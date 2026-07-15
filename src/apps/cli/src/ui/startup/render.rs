@@ -47,7 +47,7 @@ impl StartupPage {
         self.subagent_selector.render(frame, size, &self.theme);
         self.theme_selector.render(frame, size, &self.theme);
         self.provider_selector.render(frame, size, &self.theme);
-        self.model_config_form.render_mut(frame, size, &self.theme);
+        super::super::model_config_form::render_mut(&mut self.model_config_form, frame, size, &self.theme);
 
         // Overlay: command palette (Ctrl+P)
         self.command_palette.render(frame, size, &self.theme);

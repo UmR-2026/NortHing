@@ -849,7 +849,7 @@ impl ChatView {
     }
 
     fn render_model_config_form(&mut self, frame: &mut Frame, area: Rect) {
-        self.popups.model_config_form.render(frame, area, &self.theme);
+        super::model_config_form::render(&self.popups.model_config_form, frame, area, &self.theme);
     }
 
     fn render_shortcuts(&self, frame: &mut Frame, area: Rect, chat_state: &ChatState) {
