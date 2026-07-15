@@ -11,12 +11,7 @@ use crate::ui::theme::{StyleKind, Theme};
 use super::types::QuestionPrompt;
 
 /// Render the question overlay on top of the message area.
-pub fn render_question_overlay(
-    frame: &mut Frame,
-    prompt: &QuestionPrompt,
-    theme: &Theme,
-    area: Rect,
-) {
+pub fn render_question_overlay(frame: &mut Frame, prompt: &QuestionPrompt, theme: &Theme, area: Rect) {
     if prompt.on_confirm_page() {
         render_confirm_page(frame, prompt, theme, area);
     } else {
@@ -25,12 +20,7 @@ pub fn render_question_overlay(
 }
 
 /// Render a single question page with options
-fn render_question_page(
-    frame: &mut Frame,
-    prompt: &QuestionPrompt,
-    theme: &Theme,
-    area: Rect,
-) {
+fn render_question_page(frame: &mut Frame, prompt: &QuestionPrompt, theme: &Theme, area: Rect) {
     let q = match prompt.current_question() {
         Some(q) => q,
         None => return,
@@ -119,11 +109,7 @@ fn render_question_page(
     }
 
     // Question text
-    let multi_hint = if q.multi_select {
-        " (select all that apply)"
-    } else {
-        ""
-    };
+    let multi_hint = if q.multi_select { " (select all that apply)" } else { "" };
     lines.push(Line::from(Span::styled(
         format!("{}{}", q.question, multi_hint),
         Style::default().add_modifier(Modifier::BOLD),
@@ -256,16 +242,10 @@ fn render_question_page(
 }
 
 /// Render the confirm/review page (multi-question)
-fn render_confirm_page(
-    frame: &mut Frame,
-    prompt: &QuestionPrompt,
-    theme: &Theme,
-    area: Rect,
-) {
+fn render_confirm_page(frame: &mut Frame, prompt: &QuestionPrompt, theme: &Theme, area: Rect) {
     let content_height = 3 + prompt.questions.len(); // title + blank + questions + padding
     let tab_line = 2;
-    let overlay_height =
-        ((content_height + tab_line) as u16 + 4).min(area.height.saturating_sub(2));
+    let overlay_height = ((content_height + tab_line) as u16 + 4).min(area.height.saturating_sub(2));
 
     let overlay_area = Rect {
         x: area.x,
@@ -378,12 +358,7 @@ fn render_confirm_page(
 }
 
 /// Render the hint bar for question pages
-fn render_question_hint_bar(
-    frame: &mut Frame,
-    area: Rect,
-    theme: &Theme,
-    prompt: &QuestionPrompt,
-) {
+fn render_question_hint_bar(frame: &mut Frame, area: Rect, theme: &Theme, prompt: &QuestionPrompt) {
     let hint_block = Block::default().style(Style::default().bg(theme.background_element));
     frame.render_widget(hint_block, area);
 

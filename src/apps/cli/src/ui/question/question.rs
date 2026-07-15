@@ -117,12 +117,7 @@ impl QuestionPrompt {
             if q.multi_select {
                 map.insert(
                     i.to_string(),
-                    serde_json::Value::Array(
-                        processed
-                            .into_iter()
-                            .map(serde_json::Value::String)
-                            .collect(),
-                    ),
+                    serde_json::Value::Array(processed.into_iter().map(serde_json::Value::String).collect()),
                 );
             } else {
                 let val = processed.first().cloned().unwrap_or_default();
