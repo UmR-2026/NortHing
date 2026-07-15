@@ -306,18 +306,12 @@ fn render_field_input(
             ];
 
             if is_active {
-                spans.push(Span::styled(
-                    "  Space/Enter to toggle",
-                    theme.style(StyleKind::Muted),
-                ));
+                spans.push(Span::styled("  Space/Enter to toggle", theme.style(StyleKind::Muted)));
             }
 
             // Warning for skip_ssl_verify
             if field == FormField::SkipSslVerify && value {
-                spans.push(Span::styled(
-                    "  \u{26A0} Insecure",
-                    theme.style(StyleKind::Warning),
-                ));
+                spans.push(Span::styled("  \u{26A0} Insecure", theme.style(StyleKind::Warning)));
             }
 
             frame.render_widget(Paragraph::new(Line::from(spans)), area);
@@ -371,10 +365,7 @@ fn render_field_input(
                 };
 
                 let line = Line::from(vec![
-                    Span::styled(
-                        "  > ",
-                        theme.style(StyleKind::Primary).add_modifier(Modifier::BOLD),
-                    ),
+                    Span::styled("  > ", theme.style(StyleKind::Primary).add_modifier(Modifier::BOLD)),
                     Span::styled(before_raw, Style::default().fg(Color::White)),
                     Span::styled(cursor_char, Style::default().fg(Color::Black).bg(Color::White)),
                     Span::styled(after_cursor, Style::default().fg(Color::White)),
@@ -406,13 +397,9 @@ fn render_field_input(
                     _ => None,
                 };
 
-                let mut spans =
-                    vec![Span::styled("    ", Style::default()), Span::styled(display, style)];
+                let mut spans = vec![Span::styled("    ", Style::default()), Span::styled(display, style)];
                 if let Some((mark, color)) = json_hint {
-                    spans.push(Span::styled(
-                        format!("  {}", mark),
-                        Style::default().fg(color),
-                    ));
+                    spans.push(Span::styled(format!("  {}", mark), Style::default().fg(color)));
                 }
 
                 let line = Line::from(spans);
@@ -444,5 +431,4 @@ fn char_to_byte(s: &str, char_idx: usize) -> usize {
     s.char_indices().nth(char_idx).map(|(i, _)| i).unwrap_or(s.len())
 }
 
-const PROVIDER_FORMATS: [&str; 2] = ["openai", "anthropic"];
-const CUSTOM_HEADERS_MODES: [&str; 2] = ["merge", "replace"];
+use super::state::{CUSTOM_HEADERS_MODES, PROVIDER_FORMATS};

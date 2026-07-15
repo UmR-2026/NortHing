@@ -2,8 +2,8 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use super::types::{DisplayRow, FormField, ModelFormAction, ModelFormResult};
 
-const PROVIDER_FORMATS: [&str; 2] = ["openai", "anthropic"];
-const CUSTOM_HEADERS_MODES: [&str; 2] = ["merge", "replace"];
+pub(super) const PROVIDER_FORMATS: [&str; 2] = ["openai", "anthropic"];
+pub(super) const CUSTOM_HEADERS_MODES: [&str; 2] = ["merge", "replace"];
 
 /// Model config form state
 pub struct ModelConfigFormState {
@@ -90,13 +90,7 @@ impl ModelConfigFormState {
     }
 
     /// Show the form pre-filled from a provider template
-    pub fn show_from_provider(
-        &mut self,
-        provider_name: &str,
-        base_url: &str,
-        format: &str,
-        default_model: &str,
-    ) {
+    pub fn show_from_provider(&mut self, provider_name: &str, base_url: &str, format: &str, default_model: &str) {
         self.visible = true;
         self.provider_name = Some(provider_name.to_string());
         self.editing_model_id = None;
@@ -108,8 +102,7 @@ impl ModelConfigFormState {
         self.model_name = default_model.to_string();
         self.base_url = base_url.to_string();
         self.api_key.clear();
-        self.provider_format_index =
-            PROVIDER_FORMATS.iter().position(|&f| f == format).unwrap_or(0);
+        self.provider_format_index = PROVIDER_FORMATS.iter().position(|&f| f == format).unwrap_or(0);
         self.context_window = "128000".into();
         self.max_tokens = "8192".into();
         self.enable_thinking = false;
@@ -457,34 +450,26 @@ impl ModelConfigFormState {
             }
 
             // For select fields: Left/Right toggle options
-            (KeyCode::Left, KeyModifiers::NONE)
-                if matches!(self.active_field, FormField::ProviderFormat) =>
-            {
+            (KeyCode::Left, KeyModifiers::NONE) if matches!(self.active_field, FormField::ProviderFormat) => {
                 if self.provider_format_index > 0 {
                     self.provider_format_index -= 1;
                 }
                 ModelFormAction::None
             }
-            (KeyCode::Right, KeyModifiers::NONE)
-                if matches!(self.active_field, FormField::ProviderFormat) =>
-            {
+            (KeyCode::Right, KeyModifiers::NONE) if matches!(self.active_field, FormField::ProviderFormat) => {
                 if self.provider_format_index < PROVIDER_FORMATS.len() - 1 {
                     self.provider_format_index += 1;
                 }
                 ModelFormAction::None
             }
 
-            (KeyCode::Left, KeyModifiers::NONE)
-                if matches!(self.active_field, FormField::CustomHeadersMode) =>
-            {
+            (KeyCode::Left, KeyModifiers::NONE) if matches!(self.active_field, FormField::CustomHeadersMode) => {
                 if self.custom_headers_mode_index > 0 {
                     self.custom_headers_mode_index -= 1;
                 }
                 ModelFormAction::None
             }
-            (KeyCode::Right, KeyModifiers::NONE)
-                if matches!(self.active_field, FormField::CustomHeadersMode) =>
-            {
+            (KeyCode::Right, KeyModifiers::NONE) if matches!(self.active_field, FormField::CustomHeadersMode) => {
                 if self.custom_headers_mode_index < CUSTOM_HEADERS_MODES.len() - 1 {
                     self.custom_headers_mode_index += 1;
                 }
@@ -502,9 +487,7 @@ impl ModelConfigFormState {
             }
 
             // Text editing keys for text fields only
-            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT)
-                if !self.is_non_text_field() =>
-            {
+            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) if !self.is_non_text_field() => {
                 let cursor = self.cursor;
                 if let Some(buf) = self.active_buffer_mut() {
                     let byte_pos = char_to_byte(buf, cursor);
@@ -563,10 +546,6 @@ impl ModelConfigFormState {
     }
 
     // ── Shared accessors for rendering ──
-
-    pub(super) fn active_field(&self) -> FormField {
-        self.active_field
-    }
 
     pub(super) fn scroll_offset(&self) -> usize {
         self.scroll_offset

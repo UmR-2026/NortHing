@@ -8,7 +8,6 @@
 /// - "Enable Thinking" is a toggle; when on, "Preserved Thinking" appears below it
 /// - Ctrl+A toggles the Advanced Settings section which includes:
 ///   Skip SSL Verify, Custom Headers (JSON), Custom Headers Mode, Custom Request Body (JSON)
-
 pub mod render;
 pub mod state;
 pub mod types;
