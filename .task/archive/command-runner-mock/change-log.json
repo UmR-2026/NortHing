@@ -1,0 +1,12 @@
+[
+  {
+    "task_id": "command-runner-mock",
+    "description": "SKIPPED: precheck passed — tool-execution does not call services-core run_command, no mock needed",
+    "files_modified": [],
+    "files_added": [],
+    "confidence": "high",
+    "test_added": "none",
+    "test_result": "SKIPPED (precheck情形A)",
+    "notes": "Precheck command: grep for services_core::system::command in tool-execution returned empty. No work needed."
+  }
+]

@@ -1,0 +1,153 @@
+// SkillsSettingsPanel — Phase 3 sub-panel for g6 Skills
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
+// E3=a (one-line display), E2=c (global + per-workspace toggle).
+
+import { MaterialTheme, SkillStateItem } from "../theme.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { AppStrings } from "../strings.slint";
+
+export component SkillsSettingsPanel inherits Rectangle {
+    background: MaterialTheme.current-background();
+
+    in property <[SkillStateItem]> skills: [];
+    callback set-skill-global(string, bool);  // (skill_id, enabled)
+    callback set-skill-workspace(string, string);  // (skill_id, override: "" | "on" | "off")
+
+    VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: MaterialTheme.spacing-lg;
+        spacing: MaterialTheme.spacing-md;
+
+        Text {
+            text: AppStrings.settings-skills;
+            font-size: MaterialTheme.font-size-title;
+            color: MaterialTheme.current-on-surface();
+        }
+
+        if root.skills.length == 0: Rectangle {
+            height: 80px;
+            background: MaterialTheme.current-surface();
+            border-radius: 4px;
+
+            Text {
+                text: AppStrings.skills-empty;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.7;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+            }
+        }
+
+        Flickable {
+            vertical-stretch: 1;
+            width: parent.width;
+
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-xs;
+                width: parent.width;
+
+                // E3=a: one-line display (name + description).
+                for skill in root.skills: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+                    height: 56px;
+
+HorizontalLayout {
+                            spacing: MaterialTheme.spacing-md;
+                            width: parent.width;
+
+                            info := VerticalLayout {
+                            width: parent.width - 360px;
+                            spacing: 0;
+
+                            Text {
+                                text: skill.name;
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-body;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: skill.description;
+                                color: MaterialTheme.current-on-surface();
+                                opacity: 0.7;
+                                font-size: MaterialTheme.font-size-caption;
+                            }
+                        }
+
+                        // Global toggle.
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-xs;
+                            width: 180px;
+
+                            Text {
+                                text: AppStrings.skills-global-label;
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-caption;
+                                vertical-alignment: center;
+                                width: 50px;
+                            }
+
+                            global-toggle := Rectangle {
+                                width: 36px;
+                                height: 20px;
+                                border-radius: 10px;
+                                background: skill.global-enabled ? MaterialTheme.current-primary() : MaterialTheme.current-surface();
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => { root.set-skill-global(skill.id, !skill.global-enabled); }
+                                }
+                                indicator := Rectangle {
+                                    x: skill.global-enabled ? 18px : 0px;
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 10px;
+                                    background: MaterialTheme.current-background();
+                                }
+                            }
+                        }
+
+                        // Workspace override cycle button ("" → "on" → "off" → "").
+                        workspace-cycle := Rectangle {
+                            width: 140px;
+                            height: 36px;
+                            padding: MaterialTheme.spacing-xs;
+                            background: MaterialTheme.current-surface();
+                            border-radius: 4px;
+
+                            TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => {
+                                    // Cycle: "" → "on" → "off" → ""
+                                    // (string comparisons on string property)
+                                    if skill.workspace-override == "" {
+                                        root.set-skill-workspace(skill.id, "on");
+                                    } else if skill.workspace-override == "on" {
+                                        root.set-skill-workspace(skill.id, "off");
+                                    } else {
+                                        root.set-skill-workspace(skill.id, "");
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: skill.workspace-override == "" ? "跟随全局"
+                                    : skill.workspace-override == "on" ? "本工作文件夹: 开"
+                                    : "本工作文件夹: 关";
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-caption;
+                                vertical-alignment: center;
+                                horizontal-alignment: center;
+                                width: parent.width;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

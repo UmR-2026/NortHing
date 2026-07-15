@@ -1,0 +1,158 @@
+version: 1
+plan:
+  name: round48-5-way-real-god-objects-2026-07-07
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r48a-ai-adapters-gemini-split
+    title: "R48a: ai-adapters stream/types/gemini.rs 795 -> facade + N sibling (step-3.7-flash) (ai-adapters)"
+    prompt: |
+      # R48a: ai-adapters gemini.rs god-split (step-3.7-flash)
+      Target: src/crates/adapters/ai-adapters/src/stream/types/gemini.rs (795 lines)
+      Worktree: E:/agent-project/northing-impl-r48a-ai-adapters-gemini (branch impl/r48a-ai-adapters-gemini-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R49+ use previous round's squash-merge commit)
+      Package: ai-adapters (-p ai-adapters --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: gem_request.rs / gem_response.rs / gem_stream.rs / gem_types.rs
+      Cross-ref: `git grep 'stream::types::gemini\|GeminiStream\|GeminiMessage' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/adapters/ai-adapters/src/stream/types/gemini.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 795)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p ai-adapters --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(ai-adapters): R48a split stream/types/gemini.rs 795 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r48b-core-compression-split
+    title: "R48b: agentic/execution/compression.rs 789 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48b: compression.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/execution/compression.rs (789 lines)
+      Worktree: E:/agent-project/northing-impl-r48b-core-compression (branch impl/r48b-core-compression-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R49+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: compress_run.rs / compress_validate.rs / compress_state.rs / compress_types.rs
+      Cross-ref: `git grep 'agentic::execution::compression\|CompressionEngine\|CompressionPolicy' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48b split execution/compression.rs 789 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r48c-core-insights-collector-split
+    title: "R48c: agentic/insights/collector.rs 773 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48c: insights/collector.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/insights/collector.rs (773 lines)
+      Worktree: E:/agent-project/northing-impl-r48c-core-insights-collector (branch impl/r48c-core-insights-collector-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R49+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: coll_collect.rs / coll_filter.rs / coll_format.rs / coll_types.rs
+      Cross-ref: `git grep 'insights::collector\|InsightCollector\|CollectEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48c split insights/collector.rs 773 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r48d-tool-execution-edit-file-split
+    title: "R48d: tool-execution fs/edit_file.rs 771 -> facade + N sibling (M2.7, cross-crate tools) (tool-execution)"
+    prompt: |
+      # R48d: edit_file.rs god-split (M2.7, cross-crate tools)
+      Target: src/crates/execution/tool-execution/src/fs/edit_file.rs (771 lines)
+      Worktree: E:/agent-project/northing-impl-r48d-tool-execution-edit-file (branch impl/r48d-tool-execution-edit-file-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R49+ use previous round's squash-merge commit)
+      Package: tool-execution (-p tool-execution --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a, plus:
+      - fs/edit_file is cross-crate (consumed by cli, desktop, agent-runtime). Preserve all `pub use` re-export paths.
+
+      ## Sub-domain split
+      Suggested: edit_apply.rs / edit_validate.rs / edit_preview.rs / edit_types.rs
+      Cross-ref: `git grep 'fs::edit_file\|EditFile\|EditEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(tool-execution): R48d split fs/edit_file.rs 771 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r48e-core-config-manager-split
+    title: "R48e: service/config/manager.rs 762 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48e: config/manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/config/manager.rs (762 lines)
+      Worktree: E:/agent-project/northing-impl-r48e-core-config-manager (branch impl/r48e-core-config-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R49+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: mgr_load.rs / mgr_merge.rs / mgr_validate.rs / mgr_types.rs
+      Cross-ref: `git grep 'config::manager\|ConfigManager\|ConfigSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48e split config/manager.rs 762 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0

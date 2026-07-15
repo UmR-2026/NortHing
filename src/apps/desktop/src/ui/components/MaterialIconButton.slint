@@ -1,0 +1,40 @@
+// Material Icon Button Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialIconButton inherits Rectangle {
+    in property <string> icon: "";
+    in property <length> icon-size: 24px;
+    in property <bool> disabled: false;
+    
+    callback clicked();
+    
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: transparent;
+    
+    Text {
+        text: root.icon;
+        font-size: root.icon-size;
+        color: disabled ? #888888 : MaterialTheme.current-on-surface();
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    
+    ta := TouchArea {
+        enabled: !root.disabled;
+        clicked => { root.clicked(); }
+    }
+    
+    states [
+        hover when ta.has-hover: {
+            root.background: MaterialTheme.current-on-surface();
+            root.opacity: 0.1;
+        }
+        pressed when ta.pressed: {
+            root.background: MaterialTheme.current-on-surface();
+            root.opacity: 0.2;
+        }
+    ]
+}

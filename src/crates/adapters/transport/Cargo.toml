@@ -1,0 +1,36 @@
+[package]
+name = "northhing-transport"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing Transport Layer - Cross-platform communication adapters"
+
+[lib]
+name = "northhing_transport"
+
+[dependencies]
+# Events layer
+northhing-events = { path = "../../contracts/events" }
+
+# Inherited from workspace
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+chrono = { workspace = true }
+
+# Tauri adapter dependency (optional, enable only when needed)
+tauri = { workspace = true, optional = true }
+
+# Slint adapter dependency (optional, enable only when needed)
+slint = { workspace = true, optional = true }
+
+[features]
+default = []
+tauri-adapter = ["tauri"]
+slint-adapter = ["slint"]
+cli-adapter = []
+websocket-adapter = []

@@ -1,0 +1,181 @@
+version: 1
+plan:
+  name: round52-5-way-real-god-objects
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r52a-core-openai-stream-split
+    title: "R52a: adapters/ai-adapters/stream/types/openai.rs 910 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R52a: openai.rs god-split (step-3.7-flash)
+      Target: src/crates/adapters/ai-adapters/src/stream/types/openai.rs (910 lines)
+      Worktree: E:/agent-project/northing-impl-r52a-core-openai-stream (branch impl/r52a-core-openai-stream-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-ai-adapters (-p northhing-ai-adapters --lib)
+
+      ## CRITICAL iron rules (R40-R50 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo check -p <crate> --lib` to verify the lib compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      openai.rs covers OpenAI-compatible streaming response parsing. Suggested split:
+        - openai_types.rs        — request/response DTOs, JSON Schema types
+        - openai_parser.rs       — SSE event parsing, JSON-to-domain conversion
+        - openai_stream.rs       — streaming response wrapper, async iteration
+        - openai_tool_calls.rs   — function/tool call extraction from deltas
+        - openai_errors.rs       — error mapping, rate-limit/retry handling
+      Cross-ref: `git grep 'openai::' -- ':!openai.rs'`
+
+      ## PREFLIGHT
+      $p = "src/crates/adapters/ai-adapters/src/stream/types/openai.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 910)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-ai-adapters --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R52a split stream/types/openai.rs 910 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r52b-core-deep-review-budget-split
+    title: "R52b: execution/agent-runtime/deep_review/budget.rs 853 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R52b: budget.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/deep_review/budget.rs (853 lines)
+      Worktree: E:/agent-project/northing-impl-r52b-core-deep-review-budget (branch impl/r52b-core-deep-review-budget-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-agent-runtime (-p northhing-agent-runtime --lib)
+
+      ## CRITICAL iron rules
+      Same as R52a.
+
+      ## Sub-domain split
+      budget.rs covers deep-review budget management (token/cost/time). Suggested split:
+        - budget_types.rs       — Budget struct, BudgetKind enum, error types
+        - budget_state.rs       — allocation state, persistence loading
+        - budget_calc.rs        — token/cost calculation, aggregation
+        - budget_enforce.rs     — enforcement logic, throttle/reject
+        - budget_observability.rs — metrics emission, audit log integration
+      Cross-ref: `git grep 'deep_review::budget\|DeepReviewBudget' -- ':!budget.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R52b split deep_review/budget.rs 853 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r52c-core-mcp-auth-split
+    title: "R52c: service/mcp/server/manager/auth.rs 848 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R52c: auth.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/mcp/server/manager/auth.rs (848 lines)
+      Worktree: E:/agent-project/northing-impl-r52c-core-mcp-auth (branch impl/r52c-core-mcp-auth-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R52a.
+
+      ## Sub-domain split
+      auth.rs covers MCP server auth/session/token management. Suggested split:
+        - auth_types.rs         — credential/session types, error types
+        - auth_oauth.rs         — OAuth flow, token refresh, scope validation
+        - auth_session.rs       — session lifecycle, lifecycle hooks
+        - auth_token.rs         — JWT/bearer validation, signing
+        - auth_storage.rs       — credential storage, persistence integration
+      Cross-ref: `git grep 'mcp.*auth\|McpAuth' -- ':!auth.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R52c split mcp/server/manager/auth.rs 848 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r52d-core-tools-registry-split
+    title: "R52d: agentic/tools/registry.rs 835 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R52d: registry.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/registry.rs (835 lines)
+      Worktree: E:/agent-project/northing-impl-r52d-core-tools-registry (branch impl/r52d-core-tools-registry-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R52a.
+
+      ## Sub-domain split
+      registry.rs covers tool registration, lookup, capability discovery. Suggested split:
+        - registry_types.rs     — ToolSpec, ToolSpecError, registration records
+        - registry_register.rs  — add/remove/update registration logic
+        - registry_lookup.rs    — find/get/match by name/filter
+        - registry_invoke.rs    — invocation dispatch, lifecycle hooks
+        - registry_catalog.rs   — catalog enumeration, filtering by capability
+      Cross-ref: `git grep 'tools::registry\|ToolRegistry' -- ':!registry.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R52d split tools/registry.rs 835 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r52e-core-browser-launcher-split
+    title: "R52e: agentic/tools/browser_control/browser_launcher.rs 815 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R52e: browser_launcher.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/browser_control/browser_launcher.rs (815 lines)
+      Worktree: E:/agent-project/northing-impl-r52e-core-browser-launcher (branch impl/r52e-core-browser-launcher-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R52a.
+
+      ## Sub-domain split
+      browser_launcher.rs covers browser instance launch/control. Suggested split:
+        - launcher_types.rs    — BrowserProfile, BrowserHandle, error types
+        - launcher_lifecycle.rs — launch/shutdown/cleanup lifecycle
+        - launcher_state.rs    — current browser state, tab/page tracking
+        - launcher_dispatch.rs — message dispatch to browser (CDP/WS bridge)
+        - launcher_recovery.rs — crash/reconnect recovery logic
+      Cross-ref: `git grep 'browser_launcher\|BrowserLauncher' -- ':!browser_launcher.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R52e split tools/browser_control/browser_launcher.rs 815 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000

@@ -1,0 +1,216 @@
+//! Server bootstrap - initializes all core services.
+//!
+//! Mirrors the Desktop app's init sequence without any Tauri dependency.
+
+use northhing_core::agentic::*;
+use northhing_core::infrastructure::ai::AIClientFactory;
+use northhing_core::infrastructure::try_get_path_manager_arc;
+use northhing_core::service::{config, filesystem, mcp, token_usage, workspace};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+/// Shared application state for the server (mirrors Desktop's AppState).
+pub struct ServerAppState {
+    pub ai_client_factory: Arc<AIClientFactory>,
+    pub workspace_service: Arc<workspace::WorkspaceService>,
+    pub workspace_path: Arc<RwLock<Option<std::path::PathBuf>>>,
+    pub config_service: Arc<config::ConfigService>,
+    pub filesystem_service: Arc<filesystem::FileSystemService>,
+    pub agent_registry: Arc<agents::AgentRegistry>,
+    pub mcp_service: Option<Arc<mcp::MCPService>>,
+    pub token_usage_service: Arc<token_usage::TokenUsageService>,
+    pub coordinator: Arc<coordination::ConversationCoordinator>,
+    pub scheduler: Arc<coordination::DialogScheduler>,
+    pub event_queue: Arc<events::EventQueue>,
+    pub event_router: Arc<events::EventRouter>,
+    pub tool_registry_snapshot: Arc<Vec<Arc<dyn tools::framework::Tool>>>,
+    pub start_time: std::time::Instant,
+}
+
+/// Initialize all core services and return the shared server state.
+///
+/// The optional `workspace` path, when provided, is opened automatically.
+pub async fn initialize(workspace: Option<String>) -> anyhow::Result<Arc<ServerAppState>> {
+    tracing::info!("Initializing northhing server core services");
+
+    // 1. Global config
+    config::initialize_global_config().await?;
+    let config_service = config::get_global_config_service().await?;
+
+    // Initialize the global I18nService so server-mode bot/remote-connect
+    // consumers observe the same runtime locale lifecycle as Desktop.
+    if let Err(e) = northhing_core::service::i18n::initialize_global_i18n_service(Some(config_service.clone())).await {
+        tracing::warn!("Failed to initialize global I18nService in server mode: {}", e);
+    }
+
+    // 2. AI client factory
+    AIClientFactory::initialize_global().await?;
+    let ai_client_factory = AIClientFactory::get_global().await?;
+
+    // 3. Agentic system
+    let path_manager = try_get_path_manager_arc()?;
+
+    let event_queue = Arc::new(events::EventQueue::new(Default::default()));
+    let event_router = Arc::new(events::EventRouter::new());
+
+    let persistence_manager = Arc::new(persistence::PersistenceManager::new(path_manager.clone())?);
+
+    let context_store = Arc::new(session::SessionContextStore::new());
+    let context_compressor = Arc::new(session::ContextCompressor::new(Default::default()));
+
+    let session_manager = Arc::new(session::SessionManager::new(
+        context_store,
+        persistence_manager,
+        Default::default(),
+    ));
+
+    let tool_registry = tools::registry::global_tool_registry();
+    let tool_state_manager = Arc::new(tools::pipeline::ToolStateManager::new(event_queue.clone()));
+
+    let tool_pipeline = Arc::new(tools::pipeline::ToolPipeline::new(
+        tool_registry.clone(),
+        tool_state_manager,
+        None,
+        Arc::new(std::sync::OnceLock::new()),
+    ));
+
+    let stream_processor = Arc::new(execution::StreamProcessor::new(event_queue.clone()));
+    let round_executor = Arc::new(execution::RoundExecutor::new(
+        stream_processor,
+        event_queue.clone(),
+        tool_pipeline.clone(),
+    ));
+
+    let execution_engine = Arc::new(execution::ExecutionEngine::new(
+        round_executor,
+        event_queue.clone(),
+        session_manager.clone(),
+        context_compressor,
+        execution::ExecutionEngineConfig::default(),
+    ));
+
+    let coordinator = Arc::new(coordination::ConversationCoordinator::new(
+        session_manager.clone(),
+        execution_engine,
+        tool_pipeline,
+        event_queue.clone(),
+        event_router.clone(),
+    ));
+
+    coordination::ConversationCoordinator::set_global(coordinator.clone());
+
+    // Token usage
+    let token_usage_service = Arc::new(token_usage::TokenUsageService::new(path_manager.clone()).await?);
+    let token_usage_subscriber = Arc::new(token_usage::TokenUsageSubscriber::new(token_usage_service.clone()));
+    event_router.subscribe_internal("token_usage".to_string(), token_usage_subscriber);
+    event_router.subscribe_internal(
+        "thread_goal_tokens".to_string(),
+        Arc::new(northhing_core::agentic::goal_mode::ThreadGoalTokenSubscriber),
+    );
+
+    // Dialog scheduler
+    let scheduler = coordination::DialogScheduler::new(coordinator.clone(), session_manager.clone());
+    let notifier_ok = coordinator.set_scheduler_notifier(scheduler.outcome_sender());
+    let injection_ok = coordinator.set_round_injection_source(scheduler.round_injection_monitor());
+    if !notifier_ok || !injection_ok {
+        return Err(format!(
+            "dialog scheduler wiring conflict: scheduler_notifier={notifier_ok}, \
+             round_injection_source={injection_ok} — likely a duplicate init call"
+        )
+        .into());
+    }
+    coordination::set_global_scheduler(scheduler.clone());
+
+    // Cron service
+    let cron_service = northhing_core::service::cron::CronService::new(path_manager.clone(), scheduler.clone()).await?;
+    northhing_core::service::cron::set_global_cron_service(cron_service.clone());
+    let cron_subscriber = Arc::new(northhing_core::service::cron::CronEventSubscriber::new(
+        cron_service.clone(),
+    ));
+    event_router.subscribe_internal("cron_jobs".to_string(), cron_subscriber);
+    cron_service.start();
+
+    // Function agents
+    let _ = northhing_core::function_agents::git_func_agent::GitFunctionAgent::new(ai_client_factory.clone());
+    let _ =
+        northhing_core::function_agents::startchat_func_agent::StartchatFunctionAgent::new(ai_client_factory.clone());
+
+    // 4. Services
+    let workspace_service = Arc::new(workspace::WorkspaceService::new().await?);
+    workspace::set_global_workspace_service(workspace_service.clone());
+    let filesystem_service = Arc::new(filesystem::FileSystemServiceFactory::create_default());
+
+    let agent_registry = agents::agent_registry();
+
+    let mcp_service = match mcp::MCPService::new(config_service.clone()) {
+        Ok(service) => Some(Arc::new(service)),
+        Err(e) => {
+            tracing::warn!("Failed to initialize MCP service: {}", e);
+            None
+        }
+    };
+
+    // Tool registry snapshot
+    let tool_registry_snapshot = {
+        let lock = tool_registry.read().await;
+        Arc::new(lock.all_tools())
+    };
+
+    // 5. Open workspace if specified
+    let initial_workspace_path = if let Some(ws_path) = workspace {
+        let path = std::path::PathBuf::from(&ws_path);
+        match workspace_service.open_workspace(path.clone()).await {
+            Ok(info) => {
+                tracing::info!(
+                    "Workspace opened: name={}, path={}",
+                    info.name,
+                    info.root_path.display()
+                );
+
+                // Initialize snapshot for workspace
+                if let Err(e) = northhing_core::service::snapshot::initialize_snapshot_manager_for_workspace(
+                    info.root_path.clone(),
+                    None,
+                )
+                .await
+                {
+                    tracing::warn!("Failed to initialize snapshot system: {}", e);
+                }
+
+                Some(info.root_path)
+            }
+            Err(e) => {
+                tracing::error!("Failed to open workspace '{}': {}", ws_path, e);
+                None
+            }
+        }
+    } else {
+        // Try to restore last workspace
+        workspace_service.current_workspace().await.map(|w| w.root_path)
+    };
+
+    // LSP
+    if let Err(e) = northhing_core::service::lsp::initialize_global_lsp_manager().await {
+        tracing::error!("Failed to initialize LSP manager: {}", e);
+    }
+
+    let state = Arc::new(ServerAppState {
+        ai_client_factory,
+        workspace_service,
+        workspace_path: Arc::new(RwLock::new(initial_workspace_path)),
+        config_service,
+        filesystem_service,
+        agent_registry,
+        mcp_service,
+        token_usage_service,
+        coordinator,
+        scheduler,
+        event_queue,
+        event_router,
+        tool_registry_snapshot,
+        start_time: std::time::Instant::now(),
+    });
+
+    tracing::info!("northhing server core services initialized");
+    Ok(state)
+}

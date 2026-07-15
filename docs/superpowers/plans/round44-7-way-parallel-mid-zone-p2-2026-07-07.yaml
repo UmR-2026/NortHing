@@ -1,0 +1,227 @@
+version: 1
+plan:
+  name: round44-7-way-parallel-mid-zone-p2-2026-07-07
+  max_concurrency: 7
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r44a-core-task-pipeline-impl-split
+    title: "R44a: agentic/task_pipeline/task_pipeline_impl.rs 1144 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44a: task_pipeline_impl.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/task_pipeline/task_pipeline_impl.rs (1144 lines)
+      Worktree: E:/agent-project/northing-impl-r44a-core-task-pipeline-impl (branch impl/r44a-core-task-pipeline-impl-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split (suggestion, adjust to actual structure)
+      Suggested: pipeline_execute.rs / pipeline_compile.rs / pipeline_state.rs / pipeline_types.rs
+      Cross-ref: `git grep 'task_pipeline::task_pipeline_impl\|TaskPipelineImpl' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/task_pipeline/task_pipeline_impl.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 1144)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R44a split task_pipeline_impl.rs 1144 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44b-core-diff-mod-split
+    title: "R44b: tools/diff/mod.rs 1140 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44b: diff/mod.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/tools/diff/mod.rs (1140 lines)
+      Worktree: E:/agent-project/northing-impl-r44b-core-diff-mod (branch impl/r44b-core-diff-mod-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: diff_compute.rs / diff_apply.rs / diff_format.rs / diff_types.rs
+      Cross-ref: `git grep 'tools::diff\|DiffEngine\|DiffOp' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44b split tools/diff/mod.rs 1140 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44c-core-command-mod-split
+    title: "R44c: command/mod.rs 1109 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44c: command/mod.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/command/mod.rs (1109 lines)
+      Worktree: E:/agent-project/northing-impl-r44c-core-command-mod (branch impl/r44c-core-command-mod-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: command_registry.rs / command_parser.rs / command_dispatch.rs / command_types.rs
+      Cross-ref: `git grep 'command::\|CommandRegistry\|CommandSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44c split command/mod.rs 1109 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44d-core-acp-mod-split
+    title: "R44d: acp/mod.rs 1082 -> facade + N sibling (M2.7, R22 partial) (northhing-core)"
+    prompt: |
+      # R44d: acp/mod.rs god-split (M2.7, R22 partial follow-up)
+      Target: src/crates/assembly/core/src/acp/mod.rs (1082 lines)
+      Worktree: E:/agent-project/northing-impl-r44d-core-acp-mod (branch impl/r44d-core-acp-mod-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## Context (R22 partial)
+      R22 split acp/mod.rs into facade + N sibling. R44d is follow-up: facade may still be over cap.
+      MUST read R22 commit history first to see existing sibling structure before designing R44d.
+
+      ## CRITICAL iron rules
+      Same as R44a, plus:
+      - If R22 sibling files exist, R44d should EXTEND them, not duplicate or rename
+      - acp/ is cross-crate (consumed by cli, services-integrations). Carefully preserve all `pub use` re-export paths.
+
+      ## Sub-domain split (after R22)
+      Suggested: acp_session.rs / acp_channel.rs / acp_auth.rs / acp_types.rs
+      Cross-ref: `git grep 'acp::\|AcpClient\|AcpService' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44d split acp/mod.rs 1082 -> facade + N sibling (R22 follow-up)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44e-core-session-mod-split
+    title: "R44e: session/mod.rs 1051 -> facade + N sibling (M2.7, R23 partial) (northhing-core)"
+    prompt: |
+      # R44e: session/mod.rs god-split (M2.7, R23 partial follow-up)
+      Target: src/crates/assembly/core/src/session/mod.rs (1051 lines)
+      Worktree: E:/agent-project/northing-impl-r44e-core-session-mod (branch impl/r44e-core-session-mod-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## Context (R23 partial)
+      R23 split session/mod.rs into facade + N sibling. R44e is follow-up: facade may still be over cap.
+      MUST read R23 commit history first to see existing sibling structure.
+
+      ## CRITICAL iron rules
+      Same as R44a, plus:
+      - session/ is the most cross-crate module (consumed by cli, desktop, services, all tools). Preserve all `pub use` paths.
+      - session lifecycle state machine is critical — do not break state transitions.
+
+      ## Sub-domain split (after R23)
+      Suggested: session_lifecycle.rs / session_message.rs / session_meta.rs / session_types.rs
+      Cross-ref: `git grep 'session::\|SessionManager\|SessionState' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44e split session/mod.rs 1051 -> facade + N sibling (R23 follow-up)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44f-core-memory-embeddings-split
+    title: "R44f: memory/embeddings.rs 1015 -> facade + N sibling (M2.7, R26 partial) (northhing-core)"
+    prompt: |
+      # R44f: memory/embeddings.rs god-split (M2.7, R26 partial follow-up)
+      Target: src/crates/assembly/core/src/memory/embeddings.rs (1015 lines)
+      Worktree: E:/agent-project/northing-impl-r44f-core-memory-embeddings (branch impl/r44f-core-memory-embeddings-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## Context (R26 partial)
+      R26 split memory/embeddings.rs into facade + N sibling. R44f is follow-up.
+      MUST read R26 commit history first.
+
+      ## CRITICAL iron rules
+      Same as R44a, plus:
+      - embeddings backend is pluggable (openai / local / mock). Split must preserve backend trait dispatch.
+
+      ## Sub-domain split (after R26)
+      Suggested: embed_backend.rs / embed_cache.rs / embed_chunk.rs / embed_types.rs
+      Cross-ref: `git grep 'memory::embeddings\|EmbeddingService\|EmbeddingBackend' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44f split memory/embeddings.rs 1015 -> facade + N sibling (R26 follow-up)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44g-core-message-processing-split
+    title: "R44g: message_processing.rs 1005 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44g: message_processing.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/message_processing.rs (1005 lines)
+      Worktree: E:/agent-project/northing-impl-r44g-core-message-processing (branch impl/r44g-core-message-processing-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: msg_route.rs / msg_transform.rs / msg_format.rs / msg_types.rs
+      NOTE: message_processing has 4 sibling files (persist/process/format/route) planned for R46-R48. R44g only splits the top-level facade — do NOT touch the 4 sibling files.
+      Cross-ref: `git grep 'message_processing::\|MessageProcessor\|MessageRouter' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44g split message_processing.rs 1005 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

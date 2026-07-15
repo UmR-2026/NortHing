@@ -1,0 +1,301 @@
+// northhing Main Window - Three-region layout with Material Design
+
+import { MaterialTheme, SessionItem, MessageItem, SkillItem, ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "theme.slint";
+import { SidebarView } from "views/SidebarView.slint";
+import { ChatPaneView } from "views/ChatPaneView.slint";
+import { InspectorView } from "views/InspectorView.slint";
+import { StatusBarView } from "views/StatusBarView.slint";
+import { SettingsView } from "views/SettingsView.slint";
+import { WelcomeView } from "views/WelcomeView.slint";
+import { MaterialBanner } from "components/MaterialBanner.slint";
+
+export component AppWindow inherits Window {
+    title: "northhing";
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 800px;
+    min-height: 600px;
+    background: MaterialTheme.current-background();
+
+    // 2026-06-26 (Phase 2): route switching. Spec §6.1.
+    // "main" — the regular 3-pane layout
+    // "welcome" — first-run onboarding (Phase 4)
+    // "settings" — Settings panel (Phase 2 shell)
+    in-out property <string> current-route: "main";
+    // 2026-06-26 (review follow-up): both the open and close hooks
+    // are now pure Slint — no FFI round-trip to Rust. The sidebar
+    // entry forwards to `open-settings =>` and the SettingsView's
+    // × button forwards to `close-settings =>`; both set
+    // `current-route` directly. Removes the `ui.on_open_settings`
+    // Rust handler that was added in `97890b2` to fix the original
+    // wiring bug.
+    callback close-settings();
+
+    in-out property <string> app-title: "northhing v0.1.0";
+    in-out property <string> mcp-status: "MCP: Initializing...";
+    in-out property <string> model-status: "Model: Not configured";
+    in-out property <bool> dark-mode: true;
+    // Phase C.2: when true, the sidebar renders sessions nested by
+    // `parent-id` / `depth`. Bound from `app_state.rs` to the
+    // `SESSION_TREE_VIEW` const in `main.rs`.
+    in-out property <bool> session-tree-view: false;
+    // Phase G.3: user-facing toggle for whether subagent (depth >= 1)
+    // sessions are visible in the sidebar. Default true. Bound from
+    // `app_state.rs::AppState::show_subagents`.
+    in-out property <bool> show-subagents: true;
+    // Phase G.3: callback fired when the user flips the
+    // "Show subagents" checkbox in the sidebar header.
+    callback toggle-show-subagents();
+    in-out property <[SessionItem]> sessions: [];
+    in-out property <[MessageItem]> messages: [];
+    in-out property <[SkillItem]> skills: [];
+
+    // 2026-06-26 (Phase 3): Settings sub-panel state pushed from Rust.
+    in-out property <[ProviderItem]> providers-list: [];
+    in-out property <[SkillStateItem]> skills-list: [];
+    in-out property <[MCPItem]> mcp-servers-list: [];
+    in-out property <[WorkspaceItem]> workspaces-list: [];
+    in-out property <int> current-workspace-index: -1;
+    in-out property <string> default-model-provider-id: "";
+    in-out property <int> legacy-placeholder-count: 0;
+
+    // 2026-06-26 (Phase 3): Settings sub-panel callbacks (wired to AppState methods).
+    callback upsert-provider(string, string, string, string, string, string, bool);
+    callback delete-provider(string);
+    callback test-provider(string);
+    callback set-default-model(string);
+    callback cleanup-legacy-placeholders();
+    callback set-skill-global(string, bool);
+    callback set-skill-workspace(string, string);
+    callback upsert-mcp(string, string, string, string, string, string, string, bool);
+    callback delete-mcp(string);
+    callback test-mcp(string);
+    // 2026-06-26 (Phase 4): Workspace callbacks (wired to AppState methods).
+    callback pick-folder();
+    callback add-workspace(string, string, bool);
+    callback switch-workspace(string);
+    callback remove-workspace(string);
+    callback edit-identity-md(string);
+    callback open-identity-creator();
+    in-out property <string> current-session-id: "";
+    in-out property <string> current-session-name: "";
+    in-out property <string> current-session-model: "";
+    in-out property <bool> current-session-broken: false;
+    in-out property <bool> is-streaming: false;
+    in-out property <string> chat-inline-error: "";
+    in-out property <string> input-text: "";
+    // P0-C (2026-06-25): error display channels. Previously all callback
+    // failures went to stderr via `eprintln!` and the user saw nothing.
+    // The Rust side sets these via `ui.set_session_error` / `ui.set_input_error`;
+    // the SidebarView renders a banner when either is non-empty. The Rust
+    // helper auto-clears after 5s; users can also click the banner × to clear.
+    in-out property <string> session-error: "";
+    in-out property <string> input-error: "";
+    // 2026-06-26 (Phase 5): Q8=c dual error channels.
+    // - `banner-message` + `banner-detail`: first channel, rendered by
+    //   MaterialBanner at the top of the main view. Auto-dismissed
+    //   after 5s (P0-C schedule_error_clear pattern).
+    // - `chat-inline-error`: second channel, rendered by ChatPaneView
+    //   above the input. Manual close only. Pushed to by either:
+    //     a) the Rust side via set_inline_error (validation failure)
+    //     b) the user clicking "详情" on the banner (the parent
+    //        component copies `banner-message` → `chat-inline-error`)
+    in-out property <string> banner-message: "";
+    in-out property <string> banner-detail: "";
+
+    callback send-message(string);
+    callback new-session();
+    callback switch-session(string);
+    callback delete-session(string);
+    callback toggle-theme();
+    callback toggle-skill(string);
+    callback load-more-messages();
+    // Phase 4: session-level callbacks
+    callback stop-streaming();
+    callback export-markdown();
+    callback open-session-settings();
+    // Phase 5: banner callbacks
+    callback dismiss-banner();
+    callback clear-inline-error();
+    // P0-C: callbacks fired when the user clicks the banner × button.
+    callback clear-session-error();
+    callback clear-input-error();
+
+    // Internal refresh callbacks (used by app_state to push updates)
+    callback refresh-sessions();
+    callback refresh-messages();
+
+    changed dark-mode => {
+        MaterialTheme.dark-mode = dark-mode;
+    }
+
+    // 2026-06-26 (Phase 2): route switching via `if current-route == ...`.
+    // Spec §6.1 — state in `current-route` is preserved across switches.
+    // Welcome view (first-run) is rendered when current-route == "welcome";
+    // Settings view replaces the main UI when current-route == "settings".
+
+    if root.current-route == "welcome": WelcomeView {
+        width: root.width;
+        height: root.height;
+        // Phase 4 callbacks: Welcome view fires them when the user
+        // picks a folder, adds a workspace, or configures a provider.
+        // They map to the same handlers as the SettingsWorkspacePanel.
+        pick-folder => { root.pick-folder(); }
+        add-workspace(path, name, set-current) => { root.add-workspace(path, name, set-current); }
+        upsert-provider(id, name, type, base-url, api-key, model, enabled)
+            => { root.upsert-provider(id, name, type, base-url, api-key, model, enabled); }
+        on-completed => { root.current-route = "main"; }
+    }
+
+    if root.current-route == "settings": SettingsView {
+        width: root.width;
+        height: root.height;
+        providers: root.providers-list;
+        skills: root.skills-list;
+        mcp-servers: root.mcp-servers-list;
+        workspaces: root.workspaces-list;
+        current-workspace-index: root.current-workspace-index;
+        default-model-provider-id: root.default-model-provider-id;
+        legacy-placeholder-count: root.legacy-placeholder-count;
+        close-settings => { root.current-route = "main"; }
+        upsert-provider(id, name, type, base-url, api-key, model, enabled)
+            => { root.upsert-provider(id, name, type, base-url, api-key, model, enabled); }
+        delete-provider(id) => { root.delete-provider(id); }
+        test-provider(id) => { root.test-provider(id); }
+        set-default-model(id) => { root.set-default-model(id); }
+        cleanup-legacy-placeholders => { root.cleanup-legacy-placeholders(); }
+        set-skill-global(id, enabled) => { root.set-skill-global(id, enabled); }
+        set-skill-workspace(id, override) => { root.set-skill-workspace(id, override); }
+        upsert-mcp(id, name, transport, command, args, url, env, enabled)
+            => { root.upsert-mcp(id, name, transport, command, args, url, env, enabled); }
+        delete-mcp(id) => { root.delete-mcp(id); }
+        test-mcp(id) => { root.test-mcp(id); }
+        pick-folder => { root.pick-folder(); }
+        add-workspace(path, name, set-current) => { root.add-workspace(path, name, set-current); }
+        switch-workspace(id) => { root.switch-workspace(id); }
+        remove-workspace(id) => { root.remove-workspace(id); }
+        edit-identity-md(id) => { root.edit-identity-md(id); }
+        open-identity-creator => { root.open-identity-creator(); }
+    }
+
+    if root.current-route == "main": Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height - 32px;
+
+        HorizontalLayout {
+            width: parent.width;
+            height: parent.height;
+
+            SidebarView {
+                width: 280px;
+                height: parent.height;
+                sessions: root.sessions;
+                current-session-id: root.current-session-id;
+                dark-mode: root.dark-mode;
+                // Phase C.2: tree-view is bound to the const flag at
+                // main.rs:62 (SESSION_TREE_VIEW). When false, the sidebar
+                // renders the legacy flat list — byte-identical to
+                // pre-C.2 behavior.
+                tree-view: root.session-tree-view;
+                // Phase G.3: show-subagents is a runtime-mutable flag
+                // flipped by the user via the sidebar checkbox. Default
+                // true so the tree view shows the full hierarchy on
+                // first launch.
+                show-subagents: root.show-subagents;
+                // Phase 4: workspace switcher (D4=b) + Q5=a filter.
+                workspaces: root.workspaces-list;
+                current-workspace-path: root.workspaces-list[root.current-workspace-index].path;
+                switch-workspace(path) => { root.switch-workspace(path); }
+                // P0-C: error banner channels. Either non-empty renders a
+                // red banner at the top of the sidebar; the user clicks × to
+                // clear (calls clear-session-error / clear-input-error).
+                session-error: root.session-error;
+                input-error: root.input-error;
+                clear-session-error => { root.clear-session-error(); }
+                clear-input-error => { root.clear-input-error(); }
+
+                new-session => { root.new-session(); }
+                switch-session(session-id) => { root.switch-session(session-id); }
+                delete-session(session-id) => { root.delete-session(session-id); }
+                toggle-show-subagents => { root.toggle-show-subagents(); }
+                // 2026-06-26 (Phase 2 + review follow-up): Settings entry —
+                // flips `current-route` directly in Slint. The original
+                // Phase 2 wired a Rust `ui.on_open_settings` handler to do
+                // the same thing, but `close-settings` was already pure
+                // Slint, so the FFI round-trip on the open path was
+                // asymmetric. Reviewer flagged the asymmetry as a style
+                // observation; collapse both paths to pure Slint.
+                open-settings => { root.current-route = "settings"; }
+            }
+
+            ChatPaneView {
+                width: parent.width - 280px - 240px;
+                height: parent.height;
+                messages: root.messages;
+                input-text <=> root.input-text;
+                dark-mode: root.dark-mode;
+                // Phase 4: session header state
+                current-session-name: root.current-session-name;
+                current-session-model: root.current-session-model;
+                current-session-broken: root.current-session-broken;
+                is-streaming: root.is-streaming;
+                // Phase 4: G2=c inline error (second channel)
+                inline-error: root.chat-inline-error;
+
+                send-message(text) => { root.send-message(text); }
+                load-more-messages => { root.load-more-messages(); }
+                stop-streaming => { root.stop-streaming(); }
+                export-markdown => { root.export-markdown(); }
+                open-session-settings => { root.open-session-settings(); }
+            }
+
+            InspectorView {
+                width: 240px;
+                height: parent.height;
+                skills: root.skills;
+                model-status: root.model-status;
+                dark-mode: root.dark-mode;
+
+                toggle-skill(skill-id) => { root.toggle-skill(skill-id); }
+                toggle-theme => { root.toggle-theme(); }
+            }
+        }
+
+        // Status bar lives only on the main route (not in Welcome /
+        // Settings — those views manage their own chrome).
+        StatusBarView {
+            x: 0;
+            y: root.height - 32px;
+            width: root.width;
+            height: 32px;
+            mcp-status: root.mcp-status;
+            model-status: root.model-status;
+            app-title: root.app-title;
+            dark-mode: root.dark-mode;
+        }
+
+        // 2026-06-26 (Phase 5): global MaterialBanner overlay.
+        // Q8=c dual channel: this is the first channel (auto-dismiss).
+        // Renders only when `banner-message` is non-empty. The
+        // `detail-clicked` callback copies the banner to the
+        // chat-inline-error second channel (manual close).
+        if root.banner-message != "": MaterialBanner {
+            x: 0;
+            y: root.height - 32px - 56px;
+            width: root.width;
+            height: 56px;
+            message: root.banner-message;
+            detail: root.banner-detail;
+            dismissed => { root.dismiss-banner(); }
+            detail-clicked => {
+                // Q8=c "详情" expand: copy the same error to the
+                // inline channel. The Rust side reads chat-inline-error
+                // and renders it inside ChatPaneView above the input.
+                root.chat-inline-error = root.banner-message;
+                root.dismiss-banner();
+            }
+        }
+    }   // close content Rectangle (inside if current-route == "main")
+}   // close if current-route == "main"

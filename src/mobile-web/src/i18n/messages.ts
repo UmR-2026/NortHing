@@ -1,0 +1,944 @@
+import { DEFAULT_LANGUAGE, SHARED_TERMS_BY_LOCALE, type MobileLanguage } from './localeRegistry';
+
+
+
+export { DEFAULT_LANGUAGE };
+
+export type { MobileLanguage };
+
+
+
+type MessageLeaf = string;
+
+type MessageTree = { readonly [key: string]: MessageLeaf | MessageTree };
+
+
+
+export const messages: Record<MobileLanguage, MessageTree> = {
+
+  'en-US': {
+
+    shared: SHARED_TERMS_BY_LOCALE['en-US'],
+
+    common: {
+
+      back: 'Back',
+
+      continue: 'Continue',
+
+      cancel: 'Cancel',
+
+      switch: 'Switch',
+
+      loading: 'Loading...',
+
+      switchLanguage: 'Switch language',
+
+      toggleTheme: 'Toggle theme',
+
+      attachImage: 'Attach image',
+
+      stop: 'Stop',
+
+      submit: 'Submit',
+
+      submitting: 'Submitting...',
+
+      submitted: 'Submitted',
+
+      other: 'Other',
+
+      customTextInput: 'Custom text input',
+
+      typeYourAnswer: 'Type your answer...',
+
+      itemCount: '{count} 项items',
+
+      justNow: 'just now',
+
+      minutesAgo: '{count}m ago',
+
+      hoursAgo: '{count}h ago',
+
+      daysAgo: '{count}d ago',
+
+    },
+
+    pairing: {
+
+      enterUserIdToContinue: 'Enter your user ID to continue',
+
+      connectingAndPairing: 'Connecting and pairing...',
+
+      pairedLoadingSessions: 'Paired! Loading sessions...',
+
+      connectionError: 'Connection error',
+
+      invalidQrCode: 'Invalid QR code: missing room or public key',
+
+      userIdRequired: 'User ID is required',
+
+      tooManyAttempts: 'Too many failed attempts. Try again in {seconds}s.',
+
+      pairingFailed: 'Pairing failed',
+
+      fieldLabel: 'User ID',
+
+      placeholder: 'Enter a user ID',
+
+      note: 'The first successful connection binds this URL to your user ID for the current remote session.',
+
+      connecting: 'Connecting...',
+
+      retryIn: 'Retry in {seconds}s',
+
+      continue: 'Continue',
+
+    },
+
+    sessions: {
+
+      switchWorkspace: 'Switch workspace',
+
+      selectWorkspace: 'Select Workspace',
+
+      noWorkspaces: 'No workspaces found',
+
+      noWorkspaceSelected: 'No workspace selected',
+
+      assistant: 'Assistant',
+
+      switchAssistant: 'Switch assistant',
+
+      selectAssistant: 'Select Assistant',
+
+      launch: 'Launch',
+
+      startRemoteFlow: 'Start a new remote flow',
+
+      codeSessionDesc: 'For coding anywhere, anytime.',
+
+      coworkSessionDesc: 'For assisting with everyday work.',
+
+      clawSession: 'Claw Session',
+
+      clawSessionDesc: 'Personal assistant for daily tasks.',
+
+      recent: 'Recent',
+
+      sessionHistory: 'Session history',
+
+      loadingSessions: 'Loading sessions...',
+
+      noSessions: 'No sessions yet. Create one to get started.',
+
+      untitledSession: 'Untitled Session',
+
+      loadingMore: 'Loading more...',
+
+      remoteCodeSession: 'Remote Code Session',
+
+      remoteCoworkSession: 'Remote Cowork Session',
+
+      remoteClawSession: 'Remote Claw Session',
+
+      agentCode: 'Code',
+
+      agentCowork: 'Cowork',
+
+      agentDefault: 'Default',
+
+      searchSessions: 'Search sessions...',
+
+      renameSession: 'Rename',
+
+      deleteSession: 'Delete',
+
+      confirmDelete: 'Delete session?',
+
+      confirmDeleteDesc: 'This action cannot be undone.',
+
+      renameTitle: 'Rename Session',
+
+      sessionNamePlaceholder: 'Session name',
+
+      cancel: 'Cancel',
+
+      save: 'Save',
+
+      emptySearch: 'No sessions match your search.',
+
+      deleted: 'Session deleted',
+
+      deleteFailed: 'Delete failed',
+
+      renameFailed: 'Rename failed',
+
+      disconnect: 'Disconnect',
+
+      disconnectConfirm: 'Disconnect from current desktop? You can re-pair later.',
+
+      reconnecting: 'Reconnecting...',
+
+      connectionUnpaired: 'Not connected',
+
+      connectionChecking: 'Checking connection...',
+
+      connectionConnected: 'Connected',
+
+      connectionUnreachable: 'Connection lost',
+
+      continueSession: 'Continue where you left off',
+
+    },
+
+    workspace: {
+
+      loadingInfo: 'Loading workspace info...',
+
+      currentWorkspace: 'Current Workspace',
+
+      unknownProject: 'Unknown Project',
+
+      noWorkspaceOpen: 'No workspace is currently open on the desktop.',
+
+      noWorkspaceHint: 'Select a recent workspace below, or open one on the desktop first.',
+
+      selectWorkspace: 'Select Workspace',
+
+      recentWorkspaces: 'Recent Workspaces',
+
+      noRecentWorkspaces: 'No recent workspaces found. Please open a workspace on the desktop first.',
+
+      failedToSetWorkspace: 'Failed to set workspace',
+
+      openingWorkspace: 'Opening workspace...',
+
+    },
+
+    chat: {
+
+      session: 'Session',
+
+      loadingOlderMessages: 'Loading older messages...',
+
+      showResponse: 'Show response',
+
+      hideResponse: 'Hide response',
+
+      analyzingImage: 'Analyzing image with image understanding model...',
+
+      inputPlaceholder: 'How can I help you...',
+
+      collapsedInputPlaceholder: 'Ask northhing...',
+
+      collapsedStreamingPlaceholder: 'Replying...',
+
+      messageQueued: 'Message queued; it will run after the current step',
+
+      imageAnalyzingPlaceholder: 'Analyzing image...',
+
+      imageAttachmentFallback: '(see attached images)',
+
+      modelSelection: 'Select model',
+
+      modelAuto: 'Auto',
+
+      modelAutoDesc: 'Automatically route to the best model',
+
+      modelPrimary: 'Primary Model',
+
+      modelFast: 'Fast Model',
+
+      askQuestionCount: '{count} 项question{suffix}',
+
+      waiting: 'Waiting',
+
+      modeAgentic: 'Agentic',
+
+      modePlan: 'Plan',
+
+      modeDebug: 'Debug',
+
+      thinking: 'Thinking...',
+
+      allTasksCompleted: 'All tasks completed',
+
+      task: 'Task',
+
+      toolCalls: '{count} 项tool call{suffix}',
+
+      done: '{count} 项done',
+
+      running: '{count} 项running',
+
+      thoughtCharacters: 'Thought {count} 项characters',
+
+      textCharacters: 'Text {count} 项characters',
+
+      readToolsDone: '{summary}',
+
+      readToolsRunning: '{summary} ({doneCount}） done)',
+
+      fileLoading: 'Loading...',
+
+      fileUnavailable: 'File unavailable',
+
+      fileDownloading: 'Downloading...',
+
+      fileDownloaded: 'Downloaded',
+
+      clickToDownload: 'Click to download',
+
+      scrollToBottom: 'Scroll to bottom',
+
+      copyMessage: 'Copy text',
+
+      resendMessage: 'Resend',
+
+      deleteMessage: 'Delete',
+
+      messageCopied: 'Copied',
+
+      messageDeleted: 'Deleted',
+
+      copyFailed: 'Copy failed',
+
+    },
+
+    tools: {
+
+      ls: 'LS',
+
+      glob: 'Glob',
+
+      grep: 'Grep',
+
+      delete: 'Delete',
+
+      task: 'Task',
+
+      web: 'Web',
+
+    },
+
+  },
+
+  'zh-CN': {
+
+    shared: SHARED_TERMS_BY_LOCALE['zh-CN'],
+
+    common: {
+
+      back: '返回',
+
+      continue: '继续',
+
+      cancel: '取消',
+
+      switch: '切换',
+
+      loading: '加载中...',
+
+      switchLanguage: '切换语言',
+
+      toggleTheme: '切换主题',
+
+      attachImage: '添加图片',
+
+      stop: '停止',
+
+      submit: '提交',
+
+      submitting: '提交中...',
+
+      submitted: '已提交',
+
+      other: '其他',
+
+      customTextInput: '自定义输入',
+
+      typeYourAnswer: '请输入你的回答...',
+
+      itemCount: '{count} 项',
+
+      justNow: '刚刚',
+
+      minutesAgo: '{count} 分钟前?',
+
+      hoursAgo: '{count} 小时前?',
+
+      daysAgo: '{count} 项天前',
+
+    },
+
+    pairing: {
+
+      enterUserIdToContinue: '请输入你的用户 ID 继续',
+
+      connectingAndPairing: '正在连接并配对...',
+
+      pairedLoadingSessions: '配对成功，正在加载会话...',
+
+      connectionError: '连接异常',
+
+      invalidQrCode: '二维码无效：缺少 room 或 public key',
+
+      userIdRequired: '用户 ID 不能为空',
+
+      tooManyAttempts: '失败次数过多，请在 {seconds} 秒后重试。',
+
+      pairingFailed: '配对失败',
+
+      fieldLabel: '用户 ID',
+
+      placeholder: '请输入用户 ID',
+
+      note: '首次成功连接后，本次远程会话会把该 URL 绑定到你的用户 ID。',
+
+      connecting: '连接中...',
+
+      retryIn: '{seconds} 秒后重试',
+
+      continue: '继续',
+
+    },
+
+    sessions: {
+
+      switchWorkspace: '切换工作区?',
+
+      selectWorkspace: '选择工作区?',
+
+      noWorkspaces: '暂无工作区?',
+
+      noWorkspaceSelected: '未选择工作区?',
+
+      assistant: '助理',
+
+      switchAssistant: '切换助理',
+
+      selectAssistant: '选择助理',
+
+      launch: '启动',
+
+      startRemoteFlow: '开始一个新的远程流程?',
+
+      codeSessionDesc: '随时随地进行编码。?',
+
+      coworkSessionDesc: '处理日常协作与办公任务。?',
+
+      clawSession: '助理会话',
+
+      clawSessionDesc: '处理日常任务的个人助手。?',
+
+      recent: '最近?',
+
+      sessionHistory: '会话历史',
+
+      loadingSessions: '正在加载会话...',
+
+      noSessions: '还没有会话，先创建一个开始吧。?',
+
+      untitledSession: '未命名会话?',
+
+      loadingMore: '正在加载更多...',
+
+      remoteCodeSession: '远程代码会话',
+
+      remoteCoworkSession: '远程协作会话',
+
+      remoteClawSession: '远程助理会话',
+
+      agentCode: 'Code',
+
+      agentCowork: 'Cowork',
+
+      agentDefault: '默认',
+
+      searchSessions: '搜索会话...',
+
+      renameSession: '重命名?',
+
+      deleteSession: '删除',
+
+      confirmDelete: '确定删除此会话？',
+
+      confirmDeleteDesc: '此操作无法撤销。?',
+
+      renameTitle: '重命名会话',
+
+      sessionNamePlaceholder: '会话名称',
+
+      cancel: '取消',
+
+      save: '保存',
+
+      emptySearch: '没有匹配的会话。?',
+
+      deleted: '会话已删除?',
+
+      deleteFailed: '删除失败',
+
+      renameFailed: '重命名失败',
+
+      disconnect: '断开连接',
+
+      disconnectConfirm: '断开当前桌面连接？之后可重新配对。?',
+
+      reconnecting: '正在重新连接中....',
+
+      connectionUnpaired: '未连接?',
+
+      connectionChecking: '检测连接中...',
+
+      connectionConnected: '已连接?',
+
+      connectionUnreachable: '连接断开',
+
+      continueSession: '继续上次会话',
+
+    },
+
+    workspace: {
+
+      loadingInfo: '正在加载工作区信息...',
+
+      currentWorkspace: '当前工作区?',
+
+      unknownProject: '未知项目',
+
+      noWorkspaceOpen: '桌面端当前没有打开工作区。?',
+
+      noWorkspaceHint: '你可以在下方选择最近工作区，或先在桌面端打开一个工作区。?',
+
+      selectWorkspace: '选择工作区?',
+
+      recentWorkspaces: '最近工作区',
+
+      noRecentWorkspaces: '没有找到最近工作区，请先在桌面端打开一个工作区。?',
+
+      failedToSetWorkspace: '设置工作区失败?',
+
+      openingWorkspace: '正在打开工作区...',
+
+    },
+
+    chat: {
+
+      session: '会话',
+
+      loadingOlderMessages: '正在加载更早的消息...',
+
+      showResponse: 'Show response',
+
+      hideResponse: 'Hide response',
+
+      analyzingImage: '正在使用图像理解模型分析图片...',
+
+      inputPlaceholder: '有什么可以帮你...',
+
+      collapsedInputPlaceholder: '发消息...',
+
+      collapsedStreamingPlaceholder: '正在回复...',
+
+      messageQueued: '已加入队列，将在当前步骤结束后处理?',
+
+      imageAnalyzingPlaceholder: '正在分析图片...',
+
+      imageAttachmentFallback: '（见附带图片）?',
+
+      modelSelection: '选择模型',
+
+      modelAuto: 'Auto',
+
+      modelAutoDesc: '自动路由到最近合适的模型',
+
+      modelPrimary: 'Primary 模型',
+
+      modelFast: 'Fast 模型',
+
+      askQuestionCount: '{count} 项个问题{suffix}',
+
+      waiting: '等待中?',
+
+      modeAgentic: 'Agentic',
+
+      modePlan: 'Plan',
+
+      modeDebug: 'Debug',
+
+      thinking: '思考中...',
+
+      allTasksCompleted: '所有任务已完成',
+
+      task: '任务',
+
+      toolCalls: '{count} 项次工具调用{suffix}',
+
+      done: '已完成 {count}',
+
+      running: '运行中 {count}',
+
+      thoughtCharacters: '思考 {count} 个字符',
+
+      textCharacters: '文本 {count} 个字符',
+
+      readToolsDone: '{summary}',
+
+      readToolsRunning: '{summary}（已完成 {doneCount}）?',
+
+      fileLoading: '加载中...',
+
+      fileUnavailable: '文件不可用?',
+
+      fileDownloading: '下载中...',
+
+      fileDownloaded: '已下载?',
+
+      clickToDownload: '点击下载',
+
+      scrollToBottom: '滚动到底部?',
+
+      copyMessage: '复制文本',
+
+      resendMessage: '重新发送?',
+
+      deleteMessage: '删除',
+
+      messageCopied: '已复制?',
+
+      messageDeleted: '已删除?',
+
+      copyFailed: '复制失败',
+
+    },
+
+    tools: {
+
+      ls: '列表',
+
+      glob: 'Glob',
+
+      grep: 'Grep',
+
+      delete: '删除',
+
+      task: '任务',
+
+      web: '网络',
+
+    },
+
+  },
+
+  'zh-TW': {
+
+    shared: SHARED_TERMS_BY_LOCALE['zh-TW'],
+
+    common: {
+
+      back: '返回',
+
+      continue: '繼續',
+
+      cancel: '取消',
+
+      switch: '切換',
+
+      loading: '加載中...',
+
+      switchLanguage: '切換語言',
+
+      toggleTheme: '切換主題',
+
+      attachImage: '添加圖片',
+
+      stop: '停止',
+
+      submit: '提交',
+
+      submitting: '提交中...',
+
+      submitted: '已提交',
+
+      other: '其他',
+
+      customTextInput: '自定義輸入?',
+
+      typeYourAnswer: '請輸入你的回答...',
+
+      itemCount: '{count} 项',
+
+      justNow: '剛剛',
+
+      minutesAgo: '{count} 分鐘前?',
+
+      hoursAgo: '{count} 小時前?',
+
+      daysAgo: '{count} 项天前',
+
+    },
+
+    pairing: {
+
+      enterUserIdToContinue: '請輸入你的用戶 ID 繼續',
+
+      connectingAndPairing: '正在連接並配對...',
+
+      pairedLoadingSessions: '配對成功，正在加載會話...',
+
+      connectionError: '連接異常',
+
+      invalidQrCode: '二維碼無效：缺少 room 或 public key',
+
+      userIdRequired: '用戶 ID 不能為空',
+
+      tooManyAttempts: '失敗次數過多，請在 {seconds} 秒後重試。',
+
+      pairingFailed: '配對失敗',
+
+      fieldLabel: '用戶 ID',
+
+      placeholder: '請輸入用戶 ID',
+
+      note: '首次成功連接後，本次遠程會話會把該 URL 綁定到你的用戶 ID。',
+
+      connecting: '連接中...',
+
+      retryIn: '{seconds} 秒後重試',
+
+      continue: '繼續',
+
+    },
+
+    sessions: {
+
+      switchWorkspace: '切換工作區',
+
+      selectWorkspace: '選擇工作區',
+
+      noWorkspaces: '暫無工作區',
+
+      noWorkspaceSelected: '未選擇工作區',
+
+      assistant: '助理',
+
+      switchAssistant: '切換助理',
+
+      selectAssistant: '選擇助理',
+
+      launch: '啟動',
+
+      startRemoteFlow: '開始一個新的遠程流程?',
+
+      codeSessionDesc: '隨時隨地進行編碼。?',
+
+      coworkSessionDesc: '處理日常協作與辦公任務。?',
+
+      clawSession: '助理會話',
+
+      clawSessionDesc: '處理日常任務的個人助手。?',
+
+      recent: '最近?',
+
+      sessionHistory: '會話歷史',
+
+      loadingSessions: '正在加載會話...',
+
+      noSessions: '還沒有會話，先創建一個開始吧。?',
+
+      untitledSession: '未命名會話?',
+
+      loadingMore: '正在加載更多...',
+
+      remoteCodeSession: '遠程代碼會話',
+
+      remoteCoworkSession: '遠程協作會話',
+
+      remoteClawSession: '遠程助理會話',
+
+      agentCode: 'Code',
+
+      agentCowork: 'Cowork',
+
+      agentDefault: '默認',
+
+      searchSessions: '搜尋會話...',
+
+      renameSession: '重新命名',
+
+      deleteSession: '刪除',
+
+      confirmDelete: '確定刪除此會話？',
+
+      confirmDeleteDesc: '此操作無法復原。?',
+
+      renameTitle: '重新命名會話',
+
+      sessionNamePlaceholder: '會話名稱',
+
+      cancel: '取消',
+
+      save: '儲存',
+
+      emptySearch: '沒有匹配的會話。?',
+
+      deleted: '會話已刪除?',
+
+      deleteFailed: '刪除失敗',
+
+      renameFailed: '重新命名失敗',
+
+      disconnect: '斷開連接',
+
+      disconnectConfirm: '斷開當前桌面連接？之後可重新配對。?',
+
+      reconnecting: '正在重新連接中....',
+
+      connectionUnpaired: '未連接',
+
+      connectionChecking: '檢測連接中...',
+
+      connectionConnected: '已連接',
+
+      connectionUnreachable: '連接斷開',
+
+      continueSession: '繼續上次會話',
+
+    },
+
+    workspace: {
+
+      loadingInfo: '正在加載工作區信息...',
+
+      currentWorkspace: '當前工作區',
+
+      unknownProject: '未知項目',
+
+      noWorkspaceOpen: '桌面端當前沒有打開工作區。?',
+
+      noWorkspaceHint: '你可以在下方選擇最近工作區，或先在桌面端打開一個工作區。?',
+
+      selectWorkspace: '選擇工作區',
+
+      recentWorkspaces: '最近工作區',
+
+      noRecentWorkspaces: '沒有找到最近工作區，請先在桌面端打開一個工作區。?',
+
+      failedToSetWorkspace: '設置工作區失敗',
+
+      openingWorkspace: '正在打開工作區。...',
+
+    },
+
+    chat: {
+
+      session: '會話',
+
+      loadingOlderMessages: '正在加載更早的消息...',
+
+      showResponse: 'Show response',
+
+      hideResponse: 'Hide response',
+
+      analyzingImage: '正在使用圖像理解模型分析圖片...',
+
+      inputPlaceholder: '有什麼可以幫你...',
+
+      collapsedInputPlaceholder: '發消息...',
+
+      collapsedStreamingPlaceholder: '正在回覆...',
+
+      messageQueued: '已加入隊列，將在當前步驟結束後處理?',
+
+      imageAnalyzingPlaceholder: '正在分析圖片...',
+
+      imageAttachmentFallback: '（見附帶圖片）?',
+
+      modelSelection: '選擇模型',
+
+      modelAuto: 'Auto',
+
+      modelAutoDesc: '自動路由到最合適的模型',
+
+      modelPrimary: 'Primary 模型',
+
+      modelFast: 'Fast 模型',
+
+      askQuestionCount: '{count} 项個問題{suffix}',
+
+      waiting: '等待中?',
+
+      modeAgentic: 'Agentic',
+
+      modePlan: 'Plan',
+
+      modeDebug: 'Debug',
+
+      thinking: '思考中...',
+
+      allTasksCompleted: '所有任務已完成',
+
+      task: '任務',
+
+      toolCalls: '{count} 项次工具調用{suffix}',
+
+      done: '已完成 {count}',
+
+      running: '運行中 {count}',
+
+      thoughtCharacters: '思考 {count} 個字符',
+
+      textCharacters: '文本 {count} 個字符',
+
+      readToolsDone: '{summary}',
+
+      readToolsRunning: '{summary}（已完成 {doneCount}）?',
+
+      fileLoading: '加載中...',
+
+      fileUnavailable: '檔案不可用?',
+
+      fileDownloading: '下載中...',
+
+      fileDownloaded: '已下载?',
+
+      clickToDownload: '點擊下載',
+
+      scrollToBottom: '捲動到底部?',
+
+      copyMessage: '複製文本',
+
+      resendMessage: '重新傳送?',
+
+      deleteMessage: '刪除',
+
+      messageCopied: '已複製?',
+
+      messageDeleted: '已刪除?',
+
+      copyFailed: '複製失敗',
+
+    },
+
+    tools: {
+
+      ls: '列表',
+
+      glob: 'Glob',
+
+      grep: 'Grep',
+
+      delete: '刪除',
+
+      task: '任務',
+
+      web: '網絡',
+
+    },
+
+  }
+
+};
+

@@ -1,0 +1,22 @@
+[package]
+name = "northhing-tool-packs"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing concrete tool-pack owner crate"
+
+[lib]
+name = "northhing_tool_packs"
+crate-type = ["rlib"]
+
+[features]
+default = []
+basic = []
+git = []
+mcp = []
+browser-web = []
+computer-use = []
+image-analysis = []
+miniapp = []
+agent-control = []
+product-full = ["basic", "git", "mcp", "browser-web", "computer-use", "image-analysis", "miniapp", "agent-control"]

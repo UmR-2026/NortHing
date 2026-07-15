@@ -1,0 +1,336 @@
+// WorkspaceSettingsPanel — Phase 4 sub-panel for g5 Workspace management
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2
+// (WorkspaceSettingsPanel section), §6.1 (D4=b sidebar + settings switch),
+// §6.4 (D1 OS dialog via rfd), §6.5 (Q7=c broken workspace marker).
+//
+// Phase 4 is UI-only; the Rust side will wire callbacks to AppState in
+// Phase 5 (mirrors Phase 3 split).
+
+import { MaterialTheme, WorkspaceItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { AppStrings } from "../strings.slint";
+
+export component WorkspaceSettingsPanel inherits Rectangle {
+    background: MaterialTheme.current-background();
+
+    in property <[WorkspaceItem]> workspaces: [];
+    in property <int> current-workspace-index: -1;
+
+    // Form state for the "add workspace" flow.
+    // The user picks a path via OS dialog; this is the pending state
+    // before they confirm "立即选择" (set as current) or "只添加不切换".
+    in-out property <bool> add-form-visible: false;
+    in-out property <string> form-path: "";
+    in-out property <string> form-display-name: "";
+
+    // Confirmation dialog for remove (Q7=c: removing a workspace affects
+    // sessions in that workspace — they get the broken marker).
+    in-out property <bool> confirm-remove-visible: false;
+    in-out property <string> confirm-remove-id: "";
+    in-out property <string> confirm-remove-name: "";
+    in-out property <int> confirm-remove-affected-sessions: 0;
+
+    // Callbacks fired when the Slint UI needs the Rust side to do work.
+    // Names match `spec §5.8 Pattern 2`.
+    callback pick-folder();                       // D1: opens rfd::FileDialog
+    callback add-workspace(string, string, bool); // (path, display_name, set_as_current)
+    callback switch-workspace(string);           // path string used as id
+    callback remove-workspace(string);           // path
+    callback edit-identity-md(string);           // path → opens IdentityCreatorView for that workspace
+    callback open-identity-creator();            // current workspace → IdentityCreatorView
+
+    VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: MaterialTheme.spacing-lg;
+        spacing: MaterialTheme.spacing-md;
+
+        // Header: title + add button.
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+
+            Text {
+                text: AppStrings.workspace-add;
+                font-size: MaterialTheme.font-size-title;
+                color: MaterialTheme.current-on-surface();
+                vertical-alignment: center;
+            }
+
+            add-button := MaterialButton {
+                text: root.workspaces.length == 0 ? AppStrings.workspace-add : "+";
+                clicked => {
+                    root.add-form-visible = true;
+                    root.form-path = "";
+                    root.form-display-name = "";
+                    root.pick-folder();
+                }
+            }
+        }
+
+        // Identity creator entry (per D3: "为当前 workspace 创建/更新 IDENTITY.md")
+        if root.current-workspace-index >= 0: HorizontalLayout {
+            height: 40px;
+            spacing: MaterialTheme.spacing-sm;
+
+            identity-button := MaterialButton {
+                text: AppStrings.workspace-create-identity;
+                clicked => { root.open-identity-creator(); }
+            }
+        }
+
+        // Workspace list (Flickable for scroll).
+        Flickable {
+            vertical-stretch: 1;
+            width: parent.width;
+            viewport-height: parent.height;
+
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                // Empty state.
+                if root.workspaces.length == 0 && !root.add-form-visible: Rectangle {
+                    height: 120px;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+
+                    Text {
+                        text: AppStrings.workspace-empty;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.7;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                    }
+                }
+
+                for workspace[idx] in workspaces: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        width: parent.width;
+
+                        // Title row: display name + current marker
+                        HorizontalLayout {
+                            height: 28px;
+                            spacing: MaterialTheme.spacing-sm;
+                            width: parent.width;
+
+                            Text {
+                                text: workspace.display-name == "" ? workspace.path : workspace.display-name;
+                                font-size: MaterialTheme.font-size-body;
+                                color: MaterialTheme.current-on-surface();
+                                font-weight: 600;
+                                vertical-alignment: center;
+                                horizontal-alignment: left;
+                                width: parent.width - 200px;
+                            }
+
+                            if workspace.is-current: Text {
+                                text: AppStrings.workspace-current-marker;
+                                font-size: MaterialTheme.font-size-caption;
+                                color: MaterialTheme.current-primary();
+                                font-weight: 600;
+                                vertical-alignment: center;
+                                width: 60px;
+                            }
+                        }
+
+                        // Path row (small, gray)
+                        Text {
+                            text: workspace.path;
+                            font-size: MaterialTheme.font-size-caption;
+                            color: MaterialTheme.current-on-surface();
+                            opacity: 0.6;
+                            horizontal-alignment: left;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+
+                        // IDENTITY.md status row
+                        Text {
+                            text: workspace.identity-md-exists
+                                ? "IDENTITY.md: ✓"
+                                : "IDENTITY.md: (未创建)";
+                            font-size: MaterialTheme.font-size-caption;
+                            color: workspace.identity-md-exists
+                                ? MaterialTheme.current-primary()
+                                : MaterialTheme.current-on-surface();
+                            opacity: workspace.identity-md-exists ? 1.0 : 0.5;
+                            horizontal-alignment: left;
+                        }
+
+                        // Action row
+                        HorizontalLayout {
+                            height: 36px;
+                            spacing: MaterialTheme.spacing-sm;
+                            width: parent.width;
+
+                            if !workspace.is-current: MaterialButton {
+                                text: AppStrings.workspace-switch;
+                                clicked => { root.switch-workspace(workspace.id); }
+                            }
+
+                            MaterialButton {
+                                text: "IDENTITY.md";
+                                clicked => { root.edit-identity-md(workspace.id); }
+                            }
+
+                            MaterialButton {
+                                text: AppStrings.provider-delete;
+                                clicked => {
+                                    root.confirm-remove-id = workspace.id;
+                                    root.confirm-remove-name = workspace.display-name == "" ? workspace.path : workspace.display-name;
+                                    root.confirm-remove-visible = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ===== Add workspace form (D1 OS dialog flow) =====
+                if root.add-form-visible: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-sm;
+                        width: parent.width;
+
+                        Text {
+                            text: AppStrings.workspace-add;
+                            font-size: MaterialTheme.font-size-body;
+                            color: MaterialTheme.current-on-surface();
+                            font-weight: 600;
+                        }
+
+                        // Picked path display
+                        Text {
+                            text: root.form-path == "" ? "(未选择文件夹)" : root.form-path;
+                            font-size: MaterialTheme.font-size-caption;
+                            color: root.form-path == ""
+                                ? MaterialTheme.current-on-surface()
+                                : MaterialTheme.current-primary();
+                            opacity: root.form-path == "" ? 0.5 : 1.0;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+
+                        // Re-pick button (in case they want to change)
+                        MaterialButton {
+                            text: "重新选择";
+                            width: 120px;
+                            clicked => { root.pick-folder(); }
+                        }
+
+                        // Display name (optional, defaults to folder name)
+                        // Slint 1.16 has no top-level func, so we show the
+                        // path's basename via a hint text; user can override.
+                        Text {
+                            text: "(显示名称可留空，默认使用文件夹名)";
+                            font-size: MaterialTheme.font-size-caption;
+                            color: MaterialTheme.current-on-surface();
+                            opacity: 0.5;
+                        }
+
+                        // Action row: "立即选择" (set as current) + "只添加不切换" + cancel
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            height: 40px;
+                            width: parent.width;
+
+                            select-btn := MaterialButton {
+                                text: "立即选择";
+                                disabled: root.form-path == "";
+                                clicked => {
+                                    root.add-workspace(root.form-path, root.form-display-name, true);
+                                    root.add-form-visible = false;
+                                }
+                            }
+
+                            add-only-btn := MaterialButton {
+                                text: "只添加不切换";
+                                disabled: root.form-path == "";
+                                clicked => {
+                                    root.add-workspace(root.form-path, root.form-display-name, false);
+                                    root.add-form-visible = false;
+                                }
+                            }
+
+                            cancel-btn-add := MaterialButton {
+                                text: AppStrings.cancel;
+                                clicked => { root.add-form-visible = false; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ===== Confirmation dialog for remove (Q7=c) =====
+    // Rendered as an overlay Rectangle on top of the main content.
+    if root.confirm-remove-visible: Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: #00000080;
+
+        Rectangle {
+            x: (parent.width - 400px) / 2;
+            y: (parent.height - 200px) / 2;
+            width: 400px;
+            height: 200px;
+            background: MaterialTheme.current-surface();
+            border-radius: 8px;
+            padding: MaterialTheme.spacing-lg;
+
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-md;
+                width: parent.width;
+                height: parent.height;
+
+                Text {
+                    text: AppStrings.workspace-remove-confirm-title;
+                    font-size: MaterialTheme.font-size-title;
+                    color: MaterialTheme.current-on-surface();
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: "将影响 " + root.confirm-remove-affected-sessions + " 个会话（这些会话将标记为工作文件夹已移除）。";
+                    font-size: MaterialTheme.font-size-body;
+                    color: MaterialTheme.current-on-surface();
+                    wrap: word-wrap;
+                    width: parent.width;
+                }
+
+                HorizontalLayout {
+                    spacing: MaterialTheme.spacing-sm;
+                    height: 40px;
+                    width: parent.width;
+
+                    confirm-btn := MaterialButton {
+                        text: AppStrings.workspace-confirm-yes;
+                        clicked => {
+                            root.remove-workspace(root.confirm-remove-id);
+                            root.confirm-remove-visible = false;
+                        }
+                    }
+
+                    cancel-btn-confirm := MaterialButton {
+                        text: AppStrings.workspace-confirm-no;
+                        clicked => { root.confirm-remove-visible = false; }
+                    }
+                }
+            }
+        }
+    }
+}

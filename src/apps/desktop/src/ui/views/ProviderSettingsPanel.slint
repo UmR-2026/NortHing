@@ -1,0 +1,461 @@
+// ProviderSettingsPanel — Phase 3 sub-panel for g1 Provider CRUD
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
+// §6.5 (C-i inline expansion, C-iii loading state, C-iv empty state).
+
+import { MaterialTheme, ProviderItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { AppStrings } from "../strings.slint";
+
+// Type options for the provider dropdown (C-ii).
+// Display labels mirror `ProviderType::display_label()` in Rust.
+struct ProviderTypeOption {
+    value: string,   // serde tag: anthropic / openai / gemini / custom-openai / custom-anthropic
+    label: string,
+}
+
+export component ProviderSettingsPanel inherits Rectangle {
+    background: MaterialTheme.current-background();
+
+    in property <[ProviderItem]> providers: [];
+    in property <string> default-model-provider-id: "";
+
+    // Phase 4+ will populate this from the workspace's IDENTITY.md +
+    // builtin_skills discovery. For Phase 3 it's a placeholder.
+    in property <[string]> builtin-skills: [];
+
+    // Form state (C-i: inline expansion at the bottom of the list).
+    in-out property <bool> add-form-visible: false;
+    in-out property <string> form-name: "";
+    in-out property <string> form-type: "anthropic";
+    in-out property <string> form-base-url: "https://api.anthropic.com";
+    in-out property <string> form-api-key: "";
+    in-out property <string> form-model: "claude-sonnet-4-5";
+    in-out property <bool> form-enabled: true;
+    in-out property <bool> form-test-in-flight: false;
+    in-out property <string> form-test-result: "";   // empty | "ok" | "fail:..."
+
+    // Legacy placeholder cleanup (Q1=a)
+    in property <int> legacy-placeholder-count: 0;
+    in-out property <bool> legacy-banner-dismissed: false;
+
+    // Callbacks fired when the Slint UI needs the Rust side to do work.
+    // Names match `spec §5.8 Pattern 2`.
+    callback upsert-provider(string, string, string, string, string, string, bool);
+        // (id-or-empty, name, type, base_url, api_key, model, enabled)
+        // — empty id means "create new"; non-empty means "update existing"
+    callback delete-provider(string);
+    callback test-provider(string);
+    callback set-default-model(string);
+    callback cleanup-legacy-placeholders();
+
+    VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: MaterialTheme.spacing-lg;
+        spacing: MaterialTheme.spacing-md;
+
+        // Header: title + add button.
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+
+            Text {
+                text: AppStrings.provider-add;
+                font-size: MaterialTheme.font-size-title;
+                color: MaterialTheme.current-on-surface();
+                vertical-alignment: center;
+            }
+
+            add-button := MaterialButton {
+                text: root.providers.length == 0 ? AppStrings.provider-add : "+";
+                clicked => {
+                    root.add-form-visible = true;
+                    root.form-name = "";
+                    root.form-type = "anthropic";
+                    root.form-base-url = "https://api.anthropic.com";
+                    root.form-api-key = "";
+                    root.form-model = "claude-sonnet-4-5";
+                    root.form-enabled = true;
+                    root.form-test-result = "";
+                }
+            }
+        }
+
+        // Q1=a: legacy placeholder banner.
+        if root.legacy-placeholder-count > 0 && !root.legacy-banner-dismissed: Rectangle {
+            height: 56px;
+            background: MaterialTheme.current-primary().with-alpha(0.12);
+            border-radius: 4px;
+            padding: MaterialTheme.spacing-sm;
+
+            HorizontalLayout {
+                spacing: MaterialTheme.spacing-sm;
+
+                Text {
+                    text: AppStrings.provider-cleanup-legacy-banner + " (n=" + root.legacy-placeholder-count + ")";
+                    color: MaterialTheme.current-on-surface();
+                    font-size: MaterialTheme.font-size-body;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                    width: parent.width - 200px;
+                    wrap: word-wrap;
+                }
+
+                cleanup-button := MaterialButton {
+                    text: AppStrings.provider-cleanup-legacy-button;
+                    clicked => { root.cleanup-legacy-placeholders(); }
+                }
+
+                dismiss-button := MaterialButton {
+                    text: "×";
+                    width: 32px;
+                    clicked => { root.legacy-banner-dismissed = true; }
+                }
+            }
+        }
+
+        // Provider list (Flickable for scroll).
+        Flickable {
+            vertical-stretch: 1;
+            width: parent.width;
+            viewport-height: parent.height;
+
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                if root.providers.length == 0 && !root.add-form-visible: Rectangle {
+                    height: 120px;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+
+                    Text {
+                        text: AppStrings.provider-empty;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.7;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                    }
+                }
+
+                for provider in providers: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+                    height: 64px;
+
+                    HorizontalLayout {
+                        spacing: MaterialTheme.spacing-md;
+                        width: parent.width;
+
+                        verified-marker := Text {
+                            text: provider.verified == "fail" ? "⚠️"
+                                : provider.verified == "ok" ? "✓"
+                                : "";
+                            color: provider.verified == "fail" ? MaterialTheme.error
+                                : MaterialTheme.current-primary();
+                            font-size: MaterialTheme.font-size-title;
+                            vertical-alignment: center;
+                            width: 24px;
+                        }
+
+                        info-box := VerticalLayout {
+                            width: parent.width - 320px;
+                            spacing: MaterialTheme.spacing-xs;
+
+                            Text {
+                                text: provider.name + (provider.enabled ? "" : " (已禁用)");
+                                font-size: MaterialTheme.font-size-body;
+                                color: MaterialTheme.current-on-surface();
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: provider.type + " · " + provider.model;
+                                font-size: MaterialTheme.font-size-caption;
+                                color: MaterialTheme.current-on-surface();
+                                opacity: 0.7;
+                            }
+                        }
+
+                        test-button := MaterialButton {
+                            text: AppStrings.provider-test-button;
+                            clicked => { root.test-provider(provider.id); }
+                        }
+
+                        delete-button := MaterialButton {
+                            text: AppStrings.provider-delete;
+                            clicked => { root.delete-provider(provider.id); }
+                        }
+                    }
+                }
+
+                // ===== Add / edit form (inline expansion at bottom) =====
+                if root.add-form-visible: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-sm;
+                        width: parent.width;
+
+                        Text {
+                            text: root.form-name == "" ? AppStrings.provider-add : AppStrings.provider-edit;
+                            font-size: MaterialTheme.font-size-body;
+                            color: MaterialTheme.current-on-surface();
+                            font-weight: 600;
+                        }
+
+                        // Name
+                        MaterialTextField {
+                            placeholder: AppStrings.provider-name-label;
+                            text <=> root.form-name;
+                            width: parent.width;
+                        }
+
+                        // Type dropdown
+                        // Note: Slint 1.16 has ComboBox but it's basic.
+                        // For simplicity we use a horizontal button group.
+                        HorizontalLayout {
+                            height: 40px;
+                            spacing: MaterialTheme.spacing-xs;
+
+                            for opt in [
+                                { value: "anthropic", label: "Anthropic" },
+                                { value: "openai", label: "OpenAI" },
+                                { value: "gemini", label: "Gemini" },
+                                { value: "custom-openai", label: AppStrings.mcp-transport-stdio },  // reusing stdio label slot for type label row
+                                { value: "custom-anthropic", label: "Anthropic 兼容" }
+                            ]: Rectangle {
+                                height: 36px;
+                                width: 120px;
+                                padding: MaterialTheme.spacing-sm;
+                                background: opt.value == root.form-type
+                                    ? MaterialTheme.current-primary()
+                                    : MaterialTheme.current-surface();
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => {
+                                        root.form-type = opt.value;
+                                        // Auto-fill base_url + default model per C-ii.
+                                        if opt.value == "anthropic" {
+                                            root.form-base-url = "https://api.anthropic.com";
+                                            root.form-model = "claude-sonnet-4-5";
+                                        }
+                                        if opt.value == "openai" {
+                                            root.form-base-url = "https://api.openai.com/v1";
+                                            root.form-model = "gpt-4o";
+                                        }
+                                        if opt.value == "gemini" {
+                                            root.form-base-url = "https://generativelanguage.googleapis.com/v1beta";
+                                            root.form-model = "gemini-2.0-flash";
+                                        }
+                                        if opt.value == "custom-openai" {
+                                            root.form-base-url = "";
+                                            root.form-model = "";
+                                        }
+                                        if opt.value == "custom-anthropic" {
+                                            root.form-base-url = "";
+                                            root.form-model = "";
+                                        }
+                                    }
+                                }
+                                Text {
+                                    text: opt.label;
+                                    color: opt.value == root.form-type
+                                        ? MaterialTheme.on-primary
+                                        : MaterialTheme.current-on-surface();
+                                    font-size: MaterialTheme.font-size-caption;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                }
+                            }
+                        }
+
+                        // Base URL
+                        MaterialTextField {
+                            placeholder: AppStrings.provider-base-url-label;
+                            text <=> root.form-base-url;
+                            width: parent.width;
+                        }
+
+                        // API key (E2 password mode)
+                        MaterialTextField {
+                            placeholder: AppStrings.provider-api-key-label;
+                            text <=> root.form-api-key;
+                            password: true;
+                            width: parent.width;
+                        }
+
+                        // Model (B4=c: dropdown + custom input)
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            width: parent.width;
+
+                            model-input := MaterialTextField {
+                                placeholder: AppStrings.provider-model-label;
+                                text <=> root.form-model;
+                                width: parent.width - 200px;
+                            }
+
+                            // Quick-fill buttons for common models.
+                            // Slint 1.16 doesn't support top-level `func`, so the
+                            // options array is built inline via a nested conditional
+                            // returning different model strings.
+                            for model-opt in root.form-type == "anthropic" ?
+                                    ["claude-sonnet-4-5", "claude-opus-4", "claude-haiku-4"]
+                                : root.form-type == "openai" ?
+                                    ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+                                : root.form-type == "gemini" ?
+                                    ["gemini-2.0-flash", "gemini-1.5-pro"]
+                                : []: Rectangle {
+                                height: 36px;
+                                width: 100px;
+                                padding: MaterialTheme.spacing-xs;
+                                background: MaterialTheme.current-surface();
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => { root.form-model = model-opt; }
+                                }
+                                Text {
+                                    text: model-opt;
+                                    color: MaterialTheme.current-on-surface();
+                                    font-size: MaterialTheme.font-size-caption;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                }
+                            }
+                        }
+
+                        // Enabled toggle (B4)
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            height: 36px;
+
+                            enabled-toggle := Rectangle {
+                                width: 48px;
+                                height: 24px;
+                                border-radius: 12px;
+                                background: root.form-enabled ? MaterialTheme.current-primary() : MaterialTheme.current-surface();
+
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => { root.form-enabled = !root.form-enabled; }
+                                }
+
+                                indicator := Rectangle {
+                                    x: root.form-enabled ? 24px : 0px;
+                                    width: 24px;
+                                    height: 24px;
+                                    border-radius: 12px;
+                                    background: MaterialTheme.current-background();
+                                }
+                            }
+
+                            Text {
+                                text: AppStrings.provider-enabled-label;
+                                color: MaterialTheme.current-on-surface();
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // Test result (if any)
+                        if root.form-test-result != "": Text {
+                            text: root.form-test-result == "ok" ? AppStrings.provider-test-success
+                                : AppStrings.provider-test-failed-saved + " " + root.form-test-result;
+                            color: root.form-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
+                            font-size: MaterialTheme.font-size-caption;
+                        }
+
+                        // Action row: test + save + cancel
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            height: 40px;
+
+                            test-btn := MaterialButton {
+                                text: root.form-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
+                                disabled: root.form-test-in-flight;
+                                clicked => {
+                                    // Save first (so the test runs against persisted config),
+                                    // then run the test. The Rust side calls test_provider
+                                    // callback for the second half and updates form-test-result.
+                                    root.upsert-provider("", root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                                    // Note: in a fuller impl we'd first save, then refetch the
+                                    // new id, then call test-provider. For Phase 3 we ask the
+                                    // Rust side to do both in upsert-provider when id is empty.
+                                }
+                            }
+
+                            save-btn := MaterialButton {
+                                text: AppStrings.save;
+                                clicked => {
+                                    root.upsert-provider("", root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                                    root.add-form-visible = false;
+                                }
+                            }
+
+                            cancel-btn := MaterialButton {
+                                text: AppStrings.cancel;
+                                clicked => { root.add-form-visible = false; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Default model selector at the bottom (B5=b).
+        HorizontalLayout {
+            height: 48px;
+            spacing: MaterialTheme.spacing-sm;
+
+            Text {
+                text: AppStrings.provider-default-model-label;
+                font-size: MaterialTheme.font-size-body;
+                color: MaterialTheme.current-on-surface();
+                vertical-alignment: center;
+                width: 200px;
+            }
+
+            default-pick := Rectangle {
+                width: parent.width - 200px;
+                height: 36px;
+                padding: MaterialTheme.spacing-sm;
+                background: MaterialTheme.current-surface();
+                border-radius: 4px;
+
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        if root.providers.length > 0 {
+                            root.set-default-model(root.providers[0].id);
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.default-model-provider-id == "" ? "(未设置)" : root.default-model-provider_id;
+                    color: MaterialTheme.current-on-surface();
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                    font-size: MaterialTheme.font-size-body;
+                    width: parent.width;
+                }
+            }
+        }
+    }
+}
+
+// Top-level `func` removed — Slint 1.16 only allows them inside
+// component bodies. The model options are computed inline at the
+// `for` loop site above.

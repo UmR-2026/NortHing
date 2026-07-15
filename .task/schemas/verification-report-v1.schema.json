@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northhing.dev/schemas/verification-report-v1.json",
+  "title": "LAEP Verification Report",
+  "description": "Lightweight Agent Execution Protocol - Testing Model Output",
+  "type": "object",
+  "required": ["schema_version", "task", "timestamp", "status", "checks", "recommendation"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Protocol version"
+    },
+    "task": {
+      "type": "string",
+      "description": "Task name from Taskfile"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "BLOCKED"],
+      "description": "Overall verification status"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["check", "status"],
+        "properties": {
+          "check": {
+            "type": "string",
+            "enum": ["compile", "test", "boundary", "lint", "format"],
+            "description": "Type of check"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command executed"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "SKIP"],
+            "description": "Check result"
+          },
+          "warnings": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of warnings"
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of errors"
+          },
+          "tests_run": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tests run (for test check)"
+          },
+          "tests_passed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tests passed"
+          },
+          "tests_failed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tests failed"
+          },
+          "no_touch_violations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Boundary violations (for boundary check)"
+          },
+          "can_modify_compliance": {
+            "type": "boolean",
+            "description": "Whether all modified files are in can_modify list"
+          },
+          "details": {
+            "type": "string",
+            "description": "Additional details"
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": ["READY_FOR_REVIEW", "NEEDS_FIX", "NEEDS_HUMAN"],
+      "description": "Recommended next action"
+    }
+  }
+}

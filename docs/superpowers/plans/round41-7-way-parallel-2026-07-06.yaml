@@ -1,0 +1,284 @@
+version: 1
+plan:
+  name: round41-4-way-parallel-big-zone-p1-2026-07-06
+  max_concurrency: 4
+  max_consecutive_failures: 2
+  max_cycles: 1
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r41a-core-bash-tool-split
+    title: >-
+      R41a: agentic/tools/implementations/bash_tool.rs 1630 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41a: bash_tool.rs god-split (R5 教训: bash tool implementation, BashTool struct + multiple impl blocks)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs (1630 lines)
+      Worktree: E:/agent-project/northing-impl-r41a-core-bash-tool (branch
+      impl/r41a-core-bash-tool-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules (R40 lessons, all mandatory)
+      1. **0 `_lost_methods.rs` placeholder** — every method must be assigned to a sub-domain sibling
+      2. **0 `part1.rs`/`part2.rs` mechanical naming** — use sub-domain names (init/state/dispatch/types/helpers/lifecycle/...)
+      3. mod.rs ≤ 600 lines: only `mod sibling;` + `pub use super::*;` re-export + necessary struct definition
+      4. Each sibling ≤ 800 lines
+      5. Fields `pub(super)` for cross-sibling struct field access
+      6. Wildcard re-export: `pub use super::*;` in mod.rs
+      7. encoding: write .rs with Edit tool, NOT PowerShell Out-File/Set-Content
+      8. pre-commit encoding verify: `py -c "raw=open(f,'rb').read(); assert raw[:3]!=b'\\xef\\xbb\\xbf', f; assert b'\\r\\n' not in raw, f"` on all staged .rs
+
+      ## Shared iron rules (R5-R39)
+      - 0 NEW unwrap()/panic!/unreachable! (pre-existing OK)
+      - 0 NEW CRLF/BOM
+      - 0 Cargo.lock drift (no `cargo update`, only `cargo check`)
+      - 0 NEW cargo fmt diff (commit pre-check: `cargo fmt -p <crate> -- --check` must be empty)
+      - 0 cross-crate module reference (preserve all `pub use` re-export paths)
+      - `cargo test -p <crate> --lib` no regression (pass count >= baseline)
+      - Long line cap: ≤120 chars; 0 NEW per file (R18+ tolerance ≤5/file, producer must document)
+      - 1 atomic commit per task (no WIP commits)
+
+      ## Sub-domain split
+      1. `git show HEAD:<file>` to see original struct + impl schema (R31 lesson: don't infer from consumer)
+      2. `rg -n '^(impl|pub struct|pub enum|pub trait) '` to find sub-domain boundaries
+      3. Design facade + 4-6 sibling (sub-domain naming, NOT part1/N)
+      4. Suggested sub-domains for bash tool: `command_parse.rs` / `command_exec.rs` / `output_format.rs` / `safety_check.rs` / `bash_types.rs`
+      5. `git grep 'bash_tool\|BashTool' -- ':!<file>'` to find cross-crate consumer
+
+      ## Cross-crate consumer
+      `git grep 'bash_tool\|BashTool' -- ':!src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs'`
+      For each consumer crate: `cargo check -p <consumer> --message-format=short`
+
+      ## PREFLIGHT
+      ```
+      $p = "src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "bash_tool.rs canonical wc-l = $wc (expected 1630)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee-Object baseline.log
+      $baselineErrors = (Select-String -Path baseline.log -Pattern "error\[" | Measure-Object).Count
+      Write-Host "BASELINE_ERRORS=$baselineErrors (expected 0)"
+      ```
+      If BASELINE_ERRORS != 0, stop and report.
+
+      ## Implementation + Commit + Self-report
+      Same as R40a. Commit:
+      `refactor(core): R41a split bash_tool.rs 1630 -> facade + N sibling`
+
+      ## Mavis take-over signal
+      - 30 min no commit → Mavis takes over
+      - Mavis `mavis communication send` abort → stop immediately
+
+      ## 工作环境
+      - PowerShell 5.1, no bash chain
+      - Write .rs with Edit tool (auto UTF-8)
+      - line count: `[System.IO.File]::ReadAllLines($p, [System.Text.Encoding]::UTF8).Count`, NOT `Measure-Object -Line`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41b-core-tool-pipeline-split
+    title: >-
+      R41b: agentic/tools/pipeline/tool_pipeline.rs 1628 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41b: tool_pipeline.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs (1628 lines)
+      Worktree: E:/agent-project/northing-impl-r41b-core-tool-pipeline (branch
+      impl/r41b-core-tool-pipeline-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a (0 _lost_methods, 0 part1/N, mod.rs ≤ 600, sibling ≤ 800, etc.)
+
+      ## Sub-domain split
+      Suggested: `pipeline_dispatch.rs` / `pipeline_state.rs` / `pipeline_types.rs` / `pipeline_helpers.rs`
+      `git grep 'tool_pipeline\|ToolPipeline' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41b split tool_pipeline.rs 1628 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41c-core-git-tool-split
+    title: >-
+      R41c: agentic/tools/implementations/git_tool.rs 1590 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41c: git_tool.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/implementations/git_tool.rs (1590 lines)
+      Worktree: E:/agent-project/northing-impl-r41c-core-git-tool (branch
+      impl/r41c-core-git-tool-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a.
+
+      ## Sub-domain split
+      Suggested: `git_command.rs` / `git_status.rs` / `git_diff.rs` / `git_log.rs` / `git_types.rs`
+      `git grep 'git_tool\|GitTool' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41c split git_tool.rs 1590 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41d-core-coordination-scheduler-split
+    title: >-
+      R41d: agentic/coordination/scheduler.rs 1526 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41d: scheduler.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/coordination/scheduler.rs (1526 lines)
+      Worktree: E:/agent-project/northing-impl-r41d-core-coordination-scheduler (branch
+      impl/r41d-core-coordination-scheduler-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a.
+
+      ## Sub-domain split
+      Suggested: `scheduler_queue.rs` / `scheduler_dispatch.rs` / `scheduler_state.rs` / `scheduler_types.rs`
+      `git grep 'coordination::scheduler\|CoordinationScheduler' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41d split coordination/scheduler.rs 1526 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41e-core-tool-context-runtime-split
+    title: >-
+      R41e: agentic/tools/tool_context_runtime.rs 1447 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41e: tool_context_runtime.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/tool_context_runtime.rs (1447 lines)
+      Worktree: E:/agent-project/northing-impl-r41e-core-tool-context-runtime (branch
+      impl/r41e-core-tool-context-runtime-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a.
+
+      ## Sub-domain split
+      Suggested based on file structure: `context_init.rs` / `context_state.rs` / `context_invoke.rs` / `context_types.rs` / `context_helpers.rs`
+      `git grep 'tool_context_runtime\|ToolContextRuntime\|ToolUseContext' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41e split tool_context_runtime.rs 1447 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41f-core-code-review-tool-split
+    title: >-
+      R41f: agentic/tools/implementations/code_review_tool.rs 1422 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41f: code_review_tool.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/implementations/code_review_tool.rs (1422 lines)
+      Worktree: E:/agent-project/northing-impl-r41f-core-code-review-tool (branch
+      impl/r41f-core-code-review-tool-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a.
+
+      ## Sub-domain split
+      Suggested: `review_parse.rs` / `review_diff.rs` / `review_lint.rs` / `review_report.rs` / `review_types.rs`
+      `git grep 'code_review_tool\|CodeReviewTool' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41f split code_review_tool.rs 1422 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r41g-core-lsp-workspace-manager-split
+    title: >-
+      R41g: service/lsp/workspace_manager.rs 1415 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R41g: lsp/workspace_manager.rs god-split (R27b workspace manager pattern)
+
+      ## Target:
+      src/crates/assembly/core/src/service/lsp/workspace_manager.rs (1415 lines)
+      Worktree: E:/agent-project/northing-impl-r41g-core-lsp-workspace-manager (branch
+      impl/r41g-core-lsp-workspace-manager-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R41a.
+
+      ## Sub-domain split (mirror R27b pattern)
+      R27b `workspace/manager.rs` was split with this pattern: facade + lifecycle + accessors + types.
+      Same applies here. Suggested: `lsp_workspace_init.rs` / `lsp_workspace_state.rs` / `lsp_workspace_query.rs` / `lsp_workspace_types.rs`
+      `git grep 'lsp::workspace_manager\|LspWorkspaceManager' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Same as R41a. Commit:
+      `refactor(core): R41g split lsp/workspace_manager.rs 1415 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed

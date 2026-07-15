@@ -1,0 +1,16 @@
+// Material Card Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialCard inherits Rectangle {
+    in property <length> card-padding: MaterialTheme.spacing-md;
+    
+    background: MaterialTheme.current-surface();
+    border-radius: 8px;
+    
+    drop-shadow-color: #00000030;
+    drop-shadow-blur: 4px;
+    drop-shadow-offset-y: 2px;
+    
+    @children
+}

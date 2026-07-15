@@ -1,0 +1,456 @@
+impl ChatView {
+    // ============ Info popup methods ============
+
+    pub fn show_info_popup(&mut self, message: String) {
+        self.info_popup = Some(message);
+        self.popups.popup_stack.push(PopupType::InfoPopup);
+    }
+
+    pub fn info_popup_visible(&self) -> bool {
+        self.info_popup.is_some()
+    }
+
+    pub fn dismiss_info_popup(&mut self) {
+        self.info_popup = None;
+    }
+
+    // reason: reshow_info_popup() kept for upcoming re-show UX (e.g. replay dismissed notification via keyboard shortcut)
+    #[allow(dead_code)]
+    pub fn reshow_info_popup(&mut self, message: String) {
+        self.info_popup = Some(message);
+    }
+
+    // ============ Command palette methods ============
+
+    pub fn show_command_palette(&mut self) {
+        self.command_palette.show();
+        self.popups.popup_stack.push(PopupType::CommandPalette);
+    }
+
+    pub fn hide_command_palette(&mut self) {
+        self.command_palette.hide();
+    }
+
+    pub fn reshow_command_palette(&mut self) {
+        self.command_palette.show();
+    }
+
+    pub fn command_palette_visible(&self) -> bool {
+        self.command_palette.is_visible()
+    }
+
+    pub fn command_palette_handle_key(&mut self, key: crossterm::event::KeyEvent) -> PaletteAction {
+        self.command_palette.handle_key_event(key)
+    }
+
+    pub fn command_palette_handle_mouse(
+        &mut self,
+        mouse: &crossterm::event::MouseEvent,
+    ) -> PaletteAction {
+        self.command_palette.handle_mouse_event(mouse)
+    }
+
+    pub fn command_palette_captures_mouse(&self, mouse: &crossterm::event::MouseEvent) -> bool {
+        self.command_palette.captures_mouse(mouse)
+    }
+
+    // ============ Model selector methods ============
+
+    pub fn show_model_selector(
+        &mut self,
+        models: Vec<ModelItem>,
+        current_model_id: Option<String>,
+    ) {
+        self.popups.model_selector.show(models, current_model_id);
+        self.popups.popup_stack.push(PopupType::ModelSelector);
+    }
+
+    pub fn hide_model_selector(&mut self) {
+        self.popups.model_selector.hide();
+    }
+
+    pub fn reshow_model_selector(&mut self) {
+        self.popups.model_selector.reshow();
+    }
+
+    pub fn model_selector_visible(&self) -> bool {
+        self.popups.model_selector.is_visible()
+    }
+
+    pub fn model_selector_up(&mut self) {
+        self.popups.model_selector.move_up();
+    }
+
+    pub fn model_selector_down(&mut self) {
+        self.popups.model_selector.move_down();
+    }
+
+    pub fn model_selector_confirm(&self) -> Option<ModelItem> {
+        self.popups.model_selector.confirm_selection()
+    }
+
+    // ============ Theme selector methods ============
+
+    pub fn show_theme_selector(
+        &mut self,
+        themes: Vec<ThemeItem>,
+        current_theme_id: Option<String>,
+    ) {
+        self.popups.theme_selector.show(themes, current_theme_id);
+        self.popups.popup_stack.push(PopupType::ThemeSelector);
+    }
+
+    pub fn hide_theme_selector(&mut self) {
+        self.popups.theme_selector.hide();
+    }
+
+    pub fn reshow_theme_selector(&mut self) {
+        self.popups.theme_selector.reshow();
+    }
+
+    pub fn theme_selector_visible(&self) -> bool {
+        self.popups.theme_selector.is_visible()
+    }
+
+    pub fn theme_selector_up(&mut self) {
+        self.popups.theme_selector.move_up();
+    }
+
+    pub fn theme_selector_down(&mut self) {
+        self.popups.theme_selector.move_down();
+    }
+
+    pub fn theme_selector_confirm(&self) -> Option<ThemeItem> {
+        self.popups.theme_selector.confirm_selection()
+    }
+
+    pub fn theme_selector_selected(&self) -> Option<ThemeItem> {
+        self.popups.theme_selector.selected_item().cloned()
+    }
+
+    // ============ Agent selector methods ============
+
+    pub fn show_agent_selector(
+        &mut self,
+        agents: Vec<AgentItem>,
+        current_agent_id: Option<String>,
+    ) {
+        self.popups.agent_selector.show(agents, current_agent_id);
+        self.popups.popup_stack.push(PopupType::AgentSelector);
+    }
+
+    pub fn hide_agent_selector(&mut self) {
+        self.popups.agent_selector.hide();
+    }
+
+    pub fn reshow_agent_selector(&mut self) {
+        self.popups.agent_selector.reshow();
+    }
+
+    pub fn agent_selector_visible(&self) -> bool {
+        self.popups.agent_selector.is_visible()
+    }
+
+    pub fn agent_selector_up(&mut self) {
+        self.popups.agent_selector.move_up();
+    }
+
+    pub fn agent_selector_down(&mut self) {
+        self.popups.agent_selector.move_down();
+    }
+
+    pub fn agent_selector_confirm(&self) -> Option<AgentItem> {
+        self.popups.agent_selector.confirm_selection()
+    }
+
+    // ============ Skill selector methods ============
+
+    pub fn show_skill_menu(&mut self) {
+        self.popups.skill_selector.show_menu();
+        self.popups.popup_stack.push(PopupType::SkillSelector);
+    }
+
+    pub fn show_skill_list(&mut self, skills: Vec<SkillItem>) {
+        self.popups.skill_selector.show_list(skills);
+        self.popups.popup_stack.push(PopupType::SkillSelector);
+    }
+
+    pub fn show_skill_config(&mut self, skills: Vec<SkillItem>) {
+        self.popups.skill_selector.show_config(skills);
+        self.popups.popup_stack.push(PopupType::SkillSelector);
+    }
+
+    pub fn hide_skill_selector(&mut self) {
+        self.popups.skill_selector.hide();
+    }
+
+    pub fn reshow_skill_selector(&mut self) {
+        self.popups.skill_selector.reshow();
+    }
+
+    pub fn skill_selector_visible(&self) -> bool {
+        self.popups.skill_selector.is_visible()
+    }
+
+    pub fn skill_selector_up(&mut self) {
+        self.popups.skill_selector.move_up();
+    }
+
+    pub fn skill_selector_down(&mut self) {
+        self.popups.skill_selector.move_down();
+    }
+
+    pub fn skill_selector_confirm(&self) -> Option<SkillSelectorAction> {
+        self.popups.skill_selector.confirm_selection()
+    }
+
+    // ============ Subagent selector methods ============
+
+    pub fn show_subagent_menu(&mut self) {
+        self.popups.subagent_selector.show_menu();
+        self.popups.popup_stack.push(PopupType::SubagentSelector);
+    }
+
+    pub fn show_subagent_list(&mut self, subagents: Vec<SubagentItem>) {
+        self.popups.subagent_selector.show_list(subagents);
+        self.popups.popup_stack.push(PopupType::SubagentSelector);
+    }
+
+    pub fn show_subagent_config(&mut self, subagents: Vec<SubagentItem>) {
+        self.popups.subagent_selector.show_config(subagents);
+        self.popups.popup_stack.push(PopupType::SubagentSelector);
+    }
+
+    pub fn hide_subagent_selector(&mut self) {
+        self.popups.subagent_selector.hide();
+    }
+
+    pub fn reshow_subagent_selector(&mut self) {
+        self.popups.subagent_selector.reshow();
+    }
+
+    pub fn subagent_selector_visible(&self) -> bool {
+        self.popups.subagent_selector.is_visible()
+    }
+
+    pub fn subagent_selector_up(&mut self) {
+        self.popups.subagent_selector.move_up();
+    }
+
+    pub fn subagent_selector_down(&mut self) {
+        self.popups.subagent_selector.move_down();
+    }
+
+    pub fn subagent_selector_confirm(&self) -> Option<SubagentSelectorAction> {
+        self.popups.subagent_selector.confirm_selection()
+    }
+
+    // ============ MCP selector methods ============
+
+    pub fn show_mcp_selector(&mut self, items: Vec<McpItem>) {
+        self.popups.mcp_selector.show(items);
+        self.popups.popup_stack.push(PopupType::McpSelector);
+    }
+
+    pub fn hide_mcp_selector(&mut self) {
+        self.popups.mcp_selector.hide();
+    }
+
+    pub fn reshow_mcp_selector(&mut self) {
+        self.popups.mcp_selector.reshow();
+    }
+
+    pub fn mcp_selector_visible(&self) -> bool {
+        self.popups.mcp_selector.is_visible()
+    }
+
+    pub fn mcp_selector_up(&mut self) {
+        self.popups.mcp_selector.move_up();
+    }
+
+    pub fn mcp_selector_down(&mut self) {
+        self.popups.mcp_selector.move_down();
+    }
+
+    pub fn mcp_selector_confirm(&self) -> Option<McpItem> {
+        self.popups.mcp_selector.confirm_selection()
+    }
+
+    pub fn mcp_selector_set_loading(&mut self, id: Option<String>) {
+        self.popups.mcp_selector.loading_id = id;
+    }
+
+    pub fn mcp_selector_update_items(&mut self, items: Vec<McpItem>) {
+        self.popups.mcp_selector.update_items(items);
+    }
+
+    /// Take the pending MCP toggle (set by mouse click)
+    pub fn take_pending_mcp_toggle(&mut self) -> Option<String> {
+        self.mouse.pending_mcp_toggle.take()
+    }
+
+    pub fn mcp_selector_start_confirm_delete(&mut self, server_id: String) {
+        self.popups.mcp_selector.start_confirm_delete(server_id);
+    }
+
+    pub fn mcp_selector_cancel_confirm_delete(&mut self) {
+        self.popups.mcp_selector.cancel_confirm_delete();
+    }
+
+    pub fn mcp_selector_is_confirm_delete(&self, server_id: &str) -> bool {
+        self.popups.mcp_selector.is_confirm_delete(server_id)
+    }
+
+    // ============ MCP add dialog methods ============
+
+    pub fn show_mcp_add_dialog(&mut self) {
+        self.popups.mcp_add_dialog.show();
+        self.popups.popup_stack.push(PopupType::McpAddDialog);
+    }
+
+    pub fn mcp_add_dialog_visible(&self) -> bool {
+        self.popups.mcp_add_dialog.is_visible()
+    }
+
+    pub fn mcp_add_dialog_handle_key(&mut self, key: crossterm::event::KeyEvent) -> McpAddAction {
+        self.popups.mcp_add_dialog.handle_key_event(key)
+    }
+
+    pub fn mcp_add_dialog_handle_paste(&mut self, text: &str) {
+        self.popups.mcp_add_dialog.insert_text(text);
+    }
+
+    pub fn hide_mcp_add_dialog(&mut self) {
+        self.popups.mcp_add_dialog.hide();
+    }
+
+    pub fn reshow_mcp_add_dialog(&mut self) {
+        self.popups.mcp_add_dialog.show();
+    }
+
+    // ============ Session selector methods ============
+
+    pub fn show_session_selector(
+        &mut self,
+        sessions: Vec<SessionItem>,
+        current_session_id: Option<String>,
+    ) {
+        self.popups
+            .session_selector
+            .show(sessions, current_session_id);
+        self.popups.popup_stack.push(PopupType::SessionSelector);
+    }
+
+    pub fn session_selector_visible(&self) -> bool {
+        self.popups.session_selector.is_visible()
+    }
+
+    pub fn hide_session_selector(&mut self) {
+        self.popups.session_selector.hide();
+    }
+
+    pub fn reshow_session_selector(&mut self) {
+        self.popups.session_selector.reshow();
+    }
+
+    pub fn session_selector_handle_key(
+        &mut self,
+        key: crossterm::event::KeyEvent,
+    ) -> SessionAction {
+        self.popups.session_selector.handle_key_event(key)
+    }
+
+    pub fn session_selector_remove_item(&mut self, session_id: &str) {
+        self.popups.session_selector.remove_item(session_id);
+    }
+
+    // ============ Provider selector methods (add model step 1) ============
+
+    pub fn show_provider_selector(&mut self) {
+        self.popups.provider_selector.show();
+        self.popups.popup_stack.push(PopupType::ProviderSelector);
+    }
+
+    pub fn provider_selector_visible(&self) -> bool {
+        self.popups.provider_selector.is_visible()
+    }
+
+    pub fn hide_provider_selector(&mut self) {
+        self.popups.provider_selector.hide();
+    }
+
+    pub fn reshow_provider_selector(&mut self) {
+        self.popups.provider_selector.show();
+    }
+
+    pub fn provider_selector_handle_key(
+        &mut self,
+        key: crossterm::event::KeyEvent,
+    ) -> Option<ProviderSelection> {
+        self.popups.provider_selector.handle_key_event(key)
+    }
+
+    pub fn provider_selector_handle_mouse(
+        &mut self,
+        mouse: &crossterm::event::MouseEvent,
+    ) -> Option<ProviderSelection> {
+        self.popups.provider_selector.handle_mouse_event(mouse)
+    }
+
+    pub fn provider_selector_captures_mouse(&self, mouse: &crossterm::event::MouseEvent) -> bool {
+        self.popups.provider_selector.captures_mouse(mouse)
+    }
+
+    // ============ Model config form methods (add model step 2) ============
+
+    pub fn show_model_config_form_custom(&mut self) {
+        self.popups.model_config_form.show_custom();
+        self.popups.popup_stack.push(PopupType::ModelConfigForm);
+    }
+
+    pub fn show_model_config_form_from_provider(
+        &mut self,
+        provider_name: &str,
+        base_url: &str,
+        format: &str,
+        default_model: &str,
+    ) {
+        self.popups.model_config_form.show_from_provider(
+            provider_name,
+            base_url,
+            format,
+            default_model,
+        );
+        self.popups.popup_stack.push(PopupType::ModelConfigForm);
+    }
+
+    pub fn show_model_config_form_for_edit(
+        &mut self,
+        model_id: &str,
+        result: &super::model_config_form::ModelFormResult,
+    ) {
+        self.popups
+            .model_config_form
+            .show_for_edit(model_id, result);
+        self.popups.popup_stack.push(PopupType::ModelConfigForm);
+    }
+
+    pub fn model_config_form_visible(&self) -> bool {
+        self.popups.model_config_form.is_visible()
+    }
+
+    pub fn hide_model_config_form(&mut self) {
+        self.popups.model_config_form.hide();
+    }
+
+    pub fn reshow_model_config_form(&mut self) {
+        self.popups.model_config_form.reshow();
+    }
+
+    pub fn model_config_form_handle_key(
+        &mut self,
+        key: crossterm::event::KeyEvent,
+    ) -> ModelFormAction {
+        self.popups.model_config_form.handle_key_event(key)
+    }
+}

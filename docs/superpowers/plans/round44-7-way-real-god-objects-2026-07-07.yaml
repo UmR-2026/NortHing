@@ -1,0 +1,216 @@
+version: 1
+plan:
+  name: round44-7-way-parallel-real-god-objects-2026-07-07
+  max_concurrency: 7
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r44a-core-dialog-turn-mod-split
+    title: "R44a: agentic/coordination/dialog_turn/mod.rs 1219 -> facade + N sibling (M2.7, R43d SKIPPED) (northhing-core)"
+    prompt: |
+      # R44a: dialog_turn/mod.rs god-split (M2.7, R43d SKIPPED)
+      Target: src/crates/assembly/core/src/agentic/coordination/dialog_turn/mod.rs (1219 lines)
+      Worktree: E:/agent-project/northing-impl-r44a-core-dialog-turn-mod (branch impl/r44a-core-dialog-turn-mod-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## Context (R43d SKIPPED, R23 partial)
+      R43d marked this file SKIP in original R43 plan. R44a picks it up.
+      R23 partial may have left sibling files. MUST read R23 commit history first.
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib dialog_turn` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split (after R23)
+      Suggested: turn_lifecycle.rs / turn_message.rs / turn_meta.rs / turn_types.rs
+      Cross-ref: `git grep 'dialog_turn\|DialogTurnData\|TurnStatus' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/coordination/dialog_turn/mod.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 1219)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R44a split dialog_turn/mod.rs 1219 -> facade + N sibling (R23 follow-up, R43d revisit)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44b-core-miniapp-manager-split
+    title: "R44b: miniapp/manager.rs 1129 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44b: miniapp/manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/miniapp/manager.rs (1129 lines)
+      Worktree: E:/agent-project/northing-impl-r44b-core-miniapp-manager (branch impl/r44b-core-miniapp-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: mgr_runtime.rs / mgr_registry.rs / mgr_lifecycle.rs / mgr_types.rs
+      Cross-ref: `git grep 'miniapp::manager\|MiniAppManager\|MiniAppRuntime' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44b split miniapp/manager.rs 1129 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44c-core-exec-command-command-split
+    title: "R44c: agentic/tools/implementations/exec_command/command.rs 1157 -> facade + N sibling (M2.7, cross-crate) (northhing-core)"
+    prompt: |
+      # R44c: exec_command/command.rs god-split (M2.7, cross-crate)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command.rs (1157 lines)
+      Worktree: E:/agent-project/northing-impl-r44c-core-exec-command-command (branch impl/r44c-core-exec-command-command-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a, plus:
+      - exec_command is cross-crate (consumed by cli, desktop). Carefully preserve all `pub use` re-export paths.
+
+      ## Sub-domain split
+      Suggested: cmd_run.rs / cmd_parse.rs / cmd_state.rs / cmd_types.rs
+      Cross-ref: `git grep 'exec_command::command\|ExecCommand\|CommandRunner' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44c split exec_command/command.rs 1157 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44d-core-grep-tool-split
+    title: "R44d: agentic/tools/implementations/grep_tool.rs 1111 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44d: grep_tool.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/grep_tool.rs (1111 lines)
+      Worktree: E:/agent-project/northing-impl-r44d-core-grep-tool (branch impl/r44d-core-grep-tool-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: grep_match.rs / grep_filter.rs / grep_output.rs / grep_types.rs
+      Cross-ref: `git grep 'grep_tool\|GrepTool\|GrepEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44d split grep_tool.rs 1111 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44e-core-lsp-process-split
+    title: "R44e: service/lsp/process.rs 1087 -> facade + N sibling (M2.7, cross-crate LSP) (northhing-core)"
+    prompt: |
+      # R44e: service/lsp/process.rs god-split (M2.7, cross-crate LSP)
+      Target: src/crates/assembly/core/src/service/lsp/process.rs (1087 lines)
+      Worktree: E:/agent-project/northing-impl-r44e-core-lsp-process (branch impl/r44e-core-lsp-process-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a, plus:
+      - LSP is cross-crate (consumed by desktop, services-integrations). Preserve all `pub use` re-export paths.
+      - R41g already split `lsp/workspace_manager.rs` (1415 -> 105 facade + 4 sibling). R44e should EXTEND, not duplicate.
+
+      ## Sub-domain split (after R41g)
+      Suggested: proc_handler.rs / proc_init.rs / proc_state.rs / proc_types.rs
+      Cross-ref: `git grep 'lsp::process\|LspProcess\|LspClient' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44e split lsp/process.rs 1087 -> facade + N sibling (R41g follow-up)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r44f-core-skills-registry-split
+    title: "R44f: agentic/tools/implementations/skills/registry.rs 1050 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44f: skills/registry.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/skills/registry.rs (1050 lines)
+      Worktree: E:/agent-project/northing-impl-r44f-core-skills-registry (branch impl/r44f-core-skills-registry-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: registry_store.rs / registry_dispatch.rs / registry_meta.rs / registry_types.rs
+      Cross-ref: `git grep 'skills::registry\|SkillRegistry\|SkillEntry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44f split skills/registry.rs 1050 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r44g-core-workspace-service-split
+    title: "R44g: service/workspace/service.rs 1029 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R44g: workspace/service.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/workspace/service.rs (1029 lines)
+      Worktree: E:/agent-project/northing-impl-r44g-core-workspace-service (branch impl/r44g-core-workspace-service-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R44a.
+
+      ## Sub-domain split
+      Suggested: ws_init.rs / ws_invoke.rs / ws_state.rs / ws_types.rs
+      Cross-ref: `git grep 'workspace::service\|WorkspaceService' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R44g split workspace/service.rs 1029 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

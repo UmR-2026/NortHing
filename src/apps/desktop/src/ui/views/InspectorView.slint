@@ -1,0 +1,107 @@
+// Inspector View - Skills, settings, model info
+
+import { MaterialTheme, SkillItem } from "../theme.slint";
+import { MaterialListItem } from "../components/MaterialList.slint";
+import { MaterialIconButton } from "../components/MaterialIconButton.slint";
+import { MaterialBadge } from "../components/MaterialBadge.slint";
+
+export component InspectorView inherits Rectangle {
+    in property <[SkillItem]> skills: [];
+    in property <string> model-status: "Model: Not configured";
+    in property <bool> dark-mode: true;
+    
+    callback toggle-skill(string);
+    callback toggle-theme();
+    
+    background: MaterialTheme.current-surface();
+    
+    VerticalLayout {
+        padding: MaterialTheme.spacing-md;
+        spacing: MaterialTheme.spacing-md;
+        
+        // Header - fixed height
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+            
+            Text {
+                text: "Inspector";
+                font-size: MaterialTheme.font-size-title;
+                color: MaterialTheme.current-on-surface();
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            
+            MaterialIconButton {
+                icon: dark-mode ? "☀" : "🌙";
+                clicked => { root.toggle-theme(); }
+            }
+        }
+        
+        // Model status - fixed height
+        Rectangle {
+            height: 48px;
+            background: MaterialTheme.current-background();
+            border-radius: 4px;
+            // padding is layout-only in Slint; use inner layout spacing instead
+            // padding: MaterialTheme.spacing-sm;
+            
+            Text {
+                text: root.model-status;
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+        
+        // Skills label - fixed height
+        Text {
+            text: "Skills";
+            font-size: MaterialTheme.font-size-subtitle;
+            color: MaterialTheme.current-on-surface();
+            font-weight: 600;
+        }
+        
+        // Skills list - fill remaining space
+        Rectangle {
+            height: root.height - 48px - 48px - 32px - MaterialTheme.spacing-md * 3;
+            
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+                
+                VerticalLayout {
+                    spacing: MaterialTheme.spacing-xs;
+                    
+                    for skill in skills: HorizontalLayout {
+                        height: 40px;
+                        spacing: MaterialTheme.spacing-sm;
+                        
+                        MaterialListItem {
+                            text: skill.name;
+                            secondary-text: skill.description;
+                            selected: skill.enabled;
+                            width: root.width - 50px;
+                            
+                            clicked => { root.toggle-skill(skill.id); }
+                        }
+                        
+                        if skill.enabled: MaterialBadge {
+                            text: "●";
+                            background-color: MaterialTheme.secondary;
+                        }
+                    }
+                    
+                    if skills.length == 0: Text {
+                        text: "No skills available.\nCheck your agent configuration.";
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.5;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+    }
+}

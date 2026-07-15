@@ -1,0 +1,159 @@
+// Material Theme Palette - Shared theme definitions
+
+export global MaterialTheme {
+    // Colors - Dark mode (default)
+    in-out property <color> primary: #BB86FC;
+    in-out property <color> primary-variant: #3700B3;
+    in-out property <color> secondary: #03DAC6;
+    in-out property <color> background: #121212;
+    in-out property <color> surface: #1E1E1E;
+    in-out property <color> error: #CF6679;
+    in-out property <color> on-primary: #000000;
+    in-out property <color> on-secondary: #000000;
+    in-out property <color> on-background: #FFFFFF;
+    in-out property <color> on-surface: #FFFFFF;
+    in-out property <color> on-error: #000000;
+    
+    // Light mode colors
+    in-out property <color> light-primary: #6200EE;
+    in-out property <color> light-primary-variant: #3700B3;
+    in-out property <color> light-secondary: #03DAC6;
+    in-out property <color> light-background: #FFFFFF;
+    in-out property <color> light-surface: #FFFFFF;
+    in-out property <color> light-error: #B00020;
+    in-out property <color> light-on-primary: #FFFFFF;
+    in-out property <color> light-on-secondary: #000000;
+    in-out property <color> light-on-background: #000000;
+    in-out property <color> light-on-surface: #000000;
+    in-out property <color> light-on-error: #FFFFFF;
+    
+    // Typography
+    in-out property <length> font-size-headline: 24px;
+    in-out property <length> font-size-title: 20px;
+    in-out property <length> font-size-subtitle: 16px;
+    in-out property <length> font-size-body: 14px;
+    in-out property <length> font-size-caption: 12px;
+    
+    // Spacing
+    in-out property <length> spacing-xs: 4px;
+    in-out property <length> spacing-sm: 8px;
+    in-out property <length> spacing-md: 16px;
+    in-out property <length> spacing-lg: 24px;
+    in-out property <length> spacing-xl: 32px;
+    
+    // Elevation (shadows)
+    in-out property <length> elevation-0: 0px;
+    in-out property <length> elevation-1: 1px;
+    in-out property <length> elevation-2: 2px;
+    in-out property <length> elevation-4: 4px;
+    in-out property <length> elevation-8: 8px;
+    
+    // Current theme getters
+    public pure function current-primary() -> color { dark-mode ? primary : light-primary; }
+    public pure function current-surface() -> color { dark-mode ? surface : light-surface; }
+    public pure function current-background() -> color { dark-mode ? background : light-background; }
+    public pure function current-on-surface() -> color { dark-mode ? on-surface : light-on-surface; }
+    public pure function current-on-background() -> color { dark-mode ? on-background : light-on-background; }
+    
+    in-out property <bool> dark-mode: true;
+}
+
+// Data Models
+export struct SessionItem {
+    id: string,
+    name: string,
+    timestamp: string,
+    is-active: bool,
+    /// Parent session ID. Empty string when this session is a root
+    /// (no parent) — the empty-string sentinel keeps the Slint struct
+    /// `Default`-constructible while still allowing the Rust side to
+    /// pass `None` as `""`.
+    parent-id: string,
+    /// Nesting depth for tree rendering. `0` for root sessions; incremented
+    /// per parent link for child sessions. Used only when
+    /// `SESSION_TREE_VIEW = true`; the Slint sidebar picks between flat and
+    /// nested rendering based on this flag (see `SidebarView.slint`).
+    depth: int,
+    /// Q4=c: per-session model override ("" = use default; otherwise
+    /// a model identifier like "claude-sonnet-4-5").
+    model-override: string,
+    /// Q7=c: true when the session's workspace has been removed.
+    /// Renders a ⚠ marker in the sidebar and disables the chat input.
+    is-workspace-broken: bool,
+    /// Phase 4: workspace path the session belongs to. Q5=a filters
+    /// the sidebar by this when the user switches workspace.
+    workspace-path: string,
+}
+
+export struct MessageItem {
+    id: string,
+    role: string,
+    content: string,
+    timestamp: string,
+    is-streaming: bool,
+    // Phase 4 (spec §3.4 C5=c): inline tool call card. The summary
+    // shows in the collapsed state; the full detail opens on click.
+    // `tool-calls-json` carries the raw JSON for the expand panel.
+    // Empty strings mean "no tool calls" — backward compatible with
+    // pre-Phase 4 message payloads.
+    tool-calls-count: int,
+    tool-calls-summary: string,
+    tool-calls-json: string,
+}
+
+export struct SkillItem {
+    id: string,
+    name: string,
+    description: string,
+    enabled: bool,
+}
+
+// 2026-06-26 (Phase 3): DTOs for the Settings sub-panels. Spec §5.6.
+// `verified` reflects `last_verified_ok` from ProviderConfig:
+//   ""  — never tested
+//   "ok" — last test succeeded
+//   "fail" — last test failed (UI shows ⚠️ marker)
+export struct ProviderItem {
+    id: string,
+    name: string,
+    type: string,
+    base-url: string,
+    model: string,
+    enabled: bool,
+    verified: string,
+}
+
+export struct WorkspaceItem {
+    id: string,    // path string used as id (path is unique)
+    path: string,
+    display-name: string,
+    is-current: bool,
+    identity-md-exists: bool,
+}
+
+export struct MCPItem {
+    id: string,
+    name: string,
+    transport: string,   // "stdio" | "sse" | "streamable-http"
+    enabled: bool,
+    verified: string,     // "" | "ok" | "fail"
+    tool-count: int,
+}
+
+// Skill with workspace override flag (E2=c). The UI shows a single
+// row per skill with both the global toggle and the per-workspace
+// override; `effective-enabled` is the resolved state.
+//
+// `workspace-override` uses string for tri-state because Slint 1.16 doesn't
+// have proper enums and int comparisons don't behave well inline:
+//   ""    — no override (follow global)
+//   "on"  — workspace override ON
+//   "off" — workspace override OFF
+export struct SkillStateItem {
+    id: string,
+    name: string,
+    description: string,
+    global-enabled: bool,
+    workspace-override: string,
+    effective-enabled: bool,
+}

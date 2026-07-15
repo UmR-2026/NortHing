@@ -1,0 +1,355 @@
+// Sidebar View - Sessions and file tree (Phase 4 enhanced)
+
+import { MaterialTheme, SessionItem, WorkspaceItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialListItem } from "../components/MaterialList.slint";
+import { MaterialIconButton } from "../components/MaterialIconButton.slint";
+// Phase G.3: pull in the standard Slint CheckBox for the
+// "Show subagents" toggle in the sidebar header.
+import { CheckBox } from "std-widgets.slint";
+
+// Phase C.2: when `tree-view` is `true`, render sessions nested by
+// `parent-id` / `depth`. When `false`, the rendering is byte-identical to
+// the pre-C.2 flat list — same items, same order, no extra chrome. The
+// flag is sourced from `main.rs::SESSION_TREE_VIEW` (see `main.slint`
+// binding) and bound by the caller into `tree-view`.
+//
+// Phase G.3: `show-subagents` is a user-facing toggle (a checkbox in the
+// sidebar header) that gates whether depth >= 1 sessions are visible.
+// `true` (default) shows the full tree; `false` shows only depth = 0
+// (root) sessions. When `tree-view == false`, the toggle is irrelevant
+// (no nested sessions exist) and is hidden from the UI.
+//
+// Phase 4 (spec §3.3): workspace switcher at the top, Q5=a session
+// filtering (only show sessions whose workspace-path matches the
+// current workspace). `current-workspace-path` is the canonical id
+// (path string) used for the equality check.
+export component SidebarView inherits Rectangle {
+    in property <[SessionItem]> sessions: [];
+    in property <string> current-session-id: "";
+    in property <bool> dark-mode: true;
+    in property <bool> tree-view: false;
+    in property <bool> show-subagents: true;
+    callback toggle-show-subagents();
+
+    // Phase 4: workspace switcher state (D4=b).
+    in property <[WorkspaceItem]> workspaces: [];
+    in property <string> current-workspace-path: "";
+    in-out property <bool> workspace-popup-open: false;
+    callback switch-workspace(string);
+
+    callback new-session();
+    callback switch-session(string);
+    callback delete-session(string);
+    callback rename-session(string, string);
+    // 2026-06-26: open the Settings view (Phase 2). Bound from main.slint
+    // to a callback that flips `current-route` to "settings".
+    callback open-settings();
+
+    // P0-C (2026-06-25): error banner properties. Bound from AppWindow
+    // in main.slint. When either is non-empty, the banner renders at the
+    // top of the sidebar with the message text and a × close button.
+    in property <string> session-error: "";
+    in property <string> input-error: "";
+    callback clear-session-error();
+    callback clear-input-error();
+
+    background: MaterialTheme.current-surface();
+
+    // Phase 4: workspace switcher overlay (D4=b). Renders on top of
+    // the sidebar when the user clicks the workspace pill at the top.
+    if root.workspace-popup-open: Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: #00000060;
+
+        Rectangle {
+            x: MaterialTheme.spacing-md;
+            y: 56px;
+            width: parent.width - 2 * MaterialTheme.spacing-md;
+            height: 200px;
+            background: MaterialTheme.current-surface();
+            border-radius: 8px;
+            padding: MaterialTheme.spacing-sm;
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                spacing: MaterialTheme.spacing-xs;
+
+                Text {
+                    text: "切换工作文件夹";
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.6;
+                    padding: MaterialTheme.spacing-sm;
+                }
+
+                Flickable {
+                    vertical-stretch: 1;
+                    width: parent.width;
+                    viewport-height: 160px;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        width: parent.width;
+
+                        for ws in workspaces: Rectangle {
+                            width: parent.width;
+                            height: 36px;
+                            padding: MaterialTheme.spacing-sm;
+                            background: ws.path == root.current-workspace-path
+                                ? MaterialTheme.current-primary().with-alpha(0.18)
+                                : MaterialTheme.current-surface();
+
+                            TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => {
+                                    root.switch-workspace(ws.path);
+                                    root.workspace-popup-open = false;
+                                }
+                            }
+
+                            Text {
+                                text: (ws.display-name == "" ? ws.path : ws.display-name)
+                                    + (ws.is-current ? " ✓" : "");
+                                font-size: MaterialTheme.font-size-body;
+                                color: MaterialTheme.current-on-surface();
+                                vertical-alignment: center;
+                                width: parent.width;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    VerticalLayout {
+        padding: MaterialTheme.spacing-md;
+        spacing: MaterialTheme.spacing-md;
+
+        // P0-C: error banner. Renders only when session-error or
+        // input-error is non-empty. The Rust side auto-clears after 5s;
+        // the × button also clears immediately.
+        if root.session-error != "" || root.input-error != "" : Rectangle {
+            height: 56px;
+            background: MaterialTheme.dark-mode ? #CF6679 : #B00020;
+            border-radius: 4px;
+
+            HorizontalLayout {
+                padding: MaterialTheme.spacing-sm;
+                spacing: MaterialTheme.spacing-sm;
+
+                Text {
+                    text: root.session-error != "" ? root.session-error : root.input-error;
+                    color: MaterialTheme.dark-mode ? #000000 : #FFFFFF;
+                    font-size: MaterialTheme.font-size-caption;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                    width: parent.width - 32px;
+                }
+
+                MaterialIconButton {
+                    icon: "×";
+                    width: 24px;
+                    height: 24px;
+                    clicked => {
+                        if root.session-error != "" {
+                            root.clear-session-error();
+                        } else {
+                            root.clear-input-error();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 4 (D4=b): workspace switcher pill at the top of the sidebar.
+        // Clicking the pill opens the workspace-popup overlay. Shows the
+        // current workspace's display name; falls back to the path if
+        // no display name is set.
+        if root.workspaces.length > 0: Rectangle {
+            width: parent.width;
+            height: 36px;
+            background: MaterialTheme.current-primary().with-alpha(0.12);
+            border-radius: 4px;
+            padding: MaterialTheme.spacing-sm;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.workspace-popup-open = !root.workspace-popup-open; }
+            }
+
+            HorizontalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                Text {
+                    text: "📁 " + (root.workspaces.length == 1 && root.current-workspace-path == ""
+                        ? "(未选择工作文件夹)"
+                        : root.current-workspace-path);
+                    // Slint 1.16 doesn't have a "current workspace" lookup
+                    // — display the path; when only 1 workspace exists
+                    // and none is "current", show the hint.
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.current-on-surface();
+                    vertical-alignment: center;
+                    width: parent.width - 24px;
+                    overflow: elide;
+                }
+
+                Text {
+                    text: root.workspace-popup-open ? "▲" : "▼";
+                    color: MaterialTheme.current-on-surface();
+                    font-size: MaterialTheme.font-size-caption;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Header - fixed height
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+
+            Text {
+                text: "Sessions";
+                font-size: MaterialTheme.font-size-title;
+                color: MaterialTheme.current-on-surface();
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+
+            MaterialIconButton {
+                icon: "+";
+                clicked => { root.new-session(); }
+            }
+        }
+
+        // Phase G.3: subagent filter checkbox. Visible only when the
+        // tree-view flag is on (otherwise there are no nested sessions
+        // to filter). Clicking the checkbox flips `show-subagents` via
+        // the `toggle-show-subagents` callback bound from main.slint.
+        if root.tree-view: HorizontalLayout {
+            height: 28px;
+            spacing: MaterialTheme.spacing-xs;
+
+            CheckBox {
+                checked: root.show-subagents;
+                toggled => { root.toggle-show-subagents(); }
+            }
+
+            Text {
+                text: "Show subagents";
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.75;
+            }
+        }
+
+        // Session list - fill remaining space. Height subtracts the header
+        // (48px), tree-view checkbox when on (28px), error banner when shown
+        // (56px), footer (~32px) and the VerticalLayout padding (spacing-md * 2).
+        // P0-C added the banner term; without it the list overflows when an
+        // error is visible.
+        Rectangle {
+            height: root.height - 80px - 48px - (root.tree-view ? 28px : 0px) - MaterialTheme.spacing-md * 2 - (root.session-error != "" || root.input-error != "" ? 56px + MaterialTheme.spacing-md : 0px);
+
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+
+                VerticalLayout {
+                    spacing: MaterialTheme.spacing-xs;
+
+                    // Flat branch — byte-identical to pre-C.2 rendering.
+                    // Active when `tree-view == false`. Selecting this
+                    // branch preserves the legacy flat-list UX.
+                    // Phase 4 (Q5=a): filter by current workspace.
+                    if !root.tree-view: VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        for session in sessions: MaterialListItem {
+                            text: session.name + (session.is-workspace-broken ? " ⚠" : "");
+                            secondary-text: session.timestamp;
+                            selected: session.id == current-session-id;
+                            visible: root.current-workspace-path == "" || session.workspace-path == root.current-workspace-path;
+
+                            clicked => { root.switch-session(session.id); }
+                        }
+                    }
+
+                    // Tree branch — uses depth-based indentation and a
+                    // `↳` prefix for child sessions. Phase G.3 adds the
+                    // show-subagents filter: when false, depth>=1 items
+                    // are skipped (only roots render).
+                    // Phase 4 (Q5=a): also filter by current workspace.
+                    if root.tree-view: VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        for session in sessions: HorizontalLayout {
+                            spacing: 0px;
+                            visible: root.current-workspace-path == "" || session.workspace-path == root.current-workspace-path;
+
+                            // Leading spacer — 16px per depth level.
+                            // Kept as a Rectangle (not x-offset) to avoid a
+                            // width binding loop inside the VerticalLayout.
+                            Rectangle {
+                                width: session.depth * 16px;
+                                height: 40px;
+                            }
+
+                            // The `for` loop can't filter; use an inline
+                            // condition to drop subagent rows when the
+                            // toggle is off. Items keep their original
+                            // order — only visibility changes.
+                            if root.show-subagents || session.depth == 0: MaterialListItem {
+                                text: (session.parent-id != "" ? "↳ " : "") + session.name + (session.is-workspace-broken ? " ⚠" : "");
+                                secondary-text: session.timestamp;
+                                selected: session.id == current-session-id;
+                                width: root.width - session.depth * 16px - MaterialTheme.spacing-md * 2;
+
+                                clicked => { root.switch-session(session.id); }
+                            }
+                        }
+                    }
+
+                    if sessions.length == 0: Text {
+                        text: "No sessions yet.\nClick + to create one.";
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.5;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+
+        // Footer - Settings entry (A1=a: sidebar menu) + version (A1+b: cog icon — see top bar)
+        HorizontalLayout {
+            height: 32px;
+            alignment: space-between;
+
+            // 2026-06-26: Settings entry (Phase 2 spec §3.3). Click opens
+            // the Settings view; cog icon duplicates this in the top bar.
+            MaterialListItem {
+                text: "设置";
+                selected: false;
+                clicked => { root.open-settings(); }
+            }
+
+            Text {
+                text: "v0.1.0";
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.3;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

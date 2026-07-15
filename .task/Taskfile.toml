@@ -1,0 +1,43 @@
+[meta]
+name = "prompt-cache-stats-api"
+description = "Add clear_stats() and get_hit_rate() API to SessionPromptCacheStore for stats lifecycle and observability"
+author = "agent"
+created_at = "2026-06-23"
+status = "COMPLETED"
+
+[env]
+# Windows 环境需要 MSYS2 dlltool
+PATH_MSYS2 = "C:\msys64\mingw64\bin"
+
+[context]
+read = [
+    "src/crates/execution/agent-runtime/src/prompt_cache.rs",
+    "src/crates/execution/agent-runtime/src/lib.rs",
+]
+references = [
+    "src/crates/execution/agent-runtime/src/prompt.rs",
+    ".task/archive/prompt-cache-stats/Taskfile.toml",
+]
+
+[boundaries]
+can_modify = [
+    "src/crates/execution/agent-runtime/src/prompt_cache.rs",
+]
+no_touch = [
+    "src/crates/execution/agent-runtime/src/lib.rs",
+    "src/crates/execution/agent-runtime/src/prompt.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+]
+
+[verification]
+# Windows: 需要先设置 PATH_MSYS2
+# export PATH="C:\msys64\mingw64\bin:$PATH"
+commands = [
+    "cargo check -p northhing-agent-runtime --lib",
+    "cargo test -p northhing-agent-runtime --lib prompt_cache",
+]
+
+[output]
+change_log = ".task/change-log.json"
+verification_report = ".task/verification-report.json"

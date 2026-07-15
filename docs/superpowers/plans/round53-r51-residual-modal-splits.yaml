@@ -1,0 +1,191 @@
+version: 1
+plan:
+  name: round53-r51-residual-modal-splits
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: true
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r53a-scheduler-turn-modal-split
+    title: "R53a: coordination/scheduler/scheduler_turn.rs 956 -> facade + 5 sibling (step-3.7-flash)"
+    prompt: |
+      # R53a: scheduler_turn.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn.rs (956 lines)
+      Worktree: E:/agent-project/northing-impl-r53a-scheduler-turn (branch impl/r53a-scheduler-turn-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R52 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo check -p <crate> --features product-full --lib` to verify the lib compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      scheduler_turn.rs is the dialog turn dispatch + agent session reply logic.
+      Already split from R51e: facade at coord/scheduler/, this sibling is the
+      turn-flow core. To split further by modal:
+        - turn_dispatch.rs   — enqueue/dequeue/steer/queue management
+        - turn_submit.rs     — submit/cancel/clear_queue/try_start_next_queued
+        - turn_session.rs    — session reply forwarding, agent session reply plan
+        - turn_thread_goal.rs — thread goal delivery, goal continuation
+        - turn_background.rs — background delivery, injection, plans
+
+      Cross-ref: `git grep 'DialogScheduler::' -- ':!scheduler_turn.rs'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 956)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R53a split scheduler/scheduler_turn.rs 956 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r53b-tools-registry-modal-split
+    title: "R53b: agentic/tools/registry.rs 835 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R53b: registry.rs modal split (R52d mod.rs is 630L too big) (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/registry.rs (835 lines)
+      Worktree: E:/agent-project/northing-impl-r53b-tools-registry (branch impl/r53b-tools-registry-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R53a.
+
+      ## Sub-domain split
+      registry.rs covers tool registration, lookup, capability discovery.
+      R52d split: mod.rs has 4 impl blocks (ToolRegistry methods). To split further:
+        - registry_core.rs       — ToolRegistry struct definition + ctor/new
+        - registry_register.rs   — register/unregister/update
+        - registry_lookup.rs     — get/find/filter/match
+        - registry_capabilities.rs — capability discovery, enumeration
+      (mod.rs becomes lean with pub use re-exports only)
+
+      Cross-ref: `git grep 'tools::registry\|ToolRegistry::' -- ':!registry.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R53b split tools/registry.rs 835 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r53c-bash-execute-modal-split
+    title: "R53c: tools/implementations/bash_tool/bash_execute.rs 812 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R53c: bash_execute.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_execute.rs (812 lines)
+      Worktree: E:/agent-project/northing-impl-r53c-bash-execute (branch impl/r53c-bash-execute-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R53a.
+
+      ## Sub-domain split
+      bash_execute.rs is core bash execution logic. R51b already split bash_tool.
+      To split bash_execute further by phase:
+        - execute_loop.rs     — main execute loop, request parsing
+        - execute_stream.rs   — output streaming, terminal binding
+        - execute_signal.rs   — cancellation, signal handling
+        - execute_format.rs   — output formatting, render functions
+      (mod.rs in bash_tool/ already exists, this splits bash_execute specifically)
+
+      Cross-ref: `git grep 'bash_execute\|BashExecution' -- ':!bash_execute.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R53c split bash_tool/bash_execute.rs 812 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r53d-insights-analyze-modal-split
+    title: "R53d: insights/service/ins_analyze.rs 809 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R53d: ins_analyze.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/insights/service/ins_analyze.rs (809 lines)
+      Worktree: E:/agent-project/northing-impl-r53d-insights-analyze (branch impl/r53d-insights-analyze-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R53a.
+
+      ## Sub-domain split
+      ins_analyze.rs covers parallel analysis stages (Stage 1 facet/aggregate/wins/suggestions).
+      Already split from R50d: siblings ins_collect/ins_query/ins_format/ins_types.
+      To split ins_analyze further by analysis stage:
+        - analyze_facet.rs    — facet extraction parallel calls
+        - analyze_aggregate.rs — aggregate collection
+        - analyze_wins.rs      — wins/friction derivation
+        - analyze_suggestions.rs — suggestions generation
+
+      Cross-ref: `git grep 'insights::service\|InsightsService::' -- ':!ins_analyze.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R53d split insights/service/ins_analyze.rs 809 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r53e-pipeline-exec-modal-split
+    title: "R53e: tools/pipeline/tool_pipeline/pipeline_exec.rs 798 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R53e: pipeline_exec.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_exec.rs (798 lines)
+      Worktree: E:/agent-project/northing-impl-r53e-pipeline-exec (branch impl/r53e-pipeline-exec-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R53a.
+
+      ## Sub-domain split
+      pipeline_exec.rs covers pipeline execution core. Already split from R51c.
+      To split pipeline_exec further by phase:
+        - exec_dispatch.rs    — pipeline dispatch, stage ordering
+        - exec_parallel.rs    — parallel stage execution
+        - exec_serial.rs      — serial stage execution
+        - exec_retry.rs       — retry policy, classify_tool_retry_error
+
+      Cross-ref: `git grep 'tool_pipeline\|ToolPipeline' -- ':!pipeline_exec.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R53e split pipeline/tool_pipeline/pipeline_exec.rs 798 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000

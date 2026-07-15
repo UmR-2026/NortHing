@@ -1,0 +1,32 @@
+mod checksum;
+mod dialog_turn;
+pub mod layout;
+mod lineage;
+mod metadata;
+mod metadata_store;
+mod model_round;
+pub mod page;
+mod session_metadata;
+mod transcript;
+pub mod types;
+
+pub use checksum::{
+    audit_turn_parent_links, compute_turn_checksum, read_turn_checksum_sidecar,
+    turn_checksum_sidecar_path, verify_turn_checksum, write_turn_checksum_sidecar,
+    TurnChecksumError,
+};
+pub use layout::SessionStorageLayout;
+pub use lineage::{
+    apply_session_lineage, build_branched_session_metadata, collect_hidden_subagent_cascade,
+    BranchSessionMetadataFacts, SessionBranchRequest, SessionBranchResult,
+};
+pub use metadata::{
+    build_session_index_snapshot, build_session_metadata, merge_session_custom_metadata,
+    refresh_session_metadata_from_turns, remove_session_index_entry, set_deep_review_cache,
+    set_deep_review_run_manifest, set_session_relationship, try_refresh_session_metadata_for_saved_turn,
+    upsert_session_index_entry, SessionMetadataBuildFacts,
+};
+pub use metadata_store::{SessionMetadataStore, SessionMetadataStoreError};
+pub use northhing_core_types::SessionKind;
+pub use page::{build_session_metadata_page, empty_session_metadata_page, SessionMetadataPage};
+pub use types::*;

@@ -1,0 +1,79 @@
+[
+  {
+    "session": "2026-06-23-meta-plan",
+    "executed_at": "2026-06-23",
+    "tasks_completed": [
+      "prompt-cache-stats-serialize",
+      "prompt-cache-stats-combined",
+      "prompt-cache-stats-effectiveness-report",
+      "partitioned-loader-extra-tests"
+    ],
+    "tasks_skipped": [
+      {
+        "id": "command-runner-mock",
+        "reason": "precheck情形A: tool-execution does not call services-core run_command"
+      }
+    ],
+    "bonus_fix": {
+      "id": "runtime-ports-lightweight-task-serde",
+      "description": "Fix LightweightTaskOutput serde rename — rename_all does not apply to variant-internal fields",
+      "file": "src/crates/contracts/runtime-ports/src/lightweight_task.rs"
+    },
+    "workspace_regression": {
+      "scope": "cargo test --workspace --lib",
+      "result": "ALL_PASS",
+      "total_packages": 19,
+      "failed_packages": 0,
+      "summary": [
+        "northhing-core: 868 passed",
+        "northhing-agent-runtime: 99 passed",
+        "northhing-agent-stream: 48 passed",
+        "northhing-agent-dispatch: 24 passed",
+        "northhing-runtime-ports: 43 passed (was 42+1FAILED before bonus fix)",
+        "northhing-services-core: 44 passed",
+        "all others: 0 failed"
+      ]
+    },
+    "packages_verified": [
+      {
+        "name": "northhing-agent-runtime",
+        "cargo_check": "PASS",
+        "cargo_test": "99 passed"
+      },
+      {
+        "name": "northhing-core",
+        "cargo_check": "PASS",
+        "cargo_test": "868 passed"
+      },
+      {
+        "name": "northhing-runtime-ports",
+        "cargo_check": "PASS (bonus fix applied)",
+        "cargo_test": "43 passed (was 42+1FAILED)"
+      }
+    ],
+    "env_fix": {
+      "issue": "dlltool.exe not in PATH + gcc cannot write temp files in C:\\WINDOWS",
+      "fix": "Added to ~/.bashrc: export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH; export TMP=/tmp TEMP=/tmp",
+      "removed": ".cargo/config.toml rustflags with --undefined=nanosleep64"
+    },
+    "plan_compliance_checker": "ran (returned PENDING — no structured checks in plan)",
+    "all_change_logs": [
+      ".task/archive/prompt-cache-stats-serialize/change-log.json",
+      ".task/archive/prompt-cache-stats-combined/change-log.json",
+      ".task/archive/prompt-cache-stats-effectiveness-report/change-log.json",
+      ".task/archive/partitioned-loader-extra-tests/change-log.json",
+      ".task/archive/command-runner-mock/change-log.json"
+    ],
+    "all_review_guides": [
+      ".task/archive/prompt-cache-stats-serialize/review-guide.md",
+      ".task/archive/prompt-cache-stats-combined/review-guide.md",
+      ".task/archive/prompt-cache-stats-effectiveness-report/review-guide.md",
+      ".task/archive/partitioned-loader-extra-tests/review-guide.md",
+      ".task/archive/command-runner-mock/review-guide.md",
+      ".task/archive/runtime-ports-lightweight-task-serde/review-guide.md"
+    ],
+    "confidence_all_medium_or_above": true,
+    "unsafe_notes": "none added",
+    "review_status": "READY_FOR_HUMAN_REVIEW"
+  }
+]

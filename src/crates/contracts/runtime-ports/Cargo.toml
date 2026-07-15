@@ -1,0 +1,21 @@
+[package]
+name = "northhing-runtime-ports"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Thin runtime ports for northhing core decomposition"
+
+[lib]
+name = "northhing_runtime_ports"
+crate-type = ["rlib"]
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio-util = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -1,0 +1,226 @@
+version: 1
+plan:
+  name: round43-6-way-parallel-mid-zone-p1-2026-07-07
+  max_concurrency: 6
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r43a-services-integrations-git-service-split
+    title: >-
+      R43a: services-integrations/git/service.rs 1255 -> facade + N sibling (step-3.7-flash)
+      (services-integrations)
+    prompt: >
+      # R43a: services-integrations git/service.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/services/services-integrations/src/git/service.rs (1255 lines)
+      Worktree: E:/agent-project/northing-impl-r43a-services-integrations-git-service (branch
+      impl/r43a-services-integrations-git-service-split, from main 4841f3bd)
+      Package: `northhing-services-integrations` (use `-p northhing-services-integrations`)
+
+      ## CRITICAL iron rules (R40-R42 lessons, all mandatory)
+      1. **0 `_lost_methods.rs`** — every method assigned to sub-domain
+      2. **0 `part1.rs`/`part2.rs` mechanical naming** — sub-domain names (command/query/auth/types)
+      3. mod.rs ≤ 600, sibling ≤ 800
+      4. Fields `pub(super)` for cross-sibling struct field access
+      5. Wildcard re-export: `pub use super::*;` in mod.rs
+      6. Write .rs with Edit tool, NOT PowerShell Out-File/Set-Content
+      7. **MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>`** to verify test module compiles (R41b lesson)
+
+      ## Sub-domain split
+      Suggested: `git_command.rs` / `git_query.rs` / `git_auth.rs` / `git_types.rs`
+      `git grep 'services_integrations::git\|GitService' -- ':!<file>'`
+
+      ## PREFLIGHT
+      ```
+      $p = "src/crates/services/services-integrations/src/git/service.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "git service.rs canonical wc-l = $wc (expected 1255)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-services-integrations --message-format=short 2>&1 | Tee-Object baseline.log
+      ```
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(services): R43a split git/service.rs 1255 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+
+      ## 工作环境
+      PowerShell 5.1. Edit tool for .rs.
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r43b-core-browser-control-actions-split
+    title: >-
+      R43b: agentic/tools/browser_control/actions.rs 1253 -> facade + N sibling (step-3.7-flash)
+      (northhing-core)
+    prompt: >
+      # R43b: browser_control/actions.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/browser_control/actions.rs (1253 lines)
+      Worktree: E:/agent-project/northing-impl-r43b-core-browser-control-actions (branch
+      impl/r43b-core-browser-control-actions-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R43a.
+
+      ## Sub-domain split
+      Suggested: `click_actions.rs` / `input_actions.rs` / `navigation_actions.rs` / `types.rs`
+      `git grep 'browser_control::actions\|BrowserActions' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R43b split browser_control/actions.rs 1253 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r43c-core-session-usage-service-split
+    title: >-
+      R43c: service/session_usage/service.rs 1228 -> facade + N sibling (M2.7, R24 partial)
+      (northhing-core)
+    prompt: >
+      # R43c: session_usage/service.rs god-split (M2.7, R24 partial)
+
+      ## Target:
+      src/crates/assembly/core/src/service/session_usage/service.rs (1228 lines)
+      Worktree: E:/agent-project/northing-impl-r43c-core-session-usage-service (branch
+      impl/r43c-core-session-usage-service-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## Context (R24 partial)
+      R24 split session_usage/service.rs into facade + 5 sibling. This R43c is a follow-up: facade may still be over cap, may need additional sub-domain split.
+      **MUST read R24 commit history** to see existing sibling structure before designing R43c.
+
+      ## CRITICAL iron rules
+      Same as R43a, plus:
+      - If R24 sibling files exist, R43c should EXTEND them, not duplicate or rename
+      - R24 may have left the facade at > 600 cap - need to split facade further
+
+      ## Sub-domain split (after R24)
+      Suggested: `usage_record.rs` / `usage_query.rs` / `usage_aggregate.rs` / `usage_types.rs`
+      `git grep 'session_usage::service\|SessionUsageService' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R43c split session_usage/service.rs 1228 -> facade + N sibling (R24 follow-up)`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r43e-services-integrations-remote-exec-split
+    title: >-
+      R43e: services-integrations remote_ssh/remote_exec.rs 1195 -> facade + N sibling (step-3.7-flash)
+      (services-integrations)
+    prompt: >
+      # R43e: services-integrations remote_ssh/remote_exec.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/services/services-integrations/src/remote_ssh/remote_exec.rs (1195 lines)
+      Worktree: E:/agent-project/northing-impl-r43e-services-integrations-remote-exec (branch
+      impl/r43e-services-integrations-remote-exec-split, from main 4841f3bd)
+      Package: `northhing-services-integrations` (use `-p northhing-services-integrations`)
+
+      ## CRITICAL iron rules
+      Same as R43a.
+
+      ## Sub-domain split
+      Suggested: `exec_command.rs` / `exec_stream.rs` / `exec_auth.rs` / `exec_types.rs`
+      `git grep 'remote_ssh::remote_exec\|RemoteExec' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(services): R43e split remote_ssh/remote_exec.rs 1195 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r43f-core-workspace-runtime-service-split
+    title: >-
+      R43f: service/workspace_runtime/service.rs 1169 -> facade + N sibling (M2.7)
+      (northhing-core)
+    prompt: >
+      # R43f: workspace_runtime/service.rs god-split (M2.7)
+
+      ## Target:
+      src/crates/assembly/core/src/service/workspace_runtime/service.rs (1169 lines)
+      Worktree: E:/agent-project/northing-impl-r43f-core-workspace-runtime-service (branch
+      impl/r43f-core-workspace-runtime-service-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R43a, plus:
+      - This is a cross-crate service (consumed by desktop, cli, services-integrations). Carefully preserve all `pub use` re-export paths.
+
+      ## Sub-domain split
+      Suggested: `wr_init.rs` / `wr_invoke.rs` / `wr_state.rs` / `wr_types.rs`
+      `git grep 'workspace_runtime::service\|WorkspaceRuntimeService' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R43f split workspace_runtime/service.rs 1169 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r43g-core-prompt-builder-impl-split
+    title: >-
+      R43g: agentic/agents/prompt_builder/prompt_builder_impl.rs 1168 -> facade + N sibling (step-3.7-flash)
+      (northhing-core)
+    prompt: >
+      # R43g: prompt_builder/prompt_builder_impl.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/agents/prompt_builder/prompt_builder_impl.rs (1168 lines)
+      Worktree: E:/agent-project/northing-impl-r43g-core-prompt-builder-impl (branch
+      impl/r43g-core-prompt-builder-impl-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R43a.
+
+      ## Sub-domain split
+      Suggested: `builder_render.rs` / `builder_template.rs` / `builder_state.rs` / `builder_types.rs`
+      `git grep 'prompt_builder::prompt_builder_impl\|PromptBuilder' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R43g split prompt_builder_impl.rs 1168 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

@@ -1,0 +1,14 @@
+[
+  {
+    "task_id": "partitioned-loader-extra-tests",
+    "description": "Add 3 extra tests for PartitionedLoader: agent_prompt_cache_hit_skips_rebuild, system_prompt_cache_miss_after_tool_defs_change, cache_identity_hash_is_stable_for_equivalent_inputs",
+    "files_modified": [
+      "src/crates/assembly/core/src/agentic/agents/prompt_builder/partitioned_loader.rs"
+    ],
+    "files_added": [],
+    "confidence": "high",
+    "test_added": "agent_prompt_cache_hit_skips_rebuild (async), system_prompt_cache_miss_after_tool_defs_change (async), cache_identity_hash_is_stable_for_equivalent_inputs (sync)",
+    "test_result": "compile_only (linker nanosleep64 env issue; cargo check passes)",
+    "notes": "Path A taken (tokio dev-dep confirmed in assembly/core/Cargo.toml). #[cfg(test)] isolation - release binary unchanged. No unsafe/unwrap/panic added."
+  }
+]

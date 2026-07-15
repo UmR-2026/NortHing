@@ -1,0 +1,25 @@
+[package]
+name = "northhing-acp"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "NortHing Agent Client Protocol surface"
+
+[lib]
+name = "northhing_acp"
+
+[dependencies]
+northhing-core = { path = "../../assembly/core", default-features = false, features = ["product-full"] }
+northhing-events = { path = "../../contracts/events" }
+
+agent-client-protocol = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true, features = ["compat"] }
+futures = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

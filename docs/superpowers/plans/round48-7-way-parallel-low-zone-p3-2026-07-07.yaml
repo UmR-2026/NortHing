@@ -1,0 +1,210 @@
+version: 1
+plan:
+  name: round48-7-way-parallel-low-zone-p3-2026-07-07
+  max_concurrency: 7
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r48a-core-edit-tool-editor-split
+    title: "R48a: edit_tool/editor.rs 819 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48a: edit_tool/editor.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/edit_tool/editor.rs (819 lines)
+      Worktree: E:/agent-project/northing-impl-r48a-core-edit-tool-editor (branch impl/r48a-core-edit-tool-editor-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split (suggestion, adjust to actual structure)
+      Suggested: editor_apply.rs / editor_validate.rs / editor_preview.rs / editor_types.rs
+      Cross-ref: `git grep 'edit_tool::editor\|Editor\|EditOp' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/edit_tool/editor.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 819)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R48a split edit_tool/editor.rs 819 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r48b-core-prompt-builder-split
+    title: "R48b: prompt/builder.rs 818 -> facade + N sibling (M2.7, prompt family) (northhing-core)"
+    prompt: |
+      # R48b: prompt/builder.rs god-split (M2.7, prompt family)
+      Target: src/crates/assembly/core/src/prompt/builder.rs (818 lines)
+      Worktree: E:/agent-project/northing-impl-r48b-core-prompt-builder (branch impl/r48b-core-prompt-builder-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a, plus:
+      - prompt family (R43g prompt_builder_impl, R47e prompt/render, R48b prompt/builder) all share template engine. Preserve template Trait dispatch path.
+
+      ## Sub-domain split
+      Suggested: builder_compose.rs / builder_validate.rs / builder_substitute.rs / builder_types.rs
+      Cross-ref: `git grep 'prompt::builder\|PromptBuilder\|PromptSection' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48b split prompt/builder.rs 818 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r48c-core-config-manager-split
+    title: "R48c: config/manager.rs 812 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48c: config/manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/config/manager.rs (812 lines)
+      Worktree: E:/agent-project/northing-impl-r48c-core-config-manager (branch impl/r48c-core-config-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: manager_load.rs / manager_merge.rs / manager_validate.rs / manager_types.rs
+      Cross-ref: `git grep 'config::manager\|ConfigManager\|ConfigSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48c split config/manager.rs 812 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r48d-core-fs-operations-split
+    title: "R48d: fs/operations.rs 798 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48d: fs/operations.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/fs/operations.rs (798 lines)
+      Worktree: E:/agent-project/northing-impl-r48d-core-fs-operations (branch impl/r48d-core-fs-operations-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: ops_read.rs / ops_write.rs / ops_watch.rs / ops_types.rs
+      Cross-ref: `git grep 'fs::operations\|FsOps\|FsEntry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48d split fs/operations.rs 798 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r48e-core-msg-processing-route-split
+    title: "R48e: message_processing_route.rs 794 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48e: message_processing_route.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/message_processing_route.rs (794 lines)
+      Worktree: E:/agent-project/northing-impl-r48e-core-msg-processing-route (branch impl/r48e-core-msg-processing-route-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: route_match.rs / route_dispatch.rs / route_filter.rs / route_types.rs
+      Cross-ref: `git grep 'message_processing_route\|RouteEngine\|MessageRoute' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48e split message_processing_route.rs 794 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r48f-core-jsonrpc-router-split
+    title: "R48f: jsonrpc/router.rs 785 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48f: jsonrpc/router.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/jsonrpc/router.rs (785 lines)
+      Worktree: E:/agent-project/northing-impl-r48f-core-jsonrpc-router (branch impl/r48f-core-jsonrpc-router-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: router_dispatch.rs / router_handler.rs / router_middleware.rs / router_types.rs
+      Cross-ref: `git grep 'jsonrpc::router\|JsonRpcRouter\|JsonRpcRequest' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48f split jsonrpc/router.rs 785 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r48g-core-view-render-composer-split
+    title: "R48g: view_render/composer.rs 778 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R48g: view_render/composer.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/view_render/composer.rs (778 lines)
+      Worktree: E:/agent-project/northing-impl-r48g-core-view-render-composer (branch impl/r48g-core-view-render-composer-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R48a.
+
+      ## Sub-domain split
+      Suggested: composer_layout.rs / composer_style.rs / composer_bind.rs / composer_types.rs
+      Cross-ref: `git grep 'view_render::composer\|ViewComposer\|ViewSection' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R48g split view_render/composer.rs 778 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

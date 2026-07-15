@@ -1,0 +1,14 @@
+[
+  {
+    "task_id": "prompt-cache-stats-combined",
+    "description": "Add combined_total() and combined_hit_rate() methods to PromptCacheStats",
+    "files_modified": [
+      "src/crates/execution/agent-runtime/src/prompt_cache.rs"
+    ],
+    "files_added": [],
+    "confidence": "high",
+    "test_added": "combined_hit_rate_is_zero_when_no_lookups, combined_hit_rate_averages_two_caches",
+    "test_result": "compile_only (dlltool env issue; cargo check passes)",
+    "notes": "No unsafe/unwrap/panic added. Methods delegate to existing counters."
+  }
+]

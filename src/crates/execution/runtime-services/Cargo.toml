@@ -1,0 +1,18 @@
+[package]
+name = "northhing-runtime-services"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Typed runtime service assembly for northhing runtimes"
+
+[lib]
+name = "northhing_runtime_services"
+crate-type = ["rlib"]
+
+[dependencies]
+northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

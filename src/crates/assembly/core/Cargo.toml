@@ -1,0 +1,233 @@
+[package]
+name = "northhing-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing Core Library - Platform-agnostic business logic"
+
+[lib]
+name = "northhing_core"
+crate-type = ["rlib"]
+
+[dependencies]
+# Inherit shared dependencies from workspace
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+tracing = { workspace = true }
+
+uuid = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true, optional = true }
+cron = { workspace = true, optional = true }
+regex = { workspace = true }
+base64 = { workspace = true }
+image = { workspace = true, optional = true }
+md5 = { workspace = true, optional = true }
+aes = { workspace = true, optional = true }
+hex = { workspace = true }
+dashmap = { workspace = true, optional = true }
+indexmap = { workspace = true, optional = true }
+htmd = "0.5.4"
+legible = "0.4.2"
+readability-js = "0.1.5"
+
+reqwest = { workspace = true, optional = true }
+
+# Debug Log HTTP Server
+axum = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
+
+glob = { workspace = true, optional = true }
+notify = { workspace = true }
+dirs = { workspace = true }
+dunce = { workspace = true }
+filetime = { workspace = true, optional = true }
+fs2 = { workspace = true, optional = true }
+zip = { workspace = true }
+flate2 = { workspace = true, optional = true }
+include_dir = { workspace = true, optional = true }
+
+git2 = { workspace = true, optional = true }
+
+# Command detection (cross-platform)
+which = { workspace = true }
+similar = { workspace = true, optional = true }
+urlencoding = { workspace = true }
+
+globset = { workspace = true, optional = true }
+
+eventsource-stream = { workspace = true, optional = true }
+
+# MCP Streamable HTTP client (official rust-sdk)
+rmcp = { workspace = true, features = [
+    "transport-streamable-http-client-reqwest",
+], optional = true }
+sse-stream = { workspace = true, optional = true }
+
+# Shared AI protocol adapters
+northhing-ai-adapters = { path = "../../adapters/ai-adapters", optional = true }
+
+# Lightweight agent stream processing
+northhing-agent-stream = { path = "../../execution/agent-stream" }
+
+# Agent runtime owner contracts
+northhing-agent-runtime = { path = "../../execution/agent-runtime" }
+
+# Agent dispatch (SkillActor / LongRunningSkill runtime) — K.2.3
+northhing-agent-dispatch = { path = "../../execution/agent-dispatch" }
+
+# Harness workflow contracts
+northhing-harness = { path = "../../execution/harness" }
+
+# Product capability pack contracts
+northhing-product-capabilities = { path = "../product-capabilities", default-features = false, optional = true }
+
+# Agent tool contracts
+northhing-agent-tools = { path = "../../execution/tool-contracts" }
+
+# Tool pack provider plan
+northhing-tool-packs = { path = "../../execution/tool-provider-groups", default-features = false, optional = true }
+
+# Core service owner crate
+northhing-services-core = { path = "../../services/services-core" }
+
+# Integration service owner crate
+northhing-services-integrations = { path = "../../services/services-integrations", default-features = false, features = ["remote-ssh"] }
+
+# Product domain owner crate
+northhing-product-domains = { path = "../../contracts/product-domains", default-features = false, optional = true }
+
+# Tool runtime
+tool-runtime = { path = "../../execution/tool-execution", optional = true }
+
+# terminal
+terminal-core = { path = "../../services/terminal" }
+
+# I18n internationalization
+fluent-bundle = { workspace = true }
+unic-langid = { workspace = true }
+
+# Encryption (Remote Connect E2E)
+aes-gcm = { workspace = true, optional = true }
+sha2 = { workspace = true }
+rand = { workspace = true, optional = true }
+
+# Device/Network info (Remote Connect)
+local-ip-address = { workspace = true, optional = true }
+
+# QR code generation
+
+# WebSocket client
+tokio-tungstenite = { workspace = true, optional = true }
+
+# SSH - Remote SSH support (optional feature)
+russh = { workspace = true, optional = true }
+
+# Relay server shared library (embedded relay reuses standalone relay logic)
+northhing-relay-core = { path = "../../services/relay-core", optional = true }
+
+# Event layer dependency (lowest layer)
+northhing-core-types = { path = "../../contracts/core-types" }
+northhing-events = { path = "../../contracts/events" }
+northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
+
+# Transport layer dependency
+northhing-transport = { path = "../../adapters/transport" }
+
+# Tauri dependency (optional, enabled only when needed)
+tauri = { workspace = true, optional = true }
+
+# Non-Windows: vendored OpenSSL for libgit2 (no system install).
+[target.'cfg(not(windows))'.dependencies]
+git2 = { workspace = true, features = ["vendored-openssl"], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+win32job = { workspace = true }
+rustls = { workspace = true }
+rustls-native-certs = "0.8"
+schannel = "0.1"
+
+[dev-dependencies]
+northhing-test-support = { path = "../../test-support" }
+
+[features]
+# Empty default: product surface must be opted into explicitly via `features`
+# on each consumer (`desktop`, `cli`, `cli-internal`, `acp`). This stops the
+# `default = ["product-full"]` chain from forcing the full feature set on any
+# transitive consumer that forgets to set `default-features = false`, and
+# avoids the 39-version recompile cascade observed in build audits.
+#
+# `product-full` stays defined below as the compatibility product assembly
+# boundary; do not delete it without a migration review.
+default = []
+product-full = [
+    "ai-adapter-runtime",
+    "dep:chrono-tz",
+    "dep:cron",
+    "dep:dashmap",
+    "dep:eventsource-stream",
+    "dep:filetime",
+    "dep:flate2",
+    "dep:fs2",
+    "dep:glob",
+    "dep:globset",
+    "dep:include_dir",
+    "dep:indexmap",
+    "dep:md5",
+    "dep:similar",
+    "dep:tool-runtime",
+    "ssh-remote",
+    "product-capabilities",
+    "product-domains",
+    "runtime-services",
+    "service-integrations",
+    "tool-packs",
+]
+ai-adapter-runtime = ["dep:northhing-ai-adapters", "dep:reqwest"]
+product-capabilities = ["dep:northhing-product-capabilities"]
+product-domains = [
+    "ai-adapter-runtime",
+    "dep:northhing-product-domains",
+    "northhing-services-integrations/function-agents",
+    "northhing-services-integrations/miniapp-runtime",
+    "northhing-product-domains/product-full",
+]
+runtime-services = ["dep:northhing-runtime-services"]
+service-integrations = [
+    "dep:aes",
+    "dep:aes-gcm",
+    "dep:axum",
+    "dep:northhing-relay-core",
+    "dep:git2",
+    "dep:image",
+    "dep:local-ip-address",
+    "dep:md5",
+    "dep:rand",
+    "dep:reqwest",
+    "dep:rmcp",
+    "dep:sse-stream",
+    "dep:tokio-tungstenite",
+    "dep:tower-http",
+    "northhing-services-integrations/product-full",
+]
+tool-packs = ["dep:northhing-tool-packs", "northhing-tool-packs/product-full"]
+tauri-support = ["tauri"]  # Optional tauri support
+ssh-remote = [
+    "northhing-services-integrations/remote-ssh-concrete",
+    "russh",
+]
+
+[build-dependencies]
+sha2 = { workspace = true }

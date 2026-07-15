@@ -1,0 +1,48 @@
+// Status Bar View - Bottom status bar
+
+import { MaterialTheme } from "../theme.slint";
+
+export component StatusBarView inherits Rectangle {
+    in property <string> mcp-status: "MCP: Initializing...";
+    in property <string> model-status: "Model: Not configured";
+    in property <string> app-title: "northhing v0.1.0";
+    in property <bool> dark-mode: true;
+    
+    background: MaterialTheme.current-surface();
+    border-width: 1px;
+    border-color: MaterialTheme.current-on-surface();
+    opacity: 0.1;
+    
+    HorizontalLayout {
+        padding: MaterialTheme.spacing-sm;
+        alignment: space-between;
+        
+        Text {
+            text: root.app-title;
+            font-size: MaterialTheme.font-size-caption;
+            color: MaterialTheme.current-on-surface();
+            opacity: 0.6;
+            vertical-alignment: center;
+        }
+        
+        HorizontalLayout {
+            spacing: MaterialTheme.spacing-lg;
+            
+            Text {
+                text: root.mcp-status;
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.7;
+                vertical-alignment: center;
+            }
+            
+            Text {
+                text: root.model-status;
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.5;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

@@ -1,0 +1,95 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs - Frontend
+dist
+dist-ssr
+*.local
+**/dist
+**/dist-ssr
+!src/crates/contracts/product-domains/src/miniapp/builtin/assets/ppt-live/dist/
+!src/crates/contracts/product-domains/src/miniapp/builtin/assets/ppt-live/dist/ui.bundle.js
+
+# Build outputs - Rust/Tauri
+target/
+**/target/
+Cargo.lock
+
+# Monaco Editor - copied from node_modules
+public/monaco-editor/
+
+# Vditor - copied from node_modules
+public/vditor/
+
+# Generated version files
+**/generated/version.ts
+**/generated/version-injection.html
+**/public/version.json
+
+# Generated locale contracts (pnpm run i18n:generate output)
+**/generatedLocaleContract.ts
+**/generated_locale_contract.rs
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.claude
+.codebuddy
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# E2E test reports and screenshots
+tests/e2e/reports/
+
+# Eval job artifacts
+.eval/
+Cross.toml
+
+# northhing sandbox data - auto managed
+.northhing/
+.cursor
+.cursor/rules/no-cargo.mdc
+.sisyphus/
+.worktrees/
+
+ASSETS_LICENSES.md
+
+external/
+
+# Windows reserved device name - PowerShell/cmd redirection side-effect
+# git status may report a 0-byte phantom file matching this name
+nul
+
+# Hermes Agent session artifacts
+.mavis/
+
+# CodeGraph — pre-indexed code knowledge graph for AI agents (colbymchenry/codegraph).
+# 120 MB SQLite cache; per-machine, never commit. The nested .codegraph/.gitignore
+# already ignores *contents*; the root entry skips the directory itself so `git
+# status` doesn't list it as untracked.
+.codegraph/
+
+# codebase-memory-mcp — shared target directory (via .cargo/config.toml target-dir)
+target-shared/
+
+# Local cargo target directory for isolated verification
+target-local/
+
+# Ad-hoc code-rot scan artifacts (temporary investigation scripts/reports)
+_rot_scan*
+

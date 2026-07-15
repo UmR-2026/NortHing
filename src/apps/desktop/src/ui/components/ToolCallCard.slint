@@ -1,0 +1,81 @@
+// Tool Call Card Component
+
+import { MaterialTheme } from "../theme.slint";
+import { MaterialCard } from "MaterialCard.slint";
+import { MaterialIconButton } from "MaterialIconButton.slint";
+
+export component ToolCallCard inherits Rectangle {
+    in property <string> tool-name: "";
+    in property <string> tool-params: "";
+    in property <string> tool-result: "";
+    in property <string> tool-status: "running";
+    in property <bool> expanded: false;
+    
+    padding: MaterialTheme.spacing-sm;
+    
+    MaterialCard {
+        width: parent.width - MaterialTheme.spacing-md;
+        card-padding: MaterialTheme.spacing-md;
+        background: #2D2D2D;
+        
+        VerticalLayout {
+            spacing: MaterialTheme.spacing-sm;
+            
+            HorizontalLayout {
+                height: 36px;
+                alignment: space-between;
+                
+                HorizontalLayout {
+                    spacing: MaterialTheme.spacing-sm;
+                    alignment: center;
+                    
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: tool-status == "running" ? MaterialTheme.secondary
+                                : tool-status == "completed" ? #4CAF50
+                                : MaterialTheme.error;
+                    }
+                    
+                    Text {
+                        text: "🔧 " + root.tool-name;
+                        font-size: MaterialTheme.font-size-subtitle;
+                        color: MaterialTheme.current-on-surface();
+                        font-weight: 600;
+                    }
+                }
+                
+                MaterialIconButton {
+                    icon: expanded ? "▼" : "▶";
+                    clicked => { root.expanded = !root.expanded; }
+                }
+            }
+            
+            if tool-params != "": Text {
+                text: tool-params;
+                font-size: MaterialTheme.font-size-caption;
+                color: MaterialTheme.current-on-surface();
+                opacity: 0.7;
+                wrap: word-wrap;
+                max-height: expanded ? 200px : 40px;
+                overflow: elide;
+            }
+            
+            if expanded && tool-result != "": Rectangle {
+                height: 100px;
+                background: #1E1E1E;
+                border-radius: 4px;
+                padding: MaterialTheme.spacing-sm;
+                
+                Text {
+                    text: root.tool-result;
+                    font-size: MaterialTheme.font-size-body;
+                    color: #D4D4D4;
+                    font-family: "Consolas, monospace";
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,166 @@
+version: 1
+plan:
+  name: round51-5-way-real-god-objects
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r51a-core-feishu-split
+    title: "R51a: service/remote_connect/bot/feishu.rs 1639 -> facade + 5 sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R51a: feishu.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/remote_connect/bot/feishu.rs (1639 lines)
+      Worktree: E:/agent-project/northing-impl-r51a-core-feishu (branch impl/r51a-core-feishu-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R50 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo check -p <crate> --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: feishu_types.rs (types/errors/config) / feishu_webhook.rs (webhook entry/signature) /
+                 feishu_commands.rs (bot command handlers) / feishu_messages.rs (card/text formatting) /
+                 feishu_actions.rs (bot actions: send/reply/react)
+      Cross-ref: `git grep 'feishu\|FeishuBot' -- ':!feishu.rs'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/service/remote_connect/bot/feishu.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 1639)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R51a split feishu.rs 1639 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r51b-core-bash-tool-split
+    title: "R51b: agentic/tools/implementations/bash_tool.rs 1631 -> facade + 5 sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R51b: bash_tool.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs (1631 lines)
+      Worktree: E:/agent-project/northing-impl-r51b-core-bash-tool (branch impl/r51b-core-bash-tool-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R51a.
+
+      ## Sub-domain split
+      Suggested: bash_types.rs (struct/error/config) / bash_execute.rs (command execution/sandbox/timeout) /
+                 bash_tool_impl.rs (Tool trait impl, tool spec) / bash_sandbox.rs (security/sandbox) /
+                 bash_helpers.rs (output parsing/utils)
+      Cross-ref: `git grep 'bash_tool\|BashTool' -- ':!bash_tool.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R51b split bash_tool.rs 1631 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r51c-core-tool-pipeline-split
+    title: "R51c: agentic/tools/pipeline/tool_pipeline.rs 1629 -> facade + 5 sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R51c: tool_pipeline.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs (1629 lines)
+      Worktree: E:/agent-project/northing-impl-r51c-core-tool-pipeline (branch impl/r51c-core-tool-pipeline-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R51a.
+
+      ## Sub-domain split
+      Suggested: pipeline_types.rs (struct/config/error) / pipeline_pre.rs (preprocessing/validation/selection) /
+                 pipeline_exec.rs (execution/parallel/serial) / pipeline_post.rs (postprocess/formatting/cleanup) /
+                 pipeline_logging.rs (logging/metrics/tracing)
+      Cross-ref: `git grep 'tool_pipeline\|ToolPipeline' -- ':!tool_pipeline.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R51c split tool_pipeline.rs 1629 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r51d-core-git-tool-split
+    title: "R51d: agentic/tools/implementations/git_tool.rs 1591 -> facade + 5 sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R51d: git_tool.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/git_tool.rs (1591 lines)
+      Worktree: E:/agent-project/northing-impl-r51d-core-git-tool (branch impl/r51d-core-git-tool-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R51a.
+
+      ## Sub-domain split
+      Suggested: git_types.rs (struct/error/result) / git_remote.rs (clone/fetch/push/pull/remote) /
+                 git_commit.rs (commit/amend/rebase/cherry-pick) / git_branch.rs (branch/checkout/merge/tag) /
+                 git_query.rs (log/diff/status/show/blame)
+      Cross-ref: `git grep 'git_tool\|GitTool' -- ':!git_tool.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R51d split git_tool.rs 1591 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r51e-core-scheduler-split
+    title: "R51e: agentic/coordination/scheduler.rs 1527 -> facade + 5 sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R51e: scheduler.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/coordination/scheduler.rs (1527 lines)
+      Worktree: E:/agent-project/northing-impl-r51e-core-scheduler (branch impl/r51e-core-scheduler-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R51a.
+
+      ## Sub-domain split
+      Suggested: scheduler_types.rs (struct/config/error/state) / scheduler_turn.rs (dialog turn dispatch/ordering) /
+                 scheduler_lifecycle.rs (spawn/suspend/resume/kill) / scheduler_cancel.rs (cancellation tokens/timeout) /
+                 scheduler_state.rs (internal state/metrics/concurrency limits)
+      Cross-ref: `git grep 'scheduler\|DialogScheduler' -- ':!scheduler.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R51e split coordination/scheduler.rs 1527 -> facade + 5 sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000

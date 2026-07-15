@@ -1,0 +1,24 @@
+[package]
+name = "northhing-product-domains"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing product domain owner crate"
+
+[lib]
+name = "northhing_product_domains"
+crate-type = ["rlib"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+dirs = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+which = { workspace = true, optional = true }
+
+[features]
+default = []
+miniapp = ["dirs", "sha2", "which"]
+function-agents = ["tracing"]
+product-full = ["miniapp", "function-agents"]

@@ -1,0 +1,6 @@
+# Allow some common patterns
+cognitive-complexity-threshold = 30
+type-complexity-threshold = 250
+too-many-arguments-threshold = 8
+# Disallow some lints
+disallowed-methods = []

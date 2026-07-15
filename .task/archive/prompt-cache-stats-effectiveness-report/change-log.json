@@ -1,0 +1,14 @@
+[
+  {
+    "task_id": "prompt-cache-stats-effectiveness-report",
+    "description": "Add CacheEffectivenessReport struct + get_effectiveness_report() method for one-shot snapshot export",
+    "files_modified": [
+      "src/crates/execution/agent-runtime/src/prompt_cache.rs"
+    ],
+    "files_added": [],
+    "confidence": "high",
+    "test_added": "effectiveness_report_reflects_current_stats, effectiveness_report_serializes_to_json, effectiveness_report_zero_state",
+    "test_result": "compile_only (dlltool env issue; cargo check passes)",
+    "notes": "New pub struct CacheEffectivenessReport with Serialize/Deserialize. No unsafe/unwrap/panic added."
+  }
+]

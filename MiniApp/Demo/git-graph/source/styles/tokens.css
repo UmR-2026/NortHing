@@ -1,0 +1,44 @@
+/* Git Graph MiniApp â€?theme tokens (host --northhing-* when running in northhing) */
+:root {
+  --bg:          var(--northhing-bg, #0d1117);
+  --bg-surface:  var(--northhing-bg-secondary, #161b22);
+  --bg-hover:    var(--northhing-element-hover, #1c2333);
+  --bg-active:   var(--northhing-element-bg, #1f2a3d);
+  --border:      var(--northhing-border, #30363d);
+  --border-light: var(--northhing-border-subtle, #21262d);
+  --text:        var(--northhing-text, #e6edf3);
+  --text-sec:    var(--northhing-text-secondary, #8b949e);
+  --text-dim:    var(--northhing-text-muted, #484f58);
+  --accent:      var(--northhing-accent, #58a6ff);
+  --accent-dim:  var(--northhing-accent-hover, #1f6feb);
+  --green:       var(--northhing-success, #3fb950);
+  --red:         var(--northhing-error, #f85149);
+  --orange:      var(--northhing-warning, #d29922);
+  --purple:      var(--northhing-info, #bc8cff);
+  --branch-1:    var(--northhing-accent, #58a6ff);
+  --branch-2:    var(--northhing-success, #3fb950);
+  --branch-3:    var(--northhing-info, #bc8cff);
+  --branch-4:    var(--northhing-warning, #f0883e);
+  --branch-5:    #f778ba;
+  --branch-6:    #79c0ff;
+  --branch-7:    #56d364;
+  --radius:      var(--northhing-radius, 6px);
+  --radius-lg:   var(--northhing-radius-lg, 10px);
+  --graph-node-stroke: var(--northhing-bg, #0d1117);
+  --graph-uncommitted: var(--text-dim, #808080);
+  --graph-lane-width: 18px;
+  --graph-row-height: 28px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--northhing-font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }

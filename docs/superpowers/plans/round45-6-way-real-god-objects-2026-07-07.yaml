@@ -1,0 +1,183 @@
+version: 1
+plan:
+  name: round45-6-way-real-god-objects-2026-07-07
+  max_concurrency: 6
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r45a-core-round-subhandlers-split
+    title: "R45a: agentic/execution/round_subhandlers.rs 972 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45a: round_subhandlers.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/execution/round_subhandlers.rs (972 lines)
+      Worktree: E:/agent-project/northing-impl-r45a-core-round-subhandlers (branch impl/r45a-core-round-subhandlers-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: round_handler.rs / round_dispatch.rs / round_state.rs / round_types.rs
+      Cross-ref: `git grep 'round_subhandlers\|RoundHandler' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/execution/round_subhandlers.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 972)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R45a split round_subhandlers.rs 972 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45b-core-desktop-ax-actions-split
+    title: "R45b: computer_use_actions/desktop_ax_actions.rs 970 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45b: desktop_ax_actions.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/desktop_ax_actions.rs (970 lines)
+      Worktree: E:/agent-project/northing-impl-r45b-core-desktop-ax-actions (branch impl/r45b-core-desktop-ax-actions-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: ax_click.rs / ax_input.rs / ax_query.rs / ax_types.rs
+      Cross-ref: `git grep 'desktop_ax_actions\|DesktopAxAction\|AxEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45b split desktop_ax_actions.rs 970 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45c-tool-execution-grep-search-split
+    title: "R45c: tool-execution grep_search.rs 943 -> facade + N sibling (step-3.7-flash) (tool-execution)"
+    prompt: |
+      # R45c: tool-execution grep_search.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/tool-execution/src/search/grep_search.rs (943 lines)
+      Worktree: E:/agent-project/northing-impl-r45c-tool-execution-grep-search (branch impl/r45c-tool-execution-grep-search-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: tool-execution (-p tool-execution --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: grep_match.rs / grep_filter.rs / grep_output.rs / grep_types.rs
+      Cross-ref: `git grep 'grep_search::\|GrepSearchEngine\|GrepQuery' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(tool-execution): R45c split grep_search.rs 943 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45d-agent-runtime-task-execution-split
+    title: "R45d: agent-runtime deep_review/task_execution.rs 905 -> facade + N sibling (step-3.7-flash) (agent-runtime)"
+    prompt: |
+      # R45d: agent-runtime deep_review/task_execution.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/deep_review/task_execution.rs (905 lines)
+      Worktree: E:/agent-project/northing-impl-r45d-agent-runtime-task-execution (branch impl/r45d-agent-runtime-task-execution-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: agent-runtime (-p agent-runtime --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: task_run.rs / task_validate.rs / task_state.rs / task_types.rs
+      Cross-ref: `git grep 'deep_review::task_execution\|TaskExecutor\|DeepReviewTask' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(agent-runtime): R45d split deep_review/task_execution.rs 905 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45e-services-workspace-search-split
+    title: "R45e: services-integrations workspace_search/service.rs 884 -> facade + N sibling (step-3.7-flash) (services-integrations)"
+    prompt: |
+      # R45e: workspace_search/service.rs god-split (step-3.7-flash)
+      Target: src/crates/services/services-integrations/src/workspace_search/service.rs (884 lines)
+      Worktree: E:/agent-project/northing-impl-r45e-services-workspace-search (branch impl/r45e-services-workspace-search-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: services-integrations (-p services-integrations --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: ws_search.rs / ws_index.rs / ws_filter.rs / ws_types.rs
+      Cross-ref: `git grep 'workspace_search::service\|WorkspaceSearchService\|SearchEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(services): R45e split workspace_search/service.rs 884 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45f-agent-runtime-scheduler-split
+    title: "R45f: agent-runtime scheduler.rs 877 -> facade + N sibling (step-3.7-flash) (agent-runtime)"
+    prompt: |
+      # R45f: agent-runtime scheduler.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/scheduler.rs (877 lines)
+      Worktree: E:/agent-project/northing-impl-r45f-agent-runtime-scheduler (branch impl/r45f-agent-runtime-scheduler-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R46+ use previous round's squash-merge commit)
+      Package: agent-runtime (-p agent-runtime --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: sched_dispatch.rs / sched_state.rs / sched_filter.rs / sched_types.rs
+      Cross-ref: `git grep 'agent_runtime::scheduler\|Scheduler\|TaskScheduler' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(agent-runtime): R45f split scheduler.rs 877 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

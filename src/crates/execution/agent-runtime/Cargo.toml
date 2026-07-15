@@ -1,0 +1,25 @@
+[package]
+name = "northhing-agent-runtime"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Agent runtime contracts and owner decisions for northhing"
+
+[lib]
+name = "northhing_agent_runtime"
+crate-type = ["rlib"]
+
+[dependencies]
+northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-runtime-services = { path = "../runtime-services" }
+dashmap = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+async-trait = { workspace = true }
+tokio = { workspace = true }
+northhing-test-support = { path = "../../test-support" }

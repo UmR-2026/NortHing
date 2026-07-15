@@ -1,0 +1,346 @@
+version: 1
+plan:
+  name: round40-6-way-parallel-critical-zone-2026-07-06
+  max_concurrency: 6
+  max_consecutive_failures: 2
+  max_cycles: 1
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r40a-core-computer-use-host-split
+    title: >-
+      R40a: agentic/tools/computer_use_host.rs 1811 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R40a: computer_use_host.rs god-split (R5 教训: 这是 critical zone 第一个)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/computer_use_host.rs (1811 lines)
+      Worktree: E:/agent-project/northing-impl-r40a-core-computer-use-host (branch
+      impl/r40a-core-computer-use-host-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL 教训 (R40-R49 半成品 review)
+      1. **0 `_lost_methods.rs` placeholder** — 必须按 sub-domain 拆到正确 sibling, 不许用 _lost_methods 占位
+      2. **0 `part1.rs`/`part2.rs` 机械命名** — 必须 `init.rs`/`state.rs`/`dispatch.rs`/`types.rs`/`helpers.rs` sub-domain 命名
+      3. **mod.rs ≤ 600 行** — 只放 `mod sibling;` 声明 + `pub use super::*;` re-export + 必要 struct 定义
+      4. **每个 sibling ≤ 800 行** (R20 容差 242 留给 client/manager_*.rs)
+      5. **fields `pub(super)`** for cross-sibling struct field access
+      6. **wildcard re-export**: `pub use super::*;` in mod.rs (R25+R27+R29+R31+R37+R38 pattern)
+      7. **encoding**: 写 .rs 必用 Edit/Write tool, 禁 PowerShell Out-File/Set-Content
+      8. **commit 前 encoding verify**: `py -c "raw=open(f,'rb').read(); assert raw[:3]!=b'\\xef\\xbb\\xbf', f; assert b'\\r\\n' not in raw, f"` 全 staged .rs
+
+      ## Shared iron rules (R5-R39 沉淀)
+      - 0 NEW unwrap()/panic!/unreachable! (新引入的; pre-existing 不算)
+      - 0 NEW CRLF/BOM
+      - 0 Cargo.lock drift (禁 `cargo update`, 只用 `cargo check`)
+      - 0 NEW cargo fmt diff (commit 前 `cargo fmt -p <crate> -- --check` 必须空)
+      - 0 cross-crate module reference (preserve 所有 `pub use` re-export 路径)
+      - `cargo test -p <crate> --lib` 不退化 (pass 数 ≥ baseline)
+      - Long line cap: ≤120 chars; 0 NEW per file (R18+ 容差 ≤5/file, producer commit 必 document)
+      - 1 atomic commit per task (no WIP commits)
+
+      ## Sub-domain split 必做
+      1. `git show HEAD:<file>` 看原 struct + impl 完整 schema (R31 教训: 不靠 consumer 反推)
+      2. `rg -n '^(impl|pub struct|pub enum|pub trait) '` 找 sub-domain 边界
+      3. 设计 facade + 4-6 sibling (sub-domain 命名, NOT part1/N)
+      4. 候选 sub-domain (按 file 内容决定): `host_init.rs` / `host_state.rs` / `host_dispatch.rs` / `host_types.rs` / `host_helpers.rs` / `host_actions.rs`
+      5. 必先 `git grep 'computer_use_host\|ComputerUseHost' -- ':!<file>'` 找 cross-crate consumer
+
+      ## Cross-crate consumer verification
+      `git grep 'computer_use_host\|ComputerUseHost' -- ':!src/crates/assembly/core/src/agentic/tools/computer_use_host.rs'`
+      For each consumer crate: `cargo check -p <consumer> --message-format=short`
+
+      ## PREFLIGHT
+      ```
+      $p = "src/crates/assembly/core/src/agentic/tools/computer_use_host.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "computer_use_host.rs canonical wc-l = $wc (expected 1811)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee-Object baseline.log
+      $baselineErrors = (Select-String -Path baseline.log -Pattern "error\[" | Measure-Object).Count
+      Write-Host "BASELINE_ERRORS=$baselineErrors (expected 0)"
+      ```
+      If BASELINE_ERRORS != 0, stop and report baseline.
+
+      ## Implementation
+      1. Create worktree (if not exists) + branch from main 4841f3bd
+      2. Create `computer_use_host/` subdir + move original to `mod.rs` (facade)
+      3. Create 4-6 sibling files in subdir (sub-domain 命名, NOT part1/N)
+      4. `mod.rs` content:
+         ```
+         //! <doc>
+         pub(crate) use <necessary cross-crate imports>;
+         pub(crate) use super::*;  // wildcard re-export
+         mod <sibling_1>;
+         mod <sibling_2>;
+         ...
+         pub(crate) use <sibling_1>::*;  // optional, if sibling fn need cross-mod access
+         pub(crate) use <sibling_2>::*;
+         ...
+         ```
+      5. Each sibling content:
+         ```
+         use super::*;
+         <impl block for sub-domain 1>
+         ```
+      6. `cargo check -p northhing-core` (单 crate 验证)
+      7. For each cross-crate consumer: `cargo check -p <consumer>`
+      8. `cargo fmt -p northhing-core -- --check` (无 diff)
+      9. `git diff main -- Cargo.lock` (0 lines drift)
+      10. `cargo test -p northhing-core --lib` (pass 数 ≥ baseline)
+      11. Encoding verify on all staged .rs:
+          `py -c "raw=open(f,'rb').read(); assert raw[:3]!=b'\\xef\\xbb\\xbf'; assert b'\\r\\n' not in raw"`
+
+      ## Commit
+      ```
+      git add -A
+      git commit -m "refactor(core): R40a split computer_use_host.rs 1811 -> facade + N sibling"
+      ```
+      ⚠️ NEVER `git commit --amend` — R39c 0-byte 教训. Use `git reset HEAD~1` + new commit.
+
+      ## Self-report (commit 后必输出)
+      ```
+      ## R40a self-report
+
+      Branch: impl/r40a-core-computer-use-host-split
+      Commit: <hash>
+      File: src/crates/assembly/core/src/agentic/tools/computer_use_host.rs
+      Before: 1811 行
+      After:
+      - facade (mod.rs): <actual> 行
+      - <sibling_1>.rs: <actual> 行 (sub-domain: <name>)
+      - <sibling_2>.rs: <actual> 行 (sub-domain: <name>)
+      ...
+
+      Verification:
+      - cargo check -p northhing-core: 0 errors
+      - cargo check -p <consumer_1>: 0 errors
+      - cargo fmt -p northhing-core -- --check: 0 diff
+      - git diff main -- Cargo.lock: 0 lines drift
+      - cargo test -p northhing-core --lib: <N> pass (baseline <M>)
+      - Encoding check: 0 BOM, 0 CRLF
+      0 NEW unwrap/panic/unreachable.
+      0 _lost_methods.rs files created.
+      0 part1.rs/part2.rs mechanical naming.
+      ```
+
+      ## Failure handling
+      - E0624 (method private) → 加 `pub(super)` (除 trait Default/Drop implicit visibility, 不要加)
+      - E0616 (field private) → 加 `pub(super)`
+      - E0432 (use path wrong) → 严格按文件层级
+      - E0599 (trait not in scope) → 加 `use TraitName;`
+      - cargo check fail → git stash + checkout clean baseline commit + 重跑 cargo check 区分 pre-existing vs new
+
+      ## Mavis take-over 信号
+      - 30 min 无 commit → Mavis 会 take-over, 停手
+      - Mavis `mavis communication send` 发 abort → 立刻停
+
+      ## 工作环境
+      - PowerShell 5.1, 禁 bash 链式
+      - 写 .rs 用 Edit tool (auto UTF-8)
+      - line count: `[System.IO.File]::ReadAllLines($p, [System.Text.Encoding]::UTF8).Count`, 禁 `Measure-Object -Line`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r40b-core-subagent-orchestrator-split
+    title: >-
+      R40b: agentic/coordination/subagent_orchestrator.rs 1773 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R40b: subagent_orchestrator.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator.rs (1773 lines)
+      Worktree: E:/agent-project/northing-impl-r40b-core-subagent-orchestrator (branch
+      impl/r40b-core-subagent-orchestrator-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## 铁律 (R40-R49 教训)
+      - 0 `_lost_methods.rs`, 0 `part1/N` 命名, mod.rs ≤ 600 行, sibling ≤ 800 行
+      - 见 R40a prompt 完整 iron rules (复制)
+
+      ## Sub-domain split 必做
+      1. `git show HEAD:<file>` 看原 struct + impl 完整 schema
+      2. `rg -n '^(impl|pub struct|pub enum) '` 找 sub-domain 边界
+      3. 候选 sub-domain: `concurrency.rs` / `dispatch.rs` / `finalize.rs` / `resolve.rs` / `session.rs` / `types.rs` / `helpers.rs`
+      4. `git grep 'subagent_orchestrator\|SubagentOrchestrator' -- ':!<file>'` 找 consumer
+
+      ## PREFLIGHT
+      ```
+      $p = "src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "subagent_orchestrator.rs canonical wc-l = $wc (expected 1773)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee-Object baseline.log
+      ```
+
+      ## Implementation + Commit + Self-report
+      Same as R40a. Commit:
+      `refactor(core): R40b split subagent_orchestrator.rs 1773 -> facade + N sibling`
+
+      ## 工作环境
+      PowerShell 5.1. 写 .rs 用 Edit tool. line count 用 ReadAllLines().Count.
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r40c-core-coordination-ports-split
+    title: >-
+      R40c: agentic/coordination/ports.rs 1739 -> facade + N sibling (interface crate pattern, R26)
+      (northhing-core)
+    prompt: >
+      # R40c: ports.rs god-split (interface crate pattern, R26 教训)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/coordination/ports.rs (1739 lines)
+      Worktree: E:/agent-project/northing-impl-r40c-core-coordination-ports (branch
+      impl/r40c-core-coordination-ports-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## 铁律 + Sub-domain split
+      Same as R40a.
+
+      ## SPECIAL: R26 interface crate pattern
+      ports.rs 是 interface trait 集合 (参考 R26 runtime-ports/lib.rs 拆 4 sibling 模式)
+      - port_core: base PortError, PortResult, RuntimeServicePort
+      - port_session: SessionPort
+      - port_execution: ExecutionPort
+      - port_runtime: RuntimePort
+      5 sibling 决策: 如果 port_dialog + submission_events 之间有 30+ cross-ref, 合并入 port_execution (R26 教训)
+
+      ## Cross-ref 最小化
+      - port_core: base (无 cross-ref)
+      - port_session: `use super::port_core::{PortError, PortResult};`
+      - port_execution: `use super::port_core::{PortError, PortResult}; use super::port_session::SessionPort;`
+      - port_runtime: `use super::port_core::{PortError, PortResult}; use super::port_execution::ExecutionPort;`
+
+      ## Python f-string `{{` 陷阱
+      写 Rust file with `use serde::{Deserialize, Serialize};` — 必在 raw string, 禁 f-string
+      (R26 教训: 4 sibling broken `{{Deserialize, Serialize}}`)
+
+      ## `#[serde(...)]` attribute scope
+      必在 `#[derive(Serialize, Deserialize)]` 之前, 或 `use serde;` 在 scope
+      (R26 教训: 丢 1 行导致首个 #[serde] 前无 derive)
+
+      ## PREFLIGHT + Implementation + Commit
+      Same as R40a. Commit:
+      `refactor(core): R40c split coordination/ports.rs 1739 -> facade + N sibling (interface crate pattern)`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r40d-core-insights-service-split
+    title: >-
+      R40d: agentic/insights/service.rs 1681 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R40d: insights/service.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/insights/service.rs (1681 lines)
+      Worktree: E:/agent-project/northing-impl-r40d-core-insights-service (branch
+      impl/r40d-core-insights-service-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## 铁律 + Sub-domain split
+      Same as R40a. 候选 sub-domain:
+      `service_lifecycle.rs` / `service_extraction.rs` / `service_synthesis.rs` / `service_report.rs` / `service_types.rs`
+
+      ## include_str! 路径修复
+      如果 sibling 用了 `include_str!("../../foo.txt")`, 路径在新位置要相应调整 (R40 教训: 之前有 v4 script 修过)
+
+      ## PREFLIGHT + Implementation + Commit
+      Same as R40a. Commit:
+      `refactor(core): R40d split insights/service.rs 1681 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r40e-core-service-agent-runtime-split
+    title: >-
+      R40e: service_agent_runtime.rs 1643 -> facade + N sibling
+      (northhing-core)
+    prompt: >
+      # R40e: service_agent_runtime.rs god-split
+
+      ## Target:
+      src/crates/assembly/core/src/service_agent_runtime.rs (1643 lines)
+      Worktree: E:/agent-project/northing-impl-r40e-core-service-agent-runtime (branch
+      impl/r40e-core-service-agent-runtime-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## 铁律 + Sub-domain split
+      Same as R40a. 候选 sub-domain:
+      `runtime_lifecycle.rs` / `runtime_invoke.rs` / `runtime_state.rs` / `runtime_types.rs` / `runtime_helpers.rs`
+
+      ## PREFLIGHT + Implementation + Commit
+      Same as R40a. Commit:
+      `refactor(core): R40e split service_agent_runtime.rs 1643 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed
+  - id: impl-r40f-core-remote-connect-feishu-split
+    title: >-
+      R40f: service/remote_connect/bot/feishu.rs 1638 -> facade + N sibling
+      (northhing-core, R39a weixin.rs 配对)
+    prompt: >
+      # R40f: feishu.rs god-split (R39a weixin.rs 配对)
+
+      ## Target:
+      src/crates/assembly/core/src/service/remote_connect/bot/feishu.rs (1638 lines)
+      Worktree: E:/agent-project/northing-impl-r40f-core-remote-connect-feishu (branch
+      impl/r40f-core-remote-connect-feishu-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## 铁律 + Sub-domain split
+      Same as R40a. R39a weixin.rs 同模式 (commit 4841f3bd) — 必读 commit 学习 sibling 结构.
+      候选 sub-domain: `feishu_message.rs` / `feishu_media.rs` / `feishu_auth.rs` / `feishu_event.rs` / `feishu_types.rs`
+
+      ## Cross-crate consumer
+      `git grep 'feishu\|Feishu' -- ':!src/crates/assembly/core/src/service/remote_connect/bot/feishu.rs'`
+
+      ## PREFLIGHT + Implementation + Commit
+      Same as R40a. Commit:
+      `refactor(core): R40f split remote_connect/bot/feishu.rs 1638 -> facade + N sibling (R39a weixin.rs pair)`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 5400000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7-highspeed

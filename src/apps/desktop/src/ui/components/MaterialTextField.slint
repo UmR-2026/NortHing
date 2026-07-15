@@ -1,0 +1,52 @@
+// Material Text Field Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialTextField inherits Rectangle {
+    in-out property <string> text: "";
+    in property <string> placeholder: "";
+    in property <bool> multi-line: false;
+    in property <bool> disabled: false;
+    in property <bool> password: false;  // 2026-06-26: obscure input for API keys (E2)
+    in property <length> font-size: MaterialTheme.font-size-body;
+
+    callback accepted();
+    callback edited();
+
+    height: multi-line ? 80px : 48px;
+    background: MaterialTheme.current-surface();
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: MaterialTheme.current-on-surface();
+
+    if text == "" && placeholder != "": Text {
+        x: MaterialTheme.spacing-sm;
+        y: MaterialTheme.spacing-sm;
+        text: root.placeholder;
+        font-size: root.font-size;
+        color: MaterialTheme.current-on-surface();
+        opacity: 0.5;
+    }
+
+    ti := TextInput {
+        x: MaterialTheme.spacing-sm;
+        y: MaterialTheme.spacing-sm;
+        width: root.width - MaterialTheme.spacing-md;
+        height: root.height - MaterialTheme.spacing-md;
+        text <=> root.text;
+        font-size: root.font-size;
+        color: MaterialTheme.current-on-surface();
+        wrap: multi-line ? word-wrap : no-wrap;
+        input-type: root.password ? InputType.password : InputType.text;
+
+        accepted => { root.accepted(); }
+        edited => { root.edited(); }
+    }
+
+    states [
+        focused when ti.has-focus: {
+            root.border-color: MaterialTheme.current-primary();
+            root.border-width: 2px;
+        }
+    ]
+}

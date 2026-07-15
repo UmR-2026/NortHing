@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "task": "task-name-here",
+  "head_before": "abc1234",
+  "head_after": "def5678",
+  "timestamp": "2026-06-23T10:00:00Z",
+  "files_changed": [
+    {
+      "path": "src/path/to/file.rs",
+      "change_type": "modify",
+      "lines_added": 45,
+      "lines_removed": 0,
+      "description": "Added feature X"
+    }
+  ],
+  "tests_added": ["test_feature_x"],
+  "tests_modified": [],
+  "boundary_check": {
+    "no_touch_violations": [],
+    "can_modify_compliance": true
+  },
+  "notes": [],
+  "confidence": "high",
+  "uncertainties": []
+}

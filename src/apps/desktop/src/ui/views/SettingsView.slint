@@ -1,0 +1,260 @@
+// SettingsView — Phase 3 (with all sub-panels)
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2.
+
+import { MaterialTheme, ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { AppStrings } from "../strings.slint";
+import { ProviderSettingsPanel } from "ProviderSettingsPanel.slint";
+import { SkillsSettingsPanel } from "SkillsSettingsPanel.slint";
+import { MCPSettingsPanel } from "MCPSettingsPanel.slint";
+import { WorkspaceSettingsPanel } from "WorkspaceSettingsPanel.slint";
+
+export component SettingsView inherits Rectangle {
+    background: MaterialTheme.current-background();
+
+    // A2=a: left menu item the user clicked. Slint enums are not
+    // first-class in 1.16 — use a string property and match in panel.
+    in-out property <string> active-section: "providers";  // providers|workspaces|skills|mcp|general
+
+    // Settings menus (A1+a: sidebar entry; A1+b: cog icon)
+    callback close-settings();
+
+    // Phase 3: pass-through callbacks for sub-panels. SettingsView
+    // doesn't process them; main.slint wires them to AppState methods.
+    callback upsert-provider(string, string, string, string, string, string, bool);
+    callback delete-provider(string);
+    callback test-provider(string);
+    callback set-default-model(string);
+    callback cleanup-legacy-placeholders();
+    callback set-skill-global(string, bool);
+    callback set-skill-workspace(string, string);
+    callback upsert-mcp(string, string, string, string, string, string, string, bool);
+    callback delete-mcp(string);
+    callback test-mcp(string);
+
+    // Phase 4: workspace callbacks.
+    callback pick-folder();
+    callback add-workspace(string, string, bool);
+    callback switch-workspace(string);
+    callback remove-workspace(string);
+    callback edit-identity-md(string);
+    callback open-identity-creator();
+
+    in property <[ProviderItem]> providers: [];
+    in property <[SkillStateItem]> skills: [];
+    in property <[MCPItem]> mcp-servers: [];
+    in property <[WorkspaceItem]> workspaces: [];
+    in property <int> current-workspace-index: -1;
+    in property <string> default-model-provider-id: "";
+    in property <int> legacy-placeholder-count: 0;
+
+    HorizontalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: 0px;
+
+        // ===== Left nav (A2=a) =====
+        Rectangle {
+            width: 220px;
+            height: parent.height;
+            background: MaterialTheme.current-surface();
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                padding: MaterialTheme.spacing-md;
+
+                Text {
+                    text: AppStrings.settings-open;
+                    font-size: MaterialTheme.font-size-title;
+                    color: MaterialTheme.current-on-surface();
+                    horizontal-alignment: left;
+                }
+
+                Rectangle { height: MaterialTheme.spacing-md; }
+
+                // Menu items: simple clickable Rectangle + Text. Use a
+                // single selection pattern via `active-section`.
+                // MaterialCard has no `clicked` callback, so wrap each
+                // item in a TouchArea for click detection.
+                nav-providers := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "providers"
+                        ? MaterialTheme.current-primary().with-alpha(0.12)
+                        : MaterialTheme.current-surface();
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "providers"; }
+                    }
+                    Text {
+                        text: AppStrings.settings-providers;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        x: MaterialTheme.spacing-md;
+                        vertical-alignment: center;
+                    }
+                }
+                nav-workspaces := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "workspaces"
+                        ? MaterialTheme.current-primary().with-alpha(0.12)
+                        : MaterialTheme.current-surface();
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "workspaces"; }
+                    }
+                    Text {
+                        text: AppStrings.settings-workspaces;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        x: MaterialTheme.spacing-md;
+                        vertical-alignment: center;
+                    }
+                }
+                nav-skills := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "skills"
+                        ? MaterialTheme.current-primary().with-alpha(0.12)
+                        : MaterialTheme.current-surface();
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "skills"; }
+                    }
+                    Text {
+                        text: AppStrings.settings-skills;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        x: MaterialTheme.spacing-md;
+                        vertical-alignment: center;
+                    }
+                }
+                nav-mcp := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "mcp"
+                        ? MaterialTheme.current-primary().with-alpha(0.12)
+                        : MaterialTheme.current-surface();
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "mcp"; }
+                    }
+                    Text {
+                        text: AppStrings.settings-mcp;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        x: MaterialTheme.spacing-md;
+                        vertical-alignment: center;
+                    }
+                }
+                nav-general := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "general"
+                        ? MaterialTheme.current-primary().with-alpha(0.12)
+                        : MaterialTheme.current-surface();
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "general"; }
+                    }
+                    Text {
+                        text: AppStrings.settings-general;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        x: MaterialTheme.spacing-md;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // spacer pushes the close button to the bottom
+                Rectangle { vertical-stretch: 1; }
+
+                close-button := MaterialButton {
+                    text: AppStrings.close;
+                    height: 40px;
+                    clicked => { root.close-settings(); }
+                }
+            }
+        }
+
+        // ===== Right detail panel (placeholder; sub-panels in Phase 3) =====
+        Rectangle {
+            width: parent.width - 220px;
+            height: parent.height;
+            background: MaterialTheme.current-background();
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                padding: MaterialTheme.spacing-lg;
+
+                // Sub-panel switcher (Phase 3). WorkplacesSettingsPanel is Phase 4.
+                if root.active-section == "providers": ProviderSettingsPanel {
+                    width: parent.width;
+                    height: parent.height;
+                    providers: root.providers;
+                    default-model-provider-id: root.default-model-provider-id;
+                    legacy-placeholder-count: root.legacy-placeholder-count;
+                    upsert-provider(n, t, b, k, m, e, en) => { root.upsert-provider(n, t, b, k, m, e, en); }
+                    delete-provider(id) => { root.delete-provider(id); }
+                    test-provider(id) => { root.test-provider(id); }
+                    set-default-model(id) => { root.set-default-model(id); }
+                    cleanup-legacy-placeholders => { root.cleanup-legacy-placeholders(); }
+                }
+                if root.active-section == "skills": SkillsSettingsPanel {
+                    width: parent.width;
+                    height: parent.height;
+                    skills: root.skills;
+                    set-skill-global(id, en) => { root.set-skill-global(id, en); }
+                    set-skill-workspace(id, ov) => { root.set-skill-workspace(id, ov); }
+                }
+                if root.active-section == "mcp": MCPSettingsPanel {
+                    width: parent.width;
+                    height: parent.height;
+                    mcp-servers: root.mcp-servers;
+                    upsert-mcp(id, name, transport, command, args, url, env, enabled) => { root.upsert-mcp(id, name, transport, command, args, url, env, enabled); }
+                    delete-mcp(id) => { root.delete-mcp(id); }
+                    test-mcp(id) => { root.test-mcp(id); }
+                }
+                if root.active-section == "workspaces": WorkspaceSettingsPanel {
+                    width: parent.width;
+                    height: parent.height;
+                    workspaces: root.workspaces;
+                    current-workspace-index: root.current-workspace-index;
+                    pick-folder => { root.pick-folder(); }
+                    add-workspace(path, name, set-current) => { root.add-workspace(path, name, set-current); }
+                    switch-workspace(id) => { root.switch-workspace(id); }
+                    remove-workspace(id) => { root.remove-workspace(id); }
+                    edit-identity-md(id) => { root.edit-identity-md(id); }
+                    open-identity-creator => { root.open-identity-creator(); }
+                }
+                if root.active-section == "general": Rectangle {
+                    vertical-stretch: 1;
+                    width: parent.width;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+
+                    Text {
+                        text: "通用设置将在后续版本提供。";
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.7;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Spec §6.5 C-iv: empty states get a centered card. Slint 1.16 doesn't
+// support top-level `func` declarations in .slint files (only inside
+// components), so the section-title is rendered inline below using
+// a property-init block instead of a helper.

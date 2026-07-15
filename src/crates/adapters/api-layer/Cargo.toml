@@ -1,0 +1,21 @@
+[package]
+name = "northhing-api-layer"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing API Layer - Platform-agnostic business handlers"
+
+[lib]
+name = "northhing_api_layer"
+
+[dependencies]
+# Internal crates
+northhing-transport = { path = "../transport" }
+
+# Inherited from workspace
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

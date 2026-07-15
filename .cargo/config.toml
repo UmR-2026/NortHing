@@ -1,0 +1,31 @@
+[build]
+# rustc-wrapper = "sccache"   # disabled: sccache not installed in this env (cargo install sccache needed)
+target-dir = "target-shared"
+# Note: removed "-C link-arg=-Wl,--undefined=nanosleep64" — it forces a linker
+# requirement that MinGW's libpthread cannot satisfy (aws-lc-sys uses POSIX
+# nanosleep which has a different symbol name on Windows/MinGW).  The build
+# succeeds without this flag; aws-lc-sys routes to the correct Windows API
+# automatically.
+#
+# NOTE: dlltool.exe (MinGW) must be reachable when cc-rs builds native
+# dependencies (aws-lc-sys, libgit2-sys, etc.). The MSYS2 install at
+# C:\msys64\mingw64\bin provides it.
+#
+# Path resolution (set 2026-06-25, systematized — see docs/handoffs/):
+#   1. User PATH (persistent for all new shells): C:\msys64\mingw64\bin + C:\msys64\usr\bin
+#      — added via [Environment]::SetEnvironmentVariable('Path', ..., 'User')
+#   2. PowerShell profile (~\\Documents\\WindowsPowerShell\\Microsoft.PowerShell_profile.ps1):
+#      prepends the two dirs at session start for any non-interactive -NoProfile case
+#   3. Git Bash ~/.bashrc: `export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH`
+#   4. cargo-wrap.bat: cmd fallback that prepends then runs cargo (still in repo)
+#
+# The linker target below is defense-in-depth: if PATH is somehow stripped
+# (e.g. a CI runner with a sanitized env), cc-rs can still find gcc by
+# absolute path instead of searching PATH.
+
+[target.x86_64-pc-windows-gnu]
+linker = "C:/msys64/mingw64/bin/gcc.exe"
+
+[alias]
+check-review = "!bash scripts/update-review-doc.sh"
+

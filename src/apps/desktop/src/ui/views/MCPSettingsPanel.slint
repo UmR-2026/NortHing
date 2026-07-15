@@ -1,0 +1,238 @@
+// MCPSettingsPanel — Phase 3 sub-panel for g6 MCP
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
+// F1=a (form), F2=b (3 transports).
+
+import { MaterialTheme, MCPItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { AppStrings } from "../strings.slint";
+
+export component MCPSettingsPanel inherits Rectangle {
+    background: MaterialTheme.current-background();
+
+    in property <[MCPItem]> mcp-servers: [];
+    in-out property <bool> add-form-visible: false;
+    in-out property <string> form-name: "";
+    in-out property <string> form-transport: "stdio";
+    in-out property <string> form-command: "";
+    in-out property <string> form-args: "";   // newline-separated
+    in-out property <string> form-url: "";
+    in-out property <string> form-env: "";    // newline-separated KEY=VALUE
+    in-out property <bool> form-enabled: true;
+
+    callback upsert-mcp(string, string, string, string, string, string, string, bool);
+        // (id-or-empty, name, transport, command, args, url, env, enabled)
+    callback delete-mcp(string);
+    callback test-mcp(string);
+
+    VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding: MaterialTheme.spacing-lg;
+        spacing: MaterialTheme.spacing-md;
+
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+
+            Text {
+                text: AppStrings.settings-mcp;
+                font-size: MaterialTheme.font-size-title;
+                color: MaterialTheme.current-on-surface();
+                vertical-alignment: center;
+            }
+
+            add-btn := MaterialButton {
+                text: root.mcp-servers.length == 0 ? AppStrings.mcp-add : "+";
+                clicked => {
+                    root.add-form-visible = true;
+                    root.form-name = "";
+                    root.form-transport = "stdio";
+                    root.form-command = "";
+                    root.form-args = "";
+                    root.form-url = "";
+                    root.form-env = "";
+                    root.form-enabled = true;
+                }
+            }
+        }
+
+        Flickable {
+            vertical-stretch: 1;
+            width: parent.width;
+
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                if root.mcp-servers.length == 0 && !root.add-form-visible: Rectangle {
+                    height: 80px;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+
+                    Text {
+                        text: AppStrings.mcp-empty;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.7;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        width: parent.width;
+                    }
+                }
+
+                for srv in root.mcp-servers: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+                    height: 56px;
+
+                    HorizontalLayout {
+                        spacing: MaterialTheme.spacing-md;
+                        width: parent.width;
+
+                        status := Text {
+                            text: srv.verified == "fail" ? "⚠️"
+                                : srv.verified == "ok" ? "✓"
+                                : (srv.enabled ? "○" : "⨯");
+                            color: srv.verified == "fail" ? MaterialTheme.error
+                                : srv.enabled ? MaterialTheme.current-primary() : MaterialTheme.current-on-surface();
+                            width: 24px;
+                            font-size: MaterialTheme.font-size-title;
+                            vertical-alignment: center;
+                        }
+
+                        info := VerticalLayout {
+                            width: parent.width - 280px;
+                            spacing: 0;
+
+                            Text {
+                                text: srv.name;
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-body;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: srv.transport + (srv.tool-count > 0 ? " · " + srv.tool-count + " 工具" : "");
+                                color: MaterialTheme.current-on-surface();
+                                opacity: 0.7;
+                                font-size: MaterialTheme.font-size-caption;
+                            }
+                        }
+
+                        test-btn := MaterialButton {
+                            text: AppStrings.mcp-test-button;
+                            clicked => { root.test-mcp(srv.id); }
+                        }
+
+                        delete-btn := MaterialButton {
+                            text: AppStrings.provider-delete;
+                            clicked => { root.delete-mcp(srv.id); }
+                        }
+                    }
+                }
+
+                // ===== Add form (F1=a) =====
+                if root.add-form-visible: MaterialCard {
+                    width: parent.width;
+                    card-padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-sm;
+                        width: parent.width;
+
+                        MaterialTextField {
+                            placeholder: AppStrings.mcp-name-label;
+                            text <=> root.form-name;
+                            width: parent.width;
+                        }
+
+                        // Transport buttons (F2=b: 3 types)
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-xs;
+                            height: 40px;
+
+                            for t-opt in [
+                                { value: "stdio", label: AppStrings.mcp-transport-stdio },
+                                { value: "sse", label: AppStrings.mcp-transport-sse },
+                                { value: "streamable-http", label: AppStrings.mcp-transport-streamable-http }
+                            ]: Rectangle {
+                                height: 36px;
+                                padding: MaterialTheme.spacing-sm;
+                                background: t-opt.value == root.form-transport
+                                    ? MaterialTheme.current-primary()
+                                    : MaterialTheme.current-surface();
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => { root.form-transport = t-opt.value; }
+                                }
+                                Text {
+                                    text: t-opt.label;
+                                    color: t-opt.value == root.form-transport
+                                        ? MaterialTheme.on-primary
+                                        : MaterialTheme.current-on-surface();
+                                    font-size: MaterialTheme.font-size-caption;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                }
+                            }
+                        }
+
+                        // Transport-specific fields.
+                        if root.form-transport == "stdio": VerticalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            width: parent.width;
+
+                            MaterialTextField {
+                                placeholder: AppStrings.mcp-command-label;
+                                text <=> root.form-command;
+                                width: parent.width;
+                            }
+
+                            MaterialTextField {
+                                placeholder: AppStrings.mcp-args-label;
+                                text <=> root.form-args;
+                                multi-line: true;
+                                width: parent.width;
+                            }
+                        }
+
+                        if root.form-transport == "sse" || root.form-transport == "streamable-http": MaterialTextField {
+                            placeholder: AppStrings.mcp-url-label;
+                            text <=> root.form-url;
+                            width: parent.width;
+                        }
+
+                        MaterialTextField {
+                            placeholder: AppStrings.mcp-env-label;
+                            text <=> root.form-env;
+                            multi-line: true;
+                            width: parent.width;
+                        }
+
+                        // Action row
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-sm;
+                            height: 40px;
+
+                            save-btn := MaterialButton {
+                                text: AppStrings.save;
+                                clicked => {
+                                    root.upsert-mcp("", root.form-name, root.form-transport, root.form-command, root.form-args, root.form-url, root.form-env, root.form-enabled);
+                                    root.add-form-visible = false;
+                                }
+                            }
+
+                            cancel-btn := MaterialButton {
+                                text: AppStrings.cancel;
+                                clicked => { root.add-form-visible = false; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

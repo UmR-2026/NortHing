@@ -1,0 +1,215 @@
+version: 1
+plan:
+  name: round46-7-way-real-god-objects-2026-07-07
+  max_concurrency: 7
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r46a-agent-runtime-prompt-cache-split
+    title: "R46a: agent-runtime prompt_cache.rs 873 -> facade + N sibling (step-3.7-flash) (agent-runtime)"
+    prompt: |
+      # R46a: agent-runtime prompt_cache.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/prompt_cache.rs (873 lines)
+      Worktree: E:/agent-project/northing-impl-r46a-agent-runtime-prompt-cache (branch impl/r46a-agent-runtime-prompt-cache-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: agent-runtime (-p agent-runtime --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: cache_store.rs / cache_invalidate.rs / cache_query.rs / cache_types.rs
+      Cross-ref: `git grep 'prompt_cache\|PromptCache\|CacheKey' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/execution/agent-runtime/src/prompt_cache.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 873)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p agent-runtime --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(agent-runtime): R46a split prompt_cache.rs 873 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r46b-services-remote-ssh-mgr-session-lifecycle-split
+    title: "R46b: services-integrations remote_ssh/manager_session_lifecycle.rs 856 -> facade + N sibling (M2.7, R43e follow-up) (services-integrations)"
+    prompt: |
+      # R46b: remote_ssh/manager_session_lifecycle.rs god-split (M2.7, R43e follow-up)
+      Target: src/crates/services/services-integrations/src/remote_ssh/manager_session_lifecycle.rs (856 lines)
+      Worktree: E:/agent-project/northing-impl-r46b-services-remote-ssh-mgr-session-lifecycle (branch impl/r46b-services-remote-ssh-mgr-session-lifecycle-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: services-integrations (-p services-integrations --features product-full --lib)
+
+      ## Context (R43e follow-up)
+      R43e split `remote_ssh/remote_exec.rs` 1195 -> facade + 4 sibling. R46b is follow-up on `manager_session_lifecycle.rs` (different file, parallel concern).
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: mgr_lifecycle_state.rs / mgr_lifecycle_handlers.rs / mgr_lifecycle_persist.rs / mgr_lifecycle_types.rs
+      Cross-ref: `git grep 'manager_session_lifecycle\|SessionLifecycleManager\|SessionLifecycleState' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(services): R46b split remote_ssh/manager_session_lifecycle.rs 856 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r46c-core-snapshot-manager-split
+    title: "R46c: service/snapshot/manager.rs 854 -> facade + N sibling (M2.7, R42c follow-up) (northhing-core)"
+    prompt: |
+      # R46c: service/snapshot/manager.rs god-split (M2.7, R42c follow-up)
+      Target: src/crates/assembly/core/src/service/snapshot/manager.rs (854 lines)
+      Worktree: E:/agent-project/northing-impl-r46c-core-snapshot-manager (branch impl/r46c-core-snapshot-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## Context (R42c follow-up)
+      R42c split `snapshot_core.rs` 1309 -> 235 facade + 4 sibling. R46c splits `manager.rs` (different file, parallel concern).
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: mgr_capture.rs / mgr_invalidate.rs / mgr_query.rs / mgr_types.rs
+      Cross-ref: `git grep 'snapshot::manager\|SnapshotManager\|SnapshotEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R46c split snapshot/manager.rs 854 -> facade + N sibling (R42c follow-up)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r46d-agent-runtime-deep-review-budget-split
+    title: "R46d: agent-runtime deep_review/budget.rs 853 -> facade + N sibling (step-3.7-flash) (agent-runtime)"
+    prompt: |
+      # R46d: agent-runtime deep_review/budget.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/deep_review/budget.rs (853 lines)
+      Worktree: E:/agent-project/northing-impl-r46d-agent-runtime-deep-review-budget (branch impl/r46d-agent-runtime-deep-review-budget-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: agent-runtime (-p agent-runtime --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: budget_track.rs / budget_check.rs / budget_alert.rs / budget_types.rs
+      Cross-ref: `git grep 'deep_review::budget\|BudgetTracker\|BudgetPolicy' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(agent-runtime): R46d split deep_review/budget.rs 853 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r46e-core-mcp-server-mgr-auth-split
+    title: "R46e: service/mcp/server/manager/auth.rs 848 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R46e: mcp/server/manager/auth.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/mcp/server/manager/auth.rs (848 lines)
+      Worktree: E:/agent-project/northing-impl-r46e-core-mcp-server-mgr-auth (branch impl/r46e-core-mcp-server-mgr-auth-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: auth_validate.rs / auth_token.rs / auth_session.rs / auth_types.rs
+      Cross-ref: `git grep 'mcp::server::manager::auth\|AuthManager\|AuthToken' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R46e split mcp/server/manager/auth.rs 848 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r46f-core-tools-registry-split
+    title: "R46f: agentic/tools/registry.rs 835 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R46f: tools/registry.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/registry.rs (835 lines)
+      Worktree: E:/agent-project/northing-impl-r46f-core-tools-registry (branch impl/r46f-core-tools-registry-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: registry_register.rs / registry_dispatch.rs / registry_meta.rs / registry_types.rs
+      Cross-ref: `git grep 'tools::registry\|ToolRegistry\|ToolEntry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R46f split tools/registry.rs 835 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r46g-core-browser-launcher-split
+    title: "R46g: browser_control/browser_launcher.rs 815 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R46g: browser_launcher.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/browser_control/browser_launcher.rs (815 lines)
+      Worktree: E:/agent-project/northing-impl-r46g-core-browser-launcher (branch impl/r46g-core-browser-launcher-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R47+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R46a.
+
+      ## Sub-domain split
+      Suggested: launcher_init.rs / launcher_state.rs / launcher_handlers.rs / launcher_types.rs
+      Cross-ref: `git grep 'browser_launcher\|BrowserLauncher\|LaunchEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R46g split browser_launcher.rs 815 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

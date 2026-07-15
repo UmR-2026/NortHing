@@ -1,0 +1,186 @@
+version: 1
+plan:
+  name: round54-final-5-way-cleanup
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: true
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r54a-so-lifecycle-modal-split
+    title: "R54a: subagent_orchestrator/so_lifecycle.rs 787 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R54a: so_lifecycle.rs modal split (R50b residual) (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_lifecycle.rs (787 lines)
+      Worktree: E:/agent-project/northing-impl-r54a-so-lifecycle (branch impl/r54a-so-lifecycle-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R53 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo check -p <crate> --features product-full --lib` to verify the lib compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      so_lifecycle.rs is subagent lifecycle orchestration. R50b split subagent_orchestrator.rs.
+      To split so_lifecycle further by phase:
+        - spawn.rs       — create/spawn new subagent
+        - lifecycle.rs   — main lifecycle event handling (suspend/resume/restart)
+        - cleanup.rs     — cleanup/kill/shutdown
+        - monitor.rs     — health/metrics/observation
+
+      Cross-ref: `git grep 'so_lifecycle\|SOResp ' -- ':!so_lifecycle.rs'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_lifecycle.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 787)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R54a split so_lifecycle.rs 787 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r54b-system-actions-modal-split
+    title: "R54b: tools/implementations/computer_use_actions/system_actions.rs 756 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R54b: system_actions.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions.rs (756 lines)
+      Worktree: E:/agent-project/northing-impl-r54b-system-actions (branch impl/r54b-system-actions-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R54a.
+
+      ## Sub-domain split
+      system_actions.rs covers computer use system actions (mouse/keyboard/app control).
+      To split by system action category:
+        - mouse.rs       — mouse actions: click/drag/move/scroll
+        - keyboard.rs    — keyboard actions: type/hotkey/shortcut
+        - app_control.rs — app control: launch/focus/window
+        - screen.rs      — screen capture / display
+
+      Cross-ref: `git grep 'system_actions\|SystemAction' -- ':!system_actions.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R54b split tools/implementations/computer_use_actions/system_actions.rs 756 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r54c-acp-requirements-modal-split
+    title: "R54c: interfaces/acp/client/requirements.rs 755 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R54c: requirements.rs modal split (step-3.7-flash)
+      Target: src/crates/interfaces/acp/src/client/requirements.rs (755 lines)
+      Worktree: E:/agent-project/northing-impl-r54c-acp-requirements (branch impl/r54c-acp-requirements-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-acp (-p northhing-acp --lib)
+
+      ## CRITICAL iron rules
+      Same as R54a.
+
+      ## Sub-domain split
+      requirements.rs covers ACP client requirement definitions/specs.
+      To split by requirement domain:
+        - req_capabilities.rs — capability negotiation
+        - req_auth.rs         — authentication requirements
+        - req_protocol.rs     — protocol version/method requirements
+        - req_session.rs      — session lifecycle requirements
+
+      Cross-ref: `git grep 'requirements::\|AcpRequirement' -- ':!requirements.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R54c split interfaces/acp/src/client/requirements.rs 755 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r54d-deep-review-report-modal-split
+    title: "R54d: execution/agent-runtime/deep_review/report.rs 755 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R54d: report.rs modal split (step-3.7-flash)
+      Target: src/crates/execution/agent-runtime/src/deep_review/report.rs (755 lines)
+      Worktree: E:/agent-project/northing-impl-r54d-deep-review-report (branch impl/r54d-deep-review-report-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-agent-runtime (-p northhing-agent-runtime --lib)
+
+      ## CRITICAL iron rules
+      Same as R54a.
+
+      ## Sub-domain split
+      report.rs covers deep_review report formatting.
+      To split by report section:
+        - report_summary.rs   — top-level summary aggregation
+        - report_findings.rs  — findings/issues section
+        - report_score.rs     — score/rating section
+        - report_render.rs    — markdown/render formatting
+
+      Cross-ref: `git grep 'deep_review::report\|DeepReviewReport' -- ':!report.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R54d split deep_review/report.rs 755 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+
+  - id: impl-r54e-file-write-tool-modal-split
+    title: "R54e: tools/implementations/file_write_tool.rs 755 -> facade + 4 sibling (step-3.7-flash)"
+    prompt: |
+      # R54e: file_write_tool.rs modal split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool.rs (755 lines)
+      Worktree: E:/agent-project/northing-impl-r54e-file-write-tool (branch impl/r54e-file-write-tool-modal-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R54a.
+
+      ## Sub-domain split
+      file_write_tool.rs covers file write tool implementation.
+      To split by phase:
+        - write_validate.rs — path validation, content sanitization
+        - write_execute.rs   — actual file write operation
+        - write_format.rs    — content formatting, line ending
+        - write_error.rs     — error handling, conflict resolution
+
+      Cross-ref: `git grep 'file_write_tool\|FileWriteTool' -- ':!file_write_tool.rs'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R54e split file_write_tool.rs 755 -> facade + 4 sibling`
+      Self-report: `commit=xxx check=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000

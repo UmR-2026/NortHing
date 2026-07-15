@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "task": "prompt-cache-stats",
+  "timestamp": "2026-06-23T00:00:00Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "check": "compile",
+      "command": "cargo check -p northhing-agent-runtime --lib",
+      "status": "PASS",
+      "warnings": 0,
+      "errors": 0,
+      "details": "Compilation successful with no errors or warnings"
+    },
+    {
+      "check": "test",
+      "command": "cargo test -p northhing-agent-runtime --lib prompt_cache",
+      "status": "PASS",
+      "warnings": 0,
+      "errors": 0,
+      "tests_run": 10,
+      "tests_passed": 10,
+      "tests_failed": 0,
+      "details": "All 10 tests passed: 4 original + 6 new statistics tests (stats_default_all_zero, system_prompt_lookup_hit_increments_stats, system_prompt_lookup_miss_increments_stats, system_prompt_lookup_expired_increments_stats, user_context_lookup_hit_increments_stats, user_context_lookup_miss_increments_stats)"
+    }
+  ],
+  "recommendation": "READY_FOR_REVIEW"
+}

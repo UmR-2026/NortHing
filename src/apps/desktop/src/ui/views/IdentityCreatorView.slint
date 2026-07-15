@@ -1,0 +1,218 @@
+// IdentityCreatorView — Phase 4 modal for D3 IDENTITY.md LLM-driven generation
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.5
+//
+// 5 Q&A rounds + live preview of the generated IDENTITY.md.
+// Final preview is user-editable. Save writes to workspace root.
+
+import { MaterialTheme } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { AppStrings } from "../strings.slint";
+
+export component IdentityCreatorView inherits Rectangle {
+    callback on-saved(string);  // final markdown
+    callback on-cancel();
+    // Rust side calls LLM with the user's answers and returns a generated
+    // IDENTITY.md. We pass: question_id (1..5), answer_text, current draft.
+    callback llm-generate(string, string, string);  // (question_id, answer, current_draft) → sets generated_draft
+
+    in-out property <int> current-q: 1;  // 1..5
+    in-out property <string> q1-answer: "";
+    in-out property <string> q2-answer: "";
+    in-out property <string> q3-answer: "";
+    in-out property <string> q4-answer: "";
+    in-out property <string> q5-answer: "";
+    in-out property <string> generated-draft: "# Identity\n\n(等待生成…)\n";
+    in-out property <bool> llm-in-flight: false;
+    in-out property <string> llm-error: "";
+
+    background: #00000080;
+
+    Rectangle {
+        x: (parent.width - 800px) / 2;
+        y: (parent.height - 540px) / 2;
+        width: 800px;
+        height: 540px;
+        background: MaterialTheme.current-background();
+        border-radius: 8px;
+        padding: MaterialTheme.spacing-lg;
+
+        VerticalLayout {
+            spacing: MaterialTheme.spacing-md;
+            width: parent.width;
+            height: parent.height;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+                width: parent.width;
+
+                Text {
+                    text: AppStrings.identity-title;
+                    font-size: MaterialTheme.font-size-title;
+                    font-weight: 600;
+                    color: MaterialTheme.current-on-surface();
+                    vertical-alignment: center;
+                    width: parent.width - 200px;
+                }
+
+                Text {
+                    text: root.current-q + " / 5";
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.6;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle { height: 1px; background: MaterialTheme.current-surface(); }
+
+            // Two-column body: Q&A on left, preview on right
+            HorizontalLayout {
+                spacing: MaterialTheme.spacing-md;
+                vertical-stretch: 1;
+                width: parent.width;
+
+                // Left: question + answer
+                Rectangle {
+                    width: (parent.width - MaterialTheme.spacing-md) / 2;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+                    padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-sm;
+                        width: parent.width;
+
+                        Text {
+                            text: root.current-q == 1 ? AppStrings.identity-prompt-q1
+                                : root.current-q == 2 ? AppStrings.identity-prompt-q2
+                                : root.current-q == 3 ? AppStrings.identity-prompt-q3
+                                : root.current-q == 4 ? AppStrings.identity-prompt-q4
+                                : AppStrings.identity-prompt-q5;
+                            font-size: MaterialTheme.font-size-body;
+                            color: MaterialTheme.current-on-surface();
+                            font-weight: 600;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+
+                        // The current answer input
+                        MaterialTextField {
+                            placeholder: "在这里输入你的回答…";
+                            text: root.current-q == 1 ? root.q1-answer
+                                : root.current-q == 2 ? root.q2-answer
+                                : root.current-q == 3 ? root.q3-answer
+                                : root.current-q == 4 ? root.q4-answer
+                                : root.q5-answer;
+                            multi-line: true;
+                            height: 120px;
+                            width: parent.width;
+                            edited => {
+                                if root.current-q == 1 { root.q1-answer = self.text; }
+                                if root.current-q == 2 { root.q2-answer = self.text; }
+                                if root.current-q == 3 { root.q3-answer = self.text; }
+                                if root.current-q == 4 { root.q4-answer = self.text; }
+                                if root.current-q == 5 { root.q5-answer = self.text; }
+                            }
+                        }
+
+                        // LLM error display
+                        if root.llm-error != "": Text {
+                            text: "LLM 调用失败: " + root.llm-error + "（可手动编辑后保存）";
+                            font-size: MaterialTheme.font-size-caption;
+                            color: MaterialTheme.error;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+                    }
+                }
+
+                // Right: live preview
+                Rectangle {
+                    width: (parent.width - MaterialTheme.spacing-md) / 2;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+                    padding: MaterialTheme.spacing-md;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        width: parent.width;
+
+                        Text {
+                            text: "预览 IDENTITY.md";
+                            font-size: MaterialTheme.font-size-caption;
+                            color: MaterialTheme.current-on-surface();
+                            opacity: 0.6;
+                        }
+
+                        // The preview — also editable per spec.
+                        MaterialTextField {
+                            placeholder: "(等待 LLM 生成…)";
+                            text <=> root.generated-draft;
+                            multi-line: true;
+                            vertical-stretch: 1;
+                            width: parent.width;
+                        }
+                    }
+                }
+            }
+
+            // Footer buttons
+            HorizontalLayout {
+                height: 40px;
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                back-btn := MaterialButton {
+                    text: AppStrings.identity-back;
+                    disabled: root.current-q == 1;
+                    clicked => { root.current-q = root.current-q - 1; }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                regen-btn := MaterialButton {
+                    text: AppStrings.identity-regenerate;
+                    disabled: root.llm-in-flight;
+                    clicked => {
+                        root.llm-in-flight = true;
+                        root.llm-error = "";
+                        root.llm-generate(
+                            root.current-q,
+                            root.current-q == 1 ? root.q1-answer
+                                : root.current-q == 2 ? root.q2-answer
+                                : root.current-q == 3 ? root.q3-answer
+                                : root.current-q == 4 ? root.q4-answer
+                                : root.q5-answer,
+                            root.generated-draft
+                        );
+                    }
+                }
+
+                if root.current-q < 5: next-btn := MaterialButton {
+                    text: "下一题";
+                    disabled: (root.current-q == 1 ? root.q1-answer
+                        : root.current-q == 2 ? root.q2-answer
+                        : root.current-q == 3 ? root.q3-answer
+                        : root.current-q == 4 ? root.q4-answer
+                        : root.q5-answer) == "";
+                    clicked => { root.current-q = root.current-q + 1; }
+                }
+
+                save-btn := MaterialButton {
+                    text: AppStrings.identity-save;
+                    visible: root.current-q == 5;
+                    clicked => { root.on-saved(root.generated-draft); }
+                }
+
+                cancel-btn := MaterialButton {
+                    text: AppStrings.cancel;
+                    clicked => { root.on-cancel(); }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "task": "prompt-cache-stats",
+  "head_before": "none",
+  "head_after": "none",
+  "timestamp": "2026-06-23T00:00:00Z",
+  "files_changed": [
+    {
+      "path": "src/crates/execution/agent-runtime/src/prompt_cache.rs",
+      "change_type": "modify",
+      "lines_added": 28,
+      "lines_removed": 0,
+      "description": "Added PromptCacheStats struct and statistics tracking to SessionPromptCacheStore. Stats tracked for system_prompt_hits, system_prompt_misses, system_prompt_expired, user_context_hits, user_context_misses, user_context_expired. New get_stats() method added."
+    }
+  ],
+  "tests_added": [
+    "stats_default_all_zero",
+    "system_prompt_lookup_hit_increments_stats",
+    "system_prompt_lookup_miss_increments_stats",
+    "system_prompt_lookup_expired_increments_stats",
+    "user_context_lookup_hit_increments_stats",
+    "user_context_lookup_miss_increments_stats"
+  ],
+  "tests_modified": [],
+  "boundary_check": {
+    "no_touch_violations": [],
+    "can_modify_compliance": true
+  },
+  "notes": [
+    "Added std::sync::{Arc, Mutex} import for thread-safe stats",
+    "PromptCacheStats uses Arc<Mutex<>> for thread-safe sharing across clones of the store",
+    "Statistics are incremented inside lookup methods using lock().unwrap()",
+    "Added 6 new statistics tests covering hits, misses, and expired cases for both system_prompt and user_context lookups"
+  ],
+  "confidence": "high",
+  "uncertainties": []
+}

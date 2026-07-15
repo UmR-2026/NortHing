@@ -1,0 +1,157 @@
+version: 1
+plan:
+  name: round49-5-way-real-god-objects-2026-07-07
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r49a-core-transcript-export-split
+    title: "R49a: agentic/persistence/transcript_export.rs 760 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49a: transcript_export.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/persistence/transcript_export.rs (760 lines)
+      Worktree: E:/agent-project/northing-impl-r49a-core-transcript-export (branch impl/r49a-core-transcript-export-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: te_format.rs / te_write.rs / te_validate.rs / te_types.rs
+      Cross-ref: `git grep 'transcript_export\|TranscriptExporter\|ExportPolicy' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/persistence/transcript_export.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 760)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R49a split transcript_export.rs 760 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r49b-core-session-restore-split
+    title: "R49b: agentic/session/session_restore.rs 759 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49b: session_restore.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/session/session_restore.rs (759 lines)
+      Worktree: E:/agent-project/northing-impl-r49b-core-session-restore (branch impl/r49b-core-session-restore-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: restore_load.rs / restore_apply.rs / restore_validate.rs / restore_types.rs
+      Cross-ref: `git grep 'session_restore\|SessionRestore\|RestoreEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49b split session_restore.rs 759 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r49c-core-message-split
+    title: "R49c: agentic/core/message.rs 758 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49c: core/message.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/core/message.rs (758 lines)
+      Worktree: E:/agent-project/northing-impl-r49c-core-message (branch impl/r49c-core-message-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: msg_build.rs / msg_serialize.rs / msg_validate.rs / msg_types.rs
+      Cross-ref: `git grep 'agentic::core::message\|MessageBuilder\|MessageFormat' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49c split core/message.rs 758 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r49d-core-mcp-tools-split
+    title: "R49d: agentic/tools/implementations/mcp_tools.rs 756 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49d: mcp_tools.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/mcp_tools.rs (756 lines)
+      Worktree: E:/agent-project/northing-impl-r49d-core-mcp-tools (branch impl/r49d-core-mcp-tools-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: mcp_invoke.rs / mcp_register.rs / mcp_state.rs / mcp_types.rs
+      Cross-ref: `git grep 'mcp_tools\|McpTools\|McpRegistry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49d split mcp_tools.rs 756 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r49e-core-session-evidence-split
+    title: "R49e: agentic/session/session_evidence.rs 756 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49e: session_evidence.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/session/session_evidence.rs (756 lines)
+      Worktree: E:/agent-project/northing-impl-r49e-core-session-evidence (branch impl/r49e-core-session-evidence-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: ev_collect.rs / ev_format.rs / ev_query.rs / ev_types.rs
+      Cross-ref: `git grep 'session_evidence\|SessionEvidence\|EvidenceLedger' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49e split session_evidence.rs 756 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0

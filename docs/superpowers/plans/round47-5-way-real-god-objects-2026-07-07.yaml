@@ -1,0 +1,159 @@
+version: 1
+plan:
+  name: round47-5-way-real-god-objects-2026-07-07
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r47a-agent-dispatch-runtime-split
+    title: "R47a: agent-dispatch runtime.rs 815 -> facade + N sibling (step-3.7-flash) (agent-dispatch)"
+    prompt: |
+      # R47a: agent-dispatch runtime.rs god-split (step-3.7-flash)
+      Target: src/crates/execution/agent-dispatch/src/runtime.rs (815 lines)
+      Worktree: E:/agent-project/northing-impl-r47a-agent-dispatch-runtime (branch impl/r47a-agent-dispatch-runtime-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R48+ use previous round's squash-merge commit)
+      Package: agent-dispatch (-p agent-dispatch --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: rt_dispatch.rs / rt_state.rs / rt_handlers.rs / rt_types.rs
+      Cross-ref: `git grep 'agent_dispatch::runtime\|DispatchRuntime\|AgentRuntime' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/execution/agent-dispatch/src/runtime.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 815)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p agent-dispatch --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(agent-dispatch): R47a split runtime.rs 815 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r47b-core-turn-subhandlers-split
+    title: "R47b: agentic/coordination/dialog_turn/turn_subhandlers.rs 806 -> facade + N sibling (M2.7, dialog_turn family) (northhing-core)"
+    prompt: |
+      # R47b: turn_subhandlers.rs god-split (M2.7, dialog_turn family)
+      Target: src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_subhandlers.rs (806 lines)
+      Worktree: E:/agent-project/northing-impl-r47b-core-turn-subhandlers (branch impl/r47b-core-turn-subhandlers-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R48+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R47a, plus:
+      - dialog_turn family: R44a just split dialog_turn/mod.rs. R47b is in same subdir, preserve sibling layout.
+
+      ## Sub-domain split
+      Suggested: sub_handle_in.rs / sub_handle_out.rs / sub_handle_state.rs / sub_handle_types.rs
+      Cross-ref: `git grep 'turn_subhandlers\|TurnSubhandler\|SubhandlerRegistry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R47b split turn_subhandlers.rs 806 -> facade + N sibling (dialog_turn family)`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r47c-core-round-executor-split
+    title: "R47c: agentic/execution/round_executor.rs 804 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R47c: round_executor.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/execution/round_executor.rs (804 lines)
+      Worktree: E:/agent-project/northing-impl-r47c-core-round-executor (branch impl/r47c-core-round-executor-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R48+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R47a.
+
+      ## Sub-domain split
+      Suggested: rexec_run.rs / rexec_validate.rs / rexec_state.rs / rexec_types.rs
+      Cross-ref: `git grep 'round_executor\|RoundExecutor\|RoundEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R47c split round_executor.rs 804 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r47d-core-weixin-bot-media-split
+    title: "R47d: service/remote_connect/bot/weixin_bot_media.rs 803 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R47d: weixin_bot_media.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_media.rs (803 lines)
+      Worktree: E:/agent-project/northing-impl-r47d-core-weixin-bot-media (branch impl/r47d-core-weixin-bot-media-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R48+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R47a.
+
+      ## Sub-domain split
+      Suggested: media_upload.rs / media_download.rs / media_validate.rs / media_types.rs
+      Cross-ref: `git grep 'weixin_bot_media\|WeixinMedia\|MediaHandler' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R47d split weixin_bot_media.rs 803 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0
+  - id: impl-r47e-core-session-message-tool-split
+    title: "R47e: agentic/tools/implementations/session_message_tool.rs 800 -> facade + N sibling (M2.7, cross-crate) (northhing-core)"
+    prompt: |
+      # R47e: session_message_tool.rs god-split (M2.7, cross-crate)
+      Target: src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool.rs (800 lines)
+      Worktree: E:/agent-project/northing-impl-r47e-core-session-message-tool (branch impl/r47e-core-session-message-tool-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R48+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R47a, plus:
+      - session_message_tool is consumed by cli + desktop. Preserve all `pub use` re-export paths.
+
+      ## Sub-domain split
+      Suggested: sm_send.rs / sm_query.rs / sm_state.rs / sm_types.rs
+      Cross-ref: `git grep 'session_message_tool\|SessionMessageTool\|MessageHandler' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R47e split session_message_tool.rs 800 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: longcat/LongCat-2.0

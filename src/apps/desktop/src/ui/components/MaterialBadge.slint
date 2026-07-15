@@ -1,0 +1,21 @@
+// Material Badge Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialBadge inherits Rectangle {
+    in property <string> text: "";
+    in property <color> background-color: MaterialTheme.error;
+    
+    width: 24px;
+    height: 16px;
+    background: background-color;
+    border-radius: 8px;
+    
+    Text {
+        text: root.text;
+        font-size: MaterialTheme.font-size-caption;
+        color: MaterialTheme.on-error;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

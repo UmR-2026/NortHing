@@ -1,0 +1,29 @@
+// Code Block Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component CodeBlock inherits Rectangle {
+    in property <string> code: "";
+    in property <string> language: "";
+    
+    background: #1E1E1E;
+    border-radius: 4px;
+    padding: MaterialTheme.spacing-md;
+    
+    VerticalLayout {
+        if language != "": Text {
+            text: language;
+            font-size: MaterialTheme.font-size-caption;
+            color: MaterialTheme.current-on-surface();
+            opacity: 0.6;
+        }
+        
+        Text {
+            text: root.code;
+            font-size: MaterialTheme.font-size-body;
+            color: #D4D4D4;
+            font-family: "Consolas, monospace";
+            wrap: word-wrap;
+        }
+    }
+}

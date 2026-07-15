@@ -1,0 +1,104 @@
+// MaterialBanner — Phase 5: dual-channel error banner
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §6.3
+//
+// Q8=c: every error defaults to a banner that auto-dismisses after N
+// seconds. The user can click "详情" to copy the same error to the
+// inline channel (manual close). This is the first channel of the
+// dual-channel design; the inline channel is rendered by the view
+// itself (e.g. ChatPaneView's red strip above the input).
+//
+// Notes on Phase 5 implementation choices:
+// - `auto-dismiss` is implemented at the call site (Rust side calls
+//   `ui.set_banner_message("")` after N seconds) — keeping the
+//   Slint component pure UI.
+// - `detail` empty → "详情" button hidden (per spec).
+// - Background: `MaterialTheme.error` (already exists in theme.slint).
+// - The `detail-clicked` callback fires when the user clicks
+//   "详情"; the parent (AppWindow) re-pushes the same error to the
+//   inline channel via the existing `set_inline_error` method.
+
+import { MaterialTheme } from "../theme.slint";
+import { MaterialButton } from "MaterialButton.slint";
+import { MaterialIconButton } from "MaterialIconButton.slint";
+import { AppStrings } from "../strings.slint";
+
+export component MaterialBanner inherits Rectangle {
+    in property <string> message: "";
+    in property <string> detail: "";
+    in property <bool> auto-dismiss: true;
+    in property <int> auto-dismiss-secs: 5;
+
+    callback dismissed();
+    callback detail-clicked();
+
+    // Renders only when `message` is non-empty. Empty message means
+    // the banner is dismissed (used as the natural auto-dismiss
+    // mechanism: the parent clears `message` after N seconds).
+    visible: root.message != "";
+
+    height: 56px;
+    background: MaterialTheme.error;
+    border-radius: 4px;
+
+    HorizontalLayout {
+        padding: MaterialTheme.spacing-sm;
+        spacing: MaterialTheme.spacing-sm;
+        width: parent.width;
+
+        // Error icon
+        Text {
+            text: "⚠";
+            color: MaterialTheme.on-error;
+            font-size: MaterialTheme.font-size-title;
+            vertical-alignment: center;
+            width: 24px;
+        }
+
+        // Message
+        Text {
+            text: root.message;
+            color: MaterialTheme.on-error;
+            font-size: MaterialTheme.font-size-body;
+            vertical-alignment: center;
+            horizontal-alignment: left;
+            width: parent.width - 24px - 80px - 32px - 24px;
+            wrap: word-wrap;
+        }
+
+        // "详情" button (only when detail is non-empty)
+        if root.detail != "": Rectangle {
+            width: 80px;
+            height: 32px;
+            background: MaterialTheme.on-error.with-alpha(0.12);
+            border-radius: 4px;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.detail-clicked(); }
+            }
+
+            Text {
+                text: AppStrings.error-detail-button;
+                color: MaterialTheme.on-error;
+                font-size: MaterialTheme.font-size-caption;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+            }
+        }
+
+        // Spacer to push X to the right
+        Rectangle { vertical-stretch: 1; }
+
+        // Dismiss button
+        MaterialIconButton {
+            icon: "×";
+            icon-size: 16px;
+            width: 24px;
+            height: 24px;
+            clicked => { root.dismissed(); }
+        }
+    }
+}

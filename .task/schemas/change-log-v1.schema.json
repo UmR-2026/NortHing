@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northhing.dev/schemas/change-log-v1.json",
+  "title": "LAEP Change Log",
+  "description": "Lightweight Agent Execution Protocol - Coding Model Output",
+  "type": "object",
+  "required": ["schema_version", "task", "head_before", "head_after", "timestamp", "files_changed", "boundary_check", "confidence"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Protocol version"
+    },
+    "task": {
+      "type": "string",
+      "description": "Task name from Taskfile"
+    },
+    "head_before": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{7,40}$",
+      "description": "Git HEAD before coding"
+    },
+    "head_after": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{7,40}$",
+      "description": "Git HEAD after coding"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "files_changed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "change_type"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative file path"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": ["add", "modify", "delete"],
+            "description": "Type of change"
+          },
+          "lines_added": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Lines added"
+          },
+          "lines_removed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Lines removed"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the change"
+          }
+        }
+      }
+    },
+    "tests_added": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of newly added tests"
+    },
+    "tests_modified": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of modified tests"
+    },
+    "boundary_check": {
+      "type": "object",
+      "required": ["no_touch_violations", "can_modify_compliance"],
+      "properties": {
+        "no_touch_violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of no-touch files that were modified"
+        },
+        "can_modify_compliance": {
+          "type": "boolean",
+          "description": "Whether all modified files are in can_modify list"
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Coding model notes"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Confidence level"
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Uncertainties that need review attention"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+// Chat Message Bubble Component
+
+import { MaterialTheme } from "../theme.slint";
+import { MaterialCard } from "MaterialCard.slint";
+
+export component ChatMessageBubble inherits Rectangle {
+    in property <string> role: "user";
+    in property <string> content: "";
+    in property <string> timestamp: "";
+    in property <bool> is-streaming: false;
+    
+    pure function bubble-color() -> color {
+        if role == "user" { MaterialTheme.current-primary(); }
+        else if role == "assistant" { MaterialTheme.current-surface(); }
+        else if role == "system" { #666666; }
+        else if role == "tool" { #2D4A3E; }
+        else { MaterialTheme.current-surface(); }
+    }
+    
+    pure function text-color() -> color {
+        if role == "user" { MaterialTheme.on-primary; }
+        else { MaterialTheme.current-on-surface(); }
+    }
+    
+    // padding is layout-only in Slint; use card-padding on MaterialCard instead
+    // padding: MaterialTheme.spacing-sm;
+    
+    HorizontalLayout {
+        alignment: role == "user" ? end : start;
+        
+        MaterialCard {
+            width: root.width * 0.8;
+            card-padding: MaterialTheme.spacing-md;
+            background: root.bubble-color();
+            
+            VerticalLayout {
+                spacing: MaterialTheme.spacing-xs;
+                
+                Text {
+                    text: root.content;
+                    font-size: MaterialTheme.font-size-body;
+                    color: root.text-color();
+                    wrap: word-wrap;
+                }
+                
+                if is-streaming: Rectangle {
+                    height: 2px;
+                    background: MaterialTheme.current-primary();
+                    
+                    Rectangle {
+                        width: 20px;
+                        height: 2px;
+                        background: MaterialTheme.secondary;
+                        x: mod(animation-tick(), 1000ms) / 1000ms * (parent.width - 20px);
+                    }
+                }
+                
+                if timestamp != "": Text {
+                    text: root.timestamp;
+                    font-size: MaterialTheme.font-size-caption;
+                    color: root.text-color();
+                    opacity: 0.5;
+                }
+            }
+        }
+    }
+}

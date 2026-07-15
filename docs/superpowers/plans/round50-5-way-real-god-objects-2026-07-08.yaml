@@ -1,0 +1,157 @@
+version: 1
+plan:
+  name: round50-5-way-real-god-objects-2026-07-08
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r50a-core-computer-use-host-split
+    title: "R50a: agentic/tools/computer_use_host.rs 1811 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R50a: computer_use_host.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/tools/computer_use_host.rs (1811 lines)
+      Worktree: E:/agent-project/northing-impl-r50a-core-computer-use-host (branch impl/r50a-core-computer-use-host-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split
+      Suggested: ch_actions.rs / ch_state.rs / ch_platform.rs / ch_types.rs / ch_dispatch.rs
+      Cross-ref: `git grep 'computer_use_host\|ComputerUseHost\|ComputerUseBackend' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/agentic/tools/computer_use_host.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 1811)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R50a split computer_use_host.rs 1811 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: stepfun/step-3.7-flash
+  - id: impl-r50b-core-subagent-orchestrator-split
+    title: "R50b: agentic/coordination/subagent_orchestrator.rs 1773 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R50b: subagent_orchestrator.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator.rs (1773 lines)
+      Worktree: E:/agent-project/northing-impl-r50b-core-subagent-orchestrator (branch impl/r50b-core-subagent-orchestrator-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R50a.
+
+      ## Sub-domain split
+      Suggested: so_dispatch.rs / so_handlers.rs / so_state.rs / so_lifecycle.rs / so_types.rs
+      Cross-ref: `git grep 'subagent_orchestrator\|SubagentOrchestrator\|OrchestratorEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R50b split coordination/subagent_orchestrator.rs 1773 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: stepfun/step-3.7-flash
+  - id: impl-r50c-core-ports-split
+    title: "R50c: agentic/coordination/ports.rs 1739 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R50c: ports.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/coordination/ports.rs (1739 lines)
+      Worktree: E:/agent-project/northing-impl-r50c-core-ports (branch impl/r50c-core-ports-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R50a.
+
+      ## Sub-domain split
+      Suggested: port_core.rs / port_session.rs / port_remote.rs / port_agent.rs / port_types.rs
+      Cross-ref: `git grep 'coordination::ports\|CoordinationPort\|PortRouter' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R50c split coordination/ports.rs 1739 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: stepfun/step-3.7-flash
+  - id: impl-r50d-core-insights-service-split
+    title: "R50d: agentic/insights/service.rs 1681 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R50d: insights/service.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/agentic/insights/service.rs (1681 lines)
+      Worktree: E:/agent-project/northing-impl-r50d-core-insights-service (branch impl/r50d-core-insights-service-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R50a.
+
+      ## Sub-domain split
+      Suggested: ins_collect.rs / ins_analyze.rs / ins_format.rs / ins_query.rs / ins_types.rs
+      Cross-ref: `git grep 'insights::service\|InsightsService\|ServiceEngine' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R50d split insights/service.rs 1681 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: stepfun/step-3.7-flash
+  - id: impl-r50e-core-service-agent-runtime-split
+    title: "R50e: service_agent_runtime.rs 1643 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R50e: service_agent_runtime.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/service_agent_runtime.rs (1643 lines)
+      Worktree: E:/agent-project/northing-impl-r50e-core-service-agent-runtime (branch impl/r50e-core-service-agent-runtime-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R50a.
+
+      ## Sub-domain split
+      Suggested: sar_handler.rs / sar_lifecycle.rs / sar_state.rs / sar_dispatch.rs / sar_types.rs
+      Cross-ref: `git grep 'service_agent_runtime\|ServiceAgentRuntime\|AgentRuntimeService' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R50e split service_agent_runtime.rs 1643 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: stepfun/step-3.7-flash

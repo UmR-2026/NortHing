@@ -1,0 +1,44 @@
+[package]
+name = "northhing-relay-server"
+version = "0.2.10"
+authors = ["northhing Team"]
+edition = "2021"
+description = "northhing Relay Server - WebSocket relay for Remote Connect"
+
+[lib]
+name = "northhing_relay_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "northhing-relay-server"
+path = "src/main.rs"
+
+[dependencies]
+northhing-relay-core = { path = "../../crates/services/relay-core" }
+
+# Web framework
+axum = { workspace = true }
+tower-http = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+futures-util = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+rand = { workspace = true }
+base64 = { workspace = true }
+sha2 = { workspace = true }

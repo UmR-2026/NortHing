@@ -1,0 +1,14 @@
+[
+  {
+    "task_id": "prompt-cache-stats-serialize",
+    "description": "Add Serialize, Deserialize derives to PromptCacheStats for JSON export",
+    "files_modified": [
+      "src/crates/execution/agent-runtime/src/prompt_cache.rs"
+    ],
+    "files_added": [],
+    "confidence": "high",
+    "test_added": "prompt_cache_stats_serializes_to_json",
+    "test_result": "compile_only (dlltool env issue; cargo check passes)",
+    "notes": "serde::{Serialize, Deserialize} added to PromptCacheStats derive. No unsafe/unwrap/panic added."
+  }
+]

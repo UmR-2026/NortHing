@@ -1,0 +1,61 @@
+[package]
+name = "northhing"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing Desktop - Slint + Material GUI shell"
+
+[[bin]]
+name = "northhing"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+northhing-core = { path = "../../crates/assembly/core", default-features = false, features = ["product-full"] }
+northhing-events = { path = "../../crates/contracts/events" }
+northhing-agent-dispatch = { path = "../../crates/execution/agent-dispatch" }
+northhing-runtime-ports = { path = "../../crates/contracts/runtime-ports" }
+northhing-transport = { path = "../../crates/adapters/transport", features = ["slint-adapter"] }
+
+# Async traits
+async-trait = { workspace = true }
+
+# Slint UI framework
+slint = { workspace = true, features = ["backend-winit"] }
+
+# Async runtime
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+
+# Native file/folder dialogs (cross-platform). Slint has no built-in
+# file dialog; rfd wraps native Windows/macOS/Linux dialogs and is
+# called from a Slint callback via tokio::task::spawn_blocking.
+rfd = { workspace = true }
+
+# Home dir lookup for `~/.northhing/config/app.json`. The desktop app
+# resolves this directly because AppSettings lives in the desktop crate
+# (per `src/crates/assembly/AGENTS.md` boundary rule: keep platform
+# concerns out of shared core).
+dirs = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+
+[build-dependencies]
+slint-build = { workspace = true }
+
+[features]
+default = []

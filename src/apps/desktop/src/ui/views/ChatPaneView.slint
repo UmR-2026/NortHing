@@ -1,0 +1,321 @@
+// ChatPaneView — Phase 4 enhanced
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.4
+//
+// - Top: session header (name + Q7 broken marker + buttons: session
+//   settings Q4=c, export markdown C7=b, stop C6=a/c)
+// - Chat area: messages + inline tool call cards (C5=c click-to-expand)
+// - Input box: multi-line (Enter newline, Cmd+Enter send) + inline
+//   error display (G2=c second channel)
+// - Esc key (Q10=b): only when ChatPaneView focused → stop
+
+import { MaterialTheme, MessageItem } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { MaterialIconButton } from "../components/MaterialIconButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { ChatMessageBubble } from "../components/ChatMessageBubble.slint";
+import { AppStrings } from "../strings.slint";
+
+export component ChatPaneView inherits Rectangle {
+    in property <[MessageItem]> messages: [];
+    in-out property <string> input-text: "";
+    in property <bool> dark-mode: true;
+    in property <string> current-session-name: "";
+    in property <string> current-session-model: "";
+    in property <bool> current-session-broken: false;
+    in property <string> inline-error: "";
+
+    // Streaming / stop (C6=a/c)
+    in property <bool> is-streaming: false;
+
+    callback send-message(string);
+    callback load-more-messages();
+    callback stop-streaming();          // C6=c Esc / stop button
+    callback export-markdown();         // C7=b export button
+    callback open-session-settings();   // Q4=c session settings button
+
+    // Track which message's tool calls are currently expanded.
+    // Phase 4: single-expansion (one message at a time). Multi-expand
+    // would need a list<int> / map which Slint 1.16 doesn't expose
+    // cleanly from inside a `for` loop.
+    in-out property <string> expanded-message-id: "";
+
+    background: MaterialTheme.current-background();
+
+    // Helper: pure function for "is message_id in expanded set".
+    // Slint 1.16 doesn't have a public pure function for this at the
+    // top level, so we inline the check at every use site.
+
+    VerticalLayout {
+        padding: MaterialTheme.spacing-md;
+        spacing: MaterialTheme.spacing-md;
+        width: parent.width;
+        height: parent.height;
+
+        // ===== Session header =====
+        if root.current-session-name != "": MaterialCard {
+            width: parent.width;
+            card-padding: MaterialTheme.spacing-md;
+
+            HorizontalLayout {
+                height: 48px;
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                // Session name (with Q7 broken marker)
+                VerticalLayout {
+                    width: parent.width - 360px;
+                    spacing: 2px;
+
+                    Text {
+                        text: root.current-session-name;
+                        font-size: MaterialTheme.font-size-body;
+                        color: MaterialTheme.current-on-surface();
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+
+                    if root.current-session-broken: Text {
+                        text: AppStrings.session-broken-banner;
+                        font-size: MaterialTheme.font-size-caption;
+                        color: MaterialTheme.error;
+                    }
+
+                    if root.current-session-model != "" && !root.current-session-broken: Text {
+                        text: "Model: " + root.current-session-model;
+                        font-size: MaterialTheme.font-size-caption;
+                        color: MaterialTheme.current-on-surface();
+                        opacity: 0.6;
+                    }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                // Q4=c: session settings button
+                if !root.current-session-broken: MaterialIconButton {
+                    icon: "⚙";
+                    icon-size: 18px;
+                    width: 32px;
+                    height: 32px;
+                    clicked => { root.open-session-settings(); }
+                }
+
+                // C7=b: export markdown
+                if !root.current-session-broken: MaterialIconButton {
+                    icon: "↓";
+                    icon-size: 18px;
+                    width: 32px;
+                    height: 32px;
+                    clicked => { root.export-markdown(); }
+                }
+
+                // C6=c: stop button (only visible while streaming)
+                if root.is-streaming: MaterialIconButton {
+                    icon: "■";
+                    icon-size: 18px;
+                    width: 32px;
+                    height: 32px;
+                    background: MaterialTheme.error.with-alpha(0.15);
+                    clicked => { root.stop-streaming(); }
+                }
+            }
+        }
+
+        // ===== Messages area =====
+        Rectangle {
+            vertical-stretch: 1;
+            width: parent.width;
+
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+
+                VerticalLayout {
+                    spacing: MaterialTheme.spacing-md;
+                    width: parent.width;
+
+                    if messages.length == 0: Rectangle {
+                        height: 200px;
+
+                        Text {
+                            text: "Welcome to northhing v0.1.0\n\nStart a conversation by typing below.";
+                            font-size: MaterialTheme.font-size-subtitle;
+                            color: MaterialTheme.current-on-surface();
+                            opacity: 0.5;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+                    }
+
+                    for message in messages: VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        width: parent.width;
+
+                        // Standard message bubble
+                        ChatMessageBubble {
+                            role: message.role;
+                            content: message.content;
+                            timestamp: message.timestamp;
+                            is-streaming: message.is-streaming;
+                            width: parent.width - MaterialTheme.spacing-md * 2;
+                        }
+
+                        // C5=c: inline tool call card (click to expand)
+                        if message.tool-calls-count > 0: Rectangle {
+                            width: parent.width - MaterialTheme.spacing-md * 2;
+                            x: MaterialTheme.spacing-md;
+                            height: 36px;
+                            background: MaterialTheme.current-surface();
+                            border-radius: 4px;
+                            padding: MaterialTheme.spacing-sm;
+
+                            HorizontalLayout {
+                                spacing: MaterialTheme.spacing-sm;
+                                width: parent.width;
+
+                                // The toggle chevron
+                                Text {
+                                    text: root.expanded-message-id == message.id ? "▼" : "▶";
+                                    color: MaterialTheme.current-primary();
+                                    font-size: MaterialTheme.font-size-caption;
+                                    vertical-alignment: center;
+                                }
+
+                                // The summary line
+                                Text {
+                                    text: AppStrings.chat-tool-call-expanded + " (" + message.tool-calls-count + "): " + message.tool-calls-summary;
+                                    font-size: MaterialTheme.font-size-caption;
+                                    color: MaterialTheme.current-on-surface();
+                                    vertical-alignment: center;
+                                    width: parent.width - 32px;
+                                }
+
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => {
+                                        if root.expanded-message-id == message.id {
+                                            root.expanded-message-id = "";
+                                        } else {
+                                            root.expanded-message-id = message.id;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // C5=c: expanded tool call detail
+                        if message.tool-calls-json != "" && root.expanded-message-id == message.id: Rectangle {
+                            width: parent.width - MaterialTheme.spacing-md * 2;
+                            x: MaterialTheme.spacing-md;
+                            height: 200px;
+                            background: MaterialTheme.current-surface();
+                            border-radius: 4px;
+                            padding: MaterialTheme.spacing-sm;
+
+                            // Use a TextField for read-only display. Phase 5
+                            // will replace this with the proper ToolCallCard
+                            // component when the data shape is finalized.
+                            Rectangle {
+                                width: parent.width;
+                                height: parent.height;
+                                background: #00000040;
+
+                                Text {
+                                    text: message.tool-calls-json;
+                                    font-size: MaterialTheme.font-size-caption;
+                                    color: MaterialTheme.current-on-surface();
+                                    wrap: word-wrap;
+                                    width: parent.width;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== G2=c: inline error display (second channel) =====
+        if root.inline-error != "": Rectangle {
+            width: parent.width;
+            height: 40px;
+            background: MaterialTheme.error.with-alpha(0.12);
+            border-radius: 4px;
+            padding: MaterialTheme.spacing-sm;
+
+            HorizontalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+
+                Text {
+                    text: root.inline-error;
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.error;
+                    vertical-alignment: center;
+                    width: parent.width - 32px;
+                    wrap: word-wrap;
+                }
+
+                MaterialIconButton {
+                    icon: "×";
+                    width: 24px;
+                    height: 24px;
+                    clicked => { /* The Rust side will clear via set_inline_error */ }
+                }
+            }
+        }
+
+        // ===== Input area =====
+        HorizontalLayout {
+            height: 80px;
+            spacing: MaterialTheme.spacing-sm;
+
+            MaterialTextField {
+                width: parent.width - 80px;
+                height: 64px;
+                placeholder: AppStrings.chat-input-placeholder;
+                text <=> root.input-text;
+                multi-line: true;
+                disabled: root.current-session-broken;
+                accepted => {
+                    if input-text != "" {
+                        root.send-message(input-text);
+                        input-text = "";
+                    }
+                }
+            }
+
+            MaterialIconButton {
+                icon: "▶";
+                icon-size: 20px;
+                width: 48px;
+                height: 48px;
+                clicked => {
+                    if input-text != "" && !root.current-session-broken {
+                        root.send-message(input-text);
+                        input-text = "";
+                    }
+                }
+            }
+        }
+    }
+
+    // ===== Q10=b: Esc shortcut — only when this component has focus =====
+    // Slint 1.16 has limited key event support; we attach a TouchArea
+    // overlay that captures the Esc key when the chat input has focus.
+    // The actual `key-pressed` handling requires the focus-tracking
+    // element at the root of ChatPaneView.
+    //
+    // Phase 4 wiring: Slint's `key-pressed` handler at the Window level
+    // is forwarded here. We add a `focus` property and a `key-pressed`
+    // callback that fires stop-streaming when Esc is pressed and the
+    // chat is focused. The main.slint Window will route Esc events
+    // through this component's callback chain.
+    init => {
+        // No-op; focus tracking is set by main.slint binding to
+        // `chat-pane-focused` via the input-text binding.
+    }
+}

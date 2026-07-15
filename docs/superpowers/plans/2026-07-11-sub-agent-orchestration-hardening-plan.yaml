@@ -1,0 +1,442 @@
+version: 1
+plan:
+  name: sub-agent-orchestration-hardening-2026-07-11
+  max_concurrency: 3
+  max_consecutive_failures: 2
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  # P2 backlog per HANDOFF §7.5 B-2/B-3/B-4. R73+ candidate.
+  # Spec: docs/superpowers/specs/2026-07-11-sub-agent-orchestration-hardening.md
+  # Background: docs/architecture/homerail-architecture-analysis.md
+  #
+  # 2026-07-11 update: mavis team plan run rejects this plan with "Invalid plan"
+  # (floor-validator error not transparent). Mavis take-over 4 task in this round.
+  # Plan retained for future R-series dispatch when plan engine fixed.
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+
+# =============================================================================
+# Errata (2026-07-11, Mavis fact-check pre-dispatch)
+# =============================================================================
+# v1: spec/plan originally assumed "transcript has no integrity check" + "sub-agent
+#     writes transcript". Both wrong. Plan adjusted to:
+#     - transcript_fingerprint.rs:66 already implements per-transcript SHA-256
+#       fingerprint (hash of canonical payload, computed on demand)
+#     - sub-agent (a1_path.rs + subagent_orchestrator/) does NOT write transcript
+#       (sub-agent runs in isolated LongRunningSkill context, separate from
+#       main agent's transcript stream)
+#     - B-3 scope: add per-TURN checksum (granularity finer than per-transcript)
+#       at the write point (turn_io.rs::save_dialog_turn), verify on read
+#       (turn_io.rs::load_dialog_turn), and audit parent->child links
+# v2: pending post-dispatch (will be added if Mavis 5-axis pre-flight finds
+#     more drift). Worker must record v2 Errata if they find additional spec
+#     vs code drift during implementation.
+# =============================================================================
+
+tasks:
+  # ===========================================================================
+  # Round 1: B-3 (per-turn transcript checksum)
+  # ===========================================================================
+  # - No upstream dependency
+  # - Closes defense-in-depth gap: currently only per-transcript fingerprint
+  #   (transcript_fingerprint.rs:66); per-turn checksum catches corruption
+  #   at write time, before it propagates to transcript-level hash
+  # ===========================================================================
+  - id: impl-b3-checksum
+    title: "B-3: Per-turn transcript checksum (SHA-256, verify on read, parent link audit)"
+    agent: coder
+    prompt: |
+      Goal: Add per-turn SHA-256 checksum to transcript persistence.
+      Verify on read; fail loudly on mismatch. Audit parent->child turn links.
+
+      Base: main HEAD at dispatch time.
+      Worktree: E:/agent-project/northing-impl-b3-checksum
+      Branch: impl/b3-checksum
+
+      ## Spec
+      E:/agent-project/northing/docs/superpowers/specs/2026-07-11-sub-agent-orchestration-hardening.md
+      (section "Workstream B-3: Transcript checksum integrity")
+
+      ## Errata v1 (read first!)
+      transcript_fingerprint.rs:66 ALREADY implements per-transcript SHA-256
+      fingerprint (computed on demand, not stored). This work is **per-turn
+      granularity** which is finer than the existing fingerprint:
+      - Existing: per-transcript fingerprint (whole session, on demand)
+      - This work: per-turn checksum (each save_dialog_turn writes a checksum
+        field in the turn file; load_dialog_turn verifies before parsing)
+      - Both coexist: per-turn is write-time defense; per-transcript is
+        read-time whole-session integrity
+
+      ## Background
+      E:/agent-project/northing/docs/architecture/homerail-architecture-analysis.md
+      (section 2.6 "Audit and replay" — HomeRail pattern)
+
+      ## MODEL REQUIREMENT
+      Use stepfun/step-3.7-flash. Append MODEL_IN_USE: stepfun/step-3.7-flash
+      to first output line.
+
+      ## Files to modify (verified by Mavis 2026-07-11, git ls-files)
+      - src/crates/assembly/core/src/agentic/persistence/turn_io.rs
+        (lines around `pub async fn save_dialog_turn` and `load_dialog_turn`)
+      - src/crates/assembly/core/src/agentic/persistence/turn_metadata_sync.rs
+        (lines around `read_metadata_tail_turns` — need to read checksum too)
+
+      ## Files to create
+      - src/crates/assembly/core/src/agentic/persistence/turn_checksum.rs (NEW)
+        Define:
+        - `pub(super) fn compute_turn_checksum(turn: &DialogTurnData) -> [u8; 32]`
+        - `pub(super) fn verify_turn_checksum(turn: &DialogTurnData, expected: &[u8; 32]) -> Result<(), TurnChecksumError>`
+        - `pub(super) fn audit_turn_parent_links(workspace: &Path) -> Result<(), TurnLinkError>`
+        - Hash includes: turn_id, turn_index, user content, assistant blocks,
+          tool blocks, thinking blocks, parent_turn_id (if any), timestamp
+        - Use sha2::Sha256 from existing sha2 dep (already in workspace)
+
+      ## Procedure
+      1. cd E:/agent-project/northing-impl-b3-checksum
+      2. git config --local core.autocrlf false
+      3. Create turn_checksum.rs with 3 functions above
+      4. Modify turn_io.rs:
+         - `save_dialog_turn`: compute checksum before write; store in
+           `<turn_id>.checksum` sidecar file (NOT in turn json itself, to
+           preserve turn file format)
+         - `load_dialog_turn`: read checksum sidecar; verify before
+           parsing turn json; on mismatch, return
+           `PersistenceError::TurnChecksumMismatch { turn_id, expected, got }`
+      5. Modify turn_metadata_sync.rs:
+         - `read_metadata_tail_turns`: skip turns with checksum mismatch,
+           log warning, continue (don't fail the whole metadata read)
+      6. Register turn_checksum module in persistence/mod.rs
+      7. Tests: 3 scenarios
+         - clean read OK (existing baseline, must still pass)
+         - single-turn corruption detected (modify turn file bytes, assert error)
+         - parent link gap detected (delete middle turn, assert audit_turn_parent_links
+           returns error)
+      8. Verify: cargo test -p northhing-core --lib transcript (must pass)
+      9. Verify: cargo test -p northhing-core --lib (914 baseline preserved)
+      10. Verify: cargo build -p norththing-core --lib --features service-integrations
+          (must be 0 errors, B decision feature-gate fix preserved)
+      11. Verify: cargo build -p northhing-core --lib --features product-full
+          (must be 0 errors)
+      12. Verify: cargo check -p northhing-core --lib --features service-integrations
+          (must be 0 errors, B-1 per-feature compile validation)
+      13. Verify: cargo check -p northhing-core --lib --features product-full
+          (must be 0 errors, B-1 per-feature compile validation)
+      14. Commit: refactor(persistence): B-3 per-turn transcript checksum (SHA-256, parent link audit)
+      15. Report back via mavis communication send --to <session> --command prompt --content
+          "B-3 TASK COMPLETE. commit SHA. cargo test baseline (914) preserved.
+          3 feature combinations 0 errors. STAND DOWN."
+
+      ## DO NOT
+      - DO NOT add blake3 or other non-SHA256 hash; use existing sha2 dep
+      - DO NOT put checksum in turn json file (preserve format; use sidecar)
+      - DO NOT verify on write (perf cost); lazy verify on read
+      - DO NOT touch transcript_fingerprint.rs (existing per-transcript
+        fingerprint stays as is; this is complementary, not replacement)
+      - DO NOT touch R67-R72 god-file-split files (other workstream)
+      - DO NOT change PersistenceManager public API
+
+      ## DEFINITION OF DONE
+      - turn_checksum.rs created with 3 functions
+      - turn_io.rs: save writes checksum sidecar, load verifies
+      - turn_metadata_sync.rs: skips bad-checksum turns with warning
+      - 3 test scenarios pass
+      - cargo test -p northhing-core --lib: 914 passed baseline preserved
+      - 3 feature combinations (default / service-integrations / product-full):
+        all 0 errors
+      - 0 fmt diffs (pre-existing 156 fmt noise not affected)
+
+  # ===========================================================================
+  # Round 1: Audit prep for B-2 (handoff protocol)
+  # ===========================================================================
+  # - Independent of B-3
+  # - Read-only audit to inform B-2 back-compat shim scope
+  # ===========================================================================
+  - id: audit-b2-handoff-callers
+    title: "B-2 prep: Audit existing sub-agent call sites for 'one call per turn' compliance"
+    agent: coder
+    prompt: |
+      Goal: Identify all places in the codebase that invoke sub-agents, classify
+      each as compliant (one call per turn) or non-compliant. Output: list with
+      file:line citations. This informs B-2 back-compat shim scope.
+
+      Base: main HEAD.
+
+      ## Known call sites (verified by Mavis 2026-07-11, git ls-files)
+      - src/crates/assembly/core/src/agentic/coordination/a1_path.rs:70
+        `pub(crate) async fn run_a1_path` (K.2.3 A1 main entry, when
+        USE_LIGHTWEIGHT_ACTOR=true)
+      - src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_dispatch.rs:123
+        `pub(crate) async fn execute_subagent`
+      - src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_dispatch.rs:139
+        `pub(crate) async fn start_background_subagent`
+      - src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_lifecycle/mod.rs:27
+        `pub(crate) async fn execute_hidden_subagent_internal` (legacy 5-helper
+        split entry; K.2.3 says CoordinatorHiddenSubagentSkill replaces this
+        for Task tool invocations, but the function may still exist as deprecated)
+
+      ## Search patterns to enumerate all callers
+      - `execute_hidden_subagent_internal` (the 5-helper split)
+      - `SubAgentHandoff` / `sub_agent_handoff` (any)
+      - `LongRunningSkill` calls
+      - `spawn_long_running` calls
+      - `CoordinatorHiddenSubagentSkill` invocations
+      - `run_a1_path` calls
+      - `execute_subagent` / `start_background_subagent` calls
+
+      ## Output format
+      Markdown table:
+      | file:line | call site | call count per turn | compliant? (yes/no) | notes |
+
+      Summary at end:
+      - Total call sites: N
+      - Compliant: X
+      - Non-compliant: Y (need back-compat shim)
+      - Deprecated: Z (can be removed)
+
+      Output to: docs/audit/2026-07-11-b2-handoff-callers.md (untracked,
+      per HANDOFF §7.5 D user pattern)
+
+      ## Procedure
+      1. cd E:/agent-project/northing
+      2. Use rg to find all call sites matching the 7 patterns above
+      3. For each call site, manually inspect ~30 lines surrounding to determine
+         "calls per turn" (count `fn run_*` invocations within one LLM turn)
+      4. Classify each: compliant / non-compliant / deprecated
+      5. Write audit doc with table + summary
+      6. Report back via mavis communication send --to <session> --command prompt --content
+          "B-2 AUDIT COMPLETE. N total / X compliant / Y non-compliant / Z deprecated.
+          Audit doc at docs/audit/2026-07-11-b2-handoff-callers.md. STAND DOWN."
+
+      ## DO NOT
+      - DO NOT modify any source files (audit only, read-only)
+      - DO NOT dispatch other workers
+      - DO NOT commit audit doc (untracked per user pattern; round-1 audit
+        will be referenced by round-2 B-2 implementation task)
+
+      ## DEFINITION OF DONE
+      - docs/audit/2026-07-11-b2-handoff-callers.md exists with full table
+      - All 7 search patterns covered
+      - Compliant / non-compliant / deprecated classification for each
+      - Summary count
+
+  # ===========================================================================
+  # Round 2: B-4 (offline test profile) — depends on B-3
+  # ===========================================================================
+  - id: impl-b4-offline-profile
+    title: "B-4: Sub-agent offline test profile (full agent loop without LLM provider)"
+    agent: coder
+    prompt: |
+      Goal: Build OfflineSubAgentProfile that stubs sub-agent, tool, persistence,
+      LLM at every level. Full agent loop runs end-to-end without external LLM
+      provider. CI regression without provider credentials.
+
+      Depends on: B-3 (impl-b3-checksum must be merged to main first)
+
+      Base: main HEAD with B-3 merged.
+      Worktree: E:/agent-project/northing-impl-b4-offline-profile
+      Branch: impl/b4-offline-profile
+
+      ## Spec
+      E:/agent-project/northing/docs/superpowers/specs/2026-07-11-sub-agent-orchestration-hardening.md
+      (section "Workstream B-4: Sub-agent offline test profile")
+
+      ## Background
+      E:/agent-project/northing/docs/architecture/homerail-architecture-analysis.md
+      (section 2.8 "offline-deterministic profile" — HomeRail pattern)
+
+      ## Existing infrastructure (reuse, don't reinvent)
+      - src/crates/test-support/src/lib.rs (R67 created this crate)
+      - src/crates/test-support/src/test_temp_dir.rs (R67 unified 12 temp dirs)
+      - src/crates/assembly/core/src/agentic/coordination/a1_path.rs:151
+        `A1StubSkill` (existing stub for K.2.3 tests)
+
+      ## Files to create
+      - src/crates/test-support/src/offline_profile.rs (NEW)
+        Define:
+        - `pub struct OfflineSubAgentProfile { ... }`
+          - stub_sub_agent: bool (default true; uses A1StubSkill variants)
+          - stub_tool_catalog: bool (default true)
+          - use_in_memory_persistence: bool (default true; with B-3 checksum)
+          - deterministic_llm_fixtures: PathBuf (default: tests/fixtures/llm/)
+        - `pub fn activate(profile: OfflineSubAgentProfile) -> AgentRuntime`
+        - `pub fn default_profile() -> OfflineSubAgentProfile`
+      - src/crates/test-support/src/fixture_loader.rs (NEW)
+        - `pub fn load_fixtures(path: &Path) -> HashMap<String, LlmFixture>`
+        - `pub struct LlmFixture { prompt_pattern: String, response: String, tokens: u32 }`
+      - src/crates/test-support/src/lib.rs (extend exports)
+
+      ## Files to modify
+      - src/crates/agent-runtime/src/test_helpers.rs (or equivalent)
+        - Extend with `pub fn run_with_offline_profile(turn: TurnInput) -> TurnOutput`
+      - tests/fixtures/llm/ (NEW directory)
+        - 3 sample fixtures: simple_qa.json, multi_turn.json, sub_agent_invocation.json
+        - These cover: single LLM call, multi-turn conversation, sub-agent spawning
+
+      ## Procedure
+      1. cd E:/agent-project/northing-impl-b4-offline-profile
+      2. git config --local core.autocrlf false
+      3. Define OfflineSubAgentProfile struct in offline_profile.rs
+      4. Implement fixture_loader: reads JSON files, builds HashMap
+      5. Implement activate: given profile, build agent runtime with stubs:
+         - A1StubSkill (existing) for sub-agent
+         - StubToolCatalog (extend existing or create) for tool calls
+         - In-memory persistence using B-3 checksum
+         - Deterministic LLM (lookup fixture by prompt pattern, return response)
+      6. Create 3 sample fixtures in tests/fixtures/llm/
+      7. Integration test: full agent loop with offline profile
+         - Input: user asks "what's the weather?"
+         - Stub tool: returns "sunny, 25°C"
+         - Stub LLM: returns canned response using fixture
+         - Stub sub-agent: A1StubSkill returns canned result
+         - Assert: transcript contains expected segments, checksum valid
+         - Assert: NO external LLM call attempted (mock network layer or
+           check that LLM provider is None)
+      8. CI smoke test: cargo test -p northhing-test-support --lib offline
+         (must pass WITHOUT setting any LLM_API_KEY env var)
+      9. Verify: cargo test -p northhing-core --lib (914 baseline preserved)
+      10. Verify: cargo test -p northhing-agent-runtime --lib (must pass)
+      11. Verify: 3 feature combinations all 0 errors (B-1 per-feature compile)
+      12. Commit: test(test-support): B-4 sub-agent offline test profile
+      13. Report back
+
+      ## DO NOT
+      - DO NOT require LLM provider credentials in CI default test
+      - DO NOT break existing tests that do use real LLM
+      - DO NOT activate offline profile globally (per-test, opt-in)
+      - DO NOT modify A1StubSkill interface (just extend via profile activation)
+      - DO NOT skip per-turn checksum verification (use B-3 mechanism)
+
+      ## DEFINITION OF DONE
+      - OfflineSubAgentProfile struct + fixture loader
+      - 3 sample fixtures
+      - Integration test passes without LLM provider
+      - CI smoke: cargo test -p northhing-test-support --lib offline passes
+        with no LLM_API_KEY env var
+      - 914 baseline preserved
+      - 3 feature combinations all 0 errors
+
+  # ===========================================================================
+  # Round 2: B-2 (handoff protocol) — independent of B-3/B-4
+  # ===========================================================================
+  - id: impl-b2-handoff
+    title: "B-2: Sub-agent handoff protocol explicit-ization (one call per turn, type-safe I/O)"
+    agent: coder
+    prompt: |
+      Goal: Define explicit handoff contract for sub-agent invocation. One call
+      per turn enforcement (runtime check). Type-safe Input/Output per sub-agent.
+      Back-compat shim based on round-1 audit findings.
+
+      Depends on: audit-b2-handoff-callers (read audit doc at
+      docs/audit/2026-07-11-b2-handoff-callers.md to know back-compat scope)
+
+      Base: main HEAD with audit merged.
+      Worktree: E:/agent-project/northing-impl-b2-handoff
+      Branch: impl/b2-handoff
+
+      ## Spec
+      E:/agent-project/northing/docs/superpowers/specs/2026-07-11-sub-agent-orchestration-hardening.md
+      (section "Workstream B-2: Handoff protocol explicit-ization")
+
+      ## Audit findings (read first!)
+      docs/audit/2026-07-11-b2-handoff-callers.md (round-1 output)
+      Tells you: which call sites are compliant, non-compliant, deprecated.
+      Design back-compat shim scope based on non-compliant count.
+
+      ## Background
+      E:/agent-project/northing/docs/architecture/homerail-architecture-analysis.md
+      (section 2.5 "Handoff mechanism" — HomeRail pattern)
+
+      ## Existing entry points (verified by Mavis 2026-07-11)
+      - a1_path.rs:70 run_a1_path (K.2.3 A1 main)
+      - subagent_orchestrator/so_dispatch.rs:123 execute_subagent
+      - subagent_orchestrator/so_dispatch.rs:139 start_background_subagent
+      - subagent_orchestrator/so_lifecycle/mod.rs:27 execute_hidden_subagent_internal
+        (legacy 5-helper split, may be deprecated)
+
+      ## Files to create
+      - src/crates/assembly/core/src/agentic/coordination/handoff.rs (NEW)
+        Define:
+        - `pub trait SubAgentHandoff {
+             type Input: Serialize + DeserializeOwned;
+             type Output: Serialize + DeserializeOwned;
+             fn handoff(&self, input: Self::Input) -> Result<Self::Output, HandoffError>;
+             fn name(&self) -> &str; // for diagnostics
+           }`
+        - `pub enum HandoffError {
+             AlreadyCalledThisTurn { sub_agent: String, turn_id: String },
+             InvalidInput { ... },
+             SubAgentFailed { ... },
+           }`
+        - `pub struct TurnHandoffCounter { count: u32 }` (thread-local or actor
+          state — pick based on actual concurrency model)
+        - `pub fn check_one_call_per_turn(counter: &TurnHandoffCounter, sub_agent: &str) -> Result<(), HandoffError>`
+
+      ## Files to modify
+      - a1_path.rs: migrate A1StubSkill to implement SubAgentHandoff
+        (back-compat: existing direct callers keep working via shim)
+      - so_dispatch.rs: migrate execute_subagent + start_background_subagent
+      - so_lifecycle/mod.rs: deprecate execute_hidden_subagent_internal
+        (or migrate; depends on audit findings)
+      - turn_manager.rs (or actor equivalent): wire up TurnHandoffCounter
+        on each new turn (reset to 0)
+
+      ## Procedure
+      1. cd E:/agent-project/northing-impl-b2-handoff
+      2. git config --local core.autocrlf false
+      3. Read audit doc to scope back-compat
+      4. Define SubAgentHandoff trait + HandoffError + TurnHandoffCounter in handoff.rs
+      5. Wire up TurnHandoffCounter in turn_manager (reset on new turn)
+      6. Migrate A1StubSkill (a1_path.rs:151) to implement SubAgentHandoff
+         (keep existing public API as deprecated wrapper)
+      7. Migrate execute_subagent + start_background_subagent
+         (so_dispatch.rs:123, :139) similarly
+      8. For execute_hidden_subagent_internal: if audit says deprecated,
+         add #[deprecated] attribute; else migrate
+      9. Per-turn enforcement: in each migrated entry, call
+         check_one_call_per_turn() before invoking sub-agent
+      10. Tests: 4 scenarios
+          - single sub-agent call OK (existing baseline preserved)
+          - multiple sub-agent calls in same turn = HandoffError::AlreadyCalledThisTurn
+          - sub-agent exception surfaces cleanly (existing behavior preserved)
+          - reset on new turn (TurnHandoffCounter goes back to 0)
+      11. Verify: cargo test -p northhing-agent-runtime --lib (must pass)
+      12. Verify: cargo test -p northhing-core --lib (914 baseline preserved)
+      13. Verify: 3 feature combinations all 0 errors (B-1 per-feature compile)
+      14. Commit: refactor(agent-runtime): B-2 sub-agent handoff protocol explicit-ization
+      15. Report back
+
+      ## DO NOT
+      - DO NOT change LongRunningSkill semantics (just add trait impl)
+      - DO NOT use linear types (runtime check is sufficient)
+      - DO NOT break existing call sites (back-compat shim required per audit)
+      - DO NOT touch transcript persistence (B-3 separate workstream)
+      - DO NOT modify offline profile (B-4 separate workstream)
+
+      ## DEFINITION OF DONE
+      - SubAgentHandoff trait defined
+      - A1StubSkill + execute_subagent + start_background_subagent migrated
+      - TurnHandoffCounter wired into turn lifecycle
+      - Per-turn enforcement active (HandoffError::AlreadyCalledThisTurn on
+        2nd call in same turn)
+      - 4 test scenarios pass
+      - 914 baseline preserved
+      - 3 feature combinations all 0 errors
+      - Audit-driven back-compat shim covers all non-compliant call sites
+
+# =============================================================================
+# Dispatch order
+# =============================================================================
+# Round 1 (parallel, max_concurrency=3):
+#   - impl-b3-checksum     (no dependency)
+#   - audit-b2-handoff-callers  (no dependency, verifier agent)
+#
+# Round 2 (parallel, max_concurrency=3, after Round 1 merges):
+#   - impl-b4-offline-profile  (depends on impl-b3-checksum)
+#   - impl-b2-handoff          (depends on audit-b2-handoff-callers)
+#
+# Squash-merge per round (per R-series convention)
+# =============================================================================

@@ -1,0 +1,34 @@
+[meta]
+name = "task-name-here"
+description = "Describe what this task does in one sentence"
+author = "agent"
+created_at = "YYYY-MM-DD"
+
+[context]
+read = [
+    "src/path/to/primary/file.rs",
+    "src/path/to/secondary/file.rs",
+]
+references = [
+    "src/path/to/reference/file.rs",
+]
+
+[boundaries]
+can_modify = [
+    "src/path/to/primary/file.rs",
+]
+no_touch = [
+    "src/path/to/protected/file.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+]
+
+[verification]
+commands = [
+    "cargo check -p crate-name --lib",
+    "cargo test -p crate-name --lib test_filter",
+]
+
+[output]
+change_log = ".task/change-log.json"
+verification_report = ".task/verification-report.json"

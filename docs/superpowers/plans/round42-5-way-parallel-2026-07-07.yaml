@@ -1,0 +1,199 @@
+version: 1
+plan:
+  name: round42-5-way-parallel-big-zone-p2-2026-07-07
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r42a-core-insights-html-split
+    title: >-
+      R42a: agentic/insights/html.rs 1373 -> facade + N sibling (M2.7)
+      (northhing-core)
+    prompt: >
+      # R42a: insights/html.rs god-split (M2.7 non-highspeed)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/insights/html.rs (1373 lines)
+      Worktree: E:/agent-project/northing-impl-r42a-core-insights-html (branch
+      impl/r42a-core-insights-html-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules (R40-R41 lessons)
+      1. **0 `_lost_methods.rs`** — every method assigned to sub-domain
+      2. **0 `part1.rs`/`part2.rs` mechanical naming** — sub-domain names (html_render/html_template/html_state/html_types)
+      3. mod.rs ≤ 600: only `mod sibling;` + `pub use super::*;` re-export + struct
+      4. Each sibling ≤ 800
+      5. Fields `pub(super)` for cross-sibling struct field access
+      6. Wildcard re-export: `pub use super::*;`
+      7. Write .rs with Edit tool, NOT PowerShell Out-File/Set-Content
+      8. **MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>`** to verify test module compiles (R41b lesson)
+
+      ## Sub-domain split
+      Suggested: `html_render.rs` / `html_template.rs` / `html_state.rs` / `html_types.rs`
+      `git grep 'insights::html\|InsightsHtml' -- ':!<file>'`
+
+      ## PREFLIGHT
+      ```
+      $p = "src/crates/assembly/core/src/agentic/insights/html.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "html.rs canonical wc-l = $wc (expected 1373)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee-Object baseline.log
+      ```
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R42a split insights/html.rs 1373 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=pass consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+
+      ## 工作环境
+      PowerShell 5.1. Edit tool for .rs.
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r42c-core-snapshot-core-split
+    title: >-
+      R42c: service/snapshot/snapshot_core.rs 1309 -> facade + N sibling (M2.7)
+      (northhing-core)
+    prompt: >
+      # R42c: snapshot_core.rs god-split (M2.7, R33/R36 follow-up)
+
+      ## Target:
+      src/crates/assembly/core/src/service/snapshot/snapshot_core.rs (1309 lines)
+      Worktree: E:/agent-project/northing-impl-r42c-core-snapshot-core (branch
+      impl/r42c-core-snapshot-core-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R42a, plus:
+      - This is a follow-up to R33/R36 (snapshot_system.rs was already split). Read R33/R36 commit messages to learn the existing sibling structure.
+      - **MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>`**
+
+      ## Sub-domain split
+      Suggested: `snapshot_capture.rs` / `snapshot_diff.rs` / `snapshot_restore.rs` / `snapshot_types.rs`
+      `git grep 'snapshot_core\|SnapshotCore' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R42c split snapshot/snapshot_core.rs 1309 -> facade + N sibling (R33/R36 follow-up)`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r42d-core-cron-tool-split
+    title: >-
+      R42d: agentic/tools/implementations/cron_tool.rs 1286 -> facade + N sibling (step-3.7-flash)
+      (northhing-core)
+    prompt: >
+      # R42d: cron_tool.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/implementations/cron_tool.rs (1286 lines)
+      Worktree: E:/agent-project/northing-impl-r42d-core-cron-tool (branch
+      impl/r42d-core-cron-tool-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules (R40-R41 lessons)
+      1. **0 `_lost_methods.rs`** — every method assigned to sub-domain
+      2. **0 `part1.rs`/`part2.rs` mechanical naming** — sub-domain names
+      3. mod.rs ≤ 600, sibling ≤ 800
+      4. Fields `pub(super)` for cross-sibling struct field access
+      5. Wildcard re-export: `pub use super::*;`
+      6. Write .rs with Edit tool, NOT PowerShell Out-File/Set-Content
+      7. **MUST run `cargo test -p <crate> --no-run --features product-full --lib <module>`**
+
+      ## Sub-domain split
+      Suggested: `cron_schedule.rs` / `cron_run.rs` / `cron_state.rs` / `cron_types.rs`
+      `git grep 'cron_tool\|CronTool' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R42d split cron_tool.rs 1286 -> facade + N sibling`
+      Self-report same as R42a.
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r42e-core-review-platform-tool-split
+    title: >-
+      R42e: agentic/tools/implementations/review_platform_tool.rs 1261 -> facade + N sibling (step-3.7-flash)
+      (northhing-core)
+    prompt: >
+      # R42e: review_platform_tool.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/tools/implementations/review_platform_tool.rs (1261 lines)
+      Worktree: E:/agent-project/northing-impl-r42e-core-review-platform-tool (branch
+      impl/r42e-core-review-platform-tool-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R42d.
+
+      ## Sub-domain split
+      Suggested: `review_platform_invoke.rs` / `review_platform_state.rs` / `review_platform_auth.rs` / `review_platform_types.rs`
+      `git grep 'review_platform_tool\|ReviewPlatformTool' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R42e split review_platform_tool.rs 1261 -> facade + N sibling`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r42f-core-session-persistence-split
+    title: >-
+      R42f: agentic/session/session_persistence.rs 1257 -> facade + N sibling (step-3.7-flash)
+      (northhing-core)
+    prompt: >
+      # R42f: session_persistence.rs god-split (step-3.7-flash)
+
+      ## Target:
+      src/crates/assembly/core/src/agentic/session/session_persistence.rs (1257 lines)
+      Worktree: E:/agent-project/northing-impl-r42f-core-session-persistence (branch
+      impl/r42f-core-session-persistence-split, from main 4841f3bd)
+      Package: `northhing-core` (use `-p northhing-core --features product-full --lib`)
+
+      ## CRITICAL iron rules
+      Same as R42d, plus:
+      - This is a follow-up to R20 session manager series. Read R20 commit messages.
+
+      ## Sub-domain split
+      Suggested: `persistence_load.rs` / `persistence_save.rs` / `persistence_compact.rs` / `persistence_types.rs`
+      `git grep 'session_persistence\|SessionPersistence' -- ':!<file>'`
+
+      ## PREFLIGHT + Implementation + Commit + Self-report
+      Commit: `refactor(core): R42f split session_persistence.rs 1257 -> facade + N sibling (R20 follow-up)`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    gates: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

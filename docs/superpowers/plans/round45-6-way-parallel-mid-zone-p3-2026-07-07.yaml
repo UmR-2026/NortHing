@@ -1,0 +1,185 @@
+version: 1
+plan:
+  name: round45-6-way-parallel-mid-zone-p3-2026-07-07
+  max_concurrency: 6
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r45a-core-view-model-impl-split
+    title: "R45a: view_model/view_model_impl.rs 1001 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45a: view_model_impl.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/view_model/view_model_impl.rs (1001 lines)
+      Worktree: E:/agent-project/northing-impl-r45a-core-view-model-impl (branch impl/r45a-core-view-model-impl-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split (suggestion, adjust to actual structure)
+      Suggested: vm_build.rs / vm_bind.rs / vm_diff.rs / vm_types.rs
+      Cross-ref: `git grep 'view_model::view_model_impl\|ViewModelImpl' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/view_model/view_model_impl.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 1001)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R45a split view_model_impl.rs 1001 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45b-core-profile-manager-split
+    title: "R45b: profile_manager.rs 970 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45b: profile_manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/profile_manager.rs (970 lines)
+      Worktree: E:/agent-project/northing-impl-r45b-core-profile-manager (branch impl/r45b-core-profile-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: profile_store.rs / profile_switch.rs / profile_auth.rs / profile_types.rs
+      Cross-ref: `git grep 'profile_manager\|ProfileManager\|ProfileSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45b split profile_manager.rs 970 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45c-core-code-index-manager-split
+    title: "R45c: code_index_manager.rs 963 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45c: code_index_manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/code_index_manager.rs (963 lines)
+      Worktree: E:/agent-project/northing-impl-r45c-core-code-index-manager (branch impl/r45c-core-code-index-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: index_build.rs / index_query.rs / index_invalidate.rs / index_types.rs
+      Cross-ref: `git grep 'code_index_manager\|CodeIndex\|IndexBackend' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45c split code_index_manager.rs 963 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45d-core-human-input-impl-split
+    title: "R45d: human_input/human_input_impl.rs 960 -> facade + N sibling (M2.7, cross-crate) (northhing-core)"
+    prompt: |
+      # R45d: human_input_impl.rs god-split (M2.7, cross-crate)
+      Target: src/crates/assembly/core/src/human_input/human_input_impl.rs (960 lines)
+      Worktree: E:/agent-project/northing-impl-r45d-core-human-input-impl (branch impl/r45d-core-human-input-impl-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a, plus:
+      - human_input is consumed by cli (prompt-yes/no), desktop (modal dialog), and tools (permission_request).
+      - Carefully preserve all `pub use` re-export paths.
+
+      ## Sub-domain split
+      Suggested: hi_prompt.rs / hi_response.rs / hi_channel.rs / hi_types.rs
+      Cross-ref: `git grep 'human_input::human_input_impl\|HumanInputService\|HumanInputRequest' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45d split human_input_impl.rs 960 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: minimax/MiniMax-M2.7
+  - id: impl-r45e-core-tool-registry-split
+    title: "R45e: tool_registry.rs 957 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45e: tool_registry.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/tool_registry.rs (957 lines)
+      Worktree: E:/agent-project/northing-impl-r45e-core-tool-registry (branch impl/r45e-core-tool-registry-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: registry_register.rs / registry_dispatch.rs / registry_meta.rs / registry_types.rs
+      Cross-ref: `git grep 'tool_registry\|ToolRegistry\|ToolEntry' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45e split tool_registry.rs 957 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r45f-core-permission-manager-split
+    title: "R45f: permission_manager.rs 950 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R45f: permission_manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/permission_manager.rs (950 lines)
+      Worktree: E:/agent-project/northing-impl-r45f-core-permission-manager (branch impl/r45f-core-permission-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R45a.
+
+      ## Sub-domain split
+      Suggested: perm_policy.rs / perm_check.rs / perm_audit.rs / perm_types.rs
+      Cross-ref: `git grep 'permission_manager\|PermissionPolicy\|PermissionCheck' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R45f split permission_manager.rs 950 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

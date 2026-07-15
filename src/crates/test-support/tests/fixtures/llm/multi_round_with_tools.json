@@ -1,0 +1,36 @@
+{
+  "profileId": "multi_round_with_tools",
+  "agentType": "function-agent",
+  "rounds": [
+    {
+      "roundId": "r0",
+      "text": "Looking up workspace path",
+      "toolCall": {
+        "toolName": "list_directory",
+        "arguments": {
+          "path": "."
+        }
+      }
+    },
+    {
+      "roundId": "r1",
+      "text": "Reading first file",
+      "toolCall": {
+        "toolName": "read_file",
+        "arguments": {
+          "path": "src/lib.rs",
+          "maxLines": 200
+        }
+      }
+    },
+    {
+      "roundId": "r2",
+      "text": "Summarizing what I read"
+    },
+    {
+      "roundId": "r3",
+      "text": "All done — sub-agent delivered summary",
+      "isFinal": true
+    }
+  ]
+}

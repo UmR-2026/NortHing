@@ -1,0 +1,21 @@
+[package]
+name = "northhing-agent-dispatch"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Lightweight actor and one-shot dispatcher runtime for northhing (Phase 1 skeleton)"
+
+[lib]
+name = "northhing_agent_dispatch"
+crate-type = ["rlib"]
+
+[dependencies]
+northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+async-trait = { workspace = true }
+dashmap = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]

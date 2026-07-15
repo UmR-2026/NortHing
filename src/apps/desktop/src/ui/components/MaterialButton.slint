@@ -1,0 +1,41 @@
+// Material Button Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialButton inherits Rectangle {
+    in property <string> text: "Button";
+    in property <bool> primary: true;
+    in property <bool> disabled: false;
+    in property <length> font-size: MaterialTheme.font-size-body;
+    
+    callback clicked();
+    
+    height: 36px;
+    border-radius: 4px;
+    background: disabled ? #666666 : (primary ? MaterialTheme.current-primary() : transparent);
+    border-width: primary ? 0px : 1px;
+    border-color: disabled ? #888888 : MaterialTheme.current-primary();
+    
+    drop-shadow-color: primary ? #00000040 : transparent;
+    drop-shadow-blur: primary ? 2px : 0px;
+    drop-shadow-offset-y: primary ? 1px : 0px;
+    
+    Text {
+        text: root.text;
+        font-size: root.font-size;
+        color: disabled ? #AAAAAA : (primary ? MaterialTheme.on-primary : MaterialTheme.current-primary());
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    
+    ta := TouchArea {
+        enabled: !root.disabled;
+        clicked => { root.clicked(); }
+    }
+    
+    states [
+        hover when ta.pressed: {
+            root.opacity: 0.8;
+        }
+    ]
+}

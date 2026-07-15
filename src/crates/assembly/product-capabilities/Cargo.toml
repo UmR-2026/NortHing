@@ -1,0 +1,15 @@
+[package]
+name = "northhing-product-capabilities"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing product capability pack contracts"
+
+[lib]
+name = "northhing_product_capabilities"
+crate-type = ["rlib"]
+
+[dependencies]
+northhing-harness = { path = "../../execution/harness" }
+northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-tool-packs = { path = "../../execution/tool-provider-groups", default-features = false }

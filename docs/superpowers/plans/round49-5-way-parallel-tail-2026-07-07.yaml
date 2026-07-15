@@ -1,0 +1,157 @@
+version: 1
+plan:
+  name: round49-5-way-parallel-tail-2026-07-07
+  max_concurrency: 5
+  max_consecutive_failures: 3
+  max_cycles: 2
+  auto_accept: false
+  auto_reject_retries: 1
+  verifier_config:
+    default_verifiers:
+      - verifier
+    audit_sample_rate: 0
+    strict_mode: false
+tasks:
+  - id: impl-r49a-core-workflow-definition-split
+    title: "R49a: workflow/definition.rs 766 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49a: workflow/definition.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/workflow/definition.rs (766 lines)
+      Worktree: E:/agent-project/northing-impl-r49a-core-workflow-definition (branch impl/r49a-core-workflow-definition-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules (R40-R42 lessons)
+      1. 0 `_lost_methods.rs`, 0 `part1.rs`/`part2.rs` mechanical naming
+      2. mod.rs <= 600, sibling <= 800
+      3. Fields `pub(super)` for cross-sibling struct field access
+      4. Wildcard re-export `pub use super::*;` in mod.rs
+      5. Write .rs with Edit tool (auto UTF-8), NOT PowerShell Out-File
+      6. MUST run `cargo test -p northhing-core --no-run --features product-full --lib <module>` to verify test module compiles
+      7. core.autocrlf=false set locally on worktree
+
+      ## Sub-domain split (suggestion, adjust to actual structure)
+      Suggested: def_parse.rs / def_validate.rs / def_compile.rs / def_types.rs
+      Cross-ref: `git grep 'workflow::definition\|WorkflowDef\|WorkflowStep' -- ':!<file>'`
+
+      ## PREFLIGHT
+      $p = "src/crates/assembly/core/src/workflow/definition.rs"
+      $wc = [System.IO.File]::ReadAllLines((Resolve-Path $p).Path).Count
+      Write-Host "wc-l = $wc (expected 766)"
+      $env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+      cargo check -p northhing-core --features product-full --lib --message-format=short 2>&1 | Tee baseline.log
+
+      ## Implementation + Commit + Self-report
+      Commit: `refactor(core): R49a split workflow/definition.rs 766 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r49b-core-widget-composer-split
+    title: "R49b: widget/composer.rs 754 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49b: widget/composer.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/widget/composer.rs (754 lines)
+      Worktree: E:/agent-project/northing-impl-r49b-core-widget-composer (branch impl/r49b-core-widget-composer-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: composer_node.rs / composer_event.rs / composer_render.rs / composer_types.rs
+      Cross-ref: `git grep 'widget::composer\|WidgetComposer\|WidgetSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49b split widget/composer.rs 754 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r49c-core-graph-nodes-split
+    title: "R49c: graph/nodes.rs 745 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49c: graph/nodes.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/graph/nodes.rs (745 lines)
+      Worktree: E:/agent-project/northing-impl-r49c-core-graph-nodes (branch impl/r49c-core-graph-nodes-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: nodes_kind.rs / nodes_edge.rs / nodes_traverse.rs / nodes_types.rs
+      Cross-ref: `git grep 'graph::nodes\|GraphNode\|GraphEdge' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49c split graph/nodes.rs 745 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r49d-core-event-handler-split
+    title: "R49d: event/handler.rs 732 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49d: event/handler.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/event/handler.rs (732 lines)
+      Worktree: E:/agent-project/northing-impl-r49d-core-event-handler (branch impl/r49d-core-event-handler-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: handler_dispatch.rs / handler_subscribe.rs / handler_filter.rs / handler_types.rs
+      Cross-ref: `git grep 'event::handler\|EventHandler\|EventSpec' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49d split event/handler.rs 732 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash
+  - id: impl-r49e-core-cache-manager-split
+    title: "R49e: cache/manager.rs 720 -> facade + N sibling (step-3.7-flash) (northhing-core)"
+    prompt: |
+      # R49e: cache/manager.rs god-split (step-3.7-flash)
+      Target: src/crates/assembly/core/src/cache/manager.rs (720 lines)
+      Worktree: E:/agent-project/northing-impl-r49e-core-cache-manager (branch impl/r49e-core-cache-manager-split, from current default branch HEAD at dispatch — verify `git rev-parse origin/main` during PREFLIGHT; sequential rounds R45+ use previous round's squash-merge commit)
+      Package: northhing-core (-p northhing-core --features product-full --lib)
+
+      ## CRITICAL iron rules
+      Same as R49a.
+
+      ## Sub-domain split
+      Suggested: manager_get.rs / manager_set.rs / manager_invalidate.rs / manager_types.rs
+      Cross-ref: `git grep 'cache::manager\|CacheManager\|CacheKey' -- ':!<file>'`
+
+      ## PREFLIGHT + Commit
+      Commit: `refactor(core): R49e split cache/manager.rs 720 -> facade + N sibling`
+      Self-report: `commit=xxx check=pass test_compile=pass fmt=na consumers=pass encoding=pass mod=N max=N sub-domain=Y 0_part1N=1 0_lost_methods=1 new_warnings=0 baseline=N current=N`
+    assigned_to: coder
+    role: produce
+    verified_by: verifier
+    depends_on: []
+    max_retries: 0
+    timeout_ms: 7200000
+    hang_alert_after_ms: 3600000
+    model: step-3.7-flash

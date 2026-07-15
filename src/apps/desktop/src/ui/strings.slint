@@ -1,0 +1,137 @@
+// NorthHing UI 字符串集中管理（AppStrings global）
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §6.6
+//
+// 中文 only v1 (G3=a). B 阶段抽 i18n 时只改这一个文件的内容。
+// 引用：`text: AppStrings.welcome-title;`
+//
+// 每个 string 都注释了 spec ID，方便追溯。
+
+export global AppStrings {
+    // ===== Welcome view (Q3=c step2 强制不能跳过) =====
+    out property <string> welcome-title: "欢迎使用 NortHing";
+    out property <string> welcome-step1-desc: "请选择你的第一个项目文件夹";
+    out property <string> welcome-step2-desc: "配置你的第一个 AI 服务";
+    out property <string> welcome-step2-blocked-tooltip: "配置 AI 服务才能继续";
+    out property <string> welcome-step3-desc: "准备就绪";
+    out property <string> welcome-step3-identity-prompt: "想让我更懂你吗？";
+    out property <string> welcome-step3-skip: "以后再说";
+    out property <string> welcome-step1-button: "选择文件夹";
+    out property <string> welcome-step2-button: "下一步";
+    out property <string> welcome-step3-button: "开始聊天";
+
+    // ===== Settings nav (A2=a) =====
+    out property <string> settings-open: "设置";
+    out property <string> settings-providers: "AI 服务";
+    out property <string> settings-workspaces: "工作文件夹";
+    out property <string> settings-skills: "技能";
+    out property <string> settings-mcp: "工具集 (MCP)";
+    out property <string> settings-general: "通用";
+
+    // ===== Provider panel (g1) =====
+    out property <string> provider-add: "添加 AI 服务";
+    out property <string> provider-name-label: "AI 服务名称";
+    out property <string> provider-type-label: "类型";
+    out property <string> provider-base-url-label: "服务地址";
+    out property <string> provider-api-key-label: "API 密钥";
+    out property <string> provider-model-label: "模型";
+    out property <string> provider-model-custom: "自定义模型";
+    out property <string> provider-enabled-label: "启用";
+    out property <string> provider-test-button: "测试连接";
+    out property <string> provider-test-in-flight: "测试中…";
+    out property <string> provider-test-success: "✓ 连接成功";
+    out property <string> provider-test-failed-saved: "⚠️ 测试失败但已保存";
+    out property <string> provider-cleanup-legacy-banner: "检测到 {n} 个已废弃 AI 服务占位，是否清理？";
+    out property <string> provider-cleanup-legacy-button: "清理已废弃";
+    out property <string> provider-edit: "编辑";
+    out property <string> provider-delete: "删除";
+    out property <string> provider-empty: "还没有添加 AI 服务";
+    out property <string> provider-default-model-label: "新建会话的默认 AI 服务";
+
+    // ===== Workspace panel (g5) =====
+    out property <string> workspace-add: "添加文件夹";
+    out property <string> workspace-current-marker: "当前";
+    out property <string> workspace-broken-marker: "工作文件夹已移除";
+    out property <string> workspace-empty: "还没有添加工作文件夹";
+    out property <string> workspace-remove-confirm-title: "确认移除工作文件夹？";
+    out property <string> workspace-remove-confirm-body: "将影响 {n} 个会话（这些会话将标记为工作文件夹已移除）。";
+    out property <string> workspace-confirm-yes: "确认移除";
+    out property <string> workspace-confirm-no: "取消";
+    out property <string> workspace-create-identity: "为当前工作文件夹创建/更新 IDENTITY.md";
+    out property <string> workspace-switch: "切换";
+
+    // ===== Session list (g2 + Q5=a) =====
+    out property <string> session-new: "新会话";
+    out property <string> session-rename-placeholder: "会话名称";
+    out property <string> session-delete-confirm: "删除会话？";
+    out property <string> session-settings-button: "会话设置";
+    out property <string> session-settings-model-label: "本会话使用的模型";
+    out property <string> session-export-md: "导出为 Markdown";
+    out property <string> session-stop: "停止";
+    out property <string> session-empty: "还没有会话";
+    out property <string> session-broken-banner: "此会话的工作文件夹已移除，无法聊天。";
+
+    // ===== Chat (g2 + C4 + C5) =====
+    out property <string> chat-send: "发送";
+    out property <string> chat-input-placeholder: "输入消息，Enter 换行，Cmd+Enter 发送";
+    out property <string> chat-empty-provider-error: "请先在设置中添加 AI 服务";
+    out property <string> chat-empty-provider-link: "去设置";
+    out property <string> chat-tool-call-expanded: "点击展开工具调用详情";
+    out property <string> chat-streaming-cursor: "▍";
+
+    // ===== Skills panel (g6 skills, E3=a 一行展示) =====
+    out property <string> skills-empty: "还没有发现技能";
+    out property <string> skills-global-label: "全局";
+    out property <string> skills-this-workspace-label: "当前工作文件夹";
+
+    // ===== MCP panel (g6 mcp, F1=a 表单 + F2=b 全 3 transport) =====
+    out property <string> mcp-add: "添加工具集";
+    out property <string> mcp-name-label: "名称";
+    out property <string> mcp-transport-label: "传输方式";
+    out property <string> mcp-transport-stdio: "stdio";
+    out property <string> mcp-transport-sse: "sse";
+    out property <string> mcp-transport-streamable-http: "streamable-http";
+    out property <string> mcp-command-label: "命令";
+    out property <string> mcp-args-label: "参数（每行一个）";
+    out property <string> mcp-url-label: "URL";
+    out property <string> mcp-env-label: "环境变量";
+    out property <string> mcp-env-add: "+ 添加变量";
+    out property <string> mcp-test-button: "测试连接";
+    out property <string> mcp-test-success: "✓ 连接成功，{n} 个工具";
+    out property <string> mcp-test-failed-saved: "⚠️ 测试失败但已保存";
+    out property <string> mcp-empty: "还没有添加工具集";
+    out property <string> mcp-remove-confirm: "移除工具集？";
+
+    // ===== Error banner + inline (Q8=c 双通道) =====
+    out property <string> error-detail-button: "详情";
+    out property <string> error-dismiss: "关闭";
+    out property <string> error-save-failed: "保存失败：{error}（变更未持久化）";
+    out property <string> error-provider-deleted-fallback: "上次使用的 AI 服务已被移除，已自动切换。";
+    out property <string> error-no-enabled-provider: "没有可用的 AI 服务。";
+
+    // ===== Identity creator (D3 = a + LLM 对话) =====
+    out property <string> identity-title: "让我更懂你";
+    out property <string> identity-step-progress: "{current}/{total}";
+    out property <string> identity-prompt-q1: "你主要用 NortHing 做什么？";
+    out property <string> identity-prompt-q2: "你的项目主要用什么语言/框架？";
+    out property <string> identity-prompt-q3: "有没有特别的工作习惯或偏好？";
+    out property <string> identity-prompt-q4: "你希望我以什么风格回答？";
+    out property <string> identity-prompt-q5: "还有什么需要我记住的？";
+    out property <string> identity-regenerate: "重新生成";
+    out property <string> identity-save: "保存到工作文件夹";
+    out property <string> identity-back: "上一步";
+    out property <string> identity-llm-failed: "LLM 调用失败：{error}（可手动编辑后保存）";
+
+    // ===== First-run banner (Q1=a 旧用户检测) =====
+    out property <string> first-run-legacy-banner-title: "检测到已废弃 AI 服务占位";
+    out property <string> first-run-legacy-banner-body: "你的 app.json 里有 P0-B 阶段 seed 的 {n} 个 disabled 占位。点击清理按钮删除它们。";
+
+    // ===== Generic =====
+    out property <string> yes: "是";
+    out property <string> no: "否";
+    out property <string> cancel: "取消";
+    out property <string> confirm: "确认";
+    out property <string> save: "保存";
+    out property <string> close: "关闭";
+    out property <string> loading: "加载中…";
+}

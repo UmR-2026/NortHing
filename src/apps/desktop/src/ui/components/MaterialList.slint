@@ -1,0 +1,46 @@
+// Material List Item Component
+
+import { MaterialTheme } from "../theme.slint";
+
+export component MaterialListItem inherits Rectangle {
+    in property <string> text: "";
+    in property <string> secondary-text: "";
+    in property <bool> selected: false;
+    in property <bool> selectable: true;
+    
+    callback clicked();
+    
+    height: 48px;
+    background: selected ? MaterialTheme.current-primary() : transparent;
+    border-radius: 4px;
+    
+    VerticalLayout {
+        padding: MaterialTheme.spacing-sm;
+        alignment: center;
+        
+        Text {
+            text: root.text;
+            font-size: MaterialTheme.font-size-body;
+            color: selected ? MaterialTheme.on-primary : MaterialTheme.current-on-surface();
+        }
+        
+        if secondary-text != "": Text {
+            text: root.secondary-text;
+            font-size: MaterialTheme.font-size-caption;
+            color: selected ? MaterialTheme.on-primary : MaterialTheme.current-on-surface();
+            opacity: 0.6;
+        }
+    }
+    
+    ta := TouchArea {
+        enabled: root.selectable;
+        clicked => { root.clicked(); }
+    }
+    
+    states [
+        hover when ta.has-hover && !selected: {
+            root.background: MaterialTheme.current-on-surface();
+            root.opacity: 0.05;
+        }
+    ]
+}

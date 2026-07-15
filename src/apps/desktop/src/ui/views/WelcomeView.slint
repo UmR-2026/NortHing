@@ -1,0 +1,362 @@
+// WelcomeView — Phase 4 full 3-step onboarding flow
+//
+// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.1
+//
+// - Step 1: pick first workspace folder (D1 OS dialog via rfd)
+// - Step 2: configure first AI service (Q3=c: "跳过" disabled + tooltip)
+// - Step 3: ready (D3 entry to IdentityCreatorView, or skip)
+
+import { MaterialTheme } from "../theme.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { AppStrings } from "../strings.slint";
+import { IdentityCreatorView } from "IdentityCreatorView.slint";
+
+export component WelcomeView inherits Rectangle {
+    callback on-completed();
+    callback pick-folder();
+    callback add-workspace(string, string, bool);
+    callback upsert-provider(string, string, string, string, string, string, bool);
+    callback test-provider(string);
+    callback open-identity-creator();
+
+    in-out property <int> current-step: 1;
+    in-out property <string> step1-path: "";
+    in-out property <bool> step1-advanced-skip: false;
+    in-out property <string> step2-name: "";
+    in-out property <string> step2-type: "anthropic";
+    in-out property <string> step2-base-url: "https://api.anthropic.com";
+    in-out property <string> step2-api-key: "";
+    in-out property <string> step2-model: "claude-sonnet-4-5";
+    in-out property <bool> step2-enabled: true;
+    in-out property <bool> step2-test-in-flight: false;
+    in-out property <string> step2-test-result: "";
+    in-out property <string> step2-saved-provider-id: "";
+    in-out property <bool> identity-creator-visible: false;
+
+    // Slint 1.16 doesn't support custom out properties beyond the built-in
+    // Rectangle ones. Use the inline check `(saved-id != "" && test-result == "ok")`
+    // at every use site (next-step2 disabled, skip-step2 disabled, tooltip visible).
+
+    background: MaterialTheme.current-background();
+
+    VerticalLayout {
+        width: parent.width;
+        height: parent.height;
+        alignment: center;
+        padding: MaterialTheme.spacing-xl;
+
+        Text {
+            text: AppStrings.welcome-title;
+            font-size: 32px;
+            font-weight: 700;
+            color: MaterialTheme.current-on-surface();
+            horizontal-alignment: center;
+        }
+
+        Rectangle { height: MaterialTheme.spacing-sm; }
+
+        Text {
+            text: "第 " + root.current-step + " / 3 步";
+            font-size: MaterialTheme.font-size-caption;
+            color: MaterialTheme.current-on-surface();
+            opacity: 0.5;
+            horizontal-alignment: center;
+        }
+
+        Rectangle { height: MaterialTheme.spacing-lg; }
+
+        if root.current-step == 1: MaterialCard {
+            width: 600px;
+            height: 280px;
+            card-padding: MaterialTheme.spacing-lg;
+            step1-view := VerticalLayout {
+                spacing: MaterialTheme.spacing-md;
+                width: parent.width;
+                height: parent.height;
+
+                Text {
+                    text: AppStrings.welcome-step1-desc;
+                    font-size: MaterialTheme.font-size-title;
+                    color: MaterialTheme.current-on-surface();
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: "选择工作文件夹后，NortHing 会在该目录下保存会话、技能和工具集配置。";
+                    font-size: MaterialTheme.font-size-body;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.7;
+                    wrap: word-wrap;
+                    width: parent.width;
+                }
+
+                Rectangle {
+                    height: 56px;
+                    background: MaterialTheme.current-surface();
+                    border-radius: 4px;
+                    padding: MaterialTheme.spacing-sm;
+
+                    Text {
+                        text: root.step1-path == "" ? "(未选择)" : root.step1-path;
+                        font-size: MaterialTheme.font-size-body;
+                        color: root.step1-path == "" ? MaterialTheme.current-on-surface() : MaterialTheme.current-primary();
+                        opacity: root.step1-path == "" ? 0.5 : 1.0;
+                        vertical-alignment: center;
+                        horizontal-alignment: left;
+                        wrap: word-wrap;
+                        width: parent.width;
+                    }
+                }
+
+                HorizontalLayout {
+                    height: 40px;
+                    spacing: MaterialTheme.spacing-sm;
+                    width: parent.width;
+
+                    pick-button := MaterialButton {
+                        text: AppStrings.welcome-step1-button;
+                        clicked => { root.pick-folder(); }
+                    }
+
+                    Rectangle { vertical-stretch: 1; }
+
+                    skip-advanced-button := MaterialButton {
+                        text: "高级跳过";
+                        clicked => {
+                            root.step1-advanced-skip = true;
+                            root.current-step = 2;
+                        }
+                    }
+
+                    next-step1 := MaterialButton {
+                        text: AppStrings.welcome-step2-button;
+                        disabled: root.step1-path == "";
+                        clicked => { root.current-step = 2; }
+                    }
+                }
+            }
+        }
+
+        // ===== STEP 2: Provider (Q3=c) =====
+        if root.current-step == 2: MaterialCard {
+            width: 600px;
+            height: 520px;
+            card-padding: MaterialTheme.spacing-lg;
+            step2-view := VerticalLayout {
+                spacing: MaterialTheme.spacing-sm;
+                width: parent.width;
+                height: parent.height;
+
+                Text {
+                    text: AppStrings.welcome-step2-desc;
+                    font-size: MaterialTheme.font-size-title;
+                    color: MaterialTheme.current-on-surface();
+                    font-weight: 600;
+                }
+
+                MaterialTextField {
+                    placeholder: AppStrings.provider-name-label;
+                    text <=> root.step2-name;
+                    width: parent.width;
+                }
+
+                // Type buttons
+                HorizontalLayout {
+                    height: 32px;
+                    spacing: MaterialTheme.spacing-xs;
+                    width: parent.width;
+
+                    for opt in [
+                        { value: "anthropic", label: "Anthropic" },
+                        { value: "openai", label: "OpenAI" },
+                        { value: "gemini", label: "Gemini" },
+                        { value: "custom-openai", label: "自定义" },
+                        { value: "custom-anthropic", label: "Anthropic 兼容" }
+                    ]: Rectangle {
+                        height: 32px;
+                        width: (parent.width - 4 * MaterialTheme.spacing-xs) / 5;
+                        padding: MaterialTheme.spacing-xs;
+                        background: opt.value == root.step2-type
+                            ? MaterialTheme.current-primary()
+                            : MaterialTheme.current-surface();
+                        TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => {
+                                root.step2-type = opt.value;
+                                if opt.value == "anthropic" {
+                                    root.step2-base-url = "https://api.anthropic.com";
+                                    root.step2-model = "claude-sonnet-4-5";
+                                }
+                                if opt.value == "openai" {
+                                    root.step2-base-url = "https://api.openai.com/v1";
+                                    root.step2-model = "gpt-4o";
+                                }
+                                if opt.value == "gemini" {
+                                    root.step2-base-url = "https://generativelanguage.googleapis.com/v1beta";
+                                    root.step2-model = "gemini-2.0-flash";
+                                }
+                                if opt.value == "custom-openai" {
+                                    root.step2-base-url = "";
+                                    root.step2-model = "";
+                                }
+                                if opt.value == "custom-anthropic" {
+                                    root.step2-base-url = "";
+                                    root.step2-model = "";
+                                }
+                            }
+                        }
+                        Text {
+                            text: opt.label;
+                            color: opt.value == root.step2-type
+                                ? MaterialTheme.on-primary
+                                : MaterialTheme.current-on-surface();
+                            font-size: MaterialTheme.font-size-caption;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                        }
+                    }
+                }
+
+                MaterialTextField {
+                    placeholder: AppStrings.provider-base-url-label;
+                    text <=> root.step2-base-url;
+                    width: parent.width;
+                }
+
+                MaterialTextField {
+                    placeholder: AppStrings.provider-api-key-label;
+                    text <=> root.step2-api-key;
+                    password: true;
+                    width: parent.width;
+                }
+
+                MaterialTextField {
+                    placeholder: AppStrings.provider-model-label;
+                    text <=> root.step2-model;
+                    width: parent.width;
+                }
+
+                if root.step2-test-result != "": Text {
+                    text: root.step2-test-result == "ok"
+                        ? AppStrings.provider-test-success
+                        : AppStrings.provider-test-failed-saved + " " + root.step2-test-result;
+                    color: root.step2-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
+                    font-size: MaterialTheme.font-size-caption;
+                }
+
+                HorizontalLayout {
+                    height: 40px;
+                    spacing: MaterialTheme.spacing-sm;
+                    width: parent.width;
+
+                    test-btn := MaterialButton {
+                        text: root.step2-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
+                        disabled: root.step2-test-in-flight || root.step2-name == "" || root.step2-api-key == "";
+                        clicked => {
+                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                        }
+                    }
+
+                    save-btn := MaterialButton {
+                        text: AppStrings.save;
+                        disabled: root.step2-name == "";
+                        clicked => {
+                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                        }
+                    }
+
+                    Rectangle { vertical-stretch: 1; }
+
+                    skip-step2 := MaterialButton {
+                        text: "跳过";
+                        disabled: !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok");
+                        clicked => { root.current-step = 3; }
+                    }
+
+                    next-step2 := MaterialButton {
+                        text: AppStrings.welcome-step2-button;
+                        disabled: !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok");
+                        clicked => { root.current-step = 3; }
+                    }
+                }
+
+                if !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok"): Text {
+                    text: AppStrings.welcome-step2-blocked-tooltip;
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.error;
+                    opacity: 0.7;
+                }
+            }
+        }
+
+        // ===== STEP 3: Ready =====
+        if root.current-step == 3: MaterialCard {
+            width: 600px;
+            height: 280px;
+            card-padding: MaterialTheme.spacing-lg;
+            step3-view := VerticalLayout {
+                spacing: MaterialTheme.spacing-md;
+                width: parent.width;
+                height: parent.height;
+
+                Text {
+                    text: AppStrings.welcome-step3-desc;
+                    font-size: MaterialTheme.font-size-title;
+                    color: MaterialTheme.current-on-surface();
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: "一切就绪。你可以现在开始聊天，也可以花 1 分钟让 AI 更好地了解你。";
+                    font-size: MaterialTheme.font-size-body;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.7;
+                    wrap: word-wrap;
+                    width: parent.width;
+                }
+
+                HorizontalLayout {
+                    height: 40px;
+                    spacing: MaterialTheme.spacing-sm;
+                    width: parent.width;
+
+                    identity-btn := MaterialButton {
+                        text: AppStrings.welcome-step3-identity-prompt;
+                        clicked => { root.identity-creator-visible = true; }
+                    }
+
+                    skip-step3 := MaterialButton {
+                        text: AppStrings.welcome-step3-skip;
+                        clicked => { root.on-completed(); }
+                    }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                start-btn := MaterialButton {
+                    text: AppStrings.welcome-step3-button;
+                    width: 200px;
+                    clicked => { root.on-completed(); }
+                }
+            }
+        }
+    }
+
+    // ===== Identity Creator modal (D3) =====
+    if root.identity-creator-visible: IdentityCreatorView {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        on-saved(draft) => {
+            root.identity-creator-visible = false;
+        }
+        on-cancel => {
+            root.identity-creator-visible = false;
+        }
+    }
+}

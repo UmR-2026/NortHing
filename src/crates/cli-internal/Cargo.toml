@@ -1,0 +1,43 @@
+[package]
+name = "northhing-cli-internal"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing Internal CLI - Hidden capability-gated command surface"
+
+[[bin]]
+name = "northhing-internal"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+northhing-core = { path = "../assembly/core", default-features = false, features = ["product-full"] }
+northhing-events = { path = "../contracts/events" }
+
+# CLI framework
+clap = { workspace = true }
+
+# Config and serialization
+dirs = { workspace = true }
+toml = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Encryption for token storage
+sha2 = { workspace = true }
+rand = { workspace = true }
+
+[features]
+default = []

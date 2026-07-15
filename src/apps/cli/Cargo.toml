@@ -1,0 +1,71 @@
+[package]
+name = "northhing-cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "northhing CLI - Terminal User Interface"
+
+[[bin]]
+name = "northhing-cli"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+northhing-core = { path = "../../crates/assembly/core", default-features = false, features = ["product-full"] }
+northhing-events = { path = "../../crates/contracts/events" }
+northhing-acp = { path = "../../crates/interfaces/acp" }
+
+# CLI framework
+clap = { workspace = true }
+
+# TUI framework (Terminal User Interface)
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+
+# Config and serialization
+dirs = { workspace = true }
+toml = { workspace = true }
+
+# Session management
+uuid = { workspace = true }
+chrono = { workspace = true }
+dashmap = { workspace = true }
+
+# Async trait
+async-trait = { workspace = true }
+
+# Unicode width calculation (for correct wide-char handling)
+unicode-width = { workspace = true }
+
+# Path canonicalization without Windows UNC prefix
+dunce = { workspace = true }
+
+# Markdown parsing and rendering
+pulldown-cmark = { workspace = true }
+
+# Diff computation for tool card rendering
+similar = { workspace = true }
+
+# Syntax highlighting for code blocks and tool cards
+syntect = { workspace = true }
+syntect-tui = { workspace = true }
+
+# Lazy initialization for syntax highlighter singleton
+once_cell = { workspace = true }
+
+# Unix-only best-effort terminal color detection (OSC 11)
+libc = { workspace = true }
+
+# Clipboard access (for reliable paste on Windows where bracketed paste is broken)
+arboard = { workspace = true }
+
+# Inherited from workspace
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[features]
+default = []
