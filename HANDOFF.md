@@ -10,9 +10,9 @@
 > 涉及引用现有 skill / spec / plan 章节时，章节标题保留原文（§A / Gate 7 等），
 > 但围绕它们的说明文字用中文。
 >
-> **Last verified**: 2026-07-12 (R67 + R72 + R67plus3 + B decision + feature-gate fix + B-2/B-3/B-4 sub-agent hardening DONE + R73+ god file audit DONE + **R73-1 path_manager split DONE 2026-07-11** + **R73-2 turn_batch split DONE 2026-07-11** + **R73-3 skill_agent_snapshot split DONE 2026-07-12** + **R73-1/2/3 QClaw APPROVED 9.3/10 2026-07-12** — Mavis M3 take-over for splits + first multi-reviewer dispatch attempt (plan_df939a4c killed at 30min cap, Mavis M3 take-over finished commit); 13-axis verification all pass (cargo check 0 errors, 926/927 tests pass with 1 pre-existing turn_batch B-3 fail, 0 mojibake, 0 fmt diff, 0 unwrap/panic/todo in production, all pub re-exports verified, line counts within spec target); 2 non-blocking observations (dead code +7 drift from re-export path change, multi-reviewer 30min cap insufficient for >300 line files — already documented in skill). 1382 → 1390 dead_code warnings (+7 from re-export path change, not new dead code). New tools: multi-reviewer-dispatch skill (`~/.mavis/agents/mavis/skills/multi-reviewer-dispatch/SKILL.md`) + reviewer-arch + reviewer-test agents registered. R73-4 (git_tool/mod.rs 660) + R73-5 (remote_connect/connect.rs 741) paused, awaiting user direction)
+> **Last verified**: 2026-07-15 (R75 round 1+2 god-file split DONE, B3-T6 cargo fmt cleanup DONE, 47 files formatted, working tree clean, all commits on main. C4 B-3 test N/A (test not in current codebase), C5 workspace test blocked by ring/aws-lc-sys native compilation on Windows (environment issue, not code issue). v0.1.0 human-usable pending tag C7.)
 > **Branch**: `main`
-> **HEAD**: `b254db80` (R73-3 skill_agent_snapshot split; 5 new commits since prior HEAD `b927ce44`: edaf468c (R73-1) + 24a59f34 (R73-2) + a6a1061b (HANDOFF cleanup bump — B-2/B-3/B-4 review-fix-cleanup cycle complete) + 0fff09cd (docs(core): with_user_root_for_tests rustdoc) + b254db80 (R73-3) + this bump; cargo check = 0 errors, 926 tests pass, QClaw APPROVED 9.3/10 at this commit)
+> **HEAD**: `32774ce` (R75 round 1+2 god-file split + B3-T6 cargo fmt cleanup; 7 new commits this session: 0f74605 fmt + d5f2d7f docs + 7044454 chore + bc3ef48 plan + 36c79e3 model_config_form split + 7aa50a8 chat/render split + 32774ce question split; cargo check -p northhing-cli = Finished ✓)
 > **Total commits on branch**: see `git rev-list --count HEAD` (auto-updates; not statically maintained to avoid bump-loop drift)
 > **HEAD drift note**: every commit that updates HANDOFF §0 will, by definition, produce a new commit that §0 does not yet reflect. The drift is one commit per HANDOFF-bump. Readers should treat the listed HEAD as "the HEAD when this row was written", not "current HEAD". For the truly current HEAD, run `git rev-parse --short HEAD`.
 > **Tag**: `v0.1.0` (at commit `2813b36`, A6 commit)
@@ -33,10 +33,11 @@ K.2.2 (split `execute_hidden_subagent_internal` into 5 helpers) just landed (com
 P4 (optimise `log_debug_event` with OnceLock channel) just landed (commit `630d679`).
 P2 (verify coordinator.rs test compilation) confirmed clean — 0 errors, 0 warnings.
 
-**Session 2026-07-11 (continued) — Sub-agent hardening review cycle DONE**:
-- B-2 (SubAgentHandoff trait + so_dispatch migration) + B-3 (per-turn checksum) + B-4 (OfflineSubAgentProfile) + R73+ god-file audit all **QClaw APPROVED 9.2/10** at HEAD `b927ce44`
-- 4 non-blocking observations addressed in dedicated `fix(tests):` commits (`f5b920f6` / `fccdc06c` / `b927ce44`); obs 4 (tests.rs fmt) deferred to pre-existing fmt cleanup
-- See §7.5 B-2/B-3/B-4 entries and §10 commit log for details
+**Session 2026-07-15 — R75 god-file split + B3-T6 fmt cleanup DONE**:
+- R75 round 1: model_config_form (1058→4 sub-modules), chat/render (983→7 sub-files), question (803→3 sub-modules)
+- R75 round 2: question.rs (717→3 sub-modules)
+- B3-T6: cargo fmt cleanup across 47 files (pure formatting, 0 semantic change)
+- Working tree clean, all commits on main
 
 | Metric | Value | Verified by |
 |---|---|---|
@@ -51,11 +52,11 @@ P2 (verify coordinator.rs test compilation) confirmed clean — 0 errors, 0 warn
 | `InMemoryRelationship` fields | **5** (parent_session_id / parent_request_id / parent_dialog_turn_id / parent_turn_index / parent_tool_call_id) | `grep "pub " src/crates/assembly/core/src/agentic/core/session.rs` |
 | Hand-written `unsafe` in `app_state/` | **0** | `grep "unsafe" src/apps/desktop/src/app_state/mod.rs` (only slint macro output) |
 | Tag | `v0.1.0` applied at `2813b36` | `git tag` |
-| god-files (lib + tests >750 行) | **0** | Phase B closeout verification |
+| god-files (src/apps/cli/src >750 行) | **0** (R75 done: model_config_form + chat/render + question split) | `git log --oneline -7` |
 | `cargo check -p northhing-core --tests` | **0 errors** | `cargo check -p northhing-core --tests` |
 | `cargo check --workspace` | **10 pre-existing `northhing-acp` errors (out of scope)** | `cargo check --workspace` |
 
-**The next session's job**: R2 (ChatView refactor) or Pre-existing clippy fix — see §5.
+**The next session's job**: C6 docs finalize + C7 0.1.0 tag → then 0.1.0 human-usable release.
 
 ---
 
