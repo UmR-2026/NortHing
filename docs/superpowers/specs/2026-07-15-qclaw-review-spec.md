@@ -1,8 +1,9 @@
-# QClaw Review Spec — v0.1.0 human-usable (2026-07-15)
+# QClaw Review Spec — v0.1.0 human-usable (2026-07-15, RESOLVED 8.2→SHIP)
 
 > Review scope: structural integrity of R75 god-file split + B3-T6 cargo fmt cleanup.
 > HEAD: `b5a98a7` (v0.1.0 tag). Diff from snapshot: 73 files, +3215 / −2505.
 > Reviewer: 14-dimensional adversarial review per QClaw pattern.
+> Initial score: **8.2/10 FIX**. All blockers resolved → **SHIP** (commit `02913d9`).
 
 ## Focus Areas
 
