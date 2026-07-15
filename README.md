@@ -16,16 +16,7 @@
 
 ---
 
-> ⚠️ **STALENESS BANNER (2026-06-20):**
-> This README mentions **Tauri** as the desktop stack, but the current
-> `v3-restructure` branch (HEAD `840bd4f`, 47 commits) has replaced Tauri
-> with **Slint + Material** for the desktop shell. Several lines also
-> contain GBK mojibake (`�`) from earlier encoding issues.
-> **For current architecture, project state, and how to build, see
-> [`HANDOFF.md`](./HANDOFF.md) — it's accurate as of 2026-06-20.**
->
-> This README is preserved for the public-facing product description.
-> Edit with care: it's linked from the GitHub repo front page.
+> **Version**: v0.1.0 human-usable (2026-07-15). For detailed architecture and build instructions, see [`HANDOFF.md`](./HANDOFF.md).
 
 ---
 
@@ -78,7 +69,7 @@ Below is northhing’s **official Agent and capability inventory**, plus how we 
 
 | Capability | Description |
 | --- | --- |
-| **Code Agent** | Four modes: Agentic (autonomous read / edit / run / verify) / Plan (plan first, then execute) / Debug (instrument �?gather evidence �?root cause) / Review (repo-standard review) |
+| **Code Agent** | Four modes: Agentic (autonomous read / edit / run / verify) / Plan (plan first, then execute) / Debug (instrument → gather evidence → root cause) / Review (repo-standard review) |
 | **Deep Review** | A parallel Code Review Team for higher-risk code changes, with reviewer roles, a quality gate, and user-approved remediation |
 | **Session usage report** | Type `/usage` in chat to view recorded runtime, token usage, and model/tool/file summaries for the current session. |
 | **Research Agent** | PDF / DOCX / XLSX / PPTX workflows (legacy); extend on demand from the Skill marketplace |
@@ -117,23 +108,23 @@ In northhing, an Agent = **a prompt (system role + behavior constraints) + the s
 | **Tooling** | Files / terminal / Git / LSP / build & test | PDF / DOCX / XLSX / PPTX / Skill marketplace |
 | **Shared foundation** | Same sessions, memory, MCP, remote control, UI, model adapters | Same sessions, memory, MCP, remote control, UI, model adapters |
 
-**So if you want a “legal review Agent,�?a “research literature Agent,�?or an “ops incident Agent”—L1 is enough**:
+**So if you want a "legal review Agent", a "research literature Agent", or an "ops incident Agent"—L1 is enough**:
 
 1. Write a Markdown file defining role / guardrails / workflow
-2. From the tool registry, enable what it should use (files, browser, specific MCP �?
-3. If a specific tool is missing—use **L3**: open northhing and have the Code Agent add it in source
-4. If the Agent needs a dedicated UI—use **L2**: one sentence to spin up a Mini App
-5. If you want a completely different product—use **L4**: fork the repo and have the Code Agent help you reshape it
+2. From the tool registry, enable what it should use (files, browser, specific MCP etc.)
+3. If a specific tool is missing — use **L3**: open northhing and have the Code Agent add it in source
+4. If the Agent needs a dedicated UI — use **L2**: one sentence to spin up a Mini App
+5. If you want a completely different product — use **L4**: fork the repo and have the Code Agent help you reshape it
 
-**Key point**: For L3 and L4 you never leave northhing�?*open northhing, tell the Code Agent what to change, and it shows you the diff**. **The way you customize it is by using it.**
+**Key point**: For L3 and L4 you never leave northhing — *open northhing, tell the Code Agent what to change, and it shows you the diff**. **The way you customize it is by using it.**
 
-> From one Markdown file to a full fork, there is no discontinuity. That is what “a self-improving foundation�?means.
+> From one Markdown file to a full fork, there is no discontinuity. That is what "a self-improving foundation" means.
 
 ---
 
 ## Platform Support
 
-Desktop is built on Tauri for Windows / macOS / Linux; remote control works from mobile browsers, Telegram, Feishu, and WeChat.
+Desktop is built on **Slint + Material** for Windows / macOS / Linux; remote control works from mobile browsers, Telegram, Feishu, and WeChat.
 
 ---
 
@@ -150,7 +141,7 @@ Download the latest desktop installer from [Releases](https://github.com/GCWing/
 - [Node.js](https://nodejs.org/) (LTS recommended)
 - [pnpm](https://pnpm.io/)
 - [Rust toolchain](https://rustup.rs/)
-- [Slint prerequisites](https://v2.tauri.app/start/prerequisites/) (required for desktop development)
+- [Slint prerequisites](https://slint.dev/docs) (required for desktop development)
 
 **Commands:**
 
@@ -158,11 +149,14 @@ Download the latest desktop installer from [Releases](https://github.com/GCWing/
 # Install dependencies
 pnpm install
 
-# Run desktop in development mode
-cargo run -p northhing
+# Run desktop in development mode (full hot-reload)
+pnpm run desktop:dev
 
-# Build desktop
-cargo build -p northhing --release
+# Build desktop (release)
+pnpm run desktop:build:release-fast
+
+# Run CLI in development mode
+pnpm run cli:dev
 ```
 
 For more details, see the [Contributing guide](./CONTRIBUTING.md).
@@ -172,16 +166,17 @@ For more details, see the [Contributing guide](./CONTRIBUTING.md).
 ## Project structure at a glance
 
 ```
-src/crates/interfaces/         # Product protocol interfaces such as ACP
-src/crates/assembly/           # Compatibility facade and product capability assembly
-src/crates/adapters/           # AI, API, transport, and WebDriver adapters
-src/crates/services/           # Reusable OS, terminal, MCP, remote, git, and filesystem services
-src/crates/execution/          # Agent, harness, stream, typed-service, and tool primitives
-src/crates/contracts/          # Stable DTOs, events, runtime ports, and product domains
-src/apps/desktop        # Slint desktop host
-src/apps/server         # Web server runtime
-src/apps/cli            # CLI runtime
-src/web-ui              # Shared desktop / Web frontend
+src/crates/interfaces/   # Product protocol interfaces such as ACP
+src/crates/assembly/     # Compatibility facade and product capability assembly
+src/crates/adapters/     # AI, API, transport, and WebDriver adapters
+src/crates/services/     # Reusable OS, terminal, MCP, remote, git, and filesystem services
+src/crates/execution/    # Agent, harness, stream, typed-service, and tool primitives
+src/crates/contracts/    # Stable DTOs, events, runtime ports, and product domains
+src/apps/desktop/        # Slint desktop host
+src/apps/server/         # Web server runtime
+src/apps/cli/            # CLI runtime (TUI)
+src/web-ui/              # Shared desktop / Web frontend
+src/mobile-web/          # Mobile web UI
 ```
 
 Design principle: **keep product logic platform-agnostic and expose it through adapters**. See [AGENTS.md](./AGENTS.md).
@@ -205,6 +200,7 @@ We welcome great ideas and code; we are maximally open to AI-generated code. Ple
 
 1. This project is spare-time exploration and research into next-generation human–machine collaboration, not a commercial profit-making project.
 2. More than 97% was built with Vibe Coding. Code feedback is welcome; refactoring and optimization via AI is encouraged.
+3. **v0.1.0 human-usable** (2026-07-15): god-file split, cargo fmt clean, CLI compiles. Desktop/Web/Mobile not yet verified on all platforms.
 3. This project depends on and references many open-source projects. Thanks to all open-source authors. **If your rights are affected, please contact us for remediation.**
 
 ---
