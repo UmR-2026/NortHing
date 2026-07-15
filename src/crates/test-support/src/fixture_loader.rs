@@ -35,15 +35,9 @@ pub enum FixtureLoadError {
     /// even though the test-support crate is only used in tests.
     InvalidName(String),
     /// I/O error reading the fixture.
-    Io {
-        path: PathBuf,
-        source: std::io::Error,
-    },
+    Io { path: PathBuf, source: std::io::Error },
     /// JSON parse error or schema mismatch.
-    Parse {
-        path: PathBuf,
-        source: serde_json::Error,
-    },
+    Parse { path: PathBuf, source: serde_json::Error },
 }
 
 impl std::fmt::Display for FixtureLoadError {
@@ -53,11 +47,7 @@ impl std::fmt::Display for FixtureLoadError {
             Self::FixtureNotFound { root, name } => {
                 write!(f, "fixture '{}' not found under {}", name, root.display())
             }
-            Self::InvalidName(name) => write!(
-                f,
-                "invalid fixture name '{}': only [A-Za-z0-9_-]+ allowed",
-                name
-            ),
+            Self::InvalidName(name) => write!(f, "invalid fixture name '{}': only [A-Za-z0-9_-]+ allowed", name),
             Self::Io { path, source } => {
                 write!(f, "I/O error reading {}: {}", path.display(), source)
             }
@@ -104,10 +94,7 @@ impl FixtureLoader {
 
     /// Load a profile by name (no extension). Looks for `<name>.json`
     /// under the loader's root. Re-reads the file on every call (no cache).
-    pub fn load_profile(
-        &self,
-        name: &str,
-    ) -> Result<OfflineSubAgentProfile, FixtureLoadError> {
+    pub fn load_profile(&self, name: &str) -> Result<OfflineSubAgentProfile, FixtureLoadError> {
         // QClaw review observation 3 (defense-in-depth): reject names that
         // could escape the loader root, even though test-support callers
         // currently hardcode fixture names. A simple allow-list keeps the
@@ -140,10 +127,7 @@ impl FixtureLoader {
 /// `[A-Za-z0-9_-]`. This is the set of characters that are safe to
 /// interpolate into a fixture path under the loader root.
 fn is_safe_fixture_name(name: &str) -> bool {
-    !name.is_empty()
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 #[cfg(test)]
@@ -186,14 +170,14 @@ mod tests {
         let tmp = TestTempDir::new("fixture-loader-invalid-name");
         let loader = FixtureLoader::new(tmp.path());
         for bad in [
-            "../escape",         // parent traversal
-            "..",                // parent traversal (no further segment)
-            "sub/dir",           // forward slash
-            "sub\\dir",          // backslash (Windows-style)
-            "/abs/path",         // absolute forward
-            "name with space",   // whitespace
-            "name.with.dots",    // dot
-            "name\x00null",      // null byte
+            "../escape",       // parent traversal
+            "..",              // parent traversal (no further segment)
+            "sub/dir",         // forward slash
+            "sub\\dir",        // backslash (Windows-style)
+            "/abs/path",       // absolute forward
+            "name with space", // whitespace
+            "name.with.dots",  // dot
+            "name\x00null",    // null byte
         ] {
             let err = loader.load_profile(bad).unwrap_err();
             assert!(
@@ -211,7 +195,11 @@ mod tests {
         // B-4 fixtures (which contain underscores) still pass.
         let tmp = TestTempDir::new("fixture-loader-safe-name");
         let p = OfflineSubAgentProfile::new("p", "echo").with_final_round("r0", "hi");
-        std::fs::write(tmp.path().join("echo_single_round.json"), serde_json::to_string(&p).unwrap()).unwrap();
+        std::fs::write(
+            tmp.path().join("echo_single_round.json"),
+            serde_json::to_string(&p).unwrap(),
+        )
+        .unwrap();
         let loader = FixtureLoader::new(tmp.path());
         let loaded = loader.load_profile("echo_single_round").expect("valid name");
         assert_eq!(loaded, p);

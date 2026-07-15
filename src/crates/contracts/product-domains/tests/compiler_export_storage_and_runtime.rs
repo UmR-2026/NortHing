@@ -30,7 +30,6 @@ fn miniapp_compiler_preserves_head_injection_contract() {
     assert!(out.contains("console.log('ready')"));
 }
 
-
 #[test]
 fn miniapp_export_and_runtime_dtos_remain_stable() {
     assert_eq!(RuntimeKind::Node, RuntimeKind::Node);
@@ -69,7 +68,6 @@ fn miniapp_export_and_runtime_dtos_remain_stable() {
     assert_eq!(detected_runtime.runtime.as_deref(), Some("node"));
     assert!(detected_runtime.missing.is_empty());
 }
-
 
 #[test]
 fn miniapp_storage_layout_preserves_file_shape_contract() {
@@ -124,7 +122,6 @@ fn miniapp_storage_layout_preserves_file_shape_contract() {
     );
 }
 
-
 #[test]
 fn miniapp_runtime_search_plan_preserves_common_install_locations() {
     let home = PathBuf::from("/home/northhing");
@@ -151,7 +148,6 @@ fn miniapp_runtime_search_plan_preserves_common_install_locations() {
             .join("node")
     );
 }
-
 
 #[test]
 fn miniapp_worker_install_command_preserves_runtime_choice() {
@@ -183,7 +179,6 @@ fn miniapp_worker_install_command_preserves_runtime_choice() {
         Some("older".to_string())
     );
 }
-
 
 #[test]
 fn miniapp_storage_package_json_contract_remains_stable() {
@@ -219,7 +214,6 @@ fn miniapp_storage_package_json_contract_remains_stable() {
     assert_eq!(package["private"], true);
     assert_eq!(package["dependencies"]["lodash"], "^4.17.21");
 }
-
 
 #[test]
 fn miniapp_storage_import_fallback_contract_remains_stable() {
@@ -268,7 +262,6 @@ fn miniapp_storage_import_fallback_contract_remains_stable() {
     assert_eq!(fallbacks.package_json, package);
 }
 
-
 #[test]
 fn miniapp_import_bundle_plan_rehomes_meta_and_preserves_fallback_wire_shape() {
     let source_meta_json = serde_json::json!({
@@ -304,7 +297,6 @@ fn miniapp_import_bundle_plan_rehomes_meta_and_preserves_fallback_wire_shape() {
     assert_eq!(package["dependencies"], serde_json::json!({}));
 }
 
-
 #[test]
 fn miniapp_import_bundle_plan_preserves_invalid_meta_error_classification() {
     let error = build_import_bundle_plan("new-app", "{", 1234).unwrap_err();
@@ -312,5 +304,3 @@ fn miniapp_import_bundle_plan_preserves_invalid_meta_error_classification() {
     assert!(matches!(error, MiniAppImportBundlePlanError::InvalidMeta(_)));
     assert!(error.to_string().starts_with("Invalid meta.json:"));
 }
-
-

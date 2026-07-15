@@ -17,7 +17,7 @@ use tracing::{error, info, warn};
 
 use super::process::LspServerProcess;
 use super::protocol::{create_notification, create_request, extract_result, write_message};
-use super::types::{ClientCapabilities, LspInitializeParams, InitializeResult, WorkspaceFolder};
+use super::types::{ClientCapabilities, InitializeResult, LspInitializeParams, WorkspaceFolder};
 
 impl LspServerProcess {
     /// Sends a request and waits for the response.

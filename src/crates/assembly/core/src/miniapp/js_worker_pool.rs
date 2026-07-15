@@ -223,8 +223,8 @@ impl MiniAppWorkerEventSink for CoreMiniAppWorkerEventSink {
 mod tests {
     use super::*;
     use northhing_product_domains::miniapp::runtime::RuntimeKind;
-    use std::fs;
     use northhing_test_support::TestTempDir;
+    use std::fs;
 
     #[tokio::test]
     async fn runtime_port_adapter_preserves_existing_runtime_and_noop_install() {

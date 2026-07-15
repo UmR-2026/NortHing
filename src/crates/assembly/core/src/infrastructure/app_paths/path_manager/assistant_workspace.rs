@@ -156,4 +156,3 @@ mod tests {
         assert!(!pm.is_local_assistant_workspace_path("/tmp/not-northhing"));
     }
 }
-

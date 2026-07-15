@@ -2,9 +2,7 @@
 // Session-key free fn helpers used by RemoteWorkspaceSearchService.
 
 use super::repo_session::RemoteStdioSessionEntry;
-use super::service::{
-    REMOTE_STDIO_OPEN_GUARDS, REMOTE_STDIO_SESSIONS, REMOTE_STDIO_SESSION_IDLE_GRACE,
-};
+use super::service::{REMOTE_STDIO_OPEN_GUARDS, REMOTE_STDIO_SESSIONS, REMOTE_STDIO_SESSION_IDLE_GRACE};
 use crate::remote_ssh::normalize_remote_workspace_path;
 use crate::workspace_search::flashgrep::FLASHGREP_LOG_TARGET;
 use std::collections::HashMap;
@@ -114,9 +112,7 @@ mod tests {
         RemoteCommandOutput, RemoteWorkspaceSearchProvider, RemoteWorkspaceSearchStdioProtocol,
     };
     use super::super::repo_session::RemoteStdioRepoSession;
-    use super::super::service::{
-        RemoteSearchContext, RemoteWorkspaceSearchService, REMOTE_SEARCH_CONTEXTS,
-    };
+    use super::super::service::{RemoteSearchContext, RemoteWorkspaceSearchService, REMOTE_SEARCH_CONTEXTS};
 
     static REMOTE_SEARCH_TEST_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 

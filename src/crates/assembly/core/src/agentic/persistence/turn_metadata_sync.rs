@@ -49,10 +49,7 @@ impl PersistenceManager {
         // B-3: audit parent-turn link chain for the requested range.
         // Walk the turns directory for this session; if any index in the
         // range is missing, return None so caller falls back to full scan.
-        let turns_dir = workspace_path
-            .join("sessions")
-            .join(session_id)
-            .join("turns");
+        let turns_dir = workspace_path.join("sessions").join(session_id).join("turns");
         // Note: walk the full session turn dir (not just the requested range)
         // for the parent-link audit, since a gap outside the range still
         // indicates a corrupted chain.
@@ -107,9 +104,7 @@ impl PersistenceManager {
             }
         }
         if bad_checksum_skipped > 0 {
-            warn!(
-                "Skipped {bad_checksum_skipped} turn(s) with bad/missing checksum in metadata read",
-            );
+            warn!("Skipped {bad_checksum_skipped} turn(s) with bad/missing checksum in metadata read",);
         }
 
         Ok(Some(ReadTurnPathsResult {

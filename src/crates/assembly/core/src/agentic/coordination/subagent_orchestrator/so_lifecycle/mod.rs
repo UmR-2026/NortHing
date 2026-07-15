@@ -33,8 +33,10 @@ impl ConversationCoordinator {
     /// follow-up release once the A1 fallback is fully replaced by
     /// `run_a1_path`. Use the trait-level entry point
     /// `CoordinatorHiddenSubagentHandoff::handoff` for new code.
-    #[deprecated(note = "B-2: use `SubAgentHandoff::handoff` (e.g. `CoordinatorHiddenSubagentHandoff`) instead; \
-                        this fn remains only for the A1 fallback path (target removal post-0.1.0)")]
+    #[deprecated(
+        note = "B-2: use `SubAgentHandoff::handoff` (e.g. `CoordinatorHiddenSubagentHandoff`) instead; \
+                        this fn remains only for the A1 fallback path (target removal post-0.1.0)"
+    )]
     pub(crate) async fn execute_hidden_subagent_internal(
         &self,
         request: HiddenSubagentExecutionRequest,

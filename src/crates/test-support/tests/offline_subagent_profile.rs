@@ -11,9 +11,7 @@
 //! values. No LLM provider, no network, no temp-dir cleanup needed
 //! (the fixture files are checked in).
 
-use northhing_test_support::{
-    FixtureLoader, OfflineSubAgentProfile, OfflineTickOutput, OfflineToolCall,
-};
+use northhing_test_support::{FixtureLoader, OfflineSubAgentProfile, OfflineTickOutput, OfflineToolCall};
 use serde_json::json;
 
 fn loader() -> FixtureLoader {
@@ -40,12 +38,18 @@ fn echo_single_round_loads_and_dones() {
 
 #[test]
 fn multi_round_with_tools_drives_full_sequence() {
-    let p = loader().load_profile("multi_round_with_tools").expect("fixture should load");
+    let p = loader()
+        .load_profile("multi_round_with_tools")
+        .expect("fixture should load");
     assert_eq!(p.round_count(), 4);
 
     // Round 0: continue with tool call
     match p.tick(0).expect("round 0") {
-        OfflineTickOutput::Continue { round_id, text, tool_call } => {
+        OfflineTickOutput::Continue {
+            round_id,
+            text,
+            tool_call,
+        } => {
             assert_eq!(round_id, "r0");
             assert_eq!(text, "Looking up workspace path");
             let tc = tool_call.expect("round 0 has tool call");
@@ -57,7 +61,11 @@ fn multi_round_with_tools_drives_full_sequence() {
 
     // Round 1: continue with another tool call
     match p.tick(1).expect("round 1") {
-        OfflineTickOutput::Continue { round_id, text, tool_call } => {
+        OfflineTickOutput::Continue {
+            round_id,
+            text,
+            tool_call,
+        } => {
             assert_eq!(round_id, "r1");
             assert_eq!(text, "Reading first file");
             let tc = tool_call.expect("round 1 has tool call");
@@ -68,7 +76,11 @@ fn multi_round_with_tools_drives_full_sequence() {
 
     // Round 2: continue, no tool call (text-only)
     match p.tick(2).expect("round 2") {
-        OfflineTickOutput::Continue { round_id, text, tool_call } => {
+        OfflineTickOutput::Continue {
+            round_id,
+            text,
+            tool_call,
+        } => {
             assert_eq!(round_id, "r2");
             assert_eq!(text, "Summarizing what I read");
             assert!(tool_call.is_none());
@@ -88,7 +100,9 @@ fn multi_round_with_tools_drives_full_sequence() {
 
 #[test]
 fn long_running_default_drives_six_rounds() {
-    let p = loader().load_profile("long_running_default").expect("fixture should load");
+    let p = loader()
+        .load_profile("long_running_default")
+        .expect("fixture should load");
     assert_eq!(p.round_count(), 6);
 
     // Walk the profile; assert that exactly one round is `Done` and

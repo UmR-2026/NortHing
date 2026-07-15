@@ -271,11 +271,11 @@ mod tests {
     };
 
     use crate::remote_connect::remote_request_builders::{ChatMessage, RemoteModelCatalog};
-    use crate::remote_connect::RemoteCommand;
     use crate::remote_connect::remote_session_response_builders::{
         handle_remote_poll_command, handle_remote_session_command, RemotePollRuntimeHost, RemoteSessionRuntimeHost,
     };
     use crate::remote_connect::remote_session_state::RemoteSessionStateTracker;
+    use crate::remote_connect::RemoteCommand;
 
     struct FakeWorkspaceHost;
 

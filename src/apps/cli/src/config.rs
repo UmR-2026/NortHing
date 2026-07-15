@@ -231,8 +231,7 @@ mod tests {
         config.shortcuts.send_message = "Ctrl+Enter".to_string();
 
         let toml_text = toml::to_string_pretty(&config).expect("config serializes to toml");
-        let parsed: CliConfig =
-            toml::from_str(&toml_text).expect("toml round-trip parses back to CliConfig");
+        let parsed: CliConfig = toml::from_str(&toml_text).expect("toml round-trip parses back to CliConfig");
 
         assert_eq!(parsed.ui.theme, "light");
         assert_eq!(parsed.behavior.default_agent, "custom");

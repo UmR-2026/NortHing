@@ -135,9 +135,9 @@ impl CustomSubagent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use northhing_test_support::TestTempDir;
     use std::fs;
     use std::path::PathBuf;
-    use northhing_test_support::TestTempDir;
 
     #[test]
     fn review_metadata_round_trips_through_front_matter() {
@@ -159,7 +159,11 @@ mod tests {
         let saved = fs::read_to_string(&path).expect("saved subagent should be readable");
         assert!(saved.contains("review: true"));
 
-        let loaded = CustomSubagent::from_file(path.to_str().expect("path should be valid UTF-8"), CustomSubagentKind::User).expect("review subagent should load");
+        let loaded = CustomSubagent::from_file(
+            path.to_str().expect("path should be valid UTF-8"),
+            CustomSubagentKind::User,
+        )
+        .expect("review subagent should load");
         assert!(loaded.review);
         assert!(loaded.readonly);
     }

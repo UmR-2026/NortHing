@@ -27,21 +27,17 @@ pub const USE_SKILL_REGISTRY: bool = true;
 
 // Re-export the public API surface so `agentic::*` and `crate::agentic::skill_agent_snapshot::*`
 // continue to resolve the same 13 items.
-pub use types::{
-    AgentSnapshotEntry, SkillAgentDiff, SkillSnapshotEntry, TurnSkillAgentSnapshot,
-};
-pub use resolution::{resolve_skill_agent_snapshot, SkillAgentSnapshotResolution};
 pub use diff_render::{
     build_embedded_user_context_reminder, build_skill_agent_tool_listing_sections_from_snapshot,
     diff_skill_agent_snapshot, render_full_agent_listing_body, render_full_skill_listing_body,
     render_resolved_skill_listing_body,
 };
+pub use resolution::{resolve_skill_agent_snapshot, SkillAgentSnapshotResolution};
+pub use types::{AgentSnapshotEntry, SkillAgentDiff, SkillSnapshotEntry, TurnSkillAgentSnapshot};
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        diff_skill_agent_snapshot, AgentSnapshotEntry, SkillSnapshotEntry, TurnSkillAgentSnapshot,
-    };
+    use super::{diff_skill_agent_snapshot, AgentSnapshotEntry, SkillSnapshotEntry, TurnSkillAgentSnapshot};
 
     #[test]
     fn skill_agent_diff_renders_changed_added_and_removed_entries() {

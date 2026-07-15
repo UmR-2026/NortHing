@@ -102,10 +102,7 @@ pub fn verify_turn_checksum(turn: &DialogTurnData, expected: &[u8; 32]) -> Resul
 /// Sidecar file path for a turn's checksum. Sibling of `turn-NNNN.json`.
 pub fn turn_checksum_sidecar_path(turn_json_path: &Path) -> PathBuf {
     let parent = turn_json_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = turn_json_path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("turn");
+    let stem = turn_json_path.file_stem().and_then(|s| s.to_str()).unwrap_or("turn");
     parent.join(format!("{}.checksum", stem))
 }
 
@@ -125,9 +122,7 @@ pub async fn write_turn_checksum_sidecar(
 
 /// Read the checksum sidecar for a turn. Returns `Ok(None)` if the
 /// sidecar is absent (pre-checksum turn, back-compat path).
-pub async fn read_turn_checksum_sidecar(
-    turn_json_path: &Path,
-) -> Result<Option<[u8; 32]>, TurnChecksumError> {
+pub async fn read_turn_checksum_sidecar(turn_json_path: &Path) -> Result<Option<[u8; 32]>, TurnChecksumError> {
     let sidecar = turn_checksum_sidecar_path(turn_json_path);
     match fs::read(&sidecar).await {
         Ok(bytes) => {
@@ -136,11 +131,10 @@ pub async fn read_turn_checksum_sidecar(
                 reason: format!("non-utf8: {}", e),
             })?;
             let trimmed = text.trim();
-            let bytes =
-                hex_decode(trimmed).ok_or_else(|| TurnChecksumError::Corrupt {
-                    turn_id: turn_json_path.to_string_lossy().into_owned(),
-                    reason: format!("non-hex: {}", trimmed),
-                })?;
+            let bytes = hex_decode(trimmed).ok_or_else(|| TurnChecksumError::Corrupt {
+                turn_id: turn_json_path.to_string_lossy().into_owned(),
+                reason: format!("non-hex: {}", trimmed),
+            })?;
             if bytes.len() != 32 {
                 return Err(TurnChecksumError::Corrupt {
                     turn_id: turn_json_path.to_string_lossy().into_owned(),

@@ -53,7 +53,6 @@ async fn mcp_context_enhancer_preserves_resource_selection_contract() {
     assert!(context["resources"][0]["relevance_score"].as_f64().unwrap() > 0.0);
 }
 
-
 #[tokio::test]
 async fn mcp_catalog_cache_preserves_resource_prompt_lifecycle_contract() {
     let cache = MCPCatalogCache::new();
@@ -83,7 +82,6 @@ async fn mcp_catalog_cache_preserves_resource_prompt_lifecycle_contract() {
     assert!(cache.get_resources("server-b").await.is_empty());
     assert!(cache.get_prompts("server-b").await.is_empty());
 }
-
 
 #[tokio::test]
 async fn mcp_catalog_cache_replacement_invalidates_stale_entries() {
@@ -126,5 +124,3 @@ async fn mcp_catalog_cache_replacement_invalidates_stale_entries() {
     assert!(cache.get_resources("server-a").await.is_empty());
     assert!(cache.get_prompts("server-a").await.is_empty());
 }
-
-

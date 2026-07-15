@@ -189,7 +189,9 @@ pub(crate) fn emit_lifecycle(
     }
 }
 
-pub(crate) fn completion_status_for_control_action(action: RemoteExecControlAction) -> RemoteExecSessionCompletionStatus {
+pub(crate) fn completion_status_for_control_action(
+    action: RemoteExecControlAction,
+) -> RemoteExecSessionCompletionStatus {
     match action {
         RemoteExecControlAction::Interrupt => RemoteExecSessionCompletionStatus::Interrupted,
         RemoteExecControlAction::Kill => RemoteExecSessionCompletionStatus::Killed,
@@ -212,7 +214,9 @@ pub(crate) fn completion_for_closed_remote_process(
     }
 }
 
-pub(crate) fn lifecycle_status_for_completion(status: RemoteExecSessionCompletionStatus) -> RemoteExecProcessLifecycleStatus {
+pub(crate) fn lifecycle_status_for_completion(
+    status: RemoteExecSessionCompletionStatus,
+) -> RemoteExecProcessLifecycleStatus {
     match status {
         RemoteExecSessionCompletionStatus::Exited => RemoteExecProcessLifecycleStatus::Exited,
         RemoteExecSessionCompletionStatus::Interrupted => RemoteExecProcessLifecycleStatus::Interrupted,

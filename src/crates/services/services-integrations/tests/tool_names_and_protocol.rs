@@ -17,7 +17,6 @@ fn mcp_tool_name_contract_matches_existing_wire_format() {
     );
 }
 
-
 #[test]
 fn mcp_tool_info_preserves_json_shape() {
     let info = McpToolInfo {
@@ -35,7 +34,6 @@ fn mcp_tool_info_preserves_json_shape() {
         })
     );
 }
-
 
 #[test]
 fn mcp_protocol_capability_contract_matches_existing_default() {
@@ -74,5 +72,3 @@ fn mcp_protocol_capability_contract_matches_existing_default() {
 //         Some(true)
 //     );
 // }
-
-

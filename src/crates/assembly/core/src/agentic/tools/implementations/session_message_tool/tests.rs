@@ -5,11 +5,11 @@
 //! constructed with throwaway temporary workspaces so the suite stays
 //! hermetic and self-cleaning via the `TestTempDir` drop guard.
 
+use northhing_test_support::TestTempDir;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use northhing_test_support::TestTempDir;
 
 use crate::agentic::tools::framework::{Tool, ToolUseContext};
 

@@ -89,7 +89,11 @@ pub enum OfflineTickOutput {
 pub enum OfflineTickError {
     /// Caller asked for round N, but the profile has only M < N rounds.
     /// Includes the profile id for diagnostics.
-    RoundOutOfRange { profile_id: String, requested: usize, total: usize },
+    RoundOutOfRange {
+        profile_id: String,
+        requested: usize,
+        total: usize,
+    },
     /// Profile is empty (zero rounds). Every profile must declare at
     /// least one round; an empty profile is a fixture authoring bug.
     EmptyProfile { profile_id: String },
@@ -101,7 +105,11 @@ pub enum OfflineTickError {
 impl std::fmt::Display for OfflineTickError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::RoundOutOfRange { profile_id, requested, total } => write!(
+            Self::RoundOutOfRange {
+                profile_id,
+                requested,
+                total,
+            } => write!(
                 f,
                 "profile {} exhausted: requested round {} but only has {} rounds",
                 profile_id, requested, total
@@ -149,11 +157,7 @@ impl OfflineSubAgentProfile {
     }
 
     /// Builder: add a final round. The sub-agent terminates after this round.
-    pub fn with_final_round(
-        mut self,
-        round_id: impl Into<String>,
-        text: impl Into<String>,
-    ) -> Self {
+    pub fn with_final_round(mut self, round_id: impl Into<String>, text: impl Into<String>) -> Self {
         self.rounds.push(OfflineRound {
             round_id: round_id.into(),
             text: text.into(),
@@ -181,13 +185,14 @@ impl OfflineSubAgentProfile {
                 profile_id: self.profile_id.clone(),
             });
         }
-        let round = self.rounds.get(round_index).ok_or_else(|| {
-            OfflineTickError::RoundOutOfRange {
+        let round = self
+            .rounds
+            .get(round_index)
+            .ok_or_else(|| OfflineTickError::RoundOutOfRange {
                 profile_id: self.profile_id.clone(),
                 requested: round_index,
                 total: self.rounds.len(),
-            }
-        })?;
+            })?;
         if round.is_final && round_index + 1 < self.rounds.len() {
             return Err(OfflineTickError::PrematureFinal {
                 profile_id: self.profile_id.clone(),
@@ -237,23 +242,29 @@ mod tests {
             .with_round("r0", "calling tool", Some(tool_call.clone()))
             .with_round("r1", "got result", None)
             .with_final_round("r2", "goodbye");
-        assert_eq!(p.tick(0).unwrap(),
+        assert_eq!(
+            p.tick(0).unwrap(),
             OfflineTickOutput::Continue {
                 round_id: "r0".into(),
                 text: "calling tool".into(),
                 tool_call: Some(tool_call.clone()),
-            });
-        assert_eq!(p.tick(1).unwrap(),
+            }
+        );
+        assert_eq!(
+            p.tick(1).unwrap(),
             OfflineTickOutput::Continue {
                 round_id: "r1".into(),
                 text: "got result".into(),
                 tool_call: None,
-            });
-        assert_eq!(p.tick(2).unwrap(),
+            }
+        );
+        assert_eq!(
+            p.tick(2).unwrap(),
             OfflineTickOutput::Done {
                 round_id: "r2".into(),
                 final_text: "goodbye".into(),
-            });
+            }
+        );
     }
 
     #[test]

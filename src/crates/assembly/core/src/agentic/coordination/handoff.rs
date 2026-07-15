@@ -94,11 +94,7 @@ pub(crate) trait SubAgentHandoff: Send + Sync {
     /// `turn_id` is a stable id used by the per-turn counter; the same
     /// `turn_id` from two consecutive calls in the same turn triggers
     /// `HandoffError::TooManyCallsInTurn`.
-    async fn handoff(
-        &self,
-        turn_id: &str,
-        input: Self::Input,
-    ) -> NortHingResult<Self::Output>;
+    async fn handoff(&self, turn_id: &str, input: Self::Input) -> NortHingResult<Self::Output>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -286,11 +282,7 @@ impl SubAgentHandoff for CoordinatorHiddenSubagentHandoff {
     type Input = HiddenSubagentExecutionRequest;
     type Output = SubagentResult;
 
-    async fn handoff(
-        &self,
-        turn_id: &str,
-        input: Self::Input,
-    ) -> NortHingResult<Self::Output> {
+    async fn handoff(&self, turn_id: &str, input: Self::Input) -> NortHingResult<Self::Output> {
         // Per-turn enforcement: only one handoff per turn.
         self.counter.try_record(turn_id)?;
 

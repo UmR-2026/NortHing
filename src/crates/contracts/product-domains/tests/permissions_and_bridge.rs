@@ -23,7 +23,6 @@ fn miniapp_csp_content_preserves_net_allow_contract() {
     );
 }
 
-
 #[test]
 fn miniapp_permissions_support_host_notifications_without_domain_specific_fields() {
     let permissions: MiniAppPermissions = serde_json::from_value(serde_json::json!({
@@ -39,7 +38,6 @@ fn miniapp_permissions_support_host_notifications_without_domain_specific_fields
     assert_eq!(permissions.net.unwrap().allow.unwrap(), vec!["*"]);
 }
 
-
 #[test]
 fn miniapp_bridge_exposes_host_notification_namespace() {
     let bridge = build_bridge_script("app-1", "/tmp/app", "/tmp/workspace", "dark", "win32");
@@ -50,7 +48,6 @@ fn miniapp_bridge_exposes_host_notification_namespace() {
     assert!(bridge.contains("system.openExternal"));
 }
 
-
 #[test]
 fn miniapp_bridge_exposes_deck_render_page_namespace() {
     let bridge = build_bridge_script("app-1", "/tmp/app", "/tmp/workspace", "dark", "win32");
@@ -58,7 +55,6 @@ fn miniapp_bridge_exposes_deck_render_page_namespace() {
     assert!(bridge.contains("deck:"));
     assert!(bridge.contains("deck.renderPage"));
 }
-
 
 #[test]
 fn miniapp_permission_policy_preserves_scope_resolution() {
@@ -83,5 +79,3 @@ fn miniapp_permission_policy_preserves_scope_resolution() {
     assert_eq!(policy["fs"]["read"][2], "/tmp/granted");
     assert_eq!(policy["fs"]["write"][0], "/tmp/granted");
 }
-
-

@@ -1,17 +1,17 @@
 //! RemoteExecProcessManager: session table, exec orchestration, and global accessor.
 
 use super::output::{
-    completion_for_closed_remote_process, completion_status_for_control_action, deadline_from_now,
-    emit_lifecycle, input_bytes_for_write, lifecycle_status_for_completion, new_chunk_id, new_session_id,
-    spawn_lifecycle_exit_watcher, OutputCursor, OutputState,
+    completion_for_closed_remote_process, completion_status_for_control_action, deadline_from_now, emit_lifecycle,
+    input_bytes_for_write, lifecycle_status_for_completion, new_chunk_id, new_session_id, spawn_lifecycle_exit_watcher,
+    OutputCursor, OutputState,
 };
 use super::process::{spawn_remote_process, RemoteExecProcess, RemoteExecProcessCommand};
 use super::types::{
     RemoteExecCommandRequest, RemoteExecCommandResponse, RemoteExecControlAction, RemoteExecControlOrigin,
-    RemoteExecControlRequest, RemoteExecError, RemoteExecProcessLifecycleEvent,
-    RemoteExecProcessLifecycleStatus, RemoteExecResult, RemoteExecSessionCompletion,
-    RemoteExecSessionCompletionSource, RemoteExecSessionCompletionStatus, RemoteSendStdinRequest,
-    RemoteWriteStdinRequest, MAX_COMPLETED_REMOTE_EXEC_SESSIONS, MAX_REMOTE_EXEC_SESSIONS,
+    RemoteExecControlRequest, RemoteExecError, RemoteExecProcessLifecycleEvent, RemoteExecProcessLifecycleStatus,
+    RemoteExecResult, RemoteExecSessionCompletion, RemoteExecSessionCompletionSource,
+    RemoteExecSessionCompletionStatus, RemoteSendStdinRequest, RemoteWriteStdinRequest,
+    MAX_COMPLETED_REMOTE_EXEC_SESSIONS, MAX_REMOTE_EXEC_SESSIONS,
 };
 use anyhow::{anyhow, Context};
 use std::collections::HashMap;
@@ -407,4 +407,3 @@ impl RemoteExecProcessManager {
         self.completed_sessions.lock().await.remove(&session_id)
     }
 }
-

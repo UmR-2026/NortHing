@@ -2,8 +2,8 @@
 
 use super::types::{
     RemoteExecCommandRequest, RemoteExecControlAction, RemoteExecControlOrigin, RemoteExecError,
-    RemoteExecProcessLifecycleEvent, RemoteExecProcessLifecycleStatus, RemoteExecResult,
-    RemoteExecSessionCompletion, RemoteExecSessionCompletionSource, RemoteExecSessionCompletionStatus,
+    RemoteExecProcessLifecycleEvent, RemoteExecProcessLifecycleStatus, RemoteExecResult, RemoteExecSessionCompletion,
+    RemoteExecSessionCompletionSource, RemoteExecSessionCompletionStatus,
 };
 use crate::remote_ssh::SSHConnectionManager;
 use anyhow::{anyhow, Context};
@@ -306,4 +306,3 @@ async fn remote_pty_owner(
 
     output.close(exit_code).await;
 }
-

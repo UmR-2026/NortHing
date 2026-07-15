@@ -89,7 +89,6 @@ fn miniapp_host_routing_preserves_existing_primitive_and_allowlist_contract() {
     ));
 }
 
-
 #[test]
 fn miniapp_host_fs_call_plans_preserve_existing_path_and_permission_contract() {
     let read = plan_fs_host_call(
@@ -202,7 +201,6 @@ fn miniapp_host_fs_call_plans_preserve_existing_path_and_permission_contract() {
     );
 }
 
-
 #[test]
 fn miniapp_host_fs_call_plans_preserve_existing_error_contract() {
     let missing_path = plan_fs_host_call("readFile", &serde_json::json!({})).unwrap_err();
@@ -217,7 +215,6 @@ fn miniapp_host_fs_call_plans_preserve_existing_error_contract() {
     assert_eq!(unknown.kind(), MiniAppHostPlanErrorKind::Validation);
     assert_eq!(unknown.message(), "unknown fs method: chmod");
 }
-
 
 #[test]
 fn miniapp_host_shell_call_plans_preserve_existing_input_and_default_contract() {
@@ -271,7 +268,6 @@ fn miniapp_host_shell_call_plans_preserve_existing_input_and_default_contract() 
     assert_eq!(appdata_plan.cwd, PathBuf::from("/appdata"));
 }
 
-
 #[test]
 fn miniapp_host_shell_call_plans_preserve_existing_error_contract() {
     let empty = plan_shell_host_call(
@@ -294,7 +290,6 @@ fn miniapp_host_shell_call_plans_preserve_existing_error_contract() {
     assert_eq!(unknown.kind(), MiniAppHostPlanErrorKind::Validation);
     assert_eq!(unknown.message(), "unknown shell method: spawn");
 }
-
 
 #[test]
 fn miniapp_lifecycle_helpers_preserve_runtime_revision_contract() {
@@ -338,7 +333,6 @@ fn miniapp_lifecycle_helpers_preserve_runtime_revision_contract() {
     );
     assert_eq!(workspace_dir_string(None), "");
 }
-
 
 #[test]
 fn miniapp_lifecycle_manager_state_helpers_preserve_core_transitions() {
@@ -392,7 +386,6 @@ fn miniapp_lifecycle_manager_state_helpers_preserve_core_transitions() {
     assert_eq!(imported.runtime.source_revision, "src:4:4000");
     assert_eq!(imported.runtime.deps_revision, "lodash@^4.17.21");
 }
-
 
 #[test]
 fn miniapp_lifecycle_create_and_update_helpers_preserve_manager_contract() {
@@ -504,7 +497,6 @@ fn miniapp_lifecycle_create_and_update_helpers_preserve_manager_contract() {
     assert!(!metadata_only.runtime.ui_recompile_required);
 }
 
-
 #[test]
 fn miniapp_lifecycle_draft_helpers_preserve_manager_contract() {
     let mut active = sample_miniapp_for_lifecycle(MiniAppSource {
@@ -580,5 +572,3 @@ fn miniapp_lifecycle_draft_helpers_preserve_manager_contract() {
     assert!(applied.runtime.deps_dirty);
     assert!(applied.runtime.worker_restart_required);
 }
-
-

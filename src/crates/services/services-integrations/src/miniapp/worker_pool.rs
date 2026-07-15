@@ -418,9 +418,9 @@ fn map_miniapp_runtime_port_error(error: MiniAppWorkerPoolError) -> MiniAppPortE
 mod tests {
     use super::*;
     use northhing_product_domains::miniapp::runtime::RuntimeKind;
+    use northhing_test_support::TestTempDir;
     use std::fs;
     use std::path::{Path, PathBuf};
-    use northhing_test_support::TestTempDir;
 
     #[tokio::test]
     async fn runtime_port_adapter_preserves_existing_runtime_and_noop_install() {

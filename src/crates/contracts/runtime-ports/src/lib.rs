@@ -18,8 +18,8 @@ pub mod session_workspace;
 
 pub use agent::*;
 pub use deep_research::{
-    ResearchCitationDisplayMapEntry, ResearchCitationRenumberOutput, ResearchCitationRenumberStats,
-    renumber_research_report,
+    renumber_research_report, ResearchCitationDisplayMapEntry, ResearchCitationRenumberOutput,
+    ResearchCitationRenumberStats,
 };
 pub use lightweight_task::{
     LightweightTaskOutput, LightweightTaskRequest, LightweightTelemetrySink, ToolDispatcherPort,

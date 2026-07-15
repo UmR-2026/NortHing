@@ -75,7 +75,6 @@ fn miniapp_builtin_contract_preserves_seed_marker_and_hash_policy() {
     );
 }
 
-
 #[test]
 fn miniapp_builtin_contract_owns_seed_plan_and_marker_wire_shape() {
     let app = BuiltinMiniAppBundle {
@@ -125,7 +124,6 @@ fn miniapp_builtin_contract_owns_seed_plan_and_marker_wire_shape() {
     assert_eq!(parse_builtin_install_marker(&serialized).unwrap(), marker);
 }
 
-
 #[test]
 fn miniapp_builtin_contract_owns_seed_meta_timestamp_policy() {
     let app = BuiltinMiniAppBundle {
@@ -174,7 +172,6 @@ fn miniapp_builtin_contract_owns_seed_meta_timestamp_policy() {
     assert_eq!(updated_meta.updated_at, 2000);
 }
 
-
 #[test]
 fn miniapp_ports_keep_runtime_boundary_lightweight() {
     let decoded: MiniAppInstallDepsRequest = serde_json::from_value(serde_json::json!({
@@ -206,5 +203,3 @@ fn miniapp_ports_keep_runtime_boundary_lightweight() {
     let port: &dyn MiniAppRuntimePort = &RuntimePortStub;
     let _future = port.detect_runtime();
 }
-
-

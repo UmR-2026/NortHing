@@ -61,7 +61,6 @@ fn miniapp_runtime_facade_persists_port_backed_lifecycle_transitions() {
     assert_eq!(storage.saved_version_numbers(), vec![3, 4]);
 }
 
-
 #[test]
 fn miniapp_runtime_facade_owns_manager_create_update_draft_and_apply_workflows() {
     let storage = StoragePortStub::new(sample_miniapp_for_lifecycle(MiniAppSource::default()));
@@ -163,7 +162,6 @@ fn miniapp_runtime_facade_owns_manager_create_update_draft_and_apply_workflows()
     );
 }
 
-
 #[test]
 fn miniapp_runtime_facade_owns_import_bundle_recompile_and_runtime_state_workflow() {
     let storage = StoragePortStub::new(sample_miniapp_for_lifecycle(MiniAppSource::default()));
@@ -223,7 +221,6 @@ fn miniapp_runtime_facade_owns_import_bundle_recompile_and_runtime_state_workflo
     assert_eq!(writes[0].compiled_html, PLACEHOLDER_COMPILED_HTML);
 }
 
-
 #[test]
 fn miniapp_runtime_facade_skips_save_when_restart_flag_already_clear() {
     let mut app = sample_miniapp_for_lifecycle(MiniAppSource::default());
@@ -237,7 +234,6 @@ fn miniapp_runtime_facade_skips_save_when_restart_flag_already_clear() {
     assert_eq!(storage.save_count(), 0);
     assert_eq!(storage.current().version, 3);
 }
-
 
 #[test]
 fn miniapp_runtime_facade_preserves_storage_errors_without_state_writes() {
@@ -255,7 +251,6 @@ fn miniapp_runtime_facade_preserves_storage_errors_without_state_writes() {
     assert_eq!(storage.save_count(), 0);
     assert!(storage.saved_version_numbers().is_empty());
 }
-
 
 #[test]
 fn miniapp_draft_contract_preserves_manifest_and_response_shape() {
@@ -284,7 +279,6 @@ fn miniapp_draft_contract_preserves_manifest_and_response_shape() {
     assert_eq!(applied.status, MINIAPP_DRAFT_STATUS_APPLIED);
     assert_eq!(applied.updated_at, 2345);
 }
-
 
 #[test]
 fn miniapp_customization_apply_helper_preserves_builtin_override_policy() {
@@ -352,7 +346,6 @@ fn miniapp_customization_apply_helper_preserves_builtin_override_policy() {
     assert_eq!(user_created_update.updated_at, 3456);
 }
 
-
 #[test]
 fn miniapp_customization_builtin_update_policy_preserves_decline_contract() {
     let mut metadata = apply_draft_customization_metadata(
@@ -419,7 +412,6 @@ fn miniapp_customization_builtin_update_policy_preserves_decline_contract() {
     assert!(fallback);
 }
 
-
 #[test]
 fn miniapp_customization_decline_policy_updates_existing_and_trims_old_records() {
     let mut metadata = apply_draft_customization_metadata(
@@ -473,4 +465,3 @@ fn sample_miniapp_for_lifecycle(source: MiniAppSource) -> MiniApp {
         i18n: None,
     }
 }
-

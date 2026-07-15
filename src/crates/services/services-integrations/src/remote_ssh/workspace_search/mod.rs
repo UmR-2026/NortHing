@@ -16,9 +16,7 @@ mod repo_session;
 mod service;
 mod service_helpers;
 
-pub use protocol::{
-    RemoteCommandOutput, RemoteWorkspaceSearchProvider, RemoteWorkspaceSearchStdioProtocol,
-};
+pub use protocol::{RemoteCommandOutput, RemoteWorkspaceSearchProvider, RemoteWorkspaceSearchStdioProtocol};
 pub use service::RemoteWorkspaceSearchService;
 pub use service_helpers::*;
 

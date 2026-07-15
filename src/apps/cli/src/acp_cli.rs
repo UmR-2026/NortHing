@@ -690,7 +690,10 @@ mod tests {
 
     #[test]
     fn render_command_joins_command_and_args() {
-        assert_eq!(render_command("git", &["diff".into(), "--no-color".into()]), "git diff --no-color");
+        assert_eq!(
+            render_command("git", &["diff".into(), "--no-color".into()]),
+            "git diff --no-color"
+        );
         assert_eq!(render_command("cmd", &[]), "cmd");
     }
 

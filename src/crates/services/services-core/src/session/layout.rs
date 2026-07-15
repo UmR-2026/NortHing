@@ -62,7 +62,8 @@ impl SessionStorageLayout {
     /// Sidecar checksum path for a turn. Sibling of `turn-NNNN.json` with
     /// `.checksum` extension. See `checksum.rs` for write/read helpers.
     pub fn turn_checksum_path(&self, session_id: &str, turn_index: usize) -> PathBuf {
-        self.turns_dir(session_id).join(format!("turn-{:04}.checksum", turn_index))
+        self.turns_dir(session_id)
+            .join(format!("turn-{:04}.checksum", turn_index))
     }
 
     pub fn context_snapshot_path(&self, session_id: &str, turn_index: usize) -> PathBuf {

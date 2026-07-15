@@ -36,7 +36,6 @@ fn mcp_runtime_notification_and_backoff_helpers_preserve_manager_contract() {
     );
 }
 
-
 #[test]
 fn mcp_dynamic_tool_descriptor_and_result_rendering_preserve_tool_contract() {
     let tool = MCPTool {
@@ -120,7 +119,6 @@ fn mcp_dynamic_tool_descriptor_and_result_rendering_preserve_tool_contract() {
     );
 }
 
-
 #[tokio::test]
 async fn mcp_dynamic_tool_provider_preserves_manifest_contract() {
     let provider = MCPDynamicToolProvider::new("github", "GitHub");
@@ -158,7 +156,6 @@ async fn mcp_dynamic_tool_provider_preserves_manifest_contract() {
     assert_eq!(definitions[0].descriptor.tool_info.server_name, "GitHub");
     assert!(definitions[0].descriptor.read_only);
 }
-
 
 #[tokio::test]
 async fn mcp_dynamic_tool_provider_preserves_manifest_order_and_metadata_snapshot() {
@@ -232,7 +229,6 @@ async fn mcp_dynamic_tool_provider_preserves_manifest_order_and_metadata_snapsho
     );
 }
 
-
 #[test]
 fn mcp_runtime_auth_error_classifier_preserves_process_status_contract() {
     assert!(is_mcp_auth_error_message("Handshake failed: Unauthorized (401)"));
@@ -242,7 +238,6 @@ fn mcp_runtime_auth_error_classifier_preserves_process_status_contract() {
     assert!(is_mcp_auth_error_message("remote server returned status code: 403"));
     assert!(!is_mcp_auth_error_message("Handshake failed: connection reset"));
 }
-
 
 #[test]
 fn mcp_runtime_remote_header_merge_preserves_legacy_env_authorization_fallback() {
@@ -270,7 +265,6 @@ fn mcp_runtime_remote_header_merge_preserves_legacy_env_authorization_fallback()
     assert_eq!(merged.get("AUTHORIZATION").map(String::as_str), Some(""));
     assert!(!merged.contains_key("Authorization"));
 }
-
 
 #[test]
 fn mcp_server_config_preserves_transport_defaults_and_validation_contract() {
@@ -310,7 +304,6 @@ fn mcp_server_config_preserves_transport_defaults_and_validation_contract() {
     assert_eq!(remote.resolved_transport(), MCPServerTransport::StreamableHttp);
     remote.validate().expect("remote streamable-http config is valid");
 }
-
 
 #[test]
 fn mcp_oauth_session_snapshot_preserves_camel_case_status_contract() {
@@ -377,7 +370,6 @@ fn mcp_oauth_session_snapshot_preserves_camel_case_status_contract() {
 //     let _ = std::fs::remove_dir_all(data_dir);
 // }
 
-
 #[test]
 fn mcp_cursor_format_helpers_preserve_cursor_compatibility_contract() {
     let remote = MCPServerConfig {
@@ -433,4 +425,3 @@ fn mcp_cursor_format_helpers_preserve_cursor_compatibility_contract() {
     assert_eq!(parsed[0].transport, Some(MCPServerTransport::Sse));
     assert_eq!(parsed[0].location, ConfigLocation::User);
 }
-

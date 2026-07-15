@@ -287,9 +287,9 @@ pub fn phase1_clone_for_task(phase1: &SubagentPhase1Output) -> SubagentPhase1Out
 
 // ─── Sub-test modules ────────────────────────────────────────────────
 
-mod tests_success;
 mod tests_cancel;
-mod tests_timeout;
+mod tests_concurrent;
 mod tests_error;
 mod tests_parent_chain;
-mod tests_concurrent;
+mod tests_success;
+mod tests_timeout;

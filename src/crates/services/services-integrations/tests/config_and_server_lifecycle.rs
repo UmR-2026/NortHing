@@ -62,7 +62,6 @@ async fn mcp_config_service_orchestration_preserves_load_save_delete_contract() 
         .is_none());
 }
 
-
 #[tokio::test]
 async fn mcp_config_service_keeps_load_failures_as_empty_baseline() {
     let service = MCPConfigService::new(Arc::new(FailingMCPConfigStore));
@@ -91,7 +90,6 @@ async fn mcp_config_service_keeps_load_failures_as_empty_baseline() {
         .expect_err("writes must still surface config backend failures");
     assert_eq!(save_error.kind(), MCPRuntimeErrorKind::Configuration);
 }
-
 
 #[tokio::test]
 async fn mcp_server_process_owner_preserves_unsupported_remote_transport_contract() {
@@ -123,7 +121,6 @@ async fn mcp_server_process_owner_preserves_unsupported_remote_transport_contrac
     assert!(pool.get_all_server_ids().await.is_empty());
 }
 
-
 #[test]
 fn mcp_config_location_preserves_kebab_case_wire_contract() {
     assert_eq!(
@@ -139,7 +136,6 @@ fn mcp_config_location_preserves_kebab_case_wire_contract() {
         ConfigLocation::Project
     );
 }
-
 
 #[test]
 fn mcp_json_config_helpers_preserve_load_format_and_save_validation_contract() {
@@ -216,7 +212,6 @@ fn mcp_json_config_helpers_preserve_load_format_and_save_validation_contract() {
     );
 }
 
-
 #[test]
 fn mcp_config_merge_helpers_preserve_precedence_and_dedup_contract() {
     let merged = merge_mcp_server_config_sources([
@@ -273,7 +268,6 @@ fn mcp_config_merge_helpers_preserve_precedence_and_dedup_contract() {
     assert_eq!(deduped[0].location, ConfigLocation::Project);
 }
 
-
 #[test]
 fn mcp_config_authorization_helpers_preserve_header_precedence_and_normalization() {
     let mut config = make_mcp_config(
@@ -314,7 +308,6 @@ fn mcp_config_authorization_helpers_preserve_header_precedence_and_normalization
     assert_eq!(get_mcp_remote_authorization_source(&config), None);
 }
 
-
 #[test]
 fn mcp_server_type_and_status_preserve_lowercase_wire_contract() {
     assert_eq!(
@@ -334,5 +327,3 @@ fn mcp_server_type_and_status_preserve_lowercase_wire_contract() {
         MCPServerStatus::Reconnecting
     );
 }
-
-

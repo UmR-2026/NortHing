@@ -6,8 +6,8 @@
 
 use std::path::Path;
 
-use crate::util::errors::{NortHingError, NortHingResult};
 use super::PathManager;
+use crate::util::errors::{NortHingError, NortHingResult};
 
 impl PathManager {
     /// Ensure directory exists

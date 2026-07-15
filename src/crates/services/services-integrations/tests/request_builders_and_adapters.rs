@@ -35,7 +35,6 @@ fn mcp_protocol_jsonrpc_helpers_preserve_wire_shape() {
     );
 }
 
-
 #[test]
 fn mcp_protocol_request_builders_preserve_wire_shape() {
     assert_eq!(
@@ -120,7 +119,6 @@ fn mcp_protocol_request_builders_preserve_wire_shape() {
     );
 }
 
-
 #[test]
 fn mcp_protocol_prompt_content_helpers_preserve_legacy_text_behavior() {
     let mut content = MCPPromptMessageContent::Plain("Review {{target}}".to_string());
@@ -137,7 +135,6 @@ fn mcp_protocol_prompt_content_helpers_preserve_legacy_text_behavior() {
     }));
     assert_eq!(image.text_or_placeholder(), "[Image: image/png]");
 }
-
 
 #[test]
 fn mcp_resource_and_prompt_adapters_preserve_context_rendering_contract() {
@@ -226,5 +223,3 @@ fn mcp_resource_and_prompt_adapters_preserve_context_rendering_contract() {
     });
     assert_eq!(prompt_text, "User: Review src/lib.rs");
 }
-
-

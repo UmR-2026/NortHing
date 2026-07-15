@@ -47,8 +47,8 @@ pub fn log_flashgrep_stderr_line_with_context(context: Option<&str>, line: &str)
 
 pub use client::{ManagedClient, RepoSession};
 pub use protocol::{
-    ClientCapabilities, ClientInfo, FileMatch, GlobParams, FlashgrepInitializeParams, MatchLocation, RepoRef, Request, Response,
-    SearchHit, SearchLine, SearchParams, TaskRef,
+    ClientCapabilities, ClientInfo, FileMatch, FlashgrepInitializeParams, GlobParams, MatchLocation, RepoRef, Request,
+    Response, SearchHit, SearchLine, SearchParams, TaskRef,
 };
 pub use repo_session::FlashgrepRepoSession;
 pub use rpc_client::{drain_content_length_messages, ProtocolClient};

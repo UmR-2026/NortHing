@@ -1,8 +1,8 @@
-use async_trait::async_trait;
+use crate::remote_ssh::RemoteWorkspaceEntry;
 use crate::workspace_search::flashgrep::{
     drain_content_length_messages, log_flashgrep_stderr_line_with_context, ProtocolClient,
 };
-use crate::remote_ssh::RemoteWorkspaceEntry;
+use async_trait::async_trait;
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone)]

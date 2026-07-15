@@ -14,10 +14,7 @@ pub(crate) fn elapsed_ms_u64(started_at: Instant) -> u64 {
 }
 
 /// Shared helper: compute ahead/behind counts between a local branch and its upstream.
-pub(crate) fn get_ahead_behind_count(
-    repo: &Repository,
-    branch_name: &str,
-) -> Result<(i32, i32), GitError> {
+pub(crate) fn get_ahead_behind_count(repo: &Repository, branch_name: &str) -> Result<(i32, i32), GitError> {
     let local_branch = repo
         .find_branch(branch_name, BranchType::Local)
         .map_err(|e| GitError::BranchNotFound(e.to_string()))?;
@@ -42,11 +39,11 @@ pub(crate) fn get_ahead_behind_count(
     }
 }
 
-#[path = "repository.rs"]
-mod repository;
 #[path = "branch.rs"]
 mod branch;
 #[path = "log.rs"]
 mod log;
 #[path = "operations.rs"]
 mod operations;
+#[path = "repository.rs"]
+mod repository;

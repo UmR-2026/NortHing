@@ -11,9 +11,8 @@ mod transcript;
 pub mod types;
 
 pub use checksum::{
-    audit_turn_parent_links, compute_turn_checksum, read_turn_checksum_sidecar,
-    turn_checksum_sidecar_path, verify_turn_checksum, write_turn_checksum_sidecar,
-    TurnChecksumError,
+    audit_turn_parent_links, compute_turn_checksum, read_turn_checksum_sidecar, turn_checksum_sidecar_path,
+    verify_turn_checksum, write_turn_checksum_sidecar, TurnChecksumError,
 };
 pub use layout::SessionStorageLayout;
 pub use lineage::{

@@ -14,8 +14,7 @@ use crate::service::session::{DialogTurnData, SESSION_STORAGE_SCHEMA_VERSION};
 use crate::util::errors::{NortHingError, NortHingResult};
 use northhing_services_core::session::{
     compute_turn_checksum, read_turn_checksum_sidecar, refresh_session_metadata_from_turns,
-    try_refresh_session_metadata_for_saved_turn, verify_turn_checksum, write_turn_checksum_sidecar,
-    TurnChecksumError,
+    try_refresh_session_metadata_for_saved_turn, verify_turn_checksum, write_turn_checksum_sidecar, TurnChecksumError,
 };
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
@@ -121,10 +120,7 @@ impl PersistenceManager {
         turn_index: usize,
     ) -> NortHingResult<Option<DialogTurnData>> {
         let turn_path = self.turn_path(workspace_path, session_id, turn_index);
-        let file = match self
-            .read_json_optional::<StoredDialogTurnFile>(&turn_path)
-            .await?
-        {
+        let file = match self.read_json_optional::<StoredDialogTurnFile>(&turn_path).await? {
             Some(f) => f,
             None => return Ok(None),
         };

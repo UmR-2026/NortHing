@@ -21,7 +21,8 @@ use super::{
     error::{AppError, Result},
     log_flashgrep_stderr_line,
     protocol::{
-        ClientCapabilities, ClientInfo, GlobParams, FlashgrepInitializeParams, RepoRef, Request, Response, SearchParams, TaskRef,
+        ClientCapabilities, ClientInfo, FlashgrepInitializeParams, GlobParams, RepoRef, Request, Response,
+        SearchParams, TaskRef,
     },
     repo_session::FlashgrepRepoSession,
     rpc_client::{read_content_length_message, ProtocolClient},
