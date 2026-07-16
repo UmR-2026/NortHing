@@ -10,7 +10,7 @@
 use std::sync::{Arc, Mutex};
 
 use northhing_agent_dispatch::{
-    NoopTelemetrySink, TelemetryEvent, TelemetrySink, USE_ACTOR_IPC, USE_DISPATCHER_IPC, USE_LIGHTWEIGHT_ACTOR,
+    NoopTelemetrySink, TelemetryEvent, TelemetrySink, USE_ACTOR_IPC, USE_DISPATCHER_IPC,
     USE_ONESHOT_DISPATCHER,
 };
 
@@ -121,9 +121,11 @@ fn event_display_format_is_stable() {
 /// not just its private internals. If any flag flips to `true` without
 /// the regression test pair required by rule 4 of `06-const-flag-usage.md`,
 /// this test fires.
+/// Updated 2026-07-16: A2 activation (commit e5ae9b1) intentionally set
+/// `USE_LIGHTWEIGHT_ACTOR = true` per HANDOFF §0 "A2 ACTIVATED".
+/// The 3 IPC/dispatcher flags remain off — only those are still asserted.
 #[test]
 fn all_const_flags_default_off_in_phase_1() {
-    assert!(!USE_LIGHTWEIGHT_ACTOR);
     assert!(!USE_ONESHOT_DISPATCHER);
     assert!(!USE_ACTOR_IPC);
     assert!(!USE_DISPATCHER_IPC);
