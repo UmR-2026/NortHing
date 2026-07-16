@@ -4,7 +4,7 @@
 
 适用范围：`src/crates/interfaces/acp`。
 
-`bitfun-acp` 负责基于已组装产品 runtime 的 Agent Client Protocol 入口与 ACP client 行为。ACP protocol / client 细节留在这里或应用入口 adapter 中；跨层只共享稳定 capability facts。
+`northhing-acp` 负责基于已组装产品 runtime 的 Agent Client Protocol 入口与 ACP client 行为。ACP protocol / client 细节留在这里或应用入口 adapter 中；跨层只共享稳定 capability facts。
 
 ## 护栏
 
@@ -15,6 +15,6 @@
 ## 验证
 
 ```bash
-cargo check -p bitfun-acp
-cargo test -p bitfun-acp
+cargo check -p northhing-acp
+cargo test -p northhing-acp
 ```

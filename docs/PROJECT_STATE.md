@@ -25,7 +25,7 @@
  - 移除未使用的 `_start_sha` 参数
  - human 输出添加 plan title
 
-**Next session handoff**: `docs/HANDOFF_NEXT_SESSION.md`（含详细 risk log + ZCode CLI 限制— **A0 已完成** (2026-06-18): 仓库从 BitFun-v3 改为 northhing，1381 文件修改，品牌清空。
+**Next session handoff**: `docs/HANDOFF_NEXT_SESSION.md`（含详细 risk log + ZCode CLI 限制— **A0 已完成** (2026-06-18): 仓库从 northhing-v3 改为 northhing，1381 文件修改，品牌清空。
 **A1 已完成** (2026-06-18): Slint 桌面壳实现完成，编译零警告。
 - 已创建 `src/apps/desktop/` 纯 Slint GUI 应用（binary `northhing`）
 - 已实现 Material Design 主题系统 + 15 个 UI 文件（theme + 10 components + 4 views）

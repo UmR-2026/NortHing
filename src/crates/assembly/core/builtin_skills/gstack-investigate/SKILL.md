@@ -1,4 +1,4 @@
----
+﻿---
 name: investigate
 description: |
   Systematic debugging with root cause investigation. Four phases: investigate,
@@ -18,9 +18,9 @@ description: |
 
 Fixing symptoms creates whack-a-mole debugging. Every fix that doesn't address root cause makes the next bug harder to find. Find the root cause, then fix it.
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the debugging methodology. Use existing Task sub-agents to gather independent evidence, then keep hypothesis selection and fixes in the main Team session.
+When this skill is invoked by northhing Team Mode, this skill supplies the debugging methodology. Use existing Task sub-agents to gather independent evidence, then keep hypothesis selection and fixes in the main Team session.
 
 - Do not assume a Debugger sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer matching custom debugging/domain sub-agents if available; otherwise use `Explore` for code-path tracing and `FileFinder` for locating logs, configs, tests, and affected files.
@@ -48,9 +48,9 @@ Gather context before forming any hypothesis.
 
 ## Prior Learnings
 
-Use only BitFun in-session memory, project docs, `.bitfun/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior BitFun context applied: <source>`.
+Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
-Output: **"Root cause hypothesis: ..."** — a specific, testable claim about what is wrong and why.
+Output: **"Root cause hypothesis: ..."** 鈥?a specific, testable claim about what is wrong and why.
 
 ---
 
@@ -59,13 +59,13 @@ Output: **"Root cause hypothesis: ..."** — a specific, testable claim about wh
 After forming your root cause hypothesis, lock edits to the affected module to prevent scope creep.
 
 ```bash
-[ -x "BitFun built-in freeze check" ] && echo "FREEZE_AVAILABLE" || echo "FREEZE_UNAVAILABLE"
+[ -x "northhing built-in freeze check" ] && echo "FREEZE_AVAILABLE" || echo "FREEZE_UNAVAILABLE"
 ```
 
 **If FREEZE_AVAILABLE:** Identify the narrowest directory containing the affected files. Write it to the freeze state file:
 
 ```bash
-STATE_DIR="${BITFUN_TEAM_HOME:-$HOME/.bitfun/team}"
+STATE_DIR="${northhing_TEAM_HOME:-$HOME/.northhing/team}"
 mkdir -p "$STATE_DIR"
 echo "<detected-directory>/" > "$STATE_DIR/freeze-dir.txt"
 echo "Debug scope locked to: <detected-directory>/"
@@ -94,10 +94,10 @@ Check if this bug matches a known pattern:
 
 Also check:
 - `TODOS.md` for related known issues
-- `git log` for prior fixes in the same area — **recurring bugs in the same files are an architectural smell**, not a coincidence
+- `git log` for prior fixes in the same area 鈥?**recurring bugs in the same files are an architectural smell**, not a coincidence
 
 **External pattern search:** If the bug doesn't match a known pattern above, WebSearch for:
-- "{framework} {generic error type}" — **sanitize first:** strip hostnames, IPs, file paths, SQL, customer data. Search the error category, not the raw message.
+- "{framework} {generic error type}" 鈥?**sanitize first:** strip hostnames, IPs, file paths, SQL, customer data. Search the error category, not the raw message.
 - "{library} {component} known issues"
 
 If WebSearch is unavailable, skip this search and proceed with hypothesis testing. If a documented solution or known dependency bug surfaces, present it as a candidate hypothesis in Phase 3.
@@ -110,22 +110,22 @@ Before writing ANY fix, verify your hypothesis.
 
 1. **Confirm the hypothesis:** Add a temporary log statement, assertion, or debug output at the suspected root cause. Run the reproduction. Does the evidence match?
 
-2. **If the hypothesis is wrong:** Before forming the next hypothesis, consider searching for the error. **Sanitize first** — strip hostnames, IPs, file paths, SQL fragments, customer identifiers, and any internal/proprietary data from the error message. Search only the generic error type and framework context: "{component} {sanitized error type} {framework version}". If the error message is too specific to sanitize safely, skip the search. If WebSearch is unavailable, skip and proceed. Then return to Phase 1. Gather more evidence. Do not guess.
+2. **If the hypothesis is wrong:** Before forming the next hypothesis, consider searching for the error. **Sanitize first** 鈥?strip hostnames, IPs, file paths, SQL fragments, customer identifiers, and any internal/proprietary data from the error message. Search only the generic error type and framework context: "{component} {sanitized error type} {framework version}". If the error message is too specific to sanitize safely, skip the search. If WebSearch is unavailable, skip and proceed. Then return to Phase 1. Gather more evidence. Do not guess.
 
 3. **3-strike rule:** If 3 hypotheses fail, **STOP**. Use AskUserQuestion:
    ```
    3 hypotheses tested, none match. This may be an architectural issue
    rather than a simple bug.
 
-   A) Continue investigating — I have a new hypothesis: [describe]
-   B) Escalate for human review — this needs someone who knows the system
-   C) Add logging and wait — instrument the area and catch it next time
+   A) Continue investigating 鈥?I have a new hypothesis: [describe]
+   B) Escalate for human review 鈥?this needs someone who knows the system
+   C) Add logging and wait 鈥?instrument the area and catch it next time
    ```
 
-**Red flags** — if you see any of these, slow down:
-- "Quick fix for now" — there is no "for now." Fix it right or escalate.
-- Proposing a fix before tracing data flow — you're guessing.
-- Each fix reveals a new problem elsewhere — wrong layer, not wrong code.
+**Red flags** 鈥?if you see any of these, slow down:
+- "Quick fix for now" 鈥?there is no "for now." Fix it right or escalate.
+- Proposing a fix before tracing data flow 鈥?you're guessing.
+- Each fix reveals a new problem elsewhere 鈥?wrong layer, not wrong code.
 
 ---
 
@@ -146,9 +146,9 @@ Once root cause is confirmed:
 5. **If the fix touches >5 files:** Use AskUserQuestion to flag the blast radius:
    ```
    This fix touches N files. That's a large blast radius for a bug fix.
-   A) Proceed — the root cause genuinely spans these files
-   B) Split — fix the critical path now, defer the rest
-   C) Rethink — maybe there's a more targeted approach
+   A) Proceed 鈥?the root cause genuinely spans these files
+   B) Split 鈥?fix the critical path now, defer the rest
+   C) Rethink 鈥?maybe there's a more targeted approach
    ```
 
 ---
@@ -162,7 +162,7 @@ Run the test suite and paste the output.
 Output a structured debug report:
 ```
 DEBUG REPORT
-════════════════════════════════════════
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 Symptom:         [what the user observed]
 Root cause:      [what was actually wrong]
 Fix:             [what was changed, with file:line references]
@@ -170,7 +170,7 @@ Evidence:        [test output, reproduction attempt showing fix works]
 Regression test: [file:line of the new test]
 Related:         [TODOS.md items, prior bugs in same area, architectural notes]
 Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
-════════════════════════════════════════
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 ```
 
 ## Capture Learnings
@@ -179,7 +179,7 @@ If you discovered a non-obvious pattern, pitfall, or architectural insight durin
 this session, log it for future sessions:
 
 ```bash
-true # BitFun Team Mode has no external telemetry helper
+true # northhing Team Mode has no external telemetry helper
 ```
 
 **Types:** `pattern` (reusable approach), `pitfall` (what NOT to do), `preference`
@@ -187,7 +187,7 @@ true # BitFun Team Mode has no external telemetry helper
 `operational` (project environment/CLI/workflow knowledge).
 
 **Sources:** `observed` (you found this in the code), `user-stated` (user told you),
-`inferred` (AI deduction), `cross-model` (both BitFun and outside-voice sub-agent agree).
+`inferred` (AI deduction), `cross-model` (both northhing and outside-voice sub-agent agree).
 
 **Confidence:** 1-10. Be honest. An observed pattern you verified in the code is 8-9.
 An inference you're not sure about is 4-5. A user preference they explicitly stated is 10.
@@ -202,11 +202,11 @@ already knows. A good test: would this insight save time in a future session? If
 
 ## Important Rules
 
-- **3+ failed fix attempts → STOP and question the architecture.** Wrong architecture, not failed hypothesis.
+- **3+ failed fix attempts 鈫?STOP and question the architecture.** Wrong architecture, not failed hypothesis.
 - **Never apply a fix you cannot verify.** If you can't reproduce and confirm, don't ship it.
 - **Never say "this should fix it."** Verify and prove it. Run the tests.
-- **If fix touches >5 files → AskUserQuestion** about blast radius before proceeding.
+- **If fix touches >5 files 鈫?AskUserQuestion** about blast radius before proceeding.
 - **Completion status:**
-  - DONE — root cause found, fix applied, regression test written, all tests pass
-  - DONE_WITH_CONCERNS — fixed but cannot fully verify (e.g., intermittent bug, requires staging)
-  - BLOCKED — root cause unclear after investigation, escalated
+  - DONE 鈥?root cause found, fix applied, regression test written, all tests pass
+  - DONE_WITH_CONCERNS 鈥?fixed but cannot fully verify (e.g., intermittent bug, requires staging)
+  - BLOCKED 鈥?root cause unclear after investigation, escalated

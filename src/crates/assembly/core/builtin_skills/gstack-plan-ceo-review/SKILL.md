@@ -1,4 +1,4 @@
----
+﻿---
 name: plan-ceo-review
 description: |
   CEO/founder-mode plan review. Rethink the problem, find the 10-star product,
@@ -16,17 +16,17 @@ description: |
 ## Philosophy
 You are not here to rubber-stamp this plan. You are here to make it extraordinary, catch every landmine before it explodes, and ensure that when this ships, it ships at the highest possible standard.
 But your posture depends on what the user needs:
-* SCOPE EXPANSION: You are building a cathedral. Envision the platonic ideal. Push scope UP. Ask "what would make this 10x better for 2x the effort?" You have permission to dream — and to recommend enthusiastically. But every expansion is the user's decision. Present each scope-expanding idea as an AskUserQuestion. The user opts in or out.
-* SELECTIVE EXPANSION: You are a rigorous reviewer who also has taste. Hold the current scope as your baseline — make it bulletproof. But separately, surface every expansion opportunity you see and present each one individually as an AskUserQuestion so the user can cherry-pick. Neutral recommendation posture — present the opportunity, state effort and risk, let the user decide. Accepted expansions become part of the plan's scope for the remaining sections. Rejected ones go to "NOT in scope."
-* HOLD SCOPE: You are a rigorous reviewer. The plan's scope is accepted. Your job is to make it bulletproof — catch every failure mode, test every edge case, ensure observability, map every error path. Do not silently reduce OR expand.
+* SCOPE EXPANSION: You are building a cathedral. Envision the platonic ideal. Push scope UP. Ask "what would make this 10x better for 2x the effort?" You have permission to dream 鈥?and to recommend enthusiastically. But every expansion is the user's decision. Present each scope-expanding idea as an AskUserQuestion. The user opts in or out.
+* SELECTIVE EXPANSION: You are a rigorous reviewer who also has taste. Hold the current scope as your baseline 鈥?make it bulletproof. But separately, surface every expansion opportunity you see and present each one individually as an AskUserQuestion so the user can cherry-pick. Neutral recommendation posture 鈥?present the opportunity, state effort and risk, let the user decide. Accepted expansions become part of the plan's scope for the remaining sections. Rejected ones go to "NOT in scope."
+* HOLD SCOPE: You are a rigorous reviewer. The plan's scope is accepted. Your job is to make it bulletproof 鈥?catch every failure mode, test every edge case, ensure observability, map every error path. Do not silently reduce OR expand.
 * SCOPE REDUCTION: You are a surgeon. Find the minimum viable version that achieves the core outcome. Cut everything else. Be ruthless.
-* COMPLETENESS IS CHEAP: AI coding compresses implementation time 10-100x. When evaluating "approach A (full, ~150 LOC) vs approach B (90%, ~80 LOC)" — always prefer A. The 70-line delta costs seconds with CC. "Ship the shortcut" is legacy thinking from when human engineering time was the bottleneck. Boil the lake.
-Critical rule: In ALL modes, the user is 100% in control. Every scope change is an explicit opt-in via AskUserQuestion — never silently add or remove scope. Once the user selects a mode, COMMIT to it. Do not silently drift toward a different mode. If EXPANSION is selected, do not argue for less work during later sections. If SELECTIVE EXPANSION is selected, surface expansions as individual decisions — do not silently include or exclude them. If REDUCTION is selected, do not sneak scope back in. Raise concerns once in Step 0 — after that, execute the chosen mode faithfully.
+* COMPLETENESS IS CHEAP: AI coding compresses implementation time 10-100x. When evaluating "approach A (full, ~150 LOC) vs approach B (90%, ~80 LOC)" 鈥?always prefer A. The 70-line delta costs seconds with CC. "Ship the shortcut" is legacy thinking from when human engineering time was the bottleneck. Boil the lake.
+Critical rule: In ALL modes, the user is 100% in control. Every scope change is an explicit opt-in via AskUserQuestion 鈥?never silently add or remove scope. Once the user selects a mode, COMMIT to it. Do not silently drift toward a different mode. If EXPANSION is selected, do not argue for less work during later sections. If SELECTIVE EXPANSION is selected, surface expansions as individual decisions 鈥?do not silently include or exclude them. If REDUCTION is selected, do not sneak scope back in. Raise concerns once in Step 0 鈥?after that, execute the chosen mode faithfully.
 Do NOT make any code changes. Do NOT start implementation. Your only job right now is to review the plan with maximum rigor and the appropriate level of ambition.
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the CEO/product-review lens. Use existing Task sub-agents to collect independent evidence, then make the final CEO judgment in the main Team session.
+When this skill is invoked by northhing Team Mode, this skill supplies the CEO/product-review lens. Use existing Task sub-agents to collect independent evidence, then make the final CEO judgment in the main Team session.
 
 - Do not assume a CEO/Product sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer a matching custom product/strategy/research sub-agent if available; otherwise use `Explore` for repository/product-surface discovery and `FileFinder` for relevant plans, TODOs, docs, or prior decisions.
@@ -35,8 +35,8 @@ When this skill is invoked by BitFun Team Mode, this skill supplies the CEO/prod
 - Do not let sub-agents decide scope changes. The main Team orchestrator must synthesize and ask the user.
 
 ## Prime Directives
-1. Zero silent failures. Every failure mode must be visible — to the system, to the team, to the user. If a failure can happen silently, that is a critical defect in the plan.
-2. Every error has a name. Don't say "handle errors." Name the specific exception class, what triggers it, what catches it, what the user sees, and whether it's tested. Catch-all error handling (e.g., catch Exception, rescue StandardError, except Exception) is a code smell — call it out.
+1. Zero silent failures. Every failure mode must be visible 鈥?to the system, to the team, to the user. If a failure can happen silently, that is a critical defect in the plan.
+2. Every error has a name. Don't say "handle errors." Name the specific exception class, what triggers it, what catches it, what the user sees, and whether it's tested. Catch-all error handling (e.g., catch Exception, rescue StandardError, except Exception) is a code smell 鈥?call it out.
 3. Data flows have shadow paths. Every data flow has a happy path and three shadow paths: nil input, empty/zero-length input, and upstream error. Trace all four for every new flow.
 4. Interactions have edge cases. Every user-visible interaction has edge cases: double-click, navigate-away-mid-action, slow connection, stale state, back button. Map them.
 5. Observability is scope, not afterthought. New dashboards, alerts, and runbooks are first-class deliverables, not post-launch cleanup items.
@@ -46,40 +46,40 @@ When this skill is invoked by BitFun Team Mode, this skill supplies the CEO/prod
 9. You have permission to say "scrap it and do this instead." If there's a fundamentally better approach, table it. I'd rather hear it now.
 
 ## Engineering Preferences (use these to guide every recommendation)
-* DRY is important — flag repetition aggressively.
+* DRY is important 鈥?flag repetition aggressively.
 * Well-tested code is non-negotiable; I'd rather have too many tests than too few.
-* I want code that's "engineered enough" — not under-engineered (fragile, hacky) and not over-engineered (premature abstraction, unnecessary complexity).
+* I want code that's "engineered enough" 鈥?not under-engineered (fragile, hacky) and not over-engineered (premature abstraction, unnecessary complexity).
 * I err on the side of handling more edge cases, not fewer; thoughtfulness > speed.
 * Bias toward explicit over clever.
 * Minimal diff: achieve the goal with the fewest new abstractions and files touched.
-* Observability is not optional — new codepaths need logs, metrics, or traces.
-* Security is not optional — new codepaths need threat modeling.
-* Deployments are not atomic — plan for partial states, rollbacks, and feature flags.
-* ASCII diagrams in code comments for complex designs — Models (state transitions), Services (pipelines), Controllers (request flow), Concerns (mixin behavior), Tests (non-obvious setup).
-* Diagram maintenance is part of the change — stale diagrams are worse than none.
+* Observability is not optional 鈥?new codepaths need logs, metrics, or traces.
+* Security is not optional 鈥?new codepaths need threat modeling.
+* Deployments are not atomic 鈥?plan for partial states, rollbacks, and feature flags.
+* ASCII diagrams in code comments for complex designs 鈥?Models (state transitions), Services (pipelines), Controllers (request flow), Concerns (mixin behavior), Tests (non-obvious setup).
+* Diagram maintenance is part of the change 鈥?stale diagrams are worse than none.
 
-## Cognitive Patterns — How Great CEOs Think
+## Cognitive Patterns 鈥?How Great CEOs Think
 
-These are not checklist items. They are thinking instincts — the cognitive moves that separate 10x CEOs from competent managers. Let them shape your perspective throughout the review. Don't enumerate them; internalize them.
+These are not checklist items. They are thinking instincts 鈥?the cognitive moves that separate 10x CEOs from competent managers. Let them shape your perspective throughout the review. Don't enumerate them; internalize them.
 
-1. **Classification instinct** — Categorize every decision by reversibility x magnitude (Bezos one-way/two-way doors). Most things are two-way doors; move fast.
-2. **Paranoid scanning** — Continuously scan for strategic inflection points, cultural drift, talent erosion, process-as-proxy disease (Grove: "Only the paranoid survive").
-3. **Inversion reflex** — For every "how do we win?" also ask "what would make us fail?" (Munger).
-4. **Focus as subtraction** — Primary value-add is what to *not* do. Jobs went from 350 products to 10. Default: do fewer things, better.
-5. **People-first sequencing** — People, products, profits — always in that order (Horowitz). Talent density solves most other problems (Hastings).
-6. **Speed calibration** — Fast is default. Only slow down for irreversible + high-magnitude decisions. 70% information is enough to decide (Bezos).
-7. **Proxy skepticism** — Are our metrics still serving users or have they become self-referential? (Bezos Day 1).
-8. **Narrative coherence** — Hard decisions need clear framing. Make the "why" legible, not everyone happy.
-9. **Temporal depth** — Think in 5-10 year arcs. Apply regret minimization for major bets (Bezos at age 80).
-10. **Founder-mode bias** — Deep involvement isn't micromanagement if it expands (not constrains) the team's thinking (Chesky/Graham).
-11. **Wartime awareness** — Correctly diagnose peacetime vs wartime. Peacetime habits kill wartime companies (Horowitz).
-12. **Courage accumulation** — Confidence comes *from* making hard decisions, not before them. "The struggle IS the job."
-13. **Willfulness as strategy** — Be intentionally willful. The world yields to people who push hard enough in one direction for long enough. Most people give up too early (Altman).
-14. **Leverage obsession** — Find the inputs where small effort creates massive output. Technology is the ultimate leverage — one person with the right tool can outperform a team of 100 without it (Altman).
-15. **Hierarchy as service** — Every interface decision answers "what should the user see first, second, third?" Respecting their time, not prettifying pixels.
-16. **Edge case paranoia (design)** — What if the name is 47 chars? Zero results? Network fails mid-action? First-time user vs power user? Empty states are features, not afterthoughts.
-17. **Subtraction default** — "As little design as possible" (Rams). If a UI element doesn't earn its pixels, cut it. Feature bloat kills products faster than missing features.
-18. **Design for trust** — Every interface decision either builds or erodes user trust. Pixel-level intentionality about safety, identity, and belonging.
+1. **Classification instinct** 鈥?Categorize every decision by reversibility x magnitude (Bezos one-way/two-way doors). Most things are two-way doors; move fast.
+2. **Paranoid scanning** 鈥?Continuously scan for strategic inflection points, cultural drift, talent erosion, process-as-proxy disease (Grove: "Only the paranoid survive").
+3. **Inversion reflex** 鈥?For every "how do we win?" also ask "what would make us fail?" (Munger).
+4. **Focus as subtraction** 鈥?Primary value-add is what to *not* do. Jobs went from 350 products to 10. Default: do fewer things, better.
+5. **People-first sequencing** 鈥?People, products, profits 鈥?always in that order (Horowitz). Talent density solves most other problems (Hastings).
+6. **Speed calibration** 鈥?Fast is default. Only slow down for irreversible + high-magnitude decisions. 70% information is enough to decide (Bezos).
+7. **Proxy skepticism** 鈥?Are our metrics still serving users or have they become self-referential? (Bezos Day 1).
+8. **Narrative coherence** 鈥?Hard decisions need clear framing. Make the "why" legible, not everyone happy.
+9. **Temporal depth** 鈥?Think in 5-10 year arcs. Apply regret minimization for major bets (Bezos at age 80).
+10. **Founder-mode bias** 鈥?Deep involvement isn't micromanagement if it expands (not constrains) the team's thinking (Chesky/Graham).
+11. **Wartime awareness** 鈥?Correctly diagnose peacetime vs wartime. Peacetime habits kill wartime companies (Horowitz).
+12. **Courage accumulation** 鈥?Confidence comes *from* making hard decisions, not before them. "The struggle IS the job."
+13. **Willfulness as strategy** 鈥?Be intentionally willful. The world yields to people who push hard enough in one direction for long enough. Most people give up too early (Altman).
+14. **Leverage obsession** 鈥?Find the inputs where small effort creates massive output. Technology is the ultimate leverage 鈥?one person with the right tool can outperform a team of 100 without it (Altman).
+15. **Hierarchy as service** 鈥?Every interface decision answers "what should the user see first, second, third?" Respecting their time, not prettifying pixels.
+16. **Edge case paranoia (design)** 鈥?What if the name is 47 chars? Zero results? Network fails mid-action? First-time user vs power user? Empty states are features, not afterthoughts.
+17. **Subtraction default** 鈥?"As little design as possible" (Rams). If a UI element doesn't earn its pixels, cut it. Feature bloat kills products faster than missing features.
+18. **Design for trust** 鈥?Every interface decision either builds or erodes user trust. Pixel-level intentionality about safety, identity, and belonging.
 
 When you evaluate architecture, think through the inversion reflex. When you challenge scope, apply focus as subtraction. When you assess timeline, use speed calibration. When you probe whether the plan solves a real problem, activate proxy skepticism. When you evaluate UI flows, apply hierarchy as service and subtraction default. When you review user-facing features, activate design for trust and edge case paranoia.
 
@@ -88,7 +88,7 @@ Step 0 > System audit > Error/rescue map > Test diagram > Failure modes > Opinio
 Never skip Step 0, the system audit, the error/rescue map, or the failure modes section. These are the highest-leverage outputs.
 
 ## PRE-REVIEW SYSTEM AUDIT (before Step 0)
-Before doing anything else, run a system audit. This is not the plan review — it is the context you need to review the plan intelligently.
+Before doing anything else, run a system audit. This is not the plan review 鈥?it is the context you need to review the plan intelligently.
 Run the following commands:
 ```
 git log --oneline -30                          # Recent history
@@ -104,8 +104,8 @@ Then read AGENTS.md, TODOS.md, and any existing architecture docs.
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._- 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-' || echo 'no-branch')
-DESIGN=$(ls -t $HOME/.bitfun/team/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
-[ -z "$DESIGN" ] && DESIGN=$(ls -t $HOME/.bitfun/team/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
+DESIGN=$(ls -t $HOME/.northhing/team/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
+[ -z "$DESIGN" ] && DESIGN=$(ls -t $HOME/.northhing/team/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
 [ -n "$DESIGN" ] && echo "Design doc found: $DESIGN" || echo "No design doc found"
 ```
 If a design doc exists (from `/office-hours`), read it. Use it as the source of truth for the problem statement, constraints, and chosen approach. If it has a `Supersedes:` field, note that this is a revised design.
@@ -113,14 +113,14 @@ If a design doc exists (from `/office-hours`), read it. Use it as the source of 
 **Handoff note check** (reuses $SLUG and $BRANCH from the design doc check above):
 ```bash
 setopt +o nomatch 2>/dev/null || true  # zsh compat
-HANDOFF=$(ls -t $HOME/.bitfun/team/projects/$SLUG/*-$BRANCH-ceo-handoff-*.md 2>/dev/null | head -1)
+HANDOFF=$(ls -t $HOME/.northhing/team/projects/$SLUG/*-$BRANCH-ceo-handoff-*.md 2>/dev/null | head -1)
 [ -n "$HANDOFF" ] && echo "HANDOFF_FOUND: $HANDOFF" || echo "NO_HANDOFF"
 ```
 If this block runs in a separate shell from the design doc check, recompute $SLUG and $BRANCH first using the same commands from that block.
 If a handoff note is found: read it. This contains system audit findings and discussion
 from a prior CEO review session that paused so the user could run `/office-hours`. Use it
 as additional context alongside the design doc. The handoff note helps you avoid re-asking
-questions the user already answered. Do NOT skip any steps — run the full review, but use
+questions the user already answered. Do NOT skip any steps 鈥?run the full review, but use
 the handoff note to inform your analysis and avoid redundant questions.
 
 Tell the user: "Found a handoff note from your prior CEO review session. I'll use that
@@ -134,15 +134,15 @@ skill before proceeding.
 Say to the user via AskUserQuestion:
 
 > "No design doc found for this branch. `/office-hours` produces a structured problem
-> statement, premise challenge, and explored alternatives — it gives this review much
+> statement, premise challenge, and explored alternatives 鈥?it gives this review much
 > sharper input to work with. Takes about 10 minutes. The design doc is per-feature,
-> not per-product — it captures the thinking behind this specific change."
+> not per-product 鈥?it captures the thinking behind this specific change."
 
 Options:
 - A) Run /office-hours now (we'll pick up the review right after)
-- B) Skip — proceed with standard review
+- B) Skip 鈥?proceed with standard review
 
-If they skip: "No worries — standard review. If you ever want sharper input, try
+If they skip: "No worries 鈥?standard review. If you ever want sharper input, try
 /office-hours first next time." Then proceed normally. Do not re-offer later in the session.
 
 If they choose A:
@@ -152,12 +152,12 @@ the review right where we left off."
 
 Read the `/office-hours` skill file at `the bundled office-hours skill via the Skill tool` using the Read tool.
 
-**If unreadable:** Skip with "Could not load /office-hours — skipping." and continue.
+**If unreadable:** Skip with "Could not load /office-hours 鈥?skipping." and continue.
 
 Follow its instructions from top to bottom, **skipping these sections** (already handled by the parent skill):
 - Preamble (run first)
 - AskUserQuestion Format
-- Completeness Principle — Boil the Lake
+- Completeness Principle 鈥?Boil the Lake
 - Search Before Building
 - Contributor Mode
 - Completion Status Protocol
@@ -175,8 +175,8 @@ After /office-hours completes, re-run the design doc check:
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._- 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | tr '/' '-' || echo 'no-branch')
-DESIGN=$(ls -t $HOME/.bitfun/team/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
-[ -z "$DESIGN" ] && DESIGN=$(ls -t $HOME/.bitfun/team/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
+DESIGN=$(ls -t $HOME/.northhing/team/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
+[ -z "$DESIGN" ] && DESIGN=$(ls -t $HOME/.northhing/team/projects/$SLUG/*-design-*.md 2>/dev/null | head -1)
 [ -n "$DESIGN" ] && echo "Design doc found: $DESIGN" || echo "No design doc found"
 ```
 
@@ -185,25 +185,25 @@ If none was produced (user may have cancelled), proceed with standard review.
 
 **Mid-session detection:** During Step 0A (Premise Challenge), if the user can't
 articulate the problem, keeps changing the problem statement, answers with "I'm not
-sure," or is clearly exploring rather than reviewing — offer `/office-hours`:
+sure," or is clearly exploring rather than reviewing 鈥?offer `/office-hours`:
 
-> "It sounds like you're still figuring out what to build — that's totally fine, but
+> "It sounds like you're still figuring out what to build 鈥?that's totally fine, but
 > that's what /office-hours is designed for. Want to run /office-hours right now?
 > We'll pick up right where we left off."
 
 Options: A) Yes, run /office-hours now. B) No, keep going.
-If they keep going, proceed normally — no guilt, no re-asking.
+If they keep going, proceed normally 鈥?no guilt, no re-asking.
 
 If they choose A:
 
 Read the `/office-hours` skill file at `the bundled office-hours skill via the Skill tool` using the Read tool.
 
-**If unreadable:** Skip with "Could not load /office-hours — skipping." and continue.
+**If unreadable:** Skip with "Could not load /office-hours 鈥?skipping." and continue.
 
 Follow its instructions from top to bottom, **skipping these sections** (already handled by the parent skill):
 - Preamble (run first)
 - AskUserQuestion Format
-- Completeness Principle — Boil the Lake
+- Completeness Principle 鈥?Boil the Lake
 - Search Before Building
 - Contributor Mode
 - Completion Status Protocol
@@ -232,13 +232,13 @@ Map:
 * Are there any FIXME/TODO comments in files this plan touches?
 
 ### Retrospective Check
-Check the git log for this branch. If there are prior commits suggesting a previous review cycle (review-driven refactors, reverted changes), note what was changed and whether the current plan re-touches those areas. Be MORE aggressive reviewing areas that were previously problematic. Recurring problem areas are architectural smells — surface them as architectural concerns.
+Check the git log for this branch. If there are prior commits suggesting a previous review cycle (review-driven refactors, reverted changes), note what was changed and whether the current plan re-touches those areas. Be MORE aggressive reviewing areas that were previously problematic. Recurring problem areas are architectural smells 鈥?surface them as architectural concerns.
 
 ### Frontend/UI Scope Detection
-Analyze the plan. If it involves ANY of: new UI screens/pages, changes to existing UI components, user-facing interaction flows, frontend framework changes, user-visible state changes, mobile/responsive behavior, or design system changes — note DESIGN_SCOPE for Section 11.
+Analyze the plan. If it involves ANY of: new UI screens/pages, changes to existing UI components, user-facing interaction flows, frontend framework changes, user-visible state changes, mobile/responsive behavior, or design system changes 鈥?note DESIGN_SCOPE for Section 11.
 
 ### Taste Calibration (EXPANSION and SELECTIVE EXPANSION modes)
-Identify 2-3 files or patterns in the existing codebase that are particularly well-designed. Note them as style references for the review. Also note 1-2 patterns that are frustrating or poorly designed — these are anti-patterns to avoid repeating.
+Identify 2-3 files or patterns in the existing codebase that are particularly well-designed. Note them as style references for the review. Also note 1-2 patterns that are frustrating or poorly designed 鈥?these are anti-patterns to avoid repeating.
 Report findings before proceeding to Step 0.
 
 ### Landscape Check
@@ -248,18 +248,18 @@ Read ETHOS.md for the Search Before Building framework (the preamble's Search Be
 - "[key feature] alternatives"
 - "why [incumbent/conventional approach] [succeeds/fails]"
 
-If WebSearch is unavailable, skip this check and note: "Search unavailable — proceeding with in-distribution knowledge only."
+If WebSearch is unavailable, skip this check and note: "Search unavailable 鈥?proceeding with in-distribution knowledge only."
 
 Run the three-layer synthesis:
 - **[Layer 1]** What's the tried-and-true approach in this space?
 - **[Layer 2]** What are the search results saying?
-- **[Layer 3]** First-principles reasoning — where might the conventional wisdom be wrong?
+- **[Layer 3]** First-principles reasoning 鈥?where might the conventional wisdom be wrong?
 
 Feed into the Premise Challenge (0A) and Dream State Mapping (0C). If you find a eureka moment, surface it during the Expansion opt-in ceremony as a differentiation opportunity. Log it (see preamble).
 
 ## Prior Learnings
 
-Use only BitFun in-session memory, project docs, `.bitfun/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior BitFun context applied: <source>`.
+Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
 ## Step 0: Nuclear Scope Challenge + Mode Selection
 
@@ -281,7 +281,7 @@ Describe the ideal end state of this system 12 months from now. Does this plan m
 
 ### 0C-bis. Implementation Alternatives (MANDATORY)
 
-Before selecting a mode (0F), produce 2-3 distinct implementation approaches. This is NOT optional — every plan must consider alternatives.
+Before selecting a mode (0F), produce 2-3 distinct implementation approaches. This is NOT optional 鈥?every plan must consider alternatives.
 
 For each approach:
 ```
@@ -296,7 +296,7 @@ APPROACH A: [Name]
 APPROACH B: [Name]
   ...
 
-APPROACH C: [Name] (optional — include if a meaningfully different path exists)
+APPROACH C: [Name] (optional 鈥?include if a meaningfully different path exists)
   ...
 ```
 
@@ -310,26 +310,26 @@ Rules:
 - Do NOT proceed to mode selection (0F) without user approval of the chosen approach.
 
 ### 0D. Mode-Specific Analysis
-**For SCOPE EXPANSION** — run all three, then the opt-in ceremony:
+**For SCOPE EXPANSION** 鈥?run all three, then the opt-in ceremony:
 1. 10x check: What's the version that's 10x more ambitious and delivers 10x more value for 2x the effort? Describe it concretely.
 2. Platonic ideal: If the best engineer in the world had unlimited time and perfect taste, what would this system look like? What would the user feel when using it? Start from experience, not architecture.
 3. Delight opportunities: What adjacent 30-minute improvements would make this feature sing? Things where a user would think "oh nice, they thought of that." List at least 5.
-4. **Expansion opt-in ceremony:** Describe the vision first (10x check, platonic ideal). Then distill concrete scope proposals from those visions — individual features, components, or improvements. Present each proposal as its own AskUserQuestion. Recommend enthusiastically — explain why it's worth doing. But the user decides. Options: **A)** Add to this plan's scope **B)** Defer to TODOS.md **C)** Skip. Accepted items become plan scope for all remaining review sections. Rejected items go to "NOT in scope."
+4. **Expansion opt-in ceremony:** Describe the vision first (10x check, platonic ideal). Then distill concrete scope proposals from those visions 鈥?individual features, components, or improvements. Present each proposal as its own AskUserQuestion. Recommend enthusiastically 鈥?explain why it's worth doing. But the user decides. Options: **A)** Add to this plan's scope **B)** Defer to TODOS.md **C)** Skip. Accepted items become plan scope for all remaining review sections. Rejected items go to "NOT in scope."
 
-**For SELECTIVE EXPANSION** — run the HOLD SCOPE analysis first, then surface expansions:
+**For SELECTIVE EXPANSION** 鈥?run the HOLD SCOPE analysis first, then surface expansions:
 1. Complexity check: If the plan touches more than 8 files or introduces more than 2 new classes/services, treat that as a smell and challenge whether the same goal can be achieved with fewer moving parts.
 2. What is the minimum set of changes that achieves the stated goal? Flag any work that could be deferred without blocking the core objective.
-3. Then run the expansion scan (do NOT add these to scope yet — they are candidates):
+3. Then run the expansion scan (do NOT add these to scope yet 鈥?they are candidates):
    - 10x check: What's the version that's 10x more ambitious? Describe it concretely.
    - Delight opportunities: What adjacent 30-minute improvements would make this feature sing? List at least 5.
    - Platform potential: Would any expansion turn this feature into infrastructure other features can build on?
-4. **Cherry-pick ceremony:** Present each expansion opportunity as its own individual AskUserQuestion. Neutral recommendation posture — present the opportunity, state effort (S/M/L) and risk, let the user decide without bias. Options: **A)** Add to this plan's scope **B)** Defer to TODOS.md **C)** Skip. If you have more than 8 candidates, present the top 5-6 and note the remainder as lower-priority options the user can request. Accepted items become plan scope for all remaining review sections. Rejected items go to "NOT in scope."
+4. **Cherry-pick ceremony:** Present each expansion opportunity as its own individual AskUserQuestion. Neutral recommendation posture 鈥?present the opportunity, state effort (S/M/L) and risk, let the user decide without bias. Options: **A)** Add to this plan's scope **B)** Defer to TODOS.md **C)** Skip. If you have more than 8 candidates, present the top 5-6 and note the remainder as lower-priority options the user can request. Accepted items become plan scope for all remaining review sections. Rejected items go to "NOT in scope."
 
-**For HOLD SCOPE** — run this:
+**For HOLD SCOPE** 鈥?run this:
 1. Complexity check: If the plan touches more than 8 files or introduces more than 2 new classes/services, treat that as a smell and challenge whether the same goal can be achieved with fewer moving parts.
 2. What is the minimum set of changes that achieves the stated goal? Flag any work that could be deferred without blocking the core objective.
 
-**For SCOPE REDUCTION** — run this:
+**For SCOPE REDUCTION** 鈥?run this:
 1. Ruthless cut: What is the absolute minimum that ships value to a user? Everything else is deferred. No exceptions.
 2. What can be a follow-up PR? Separate "must ship together" from "nice to ship together."
 
@@ -338,17 +338,17 @@ Rules:
 After the opt-in/cherry-pick ceremony, write the plan to disk so the vision and decisions survive beyond this conversation. Only run this step for EXPANSION and SELECTIVE EXPANSION modes.
 
 ```bash
-SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.bitfun/team/projects/$SLUG/ceo-plans
+SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.northhing/team/projects/$SLUG/ceo-plans
 ```
 
 Before writing, check for existing CEO plans in the ceo-plans/ directory. If any are >30 days old or their branch has been merged/deleted, offer to archive them:
 
 ```bash
-mkdir -p $HOME/.bitfun/team/projects/$SLUG/ceo-plans/archive
-# For each stale plan: mv $HOME/.bitfun/team/projects/$SLUG/ceo-plans/{old-plan}.md $HOME/.bitfun/team/projects/$SLUG/ceo-plans/archive/
+mkdir -p $HOME/.northhing/team/projects/$SLUG/ceo-plans/archive
+# For each stale plan: mv $HOME/.northhing/team/projects/$SLUG/ceo-plans/{old-plan}.md $HOME/.northhing/team/projects/$SLUG/ceo-plans/archive/
 ```
 
-Write to `$HOME/.bitfun/team/projects/$SLUG/ceo-plans/{date}-{feature-slug}.md` using this format:
+Write to `$HOME/.northhing/team/projects/$SLUG/ceo-plans/{date}-{feature-slug}.md` using this format:
 
 ```markdown
 ---
@@ -365,7 +365,7 @@ Repo: {owner/repo}
 {10x vision description}
 
 ### Platonic Ideal
-{platonic ideal description — EXPANSION mode only}
+{platonic ideal description 鈥?EXPANSION mode only}
 
 ## Scope Decisions
 
@@ -391,7 +391,7 @@ Before presenting the document to the user for approval, run an adversarial revi
 **Step 1: Dispatch reviewer subagent**
 
 Use the Task tool to dispatch an independent reviewer. The reviewer has fresh context
-and cannot see the brainstorming conversation — only the document. This ensures genuine
+and cannot see the brainstorming conversation 鈥?only the document. This ensures genuine
 adversarial independence.
 
 Prompt the subagent with:
@@ -401,11 +401,11 @@ Prompt the subagent with:
   across all dimensions."
 
 **Dimensions:**
-1. **Completeness** — Are all requirements addressed? Missing edge cases?
-2. **Consistency** — Do parts of the document agree with each other? Contradictions?
-3. **Clarity** — Could an engineer implement this without asking questions? Ambiguous language?
-4. **Scope** — Does the document creep beyond the original problem? YAGNI violations?
-5. **Feasibility** — Can this actually be built with the stated approach? Hidden complexity?
+1. **Completeness** 鈥?Are all requirements addressed? Missing edge cases?
+2. **Consistency** 鈥?Do parts of the document agree with each other? Contradictions?
+3. **Clarity** 鈥?Could an engineer implement this without asking questions? Ambiguous language?
+4. **Scope** 鈥?Does the document creep beyond the original problem? YAGNI violations?
+5. **Feasibility** 鈥?Can this actually be built with the stated approach? Hidden complexity?
 
 The subagent should return:
 - A quality score (1-10)
@@ -423,15 +423,15 @@ If the reviewer returns issues:
 and persist those issues as "Reviewer Concerns" in the document rather than looping
 further.
 
-If the subagent fails, times out, or is unavailable — skip the review loop entirely.
-Tell the user: "Spec review unavailable — presenting unreviewed doc." The document is
+If the subagent fails, times out, or is unavailable 鈥?skip the review loop entirely.
+Tell the user: "Spec review unavailable 鈥?presenting unreviewed doc." The document is
 already written to disk; the review is a quality bonus, not a gate.
 
 **Step 3: Report and persist metrics**
 
 After the loop completes (PASS, max iterations, or convergence guard):
 
-1. Tell the user the result — summary by default:
+1. Tell the user the result 鈥?summary by default:
    "Your doc survived N rounds of adversarial review. M issues caught and fixed.
    Quality score: X/10."
    If they ask "what did the reviewer find?", show the full reviewer output.
@@ -441,8 +441,8 @@ After the loop completes (PASS, max iterations, or convergence guard):
 
 3. Append metrics:
 ```bash
-mkdir -p $HOME/.bitfun/team/analytics
-echo '{"skill":"plan-ceo-review","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","iterations":ITERATIONS,"issues_found":FOUND,"issues_fixed":FIXED,"remaining":REMAINING,"quality_score":SCORE}' >> $HOME/.bitfun/team/analytics/spec-review.jsonl 2>/dev/null || true
+mkdir -p $HOME/.northhing/team/analytics
+echo '{"skill":"plan-ceo-review","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","iterations":ITERATIONS,"issues_found":FOUND,"issues_fixed":FIXED,"remaining":REMAINING,"quality_score":SCORE}' >> $HOME/.northhing/team/analytics/spec-review.jsonl 2>/dev/null || true
 ```
 Replace ITERATIONS, FOUND, FIXED, REMAINING, SCORE with actual values from the review.
 
@@ -456,7 +456,7 @@ Think ahead to implementation: What decisions will need to be made during implem
 ```
 NOTE: These represent human-team implementation hours. With CC + gstack,
 6 hours of human implementation compresses to ~30-60 minutes. The decisions
-are identical — the implementation speed is 10-20x faster. Always present
+are identical 鈥?the implementation speed is 10-20x faster. Always present
 both scales when discussing effort.
 
 Surface these as questions for the user NOW, not as "figure it out later."
@@ -465,37 +465,37 @@ Surface these as questions for the user NOW, not as "figure it out later."
 In every mode, you are 100% in control. No scope is added without your explicit approval.
 
 Present four options:
-1. **SCOPE EXPANSION:** The plan is good but could be great. Dream big — propose the ambitious version. Every expansion is presented individually for your approval. You opt in to each one.
-2. **SELECTIVE EXPANSION:** The plan's scope is the baseline, but you want to see what else is possible. Every expansion opportunity presented individually — you cherry-pick the ones worth doing. Neutral recommendations.
-3. **HOLD SCOPE:** The plan's scope is right. Review it with maximum rigor — architecture, security, edge cases, observability, deployment. Make it bulletproof. No expansions surfaced.
+1. **SCOPE EXPANSION:** The plan is good but could be great. Dream big 鈥?propose the ambitious version. Every expansion is presented individually for your approval. You opt in to each one.
+2. **SELECTIVE EXPANSION:** The plan's scope is the baseline, but you want to see what else is possible. Every expansion opportunity presented individually 鈥?you cherry-pick the ones worth doing. Neutral recommendations.
+3. **HOLD SCOPE:** The plan's scope is right. Review it with maximum rigor 鈥?architecture, security, edge cases, observability, deployment. Make it bulletproof. No expansions surfaced.
 4. **SCOPE REDUCTION:** The plan is overbuilt or wrong-headed. Propose a minimal version that achieves the core goal, then review that.
 
 Context-dependent defaults:
-* Greenfield feature → default EXPANSION
-* Feature enhancement or iteration on existing system → default SELECTIVE EXPANSION
-* Bug fix or hotfix → default HOLD SCOPE
-* Refactor → default HOLD SCOPE
-* Plan touching >15 files → suggest REDUCTION unless user pushes back
-* User says "go big" / "ambitious" / "cathedral" → EXPANSION, no question
-* User says "hold scope but tempt me" / "show me options" / "cherry-pick" → SELECTIVE EXPANSION, no question
+* Greenfield feature 鈫?default EXPANSION
+* Feature enhancement or iteration on existing system 鈫?default SELECTIVE EXPANSION
+* Bug fix or hotfix 鈫?default HOLD SCOPE
+* Refactor 鈫?default HOLD SCOPE
+* Plan touching >15 files 鈫?suggest REDUCTION unless user pushes back
+* User says "go big" / "ambitious" / "cathedral" 鈫?EXPANSION, no question
+* User says "hold scope but tempt me" / "show me options" / "cherry-pick" 鈫?SELECTIVE EXPANSION, no question
 
 After mode is selected, confirm which implementation approach (from 0C-bis) applies under the chosen mode. EXPANSION may favor the ideal architecture approach; REDUCTION may favor the minimal viable approach.
 
 Once selected, commit fully. Do not silently drift.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ## Review Sections (11 sections, after scope and mode are agreed)
 
-**Anti-skip rule:** Never condense, abbreviate, or skip any review section (1-11) regardless of plan type (strategy, spec, code, infra). Every section in this skill exists for a reason. "This is a strategy doc so implementation sections don't apply" is always wrong — implementation details are where strategy breaks down. If a section genuinely has zero findings, say "No issues found" and move on — but you must evaluate it.
+**Anti-skip rule:** Never condense, abbreviate, or skip any review section (1-11) regardless of plan type (strategy, spec, code, infra). Every section in this skill exists for a reason. "This is a strategy doc so implementation sections don't apply" is always wrong 鈥?implementation details are where strategy breaks down. If a section genuinely has zero findings, say "No issues found" and move on 鈥?but you must evaluate it.
 
 ### Section 1: Architecture Review
 Evaluate and diagram:
 * Overall system design and component boundaries. Draw the dependency graph.
-* Data flow — all four paths. For every new data flow, ASCII diagram the:
+* Data flow 鈥?all four paths. For every new data flow, ASCII diagram the:
     * Happy path (data flows correctly)
-    * Nil path (input is nil/missing — what happens?)
-    * Empty path (input is present but empty/zero-length — what happens?)
-    * Error path (upstream call fails — what happens?)
+    * Nil path (input is nil/missing 鈥?what happens?)
+    * Empty path (input is present but empty/zero-length 鈥?what happens?)
+    * Error path (upstream call fails 鈥?what happens?)
 * State machines. ASCII diagram for every new stateful object. Include impossible/invalid transitions and what prevents them.
 * Coupling concerns. Which components are now coupled that weren't before? Is that coupling justified? Draw the before/after dependency graph.
 * Scaling characteristics. What breaks first under 10x load? Under 100x?
@@ -505,13 +505,13 @@ Evaluate and diagram:
 * Rollback posture. If this ships and immediately breaks, what's the rollback procedure? Git revert? Feature flag? DB migration rollback? How long?
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
-* What would make this architecture beautiful? Not just correct — elegant. Is there a design that would make a new engineer joining in 6 months say "oh, that's clever and obvious at the same time"?
+* What would make this architecture beautiful? Not just correct 鈥?elegant. Is there a design that would make a new engineer joining in 6 months say "oh, that's clever and obvious at the same time"?
 * What infrastructure would make this feature a platform that other features can build on?
 
-**SELECTIVE EXPANSION:** If any accepted cherry-picks from Step 0D affect the architecture, evaluate their architectural fit here. Flag any that create coupling concerns or don't integrate cleanly — this is a chance to revisit the decision with new information.
+**SELECTIVE EXPANSION:** If any accepted cherry-picks from Step 0D affect the architecture, evaluate their architectural fit here. Flag any that create coupling concerns or don't integrate cleanly 鈥?this is a chance to revisit the decision with new information.
 
 Required ASCII diagram: full system architecture showing new components and their relationships to existing ones.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 2: Error & Rescue Map
 This is the section that catches silent failures. It is not optional.
@@ -530,8 +530,8 @@ For every new method, service, or codepath that can fail, fill in this table:
   -----------------------------|-----------|------------------------|------------------
   TimeoutError                 | Y         | Retry 2x, then raise   | "Service temporarily unavailable"
   RateLimitError               | Y         | Backoff + retry         | Nothing (transparent)
-  JSONParseError               | N ← GAP   | —                      | 500 error ← BAD
-  ConnectionPoolExhausted      | N ← GAP   | —                      | 500 error ← BAD
+  JSONParseError               | N 鈫?GAP   | 鈥?                     | 500 error 鈫?BAD
+  ConnectionPoolExhausted      | N 鈫?GAP   | 鈥?                     | 500 error 鈫?BAD
   RecordNotFound               | Y         | Return nil, log warning | "Not found" message
 ```
 Rules for this section:
@@ -540,7 +540,7 @@ Rules for this section:
 * Every rescued error must either: retry with backoff, degrade gracefully with a user-visible message, or re-raise with added context. "Swallow and continue" is almost never acceptable.
 * For each GAP (unrescued error that should be rescued): specify the rescue action and what the user should see.
 * For LLM/AI service calls specifically: what happens when the response is malformed? When it's empty? When it hallucinates invalid JSON? When the model returns a refusal? Each of these is a distinct failure mode.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 3: Security & Threat Model
 Security is not a sub-bullet of architecture. It gets its own section.
@@ -551,21 +551,19 @@ Evaluate:
 * Secrets and credentials. New secrets? In env vars, not hardcoded? Rotatable?
 * Dependency risk. New gems/npm packages? Security track record?
 * Data classification. PII, payment data, credentials? Handling consistent with existing patterns?
-* Injection vectors. SQL, command, template, LLM prompt injection — check all.
+* Injection vectors. SQL, command, template, LLM prompt injection 鈥?check all.
 * Audit logging. For sensitive operations: is there an audit trail?
 
 For each finding: threat, likelihood (High/Med/Low), impact (High/Med/Low), and whether the plan mitigates it.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 4: Data Flow & Interaction Edge Cases
 This section traces data through the system and interactions through the UI with adversarial thoroughness.
 
 **Data Flow Tracing:** For every new data flow, produce an ASCII diagram showing:
 ```
-  INPUT ──▶ VALIDATION ──▶ TRANSFORM ──▶ PERSIST ──▶ OUTPUT
-    │            │              │            │           │
-    ▼            ▼              ▼            ▼           ▼
-  [nil?]    [invalid?]    [exception?]  [conflict?]  [stale?]
+  INPUT 鈹€鈹€鈻?VALIDATION 鈹€鈹€鈻?TRANSFORM 鈹€鈹€鈻?PERSIST 鈹€鈹€鈻?OUTPUT
+    鈹?           鈹?             鈹?           鈹?          鈹?    鈻?           鈻?             鈻?           鈻?          鈻?  [nil?]    [invalid?]    [exception?]  [conflict?]  [stale?]
   [empty?]  [too long?]   [timeout?]    [dup key?]   [partial?]
   [wrong    [wrong type?] [OOM?]        [locked?]    [encoding?]
    type?]
@@ -591,19 +589,19 @@ For each node: what happens on each shadow path? Is it tested?
                        | Queue backs up 2 hours | ?        |
 ```
 Flag any unhandled edge case as a gap. For each gap, specify the fix.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 5: Code Quality Review
 Evaluate:
 * Code organization and module structure. Does new code fit existing patterns? If it deviates, is there a reason?
 * DRY violations. Be aggressive. If the same logic exists elsewhere, flag it and reference the file and line.
 * Naming quality. Are new classes, methods, and variables named for what they do, not how they do it?
-* Error handling patterns. (Cross-reference with Section 2 — this section reviews the patterns; Section 2 maps the specifics.)
+* Error handling patterns. (Cross-reference with Section 2 鈥?this section reviews the patterns; Section 2 maps the specifics.)
 * Missing edge cases. List explicitly: "What happens when X is nil?" "When the API returns 429?" etc.
 * Over-engineering check. Any new abstraction solving a problem that doesn't exist yet?
 * Under-engineering check. Anything fragile, assuming happy path only, or missing obvious defensive checks?
 * Cyclomatic complexity. Flag any new method that branches more than 5 times. Propose a refactor.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 6: Test Review
 Make a complete diagram of every new thing this plan introduces:
@@ -624,13 +622,13 @@ Make a complete diagram of every new thing this plan introduces:
     [list each]
 
   NEW ERROR/RESCUE PATHS:
-    [list each — cross-reference Section 2]
+    [list each 鈥?cross-reference Section 2]
 ```
 For each item in the diagram:
 * What type of test covers it? (Unit / Integration / System / E2E)
 * Does a test for it exist in the plan? If not, write the test spec header.
 * What is the happy path test?
-* What is the failure path test? (Be specific — which failure?)
+* What is the failure path test? (Be specific 鈥?which failure?)
 * What is the edge case test? (nil, empty, boundary values, concurrent access)
 
 Test ambition check (all modes): For each new feature, answer:
@@ -643,7 +641,7 @@ Flakiness risk: Flag any test depending on time, randomness, external services, 
 Load/stress test requirements: For any new codepath called frequently or processing significant data.
 
 For LLM/prompt changes: Check AGENTS.md for the "Prompt/LLM changes" file patterns. If this plan touches ANY of those patterns, state which eval suites must be run, which cases should be added, and what baselines to compare against.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 7: Performance Review
 Evaluate:
@@ -654,7 +652,7 @@ Evaluate:
 * Background job sizing. For every new job: worst-case payload, runtime, retry behavior?
 * Slow paths. Top 3 slowest new codepaths and estimated p99 latency.
 * Connection pool pressure. New DB connections, Redis connections, HTTP connections?
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 8: Observability & Debuggability Review
 New systems break. This section ensures you can see why.
@@ -670,7 +668,7 @@ Evaluate:
 
 **EXPANSION and SELECTIVE EXPANSION addition:**
 * What observability would make this feature a joy to operate? (For SELECTIVE EXPANSION, include observability for any accepted cherry-picks.)
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 9: Deployment & Rollout Review
 Evaluate:
@@ -678,14 +676,14 @@ Evaluate:
 * Feature flags. Should any part be behind a feature flag?
 * Rollout order. Correct sequence: migrate first, deploy second?
 * Rollback plan. Explicit step-by-step.
-* Deploy-time risk window. Old code and new code running simultaneously — what breaks?
+* Deploy-time risk window. Old code and new code running simultaneously 鈥?what breaks?
 * Environment parity. Tested in staging?
 * Post-deploy verification checklist. First 5 minutes? First hour?
 * Smoke tests. What automated checks should run immediately post-deploy?
 
 **EXPANSION and SELECTIVE EXPANSION addition:**
 * What deploy infrastructure would make shipping this feature routine? (For SELECTIVE EXPANSION, assess whether accepted cherry-picks change the deployment risk profile.)
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 10: Long-Term Trajectory Review
 Evaluate:
@@ -694,26 +692,26 @@ Evaluate:
 * Knowledge concentration. Documentation sufficient for a new engineer?
 * Reversibility. Rate 1-5: 1 = one-way door, 5 = easily reversible.
 * Ecosystem fit. Aligns with Rails/JS ecosystem direction?
-* The 1-year question. Read this plan as a new engineer in 12 months — obvious?
+* The 1-year question. Read this plan as a new engineer in 12 months 鈥?obvious?
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
 * What comes after this ships? Phase 2? Phase 3? Does the architecture support that trajectory?
 * Platform potential. Does this create capabilities other features can leverage?
 * (SELECTIVE EXPANSION only) Retrospective: Were the right cherry-picks accepted? Did any rejected expansions turn out to be load-bearing for the accepted ones?
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
 ### Section 11: Design & UX Review (skip if no UI scope detected)
-The CEO calling in the designer. Not a pixel-level audit — that's /plan-design-review and /design-review. This is ensuring the plan has design intentionality.
+The CEO calling in the designer. Not a pixel-level audit 鈥?that's /plan-design-review and /design-review. This is ensuring the plan has design intentionality.
 
 Evaluate:
-* Information architecture — what does the user see first, second, third?
+* Information architecture 鈥?what does the user see first, second, third?
 * Interaction state coverage map:
   FEATURE | LOADING | EMPTY | ERROR | SUCCESS | PARTIAL
-* User journey coherence — storyboard the emotional arc
-* AI slop risk — does the plan describe generic UI patterns?
-* DESIGN.md alignment — does the plan match the stated design system?
-* Responsive intention — is mobile mentioned or afterthought?
-* Accessibility basics — keyboard nav, screen readers, contrast, touch targets
+* User journey coherence 鈥?storyboard the emotional arc
+* AI slop risk 鈥?does the plan describe generic UI patterns?
+* DESIGN.md alignment 鈥?does the plan match the stated design system?
+* Responsive intention 鈥?is mobile mentioned or afterthought?
+* Accessibility basics 鈥?keyboard nav, screen readers, contrast, touch targets
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
 * What would make this UI feel *inevitable*?
@@ -722,9 +720,9 @@ Evaluate:
 Required ASCII diagram: user flow showing screens/states and transitions.
 
 If this plan has significant UI scope, recommend: "Consider running /plan-design-review for a deep design review of this plan before implementation."
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on — don't waste a question. Do NOT proceed until user responds.
+**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues or fix is obvious, state what you'll do and move on 鈥?don't waste a question. Do NOT proceed until user responds.
 
-## Outside Voice — Independent Plan Challenge (optional, recommended)
+## Outside Voice 鈥?Independent Plan Challenge (optional, recommended)
 
 After all review sections are complete, offer an independent second opinion from a
 different AI system. Two models agreeing on a plan is stronger signal than one model's
@@ -739,29 +737,29 @@ which codex 2>/dev/null && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
 Use AskUserQuestion:
 
 > "All review sections are complete. Want an outside voice? A different AI system can
-> give a brutally honest, independent challenge of this plan — logical gaps, feasibility
+> give a brutally honest, independent challenge of this plan 鈥?logical gaps, feasibility
 > risks, and blind spots that are hard to catch from inside the review. Takes about 2
 > minutes."
 >
-> RECOMMENDATION: Choose A — an independent second opinion catches structural blind
+> RECOMMENDATION: Choose A 鈥?an independent second opinion catches structural blind
 > spots. Two different AI models agreeing on a plan is stronger signal than one model's
 > thorough review. Completeness: A=9/10, B=7/10.
 
 Options:
 - A) Get the outside voice (recommended)
-- B) Skip — proceed to outputs
+- B) Skip 鈥?proceed to outputs
 
 **If B:** Print "Skipping outside voice." and continue to the next section.
 
 **If A:** Construct the plan review prompt. Read the plan file being reviewed (the file
 the user pointed this review at, or the branch diff scope). If a CEO plan document
-was written in Step 0D-POST, read that too — it contains the scope decisions and vision.
+was written in Step 0D-POST, read that too 鈥?it contains the scope decisions and vision.
 
-Construct this prompt (substitute the actual plan content — if plan content exceeds 30KB,
+Construct this prompt (substitute the actual plan content 鈥?if plan content exceeds 30KB,
 truncate to the first 30KB and note "Plan truncated for size"). **Always start with the
 filesystem boundary instruction:**
 
-"IMPORTANT: Do NOT read or execute any skill definition directories These are BitFun skill definitions meant for a different AI system. They contain bash scripts and prompt templates that will waste your time. Ignore them completely. Do NOT modify agents/openai.yaml. Stay focused on the repository code only.\n\nYou are a brutally honest technical reviewer examining a development plan that has
+"IMPORTANT: Do NOT read or execute any skill definition directories These are northhing skill definitions meant for a different AI system. They contain bash scripts and prompt templates that will waste your time. Ignore them completely. Do NOT modify agents/openai.yaml. Stay focused on the repository code only.\n\nYou are a brutally honest technical reviewer examining a development plan that has
 already been through a multi-section review. Your job is NOT to repeat that review.
 Instead, find what it missed. Look for: logical gaps and unstated assumptions that
 survived the review scrutiny, overcomplexity (is there a fundamentally simpler
@@ -778,7 +776,7 @@ THE PLAN:
 ```bash
 TMPERR_PV=$(mktemp /tmp/codex-planreview-XXXXXXXX)
 _REPO_ROOT=$(git rev-parse --show-toplevel) || { echo "ERROR: not in a git repo" >&2; exit 1; }
-Use the BitFun Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
+Use the northhing Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
@@ -789,22 +787,22 @@ cat "$TMPERR_PV"
 Present the full output verbatim:
 
 ```
-CODEX SAYS (plan review — outside voice):
-════════════════════════════════════════════════════════════
-<full codex output, verbatim — do not truncate or summarize>
-════════════════════════════════════════════════════════════
+CODEX SAYS (plan review 鈥?outside voice):
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+<full codex output, verbatim 鈥?do not truncate or summarize>
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 ```
 
-**Error handling:** All errors are non-blocking — the outside voice is informational.
-- Outside-voice unavailable: if the selected BitFun sub-agent cannot run, skip this informational pass and continue with the main-session review.
+**Error handling:** All errors are non-blocking 鈥?the outside voice is informational.
+- Outside-voice unavailable: if the selected northhing sub-agent cannot run, skip this informational pass and continue with the main-session review.
 - Timeout: "outside-voice sub-agent timed out after 5 minutes."
 - Empty response: "outside-voice sub-agent returned no response."
 
-On any outside-voice sub-agent error, fall back to the BitFun adversarial subagent.
+On any outside-voice sub-agent error, fall back to the northhing adversarial subagent.
 
 **If CODEX_NOT_AVAILABLE (or outside-voice sub-agent errored):**
 
-Dispatch via the Task tool. The subagent has fresh context — genuine independence.
+Dispatch via the Task tool. The subagent has fresh context 鈥?genuine independence.
 
 Subagent prompt: same plan review prompt as above.
 
@@ -825,7 +823,7 @@ CROSS-MODEL TENSION:
 
 **User Sovereignty:** Do NOT auto-incorporate outside voice recommendations into the plan.
 Present each tension point to the user. The user decides. Cross-model agreement is a
-strong signal — present it as such — but it is NOT permission to act. You may state
+strong signal 鈥?present it as such 鈥?but it is NOT permission to act. You may state
 which argument you find more compelling, but you MUST NOT apply the change without
 explicit user approval.
 
@@ -844,17 +842,17 @@ Options:
 - D) Add to TODOS.md for later
 
 Wait for the user's response. Do NOT default to accepting because you agree with the
-outside voice. If the user chooses B, the current approach stands — do not re-argue.
+outside voice. If the user chooses B, the current approach stands 鈥?do not re-argue.
 
-If no tension points exist, note: "No cross-model tension — both reviewers agree."
+If no tension points exist, note: "No cross-model tension 鈥?both reviewers agree."
 
 **Persist the result:**
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 
 Substitute: STATUS = "clean" if no findings, "issues_found" if findings exist.
-SOURCE = "codex" if outside-voice sub-agent ran, "subagent" if a BitFun Task sub-agent ran.
+SOURCE = "codex" if outside-voice sub-agent ran, "subagent" if a northhing Task sub-agent ran.
 
 **Cleanup:** Run `rm -f "$TMPERR_PV"` after processing (if outside-voice sub-agent was used).
 
@@ -865,13 +863,13 @@ SOURCE = "codex" if outside-voice sub-agent ran, "subagent" if a BitFun Task sub
 Outside voice findings are INFORMATIONAL until the user explicitly approves each one.
 Do NOT incorporate outside voice recommendations into the plan without presenting each
 finding via AskUserQuestion and getting explicit approval. This applies even when you
-agree with the outside voice. Cross-model consensus is a strong signal — present it as
-such — but the user makes the decision.
+agree with the outside voice. Cross-model consensus is a strong signal 鈥?present it as
+such 鈥?but the user makes the decision.
 
 ## Post-Implementation Design Audit (if UI scope detected)
 After implementation, run `/design-review` on the live site to catch visual issues that can only be evaluated with rendered output.
 
-## CRITICAL RULE — How to ask questions
+## CRITICAL RULE 鈥?How to ask questions
 Follow the AskUserQuestion format from the Preamble above. Additional rules for plan reviews:
 * **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
 * Describe the problem concretely, with file and line references.
@@ -879,7 +877,7 @@ Follow the AskUserQuestion format from the Preamble above. Additional rules for 
 * For each option: effort, risk, and maintenance burden in one line.
 * **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference.
 * Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
-* **Escape hatch:** If a section has no issues, say so and move on. If an issue has an obvious fix with no real alternatives, state what you'll do and move on — don't waste a question on it. Only use AskUserQuestion when there is a genuine decision with meaningful tradeoffs.
+* **Escape hatch:** If a section has no issues, say so and move on. If an issue has an obvious fix with no real alternatives, state what you'll do and move on 鈥?don't waste a question on it. Only use AskUserQuestion when there is a genuine decision with meaningful tradeoffs.
 
 ## Required Outputs
 
@@ -900,10 +898,10 @@ Complete table of every method that can fail, every exception class, rescued sta
   CODEPATH | FAILURE MODE   | RESCUED? | TEST? | USER SEES?     | LOGGED?
   ---------|----------------|----------|-------|----------------|--------
 ```
-Any row with RESCUED=N, TEST=N, USER SEES=Silent → **CRITICAL GAP**.
+Any row with RESCUED=N, TEST=N, USER SEES=Silent 鈫?**CRITICAL GAP**.
 
 ### TODOS.md updates
-Present each potential TODO as its own individual AskUserQuestion. Never batch TODOs — one per question. Never silently skip this step. Follow the format in `the built-in review TODO format`.
+Present each potential TODO as its own individual AskUserQuestion. Never batch TODOs 鈥?one per question. Never silently skip this step. Follow the format in `the built-in review TODO format`.
 
 For each TODO, describe:
 * **What:** One-line description of the work.
@@ -911,14 +909,14 @@ For each TODO, describe:
 * **Pros:** What you gain by doing this work.
 * **Cons:** Cost, complexity, or risks of doing it.
 * **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
-* **Effort estimate:** S/M/L/XL (human team) → with CC+gstack: S→S, M→S, L→M, XL→L
+* **Effort estimate:** S/M/L/XL (human team) 鈫?with CC+gstack: S鈫扴, M鈫扴, L鈫扢, XL鈫扡
 * **Priority:** P1/P2/P3
 * **Depends on / blocked by:** Any prerequisites or ordering constraints.
 
-Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough **C)** Build it now in this PR instead of deferring.
+Then present options: **A)** Add to TODOS.md **B)** Skip 鈥?not valuable enough **C)** Build it now in this PR instead of deferring.
 
 ### Scope Expansion Decisions (EXPANSION and SELECTIVE EXPANSION only)
-For EXPANSION and SELECTIVE EXPANSION modes: expansion opportunities and delight items were surfaced and decided in Step 0D (opt-in/cherry-pick ceremony). The decisions are persisted in the CEO plan document. Reference the CEO plan for the full record. Do not re-surface them here — list the accepted expansions for completeness:
+For EXPANSION and SELECTIVE EXPANSION modes: expansion opportunities and delight items were surfaced and decided in Step 0D (opt-in/cherry-pick ceremony). The decisions are persisted in the CEO plan document. Reference the CEO plan for the full record. Do not re-surface them here 鈥?list the accepted expansions for completeness:
 * Accepted: {list items added to scope}
 * Deferred: {list items sent to TODOS.md}
 * Skipped: {list items rejected}
@@ -937,7 +935,7 @@ List every ASCII diagram in files this plan touches. Still accurate?
 ### Completion Summary
 ```
   +====================================================================+
-  |            MEGA PLAN REVIEW — COMPLETION SUMMARY                   |
+  |            MEGA PLAN REVIEW 鈥?COMPLETION SUMMARY                   |
   +====================================================================+
   | Mode selected        | EXPANSION / SELECTIVE / HOLD / REDUCTION     |
   | System Audit         | [key findings]                              |
@@ -975,27 +973,26 @@ If any AskUserQuestion goes unanswered, note it here. Never silently default.
 
 ## Handoff Note Cleanup
 
-After producing the Completion Summary, clean up any handoff notes for this branch —
-the review is complete and the context is no longer needed.
+After producing the Completion Summary, clean up any handoff notes for this branch 鈥?the review is complete and the context is no longer needed.
 
 ```bash
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-)
-rm -f $HOME/.bitfun/team/projects/$SLUG/*-$BRANCH-ceo-handoff-*.md 2>/dev/null || true
+rm -f $HOME/.northhing/team/projects/$SLUG/*-$BRANCH-ceo-handoff-*.md 2>/dev/null || true
 ```
 
 ## Review Log
 
 After producing the Completion Summary above, persist the review result.
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** This command writes review metadata to
-`$HOME/.bitfun/team/` (user config directory, not project files). The skill preamble
-already writes to `$HOME/.bitfun/team/sessions/` and `$HOME/.bitfun/team/analytics/` — this is
+**PLAN MODE EXCEPTION 鈥?ALWAYS RUN:** This command writes review metadata to
+`$HOME/.northhing/team/` (user config directory, not project files). The skill preamble
+already writes to `$HOME/.northhing/team/sessions/` and `$HOME/.northhing/team/analytics/` 鈥?this is
 the same pattern. The review dashboard depends on this data. Skipping this
 command breaks the review readiness dashboard in /ship.
 
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 
 Before running this command, substitute the placeholder values from the Completion Summary you just produced:
@@ -1014,10 +1011,10 @@ Before running this command, substitute the placeholder values from the Completi
 After completing the review, read the review log and config to display the dashboard.
 
 ```bash
-true # BitFun Team Mode reads review context from the current session
+true # northhing Team Mode reads review context from the current session
 ```
 
-Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry — this captures outside voices from both /plan-ceo-review and /plan-eng-review.
+Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry 鈥?this captures outside voices from both /plan-ceo-review and /plan-eng-review.
 
 **Source attribution:** If the most recent entry for a skill has a \`"via"\` field, append it to the status label in parentheses. Examples: `plan-eng-review` with `via:"autoplan"` shows as "CLEAR (PLAN via /autoplan)". `review` with `via:"ship"` shows as "CLEAR (DIFF via /ship)". Entries without a `via` field show as "CLEAR (PLAN)" or "CLEAR (DIFF)" as before.
 
@@ -1032,12 +1029,12 @@ Display:
 | Review          | Runs | Last Run            | Status    | Required |
 |-----------------|------|---------------------|-----------|----------|
 | Eng Review      |  1   | 2026-03-16 15:00    | CLEAR     | YES      |
-| CEO Review      |  0   | —                   | —         | no       |
-| Design Review   |  0   | —                   | —         | no       |
-| Adversarial     |  0   | —                   | —         | no       |
-| Outside Voice   |  0   | —                   | —         | no       |
+| CEO Review      |  0   | 鈥?                  | 鈥?        | no       |
+| Design Review   |  0   | 鈥?                  | 鈥?        | no       |
+| Adversarial     |  0   | 鈥?                  | 鈥?        | no       |
+| Outside Voice   |  0   | 鈥?                  | 鈥?        | no       |
 +--------------------------------------------------------------------+
-| VERDICT: CLEARED — Eng Review passed                                |
+| VERDICT: CLEARED 鈥?Eng Review passed                                |
 +====================================================================+
 ```
 
@@ -1045,7 +1042,7 @@ Display:
 - **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with \`Team Mode setting skip_eng_review=true\` (the "don't bother me" setting).
 - **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
 - **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
-- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both BitFun adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
+- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both northhing adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
 - **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to independent subagent if outside-voice sub-agent is unavailable. Never gates shipping.
 
 **Verdict logic:**
@@ -1056,8 +1053,8 @@ Display:
 
 **Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
 - Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
-- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
-- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
+- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale 鈥?{N} commits since review"
+- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking 鈥?consider re-running for accurate staleness detection"
 - If all reviews match the current HEAD, do not display any staleness notes
 
 ## Plan File Review Report
@@ -1068,8 +1065,8 @@ After displaying the Review Readiness Dashboard in conversation output, also upd
 ### Detect the plan file
 
 1. Check if there is an active plan file in this conversation (the host provides plan file
-   paths in system messages — look for plan file references in the conversation context).
-2. If not found, skip this section silently — not every review runs in plan mode.
+   paths in system messages 鈥?look for plan file references in the conversation context).
+2. If not found, skip this section silently 鈥?not every review runs in plan mode.
 
 ### Generate the report
 
@@ -1077,22 +1074,22 @@ Read the review log output you already have from the Review Readiness Dashboard 
 Parse each JSONL entry. Each skill logs different fields:
 
 - **plan-ceo-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`mode\`, \`scope_proposed\`, \`scope_accepted\`, \`scope_deferred\`, \`commit\`
-  → Findings: "{scope_proposed} proposals, {scope_accepted} accepted, {scope_deferred} deferred"
-  → If scope fields are 0 or missing (HOLD/REDUCTION mode): "mode: {mode}, {critical_gaps} critical gaps"
+  鈫?Findings: "{scope_proposed} proposals, {scope_accepted} accepted, {scope_deferred} deferred"
+  鈫?If scope fields are 0 or missing (HOLD/REDUCTION mode): "mode: {mode}, {critical_gaps} critical gaps"
 - **plan-eng-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`issues_found\`, \`mode\`, \`commit\`
-  → Findings: "{issues_found} issues, {critical_gaps} critical gaps"
+  鈫?Findings: "{issues_found} issues, {critical_gaps} critical gaps"
 - **plan-design-review**: \`status\`, \`initial_score\`, \`overall_score\`, \`unresolved\`, \`decisions_made\`, \`commit\`
-  → Findings: "score: {initial_score}/10 → {overall_score}/10, {decisions_made} decisions"
+  鈫?Findings: "score: {initial_score}/10 鈫?{overall_score}/10, {decisions_made} decisions"
 - **plan-devex-review**: \`status\`, \`initial_score\`, \`overall_score\`, \`product_type\`, \`tthw_current\`, \`tthw_target\`, \`mode\`, \`persona\`, \`competitive_tier\`, \`unresolved\`, \`commit\`
-  → Findings: "score: {initial_score}/10 → {overall_score}/10, TTHW: {tthw_current} → {tthw_target}"
+  鈫?Findings: "score: {initial_score}/10 鈫?{overall_score}/10, TTHW: {tthw_current} 鈫?{tthw_target}"
 - **devex-review**: \`status\`, \`overall_score\`, \`product_type\`, \`tthw_measured\`, \`dimensions_tested\`, \`dimensions_inferred\`, \`boomerang\`, \`commit\`
-  → Findings: "score: {overall_score}/10, TTHW: {tthw_measured}, {dimensions_tested} tested/{dimensions_inferred} inferred"
+  鈫?Findings: "score: {overall_score}/10, TTHW: {tthw_measured}, {dimensions_tested} tested/{dimensions_inferred} inferred"
 - **outside-voice-review**: \`status\`, \`gate\`, \`findings\`, \`findings_fixed\`
-  → Findings: "{findings} findings, {findings_fixed}/{findings} fixed"
+  鈫?Findings: "{findings} findings, {findings_fixed}/{findings} fixed"
 
 All fields needed for the Findings column are now present in the JSONL entries.
 For the review you just completed, you may use richer details from your own Completion
-Summary. For prior reviews, use the JSONL fields directly — they contain all required data.
+Summary. For prior reviews, use the JSONL fields directly 鈥?they contain all required data.
 
 Produce this markdown table:
 
@@ -1102,7 +1099,7 @@ Produce this markdown table:
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | \`/plan-ceo-review\` | Scope & strategy | {runs} | {status} | {findings} |
-| outside-voice sub-agent Review | \`BitFun Task outside-voice review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
+| outside-voice sub-agent Review | \`northhing Task outside-voice review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
 | Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | {runs} | {status} | {findings} |
 | Design Review | \`/plan-design-review\` | UI/UX gaps | {runs} | {status} | {findings} |
 | DX Review | \`/plan-devex-review\` | Developer experience gaps | {runs} | {status} | {findings} |
@@ -1110,20 +1107,20 @@ Produce this markdown table:
 
 Below the table, add these lines (omit any that are empty/not applicable):
 
-- **CODEX:** (only if outside-voice-review ran) — one-line summary of codex fixes
-- **CROSS-MODEL:** (only if both BitFun and outside-voice sub-agent reviews exist) — overlap analysis
+- **CODEX:** (only if outside-voice-review ran) 鈥?one-line summary of codex fixes
+- **CROSS-MODEL:** (only if both northhing and outside-voice sub-agent reviews exist) 鈥?overlap analysis
 - **UNRESOLVED:** total unresolved decisions across all reviews
-- **VERDICT:** list reviews that are CLEAR (e.g., "CEO + ENG CLEARED — ready to implement").
+- **VERDICT:** list reviews that are CLEAR (e.g., "CEO + ENG CLEARED 鈥?ready to implement").
   If Eng Review is not CLEAR and not skipped globally, append "eng review required".
 
 ### Write to the plan file
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** This writes to the plan file, which is the one
+**PLAN MODE EXCEPTION 鈥?ALWAYS RUN:** This writes to the plan file, which is the one
 file you are allowed to edit in plan mode. The plan file review report is part of the
 plan's living status.
 
 - Search the plan file for a \`## GSTACK REVIEW REPORT\` section **anywhere** in the file
-  (not just at the end — content may have been added after it).
+  (not just at the end 鈥?content may have been added after it).
 - If found, **replace it** entirely using the Edit tool. Match from \`## GSTACK REVIEW REPORT\`
   through either the next \`## \` heading or end of file, whichever comes first. This ensures
   content added after the report section is preserved, not eaten. If the Edit fails
@@ -1132,20 +1129,20 @@ plan's living status.
 - Always place it as the very last section in the plan file. If it was found mid-file,
   move it: delete the old location and append at the end.
 
-## Next Steps — Review Chaining
+## Next Steps 鈥?Review Chaining
 
 After displaying the Review Readiness Dashboard, recommend the next review(s) based on what this CEO review discovered. Read the dashboard output to see which reviews have already been run and whether they are stale.
 
-**Recommend /plan-eng-review if eng review is not skipped globally** — check the dashboard output for `skip_eng_review`. If it is `true`, eng review is opted out — do not recommend it. Otherwise, eng review is the required shipping gate. If this CEO review expanded scope, changed architectural direction, or accepted scope expansions, emphasize that a fresh eng review is needed. If an eng review already exists in the dashboard but the commit hash shows it predates this CEO review, note that it may be stale and should be re-run.
+**Recommend /plan-eng-review if eng review is not skipped globally** 鈥?check the dashboard output for `skip_eng_review`. If it is `true`, eng review is opted out 鈥?do not recommend it. Otherwise, eng review is the required shipping gate. If this CEO review expanded scope, changed architectural direction, or accepted scope expansions, emphasize that a fresh eng review is needed. If an eng review already exists in the dashboard but the commit hash shows it predates this CEO review, note that it may be stale and should be re-run.
 
-**Recommend /plan-design-review if UI scope was detected** — specifically if Section 11 (Design & UX Review) was NOT skipped, or if accepted scope expansions included UI-facing features. If an existing design review is stale (commit hash drift), note that. In SCOPE REDUCTION mode, skip this recommendation — design review is unlikely relevant for scope cuts.
+**Recommend /plan-design-review if UI scope was detected** 鈥?specifically if Section 11 (Design & UX Review) was NOT skipped, or if accepted scope expansions included UI-facing features. If an existing design review is stale (commit hash drift), note that. In SCOPE REDUCTION mode, skip this recommendation 鈥?design review is unlikely relevant for scope cuts.
 
 **If both are needed, recommend eng review first** (required gate), then design review.
 
 Use AskUserQuestion to present the next step. Include only applicable options:
 - **A)** Run /plan-eng-review next (required gate)
 - **B)** Run /plan-design-review next (only if UI scope detected)
-- **C)** Skip — I'll handle reviews manually
+- **C)** Skip 鈥?I'll handle reviews manually
 
 ## docs/designs Promotion (EXPANSION and SELECTIVE EXPANSION only)
 
@@ -1153,7 +1150,7 @@ At the end of the review, if the vision produced a compelling feature direction,
 
 "The vision from this review produced {N} accepted scope expansions. Want to promote it to a design doc in the repo?"
 - **A)** Promote to `docs/designs/{FEATURE}.md` (committed to repo, visible to the team)
-- **B)** Keep in `$HOME/.bitfun/team/projects/` only (local, personal reference)
+- **B)** Keep in `$HOME/.northhing/team/projects/` only (local, personal reference)
 - **C)** Skip
 
 If promoted, copy the CEO plan content to `docs/designs/{FEATURE}.md` (create the directory if needed) and update the `status` field in the original CEO plan from `ACTIVE` to `PROMOTED`.
@@ -1171,7 +1168,7 @@ If you discovered a non-obvious pattern, pitfall, or architectural insight durin
 this session, log it for future sessions:
 
 ```bash
-true # BitFun Team Mode has no external telemetry helper
+true # northhing Team Mode has no external telemetry helper
 ```
 
 **Types:** `pattern` (reusable approach), `pitfall` (what NOT to do), `preference`
@@ -1179,7 +1176,7 @@ true # BitFun Team Mode has no external telemetry helper
 `operational` (project environment/CLI/workflow knowledge).
 
 **Sources:** `observed` (you found this in the code), `user-stated` (user told you),
-`inferred` (AI deduction), `cross-model` (both BitFun and outside-voice sub-agent agree).
+`inferred` (AI deduction), `cross-model` (both northhing and outside-voice sub-agent agree).
 
 **Confidence:** 1-10. Be honest. An observed pattern you verified in the code is 8-9.
 An inference you're not sure about is 4-5. A user preference they explicitly stated is 10.
@@ -1192,39 +1189,4 @@ already knows. A good test: would this insight save time in a future session? If
 
 ## Mode Quick Reference
 ```
-  ┌────────────────────────────────────────────────────────────────────────────────┐
-  │                            MODE COMPARISON                                     │
-  ├─────────────┬──────────────┬──────────────┬──────────────┬────────────────────┤
-  │             │  EXPANSION   │  SELECTIVE   │  HOLD SCOPE  │  REDUCTION         │
-  ├─────────────┼──────────────┼──────────────┼──────────────┼────────────────────┤
-  │ Scope       │ Push UP      │ Hold + offer │ Maintain     │ Push DOWN          │
-  │             │ (opt-in)     │              │              │                    │
-  │ Recommend   │ Enthusiastic │ Neutral      │ N/A          │ N/A                │
-  │ posture     │              │              │              │                    │
-  │ 10x check   │ Mandatory    │ Surface as   │ Optional     │ Skip               │
-  │             │              │ cherry-pick  │              │                    │
-  │ Platonic    │ Yes          │ No           │ No           │ No                 │
-  │ ideal       │              │              │              │                    │
-  │ Delight     │ Opt-in       │ Cherry-pick  │ Note if seen │ Skip               │
-  │ opps        │ ceremony     │ ceremony     │              │                    │
-  │ Complexity  │ "Is it big   │ "Is it right │ "Is it too   │ "Is it the bare    │
-  │ question    │  enough?"    │  + what else │  complex?"   │  minimum?"         │
-  │             │              │  is tempting"│              │                    │
-  │ Taste       │ Yes          │ Yes          │ No           │ No                 │
-  │ calibration │              │              │              │                    │
-  │ Temporal    │ Full (hr 1-6)│ Full (hr 1-6)│ Key decisions│ Skip               │
-  │ interrogate │              │              │  only        │                    │
-  │ Observ.     │ "Joy to      │ "Joy to      │ "Can we      │ "Can we see if     │
-  │ standard    │  operate"    │  operate"    │  debug it?"  │  it's broken?"     │
-  │ Deploy      │ Infra as     │ Safe deploy  │ Safe deploy  │ Simplest possible  │
-  │ standard    │ feature scope│ + cherry-pick│  + rollback  │  deploy            │
-  │             │              │  risk check  │              │                    │
-  │ Error map   │ Full + chaos │ Full + chaos │ Full         │ Critical paths     │
-  │             │  scenarios   │ for accepted │              │  only              │
-  │ CEO plan    │ Written      │ Written      │ Skipped      │ Skipped            │
-  │ Phase 2/3   │ Map accepted │ Map accepted │ Note it      │ Skip               │
-  │ planning    │              │ cherry-picks │              │                    │
-  │ Design      │ "Inevitable" │ If UI scope  │ If UI scope  │ Skip               │
-  │ (Sec 11)    │  UI review   │  detected    │  detected    │                    │
-  └─────────────┴──────────────┴──────────────┴──────────────┴────────────────────┘
-```
+  鈹屸攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?  鈹?                           MODE COMPARISON                                     鈹?  鈹溾攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?  鈹?            鈹? EXPANSION   鈹? SELECTIVE   鈹? HOLD SCOPE  鈹? REDUCTION         鈹?  鈹溾攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹尖攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?  鈹?Scope       鈹?Push UP      鈹?Hold + offer 鈹?Maintain     鈹?Push DOWN          鈹?  鈹?            鈹?(opt-in)     鈹?             鈹?             鈹?                   鈹?  鈹?Recommend   鈹?Enthusiastic 鈹?Neutral      鈹?N/A          鈹?N/A                鈹?  鈹?posture     鈹?             鈹?             鈹?             鈹?                   鈹?  鈹?10x check   鈹?Mandatory    鈹?Surface as   鈹?Optional     鈹?Skip               鈹?  鈹?            鈹?             鈹?cherry-pick  鈹?             鈹?                   鈹?  鈹?Platonic    鈹?Yes          鈹?No           鈹?No           鈹?No                 鈹?  鈹?ideal       鈹?             鈹?             鈹?             鈹?                   鈹?  鈹?Delight     鈹?Opt-in       鈹?Cherry-pick  鈹?Note if seen 鈹?Skip               鈹?  鈹?opps        鈹?ceremony     鈹?ceremony     鈹?             鈹?                   鈹?  鈹?Complexity  鈹?"Is it big   鈹?"Is it right 鈹?"Is it too   鈹?"Is it the bare    鈹?  鈹?question    鈹? enough?"    鈹? + what else 鈹? complex?"   鈹? minimum?"         鈹?  鈹?            鈹?             鈹? is tempting"鈹?             鈹?                   鈹?  鈹?Taste       鈹?Yes          鈹?Yes          鈹?No           鈹?No                 鈹?  鈹?calibration 鈹?             鈹?             鈹?             鈹?                   鈹?  鈹?Temporal    鈹?Full (hr 1-6)鈹?Full (hr 1-6)鈹?Key decisions鈹?Skip               鈹?  鈹?interrogate 鈹?             鈹?             鈹? only        鈹?                   鈹?  鈹?Observ.     鈹?"Joy to      鈹?"Joy to      鈹?"Can we      鈹?"Can we see if     鈹?  鈹?standard    鈹? operate"    鈹? operate"    鈹? debug it?"  鈹? it's broken?"     鈹?  鈹?Deploy      鈹?Infra as     鈹?Safe deploy  鈹?Safe deploy  鈹?Simplest possible  鈹?  鈹?standard    鈹?feature scope鈹?+ cherry-pick鈹? + rollback  鈹? deploy            鈹?  鈹?            鈹?             鈹? risk check  鈹?             鈹?                   鈹?  鈹?Error map   鈹?Full + chaos 鈹?Full + chaos 鈹?Full         鈹?Critical paths     鈹?  鈹?            鈹? scenarios   鈹?for accepted 鈹?             鈹? only              鈹?  鈹?CEO plan    鈹?Written      鈹?Written      鈹?Skipped      鈹?Skipped            鈹?  鈹?Phase 2/3   鈹?Map accepted 鈹?Map accepted 鈹?Note it      鈹?Skip               鈹?  鈹?planning    鈹?             鈹?cherry-picks 鈹?             鈹?                   鈹?  鈹?Design      鈹?"Inevitable" 鈹?If UI scope  鈹?If UI scope  鈹?Skip               鈹?  鈹?(Sec 11)    鈹? UI review   鈹? detected    鈹? detected    鈹?                   鈹?  鈹斺攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹粹攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹?```

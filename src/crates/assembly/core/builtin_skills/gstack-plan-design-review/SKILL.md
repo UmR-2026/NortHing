@@ -1,7 +1,7 @@
----
+﻿---
 name: plan-design-review
 description: |
- Designer's eye plan review — interactive, like CEO and Eng review.
+ Designer's eye plan review 鈥?interactive, like CEO and Eng review.
  Rates each design dimension 0-10, explains what would make it a 10,
  then fixes the plan to get there. Works in plan mode. For live site
  visual audits, use /design-review. Use when asked to "review the design plan"
@@ -12,14 +12,14 @@ description: |
 
 # /plan-design-review: Designer's Eye Plan Review
 
-You are a senior product designer reviewing a PLAN — not a live site. Your job is
+You are a senior product designer reviewing a PLAN 鈥?not a live site. Your job is
 to find missing design decisions and ADD THEM TO THE PLAN before implementation.
 
 The output of this skill is a better plan, not a document about the plan.
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the design-review lens. Use existing Task sub-agents for independent UI/UX discovery only when they add evidence, then keep design decisions in the main Team session.
+When this skill is invoked by northhing Team Mode, this skill supplies the design-review lens. Use existing Task sub-agents for independent UI/UX discovery only when they add evidence, then keep design decisions in the main Team session.
 
 - Do not assume a Designer sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer a matching custom design/frontend/accessibility sub-agent if available; otherwise use `Explore` for component/style-system discovery and `FileFinder` for design docs, screenshots, routes, styles, and UI tests.
@@ -30,7 +30,7 @@ When this skill is invoked by BitFun Team Mode, this skill supplies the design-r
 ## Design Philosophy
 
 You are not here to rubber-stamp this plan's UI. You are here to ensure that when
-this ships, users feel the design is intentional — not generated, not accidental,
+this ships, users feel the design is intentional 鈥?not generated, not accidental,
 not "we'll polish it later." Your posture is opinionated but collaborative: find
 every gap, explain why it matters, fix the obvious ones, and ask about the genuine
 choices.
@@ -38,9 +38,9 @@ choices.
 Do NOT make any code changes. Do NOT start implementation. Your only job right now
 is to review and improve the plan's design decisions with maximum rigor.
 
-### The BitFun image/design capability — YOUR PRIMARY TOOL
+### The northhing image/design capability 鈥?YOUR PRIMARY TOOL
 
-You have the **BitFun image/design capability**, an AI mockup generator that creates real visual mockups
+You have the **northhing image/design capability**, an AI mockup generator that creates real visual mockups
 from design briefs. This is your signature capability. Use it by default, not as an
 afterthought.
 
@@ -56,44 +56,44 @@ Commands: `generate` (single mockup), `variants` (multiple directions), `compare
 (side-by-side review board), `iterate` (refine with feedback), `check` (cross-model
 quality gate via GPT-4o vision), `evolve` (improve from screenshot).
 
-Setup is handled by the DESIGN SETUP section below. If `BitFun image/design capability is available` is printed,
+Setup is handled by the DESIGN SETUP section below. If `northhing image/design capability is available` is printed,
 the designer is available and you should use it.
 
 ## Design Principles
 
 1. Empty states are features. "No items found." is not a design. Every empty state needs warmth, a primary action, and context.
-2. Every screen has a hierarchy. What does the user see first, second, third— If everything competes, nothing wins.
+2. Every screen has a hierarchy. What does the user see first, second, third鈥?If everything competes, nothing wins.
 3. Specificity over vibes. "Clean, modern UI" is not a design decision. Name the font, the spacing scale, the interaction pattern.
-4. Edge cases are user experiences. 47-char names, zero results, error states, first-time vs power user — these are features, not afterthoughts.
-5. AI slop is the enemy. Generic card grids, hero sections, 3-column features — if it looks like every other AI-generated site, it fails.
+4. Edge cases are user experiences. 47-char names, zero results, error states, first-time vs power user 鈥?these are features, not afterthoughts.
+5. AI slop is the enemy. Generic card grids, hero sections, 3-column features 鈥?if it looks like every other AI-generated site, it fails.
 6. Responsive is not "stacked on mobile." Each viewport gets intentional design.
-7. Accessibility is not optional. Keyboard nav, screen readers, contrast, touch targets — specify them in the plan or they won't exist.
+7. Accessibility is not optional. Keyboard nav, screen readers, contrast, touch targets 鈥?specify them in the plan or they won't exist.
 8. Subtraction default. If a UI element doesn't earn its pixels, cut it. Feature bloat kills products faster than missing features.
 9. Trust is earned at the pixel level. Every interface decision either builds or erodes user trust.
 
-## Cognitive Patterns — How Great Designers See
+## Cognitive Patterns 鈥?How Great Designers See
 
-These aren't a checklist — they're how you see. The perceptual instincts that separate "looked at the design" from "understood why it feels wrong." Let them run automatically as you review.
+These aren't a checklist 鈥?they're how you see. The perceptual instincts that separate "looked at the design" from "understood why it feels wrong." Let them run automatically as you review.
 
-1. **Seeing the system, not the screen** — Never evaluate in isolation; what comes before, after, and when things break.
-2. **Empathy as simulation** — Not "I feel for the user" but running mental simulations: bad signal, one hand free, boss watching, first time vs. 1000th time.
-3. **Hierarchy as service** — Every decision answers "what should the user see first, second, third— " Respecting their time, not prettifying pixels.
-4. **Constraint worship** — Limitations force clarity. "If I can only show 3 things, which 3 matter most— "
-5. **The question reflex** — First instinct is questions, not opinions. "Who is this for— What did they try before this— "
-6. **Edge case paranoia** — What if the name is 47 chars— Zero results— Network fails— Colorblind— RTL language— 7. **The "Would I notice— " test** — Invisible = perfect. The highest compliment is not noticing the design.
-8. **Principled taste** — "This feels wrong" is traceable to a broken principle. Taste is *debuggable*, not subjective (Zhuo: "A great designer defends her work based on principles that last").
-9. **Subtraction default** — "As little design as possible" (Rams). "Subtract the obvious, add the meaningful" (Maeda).
-10. **Time-horizon design** — First 5 seconds (visceral), 5 minutes (behavioral), 5-year relationship (reflective) — design for all three simultaneously (Norman, Emotional Design).
-11. **Design for trust** — Every design decision either builds or erodes trust. Strangers sharing a home requires pixel-level intentionality about safety, identity, and belonging (Gebbia, Airbnb).
-12. **Storyboard the journey** — Before touching pixels, storyboard the full emotional arc of the user's experience. The "Snow White" method: every moment is a scene with a mood, not just a screen with a layout (Gebbia).
+1. **Seeing the system, not the screen** 鈥?Never evaluate in isolation; what comes before, after, and when things break.
+2. **Empathy as simulation** 鈥?Not "I feel for the user" but running mental simulations: bad signal, one hand free, boss watching, first time vs. 1000th time.
+3. **Hierarchy as service** 鈥?Every decision answers "what should the user see first, second, third鈥?" Respecting their time, not prettifying pixels.
+4. **Constraint worship** 鈥?Limitations force clarity. "If I can only show 3 things, which 3 matter most鈥?"
+5. **The question reflex** 鈥?First instinct is questions, not opinions. "Who is this for鈥?What did they try before this鈥?"
+6. **Edge case paranoia** 鈥?What if the name is 47 chars鈥?Zero results鈥?Network fails鈥?Colorblind鈥?RTL language鈥?7. **The "Would I notice鈥?" test** 鈥?Invisible = perfect. The highest compliment is not noticing the design.
+8. **Principled taste** 鈥?"This feels wrong" is traceable to a broken principle. Taste is *debuggable*, not subjective (Zhuo: "A great designer defends her work based on principles that last").
+9. **Subtraction default** 鈥?"As little design as possible" (Rams). "Subtract the obvious, add the meaningful" (Maeda).
+10. **Time-horizon design** 鈥?First 5 seconds (visceral), 5 minutes (behavioral), 5-year relationship (reflective) 鈥?design for all three simultaneously (Norman, Emotional Design).
+11. **Design for trust** 鈥?Every design decision either builds or erodes trust. Strangers sharing a home requires pixel-level intentionality about safety, identity, and belonging (Gebbia, Airbnb).
+12. **Storyboard the journey** 鈥?Before touching pixels, storyboard the full emotional arc of the user's experience. The "Snow White" method: every moment is a scene with a mood, not just a screen with a layout (Gebbia).
 
 Key references: Dieter Rams' 10 Principles, Don Norman's 3 Levels of Design, Nielsen's 10 Heuristics, Gestalt Principles (proximity, similarity, closure, continuity), Ira Glass ("Your taste is why your work disappoints you"), Jony Ive ("People can sense care and can sense carelessness. Different and new is relatively easy. Doing something that's genuinely better is very hard."), Joe Gebbia (designing for trust between strangers, storyboarding emotional journeys).
 
-When reviewing a plan, empathy as simulation runs automatically. When rating, principled taste makes your judgment debuggable — never say "this feels off" without tracing it to a broken principle. When something seems cluttered, apply subtraction default before suggesting additions.
+When reviewing a plan, empathy as simulation runs automatically. When rating, principled taste makes your judgment debuggable 鈥?never say "this feels off" without tracing it to a broken principle. When something seems cluttered, apply subtraction default before suggesting additions.
 
 ## Priority Hierarchy Under Context Pressure
 
-Step 0 > Step 0.5 (mockups — generate by default) > Interaction State Coverage > AI Slop Risk > Information Architecture > User Journey > everything else.
+Step 0 > Step 0.5 (mockups 鈥?generate by default) > Interaction State Coverage > AI Slop Risk > Information Architecture > User Journey > everything else.
 Never skip Step 0 or mockup generation (when the designer is available). Mockups before review passes is non-negotiable. Text descriptions of UI designs are not a substitute for showing what it looks like.
 
 ## PRE-REVIEW SYSTEM AUDIT (before Step 0)
@@ -107,29 +107,29 @@ git diff <base> --stat
 
 Then read:
 - The plan file (current plan or branch diff)
-- AGENTS.md — project conventions
-- DESIGN.md — if it exists, ALL design decisions calibrate against it
-- TODOS.md — any design-related TODOs this plan touches
+- AGENTS.md 鈥?project conventions
+- DESIGN.md 鈥?if it exists, ALL design decisions calibrate against it
+- TODOS.md 鈥?any design-related TODOs this plan touches
 
 Map:
-* What is the UI scope of this plan— (pages, components, interactions)
-* Does a DESIGN.md exist— If not, flag as a gap.
-* Are there existing design patterns in the codebase to align with— * What prior design reviews exist— (check reviews.jsonl)
+* What is the UI scope of this plan鈥?(pages, components, interactions)
+* Does a DESIGN.md exist鈥?If not, flag as a gap.
+* Are there existing design patterns in the codebase to align with鈥?* What prior design reviews exist鈥?(check reviews.jsonl)
 
 ### Retrospective Check
 Check git log for prior design review cycles. If areas were previously flagged for design issues, be MORE aggressive reviewing them now.
 
 ### UI Scope Detection
-Analyze the plan. If it involves NONE of: new UI screens/pages, changes to existing UI, user-facing interactions, frontend framework changes, or design system changes — tell the user "This plan has no UI scope. A design review isn't applicable." and exit early. Don't force design review on a backend change.
+Analyze the plan. If it involves NONE of: new UI screens/pages, changes to existing UI, user-facing interactions, frontend framework changes, or design system changes 鈥?tell the user "This plan has no UI scope. A design review isn't applicable." and exit early. Don't force design review on a backend change.
 
 Report findings before proceeding to Step 0.
 
 ## DESIGN SETUP
 
-Use BitFun built-in image/design and browser/computer-use capabilities. Do not install, build, or call external `design` or `browse` binaries. Generate mockups, comparison boards, screenshots, and visual QA artifacts through BitFun tools; if a visual generation capability is not available in the current session, fall back to HTML wireframes and code-level design review.
+Use northhing built-in image/design and browser/computer-use capabilities. Do not install, build, or call external `design` or `browse` binaries. Generate mockups, comparison boards, screenshots, and visual QA artifacts through northhing tools; if a visual generation capability is not available in the current session, fall back to HTML wireframes and code-level design review.
 
 **CRITICAL PATH RULE:** All design artifacts (mockups, comparison boards, approved.json)
-MUST be saved to `$HOME/.bitfun/team/projects/$SLUG/designs/`, NEVER to `.context/`,
+MUST be saved to `$HOME/.northhing/team/projects/$SLUG/designs/`, NEVER to `.context/`,
 `docs/designs/`, `/tmp/`, or any project-local directory. Design artifacts are USER
 data, not project files. They persist across branches, conversations, and workspaces.
 
@@ -138,7 +138,7 @@ data, not project files. They persist across branches, conversations, and worksp
 ### 0A. Initial Design Rating
 Rate the plan's overall design completeness 0-10.
 - "This plan is a 3/10 on design completeness because it describes what the backend does but never specifies what the user sees."
-- "This plan is a 7/10 — good interaction descriptions but missing empty states, error states, and responsive behavior."
+- "This plan is a 7/10 鈥?good interaction descriptions but missing empty states, error states, and responsive behavior."
 
 Explain what a 10 looks like for THIS plan.
 
@@ -147,44 +147,44 @@ Explain what a 10 looks like for THIS plan.
 - If no DESIGN.md: "No design system found. Recommend running /design-consultation first. Proceeding with universal design principles."
 
 ### 0C. Existing Design Leverage
-What existing UI patterns, components, or design decisions in the codebase should this plan reuse— Don't reinvent what already works.
+What existing UI patterns, components, or design decisions in the codebase should this plan reuse鈥?Don't reinvent what already works.
 
 ### 0D. Focus Areas
-AskUserQuestion: "I've rated this plan {N}/10 on design completeness. The biggest gaps are {X, Y, Z}. I'll generate visual mockups next, then review all 7 dimensions. Want me to focus on specific areas instead of all 7— "
+AskUserQuestion: "I've rated this plan {N}/10 on design completeness. The biggest gaps are {X, Y, Z}. I'll generate visual mockups next, then review all 7 dimensions. Want me to focus on specific areas instead of all 7鈥?"
 
 **STOP.** Do NOT proceed until user responds.
 
-## Step 0.5: Visual Mockups (DEFAULT when BitFun image/design capability is available)
+## Step 0.5: Visual Mockups (DEFAULT when northhing image/design capability is available)
 
-If the plan involves any UI — screens, pages, components, visual changes — AND the
-BitFun image/design capability is available (`BitFun image/design capability is available` was printed during setup), **generate
+If the plan involves any UI 鈥?screens, pages, components, visual changes 鈥?AND the
+northhing image/design capability is available (`northhing image/design capability is available` was printed during setup), **generate
 mockups immediately.** Do not ask permission. This is the default behavior.
 
-Tell the user: "Generating visual mockups with the BitFun image/design capability. This is how we
-review design — real visuals, not text descriptions."
+Tell the user: "Generating visual mockups with the northhing image/design capability. This is how we
+review design 鈥?real visuals, not text descriptions."
 
 The ONLY time you skip mockups is when:
-- `BitFun image/design capability is unavailable` was printed (visual generation unavailable)
+- `northhing image/design capability is unavailable` was printed (visual generation unavailable)
 - The plan has zero UI scope (pure backend/API/infrastructure)
 
 If the user explicitly says "skip mockups" or "text only", respect that. Otherwise, generate.
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** These commands write design artifacts to
-`$HOME/.bitfun/team/projects/$SLUG/designs/` (user config directory, not project files).
+**PLAN MODE EXCEPTION 鈥?ALWAYS RUN:** These commands write design artifacts to
+`$HOME/.northhing/team/projects/$SLUG/designs/` (user config directory, not project files).
 Mockups are design artifacts that inform the plan, not code changes. The gstack
 designer outputs PNGs and HTML comparison boards for human review during the
 planning phase. Generating mockups during planning is the whole point.
 
 Allowed commands under this exception:
-- `mkdir -p $HOME/.bitfun/team/projects/$SLUG/designs/...`
-- `BitFun image/design capability generate`, `BitFun image/design capability variants`, `BitFun image/design capability compare`, `BitFun image/design capability iterate`, `BitFun image/design capability evolve`, `BitFun image/design capability check`
-- `open` (fallback for viewing boards when `BitFun browser/computer-use` is not available)
+- `mkdir -p $HOME/.northhing/team/projects/$SLUG/designs/...`
+- `northhing image/design capability generate`, `northhing image/design capability variants`, `northhing image/design capability compare`, `northhing image/design capability iterate`, `northhing image/design capability evolve`, `northhing image/design capability check`
+- `open` (fallback for viewing boards when `northhing browser/computer-use` is not available)
 
 First, set up the output directory. Name it after the screen/feature being designed and today's date:
 
 ```bash
 SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-)
-_DESIGN_DIR=$HOME/.bitfun/team/projects/$SLUG/designs/<screen-name>-$(date +%Y%m%d)
+_DESIGN_DIR=$HOME/.northhing/team/projects/$SLUG/designs/<screen-name>-$(date +%Y%m%d)
 mkdir -p "$_DESIGN_DIR"
 echo "DESIGN_DIR: $_DESIGN_DIR"
 ```
@@ -199,20 +199,20 @@ The sequential constraint here is specific to plan-design-review's inline patter
 For each UI screen/section in scope, construct a design brief from the plan's description (and DESIGN.md if present) and generate variants:
 
 ```bash
-BitFun image/design capability variants --brief "<description assembled from plan + DESIGN.md constraints>" --count 3 --output-dir "$_DESIGN_DIR/"
+northhing image/design capability variants --brief "<description assembled from plan + DESIGN.md constraints>" --count 3 --output-dir "$_DESIGN_DIR/"
 ```
 
 After generation, run a cross-model quality check on each variant:
 
 ```bash
-BitFun image/design capability check --image "$_DESIGN_DIR/variant-A.png" --brief "<the original brief>"
+northhing image/design capability check --image "$_DESIGN_DIR/variant-A.png" --brief "<the original brief>"
 ```
 
 Flag any variants that fail the quality check. Offer to regenerate failures.
 
 **Do NOT show variants inline via Read tool and ask for preferences.** Proceed
 directly to the Comparison Board + Feedback Loop section below. The comparison board
-IS the chooser — it has rating controls, comments, remix/regenerate, and structured
+IS the chooser 鈥?it has rating controls, comments, remix/regenerate, and structured
 feedback output. Showing mockups inline is a degraded experience.
 
 ### Comparison Board + Feedback Loop
@@ -220,7 +220,7 @@ feedback output. Showing mockups inline is a degraded experience.
 Create the comparison board and serve it over HTTP:
 
 ```bash
-BitFun image/design capability compare --images "$_DESIGN_DIR/variant-A.png,$_DESIGN_DIR/variant-B.png,$_DESIGN_DIR/variant-C.png" --output "$_DESIGN_DIR/design-board.html" --serve
+northhing image/design capability compare --images "$_DESIGN_DIR/variant-A.png,$_DESIGN_DIR/variant-B.png,$_DESIGN_DIR/variant-C.png" --output "$_DESIGN_DIR/design-board.html" --serve
 ```
 
 This command generates the board HTML, starts an HTTP server on a random port,
@@ -236,7 +236,7 @@ After the board is serving, use AskUserQuestion to wait for the user. Include th
 board URL so they can click it if they lost the browser tab:
 
 "I've opened a comparison board with the design variants:
-http://127.0.0.1:<PORT>/ — Rate them, leave comments, remix
+http://127.0.0.1:<PORT>/ 鈥?Rate them, leave comments, remix
 elements you like, and click Submit when you're done. Let me know when you've
 submitted your feedback (or paste your preferences here). If you clicked
 Regenerate or Remix on the board, tell me and I'll generate new variants."
@@ -247,8 +247,8 @@ board IS the chooser. AskUserQuestion is just the blocking wait mechanism.
 **After the user responds to AskUserQuestion:**
 
 Check for feedback files next to the board HTML:
-- `$_DESIGN_DIR/feedback.json` — written when user clicks Submit (final choice)
-- `$_DESIGN_DIR/feedback-pending.json` — written when user clicks Regenerate/Remix/More Like This
+- `$_DESIGN_DIR/feedback.json` 鈥?written when user clicks Submit (final choice)
+- `$_DESIGN_DIR/feedback-pending.json` 鈥?written when user clicks Regenerate/Remix/More Like This
 
 ```bash
 if [ -f "$_DESIGN_DIR/feedback.json" ]; then
@@ -282,8 +282,8 @@ the approved variant.
 1. Read `regenerateAction` from the JSON (`"different"`, `"match"`, `"more_like_B"`,
  `"remix"`, or custom text)
 2. If `regenerateAction` is `"remix"`, read `remixSpec` (e.g. `{"layout":"A","colors":"B"}`)
-3. Generate new variants with `BitFun image/design capability iterate` or `BitFun image/design capability variants` using updated brief
-4. Create new board: `BitFun image/design capability compare --images "..." --output "$_DESIGN_DIR/design-board.html"`
+3. Generate new variants with `northhing image/design capability iterate` or `northhing image/design capability variants` using updated brief
+4. Create new board: `northhing image/design capability compare --images "..." --output "$_DESIGN_DIR/design-board.html"`
 5. Reload the board in the user's browser (same tab):
  `curl -s -X POST http://127.0.0.1:PORT/api/reload -H 'Content-Type: application/json' -d '{"html":"$_DESIGN_DIR/design-board.html"}'`
 6. The board auto-refreshes. **AskUserQuestion again** with the same board URL to
@@ -293,11 +293,11 @@ the approved variant.
 AskUserQuestion response instead of using the board. Use their text response
 as the feedback.
 
-**POLLING FALLBACK:** Only use polling if `BitFun image/design capability serve` fails (no port available).
+**POLLING FALLBACK:** Only use polling if `northhing image/design capability serve` fails (no port available).
 In that case, show each variant inline using the Read tool (so the user can see them),
 then use AskUserQuestion:
 "The comparison board server failed to start. I've shown the variants above.
-Which do you prefer— Any feedback— "
+Which do you prefer鈥?Any feedback鈥?"
 
 **After receiving feedback (any path):** Output a clear summary confirming
 what was understood:
@@ -308,7 +308,7 @@ RATINGS: [list]
 YOUR NOTES: [comments]
 DIRECTION: [overall]
 
-Is this right— "
+Is this right鈥?"
 
 Use AskUserQuestion to verify before proceeding.
 
@@ -317,21 +317,21 @@ Use AskUserQuestion to verify before proceeding.
 echo '{"approved_variant":"<V>","feedback":"<FB>","date":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","screen":"<SCREEN>","branch":"'$(git branch --show-current 2>/dev/null)'"}' > "$_DESIGN_DIR/approved.json"
 ```
 
-**Do NOT use AskUserQuestion to ask which variant the user picked.** Read `feedback.json` — it already contains their preferred variant, ratings, comments, and overall feedback. Only use AskUserQuestion to confirm you understood the feedback correctly, never to re-ask what they chose.
+**Do NOT use AskUserQuestion to ask which variant the user picked.** Read `feedback.json` 鈥?it already contains their preferred variant, ratings, comments, and overall feedback. Only use AskUserQuestion to confirm you understood the feedback correctly, never to re-ask what they chose.
 
 Note which direction was approved. This becomes the visual reference for all subsequent review passes.
 
 **Multiple variants/screens:** If the user asked for multiple variants (e.g., "5 versions of the homepage"), generate ALL as separate variant sets with their own comparison boards. Each screen/variant set gets its own subdirectory under `designs/`. Complete all mockup generation and user selection before starting review passes.
 
-**If `BitFun image/design capability is unavailable`:** Tell the user: "The BitFun image/design capability isn't set up yet. Proceeding with text-only review, but you're missing the best part." Then proceed to review passes with text-based review.
+**If `northhing image/design capability is unavailable`:** Tell the user: "The northhing image/design capability isn't set up yet. Proceeding with text-only review, but you're missing the best part." Then proceed to review passes with text-based review.
 
 ## Design Outside Voices (parallel)
 
 Use AskUserQuestion:
-> "Want outside design voices before the detailed review— outside-voice sub-agent evaluates against OpenAI's design hard rules + litmus checks; independent subagent does an independent completeness review."
+> "Want outside design voices before the detailed review鈥?outside-voice sub-agent evaluates against OpenAI's design hard rules + litmus checks; independent subagent does an independent completeness review."
 >
-> A) Yes — run outside design voices
-> B) No — proceed without
+> A) Yes 鈥?run outside design voices
+> B) No 鈥?proceed without
 
 If user chooses B, skip this step and continue.
 
@@ -340,15 +340,15 @@ If user chooses B, skip this step and continue.
 which codex 2>/dev/null && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
 ```
 
-**If a suitable BitFun outside-voice or review sub-agent is available**, launch both voices simultaneously:
+**If a suitable northhing outside-voice or review sub-agent is available**, launch both voices simultaneously:
 
 1. **outside-voice sub-agent design voice** (via Bash):
 ```bash
 TMPERR_DESIGN=$(mktemp /tmp/codex-design-XXXXXXXX)
 _REPO_ROOT=$(git rev-parse --show-toplevel) || { echo "ERROR: not in a git repo" >&2; exit 1; }
-Use the BitFun Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
+Use the northhing Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
 
-HARD REJECTION — flag if ANY apply:
+HARD REJECTION 鈥?flag if ANY apply:
 1. Generic SaaS card grid as first impression
 2. Beautiful image with weak brand
 3. Strong headline with no clear action
@@ -357,8 +357,8 @@ HARD REJECTION — flag if ANY apply:
 6. Carousel with no narrative purpose
 7. App UI made of stacked cards instead of layout
 
-LITMUS CHECKS — answer YES or NO for each:
-1. Brand/product unmistakable in first screen— 2. One strong visual anchor present— 3. Page understandable by scanning headlines only— 4. Each section has one job— 5. Are cards actually necessary— 6. Does motion improve hierarchy or atmosphere— 7. Would design feel premium with all decorative shadows removed— HARD RULES — first classify as MARKETING/LANDING PAGE vs APP UI vs HYBRID, then flag violations of the matching rule set:
+LITMUS CHECKS 鈥?answer YES or NO for each:
+1. Brand/product unmistakable in first screen鈥?2. One strong visual anchor present鈥?3. Page understandable by scanning headlines only鈥?4. Each section has one job鈥?5. Are cards actually necessary鈥?6. Does motion improve hierarchy or atmosphere鈥?7. Would design feel premium with all decorative shadows removed鈥?HARD RULES 鈥?first classify as MARKETING/LANDING PAGE vs APP UI vs HYBRID, then flag violations of the matching rule set:
 - MARKETING: First viewport as one composition, brand-first hierarchy, full-bleed hero, 2-3 intentional motions, composition-first layout
 - APP UI: Calm surface hierarchy, dense but readable, utility language, minimal chrome
 - UNIVERSAL: CSS variables for colors, no default font stacks, one job per section, cards earn existence
@@ -370,120 +370,117 @@ Use a 5-minute timeout (`timeout: 300000`). After the command completes, read st
 cat "$TMPERR_DESIGN" && rm -f "$TMPERR_DESIGN"
 ```
 
-2. **Independent design subagent** (via BitFun Task tool):
+2. **Independent design subagent** (via northhing Task tool):
 Dispatch a subagent with this prompt:
 "Read the plan file at [plan-file-path]. You are an independent senior product designer reviewing this plan. You have NOT seen any prior review. Evaluate:
 
-1. Information hierarchy: what does the user see first, second, third— Is it right— 2. Missing states: loading, empty, error, success, partial — which are unspecified— 3. User journey: what's the emotional arc— Where does it break— 4. Specificity: does the plan describe SPECIFIC UI ("48px Söhne Bold header, #1a1a1a on white") or generic patterns ("clean modern card-based layout")— 5. What design decisions will haunt the implementer if left ambiguous— For each finding: what's wrong, severity (critical/high/medium), and the fix."
+1. Information hierarchy: what does the user see first, second, third鈥?Is it right鈥?2. Missing states: loading, empty, error, success, partial 鈥?which are unspecified鈥?3. User journey: what's the emotional arc鈥?Where does it break鈥?4. Specificity: does the plan describe SPECIFIC UI ("48px S枚hne Bold header, #1a1a1a on white") or generic patterns ("clean modern card-based layout")鈥?5. What design decisions will haunt the implementer if left ambiguous鈥?For each finding: what's wrong, severity (critical/high/medium), and the fix."
 
 **Error handling (all non-blocking):**
 
 - **Timeout:** "outside-voice sub-agent timed out after 5 minutes."
 - **Empty response:** "outside-voice sub-agent returned no response."
 - On any outside-voice sub-agent error: proceed with independent subagent output only, tagged `[single-model]`.
-- If independent subagent also fails: "Outside voices unavailable — continuing with primary review."
+- If independent subagent also fails: "Outside voices unavailable 鈥?continuing with primary review."
 
 Present outside-voice sub-agent output under a `CODEX SAYS (design critique):` header.
 Present subagent output under a `INDEPENDENT SUBAGENT (design completeness):` header.
 
-**Synthesis — Litmus scorecard:**
+**Synthesis 鈥?Litmus scorecard:**
 
 ```
-DESIGN OUTSIDE VOICES — LITMUS SCORECARD:
-═══════════════════════════════════════════════════════════════
- Check BitFun outside-voice sub-agent Consensus
- ─────────────────────────────────────── ─────── ─────── ─────────
- 1. Brand unmistakable in first screen— 2. One strong visual anchor— 3. Scannable by headlines only— 4. Each section has one job— 5. Cards actually necessary— 6. Motion improves hierarchy— 7. Premium without decorative shadows— ─────────────────────────────────────── ─────── ─────── ─────────
- Hard rejections triggered: — —
-═══════════════════════════════════════════════════════════════
-```
+DESIGN OUTSIDE VOICES 鈥?LITMUS SCORECARD:
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺? Check northhing outside-voice sub-agent Consensus
+ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+ 1. Brand unmistakable in first screen鈥?2. One strong visual anchor鈥?3. Scannable by headlines only鈥?4. Each section has one job鈥?5. Cards actually necessary鈥?6. Motion improves hierarchy鈥?7. Premium without decorative shadows鈥?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+ Hard rejections triggered: 鈥?鈥?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?```
 
 Fill in each cell from the outside-voice sub-agent and subagent outputs. CONFIRMED = both agree. DISAGREE = models differ. NOT SPEC'D = not enough info to evaluate.
 
 **Pass integration (respects existing 7-pass contract):**
-- Hard rejections → raised as the FIRST items in Pass 1, tagged `[HARD REJECTION]`
-- Litmus DISAGREE items → raised in the relevant pass with both perspectives
-- Litmus CONFIRMED failures → pre-loaded as known issues in the relevant pass
+- Hard rejections 鈫?raised as the FIRST items in Pass 1, tagged `[HARD REJECTION]`
+- Litmus DISAGREE items 鈫?raised in the relevant pass with both perspectives
+- Litmus CONFIRMED failures 鈫?pre-loaded as known issues in the relevant pass
 - Passes can skip discovery and go straight to fixing for pre-identified issues
 
 **Log the result:**
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 Replace STATUS with "clean" or "issues_found", SOURCE with "codex+subagent", "codex-only", "subagent-only", or "unavailable".
 
 ## The 0-10 Rating Method
 
-For each design section, rate the plan 0-10 on that dimension. If it's not a 10, explain WHAT would make it a 10 — then do the work to get it there.
+For each design section, rate the plan 0-10 on that dimension. If it's not a 10, explain WHAT would make it a 10 鈥?then do the work to get it there.
 
 Pattern:
 1. Rate: "Information Architecture: 4/10"
 2. Gap: "It's a 4 because the plan doesn't define content hierarchy. A 10 would have clear primary/secondary/tertiary for every screen."
 3. Fix: Edit the plan to add what's missing
-4. Re-rate: "Now 8/10 — still missing mobile nav hierarchy"
+4. Re-rate: "Now 8/10 鈥?still missing mobile nav hierarchy"
 5. AskUserQuestion if there's a genuine design choice to resolve
-6. Fix again → repeat until 10 or user says "good enough, move on"
+6. Fix again 鈫?repeat until 10 or user says "good enough, move on"
 
-Re-run loop: invoke /plan-design-review again → re-rate → sections at 8+ get a quick pass, sections below 8 get full treatment.
+Re-run loop: invoke /plan-design-review again 鈫?re-rate 鈫?sections at 8+ get a quick pass, sections below 8 get full treatment.
 
-### "Show me what 10/10 looks like" (uses BitFun image/design capability)
+### "Show me what 10/10 looks like" (uses northhing image/design capability)
 
-If `BitFun image/design capability is available` was printed during setup AND a dimension rates below 7/10,
+If `northhing image/design capability is available` was printed during setup AND a dimension rates below 7/10,
 offer to generate a visual mockup showing what the improved version would look like:
 
 ```bash
-BitFun image/design capability generate --brief "<description of what 10/10 looks like for this dimension>" --output /tmp/gstack-ideal-<dimension>.png
+northhing image/design capability generate --brief "<description of what 10/10 looks like for this dimension>" --output /tmp/gstack-ideal-<dimension>.png
 ```
 
 Show the mockup to the user via the Read tool. This makes the gap between
 "what the plan describes" and "what it should look like" visceral, not abstract.
 
-If the BitFun image/design capability is not available, skip this and continue with text-based
+If the northhing image/design capability is not available, skip this and continue with text-based
 descriptions of what 10/10 looks like.
 
 ## Review Sections (7 passes, after scope is agreed)
 
-**Anti-skip rule:** Never condense, abbreviate, or skip any review pass (1-7) regardless of plan type (strategy, spec, code, infra). Every pass in this skill exists for a reason. "This is a strategy doc so design passes don't apply" is always wrong — design gaps are where implementation breaks down. If a pass genuinely has zero findings, say "No issues found" and move on — but you must evaluate it.
+**Anti-skip rule:** Never condense, abbreviate, or skip any review pass (1-7) regardless of plan type (strategy, spec, code, infra). Every pass in this skill exists for a reason. "This is a strategy doc so design passes don't apply" is always wrong 鈥?design gaps are where implementation breaks down. If a pass genuinely has zero findings, say "No issues found" and move on 鈥?but you must evaluate it.
 
 ## Prior Learnings
 
-Use only BitFun in-session memory, project docs, `.bitfun/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior BitFun context applied: <source>`.
+Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
 ### Pass 1: Information Architecture
-Rate 0-10: Does the plan define what the user sees first, second, third— FIX TO 10: Add information hierarchy to the plan. Include ASCII diagram of screen/page structure and navigation flow. Apply "constraint worship" — if you can only show 3 things, which 3— **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues, say so and move on. Do NOT proceed until user responds.
+Rate 0-10: Does the plan define what the user sees first, second, third鈥?FIX TO 10: Add information hierarchy to the plan. Include ASCII diagram of screen/page structure and navigation flow. Apply "constraint worship" 鈥?if you can only show 3 things, which 3鈥?**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If no issues, say so and move on. Do NOT proceed until user responds.
 
 ### Pass 2: Interaction State Coverage
-Rate 0-10: Does the plan specify loading, empty, error, success, partial states— FIX TO 10: Add interaction state table to the plan:
+Rate 0-10: Does the plan specify loading, empty, error, success, partial states鈥?FIX TO 10: Add interaction state table to the plan:
 ```
  FEATURE | LOADING | EMPTY | ERROR | SUCCESS | PARTIAL
  ---------------------|---------|-------|-------|---------|--------
  [each UI feature] | [spec] | [spec]| [spec]| [spec] | [spec]
 ```
 For each state: describe what the user SEES, not backend behavior.
-Empty states are features — specify warmth, primary action, context.
+Empty states are features 鈥?specify warmth, primary action, context.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
 
 ### Pass 3: User Journey & Emotional Arc
-Rate 0-10: Does the plan consider the user's emotional experience— FIX TO 10: Add user journey storyboard:
+Rate 0-10: Does the plan consider the user's emotional experience鈥?FIX TO 10: Add user journey storyboard:
 ```
- STEP | USER DOES | USER FEELS | PLAN SPECIFIES— |------------------|-----------------|----------------
- 1 | Lands on page | [what emotion— ] | [what supports it— ]
+ STEP | USER DOES | USER FEELS | PLAN SPECIFIES鈥?|------------------|-----------------|----------------
+ 1 | Lands on page | [what emotion鈥?] | [what supports it鈥?]
  ...
 ```
 Apply time-horizon design: 5-sec visceral, 5-min behavioral, 5-year reflective.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
 
 ### Pass 4: AI Slop Risk
-Rate 0-10: Does the plan describe specific, intentional UI — or generic patterns— FIX TO 10: Rewrite vague UI descriptions with specific alternatives.
+Rate 0-10: Does the plan describe specific, intentional UI 鈥?or generic patterns鈥?FIX TO 10: Rewrite vague UI descriptions with specific alternatives.
 
 ### Design Hard Rules
 
-**Classifier — determine rule set before evaluating:**
-- **MARKETING/LANDING PAGE** (hero-driven, brand-forward, conversion-focused) → apply Landing Page Rules
-- **APP UI** (workspace-driven, data-dense, task-focused: dashboards, admin, settings) → apply App UI Rules
-- **HYBRID** (marketing shell with app-like sections) → apply Landing Page Rules to hero/marketing sections, App UI Rules to functional sections
+**Classifier 鈥?determine rule set before evaluating:**
+- **MARKETING/LANDING PAGE** (hero-driven, brand-forward, conversion-focused) 鈫?apply Landing Page Rules
+- **APP UI** (workspace-driven, data-dense, task-focused: dashboards, admin, settings) 鈫?apply App UI Rules
+- **HYBRID** (marketing shell with app-like sections) 鈫?apply Landing Page Rules to hero/marketing sections, App UI Rules to functional sections
 
-**Hard rejection criteria** (instant-fail patterns — flag if ANY apply):
+**Hard rejection criteria** (instant-fail patterns 鈥?flag if ANY apply):
 1. Generic SaaS card grid as first impression
 2. Beautiful image with weak brand
 3. Strong headline with no clear action
@@ -492,12 +489,12 @@ Rate 0-10: Does the plan describe specific, intentional UI — or generic patter
 6. Carousel with no narrative purpose
 7. App UI made of stacked cards instead of layout
 
-**Litmus checks** (answer YES/NO for each — used for cross-model consensus scoring):
-1. Brand/product unmistakable in first screen— 2. One strong visual anchor present— 3. Page understandable by scanning headlines only— 4. Each section has one job— 5. Are cards actually necessary— 6. Does motion improve hierarchy or atmosphere— 7. Would design feel premium with all decorative shadows removed— **Landing page rules** (apply when classifier = MARKETING/LANDING):
+**Litmus checks** (answer YES/NO for each 鈥?used for cross-model consensus scoring):
+1. Brand/product unmistakable in first screen鈥?2. One strong visual anchor present鈥?3. Page understandable by scanning headlines only鈥?4. Each section has one job鈥?5. Are cards actually necessary鈥?6. Does motion improve hierarchy or atmosphere鈥?7. Would design feel premium with all decorative shadows removed鈥?**Landing page rules** (apply when classifier = MARKETING/LANDING):
 - First viewport reads as one composition, not a dashboard
 - Brand-first hierarchy: brand > headline > body > CTA
-- Typography: expressive, purposeful — no default stacks (Inter, Roboto, Arial, system)
-- No flat single-color backgrounds — use gradients, images, subtle patterns
+- Typography: expressive, purposeful 鈥?no default stacks (Inter, Roboto, Arial, system)
+- No flat single-color backgrounds 鈥?use gradients, images, subtle patterns
 - Hero: full-bleed, edge-to-edge, no inset/tiled/rounded variants
 - Hero budget: brand, one headline, one supporting sentence, one CTA group, one image
 - No cards in hero. Cards only when card IS the interaction
@@ -512,7 +509,7 @@ Rate 0-10: Does the plan describe specific, intentional UI — or generic patter
 - Dense but readable, minimal chrome
 - Organize: primary workspace, navigation, secondary context, one accent
 - Avoid: dashboard-card mosaics, thick borders, decorative gradients, ornamental icons
-- Copy: utility language — orientation, status, action. Not mood/brand/aspiration
+- Copy: utility language 鈥?orientation, status, action. Not mood/brand/aspiration
 - Cards only when card IS the interaction
 - Section headings state what area is or what user can do ("Selected KPIs", "Plan status")
 
@@ -521,7 +518,7 @@ Rate 0-10: Does the plan describe specific, intentional UI — or generic patter
 - No default font stacks (Inter, Roboto, Arial, system)
 - One job per section
 - "If deleting 30% of the copy improves it, keep deleting"
-- Cards earn their existence — no decorative card grids
+- Cards earn their existence 鈥?no decorative card grids
 
 **AI Slop blacklist** (the 10 patterns that scream "AI-generated"):
 1. Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes
@@ -533,19 +530,19 @@ Rate 0-10: Does the plan describe specific, intentional UI — or generic patter
 7. Emoji as design elements (rockets in headings, emoji as bullet points)
 8. Colored left-border on cards (`border-left: 3px solid <accent>`)
 9. Generic hero copy ("Welcome to [X]", "Unlock the power of...", "Your all-in-one solution for...")
-10. Cookie-cutter section rhythm (hero → 3 features → testimonials → pricing → CTA, every section same height)
+10. Cookie-cutter section rhythm (hero 鈫?3 features 鈫?testimonials 鈫?pricing 鈫?CTA, every section same height)
 
 Source: [OpenAI "Designing Delightful Frontends with GPT-5.4"](https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4) (Mar 2026) + gstack design methodology.
-- "Cards with icons" → what differentiates these from every SaaS template— "Hero section" → what makes this hero feel like THIS product— "Clean, modern UI" → meaningless. Replace with actual design decisions.
-- "Dashboard with widgets" → what makes this NOT every other dashboard— If visual mockups were generated in Step 0.5, evaluate them against the AI slop blacklist above. Read each mockup image using the Read tool. Does the mockup fall into generic patterns (3-column grid, centered hero, stock-photo feel)— If so, flag it and offer to regenerate with more specific direction via `BitFun image/design capability iterate --feedback "..."`.
+- "Cards with icons" 鈫?what differentiates these from every SaaS template鈥?"Hero section" 鈫?what makes this hero feel like THIS product鈥?"Clean, modern UI" 鈫?meaningless. Replace with actual design decisions.
+- "Dashboard with widgets" 鈫?what makes this NOT every other dashboard鈥?If visual mockups were generated in Step 0.5, evaluate them against the AI slop blacklist above. Read each mockup image using the Read tool. Does the mockup fall into generic patterns (3-column grid, centered hero, stock-photo feel)鈥?If so, flag it and offer to regenerate with more specific direction via `northhing image/design capability iterate --feedback "..."`.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
 
 ### Pass 5: Design System Alignment
-Rate 0-10: Does the plan align with DESIGN.md— FIX TO 10: If DESIGN.md exists, annotate with specific tokens/components. If no DESIGN.md, flag the gap and recommend `/design-consultation`.
-Flag any new component — does it fit the existing vocabulary— **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
+Rate 0-10: Does the plan align with DESIGN.md鈥?FIX TO 10: If DESIGN.md exists, annotate with specific tokens/components. If no DESIGN.md, flag the gap and recommend `/design-consultation`.
+Flag any new component 鈥?does it fit the existing vocabulary鈥?**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
 
 ### Pass 6: Responsive & Accessibility
-Rate 0-10: Does the plan specify mobile/tablet, keyboard nav, screen readers— FIX TO 10: Add responsive specs per viewport — not "stacked on mobile" but intentional layout changes. Add a11y: keyboard nav patterns, ARIA landmarks, touch target sizes (44px min), color contrast requirements.
+Rate 0-10: Does the plan specify mobile/tablet, keyboard nav, screen readers鈥?FIX TO 10: Add responsive specs per viewport 鈥?not "stacked on mobile" but intentional layout changes. Add a11y: keyboard nav patterns, ARIA landmarks, touch target sizes (44px min), color contrast requirements.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY.
 
 ### Pass 7: Unresolved Design Decisions
@@ -553,30 +550,30 @@ Surface ambiguities that will haunt implementation:
 ```
  DECISION NEEDED | IF DEFERRED, WHAT HAPPENS
  -----------------------------|---------------------------
- What does empty state look like— | Engineer ships "No items found."
- Mobile nav pattern— | Desktop nav hides behind hamburger
+ What does empty state look like鈥?| Engineer ships "No items found."
+ Mobile nav pattern鈥?| Desktop nav hides behind hamburger
  ...
 ```
-If visual mockups were generated in Step 0.5, reference them as evidence when surfacing unresolved decisions. A mockup makes decisions concrete — e.g., "Your approved mockup shows a sidebar nav, but the plan doesn't specify mobile behavior. What happens to this sidebar on 375px— "
+If visual mockups were generated in Step 0.5, reference them as evidence when surfacing unresolved decisions. A mockup makes decisions concrete 鈥?e.g., "Your approved mockup shows a sidebar nav, but the plan doesn't specify mobile behavior. What happens to this sidebar on 375px鈥?"
 Each decision = one AskUserQuestion with recommendation + WHY + alternatives. Edit the plan with each decision as it's made.
 
 ### Post-Pass: Update Mockups (if generated)
 
 If mockups were generated in Step 0.5 and review passes changed significant design decisions (information architecture restructure, new states, layout changes), offer to regenerate (one-shot, not a loop):
 
-AskUserQuestion: "The review passes changed [list major design changes]. Want me to regenerate mockups to reflect the updated plan— This ensures the visual reference matches what we're actually building."
+AskUserQuestion: "The review passes changed [list major design changes]. Want me to regenerate mockups to reflect the updated plan鈥?This ensures the visual reference matches what we're actually building."
 
-If yes, use `BitFun image/design capability iterate` with feedback summarizing the changes, or `BitFun image/design capability variants` with an updated brief. Save to the same `$_DESIGN_DIR` directory.
+If yes, use `northhing image/design capability iterate` with feedback summarizing the changes, or `northhing image/design capability variants` with an updated brief. Save to the same `$_DESIGN_DIR` directory.
 
-## CRITICAL RULE — How to ask questions
+## CRITICAL RULE 鈥?How to ask questions
 Follow the AskUserQuestion format from the Preamble above. Additional rules for plan design reviews:
 * **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
-* Describe the design gap concretely — what's missing, what the user will experience if it's not specified.
+* Describe the design gap concretely 鈥?what's missing, what the user will experience if it's not specified.
 * Present 2-3 options. For each: effort to specify now, risk if deferred.
 * **Map to Design Principles above.** One sentence connecting your recommendation to a specific principle.
 * Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
-* **Escape hatch:** If a section has no issues, say so and move on. If a gap has an obvious fix, state what you'll add and move on — don't waste a question on it. Only use AskUserQuestion when there is a genuine design choice with meaningful tradeoffs.
-* **NEVER use AskUserQuestion to ask which variant the user prefers.** Always create a comparison board first (`BitFun image/design capability compare --serve`) and open it in the browser. The board has rating controls, comments, remix/regenerate buttons, and structured feedback output. Use AskUserQuestion ONLY to notify the user the board is open and wait for them to finish — not to present variants inline and ask "which do you prefer— " That is a degraded experience.
+* **Escape hatch:** If a section has no issues, say so and move on. If a gap has an obvious fix, state what you'll add and move on 鈥?don't waste a question on it. Only use AskUserQuestion when there is a genuine design choice with meaningful tradeoffs.
+* **NEVER use AskUserQuestion to ask which variant the user prefers.** Always create a comparison board first (`northhing image/design capability compare --serve`) and open it in the browser. The board has rating controls, comments, remix/regenerate buttons, and structured feedback output. Use AskUserQuestion ONLY to notify the user the board is open and wait for them to finish 鈥?not to present variants inline and ask "which do you prefer鈥?" That is a degraded experience.
 
 ## Required Outputs
 
@@ -587,7 +584,7 @@ Design decisions considered and explicitly deferred, with one-line rationale eac
 Existing DESIGN.md, UI patterns, and components that the plan should reuse.
 
 ### TODOS.md updates
-After all review passes are complete, present each potential TODO as its own individual AskUserQuestion. Never batch TODOs — one per question. Never silently skip this step.
+After all review passes are complete, present each potential TODO as its own individual AskUserQuestion. Never batch TODOs 鈥?one per question. Never silently skip this step.
 
 For design debt: missing a11y, unresolved responsive behavior, deferred empty states. Each TODO gets:
 * **What:** One-line description of the work.
@@ -597,21 +594,21 @@ For design debt: missing a11y, unresolved responsive behavior, deferred empty st
 * **Context:** Enough detail that someone picking this up in 3 months understands the motivation.
 * **Depends on / blocked by:** Any prerequisites.
 
-Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough **C)** Build it now in this PR instead of deferring.
+Then present options: **A)** Add to TODOS.md **B)** Skip 鈥?not valuable enough **C)** Build it now in this PR instead of deferring.
 
 ### Completion Summary
 ```
  +====================================================================+
- | DESIGN PLAN REVIEW — COMPLETION SUMMARY |
+ | DESIGN PLAN REVIEW 鈥?COMPLETION SUMMARY |
  +====================================================================+
  | System Audit | [DESIGN.md status, UI scope] |
  | Step 0 | [initial rating, focus areas] |
- | Pass 1 (Info Arch) | ___/10 → ___/10 after fixes |
- | Pass 2 (States) | ___/10 → ___/10 after fixes |
- | Pass 3 (Journey) | ___/10 → ___/10 after fixes |
- | Pass 4 (AI Slop) | ___/10 → ___/10 after fixes |
- | Pass 5 (Design Sys) | ___/10 → ___/10 after fixes |
- | Pass 6 (Responsive) | ___/10 → ___/10 after fixes |
+ | Pass 1 (Info Arch) | ___/10 鈫?___/10 after fixes |
+ | Pass 2 (States) | ___/10 鈫?___/10 after fixes |
+ | Pass 3 (Journey) | ___/10 鈫?___/10 after fixes |
+ | Pass 4 (AI Slop) | ___/10 鈫?___/10 after fixes |
+ | Pass 5 (Design Sys) | ___/10 鈫?___/10 after fixes |
+ | Pass 6 (Responsive) | ___/10 鈫?___/10 after fixes |
  | Pass 7 (Decisions) | ___ resolved, ___ deferred |
  +--------------------------------------------------------------------+
  | NOT in scope | written (___ items) |
@@ -620,7 +617,7 @@ Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough
  | Approved Mockups | ___ generated, ___ approved |
  | Decisions made | ___ added to plan |
  | Decisions deferred | ___ (listed below) |
- | Overall design score | ___/10 → ___/10 |
+ | Overall design score | ___/10 鈫?___/10 |
  +====================================================================+
 ```
 
@@ -639,7 +636,7 @@ If visual mockups were generated during this review, add to the plan file:
 
 | Screen/Section | Mockup Path | Direction | Notes |
 |----------------|-------------|-----------|-------|
-| [screen name] | $HOME/.bitfun/team/projects/$SLUG/designs/[folder]/[filename].png | [brief description] | [constraints from review] |
+| [screen name] | $HOME/.northhing/team/projects/$SLUG/designs/[folder]/[filename].png | [brief description] | [constraints from review] |
 ```
 
 Include the full path to each approved mockup (the variant the user chose), a one-line description of the direction, and any constraints. The implementer reads this to know exactly which visual to build from. These persist across conversations and workspaces. If no mockups were generated, omit this section.
@@ -648,14 +645,14 @@ Include the full path to each approved mockup (the variant the user chose), a on
 
 After producing the Completion Summary above, persist the review result.
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** This command writes review metadata to
-`$HOME/.bitfun/team/` (user config directory, not project files). The skill preamble
-already writes to `$HOME/.bitfun/team/sessions/` and `$HOME/.bitfun/team/analytics/` — this is
+**PLAN MODE EXCEPTION 鈥?ALWAYS RUN:** This command writes review metadata to
+`$HOME/.northhing/team/` (user config directory, not project files). The skill preamble
+already writes to `$HOME/.northhing/team/sessions/` and `$HOME/.northhing/team/analytics/` 鈥?this is
 the same pattern. The review dashboard depends on this data. Skipping this
 command breaks the review readiness dashboard in /ship.
 
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 
 Substitute values from the Completion Summary:
@@ -672,10 +669,10 @@ Substitute values from the Completion Summary:
 After completing the review, read the review log and config to display the dashboard.
 
 ```bash
-true # BitFun Team Mode reads review context from the current session
+true # northhing Team Mode reads review context from the current session
 ```
 
-Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry — this captures outside voices from both /plan-ceo-review and /plan-eng-review.
+Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry 鈥?this captures outside voices from both /plan-ceo-review and /plan-eng-review.
 
 **Source attribution:** If the most recent entry for a skill has a \`"via"\` field, append it to the status label in parentheses. Examples: `plan-eng-review` with `via:"autoplan"` shows as "CLEAR (PLAN via /autoplan)". `review` with `via:"ship"` shows as "CLEAR (DIFF via /ship)". Entries without a `via` field show as "CLEAR (PLAN)" or "CLEAR (DIFF)" as before.
 
@@ -690,12 +687,12 @@ Display:
 | Review | Runs | Last Run | Status | Required |
 |-----------------|------|---------------------|-----------|----------|
 | Eng Review | 1 | 2026-03-16 15:00 | CLEAR | YES |
-| CEO Review | 0 | — | — | no |
-| Design Review | 0 | — | — | no |
-| Adversarial | 0 | — | — | no |
-| Outside Voice | 0 | — | — | no |
+| CEO Review | 0 | 鈥?| 鈥?| no |
+| Design Review | 0 | 鈥?| 鈥?| no |
+| Adversarial | 0 | 鈥?| 鈥?| no |
+| Outside Voice | 0 | 鈥?| 鈥?| no |
 +--------------------------------------------------------------------+
-| VERDICT: CLEARED — Eng Review passed |
+| VERDICT: CLEARED 鈥?Eng Review passed |
 +====================================================================+
 ```
 
@@ -703,7 +700,7 @@ Display:
 - **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with \`Team Mode setting skip_eng_review=true\` (the "don't bother me" setting).
 - **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
 - **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
-- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both BitFun adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
+- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both northhing adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
 - **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to independent subagent if outside-voice sub-agent is unavailable. Never gates shipping.
 
 **Verdict logic:**
@@ -714,8 +711,8 @@ Display:
 
 **Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
 - Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
-- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
-- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
+- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale 鈥?{N} commits since review"
+- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking 鈥?consider re-running for accurate staleness detection"
 - If all reviews match the current HEAD, do not display any staleness notes
 
 ## Plan File Review Report
@@ -726,8 +723,8 @@ After displaying the Review Readiness Dashboard in conversation output, also upd
 ### Detect the plan file
 
 1. Check if there is an active plan file in this conversation (the host provides plan file
- paths in system messages — look for plan file references in the conversation context).
-2. If not found, skip this section silently — not every review runs in plan mode.
+ paths in system messages 鈥?look for plan file references in the conversation context).
+2. If not found, skip this section silently 鈥?not every review runs in plan mode.
 
 ### Generate the report
 
@@ -735,22 +732,22 @@ Read the review log output you already have from the Review Readiness Dashboard 
 Parse each JSONL entry. Each skill logs different fields:
 
 - **plan-ceo-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`mode\`, \`scope_proposed\`, \`scope_accepted\`, \`scope_deferred\`, \`commit\`
- → Findings: "{scope_proposed} proposals, {scope_accepted} accepted, {scope_deferred} deferred"
- → If scope fields are 0 or missing (HOLD/REDUCTION mode): "mode: {mode}, {critical_gaps} critical gaps"
+ 鈫?Findings: "{scope_proposed} proposals, {scope_accepted} accepted, {scope_deferred} deferred"
+ 鈫?If scope fields are 0 or missing (HOLD/REDUCTION mode): "mode: {mode}, {critical_gaps} critical gaps"
 - **plan-eng-review**: \`status\`, \`unresolved\`, \`critical_gaps\`, \`issues_found\`, \`mode\`, \`commit\`
- → Findings: "{issues_found} issues, {critical_gaps} critical gaps"
+ 鈫?Findings: "{issues_found} issues, {critical_gaps} critical gaps"
 - **plan-design-review**: \`status\`, \`initial_score\`, \`overall_score\`, \`unresolved\`, \`decisions_made\`, \`commit\`
- → Findings: "score: {initial_score}/10 → {overall_score}/10, {decisions_made} decisions"
+ 鈫?Findings: "score: {initial_score}/10 鈫?{overall_score}/10, {decisions_made} decisions"
 - **plan-devex-review**: \`status\`, \`initial_score\`, \`overall_score\`, \`product_type\`, \`tthw_current\`, \`tthw_target\`, \`mode\`, \`persona\`, \`competitive_tier\`, \`unresolved\`, \`commit\`
- → Findings: "score: {initial_score}/10 → {overall_score}/10, TTHW: {tthw_current} → {tthw_target}"
+ 鈫?Findings: "score: {initial_score}/10 鈫?{overall_score}/10, TTHW: {tthw_current} 鈫?{tthw_target}"
 - **devex-review**: \`status\`, \`overall_score\`, \`product_type\`, \`tthw_measured\`, \`dimensions_tested\`, \`dimensions_inferred\`, \`boomerang\`, \`commit\`
- → Findings: "score: {overall_score}/10, TTHW: {tthw_measured}, {dimensions_tested} tested/{dimensions_inferred} inferred"
+ 鈫?Findings: "score: {overall_score}/10, TTHW: {tthw_measured}, {dimensions_tested} tested/{dimensions_inferred} inferred"
 - **outside-voice-review**: \`status\`, \`gate\`, \`findings\`, \`findings_fixed\`
- → Findings: "{findings} findings, {findings_fixed}/{findings} fixed"
+ 鈫?Findings: "{findings} findings, {findings_fixed}/{findings} fixed"
 
 All fields needed for the Findings column are now present in the JSONL entries.
 For the review you just completed, you may use richer details from your own Completion
-Summary. For prior reviews, use the JSONL fields directly — they contain all required data.
+Summary. For prior reviews, use the JSONL fields directly 鈥?they contain all required data.
 
 Produce this markdown table:
 
@@ -760,7 +757,7 @@ Produce this markdown table:
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | \`/plan-ceo-review\` | Scope & strategy | {runs} | {status} | {findings} |
-| outside-voice sub-agent Review | \`BitFun Task outside-voice review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
+| outside-voice sub-agent Review | \`northhing Task outside-voice review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
 | Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | {runs} | {status} | {findings} |
 | Design Review | \`/plan-design-review\` | UI/UX gaps | {runs} | {status} | {findings} |
 | DX Review | \`/plan-devex-review\` | Developer experience gaps | {runs} | {status} | {findings} |
@@ -768,20 +765,20 @@ Produce this markdown table:
 
 Below the table, add these lines (omit any that are empty/not applicable):
 
-- **CODEX:** (only if outside-voice-review ran) — one-line summary of codex fixes
-- **CROSS-MODEL:** (only if both BitFun and outside-voice sub-agent reviews exist) — overlap analysis
+- **CODEX:** (only if outside-voice-review ran) 鈥?one-line summary of codex fixes
+- **CROSS-MODEL:** (only if both northhing and outside-voice sub-agent reviews exist) 鈥?overlap analysis
 - **UNRESOLVED:** total unresolved decisions across all reviews
-- **VERDICT:** list reviews that are CLEAR (e.g., "CEO + ENG CLEARED — ready to implement").
+- **VERDICT:** list reviews that are CLEAR (e.g., "CEO + ENG CLEARED 鈥?ready to implement").
  If Eng Review is not CLEAR and not skipped globally, append "eng review required".
 
 ### Write to the plan file
 
-**PLAN MODE EXCEPTION — ALWAYS RUN:** This writes to the plan file, which is the one
+**PLAN MODE EXCEPTION 鈥?ALWAYS RUN:** This writes to the plan file, which is the one
 file you are allowed to edit in plan mode. The plan file review report is part of the
 plan's living status.
 
 - Search the plan file for a \`## GSTACK REVIEW REPORT\` section **anywhere** in the file
- (not just at the end — content may have been added after it).
+ (not just at the end 鈥?content may have been added after it).
 - If found, **replace it** entirely using the Edit tool. Match from \`## GSTACK REVIEW REPORT\`
  through either the next \`## \` heading or end of file, whichever comes first. This ensures
  content added after the report section is preserved, not eaten. If the Edit fails
@@ -796,7 +793,7 @@ If you discovered a non-obvious pattern, pitfall, or architectural insight durin
 this session, log it for future sessions:
 
 ```bash
-true # BitFun Team Mode has no external telemetry helper
+true # northhing Team Mode has no external telemetry helper
 ```
 
 **Types:** `pattern` (reusable approach), `pitfall` (what NOT to do), `preference`
@@ -804,7 +801,7 @@ true # BitFun Team Mode has no external telemetry helper
 `operational` (project environment/CLI/workflow knowledge).
 
 **Sources:** `observed` (you found this in the code), `user-stated` (user told you),
-`inferred` (AI deduction), `cross-model` (both BitFun and outside-voice sub-agent agree).
+`inferred` (AI deduction), `cross-model` (both northhing and outside-voice sub-agent agree).
 
 **Confidence:** 1-10. Be honest. An observed pattern you verified in the code is 8-9.
 An inference you're not sure about is 4-5. A user preference they explicitly stated is 10.
@@ -813,19 +810,19 @@ An inference you're not sure about is 4-5. A user preference they explicitly sta
 staleness detection: if those files are later deleted, the learning can be flagged.
 
 **Only log genuine discoveries.** Don't log obvious things. Don't log things the user
-already knows. A good test: would this insight save time in a future session— If yes, log it.
+already knows. A good test: would this insight save time in a future session鈥?If yes, log it.
 
-## Next Steps — Review Chaining
+## Next Steps 鈥?Review Chaining
 
 After displaying the Review Readiness Dashboard, recommend the next review(s) based on what this design review discovered. Read the dashboard output to see which reviews have already been run and whether they are stale.
 
-**Recommend /plan-eng-review if eng review is not skipped globally** — check the dashboard output for `skip_eng_review`. If it is `true`, eng review is opted out — do not recommend it. Otherwise, eng review is the required shipping gate. If this design review added significant interaction specifications, new user flows, or changed the information architecture, emphasize that eng review needs to validate the architectural implications. If an eng review already exists but the commit hash shows it predates this design review, note that it may be stale and should be re-run.
+**Recommend /plan-eng-review if eng review is not skipped globally** 鈥?check the dashboard output for `skip_eng_review`. If it is `true`, eng review is opted out 鈥?do not recommend it. Otherwise, eng review is the required shipping gate. If this design review added significant interaction specifications, new user flows, or changed the information architecture, emphasize that eng review needs to validate the architectural implications. If an eng review already exists but the commit hash shows it predates this design review, note that it may be stale and should be re-run.
 
-**Consider recommending /plan-ceo-review** — but only if this design review revealed fundamental product direction gaps. Specifically: if the overall design score started below 4/10, if the information architecture had major structural problems, or if the review surfaced questions about whether the right problem is being solved. AND no CEO review exists in the dashboard. This is a selective recommendation — most design reviews should NOT trigger a CEO review.
+**Consider recommending /plan-ceo-review** 鈥?but only if this design review revealed fundamental product direction gaps. Specifically: if the overall design score started below 4/10, if the information architecture had major structural problems, or if the review surfaced questions about whether the right problem is being solved. AND no CEO review exists in the dashboard. This is a selective recommendation 鈥?most design reviews should NOT trigger a CEO review.
 
 **If both are needed, recommend eng review first** (required gate).
 
-**Recommend design exploration skills when appropriate** — /design-shotgun and /design-html
+**Recommend design exploration skills when appropriate** 鈥?/design-shotgun and /design-html
 produce design artifacts (mockups, HTML previews), not application code. They belong in
 plan mode alongside reviews. If this design review found visual issues that would benefit
 from exploring new directions, recommend /design-shotgun. If approved mockups exist and
@@ -834,9 +831,9 @@ need to be turned into working HTML, recommend /design-html.
 Use AskUserQuestion to present the next step. Include only applicable options:
 - **A)** Run /plan-eng-review next (required gate)
 - **B)** Run /plan-ceo-review (only if fundamental product gaps found)
-- **C)** Run /design-shotgun — explore visual design variants for issues found
-- **D)** Run /design-html — generate Pretext-native HTML from approved mockups
-- **E)** Skip — I'll handle next steps manually
+- **C)** Run /design-shotgun 鈥?explore visual design variants for issues found
+- **D)** Run /design-html 鈥?generate Pretext-native HTML from approved mockups
+- **E)** Skip 鈥?I'll handle next steps manually
 
 ## Formatting Rules
 * NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).

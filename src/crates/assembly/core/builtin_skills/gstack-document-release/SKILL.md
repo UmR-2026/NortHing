@@ -1,4 +1,4 @@
----
+﻿---
 name: document-release
 description: |
   Post-ship documentation update. Reads all project docs, cross-references the
@@ -33,13 +33,13 @@ subjective decisions.
 - Cross-doc factual inconsistencies (e.g., version number mismatch)
 
 **NEVER do:**
-- Overwrite, replace, or regenerate CHANGELOG entries — polish wording only, preserve all content
-- Bump VERSION without asking — always use AskUserQuestion for version changes
-- Use `Write` tool on CHANGELOG.md — always use `Edit` with exact `old_string` matches
+- Overwrite, replace, or regenerate CHANGELOG entries 鈥?polish wording only, preserve all content
+- Bump VERSION without asking 鈥?always use AskUserQuestion for version changes
+- Use `Write` tool on CHANGELOG.md 鈥?always use `Edit` with exact `old_string` matches
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the documentation-release methodology. Use existing Task sub-agents for read-only doc drift discovery, then keep edits in the main Team session.
+When this skill is invoked by northhing Team Mode, this skill supplies the documentation-release methodology. Use existing Task sub-agents for read-only doc drift discovery, then keep edits in the main Team session.
 
 - Do not assume a Technical Writer sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer matching custom docs/writing sub-agents if available; otherwise use `Explore` for diff-to-doc mapping and `FileFinder` for locating impacted docs.
@@ -70,14 +70,14 @@ git diff <base>...HEAD --name-only
 3. Discover all documentation files in the repo:
 
 ```bash
-find . -maxdepth 2 -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./.bitfun/team/*" -not -path "./.context/*" | sort
+find . -maxdepth 2 -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./.northhing/team/*" -not -path "./.context/*" | sort
 ```
 
 4. Classify the changes into categories relevant to documentation:
-   - **New features** — new files, new commands, new skills, new capabilities
-   - **Changed behavior** — modified services, updated APIs, config changes
-   - **Removed functionality** — deleted files, removed commands
-   - **Infrastructure** — build system, test infrastructure, CI
+   - **New features** 鈥?new files, new commands, new skills, new capabilities
+   - **Changed behavior** 鈥?modified services, updated APIs, config changes
+   - **Removed functionality** 鈥?deleted files, removed commands
+   - **Infrastructure** 鈥?build system, test infrastructure, CI
 
 5. Output a brief summary: "Analyzing N files changed across M commits. Found K documentation files to review."
 
@@ -86,7 +86,7 @@ find . -maxdepth 2 -name "*.md" -not -path "./.git/*" -not -path "./node_modules
 ## Step 2: Per-File Documentation Audit
 
 Read each documentation file and cross-reference it against the diff. Use these generic heuristics
-(adapt to whatever project you're in — these are not gstack-specific):
+(adapt to whatever project you're in 鈥?these are not gstack-specific):
 
 **README.md:**
 - Does it describe all features and capabilities visible in the diff?
@@ -97,10 +97,10 @@ Read each documentation file and cross-reference it against the diff. Use these 
 **ARCHITECTURE.md:**
 - Do ASCII diagrams and component descriptions match the current code?
 - Are design decisions and "why" explanations still accurate?
-- Be conservative — only update things clearly contradicted by the diff. Architecture docs
+- Be conservative 鈥?only update things clearly contradicted by the diff. Architecture docs
   describe things unlikely to change frequently.
 
-**CONTRIBUTING.md — New contributor smoke test:**
+**CONTRIBUTING.md 鈥?New contributor smoke test:**
 - Walk through the setup instructions as if you are a brand new contributor.
 - Are the listed commands accurate? Would each step succeed?
 - Do test tier descriptions match the current test infrastructure?
@@ -118,9 +118,9 @@ Read each documentation file and cross-reference it against the diff. Use these 
 
 For each file, classify needed updates as:
 
-- **Auto-update** — Factual corrections clearly warranted by the diff: adding an item to a
+- **Auto-update** 鈥?Factual corrections clearly warranted by the diff: adding an item to a
   table, updating a file path, fixing a count, updating a project structure tree.
-- **Ask user** — Narrative changes, section removal, security model changes, large rewrites
+- **Ask user** 鈥?Narrative changes, section removal, security model changes, large rewrites
   (more than ~10 lines in one section), ambiguous relevance, adding entirely new sections.
 
 ---
@@ -129,7 +129,7 @@ For each file, classify needed updates as:
 
 Make all clear, factual updates directly using the Edit tool.
 
-For each file modified, output a one-line summary describing **what specifically changed** — not
+For each file modified, output a one-line summary describing **what specifically changed** 鈥?not
 just "Updated README.md" but "README.md: added /new-skill to skills table, updated skill count
 from 9 to 10."
 
@@ -147,7 +147,7 @@ For each risky or questionable update identified in Step 2, use AskUserQuestion 
 - Context: project name, branch, which doc file, what we're reviewing
 - The specific documentation decision
 - `RECOMMENDATION: Choose [X] because [one-line reason]`
-- Options including C) Skip — leave as-is
+- Options including C) Skip 鈥?leave as-is
 
 Apply approved changes immediately after each answer.
 
@@ -155,7 +155,7 @@ Apply approved changes immediately after each answer.
 
 ## Step 5: CHANGELOG Voice Polish
 
-**CRITICAL — NEVER CLOBBER CHANGELOG ENTRIES.**
+**CRITICAL 鈥?NEVER CLOBBER CHANGELOG ENTRIES.**
 
 This step polishes voice. It does NOT rewrite, replace, or regenerate CHANGELOG content.
 
@@ -168,8 +168,8 @@ preserved them. This skill must NEVER do that.
 3. Never regenerate a CHANGELOG entry from scratch. The entry was written by `/ship` from the
    actual diff and commit history. It is the source of truth. You are polishing prose, not
    rewriting history.
-4. If an entry looks wrong or incomplete, use AskUserQuestion — do NOT silently fix it.
-5. Use Edit tool with exact `old_string` matches — never use Write to overwrite CHANGELOG.md.
+4. If an entry looks wrong or incomplete, use AskUserQuestion 鈥?do NOT silently fix it.
+5. Use Edit tool with exact `old_string` matches 鈥?never use Write to overwrite CHANGELOG.md.
 
 **If CHANGELOG was not modified in this branch:** skip this step.
 
@@ -177,7 +177,7 @@ preserved them. This skill must NEVER do that.
 
 - **Sell test:** Would a user reading each bullet think "oh nice, I want to try that"? If not,
   rewrite the wording (not the content).
-- Lead with what the user can now **do** — not implementation details.
+- Lead with what the user can now **do** 鈥?not implementation details.
 - "You can now..." not "Refactored the..."
 - Flag and rewrite any entry that reads like a commit message.
 - Internal/contributor changes belong in a separate "### For contributors" subsection.
@@ -209,7 +209,7 @@ If TODOS.md does not exist, skip this step.
 
 1. **Completed items not yet marked:** Cross-reference the diff against open TODO items. If a
    TODO is clearly completed by the changes in this branch, move it to the Completed section
-   with `**Completed:** vX.Y.Z.W (YYYY-MM-DD)`. Be conservative — only mark items with clear
+   with `**Completed:** vX.Y.Z.W (YYYY-MM-DD)`. Be conservative 鈥?only mark items with clear
    evidence in the diff.
 
 2. **Items needing description updates:** If a TODO references files or components that were
@@ -224,7 +224,7 @@ If TODOS.md does not exist, skip this step.
 
 ## Step 8: VERSION Bump Question
 
-**CRITICAL — NEVER BUMP VERSION WITHOUT ASKING.**
+**CRITICAL 鈥?NEVER BUMP VERSION WITHOUT ASKING.**
 
 1. **If VERSION does not exist:** Skip silently.
 
@@ -236,9 +236,9 @@ git diff <base>...HEAD -- VERSION
 
 3. **If VERSION was NOT bumped:** Use AskUserQuestion:
    - RECOMMENDATION: Choose C (Skip) because docs-only changes rarely warrant a version bump
-   - A) Bump PATCH (X.Y.Z+1) — if doc changes ship alongside code changes
-   - B) Bump MINOR (X.Y+1.0) — if this is a significant standalone release
-   - C) Skip — no version bump needed
+   - A) Bump PATCH (X.Y.Z+1) 鈥?if doc changes ship alongside code changes
+   - B) Bump MINOR (X.Y+1.0) 鈥?if this is a significant standalone release
+   - C) Skip 鈥?no version bump needed
 
 4. **If VERSION was already bumped:** Do NOT skip silently. Instead, check whether the bump
    still covers the full scope of changes on this branch:
@@ -247,14 +247,14 @@ git diff <base>...HEAD -- VERSION
    b. Read the full diff (`git diff <base>...HEAD --stat` and `git diff <base>...HEAD --name-only`).
       Are there significant changes (new features, new skills, new commands, major refactors)
       that are NOT mentioned in the CHANGELOG entry for the current version?
-   c. **If the CHANGELOG entry covers everything:** Skip — output "VERSION: Already bumped to
+   c. **If the CHANGELOG entry covers everything:** Skip 鈥?output "VERSION: Already bumped to
       vX.Y.Z, covers all changes."
    d. **If there are significant uncovered changes:** Use AskUserQuestion explaining what the
       current version covers vs what's new, and ask:
       - RECOMMENDATION: Choose A because the new changes warrant their own version
-      - A) Bump to next patch (X.Y.Z+1) — give the new changes their own version
-      - B) Keep current version — add new changes to the existing CHANGELOG entry
-      - C) Skip — leave version as-is, handle later
+      - A) Bump to next patch (X.Y.Z+1) 鈥?give the new changes their own version
+      - B) Keep current version 鈥?add new changes to the existing CHANGELOG entry
+      - C) Skip 鈥?leave version as-is, handle later
 
    The key insight: a VERSION bump set for "feature A" should not silently absorb "feature B"
    if feature B is substantial enough to deserve its own version entry.
@@ -302,7 +302,7 @@ glab mr view -F json 2>/dev/null | python3 -c "import sys,json; print(json.load(
 2. If the tempfile already contains a `## Documentation` section, replace that section with the
    updated content. If it does not contain one, append a `## Documentation` section at the end.
 
-3. The Documentation section should include a **doc diff preview** — for each file modified,
+3. The Documentation section should include a **doc diff preview** 鈥?for each file modified,
    describe what specifically changed (e.g., "README.md: added /document-release to skills
    table, updated skill count from 9 to 10").
 
@@ -328,8 +328,8 @@ MRBODY
 rm -f /tmp/gstack-pr-body-$$.md
 ```
 
-6. If `gh pr view` / `glab mr view` fails (no PR/MR exists): skip with message "No PR/MR found — skipping body update."
-7. If `gh pr edit` / `glab mr update` fails: warn "Could not update PR/MR body — documentation changes are in the
+6. If `gh pr view` / `glab mr view` fails (no PR/MR exists): skip with message "No PR/MR found 鈥?skipping body update."
+7. If `gh pr edit` / `glab mr update` fails: warn "Could not update PR/MR body 鈥?documentation changes are in the
    commit." and continue.
 
 **Structured doc health summary (final output):**
@@ -347,12 +347,12 @@ Documentation health:
 ```
 
 Where status is one of:
-- Updated — with description of what changed
-- Current — no changes needed
-- Voice polished — wording adjusted
-- Not bumped — user chose to skip
-- Already bumped — version was set by /ship
-- Skipped — file does not exist
+- Updated 鈥?with description of what changed
+- Current 鈥?no changes needed
+- Voice polished 鈥?wording adjusted
+- Not bumped 鈥?user chose to skip
+- Already bumped 鈥?version was set by /ship
+- Skipped 鈥?file does not exist
 
 ---
 

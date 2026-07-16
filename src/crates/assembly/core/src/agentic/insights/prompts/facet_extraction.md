@@ -1,4 +1,4 @@
-Analyze this BitFun session and extract structured facets.
+﻿Analyze this northhing session and extract structured facets.
 
 CRITICAL GUIDELINES:
 
@@ -8,11 +8,11 @@ CRITICAL GUIDELINES:
    - ONLY count when user says "can you...", "please...", "I need...", "let's..."
 
 2. **user_satisfaction_counts**: Base ONLY on explicit user signals.
-   - "Yay!", "great!", "perfect!" → happy
-   - "thanks", "looks good", "that works" → satisfied
-   - "ok, now let's..." (continuing without complaint) → likely_satisfied
-   - "that's not right", "try again" → dissatisfied
-   - "this is broken", "I give up" → frustrated
+   - "Yay!", "great!", "perfect!" 鈫?happy
+   - "thanks", "looks good", "that works" 鈫?satisfied
+   - "ok, now let's..." (continuing without complaint) 鈫?likely_satisfied
+   - "that's not right", "try again" 鈫?dissatisfied
+   - "this is broken", "I give up" 鈫?frustrated
 
 3. **friction_counts**: Be specific about what went wrong.
    - misunderstood_request: AI interpreted incorrectly

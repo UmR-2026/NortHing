@@ -4,7 +4,7 @@
 
 Scope: this guide applies to `src/crates/interfaces/acp`.
 
-`bitfun-acp` owns the Agent Client Protocol surface over the assembled product
+`northhing-acp` owns the Agent Client Protocol surface over the assembled product
 runtime. Keep ACP protocol/client details here or in app-surface adapters;
 share only stable capability facts through contract crates.
 
@@ -22,6 +22,6 @@ share only stable capability facts through contract crates.
 ## Verification
 
 ```bash
-cargo check -p bitfun-acp
-cargo test -p bitfun-acp
+cargo check -p northhing-acp
+cargo test -p northhing-acp
 ```

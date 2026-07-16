@@ -25,7 +25,6 @@ EXCLUDE_DIRS = {
     "node_modules",
     "dist",
     "build",
-    ".bitfun",  # safety, although already deleted
     "__pycache__",
 }
 

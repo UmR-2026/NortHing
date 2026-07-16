@@ -1358,4 +1358,4 @@ export global AppStrings {
 - g4 IDENTITY.md 富文本编辑器
 - 英文 i18n（B 阶段加）
 - Cloud / Background agents UI（如果有需求）
-- BitFun deep_review 等借鉴项（per T5 v2 借鉴清单）
+- northhing deep_review 等借鉴项（per T5 v2 借鉴清单）

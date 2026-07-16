@@ -1,4 +1,4 @@
-import { translate as t, getLocale } from './src/i18n.js';
+﻿import { translate as t, getLocale } from './src/i18n.js';
 import {
   ELEMENT_TYPES,
   HISTORY_KEY,
@@ -39,10 +39,10 @@ import {
 import { downloadBase64File, downloadHtmlDeck, fileSafe } from './src/export-html.js';
 import { exportFormatIcon, exportFormatTone } from './src/export-format-icons.js';
 import {
-  installBitFunBackendAdapter,
+  installNorthhingBackendAdapter,
   PPT_DESIGN_REQUIRED_REFERENCES,
   PPT_DESIGN_SKILL_KEY,
-} from './src/bitfun-backend-adapter.js';
+} from './src/northhing-backend-adapter.js';
 
 let state = createInitialState();
 let busy = false;
@@ -57,7 +57,7 @@ let lastHistoryWriteAt = 0;
 
 const $ = (id) => document.getElementById(id);
 const runtime = () => window.app || {};
-installBitFunBackendAdapter(runtime());
+installNorthhingBackendAdapter(runtime());
 const STORAGE_TIMEOUT_MS = 2500;
 const memoryStorage = new Map();
 
@@ -595,11 +595,11 @@ function mentionedSlideIndexes(instruction) {
   const indexes = new Set();
   const textValue = String(instruction || '');
   const activeIndex = getActiveIndex(state);
-  if (/(当前|本页|这一页|此页|current\s+(slide|page)|this\s+(slide|page))/i.test(textValue)) {
+  if (/(褰撳墠|鏈〉|杩欎竴椤祙姝ら〉|current\s+(slide|page)|this\s+(slide|page))/i.test(textValue)) {
     indexes.add(activeIndex);
   }
   const patterns = [
-    /第\s*(\d{1,2})\s*(页|頁|张|張)/gi,
+    /绗琝s*(\d{1,2})\s*(椤祙闋亅寮爘寮?/gi,
     /\b(?:slide|page)\s*(\d{1,2})\b/gi,
     /\b(\d{1,2})\s*(?:slide|slides|page|pages)\b/gi,
   ];
@@ -754,12 +754,12 @@ function isUnknownSessionBackendError(error) {
   );
 }
 
-// ─── Deck project files (ppt-design native protocol) ─────────────────────────
+// 鈹€鈹€鈹€ Deck project files (ppt-design native protocol) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 //
 // Staged generation runs the agent inside a dedicated deck project directory
 // (`decks/<runId>` under this app's appdata storage). The agent follows the
-// ppt-design skill's own conventions — `project.json` for the plan and
-// `slides/slide-NN.html` per page — and ui.js reads the files back. Files on
+// ppt-design skill's own conventions 鈥?`project.json` for the plan and
+// `slides/slide-NN.html` per page 鈥?and ui.js reads the files back. Files on
 // disk are the source of truth, which makes interruption recovery natural:
 // whatever was written stays written.
 
@@ -1241,7 +1241,7 @@ async function executeBackendTurn(requestInput, hooks = {}, options = {}) {
         const now = Date.now();
         if (now - progressTracker.lastProgressLogAt < 12000) return;
         const current = (state.generation?.steps || []).find((step) => step.status === 'running');
-        progressTracker.note(current?.label ? `${current.label}…` : t('generationProgressPulse'), current?.detail || '', 'pulse', 0);
+        progressTracker.note(current?.label ? `${current.label}鈥 : t('generationProgressPulse'), current?.detail || '', 'pulse', 0);
       }, 12000);
       cleanup.push(() => clearInterval(heartbeat));
     });
@@ -3552,7 +3552,7 @@ function updateExportPreview() {
   const format = getSelectedExportFormat().toUpperCase();
   const total = Math.max(1, slides.length);
   exportPreviewIndex = clamp(exportPreviewIndex, 0, Math.max(0, slides.length - 1));
-  if (info) info.textContent = `${format} · ${slides.length} slides`;
+  if (info) info.textContent = `${format} 路 ${slides.length} slides`;
   if (counter) counter.textContent = `${exportPreviewIndex + 1} / ${total}`;
   if (!frame) return;
   const slide = slides[exportPreviewIndex];
@@ -3630,7 +3630,7 @@ function bindExportModal() {
 }
 
 /* ============================================
-   HOST THEME — follow BitFun light/dark
+   HOST THEME 鈥?follow northhing light/dark
    ============================================ */
 const THEME_STORAGE_KEY = 'pptLiveTheme';
 

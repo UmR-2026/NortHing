@@ -1,8 +1,8 @@
----
+﻿---
 name: qa-only
 description: |
   Report-only QA testing. Systematically tests a web application and produces a
-  structured report with health score, screenshots, and repro steps — but never
+  structured report with health score, screenshots, and repro steps 鈥?but never
   fixes anything. Use when asked to "just report bugs", "qa report only", or
   "test but don't fix". For the full test-fix-verify loop, use /qa instead.
   Proactively suggest when the user wants a bug report without any code changes. (gstack)
@@ -11,11 +11,11 @@ description: |
 
 # /qa-only: Report-Only QA Testing
 
-You are a QA engineer. Test web applications like a real user — click everything, fill every form, check every state. Produce a structured report with evidence. **NEVER fix anything.**
+You are a QA engineer. Test web applications like a real user 鈥?click everything, fill every form, check every state. Produce a structured report with evidence. **NEVER fix anything.**
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the report-only QA methodology. Use existing Task sub-agents for independent testing tracks, and never ask them to mutate files.
+When this skill is invoked by northhing Team Mode, this skill supplies the report-only QA methodology. Use existing Task sub-agents for independent testing tracks, and never ask them to mutate files.
 
 - Do not assume a QA Reporter sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer a matching custom QA/browser sub-agent if available; otherwise use `ComputerUse` for browser/desktop testing when available, and `Explore` for diff-aware test-scope mapping.
@@ -30,19 +30,19 @@ When this skill is invoked by BitFun Team Mode, this skill supplies the report-o
 | Parameter | Default | Override example |
 |-----------|---------|-----------------:|
 | Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
-| Mode | full | `--quick`, `--regression .bitfun/team/qa-reports/baseline.json` |
-| Output dir | `.bitfun/team/qa-reports/` | `Output to /tmp/qa` |
+| Mode | full | `--quick`, `--regression .northhing/team/qa-reports/baseline.json` |
+| Output dir | `.northhing/team/qa-reports/` | `Output to /tmp/qa` |
 | Scope | Full app (or diff-scoped) | `Focus on the billing page` |
 | Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
 
-**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case — the user just shipped code on a branch and wants to verify it works.
+**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case 鈥?the user just shipped code on a branch and wants to verify it works.
 
-**Browser/desktop QA tooling:** Use BitFun built-in browser/computer-use capability. Do not install, build, or call any external browse binary. Capture screenshots, snapshots, console errors, and repro evidence through BitFun tooling and save artifacts under `.bitfun/team/qa-reports/`.
+**Browser/desktop QA tooling:** Use northhing built-in browser/computer-use capability. Do not install, build, or call any external browse binary. Capture screenshots, snapshots, console errors, and repro evidence through northhing tooling and save artifacts under `.northhing/team/qa-reports/`.
 
 **Create output directories:**
 
 ```bash
-REPORT_DIR=".bitfun/team/qa-reports"
+REPORT_DIR=".northhing/team/qa-reports"
 mkdir -p "$REPORT_DIR/screenshots"
 ```
 
@@ -50,17 +50,17 @@ mkdir -p "$REPORT_DIR/screenshots"
 
 ## Prior Learnings
 
-Use only BitFun in-session memory, project docs, `.bitfun/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior BitFun context applied: <source>`.
+Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
 ## Test Plan Context
 
 Before falling back to git diff heuristics, check for richer test plan sources:
 
-1. **Project-scoped test plans:** Check `$HOME/.bitfun/team/projects/` for recent `*-test-plan-*.md` files for this repo
+1. **Project-scoped test plans:** Check `$HOME/.northhing/team/projects/` for recent `*-test-plan-*.md` files for this repo
    ```bash
    setopt +o nomatch 2>/dev/null || true  # zsh compat
    SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-)
-   ls -t $HOME/.bitfun/team/projects/$SLUG/*-test-plan-*.md 2>/dev/null | head -1
+   ls -t $HOME/.northhing/team/projects/$SLUG/*-test-plan-*.md 2>/dev/null | head -1
    ```
 2. **Conversation context:** Check if a prior `/plan-eng-review` or `/plan-ceo-review` produced test plan output in this conversation
 3. **Use whichever source is richer.** Fall back to git diff analysis only if neither is available.
@@ -80,20 +80,20 @@ This is the **primary mode** for developers verifying their work. When the user 
    ```
 
 2. **Identify affected pages/routes** from the changed files:
-   - Controller/route files → which URL paths they serve
-   - View/template/component files → which pages render them
-   - Model/service files → which pages use those models (check controllers that reference them)
-   - CSS/style files → which pages include those stylesheets
-   - API endpoints → test them directly with `BitFun browser/computer-use js "await fetch('/api/...')"`
-   - Static pages (markdown, HTML) → navigate to them directly
+   - Controller/route files 鈫?which URL paths they serve
+   - View/template/component files 鈫?which pages render them
+   - Model/service files 鈫?which pages use those models (check controllers that reference them)
+   - CSS/style files 鈫?which pages include those stylesheets
+   - API endpoints 鈫?test them directly with `northhing browser/computer-use js "await fetch('/api/...')"`
+   - Static pages (markdown, HTML) 鈫?navigate to them directly
 
-   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode — navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior — always verify the app still works.
+   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode 鈥?navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior 鈥?always verify the app still works.
 
-3. **Detect the running app** — check common local dev ports:
+3. **Detect the running app** 鈥?check common local dev ports:
    ```bash
-   BitFun browser/computer-use goto http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
-   BitFun browser/computer-use goto http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
-   BitFun browser/computer-use goto http://localhost:8080 2>/dev/null && echo "Found app on :8080"
+   northhing browser/computer-use goto http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
+   northhing browser/computer-use goto http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
+   northhing browser/computer-use goto http://localhost:8080 2>/dev/null && echo "Found app on :8080"
    ```
    If no local app is found, check for a staging/preview URL in the PR or environment. If nothing works, ask the user for the URL.
 
@@ -104,7 +104,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - If the change was interactive (forms, buttons, flows), test the interaction end-to-end
    - Use `snapshot -D` before and after actions to verify the change had the expected effect
 
-5. **Cross-reference with commit messages and PR description** to understand *intent* — what should the change do? Verify it actually does that.
+5. **Cross-reference with commit messages and PR description** to understand *intent* 鈥?what should the change do? Verify it actually does that.
 
 6. **Check TODOS.md** (if it exists) for known bugs or issues related to the changed files. If a TODO describes a bug that this branch should fix, add it to your test plan. If you find a new bug during QA that isn't in TODOS.md, note it in the report.
 
@@ -130,7 +130,7 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 
 ### Phase 1: Initialize
 
-1. Find BitFun browser/computer-use tooling (see Setup above)
+1. Find northhing browser/computer-use tooling (see Setup above)
 2. Create output directories
 3. Copy report template from `qa/templates/qa-report-template.md` to output dir
 4. Start timer for duration tracking
@@ -140,19 +140,19 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 **If the user specified auth credentials:**
 
 ```bash
-BitFun browser/computer-use goto <login-url>
-BitFun browser/computer-use snapshot -i                    # find the login form
-BitFun browser/computer-use fill @e3 "user@example.com"
-BitFun browser/computer-use fill @e4 "[REDACTED]"         # NEVER include real passwords in report
-BitFun browser/computer-use click @e5                      # submit
-BitFun browser/computer-use snapshot -D                    # verify login succeeded
+northhing browser/computer-use goto <login-url>
+northhing browser/computer-use snapshot -i                    # find the login form
+northhing browser/computer-use fill @e3 "user@example.com"
+northhing browser/computer-use fill @e4 "[REDACTED]"         # NEVER include real passwords in report
+northhing browser/computer-use click @e5                      # submit
+northhing browser/computer-use snapshot -D                    # verify login succeeded
 ```
 
 **If the user provided a cookie file:**
 
 ```bash
-BitFun browser/computer-use cookie-import cookies.json
-BitFun browser/computer-use goto <target-url>
+northhing browser/computer-use cookie-import cookies.json
+northhing browser/computer-use goto <target-url>
 ```
 
 **If 2FA/OTP is required:** Ask the user for the code and wait.
@@ -164,17 +164,17 @@ BitFun browser/computer-use goto <target-url>
 Get a map of the application:
 
 ```bash
-BitFun browser/computer-use goto <target-url>
-BitFun browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/initial.png"
-BitFun browser/computer-use links                          # map navigation structure
-BitFun browser/computer-use console --errors               # any errors on landing?
+northhing browser/computer-use goto <target-url>
+northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/initial.png"
+northhing browser/computer-use links                          # map navigation structure
+northhing browser/computer-use console --errors               # any errors on landing?
 ```
 
 **Detect framework** (note in report metadata):
-- `__next` in HTML or `_next/data` requests → Next.js
-- `csrf-token` meta tag → Rails
-- `wp-content` in URLs → WordPress
-- Client-side routing with no page reloads → SPA
+- `__next` in HTML or `_next/data` requests 鈫?Next.js
+- `csrf-token` meta tag 鈫?Rails
+- `wp-content` in URLs 鈫?WordPress
+- Client-side routing with no page reloads 鈫?SPA
 
 **For SPAs:** The `links` command may return few results because navigation is client-side. Use `snapshot -i` to find nav elements (buttons, menu items) instead.
 
@@ -183,33 +183,33 @@ BitFun browser/computer-use console --errors               # any errors on landi
 Visit pages systematically. At each page:
 
 ```bash
-BitFun browser/computer-use goto <page-url>
-BitFun browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/page-name.png"
-BitFun browser/computer-use console --errors
+northhing browser/computer-use goto <page-url>
+northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/page-name.png"
+northhing browser/computer-use console --errors
 ```
 
 Then follow the **per-page exploration checklist** (see `qa/references/issue-taxonomy.md`):
 
-1. **Visual scan** — Look at the annotated screenshot for layout issues
-2. **Interactive elements** — Click buttons, links, controls. Do they work?
-3. **Forms** — Fill and submit. Test empty, invalid, edge cases
-4. **Navigation** — Check all paths in and out
-5. **States** — Empty state, loading, error, overflow
-6. **Console** — Any new JS errors after interactions?
-7. **Responsiveness** — Check mobile viewport if relevant:
+1. **Visual scan** 鈥?Look at the annotated screenshot for layout issues
+2. **Interactive elements** 鈥?Click buttons, links, controls. Do they work?
+3. **Forms** 鈥?Fill and submit. Test empty, invalid, edge cases
+4. **Navigation** 鈥?Check all paths in and out
+5. **States** 鈥?Empty state, loading, error, overflow
+6. **Console** 鈥?Any new JS errors after interactions?
+7. **Responsiveness** 鈥?Check mobile viewport if relevant:
    ```bash
-   BitFun browser/computer-use viewport 375x812
-   BitFun browser/computer-use screenshot "$REPORT_DIR/screenshots/page-mobile.png"
-   BitFun browser/computer-use viewport 1280x720
+   northhing browser/computer-use viewport 375x812
+   northhing browser/computer-use screenshot "$REPORT_DIR/screenshots/page-mobile.png"
+   northhing browser/computer-use viewport 1280x720
    ```
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
 
-**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist — just check: loads? Console errors? Broken links visible?
+**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist 鈥?just check: loads? Console errors? Broken links visible?
 
 ### Phase 5: Document
 
-Document each issue **immediately when found** — don't batch them.
+Document each issue **immediately when found** 鈥?don't batch them.
 
 **Two evidence tiers:**
 
@@ -221,10 +221,10 @@ Document each issue **immediately when found** — don't batch them.
 5. Write repro steps referencing screenshots
 
 ```bash
-BitFun browser/computer-use screenshot "$REPORT_DIR/screenshots/issue-001-step-1.png"
-BitFun browser/computer-use click @e5
-BitFun browser/computer-use screenshot "$REPORT_DIR/screenshots/issue-001-result.png"
-BitFun browser/computer-use snapshot -D
+northhing browser/computer-use screenshot "$REPORT_DIR/screenshots/issue-001-step-1.png"
+northhing browser/computer-use click @e5
+northhing browser/computer-use screenshot "$REPORT_DIR/screenshots/issue-001-result.png"
+northhing browser/computer-use snapshot -D
 ```
 
 **Static bugs** (typos, layout issues, missing images):
@@ -232,7 +232,7 @@ BitFun browser/computer-use snapshot -D
 2. Describe what's wrong
 
 ```bash
-BitFun browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
+northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
 ```
 
 **Write each issue to the report immediately** using the template format from `qa/templates/qa-report-template.md`.
@@ -240,11 +240,11 @@ BitFun browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002
 ### Phase 6: Wrap Up
 
 1. **Compute health score** using the rubric below
-2. **Write "Top 3 Things to Fix"** — the 3 highest-severity issues
-3. **Write console health summary** — aggregate all console errors seen across pages
+2. **Write "Top 3 Things to Fix"** 鈥?the 3 highest-severity issues
+3. **Write console health summary** 鈥?aggregate all console errors seen across pages
 4. **Update severity counts** in the summary table
-5. **Fill in report metadata** — date, duration, pages visited, screenshot count, framework
-6. **Save baseline** — write `baseline.json` with:
+5. **Fill in report metadata** 鈥?date, duration, pages visited, screenshot count, framework
+6. **Save baseline** 鈥?write `baseline.json` with:
    ```json
    {
      "date": "YYYY-MM-DD",
@@ -268,21 +268,21 @@ BitFun browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002
 Compute each category score (0-100), then take the weighted average.
 
 ### Console (weight: 15%)
-- 0 errors → 100
-- 1-3 errors → 70
-- 4-10 errors → 40
-- 10+ errors → 10
+- 0 errors 鈫?100
+- 1-3 errors 鈫?70
+- 4-10 errors 鈫?40
+- 10+ errors 鈫?10
 
 ### Links (weight: 10%)
-- 0 broken → 100
-- Each broken link → -15 (minimum 0)
+- 0 broken 鈫?100
+- Each broken link 鈫?-15 (minimum 0)
 
 ### Per-Category Scoring (Visual, Functional, UX, Content, Performance, Accessibility)
 Each category starts at 100. Deduct per finding:
-- Critical issue → -25
-- High issue → -15
-- Medium issue → -8
-- Low issue → -3
+- Critical issue 鈫?-25
+- High issue 鈫?-15
+- Medium issue 鈫?-8
+- Low issue 鈫?-3
 Minimum 0 per category.
 
 ### Weights
@@ -298,7 +298,7 @@ Minimum 0 per category.
 | Accessibility | 15% |
 
 ### Final Score
-`score = Σ (category_score × weight)`
+`score = 危 (category_score 脳 weight)`
 
 ---
 
@@ -306,14 +306,14 @@ Minimum 0 per category.
 
 ### Next.js
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
-- Monitor `_next/data` requests in network — 404s indicate broken data fetching
-- Test client-side navigation (click links, don't just `goto`) — catches routing issues
+- Monitor `_next/data` requests in network 鈥?404s indicate broken data fetching
+- Test client-side navigation (click links, don't just `goto`) 鈥?catches routing issues
 - Check for CLS (Cumulative Layout Shift) on pages with dynamic content
 
 ### Rails
 - Check for N+1 query warnings in console (if development mode)
 - Verify CSRF token presence in forms
-- Test Turbo/Stimulus integration — do page transitions work smoothly?
+- Test Turbo/Stimulus integration 鈥?do page transitions work smoothly?
 - Check for flash messages appearing and dismissing correctly
 
 ### WordPress
@@ -323,9 +323,9 @@ Minimum 0 per category.
 - Check for mixed content warnings (common with WP)
 
 ### General SPA (React, Vue, Angular)
-- Use `snapshot -i` for navigation — `links` command misses client-side routes
-- Check for stale state (navigate away and back — does data refresh?)
-- Test browser back/forward — does the app handle history correctly?
+- Use `snapshot -i` for navigation 鈥?`links` command misses client-side routes
+- Check for stale state (navigate away and back 鈥?does data refresh?)
+- Test browser back/forward 鈥?does the app handle history correctly?
 - Check for memory leaks (monitor console after extended use)
 
 ---
@@ -340,10 +340,10 @@ Minimum 0 per category.
 6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
 7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
 8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
-9. **Never delete output files.** Screenshots and reports accumulate — that's intentional.
+9. **Never delete output files.** Screenshots and reports accumulate 鈥?that's intentional.
 10. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
-11. **Show screenshots to the user.** After every `BitFun browser/computer-use screenshot`, `BitFun browser/computer-use snapshot -a -o`, or `BitFun browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical — without it, screenshots are invisible to the user.
-12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior — always open the browser and test.
+11. **Show screenshots to the user.** After every `northhing browser/computer-use screenshot`, `northhing browser/computer-use snapshot -a -o`, or `northhing browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical 鈥?without it, screenshots are invisible to the user.
+12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior 鈥?always open the browser and test.
 
 ---
 
@@ -351,25 +351,25 @@ Minimum 0 per category.
 
 Write the report to both local and project-scoped locations:
 
-**Local:** `.bitfun/team/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
+**Local:** `.northhing/team/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
 
 **Project-scoped:** Write test outcome artifact for cross-session context:
 ```bash
-SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.bitfun/team/projects/$SLUG
+SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.northhing/team/projects/$SLUG
 ```
-Write to `$HOME/.bitfun/team/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
+Write to `$HOME/.northhing/team/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
 
 ### Output Structure
 
 ```
-.bitfun/team/qa-reports/
-├── qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
-├── screenshots/
-│   ├── initial.png                        # Landing page annotated screenshot
-│   ├── issue-001-step-1.png               # Per-issue evidence
-│   ├── issue-001-result.png
-│   └── ...
-└── baseline.json                          # For regression mode
+.northhing/team/qa-reports/
+鈹溾攢鈹€ qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
+鈹溾攢鈹€ screenshots/
+鈹?  鈹溾攢鈹€ initial.png                        # Landing page annotated screenshot
+鈹?  鈹溾攢鈹€ issue-001-step-1.png               # Per-issue evidence
+鈹?  鈹溾攢鈹€ issue-001-result.png
+鈹?  鈹斺攢鈹€ ...
+鈹斺攢鈹€ baseline.json                          # For regression mode
 ```
 
 Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
@@ -382,7 +382,7 @@ If you discovered a non-obvious pattern, pitfall, or architectural insight durin
 this session, log it for future sessions:
 
 ```bash
-true # BitFun Team Mode has no external telemetry helper
+true # northhing Team Mode has no external telemetry helper
 ```
 
 **Types:** `pattern` (reusable approach), `pitfall` (what NOT to do), `preference`
@@ -390,7 +390,7 @@ true # BitFun Team Mode has no external telemetry helper
 `operational` (project environment/CLI/workflow knowledge).
 
 **Sources:** `observed` (you found this in the code), `user-stated` (user told you),
-`inferred` (AI deduction), `cross-model` (both BitFun and outside-voice sub-agent agree).
+`inferred` (AI deduction), `cross-model` (both northhing and outside-voice sub-agent agree).
 
 **Confidence:** 1-10. Be honest. An observed pattern you verified in the code is 8-9.
 An inference you're not sure about is 4-5. A user preference they explicitly stated is 10.

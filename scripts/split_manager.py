@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-R19 split script: bitfun-acp manager.rs 2519 -> facade + 11 sub-siblings.
+R19 split script: northhing-acp manager.rs 2519 -> facade + 11 sub-siblings.
 
 Per-sibling explicit handling (no auto-detection):
 - methods (4-space indent) for impl AcpClientService -> wrap in new impl block
@@ -729,7 +729,7 @@ def main():
     # In Rust 2018+, `use serde;` (without braces) is needed for the serde attribute macro.
     facade_parts[0] = "use serde;\n" + facade_parts[0]
     facade_body = "\n\n".join(facade_parts)
-    facade_header = """// R19 split: facade for bitfun-acp ACP client service.
+    facade_header = """// R19 split: facade for northhing-acp ACP client service.
 // File: src/crates/interfaces/acp/src/client/manager.rs
 // Origin: manager.rs (2519 lines god-object, Kimi P1 critical)
 //

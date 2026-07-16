@@ -611,7 +611,7 @@ without showing the `8/8 PASS` line.
 | Reference library | `.agents/reference/<domain>/` | 4-domain read-only code mirror |
 | Workflow skill | `.agents/skills/reference-library/SKILL.md` | Auto-loaded via `preflight-skill-check` |
 | **Tech-selection SOP spec** (in-flight, awaiting plan + execute) | `docs/superpowers/specs/2026-06-21-reference-library-tech-selection-sop-design.md` | Approved 2026-06-21. Add §A (7 Decision Gates) + §B (Red-Flag Triage appendix) + `evaluations/` dir + `scripts/check-skill-trigger.sh`. **Next: writing-plans → execute.** |
-| Workspace-level README | `../README.md` | Multi-project workspace entry (northhing + BitFun + docs/) |
+| Workspace-level README | `../README.md` | Multi-project workspace entry (northhing + docs/) |
 | Workspace cleanup report | `../docs/archive/CLEANUP-2026-06-20.md` | 2026-06-20 E:\agent-project\ cleanup diff |
 | **R60 closeout handoff** | `docs/handoffs/2026-07-10-r60-closeout-handoff.md` | Phase B closeout + cleanup status + R44-R59 breakdown |
 | Kimi review summary | `E:\agent-project\review-summary.md` | R44-R59 8-dimension review (6.5/10) |

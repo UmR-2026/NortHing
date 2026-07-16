@@ -1,4 +1,4 @@
----
+﻿---
 name: writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
@@ -9,19 +9,19 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
 
-**Personal skills live in agent-specific directories (`$HOME/.bitfun/skills` for BitFun Code, `$HOME/.bitfun/skills/` for Codex)**
+**Personal skills live in agent-specific directories (`$HOME/.northhing/skills` for northhing Code, `$HOME/.northhing/skills/` for Codex)**
 
 You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
 
 **Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
 
-**CORE PRINCIPLE:** This skill adapts the RED-GREEN-REFACTOR cycle to documentation — write a failing test (baseline scenario), write the skill, verify it works, then close loopholes.
+**CORE PRINCIPLE:** This skill adapts the RED-GREEN-REFACTOR cycle to documentation 鈥?write a failing test (baseline scenario), write the skill, verify it works, then close loopholes.
 
-**Official guidance:** For BitFun bundled skills, keep instructions self-contained, tool-accurate, and independent of external assistant runtimes. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
+**Official guidance:** For northhing bundled skills, keep instructions self-contained, tool-accurate, and independent of external assistant runtimes. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
 
 ## What is a Skill?
 
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future BitFun instances find and apply effective approaches.
+A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future northhing instances find and apply effective approaches.
 
 **Skills are:** Reusable techniques, patterns, tools, reference guides
 
@@ -40,7 +40,7 @@ A **skill** is a reference guide for proven techniques, patterns, or tools. Skil
 | **Watch it fail** | Document exact rationalizations agent uses |
 | **Minimal code** | Write skill addressing those specific violations |
 | **Watch it pass** | Verify agent now complies |
-| **Refactor cycle** | Find new rationalizations → plug → re-verify |
+| **Refactor cycle** | Find new rationalizations 鈫?plug 鈫?re-verify |
 
 The entire skill creation process follows RED-GREEN-REFACTOR.
 
@@ -56,7 +56,7 @@ The entire skill creation process follows RED-GREEN-REFACTOR.
 - One-off solutions
 - Standard practices well-documented elsewhere
 - Project-specific conventions (put in AGENTS.md)
-- Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
+- Mechanical constraints (if it's enforceable with regex/validation, automate it鈥攕ave documentation for judgment calls)
 
 ## Skill Types
 
@@ -137,13 +137,13 @@ Concrete results
 ```
 
 
-## BitFun Search Optimization (CSO)
+## northhing Search Optimization (CSO)
 
-**Critical for discovery:** Future BitFun needs to FIND your skill
+**Critical for discovery:** Future northhing needs to FIND your skill
 
 ### 1. Rich Description Field
 
-**Purpose:** BitFun reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+**Purpose:** northhing reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
 
 **Format:** Start with "Use when..." to focus on triggering conditions
 
@@ -151,23 +151,23 @@ Concrete results
 
 The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
 
-**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, BitFun may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused BitFun to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, northhing may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused northhing to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
 
-When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), BitFun correctly read the flowchart and followed the two-stage review process.
+When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), northhing correctly read the flowchart and followed the two-stage review process.
 
-**The trap:** Descriptions that summarize workflow create a shortcut BitFun will take. The skill body becomes documentation BitFun skips.
+**The trap:** Descriptions that summarize workflow create a shortcut northhing will take. The skill body becomes documentation northhing skips.
 
 ```yaml
-# ❌ BAD: Summarizes workflow - BitFun may follow this instead of reading skill
+# 鉂?BAD: Summarizes workflow - northhing may follow this instead of reading skill
 description: Use when executing plans - dispatches subagent per task with code review between tasks
 
-# ❌ BAD: Too much process detail
+# 鉂?BAD: Too much process detail
 description: Use for TDD - write test first, watch it fail, write minimal code, refactor
 
-# ✅ GOOD: Just triggering conditions, no workflow summary
+# 鉁?GOOD: Just triggering conditions, no workflow summary
 description: Use when executing implementation plans with independent tasks in the current session
 
-# ✅ GOOD: Triggering conditions only
+# 鉁?GOOD: Triggering conditions only
 description: Use when implementing any feature or bugfix, before writing implementation code
 ```
 
@@ -180,25 +180,25 @@ description: Use when implementing any feature or bugfix, before writing impleme
 - **NEVER summarize the skill's process or workflow**
 
 ```yaml
-# ❌ BAD: Too abstract, vague, doesn't include when to use
+# 鉂?BAD: Too abstract, vague, doesn't include when to use
 description: For async testing
 
-# ❌ BAD: First person
+# 鉂?BAD: First person
 description: I can help you with async tests when they're flaky
 
-# ❌ BAD: Mentions technology but skill isn't specific to it
+# 鉂?BAD: Mentions technology but skill isn't specific to it
 description: Use when tests use setTimeout/sleep and are flaky
 
-# ✅ GOOD: Starts with "Use when", describes problem, no workflow
+# 鉁?GOOD: Starts with "Use when", describes problem, no workflow
 description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
 
-# ✅ GOOD: Technology-specific skill with explicit trigger
+# 鉁?GOOD: Technology-specific skill with explicit trigger
 description: Use when using React Router and handling authentication redirects
 ```
 
 ### 2. Keyword Coverage
 
-Use words BitFun would search for:
+Use words northhing would search for:
 - Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
 - Symptoms: "flaky", "hanging", "zombie", "pollution"
 - Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
@@ -207,8 +207,8 @@ Use words BitFun would search for:
 ### 3. Descriptive Naming
 
 **Use active voice, verb-first:**
-- ✅ `creating-skills` not `skill-creation`
-- ✅ `condition-based-waiting` not `async-test-helpers`
+- 鉁?`creating-skills` not `skill-creation`
+- 鉁?`condition-based-waiting` not `async-test-helpers`
 
 ### 4. Token Efficiency (Critical)
 
@@ -223,34 +223,34 @@ Use words BitFun would search for:
 
 **Move details to tool help:**
 ```bash
-# ❌ BAD: Document all flags in SKILL.md
+# 鉂?BAD: Document all flags in SKILL.md
 search-conversations supports --text, --both, --after DATE, --before DATE, --limit N
 
-# ✅ GOOD: Reference --help
+# 鉁?GOOD: Reference --help
 search-conversations supports multiple modes and filters. Run --help for details.
 ```
 
 **Use cross-references:**
 ```markdown
-# ❌ BAD: Repeat workflow details
+# 鉂?BAD: Repeat workflow details
 When searching, dispatch subagent with template...
 [20 lines of repeated instructions]
 
-# ✅ GOOD: Reference other skill
+# 鉁?GOOD: Reference other skill
 Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
 ```
 
 **Compress examples:**
 ```markdown
-# ❌ BAD: Verbose example (42 words)
+# 鉂?BAD: Verbose example (42 words)
 your human partner: "How did we handle authentication errors in React Router before?"
 You: I'll search past conversations for React Router authentication patterns.
 [Dispatch subagent with search query: "React Router authentication error handling 401"]
 
-# ✅ GOOD: Minimal example (20 words)
+# 鉁?GOOD: Minimal example (20 words)
 Partner: "How did we handle auth errors in React Router?"
 You: Searching...
-[Dispatch subagent → synthesis]
+[Dispatch subagent 鈫?synthesis]
 ```
 
 **Eliminate redundancy:**
@@ -266,10 +266,10 @@ wc -w skills/path/SKILL.md
 ```
 
 **Name by what you DO or core insight:**
-- ✅ `condition-based-waiting` > `async-test-helpers`
-- ✅ `using-skills` not `skill-usage`
-- ✅ `flatten-with-flags` > `data-structure-refactoring`
-- ✅ `root-cause-tracing` > `debugging-techniques`
+- 鉁?`condition-based-waiting` > `async-test-helpers`
+- 鉁?`using-skills` not `skill-usage`
+- 鉁?`flatten-with-flags` > `data-structure-refactoring`
+- 鉁?`root-cause-tracing` > `debugging-techniques`
 
 **Gerunds (-ing) work well for processes:**
 - `creating-skills`, `testing-skills`, `debugging-with-logs`
@@ -280,10 +280,10 @@ wc -w skills/path/SKILL.md
 **When writing documentation that references other skills:**
 
 Use skill name only, with explicit requirement markers:
-- ✅ Good: `**REQUIRED SUB-SKILL:** Use skill-name-here`
-- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand skill-name-here`
-- ❌ Bad: `See skills/testing/some-skill` (unclear if required)
-- ❌ Bad: `@skills/testing/some-skill/SKILL.md` (force-loads, burns context)
+- 鉁?Good: `**REQUIRED SUB-SKILL:** Use skill-name-here`
+- 鉁?Good: `**REQUIRED BACKGROUND:** You MUST understand skill-name-here`
+- 鉂?Bad: `See skills/testing/some-skill` (unclear if required)
+- 鉂?Bad: `@skills/testing/some-skill/SKILL.md` (force-loads, burns context)
 
 **Why no @ links:** `@` syntax force-loads files immediately, consuming 200k+ context before you need them.
 
@@ -308,9 +308,9 @@ digraph when_flowchart {
 - "When to use A vs B" decisions
 
 **Never use flowcharts for:**
-- Reference material → Tables, lists
-- Code examples → Markdown blocks
-- Linear instructions → Numbered lists
+- Reference material 鈫?Tables, lists
+- Code examples 鈫?Markdown blocks
+- Linear instructions 鈫?Numbered lists
 - Labels without semantic meaning (step1, helper2)
 
 See @graphviz-conventions.dot for graphviz style rules.
@@ -326,9 +326,9 @@ See @graphviz-conventions.dot for graphviz style rules.
 **One excellent example beats many mediocre ones**
 
 Choose most relevant language:
-- Testing techniques → TypeScript/JavaScript
-- System debugging → Shell/Python
-- Data processing → Python
+- Testing techniques 鈫?TypeScript/JavaScript
+- System debugging 鈫?Shell/Python
+- Data processing 鈫?Python
 
 **Good example:**
 - Complete and runnable
@@ -445,13 +445,13 @@ Different skill types need different test approaches:
 
 | Excuse | Reality |
 |--------|---------|
-| "Skill is obviously clear" | Clear to you ≠ clear to other agents. Test it. |
+| "Skill is obviously clear" | Clear to you 鈮?clear to other agents. Test it. |
 | "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
 | "Testing is overkill" | Untested skills have issues. Always. 15 min testing saves hours. |
 | "I'll test if problems emerge" | Problems = agents can't use skill. Test BEFORE deploying. |
 | "Too tedious to test" | Testing is less tedious than debugging bad skill in production. |
 | "I'm confident it's good" | Overconfidence guarantees issues. Test anyway. |
-| "Academic review is enough" | Reading ≠ using. Test application scenarios. |
+| "Academic review is enough" | Reading 鈮?using. Test application scenarios. |
 | "No time to test" | Deploying untested skill wastes more time fixing it later. |
 
 **All of these mean: Test before deploying. No exceptions.**
@@ -561,22 +561,22 @@ Agent found new rationalization? Add explicit counter. Re-test until bulletproof
 
 ## Anti-Patterns
 
-### ❌ Narrative Example
+### 鉂?Narrative Example
 "In session 2025-10-03, we found empty projectDir caused..."
 **Why bad:** Too specific, not reusable
 
-### ❌ Multi-Language Dilution
+### 鉂?Multi-Language Dilution
 example-js.js, example-py.py, example-go.go
 **Why bad:** Mediocre quality, maintenance burden
 
-### ❌ Code in Flowcharts
+### 鉂?Code in Flowcharts
 ```dot
 step1 [label="import fs"];
 step2 [label="read file"];
 ```
 **Why bad:** Can't copy-paste, hard to read
 
-### ❌ Generic Labels
+### 鉂?Generic Labels
 helper1, helper2, step3, pattern4
 **Why bad:** Labels should have semantic meaning
 
@@ -634,7 +634,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 
 ## Discovery Workflow
 
-How future BitFun finds your skill:
+How future northhing finds your skill:
 
 1. **Encounters problem** ("tests are flaky")
 3. **Finds SKILL** (description matches)
@@ -649,7 +649,7 @@ How future BitFun finds your skill:
 **Creating skills IS TDD for process documentation.**
 
 Same Iron Law: No skill without failing test first.
-Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes).
+Same cycle: RED (baseline) 鈫?GREEN (write skill) 鈫?REFACTOR (close loopholes).
 Same benefits: Better quality, fewer surprises, bulletproof results.
 
 If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.

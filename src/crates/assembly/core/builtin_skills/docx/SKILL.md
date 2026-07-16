@@ -1,4 +1,4 @@
----
+﻿---
 name: docx
 description: "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files). Triggers include: any mention of \"Word doc\", \"word document\", \".docx\", or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a \"report\", \"memo\", \"letter\", \"template\", or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation."
 license: Proprietary. LICENSE.txt has complete terms
@@ -16,7 +16,7 @@ A .docx file is a ZIP archive containing XML files.
 |------|----------|
 | Read/analyze content | `pandoc` or unpack for raw XML |
 | Create new document | Use `docx-js` - see Creating New Documents below |
-| Edit existing document | Unpack → edit XML → repack - see Editing Existing Documents below |
+| Edit existing document | Unpack 鈫?edit XML 鈫?repack - see Editing Existing Documents below |
 
 ### Converting .doc to .docx
 
@@ -139,16 +139,16 @@ const doc = new Document({
 ### Lists (NEVER use unicode bullets)
 
 ```javascript
-// ❌ WRONG - never manually insert bullet characters
-new Paragraph({ children: [new TextRun("• Item")] })  // BAD
+// 鉂?WRONG - never manually insert bullet characters
+new Paragraph({ children: [new TextRun("鈥?Item")] })  // BAD
 new Paragraph({ children: [new TextRun("\u2022 Item")] })  // BAD
 
-// ✅ CORRECT - use numbering config with LevelFormat.BULLET
+// 鉁?CORRECT - use numbering config with LevelFormat.BULLET
 const doc = new Document({
   numbering: {
     config: [
       { reference: "bullets",
-        levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+        levels: [{ level: 0, format: LevelFormat.BULLET, text: "鈥?, alignment: AlignmentType.LEFT,
           style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
       { reference: "numbers",
         levels: [{ level: 0, format: LevelFormat.DECIMAL, text: "%1.", alignment: AlignmentType.LEFT,
@@ -165,7 +165,7 @@ const doc = new Document({
   }]
 });
 
-// ⚠️ Each reference creates INDEPENDENT numbering
+// 鈿狅笍 Each reference creates INDEPENDENT numbering
 // Same reference = continues (1,2,3 then 4,5,6)
 // Different reference = restarts (1,2,3 then 1,2,3)
 ```
@@ -201,7 +201,7 @@ new Table({
 
 **Table width calculation:**
 
-Always use `WidthType.DXA` — `WidthType.PERCENTAGE` breaks in Google Docs.
+Always use `WidthType.DXA` 鈥?`WidthType.PERCENTAGE` breaks in Google Docs.
 
 ```javascript
 // Table width = sum of columnWidths = content width
@@ -211,7 +211,7 @@ columnWidths: [7000, 2360]  // Must sum to table width
 ```
 
 **Width rules:**
-- **Always use `WidthType.DXA`** — never `WidthType.PERCENTAGE` (incompatible with Google Docs)
+- **Always use `WidthType.DXA`** 鈥?never `WidthType.PERCENTAGE` (incompatible with Google Docs)
 - Table width must equal the sum of `columnWidths`
 - Cell `width` must match corresponding `columnWidth`
 - Cell `margins` are internal padding - they reduce content area, not add to cell width
@@ -300,7 +300,7 @@ Extracts XML, pretty-prints, merges adjacent runs, and converts smart quotes to 
 
 Edit files in `unpacked/word/`. See XML Reference below for patterns.
 
-**Use "BitFun" as the author** for tracked changes and comments, unless the user explicitly requests use of a different name.
+**Use "northhing" as the author** for tracked changes and comments, unless the user explicitly requests use of a different name.
 
 **Use the Edit tool directly for string replacement. Do not write Python scripts.** Scripts introduce unnecessary complexity. The Edit tool shows exactly what is being replaced.
 
@@ -311,10 +311,10 @@ Edit files in `unpacked/word/`. See XML Reference below for patterns.
 ```
 | Entity | Character |
 |--------|-----------|
-| `&#x2018;` | ‘ (left single) |
-| `&#x2019;` | ’ (right single / apostrophe) |
-| `&#x201C;` | “ (left double) |
-| `&#x201D;` | ” (right double) |
+| `&#x2018;` | 鈥?(left single) |
+| `&#x2019;` | 鈥?(right single / apostrophe) |
+| `&#x201C;` | 鈥?(left double) |
+| `&#x201D;` | 鈥?(right double) |
 
 **Adding comments:** Use `comment.py` to handle boilerplate across multiple XML files (text must be pre-escaped XML):
 ```bash
@@ -356,14 +356,14 @@ Validates with auto-repair, condenses XML, and creates DOCX. Use `--validate fal
 
 **Insertion:**
 ```xml
-<w:ins w:id="1" w:author="BitFun" w:date="2025-01-01T00:00:00Z">
+<w:ins w:id="1" w:author="northhing" w:date="2025-01-01T00:00:00Z">
   <w:r><w:t>inserted text</w:t></w:r>
 </w:ins>
 ```
 
 **Deletion:**
 ```xml
-<w:del w:id="2" w:author="BitFun" w:date="2025-01-01T00:00:00Z">
+<w:del w:id="2" w:author="northhing" w:date="2025-01-01T00:00:00Z">
   <w:r><w:delText>deleted text</w:delText></w:r>
 </w:del>
 ```
@@ -374,10 +374,10 @@ Validates with auto-repair, condenses XML, and creates DOCX. Use `--validate fal
 ```xml
 <!-- Change "30 days" to "60 days" -->
 <w:r><w:t>The term is </w:t></w:r>
-<w:del w:id="1" w:author="BitFun" w:date="...">
+<w:del w:id="1" w:author="northhing" w:date="...">
   <w:r><w:delText>30</w:delText></w:r>
 </w:del>
-<w:ins w:id="2" w:author="BitFun" w:date="...">
+<w:ins w:id="2" w:author="northhing" w:date="...">
   <w:r><w:t>60</w:t></w:r>
 </w:ins>
 <w:r><w:t> days.</w:t></w:r>
@@ -389,10 +389,10 @@ Validates with auto-repair, condenses XML, and creates DOCX. Use `--validate fal
   <w:pPr>
     <w:numPr>...</w:numPr>  <!-- list numbering if present -->
     <w:rPr>
-      <w:del w:id="1" w:author="BitFun" w:date="2025-01-01T00:00:00Z"/>
+      <w:del w:id="1" w:author="northhing" w:date="2025-01-01T00:00:00Z"/>
     </w:rPr>
   </w:pPr>
-  <w:del w:id="2" w:author="BitFun" w:date="2025-01-01T00:00:00Z">
+  <w:del w:id="2" w:author="northhing" w:date="2025-01-01T00:00:00Z">
     <w:r><w:delText>Entire paragraph content being deleted...</w:delText></w:r>
   </w:del>
 </w:p>
@@ -402,7 +402,7 @@ Without the `<w:del/>` in `<w:pPr><w:rPr>`, accepting changes leaves an empty pa
 **Rejecting another author's insertion** - nest deletion inside their insertion:
 ```xml
 <w:ins w:author="Jane" w:id="5">
-  <w:del w:author="BitFun" w:id="10">
+  <w:del w:author="northhing" w:id="10">
     <w:r><w:delText>their inserted text</w:delText></w:r>
   </w:del>
 </w:ins>
@@ -413,7 +413,7 @@ Without the `<w:del/>` in `<w:pPr><w:rPr>`, accepting changes leaves an empty pa
 <w:del w:author="Jane" w:id="5">
   <w:r><w:delText>deleted text</w:delText></w:r>
 </w:del>
-<w:ins w:author="BitFun" w:id="10">
+<w:ins w:author="northhing" w:id="10">
   <w:r><w:t>deleted text</w:t></w:r>
 </w:ins>
 ```
@@ -427,7 +427,7 @@ After running `comment.py` (see Step 2), add markers to document.xml. For replie
 ```xml
 <!-- Comment markers are direct children of w:p, never inside w:r -->
 <w:commentRangeStart w:id="0"/>
-<w:del w:id="1" w:author="BitFun" w:date="2025-01-01T00:00:00Z">
+<w:del w:id="1" w:author="northhing" w:date="2025-01-01T00:00:00Z">
   <w:r><w:delText>deleted</w:delText></w:r>
 </w:del>
 <w:r><w:t> more text</w:t></w:r>

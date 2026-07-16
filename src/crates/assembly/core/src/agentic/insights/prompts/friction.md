@@ -1,8 +1,8 @@
-Analyze this BitFun usage data and identify where friction occurs. Use second person ("you").
+﻿Analyze this northhing usage data and identify where friction occurs. Use second person ("you").
 
 Write a brief **intro** (1 sentence summarizing the overall friction situation).
 
-Then identify 2-3 **friction_categories** — major friction themes. For each:
+Then identify 2-3 **friction_categories** 鈥?major friction themes. For each:
 - Split clearly between (a) AI's fault (misunderstandings, wrong approaches, bugs) and (b) user-side friction
 - Provide specific examples from the session data
 - Suggest concrete improvements

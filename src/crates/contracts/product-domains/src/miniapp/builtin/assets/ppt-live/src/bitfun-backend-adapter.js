@@ -1,12 +1,12 @@
-// BitFun backend adapter for PPT Live.
+﻿// northhing backend adapter for PPT Live.
 //
 // The MiniApp agent bridge (`app.agent.*`) is the only generation path. The
-// planning turn loads BitFun's pinned built-in `ppt-design` skill, reads the
+// planning turn loads northhing's pinned built-in `ppt-design` skill, reads the
 // required references, and writes a durable generation contract. Serial render
 // and edit turns reuse the deck session and project directory.
 
 const EVENT_LISTENERS = new Set();
-export const PPT_DESIGN_SKILL_KEY = 'user::bitfun-system::ppt-design';
+export const PPT_DESIGN_SKILL_KEY = 'user::northhing-system::ppt-design';
 export const PPT_DESIGN_REQUIRED_REFERENCES = [
   'references/editable-pptx.md',
   'references/slide-decks.md',
@@ -30,7 +30,7 @@ function emitEvent(event) {
   });
 }
 
-// ─── Agent prompt builder (staged plan/render/edit protocol) ─────────────────
+// 鈹€鈹€鈹€ Agent prompt builder (staged plan/render/edit protocol) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 const SLIDE_SHAPE_JSON = `{
       "slideNumber": 1,
@@ -76,7 +76,7 @@ function buildOperationAppendix(input) {
 - Operation: ${operation}
 - \`currentDeck\` is provided. Treat the user instruction as an incremental editing request for the existing deck unless the instruction explicitly asks for a completely new deck.
 - \`currentDeck.slides[].slideIndex\` is zero-based. \`currentDeck.slides[].slideNumber\` is one-based and matches what users usually say.
-- Use \`currentDeck.activeSlideIndex\` when the instruction says "current slide", "this page", "本页", "当前页", or similar.
+- Use \`currentDeck.activeSlideIndex\` when the instruction says "current slide", "this page", "鏈〉", "褰撳墠椤?, or similar.
 - Decide the affected slide or slides yourself from the instruction, \`currentDeck.targetHints\`, slide titles, claims, notes, and visible text. Do not ask the user which pages to edit.
 - Preserve unchanged slides exactly by returning a patch instead of regenerating them.
 - Prefer \`deckPatch\` for revision, insertion, and deletion. Return a full \`slides\` array only when the user asks for a whole-deck rewrite or the requested change naturally affects most slides.
@@ -146,21 +146,21 @@ function buildStyleAppendix(input) {
   const palette = style.palette;
 
   const fontRule = font === 'serif'
-    ? 'serif — use serif typography in every slide HTML (for example Georgia, "Songti SC", "Times New Roman", Cambria). Avoid sans-serif body copy.'
-    : 'sans-serif — use clean sans-serif typography in every slide HTML (for example system-ui, "PingFang SC", "Microsoft YaHei", Arial, Helvetica). Avoid serif body copy.';
+    ? 'serif 鈥?use serif typography in every slide HTML (for example Georgia, "Songti SC", "Times New Roman", Cambria). Avoid sans-serif body copy.'
+    : 'sans-serif 鈥?use clean sans-serif typography in every slide HTML (for example system-ui, "PingFang SC", "Microsoft YaHei", Arial, Helvetica). Avoid serif body copy.';
 
   let densityRule;
   if (density === 'compact') {
-    densityRule = 'compact — information-forward: body padding 24-32px, line-height 1.2-1.28, and 4-6 concise bullets, metrics, or a two-column grid when the content supports it. Prefer readable tightness over decorative whitespace; never overflow the slide.';
+    densityRule = 'compact 鈥?information-forward: body padding 24-32px, line-height 1.2-1.28, and 4-6 concise bullets, metrics, or a two-column grid when the content supports it. Prefer readable tightness over decorative whitespace; never overflow the slide.';
   } else if (density === 'spacious') {
-    densityRule = 'spacious — the loosest tier, still content-rich: body padding 44-52px, line-height 1.32-1.4, and 2-4 concise bullets or 2-3 short content blocks per slide. Keep clear hierarchy without leaving large empty regions.';
+    densityRule = 'spacious 鈥?the loosest tier, still content-rich: body padding 44-52px, line-height 1.32-1.4, and 2-4 concise bullets or 2-3 short content blocks per slide. Keep clear hierarchy without leaving large empty regions.';
   } else {
-    densityRule = 'standard — balanced professional density: body padding 34-42px, line-height 1.26-1.34, and 3-5 bullets, metrics, or paired columns when useful. Use whitespace to separate sections, not to leave half the slide blank.';
+    densityRule = 'standard 鈥?balanced professional density: body padding 34-42px, line-height 1.26-1.34, and 3-5 bullets, metrics, or paired columns when useful. Use whitespace to separate sections, not to leave half the slide blank.';
   }
 
   const colorRule = colorMode === 'dark'
-    ? 'dark — use dark slide backgrounds with light text, high-contrast panels, and a keynote-style atmosphere. Set design.theme to dark and reflect it in every slides[].html background, text, and panel colors.'
-    : 'light — use light slide backgrounds with dark text, clean readable contrast, and a professional presentation look. Set design.theme to light and reflect it in every slides[].html background, text, and panel colors.';
+    ? 'dark 鈥?use dark slide backgrounds with light text, high-contrast panels, and a keynote-style atmosphere. Set design.theme to dark and reflect it in every slides[].html background, text, and panel colors.'
+    : 'light 鈥?use light slide backgrounds with dark text, clean readable contrast, and a professional presentation look. Set design.theme to light and reflect it in every slides[].html background, text, and panel colors.';
 
   let styleRules = `
 
@@ -172,7 +172,7 @@ function buildStyleAppendix(input) {
 
 ## Hard layout rules (apply to every slides[].html, any style)
 
-- Zero overflow, enforced by budget: before writing each slide, budget the vertical space — title block 70-95pt + footer 20-25pt + a mandatory >=36pt (0.5in) bottom safety margin leaves only ~390-420pt for body content. Estimate every block as \`lines x font-size x line-height + paddings\` (tables as \`rows x row-height\`); if the sum exceeds the body budget, cut rows, merge columns, or split the slide. Never shrink fonts below 10px to force-fit content.
+- Zero overflow, enforced by budget: before writing each slide, budget the vertical space 鈥?title block 70-95pt + footer 20-25pt + a mandatory >=36pt (0.5in) bottom safety margin leaves only ~390-420pt for body content. Estimate every block as \`lines x font-size x line-height + paddings\` (tables as \`rows x row-height\`); if the sum exceeds the body budget, cut rows, merge columns, or split the slide. Never shrink fonts below 10px to force-fit content.
 - Structural clipping fallback: set \`body { overflow: hidden; }\`, make the root a \`display:flex; flex-direction:column; height:540pt;\` container, and give the stretchable content area \`flex:1; min-height:0; overflow:hidden;\` so a misestimate clips inside its container instead of overflowing the canvas. Every text box larger than 12px must end >=0.5in above the canvas bottom.
 - Choose the representation by content shape, judged per slide by which form communicates fastest: comparisons -> tables/matrices, rankings -> CSS horizontal bar charts, trends -> CSS column charts, composition -> \`conic-gradient\` pie/donut, strategy -> SWOT/2x2 grids, processes -> flow diagrams with CSS arrows, milestones -> timelines, single KPIs -> big-number callouts; qualitative reasoning or narrative stays as structured text. Do not write paragraphs where a visual is clearly faster, and do not force decorative charts onto purely qualitative content. Pure HTML/CSS only, label every bar/segment with its value, and pair each visual with a one-line takeaway.
 `;
@@ -196,7 +196,7 @@ function buildStyleAppendix(input) {
 
 // Prefixed to any turn that re-runs after an interrupted attempt, so the model
 // treats the rerun as a continuation instead of a contradictory new task.
-const CONTINUE_AFTER_INTERRUPTION_PREFIX = `Your previous response in this session was interrupted before it finished. Continue the task now. If your deliverable is a project file, first inspect what you already wrote (Read it) and rewrite that file completely if it could be incomplete. If your deliverable is a final JSON message, re-emit the complete JSON from scratch — do not assume any part of the interrupted output was received.
+const CONTINUE_AFTER_INTERRUPTION_PREFIX = `Your previous response in this session was interrupted before it finished. Continue the task now. If your deliverable is a project file, first inspect what you already wrote (Read it) and rewrite that file completely if it could be incomplete. If your deliverable is a final JSON message, re-emit the complete JSON from scratch 鈥?do not assume any part of the interrupted output was received.
 
 `;
 
@@ -248,7 +248,7 @@ function buildPlanPrompt(input) {
 2. From the skill directory returned by Skill, \`Read\` all mandatory references: \`${PPT_DESIGN_REQUIRED_REFERENCES.join('`, `')}\`.
 ${presetReference ? `3. \`Read\` the selected style preset \`${presetReference}\` and apply its visual rules when planning.` : '3. No named style preset was supplied; derive one coherent visual system from the user intent and skill.'}
 4. If the deck is data-heavy, analytical, explanatory, or structurally complex, \`Read\` \`references/data-information-visualization.md\` before drafting slide plans.
-5. Use any BitFun research tools needed by the user's prompt. All external research happens NOW; render runs must not re-research.
+5. Use any northhing research tools needed by the user's prompt. All external research happens NOW; render runs must not re-research.
 6. When the plan is final, \`Write\` it to \`project.json\` as one strict JSON object matching the schema below. Do not generate slide HTML in this phase.
 7. For a deck with at least 5 pages, choose two visually different \`showcaseSlideNumbers\` that later render first and establish the grammar for the remaining pages.
 8. End with one short status line such as "PLAN READY: N slides". Do not paste the JSON into the reply.
@@ -285,7 +285,7 @@ ${presetReference ? `3. \`Read\` the selected style preset \`${presetReference}\
       "designRead": "one-line audience, task, visual language, structural grammar",
       "visualThesis": "why this brief should look this way; not generic adjectives",
       "signatureMove": "one theme-specific device used sparingly across the deck",
-      "typography": "hierarchy via weight, size, spacing — not decoration",
+      "typography": "hierarchy via weight, size, spacing 鈥?not decoration",
       "paletteRoles": "semantic role of every supplied color",
       "composition": "grid, margins, edge discipline, and dominant visual masses",
       "layoutFamilies": ["deck-specific families with different silhouettes"],
@@ -341,7 +341,7 @@ Plan rules:
 - \`outline[].slide_id\`, \`slide_order[]\`, and \`slides/slide-XX.html\` numbering must agree.
 - Copy the user's original instruction, brief, and all style settings into \`generationContract\`; do not paraphrase away explicit requirements.
 - Every \`contentBrief\` must be concrete enough that a render run with no research access can produce an audience-ready slide from it. Put real numbers, names, and source notes into the briefs, not vague directions.
-- \`design.layoutPrinciples\` and \`design.palette\` are the consistency contract across render runs — make them specific.
+- \`design.layoutPrinciples\` and \`design.palette\` are the consistency contract across render runs 鈥?make them specific.
 - Distill the skill, mandatory references, selected preset, and user style into \`generationContract.hardRules\` and \`generationContract.visualGrammar\` so later turns can recover after context compression.
 - The editable PPTX rules below are non-negotiable and must appear compactly in \`generationContract.hardRules\`:
 ${EDITABLE_PPTX_HARD_RULES}
@@ -383,7 +383,7 @@ function buildSessionSlidePrompt(input) {
 5. End with "SLIDE ${assigned} READY"; do not paste HTML into the reply.
 
 Hard HTML/PPTX constraints:
-- The file must be a complete self-contained 960pt × 540pt document with inline CSS only and no remote assets.
+- The file must be a complete self-contained 960pt 脳 540pt document with inline CSS only and no remote assets.
 - \`body { overflow: hidden; }\`, flex-column root with \`height: 540pt\`, stretchable areas \`flex:1; min-height:0; overflow:hidden;\`.
 - Budget the vertical space before writing; body text >= 10px; keep a >=36pt bottom safety margin; never overflow the canvas.
 ${EDITABLE_PPTX_HARD_RULES}
@@ -417,7 +417,7 @@ function buildSlidesPrompt(input) {
 1. Call \`Skill('${PPT_DESIGN_SKILL_KEY}')\`; verify the result reports the exact stable key. Never substitute another skill.
 2. \`Read\` every path in \`plan.generationContract.requiredReferences\`, including mandatory references \`${PPT_DESIGN_REQUIRED_REFERENCES.join('`, `')}\`, plus the selected style preset when listed.
 3. \`Read\` \`project.json\`, then follow \`generationContract\`, \`plan.design\`, and the assigned slide together. Do not re-research or change the planned title, claim, layout, or narrative role.
-4. \`Write\` exactly one complete document to \`${file}\`: self-contained 960pt × 540pt HTML with inline CSS and audience-ready copy.
+4. \`Write\` exactly one complete document to \`${file}\`: self-contained 960pt 脳 540pt HTML with inline CSS and audience-ready copy.
 5. End with "SLIDE ${assigned} READY"; do not paste HTML into the reply.
 
 Render rules:
@@ -440,7 +440,7 @@ function buildLegacyPrompt(input) {
 3. Use research tools only when the edit introduces factual claims not already grounded by the deck.
 4. Finish with only one strict JSON object.
 
-Every slide must include complete \`slides[].html\`: self-contained 960pt × 540pt HTML with inline CSS (ppt-design editable PPTX rules). Slide copy must be audience-ready, never placeholder instructions.
+Every slide must include complete \`slides[].html\`: self-contained 960pt 脳 540pt HTML with inline CSS (ppt-design editable PPTX rules). Slide copy must be audience-ready, never placeholder instructions.
 ${EDITABLE_PPTX_HARD_RULES}
 
 Return JSON matching this shape:
@@ -505,7 +505,7 @@ function buildAgentPrompt(input) {
   return MINIAPP_HEADLESS_AGENT_RULES + prompt;
 }
 
-// ─── Agent-backed backend (primary path) ─────────────────────────────────────
+// 鈹€鈹€鈹€ Agent-backed backend (primary path) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 function installAgentBackend(app) {
   let agentEventsHooked = false;
@@ -568,9 +568,9 @@ function installAgentBackend(app) {
   };
 }
 
-// ─── Install ─────────────────────────────────────────────────────────────────
+// 鈹€鈹€鈹€ Install 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
-export function installBitFunBackendAdapter(app = window.app) {
+export function installnorthhingBackendAdapter(app = window.app) {
   if (!app || app.backend?.call) return;
   if (app.agent?.run) {
     installAgentBackend(app);

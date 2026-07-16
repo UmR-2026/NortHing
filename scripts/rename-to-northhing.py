@@ -29,7 +29,6 @@ EXCLUDE_DIRS = {
     "node_modules",
     "dist",
     "build",
-    ".bitfun",
     "__pycache__",
 }
 

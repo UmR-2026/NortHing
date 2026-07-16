@@ -1,4 +1,4 @@
----
+﻿---
 name: ship
 description: |
   Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION,
@@ -12,9 +12,9 @@ description: |
 
 You are running the `/ship` workflow. This is a **non-interactive, fully automated** workflow. Do NOT ask for confirmation at any step. The user said `/ship` which means DO IT. Run straight through and output the PR URL at the end.
 
-## BitFun Team Mode Dispatch
+## northhing Team Mode Dispatch
 
-When this skill is invoked by BitFun Team Mode, this skill supplies the release-engineering checklist. Use existing Task sub-agents only for read-only readiness checks that can run independently, then keep all mutations in the main Team session.
+When this skill is invoked by northhing Team Mode, this skill supplies the release-engineering checklist. Use existing Task sub-agents only for read-only readiness checks that can run independently, then keep all mutations in the main Team session.
 
 - Do not assume a Release Engineer sub-agent exists. Choose only from the Task tool's available agents.
 - Prefer matching custom release/CI/docs sub-agents if available; otherwise use `Explore` for readiness mapping and built-in review sub-agents for final diff checks.
@@ -27,22 +27,22 @@ When this skill is invoked by BitFun Team Mode, this skill supplies the release-
 - Merge conflicts that can't be auto-resolved (stop, show conflicts)
 - In-branch test failures (pre-existing failures are triaged, not auto-blocking)
 - Pre-landing review finds ASK items that need user judgment
-- MINOR or MAJOR version bump needed (ask — see Step 4)
+- MINOR or MAJOR version bump needed (ask 鈥?see Step 4)
 - Greptile review comments that need user decision (complex fixes, false positives)
-- AI-assessed coverage below minimum threshold (hard gate with user override — see Step 3.4)
+- AI-assessed coverage below minimum threshold (hard gate with user override 鈥?see Step 3.4)
 - Plan items NOT DONE with no user override (see Step 3.45)
 - Plan verification failures (see Step 3.47)
-- TODOS.md missing and user wants to create one (ask — see Step 5.5)
-- TODOS.md disorganized and user wants to reorganize (ask — see Step 5.5)
+- TODOS.md missing and user wants to create one (ask 鈥?see Step 5.5)
+- TODOS.md disorganized and user wants to reorganize (ask 鈥?see Step 5.5)
 
 **Never stop for:**
 - Uncommitted changes (always include them)
-- Version bump choice (auto-pick MICRO or PATCH — see Step 4)
+- Version bump choice (auto-pick MICRO or PATCH 鈥?see Step 4)
 - CHANGELOG content (auto-generate from diff)
 - Commit message approval (auto-commit)
 - Multi-file changesets (auto-split into bisectable commits)
 - TODOS.md completed-item detection (auto-mark)
-- Auto-fixable review findings (dead code, N+1, stale comments — fixed automatically)
+- Auto-fixable review findings (dead code, N+1, stale comments 鈥?fixed automatically)
 - Test coverage gaps within target threshold (auto-generate and commit, or flag in PR body)
 
 **Re-run behavior (idempotency):**
@@ -61,7 +61,7 @@ Never skip a verification step because a prior `/ship` run already performed it.
 
 1. Check the current branch. If on the base branch or the repo's default branch, **abort**: "You're on the base branch. Ship from a feature branch."
 
-2. Run `git status` (never use `-uall`). Uncommitted changes are always included — no need to ask.
+2. Run `git status` (never use `-uall`). Uncommitted changes are always included 鈥?no need to ask.
 
 3. Run `git diff <base>...HEAD --stat` and `git log <base>..HEAD --oneline` to understand what's being shipped.
 
@@ -72,10 +72,10 @@ Never skip a verification step because a prior `/ship` run already performed it.
 After completing the review, read the review log and config to display the dashboard.
 
 ```bash
-true # BitFun Team Mode reads review context from the current session
+true # northhing Team Mode reads review context from the current session
 ```
 
-Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry — this captures outside voices from both /plan-ceo-review and /plan-eng-review.
+Parse the output. Find the most recent entry for each skill (plan-ceo-review, plan-eng-review, review, plan-design-review, design-review-lite, adversarial-review, outside-voice-review, outside-voice-plan-review). Ignore entries with timestamps older than 7 days. For the Eng Review row, show whichever is more recent between `review` (diff-scoped pre-landing review) and `plan-eng-review` (plan-stage architecture review). Append "(DIFF)" or "(PLAN)" to the status to distinguish. For the Adversarial row, show whichever is more recent between `adversarial-review` (new auto-scaled) and `outside-voice-review` (legacy). For Design Review, show whichever is more recent between `plan-design-review` (full visual audit) and `design-review-lite` (code-level check). Append "(FULL)" or "(LITE)" to the status to distinguish. For the Outside Voice row, show the most recent `outside-voice-plan-review` entry 鈥?this captures outside voices from both /plan-ceo-review and /plan-eng-review.
 
 **Source attribution:** If the most recent entry for a skill has a \`"via"\` field, append it to the status label in parentheses. Examples: `plan-eng-review` with `via:"autoplan"` shows as "CLEAR (PLAN via /autoplan)". `review` with `via:"ship"` shows as "CLEAR (DIFF via /ship)". Entries without a `via` field show as "CLEAR (PLAN)" or "CLEAR (DIFF)" as before.
 
@@ -90,12 +90,12 @@ Display:
 | Review          | Runs | Last Run            | Status    | Required |
 |-----------------|------|---------------------|-----------|----------|
 | Eng Review      |  1   | 2026-03-16 15:00    | CLEAR     | YES      |
-| CEO Review      |  0   | —                   | —         | no       |
-| Design Review   |  0   | —                   | —         | no       |
-| Adversarial     |  0   | —                   | —         | no       |
-| Outside Voice   |  0   | —                   | —         | no       |
+| CEO Review      |  0   | 鈥?                  | 鈥?        | no       |
+| Design Review   |  0   | 鈥?                  | 鈥?        | no       |
+| Adversarial     |  0   | 鈥?                  | 鈥?        | no       |
+| Outside Voice   |  0   | 鈥?                  | 鈥?        | no       |
 +--------------------------------------------------------------------+
-| VERDICT: CLEARED — Eng Review passed                                |
+| VERDICT: CLEARED 鈥?Eng Review passed                                |
 +====================================================================+
 ```
 
@@ -103,7 +103,7 @@ Display:
 - **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with \`Team Mode setting skip_eng_review=true\` (the "don't bother me" setting).
 - **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
 - **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
-- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both BitFun adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
+- **Adversarial Review (automatic):** Always-on for every review. Every diff gets both northhing adversarial subagent and outside-voice sub-agent adversarial challenge. Large diffs (200+ lines) additionally get outside-voice sub-agent structured review with P1 gate. No configuration needed.
 - **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to independent subagent if outside-voice sub-agent is unavailable. Never gates shipping.
 
 **Verdict logic:**
@@ -114,28 +114,28 @@ Display:
 
 **Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
 - Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
-- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
-- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
+- For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale 鈥?{N} commits since review"
+- For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking 鈥?consider re-running for accurate staleness detection"
 - If all reviews match the current HEAD, do not display any staleness notes
 
 If the Eng Review is NOT "CLEAR":
 
-Print: "No prior eng review found — ship will run its own pre-landing review in Step 3.5."
+Print: "No prior eng review found 鈥?ship will run its own pre-landing review in Step 3.5."
 
 Check diff size: `git diff <base>...HEAD --stat | tail -1`. If the diff is >200 lines, add: "Note: This is a large diff. Consider running `/plan-eng-review` or `/autoplan` for architecture-level review before shipping."
 
-If CEO Review is missing, mention as informational ("CEO Review not run — recommended for product changes") but do NOT block.
+If CEO Review is missing, mention as informational ("CEO Review not run 鈥?recommended for product changes") but do NOT block.
 
-For Design Review: run `source <(true # BitFun Team Mode infers diff scope with git/rg <base> 2>/dev/null)`. If `SCOPE_FRONTEND=true` and no design review (plan-design-review or design-review-lite) exists in the dashboard, mention: "Design Review not run — this PR changes frontend code. The lite design check will run automatically in Step 3.5, but consider running /design-review for a full visual audit post-implementation." Still never block.
+For Design Review: run `source <(true # northhing Team Mode infers diff scope with git/rg <base> 2>/dev/null)`. If `SCOPE_FRONTEND=true` and no design review (plan-design-review or design-review-lite) exists in the dashboard, mention: "Design Review not run 鈥?this PR changes frontend code. The lite design check will run automatically in Step 3.5, but consider running /design-review for a full visual audit post-implementation." Still never block.
 
-Continue to Step 1.5 — do NOT block or ask. Ship runs its own review in Step 3.5.
+Continue to Step 1.5 鈥?do NOT block or ask. Ship runs its own review in Step 3.5.
 
 ---
 
 ## Step 1.5: Distribution Pipeline Check
 
-If the diff introduces a new standalone artifact (CLI binary, library package, tool) — not a web
-service with existing deployment — verify that a distribution pipeline exists.
+If the diff introduces a new standalone artifact (CLI binary, library package, tool) 鈥?not a web
+service with existing deployment 鈥?verify that a distribution pipeline exists.
 
 1. Check if the diff adds a new `cmd/` directory, `main.go`, or `bin/` entry point:
    ```bash
@@ -151,9 +151,9 @@ service with existing deployment — verify that a distribution pipeline exists.
 3. **If no release pipeline exists and a new artifact was added:** Use AskUserQuestion:
    - "This PR adds a new binary/tool but there's no CI/CD pipeline to build and publish it.
      Users won't be able to download the artifact after merge."
-   - A) Add a release workflow now (CI/CD release pipeline — GitHub Actions or GitLab CI depending on platform)
-   - B) Defer — add to TODOS.md
-   - C) Not needed — this is internal/web-only, existing deployment covers it
+   - A) Add a release workflow now (CI/CD release pipeline 鈥?GitHub Actions or GitLab CI depending on platform)
+   - B) Defer 鈥?add to TODOS.md
+   - C) Not needed 鈥?this is internal/web-only, existing deployment covers it
 
 4. **If release pipeline exists:** Continue silently.
 5. **If no new artifact detected:** Skip silently.
@@ -197,7 +197,7 @@ setopt +o nomatch 2>/dev/null || true  # zsh compat
 ls jest.config.* vitest.config.* playwright.config.* .rspec pytest.ini pyproject.toml phpunit.xml 2>/dev/null
 ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
 # Check opt-out marker
-[ -f .bitfun/team/no-test-bootstrap ] && echo "BOOTSTRAP_DECLINED"
+[ -f .northhing/team/no-test-bootstrap ] && echo "BOOTSTRAP_DECLINED"
 ```
 
 **If test framework detected** (config files or test directories found):
@@ -205,14 +205,14 @@ Print "Test framework detected: {name} ({N} existing tests). Skipping bootstrap.
 Read 2-3 existing test files to learn conventions (naming, imports, assertion style, setup patterns).
 Store conventions as prose context for use in Phase 8e.5 or Step 3.4. **Skip the rest of bootstrap.**
 
-**If BOOTSTRAP_DECLINED** appears: Print "Test bootstrap previously declined — skipping." **Skip the rest of bootstrap.**
+**If BOOTSTRAP_DECLINED** appears: Print "Test bootstrap previously declined 鈥?skipping." **Skip the rest of bootstrap.**
 
 **If NO runtime detected** (no config files found): Use AskUserQuestion:
 "I couldn't detect your project's language. What runtime are you using?"
 Options: A) Node.js/TypeScript B) Ruby/Rails C) Python D) Go E) Rust F) PHP G) Elixir H) This project doesn't need tests.
-If user picks H → write `.bitfun/team/no-test-bootstrap` and continue without tests.
+If user picks H 鈫?write `.northhing/team/no-test-bootstrap` and continue without tests.
 
-**If runtime detected but no test framework — bootstrap:**
+**If runtime detected but no test framework 鈥?bootstrap:**
 
 ### B2. Research best practices
 
@@ -229,22 +229,22 @@ If WebSearch is unavailable, use this built-in knowledge table:
 | Next.js | vitest + @testing-library/react + playwright | jest + cypress |
 | Python | pytest + pytest-cov | unittest |
 | Go | stdlib testing + testify | stdlib only |
-| Rust | cargo test (built-in) + mockall | — |
+| Rust | cargo test (built-in) + mockall | 鈥?|
 | PHP | phpunit + mockery | pest |
-| Elixir | ExUnit (built-in) + ex_machina | — |
+| Elixir | ExUnit (built-in) + ex_machina | 鈥?|
 
 ### B3. Framework selection
 
 Use AskUserQuestion:
 "I detected this is a [Runtime/Framework] project with no test framework. I researched current best practices. Here are the options:
-A) [Primary] — [rationale]. Includes: [packages]. Supports: unit, integration, smoke, e2e
-B) [Alternative] — [rationale]. Includes: [packages]
-C) Skip — don't set up testing right now
+A) [Primary] 鈥?[rationale]. Includes: [packages]. Supports: unit, integration, smoke, e2e
+B) [Alternative] 鈥?[rationale]. Includes: [packages]
+C) Skip 鈥?don't set up testing right now
 RECOMMENDATION: Choose A because [reason based on project context]"
 
-If user picks C → write `.bitfun/team/no-test-bootstrap`. Tell user: "If you change your mind later, delete `.bitfun/team/no-test-bootstrap` and re-run." Continue without tests.
+If user picks C 鈫?write `.northhing/team/no-test-bootstrap`. Tell user: "If you change your mind later, delete `.northhing/team/no-test-bootstrap` and re-run." Continue without tests.
 
-If multiple runtimes detected (monorepo) → ask which runtime to set up first, with option to do both sequentially.
+If multiple runtimes detected (monorepo) 鈫?ask which runtime to set up first, with option to do both sequentially.
 
 ### B4. Install and configure
 
@@ -253,7 +253,7 @@ If multiple runtimes detected (monorepo) → ask which runtime to set up first, 
 3. Create directory structure (test/, spec/, etc.)
 4. Create one example test matching the project's code to verify setup works
 
-If package installation fails → debug once. If still failing → revert with `git checkout -- package.json package-lock.json` (or equivalent for the runtime). Warn user and continue without tests.
+If package installation fails 鈫?debug once. If still failing 鈫?revert with `git checkout -- package.json package-lock.json` (or equivalent for the runtime). Warn user and continue without tests.
 
 ### B4.5. First real tests
 
@@ -261,8 +261,8 @@ Generate 3-5 real tests for existing code:
 
 1. **Find recently changed files:** `git log --since=30.days --name-only --format="" | sort | uniq -c | sort -rn | head -10`
 2. **Prioritize by risk:** Error handlers > business logic with conditionals > API endpoints > pure functions
-3. **For each file:** Write one test that tests real behavior with meaningful assertions. Never `expect(x).toBeDefined()` — test what the code DOES.
-4. Run each test. Passes → keep. Fails → fix once. Still fails → delete silently.
+3. **For each file:** Write one test that tests real behavior with meaningful assertions. Never `expect(x).toBeDefined()` 鈥?test what the code DOES.
+4. Run each test. Passes 鈫?keep. Fails 鈫?fix once. Still fails 鈫?delete silently.
 5. Generate at least 1 test, cap at 5.
 
 Never import secrets, API keys, or credentials in test files. Use environment variables or test fixtures.
@@ -274,7 +274,7 @@ Never import secrets, API keys, or credentials in test files. Use environment va
 {detected test command}
 ```
 
-If tests fail → debug once. If still failing → revert all bootstrap changes and warn user.
+If tests fail 鈫?debug once. If still failing 鈫?revert all bootstrap changes and warn user.
 
 ### B5.5. CI/CD pipeline
 
@@ -284,21 +284,21 @@ ls -d .github/ 2>/dev/null && echo "CI:github"
 ls .gitlab-ci.yml .circleci/ bitrise.yml 2>/dev/null
 ```
 
-If `.github/` exists (or no CI detected — default to GitHub Actions):
+If `.github/` exists (or no CI detected 鈥?default to GitHub Actions):
 Create `.github/workflows/test.yml` with:
 - `runs-on: ubuntu-latest`
 - Appropriate setup action for the runtime (setup-node, setup-ruby, setup-python, etc.)
 - The same test command verified in B5
 - Trigger: push + pull_request
 
-If non-GitHub CI detected → skip CI generation with note: "Detected {provider} — CI pipeline generation supports GitHub Actions only. Add test step to your existing pipeline manually."
+If non-GitHub CI detected 鈫?skip CI generation with note: "Detected {provider} 鈥?CI pipeline generation supports GitHub Actions only. Add test step to your existing pipeline manually."
 
 ### B6. Create TESTING.md
 
-First check: If TESTING.md already exists → read it and update/append rather than overwriting. Never destroy existing content.
+First check: If TESTING.md already exists 鈫?read it and update/append rather than overwriting. Never destroy existing content.
 
 Write TESTING.md with:
-- Philosophy: "100% test coverage is the key to great vibe coding. Tests let you move fast, trust your instincts, and ship with confidence — without them, vibe coding is just yolo coding. With tests, it's a superpower."
+- Philosophy: "100% test coverage is the key to great vibe coding. Tests let you move fast, trust your instincts, and ship with confidence 鈥?without them, vibe coding is just yolo coding. With tests, it's a superpower."
 - Framework name and version
 - How to run tests (the verified command from B5)
 - Test layers: Unit tests (what, where, when), Integration tests, Smoke tests, E2E tests
@@ -306,13 +306,13 @@ Write TESTING.md with:
 
 ### B7. Update AGENTS.md
 
-First check: If AGENTS.md already has a `## Testing` section → skip. Don't duplicate.
+First check: If AGENTS.md already has a `## Testing` section 鈫?skip. Don't duplicate.
 
 Append a `## Testing` section:
 - Run command and test directory
 - Reference to TESTING.md
 - Test expectations:
-  - 100% test coverage is the goal — tests make vibe coding safe
+  - 100% test coverage is the goal 鈥?tests make vibe coding safe
   - When writing new functions, write a corresponding test
   - When fixing a bug, write a regression test
   - When adding error handling, write a test that triggers the error
@@ -334,7 +334,7 @@ Only commit if there are changes. Stage all bootstrap files (config, test direct
 
 ## Step 3: Run tests (on merged code)
 
-**Do NOT run `RAILS_ENV=test bin/rails db:migrate`** — `bin/test-lane` already calls
+**Do NOT run `RAILS_ENV=test bin/rails db:migrate`** 鈥?`bin/test-lane` already calls
 `db:test:prepare` internally, which loads the schema into the correct lane database.
 Running bare test migrations without INSTANCE hits an orphan DB and corrupts structure.sql.
 
@@ -368,7 +368,7 @@ For each failing test:
    - **Likely pre-existing** if: neither the test file nor the code it tests was modified on this branch, AND the failure is unrelated to any branch change you can identify.
    - **When ambiguous, default to in-branch.** It is safer to stop the developer than to let a broken test ship. Only classify as pre-existing when you are confident.
 
-   This classification is heuristic — use your judgment reading the diff and the test output. You do not have a programmatic dependency graph.
+   This classification is heuristic 鈥?use your judgment reading the diff and the test output. You do not have a programmatic dependency graph.
 
 ### Step T2: Handle in-branch failures
 
@@ -388,10 +388,10 @@ Use AskUserQuestion:
 >
 > Since this is a solo repo, you're the only one who will fix these.
 >
-> RECOMMENDATION: Choose A — fix now while the context is fresh. Completeness: 9/10.
-> A) Investigate and fix now (human: ~2-4h / CC: ~15min) — Completeness: 10/10
-> B) Add as P0 TODO — fix after this branch lands — Completeness: 7/10
-> C) Skip — I know about this, ship anyway — Completeness: 3/10
+> RECOMMENDATION: Choose A 鈥?fix now while the context is fresh. Completeness: 9/10.
+> A) Investigate and fix now (human: ~2-4h / CC: ~15min) 鈥?Completeness: 10/10
+> B) Add as P0 TODO 鈥?fix after this branch lands 鈥?Completeness: 7/10
+> C) Skip 鈥?I know about this, ship anyway 鈥?Completeness: 3/10
 
 **If REPO_MODE is `collaborative` or `unknown`:**
 
@@ -401,13 +401,13 @@ Use AskUserQuestion:
 >
 > [list each failure with file:line and brief error description]
 >
-> This is a collaborative repo — these may be someone else's responsibility.
+> This is a collaborative repo 鈥?these may be someone else's responsibility.
 >
-> RECOMMENDATION: Choose B — assign it to whoever broke it so the right person fixes it. Completeness: 9/10.
-> A) Investigate and fix now anyway — Completeness: 10/10
-> B) Blame + assign GitHub issue to the author — Completeness: 9/10
-> C) Add as P0 TODO — Completeness: 7/10
-> D) Skip — ship anyway — Completeness: 3/10
+> RECOMMENDATION: Choose B 鈥?assign it to whoever broke it so the right person fixes it. Completeness: 9/10.
+> A) Investigate and fix now anyway 鈥?Completeness: 10/10
+> B) Blame + assign GitHub issue to the author 鈥?Completeness: 9/10
+> C) Add as P0 TODO 鈥?Completeness: 7/10
+> D) Skip 鈥?ship anyway 鈥?Completeness: 3/10
 
 ### Step T4: Execute the chosen action
 
@@ -421,7 +421,7 @@ Use AskUserQuestion:
 - If `TODOS.md` exists, add the entry following the format in `review/TODOS-format.md` (or `the built-in review TODO format`).
 - If `TODOS.md` does not exist, create it with the standard header and add the entry.
 - Entry should include: title, the error output, which branch it was noticed on, and priority P0.
-- Continue with the workflow — treat the pre-existing failure as non-blocking.
+- Continue with the workflow 鈥?treat the pre-existing failure as non-blocking.
 
 **If "Blame + assign GitHub issue" (collaborative only):**
 - Find who likely broke it. Check BOTH the test file AND the production code it tests:
@@ -431,7 +431,7 @@ Use AskUserQuestion:
   # Who last touched the production code the test covers? (often the actual breaker)
   git log --format="%an (%ae)" -1 -- <source-file-under-test>
   ```
-  If these are different people, prefer the production code author — they likely introduced the regression.
+  If these are different people, prefer the production code author 鈥?they likely introduced the regression.
 - Create an issue assigned to that person (use the platform detected in Step 0):
   - **If GitHub:**
     ```bash
@@ -456,7 +456,7 @@ Use AskUserQuestion:
 
 **After triage:** If any in-branch failures remain unfixed, **STOP**. Do not proceed. If all failures were pre-existing and handled (fixed, TODOed, assigned, or skipped), continue to Step 3.25.
 
-**If all pass:** Continue silently — just note the counts briefly.
+**If all pass:** Continue silently 鈥?just note the counts briefly.
 
 ---
 
@@ -479,7 +479,7 @@ Match against these patterns (from AGENTS.md):
 - `config/system_prompts/*.txt`
 - `test/evals/**/*` (eval infrastructure changes affect all suites)
 
-**If no matches:** Print "No prompt-related files changed — skipping evals." and continue to Step 3.5.
+**If no matches:** Print "No prompt-related files changed 鈥?skipping evals." and continue to Step 3.5.
 
 **2. Identify affected eval suites:**
 
@@ -489,11 +489,11 @@ Each eval runner (`test/evals/*_eval_runner.rb`) declares `PROMPT_SOURCE_FILES` 
 grep -l "changed_file_basename" test/evals/*_eval_runner.rb
 ```
 
-Map runner → test file: `post_generation_eval_runner.rb` → `post_generation_eval_test.rb`.
+Map runner 鈫?test file: `post_generation_eval_runner.rb` 鈫?`post_generation_eval_test.rb`.
 
 **Special cases:**
 - Changes to `test/evals/judges/*.rb`, `test/evals/support/*.rb`, or `test/evals/fixtures/` affect ALL suites that use those judges/support files. Check imports in the eval test files to determine which.
-- Changes to `config/system_prompts/*.txt` — grep eval runners for the prompt filename to find affected suites.
+- Changes to `config/system_prompts/*.txt` 鈥?grep eval runners for the prompt filename to find affected suites.
 - If unsure which suites are affected, run ALL suites that could plausibly be impacted. Over-testing is better than missing a regression.
 
 **3. Run affected suites at `EVAL_JUDGE_TIER=full`:**
@@ -504,16 +504,16 @@ Map runner → test file: `post_generation_eval_runner.rb` → `post_generation_
 EVAL_JUDGE_TIER=full EVAL_VERBOSE=1 bin/test-lane --eval test/evals/<suite>_eval_test.rb 2>&1 | tee /tmp/ship_evals.txt
 ```
 
-If multiple suites need to run, run them sequentially (each needs a test lane). If the first suite fails, stop immediately — don't burn API cost on remaining suites.
+If multiple suites need to run, run them sequentially (each needs a test lane). If the first suite fails, stop immediately 鈥?don't burn API cost on remaining suites.
 
 **4. Check results:**
 
 - **If any eval fails:** Show the failures, the cost dashboard, and **STOP**. Do not proceed.
 - **If all pass:** Note pass counts and cost. Continue to Step 3.5.
 
-**5. Save eval output** — include eval results and cost dashboard in the PR body (Step 8).
+**5. Save eval output** 鈥?include eval results and cost dashboard in the PR body (Step 8).
 
-**Tier reference (for context — /ship always uses `full`):**
+**Tier reference (for context 鈥?/ship always uses `full`):**
 | Tier | When | Speed (cached) | Cost |
 |------|------|----------------|------|
 | `fast` (Haiku) | Dev iteration, smoke tests | ~5s (14x faster) | ~$0.07/run |
@@ -524,13 +524,13 @@ If multiple suites need to run, run them sequentially (each needs a test lane). 
 
 ## Step 3.4: Test Coverage Audit
 
-100% coverage is the goal — every untested path is a path where bugs hide and vibe coding becomes yolo coding. Evaluate what was ACTUALLY coded (from the diff), not what was planned.
+100% coverage is the goal 鈥?every untested path is a path where bugs hide and vibe coding becomes yolo coding. Evaluate what was ACTUALLY coded (from the diff), not what was planned.
 
 ### Test Framework Detection
 
 Before analyzing coverage, detect the project's test framework:
 
-1. **Read AGENTS.md** — look for a `## Testing` section with test command and framework name. If found, use that as the authoritative source.
+1. **Read AGENTS.md** 鈥?look for a `## Testing` section with test command and framework name. If found, use that as the authoritative source.
 2. **If AGENTS.md has no testing section, auto-detect:**
 
 ```bash
@@ -559,7 +559,7 @@ Store this number for the PR body.
 
 **1. Trace every codepath changed** using `git diff origin/<base>...HEAD`:
 
-Read every changed file. For each one, trace how data flows through the code — don't just list functions, actually follow the execution:
+Read every changed file. For each one, trace how data flows through the code 鈥?don't just list functions, actually follow the execution:
 
 1. **Read the diff.** For each changed file, read the full file (not just the diff hunk) to understand context.
 2. **Trace data flow.** Starting from each entry point (route handler, exported function, event listener, component render), follow the data through every branch:
@@ -571,21 +571,21 @@ Read every changed file. For each one, trace how data flows through the code —
    - Every function/method that was added or modified
    - Every conditional branch (if/else, switch, ternary, guard clause, early return)
    - Every error path (try/catch, rescue, error boundary, fallback)
-   - Every call to another function (trace into it — does IT have untested branches?)
+   - Every call to another function (trace into it 鈥?does IT have untested branches?)
    - Every edge: what happens with null input? Empty array? Invalid type?
 
-This is the critical step — you're building a map of every line of code that can execute differently based on input. Every branch in this diagram needs a test.
+This is the critical step 鈥?you're building a map of every line of code that can execute differently based on input. Every branch in this diagram needs a test.
 
 **2. Map user flows, interactions, and error states:**
 
-Code coverage isn't enough — you need to cover how real users interact with the changed code. For each changed feature, think through:
+Code coverage isn't enough 鈥?you need to cover how real users interact with the changed code. For each changed feature, think through:
 
-- **User flows:** What sequence of actions does a user take that touches this code? Map the full journey (e.g., "user clicks 'Pay' → form validates → API call → success/failure screen"). Each step in the journey needs a test.
+- **User flows:** What sequence of actions does a user take that touches this code? Map the full journey (e.g., "user clicks 'Pay' 鈫?form validates 鈫?API call 鈫?success/failure screen"). Each step in the journey needs a test.
 - **Interaction edge cases:** What happens when the user does something unexpected?
   - Double-click/rapid resubmit
   - Navigate away mid-operation (back button, close tab, click another link)
   - Submit with stale data (page sat open for 30 minutes, session expired)
-  - Slow connection (API takes 10 seconds — what does the user see?)
+  - Slow connection (API takes 10 seconds 鈥?what does the user see?)
   - Concurrent actions (two tabs, same form)
 - **Error states the user can see:** For every error the code handles, what does the user actually experience?
   - Is there a clear error message or a silent failure?
@@ -597,30 +597,30 @@ Add these to your diagram alongside the code branches. A user flow with no test 
 
 **3. Check each branch against existing tests:**
 
-Go through your diagram branch by branch — both code paths AND user flows. For each one, search for a test that exercises it:
-- Function `processPayment()` → look for `billing.test.ts`, `billing.spec.ts`, `test/billing_test.rb`
-- An if/else → look for tests covering BOTH the true AND false path
-- An error handler → look for a test that triggers that specific error condition
-- A call to `helperFn()` that has its own branches → those branches need tests too
-- A user flow → look for an integration or E2E test that walks through the journey
-- An interaction edge case → look for a test that simulates the unexpected action
+Go through your diagram branch by branch 鈥?both code paths AND user flows. For each one, search for a test that exercises it:
+- Function `processPayment()` 鈫?look for `billing.test.ts`, `billing.spec.ts`, `test/billing_test.rb`
+- An if/else 鈫?look for tests covering BOTH the true AND false path
+- An error handler 鈫?look for a test that triggers that specific error condition
+- A call to `helperFn()` that has its own branches 鈫?those branches need tests too
+- A user flow 鈫?look for an integration or E2E test that walks through the journey
+- An interaction edge case 鈫?look for a test that simulates the unexpected action
 
 Quality scoring rubric:
-- ★★★  Tests behavior with edge cases AND error paths
-- ★★   Tests correct behavior, happy path only
-- ★    Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
+- 鈽呪槄鈽? Tests behavior with edge cases AND error paths
+- 鈽呪槄   Tests correct behavior, happy path only
+- 鈽?   Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
 
 ### E2E Test Decision Matrix
 
 When checking each branch, also determine whether a unit test or E2E/integration test is the right tool:
 
-**RECOMMEND E2E (mark as [→E2E] in the diagram):**
-- Common user flow spanning 3+ components/services (e.g., signup → verify email → first login)
-- Integration point where mocking hides real failures (e.g., API → queue → worker → DB)
-- Auth/payment/data-destruction flows — too important to trust unit tests alone
+**RECOMMEND E2E (mark as [鈫扙2E] in the diagram):**
+- Common user flow spanning 3+ components/services (e.g., signup 鈫?verify email 鈫?first login)
+- Integration point where mocking hides real failures (e.g., API 鈫?queue 鈫?worker 鈫?DB)
+- Auth/payment/data-destruction flows 鈥?too important to trust unit tests alone
 
-**RECOMMEND EVAL (mark as [→EVAL] in the diagram):**
-- Critical LLM call that needs a quality eval (e.g., prompt change → test output still meets quality bar)
+**RECOMMEND EVAL (mark as [鈫扙VAL] in the diagram):**
+- Critical LLM call that needs a quality eval (e.g., prompt change 鈫?test output still meets quality bar)
 - Changes to prompt templates, system instructions, or tool definitions
 
 **STICK WITH UNIT TESTS:**
@@ -631,7 +631,7 @@ When checking each branch, also determine whether a unit test or E2E/integration
 
 ### REGRESSION RULE (mandatory)
 
-**IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is written immediately. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
+**IRON RULE:** When the coverage audit identifies a REGRESSION 鈥?code that previously worked but the diff broke 鈥?a regression test is written immediately. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
 
 A regression is when:
 - The diff modifies existing behavior (not new code)
@@ -650,45 +650,40 @@ Include BOTH code paths and user flows in the same diagram. Mark E2E-worthy and 
 CODE PATH COVERAGE
 ===========================
 [+] src/services/billing.ts
-    │
-    ├── processPayment()
-    │   ├── [★★★ TESTED] Happy path + card declined + timeout — billing.test.ts:42
-    │   ├── [GAP]         Network timeout — NO TEST
-    │   └── [GAP]         Invalid currency — NO TEST
-    │
-    └── refundPayment()
-        ├── [★★  TESTED] Full refund — billing.test.ts:89
-        └── [★   TESTED] Partial refund (checks non-throw only) — billing.test.ts:101
+    鈹?    鈹溾攢鈹€ processPayment()
+    鈹?  鈹溾攢鈹€ [鈽呪槄鈽?TESTED] Happy path + card declined + timeout 鈥?billing.test.ts:42
+    鈹?  鈹溾攢鈹€ [GAP]         Network timeout 鈥?NO TEST
+    鈹?  鈹斺攢鈹€ [GAP]         Invalid currency 鈥?NO TEST
+    鈹?    鈹斺攢鈹€ refundPayment()
+        鈹溾攢鈹€ [鈽呪槄  TESTED] Full refund 鈥?billing.test.ts:89
+        鈹斺攢鈹€ [鈽?  TESTED] Partial refund (checks non-throw only) 鈥?billing.test.ts:101
 
 USER FLOW COVERAGE
 ===========================
 [+] Payment checkout flow
-    │
-    ├── [★★★ TESTED] Complete purchase — checkout.e2e.ts:15
-    ├── [GAP] [→E2E] Double-click submit — needs E2E, not just unit
-    ├── [GAP]         Navigate away during payment — unit test sufficient
-    └── [★   TESTED]  Form validation errors (checks render only) — checkout.test.ts:40
+    鈹?    鈹溾攢鈹€ [鈽呪槄鈽?TESTED] Complete purchase 鈥?checkout.e2e.ts:15
+    鈹溾攢鈹€ [GAP] [鈫扙2E] Double-click submit 鈥?needs E2E, not just unit
+    鈹溾攢鈹€ [GAP]         Navigate away during payment 鈥?unit test sufficient
+    鈹斺攢鈹€ [鈽?  TESTED]  Form validation errors (checks render only) 鈥?checkout.test.ts:40
 
 [+] Error states
-    │
-    ├── [★★  TESTED] Card declined message — billing.test.ts:58
-    ├── [GAP]         Network timeout UX (what does user see?) — NO TEST
-    └── [GAP]         Empty cart submission — NO TEST
+    鈹?    鈹溾攢鈹€ [鈽呪槄  TESTED] Card declined message 鈥?billing.test.ts:58
+    鈹溾攢鈹€ [GAP]         Network timeout UX (what does user see?) 鈥?NO TEST
+    鈹斺攢鈹€ [GAP]         Empty cart submission 鈥?NO TEST
 
 [+] LLM integration
-    │
-    └── [GAP] [→EVAL] Prompt template change — needs eval test
+    鈹?    鈹斺攢鈹€ [GAP] [鈫扙VAL] Prompt template change 鈥?needs eval test
 
-─────────────────────────────────
+鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 COVERAGE: 5/13 paths tested (38%)
   Code paths: 3/5 (60%)
   User flows: 2/8 (25%)
-QUALITY:  ★★★: 2  ★★: 2  ★: 1
+QUALITY:  鈽呪槄鈽? 2  鈽呪槄: 2  鈽? 1
 GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
-─────────────────────────────────
+鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ```
 
-**Fast path:** All paths covered → "Step 3.4: All new code paths have test coverage ✓" Continue.
+**Fast path:** All paths covered 鈫?"Step 3.4: All new code paths have test coverage 鉁? Continue.
 
 **5. Generate tests for uncovered paths:**
 
@@ -696,15 +691,15 @@ If test framework detected (or bootstrapped in Step 2.5):
 - Prioritize error handlers and edge cases first (happy paths are more likely already tested)
 - Read 2-3 existing test files to match conventions exactly
 - Generate unit tests. Mock all external dependencies (DB, API, Redis).
-- For paths marked [→E2E]: generate integration/E2E tests using the project's E2E framework (Playwright, Cypress, Capybara, etc.)
-- For paths marked [→EVAL]: generate eval tests using the project's eval framework, or flag for manual eval if none exists
+- For paths marked [鈫扙2E]: generate integration/E2E tests using the project's E2E framework (Playwright, Cypress, Capybara, etc.)
+- For paths marked [鈫扙VAL]: generate eval tests using the project's eval framework, or flag for manual eval if none exists
 - Write tests that exercise the specific uncovered path with real assertions
-- Run each test. Passes → commit as `test: coverage for {feature}`
-- Fails → fix once. Still fails → revert, note gap in diagram.
+- Run each test. Passes 鈫?commit as `test: coverage for {feature}`
+- Fails 鈫?fix once. Still fails 鈫?revert, note gap in diagram.
 
 Caps: 30 code paths max, 20 tests generated max (code + user flow combined), 2-min per-test exploration cap.
 
-If no test framework AND user declined bootstrap → diagram only, no generation. Note: "Test generation skipped — no test framework configured."
+If no test framework AND user declined bootstrap 鈫?diagram only, no generation. Note: "Test generation skipped 鈥?no test framework configured."
 
 **Diff is test-only changes:** Skip Step 3.4 entirely: "No new application code paths to audit."
 
@@ -715,7 +710,7 @@ If no test framework AND user declined bootstrap → diagram only, no generation
 find . -name '*.test.*' -o -name '*.spec.*' -o -name '*_test.*' -o -name '*_spec.*' | grep -v node_modules | wc -l
 ```
 
-For PR body: `Tests: {before} → {after} (+{delta} new)`
+For PR body: `Tests: {before} 鈫?{after} (+{delta} new)`
 Coverage line: `Test Coverage Audit: N new code paths. M covered (X%). K tests generated, J committed.`
 
 **7. Coverage gate:**
@@ -730,22 +725,22 @@ Using the coverage percentage from the diagram in substep 4 (the `COVERAGE: X/Y 
   - RECOMMENDATION: Choose A because untested code paths are where production bugs hide.
   - Options:
     A) Generate more tests for remaining gaps (recommended)
-    B) Ship anyway — I accept the coverage risk
-    C) These paths don't need tests — mark as intentionally uncovered
+    B) Ship anyway 鈥?I accept the coverage risk
+    C) These paths don't need tests 鈥?mark as intentionally uncovered
   - If A: Loop back to substep 5 (generate tests) targeting the remaining gaps. After second pass, if still below target, present AskUserQuestion again with updated numbers. Maximum 2 generation passes total.
-  - If B: Continue. Include in PR body: "Coverage gate: {X}% — user accepted risk."
-  - If C: Continue. Include in PR body: "Coverage gate: {X}% — {N} paths intentionally uncovered."
+  - If B: Continue. Include in PR body: "Coverage gate: {X}% 鈥?user accepted risk."
+  - If C: Continue. Include in PR body: "Coverage gate: {X}% 鈥?{N} paths intentionally uncovered."
 
 - **< minimum:** Use AskUserQuestion:
   - "AI-assessed coverage is critically low ({X}%). {N} of {M} code paths have no tests. Minimum threshold is {minimum}%."
   - RECOMMENDATION: Choose A because less than {minimum}% means more code is untested than tested.
   - Options:
     A) Generate tests for remaining gaps (recommended)
-    B) Override — ship with low coverage (I understand the risk)
+    B) Override 鈥?ship with low coverage (I understand the risk)
   - If A: Loop back to substep 5. Maximum 2 passes. If still below minimum after 2 passes, present the override choice again.
   - If B: Continue. Include in PR body: "Coverage gate: OVERRIDDEN at {X}%."
 
-**Coverage percentage undetermined:** If the coverage diagram doesn't produce a clear numeric percentage (ambiguous output, parse error), **skip the gate** with: "Coverage gate: could not determine percentage — skipping." Do not default to 0% or block.
+**Coverage percentage undetermined:** If the coverage diagram doesn't produce a clear numeric percentage (ambiguous output, parse error), **skip the gate** with: "Coverage gate: could not determine percentage 鈥?skipping." Do not default to 0% or block.
 
 **Test-only diffs:** Skip the gate (same as the existing fast-path).
 
@@ -756,12 +751,12 @@ Using the coverage percentage from the diagram in substep 4 (the `COVERAGE: X/Y 
 After producing the coverage diagram, write a test plan artifact so `/qa` and `/qa-only` can consume it:
 
 ```bash
-SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.bitfun/team/projects/$SLUG
+SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.northhing/team/projects/$SLUG
 USER=$(whoami)
 DATETIME=$(date +%Y%m%d-%H%M%S)
 ```
 
-Write to `$HOME/.bitfun/team/projects/{slug}/{user}-{branch}-ship-test-plan-{datetime}.md`:
+Write to `$HOME/.northhing/team/projects/{slug}/{user}-{branch}-ship-test-plan-{datetime}.md`:
 
 ```markdown
 # Test Plan
@@ -770,7 +765,7 @@ Branch: {branch}
 Repo: {owner/repo}
 
 ## Affected Pages/Routes
-- {URL path} — {what to test and why}
+- {URL path} 鈥?{what to test and why}
 
 ## Key Interactions to Verify
 - {interaction description} on {page}
@@ -788,7 +783,7 @@ Repo: {owner/repo}
 
 ### Plan File Discovery
 
-1. **Conversation context (primary):** Check if there is an active plan file in this conversation. The host agent's system messages include plan file paths when in plan mode. If found, use it directly — this is the most reliable signal.
+1. **Conversation context (primary):** Check if there is an active plan file in this conversation. The host agent's system messages include plan file paths when in plan mode. If found, use it directly 鈥?this is the most reliable signal.
 
 2. **Content-based search (fallback):** If no plan file is referenced in conversation context, search by content:
 
@@ -796,11 +791,11 @@ Repo: {owner/repo}
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
 REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")
-# Compute project slug for $HOME/.bitfun/team/projects/ lookup
+# Compute project slug for $HOME/.northhing/team/projects/ lookup
 _PLAN_SLUG=$(git remote get-url origin 2>/dev/null | sed 's|.*[:/]\([^/]*/[^/]*\)\.git$|\1|;s|.*[:/]\([^/]*/[^/]*\)$|\1|' | tr '/' '-' | tr -cd 'a-zA-Z0-9._-') || true
 _PLAN_SLUG="${_PLAN_SLUG:-$(basename "$PWD" | tr -cd 'a-zA-Z0-9._-')}"
 # Search common plan file locations (project designs first, then personal/local)
-for PLAN_DIR in "$HOME/.bitfun/team/projects/$_PLAN_SLUG" "$HOME/.bitfun/team/plans" "$HOME/.codex/plans" ".bitfun/team/plans"; do
+for PLAN_DIR in "$HOME/.northhing/team/projects/$_PLAN_SLUG" "$HOME/.northhing/team/plans" "$HOME/.codex/plans" ".northhing/team/plans"; do
   [ -d "$PLAN_DIR" ] || continue
   PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/null | head -1)
   [ -z "$PLAN" ] && PLAN=$(ls -t "$PLAN_DIR"/*.md 2>/dev/null | xargs grep -l "$REPO" 2>/dev/null | head -1)
@@ -813,12 +808,12 @@ done
 3. **Validation:** If a plan file was found via content-based search (not conversation context), read the first 20 lines and verify it is relevant to the current branch's work. If it appears to be from a different project or feature, treat as "no plan file found."
 
 **Error handling:**
-- No plan file found → skip with "No plan file detected — skipping."
-- Plan file found but unreadable (permissions, encoding) → skip with "Plan file found but unreadable — skipping."
+- No plan file found 鈫?skip with "No plan file detected 鈥?skipping."
+- Plan file found but unreadable (permissions, encoding) 鈫?skip with "Plan file found but unreadable 鈥?skipping."
 
 ### Actionable Item Extraction
 
-Read the plan file. Extract every actionable item — anything that describes work to be done. Look for:
+Read the plan file. Extract every actionable item 鈥?anything that describes work to be done. Look for:
 
 - **Checkbox items:** `- [ ] ...` or `- [x] ...`
 - **Numbered steps** under implementation headings: "1. Create ...", "2. Add ...", "3. Modify ..."
@@ -834,9 +829,9 @@ Read the plan file. Extract every actionable item — anything that describes wo
 - Explicitly deferred items ("Future:", "Out of scope:", "NOT in scope:", "P2:", "P3:", "P4:")
 - CEO Review Decisions sections (these record choices, not work items)
 
-**Cap:** Extract at most 50 items. If the plan has more, note: "Showing top 50 of N plan items — full list in plan file."
+**Cap:** Extract at most 50 items. If the plan has more, note: "Showing top 50 of N plan items 鈥?full list in plan file."
 
-**No items found:** If the plan contains no extractable actionable items, skip with: "Plan file contains no actionable items — skipping completion audit."
+**No items found:** If the plan contains no extractable actionable items, skip with: "Plan file contains no actionable items 鈥?skipping completion audit."
 
 For each item, note:
 - The item text (verbatim or concise summary)
@@ -848,58 +843,57 @@ Run `git diff origin/<base>...HEAD` and `git log origin/<base>..HEAD --oneline` 
 
 For each extracted plan item, check the diff and classify:
 
-- **DONE** — Clear evidence in the diff that this item was implemented. Cite the specific file(s) changed.
-- **PARTIAL** — Some work toward this item exists in the diff but it's incomplete (e.g., model created but controller missing, function exists but edge cases not handled).
-- **NOT DONE** — No evidence in the diff that this item was addressed.
-- **CHANGED** — The item was implemented using a different approach than the plan described, but the same goal is achieved. Note the difference.
+- **DONE** 鈥?Clear evidence in the diff that this item was implemented. Cite the specific file(s) changed.
+- **PARTIAL** 鈥?Some work toward this item exists in the diff but it's incomplete (e.g., model created but controller missing, function exists but edge cases not handled).
+- **NOT DONE** 鈥?No evidence in the diff that this item was addressed.
+- **CHANGED** 鈥?The item was implemented using a different approach than the plan described, but the same goal is achieved. Note the difference.
 
-**Be conservative with DONE** — require clear evidence in the diff. A file being touched is not enough; the specific functionality described must be present.
-**Be generous with CHANGED** — if the goal is met by different means, that counts as addressed.
+**Be conservative with DONE** 鈥?require clear evidence in the diff. A file being touched is not enough; the specific functionality described must be present.
+**Be generous with CHANGED** 鈥?if the goal is met by different means, that counts as addressed.
 
 ### Output Format
 
 ```
 PLAN COMPLETION AUDIT
-═══════════════════════════════
-Plan: {plan file path}
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?Plan: {plan file path}
 
 ## Implementation Items
-  [DONE]      Create UserService — src/services/user_service.rb (+142 lines)
-  [PARTIAL]   Add validation — model validates but missing controller checks
-  [NOT DONE]  Add caching layer — no cache-related changes in diff
-  [CHANGED]   "Redis queue" → implemented with Sidekiq instead
+  [DONE]      Create UserService 鈥?src/services/user_service.rb (+142 lines)
+  [PARTIAL]   Add validation 鈥?model validates but missing controller checks
+  [NOT DONE]  Add caching layer 鈥?no cache-related changes in diff
+  [CHANGED]   "Redis queue" 鈫?implemented with Sidekiq instead
 
 ## Test Items
-  [DONE]      Unit tests for UserService — test/services/user_service_test.rb
+  [DONE]      Unit tests for UserService 鈥?test/services/user_service_test.rb
   [NOT DONE]  E2E test for signup flow
 
 ## Migration Items
-  [DONE]      Create users table — db/migrate/20240315_create_users.rb
+  [DONE]      Create users table 鈥?db/migrate/20240315_create_users.rb
 
-─────────────────────────────────
+鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 COMPLETION: 4/7 DONE, 1 PARTIAL, 1 NOT DONE, 1 CHANGED
-─────────────────────────────────
+鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ```
 
 ### Gate Logic
 
 After producing the completion checklist:
 
-- **All DONE or CHANGED:** Pass. "Plan completion: PASS — all items addressed." Continue.
+- **All DONE or CHANGED:** Pass. "Plan completion: PASS 鈥?all items addressed." Continue.
 - **Only PARTIAL items (no NOT DONE):** Continue with a note in the PR body. Not blocking.
 - **Any NOT DONE items:** Use AskUserQuestion:
   - Show the completion checklist above
   - "{N} items from the plan are NOT DONE. These were part of the original plan but are missing from the implementation."
   - RECOMMENDATION: depends on item count and severity. If 1-2 minor items (docs, config), recommend B. If core functionality is missing, recommend A.
   - Options:
-    A) Stop — implement the missing items before shipping
-    B) Ship anyway — defer these to a follow-up (will create P1 TODOs in Step 5.5)
-    C) These items were intentionally dropped — remove from scope
+    A) Stop 鈥?implement the missing items before shipping
+    B) Ship anyway 鈥?defer these to a follow-up (will create P1 TODOs in Step 5.5)
+    C) These items were intentionally dropped 鈥?remove from scope
   - If A: STOP. List the missing items for the user to implement.
   - If B: Continue. For each NOT DONE item, create a P1 TODO in Step 5.5 with "Deferred from plan: {plan file path}".
   - If C: Continue. Note in PR body: "Plan items intentionally dropped: {list}."
 
-**No plan file found:** Skip entirely. "No plan file detected — skipping plan completion audit."
+**No plan file found:** Skip entirely. "No plan file detected 鈥?skipping plan completion audit."
 
 **Include in PR body (Step 8):** Add a `## Plan Completion` section with the checklist summary.
 
@@ -913,7 +907,7 @@ Automatically verify the plan's testing/verification steps using the `/qa-only` 
 
 Using the plan file already discovered in Step 3.45, look for a verification section. Match any of these headings: `## Verification`, `## Test plan`, `## Testing`, `## How to test`, `## Manual testing`, or any section with verification-flavored items (URLs to visit, things to check visually, interactions to test).
 
-**If no verification section found:** Skip with "No verification steps found in plan — skipping auto-verification."
+**If no verification section found:** Skip with "No verification steps found in plan 鈥?skipping auto-verification."
 **If no plan file was found in Step 3.45:** Skip (already handled).
 
 ### 2. Check for running dev server
@@ -927,7 +921,7 @@ curl -s -o /dev/null -w '%{http_code}' http://localhost:5173 2>/dev/null || \
 curl -s -o /dev/null -w '%{http_code}' http://localhost:4000 2>/dev/null || echo "NO_SERVER"
 ```
 
-**If NO_SERVER:** Skip with "No dev server detected — skipping plan verification. Run /qa separately after deploying."
+**If NO_SERVER:** Skip with "No dev server detected 鈥?skipping plan verification. Run /qa separately after deploying."
 
 ### 3. Invoke /qa-only inline
 
@@ -937,14 +931,14 @@ Read the `/qa-only` skill from disk:
 Load the bundled qa-only skill through the Skill tool
 ```
 
-**If unreadable:** Skip with "Could not load /qa-only — skipping plan verification."
+**If unreadable:** Skip with "Could not load /qa-only 鈥?skipping plan verification."
 
 Follow the /qa-only workflow with these modifications:
 - **Skip the preamble** (already handled by /ship)
-- **Use the plan's verification section as the primary test input** — treat each verification item as a test case
+- **Use the plan's verification section as the primary test input** 鈥?treat each verification item as a test case
 - **Use the detected dev server URL** as the base URL
-- **Skip the fix loop** — this is report-only verification during /ship
-- **Cap at the verification items from the plan** — do not expand into general site QA
+- **Skip the fix loop** 鈥?this is report-only verification during /ship
+- **Cap at the verification items from the plan** 鈥?do not expand into general site QA
 
 ### 4. Gate logic
 
@@ -954,7 +948,7 @@ Follow the /qa-only workflow with these modifications:
   - RECOMMENDATION: Choose A if failures indicate broken functionality. Choose B if cosmetic only.
   - Options:
     A) Fix the failures before shipping (recommended for functional issues)
-    B) Ship anyway — known issues (acceptable for cosmetic issues)
+    B) Ship anyway 鈥?known issues (acceptable for cosmetic issues)
 - **No verification section / no server / unreadable skill:** Skip (non-blocking).
 
 ### 5. Include in PR body
@@ -965,16 +959,16 @@ Add a `## Verification Results` section to the PR body (Step 8):
 
 ## Prior Learnings
 
-Use only BitFun in-session memory, project docs, `.bitfun/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior BitFun context applied: <source>`.
+Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
 ## Step 3.48: Scope Drift Detection
 
-Before reviewing code quality, check: **did they build what was requested — nothing more, nothing less?**
+Before reviewing code quality, check: **did they build what was requested 鈥?nothing more, nothing less?**
 
 1. Read `TODOS.md` (if it exists). Read PR description (`gh pr view --json body --jq .body 2>/dev/null || true`).
    Read commit messages (`git log origin/<base>..HEAD --oneline`).
-   **If no PR exists:** rely on commit messages and TODOS.md for stated intent — this is the common case since /review runs before /ship creates the PR.
-2. Identify the **stated intent** — what was this branch supposed to accomplish?
+   **If no PR exists:** rely on commit messages and TODOS.md for stated intent 鈥?this is the common case since /review runs before /ship creates the PR.
+2. Identify the **stated intent** 鈥?what was this branch supposed to accomplish?
 3. Run `git diff origin/<base>...HEAD --stat` and compare the files changed against the stated intent.
 
 4. Evaluate with skepticism (incorporating plan completion results if available from an earlier step or adjacent section):
@@ -998,7 +992,7 @@ Before reviewing code quality, check: **did they build what was requested — no
    [If missing: list each unaddressed requirement]
    \`\`\`
 
-6. This is **INFORMATIONAL** — does not block the review. Proceed to the next step.
+6. This is **INFORMATIONAL** 鈥?does not block the review. Proceed to the next step.
 
 ---
 
@@ -1030,11 +1024,11 @@ Every finding MUST include a confidence score (1-10):
 
 **Finding format:**
 
-\`[SEVERITY] (confidence: N/10) file:line — description\`
+\`[SEVERITY] (confidence: N/10) file:line 鈥?description\`
 
 Example:
-\`[P1] (confidence: 9/10) app/models/user.rb:42 — SQL injection via string interpolation in where clause\`
-\`[P2] (confidence: 5/10) app/controllers/api/v1/users_controller.rb:18 — Possible N+1 query, verify with production logs\`
+\`[P1] (confidence: 9/10) app/models/user.rb:42 鈥?SQL injection via string interpolation in where clause\`
+\`[P2] (confidence: 5/10) app/controllers/api/v1/users_controller.rb:18 鈥?Possible N+1 query, verify with production logs\`
 
 **Calibration learning:** If you report a finding with confidence < 7 and the user
 confirms it IS a real issue, that is a calibration event. Your initial confidence was
@@ -1046,30 +1040,30 @@ higher confidence.
 Check if the diff touches frontend files using `git diff + rg scope inference`:
 
 ```bash
-source <(true # BitFun Team Mode infers diff scope with git/rg <base> 2>/dev/null)
+source <(true # northhing Team Mode infers diff scope with git/rg <base> 2>/dev/null)
 ```
 
 **If `SCOPE_FRONTEND=false`:** Skip design review silently. No output.
 
 **If `SCOPE_FRONTEND=true`:**
 
-1. **Check for DESIGN.md.** If `DESIGN.md` or `design-system.md` exists in the repo root, read it. All design findings are calibrated against it — patterns blessed in DESIGN.md are not flagged. If not found, use universal design principles.
+1. **Check for DESIGN.md.** If `DESIGN.md` or `design-system.md` exists in the repo root, read it. All design findings are calibrated against it 鈥?patterns blessed in DESIGN.md are not flagged. If not found, use universal design principles.
 
-2. **Read `the built-in design review checklist`.** If the file cannot be read, skip design review with a note: "Design checklist not found — skipping design review."
+2. **Read `the built-in design review checklist`.** If the file cannot be read, skip design review with a note: "Design checklist not found 鈥?skipping design review."
 
 3. **Read each changed frontend file** (full file, not just diff hunks). Frontend files are identified by the patterns listed in the checklist.
 
 4. **Apply the design checklist** against the changed files. For each item:
    - **[HIGH] mechanical CSS fix** (`outline: none`, `!important`, `font-size < 16px`): classify as AUTO-FIX
    - **[HIGH/MEDIUM] design judgment needed**: classify as ASK
-   - **[LOW] intent-based detection**: present as "Possible — verify visually or run /design-review"
+   - **[LOW] intent-based detection**: present as "Possible 鈥?verify visually or run /design-review"
 
 5. **Include findings** in the review output under a "Design Review" header, following the output format in the checklist. Design findings merge with code review findings into the same Fix-First flow.
 
 6. **Log the result** for the Review Readiness Dashboard:
 
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 
 Substitute: TIMESTAMP = ISO 8601 datetime, STATUS = "clean" if 0 findings or "issues_found", N = total findings, M = auto-fixed count, COMMIT = output of `git rev-parse --short HEAD`.
@@ -1080,12 +1074,12 @@ Substitute: TIMESTAMP = ISO 8601 datetime, STATUS = "clean" if 0 findings or "is
 which codex 2>/dev/null && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
 ```
 
-If a suitable BitFun outside-voice or review sub-agent is available, run a lightweight design check on the diff:
+If a suitable northhing outside-voice or review sub-agent is available, run a lightweight design check on the diff:
 
 ```bash
 TMPERR_DRL=$(mktemp /tmp/codex-drl-XXXXXXXX)
 _REPO_ROOT=$(git rev-parse --show-toplevel) || { echo "ERROR: not in a git repo" >&2; exit 1; }
-Use the BitFun Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
+Use the northhing Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
@@ -1093,18 +1087,18 @@ Use a 5-minute timeout (`timeout: 300000`). After the command completes, read st
 cat "$TMPERR_DRL" && rm -f "$TMPERR_DRL"
 ```
 
-**Error handling:** All errors are non-blocking. On auth failure, timeout, or empty response — skip with a brief note and continue.
+**Error handling:** All errors are non-blocking. On auth failure, timeout, or empty response 鈥?skip with a brief note and continue.
 
 Present outside-voice sub-agent output under a `CODEX (design):` header, merged with the checklist findings above.
 
    Include any design findings alongside the code review findings. They follow the same Fix-First flow below.
 
-## Step 3.55: Review Army — Specialist Dispatch
+## Step 3.55: Review Army 鈥?Specialist Dispatch
 
 ### Detect stack and scope
 
 ```bash
-source <(true # BitFun Team Mode infers diff scope with git/rg <base> 2>/dev/null) || true
+source <(true # northhing Team Mode infers diff scope with git/rg <base> 2>/dev/null) || true
 # Detect stack for specialist context
 STACK=""
 [ -f Gemfile ] && STACK="${STACK}ruby "
@@ -1130,7 +1124,7 @@ echo "TEST_FW: ${TEST_FW:-unknown}"
 ### Read specialist hit rates (adaptive gating)
 
 ```bash
-true # BitFun Team Mode has no external specialist-stats helper 2>/dev/null || true
+true # northhing Team Mode has no external specialist-stats helper 2>/dev/null || true
 ```
 
 ### Select specialists
@@ -1138,17 +1132,17 @@ true # BitFun Team Mode has no external specialist-stats helper 2>/dev/null || t
 Based on the scope signals above, select which specialists to dispatch.
 
 **Always-on (dispatch on every review with 50+ changed lines):**
-1. **Testing** — read `the built-in testing review checklist`
-2. **Maintainability** — read `the built-in maintainability review checklist`
+1. **Testing** 鈥?read `the built-in testing review checklist`
+2. **Maintainability** 鈥?read `the built-in maintainability review checklist`
 
-**If DIFF_LINES < 50:** Skip all specialists. Print: "Small diff ($DIFF_LINES lines) — specialists skipped." Continue to the Fix-First flow (item 4).
+**If DIFF_LINES < 50:** Skip all specialists. Print: "Small diff ($DIFF_LINES lines) 鈥?specialists skipped." Continue to the Fix-First flow (item 4).
 
 **Conditional (dispatch if the matching scope signal is true):**
-3. **Security** — if SCOPE_AUTH=true, OR if SCOPE_BACKEND=true AND DIFF_LINES > 100. Read `the built-in security review checklist`
-4. **Performance** — if SCOPE_BACKEND=true OR SCOPE_FRONTEND=true. Read `the built-in performance review checklist`
-5. **Data Migration** — if SCOPE_MIGRATIONS=true. Read `the built-in data-migration review checklist`
-6. **API Contract** — if SCOPE_API=true. Read `the built-in API-contract review checklist`
-7. **Design** — if SCOPE_FRONTEND=true. Use the existing design review checklist at `the built-in design review checklist`
+3. **Security** 鈥?if SCOPE_AUTH=true, OR if SCOPE_BACKEND=true AND DIFF_LINES > 100. Read `the built-in security review checklist`
+4. **Performance** 鈥?if SCOPE_BACKEND=true OR SCOPE_FRONTEND=true. Read `the built-in performance review checklist`
+5. **Data Migration** 鈥?if SCOPE_MIGRATIONS=true. Read `the built-in data-migration review checklist`
+6. **API Contract** 鈥?if SCOPE_API=true. Read `the built-in API-contract review checklist`
+7. **Design** 鈥?if SCOPE_FRONTEND=true. Use the existing design review checklist at `the built-in design review checklist`
 
 ### Adaptive gating
 
@@ -1156,7 +1150,7 @@ After scope-based selection, apply adaptive gating based on specialist hit rates
 
 For each conditional specialist that passed scope gating, check the `built-in specialist summary` output above:
 - If tagged `[GATE_CANDIDATE]` (0 findings in 10+ dispatches): skip it. Print: "[specialist] auto-gated (0 findings in N reviews)."
-- If tagged `[NEVER_GATE]`: always dispatch regardless of hit rate. Security and data-migration are insurance policy specialists — they should run even when silent.
+- If tagged `[NEVER_GATE]`: always dispatch regardless of hit rate. Security and data-migration are insurance policy specialists 鈥?they should run even when silent.
 
 **Force flags:** If the user's prompt includes `--security`, `--performance`, `--testing`, `--maintainability`, `--data-migration`, `--api-contract`, `--design`, or `--all-specialists`, force-include that specialist regardless of gating.
 
@@ -1167,9 +1161,9 @@ Note which specialists were selected, gated, and skipped. Print the selection:
 
 ### Dispatch specialists in parallel
 
-For each selected specialist, launch an independent subagent via BitFun's Task tool.
+For each selected specialist, launch an independent subagent via northhing's Task tool.
 **Launch ALL selected specialists in a single message** (multiple Task tool calls)
-so they run in parallel. Each subagent has fresh context — no prior review bias.
+so they run in parallel. Each subagent has fresh context 鈥?no prior review bias.
 
 **Each specialist subagent prompt:**
 
@@ -1180,7 +1174,7 @@ Construct the prompt for each specialist. The prompt includes:
 3. Past learnings for this domain (if any exist):
 
 ```bash
-true # BitFun Team Mode has no external learnings helper
+true # northhing Team Mode has no external learnings helper
 ```
 
 If learnings are found, include them: "Past learnings for this domain: {learnings}"
@@ -1197,11 +1191,11 @@ Required fields: severity, confidence, path, category, summary, specialist.
 Optional: line, fix, fingerprint, evidence, test_stub.
 
 If you can write a test that would catch this issue, include it in the `test_stub` field.
-Use the detected test framework ({TEST_FW}). Write a minimal skeleton — describe/it/test
+Use the detected test framework ({TEST_FW}). Write a minimal skeleton 鈥?describe/it/test
 blocks with clear intent. Skip test_stub for architectural or design-only findings.
 
 If no findings: output `NO FINDINGS` and nothing else.
-Do not output anything else — no preamble, no summary, no commentary.
+Do not output anything else 鈥?no preamble, no summary, no commentary.
 
 Stack context: {STACK}
 Past learnings: {learnings or 'none'}
@@ -1211,8 +1205,8 @@ CHECKLIST:
 
 **Subagent configuration:**
 - Use `subagent_type: "general-purpose"`
-- Do NOT use `run_in_background` — all specialists must complete before merge
-- If any specialist subagent fails or times out, log the failure and continue with results from successful specialists. Specialists are additive — partial results are better than no results.
+- Do NOT use `run_in_background` 鈥?all specialists must complete before merge
+- If any specialist subagent fails or times out, log the failure and continue with results from successful specialists. Specialists are additive 鈥?partial results are better than no results.
 
 ---
 
@@ -1222,7 +1216,7 @@ After all specialist subagents complete, collect their outputs.
 
 **Parse findings:**
 For each specialist's output:
-1. If output is "NO FINDINGS" — skip, this specialist found nothing
+1. If output is "NO FINDINGS" 鈥?skip, this specialist found nothing
 2. Otherwise, parse each line as a JSON object. Skip lines that are not valid JSON.
 3. Collect all parsed findings into a single list, tagged with their specialist name.
 
@@ -1239,7 +1233,7 @@ Group findings by fingerprint. For findings sharing the same fingerprint:
 
 **Apply confidence gates:**
 - Confidence 7+: show normally in the findings output
-- Confidence 5-6: show with caveat "Medium confidence — verify this is actually an issue"
+- Confidence 5-6: show with caveat "Medium confidence 鈥?verify this is actually an issue"
 - Confidence 3-4: move to appendix (suppress from main findings)
 - Confidence 1-2: suppress entirely
 
@@ -1255,7 +1249,7 @@ Present the merged findings in the same format as the current review:
 SPECIALIST REVIEW: N findings (X critical, Y informational) from Z specialists
 
 [For each finding, in order: CRITICAL first, then INFORMATIONAL, sorted by confidence descending]
-[SEVERITY] (confidence: N/10, specialist: name) path:line — summary
+[SEVERITY] (confidence: N/10, specialist: name) path:line 鈥?summary
   Fix: recommended fix
   [If MULTI-SPECIALIST CONFIRMED: show confirmation note]
 
@@ -1263,7 +1257,7 @@ PR Quality Score: X/10
 ```
 
 These findings flow into the Fix-First flow (item 4) alongside the checklist pass (Step 3.5).
-The Fix-First heuristic applies identically — specialist findings follow the same AUTO-FIX vs ASK classification.
+The Fix-First heuristic applies identically 鈥?specialist findings follow the same AUTO-FIX vs ASK classification.
 
 **Compile per-specialist stats:**
 After merging findings, compile a `specialists` object for the review-log persist.
@@ -1274,7 +1268,7 @@ For each specialist (testing, maintainability, security, performance, data-migra
 - If not applicable (e.g., red-team not activated): omit from the object
 
 Include the Design specialist even though it uses `design-checklist.md` instead of the specialist schema files.
-Remember these stats — you will need them for the review-log entry in Step 5.8.
+Remember these stats 鈥?you will need them for the review-log entry in Step 5.8.
 
 ---
 
@@ -1307,10 +1301,10 @@ If the Red Team subagent fails or times out, skip silently and continue.
 Before classifying findings, check if any were previously skipped by the user in a prior review on this branch.
 
 ```bash
-true # BitFun Team Mode reads review context from the current session
+true # northhing Team Mode reads review context from the current session
 ```
 
-Parse the output: only lines BEFORE `---CONFIG---` are JSONL entries (the output also contains `---CONFIG---` and `---HEAD---` footer sections that are not JSONL — ignore those).
+Parse the output: only lines BEFORE `---CONFIG---` are JSONL entries (the output also contains `---CONFIG---` and `---HEAD---` footer sections that are not JSONL 鈥?ignore those).
 
 For each JSONL entry that has a `findings` array:
 1. Collect all fingerprints where `action: "skipped"`
@@ -1330,7 +1324,7 @@ If both conditions are true: suppress the finding. It was intentionally skipped 
 
 Print: "Suppressed N findings from prior reviews (previously skipped by user)"
 
-**Only suppress `skipped` findings — never `fixed` or `auto-fixed`** (those might regress and should be re-checked).
+**Only suppress `skipped` findings 鈥?never `fixed` or `auto-fixed`** (those might regress and should be re-checked).
 
 If no prior reviews exist or none have a `findings` array, skip this step silently.
 
@@ -1340,7 +1334,7 @@ Output a summary header: `Pre-Landing Review: N issues (X critical, Y informatio
    checklist.md. Critical findings lean toward ASK; informational lean toward AUTO-FIX.
 
 5. **Auto-fix all AUTO-FIX items.** Apply each fix. Output one line per fix:
-   `[AUTO-FIXED] [file:line] Problem → what you did`
+   `[AUTO-FIXED] [file:line] Problem 鈫?what you did`
 
 6. **If ASK items remain,** present them in ONE AskUserQuestion:
    - List each with number, severity, problem, recommended fix
@@ -1352,13 +1346,13 @@ Output a summary header: `Pre-Landing Review: N issues (X critical, Y informatio
    - If ANY fixes were applied: commit fixed files by name (`git add <fixed-files> && git commit -m "fix: pre-landing review fixes"`), then **STOP** and tell the user to run `/ship` again to re-test.
    - If no fixes applied (all ASK items skipped, or no issues found): continue to Step 4.
 
-8. Output summary: `Pre-Landing Review: N issues — M auto-fixed, K asked (J fixed, L skipped)`
+8. Output summary: `Pre-Landing Review: N issues 鈥?M auto-fixed, K asked (J fixed, L skipped)`
 
    If no issues found: `Pre-Landing Review: No issues found.`
 
 9. Persist the review result to the review log:
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 Substitute TIMESTAMP (ISO 8601), STATUS ("clean" if no issues, "issues_found" otherwise),
 and N values from the summary counts above. The `via:"ship"` distinguishes from standalone `/review` runs.
@@ -1366,7 +1360,7 @@ and N values from the summary counts above. The `via:"ship"` distinguishes from 
 - `specialists` = the per-specialist stats object compiled in Step 3.56. Each specialist that was considered gets an entry: `{"dispatched":true/false,"findings":N,"critical":N,"informational":N}` if dispatched, or `{"dispatched":false,"reason":"scope|gated"}` if skipped. Example: `{"testing":{"dispatched":true,"findings":2,"critical":0,"informational":2},"security":{"dispatched":false,"reason":"scope"}}`
 - `findings` = array of per-finding records. For each finding (from checklist pass and specialists), include: `{"fingerprint":"path:line:category","severity":"CRITICAL|INFORMATIONAL","action":"ACTION"}`. ACTION is `"auto-fixed"`, `"fixed"` (user approved), or `"skipped"` (user chose Skip).
 
-Save the review output — it goes into the PR body in Step 8.
+Save the review output 鈥?it goes into the PR body in Step 8.
 
 ---
 
@@ -1388,10 +1382,10 @@ For each classified comment:
 - The comment (file:line or [top-level] + body summary + permalink URL)
 - `RECOMMENDATION: Choose A because [one-line reason]`
 - Options: A) Fix now, B) Acknowledge and ship anyway, C) It's a false positive
-- If user chooses A: apply the fix, commit the fixed files (`git add <fixed-files> && git commit -m "fix: address Greptile review — <brief description>"`), reply using the **Fix reply template** from greptile-triage.md (include inline diff + explanation), and save to both per-project and global greptile-history (type: fix).
+- If user chooses A: apply the fix, commit the fixed files (`git add <fixed-files> && git commit -m "fix: address Greptile review 鈥?<brief description>"`), reply using the **Fix reply template** from greptile-triage.md (include inline diff + explanation), and save to both per-project and global greptile-history (type: fix).
 - If user chooses C: reply using the **False Positive reply template** from greptile-triage.md (include evidence + suggested re-rank), save to both per-project and global greptile-history (type: fp).
 
-**VALID BUT ALREADY FIXED:** Reply using the **Already Fixed reply template** from greptile-triage.md — no AskUserQuestion needed:
+**VALID BUT ALREADY FIXED:** Reply using the **Already Fixed reply template** from greptile-triage.md 鈥?no AskUserQuestion needed:
 - Include what was done and the fixing commit SHA
 - Save to both per-project and global greptile-history (type: already-fixed)
 
@@ -1403,7 +1397,7 @@ For each classified comment:
   - C) Ignore silently
 - If user chooses A: reply using the **False Positive reply template** from greptile-triage.md (include evidence + suggested re-rank), save to both per-project and global greptile-history (type: fp)
 
-**SUPPRESSED:** Skip silently — these are known false positives from previous triage.
+**SUPPRESSED:** Skip silently 鈥?these are known false positives from previous triage.
 
 **After all comments are resolved:** If any fixes were applied, the tests from Step 3 are now stale. **Re-run tests** (Step 3) before continuing to Step 4. If no fixes were applied, continue to Step 4.
 
@@ -1411,7 +1405,7 @@ For each classified comment:
 
 ## Step 3.8: Adversarial review (always-on)
 
-Every diff gets adversarial review from both BitFun and outside-voice sub-agent. LOC is not a proxy for risk — a 5-line auth change can be critical.
+Every diff gets adversarial review from both northhing and outside-voice sub-agent. LOC is not a proxy for risk 鈥?a 5-line auth change can be critical.
 
 **Detect diff size and tool availability:**
 
@@ -1420,56 +1414,56 @@ DIFF_INS=$(git diff origin/<base> --stat | tail -1 | grep -oE '[0-9]+ insertion'
 DIFF_DEL=$(git diff origin/<base> --stat | tail -1 | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
 DIFF_TOTAL=$((DIFF_INS + DIFF_DEL))
 which codex 2>/dev/null && echo "CODEX_AVAILABLE" || echo "CODEX_NOT_AVAILABLE"
-# Legacy opt-out — only gates outside-voice sub-agent passes, BitFun always runs
-OLD_CFG="" # BitFun Team Mode has no external codex_reviews config
+# Legacy opt-out 鈥?only gates outside-voice sub-agent passes, northhing always runs
+OLD_CFG="" # northhing Team Mode has no external codex_reviews config
 echo "DIFF_SIZE: $DIFF_TOTAL"
 echo "OLD_CFG: ${OLD_CFG:-not_set}"
 ```
 
-If `OLD_CFG` is `disabled`: skip outside-voice sub-agent passes only. BitFun adversarial subagent still runs (it's free and fast). Jump to the "BitFun adversarial subagent" section.
+If `OLD_CFG` is `disabled`: skip outside-voice sub-agent passes only. northhing adversarial subagent still runs (it's free and fast). Jump to the "northhing adversarial subagent" section.
 
 **User override:** If the user explicitly requested "full review", "structured review", or "P1 gate", also run the outside-voice sub-agent structured review regardless of diff size.
 
 ---
 
-### BitFun adversarial subagent (always runs)
+### northhing adversarial subagent (always runs)
 
-Dispatch via the Task tool. The subagent has fresh context — no checklist bias from the structured review. This genuine independence catches things the primary reviewer is blind to.
+Dispatch via the Task tool. The subagent has fresh context 鈥?no checklist bias from the structured review. This genuine independence catches things the primary reviewer is blind to.
 
 Subagent prompt:
-"Read the diff for this branch with `git diff origin/<base>`. Think like an attacker and a chaos engineer. Your job is to find ways this code will fail in production. Look for: edge cases, race conditions, security holes, resource leaks, failure modes, silent data corruption, logic errors that produce wrong results silently, error handling that swallows failures, and trust boundary violations. Be adversarial. Be thorough. No compliments — just the problems. For each finding, classify as FIXABLE (you know how to fix it) or INVESTIGATE (needs human judgment)."
+"Read the diff for this branch with `git diff origin/<base>`. Think like an attacker and a chaos engineer. Your job is to find ways this code will fail in production. Look for: edge cases, race conditions, security holes, resource leaks, failure modes, silent data corruption, logic errors that produce wrong results silently, error handling that swallows failures, and trust boundary violations. Be adversarial. Be thorough. No compliments 鈥?just the problems. For each finding, classify as FIXABLE (you know how to fix it) or INVESTIGATE (needs human judgment)."
 
 Present findings under an `ADVERSARIAL REVIEW (independent subagent):` header. **FIXABLE findings** flow into the same Fix-First pipeline as the structured review. **INVESTIGATE findings** are presented as informational.
 
-If the subagent fails or times out: "BitFun adversarial subagent unavailable. Continuing."
+If the subagent fails or times out: "northhing adversarial subagent unavailable. Continuing."
 
 ---
 
 ### outside-voice sub-agent adversarial challenge (always runs when available)
 
-If a suitable BitFun outside-voice or review sub-agent is available AND `OLD_CFG` is NOT `disabled`:
+If a suitable northhing outside-voice or review sub-agent is available AND `OLD_CFG` is NOT `disabled`:
 
 ```bash
 TMPERR_ADV=$(mktemp /tmp/codex-adv-XXXXXXXX)
 _REPO_ROOT=$(git rev-parse --show-toplevel) || { echo "ERROR: not in a git repo" >&2; exit 1; }
-Use the BitFun Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
+Use the northhing Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
 ```
 
-Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the `timeout` shell command — it doesn't exist on macOS. After the command completes, read stderr:
+Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the `timeout` shell command 鈥?it doesn't exist on macOS. After the command completes, read stderr:
 ```bash
 cat "$TMPERR_ADV"
 ```
 
-Present the full output verbatim. This is informational — it never blocks shipping.
+Present the full output verbatim. This is informational 鈥?it never blocks shipping.
 
-**Error handling:** All errors are non-blocking — adversarial review is a quality enhancement, not a prerequisite.
-- **Outside-voice unavailable:** If the selected BitFun sub-agent cannot run, skip this informational pass and continue with the main-session review.
+**Error handling:** All errors are non-blocking 鈥?adversarial review is a quality enhancement, not a prerequisite.
+- **Outside-voice unavailable:** If the selected northhing sub-agent cannot run, skip this informational pass and continue with the main-session review.
 - **Timeout:** "outside-voice sub-agent timed out after 5 minutes."
 - **Empty response:** "outside-voice sub-agent returned no response. Stderr: <paste relevant error>."
 
 **Cleanup:** Run `rm -f "$TMPERR_ADV"` after processing.
 
-If outside-voice sub-agent is not available in the current BitFun runtime, run the BitFun adversarial path only and note that cross-model coverage was skipped.
+If outside-voice sub-agent is not available in the current northhing runtime, run the northhing adversarial path only and note that cross-model coverage was skipped.
 
 ---
 
@@ -1481,27 +1475,27 @@ If `DIFF_TOTAL >= 200` AND outside-voice sub-agent is available AND `OLD_CFG` is
 TMPERR=$(mktemp /tmp/outside-voice-review-XXXXXXXX)
 _REPO_ROOT=$(git rev-parse --show-toplevel) || { echo "ERROR: not in a git repo" >&2; exit 1; }
 cd "$_REPO_ROOT"
-Use the BitFun Task tool to dispatch a suitable independent read-only structured review sub-agent over the diff.
+Use the northhing Task tool to dispatch a suitable independent read-only structured review sub-agent over the diff.
 ```
 
-Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the `timeout` shell command — it doesn't exist on macOS. Present output under `CODEX SAYS (code review):` header.
-Check for `[P1]` markers: found → `GATE: FAIL`, not found → `GATE: PASS`.
+Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the `timeout` shell command 鈥?it doesn't exist on macOS. Present output under `CODEX SAYS (code review):` header.
+Check for `[P1]` markers: found 鈫?`GATE: FAIL`, not found 鈫?`GATE: PASS`.
 
 If GATE is FAIL, use AskUserQuestion:
 ```
 outside-voice sub-agent found N critical issues in the diff.
 
 A) Investigate and fix now (recommended)
-B) Continue — review will still complete
+B) Continue 鈥?review will still complete
 ```
 
-If A: address the findings. After fixing, re-run tests (Step 3) since code has changed. Re-run `BitFun Task outside-voice review` to verify.
+If A: address the findings. After fixing, re-run tests (Step 3) since code has changed. Re-run `northhing Task outside-voice review` to verify.
 
 Read stderr for errors (same error handling as outside-voice sub-agent adversarial above).
 
 After stderr: `rm -f "$TMPERR"`
 
-If `DIFF_TOTAL < 200`: skip this section silently. The BitFun + outside-voice sub-agent adversarial passes provide sufficient coverage for smaller diffs.
+If `DIFF_TOTAL < 200`: skip this section silently. The northhing + outside-voice sub-agent adversarial passes provide sufficient coverage for smaller diffs.
 
 ---
 
@@ -1509,7 +1503,7 @@ If `DIFF_TOTAL < 200`: skip this section silently. The BitFun + outside-voice su
 
 After all passes complete, persist:
 ```bash
-true # BitFun Team Mode has no external review-log helper
+true # northhing Team Mode has no external review-log helper
 ```
 Substitute: STATUS = "clean" if no findings across ALL passes, "issues_found" if any pass found issues. SOURCE = "both" if outside-voice sub-agent ran, "task" if only independent subagent ran. GATE = the outside-voice sub-agent structured review gate result ("pass"/"fail"), "skipped" if diff < 200, or "informational" if outside-voice sub-agent was unavailable. If all passes failed, do NOT persist.
 
@@ -1521,13 +1515,12 @@ After all passes complete, synthesize findings across all sources:
 
 ```
 ADVERSARIAL REVIEW SYNTHESIS (always-on, N lines):
-════════════════════════════════════════════════════════════
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
   High confidence (found by multiple sources): [findings agreed on by >1 pass]
-  Unique to BitFun structured review: [from earlier step]
-  Unique to BitFun adversarial: [from subagent]
+  Unique to northhing structured review: [from earlier step]
+  Unique to northhing adversarial: [from subagent]
   Unique to outside-voice sub-agent: [from codex adversarial or code review, if ran]
-  Models used: BitFun structured ✓  BitFun adversarial ✓/✗  outside-voice sub-agent ✓/✗
-════════════════════════════════════════════════════════════
+  Models used: northhing structured 鉁? northhing adversarial 鉁?鉁? outside-voice sub-agent 鉁?鉁?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 ```
 
 High-confidence findings (agreed on by multiple sources) should be prioritized for fixes.
@@ -1540,7 +1533,7 @@ If you discovered a non-obvious pattern, pitfall, or architectural insight durin
 this session, log it for future sessions:
 
 ```bash
-true # BitFun Team Mode has no external telemetry helper
+true # northhing Team Mode has no external telemetry helper
 ```
 
 **Types:** `pattern` (reusable approach), `pitfall` (what NOT to do), `preference`
@@ -1548,7 +1541,7 @@ true # BitFun Team Mode has no external telemetry helper
 `operational` (project environment/CLI/workflow knowledge).
 
 **Sources:** `observed` (you found this in the code), `user-stated` (user told you),
-`inferred` (AI deduction), `cross-model` (both BitFun and outside-voice sub-agent agree).
+`inferred` (AI deduction), `cross-model` (both northhing and outside-voice sub-agent agree).
 
 **Confidence:** 1-10. Be honest. An observed pattern you verified in the code is 8-9.
 An inference you're not sure about is 4-5. A user preference they explicitly stated is 10.
@@ -1570,7 +1563,7 @@ echo "BASE: $BASE_VERSION  HEAD: $CURRENT_VERSION"
 if [ "$CURRENT_VERSION" != "$BASE_VERSION" ]; then echo "ALREADY_BUMPED"; fi
 ```
 
-If output shows `ALREADY_BUMPED`, VERSION was already bumped on this branch (prior `/ship` run). Skip the bump action (do not modify VERSION), but read the current VERSION value — it is needed for CHANGELOG and PR body. Continue to the next step. Otherwise proceed with the bump.
+If output shows `ALREADY_BUMPED`, VERSION was already bumped on this branch (prior `/ship` run). Skip the bump action (do not modify VERSION), but read the current VERSION value 鈥?it is needed for CHANGELOG and PR body. Continue to the next step. Otherwise proceed with the bump.
 
 1. Read the current `VERSION` file (4-digit format: `MAJOR.MINOR.PATCH.MICRO`)
 
@@ -1580,11 +1573,11 @@ If output shows `ALREADY_BUMPED`, VERSION was already bumped on this branch (pri
    - **MICRO** (4th digit): < 50 lines changed, trivial tweaks, typos, config
    - **PATCH** (3rd digit): 50+ lines changed, no feature signals detected
    - **MINOR** (2nd digit): **ASK the user** if ANY feature signal is detected, OR 500+ lines changed, OR new modules/packages added
-   - **MAJOR** (1st digit): **ASK the user** — only for milestones or breaking changes
+   - **MAJOR** (1st digit): **ASK the user** 鈥?only for milestones or breaking changes
 
 3. Compute the new version:
    - Bumping a digit resets all digits to its right to 0
-   - Example: `0.19.1.0` + PATCH → `0.19.2.0`
+   - Example: `0.19.1.0` + PATCH 鈫?`0.19.2.0`
 
 4. Write the new version to the `VERSION` file.
 
@@ -1616,10 +1609,10 @@ If output shows `ALREADY_BUMPED`, VERSION was already bumped on this branch (pri
 5. **Write the CHANGELOG entry** covering ALL groups:
    - If existing CHANGELOG entries on the branch already cover some commits, replace them with one unified entry for the new version
    - Categorize changes into applicable sections:
-     - `### Added` — new features
-     - `### Changed` — changes to existing functionality
-     - `### Fixed` — bug fixes
-     - `### Removed` — removed features
+     - `### Added` 鈥?new features
+     - `### Changed` 鈥?changes to existing functionality
+     - `### Fixed` 鈥?bug fixes
+     - `### Removed` 鈥?removed features
    - Write concise, descriptive bullet points
    - Insert after the file header (line 5), dated today
    - Format: `## [X.Y.Z.W] - YYYY-MM-DD`
@@ -1658,12 +1651,12 @@ Read TODOS.md and verify it follows the recommended structure:
 **If disorganized** (missing priority fields, no component groupings, no Completed section): Use AskUserQuestion:
 - Message: "TODOS.md doesn't follow the recommended structure (skill/component groupings, P0-P4 priority, Completed section). Would you like to reorganize it?"
 - Options: A) Reorganize now (recommended), B) Leave as-is
-- If A: Reorganize in-place following TODOS-format.md. Preserve all content — only restructure, never delete items.
+- If A: Reorganize in-place following TODOS-format.md. Preserve all content 鈥?only restructure, never delete items.
 - If B: Continue to step 3 without restructuring.
 
 **3. Detect completed TODOs:**
 
-This step is fully automatic — no user interaction.
+This step is fully automatic 鈥?no user interaction.
 
 Use the diff and commit history already gathered in earlier steps:
 - `git diff <base>...HEAD` (full diff against the base branch)
@@ -1685,7 +1678,7 @@ For each TODO item, check if the changes in this PR complete it by:
 
 **6. Defensive:** If TODOS.md cannot be written (permission error, disk full), warn the user and continue. Never stop the ship workflow for a TODOS failure.
 
-Save this summary — it goes into the PR body in Step 8.
+Save this summary 鈥?it goes into the PR body in Step 8.
 
 ---
 
@@ -1693,7 +1686,7 @@ Save this summary — it goes into the PR body in Step 8.
 
 **Goal:** Create small, logical commits that work well with `git bisect` and help LLMs understand what changed.
 
-1. Analyze the diff and group changes into logical commits. Each commit should represent **one coherent change** — not one file, but one logical unit.
+1. Analyze the diff and group changes into logical commits. Each commit should represent **one coherent change** 鈥?not one file, but one logical unit.
 
 2. **Commit ordering** (earlier commits first):
    - **Infrastructure:** migrations, config changes, route additions
@@ -1709,7 +1702,7 @@ Save this summary — it goes into the PR body in Step 8.
    - Config/route changes can group with the feature they enable
    - If the total diff is small (< 50 lines across < 4 files), a single commit is fine
 
-4. **Each commit must be independently valid** — no broken imports, no references to code that doesn't exist yet. Order commits so dependencies come first.
+4. **Each commit must be independently valid** 鈥?no broken imports, no references to code that doesn't exist yet. Order commits so dependencies come first.
 
 5. Compose each commit message:
    - First line: `<type>: <summary>` (type = feat/fix/chore/refactor/docs)
@@ -1736,10 +1729,10 @@ Before pushing, re-verify if code changed during Steps 4-6:
 2. **Build verification:** If the project has a build step, run it. Paste output.
 
 3. **Rationalization prevention:**
-   - "Should work now" → RUN IT.
-   - "I'm confident" → Confidence is not evidence.
-   - "I already tested earlier" → Code changed since then. Test again.
-   - "It's a trivial change" → Trivial changes break production.
+   - "Should work now" 鈫?RUN IT.
+   - "I'm confident" 鈫?Confidence is not evidence.
+   - "I already tested earlier" 鈫?Code changed since then. Test again.
+   - "It's a trivial change" 鈫?Trivial changes break production.
 
 **If tests fail here:** STOP. Do not push. Fix the issue and return to Step 3.
 
@@ -1798,17 +1791,17 @@ you missed it.>
 
 ## Test Coverage
 <coverage diagram from Step 3.4, or "All new code paths have test coverage.">
-<If Step 3.4 ran: "Tests: {before} → {after} (+{delta} new)">
+<If Step 3.4 ran: "Tests: {before} 鈫?{after} (+{delta} new)">
 
 ## Pre-Landing Review
 <findings from Step 3.5 code review, or "No issues found.">
 
 ## Design Review
-<If design review ran: "Design Review (lite): N findings — M auto-fixed, K skipped. AI Slop: clean/N issues.">
-<If no frontend files changed: "No frontend files changed — design review skipped.">
+<If design review ran: "Design Review (lite): N findings 鈥?M auto-fixed, K skipped. AI Slop: clean/N issues.">
+<If no frontend files changed: "No frontend files changed 鈥?design review skipped.">
 
 ## Eval Results
-<If evals ran: suite names, pass/fail counts, cost dashboard summary. If skipped: "No prompt-related files changed — evals skipped.">
+<If evals ran: suite names, pass/fail counts, cost dashboard summary. If skipped: "No prompt-related files changed 鈥?evals skipped.">
 
 ## Greptile Review
 <If Greptile comments were found: bullet list with [FIXED] / [FALSE POSITIVE] / [ALREADY FIXED] tag + one-line summary per comment>
@@ -1839,7 +1832,7 @@ you missed it.>
 - [x] All Rails tests pass (N runs, 0 failures)
 - [x] All Vitest tests pass (N tests)
 
-Generated with BitFun
+Generated with northhing
 ```
 
 **If GitHub:**
@@ -1861,9 +1854,9 @@ EOF
 ```
 
 **If neither CLI is available:**
-Print the branch name, remote URL, and instruct the user to create the PR/MR manually via the web UI. Do not stop — the code is pushed and ready.
+Print the branch name, remote URL, and instruct the user to create the PR/MR manually via the web UI. Do not stop 鈥?the code is pushed and ready.
 
-**Output the PR/MR URL** — then proceed to Step 8.5.
+**Output the PR/MR URL** 鈥?then proceed to Step 8.5.
 
 ---
 
@@ -1874,17 +1867,17 @@ After the PR is created, automatically sync project documentation. Read the
 execute its full workflow:
 
 1. Read the `/document-release` skill: `cat the bundled document-release skill via the Skill tool`
-2. Follow its instructions — it reads all .md files in the project, cross-references
+2. Follow its instructions 鈥?it reads all .md files in the project, cross-references
    the diff, and updates anything that drifted (README, ARCHITECTURE, CONTRIBUTING,
    AGENTS.md, TODOS, etc.)
 3. If any docs were updated, commit the changes and push to the same branch:
    ```bash
    git add -A && git commit -m "docs: sync documentation with shipped changes" && git push
    ```
-4. If no docs needed updating, say "Documentation is current — no updates needed."
+4. If no docs needed updating, say "Documentation is current 鈥?no updates needed."
 
 This step is automatic. Do not ask the user for confirmation. The goal is zero-friction
-doc updates — the user runs `/ship` and documentation stays current without a separate command.
+doc updates 鈥?the user runs `/ship` and documentation stays current without a separate command.
 
 If Step 8.5 created a docs commit, re-edit the PR/MR body to include the latest commit SHA in the summary. This ensures the PR body reflects the truly final state after document-release.
 
@@ -1895,13 +1888,13 @@ If Step 8.5 created a docs commit, re-edit the PR/MR body to include the latest 
 Log coverage and plan completion data so `/retro` can track trends:
 
 ```bash
-SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.bitfun/team/projects/$SLUG
+SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" | tr -cd A-Za-z0-9._-) && mkdir -p $HOME/.northhing/team/projects/$SLUG
 ```
 
-Append to `$HOME/.bitfun/team/projects/$SLUG/$BRANCH-reviews.jsonl`:
+Append to `$HOME/.northhing/team/projects/$SLUG/$BRANCH-reviews.jsonl`:
 
 ```bash
-echo '{"skill":"ship","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","coverage_pct":COVERAGE_PCT,"plan_items_total":PLAN_TOTAL,"plan_items_done":PLAN_DONE,"verification_result":"VERIFY_RESULT","version":"VERSION","branch":"BRANCH"}' >> $HOME/.bitfun/team/projects/$SLUG/$BRANCH-reviews.jsonl
+echo '{"skill":"ship","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","coverage_pct":COVERAGE_PCT,"plan_items_total":PLAN_TOTAL,"plan_items_done":PLAN_DONE,"verification_result":"VERIFY_RESULT","version":"VERSION","branch":"BRANCH"}' >> $HOME/.northhing/team/projects/$SLUG/$BRANCH-reviews.jsonl
 ```
 
 Substitute from earlier steps:
@@ -1912,7 +1905,7 @@ Substitute from earlier steps:
 - **VERSION**: from the VERSION file
 - **BRANCH**: current branch name
 
-This step is automatic — never skip it, never ask for confirmation.
+This step is automatic 鈥?never skip it, never ask for confirmation.
 
 ---
 
@@ -1924,7 +1917,7 @@ This step is automatic — never skip it, never ask for confirmation.
 - **Never ask for trivial confirmations** (e.g., "ready to push?", "create PR?"). DO stop for: version bumps (MINOR/MAJOR), pre-landing review findings (ASK items), and outside-voice sub-agent structured review [P1] findings (large diffs only).
 - **Always use the 4-digit version format** from the VERSION file.
 - **Date format in CHANGELOG:** `YYYY-MM-DD`
-- **Split commits for bisectability** — each commit = one logical change.
+- **Split commits for bisectability** 鈥?each commit = one logical change.
 - **TODOS.md completion detection must be conservative.** Only mark items as completed when the diff clearly shows the work is done.
 - **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence (inline diff, code references, re-rank suggestion). Never post vague replies.
 - **Never push without fresh verification evidence.** If code changed after Step 3 tests, re-run before pushing.

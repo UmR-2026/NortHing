@@ -1,10 +1,10 @@
-# BitFun English Language Pack
+﻿# northhing English Language Pack
 # English (US) (en-US) Fluent Translation File
 
 # ==================== General ====================
 app-version = Version { $version }
 loading = Loading...
-welcome = Welcome to BitFun
+welcome = Welcome to northhing
 
 # ==================== Actions ====================
 action-confirm = Confirm
