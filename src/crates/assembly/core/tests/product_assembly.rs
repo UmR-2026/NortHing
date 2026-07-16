@@ -1,3 +1,5 @@
+#![cfg(feature = "product-full")]
+
 use northhing_core::product_assembly;
 use northhing_core::product_runtime::CoreRuntimeServicesProvider;
 use northhing_product_capabilities::{

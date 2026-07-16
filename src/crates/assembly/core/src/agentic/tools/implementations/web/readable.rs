@@ -2,6 +2,7 @@ use crate::util::errors::{NortHingError, NortHingResult};
 use crate::util::truncate_at_char_boundary;
 use htmd::HtmlToMarkdown;
 use legible::{parse as parse_legible, Error as LegibleError, Options as LegibleOptions};
+#[cfg(feature = "readability-js")]
 use readability_js::{Readability, ReadabilityOptions};
 use regex::{Captures, Regex};
 use reqwest::Url;
@@ -71,13 +72,18 @@ pub(crate) fn extract_markdown_with_text_fallback(html: &str, base_url: &str) ->
     // Local extraction experiments across article, documentation, wiki, and
     // forum pages showed this order worked best for the current codebase:
     // - legible: best article quality with good latency
-    // - readability-js: similar quality but slower, useful as a fallback
+    // - readability-js: similar quality but slower, useful as a fallback (optional feature)
     // We intentionally avoid rs-trafilatura here for now. In the current crate
     // version it emits unconditional DEBUG lines to stderr during extraction,
     // which would pollute northhing tool execution output. Revisit it once the
     // upstream crate makes that logging opt-in or routes it through a proper
     // logging facade.
-    for extractor in [attempt_legible as ExtractorFn, attempt_readability_js as ExtractorFn] {
+    #[cfg(feature = "readability-js")]
+    let extractors: [ExtractorFn; 2] = [attempt_legible, attempt_readability_js];
+    #[cfg(not(feature = "readability-js"))]
+    let extractors: [ExtractorFn; 1] = [attempt_legible];
+
+    for extractor in extractors {
         let Ok(candidate) = extractor(html, base_url) else {
             continue;
         };
@@ -148,6 +154,7 @@ fn attempt_legible(html: &str, base_url: &str) -> NortHingResult<ExtractedCandid
     })
 }
 
+#[cfg(feature = "readability-js")]
 fn attempt_readability_js(html: &str, base_url: &str) -> NortHingResult<ExtractedCandidate> {
     let reader = Readability::new()
         .map_err(|err| NortHingError::tool(format!("Failed to initialize readability-js: {}", err)))?;

@@ -1,3 +1,5 @@
+#![cfg(feature = "product-full")]
+
 use northhing_core::agentic::context_profile::{ContextProfile, ContextProfilePolicy, ModelCapabilityProfile};
 
 #[test]

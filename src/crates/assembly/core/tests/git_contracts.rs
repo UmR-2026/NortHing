@@ -1,3 +1,5 @@
+#![cfg(feature = "service-integrations")]
+
 use northhing_core::service::git::{
     build_git_changed_files_args, build_git_diff_args, parse_branch_line, parse_git_log_line, GitChangedFileStatus,
     GitChangedFilesParams, GitCommandOutput, GitCommitParams, GitDiffParams, GitGraph, GitService, GitWorktreeInfo,
