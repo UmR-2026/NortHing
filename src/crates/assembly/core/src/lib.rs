@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 #![recursion_limit = "256"]
 //! Compatibility facade and full product runtime assembly.
 //!

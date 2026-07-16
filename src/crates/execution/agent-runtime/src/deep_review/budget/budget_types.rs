@@ -1,4 +1,4 @@
-use super::super::concurrency_policy::{DeepReviewEffectiveConcurrencySnapshot, DeepReviewEffectiveConcurrencyState};
+use super::super::concurrency_policy::DeepReviewEffectiveConcurrencyState;
 use super::super::diagnostics::DeepReviewRuntimeDiagnostics;
 use super::super::shared_context::{DeepReviewSharedContextKey, DeepReviewSharedContextUseRecord};
 use std::collections::{BTreeMap, HashMap};

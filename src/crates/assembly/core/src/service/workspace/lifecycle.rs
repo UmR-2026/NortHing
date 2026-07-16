@@ -12,9 +12,9 @@
 use super::manager::{WorkspaceInfo, WorkspaceKind, WorkspaceManager, WorkspaceManagerConfig};
 use super::{WorkspaceCreateOptions, WorkspaceService};
 use crate::infrastructure::storage::PersistenceService;
-use crate::infrastructure::{try_get_path_manager_arc, PathManager};
+use crate::infrastructure::try_get_path_manager_arc;
 use crate::service::bootstrap::initialize_workspace_persona_files;
-use crate::service::workspace_runtime::{try_get_workspace_runtime_service_arc, WorkspaceRuntimeService};
+use crate::service::workspace_runtime::try_get_workspace_runtime_service_arc;
 use crate::util::errors::*;
 use std::collections::HashSet;
 use std::path::PathBuf;

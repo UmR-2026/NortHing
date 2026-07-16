@@ -11,21 +11,14 @@
 //! from inside the `workspace` module.
 
 use super::manager::{
-    RelatedPath, ScanOptions, WorkspaceIdentity, WorkspaceInfo, WorkspaceKind, WorkspaceManager,
-    WorkspaceManagerStatistics, WorkspaceOpenOptions, WorkspaceStatus, WorkspaceSummary,
+    ScanOptions, WorkspaceIdentity, WorkspaceInfo, WorkspaceKind,
+    WorkspaceManagerStatistics, WorkspaceOpenOptions, WorkspaceStatus,
 };
 use super::service::{BatchImportResult, BatchRemoveResult, WorkspaceIdentityChangedEvent, WorkspaceInfoUpdates};
 use super::WorkspaceService;
-use crate::service::remote_ssh::normalize_remote_workspace_path;
-use crate::service::remote_ssh::workspace_state::{
-    canonicalize_local_workspace_root, local_workspace_roots_equal, remote_workspace_manager,
-    remote_workspace_stable_id,
-};
+use crate::service::remote_ssh::workspace_state::local_workspace_roots_equal;
 use crate::util::errors::*;
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::path::PathBuf;
 use tracing::warn;
 impl WorkspaceService {
     pub(super) async fn remove_workspace_impl(&self, workspace_id: &str) -> NortHingResult<()> {

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use super::super::output::*;
 use super::super::platform::*;
 use super::super::types::*;
-use crate::{TerminalError, TerminalResult};
+use crate::TerminalResult;
 use tokio::sync::mpsc;
 
 pub(super) async fn control_session_impl(

@@ -1,4 +1,6 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 #![doc = include_str!("../README.md")]
 
 pub mod client;

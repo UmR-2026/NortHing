@@ -3,8 +3,6 @@
 //! Owns packet metadata inference and `reviewers` array shaping for the
 //! findings section of a Deep Review report.
 
-use super::super::manifest::DeepReviewScopeProfile;
-use crate::deep_review::manifest::{DeepReviewEvidencePack, DeepReviewRunManifestGate};
 use serde_json::{json, Value};
 
 pub fn fill_deep_review_packet_metadata(input: &mut Value, run_manifest: Option<&Value>) {

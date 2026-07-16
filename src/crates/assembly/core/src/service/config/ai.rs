@@ -8,7 +8,6 @@
 //! Re-exports `northhing_core_types::ReasoningMode` for `AIConfig.agent_profiles` etc.
 
 use super::runtime::{DebugModeConfig, ParentSubagentOverrideConfig};
-use crate::util::errors::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

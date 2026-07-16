@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! northhing Relay Server Library
 //!
 //! The standalone relay-server binary. Re-exports shared relay logic from

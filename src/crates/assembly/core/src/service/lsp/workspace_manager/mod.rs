@@ -13,7 +13,4 @@ mod diagnostics;
 mod format;
 mod workspace;
 
-pub use client::*;
-pub use diagnostics::*;
-pub use format::*;
 pub use workspace::*;

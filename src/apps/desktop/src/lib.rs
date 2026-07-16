@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 //! northhing Desktop Shell Library
 //!
 //! Re-exports for the desktop application.

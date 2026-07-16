@@ -20,12 +20,10 @@ pub use super::service_types::{
     WorkspaceIdentityChangedEvent, WorkspaceImportResult, WorkspaceInfoUpdates, WorkspaceQuickSummary,
 };
 
-use super::manager::{WorkspaceInfo, WorkspaceKind, WorkspaceManager, WorkspaceManagerConfig, WorkspaceOpenOptions};
+use super::manager::WorkspaceManager;
 use crate::infrastructure::storage::PersistenceService;
 use crate::infrastructure::PathManager;
-use crate::service::remote_ssh::workspace_state::remote_workspace_stable_id;
 use crate::service::workspace_runtime::WorkspaceRuntimeService;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -62,8 +60,13 @@ mod tests {
     use super::*;
     use crate::agentic::persistence::PersistenceManager;
     use crate::infrastructure::storage::{PersistenceService, StorageOptions};
+    use crate::service::remote_ssh::workspace_state::remote_workspace_stable_id;
     use crate::service::session::SessionMetadata;
+    use crate::service::workspace::manager::{
+        WorkspaceInfo, WorkspaceKind, WorkspaceManagerConfig, WorkspaceOpenOptions,
+    };
     use std::collections::HashMap;
+    use std::path::PathBuf;
     use uuid::Uuid;
 
     struct TestEnvironment {

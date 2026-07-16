@@ -1,4 +1,6 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 //! Terminal Core - A standalone terminal module
 //!
 //! This crate provides a complete terminal implementation with PTY support,

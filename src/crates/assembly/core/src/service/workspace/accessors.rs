@@ -10,7 +10,7 @@
 //! public cross-crate API; this file's `pub(super)` items are only callable
 //! from inside the `workspace` module.
 
-use super::manager::{WorkspaceInfo, WorkspaceManager, WorkspaceStatus, WorkspaceSummary, WorkspaceType};
+use super::manager::{WorkspaceInfo, WorkspaceStatus, WorkspaceSummary, WorkspaceType};
 use super::WorkspaceService;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
 use crate::service::remote_ssh::workspace_state::local_workspace_roots_equal;

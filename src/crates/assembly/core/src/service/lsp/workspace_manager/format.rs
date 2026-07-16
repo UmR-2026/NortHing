@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use tracing::{error, info, warn};
 
 use super::super::config_watcher::ConfigWatcher;
@@ -12,7 +11,6 @@ use super::super::manager::LspManager;
 use super::workspace::{ServerStatus, TokenInfo, TokenState, WorkspaceLspManager};
 use crate::infrastructure::events::EventEmitter;
 
-use anyhow::Result;
 use serde_json;
 
 impl WorkspaceLspManager {

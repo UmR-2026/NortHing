@@ -1,6 +1,5 @@
 //! Diagnostics + hover + completion handlers.
 
-use super::super::manager::LspManager;
 use super::super::types::{CompletionItem, InlayHint};
 use super::workspace::WorkspaceLspManager;
 use anyhow::{anyhow, Result};

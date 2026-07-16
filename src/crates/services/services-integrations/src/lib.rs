@@ -1,4 +1,6 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 //! Integration service owner crate.
 //!
 //! Heavy external integrations live here behind feature groups so local checks

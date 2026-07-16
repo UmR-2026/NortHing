@@ -1,4 +1,6 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 //! northhing Agent Client Protocol integration.
 //!
 //! This crate owns the external ACP server surface and maps it onto northhing's

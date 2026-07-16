@@ -2,11 +2,8 @@
 
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
 
-use super::super::manager::LspManager;
 use super::workspace::{LspEvent, ServerState, ServerStatus, WorkspaceLspManager};
 use crate::infrastructure::events::EventEmitter;
 

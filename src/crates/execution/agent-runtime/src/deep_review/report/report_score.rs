@@ -3,7 +3,6 @@
 //! Owns reliability signal shaping for the score/rating section of a Deep
 //! Review report.
 
-use super::super::incremental_cache::DeepReviewIncrementalCache;
 use super::report_summary::DeepReviewCacheUpdate;
 use crate::deep_review::manifest::{DeepReviewEvidencePack, DeepReviewScopeProfile};
 use serde_json::{json, Value};

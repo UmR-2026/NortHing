@@ -18,22 +18,19 @@
 //!     normalize_workspace_options_for_path, ensure_assistant_workspaces
 
 use super::manager::{
-    RelatedPath, ScanOptions, WorkspaceIdentity, WorkspaceInfo, WorkspaceKind, WorkspaceManager, WorkspaceOpenOptions,
-    WorkspaceStatus, WorkspaceSummary,
+    WorkspaceInfo, WorkspaceKind, WorkspaceManager, WorkspaceOpenOptions,
 };
 use super::service::{
-    BatchImportResult, BatchRemoveResult, WorkspaceCreateOptions, WorkspaceExport, WorkspaceHealthStatus,
-    WorkspaceImportResult, WorkspaceInfoUpdates, WorkspaceQuickSummary,
+    WorkspaceCreateOptions, WorkspaceExport, WorkspaceHealthStatus,
+    WorkspaceImportResult, WorkspaceQuickSummary,
 };
 use super::service_types::{AssistantWorkspaceDescriptor, WorkspacePersistenceData};
 use super::WorkspaceService;
-use crate::infrastructure::storage::{PersistenceService, StorageOptions};
+use crate::infrastructure::storage::StorageOptions;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
-use crate::service::remote_ssh::workspace_state::{local_workspace_roots_equal, remote_workspace_stable_id};
+use crate::service::remote_ssh::workspace_state::remote_workspace_stable_id;
 use crate::util::errors::*;
-use chrono::{DateTime, Utc};
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::RwLock;
