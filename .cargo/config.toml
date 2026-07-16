@@ -1,6 +1,6 @@
 [build]
 # rustc-wrapper = "sccache"   # disabled: sccache not installed in this env (cargo install sccache needed)
-target-dir = "target-shared"
+target-dir = "E:/tgt/northing"
 # Note: removed "-C link-arg=-Wl,--undefined=nanosleep64" — it forces a linker
 # requirement that MinGW's libpthread cannot satisfy (aws-lc-sys uses POSIX
 # nanosleep which has a different symbol name on Windows/MinGW).  The build

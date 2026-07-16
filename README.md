@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![northhing](./png/northhing_title.png)
+![northhing](./png/BitFun_title.png)
 
 </div>
 <div align="center">
@@ -172,11 +172,14 @@ src/crates/adapters/     # AI, API, transport, and WebDriver adapters
 src/crates/services/     # Reusable OS, terminal, MCP, remote, git, and filesystem services
 src/crates/execution/    # Agent, harness, stream, typed-service, and tool primitives
 src/crates/contracts/    # Stable DTOs, events, runtime ports, and product domains
+src/crates/cli-internal/ # CLI internal implementation
+src/crates/test-support/ # Test infrastructure
 src/apps/desktop/        # Slint desktop host
 src/apps/server/         # Web server runtime
 src/apps/cli/            # CLI runtime (TUI)
-src/web-ui/              # Shared desktop / Web frontend
+src/apps/relay-server/   # Relay server
 src/mobile-web/          # Mobile web UI
+src/shared/              # Shared code
 ```
 
 Design principle: **keep product logic platform-agnostic and expose it through adapters**. See [AGENTS.md](./AGENTS.md).
@@ -201,6 +204,6 @@ We welcome great ideas and code; we are maximally open to AI-generated code. Ple
 1. This project is spare-time exploration and research into next-generation human–machine collaboration, not a commercial profit-making project.
 2. More than 97% was built with Vibe Coding. Code feedback is welcome; refactoring and optimization via AI is encouraged.
 3. **v0.1.0 human-usable** (2026-07-15): god-file split, cargo fmt clean, CLI compiles. Desktop/Web/Mobile not yet verified on all platforms.
-3. This project depends on and references many open-source projects. Thanks to all open-source authors. **If your rights are affected, please contact us for remediation.**
+4. This project depends on and references many open-source projects. Thanks to all open-source authors. **If your rights are affected, please contact us for remediation.**
 
 ---

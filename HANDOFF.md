@@ -10,12 +10,12 @@
 > 涉及引用现有 skill / spec / plan 章节时，章节标题保留原文（§A / Gate 7 等），
 > 但围绕它们的说明文字用中文。
 >
-> **Last verified**: 2026-07-15 (R75 round 1+2 god-file split DONE, B3-T6 cargo fmt cleanup DONE, 47 files formatted, working tree clean, all commits on main. C4 B-3 test N/A (test not in current codebase), C5 workspace test blocked by ring/aws-lc-sys native compilation on Windows (environment issue, not code issue). v0.1.0 human-usable pending tag C7.)
+> **Last verified**: 2026-07-16 (R75 round 1+2 + QClaw review 8.2/10 SHIP + B3-T6 fmt cleanup + c0a8371 HEAD + 14 commits on main)
 > **Branch**: `main`
-> **HEAD**: `32774ce` (R75 round 1+2 god-file split + B3-T6 cargo fmt cleanup; 7 new commits this session: 0f74605 fmt + d5f2d7f docs + 7044454 chore + bc3ef48 plan + 36c79e3 model_config_form split + 7aa50a8 chat/render split + 32774ce question split; cargo check -p northhing-cli = Finished ✓)
+> **HEAD**: `c0a8371` (R75 round 1+2 god-file split + B3-T6 cargo fmt cleanup + QClaw review; 14 commits this session: 1b147c3 snapshot + 0f74605 fmt + d5f2d7f docs + 7044454 chore + bc3ef48 plan + 36c79e3 model_config_form split + 7aa50a8 chat/render split + 32774ce question split + facc9c3 HANDOFF §0 update + b5a98a7 README update + f63e45f QClaw review spec + 02913d9 QClaw blockers resolved + 4b4e7b3 QClaw RESOLVED + c0a8371 cargo fmt + QClaw review report; cargo check -p northhing-cli = Finished ✓)
 > **Total commits on branch**: see `git rev-list --count HEAD` (auto-updates; not statically maintained to avoid bump-loop drift)
 > **HEAD drift note**: every commit that updates HANDOFF §0 will, by definition, produce a new commit that §0 does not yet reflect. The drift is one commit per HANDOFF-bump. Readers should treat the listed HEAD as "the HEAD when this row was written", not "current HEAD". For the truly current HEAD, run `git rev-parse --short HEAD`.
-> **Tag**: `v0.1.0` (at commit `2813b36`, A6 commit)
+> **Tag**: `v0.1.0` (at commit `facc9c3`, HANDOFF §0 v0.1.0 human-usable update)
 > **Tooling**: ZCode superpowers plugin upgraded **5.1.0 → 6.0.3** (filesystem-source, cache overwritten; backup at `~/.zcode/cli/plugins/cache/.../superpowers/5.1.0.backup-2026-06-20/`). See §6.
 > **A2 ACTIVATED**: `USE_LIGHTWEIGHT_ACTOR = true` (commit `e5ae9b1`). `CoordinatorHiddenSubagentSkill` now replaces legacy `execute_hidden_subagent_phase1/2/3` for all `Task` tool invocations. 13/13 desktop tests pass (1 `#[ignore]` re-enabled via `#[tokio::test]`). See `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`.
 > **TaskTool COLLAPSED**: `ToolExposure::Collapsed` saves ~800-1,200 tokens/turn in manifest. `GetToolSpec` fetches full schema on first use. 44/44 task_tool tests pass. See `docs/superpowers/specs/2026-06-23-collapse-task-tool-design.md`.
@@ -51,12 +51,12 @@ P2 (verify coordinator.rs test compilation) confirmed clean — 0 errors, 0 warn
 | Const flags in `agent-dispatch` | **all `false`** | `grep "pub const USE_" src/crates/execution/agent-dispatch/src/flags.rs` |
 | `InMemoryRelationship` fields | **5** (parent_session_id / parent_request_id / parent_dialog_turn_id / parent_turn_index / parent_tool_call_id) | `grep "pub " src/crates/assembly/core/src/agentic/core/session.rs` |
 | Hand-written `unsafe` in `app_state/` | **0** | `grep "unsafe" src/apps/desktop/src/app_state/mod.rs` (only slint macro output) |
-| Tag | `v0.1.0` applied at `2813b36` | `git tag` |
+| Tag | `v0.1.0` applied at `facc9c3` | `git tag` |
 | god-files (src/apps/cli/src >750 行) | **0** (R75 done: model_config_form + chat/render + question split) | `git log --oneline -7` |
 | `cargo check -p northhing-core --tests` | **0 errors** | `cargo check -p northhing-core --tests` |
 | `cargo check --workspace` | **10 pre-existing `northhing-acp` errors (out of scope)** | `cargo check --workspace` |
 
-**The next session's job**: C6 docs finalize + C7 0.1.0 tag → then 0.1.0 human-usable release.
+**The next session's job**: C5 blocker resolution (fix gcc or make onig/QuickJS optional) + v0.1.0 human-usable-final tag + release notes + push to GitHub.
 
 ---
 
@@ -235,13 +235,17 @@ Full design sketches for K.2.2 / K.2.3 / K.2.4 are in `docs/plans/2026-06-19-pos
    plus a `docs(handoff): bump N→N+M` commit at end. Update this HANDOFF.md
    §10 (commit log) + §0 (verified metrics) + §3 (submodule layout if changed).
 
-### Post-R72 next steps (2026-07-11, current session end)
+### Post-R75 next steps (2026-07-16, current)
 
-A. **R67+R72 review-fix-cleanup cycle** (user-driven, NOT for next session to dispatch):
-   - QClaw: dispatch `*-review-report.md` per R72a/b/c/d commit (5ac1cf96, 2f608308, 8897e8ac, 8aead8b9)
-   - Kimi: user verbal, optional
-   - Fix any `fix(tests):` minor observations as separate commits
-   - `docs(handoff):` bump to merge cleanup HEAD
+A. **C5 blocker resolution** (next session priority):
+   - Option A: Fix gcc via MSYS2 reinstall/update
+   - Option B: Make onig/QuickJS optional features
+   - Target: `cargo test --workspace` passes
+
+B. **v0.1.0 human-usable-final**:
+   - Re-tag v0.1.0 after C5 resolved
+   - Write release notes (`docs/releases/2026-07-15-v0.1.0-release.md`)
+   - Push to GitHub (per user "0.1.0 人类可以使用后再上传")
 
 B. **escape_html security review** (single decision point): ✅ **DONE 2026-07-11**
    - R67plus3 removed `&`→`&amp;` replacement to satisfy test expectation
@@ -418,9 +422,9 @@ D. **Cleanup 5 untracked docs** (low priority):
 cd /e/agent-project/northhing
 
 # State
-git rev-parse --short HEAD                    # expect: 32d050d (or newer)
+git rev-parse --short HEAD                    # expect: c0a8371 (or newer)
 git status                                    # expect: clean
-git rev-list --count HEAD                     # expect: 155 (or newer)
+git rev-list --count HEAD                     # expect: 14 (or newer)
 git log --oneline -5                          # eyeball the recent history
 
 # Compile (both must be 0 warnings)
@@ -549,6 +553,25 @@ without showing the `8/8 PASS` line.
 | (this commit) | docs(review) | commit QClaw review report `2026-07-12-r73-god-file-splits-review-report.md` (per project convention, QClaw produces the report; Mavis commits it verbatim) |
 | (next commit) | docs(handoff) | bump R73-1/2/3 closed at QClaw APPROVED 9.3/10; §0 + §7.5 B-7 (new) + C (R73 status updated) + §10 + Review history updated |
 
+### Session 2026-07-15 (R75 god-file split + B3-T6 fmt + QClaw review)
+
+| Commit | Phase | Description |
+|---|---|---|
+| `1b147c3` | snapshot | snapshot: from northing-impl-b0-smoke 2026-07-12 (HEAD b254db80) |
+| `0f74605` | fmt (B3-T6) | fmt: cargo fmt cleanup across 47 files (B3-T6) |
+| `d5f2d7f` | docs | docs: commit B2 handoff + v0.1.0 roadmap (untracked → tracked) |
+| `7044454` | chore | chore: remove 2 empty junk files (pilot-step37-grep_search) |
+| `bc3ef48` | plan | plan: R75 round 1 god file split (model_config_form + chat/render) |
+| `36c79e3` | refactor(ui) | refactor(ui): split model_config_form.rs (1058 lines) into 4 sub-modules |
+| `7aa50a8` | refactor(ui) | refactor(ui): split chat/render.rs (983 lines) into 7 sub-files |
+| `32774ce` | refactor(ui) | refactor(ui): split question.rs (803 lines) into 3 sub-modules |
+| `facc9c3` | docs | docs: HANDOFF.md §0 update to v0.1.0 human-usable state |
+| `b5a98a7` | docs | docs: README.md v0.1.0 human-usable update |
+| `f63e45f` | docs(review) | docs(review): QClaw review spec for v0.1.0 human-usable |
+| `02913d9` | fix(review) | fix(review): QClaw 8.2/10 blockers resolved |
+| `4b4e7b3` | docs(review) | docs(review): mark QClaw spec RESOLVED (8.2→SHIP) |
+| `c0a8371` | chore | chore: cargo fmt on question/ + QClaw review report |
+
 ### Review history
 
 | Date | Reviewer | HEAD | Outcome |
@@ -600,8 +623,8 @@ cd /e/agent-project/northhing
 
 # 1. Confirm state
 git status                              # expect: clean
-git rev-parse --short HEAD              # expect: matches HANDOFF §0
-git rev-list --count HEAD               # expect: matches HANDOFF §0
+git rev-parse --short HEAD              # expect: c0a8371 (or newer)
+git rev-list --count HEAD               # expect: 14 (or newer)
 
 # 2. Verify green
 cargo check -p northhing --lib --tests  # expect: 0 warnings
