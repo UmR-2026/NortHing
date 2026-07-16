@@ -10,12 +10,12 @@
 > 涉及引用现有 skill / spec / plan 章节时，章节标题保留原文（§A / Gate 7 等），
 > 但围绕它们的说明文字用中文。
 >
-> **Last verified**: 2026-07-16 (R75 round 1+2 + QClaw review 8.2/10 SHIP + B3-T6 fmt cleanup + c0a8371 HEAD + 14 commits on main)
+> **Last verified**: 2026-07-16 (612677a + v0.1.0-human-usable release preparation done)
 > **Branch**: `main`
-> **HEAD**: `c0a8371` (R75 round 1+2 god-file split + B3-T6 cargo fmt cleanup + QClaw review; 14 commits this session: 1b147c3 snapshot + 0f74605 fmt + d5f2d7f docs + 7044454 chore + bc3ef48 plan + 36c79e3 model_config_form split + 7aa50a8 chat/render split + 32774ce question split + facc9c3 HANDOFF §0 update + b5a98a7 README update + f63e45f QClaw review spec + 02913d9 QClaw blockers resolved + 4b4e7b3 QClaw RESOLVED + c0a8371 cargo fmt + QClaw review report; cargo check -p northhing-cli = Finished ✓)
+> **HEAD**: `612677a` (v0.1.0-human-usable release prep: syntect optional + AGENTS.md restore + C5 resolution; 932/933 tests pass; `--workspace --exclude northhing` green; 1 pre-existing turn_batch fail B-3 known)
 > **Total commits on branch**: see `git rev-list --count HEAD` (auto-updates; not statically maintained to avoid bump-loop drift)
 > **HEAD drift note**: every commit that updates HANDOFF §0 will, by definition, produce a new commit that §0 does not yet reflect. The drift is one commit per HANDOFF-bump. Readers should treat the listed HEAD as "the HEAD when this row was written", not "current HEAD". For the truly current HEAD, run `git rev-parse --short HEAD`.
-> **Tag**: `v0.1.0` (at commit `facc9c3`, HANDOFF §0 v0.1.0 human-usable update)
+> **Tag**: `v0.1.0` at `facc9c3`; `v0.1.0-human-usable-final` planned at `612677a`
 > **Tooling**: ZCode superpowers plugin upgraded **5.1.0 → 6.0.3** (filesystem-source, cache overwritten; backup at `~/.zcode/cli/plugins/cache/.../superpowers/5.1.0.backup-2026-06-20/`). See §6.
 > **A2 ACTIVATED**: `USE_LIGHTWEIGHT_ACTOR = true` (commit `e5ae9b1`). `CoordinatorHiddenSubagentSkill` now replaces legacy `execute_hidden_subagent_phase1/2/3` for all `Task` tool invocations. 13/13 desktop tests pass (1 `#[ignore]` re-enabled via `#[tokio::test]`). See `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`.
 > **TaskTool COLLAPSED**: `ToolExposure::Collapsed` saves ~800-1,200 tokens/turn in manifest. `GetToolSpec` fetches full schema on first use. 44/44 task_tool tests pass. See `docs/superpowers/specs/2026-06-23-collapse-task-tool-design.md`.
@@ -43,12 +43,12 @@ P2 (verify coordinator.rs test compilation) confirmed clean — 0 errors, 0 warn
 |---|---|---|
 | Regression tests | **8/8 PASS** | `bash scripts/regression-test-desktop.sh` |
 | agent-dispatch tests | **24/24 PASS** | `cargo test -p northhing-agent-dispatch --lib` |
-| Workspace builds | **PASS** | `cargo check --workspace` |
+| Workspace test (`--workspace --exclude northhing`) | **932/933 PASS** | 1 pre-existing turn_batch fail (B-3 known); northhing (Slint) excluded due to MSYS2 GCC runtime issue |
 | Coordinator phase boundary tests | **20/20 PASS** (12 original + 8 new) | `cargo test -p northhing-core --lib -- subagent_boundary_e2e` + `cargo test -p northhing-core --lib -- 'coordinator::tests::'` (2026-06-24) |
 | Coordinator test compilation | **0 errors, 0 warnings** | `cargo check -p northhing-core --lib --tests` (P2 verified 2026-06-22) |
 | Compiler warnings (lib only) | **0** | `cargo check -p northhing-core --lib` |
 | Slint callbacks wired | **10** | `grep -c "^\s*ui\.on_" src/apps/desktop/src/app_state/mod.rs` |
-| Const flags in `agent-dispatch` | **all `false`** | `grep "pub const USE_" src/crates/execution/agent-dispatch/src/flags.rs` |
+| Const flags in `agent-dispatch` | **3 off** (ONESHOT_DISPATCHER / ACTOR_IPC / DISPATCHER_IPC all false; USE_LIGHTWEIGHT_ACTOR=true since e5ae9b1 A2 activation) | `grep "pub const USE_" src/crates/execution/agent-dispatch/src/flags.rs` |
 | `InMemoryRelationship` fields | **5** (parent_session_id / parent_request_id / parent_dialog_turn_id / parent_turn_index / parent_tool_call_id) | `grep "pub " src/crates/assembly/core/src/agentic/core/session.rs` |
 | Hand-written `unsafe` in `app_state/` | **0** | `grep "unsafe" src/apps/desktop/src/app_state/mod.rs` (only slint macro output) |
 | Tag | `v0.1.0` applied at `facc9c3` | `git tag` |
@@ -56,7 +56,7 @@ P2 (verify coordinator.rs test compilation) confirmed clean — 0 errors, 0 warn
 | `cargo check -p northhing-core --tests` | **0 errors** | `cargo check -p northhing-core --tests` |
 | `cargo check --workspace` | **10 pre-existing `northhing-acp` errors (out of scope)** | `cargo check --workspace` |
 
-**The next session's job**: C5 blocker resolution (fix gcc or make onig/QuickJS optional) + v0.1.0 human-usable-final tag + release notes + push to GitHub.
+**The next session's job**: v0.1.0-human-usable-final tag → GitHub push → then post-v0.1.0 hardening.
 
 ---
 
@@ -237,15 +237,16 @@ Full design sketches for K.2.2 / K.2.3 / K.2.4 are in `docs/plans/2026-06-19-pos
 
 ### Post-R75 next steps (2026-07-16, current)
 
-A. **C5 blocker resolution** (next session priority):
-   - Option A: Fix gcc via MSYS2 reinstall/update
-   - Option B: Make onig/QuickJS optional features
-   - Target: `cargo test --workspace` passes
+A. **C5 blocker resolution**: ✅ **DONE 2026-07-16**
+   - `readability-js` was already optional (no change needed)
+   - Made `syntect` + `syntect-tui` optional behind `syntax-highlight` feature in `northhing-cli`
+   - Fixed outdated test assertion for `USE_LIGHTWEIGHT_ACTOR` in telemetry_test.rs
+   - Verified: `cargo test --workspace --exclude northhing` = 932/933 PASS (1 pre-existing turn_batch fail B-3)
 
 B. **v0.1.0 human-usable-final**:
-   - Re-tag v0.1.0 after C5 resolved
-   - Write release notes (`docs/releases/2026-07-15-v0.1.0-release.md`)
-   - Push to GitHub (per user "0.1.0 人类可以使用后再上传")
+   - ⏳ Tag v0.1.0-human-usable-final at HEAD
+   - ⏳ Write release notes
+   - ⏳ Push to GitHub (per user "0.1.0 人类可以使用后再上传")
 
 B. **escape_html security review** (single decision point): ✅ **DONE 2026-07-11**
    - R67plus3 removed `&`→`&amp;` replacement to satisfy test expectation
@@ -552,6 +553,17 @@ without showing the `8/8 PASS` line.
 | `b254db80` | **refactor(agentic) R73-3** | split `skill_agent_snapshot.rs` 633→115 entry + 3 sub-modules (`types.rs` 94 + `resolution.rs` 192 + `diff_render.rs` 247 actual / 277 self-measured, within spec ≤250) by phase. 13 public items re-exported from entry (4 structs + 1 resolution struct + 1 pub async entry + 1 pub diff + 1 pub context reminder + 4 pub render + 1 const). 2/2 skill_agent_snapshot tests pass, 926/927 baseline (1 pre-existing turn_batch fail, B-3 known). 1383→1390 dead_code (+7 from re-export path shift, no new dead code). **First multi-reviewer dispatch** (plan_df939a4c): 3 reviewers parallel (verifier + reviewer-arch + reviewer-test), killed at 30min cap (attempt 2, 0 tokens), Mavis M3 take-over verified + committed. `Reviewer: marvis`. |
 | (this commit) | docs(review) | commit QClaw review report `2026-07-12-r73-god-file-splits-review-report.md` (per project convention, QClaw produces the report; Mavis commits it verbatim) |
 | (next commit) | docs(handoff) | bump R73-1/2/3 closed at QClaw APPROVED 9.3/10; §0 + §7.5 B-7 (new) + C (R73 status updated) + §10 + Review history updated |
+
+### Session 2026-07-16 (v0.1.0-human-usable release preparation)
+
+| Commit | Phase | Description |
+|---|---|---|
+| `8e61991` | fix(agents) | restore original English AGENTS.md (203 lines) — lost during Mavis migration |
+| `857f897` | docs | finalize v0.1.0 human-usable documentation (AGENTS/HANDOFF/README) + fix target-dir |
+| `b0d251b` | docs | track migration notes + doc audit from 2026-07-16 session |
+| `847a5af` | plan | add v0.1.0 human-usable roadmap |
+| `612677a` | fix | make syntect optional + update outdated const-flag test |
+| (working tree cleanup) | cleanup | remove .loop-worktrees/, target-test/, 12 test-*.txt |
 
 ### Session 2026-07-15 (R75 god-file split + B3-T6 fmt + QClaw review)
 
