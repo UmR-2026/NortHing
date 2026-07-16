@@ -1,5 +1,7 @@
 packages:
-  - "src/web-ui"
+  # v0.1.0-human-usable: src/web-ui removed (directory does not exist).
+  # Restore when web UI is reintroduced.
+  # - "src/web-ui"
   - "src/mobile-web"
   - "northing-installer"
   - "tests/e2e"

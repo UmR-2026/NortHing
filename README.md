@@ -143,6 +143,9 @@ Download the latest desktop installer from the [Releases page] once the first pu
 - [Rust toolchain](https://rustup.rs/)
 - [Slint prerequisites](https://slint.dev/docs) (required for desktop development)
 
+**Desktop GUI note (v0.1.0-human-usable):**
+The desktop GUI uses the Slint framework (a Rust-native UI toolkit with a C++ build dependency). On Windows it builds with the **MSVC** Rust toolchain (`stable-x86_64-pc-windows-msvc`). The GNU toolchain (`x86_64-pc-windows-gnu`) may fail with `STATUS_ENTRYPOINT_NOT_FOUND` or Slint C++ linker errors on some Windows setups. If you encounter build issues on Windows, switch to MSVC: `rustup override set stable-x86_64-pc-windows-msvc` in the project root, then `cargo build -p northhing`.
+
 **Commands:**
 
 ```bash

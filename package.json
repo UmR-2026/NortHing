@@ -7,8 +7,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "copy-monaco": "copyfiles -u 5 \"src/web-ui/node_modules/monaco-editor/min/vs/**/*\" src/web-ui/public/monaco-editor",
-    "copy-icons": "copyfiles -f \"src/apps/desktop/icons/Logo-ICON.png\" \"src/web-ui/public/\"",
+    "copy-monaco": "node -e \"const fs=require('fs');if(fs.existsSync('src/web-ui')){console.log('Setting up copyfiles...');require('child_process').execSync('copyfiles -u 5 \\\"src/web-ui/node_modules/monaco-editor/min/vs/**/*\\\" src/web-ui/public/monaco-editor',{stdio:'inherit'})}else{console.log('v0.1.0: src/web-ui missing — skipping copy-monaco')}\"",
+    "copy-icons": "node -e \"const fs=require('fs');if(fs.existsSync('src/web-ui')){require('child_process').execSync('copyfiles -f \\\"src/apps/desktop/icons/Logo-ICON.png\\\" \\\"src/web-ui/public/\\\"',{stdio:'inherit'})}else{console.log('v0.1.0: src/web-ui missing — skipping copy-icons')}\"",
     "copy-assets": "pnpm run copy-monaco && pnpm run copy-icons",
     "generate-version": "node scripts/generate-version.cjs",
     "generate-all": "pnpm run generate-version",
@@ -44,6 +44,10 @@
     "cli:check": "cd src/apps/cli && cargo check",
     "cli:test": "cd src/apps/cli && cargo test",
     "desktop:build": "cargo build -p northhing --release",
+    "desktop:build:linux": "cargo build -p northhing --release --target x86_64-unknown-linux-gnu",
+    "desktop:build:arm64": "cargo build -p northhing --release --target aarch64-apple-darwin",
+    "desktop:build:x86_64": "cargo build -p northhing --release --target x86_64-apple-darwin",
+    "desktop:build:nsis": "cargo build -p northhing --release --target x86_64-pc-windows-msvc",
     "desktop:run": "cargo run -p northhing",
     "desktop:check": "cargo check -p northhing",
     "desktop:test": "bash scripts/regression-test-desktop.sh",
