@@ -4,6 +4,11 @@
 //! Mobile clients interact through HTTP requests that the relay bridges
 //! to the desktop via the WebSocket connection. The relay stores no
 //! business data — it only routes messages.
+//!
+//! Security note: fields like `public_key`, `device_id`, `joined_at`, and
+//! `created_at` on `DesktopConnection` / `RelayRoom` are UNIMPLEMENTED
+//! placeholders for post-v0.1.0 E2E/audit work. They are NOT active
+//! security controls today.
 
 use chrono::Utc;
 use dashmap::DashMap;
@@ -26,16 +31,19 @@ pub struct ResponsePayload {
 }
 
 #[derive(Debug)]
+/// Fields `device_id`, `public_key`, and `joined_at` are UNIMPLEMENTED —
+/// placeholders for post-v0.1.0 E2E/audit work. They MUST NOT be
+/// interpreted as active security controls today.
 pub struct DesktopConnection {
     pub conn_id: ConnId,
-    // reason: device_id is held for upcoming device-identification API (audit log, ban-list); not yet routed
+    // UNIMPLEMENTED — device_id is a placeholder for post-v0.1.0 device-identification API (audit log, ban-list); not yet routed
     #[allow(dead_code)]
     pub device_id: String,
-    // reason: public_key is held for the upcoming end-to-end key-exchange protocol; not yet exchanged
+    // UNIMPLEMENTED — public_key is a placeholder for post-v0.1.0 end-to-end key-exchange; stored but NOT authenticated or exchanged; vulnerable to MITM
     #[allow(dead_code)]
     pub public_key: String,
     pub tx: mpsc::UnboundedSender<OutboundMessage>,
-    // reason: joined_at is held for upcoming analytics/audit surface; not yet queried
+    // UNIMPLEMENTED — joined_at is a placeholder for post-v0.1.0 analytics/audit surface; not yet queried
     #[allow(dead_code)]
     pub joined_at: i64,
     pub last_heartbeat: i64,
@@ -44,7 +52,7 @@ pub struct DesktopConnection {
 #[derive(Debug)]
 pub struct RelayRoom {
     pub room_id: String,
-    // reason: created_at is held for upcoming analytics/audit surface (TTL uses last_activity instead)
+    // UNIMPLEMENTED — created_at is a placeholder for post-v0.1.0 analytics/audit surface; TTL uses last_activity instead
     #[allow(dead_code)]
     pub created_at: i64,
     pub last_activity: i64,
@@ -152,7 +160,7 @@ impl RoomManager {
         }
     }
 
-    // reason: get_desktop_public_key() is reserved for the upcoming key-exchange protocol; today clients exchange keys directly via WebSocket frames
+    // UNIMPLEMENTED — get_desktop_public_key() is a placeholder for post-v0.1.0 relay-mediated key-exchange. Today clients exchange keys directly via WebSocket frames.
     #[allow(dead_code)]
     pub fn get_desktop_public_key(&self, room_id: &str) -> Option<String> {
         self.rooms

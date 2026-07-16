@@ -10,7 +10,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/GCWing/northhing?style=flat-square&color=blue)](https://github.com/GCWing/northhing/releases)
 [![Website](https://img.shields.io/badge/Website-opennorthhing.com-6f42c1?style=flat-square)](https://opennorthhing.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://github.com/GCWing/northhing/blob/main/LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square)](https://github.com/GCWing/northhing)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20(%2FmacOS%2FLinux%20build%20ready)-blue?style=flat-square)](https://github.com/GCWing/northhing)
 
 </div>
 
@@ -41,18 +41,18 @@ northhing aims to pack **the coding power of Code Agents, the research depth of 
 ## Why northhing
 
 - **One app, almost every mainstream Agent capability in the industry**: Code / Research / Computer Use / document collaboration / MCP / remote control — No juggling multiple tools or paying for separate subscriptions for each.
-- **Download and run—no DIY assembly**: MCP / filesystem / terminal / Git / remote SSH are all built in; configure your model and go, without spending time wiring the protocol stack from scratch.
-- **Your data stays on your machine**: Sessions, memory, and working directories live under `.northhing/sessions/`, portable, exportable, and auditable; nothing is forced to the cloud—suitable for privacy and compliance scenarios.
+- **Download, configure your first AI provider, and start**: MCP / filesystem / terminal / Git / remote SSH are all built in; after that initial setup you can go—without spending time wiring the protocol stack from scratch.
+- **Your data stays on your machine**: Sessions live under `~/.northhing/projects/<your-workspace>/sessions/`, memory under `~/.northhing/personal_assistant/`. Portable, exportable, and auditable; nothing is forced to the cloud—suitable for privacy and compliance scenarios.
 - **Deeply customizable, with no gap from a single Markdown file to a full-repo fork**: ~90% of domain needs are covered with one `.md`; missing a tool? a UI? want to change the product? Have the Code Agent do it inside northhing—*the way you customize it is by using it**.
 - **Control the desktop from your phone**: Pair by QR code, or use Telegram, Feishu Bot, or WeChat Bot as remote entry points. The Agent works on the desktop; you check progress on the go.
 - **A desktop app you can actually live with**: Rust core + Slint shell—fast cold start, low idle footprint, fine to leave running in the background for a long time.
-- **Self-improving**: 97%+ of the code was produced by northhing's built-in Code Agent via Vibe Coding, so it naturally fits AI-assisted development.
+- **Self-improving**: The majority of code was produced by northhing's built-in Code Agent via Vibe Coding, so it naturally fits AI-assisted development.
 
 ---
 
 ## What's New
 
-northhing combines **flashgrep** with **ripgrep** into an enhanced code-search pipeline. On very large repositories such as Chromium, search time drops by up to about **94.6%**, with an average speedup of about **36.1×**, significantly reducing the time you spend exploring a project.
+northhing combines **flashgrep** with **ripgrep** into an enhanced code-search pipeline. On very large repositories, search is significantly faster than ripgrep alone, reducing project exploration time. (Internal measurement on a major open-source codebase; formal reproducible benchmark pending.)
 
 ![flashgrep feature](./png/feat_flashgrep.png)
 
@@ -65,14 +65,14 @@ New paradigms appear almost weekly in the Agent space. northhing’s pace is: **
 
 ![first_screen_screenshot](./png/first_screen_screenshot.png)
 
-Below is northhing’s **official Agent and capability inventory**, plus how we track the industry’s latest Agent patterns. Zero extra setup—download and use:
+Below is northhing's **official Agent and capability inventory**, plus how we track the industry's latest Agent patterns. After a one-time model-provider setup, you can use it right away:
 
 | Capability | Description |
 | --- | --- |
 | **Code Agent** | Four modes: Agentic (autonomous read / edit / run / verify) / Plan (plan first, then execute) / Debug (instrument → gather evidence → root cause) / Review (repo-standard review) |
 | **Deep Review** | A parallel Code Review Team for higher-risk code changes, with reviewer roles, a quality gate, and user-approved remediation |
 | **Session usage report** | Type `/usage` in chat to view recorded runtime, token usage, and model/tool/file summaries for the current session. |
-| **Research Agent** | PDF / DOCX / XLSX / PPTX workflows (legacy); extend on demand from the Skill marketplace |
+| **Research Agent** | Research and document workflows via Skills (extendable to PDF / DOCX / XLSX / PPTX); no native Office engine |
 | **Document collaboration** | Write and ask in the document; the AI rewrites, continues, summarizes, and lays out text directly in paragraphs |
 | **Computer Use** | Sees the screen and drives mouse and keyboard to operate browsers and any desktop app—hand repetitive clicking to the Agent |
 | **Personal Assistant** | Long-term memory and personality; schedules Code / Research / Computer Use / custom Agents as needed |
@@ -105,7 +105,7 @@ In northhing, an Agent = **a prompt (system role + behavior constraints) + the s
 | | Code Agent | Research Agent |
 | --- | --- | --- |
 | **Prompt** | Role and norms for repo work; four operating modes | Role and document workflows for knowledge work |
-| **Tooling** | Files / terminal / Git / LSP / build & test | PDF / DOCX / XLSX / PPTX / Skill marketplace |
+| **Tooling** | Files / terminal / Git / LSP / build & test | Browser / Skill-based document processing / Skill marketplace |
 | **Shared foundation** | Same sessions, memory, MCP, remote control, UI, model adapters | Same sessions, memory, MCP, remote control, UI, model adapters |
 
 **So if you want a "legal review Agent", a "research literature Agent", or an "ops incident Agent"—L1 is enough**:
@@ -124,7 +124,7 @@ In northhing, an Agent = **a prompt (system role + behavior constraints) + the s
 
 ## Platform Support
 
-Desktop is built on **Slint + Material** for Windows / macOS / Linux; remote control works from mobile browsers, Telegram, Feishu, and WeChat.
+Desktop is built on **Slint + Material**. CI packaging currently targets **Windows x64**; macOS / Linux build targets exist in `package.json` (`desktop:build:arm64`, `desktop:build:x86_64`, `desktop:build:linux`) but CI matrix for those platforms is disabled pending cross-compilation verification. Remote control works from mobile browsers, Telegram, Feishu, and WeChat.
 
 ---
 
@@ -152,11 +152,11 @@ The desktop GUI uses the Slint framework (a Rust-native UI toolkit with a C++ bu
 # Install dependencies
 pnpm install
 
-# Run desktop in development mode (full hot-reload)
-pnpm run desktop:dev
+# Run desktop in development mode
+pnpm run desktop:run
 
 # Build desktop (release)
-pnpm run desktop:build:release-fast
+pnpm run desktop:build
 
 # Run CLI in development mode
 pnpm run cli:dev
@@ -205,7 +205,7 @@ We welcome great ideas and code; we are maximally open to AI-generated code. Ple
 ## Disclaimer
 
 1. This project is spare-time exploration and research into next-generation human–machine collaboration, not a commercial profit-making project.
-2. More than 97% was built with Vibe Coding. Code feedback is welcome; refactoring and optimization via AI is encouraged.
+2. The majority of code was built with Vibe Coding. Code feedback is welcome; refactoring and optimization via AI is encouraged.
 3. **v0.1.0 human-usable** (2026-07-15): god-file split, cargo fmt clean, CLI compiles. Desktop/Web/Mobile not yet verified on all platforms.
 4. This project depends on and references many open-source projects. Thanks to all open-source authors. **If your rights are affected, please contact us for remediation.**
 

@@ -1,4 +1,4 @@
-//! REST API routes for the relay server.
+﻿//! REST API routes for the relay server.
 //!
 //! Provides two HTTP endpoints for mobile clients:
 //! - POST /api/rooms/:room_id/pair — initiate pairing
@@ -33,6 +33,10 @@ pub struct AppState {
     /// `Some(_)`, `pair` and `command` reject requests without a
     /// matching key. When `None`, those endpoints are open (dev only).
     /// Set via `RELAY_API_KEY` env var in `RelayConfig::from_env`.
+    ///
+    /// SECURITY: `upload_web`, `check_web_files`, `upload_web_files`, and
+    /// `serve_room_web_catchall` do NOT call `auth.require()` — these
+    /// endpoints are unauthenticated even when `RELAY_API_KEY` is set.
     pub api_key: Option<String>,
 }
 

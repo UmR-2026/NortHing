@@ -1,4 +1,4 @@
-use crate::stream::types::unified::{UnifiedTokenUsage, UnifiedToolCall};
+﻿use crate::stream::types::unified::{UnifiedTokenUsage, UnifiedToolCall};
 use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
@@ -89,8 +89,7 @@ pub(crate) struct OpenAIToolCall {
     // reason: OpenAIToolCall.index is deserialized for OpenAI compat; tool_calls are flattened in stream order so index is unused downstream
     #[allow(dead_code)]
     pub(crate) index: usize,
-    // reason: OpenAIToolCall.id is deserialized but not propagated to UnifiedToolCall (the unified type carries no id today)
-    #[allow(dead_code)]
+    // reason: OpenAIToolCall.id is propagated to UnifiedToolCall.id (see L108)
     pub(crate) id: Option<String>,
     // reason: OpenAIToolCall.tool_type is deserialized for the W3C-style "type" field; today only "function" tool calls are emitted by supported providers
     #[allow(dead_code)]

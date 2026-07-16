@@ -1,4 +1,4 @@
-//! Relay server configuration.
+﻿//! Relay server configuration.
 
 use std::net::SocketAddr;
 
@@ -33,6 +33,8 @@ impl Default for RelayConfig {
             heartbeat_timeout_secs: 90,
             static_dir: None,
             room_web_dir: "/tmp/northhing-room-web".to_string(),
+            // SECURITY: wildcard CORS — acceptable for local dev,
+            // must be restricted in production deployment.
             cors_allow_origins: vec!["*".to_string()],
             api_key: None,
         }

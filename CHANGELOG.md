@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.10] - 2026-07-16
 
+### Added
+- **Settings panel** (gear icon, bottom-left sidebar): Provider / Skills / MCP / Workspace / General configuration surfaces
+- **Welcome flow**: 3-step first-run experience (pick workspace folder → create/import IDENTITY.md → start using app)
+- **Chat enhancements**: collapsible tool calls, inline + banner error channels, session header, workspace switcher
+- **Relay security upgrade**: 16-byte cryptographic room IDs (was 6 bytes), race-free stale-room cleanup, `pair`/`command` endpoints gated by `RELAY_API_KEY`
+
+### Fixed
+- **9 Slint setter sites** in `app_state/mod.rs` that silently dropped updates from background threads (now dispatched via `slint::invoke_from_event_loop`)
+- **Q6 / Q7 integrity checks**: provider/workspace deletion now flags broken sessions and surfaces errors in UI
+- **Sidebar open-settings**: wired through Slint directly (removed asymmetric FFI path)
+
 ### Changed
-- **Version bump** from 0.2.0 -> 0.2.10 to align workspace metadata with the current release train
-- `workspace.package.version` and `workspace.metadata.version` both pinned to `0.2.10`
+- **Workspace metadata version** bumped from 0.2.0 → 0.2.10 to align with the release train (cosmetic metadata change)
 
 ### Notes
-- No functional code changes; release-cosmetics-only bump
-- Prepares the crate for crates.io publication under the new version scheme
+- Companion release notes: `docs/releases/v0.2.10.md` (full commit list, test results, upgrade notes)
+- 20 commits in this release cycle
+- Initial release date: 2026-06-26
 
 ## [0.1.0-human-usable] - 2026-07-16
 

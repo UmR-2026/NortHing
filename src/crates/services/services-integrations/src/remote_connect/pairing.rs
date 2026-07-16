@@ -2,7 +2,9 @@
 //!
 //! Desktop generates a keypair + room, encodes it in a QR code.
 //! Mobile scans QR, joins room, sends its public key.
-//! Both sides derive a shared secret via ECDH and verify with a challenge-response.
+//! Both sides derive a shared secret via ECDH and perform an echo-based liveness check.
+//! WARNING: this is NOT cryptographic proof of key possession — susceptible to MITM relay.
+//! True SAS/HMAC verification deferred post-v0.1.0.
 
 use anyhow::{anyhow, Result};
 use rand::Rng;
@@ -143,6 +145,8 @@ impl PairingProtocol {
     }
 
     /// Step 3 (Desktop): Verify the peer's challenge response.
+    /// WARNING: this compares plaintext echo — does NOT prove shared_secret knowledge.
+    /// Subject to MITM relay. True SAS/HMAC verification deferred post-v0.1.0.
     pub async fn verify_response(&mut self, response: &PairingResponse) -> Result<bool> {
         let expected = self.challenge.as_ref().ok_or_else(|| anyhow!("no challenge issued"))?;
 
@@ -160,6 +164,8 @@ impl PairingProtocol {
     }
 
     /// Mobile side: process a received challenge and produce a response.
+    /// WARNING: plaintext echo — does not prove shared_secret knowledge.
+    /// Subject to MITM relay. True SAS/HMAC verification deferred post-v0.1.0.
     pub fn answer_challenge(
         challenge: &PairingChallenge,
         device_identity: &DeviceIdentity,

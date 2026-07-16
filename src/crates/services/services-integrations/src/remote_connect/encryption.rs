@@ -1,6 +1,10 @@
-//! End-to-end encryption for Remote Connect.
+//! End-to-end encryption for Remote Connect (v0.1.0 data layer).
 //!
-//! Uses X25519 ECDH for key exchange and AES-256-GCM for authenticated encryption.
+//! Uses X25519 ECDH for key agreement and AES-256-GCM for the data layer.
+//! Key derivation is X25519 shared secret used DIRECTLY as AES key (no HKDF).
+//! No key confirmation (no SAS verification). No identity/channel authentication.
+//! Vulnerable to MITM if public key is not authenticated through out-of-band channel.
+//! Data-layer AEAD is sound; key exchange authentication is deferred.
 //! Both sides generate ephemeral keypairs; the shared secret is derived via ECDH
 //! and used directly as the AES-256-GCM key (X25519 output is already 32 bytes).
 
