@@ -132,7 +132,7 @@ Desktop is built on **Slint + Material** for Windows / macOS / Linux; remote con
 
 ### Download and use
 
-Download the latest desktop installer from [Releases](https://github.com/GCWing/northhing/releases). After installation, configure your model and start using northhing.
+Download the latest desktop installer from the [Releases page] once the first public release is published. After installation, configure your model and start using northhing.
 
 ### Build from source
 

@@ -16,17 +16,6 @@
 
 ---
 
-> ⚠️ **过期提醒（2026-06-20）：** 本 README 提到 **Tauri** 作为桌面技术栈，但当前
-> `v3-restructure` 分支（HEAD `840bd4f`，47 commits）已将 Tauri
-> 替换为 **Slint + Material** 作为桌面 Shell。README 中一些行仍含有
-> 历史编码问题残留的乱码字符。
-> **当前架构、项目状态和构建方法，请参阅
-> [`HANDOFF.md`](./HANDOFF.md)——它是截至 2026-06-20 的准确描述。**
->
-> 本 README 保留用于对外的产品描述。编辑时请谨慎：它链接自 GitHub 仓库首页。
-
----
-
 ## 什么是 northhing
 
 **northhing 是一个桌面级 Agent 运行时（Local Agent Runtime），同时也是一套开箱即用的桌面 Agent 应用。**
@@ -178,7 +167,8 @@ src/crates/contracts/          # 稳定 DTO、事件、runtime ports、产品域
 src/apps/desktop        # Slint 桌面宿主
 src/apps/server         # Web 服务端运行时
 src/apps/cli            # CLI 运行时
-src/web-ui              # 桌面 / Web 共用前端
+src/mobile-web          # 移动端 Web UI
+src/shared              # 共用代码
 ```
 
 设计原则：**产品逻辑保持平台无关，通过适配器对外暴露**。详见 [AGENTS.md](./AGENTS.md)。

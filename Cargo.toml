@@ -47,7 +47,7 @@ edition = "2021"
 # northhing: workspace metadata for product identification
 [workspace.metadata]
 name = "northhing"
-version = "0.1.0"
+version = "0.2.10"
 repository = ""
 
 # Shared dependency versions to keep all crates aligned

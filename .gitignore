@@ -23,7 +23,7 @@ dist-ssr
 # Build outputs - Rust/Tauri
 target/
 **/target/
-Cargo.lock
+# Cargo.lock intentionally NOT ignored — binary workspace tracks it for release reproducibility
 
 # Monaco Editor - copied from node_modules
 public/monaco-editor/
@@ -92,4 +92,18 @@ target-local/
 
 # Ad-hoc code-rot scan artifacts (temporary investigation scripts/reports)
 _rot_scan*
+
+# Development scripts — never commit
+*.py
+*.cjs
+
+# Audit scratch files
+r60c-*
+r63a-*
+
+# Phantom file pattern (PowerShell redirection side-effect)
+{}
+
+# VERSIONS_DIR placeholder
+VERSIONS_DIR=.
 

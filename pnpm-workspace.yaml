@@ -1,5 +1,5 @@
 packages:
   - "src/web-ui"
   - "src/mobile-web"
-  - "northhing-Installer"
+  - "northing-installer"
   - "tests/e2e"

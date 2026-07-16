@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.10] - 2026-07-16
+
+### Changed
+- **Version bump** from 0.2.0 → 0.2.10 to align workspace metadata with the current release train
+- `workspace.package.version` and `workspace.metadata.version` both pinned to `0.2.10`
+
+### Notes
+- No functional code changes; release-cosmetics-only bump
+- Prepares the crate for crates.io publication under the new version scheme
+
+## [0.1.0-human-usable] - 2026-07-16
+
+### Added
+- **AGENTS.md restoration** — contributor onboarding document re-committed to repository root
+- **Syntect optionalized** behind a `syntax-highlight` crate feature, reducing compile-time and binary size for users who do not need syntax highlighting
+- **Roadmap and documentation audit** docs committed (`docs/handoffs/2026-07-16-graph-review.md`, `docs/handoffs/2026-07-16-handoff.md`)
+
+### Changed
+- **v0.1.0-human-usable** tagged as the first end-user-release baseline
+
+### Fixed
+- **Test pass rate**: 932 / 933 tests pass (pre-existing `northhing-acp` error remains out-of-scope)
+
+### Notes
+- CLI ✅ compiles; god-file split (0 god-files with lib + tests >750 lines) still holds
+- `cargo fmt` clean across the workspace
+- Release-prep sweep removes ad-hoc developer scripts (`.py`, `.cjs`, audit scratch files, phantom `{}`) from version control and hardens `.gitignore` to prevent re-introduction
+
 ## [0.2.0] - 2026-07-10
 
 ### Added

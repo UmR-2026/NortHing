@@ -20,7 +20,7 @@ crate dependencies inside each layer to the smallest set needed.
 
 | # | Layer | Path | Owns | Modules / entries | Layer doc |
 |---|---|---|---|---|---|
-| 1 | Interfaces and entrypoints | `src/apps/*`, `src/web-ui`, `src/mobile-web`, `northhing-Installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, Web UI, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | Interfaces and entrypoints | `src/apps/*`, `src/web-ui`, `src/mobile-web`, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, Web UI, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | Adapters | `src/crates/adapters` | AI/API/transport/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `api-layer`, `transport`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
@@ -92,7 +92,7 @@ For the full script list, see [`package.json`](package.json).
   `src/shared/i18n/resources/shared/<locale>/terms.json`; workflow copy stays
   in the owning product surface.
 - Do not import Web UI locale resources into smaller product surfaces such as
-  `src/mobile-web` or `northhing-Installer`. See `docs/architecture/i18n.md`.
+  `src/mobile-web` or `northing-installer`. See `docs/architecture/i18n.md`.
 - Static self-contained pages may use generated page-scoped shared-term files;
   they must not import Web UI locale catalogs.
 - Web UI loads only bootstrap namespaces eagerly; use `useI18n(namespace)` for
@@ -194,8 +194,8 @@ change directly affects build, packaging, or CI cannot protect the path.
 | Desktop integration, Tauri APIs, browser/computer-use, or desktop-only behavior | `cargo check -p northhing-desktop`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
 | `src/crates/adapters/ai-adapters` | Relevant Rust checks above; add `cargo test -p northhing-agent-stream` only when stream contracts changed |
-| Installer frontend or i18n runtime without packaging changes | `pnpm --dir northhing-Installer run type-check` |
-| Installer Tauri/Rust changes | `cargo check --manifest-path northhing-Installer/src-tauri/Cargo.toml` |
+| Installer frontend or i18n runtime without packaging changes | `pnpm --dir northing-installer run type-check` |
+| Installer Tauri/Rust changes | `cargo check --manifest-path northing-installer/src-tauri/Cargo.toml` |
 | Installer packaging, payload, install/uninstall flow, or native bundling | `pnpm run installer:build` |
 
 ## Agent-doc priority
