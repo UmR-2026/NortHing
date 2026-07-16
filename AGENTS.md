@@ -1,183 +1,203 @@
-# northing project — AGENTS.md
+[中文](AGENTS-CN.md) | **English**
 
-**Generated**: 2026-07-16 02:55 (auto from mavis memory migration to BitFun)
-**Source**: mavis `agents/mavis/memory/` 4 northing .md files (consolidated)
-**Tag**: v0.1.0 at facc9c3 on main
-**Status**: clean working tree, only `.loop-worktrees/` untracked
+# AGENTS.md
 
-> BitFun Agent: 本文件是 northing 项目的根级指令文件。每次任务开始时, 优先读这份 AGENTS.md + `.loop-worktrees/` 当前内容。
+northhing is a Rust workspace plus React frontends.
 
----
+Repository rule: **keep product logic platform-agnostic, then expose it through platform adapters**.
 
-## 0. Project 现状 (2026-07-15 v0.1.0)
+## Quick start
 
-**14 commits on main, tag v0.1.0**:
-- B3-T6 cargo fmt (47 文件)
-- B2 handoff + v0.1.0 roadmap
-- model_config_form 拆分 (1058→4 子模块)
-- chat/render 拆分 (983→7 子文件)
-- question 拆分 (803→3 子模块)
-- QClaw review 8.2/10 SHIP
+1. Read `README.md` and `CONTRIBUTING.md` before architecture-sensitive changes.
+2. For desktop development, prefer `pnpm run desktop:dev` —it provides full hot-reload (Vite HMR + Rust auto-rebuild & restart). Use `pnpm run desktop:preview:debug` only when you need a faster cold-start for frontend-only iteration (Rust changes are not auto-rebuilt).
+3. After Rust file changes, prefer `pnpm run fmt:rs` to format only changed or staged `.rs` files. Use `cargo fmt` only when you intentionally want broader formatting coverage.
+4. After changes, run the smallest matching verification from the table below.
 
-**Toolchain**: rustup `stable-x86_64-pc-windows-gnu` + MSYS2 gcc 16.1.0-5 (broken) + LLVM clang 22.1.7
+## Layered Module Index
 
-**Blocker**: C5 `cargo test --workspace` runtime 0xC0000139 STATUS_ENTRYPOINT_NOT_FOUND (mingw 整体错位)
+Dependencies flow top to bottom. A layer may depend on lower layers only; keep
+crate dependencies inside each layer to the smallest set needed.
 
----
+| # | Layer | Path | Owns | Modules / entries | Layer doc |
+|---|---|---|---|---|---|
+| 1 | Interfaces and entrypoints | `src/apps/*`, `src/web-ui`, `src/mobile-web`, `northhing-Installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, Web UI, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+| 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
+| 3 | Adapters | `src/crates/adapters` | AI/API/transport/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `api-layer`, `transport`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+| 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+| 5 | Execution primitives | `src/crates/execution` | Portable agent, harness, stream, DeepReview policy/report, typed-service, tool-contract, tool-group, and tool-execution building blocks | `agent-runtime`, `agent-stream`, `tool-contracts`, `harness`, `runtime-services`, `tool-provider-groups`, `tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+| 6 | Stable contracts and product domains | `src/crates/contracts` | Shared DTOs, event shapes, runtime ports, and product domain contracts/policies | `core-types`, `events`, `runtime-ports`, `product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
 
-## 1. 重要 lessons (跨 session, 必读)
+Boundary rules:
 
-### 1.1 Mavis producer-boundary (2026-07-15 push-back)
-**Mavis 写 spec + dispatch, subagent 写 .rs. 不写代码。** 这次 session 大量手写 code 违反了这个守则. 后续 M3 take-over 才 5-15 min/file 合理。
+- Interfaces and app entrypoints expose selected product behavior; reusable behavior moves down.
+- Assembly wires lower layers and selects product capability facts; it must not implement concrete adapter, OS, or service details.
+- Adapters translate protocols and external systems; they should not own product capability selection or reusable OS service behavior.
+- Services implement reusable concrete OS, process, terminal, MCP, remote, git, filesystem, and MiniApp runtime IO capabilities.
+- Execution crates are portable runtime building blocks, not host-specific or delivery-profile owners.
+- Contracts stay behavior-light and must not depend upward.
 
-### 1.2 Subagent dispatch 失败时 Mavis 不要自己硬上
-上下文会爆. Mavis 应该派 subagent 处理 MSVC + tests, 不要自己 diagnostics. 这次连续 5+ 个 subagent call aborted 后我自己干, 浪费大量上下文。
 
-### 1.3 Token Plan 上限
-30 turn 后开始消耗 token plan 限速. 下次开 session 写新 plan 之前先 batch 起来。
+## Common commands
 
-### 1.4 OpenCode task tool 限制
-1 message 最多 2 个 `task` calls, 3+ abort. 之前派了 2 个, 都 aborted. 实际有效 = 1 by 1 sequential。
+These are command references, not a pre-PR checklist. Use the Verification table
+to choose the smallest local precheck; broad suites and builds are mainly for CI
+reproduction or build-impacting changes.
 
-### 1.5 MSVC 切换细节
-- `rustup override set <toolchain>` 只对当前目录生效
-- `cargo clean` 不清 `target-shared/`, 跨项目共享. cross-project 用 `target-shared` 别名
-- `gcc` 在 MSYS2 路径里直接跑 OK, 但被 `cc` crate 调用挂 — 神秘 (PATH? DLL? argv encoding?)
-
----
-
-## 2. C5 Blocker 修法 (2 选 1, user pick)
-
-### 修法 A: Fix gcc
-用 MSYS2 重装/更新 gcc, 然后 GNU toolchain 跑 `cargo test --workspace`:
 ```bash
-C:\msys64\usr\bin\bash.exe -c "pacman -Syu mingw-w64-x86_64-gcc --noconfirm"
+# Install
+pnpm install
+
+# Dev
+pnpm run desktop:dev               # full hot-reload: Vite HMR + Rust auto-rebuild & restart
+pnpm run desktop:preview:debug     # reuse pre-built binary + Vite HMR; no Rust auto-rebuild
+pnpm run dev:web                   # browser-only frontend
+pnpm run cli:dev                   # CLI runtime
+
+# Check
+pnpm run fmt:rs                     # format only changed / staged Rust files
+pnpm run lint:web
+pnpm run type-check:web
+pnpm --dir src/mobile-web run type-check
+pnpm run i18n:contract:test          # i18n contract / resources only
+pnpm run i18n:audit                  # i18n contract / resources only
+pnpm run check:repo-hygiene
+pnpm run check:github-config
+cargo check --workspace
+
+# Test (prefer focused paths locally; broad suites are CI-backed)
+pnpm --dir src/web-ui run test:run      # broad suite; prefer focused paths locally
+cargo test --workspace                  # broad suite; CI-backed
+
+# Build (only for build-impacting changes or CI reproduction)
+cargo build -p northhing-desktop           # build-impacting changes / CI reproduction
+pnpm run build:web                      # build-impacting changes / CI reproduction
+pnpm run build:mobile-web               # build-impacting changes / CI reproduction
+
+# Fast builds (manual build/debug flows)
+pnpm run desktop:build:fast           # debug build, no bundling
+pnpm run desktop:build:release-fast   # release with reduced LTO
+pnpm run desktop:build:nsis:fast      # Windows installer, release-fast profile
 ```
 
-### 修法 B: Make onig/QuickJS optional
-砍掉 `readability-js` 依赖, 把 rquickjs-sys 变 optional feature (CLI 核心不依赖这两个)。
+For the full script list, see [`package.json`](package.json).
 
-### MSVC env setup (verified work)
-```cmd
-cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=amd64'
+## Global rules
+
+### Internationalization
+
+- Locale ids, aliases, fallback rules, and surface defaults are owned by
+  `src/shared/i18n/contract/locales.json`. Run `pnpm run i18n:generate`
+  after editing it.
+- Shared stable labels live in
+  `src/shared/i18n/resources/shared/<locale>/terms.json`; workflow copy stays
+  in the owning product surface.
+- Do not import Web UI locale resources into smaller product surfaces such as
+  `src/mobile-web` or `northhing-Installer`. See `docs/architecture/i18n.md`.
+- Static self-contained pages may use generated page-scoped shared-term files;
+  they must not import Web UI locale catalogs.
+- Web UI loads only bootstrap namespaces eagerly; use `useI18n(namespace)` for
+  route or feature copy and keep direct `i18nService.t(...)` calls in bootstrap
+  namespaces.
+- Use shared i18n formatting helpers for user-visible dates, times, and
+  numbers instead of direct `Intl.*` or `toLocale*` calls.
+- `pnpm run i18n:audit` enforces key/placeholder parity, direct static key
+  existence, dynamic key source proofs, literal fallback and locale-format
+  no-growth baselines, shared-term/l10n governance baselines, non-blocking
+  same-text locale inventory, and the no-hardcoded-CJK source budget.
+
+### Logging
+
+Logs must be English-only, with no emojis.
+
+- Frontend: [`src/web-ui/LOGGING.md`](src/web-ui/LOGGING.md)
+- Backend: [`src/crates/LOGGING.md`](src/crates/LOGGING.md)
+
+### Tauri commands
+
+- Command names: `snake_case`
+- TypeScript may wrap with `camelCase`, but invoke Rust with a structured `request`
+
+```rust
+#[tauri::command]
+pub async fn your_command(
+    state: State<'_, AppState>,
+    request: YourRequest,
+) -> Result<YourResponse, String>
 ```
 
----
+```ts
+await api.invoke('your_command', { request: { ... } });
+```
 
-## 3. Next session 第一步
+### Platform boundaries
 
-1. 选一个修法 (fix gcc 或 make optional)
-2. 派 1 个 subagent 做, Mavis 留 context review
-3. 修通后 commit + re-tag v0.1.0
-4. 跑 `cargo test --workspace`, capture pass count
-5. QClaw review (已经在 `docs/superpowers/specs/2026-07-15-qclaw-review-spec.md`, dispatch QClaw agent)
-6. 修 QClaw findings, 最终 tag v0.1.0 human-usable-final
-7. 写 v0.1.0 release notes (`docs/releases/2026-07-15-v0.1.0-release.md`)
-8. 推 GitHub (per user "0.1.0 人类可以使用后再上传")
+- Do not call Tauri APIs directly from UI components; go through the adapter/infrastructure layer.
+- Desktop-only host adapters belong in `src/apps/desktop`, then flow back through transport/API layers.
+- In shared core, avoid host-specific APIs such as `tauri::AppHandle`; use shared abstractions such as `northhing_events::EventEmitter`.
 
----
+### Remote compatibility
 
-## 4. 关键文件 (handoff 给新 session)
+- When adding features, consider remote workspace and remote control synchronization support from the start. Local-only behavior can silently leave remote scenarios incomplete.
+- If a feature cannot reasonably support remote workspaces, gate it or show a clear unsupported-state message instead of letting it fail with a generic error.
 
-- `HANDOFF.md` §0 — 反映 v0.1.0 状态 (但 cron+worktree 等未更新)
-- `README.md` — v0.1.0 human-usable 公开版
-- `docs/plans/2026-07-15-v0.1.0-roadmap.md` — critical path plan
-- `docs/superpowers/specs/2026-07-15-qclaw-review-spec.md` — review spec
-- `docs/superpowers/reviews/2026-07-15-qclaw-review-report.md` — QClaw report
-- `docs/handoffs/2026-07-15-b2-v2-source-recovery-c21-complete.md` — source recovery context
+### Agent loop behavior
 
----
+- Do not add hard-coded limits or pattern checks to the agent loop as a first response to looping behavior, such as blocking repeated tool calls by string or count alone.
+- Excessive hard-coding turns the agent loop into a brittle workflow engine. Investigate the root cause first: tool behavior, model interaction, session context packaging, prompt/tool schema design, or state synchronization issues.
 
-## 5. 关键 stash / untracked
+## Architecture
 
-- `stash@{0}` — MSVC 切换失败的 .cargo/config.toml + .cargo/cl-wrapper.bat 配置. **不需要 apply, 只是 record**
-- `.loop-worktrees/b2-god-split-v2-20260715/` — b2 v2 worktree (user 之后 `git worktree remove`)
+### Core decomposition guardrails
 
----
+For any `northhing-core` decomposition, feature-boundary, dependency-boundary, or
+Rust build-speed refactor, read
+[`docs/architecture/core-decomposition.md`](docs/architecture/core-decomposition.md)
+before editing. Keep this file as an entry point; put module-specific ownership
+details in the nearest module `AGENTS.md`.
 
-## 6. 不需要重新做的事
+Repository-level decomposition rules:
 
-- model_config_form / chat/render / question 拆分 — 已 commit + QClaw approved
-- B3-T6 cargo fmt — 已 commit
-- v0.1.0 tag — 已打
-- QClaw review — 已 done (8.2/10 → SHIP)
+- Do not confuse DTO/contract extraction with runtime owner migration.
+- Product surfaces may diverge; share stable facts or ports, not UI, protocol,
+  lifecycle, or platform implementation.
+- Moving runtime ownership requires a reviewed port/provider design, old-path
+  compatibility, behavior equivalence tests, and explicit confirmation when a
+  behavior boundary could change.
 
----
+### SDLC quality guardrails
 
-# B1 batch 2 Plan review guide + cleanup proposal (2026-07-14)
+For lifecycle evidence, gates, Artifact Graph, Project Profile, Deep Review
+policy, OpenCode compatibility, or target-project governance changes, read
+[`docs/sdlc-harness/README.md`](docs/sdlc-harness/README.md)
+first, then [`docs/sdlc-harness/design.md`](docs/sdlc-harness/design.md). If
+module boundaries or behavior change, follow the matching design under
+`docs/sdlc-harness/architecture/` or `docs/sdlc-harness/features/`.
 
-**Reviewer: marvis**
-**Source**: Gemini Antigravity 跑完 B1 batch 2 plan
+Do not hard-code northhing repository assumptions as target-project rules; keep
+quality protection behavior target-aware, evidence-backed, risk-tiered,
+cost-aware, and auditable.
 
-## 12 verify 维度 (Mavis spot-check)
+## Verification
 
-1. **代码正确性**: 5 phase 实际 line count 跟 walkthrough 描述 (3 处不精确, 详见 `walkthrough-fix-suggestion-2026-07-14.md`)
-2. **测试覆盖**: cargo test 34/34 pass (R75 batch 1 baseline 一致)
-3. **clippy clean**: refactored files 0 warning
-4. **line count 守则**: facade ≤50 (chat_render 27, theme 21, selectors 34 OK), biggest sub ≤350 (chat_render 345 OK 但接近 cap)
-5. **visibility 迁移**: selectors 改 `pub(crate)` 解决 E0624 错误
-6. **clippy fix 完整性**: 4 个 warning fix
-7. **worktree 隔离**: theme + selectors 各在独立 branch, 没污染 main
-8. **commit 格式**: 1+4+1 commit 跟 R75 batch 1 pattern 一致
-9. **commit message 准确性**: 跟 walkthrough 描述基本对 (1 处 sub count 不精确)
-10. **main working tree 干净**: 0 modified + 0 deleted
-11. **Loop-engineering 集成**: AGENTS.md + .gitignore 1 commit
-12. **不 commit handoff self**: Gemini 1+4+1 commit 都是 production code
+Run the smallest local precheck that matches the touched files. CI is expected to
+cover full builds and broad test suites; run heavier local commands only when the
+change directly affects build, packaging, or CI cannot protect the path.
 
-## 9 verify steps (跟 R75 batch 1 模式)
+| Change type | Minimum verification |
+|---|---|
+| Frontend UI, state, or adapters without i18n resource/contract changes | `pnpm run type-check:web`, plus the nearest focused test when behavior changed |
+| Locale resource-only changes | `pnpm run i18n:audit` |
+| Locale contract or shared terms | `pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit` |
+| Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | `pnpm run i18n:contract:test && pnpm run type-check:web && pnpm --dir src/web-ui run test:run src/infrastructure/i18n/core/I18nService.test.ts` |
+| Mobile web UI, state, pairing, disconnect, or reconnect behavior | `pnpm --dir src/mobile-web run type-check`; include manual pairing / reconnect notes when behavior changes |
+| Shared Rust logic in `core`, `transport`, `api-layer`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
+| Desktop integration, Tauri APIs, browser/computer-use, or desktop-only behavior | `cargo check -p northhing-desktop`, plus focused desktop tests when behavior changed |
+| Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
+| `src/crates/adapters/ai-adapters` | Relevant Rust checks above; add `cargo test -p northhing-agent-stream` only when stream contracts changed |
+| Installer frontend or i18n runtime without packaging changes | `pnpm --dir northhing-Installer run type-check` |
+| Installer Tauri/Rust changes | `cargo check --manifest-path northhing-Installer/src-tauri/Cargo.toml` |
+| Installer packaging, payload, install/uninstall flow, or native bundling | `pnpm run installer:build` |
 
-1. `git log main -10` verify 1+4+1 commit 顺序对
-2. `git log loop/B1-surface-theme-20260714 -5` verify theme worktree commit + merge
-3. `git log loop/B1-surface-selectors-20260714 -5` verify selectors worktree commit
-4. `cargo test -p northhing-cli` verify 34/34 pass
-5. `git status --short main` verify 0 modified + 0 deleted
-6. `git worktree list` verify 3 worktree + 1 旧 impl-b0-smoke
-7. chat_render line count verify (mod.rs 27 + 7 sub, biggest message.rs 345)
-8. theme line count verify (mod.rs 21 + 4 sub)
-9. selectors line count verify (mod.rs 34 + 1 sub)
+## Agent-doc priority
 
----
-
-# Walkthrough 3 处不精确 fix 建议 (2026-07-14)
-
-**Source**: `C:\Users\UmR\.gemini\antigravity\brain\dd71699c-1519-4487-8082-b4ebfabad176\walkthrough.md`
-
-## 不精确 #1: chat_render sub count
-
-**Walkthrough 描述**: "5 sub-modules"
-**实际**: 7 sub (mod.rs 27 + header.rs 49 + message.rs 345 + message_helpers.rs 91 + messages.rs 268 + root.rs 139 + shortcuts.rs 145 + status.rs 81)
-**Diff**: 7 sub 不是 5 sub. walkthrough 漏 2 sub (header + message_helpers), biggest sub 实际 345 lines 没标.
-**Fix 建议**: walkthrough 改 "5 sub-modules" → "7 sub-modules", 加 "biggest sub: message.rs 345 lines"
-
-## 不精确 #2: theme god split sub count
-
-**Walkthrough 描述**: "8 sub-modules"
-**实际**: 4 sub (mod.rs 21 + types.rs 83 + presets.rs 178 + detection.rs 180)
-**Diff**: 4 sub 不是 8 sub
-**Fix 建议**: walkthrough 改 "8 sub-modules" → "4 sub-modules"
-
-## 不精确 #3: selectors sub count
-
-**Walkthrough 描述**: (类似问题)
-**实际**: 1 sub (mod.rs 34)
-**Fix 建议**: 同步修正
-
----
-
-# Archive Reference
-
-历史详细 lesson 在 archive:
-- `archive/northing-god-object-split-2026-07.md` (28 KB) — B2 重构详细
-- `archive/northing-split-execution-2026-07.md` (15 KB) — B2 拆分执行详细
-
----
-
-# Cross-reference (Mavis 在 BitFun 端)
-
-- 跨项目守则: `C:\Users\UmR\AppData\Roaming\bitfun\data\rules\MEMORY.md`
-- 流程 lesson: `C:\Users\UmR\AppData\Roaming\bitfun\data\rules\workflow-revised.md`
-- 模型选型: `C:\Users\UmR\AppData\Roaming\bitfun\data\rules\model-evaluation.md`
-- Windows gotchas: `C:\Users\UmR\AppData\Roaming\bitfun\data\rules\windows-powershell-gotchas.md`
-- codegraph 用法: `C:\Users\UmR\AppData\Roaming\bitfun\data\rules\codegraph-workflow.md`
-- 知识图谱: `C:\Users\UmR\AppData\Roaming\bitfun\.graph\`
-- evolve 框架: `C:\Users\UmR\AppData\Roaming\bitfun\evolve\`
+Prefer the nearest matching `AGENTS.md` / `AGENTS-CN.md` for the directory you are changing. If local guidance conflicts with this file, follow the more specific, nearer document.
