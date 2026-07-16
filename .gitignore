@@ -94,15 +94,17 @@ target-local/
 _rot_scan*
 
 # Development scripts — never commit
-*.py
-*.cjs
+# NOTE: These patterns are ROOT-ONLY (leading /) so they don't accidentally
+# ignore .py/.cjs in subdirectories like northing-installer/src/.
+/*.py
+/*.cjs
 
-# Audit scratch files
-r60c-*
-r63a-*
+# Audit scratch files (root-only)
+/r60c-*
+/r63a-*
 
-# Phantom file pattern (PowerShell redirection side-effect)
-{}
+# Phantom file pattern (PowerShell redirection side-effect, root-only)
+/{}
 
 # VERSIONS_DIR placeholder
 VERSIONS_DIR=.

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.10] - 2026-07-16
 
 ### Changed
-- **Version bump** from 0.2.0 → 0.2.10 to align workspace metadata with the current release train
+- **Version bump** from 0.2.0 -> 0.2.10 to align workspace metadata with the current release train
 - `workspace.package.version` and `workspace.metadata.version` both pinned to `0.2.10`
 
 ### Notes
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-human-usable] - 2026-07-16
 
 ### Added
-- **AGENTS.md restoration** — contributor onboarding document re-committed to repository root
+- **AGENTS.md restoration** -- contributor onboarding document re-committed to repository root
 - **Syntect optionalized** behind a `syntax-highlight` crate feature, reducing compile-time and binary size for users who do not need syntax highlighting
 - **Roadmap and documentation audit** docs committed (`docs/handoffs/2026-07-16-graph-review.md`, `docs/handoffs/2026-07-16-handoff.md`)
 
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test pass rate**: 932 / 933 tests pass (pre-existing `northhing-acp` error remains out-of-scope)
 
 ### Notes
-- CLI ✅ compiles; god-file split (0 god-files with lib + tests >750 lines) still holds
+- CLI compiles; god-file split (0 god-files with lib + tests >750 lines) still holds
 - `cargo fmt` clean across the workspace
 - Release-prep sweep removes ad-hoc developer scripts (`.py`, `.cjs`, audit scratch files, phantom `{}`) from version control and hardens `.gitignore` to prevent re-introduction
 
@@ -60,18 +60,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **R3**: `SessionStoragePathResolution` enum 类型安全重构
-  - `Local { workspace_path }` — 本地工作区存储
-  - `Remote { requested_workspace_path, effective_storage_path, remote_connection_id, remote_ssh_host }` — 远程 SSH 工作区
-  - `UnresolvedRemote { requested_workspace_path, effective_storage_path, remote_connection_id }` — 未解析的远程工作区
+  - `Local { workspace_path }` -- 本地工作区存储
+  - `Remote { requested_workspace_path, effective_storage_path, remote_connection_id, remote_ssh_host }` -- 远程 SSH 工作区
+  - `UnresolvedRemote { requested_workspace_path, effective_storage_path, remote_connection_id }` -- 未解析的远程工作区
   - 自定义 serde 序列化保持与原来 struct 完全相同的 JSON 格式
   - 新增访问器方法：`effective_storage_path()`, `storage_kind()`, `remote_connection_id()`, `remote_ssh_host()`
 
 ### Changed
-- **A1**: 修复 149 个 clippy warnings → 降至 15 个
+- **A1**: 修复 149 个 clippy warnings -> 降至 15 个
   - 84 个 auto-fixable warnings 自动修复
   - 65 个手动修复（sort_by, field_reassign, redundant_locals 等）
 - **B2**: 全局 tracing 迁移（178 文件）
-  - `log::` → `tracing::` 统一日志门面
+  - `log::` -> `tracing::` 统一日志门面
   - 13 个 Cargo.toml 添加 tracing 依赖
 - **C2**: 死代码清理（29 warnings）
   - 移除 24 个未使用 import
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 - 这是一个 MVP 发布版本，包含核心功能稳定
 - 测试覆盖：1456+ passed, 0 failed, 2 ignored（v3-restructure 验证）
-- 构建状态：CLI ✅ / GUI ✅（desktop 编译通过，测试因 Windows DLL 缺失需排除）
+- 构建状态：CLI OK / GUI OK（desktop 编译通过，测试因 Windows DLL 缺失需排除）
 - 环境要求：Windows 上需 `rustup component add clippy`
 
 [0.1.0]: https://github.com/northhing/northhing/releases/tag/v0.1.0

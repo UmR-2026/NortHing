@@ -219,8 +219,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type-check web UI
-        run: pnpm run type-check:web
+      # v0.1.0-human-usable: type-check:web disabled — src/web-ui does not
+      # exist yet. Keeping the step commented to avoid breaking the release
+      # workflow; revisit when web UI lands.
+      # - name: Type-check web UI
+      #   run: pnpm run type-check:web
 
       - name: Build desktop app
         run: ${{ matrix.platform.build_command }}
