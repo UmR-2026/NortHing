@@ -85,7 +85,7 @@ function prepareTauriConfig(baseConfigPath, { desktopDir, flashgrepBinary }) {
 
     const endpoint =
       process.env.TAURI_UPDATER_ENDPOINT ||
-      'https://github.com/GCWing/northhing/releases/latest/download/latest.json';
+      'https://github.com/UmR-2026/northhing/releases/latest/download/latest.json';
 
     config.bundle = {
       ...(config.bundle || {}),

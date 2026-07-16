@@ -17,6 +17,6 @@
 
 - 项目画像示例可以读取 northhing — AGENTS.md、CONTRIBUTING、package/cargo scripts、CI 和模块边界— 变更就绪度示例可以使— northhing — fork PR 流程，但必须标注为项目特定— 风险分类器示例可以覆— Rust 工作区、React frontend、Tauri desktop、remote、AI 适配器、深度审查等高风险区域— 安全边界示例应覆— shell、网络、凭据、MCP、hook、跨目录写、删除、发— credential 等安全面— 证据包示例应表达为“任务和变更证据”，不默认要求所有项目生成完整证据包— 评测示例需要同时覆盖快速路径、误升级、安全提示、PR 就绪度和高风险审查— ## 4. northhing 特定规则的适用边界
 
-- `pnpm`、`cargo`、Tauri、Rust 工作区和 React 前端只代— northhing 技术栈样本— fork PR — `GCWing/northhing` 只代— northhing 当前协作模式样本— northhing 的严格审查习惯用于验— `guarded/regulated` 场景，不作为所有项目默认质量要求— northhing — AGENTS.md 完整度用于验证规则读取能力，不作为目标项目最低要求— northhing — CI 行为、耗时和不稳定风险用于验证复杂项目指标，不作为通用阈值— ## 5. 成功标准
+- `pnpm`、`cargo`、Tauri、Rust 工作区和 React 前端只代— northhing 技术栈样本— fork PR — `UmR-2026/northhing` 只代— northhing 当前协作模式样本— northhing 的严格审查习惯用于验— `guarded/regulated` 场景，不作为所有项目默认质量要求— northhing — AGENTS.md 完整度用于验证规则读取能力，不作为目标项目最低要求— northhing — CI 行为、耗时和不稳定风险用于验证复杂项目指标，不作为通用阈值— ## 5. 成功标准
 
 - northhing 仓库能作为高复杂度、强协作、强安全样本验证设计— 普通目标项目仍能保持低摩擦快速路径— 文档读者能清楚区分产品默认、团队可选强治理— northhing 仓库自身规则— 所有从 northhing 仓库抽象出的能力，都有“哪些场景不适用”的反证说明

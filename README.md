@@ -7,10 +7,10 @@
 </div>
 <div align="center">
 
-[![GitHub release](https://img.shields.io/github/v/release/GCWing/northhing?style=flat-square&color=blue)](https://github.com/GCWing/northhing/releases)
+[![GitHub release](https://img.shields.io/github/v/release/UmR-2026/northhing?style=flat-square&color=blue)](https://github.com/UmR-2026/northhing/releases)
 [![Website](https://img.shields.io/badge/Website-opennorthhing.com-6f42c1?style=flat-square)](https://opennorthhing.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://github.com/GCWing/northhing/blob/main/LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20(%2FmacOS%2FLinux%20build%20ready)-blue?style=flat-square)](https://github.com/GCWing/northhing)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://github.com/UmR-2026/northhing/blob/main/LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20(%2FmacOS%2FLinux%20build%20ready)-blue?style=flat-square)](https://github.com/UmR-2026/northhing)
 
 </div>
 

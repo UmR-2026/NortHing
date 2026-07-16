@@ -17,7 +17,7 @@ WebSocket relay server for northhing Remote Connect. It bridges desktop (WebSock
 
 ```bash
 # Clone on the target server
-git clone https://github.com/GCWing/northhing
+git clone https://github.com/UmR-2026/northhing
 cd northhing/src/apps/relay-server
 
 # Deploy to the current machine

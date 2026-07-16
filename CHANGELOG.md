@@ -103,4 +103,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 构建状态：CLI OK / GUI OK（desktop 编译通过，测试因 Windows DLL 缺失需排除）
 - 环境要求：Windows 上需 `rustup component add clippy`
 
-[0.1.0]: https://github.com/northhing/northhing/releases/tag/v0.1.0
+[0.1.0]: https://github.com/UmR-2026/northhing/releases/tag/v0.1.0

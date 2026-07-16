@@ -25,7 +25,7 @@
 - **CLI 启动横幅**: `NortHing vX.Y.Z`
 - **CLI 命令名**: `northhing`
 - **Tauri bundle id**: `com.northhing.installer`
-- **GitHub repo**: `GCWing/northhing`
+- **GitHub repo**: `UmR-2026/northhing`
 
 ## 替换规则
 

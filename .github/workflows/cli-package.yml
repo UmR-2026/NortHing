@@ -243,7 +243,7 @@ jobs:
             cli-release-assets/SHA256SUMS
           fail_on_unmatched_files: true
 
-      # Tell GCWing/homebrew-tap to bump the northhing-cli formula now that
+      # Tell UmR-2026/homebrew-tap to bump the northhing-cli formula now that
       # the tarballs are live on the release.  Safe no-op if the secret
       # has not been configured (e.g. on forks or before the tap exists).
       - name: Notify homebrew-tap
@@ -258,10 +258,10 @@ jobs:
             exit 0
           fi
 
-          echo "Dispatching northhing-release-published for ${RELEASE_TAG} to GCWing/homebrew-tap"
+          echo "Dispatching northhing-release-published for ${RELEASE_TAG} to UmR-2026/homebrew-tap"
           curl -fsSL -X POST \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/GCWing/homebrew-tap/dispatches \
+            https://api.github.com/repos/UmR-2026/homebrew-tap/dispatches \
             -d "{\"event_type\":\"northhing-release-published\",\"client_payload\":{\"tag_name\":\"${RELEASE_TAG}\"}}"

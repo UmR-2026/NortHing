@@ -82,7 +82,7 @@ jobs:
     env:
       NODE_OPTIONS: --max-old-space-size=6144
       northhing_ENABLE_UPDATER_ARTIFACTS: ${{ needs.prepare.outputs.upload_to_release }}
-      TAURI_UPDATER_ENDPOINT: https://github.com/GCWing/northhing/releases/latest/download/latest.json
+      TAURI_UPDATER_ENDPOINT: https://github.com/UmR-2026/northhing/releases/latest/download/latest.json
       TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -280,7 +280,7 @@ jobs:
             --assets-dir release-updater-assets \
             --version "${{ needs.prepare.outputs.version }}" \
             --tag "${{ needs.prepare.outputs.release_tag }}" \
-            --repo "GCWing/northhing" \
+            --repo "UmR-2026/northhing" \
             --out release-updater-assets/latest.json \
             --required-platforms "${REQUIRED_UPDATER_PLATFORMS}"
 
@@ -305,7 +305,7 @@ jobs:
       - name: Verify published updater manifest
         run: |
           curl -fsSL --retry 5 --retry-delay 3 \
-            "https://github.com/GCWing/northhing/releases/download/${{ needs.prepare.outputs.release_tag }}/latest.json" \
+            "https://github.com/UmR-2026/northhing/releases/download/${{ needs.prepare.outputs.release_tag }}/latest.json" \
             -o latest.published.json
           node scripts/verify-tauri-latest-json.mjs \
             --manifest latest.published.json \
