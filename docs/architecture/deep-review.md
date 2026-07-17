@@ -1,5 +1,8 @@
 # DeepReview Architecture
 
+> **v0.1.0 status note**: This document references `src/web-ui/` which is [missing] in v0.1.0.
+> DeepReview is a frozen-experimental surface. Paths below are historical and may not exist.
+
 ## Scope
 
 DeepReview is a child-session workflow that runs a configurable Code Review Team against a review target. The current implementation has three layers:
