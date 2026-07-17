@@ -110,7 +110,7 @@ _rot_scan*
 VERSIONS_DIR=.
 
 # .graph FTS5 + vector databases (regenerated from memory/)
-/graph/*.db
+/.graph/*.db
 
 # Local credentials (never commit)
 /memory/credentials.md
