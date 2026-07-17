@@ -145,6 +145,18 @@ await api.invoke('your_command', { request: { ... } });
 - Do not add hard-coded limits or pattern checks to the agent loop as a first response to looping behavior, such as blocking repeated tool calls by string or count alone.
 - Excessive hard-coding turns the agent loop into a brittle workflow engine. Investigate the root cause first: tool behavior, model interaction, session context packaging, prompt/tool schema design, or state synchronization issues.
 
+## Backbone invariants (verified 2026-07-17)
+
+Change these only with a flag flip + integration test, and update this section in the same commit.
+
+- **Desktop package is `northhing` (Slint)**, not `northhing-desktop`. agent-dispatch flags: `USE_LIGHTWEIGHT_ACTOR = true`; `USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` = false (`src/crates/execution/agent-dispatch/src/flags.rs`).
+- **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Desktop `AppSettings` stays UI-owner and pushes providers into core via `sync_providers_to_core` (see `95e29ba`). Never add a second runtime-readable config file.
+- **UI thread discipline**: writing Slint properties from a non-event-loop thread is silently dropped. All such writes must go through `slint::invoke_from_event_loop` (helpers in `error_banners.rs` already wrap this — reuse them, see `ad349f9`).
+- **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too; MiniApp string-mode commands containing shell metacharacters are rejected.
+- **Project runtime slug always carries a path hash** (CJK paths must not collide, see `c7e7218`).
+- **Installer toolchain**: `northing-installer` `[lib] crate-type = ["rlib"]` only (cdylib/staticlib blow past the GNU ld export-ordinal limit); `embed-resource` pinned to 3.0.5 (3.0.11 fails on rustc 1.96 MSVC). Desktop builds use MSVC; repo dir override is GNU and `cargo +toolchain` is unavailable — use `rustup run <tc> cargo`.
+- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; mobile-web / server / relay / MiniApp UI / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
+
 ## Architecture
 
 ### Core decomposition guardrails
