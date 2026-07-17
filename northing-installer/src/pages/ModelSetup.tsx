@@ -221,7 +221,7 @@ export function ModelSetup({ options, setOptions, onSkip, onNext, onTestConnecti
     setRemoteModelsError(null);
     try {
       const list = await invoke<RemoteModelInfo[]>('list_model_config_models', {
-        modelConfig: draftModelConfig,
+        request: { modelConfig: draftModelConfig },
       });
       setRemoteModels(list);
       if (list.length === 0) {

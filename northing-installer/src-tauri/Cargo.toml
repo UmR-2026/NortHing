@@ -7,7 +7,7 @@ description = "northhing Custom Installer - Modern branded installation experien
 
 [lib]
 name = "northhing_installer_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [[bin]]
 name = "northhing-installer"
@@ -35,11 +35,13 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 urlencoding = "2"
 futures = "0.3"
 eventsource-stream = "0.2"
+sha2 = "0.10"
 northhing-ai-adapters = { path = "../../src/crates/adapters/ai-adapters" }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
 mslnk = "0.1"
+windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }
 
 [profile.release]
 opt-level = "z"

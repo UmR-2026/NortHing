@@ -7,7 +7,7 @@
       "notAbsolute": "The installation path must be an absolute path (for example a folder on a local drive).",
       "filesystemRoot": "Cannot install to a drive root. Choose a folder inside the drive.",
       "pathNotDirectory": "The selected path exists but is not a folder.",
-      "directoryMustBeEmptyOrnorthhing": "The installation folder must be empty, or already contain a northhing installation.",
+      "directoryMustBeEmptyOrNorthhing": "The installation folder must be empty, or already contain a northhing installation.",
       "inspectDirectoryFailed": "Could not read the installation folder. Check permissions and try again.",
       "directoryNotWritable": "The installation folder is not writable. Choose another location or run the installer as administrator (see below).",
       "parentNotWritable": "The parent folder is not writable. System folders such as Program Files often require administrator rights (see below).",

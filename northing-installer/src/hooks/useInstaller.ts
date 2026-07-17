@@ -195,7 +195,7 @@ export function useInstaller(): UseInstallerReturn {
 
   const refreshDiskSpace = useCallback(async (path: string) => {
     try {
-      const info = await invoke<DiskSpaceInfo>('get_disk_space', { path });
+      const info = await invoke<DiskSpaceInfo>('get_disk_space', { request: { path } });
       setDiskSpace(info);
     } catch (err) {
       console.warn('Failed to get disk space:', err);
@@ -215,8 +215,10 @@ export function useInstaller(): UseInstallerReturn {
     }
     try {
       await invoke('launch_registered_uninstaller', {
-        uninstallCommand: cmd,
-        installPath: latestInstall.installLocation ?? null,
+        request: {
+          uninstallCommand: cmd,
+          installPath: latestInstall.installLocation ?? null,
+        },
       });
       window.setTimeout(() => {
         void refreshExistingInstall();
@@ -274,7 +276,7 @@ export function useInstaller(): UseInstallerReturn {
     setCanConfirmProgress(false);
     try {
       const validated = await invoke<InstallPathValidation>('validate_install_path', {
-        path: options.installPath,
+        request: { path: options.installPath },
       });
       const effectiveOptions = {
         ...options,
@@ -285,7 +287,7 @@ export function useInstaller(): UseInstallerReturn {
       }
       setStep('progress');
       setProgress({ step: 'prepare', percent: 0, message: '' });
-      await invoke('start_installation', { options: effectiveOptions });
+      await invoke('start_installation', { request: { options: effectiveOptions } });
       setInstallationCompleted(true);
       setStep('model');
       try {
@@ -322,15 +324,15 @@ export function useInstaller(): UseInstallerReturn {
 
   const saveModelConfig = useCallback(async () => {
     if (!options.modelConfig) return;
-    await invoke('set_model_config', { modelConfig: options.modelConfig });
+    await invoke('set_model_config', { request: { modelConfig: options.modelConfig } });
   }, [options.modelConfig]);
 
   const testModelConnection = useCallback(async (modelConfig: ModelConfig) => {
-    return invoke<ConnectionTestResult>('test_model_config_connection', { modelConfig });
+    return invoke<ConnectionTestResult>('test_model_config_connection', { request: { modelConfig } });
   }, []);
 
   const launchApp = useCallback(async () => {
-    await invoke('launch_application', { installPath: options.installPath });
+    await invoke('launch_application', { request: { installPath: options.installPath } });
   }, [options.installPath]);
 
   const closeInstaller = useCallback(() => {
@@ -359,7 +361,7 @@ export function useInstaller(): UseInstallerReturn {
         }, 80);
       });
 
-      await invoke('uninstall', { installPath: options.installPath });
+      await invoke('uninstall', { request: { installPath: options.installPath } });
       setUninstallProgress(100);
       setUninstallCompleted(true);
       window.setTimeout(() => {

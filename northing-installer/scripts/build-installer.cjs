@@ -157,7 +157,7 @@ function getCandidateAppExePaths(mode) {
         "target",
         "x86_64-pc-windows-msvc",
         profile,
-        "northhing-desktop.exe"
+        "northhing.exe"
       ),
       path.join(
         northhing_ROOT,
@@ -166,9 +166,9 @@ function getCandidateAppExePaths(mode) {
         "desktop",
         "target",
         profile,
-        "northhing-desktop.exe"
+        "northhing.exe"
       ),
-      path.join(northhing_ROOT, "target", profile, "northhing-desktop.exe")
+      path.join(northhing_ROOT, "target", profile, "northhing.exe")
     );
   }
 
@@ -226,14 +226,14 @@ if (appExePath) {
     files: [],
   };
 
-  const destExe = path.join(PAYLOAD_DIR, "northhing-desktop.exe");
+  const destExe = path.join(PAYLOAD_DIR, "northhing.exe");
   writeFileWithManifest(appExePath, destExe, manifest, PAYLOAD_DIR);
   log(`Copied: ${appExePath} -> ${destExe}`);
 
   const exeSize = fs.statSync(destExe).size;
   if (STRICT_PAYLOAD_VALIDATION && exeSize < MIN_APP_EXE_BYTES) {
     error(
-      `northhing-desktop.exe in payload is unexpectedly small (${exeSize} bytes). Refusing to continue.`
+      `northhing.exe in payload is unexpectedly small (${exeSize} bytes). Refusing to continue.`
     );
   }
 

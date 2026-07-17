@@ -7,7 +7,7 @@
       "notAbsolute": "安装路径必须是绝对路径（例如本地驱动器上的某个文件夹）。",
       "filesystemRoot": "不能安装到磁盘根目录，请选择磁盘下的某个文件夹。",
       "pathNotDirectory": "所选路径已存在但不是文件夹。",
-      "directoryMustBeEmptyOrnorthhing": "安装目录必须为空，或已包含 northhing 安装。",
+      "directoryMustBeEmptyOrNorthhing": "安装目录必须为空，或已包含 northhing 安装。",
       "inspectDirectoryFailed": "无法读取安装目录，请检查权限后重试。",
       "directoryNotWritable": "安装目录不可写入。请更换路径，或以管理员身份运行安装器（见下方说明）。",
       "parentNotWritable": "上级目录不可写入。系统目录（如 Program Files）通常需要管理员权限（见下方说明）。",

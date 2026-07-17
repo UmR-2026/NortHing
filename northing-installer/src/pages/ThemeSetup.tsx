@@ -50,7 +50,7 @@ export function ThemeSetup({ options, setOptions, onLaunch, onClose }: ThemeSetu
 
     try {
       try {
-        await invoke('set_theme_preference', { themePreference: options.themePreference });
+        await invoke('set_theme_preference', { request: { themePreference: options.themePreference } });
       } catch (err) {
         console.warn('Failed to persist theme preference:', err);
       }

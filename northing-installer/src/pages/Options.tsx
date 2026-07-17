@@ -53,7 +53,7 @@ export function Options({
     if (selected && typeof selected === 'string') {
       try {
         const validated = await invoke<InstallPathValidation>('validate_install_path', {
-          path: selected,
+          request: { path: selected },
         });
         setOptions((prev) => ({ ...prev, installPath: validated.installPath }));
       } catch {

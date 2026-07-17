@@ -7,7 +7,7 @@
       "notAbsolute": "安裝路徑必須是絕對路徑（例如本機磁碟上的某個資料夾）。",
       "filesystemRoot": "不能安裝到磁碟根目錄，請選擇磁碟下的某個資料夾。",
       "pathNotDirectory": "所選路徑已存在但不是資料夾。",
-      "directoryMustBeEmptyOrnorthhing": "安裝目錄必須為空，或已包含 northhing 安裝。",
+      "directoryMustBeEmptyOrNorthhing": "安裝目錄必須為空，或已包含 northhing 安裝。",
       "inspectDirectoryFailed": "無法讀取安裝目錄，請檢查權限後重試。",
       "directoryNotWritable": "安裝目錄不可寫入。請更換路徑，或以管理員身份運行安裝器（見下方說明）。",
       "parentNotWritable": "上級目錄不可寫入。系統目錄（如 Program Files）通常需要管理員權限（見下方說明）。",
