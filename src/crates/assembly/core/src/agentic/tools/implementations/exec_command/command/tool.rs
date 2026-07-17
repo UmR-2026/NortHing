@@ -152,19 +152,31 @@ Output:
             };
         }
 
-        // R1: Shell safety denylist - block catastrophic commands before confirmation
+        // R1: Shell safety denylist - block catastrophic commands before confirmation.
+        // Uses guard_command_execution so denied commands are written to the audit log.
         const ENABLE_SHELL_DENYLIST: bool = true;
         if ENABLE_SHELL_DENYLIST {
-            if let Some(pattern) = shell_safety::check_command_denied(cmd) {
-                return ValidationResult {
-                    result: false,
-                    message: Some(format!(
-                        "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
-                        cmd, pattern
-                    )),
-                    error_code: Some(403),
-                    meta: None,
-                };
+            match shell_safety::guard_command_execution(cmd, "ExecCommand", true).await {
+                Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                    return ValidationResult {
+                        result: false,
+                        message: Some(format!(
+                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                            cmd, pattern
+                        )),
+                        error_code: Some(403),
+                        meta: None,
+                    };
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    return ValidationResult {
+                        result: false,
+                        message: Some(format!("Shell safety guard error: {}", e)),
+                        error_code: Some(500),
+                        meta: None,
+                    };
+                }
             }
         }
 
