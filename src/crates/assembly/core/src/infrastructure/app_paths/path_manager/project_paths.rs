@@ -84,8 +84,15 @@ impl PathManager {
     }
 
     /// Derive the runtime slug for a workspace path. Returns a
-    /// filesystem-safe, human-readable slug (lowercased alphanumerics +
-    /// `-`; truncated with a 12-char SHA-256 suffix when long).
+    /// filesystem-safe, human-readable slug: a lowercased ASCII prefix
+    /// (non-ASCII characters become `-`, consecutive `-` collapsed) with a
+    /// short SHA-256 hex suffix derived from the full canonical path.
+    ///
+    /// The hash suffix is always present so that paths differing only in
+    /// non-ASCII characters (e.g. `E:\工作\proj` vs `E:\项目\proj`) map to
+    /// distinct slugs. Because the slug format changed, existing runtime
+    /// directories from older versions are not migrated; the new version
+    /// simply produces a new slug.
     fn project_runtime_slug(&self, workspace_path: &Path) -> String {
         let requested_path = workspace_path.to_path_buf();
         if let Some(slug) = self.cached_project_runtime_slug(&requested_path) {
@@ -127,28 +134,35 @@ impl PathManager {
     }
 
     fn build_project_runtime_slug(canonical: &str) -> String {
-        let slug: String = canonical
-            .chars()
-            .map(|ch| {
-                if ch.is_ascii_alphanumeric() {
-                    ch.to_ascii_lowercase()
-                } else {
-                    '-'
-                }
-            })
-            .collect();
-
-        let slug = slug.trim_matches('-');
-        let slug = if slug.is_empty() { "workspace" } else { slug };
-
-        if slug.len() <= MAX_PROJECT_SLUG_LEN {
-            return slug.to_string();
+        // Map each character to a filesystem-safe ASCII token, collapsing
+        // consecutive non-alphanumeric runs into a single `-`.
+        let mut slug = String::with_capacity(canonical.len());
+        let mut last_was_dash = false;
+        for ch in canonical.chars() {
+            if ch.is_ascii_alphanumeric() {
+                slug.push(ch.to_ascii_lowercase());
+                last_was_dash = false;
+            } else if !last_was_dash {
+                slug.push('-');
+                last_was_dash = true;
+            }
         }
 
+        let prefix = slug.trim_matches('-');
+        let prefix = if prefix.is_empty() { "workspace" } else { prefix };
+
+        // Always append a short hash of the full canonical path so that paths
+        // differing only in non-ASCII characters (e.g. CJK) get distinct slugs.
         let hash = hex::encode(Sha256::digest(canonical.as_bytes()));
-        let suffix = &hash[..12];
+        let suffix = &hash[..16];
         let max_prefix_len = MAX_PROJECT_SLUG_LEN.saturating_sub(suffix.len() + 1);
-        let prefix = slug[..max_prefix_len].trim_end_matches('-');
+        let prefix = if prefix.len() > max_prefix_len {
+            &prefix[..max_prefix_len]
+        } else {
+            prefix
+        };
+        let prefix = prefix.trim_end_matches('-');
+
         format!("{}-{}", prefix, suffix)
     }
 }
@@ -163,6 +177,7 @@ use {Arc as _, Mutex as _};
 #[cfg(test)]
 mod tests {
     use super::PathManager;
+    use super::MAX_PROJECT_SLUG_LEN;
     use std::path::Path;
 
     #[test]
@@ -174,7 +189,49 @@ mod tests {
             .and_then(|value| value.to_str())
             .expect("runtime root should have terminal component");
 
-        assert!(slug.starts_with("e--projects-opennorthhing-northhing"));
+        assert!(slug.starts_with("e-projects-opennorthhing-northhing-"));
+        assert!(slug.len() > "e-projects-opennorthhing-northhing-".len());
         assert_eq!(runtime_root.parent(), Some(pm.projects_root().as_path()));
+    }
+
+    #[test]
+    fn cjk_paths_differing_only_in_non_ascii_produce_distinct_slugs() {
+        let pm = PathManager::default();
+        let slug_a = pm.project_runtime_slug(Path::new(r"E:\工作\proj"));
+        let slug_b = pm.project_runtime_slug(Path::new(r"E:\项目\proj"));
+        assert_ne!(slug_a, slug_b, "CJK-only-differing paths must not collide");
+    }
+
+    #[test]
+    fn same_path_generates_stable_slug() {
+        let pm = PathManager::default();
+        let first = pm.project_runtime_slug(Path::new(r"E:\Projects\myapp"));
+        let second = pm.project_runtime_slug(Path::new(r"E:\Projects\myapp"));
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn long_path_slug_stays_within_max_len() {
+        let pm = PathManager::default();
+        let long_path = format!(r"C:\{}", "a".repeat(500));
+        let slug = pm.project_runtime_slug(Path::new(&long_path));
+        assert!(
+            slug.len() <= MAX_PROJECT_SLUG_LEN,
+            "slug length {} exceeds {}",
+            slug.len(),
+            MAX_PROJECT_SLUG_LEN
+        );
+    }
+
+    #[test]
+    fn pure_ascii_path_also_carries_hash_suffix() {
+        let pm = PathManager::default();
+        let slug = pm.project_runtime_slug(Path::new(r"E:\Projects\myapp"));
+        let suffix = slug.rsplit('-').next().expect("hash suffix present");
+        assert_eq!(suffix.len(), 16, "suffix should be 16 hex chars");
+        assert!(
+            u64::from_str_radix(suffix, 16).is_ok(),
+            "suffix should be valid hex"
+        );
     }
 }
