@@ -41,9 +41,14 @@ pub fn set_banner_message(ui: &AppWindow, message: impl Into<String>, detail: im
     let msg = message.into();
     let det = detail.into();
     tracing::warn!(target: "app_state", "banner_message: {msg}");
-    ui.set_banner_message(SharedString::from(msg));
-    ui.set_banner_detail(SharedString::from(det));
-    schedule_error_clear(ui.as_weak(), ErrorKind::Banner);
+    let weak = ui.as_weak();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_banner_message(SharedString::from(msg));
+            ui.set_banner_detail(SharedString::from(det));
+            schedule_error_clear(ui.as_weak(), ErrorKind::Banner);
+        }
+    });
 }
 
 /// 2026-06-26 (Phase 5): set the chat inline error (second channel).
@@ -54,7 +59,12 @@ pub fn set_banner_message(ui: &AppWindow, message: impl Into<String>, detail: im
 pub fn set_inline_error(ui: &AppWindow, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "inline_error: {msg}");
-    ui.set_chat_inline_error(SharedString::from(msg));
+    let weak = ui.as_weak();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_chat_inline_error(SharedString::from(msg));
+        }
+    });
 }
 
 #[derive(Copy, Clone)]

@@ -101,7 +101,7 @@ pub struct ProviderConfig {
     pub provider_type: ProviderType,
     /// Auto-filled from `ProviderType::default_base_url`; user-editable.
     pub base_url: String,
-    /// Stored in plaintext in app.json (file perms 0600). Never logged.
+    /// Stored in plaintext in app.json. Never logged.
     pub api_key: String,
     /// Either a value from `ProviderType::default_models` or a user-typed
     /// custom model name (B4 = c: dropdown + custom).
@@ -138,6 +138,112 @@ impl ProviderConfig {
             last_verified_ok: None,
         }
     }
+}
+
+// ===== Core sync helpers =====
+
+/// Map a `ProviderType` to the wire-format `provider` string used by
+/// `northhing-core`'s `AIModelConfig`.
+pub fn provider_wire_format(t: &ProviderType) -> &'static str {
+    match t {
+        ProviderType::Anthropic => "anthropic",
+        ProviderType::Openai => "openai",
+        ProviderType::Gemini => "gemini",
+        ProviderType::CustomOpenaiCompatible => "openai",
+        ProviderType::CustomAnthropicCompatible => "anthropic",
+    }
+}
+
+/// Convert a desktop `ProviderConfig` into a core `AIModelConfig`.
+pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_core::service::config::AIModelConfig {
+    use northhing_core::service::config::{AuthConfig, ModelCapability, ModelCategory};
+    northhing_core::service::config::AIModelConfig {
+        id: p.id.clone(),
+        name: p.name.clone(),
+        provider: provider_wire_format(&p.provider_type).to_string(),
+        model_name: p.model.clone(),
+        base_url: p.base_url.clone(),
+        request_url: None,
+        api_key: p.api_key.clone(),
+        context_window: None,
+        max_tokens: None,
+        temperature: None,
+        top_p: None,
+        enabled: p.enabled,
+        category: ModelCategory::GeneralChat,
+        capabilities: vec![ModelCapability::TextChat, ModelCapability::FunctionCalling],
+        recommended_for: vec![],
+        metadata: None,
+        enable_thinking_process: false,
+        reasoning_mode: None,
+        inline_think_in_text: true,
+        custom_headers: None,
+        custom_headers_mode: None,
+        skip_ssl_verify: false,
+        reasoning_effort: None,
+        thinking_budget_tokens: None,
+        custom_request_body: None,
+        custom_request_body_mode: None,
+        auth: AuthConfig::ApiKey,
+    }
+}
+
+/// Sync all desktop providers into the core `GlobalConfig.ai.models` list,
+/// then run `reconcile_models` so `default_models.primary` / `.fast` point
+/// at the first enabled model. Returns the number of providers synced.
+///
+/// This is the "adapt-push" path: desktop owns the provider UI + storage,
+/// but the runtime reads from core — so on every provider change we push
+/// the corresponding `AIModelConfig` into core and let it reconcile.
+pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<usize> {
+    use northhing_core::service::config::get_global_config_service;
+    let service = get_global_config_service().await?;
+    let existing = service.get_ai_models().await?;
+    let mut count = 0;
+    for p in &settings.providers {
+        let model = provider_to_ai_model_config(p);
+        let model_id = model.id.clone();
+        if existing.iter().any(|m| m.id == model_id) {
+            service.update_ai_model(&model_id, model).await?;
+        } else {
+            service.add_ai_model(model).await?;
+        }
+        count += 1;
+    }
+    service.reconcile_models("desktop-sync").await?;
+    Ok(count)
+}
+
+/// Validate user input from the provider form. Returns `Ok(())` when the
+/// input is acceptable, or `Err(msg)` with a Chinese error message.
+pub fn validate_provider_input(
+    name: &str,
+    type_str: &str,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+) -> Result<(), String> {
+    if name.trim().is_empty() {
+        return Err("名称不能为空".to_string());
+    }
+    if api_key.trim().is_empty() {
+        return Err("API Key 不能为空".to_string());
+    }
+    if model.trim().is_empty() {
+        return Err("模型不能为空".to_string());
+    }
+    match type_str {
+        "anthropic" | "openai" | "gemini" => {}
+        "custom-openai" | "custom-anthropic" => {
+            if base_url.trim().is_empty() {
+                return Err("自定义服务需要提供 Base URL".to_string());
+            }
+        }
+        _ => {
+            return Err(format!("不支持的服务类型: {type_str}"));
+        }
+    }
+    Ok(())
 }
 
 // ===== Workspace =====
@@ -871,5 +977,100 @@ mod tests {
 
         // And the default model should fall back to nothing.
         assert!(s.resolve_default_model().is_none());
+    }
+
+    // ===== Core sync helper tests =====
+
+    #[test]
+    fn provider_wire_format_mapping() {
+        use super::provider_wire_format;
+        use super::ProviderType;
+        assert_eq!(provider_wire_format(&ProviderType::Anthropic), "anthropic");
+        assert_eq!(provider_wire_format(&ProviderType::Openai), "openai");
+        assert_eq!(provider_wire_format(&ProviderType::Gemini), "gemini");
+        assert_eq!(
+            provider_wire_format(&ProviderType::CustomOpenaiCompatible),
+            "openai"
+        );
+        assert_eq!(
+            provider_wire_format(&ProviderType::CustomAnthropicCompatible),
+            "anthropic"
+        );
+    }
+
+    #[test]
+    fn provider_to_ai_model_config_fields() {
+        use super::provider_to_ai_model_config;
+        let p = ProviderConfig::new("我的 Anthropic".into(), ProviderType::Anthropic);
+        let m = provider_to_ai_model_config(&p);
+        assert_eq!(m.id, p.id);
+        assert_eq!(m.name, "我的 Anthropic");
+        assert_eq!(m.provider, "anthropic");
+        assert_eq!(m.model_name, p.model);
+        assert_eq!(m.api_key, p.api_key);
+        assert_eq!(m.enabled, p.enabled);
+        assert!(m.base_url.contains("anthropic"));
+        assert_eq!(m.category, northhing_core::service::config::ModelCategory::GeneralChat);
+        assert_eq!(m.auth, northhing_core::service::config::AuthConfig::ApiKey);
+    }
+
+    #[test]
+    fn validate_provider_input_rejects_empty_name() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("", "anthropic", "", "sk-x", "claude");
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("名称"));
+    }
+
+    #[test]
+    fn validate_provider_input_rejects_empty_api_key() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("foo", "anthropic", "", "", "claude");
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("API Key"));
+    }
+
+    #[test]
+    fn validate_provider_input_rejects_empty_model() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("foo", "anthropic", "", "sk-x", "");
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("模型"));
+    }
+
+    #[test]
+    fn validate_provider_input_rejects_unknown_type() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("foo", "bogus", "", "sk-x", "claude");
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("不支持"));
+    }
+
+    #[test]
+    fn validate_provider_input_custom_requires_base_url() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("foo", "custom-openai", "", "sk-x", "gpt");
+        assert!(r.is_err());
+        assert!(r.unwrap_err().contains("Base URL"));
+    }
+
+    #[test]
+    fn validate_provider_input_accepts_valid_anthropic() {
+        use super::validate_provider_input;
+        let r = validate_provider_input("foo", "anthropic", "", "sk-x", "claude");
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn validate_provider_input_accepts_valid_custom() {
+        use super::validate_provider_input;
+        let r = validate_provider_input(
+            "foo",
+            "custom-openai",
+            "https://example.com/v1",
+            "sk-x",
+            "gpt",
+        );
+        assert!(r.is_ok());
     }
 }

@@ -103,6 +103,18 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                     return;
                 }
 
+                // Best-effort: remove the provider from core's model list
+                // and reconcile. Failure is non-fatal — the user's data is
+                // safe on disk; we just log and let the UI continue.
+                if let Ok(service) = northhing_core::service::config::get_global_config_service().await {
+                    if let Err(e) = service.delete_ai_model(&pid).await {
+                        tracing::warn!(target: "app_state", "delete-provider delete_ai_model failed: {e}");
+                    }
+                    if let Err(e) = service.reconcile_models("desktop-delete").await {
+                        tracing::warn!(target: "app_state", "delete-provider reconcile_models failed: {e}");
+                    }
+                }
+
                 // Step 2: run Q6 integrity check on the snapshot.
                 let snapshot = app_state.session_metadata_snapshot();
                 let session_ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
@@ -246,18 +258,40 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 Err(_) => return,
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(_) => return,
-                };
-                use crate::app_state::settings::ProviderType;
+                use crate::app_state::settings::{validate_provider_input, ProviderType};
+                if let Err(msg) =
+                    validate_provider_input(&pname, &ptype, &pbase, &pkey, &pmodel)
+                {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_inline_error(&ui, msg);
+                    }
+                    return;
+                }
                 let provider_type = match ptype.as_str() {
                     "anthropic" => ProviderType::Anthropic,
                     "openai" => ProviderType::Openai,
                     "gemini" => ProviderType::Gemini,
                     "custom-openai" => ProviderType::CustomOpenaiCompatible,
                     "custom-anthropic" => ProviderType::CustomAnthropicCompatible,
-                    _ => ProviderType::Anthropic,
+                    // validate_provider_input already rejected unknown types;
+                    // this branch is unreachable in practice, but we handle
+                    // it gracefully instead of panicking (panic in a spawn
+                    // thread would abort the process).
+                    _ => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_inline_error(&ui, "内部错误：未知的服务类型".to_string());
+                        }
+                        return;
+                    }
+                };
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_inline_error(&ui, e);
+                        }
+                        return;
+                    }
                 };
                 let mut new_provider = crate::app_state::settings::ProviderConfig::new(pname.clone(), provider_type);
                 if !pid.is_empty() {
@@ -268,7 +302,21 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 new_provider.model = pmodel;
                 new_provider.enabled = penabled;
                 s.upsert_provider(new_provider);
-                if let Err(_) = save_app_settings_quiet(&s).await {
+                if let Err(e) = save_app_settings_quiet(&s).await {
+                    tracing::warn!(target: "app_state", "upsert-provider save failed: {e}");
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_inline_error(&ui, "同步到运行时配置失败，请重试".to_string());
+                    }
+                    return;
+                }
+                // Push the new/updated provider into core so the runtime
+                // sees it. Failure is non-fatal — the user's data is safe
+                // on disk; we surface a banner and let them retry.
+                if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
+                    tracing::warn!(target: "app_state", "upsert-provider sync-to-core failed: {e}");
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_inline_error(&ui, "同步到运行时配置失败，请重试".to_string());
+                    }
                     return;
                 }
                 // Q6 reverse direction: if user re-adds a provider
@@ -293,7 +341,7 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 };
                 let _ = s.validate_session_integrity(session_ids, &provider_lookup, &workspace_lookup);
                 if let Some(ui) = ui_weak.upgrade() {
-                    let _ = format!("已保存 AI 服务 {}", pname);
+                    set_banner_message(&ui, format!("已保存 AI 服务 {}", pname), "");
                 }
             });
         });

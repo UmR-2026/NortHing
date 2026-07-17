@@ -128,6 +128,21 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                             );
                         }
                     }
+                    // One-time startup sync: push any providers the user
+                    // stored on disk into core's runtime config. This is
+                    // the migration path for existing users whose keys
+                    // live in app.json but whose core config is empty.
+                    // Failure is non-fatal — we just warn and continue.
+                    if !settings.providers.is_empty() {
+                        if let Err(e) =
+                            crate::app_state::settings::sync_providers_to_core(&settings).await
+                        {
+                            tracing::warn!(
+                                target: "app_state",
+                                "startup sync_providers_to_core failed: {e}"
+                            );
+                        }
+                    }
                 }
                 Err(e) => {
                     // Settings load failure is non-fatal — show the main
