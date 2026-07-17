@@ -38,10 +38,8 @@ pnpm install
 
 ```bash
 # Desktop (recommended for daily development)
-pnpm run desktop:dev                # full hot-reload: Vite HMR + Rust auto-rebuild & restart
-
-# Desktop (lightweight preview, no Rust auto-rebuild)
-pnpm run desktop:preview:debug      # reuse pre-built binary + Vite HMR; Rust changes require manual restart
+pnpm run desktop:dev                # build and run Slint desktop app (cold start)
+pnpm run desktop:check              # compile check only
 
 # Desktop (production build)
 pnpm run desktop:build
@@ -50,9 +48,10 @@ pnpm run desktop:build
 pnpm run e2e:test
 ```
 
-> **`desktop:dev` vs `desktop:preview:debug`**: `desktop:dev` runs `tauri dev`, which provides **full hot-reload** —frontend changes apply instantly via Vite HMR, and Rust/backend changes trigger an incremental rebuild followed by an automatic app restart. This is the recommended workflow for active development. `desktop:preview:debug` launches a pre-built debug binary alongside a Vite dev server; frontend edits still get HMR, but **Rust-side changes are not auto-rebuilt** —you must stop and re-run the command (or use `--force-rebuild`). Use `desktop:preview:debug` when you only need to iterate on frontend code or want a faster cold-start without waiting for `tauri dev` initialization.
-
-> For the full script list, see [`package.json`](package.json). For agent-specific commands, verification, and architecture rules, see [`AGENTS.md`](AGENTS.md).
+> **v0.1.0**: Desktop uses Slint (not Tauri). `desktop:dev` is `cargo run -p northhing` —
+> no HMR, no Vite, no auto-rebuild. `desktop:preview:debug` is the same command (alias).
+> For the full script list, see [`package.json`](package.json). For agent-specific
+> commands, verification, and architecture rules, see [`AGENTS.md`](AGENTS.md).
 
 ### Desktop debugging tools
 
@@ -97,7 +96,7 @@ We welcome contributions beyond standard feature or bug-fix PRs. Examples includ
 | Prompts | `src/crates/assembly/core/src/agentic/agents/prompts/` | Add or refine prompts, and update related logic as needed |
 | Tools | `src/crates/assembly/core/src/agentic/tools/implementations/`, `src/crates/assembly/core/src/agentic/tools/registry.rs` | Add tool implementations and register them in the tool registry |
 | Subagents | `src/crates/assembly/core/src/agentic/agents/custom_subagents/`, `src/crates/assembly/core/src/agentic/agents/registry.rs` | Add subagent implementations and register them in the subagent registry |
-| Mode contributions | `src/crates/assembly/core/src/agentic/agents/*_mode.rs`, `src/crates/assembly/core/src/agentic/agents/prompts/*_mode.md`, `src/web-ui/src/locales/*/settings/modes.json` | Add/improve agent modes (e.g. Plan/Debug/Agentic or custom modes) and keep prompts + UI copy in sync |
+| Mode contributions | `src/crates/assembly/core/src/agentic/agents/*_mode.rs`, `src/crates/assembly/core/src/agentic/agents/prompts/*_mode.md` [missing: src/web-ui locale paths absent in v0.1.0] | Add/improve agent modes (e.g. Plan/Debug/Agentic or custom modes) and keep prompts + UI copy in sync |
 | Scenario guides for Code Agent and AIIde | `website/src/docs/` | Add workflows, playbooks, and real-world scenario docs (or link them from `README.md`) |
 
 ### Before you start
@@ -146,7 +145,7 @@ Common local checks:
 | Frontend runtime or UI | `pnpm run type-check:web`, plus the nearest focused test when behavior changed |
 | Mobile web | `pnpm --dir src/mobile-web run type-check` |
 | Rust shared runtime or services | `cargo check --workspace`, plus a focused `cargo test` when behavior changed |
-| Desktop/Tauri integration | `cargo check -p northhing-desktop` |
+| Desktop integration | `cargo check -p northhing` |
 | i18n resources or contract | use the matching i18n row in `AGENTS.md` |
 
 For UI changes, include screenshots or a short recording when helpful. If you
