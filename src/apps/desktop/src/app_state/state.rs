@@ -33,6 +33,9 @@ pub struct AppState {
     /// A7: tracks which session is currently streaming a response.
     /// Set when user sends a message, cleared when response completes.
     current_streaming_session: Mutex<Option<String>>,
+    /// Tracks the active dialog turn id so the stop button can cancel it.
+    /// Set from DialogTurnStarted, cleared on terminal turn events.
+    active_turn_id: Mutex<Option<String>>,
     /// 2026-06-26 (Phase 5 Q6/Q7 wire-up): per-session metadata
     /// (provider_id + workspace_path) so `validate_session_integrity`
     /// can detect Q6 (provider deleted) and Q7 (workspace removed)
@@ -66,6 +69,7 @@ impl AppState {
             show_subagents: Mutex::new(true),
             actor_runtime: std::sync::OnceLock::new(),
             current_streaming_session: Mutex::new(None),
+            active_turn_id: Mutex::new(None),
             session_metadata: Mutex::new(std::collections::HashMap::new()),
         }
     }
@@ -145,6 +149,16 @@ impl AppState {
     /// A7: get the session ID that is currently streaming, if any
     pub fn get_streaming_session(&self) -> Option<String> {
         self.current_streaming_session.lock().clone()
+    }
+
+    /// Set the active dialog turn id (set from DialogTurnStarted).
+    pub fn set_active_turn_id(&self, turn_id: Option<String>) {
+        *self.active_turn_id.lock() = turn_id;
+    }
+
+    /// Get the active dialog turn id, if any.
+    pub fn get_active_turn_id(&self) -> Option<String> {
+        self.active_turn_id.lock().clone()
     }
 
     /// 2026-06-26 (Phase 5): record session metadata when a session

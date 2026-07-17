@@ -14,13 +14,14 @@ use super::callbacks_lifecycle::{
     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
     register_delete_session_callback, register_dismiss_banner_callback, register_load_more_messages_callback,
     register_new_session_callback, register_refresh_messages_callback, register_refresh_sessions_callback,
-    register_send_message_callback, register_switch_session_callback, register_toggle_show_subagents_callback,
-    register_toggle_skill_callback, register_toggle_theme_callback,
+    register_send_message_callback, register_stop_streaming_callback, register_switch_session_callback,
+    register_toggle_show_subagents_callback, register_toggle_skill_callback, register_toggle_theme_callback,
 };
 use super::callbacks_settings::{
     register_delete_provider_callback, register_remove_workspace_callback, register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
+use super::event_bridge;
 use super::inspector::build_mcp_status_string;
 use super::inspector_model_status::build_model_status_string;
 use super::sessions::refresh_sessions_ui;
@@ -266,6 +267,12 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
         });
     });
 
+    // Register the desktop event bridge (core events → UI). The global
+    // coordinator is initialized by `initialize_core_services` before
+    // `run_slint_app` calls `create_ui`, so `global_coordinator()` is
+    // expected to be available here.
+    event_bridge::register_desktop_event_bridge(&ui, &app_state);
+
     // --- Register all 17 Slint callbacks ---
     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
     register_send_message_callback(&ui, &app_state);
@@ -282,6 +289,7 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_clear_input_error_callback(&ui, &app_state);
     register_dismiss_banner_callback(&ui, &app_state);
     register_clear_inline_error_callback(&ui, &app_state);
+    register_stop_streaming_callback(&ui, &app_state);
     // Settings callbacks (Q6/Q7/upsert)
     register_delete_provider_callback(&ui, &app_state);
     register_remove_workspace_callback(&ui, &app_state);

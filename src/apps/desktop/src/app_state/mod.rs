@@ -32,6 +32,7 @@ pub(super) mod callbacks_lifecycle;
 pub(super) mod callbacks_settings;
 pub(super) mod create_ui;
 pub(super) mod error_banners;
+pub(super) mod event_bridge;
 pub(super) mod state;
 
 // Wildcard re-exports so `crate::app_state::{AppState, create_ui, ...}`
@@ -251,6 +252,19 @@ mod phase_i_tests {
 
         app_state.set_streaming_session(None);
         assert_eq!(app_state.get_streaming_session(), None);
+    }
+
+    /// A7: AppState active turn id getter/setter round-trip
+    #[test]
+    fn app_state_active_turn_id_round_trip() {
+        let app_state = super::AppState::new();
+        assert_eq!(app_state.get_active_turn_id(), None);
+
+        app_state.set_active_turn_id(Some("turn-456".to_string()));
+        assert_eq!(app_state.get_active_turn_id(), Some("turn-456".to_string()));
+
+        app_state.set_active_turn_id(None);
+        assert_eq!(app_state.get_active_turn_id(), None);
     }
 
     /// A7: streaming indicator is NOT shown when messages list is empty

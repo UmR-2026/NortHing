@@ -15,20 +15,36 @@ use slint::{ComponentHandle, SharedString};
 use super::slint_glue::AppWindow;
 
 /// Set the session-level error banner. Auto-clears after 5s.
+///
+/// Dispatches onto the Slint event loop thread — Slint 1.16 silently drops
+/// property setters called from non-event-loop threads. Same root cause as
+/// the `set_inline_error` fix and the model-status / mcp-status fixes.
 pub fn set_session_error(ui: &AppWindow, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "session_error: {msg}");
-    ui.set_session_error(SharedString::from(msg));
-    schedule_error_clear(ui.as_weak(), ErrorKind::Session);
+    let weak = ui.as_weak();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_session_error(SharedString::from(msg));
+            schedule_error_clear(ui.as_weak(), ErrorKind::Session);
+        }
+    });
 }
 
 /// Set the input-level error banner (for input-validation failures
 /// like "no session selected"). Auto-clears after 5s.
+///
+/// Dispatches onto the Slint event loop thread — see `set_session_error`.
 pub fn set_input_error(ui: &AppWindow, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "input_error: {msg}");
-    ui.set_input_error(SharedString::from(msg));
-    schedule_error_clear(ui.as_weak(), ErrorKind::Input);
+    let weak = ui.as_weak();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_input_error(SharedString::from(msg));
+            schedule_error_clear(ui.as_weak(), ErrorKind::Input);
+        }
+    });
 }
 
 /// 2026-06-26 (Phase 5): set the global MaterialBanner (first channel

@@ -156,8 +156,8 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                     return;
                 }
 
-                // A7: response complete — clear streaming state
-                app_state.set_streaming_session(None);
+                // turn 已 spawn，流式状态由 event bridge 管理
+                // (DialogTurnStarted sets streaming; terminal events clear it)
 
                 // Refresh messages after response completes
                 if let Some(ui) = ui_clone.upgrade() {
@@ -715,5 +715,47 @@ pub(super) fn register_clear_inline_error_callback(ui: &AppWindow, app_state: &A
         if let Some(ui) = ui_weak_clear_inline.upgrade() {
             ui.set_chat_inline_error(SharedString::from(String::new()));
         }
+    });
+}
+
+pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+    // --- stop-streaming callback (C6=c) ---
+    let app_state_arc_stop = std::sync::Arc::clone(app_state);
+    let ui_weak_stop = ui.as_weak();
+    ui.on_stop_streaming(move || {
+        let app_state = &*app_state_arc_stop;
+        let session_id = app_state.get_current_session_id();
+        let active_turn = app_state.get_active_turn_id();
+
+        let Some(turn_id) = active_turn else {
+            if let Some(ui) = ui_weak_stop.upgrade() {
+                set_inline_error(&ui, "当前没有正在运行的回复");
+            }
+            return;
+        };
+
+        let ui_clone = ui_weak_stop.clone();
+        let sid = session_id.clone();
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("failed to build tokio runtime for stop-streaming");
+            rt.block_on(async move {
+                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator()
+                else {
+                    if let Some(ui) = ui_clone.upgrade() {
+                        set_session_error(&ui, "Global coordinator not available.");
+                    }
+                    return;
+                };
+                if let Err(e) = coordinator.cancel_dialog_turn(&sid, &turn_id).await {
+                    if let Some(ui) = ui_clone.upgrade() {
+                        set_session_error(&ui, format!("停止失败: {e}"));
+                    }
+                }
+                // On success, DialogTurnCancelled event cleans up the UI.
+            });
+        });
     });
 }
