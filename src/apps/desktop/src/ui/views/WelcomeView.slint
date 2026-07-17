@@ -273,19 +273,19 @@ export component WelcomeView inherits Rectangle {
 
                     skip-step2 := MaterialButton {
                         text: "跳过";
-                        disabled: !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok");
+                        disabled: root.step2-name == "" || root.step2-api-key == "";
                         clicked => { root.current-step = 3; }
                     }
 
                     next-step2 := MaterialButton {
                         text: AppStrings.welcome-step2-button;
-                        disabled: !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok");
+                        disabled: root.step2-name == "" || root.step2-api-key == "";
                         clicked => { root.current-step = 3; }
                     }
                 }
 
-                if !(root.step2-saved-provider-id != "" && root.step2-test-result == "ok"): Text {
-                    text: AppStrings.welcome-step2-blocked-tooltip;
+                if root.step2-api-key == "" || root.step2-name == "": Text {
+                    text: "请输入名称和 API Key 以继续";
                     font-size: MaterialTheme.font-size-caption;
                     color: MaterialTheme.error;
                     opacity: 0.7;
