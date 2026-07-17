@@ -9,7 +9,7 @@ Repository rule: **keep product logic platform-agnostic, then expose it through 
 ## Quick start
 
 1. Read `README.md` and `CONTRIBUTING.md` before architecture-sensitive changes.
-2. For desktop development, prefer `pnpm run desktop:dev` —it provides full hot-reload (Vite HMR + Rust auto-rebuild & restart). Use `pnpm run desktop:preview:debug` only when you need a faster cold-start for frontend-only iteration (Rust changes are not auto-rebuilt).
+2. For desktop development, use `pnpm run desktop:dev` — it builds and runs the Slint desktop app (cold start, no HMR). Use `pnpm run desktop:check` for faster compile-only verification.
 3. After Rust file changes, prefer `pnpm run fmt:rs` to format only changed or staged `.rs` files. Use `cargo fmt` only when you intentionally want broader formatting coverage.
 4. After changes, run the smallest matching verification from the table below.
 
@@ -20,7 +20,7 @@ crate dependencies inside each layer to the smallest set needed.
 
 | # | Layer | Path | Owns | Modules / entries | Layer doc |
 |---|---|---|---|---|---|
-| 1 | Interfaces and entrypoints | `src/apps/*`, `src/web-ui`, `src/mobile-web`, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, Web UI, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | Interfaces and entrypoints | `src/apps/*`, `src/mobile-web` *(frozen)*, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | Adapters | `src/crates/adapters` | AI/API/transport/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `api-layer`, `transport`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
@@ -48,30 +48,30 @@ reproduction or build-impacting changes.
 pnpm install
 
 # Dev
-pnpm run desktop:dev               # full hot-reload: Vite HMR + Rust auto-rebuild & restart
-pnpm run desktop:preview:debug     # reuse pre-built binary + Vite HMR; no Rust auto-rebuild
-pnpm run dev:web                   # browser-only frontend
+pnpm run desktop:dev               # build and run Slint desktop app (cold start)
+pnpm run desktop:preview:debug     # alias: same as desktop:dev (cargo run -p northhing)
+pnpm run dev:web                   # [missing: src/web-ui — not available in v0.1.0]
 pnpm run cli:dev                   # CLI runtime
 
 # Check
 pnpm run fmt:rs                     # format only changed / staged Rust files
-pnpm run lint:web
-pnpm run type-check:web
-pnpm --dir src/mobile-web run type-check
-pnpm run i18n:contract:test          # i18n contract / resources only
-pnpm run i18n:audit                  # i18n contract / resources only
+pnpm run lint:web                  # [missing: src/web-ui]
+pnpm run type-check:web            # [missing: src/web-ui]
+pnpm --dir src/mobile-web run type-check   # [frozen: mobile-web]
+pnpm run i18n:contract:test          # i18n contract / resources only [frozen: i18n engineering]
+pnpm run i18n:audit                  # i18n contract / resources only [frozen: i18n engineering]
 pnpm run check:repo-hygiene
 pnpm run check:github-config
 cargo check --workspace
 
 # Test (prefer focused paths locally; broad suites are CI-backed)
-pnpm --dir src/web-ui run test:run      # broad suite; prefer focused paths locally
+# [missing: src/web-ui — frontend test suite absent in v0.1.0]
 cargo test --workspace                  # broad suite; CI-backed
 
 # Build (only for build-impacting changes or CI reproduction)
-cargo build -p northhing-desktop           # build-impacting changes / CI reproduction
-pnpm run build:web                      # build-impacting changes / CI reproduction
-pnpm run build:mobile-web               # build-impacting changes / CI reproduction
+cargo build -p northhing                 # build-impacting changes / CI reproduction
+# [missing: src/web-ui — build:web not available]
+# [frozen: build:mobile-web — mobile-web is frozen-experimental]
 
 # Fast builds (manual build/debug flows)
 pnpm run desktop:build:fast           # debug build, no bundling
@@ -84,6 +84,9 @@ For the full script list, see [`package.json`](package.json).
 ## Global rules
 
 ### Internationalization
+
+> **v0.1.0 status**: Desktop UI uses hardcoded Chinese. i18n engineering is frozen.
+> `src/web-ui` is absent from this snapshot. The rules below apply when i18n is unfrozen.
 
 - Locale ids, aliases, fallback rules, and surface defaults are owned by
   `src/shared/i18n/contract/locales.json`. Run `pnpm run i18n:generate`
@@ -109,10 +112,12 @@ For the full script list, see [`package.json`](package.json).
 
 Logs must be English-only, with no emojis.
 
-- Frontend: [`src/web-ui/LOGGING.md`](src/web-ui/LOGGING.md)
+- Frontend: `[missing: src/web-ui/LOGGING.md — absent in v0.1.0]`
 - Backend: [`src/crates/LOGGING.md`](src/crates/LOGGING.md)
 
-### Tauri commands
+### Tauri commands (installer only)
+
+> **v0.1.0**: The Slint desktop app does not use Tauri. These rules apply to `northing-installer/src-tauri` only.
 
 - Command names: `snake_case`
 - TypeScript may wrap with `camelCase`, but invoke Rust with a structured `request`
@@ -197,18 +202,20 @@ change directly affects build, packaging, or CI cannot protect the path.
 
 | Change type | Minimum verification |
 |---|---|
-| Frontend UI, state, or adapters without i18n resource/contract changes | `pnpm run type-check:web`, plus the nearest focused test when behavior changed |
-| Locale resource-only changes | `pnpm run i18n:audit` |
-| Locale contract or shared terms | `pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit` |
-| Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | `pnpm run i18n:contract:test && pnpm run type-check:web && pnpm --dir src/web-ui run test:run src/infrastructure/i18n/core/I18nService.test.ts` |
-| Mobile web UI, state, pairing, disconnect, or reconnect behavior | `pnpm --dir src/mobile-web run type-check`; include manual pairing / reconnect notes when behavior changes |
+| Frontend UI, state, or adapters without i18n resource/contract changes | *[missing: src/web-ui — type-check:web not available in v0.1.0]* |
+| Locale resource-only changes | *[frozen: i18n engineering — run if unfrozen]* |
+| Locale contract or shared terms | *[frozen: i18n engineering — run if unfrozen]* |
+| Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | *[missing: src/web-ui — not available in v0.1.0]* |
+| Mobile web UI, state, pairing, disconnect, or reconnect behavior | *[frozen: mobile-web — `pnpm --dir src/mobile-web run type-check`; run if unfrozen]* |
 | Shared Rust logic in `core`, `transport`, `api-layer`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
-| Desktop integration, Tauri APIs, browser/computer-use, or desktop-only behavior | `cargo check -p northhing-desktop`, plus focused desktop tests when behavior changed |
+| Desktop integration, Slint UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
 | `src/crates/adapters/ai-adapters` | Relevant Rust checks above; add `cargo test -p northhing-agent-stream` only when stream contracts changed |
 | Installer frontend or i18n runtime without packaging changes | `pnpm --dir northing-installer run type-check` |
-| Installer Tauri/Rust changes | `cargo check --manifest-path northing-installer/src-tauri/Cargo.toml` |
+| Installer Rust changes | `cargo check --manifest-path northing-installer/src-tauri/Cargo.toml` |
 | Installer packaging, payload, install/uninstall flow, or native bundling | `pnpm run installer:build` |
+
+凡本表与 `package.json`/`Cargo.toml` 实际不符的条目，以实际为准并当场修正本表。
 
 ## Agent-doc priority
 
