@@ -1,5 +1,10 @@
 //! Room management for the relay server.
 //!
+//! NOTE: This is one of two divergent implementations. The other is at
+//! `src/crates/services/relay-core/src/relay/room.rs`. This surface is FROZEN
+//! (v0.1.0). When unfreezing, the two implementations MUST be deduped
+//! before any feature work.
+//!
 //! Each room holds a single desktop participant connected via WebSocket.
 //! Mobile clients interact through HTTP requests that the relay bridges
 //! to the desktop via the WebSocket connection. The relay stores no
