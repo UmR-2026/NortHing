@@ -129,6 +129,18 @@ await api.invoke('your_command', { request: { ... } });
 - 不要把硬编码的限制或模式检查作为对循环行为的首选应对，例如仅按字符串或次数阻止重复的工具调用。
 - 过度硬编码会把 agent 循环变成脆弱的工作流引擎。请先调查根因：工具行为、模型交互、会话上下文打包、prompt/工具 schema 设计或状态同步问题。
 
+## 骨干不变量（2026-07-17 验证）
+
+改动以下任一项需要 flag flip + 集成测试，并在同一 commit 更新本节。
+
+- **桌面包名是 `northhing`（Slint）**，不是 `northhing-desktop`。agent-dispatch flags：`USE_LIGHTWEIGHT_ACTOR = true`；`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` = false（`src/crates/execution/agent-dispatch/src/flags.rs`）。
+- **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。桌面 `AppSettings` 仍是 UI owner，经 `sync_providers_to_core` 适配推送到 core（见 `95e29ba`）。禁止再出现第二个运行时可读的配置文件。
+- **UI 线程纪律**：非事件循环线程写 Slint 属性会被静默丢弃。所有此类写入必须走 `slint::invoke_from_event_loop`（`error_banners.rs` 的 helper 已封装，直接复用，见 `ad349f9`）。
+- **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入；MiniApp string 模式命令含 shell 元字符一律拒绝。
+- **项目运行时 slug 恒带路径哈希**（CJK 路径不得冲突，见 `c7e7218`）。
+- **安装器工具链**：`northing-installer` `[lib] crate-type = ["rlib"]`（cdylib/staticlib 会突破 GNU ld 导出 ordinal 上限）；`embed-resource` pin 3.0.5（3.0.11 在 rustc 1.96 MSVC 下编译失败）。桌面构建用 MSVC；仓库目录 override 是 GNU 且 `cargo +toolchain` 不可用——用 `rustup run <tc> cargo`。
+- **v0.1.0 面基线**：发货面仅 Slint 桌面 + `northing-installer`；mobile-web / server / relay / MiniApp UI / SDLC harness 为冻结-实验面。能力 crates（tools/MCP/search/terminal/git/ssh）是 agent 工具箱，保持激活。见 `docs/tech-debt-cleanup-guide.md` §0。
+
 ## 架构
 
 ### Core 分解护栏
