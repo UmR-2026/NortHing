@@ -340,14 +340,18 @@ fn default_stream_ttft_timeout() -> Option<u64> {
     Some(30)
 }
 
-/// Default is no timeout (wait forever).
+// 2026-07-18 (W3a-2): 300s is the floor fallback for interactive desktop agents.
+// Tools that manage their own execution timeout (ExecCommand, Task, etc.) bypass
+// the pipeline timeout via `manages_own_execution_timeout() == true` and are unaffected.
+
+/// Default tool execution timeout: 300 seconds (5 minutes).
 fn default_tool_execution_timeout() -> Option<u64> {
-    None
+    Some(300)
 }
 
-/// Default is no timeout (wait forever).
+/// Default tool confirmation timeout: 300 seconds (5 minutes).
 fn default_tool_confirmation_timeout() -> Option<u64> {
-    None
+    Some(300)
 }
 
 fn default_skip_tool_confirmation() -> bool {
@@ -490,5 +494,17 @@ impl Default for AIConfig {
             browser_control_preferred_browser: String::new(),
             max_rounds: default_max_rounds(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_ai_config_tool_timeouts_are_some_300() {
+        let config = AIConfig::default();
+        assert_eq!(config.tool_execution_timeout_secs, Some(300));
+        assert_eq!(config.tool_confirmation_timeout_secs, Some(300));
     }
 }
