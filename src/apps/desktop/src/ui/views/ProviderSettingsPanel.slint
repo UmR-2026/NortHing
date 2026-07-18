@@ -191,6 +191,13 @@ export component ProviderSettingsPanel inherits Rectangle {
                             text: AppStrings.provider-delete;
                             clicked => { root.delete-provider(provider.id); }
                         }
+
+                        // 2026-07-18 (D2b): set-default-model per-row action.
+                        set-default-button := MaterialButton {
+                            text: "设为默认";
+                            clicked => { root.set-default-model(provider.id); }
+                            disabled: !provider.enabled || root.default-model-provider-id == provider.id;
+                        }
                     }
                 }
 
@@ -426,22 +433,14 @@ export component ProviderSettingsPanel inherits Rectangle {
                 width: 200px;
             }
 
+            // 2026-07-18 (D2b): default-pick is now display-only — the
+            // "设为默认" action lives on each provider row below.
             default-pick := Rectangle {
                 width: parent.width - 200px;
                 height: 36px;
                 padding: MaterialTheme.spacing-sm;
                 background: MaterialTheme.current-surface();
                 border-radius: 4px;
-
-                TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    clicked => {
-                        if root.providers.length > 0 {
-                            root.set-default-model(root.providers[0].id);
-                        }
-                    }
-                }
 
                 Text {
                     text: root.default-model-provider-id == "" ? "(未设置)" : root.default-model-provider_id;

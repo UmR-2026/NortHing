@@ -118,6 +118,7 @@ export component AppWindow inherits Window {
     callback new-session();
     callback switch-session(string);
     callback delete-session(string);
+    callback rename-session(string, string);
     callback toggle-theme();
     callback toggle-skill(string);
     callback load-more-messages();
@@ -237,6 +238,7 @@ export component AppWindow inherits Window {
                 new-session => { root.new-session(); }
                 switch-session(session-id) => { root.switch-session(session-id); }
                 delete-session(session-id) => { root.delete-session(session-id); }
+                rename-session(id, name) => { root.rename-session(id, name); }
                 toggle-show-subagents => { root.toggle-show-subagents(); }
                 // 2026-06-26 (Phase 2 + review follow-up): Settings entry —
                 // flips `current-route` directly in Slint. The original

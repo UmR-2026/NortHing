@@ -13,9 +13,10 @@ use super::error_banners::{set_banner_message, set_inline_error, set_input_error
 use super::log::log_debug_event;
 use super::sessions::{build_messages_model, refresh_messages_ui, refresh_sessions_ui};
 use super::skills::refresh_skills_ui;
-use super::slint_glue::AppWindow;
+use super::slint_glue::{AppWindow, MCPItem, ProviderItem, SkillStateItem, WorkspaceItem};
 use super::state::{AppState, SessionMeta};
-use slint::{ComponentHandle, SharedString};
+use crate::app_state::settings::{MCPTransport, ModelRef, ProviderType};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::sync::Arc;
 
 // 2026-06-26 (Phase 5 wire-up): helpers that load / save the
@@ -151,6 +152,8 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                     } else {
                         set_banner_message(&ui, format!("已删除 AI 服务 {}", provider_name), "");
                     }
+                    // 2026-07-18 (D2b): refresh settings lists after save.
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });
@@ -226,6 +229,8 @@ pub(super) fn register_remove_workspace_callback(ui: &AppWindow, app_state: &Arc
                     } else {
                         set_banner_message(&ui, format!("已删除工作文件夹 {}", name), "");
                     }
+                    // 2026-07-18 (D2b): refresh settings lists after save.
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });
@@ -356,6 +361,8 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                             ui.set_last_saved_provider_id(slint::SharedString::from(saved_id));
                         }
                     });
+                    // 2026-07-18 (D2b): refresh settings lists after save.
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });
@@ -408,6 +415,10 @@ pub(super) fn register_pick_folder_callback(ui: &AppWindow, _app_state: &Arc<App
                         set_banner_message(&ui, e, "");
                     }
                     return;
+                }
+                // 2026-07-18 (D2b): refresh settings lists after save.
+                if let Some(ui) = ui_weak2.upgrade() {
+                    refresh_settings_lists(&ui).await;
                 }
                 let ui_weak3 = ui_weak2.clone();
                 if let Err(e) = slint::invoke_from_event_loop(move || {
@@ -470,6 +481,11 @@ pub(super) fn register_add_workspace_callback(ui: &AppWindow, _app_state: &Arc<A
                     if let Some(ui) = ui_weak2.upgrade() {
                         set_banner_message(&ui, e, "");
                     }
+                    return;
+                }
+                // 2026-07-18 (D2b): refresh settings lists after save.
+                if let Some(ui) = ui_weak2.upgrade() {
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });
@@ -738,6 +754,216 @@ pub(super) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                             }
                         });
                     }
+                }
+            });
+        });
+    });
+}
+
+// 2026-07-18 (D2b): refresh all 7 settings-list properties from AppSettings.
+// Called once at startup (create_ui) and after every settings mutation
+// so the SettingsView sub-panels always reflect the on-disk state.
+pub(super) async fn refresh_settings_lists(ui: &AppWindow) {
+    let s = match load_app_settings_quiet().await {
+        Ok(s) => s,
+        Err(e) => {
+            set_banner_message(&ui, e, "");
+            return;
+        }
+    };
+
+    // ProviderItem: map ProviderConfig → UI struct. The `type` string is
+    // the inverse of the type→ProviderType parsing in register_upsert_provider_callback.
+    let providers: Vec<ProviderItem> = s
+        .providers
+        .iter()
+        .map(|p| {
+            let type_str = match p.provider_type {
+                ProviderType::Anthropic => "anthropic",
+                ProviderType::Openai => "openai",
+                ProviderType::Gemini => "gemini",
+                ProviderType::CustomOpenaiCompatible => "custom-openai",
+                ProviderType::CustomAnthropicCompatible => "custom-anthropic",
+            };
+            let verified = match p.last_verified_ok {
+                None => "",
+                Some(true) => "ok",
+                Some(false) => "fail",
+            };
+            ProviderItem {
+                id: SharedString::from(p.id.clone()),
+                name: SharedString::from(p.name.clone()),
+                r#type: SharedString::from(type_str),
+                base_url: SharedString::from(p.base_url.clone()),
+                model: SharedString::from(p.model.clone()),
+                enabled: p.enabled,
+                verified: SharedString::from(verified),
+            }
+        })
+        .collect();
+
+    // WorkspaceItem: id and path both use the path string; is-current
+    // compares against current_workspace.
+    let workspaces: Vec<WorkspaceItem> = s
+        .workspaces
+        .iter()
+        .map(|w| {
+            let path_str = w.path.to_string_lossy().to_string();
+            WorkspaceItem {
+                id: SharedString::from(path_str.clone()),
+                path: SharedString::from(path_str),
+                display_name: SharedString::from(w.display_name.clone()),
+                is_current: s.current_workspace.as_deref() == Some(w.path.as_path()),
+                identity_md_exists: w.identity_md_path.is_some(),
+            }
+        })
+        .collect();
+
+    // MCPItem: verified reflects last_verified_ok (same tri-state as
+    // ProviderItem); tool-count comes from the last successful tools/list.
+    let mcp_servers: Vec<MCPItem> = s
+        .mcp_servers
+        .iter()
+        .map(|m| {
+            let transport_str = match m.transport {
+                MCPTransport::Stdio => "stdio",
+                MCPTransport::Sse => "sse",
+                MCPTransport::StreamableHttp => "streamable-http",
+            };
+            let verified = match m.last_verified_ok {
+                None => "",
+                Some(true) => "ok",
+                Some(false) => "fail",
+            };
+            MCPItem {
+                id: SharedString::from(m.id.clone()),
+                name: SharedString::from(m.name.clone()),
+                transport: SharedString::from(transport_str),
+                enabled: m.enabled,
+                verified: SharedString::from(verified),
+                tool_count: m.last_tools.len() as i32,
+            }
+        })
+        .collect();
+
+    // SkillStateItem: workspace-override is looked up via current_workspace.
+    let skills: Vec<SkillStateItem> = s
+        .skills_enabled
+        .iter()
+        .map(|sk| {
+            let override_val = s
+                .current_workspace
+                .as_ref()
+                .and_then(|cw| sk.workspace_overrides.get(cw))
+                .copied();
+            let workspace_override_str = match override_val {
+                None => "",
+                Some(true) => "on",
+                Some(false) => "off",
+            };
+            let effective = override_val.unwrap_or(sk.global_enabled);
+            SkillStateItem {
+                id: SharedString::from(sk.name.clone()),
+                name: SharedString::from(sk.name.clone()),
+                description: SharedString::from(""),
+                global_enabled: sk.global_enabled,
+                workspace_override: SharedString::from(workspace_override_str),
+                effective_enabled: effective,
+            }
+        })
+        .collect();
+
+    // current-workspace-index: position of current_workspace in workspaces, -1 if none.
+    let current_workspace_index = s
+        .current_workspace
+        .as_ref()
+        .and_then(|cw| s.workspaces.iter().position(|w| &w.path == cw))
+        .map(|i| i as i32)
+        .unwrap_or(-1);
+
+    // default-model-provider-id: use the configured value directly (not resolve_default_model).
+    let default_model_provider_id = s
+        .default_model
+        .as_ref()
+        .map(|m| m.provider_id.clone())
+        .unwrap_or_default();
+
+    // legacy-placeholder-count: providers with id containing "-default" and disabled.
+    let legacy_placeholder_count =
+        s.providers.iter().filter(|p| p.id.contains("-default") && !p.enabled).count() as i32;
+
+    // All 7 property sets in a single invoke_from_event_loop.
+    let ui_weak = ui.as_weak();
+    if let Err(e) = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            ui.set_providers_list(ModelRc::new(VecModel::from(providers)));
+            ui.set_skills_list(ModelRc::new(VecModel::from(skills)));
+            ui.set_mcp_servers_list(ModelRc::new(VecModel::from(mcp_servers)));
+            ui.set_workspaces_list(ModelRc::new(VecModel::from(workspaces)));
+            ui.set_current_workspace_index(current_workspace_index);
+            ui.set_default_model_provider_id(SharedString::from(default_model_provider_id));
+            ui.set_legacy_placeholder_count(legacy_placeholder_count);
+        }
+    }) {
+        tracing::warn!(
+            target: "app_state",
+            "refresh_settings_lists: failed to dispatch to UI thread: {e}"
+        );
+    }
+}
+
+// 2026-07-18 (D2b): set-default-model handler. Finds the provider by id,
+// verifies it is enabled, persists the ModelRef, then refreshes the
+// settings lists and shows a success banner.
+pub(super) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_set_default_model(move |provider_id| {
+        let pid = provider_id.to_string();
+        let ui_weak = ui_weak.clone();
+
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "set-default-model: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_banner_message(&ui, e, "");
+                        }
+                        return;
+                    }
+                };
+                let provider = match s.providers.iter().find(|p| p.id == pid && p.enabled) {
+                    Some(p) => p.clone(),
+                    None => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_banner_message(&ui, "未找到已启用的指定 AI 服务", "");
+                        }
+                        return;
+                    }
+                };
+                s.default_model = Some(ModelRef {
+                    provider_id: pid,
+                    model: provider.model.clone(),
+                });
+                if let Err(e) = save_app_settings_quiet(&s).await {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_banner_message(&ui, e, "");
+                    }
+                    return;
+                }
+                if let Some(ui) = ui_weak.upgrade() {
+                    set_banner_message(&ui, "已设置默认模型", "");
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });

@@ -4,6 +4,8 @@ import { MaterialTheme, SessionItem, WorkspaceItem } from "../theme.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialListItem } from "../components/MaterialList.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
+import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { AppStrings } from "../strings.slint";
 // Phase G.3: pull in the standard Slint CheckBox for the
 // "Show subagents" toggle in the sidebar header.
 import { CheckBox } from "std-widgets.slint";
@@ -45,6 +47,12 @@ export component SidebarView inherits Rectangle {
     // 2026-06-26: open the Settings view (Phase 2). Bound from main.slint
     // to a callback that flips `current-route` to "settings".
     callback open-settings();
+
+    // 2026-07-18 (D2b): rename-popup state. When renaming-id is non-empty,
+    // the rename overlay renders; rename-text is two-way bound to the
+    // TextInput inside the overlay.
+    in-out property <string> renaming-id: "";
+    in-out property <string> rename-text: "";
 
     // P0-C (2026-06-25): error banner properties. Bound from AppWindow
     // in main.slint. When either is non-empty, the banner renders at the
@@ -121,6 +129,61 @@ export component SidebarView inherits Rectangle {
                                 vertical-alignment: center;
                                 width: parent.width;
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2026-07-18 (D2b): rename-session popup overlay. Mirrors the
+    // workspace-popup pattern — renders on top of the sidebar when
+    // renaming-id is non-empty. Contains a TextInput (two-way bound
+    // to rename-text) and 确定/取消 buttons.
+    if root.renaming-id != "": Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: #00000060;
+
+        Rectangle {
+            x: MaterialTheme.spacing-md;
+            y: 56px;
+            width: parent.width - 2 * MaterialTheme.spacing-md;
+            height: 120px;
+            background: MaterialTheme.current-surface();
+            border-radius: 8px;
+            padding: MaterialTheme.spacing-sm;
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                spacing: MaterialTheme.spacing-sm;
+
+                MaterialTextField {
+                    placeholder: AppStrings.session-rename-placeholder;
+                    text <=> root.rename-text;
+                    width: parent.width;
+                }
+
+                HorizontalLayout {
+                    spacing: MaterialTheme.spacing-sm;
+                    height: 40px;
+
+                    MaterialButton {
+                        text: AppStrings.confirm;
+                        disabled: root.rename-text == "";
+                        clicked => {
+                            root.rename-session(root.renaming-id, root.rename-text);
+                            root.renaming-id = "";
+                        }
+                    }
+
+                    MaterialButton {
+                        text: AppStrings.cancel;
+                        clicked => {
+                            root.renaming-id = "";
                         }
                     }
                 }
@@ -272,15 +335,40 @@ export component SidebarView inherits Rectangle {
                     // Active when `tree-view == false`. Selecting this
                     // branch preserves the legacy flat-list UX.
                     // Phase 4 (Q5=a): filter by current workspace.
+                    // 2026-07-18 (D2b): each row now ends with ✎ / × buttons.
+                    // Uses root.width (not parent.width) to avoid a binding loop
+                    // inside the HorizontalLayout — same pattern as the tree branch.
                     if !root.tree-view: VerticalLayout {
                         spacing: MaterialTheme.spacing-xs;
-                        for session in sessions: MaterialListItem {
-                            text: session.name + (session.is-workspace-broken ? " ⚠" : "");
-                            secondary-text: session.timestamp;
-                            selected: session.id == current-session-id;
+                        for session in sessions: HorizontalLayout {
+                            spacing: MaterialTheme.spacing-xs;
                             visible: root.current-workspace-path == "" || session.workspace-path == root.current-workspace-path;
 
-                            clicked => { root.switch-session(session.id); }
+                            MaterialListItem {
+                                text: session.name + (session.is-workspace-broken ? " ⚠" : "");
+                                secondary-text: session.timestamp;
+                                selected: session.id == current-session-id;
+                                width: root.width - 80px - MaterialTheme.spacing-md * 2;
+
+                                clicked => { root.switch-session(session.id); }
+                            }
+
+                            MaterialIconButton {
+                                icon: "✎";
+                                width: 32px;
+                                height: 32px;
+                                clicked => {
+                                    root.renaming-id = session.id;
+                                    root.rename-text = session.name;
+                                }
+                            }
+
+                            MaterialIconButton {
+                                icon: "×";
+                                width: 32px;
+                                height: 32px;
+                                clicked => { root.delete-session(session.id); }
+                            }
                         }
                     }
 
@@ -289,6 +377,8 @@ export component SidebarView inherits Rectangle {
                     // show-subagents filter: when false, depth>=1 items
                     // are skipped (only roots render).
                     // Phase 4 (Q5=a): also filter by current workspace.
+                    // 2026-07-18 (D2b): tree branch keeps depth indent and
+                    // adds ✎ / × buttons after each MaterialListItem.
                     if root.tree-view: VerticalLayout {
                         spacing: MaterialTheme.spacing-xs;
                         for session in sessions: HorizontalLayout {
@@ -307,13 +397,38 @@ export component SidebarView inherits Rectangle {
                             // condition to drop subagent rows when the
                             // toggle is off. Items keep their original
                             // order — only visibility changes.
-                            if root.show-subagents || session.depth == 0: MaterialListItem {
-                                text: (session.parent-id != "" ? "↳ " : "") + session.name + (session.is-workspace-broken ? " ⚠" : "");
-                                secondary-text: session.timestamp;
-                                selected: session.id == current-session-id;
+                            // 2026-07-18 (D2b): inner HorizontalLayout carries
+                            // the MaterialListItem + ✎ / × buttons. Uses
+                            // root.width (not parent.width) to avoid a binding loop.
+                            if root.show-subagents || session.depth == 0: HorizontalLayout {
+                                spacing: MaterialTheme.spacing-xs;
                                 width: root.width - session.depth * 16px - MaterialTheme.spacing-md * 2;
 
-                                clicked => { root.switch-session(session.id); }
+                                MaterialListItem {
+                                    text: (session.parent-id != "" ? "↳ " : "") + session.name + (session.is-workspace-broken ? " ⚠" : "");
+                                    secondary-text: session.timestamp;
+                                    selected: session.id == current-session-id;
+                                    width: root.width - session.depth * 16px - 80px - MaterialTheme.spacing-md * 2;
+
+                                    clicked => { root.switch-session(session.id); }
+                                }
+
+                                MaterialIconButton {
+                                    icon: "✎";
+                                    width: 32px;
+                                    height: 32px;
+                                    clicked => {
+                                        root.renaming-id = session.id;
+                                        root.rename-text = session.name;
+                                    }
+                                }
+
+                                MaterialIconButton {
+                                    icon: "×";
+                                    width: 32px;
+                                    height: 32px;
+                                    clicked => { root.delete-session(session.id); }
+                                }
                             }
                         }
                     }

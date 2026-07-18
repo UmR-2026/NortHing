@@ -14,13 +14,15 @@ use super::callbacks_lifecycle::{
     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
     register_delete_session_callback, register_dismiss_banner_callback, register_load_more_messages_callback,
     register_new_session_callback, register_refresh_messages_callback, register_refresh_sessions_callback,
-    register_send_message_callback, register_stop_streaming_callback, register_switch_session_callback,
-    register_toggle_show_subagents_callback, register_toggle_skill_callback, register_toggle_theme_callback,
+    register_rename_session_callback, register_send_message_callback, register_stop_streaming_callback,
+    register_switch_session_callback, register_toggle_show_subagents_callback, register_toggle_skill_callback,
+    register_toggle_theme_callback,
 };
 use super::callbacks_settings::{
     register_add_workspace_callback, register_delete_provider_callback, register_onboarding_completed_callback,
-    register_pick_folder_callback, register_remove_workspace_callback, register_test_provider_callback,
-    register_test_provider_config_callback, register_upsert_provider_callback,
+    register_pick_folder_callback, register_remove_workspace_callback, register_set_default_model_callback,
+    register_test_provider_callback, register_test_provider_config_callback, register_upsert_provider_callback,
+    refresh_settings_lists,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -307,6 +309,29 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_test_provider_callback(&ui, &app_state);
     register_test_provider_config_callback(&ui, &app_state);
     register_onboarding_completed_callback(&ui, &app_state);
+    // 2026-07-18 (D2b): default-model + rename-session callbacks.
+    register_set_default_model_callback(&ui, &app_state);
+    register_rename_session_callback(&ui, &app_state);
+
+    // 2026-07-18 (D2b): initial settings-list backfill. Runs on a background
+    // thread; refresh_settings_lists dispatches the 7 property sets onto
+    // the UI thread internally. Harmless on both first-run and returning-user
+    // paths (the lists just stay empty when there's nothing to show).
+    let ui_weak_refresh = ui.as_weak();
+    std::thread::spawn(move || {
+        let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            Ok(rt) => rt,
+            Err(e) => {
+                eprintln!("D2b: failed to build runtime for refresh_settings_lists: {e}");
+                return;
+            }
+        };
+        rt.block_on(async move {
+            if let Some(ui) = ui_weak_refresh.upgrade() {
+                refresh_settings_lists(&ui).await;
+            }
+        });
+    });
 
     // P0-A startup auto-create session (background thread)
     spawn_startup_session(&ui, &app_state);

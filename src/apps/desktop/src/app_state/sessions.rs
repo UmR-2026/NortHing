@@ -125,6 +125,54 @@ pub(super) fn build_sessions_model(
     ModelRc::new(VecModel::from(items))
 }
 
+/// 2026-07-18 (D2b fix): build the session item Vec (Send-safe) without
+/// wrapping in ModelRc, so the background thread can produce data and the
+/// UI thread constructs the Rc-based model inside the event-loop closure.
+pub(super) fn build_sessions_items(
+    summaries: &[northhing_core::agentic::core::SessionSummary],
+) -> Vec<SessionItem> {
+    const MAX_DEPTH: i32 = 8;
+
+    let items: Vec<SessionItem> = summaries.iter().map(session_summary_to_item).collect();
+
+    let parent_of: std::collections::HashMap<&str, &str> = items
+        .iter()
+        .filter(|item| !item.parent_id.is_empty())
+        .map(|item| (item.id.as_str(), item.parent_id.as_str()))
+        .collect();
+
+    let depths: Vec<i32> = items
+        .iter()
+        .map(|item| {
+            let mut depth: i32 = 0;
+            let mut current = item.id.to_string();
+            let mut seen = std::collections::HashSet::new();
+            seen.insert(current.clone());
+            while let Some(parent_id) = parent_of.get(current.as_str()) {
+                if !seen.insert((*parent_id).to_string()) {
+                    depth = MAX_DEPTH;
+                    break;
+                }
+                depth += 1;
+                if depth >= MAX_DEPTH {
+                    break;
+                }
+                current = (*parent_id).to_string();
+            }
+            depth
+        })
+        .collect();
+
+    items
+        .into_iter()
+        .zip(depths)
+        .map(|(mut item, depth)| {
+            item.depth = depth;
+            item
+        })
+        .collect()
+}
+
 /// Build a Slint ModelRc<MessageItem> from a list of messages
 /// A7: `streaming_session_id` marks the last assistant message as streaming
 /// when it matches the session being viewed.
@@ -147,7 +195,33 @@ pub(super) fn build_messages_model(
         .collect();
     ModelRc::new(VecModel::from(items))
 }
-/// Refresh the sessions list in the UI
+
+/// 2026-07-18 (D2b fix): build the message item Vec (Send-safe) without
+/// wrapping in ModelRc — see `build_sessions_items` above.
+pub(super) fn build_messages_items(
+    messages: &[northhing_core::agentic::core::Message],
+    streaming_session_id: Option<&str>,
+) -> Vec<MessageItem> {
+    messages
+        .iter()
+        .enumerate()
+        .map(|(idx, msg)| {
+            let is_last = idx == messages.len().saturating_sub(1);
+            let is_assistant = matches!(msg.role, northhing_core::agentic::core::MessageRole::Assistant);
+            let is_streaming = streaming_session_id.is_some() && is_last && is_assistant;
+            message_to_item(msg, is_streaming)
+        })
+        .collect()
+}
+/// Refresh the sessions list in the UI.
+///
+/// 2026-07-18 (D2b fix): all `ui.set_*` calls are now dispatched onto the
+/// Slint event loop thread via `invoke_from_event_loop`. The background
+/// segment only fetches data from the coordinator and builds the item Vec;
+/// the ModelRc (which is Rc-based and !Send) is constructed inside the
+/// event-loop closure so it never crosses a thread boundary. Writing Slint
+/// properties from a non-event-loop thread is silently dropped by Slint 1.16
+/// (backbone invariant: UI thread discipline).
 pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         return;
@@ -157,34 +231,73 @@ pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| ".".to_string());
 
-    match coordinator.list_sessions(std::path::Path::new(&workspace)).await {
+    let result = coordinator.list_sessions(std::path::Path::new(&workspace)).await;
+    let ui_weak = ui.as_weak();
+    match result {
         Ok(sessions) => {
-            let model = build_sessions_model(&sessions);
-            ui.set_sessions(model);
-            if !current_session_id.is_empty() {
-                ui.set_current_session_id(SharedString::from(current_session_id.to_string()));
+            // Build the item Vec on the background thread (Send-safe);
+            // the ModelRc is constructed inside the event-loop closure.
+            let items = build_sessions_items(&sessions);
+            let sid = current_session_id.to_string();
+            if let Err(e) = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_sessions(ModelRc::new(VecModel::from(items)));
+                    if !sid.is_empty() {
+                        ui.set_current_session_id(SharedString::from(sid));
+                    }
+                }
+            }) {
+                tracing::warn!(
+                    target: "app_state",
+                    "refresh_sessions_ui: failed to dispatch to UI thread: {e}"
+                );
             }
         }
         Err(e) => crate::app_state::set_session_error(ui, format!("Failed to list sessions: {e}")),
     }
 }
 
-/// Refresh the messages list in the UI for a given session
-/// A7: `streaming_session_id` marks the last assistant message as streaming
+/// Refresh the messages list in the UI for a given session.
+/// A7: `streaming_session_id` marks the last assistant message as streaming.
+///
+/// 2026-07-18 (D2b fix): all `ui.set_*` calls are now dispatched onto the
+/// Slint event loop thread — see `refresh_sessions_ui` above.
 pub(super) async fn refresh_messages_ui(ui: &AppWindow, session_id: &str, streaming_session_id: Option<&str>) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         return;
     };
 
     if session_id.is_empty() {
-        ui.set_messages(ModelRc::new(VecModel::from(Vec::<MessageItem>::new())));
+        let ui_weak = ui.as_weak();
+        if let Err(e) = slint::invoke_from_event_loop(move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.set_messages(ModelRc::new(VecModel::from(Vec::<MessageItem>::new())));
+            }
+        }) {
+            tracing::warn!(
+                target: "app_state",
+                "refresh_messages_ui: failed to dispatch empty model to UI thread: {e}"
+            );
+        }
         return;
     }
 
-    match coordinator.get_messages(session_id).await {
+    let result = coordinator.get_messages(session_id).await;
+    let ui_weak = ui.as_weak();
+    match result {
         Ok(messages) => {
-            let model = build_messages_model(&messages, streaming_session_id);
-            ui.set_messages(model);
+            // Build item Vec on background thread; construct ModelRc on UI thread.
+            let items = build_messages_items(&messages, streaming_session_id);
+            if let Err(e) = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_messages(ModelRc::new(VecModel::from(items)));
+                }
+            }) {
+                tracing::warn!(
+                    target: "app_state",
+                    "refresh_messages_ui: failed to dispatch to UI thread: {e}"
+                );
+            }
         }
         Err(e) => crate::app_state::set_session_error(ui, format!("Failed to get messages: {e}")),
     }

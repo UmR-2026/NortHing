@@ -56,7 +56,10 @@ pub fn set_input_error(ui: &AppWindow, message: impl Into<String>) {
 pub fn set_banner_message(ui: &AppWindow, message: impl Into<String>, detail: impl Into<String>) {
     let msg = message.into();
     let det = detail.into();
-    tracing::warn!(target: "app_state", "banner_message: {msg}");
+    // 2026-07-18 (D2b fix): log only a fixed English event description;
+    // the user-facing message (which may contain CJK) goes to the UI banner
+    // only, never into logs (backbone invariant: logs are English-only).
+    tracing::warn!(target: "app_state", "banner shown");
     let weak = ui.as_weak();
     let _ = slint::invoke_from_event_loop(move || {
         if let Some(ui) = weak.upgrade() {

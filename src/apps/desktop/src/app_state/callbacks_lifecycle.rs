@@ -411,6 +411,19 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
                         app_state.forget_session_meta(&sid_str);
 
                         if let Some(ui) = ui_clone.upgrade() {
+                            // 2026-07-18 (D2b fix): clear current-session
+                            // Slint properties via event loop when the
+                            // deleted session was the active one.
+                            let was_current = current_sid == sid_str;
+                            let ui_weak_clear = ui.as_weak();
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_weak_clear.upgrade() {
+                                    if was_current {
+                                        ui.set_current_session_id(SharedString::from(""));
+                                        ui.set_current_session_name(SharedString::from(""));
+                                    }
+                                }
+                            });
                             refresh_sessions_ui(&ui, "").await;
                         }
                     }
@@ -755,6 +768,81 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
                     }
                 }
                 // On success, DialogTurnCancelled event cleans up the UI.
+            });
+        });
+    });
+}
+
+// 2026-07-18 (D2b): rename-session callback. Spawns a thread, calls
+// coordinator.update_session_title, then refreshes the sessions UI and
+// updates the current-session-name if the renamed session is the active one.
+//
+// 2026-07-18 (D2b fix): the current-session id is re-read inside the
+// event-loop closure (not captured before the spawn) so that a user who
+// switches sessions during the async rename does not get their state
+// overwritten by a stale value.
+pub(super) fn register_rename_session_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+    let app_state_arc = std::sync::Arc::clone(app_state);
+    let ui_weak = ui.as_weak();
+    ui.on_rename_session(move |session_id, new_name| {
+        let sid = session_id.to_string();
+        let name = new_name.to_string();
+        // 2026-07-18 (D2b fix): clone the Arc into the spawn so the
+        // outer closure remains FnMut-callable across clicks.
+        let app_state_for_spawn = Arc::clone(&app_state_arc);
+        let ui_weak = ui_weak.clone();
+
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "rename-session: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_session_error(&ui, "Global coordinator not available.");
+                    }
+                    return;
+                };
+                match coordinator.update_session_title(&sid, &name).await {
+                    Ok(normalized) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let ui_weak2 = ui.as_weak();
+                            let sid_for_dispatch = sid.clone();
+                            let normalized_for_dispatch = normalized.clone();
+                            // 2026-07-18 (D2b fix): move the Arc into the
+                            // event-loop closure so it outlives the block_on
+                            // scope; re-read current session id at dispatch.
+                            let app_state_in_closure = Arc::clone(&app_state_for_spawn);
+                            let _ = slint::invoke_from_event_loop(move || {
+                                let Some(ui) = ui_weak2.upgrade() else {
+                                    return;
+                                };
+                                // refresh_sessions_ui is async — drive it with a
+                                // fresh current-thread runtime on the UI thread.
+                                let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
+                                if let Ok(rt) = rt {
+                                    let current_now = app_state_in_closure.get_current_session_id();
+                                    let _ = rt.block_on(refresh_sessions_ui(&ui, &current_now));
+                                    if sid_for_dispatch == current_now {
+                                        ui.set_current_session_name(SharedString::from(normalized_for_dispatch));
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_session_error(&ui, format!("Failed to rename session: {e}"));
+                        }
+                    }
+                }
             });
         });
     });
