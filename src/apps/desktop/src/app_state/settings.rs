@@ -216,6 +216,17 @@ pub(crate) fn compute_stale_core_model_ids(
         .collect()
 }
 
+// 2026-07-18 (D2f): pick the provider id that should become core
+// `default_models.primary` — the desktop default when it exists and is
+// enabled; otherwise None (leave core reconcile semantics untouched).
+pub(crate) fn desired_primary_model_id(s: &AppSettings) -> Option<String> {
+    let dm = s.default_model.as_ref()?;
+    s.providers
+        .iter()
+        .any(|p| p.id == dm.provider_id && p.enabled)
+        .then(|| dm.provider_id.clone())
+}
+
 /// Sync all desktop providers into the core `GlobalConfig.ai.models` list,
 /// then run `reconcile_models` so `default_models.primary` / `.fast` point
 /// at the first enabled model. Returns the number of providers synced.
@@ -250,6 +261,14 @@ pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<us
     for stale_id in &stale_ids {
         if let Err(e) = service.delete_ai_model(stale_id).await {
             tracing::warn!(target: "app_state", "delete stale core model '{stale_id}' failed: {e}");
+        }
+    }
+    // 2026-07-18 (D2f): push desktop default_model to core if it points at an
+    // enabled provider, so core.default_models.primary is never left null.
+    if let Some(pid) = desired_primary_model_id(settings) {
+        let pid_for_log = pid.clone();
+        if let Err(e) = service.set_config("ai.default_models.primary", Some::<String>(pid)).await {
+            tracing::warn!(target: "app_state", "set default_models.primary to '{pid_for_log}' failed: {e}");
         }
     }
     service.reconcile_models("desktop-sync").await?;
@@ -1424,5 +1443,49 @@ mod tests {
         use super::resolve_effective_api_key;
         let result = resolve_effective_api_key(Some("sk-stored"), "   ");
         assert_eq!(result, "sk-stored");
+    }
+
+    // ===== 2026-07-18 (D2f): desired_primary_model_id tests =====
+
+    #[test]
+    fn desired_primary_model_id_returns_id_when_default_points_at_enabled_provider() {
+        let mut s = AppSettings::default();
+        let p = provider_with_fields("pid-123", "foo", "https://a.com/v1", "sk", "gpt", true);
+        s.upsert_provider(p);
+        s.default_model = Some(ModelRef {
+            provider_id: "pid-123".to_string(),
+            model: "gpt".to_string(),
+        });
+        assert_eq!(super::desired_primary_model_id(&s), Some("pid-123".to_string()));
+    }
+
+    #[test]
+    fn desired_primary_model_id_returns_none_when_provider_disabled() {
+        let mut s = AppSettings::default();
+        let p = provider_with_fields("pid-123", "foo", "https://a.com/v1", "sk", "gpt", false);
+        s.upsert_provider(p);
+        s.default_model = Some(ModelRef {
+            provider_id: "pid-123".to_string(),
+            model: "gpt".to_string(),
+        });
+        assert!(super::desired_primary_model_id(&s).is_none());
+    }
+
+    #[test]
+    fn desired_primary_model_id_returns_none_when_provider_not_found() {
+        let mut s = AppSettings::default();
+        // No providers at all.
+        s.default_model = Some(ModelRef {
+            provider_id: "nonexistent".to_string(),
+            model: "gpt".to_string(),
+        });
+        assert!(super::desired_primary_model_id(&s).is_none());
+    }
+
+    #[test]
+    fn desired_primary_model_id_returns_none_when_default_model_is_none() {
+        let s = AppSettings::default();
+        assert!(s.default_model.is_none());
+        assert!(super::desired_primary_model_id(&s).is_none());
     }
 }
