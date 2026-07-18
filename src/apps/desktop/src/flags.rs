@@ -22,13 +22,7 @@
 pub const SESSION_TREE_VIEW: bool = true;
 
 /// Default mode id used by the desktop shell's skill panel.
-///
-/// Today the desktop shell only ships a single mode (`"code"`); the
-/// constant lives here so a future multi-mode shell can change one line
-/// instead of grep-replacing every callsite. The value is also used by
-/// the Inspector's skill-toggle callback (`on_toggle_skill`) — see
-/// `app_state.rs`.
-pub const DEFAULT_MODE_ID: &str = "code";
+pub const DEFAULT_MODE_ID: &str = "agentic"; // 2026-07-18: registry has no "code" mode; agentic is the default single-agent mode
 
 #[cfg(test)]
 mod tests {
@@ -43,11 +37,11 @@ mod tests {
         assert!(SESSION_TREE_VIEW);
     }
 
-    /// `DEFAULT_MODE_ID = "code"` is the only mode in the desktop shell
-    /// today; the value is asserted here so any future multi-mode shell
-    /// has a deliberate edit point.
+    /// `DEFAULT_MODE_ID = "agentic"` — the registry only has "agentic" /
+    /// "Claw" / "Team" modes, no "code". Edit here when multi-mode shell
+    /// is introduced.
     #[test]
-    fn default_mode_id_is_code() {
-        assert_eq!(DEFAULT_MODE_ID, "code");
+    fn default_mode_id_is_agentic() {
+        assert_eq!(DEFAULT_MODE_ID, "agentic");
     }
 }
