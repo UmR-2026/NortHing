@@ -18,6 +18,7 @@ use super::state::{AppState, SessionMeta};
 use crate::app_state::settings::{MCPTransport, ModelRef, ProviderType};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::sync::Arc;
+use tokio::time::Duration;
 
 // 2026-06-26 (Phase 5 wire-up): helpers that load / save the
 // on-disk `AppSettings` without panicking on IO errors. The Q6/Q7
@@ -921,22 +922,66 @@ pub(super) async fn refresh_settings_lists(ui: &AppWindow) {
         s.providers.iter().filter(|p| p.id.contains("-default") && !p.enabled).count() as i32;
 
     // All 7 property sets in a single invoke_from_event_loop.
+    // Wrap in Arc so retry (after startup-race sleep) can reuse the same data.
+    let providers = Arc::new(providers);
+    let skills = Arc::new(skills);
+    let mcp_servers = Arc::new(mcp_servers);
+    let workspaces = Arc::new(workspaces);
+    let current_workspace_index = Arc::new(current_workspace_index);
+    let default_model_provider_id = Arc::new(default_model_provider_id);
+    let legacy_placeholder_count = Arc::new(legacy_placeholder_count);
+
     let ui_weak = ui.as_weak();
-    if let Err(e) = slint::invoke_from_event_loop(move || {
-        if let Some(ui) = ui_weak.upgrade() {
-            ui.set_providers_list(ModelRc::new(VecModel::from(providers)));
-            ui.set_skills_list(ModelRc::new(VecModel::from(skills)));
-            ui.set_mcp_servers_list(ModelRc::new(VecModel::from(mcp_servers)));
-            ui.set_workspaces_list(ModelRc::new(VecModel::from(workspaces)));
-            ui.set_current_workspace_index(current_workspace_index);
-            ui.set_default_model_provider_id(SharedString::from(default_model_provider_id));
-            ui.set_legacy_placeholder_count(legacy_placeholder_count);
+
+    // Wrap owned copies in Arc so dispatch (Fn) can be called multiple times.
+    let providers_owned: Arc<Vec<ProviderItem>> = Arc::new((*providers).clone());
+    let skills_owned: Arc<Vec<SkillStateItem>> = Arc::new((*skills).clone());
+    let mcp_servers_owned: Arc<Vec<MCPItem>> = Arc::new((*mcp_servers).clone());
+    let workspaces_owned: Arc<Vec<WorkspaceItem>> = Arc::new((*workspaces).clone());
+    let current_workspace_index_owned: i32 = *current_workspace_index;
+    let default_model_provider_id_owned: String = (*default_model_provider_id).clone();
+    let legacy_placeholder_count_owned: i32 = *legacy_placeholder_count;
+
+    let dispatch = || {
+        let ui_weak = ui_weak.clone();
+        let providers_owned = providers_owned.clone();
+        let skills_owned = skills_owned.clone();
+        let mcp_servers_owned = mcp_servers_owned.clone();
+        let workspaces_owned = workspaces_owned.clone();
+        let current_workspace_index_owned = current_workspace_index_owned;
+        let default_model_provider_id_owned = default_model_provider_id_owned.clone();
+        let legacy_placeholder_count_owned = legacy_placeholder_count_owned;
+
+        move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.set_providers_list(ModelRc::new(VecModel::from((*providers_owned).clone())));
+                ui.set_skills_list(ModelRc::new(VecModel::from((*skills_owned).clone())));
+                ui.set_mcp_servers_list(ModelRc::new(VecModel::from((*mcp_servers_owned).clone())));
+                ui.set_workspaces_list(ModelRc::new(VecModel::from((*workspaces_owned).clone())));
+                ui.set_current_workspace_index(current_workspace_index_owned);
+                ui.set_default_model_provider_id(SharedString::from(default_model_provider_id_owned.clone()));
+                ui.set_legacy_placeholder_count(legacy_placeholder_count_owned);
+            }
         }
-    }) {
-        tracing::warn!(
-            target: "app_state",
-            "refresh_settings_lists: failed to dispatch to UI thread: {e}"
-        );
+    };
+
+    if let Err(e) = slint::invoke_from_event_loop(dispatch()) {
+        // 2026-07-18 (D2h): startup-race retry: the event loop may not be
+        // ready yet when this is called early in app init. Wait 500ms and
+        // retry with the same data (Arc-wrapped above).
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime for retry dispatch");
+        rt.block_on(async {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        });
+        if let Err(e2) = slint::invoke_from_event_loop(dispatch()) {
+            tracing::warn!(
+                target: "app_state",
+                "refresh_settings_lists: failed to dispatch to UI thread (startup race retry failed): {e2}"
+            );
+        }
     }
 }
 
@@ -1054,6 +1099,32 @@ pub(super) fn register_onboarding_completed_callback(ui: &AppWindow, _app_state:
                         target: "app_state",
                         "onboarding-completed: failed to dispatch route change: {e}"
                     );
+                }
+            });
+        });
+    });
+}
+
+// 2026-07-18 (D2h): refresh-settings callback. Fires when the settings route
+// is entered so the panel always reflects current on-disk data.
+pub(super) fn register_refresh_settings_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_refresh_settings(move || {
+        let ui_weak = ui_weak.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "refresh-settings: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                if let Some(ui) = ui_weak.upgrade() {
+                    refresh_settings_lists(&ui).await;
                 }
             });
         });

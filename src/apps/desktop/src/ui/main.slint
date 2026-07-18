@@ -31,6 +31,15 @@ export component AppWindow inherits Window {
     // wiring bug.
     callback close-settings();
 
+    // 2026-07-18 (D2h): refresh settings lists whenever the settings
+    // route is entered so the panel always shows current data.
+    callback refresh-settings();
+    changed current-route => {
+        if root.current-route == "settings" {
+            root.refresh-settings();
+        }
+    }
+
     in-out property <string> app-title: "northhing v0.1.0";
     in-out property <string> mcp-status: "MCP: Initializing...";
     in-out property <string> model-status: "Model: Not configured";

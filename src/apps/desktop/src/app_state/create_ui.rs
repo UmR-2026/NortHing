@@ -20,9 +20,9 @@ use super::callbacks_lifecycle::{
 };
 use super::callbacks_settings::{
     register_add_workspace_callback, register_delete_provider_callback, register_onboarding_completed_callback,
-    register_pick_folder_callback, register_remove_workspace_callback, register_set_default_model_callback,
-    register_test_provider_callback, register_test_provider_config_callback, register_upsert_provider_callback,
-    refresh_settings_lists,
+    register_pick_folder_callback, register_refresh_settings_callback, register_remove_workspace_callback,
+    register_set_default_model_callback, register_test_provider_callback, register_test_provider_config_callback,
+    register_upsert_provider_callback, refresh_settings_lists,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -303,6 +303,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_delete_provider_callback(&ui, &app_state);
     register_remove_workspace_callback(&ui, &app_state);
     register_upsert_provider_callback(&ui, &app_state);
+    // 2026-07-18 (D2h): refresh settings lists when settings route is entered.
+    register_refresh_settings_callback(&ui, &app_state);
     // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
     register_pick_folder_callback(&ui, &app_state);
     register_add_workspace_callback(&ui, &app_state);
