@@ -307,8 +307,10 @@ export component ProviderSettingsPanel inherits Rectangle {
                         }
 
                         // API key (E2 password mode)
+                        // 2026-07-18 (D2e): dynamic placeholder — add mode shows the
+                        // normal label; edit mode reminds user that empty = keep existing.
                         MaterialTextField {
-                            placeholder: AppStrings.provider-api-key-label;
+                            placeholder: root.edit-id == "" ? AppStrings.provider-api-key-label : "留空则保持原密钥";
                             text <=> root.form-api-key;
                             password: true;
                             width: parent.width;

@@ -140,6 +140,16 @@ impl ProviderConfig {
     }
 }
 
+// 2026-07-18 (D2e): edit-flow key inheritance — empty incoming key on edit
+// keeps the stored one; add-flow or non-empty key passes through.
+pub fn resolve_effective_api_key(stored: Option<&str>, incoming: &str) -> String {
+    if incoming.trim().is_empty() {
+        stored.unwrap_or("").to_string()
+    } else {
+        incoming.to_string()
+    }
+}
+
 // ===== Core sync helpers =====
 
 /// Map a `ProviderType` to the wire-format `provider` string used by
@@ -1383,5 +1393,36 @@ mod tests {
         let existing = vec!["id-a".to_string(), "id-b".to_string()];
         let stale = super::compute_stale_core_model_ids(&existing, &providers);
         assert!(stale.is_empty(), "all existing ids matched → nothing stale");
+    }
+
+    // ===== 2026-07-18 (D2e): resolve_effective_api_key tests =====
+
+    #[test]
+    fn resolve_effective_api_key_empty_incoming_keeps_stored() {
+        use super::resolve_effective_api_key;
+        let stored = Some("sk-stored");
+        let result = resolve_effective_api_key(stored, "");
+        assert_eq!(result, "sk-stored");
+    }
+
+    #[test]
+    fn resolve_effective_api_key_empty_incoming_no_stored_returns_empty() {
+        use super::resolve_effective_api_key;
+        let result = resolve_effective_api_key(None, "");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn resolve_effective_api_key_non_empty_incoming_passes_through() {
+        use super::resolve_effective_api_key;
+        let result = resolve_effective_api_key(Some("sk-stored"), "sk-new");
+        assert_eq!(result, "sk-new");
+    }
+
+    #[test]
+    fn resolve_effective_api_key_whitespace_only_treated_as_empty() {
+        use super::resolve_effective_api_key;
+        let result = resolve_effective_api_key(Some("sk-stored"), "   ");
+        assert_eq!(result, "sk-stored");
     }
 }

@@ -263,12 +263,39 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 Err(_) => return,
             };
             rt.block_on(async move {
-                use crate::app_state::settings::{validate_provider_input, ProviderType};
+                use crate::app_state::settings::{validate_provider_input, resolve_effective_api_key, ProviderType};
+
+                // 2026-07-18 (D2e): load settings BEFORE validate so we can look up
+                // the stored API key when editing with an empty form field.
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            set_inline_error(&ui, e);
+                        }
+                        return;
+                    }
+                };
+
+                // 2026-07-18 (D2e): edit-flow key inheritance — if pid is non-empty
+                // (edit mode) and the incoming key is empty, inherit the stored key.
+                let effective_key = if !pid.is_empty() && pkey.trim().is_empty() {
+                    resolve_effective_api_key(
+                        s.providers.iter().find(|p| p.id == pid).map(|p| p.api_key.as_str()),
+                        &pkey,
+                    )
+                } else {
+                    pkey.clone()
+                };
+
                 if let Err(msg) =
-                    validate_provider_input(&pname, &ptype, &pbase, &pkey, &pmodel)
+                    validate_provider_input(&pname, &ptype, &pbase, &effective_key, &pmodel)
                 {
                     if let Some(ui) = ui_weak.upgrade() {
-                        set_inline_error(&ui, msg);
+                        set_inline_error(&ui, msg.clone());
+                        // 2026-07-18 (D2e): banner is globally visible — unlike inline
+                        // error which only renders in ChatPaneView.
+                        set_banner_message(&ui, msg, "");
                     }
                     return;
                 }
@@ -289,21 +316,12 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                         return;
                     }
                 };
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_inline_error(&ui, e);
-                        }
-                        return;
-                    }
-                };
                 let mut new_provider = crate::app_state::settings::ProviderConfig::new(pname.clone(), provider_type);
                 if !pid.is_empty() {
                     new_provider.id = pid.clone();
                 }
                 new_provider.base_url = pbase;
-                new_provider.api_key = pkey;
+                new_provider.api_key = effective_key;
                 new_provider.model = pmodel;
                 new_provider.enabled = penabled;
                 s.upsert_provider(new_provider);
