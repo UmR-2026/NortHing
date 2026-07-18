@@ -19,6 +19,7 @@ export component WelcomeView inherits Rectangle {
     callback add-workspace(string, string, bool);
     callback upsert-provider(string, string, string, string, string, string, bool);
     callback test-provider(string);
+    callback test-provider-config(string, string, string, string, string, bool);
     callback open-identity-creator();
 
     in-out property <int> current-step: 1;
@@ -257,17 +258,16 @@ export component WelcomeView inherits Rectangle {
                         text: root.step2-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
                         disabled: root.step2-test-in-flight || root.step2-name == "" || root.step2-api-key == "";
                         clicked => {
-                            // 2026-06-26 (Phase 4 fix): persist first, then test
-                            // the just-saved provider. The "__last__" sentinel is
-                            // resolved by the Rust handler to the last saved id.
+                            // 2026-07-18 (D2a+1): call test-provider-config with
+                            // in-memory params — no disk read, no "__last__" race.
                             root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
-                            root.test-provider("__last__");
+                            root.test-provider-config(root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                         }
                     }
 
                     save-btn := MaterialButton {
                         text: AppStrings.save;
-                        disabled: root.step2-name == "";
+                        disabled: root.step2-name == "" || root.step2-test-in-flight;
                         clicked => {
                             root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                         }
@@ -277,13 +277,13 @@ export component WelcomeView inherits Rectangle {
 
                     skip-step2 := MaterialButton {
                         text: "稍后配置";
-                        disabled: false;
+                        disabled: root.step2-test-in-flight;
                         clicked => { root.current-step = 3; }
                     }
 
                     next-step2 := MaterialButton {
                         text: AppStrings.welcome-step2-button;
-                        disabled: root.step2-name == "" || root.step2-api-key == "";
+                        disabled: root.step2-name == "" || root.step2-api-key == "" || root.step2-test-in-flight;
                         clicked => {
                             // 2026-06-26 (Phase 4 fix): persist before flipping
                             // so the user's input is not lost.

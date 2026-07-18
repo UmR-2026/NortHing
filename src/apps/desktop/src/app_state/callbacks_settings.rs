@@ -621,6 +621,129 @@ pub(super) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
     });
 }
 
+// 2026-07-18 (D2a+1): test-provider-config — race-free variant that tests
+// an in-memory config directly without reading disk or resolving "__last__".
+// The WelcomeView test button calls this instead of test-provider to avoid
+// the race where test_provider tries to read a provider that upsert-provider
+// has not yet flushed to disk.
+pub(super) fn register_test_provider_config_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_test_provider_config(move |name, ptype, base_url, api_key, model, enabled| {
+        let ui_weak2 = ui_weak.clone();
+        // Flip to in-flight immediately on the UI thread (the callback
+        // itself runs on the event loop, so a direct set is safe here).
+        if let Some(ui) = ui_weak2.upgrade() {
+            ui.set_provider_test_in_flight(true);
+            ui.set_provider_test_result(slint::SharedString::from(""));
+        }
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "test-provider-config: failed to build runtime: {e}"
+                    );
+                    let ui_weak3 = ui_weak2.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak3.upgrade() {
+                            ui.set_provider_test_in_flight(false);
+                            ui.set_provider_test_result(slint::SharedString::from(
+                                "内部错误：无法启动运行时",
+                            ));
+                        }
+                    });
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                // Parse provider type from string — same mapping as register_upsert_provider_callback.
+                use crate::app_state::settings::ProviderType;
+                let provider_type = match ptype.as_str() {
+                    "anthropic" => ProviderType::Anthropic,
+                    "openai" => ProviderType::Openai,
+                    "gemini" => ProviderType::Gemini,
+                    "custom-openai" => ProviderType::CustomOpenaiCompatible,
+                    "custom-anthropic" => ProviderType::CustomAnthropicCompatible,
+                    _ => {
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(
+                                    "内部错误：未知的服务类型",
+                                ));
+                            }
+                        });
+                        return;
+                    }
+                };
+                // Build an in-memory ProviderConfig — no disk read, no slot to write.
+                let mut provider = crate::app_state::settings::ProviderConfig::new(name.to_string(), provider_type);
+                provider.base_url = base_url.to_string();
+                provider.api_key = api_key.to_string();
+                provider.model = model.to_string();
+                provider.enabled = enabled;
+                // Reuse the existing test chain: provider → model_config → AIConfig → AIClient.
+                let model_config = crate::app_state::settings::provider_to_ai_model_config(&provider);
+                let ai_config = match northhing_core::util::types::AIConfig::try_from(model_config) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(e));
+                            }
+                        });
+                        return;
+                    }
+                };
+                let client = northhing_core::infrastructure::ai::AIClient::new(ai_config);
+                match client.test_connection().await {
+                    Ok(result) => {
+                        let result_str = if result.success {
+                            "ok".to_string()
+                        } else {
+                            let detail = result.error_details.unwrap_or_default();
+                            let first_line = detail.lines().next().unwrap_or("").trim();
+                            if first_line.is_empty() {
+                                "连接失败".to_string()
+                            } else {
+                                first_line.chars().take(120).collect()
+                            }
+                        };
+                        // No disk write — result is returned to UI only.
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(result_str));
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        let detail = format!("{e}");
+                        let first_line = detail.lines().next().unwrap_or("").trim();
+                        let result_str = if first_line.is_empty() {
+                            "连接失败".to_string()
+                        } else {
+                            first_line.chars().take(120).collect()
+                        };
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(result_str));
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    });
+}
+
 // 2026-06-26 (Phase 4 fix): onboarding-completed handler. Persists
 // `onboarding_completed = true` so a fully-skipped flow does not
 // reappear on the next launch, then flips the route back to "main".
