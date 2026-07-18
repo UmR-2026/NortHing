@@ -172,12 +172,11 @@ export component WelcomeView inherits Rectangle {
                     for opt in [
                         { value: "anthropic", label: "Anthropic" },
                         { value: "openai", label: "OpenAI" },
-                        { value: "gemini", label: "Gemini" },
-                        { value: "custom-openai", label: "自定义" },
+                        { value: "custom-openai", label: "OpenAI 兼容" },
                         { value: "custom-anthropic", label: "Anthropic 兼容" }
                     ]: Rectangle {
                         height: 32px;
-                        width: (parent.width - 4 * MaterialTheme.spacing-xs) / 5;
+                        width: (parent.width - 3 * MaterialTheme.spacing-xs) / 4;
                         padding: MaterialTheme.spacing-xs;
                         background: opt.value == root.step2-type
                             ? MaterialTheme.current-primary()
@@ -194,10 +193,6 @@ export component WelcomeView inherits Rectangle {
                                 if opt.value == "openai" {
                                     root.step2-base-url = "https://api.openai.com/v1";
                                     root.step2-model = "gpt-4o";
-                                }
-                                if opt.value == "gemini" {
-                                    root.step2-base-url = "https://generativelanguage.googleapis.com/v1beta";
-                                    root.step2-model = "gemini-2.0-flash";
                                 }
                                 if opt.value == "custom-openai" {
                                     root.step2-base-url = "";
@@ -225,6 +220,18 @@ export component WelcomeView inherits Rectangle {
                 MaterialTextField {
                     placeholder: AppStrings.provider-base-url-label;
                     text <=> root.step2-base-url;
+                    width: parent.width;
+                }
+
+                // 2026-07-18 (D2c): endpoint hint caption — content varies by type.
+                Text {
+                    text: root.step2-type == "anthropic" || root.step2-type == "custom-anthropic"
+                        ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
+                        : "填到 /v1 为止，客户端自动补 /chat/completions";
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.6;
+                    wrap: word-wrap;
                     width: parent.width;
                 }
 
@@ -258,9 +265,9 @@ export component WelcomeView inherits Rectangle {
                         text: root.step2-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
                         disabled: root.step2-test-in-flight || root.step2-name == "" || root.step2-api-key == "";
                         clicked => {
-                            // 2026-07-18 (D2a+1): call test-provider-config with
-                            // in-memory params — no disk read, no "__last__" race.
-                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                            // 2026-07-18 (D2c): use last-saved-provider-id so
+                            // repeated clicks replace instead of duplicating.
+                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                             root.test-provider-config(root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                         }
                     }
@@ -269,7 +276,8 @@ export component WelcomeView inherits Rectangle {
                         text: AppStrings.save;
                         disabled: root.step2-name == "" || root.step2-test-in-flight;
                         clicked => {
-                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                            // 2026-07-18 (D2c): use last-saved-provider-id.
+                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                         }
                     }
 
@@ -285,9 +293,8 @@ export component WelcomeView inherits Rectangle {
                         text: AppStrings.welcome-step2-button;
                         disabled: root.step2-name == "" || root.step2-api-key == "" || root.step2-test-in-flight;
                         clicked => {
-                            // 2026-06-26 (Phase 4 fix): persist before flipping
-                            // so the user's input is not lost.
-                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                            // 2026-07-18 (D2c): use last-saved-provider-id.
+                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
                             root.current-step = 3;
                         }
                     }

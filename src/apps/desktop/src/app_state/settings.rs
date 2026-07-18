@@ -425,12 +425,37 @@ impl AppSettings {
         })
     }
 
-    /// Mutator: add or replace a provider (matched by `id`).
-    pub fn upsert_provider(&mut self, p: ProviderConfig) {
+    /// Mutator: add or replace a provider.
+    ///
+    /// 2026-07-18 (D2c): three-tier matching —
+    /// 1. match by `id` (exact replace);
+    /// 2. match by (name, base_url, api_key) — keep the existing id so session
+    ///    references stay valid, replace the other fields;
+    /// 3. otherwise push as new.
+    pub fn upsert_provider(&mut self, mut p: ProviderConfig) {
         if let Some(slot) = self.providers.iter_mut().find(|x| x.id == p.id) {
+            *slot = p;
+        } else if let Some(slot) = self.providers.iter_mut().find(|x| {
+            x.name == p.name && x.base_url == p.base_url && x.api_key == p.api_key
+        }) {
+            // Keep the original id to avoid breaking session references.
+            let keep_id = slot.id.clone();
+            p.id = keep_id;
             *slot = p;
         } else {
             self.providers.push(p);
+        }
+
+        // 2026-07-18 (D2c): auto-set default model on first enabled provider.
+        if self.default_model.is_none() {
+            if let Some(last) = self.providers.last() {
+                if last.enabled {
+                    self.default_model = Some(ModelRef {
+                        provider_id: last.id.clone(),
+                        model: last.model.clone(),
+                    });
+                }
+            }
         }
     }
 
@@ -640,6 +665,11 @@ pub fn app_settings_path() -> Result<PathBuf> {
 /// Load settings from `~/.northhing/config/app.json`. Returns `AppSettings::default()`
 /// when the file is missing or fails to parse — the welcome screen's `is_first_run()`
 /// check decides whether to show onboarding UI.
+///
+/// 2026-07-18 (D2c): after deserialization, dedup providers by
+/// (name, provider_type, base_url, api_key, model) — keep the first, drop the
+/// rest; re-point `default_model` at the kept entry when its original id was
+/// dropped. Persist the migration immediately when anything was dropped.
 pub async fn load_app_settings() -> Result<AppSettings> {
     let path = app_settings_path()?;
     if !path.exists() {
@@ -648,9 +678,64 @@ pub async fn load_app_settings() -> Result<AppSettings> {
     let raw = tokio::fs::read_to_string(&path)
         .await
         .with_context(|| format!("读取 {path:?} 失败"))?;
-    let parsed: AppSettings =
+    let mut parsed: AppSettings =
         serde_json::from_str(&raw).with_context(|| format!("解析 {path:?} 失败（schema 可能不兼容）"))?;
+    let dropped = dedup_providers_on_load(&mut parsed);
+    if dropped > 0 {
+        // 2026-07-18 (D2c): persist migration result immediately.
+        if let Err(e) = save_app_settings(&parsed).await {
+            tracing::warn!(target: "app_state", "load dedup save failed: {e}");
+        }
+    }
     Ok(parsed)
+}
+
+/// 2026-07-18 (D2c): in-place provider dedup + default_model re-point.
+/// Keeps the first of each (name, provider_type, base_url, api_key, model) group.
+/// Returns the number of dropped duplicates (caller decides whether to save).
+fn dedup_providers_on_load(s: &mut AppSettings) -> usize {
+    use std::collections::HashSet;
+    let mut seen: HashSet<(String, String, String, String, String)> = HashSet::new();
+    let mut kept_ids: Vec<String> = Vec::new();
+    let mut dropped_count = 0usize;
+    s.providers.retain(|p| {
+        let key = (
+            p.name.clone(),
+            serde_json::to_string(&p.provider_type).unwrap_or_default(),
+            p.base_url.clone(),
+            p.api_key.clone(),
+            p.model.clone(),
+        );
+        if seen.insert(key) {
+            kept_ids.push(p.id.clone());
+            true
+        } else {
+            dropped_count += 1;
+            false
+        }
+    });
+    if dropped_count > 0 {
+        let kept_set: HashSet<&str> = kept_ids.iter().map(|x| x.as_str()).collect();
+        if let Some(dm) = &s.default_model {
+            if !kept_set.contains(dm.provider_id.as_str()) {
+                // default_model pointed at a dropped entry → re-point at the
+                // first kept provider so the reference stays valid.
+                if let Some(first) = s.providers.first() {
+                    s.default_model = Some(ModelRef {
+                        provider_id: first.id.clone(),
+                        model: first.model.clone(),
+                    });
+                } else {
+                    s.default_model = None;
+                }
+            }
+        }
+        tracing::info!(
+            target: "app_state",
+            "load dedup: dropped {dropped_count} duplicate provider(s)"
+        );
+    }
+    dropped_count
 }
 
 /// Save settings to `~/.northhing/config/app.json`. Creates parent dirs as
@@ -821,11 +906,17 @@ mod tests {
     #[test]
     fn fallback_provider_skips_self() {
         let mut s = AppSettings::default();
-        let a = sample_provider();
-        let b = sample_provider();
+        let mut a = sample_provider();
+        let mut b = sample_provider();
+        // 2026-07-18 (D2c): make (name, base_url, api_key) distinct so the new
+        // dedup logic does not collapse them — this test is about fallback
+        // selection, not dedup.
+        a.name = "a".to_string();
+        b.name = "b".to_string();
         let b_id = b.id.clone();
         s.upsert_provider(a);
         s.upsert_provider(b);
+        assert_eq!(s.providers.len(), 2);
         // Remove a; b should be the fallback.
         let a_id = s.providers[0].id.clone();
         s.remove_provider(&a_id);
@@ -1102,5 +1193,123 @@ mod tests {
             "gpt",
         );
         assert!(r.is_ok());
+    }
+
+    // ===== 2026-07-18 (D2c): upsert dedup + default-model auto-set tests =====
+
+    fn provider_with_fields(
+        id: &str,
+        name: &str,
+        base_url: &str,
+        api_key: &str,
+        model: &str,
+        enabled: bool,
+    ) -> ProviderConfig {
+        ProviderConfig {
+            id: id.to_string(),
+            name: name.to_string(),
+            provider_type: if base_url.contains("anthropic") {
+                ProviderType::Anthropic
+            } else {
+                ProviderType::Openai
+            },
+            base_url: base_url.to_string(),
+            api_key: api_key.to_string(),
+            model: model.to_string(),
+            enabled,
+            created_at: 0,
+            last_verified_at: None,
+            last_verified_ok: None,
+        }
+    }
+
+    #[test]
+    fn upsert_provider_dedup_by_name_base_url_api_key_keeps_original_id() {
+        let mut s = AppSettings::default();
+        // First upsert: empty id → push new (gets a fresh UUID).
+        let first = provider_with_fields("", "foo", "https://x.com/v1", "sk-same", "gpt", true);
+        s.upsert_provider(first);
+        assert_eq!(s.providers.len(), 1);
+        let original_id = s.providers[0].id.clone();
+
+        // Second upsert: different id but same (name, base_url, api_key) →
+        // should replace in place and KEEP the original id.
+        let second = provider_with_fields(
+            "totally-different-id",
+            "foo",
+            "https://x.com/v1",
+            "sk-same",
+            "gpt",
+            true,
+        );
+        s.upsert_provider(second);
+        assert_eq!(s.providers.len(), 1, "must not duplicate");
+        assert_eq!(
+            s.providers[0].id, original_id,
+            "must keep the original id to preserve session references"
+        );
+    }
+
+    #[test]
+    fn upsert_provider_first_enabled_auto_sets_default_model() {
+        let mut s = AppSettings::default();
+        assert!(s.default_model.is_none());
+        let p = provider_with_fields("", "foo", "https://x.com/v1", "sk", "gpt", true);
+        s.upsert_provider(p);
+        assert_eq!(s.providers.len(), 1);
+        let dm = s.default_model.expect("default_model should be auto-set");
+        assert_eq!(dm.provider_id, s.providers[0].id);
+        assert_eq!(dm.model, "gpt");
+    }
+
+    #[test]
+    fn upsert_provider_does_not_overwrite_existing_default_model() {
+        let mut s = AppSettings::default();
+        let first = provider_with_fields("id-first", "first", "https://a.com/v1", "sk1", "m1", true);
+        s.upsert_provider(first);
+        let first_dm = s.default_model.clone().unwrap();
+
+        // Second enabled provider → default_model must stay pointing at first.
+        let second = provider_with_fields("id-second", "second", "https://b.com/v1", "sk2", "m2", true);
+        s.upsert_provider(second);
+        assert_eq!(s.providers.len(), 2);
+        let dm = s.default_model.unwrap();
+        assert_eq!(dm.provider_id, first_dm.provider_id);
+        assert_eq!(dm.model, first_dm.model);
+    }
+
+    #[test]
+    fn dedup_providers_on_load_drops_duplicates_keeps_first() {
+        let mut s = AppSettings::default();
+        // Two identical providers (same name/type/base_url/api_key/model) but
+        // different ids → after dedup only the first remains.
+        let a = provider_with_fields("id-a", "foo", "https://x.com/v1", "sk", "gpt", true);
+        let b = provider_with_fields("id-b", "foo", "https://x.com/v1", "sk", "gpt", true);
+        let c = provider_with_fields("id-c", "bar", "https://y.com/v1", "sk", "gpt", true);
+        s.providers = vec![a, b, c];
+        let dropped = super::dedup_providers_on_load(&mut s);
+        assert_eq!(dropped, 1);
+        assert_eq!(s.providers.len(), 2);
+        assert_eq!(s.providers[0].id, "id-a", "first of group kept");
+        assert_eq!(s.providers[1].id, "id-c");
+    }
+
+    #[test]
+    fn dedup_providers_on_load_repoints_default_model_when_dropped() {
+        let mut s = AppSettings::default();
+        let a = provider_with_fields("id-a", "foo", "https://x.com/v1", "sk", "gpt", true);
+        let b = provider_with_fields("id-b", "foo", "https://x.com/v1", "sk", "gpt", true);
+        s.providers = vec![a, b];
+        // default_model points at id-b (the one that will be dropped).
+        s.default_model = Some(ModelRef {
+            provider_id: "id-b".to_string(),
+            model: "gpt".to_string(),
+        });
+        let dropped = super::dedup_providers_on_load(&mut s);
+        assert_eq!(dropped, 1);
+        assert_eq!(s.providers.len(), 1);
+        // After dedup, default_model should point at the kept entry (id-a).
+        let dm = s.default_model.expect("default_model should be re-pointed");
+        assert_eq!(dm.provider_id, "id-a");
     }
 }

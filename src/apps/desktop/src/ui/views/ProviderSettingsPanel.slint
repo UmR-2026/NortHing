@@ -12,7 +12,7 @@ import { AppStrings } from "../strings.slint";
 // Type options for the provider dropdown (C-ii).
 // Display labels mirror `ProviderType::display_label()` in Rust.
 struct ProviderTypeOption {
-    value: string,   // serde tag: anthropic / openai / gemini / custom-openai / custom-anthropic
+    value: string,   // serde tag: anthropic / openai / custom-openai / custom-anthropic
     label: string,
 }
 
@@ -234,8 +234,7 @@ export component ProviderSettingsPanel inherits Rectangle {
                             for opt in [
                                 { value: "anthropic", label: "Anthropic" },
                                 { value: "openai", label: "OpenAI" },
-                                { value: "gemini", label: "Gemini" },
-                                { value: "custom-openai", label: AppStrings.mcp-transport-stdio },  // reusing stdio label slot for type label row
+                                { value: "custom-openai", label: "OpenAI 兼容" },
                                 { value: "custom-anthropic", label: "Anthropic 兼容" }
                             ]: Rectangle {
                                 height: 36px;
@@ -257,10 +256,6 @@ export component ProviderSettingsPanel inherits Rectangle {
                                         if opt.value == "openai" {
                                             root.form-base-url = "https://api.openai.com/v1";
                                             root.form-model = "gpt-4o";
-                                        }
-                                        if opt.value == "gemini" {
-                                            root.form-base-url = "https://generativelanguage.googleapis.com/v1beta";
-                                            root.form-model = "gemini-2.0-flash";
                                         }
                                         if opt.value == "custom-openai" {
                                             root.form-base-url = "";
@@ -292,6 +287,18 @@ export component ProviderSettingsPanel inherits Rectangle {
                             width: parent.width;
                         }
 
+                        // 2026-07-18 (D2c): endpoint hint caption — content varies by type.
+                        Text {
+                            text: root.form-type == "anthropic" || root.form-type == "custom-anthropic"
+                                ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
+                                : "填到 /v1 为止，客户端自动补 /chat/completions";
+                            font-size: MaterialTheme.font-size-caption;
+                            color: MaterialTheme.current-on-surface();
+                            opacity: 0.6;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
+
                         // API key (E2 password mode)
                         MaterialTextField {
                             placeholder: AppStrings.provider-api-key-label;
@@ -300,46 +307,11 @@ export component ProviderSettingsPanel inherits Rectangle {
                             width: parent.width;
                         }
 
-                        // Model (B4=c: dropdown + custom input)
-                        HorizontalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                        // Model (2026-07-18 D2c: plain text field, no preset dropdown)
+                        MaterialTextField {
+                            placeholder: AppStrings.provider-model-label;
+                            text <=> root.form-model;
                             width: parent.width;
-
-                            model-input := MaterialTextField {
-                                placeholder: AppStrings.provider-model-label;
-                                text <=> root.form-model;
-                                width: parent.width - 200px;
-                            }
-
-                            // Quick-fill buttons for common models.
-                            // Slint 1.16 doesn't support top-level `func`, so the
-                            // options array is built inline via a nested conditional
-                            // returning different model strings.
-                            for model-opt in root.form-type == "anthropic" ?
-                                    ["claude-sonnet-4-5", "claude-opus-4", "claude-haiku-4"]
-                                : root.form-type == "openai" ?
-                                    ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
-                                : root.form-type == "gemini" ?
-                                    ["gemini-2.0-flash", "gemini-1.5-pro"]
-                                : []: Rectangle {
-                                height: 36px;
-                                width: 100px;
-                                padding: MaterialTheme.spacing-xs;
-                                background: MaterialTheme.current-surface();
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => { root.form-model = model-opt; }
-                                }
-                                Text {
-                                    text: model-opt;
-                                    color: MaterialTheme.current-on-surface();
-                                    font-size: MaterialTheme.font-size-caption;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                    width: parent.width;
-                                }
-                            }
                         }
 
                         // Enabled toggle (B4)
