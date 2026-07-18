@@ -103,6 +103,16 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                     }
                     return;
                 }
+                // 2026-07-18 (D2g): push provider state into core so the runtime
+                // sees the deletion. Failure is non-fatal — the user's data is
+                // safe on disk; we surface a banner and let them retry.
+                if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
+                    tracing::warn!(target: "app_state", "delete-provider sync-to-core failed: {e}");
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_banner_message(&ui, "同步到运行时配置失败，请重试".to_string(), "");
+                    }
+                    // do NOT return — data is already persisted
+                }
 
                 // Best-effort: remove the provider from core's model list
                 // and reconcile. Failure is non-fatal — the user's data is
@@ -978,6 +988,16 @@ pub(super) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                         set_banner_message(&ui, e, "");
                     }
                     return;
+                }
+                // 2026-07-18 (D2g): push default model into core so the runtime
+                // sees the updated primary. Failure is non-fatal — the user's
+                // data is safe on disk; we surface a banner and let them retry.
+                if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
+                    tracing::warn!(target: "app_state", "set-default-model sync-to-core failed: {e}");
+                    if let Some(ui) = ui_weak.upgrade() {
+                        set_banner_message(&ui, "同步到运行时配置失败，请重试".to_string(), "");
+                    }
+                    // do NOT return — data is already persisted
                 }
                 if let Some(ui) = ui_weak.upgrade() {
                     set_banner_message(&ui, "已设置默认模型", "");
