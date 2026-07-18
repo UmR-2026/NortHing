@@ -71,12 +71,22 @@ export component AppWindow inherits Window {
     callback delete-mcp(string);
     callback test-mcp(string);
     // 2026-06-26 (Phase 4): Workspace callbacks (wired to AppState methods).
-    callback pick-folder();
-    callback add-workspace(string, string, bool);
-    callback switch-workspace(string);
-    callback remove-workspace(string);
-    callback edit-identity-md(string);
-    callback open-identity-creator();
+     callback pick-folder();
+     callback add-workspace(string, string, bool);
+     callback switch-workspace(string);
+     callback remove-workspace(string);
+     callback edit-identity-md(string);
+     callback open-identity-creator();
+     // 2026-06-26 (Phase 4 fix): welcome-step1-path is written by the
+     // Rust pick-folder handler via invoke_from_event_loop; binding it
+     // here lets WelcomeView's `next-step1` button un-gray once a folder
+     // is chosen. provider-test-result / provider-test-in-flight /
+     // last-saved-provider-id are written by the test-provider handler.
+     in-out property <string> welcome-step1-path: "";
+     in-out property <string> provider-test-result: "";
+     in-out property <bool> provider-test-in-flight: false;
+     in-out property <string> last-saved-provider-id: "";
+     callback onboarding-completed();
     in-out property <string> current-session-id: "";
     in-out property <string> current-session-name: "";
     in-out property <string> current-session-model: "";
@@ -144,7 +154,14 @@ export component AppWindow inherits Window {
         add-workspace(path, name, set-current) => { root.add-workspace(path, name, set-current); }
         upsert-provider(id, name, type, base-url, api-key, model, enabled)
             => { root.upsert-provider(id, name, type, base-url, api-key, model, enabled); }
-        on-completed => { root.current-route = "main"; }
+        // 2026-06-26 (Phase 4 fix): bind WelcomeView's internal state to
+        // root properties so Rust handlers (which can only set root-level
+        // properties via invoke_from_event_loop) can drive the UI.
+        step1-path <=> root.welcome-step1-path;
+        step2-test-result <=> root.provider-test-result;
+        step2-test-in-flight <=> root.provider-test-in-flight;
+        step2-saved-provider-id <=> root.last-saved-provider-id;
+        on-completed => { root.onboarding-completed(); }
     }
 
     if root.current-route == "settings": SettingsView {

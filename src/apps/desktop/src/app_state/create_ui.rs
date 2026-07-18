@@ -18,7 +18,9 @@ use super::callbacks_lifecycle::{
     register_toggle_show_subagents_callback, register_toggle_skill_callback, register_toggle_theme_callback,
 };
 use super::callbacks_settings::{
-    register_delete_provider_callback, register_remove_workspace_callback, register_upsert_provider_callback,
+    register_add_workspace_callback, register_delete_provider_callback, register_onboarding_completed_callback,
+    register_pick_folder_callback, register_remove_workspace_callback, register_test_provider_callback,
+    register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -111,10 +113,15 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
         rt.block_on(async move {
             match crate::app_state::settings::load_app_settings().await {
                 Ok(settings) => {
-                    let is_first = settings.is_first_run();
+                    // 2026-06-26 (Phase 4 fix): only route to welcome when
+                    // the user has never completed onboarding. A fully-
+                    // skipped flow sets `onboarding_completed = true`, so
+                    // returning users are not trapped in a welcome loop.
+                    let is_first = settings.is_first_run() && !settings.onboarding_completed;
                     tracing::info!(
                         target: "app_state",
-                        "Phase 4: first-run check complete: is_first_run={is_first}"
+                        "Phase 4: first-run check complete: is_first_run={is_first} onboarding_completed={}",
+                        settings.onboarding_completed
                     );
                     if is_first {
                         let ui_weak = ui_weak_first_run.clone();
@@ -294,6 +301,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_delete_provider_callback(&ui, &app_state);
     register_remove_workspace_callback(&ui, &app_state);
     register_upsert_provider_callback(&ui, &app_state);
+    // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
+    register_pick_folder_callback(&ui, &app_state);
+    register_add_workspace_callback(&ui, &app_state);
+    register_test_provider_callback(&ui, &app_state);
+    register_onboarding_completed_callback(&ui, &app_state);
 
     // P0-A startup auto-create session (background thread)
     spawn_startup_session(&ui, &app_state);

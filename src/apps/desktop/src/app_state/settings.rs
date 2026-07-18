@@ -358,6 +358,12 @@ pub struct AppSettings {
     pub skills_enabled: Vec<SkillState>,
     pub mcp_servers: Vec<MCPServerConfig>,
     pub default_model: Option<ModelRef>,
+    /// True once the user has completed (or skipped) the 3-step welcome
+    /// flow. Persisted so a fully-skipped onboarding does not reappear
+    /// on the next launch. `#[serde(default)]` keeps pre-existing
+    /// app.json files compatible (they lack the field → false).
+    #[serde(default)]
+    pub onboarding_completed: bool,
 }
 
 impl Default for AppSettings {
@@ -370,6 +376,7 @@ impl Default for AppSettings {
             skills_enabled: Vec::new(),
             mcp_servers: Vec::new(),
             default_model: None,
+            onboarding_completed: false,
         }
     }
 }
@@ -560,7 +567,7 @@ impl AppSettings {
 
 // ===== Helpers =====
 
-fn now_unix_secs() -> i64 {
+pub(crate) fn now_unix_secs() -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -851,6 +858,29 @@ mod tests {
         let back: AppSettings = serde_json::from_str(&json).unwrap();
         assert_eq!(back.providers.len(), 1);
         assert_eq!(back.workspaces.len(), 1);
+    }
+
+    // 2026-06-26 (Phase 4 fix): onboarding_completed serde default +
+    // roundtrip. Pre-existing app.json files lack the field and must
+    // deserialize to `false`; once set to `true` it round-trips cleanly.
+    #[test]
+    fn onboarding_completed_serde_default_false() {
+        let full = serde_json::to_value(AppSettings::default()).expect("serialize default");
+        let mut obj = full.as_object().expect("object").clone();
+        obj.remove("onboarding_completed");
+        let s: AppSettings = serde_json::from_value(serde_json::Value::Object(obj))
+            .expect("deserialize without onboarding_completed");
+        assert!(!s.onboarding_completed, "missing field should default to false");
+    }
+
+    #[test]
+    fn onboarding_completed_roundtrip() {
+        let mut s = AppSettings::default();
+        assert!(!s.onboarding_completed);
+        s.onboarding_completed = true;
+        let json = serde_json::to_string_pretty(&s).unwrap();
+        let back: AppSettings = serde_json::from_str(&json).unwrap();
+        assert!(back.onboarding_completed, "true should round-trip");
     }
 
     // 2026-06-26 (Phase 5): Q6/Q7 session integrity validation tests.

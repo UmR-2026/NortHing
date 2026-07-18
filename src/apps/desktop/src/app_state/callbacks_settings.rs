@@ -342,6 +342,331 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 let _ = s.validate_session_integrity(session_ids, &provider_lookup, &workspace_lookup);
                 if let Some(ui) = ui_weak.upgrade() {
                     set_banner_message(&ui, format!("已保存 AI 服务 {}", pname), "");
+                    // 2026-06-26 (Phase 4 fix): expose the saved provider id so
+                    // the welcome flow's test-btn can request "test the last
+                    // saved one" via the "__last__" sentinel.
+                    let saved_id = if pid.is_empty() {
+                        s.providers.last().map(|p| p.id.clone()).unwrap_or_default()
+                    } else {
+                        pid.clone()
+                    };
+                    let ui_weak_set_id = ui.as_weak();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak_set_id.upgrade() {
+                            ui.set_last_saved_provider_id(slint::SharedString::from(saved_id));
+                        }
+                    });
+                }
+            });
+        });
+    });
+}
+
+// 2026-06-26 (Phase 4 fix): pick-folder handler. The Slint callback runs
+// on the UI thread; rfd::FileDialog::pick_folder() is a blocking modal, but
+// that is acceptable here since the user explicitly clicked the button and
+// the UI is expected to block until they choose. On success we persist the
+// new workspace and reflect the chosen path back into the welcome view via
+// the bound `welcome-step1-path` property.
+pub(super) fn register_pick_folder_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_pick_folder(move || {
+        let Some(ui) = ui_weak.upgrade() else {
+            return;
+        };
+        let path = rfd::FileDialog::new().set_title("选择工作文件夹").pick_folder();
+        let Some(folder) = path else {
+            return;
+        };
+        let path_str = folder.to_string_lossy().to_string();
+        let ui_weak2 = ui.as_weak();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "pick-folder: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak2.upgrade() {
+                            set_banner_message(&ui, e, "");
+                        }
+                        return;
+                    }
+                };
+                s.add_workspace(folder.clone());
+                if let Err(e) = save_app_settings_quiet(&s).await {
+                    tracing::warn!(target: "app_state", "pick-folder save failed: {e}");
+                    if let Some(ui) = ui_weak2.upgrade() {
+                        set_banner_message(&ui, e, "");
+                    }
+                    return;
+                }
+                let ui_weak3 = ui_weak2.clone();
+                if let Err(e) = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak3.upgrade() {
+                        ui.set_welcome_step1_path(slint::SharedString::from(path_str.clone()));
+                    }
+                }) {
+                    tracing::warn!(
+                        target: "app_state",
+                        "pick-folder: failed to dispatch step1-path to UI thread: {e}"
+                    );
+                }
+            });
+        });
+    });
+}
+
+// 2026-06-26 (Phase 4 fix): add-workspace handler (manual path entry).
+// Mirrors the pick-folder persistence path but takes an explicit path
+// string. `set_current` updates `current_workspace` when true.
+pub(super) fn register_add_workspace_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_add_workspace(move |path, name, set_current| {
+        let p = std::path::PathBuf::from(path.to_string());
+        let display = name.to_string();
+        let set_cur = set_current;
+        let ui_weak2 = ui_weak.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "add-workspace: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak2.upgrade() {
+                            set_banner_message(&ui, e, "");
+                        }
+                        return;
+                    }
+                };
+                s.add_workspace(p.clone());
+                if !display.is_empty() {
+                    if let Some(w) = s.workspaces.iter_mut().find(|w| w.path == p) {
+                        w.display_name = display;
+                    }
+                }
+                if set_cur {
+                    s.set_current_workspace(Some(&p));
+                }
+                if let Err(e) = save_app_settings_quiet(&s).await {
+                    tracing::warn!(target: "app_state", "add-workspace save failed: {e}");
+                    if let Some(ui) = ui_weak2.upgrade() {
+                        set_banner_message(&ui, e, "");
+                    }
+                }
+            });
+        });
+    });
+}
+
+// 2026-06-26 (Phase 4 fix): test-provider handler. Resolves the provider
+// id ("__last__" → the most recently saved provider), builds an AIClient
+// from the stored config, and runs `test_connection()` on a background
+// thread. Progress is surfaced via the bound `provider-test-in-flight` and
+// `provider-test-result` properties.
+pub(super) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_test_provider(move |id| {
+        let id_str = id.to_string();
+        let ui_weak2 = ui_weak.clone();
+        // Flip to in-flight immediately on the UI thread (the callback
+        // itself runs on the event loop, so a direct set is safe here).
+        if let Some(ui) = ui_weak2.upgrade() {
+            ui.set_provider_test_in_flight(true);
+            ui.set_provider_test_result(slint::SharedString::from(""));
+        }
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "test-provider: failed to build runtime: {e}"
+                    );
+                    let ui_weak3 = ui_weak2.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak3.upgrade() {
+                            ui.set_provider_test_in_flight(false);
+                            ui.set_provider_test_result(slint::SharedString::from(
+                                "内部错误：无法启动运行时",
+                            ));
+                        }
+                    });
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(e));
+                            }
+                        });
+                        return;
+                    }
+                };
+                // Resolve "__last__" sentinel to the last saved provider id.
+                let resolved_id = if id_str == "__last__" {
+                    let rid = s.providers.last().map(|p| p.id.clone()).unwrap_or_default();
+                    let rid_for_ui = rid.clone();
+                    let ui_weak3 = ui_weak2.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak3.upgrade() {
+                            ui.set_last_saved_provider_id(slint::SharedString::from(rid_for_ui));
+                        }
+                    });
+                    rid
+                } else {
+                    id_str.clone()
+                };
+                let provider = match s.providers.iter().find(|p| p.id == resolved_id) {
+                    Some(p) => p.clone(),
+                    None => {
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(
+                                    "未找到要测试的服务",
+                                ));
+                            }
+                        });
+                        return;
+                    }
+                };
+                // Build an AIClient from the stored provider config.
+                let model_config = crate::app_state::settings::provider_to_ai_model_config(&provider);
+                let ai_config = match northhing_core::util::types::AIConfig::try_from(model_config) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(e));
+                            }
+                        });
+                        return;
+                    }
+                };
+                let client = northhing_core::infrastructure::ai::AIClient::new(ai_config);
+                match client.test_connection().await {
+                    Ok(result) => {
+                        let result_str = if result.success {
+                            "ok".to_string()
+                        } else {
+                            let detail = result.error_details.unwrap_or_default();
+                            // Take the first line, cap at 120 chars.
+                            let first_line = detail.lines().next().unwrap_or("").trim();
+                            if first_line.is_empty() {
+                                "连接失败".to_string()
+                            } else {
+                                first_line.chars().take(120).collect()
+                            }
+                        };
+                        // Persist verification state on the provider.
+                        if let Some(slot) = s.providers.iter_mut().find(|p| p.id == resolved_id) {
+                            slot.last_verified_at = Some(crate::app_state::settings::now_unix_secs());
+                            slot.last_verified_ok = Some(result.success);
+                        }
+                        let _ = save_app_settings_quiet(&s).await;
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(result_str));
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        let detail = format!("{e}");
+                        let first_line = detail.lines().next().unwrap_or("").trim();
+                        let result_str = if first_line.is_empty() {
+                            "连接失败".to_string()
+                        } else {
+                            first_line.chars().take(120).collect()
+                        };
+                        let ui_weak3 = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak3.upgrade() {
+                                ui.set_provider_test_in_flight(false);
+                                ui.set_provider_test_result(slint::SharedString::from(result_str));
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    });
+}
+
+// 2026-06-26 (Phase 4 fix): onboarding-completed handler. Persists
+// `onboarding_completed = true` so a fully-skipped flow does not
+// reappear on the next launch, then flips the route back to "main".
+pub(super) fn register_onboarding_completed_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_onboarding_completed(move || {
+        let ui_weak2 = ui_weak.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(
+                        target: "app_state",
+                        "onboarding-completed: failed to build runtime: {e}"
+                    );
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let mut s = match load_app_settings_quiet().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        if let Some(ui) = ui_weak2.upgrade() {
+                            set_banner_message(&ui, e, "");
+                        }
+                        return;
+                    }
+                };
+                s.onboarding_completed = true;
+                if let Err(e) = save_app_settings_quiet(&s).await {
+                    tracing::warn!(target: "app_state", "onboarding-completed save failed: {e}");
+                    if let Some(ui) = ui_weak2.upgrade() {
+                        set_banner_message(&ui, e, "");
+                    }
+                    return;
+                }
+                let ui_weak3 = ui_weak2.clone();
+                if let Err(e) = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak3.upgrade() {
+                        ui.set_current_route(slint::SharedString::from("main"));
+                    }
+                }) {
+                    tracing::warn!(
+                        target: "app_state",
+                        "onboarding-completed: failed to dispatch route change: {e}"
+                    );
                 }
             });
         });

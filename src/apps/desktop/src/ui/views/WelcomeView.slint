@@ -257,7 +257,11 @@ export component WelcomeView inherits Rectangle {
                         text: root.step2-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
                         disabled: root.step2-test-in-flight || root.step2-name == "" || root.step2-api-key == "";
                         clicked => {
+                            // 2026-06-26 (Phase 4 fix): persist first, then test
+                            // the just-saved provider. The "__last__" sentinel is
+                            // resolved by the Rust handler to the last saved id.
                             root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                            root.test-provider("__last__");
                         }
                     }
 
@@ -272,15 +276,20 @@ export component WelcomeView inherits Rectangle {
                     Rectangle { vertical-stretch: 1; }
 
                     skip-step2 := MaterialButton {
-                        text: "跳过";
-                        disabled: root.step2-name == "" || root.step2-api-key == "";
+                        text: "稍后配置";
+                        disabled: false;
                         clicked => { root.current-step = 3; }
                     }
 
                     next-step2 := MaterialButton {
                         text: AppStrings.welcome-step2-button;
                         disabled: root.step2-name == "" || root.step2-api-key == "";
-                        clicked => { root.current-step = 3; }
+                        clicked => {
+                            // 2026-06-26 (Phase 4 fix): persist before flipping
+                            // so the user's input is not lost.
+                            root.upsert-provider("", root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
+                            root.current-step = 3;
+                        }
                     }
                 }
 
