@@ -40,7 +40,7 @@ pub use self::subagent_orchestrator::*;
 // reference through `crate::agentic::coordination::*`.
 pub use self::coordinator::DialogTriggerSource;
 pub use self::scheduler::{
-    abort_thread_goal_continuation_for_session, clear_thread_goal_continuation_abort, global_scheduler,
+    abort_thread_goal_continuation_for_session, clear_thread_goal_continuation_abort, global_scheduler, set_global_scheduler,
     DialogQueuePriority, DialogScheduler, DialogSubmissionPolicy, DialogSubmitOutcome,
 };
 pub use self::turn_outcome::TurnOutcome;

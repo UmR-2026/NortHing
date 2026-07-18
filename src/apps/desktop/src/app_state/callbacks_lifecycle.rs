@@ -133,31 +133,87 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_else(|_| ".".to_string());
 
-                let result = coordinator
-                    .start_dialog_turn(
-                        sid.clone(),
-                        text_str,
-                        None,
-                        None,
-                        crate::flags::DEFAULT_MODE_ID.to_string(),
-                        Some(workspace),
-                        northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
-                            northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
-                        ),
-                        None,
-                    )
-                    .await;
-
-                if let Err(e) = result {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, format!("Failed to send message: {e}"));
+                                // 2026-07-18 (W3a-4): route submissions through the dialog
+                // scheduler so in-turn messages are enqueued (per-session depth
+                // cap 20) instead of rejected by the Processing guard. The
+                // scheduler's outcome handler auto-dispatches the next queued
+                // turn when the active turn ends.
+                let scheduler = northhing_core::agentic::coordination::global_scheduler();
+                let submit_ok = match scheduler {
+                    Some(scheduler) => {
+                        // 2026-07-18 (W3a-4): scheduler path — returns a
+                        // DialogSubmitOutcome distinguishing Started vs Queued.
+                        match scheduler
+                            .submit(
+                                sid.clone(),
+                                text_str,
+                                None,
+                                None,
+                                crate::flags::DEFAULT_MODE_ID.to_string(),
+                                Some(workspace),
+                                northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
+                                    northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
+                                ),
+                                None,
+                                None,
+                                None,
+                            )
+                            .await
+                        {
+                            Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Started { .. }) => {
+                                // turn started immediately; streaming indicator
+                                // already set optimistically at entry — lifecycle
+                                // is owned by the event bridge.
+                                Ok(())
+                            }
+                            Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Queued { .. }) => {
+                                // 2026-07-18 (W3a-4): message queued behind the
+                                // active turn. Show a banner; keep the streaming
+                                // indicator — the current turn is still running.
+                                // Turn handoff is收敛 by the event bridge when
+                                // the active turn ends and the queued turn starts.
+                                if let Some(ui) = ui_clone.upgrade() {
+                                    set_banner_message(
+                                        &ui,
+                                        "已排队，将在当前回复完成后发送",
+                                        "",
+                                    );
+                                }
+                                Ok(())
+                            }
+                            Err(e) => Err(format!("Failed to send message: {e}")),
+                        }
                     }
-                    app_state.set_streaming_session(None);
+                    // 2026-07-18 (W3a-4): fallback (theoretically unreachable
+                    // once desktop wiring is in place): keep the old direct-call
+                    // path. Returns () on success.
+                    None => coordinator
+                        .start_dialog_turn(
+                            sid.clone(),
+                            text_str,
+                            None,
+                            None,
+                            crate::flags::DEFAULT_MODE_ID.to_string(),
+                            Some(workspace),
+                            northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
+                                northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
+                            ),
+                            None,
+                        )
+                        .await
+                        .map_err(|e| format!("Failed to send message: {e}")),
+                };
+
+                if let Err(e) = submit_ok {
+                    if let Some(ui) = ui_clone.upgrade() {
+                        set_session_error(&ui, e);
+                    }
+                    // 2026-07-18 (W3a-4): do NOT clear the streaming indicator
+                    // here — its lifecycle is owned by the event bridge. Clearing
+                    // on submit failure was the original bug that dropped the
+                    // streaming state prematurely.
                     return;
                 }
-
-                // turn 已 spawn，流式状态由 event bridge 管理
-                // (DialogTurnStarted sets streaming; terminal events clear it)
 
                 // Refresh messages after response completes
                 if let Some(ui) = ui_clone.upgrade() {
