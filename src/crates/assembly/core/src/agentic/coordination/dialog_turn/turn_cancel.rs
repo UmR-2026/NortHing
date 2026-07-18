@@ -219,6 +219,23 @@ impl ConversationCoordinator {
                 "Cancelled turn did not fully drain within 1500ms: session_id={}, dialog_turn_id={}, pending={}",
                 session_id, dialog_turn_id, pending
             );
+            // 2026-07-18 (W3a-3): Convergence fallback. The turn task is still
+            // alive after the drain window (e.g. stuck in an uninterruptible
+            // await such as AskUserQuestion). The spawned task will not emit
+            // DialogTurnCancelled on its own, so the desktop UI would stay in
+            // streaming state forever. Emit the terminal event and persist the
+            // terminal state here unconditionally so the UI converges to Idle.
+            // Duplicates are harmless (see persist_cancelled_dialog_turn).
+            if state_updated {
+                Self::persist_cancelled_dialog_turn(
+                    self.event_queue.as_ref(),
+                    self.session_manager.as_ref(),
+                    self.scheduler_notify_tx.get(),
+                    session_id,
+                    dialog_turn_id,
+                )
+                .await;
+            }
         } else {
             debug!(
                 "Cancelled turn fully drained: session_id={}, dialog_turn_id={}",

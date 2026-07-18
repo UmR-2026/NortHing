@@ -77,6 +77,58 @@ pub fn test_coordinator() -> (
     .clone()
 }
 
+// 2026-07-18 (W3a-3): Build an isolated coordinator with its own event queue.
+// Used by cancel convergence and watchdog tests that must not share state
+// with the global `test_coordinator()` OnceLock singleton.
+pub fn build_isolated_coordinator() -> (
+    Arc<crate::agentic::coordination::coordinator::ConversationCoordinator>,
+    Arc<SessionManager>,
+) {
+    let event_queue = Arc::new(EventQueue::new(EventQueueConfig::default()));
+    let session_manager = Arc::new(SessionManager::new(
+        Arc::new(SessionContextStore::new()),
+        Arc::new(
+            PersistenceManager::new(Arc::new(PathManager::new().expect("path manager")))
+                .expect("persistence manager"),
+        ),
+        SessionManagerConfig {
+            max_active_sessions: 100,
+            session_idle_timeout: std::time::Duration::from_secs(3600),
+            auto_save_interval: std::time::Duration::from_secs(300),
+            enable_persistence: false,
+            prompt_cache_policy: PromptCachePolicy::default(),
+        },
+    ));
+    let tool_pipeline = Arc::new(ToolPipeline::new(
+        Arc::new(tokio::sync::RwLock::new(
+            crate::agentic::tools::registry::ToolRegistry::new(),
+        )),
+        Arc::new(ToolStateManager::new(event_queue.clone())),
+        None,
+        Arc::new(OnceLock::new()),
+    ));
+    let execution_engine = Arc::new(ExecutionEngine::new(
+        Arc::new(RoundExecutor::new(
+            Arc::new(StreamProcessor::new(event_queue.clone())),
+            event_queue.clone(),
+            tool_pipeline.clone(),
+        )),
+        event_queue.clone(),
+        session_manager.clone(),
+        Arc::new(ContextCompressor::new(CompressionConfig::default())),
+        ExecutionEngineConfig::default(),
+    ));
+    let coordinator = crate::agentic::coordination::coordinator::ConversationCoordinator::new(
+        session_manager.clone(),
+        execution_engine,
+        tool_pipeline,
+        event_queue,
+        Arc::new(EventRouter::new()),
+    );
+
+    (Arc::new(coordinator), session_manager)
+}
+
 #[cfg(test)]
 pub mod session_ports;
 #[cfg(test)]

@@ -32,9 +32,23 @@ use crate::util::errors::{NortHingError, NortHingResult};
 use northhing_runtime_ports::DelegationPolicy;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use tracing::{debug, error};
+use tokio::time::Duration;
+use tracing::{debug, error, warn};
 
 use tokio_util::sync::CancellationToken;
+
+// 2026-07-18 (W3a-3): Turn watchdog timeout. Reads `NORTHHING_TURN_WATCHDOG_SECS`
+// env var; defaults to 600s. This is a safety net for the interactive desktop
+// agent — normal turns complete in seconds to minutes, so 600s is generous
+// enough to avoid false positives while still catching stuck turns (e.g. a
+// turn task blocked in an uninterruptible await).
+fn turn_watchdog_timeout() -> Duration {
+    std::env::var("NORTHHING_TURN_WATCHDOG_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .map(Duration::from_secs)
+        .unwrap_or_else(|| Duration::from_secs(600))
+}
 
 impl ConversationCoordinator {
     pub(super) async fn finalize_turn(&self, ctx: &mut TurnContext) -> NortHingResult<()> {
@@ -326,6 +340,49 @@ impl ConversationCoordinator {
                 user_message_metadata_clone,
             )
             .await;
+        });
+        // 2026-07-18 (W3a-3): Turn watchdog. After the timeout, if this turn
+        // is still the active processing turn for the session, trigger
+        // cancellation via the coordinator. The cancel path includes the
+        // convergence fallback (persist_cancelled_dialog_turn) so the UI
+        // converges to Idle even if the turn task is stuck in an
+        // uninterruptible await. State check is by session_manager
+        // (Processing + current_turn_id match) to avoid cancelling a newer
+        // turn that replaced this one.
+        let session_manager_for_watchdog = self.session_manager.clone();
+        let session_id_for_watchdog = session_id.clone();
+        let turn_id_for_watchdog = turn_id.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(turn_watchdog_timeout()).await;
+            let still_active = session_manager_for_watchdog
+                .get_session(&session_id_for_watchdog)
+                .map(|session| {
+                    matches!(
+                        &session.state,
+                        SessionState::Processing { current_turn_id, .. }
+                            if current_turn_id == &turn_id_for_watchdog
+                    )
+                })
+                .unwrap_or(false);
+            if still_active {
+                warn!(
+                    "Turn watchdog timeout: session_id={}, turn_id={}, timeout_secs={}",
+                    session_id_for_watchdog,
+                    turn_id_for_watchdog,
+                    turn_watchdog_timeout().as_secs()
+                );
+                if let Some(coordinator) = global_coordinator() {
+                    if let Err(error) = coordinator
+                        .cancel_dialog_turn(&session_id_for_watchdog, &turn_id_for_watchdog)
+                        .await
+                    {
+                        warn!(
+                            "Watchdog cancel failed: session_id={}, turn_id={}, error={}",
+                            session_id_for_watchdog, turn_id_for_watchdog, error
+                        );
+                    }
+                }
+            }
         });
         active_registration.disarm();
         Ok(())
