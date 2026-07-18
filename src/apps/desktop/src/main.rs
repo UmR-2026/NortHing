@@ -9,6 +9,7 @@ mod flags;
 mod mcp_adapter;
 
 use anyhow::Result;
+use std::sync::mpsc;
 use std::thread;
 
 // ======================== Feature Flags for Future Phases ========================
@@ -121,37 +122,74 @@ fn main() {
         .with_target(false)
         .init();
 
+    // 2026-07-18 (D2i): split init and UI across threads. The worker thread
+    // owns the tokio runtime and runs initialize_core_services; the main
+    // thread runs the Slint event loop directly (slint::run_event_loop must
+    // run on the main thread for invoke_from_event_loop closures to fire —
+    // Slint silently drops cross-thread dispatches when the loop is not on
+    // the main thread).
+    let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
+
     let worker = thread::Builder::new()
         .stack_size(16 * 1024 * 1024)
-        .spawn(|| {
+        .spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .expect("failed to build tokio runtime");
-            runtime.block_on(async {
-                // Initialize core services
-                let _agentic_system = initialize_core_services().await?;
 
-                // Run Slint UI on the main thread
-                let slint_result = run_slint_app();
+            // Initialize core services
+            if let Err(e) = runtime.block_on(initialize_core_services()) {
+                eprintln!("Error: failed to initialize core services: {e}");
+                std::process::exit(1);
+            }
 
-                // Graceful shutdown
-                shutdown_mcp_servers().await;
-
-                slint_result
-            })
+            // 2026-07-18 (D2i): keep the multi-thread runtime alive until the
+            // UI exits. The runtime on the stack keeps all spawned tasks
+            // (e.g. MCP background init) alive. Block on shutdown_rx so the
+            // thread stays alive without spinning; when the signal arrives
+            // the function returns and the runtime is dropped.
+            let _ = shutdown_rx.recv();
         })
         .expect("failed to spawn northhing worker thread");
 
+    // 2026-07-18 (D2i): main thread needs a tokio runtime context for
+    // agent-dispatch (spawn_one_shot calls Handle::current()). Create a
+    // multi-thread runtime on the main thread; tokio tasks run on its
+    // thread pool so the Slint event loop (running on the main thread
+    // inside block_on) does not starve the executor.
+    let main_rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build main tokio runtime");
+
+    // 2026-07-18 (D2i): run Slint UI on the main thread. Previously this
+    // ran inside the worker's runtime.block_on, which meant
+    // slint::invoke_from_event_loop closures never executed.
+    let slint_result = main_rt.block_on(async { run_slint_app() });
+
+    // Signal worker to shutdown and wait for it to finish
+    let _ = shutdown_tx.send(());
+
     match worker.join() {
-        Ok(Ok(())) => {}
-        Ok(Err(err)) => {
-            eprintln!("Error: {err}");
-            std::process::exit(1);
-        }
+        Ok(()) => {}
         Err(_) => {
             eprintln!("Error: northhing worker thread panicked");
             std::process::exit(1);
         }
+    }
+
+    // 2026-07-18 (D2i): graceful MCP shutdown on a temporary runtime. The
+    // worker's runtime is already dropped by this point.
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build shutdown runtime");
+    rt.block_on(shutdown_mcp_servers());
+
+    // Handle slint result
+    if let Err(err) = slint_result {
+        eprintln!("Error: {err}");
+        std::process::exit(1);
     }
 }
