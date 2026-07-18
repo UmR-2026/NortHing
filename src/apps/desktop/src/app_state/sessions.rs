@@ -128,9 +128,7 @@ pub(super) fn build_sessions_model(
 /// 2026-07-18 (D2b fix): build the session item Vec (Send-safe) without
 /// wrapping in ModelRc, so the background thread can produce data and the
 /// UI thread constructs the Rc-based model inside the event-loop closure.
-pub(super) fn build_sessions_items(
-    summaries: &[northhing_core::agentic::core::SessionSummary],
-) -> Vec<SessionItem> {
+pub(super) fn build_sessions_items(summaries: &[northhing_core::agentic::core::SessionSummary]) -> Vec<SessionItem> {
     const MAX_DEPTH: i32 = 8;
 
     let items: Vec<SessionItem> = summaries.iter().map(session_summary_to_item).collect();
@@ -222,7 +220,11 @@ pub(super) fn build_messages_items(
 /// event-loop closure so it never crosses a thread boundary. Writing Slint
 /// properties from a non-event-loop thread is silently dropped by Slint 1.16
 /// (backbone invariant: UI thread discipline).
-pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` so callers on
+/// background threads no longer need to `upgrade()` (which returns None on
+/// non-UI threads). The upgrade happens inside the invoke closure (UI thread).
+pub(super) async fn refresh_sessions_ui(ui_weak: slint::Weak<AppWindow>, current_session_id: &str) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         return;
     };
@@ -232,7 +234,6 @@ pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str
         .unwrap_or_else(|_| ".".to_string());
 
     let result = coordinator.list_sessions(std::path::Path::new(&workspace)).await;
-    let ui_weak = ui.as_weak();
     match result {
         Ok(sessions) => {
             // Build the item Vec on the background thread (Send-safe);
@@ -253,7 +254,7 @@ pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str
                 );
             }
         }
-        Err(e) => crate::app_state::set_session_error(ui, format!("Failed to list sessions: {e}")),
+        Err(e) => crate::app_state::set_session_error(ui_weak, format!("Failed to list sessions: {e}")),
     }
 }
 
@@ -262,15 +263,22 @@ pub(super) async fn refresh_sessions_ui(ui: &AppWindow, current_session_id: &str
 ///
 /// 2026-07-18 (D2b fix): all `ui.set_*` calls are now dispatched onto the
 /// Slint event loop thread — see `refresh_sessions_ui` above.
-pub(super) async fn refresh_messages_ui(ui: &AppWindow, session_id: &str, streaming_session_id: Option<&str>) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` — see
+/// `refresh_sessions_ui` above.
+pub(super) async fn refresh_messages_ui(
+    ui_weak: slint::Weak<AppWindow>,
+    session_id: &str,
+    streaming_session_id: Option<&str>,
+) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         return;
     };
 
     if session_id.is_empty() {
-        let ui_weak = ui.as_weak();
+        let ui_weak_empty = ui_weak.clone();
         if let Err(e) = slint::invoke_from_event_loop(move || {
-            if let Some(ui) = ui_weak.upgrade() {
+            if let Some(ui) = ui_weak_empty.upgrade() {
                 ui.set_messages(ModelRc::new(VecModel::from(Vec::<MessageItem>::new())));
             }
         }) {
@@ -283,7 +291,6 @@ pub(super) async fn refresh_messages_ui(ui: &AppWindow, session_id: &str, stream
     }
 
     let result = coordinator.get_messages(session_id).await;
-    let ui_weak = ui.as_weak();
     match result {
         Ok(messages) => {
             // Build item Vec on background thread; construct ModelRc on UI thread.
@@ -299,6 +306,6 @@ pub(super) async fn refresh_messages_ui(ui: &AppWindow, session_id: &str, stream
                 );
             }
         }
-        Err(e) => crate::app_state::set_session_error(ui, format!("Failed to get messages: {e}")),
+        Err(e) => crate::app_state::set_session_error(ui_weak, format!("Failed to get messages: {e}")),
     }
 }

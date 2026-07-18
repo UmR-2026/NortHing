@@ -19,10 +19,10 @@ use super::callbacks_lifecycle::{
     register_toggle_theme_callback,
 };
 use super::callbacks_settings::{
-    register_add_workspace_callback, register_delete_provider_callback, register_onboarding_completed_callback,
-    register_pick_folder_callback, register_refresh_settings_callback, register_remove_workspace_callback,
-    register_set_default_model_callback, register_test_provider_callback, register_test_provider_config_callback,
-    register_upsert_provider_callback, refresh_settings_lists,
+    refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
+    register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
+    register_remove_workspace_callback, register_set_default_model_callback, register_test_provider_callback,
+    register_test_provider_config_callback, register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -144,9 +144,7 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                     // live in app.json but whose core config is empty.
                     // Failure is non-fatal — we just warn and continue.
                     if !settings.providers.is_empty() {
-                        if let Err(e) =
-                            crate::app_state::settings::sync_providers_to_core(&settings).await
-                        {
+                        if let Err(e) = crate::app_state::settings::sync_providers_to_core(&settings).await {
                             tracing::warn!(
                                 target: "app_state",
                                 "startup sync_providers_to_core failed: {e}"
@@ -198,11 +196,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
             }
         };
         rt.block_on(async move {
-            let Some(ui) = ui_weak_provider.upgrade() else {
-                return;
-            };
+            // 2026-07-18 (D2j): fetch status on background thread, then
+            // dispatch setter onto UI thread. Removed the background-thread
+            // `upgrade()` guard (returns None on non-UI threads).
             let status = build_model_status_string().await;
-            let ui_weak = ui.as_weak();
+            let ui_weak = ui_weak_provider.clone();
             if let Err(e) = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.set_model_status(SharedString::from(status));
@@ -234,11 +232,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
             }
         };
         rt.block_on(async move {
-            let Some(ui) = ui_weak_mcp.upgrade() else {
-                return;
-            };
+            // 2026-07-18 (D2j): fetch status on background thread, then
+            // dispatch setter onto UI thread. Removed the background-thread
+            // `upgrade()` guard (returns None on non-UI threads).
             let status = build_mcp_status_string().await;
-            let ui_weak = ui.as_weak();
+            let ui_weak = ui_weak_mcp.clone();
             if let Err(e) = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.set_mcp_status(SharedString::from(status));
@@ -269,10 +267,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                 return;
             }
         };
+        // 2026-07-18 (D2j-fix): background thread block_on drives the async
+        // refresh_skills_ui directly with weak. No invoke_from_event_loop
+        // wrapper — refresh_skills_ui internally dispatches the UI set.
         rt.block_on(async move {
-            if let Some(ui) = ui_weak_skills_init.upgrade() {
-                refresh_skills_ui(&ui).await;
-            }
+            refresh_skills_ui(ui_weak_skills_init.clone()).await;
         });
     });
 
@@ -329,9 +328,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
             }
         };
         rt.block_on(async move {
-            if let Some(ui) = ui_weak_refresh.upgrade() {
-                refresh_settings_lists(&ui).await;
-            }
+            // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
+            refresh_settings_lists(ui_weak_refresh.clone()).await;
         });
     });
 
@@ -373,9 +371,11 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
         }
         if !system_ready {
             tracing::warn!("P0-A: agentic system not ready after 5s, skipping startup session");
-            if let Some(ui) = ui_weak_startup.upgrade() {
-                set_session_error(&ui, "Startup: agentic system not ready. Try restarting the app.");
-            }
+            // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+            set_session_error(
+                ui_weak_startup.clone(),
+                "Startup: agentic system not ready. Try restarting the app.",
+            );
             return;
         }
 
@@ -390,12 +390,11 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
             let app_state = &*app_state_arc_startup;
             let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
                 tracing::warn!("P0-A: global coordinator not available");
-                if let Some(ui) = ui_weak_startup.upgrade() {
-                    set_session_error(
-                        &ui,
-                        "Startup: global coordinator not available. Try restarting the app.",
-                    );
-                }
+                // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                set_session_error(
+                    ui_weak_startup.clone(),
+                    "Startup: global coordinator not available. Try restarting the app.",
+                );
                 return;
             };
 
@@ -421,44 +420,40 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
 
                     tracing::info!(target: "app_state", "P0-A: created startup session {sid}");
 
-                    // 2026-06-26 (review follow-up): both `set_current_session_id`
-                    // and `refresh_sessions_ui` (which calls `set_sessions` and
-                    // `set_current_session_id` internally) are Slint property
-                    // setters. They MUST run on the event loop thread — calling
-                    // from this background `rt.block_on` is silently dropped by
-                    // Slint 1.16. Dispatch the whole UI-touching block via
-                    // `invoke_from_event_loop`; the dispatched closure runs a
-                    // fresh tokio runtime to await the `refresh_sessions_ui`
-                    // future on the UI thread. Rust state mutations above
-                    // (`app_state.set_current_session_id` /
+                    // 2026-06-26 (review follow-up): `set_current_session_id`
+                    // is a Slint property setter and MUST run on the event loop
+                    // thread — calling from this background `rt.block_on` is
+                    // silently dropped by Slint 1.16. Dispatch only the sync
+                    // setter via `invoke_from_event_loop`; then drive the async
+                    // `refresh_sessions_ui` directly on this background thread
+                    // (it dispatches its own UI sets internally). Rust state
+                    // mutations above (`app_state.set_current_session_id` /
                     // `set_load_more_cursor`) stay on the background thread.
+                    //
+                    // 2026-07-18 (D2j-fix): no nested block_on inside the
+                    // invoke closure — that panics ("Cannot start a runtime
+                    // from within a runtime") because the UI thread already
+                    // runs in a tokio context.
                     //
                     // Reviewer flagged this as the third latent bug matching
                     // the Phase 4 first-run pattern (`748f628`).
-                    if let Some(ui) = ui_weak_startup.upgrade() {
-                        let ui_weak = ui.as_weak();
-                        let sid_for_dispatch = sid.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            let Some(ui) = ui_weak.upgrade() else {
-                                return;
-                            };
-                            ui.set_current_session_id(SharedString::from(sid_for_dispatch.clone()));
-                            // refresh_sessions_ui awaits a tokio future. We
-                            // can't `await` inside a sync closure, so spin up
-                            // a fresh current-thread runtime to drive the
-                            // future to completion on the UI thread.
-                            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
-                            if let Ok(rt) = rt {
-                                let _ = rt.block_on(refresh_sessions_ui(&ui, &sid_for_dispatch));
-                            }
-                        });
-                    }
+                    let ui_weak = ui_weak_startup.clone();
+                    let sid_for_dispatch = sid.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_current_session_id(SharedString::from(sid_for_dispatch));
+                        }
+                    });
+                    let sid_for_refresh = sid.clone();
+                    refresh_sessions_ui(ui_weak_startup.clone(), &sid_for_refresh).await;
                 }
                 Err(e) => {
                     tracing::error!("P0-A: failed to create startup session: {e}");
-                    if let Some(ui) = ui_weak_startup.upgrade() {
-                        set_session_error(&ui, format!("Failed to create startup session: {e}"));
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(
+                        ui_weak_startup.clone(),
+                        format!("Failed to create startup session: {e}"),
+                    );
                 }
             }
         });

@@ -9,10 +9,10 @@ use super::error_banners::set_session_error;
 use super::sessions::build_messages_model;
 use super::slint_glue::{AppWindow, MessageItem};
 use super::state::AppState;
-use northhing_events::agentic::ErrorCategory;
-use northhing_events::AgenticEvent;
 use northhing_core::agentic::events::router::EventSubscriber;
 use northhing_core::util::errors::NortHingResult;
+use northhing_events::agentic::ErrorCategory;
+use northhing_events::AgenticEvent;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::sync::Arc;
 
@@ -38,35 +38,41 @@ impl DesktopEventBridge {
     fn flush_draft(&self, session_id: &str, draft: String) {
         let ui = self.ui.clone();
         let sid = session_id.to_string();
-        let _ = slint::invoke_from_event_loop(move || {
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build();
-            if let Ok(rt) = rt {
-                let _ = rt.block_on(async {
-                    let Some(coordinator) =
-                        northhing_core::agentic::coordination::global_coordinator()
-                    else {
-                        return;
-                    };
-                    match coordinator.get_messages(&sid).await {
-                        Ok(msgs) => {
-                            let base = build_messages_model(&msgs, None);
-                            let mut items: Vec<MessageItem> = base.iter().collect();
-                            items.push(slint_streaming_item(draft.clone()));
-                            ui.set_messages(ModelRc::new(VecModel::from(items)));
-                        }
-                        Err(_) => {
-                            let items = vec![slint_streaming_item(draft.clone())];
-                            ui.set_messages(ModelRc::new(VecModel::from(items)));
-                        }
+        // 2026-07-18 (D2j-fix): event bridge subscription runs on a background
+        // thread. Fetch messages there, then dispatch only the sync UI set
+        // onto the UI thread via invoke_from_event_loop. No nested block_on
+        // inside the invoke closure (would panic: "Cannot start a runtime
+        // from within a runtime").
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
+        if let Ok(rt) = rt {
+            let _ = rt.block_on(async {
+                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+                    return;
+                };
+                match coordinator.get_messages(&sid).await {
+                    Ok(msgs) => {
+                        let base = build_messages_model(&msgs, None);
+                        let mut items: Vec<MessageItem> = base.iter().collect();
+                        items.push(slint_streaming_item(draft.clone()));
+                        let ui_weak = ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_messages(ModelRc::new(VecModel::from(items)));
+                            }
+                        });
                     }
-                });
-            }
-        });
+                    Err(_) => {
+                        let items = vec![slint_streaming_item(draft.clone())];
+                        let ui_weak = ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.set_messages(ModelRc::new(VecModel::from(items)));
+                            }
+                        });
+                    }
+                }
+            });
+        }
     }
 
     /// Refresh messages from the coordinator (no synthetic item). Used for
@@ -74,23 +80,26 @@ impl DesktopEventBridge {
     fn refresh_messages(&self, session_id: &str) {
         let ui = self.ui.clone();
         let sid = session_id.to_string();
-        let _ = slint::invoke_from_event_loop(move || {
-            let Some(ui) = ui.upgrade() else {
-                return;
-            };
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build();
-            if let Ok(rt) = rt {
-                let _ = rt.block_on(async {
-                    if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-                        if let Ok(msgs) = c.get_messages(&sid).await {
-                            ui.set_messages(build_messages_model(&msgs, None));
-                        }
+        // 2026-07-18 (D2j-fix): event bridge subscription runs on a background
+        // thread. Fetch messages there, then dispatch only the sync UI set
+        // onto the UI thread via invoke_from_event_loop. No nested block_on
+        // inside the invoke closure (would panic).
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
+        if let Ok(rt) = rt {
+            let _ = rt.block_on(async {
+                if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
+                    if let Ok(msgs) = c.get_messages(&sid).await {
+                        let ui_weak = ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak.upgrade() {
+                                let model = build_messages_model(&msgs, None);
+                                ui.set_messages(model);
+                            }
+                        });
                     }
-                });
-            }
-        });
+                }
+            });
+        }
     }
 }
 
@@ -248,7 +257,8 @@ impl EventSubscriber for DesktopEventBridge {
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = ui.upgrade() {
                         ui.set_is_streaming(false);
-                        set_session_error(&ui, msg_clone);
+                        // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+                        set_session_error(ui.as_weak(), msg_clone);
                     }
                 });
                 self.refresh_messages(&sid);

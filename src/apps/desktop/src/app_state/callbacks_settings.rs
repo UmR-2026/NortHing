@@ -9,7 +9,7 @@
 //! `Arc::clone(app_state)` to match the `&Arc<AppState>` parameter;
 //! semantics are identical (clone the Arc, no behavior change).
 
-use super::error_banners::{set_banner_message, set_inline_error, set_input_error, set_session_error};
+use super::error_banners::{set_banner_message, set_inline_error};
 use super::log::log_debug_event;
 use super::sessions::{build_messages_model, refresh_messages_ui, refresh_sessions_ui};
 use super::skills::refresh_skills_ui;
@@ -85,9 +85,8 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak.clone(), e, "");
                         return;
                     }
                 };
@@ -99,9 +98,8 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                     .unwrap_or_else(|| pid.clone());
                 let _ = s.remove_provider(&pid);
                 if let Err(e) = save_app_settings_quiet(&s).await {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak.clone(), e, "");
                     return;
                 }
                 // 2026-07-18 (D2g): push provider state into core so the runtime
@@ -109,9 +107,8 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                 // safe on disk; we surface a banner and let them retry.
                 if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
                     tracing::warn!(target: "app_state", "delete-provider sync-to-core failed: {e}");
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_banner_message(&ui, "同步到运行时配置失败，请重试".to_string(), "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string(), "");
                     // do NOT return — data is already persisted
                 }
 
@@ -148,24 +145,23 @@ pub(super) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                 // (Q7 issues are NOT expected from a provider delete
                 // — they fire only on remove-workspace. We still log
                 // them so nothing is silently dropped.)
-                if let Some(ui) = ui_weak.upgrade() {
-                    let q6_count = issues.iter().filter(|i| i.kind == "provider-deleted").count();
-                    if q6_count > 0 {
-                        let fallback = s.fallback_provider_for(&pid);
-                        let detail = match fallback {
-                            Some(fb) => format!("新会话将自动使用 {} ({} 个会话受影响)。", fb.name, q6_count),
-                            None => {
-                                format!("没有其他可用的 AI 服务。{} 个会话无法继续。", q6_count)
-                            }
-                        };
-                        set_banner_message(&ui, format!("已删除 AI 服务 {}", provider_name), detail);
-                        set_inline_error(&ui, "上次使用的 AI 服务已被移除，已自动切换。");
-                    } else {
-                        set_banner_message(&ui, format!("已删除 AI 服务 {}", provider_name), "");
-                    }
-                    // 2026-07-18 (D2b): refresh settings lists after save.
-                    refresh_settings_lists(&ui).await;
+                // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                let q6_count = issues.iter().filter(|i| i.kind == "provider-deleted").count();
+                if q6_count > 0 {
+                    let fallback = s.fallback_provider_for(&pid);
+                    let detail = match fallback {
+                        Some(fb) => format!("新会话将自动使用 {} ({} 个会话受影响)。", fb.name, q6_count),
+                        None => {
+                            format!("没有其他可用的 AI 服务。{} 个会话无法继续。", q6_count)
+                        }
+                    };
+                    set_banner_message(ui_weak.clone(), format!("已删除 AI 服务 {}", provider_name), detail);
+                    set_inline_error(ui_weak.clone(), "上次使用的 AI 服务已被移除，已自动切换。");
+                } else {
+                    set_banner_message(ui_weak.clone(), format!("已删除 AI 服务 {}", provider_name), "");
                 }
+                // 2026-07-18 (D2b): refresh settings lists after save.
+                refresh_settings_lists(ui_weak.clone()).await;
             });
         });
     });
@@ -195,18 +191,16 @@ pub(super) fn register_remove_workspace_callback(ui: &AppWindow, app_state: &Arc
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak.clone(), e, "");
                         return;
                     }
                 };
                 let workspace_name = wpath.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
                 let _ = s.remove_workspace(&wpath);
                 if let Err(e) = save_app_settings_quiet(&s).await {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak.clone(), e, "");
                     return;
                 }
 
@@ -226,23 +220,22 @@ pub(super) fn register_remove_workspace_callback(ui: &AppWindow, app_state: &Arc
                 };
                 let issues = s.validate_session_integrity(session_ids, &provider_lookup, &workspace_lookup);
 
-                if let Some(ui) = ui_weak.upgrade() {
-                    let q7_count = issues.iter().filter(|i| i.kind == "workspace-removed").count();
-                    let name = if workspace_name.is_empty() {
-                        wpath.to_string_lossy().to_string()
-                    } else {
-                        workspace_name
-                    };
-                    if q7_count > 0 {
-                        let detail = format!("{} 个会话已标记为工作文件夹已移除，无法继续聊天。", q7_count);
-                        set_banner_message(&ui, format!("已删除工作文件夹 {}", name), detail);
-                        set_inline_error(&ui, "工作文件夹已移除，无法继续聊天。");
-                    } else {
-                        set_banner_message(&ui, format!("已删除工作文件夹 {}", name), "");
-                    }
-                    // 2026-07-18 (D2b): refresh settings lists after save.
-                    refresh_settings_lists(&ui).await;
+                // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                let q7_count = issues.iter().filter(|i| i.kind == "workspace-removed").count();
+                let name = if workspace_name.is_empty() {
+                    wpath.to_string_lossy().to_string()
+                } else {
+                    workspace_name
+                };
+                if q7_count > 0 {
+                    let detail = format!("{} 个会话已标记为工作文件夹已移除，无法继续聊天。", q7_count);
+                    set_banner_message(ui_weak.clone(), format!("已删除工作文件夹 {}", name), detail);
+                    set_inline_error(ui_weak.clone(), "工作文件夹已移除，无法继续聊天。");
+                } else {
+                    set_banner_message(ui_weak.clone(), format!("已删除工作文件夹 {}", name), "");
                 }
+                // 2026-07-18 (D2b): refresh settings lists after save.
+                refresh_settings_lists(ui_weak.clone()).await;
             });
         });
     });
@@ -274,16 +267,15 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 Err(_) => return,
             };
             rt.block_on(async move {
-                use crate::app_state::settings::{validate_provider_input, resolve_effective_api_key, ProviderType};
+                use crate::app_state::settings::{resolve_effective_api_key, validate_provider_input, ProviderType};
 
                 // 2026-07-18 (D2e): load settings BEFORE validate so we can look up
                 // the stored API key when editing with an empty form field.
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_inline_error(&ui, e);
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_inline_error(ui_weak.clone(), e);
                         return;
                     }
                 };
@@ -299,15 +291,12 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                     pkey.clone()
                 };
 
-                if let Err(msg) =
-                    validate_provider_input(&pname, &ptype, &pbase, &effective_key, &pmodel)
-                {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_inline_error(&ui, msg.clone());
-                        // 2026-07-18 (D2e): banner is globally visible — unlike inline
-                        // error which only renders in ChatPaneView.
-                        set_banner_message(&ui, msg, "");
-                    }
+                if let Err(msg) = validate_provider_input(&pname, &ptype, &pbase, &effective_key, &pmodel) {
+                    // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                    set_inline_error(ui_weak.clone(), msg.clone());
+                    // 2026-07-18 (D2e): banner is globally visible — unlike inline
+                    // error which only renders in ChatPaneView.
+                    set_banner_message(ui_weak.clone(), msg, "");
                     return;
                 }
                 let provider_type = match ptype.as_str() {
@@ -321,9 +310,8 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                     // it gracefully instead of panicking (panic in a spawn
                     // thread would abort the process).
                     _ => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_inline_error(&ui, "内部错误：未知的服务类型".to_string());
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_inline_error(ui_weak.clone(), "内部错误：未知的服务类型".to_string());
                         return;
                     }
                 };
@@ -338,9 +326,8 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 s.upsert_provider(new_provider);
                 if let Err(e) = save_app_settings_quiet(&s).await {
                     tracing::warn!(target: "app_state", "upsert-provider save failed: {e}");
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_inline_error(&ui, "同步到运行时配置失败，请重试".to_string());
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_inline_error(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string());
                     return;
                 }
                 // Push the new/updated provider into core so the runtime
@@ -348,9 +335,8 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 // on disk; we surface a banner and let them retry.
                 if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
                     tracing::warn!(target: "app_state", "upsert-provider sync-to-core failed: {e}");
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_inline_error(&ui, "同步到运行时配置失败，请重试".to_string());
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_inline_error(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string());
                     return;
                 }
                 // Q6 reverse direction: if user re-adds a provider
@@ -374,25 +360,24 @@ pub(super) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                         .map(|(_, m)| m.workspace_path.clone())
                 };
                 let _ = s.validate_session_integrity(session_ids, &provider_lookup, &workspace_lookup);
-                if let Some(ui) = ui_weak.upgrade() {
-                    set_banner_message(&ui, format!("已保存 AI 服务 {}", pname), "");
-                    // 2026-06-26 (Phase 4 fix): expose the saved provider id so
-                    // the welcome flow's test-btn can request "test the last
-                    // saved one" via the "__last__" sentinel.
-                    let saved_id = if pid.is_empty() {
-                        s.providers.last().map(|p| p.id.clone()).unwrap_or_default()
-                    } else {
-                        pid.clone()
-                    };
-                    let ui_weak_set_id = ui.as_weak();
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = ui_weak_set_id.upgrade() {
-                            ui.set_last_saved_provider_id(slint::SharedString::from(saved_id));
-                        }
-                    });
-                    // 2026-07-18 (D2b): refresh settings lists after save.
-                    refresh_settings_lists(&ui).await;
-                }
+                // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                set_banner_message(ui_weak.clone(), format!("已保存 AI 服务 {}", pname), "");
+                // 2026-06-26 (Phase 4 fix): expose the saved provider id so
+                // the welcome flow's test-btn can request "test the last
+                // saved one" via the "__last__" sentinel.
+                let saved_id = if pid.is_empty() {
+                    s.providers.last().map(|p| p.id.clone()).unwrap_or_default()
+                } else {
+                    pid.clone()
+                };
+                let ui_weak_set_id = ui_weak.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak_set_id.upgrade() {
+                        ui.set_last_saved_provider_id(slint::SharedString::from(saved_id));
+                    }
+                });
+                // 2026-07-18 (D2b): refresh settings lists after save.
+                refresh_settings_lists(ui_weak.clone()).await;
             });
         });
     });
@@ -431,24 +416,21 @@ pub(super) fn register_pick_folder_callback(ui: &AppWindow, _app_state: &Arc<App
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak2.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak2.clone(), e, "");
                         return;
                     }
                 };
                 s.add_workspace(folder.clone());
                 if let Err(e) = save_app_settings_quiet(&s).await {
                     tracing::warn!(target: "app_state", "pick-folder save failed: {e}");
-                    if let Some(ui) = ui_weak2.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak2.clone(), e, "");
                     return;
                 }
                 // 2026-07-18 (D2b): refresh settings lists after save.
-                if let Some(ui) = ui_weak2.upgrade() {
-                    refresh_settings_lists(&ui).await;
-                }
+                // 2026-07-18 (D2j): pass weak directly; function upgrades on UI thread.
+                refresh_settings_lists(ui_weak2.clone()).await;
                 let ui_weak3 = ui_weak2.clone();
                 if let Err(e) = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = ui_weak3.upgrade() {
@@ -490,9 +472,8 @@ pub(super) fn register_add_workspace_callback(ui: &AppWindow, _app_state: &Arc<A
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak2.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak2.clone(), e, "");
                         return;
                     }
                 };
@@ -507,15 +488,13 @@ pub(super) fn register_add_workspace_callback(ui: &AppWindow, _app_state: &Arc<A
                 }
                 if let Err(e) = save_app_settings_quiet(&s).await {
                     tracing::warn!(target: "app_state", "add-workspace save failed: {e}");
-                    if let Some(ui) = ui_weak2.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak2.clone(), e, "");
                     return;
                 }
                 // 2026-07-18 (D2b): refresh settings lists after save.
-                if let Some(ui) = ui_weak2.upgrade() {
-                    refresh_settings_lists(&ui).await;
-                }
+                // 2026-07-18 (D2j): pass weak directly; function upgrades on UI thread.
+                refresh_settings_lists(ui_weak2.clone()).await;
             });
         });
     });
@@ -549,9 +528,7 @@ pub(super) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak3.upgrade() {
                             ui.set_provider_test_in_flight(false);
-                            ui.set_provider_test_result(slint::SharedString::from(
-                                "内部错误：无法启动运行时",
-                            ));
+                            ui.set_provider_test_result(slint::SharedString::from("内部错误：无法启动运行时"));
                         }
                     });
                     return;
@@ -592,9 +569,7 @@ pub(super) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak3.upgrade() {
                                 ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from(
-                                    "未找到要测试的服务",
-                                ));
+                                ui.set_provider_test_result(slint::SharedString::from("未找到要测试的服务"));
                             }
                         });
                         return;
@@ -693,9 +668,7 @@ pub(super) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak3.upgrade() {
                             ui.set_provider_test_in_flight(false);
-                            ui.set_provider_test_result(slint::SharedString::from(
-                                "内部错误：无法启动运行时",
-                            ));
+                            ui.set_provider_test_result(slint::SharedString::from("内部错误：无法启动运行时"));
                         }
                     });
                     return;
@@ -715,9 +688,7 @@ pub(super) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak3.upgrade() {
                                 ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from(
-                                    "内部错误：未知的服务类型",
-                                ));
+                                ui.set_provider_test_result(slint::SharedString::from("内部错误：未知的服务类型"));
                             }
                         });
                         return;
@@ -792,11 +763,15 @@ pub(super) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
 // 2026-07-18 (D2b): refresh all 7 settings-list properties from AppSettings.
 // Called once at startup (create_ui) and after every settings mutation
 // so the SettingsView sub-panels always reflect the on-disk state.
-pub(super) async fn refresh_settings_lists(ui: &AppWindow) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` so callers on
+/// background threads no longer need to `upgrade()` (which returns None on
+/// non-UI threads). The upgrade happens inside the invoke closure (UI thread).
+pub(super) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
     let s = match load_app_settings_quiet().await {
         Ok(s) => s,
         Err(e) => {
-            set_banner_message(&ui, e, "");
+            set_banner_message(ui_weak, e, "");
             return;
         }
     };
@@ -918,8 +893,11 @@ pub(super) async fn refresh_settings_lists(ui: &AppWindow) {
         .unwrap_or_default();
 
     // legacy-placeholder-count: providers with id containing "-default" and disabled.
-    let legacy_placeholder_count =
-        s.providers.iter().filter(|p| p.id.contains("-default") && !p.enabled).count() as i32;
+    let legacy_placeholder_count = s
+        .providers
+        .iter()
+        .filter(|p| p.id.contains("-default") && !p.enabled)
+        .count() as i32;
 
     // All 7 property sets in a single invoke_from_event_loop.
     // Wrap in Arc so retry (after startup-race sleep) can reuse the same data.
@@ -930,8 +908,6 @@ pub(super) async fn refresh_settings_lists(ui: &AppWindow) {
     let current_workspace_index = Arc::new(current_workspace_index);
     let default_model_provider_id = Arc::new(default_model_provider_id);
     let legacy_placeholder_count = Arc::new(legacy_placeholder_count);
-
-    let ui_weak = ui.as_weak();
 
     // Wrap owned copies in Arc so dispatch (Fn) can be called multiple times.
     let providers_owned: Arc<Vec<ProviderItem>> = Arc::new((*providers).clone());
@@ -1009,18 +985,16 @@ pub(super) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak.clone(), e, "");
                         return;
                     }
                 };
                 let provider = match s.providers.iter().find(|p| p.id == pid && p.enabled) {
                     Some(p) => p.clone(),
                     None => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_banner_message(&ui, "未找到已启用的指定 AI 服务", "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak.clone(), "未找到已启用的指定 AI 服务", "");
                         return;
                     }
                 };
@@ -1029,9 +1003,8 @@ pub(super) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                     model: provider.model.clone(),
                 });
                 if let Err(e) = save_app_settings_quiet(&s).await {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak.clone(), e, "");
                     return;
                 }
                 // 2026-07-18 (D2g): push default model into core so the runtime
@@ -1039,15 +1012,13 @@ pub(super) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                 // data is safe on disk; we surface a banner and let them retry.
                 if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
                     tracing::warn!(target: "app_state", "set-default-model sync-to-core failed: {e}");
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_banner_message(&ui, "同步到运行时配置失败，请重试".to_string(), "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string(), "");
                     // do NOT return — data is already persisted
                 }
-                if let Some(ui) = ui_weak.upgrade() {
-                    set_banner_message(&ui, "已设置默认模型", "");
-                    refresh_settings_lists(&ui).await;
-                }
+                // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                set_banner_message(ui_weak.clone(), "已设置默认模型", "");
+                refresh_settings_lists(ui_weak.clone()).await;
             });
         });
     });
@@ -1075,18 +1046,16 @@ pub(super) fn register_onboarding_completed_callback(ui: &AppWindow, _app_state:
                 let mut s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
-                        if let Some(ui) = ui_weak2.upgrade() {
-                            set_banner_message(&ui, e, "");
-                        }
+                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                        set_banner_message(ui_weak2.clone(), e, "");
                         return;
                     }
                 };
                 s.onboarding_completed = true;
                 if let Err(e) = save_app_settings_quiet(&s).await {
                     tracing::warn!(target: "app_state", "onboarding-completed save failed: {e}");
-                    if let Some(ui) = ui_weak2.upgrade() {
-                        set_banner_message(&ui, e, "");
-                    }
+                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                    set_banner_message(ui_weak2.clone(), e, "");
                     return;
                 }
                 let ui_weak3 = ui_weak2.clone();
@@ -1123,9 +1092,8 @@ pub(super) fn register_refresh_settings_callback(ui: &AppWindow, _app_state: &Ar
                 }
             };
             rt.block_on(async move {
-                if let Some(ui) = ui_weak.upgrade() {
-                    refresh_settings_lists(&ui).await;
-                }
+                // 2026-07-18 (D2j): pass weak directly; function upgrades on UI thread.
+                refresh_settings_lists(ui_weak.clone()).await;
             });
         });
     });

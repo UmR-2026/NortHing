@@ -19,12 +19,15 @@ use super::slint_glue::AppWindow;
 /// Dispatches onto the Slint event loop thread — Slint 1.16 silently drops
 /// property setters called from non-event-loop threads. Same root cause as
 /// the `set_inline_error` fix and the model-status / mcp-status fixes.
-pub fn set_session_error(ui: &AppWindow, message: impl Into<String>) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` so callers on
+/// background threads no longer need to `upgrade()` (which returns None on
+/// non-UI threads). The upgrade happens inside the invoke closure (UI thread).
+pub fn set_session_error(ui_weak: slint::Weak<AppWindow>, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "session_error: {msg}");
-    let weak = ui.as_weak();
     let _ = slint::invoke_from_event_loop(move || {
-        if let Some(ui) = weak.upgrade() {
+        if let Some(ui) = ui_weak.upgrade() {
             ui.set_session_error(SharedString::from(msg));
             schedule_error_clear(ui.as_weak(), ErrorKind::Session);
         }
@@ -35,12 +38,14 @@ pub fn set_session_error(ui: &AppWindow, message: impl Into<String>) {
 /// like "no session selected"). Auto-clears after 5s.
 ///
 /// Dispatches onto the Slint event loop thread — see `set_session_error`.
-pub fn set_input_error(ui: &AppWindow, message: impl Into<String>) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` — see
+/// `set_session_error` above.
+pub fn set_input_error(ui_weak: slint::Weak<AppWindow>, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "input_error: {msg}");
-    let weak = ui.as_weak();
     let _ = slint::invoke_from_event_loop(move || {
-        if let Some(ui) = weak.upgrade() {
+        if let Some(ui) = ui_weak.upgrade() {
             ui.set_input_error(SharedString::from(msg));
             schedule_error_clear(ui.as_weak(), ErrorKind::Input);
         }
@@ -53,16 +58,18 @@ pub fn set_input_error(ui: &AppWindow, message: impl Into<String>) {
 /// shows a "详情" button that copies the same error to the inline
 /// channel (second channel). Use this for transient / summary errors
 /// that the user might want to dig into.
-pub fn set_banner_message(ui: &AppWindow, message: impl Into<String>, detail: impl Into<String>) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` — see
+/// `set_session_error` above.
+pub fn set_banner_message(ui_weak: slint::Weak<AppWindow>, message: impl Into<String>, detail: impl Into<String>) {
     let msg = message.into();
     let det = detail.into();
     // 2026-07-18 (D2b fix): log only a fixed English event description;
     // the user-facing message (which may contain CJK) goes to the UI banner
     // only, never into logs (backbone invariant: logs are English-only).
     tracing::warn!(target: "app_state", "banner shown");
-    let weak = ui.as_weak();
     let _ = slint::invoke_from_event_loop(move || {
-        if let Some(ui) = weak.upgrade() {
+        if let Some(ui) = ui_weak.upgrade() {
             ui.set_banner_message(SharedString::from(msg));
             ui.set_banner_detail(SharedString::from(det));
             schedule_error_clear(ui.as_weak(), ErrorKind::Banner);
@@ -75,12 +82,14 @@ pub fn set_banner_message(ui: &AppWindow, message: impl Into<String>, detail: im
 /// fires `clear-inline-error` → `set_chat_inline_error` with empty).
 /// Use for errors the user needs to acknowledge (e.g. "上次使用的 AI
 /// 服务已被移除，已自动切换。", "LLM 调用失败: ...").
-pub fn set_inline_error(ui: &AppWindow, message: impl Into<String>) {
+///
+/// 2026-07-18 (D2j): signature takes `slint::Weak<AppWindow>` — see
+/// `set_session_error` above.
+pub fn set_inline_error(ui_weak: slint::Weak<AppWindow>, message: impl Into<String>) {
     let msg = message.into();
     tracing::warn!(target: "app_state", "inline_error: {msg}");
-    let weak = ui.as_weak();
     let _ = slint::invoke_from_event_loop(move || {
-        if let Some(ui) = weak.upgrade() {
+        if let Some(ui) = ui_weak.upgrade() {
             ui.set_chat_inline_error(SharedString::from(msg));
         }
     });

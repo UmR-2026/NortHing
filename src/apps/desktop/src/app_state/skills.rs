@@ -53,7 +53,18 @@ pub(super) async fn build_skills_model(mode_id: &str) -> Vec<SkillItem> {
 /// Phase C.4: refresh the Inspector's `skills` model from the live registry.
 /// Called once at init and again after `on_toggle_skill` flips a skill, so
 /// the UI badge (●) reflects the new state without a manual reload.
-pub(super) async fn refresh_skills_ui(ui: &AppWindow) {
+///
+/// 2026-07-18 (D2j-fix): signature takes `slint::Weak<AppWindow>` so callers
+/// on background threads no longer need to `upgrade()` (which returns None on
+/// non-UI threads). Data fetch runs on the caller thread; the ModelRc-based
+/// UI set is dispatched onto the UI thread via `invoke_from_event_loop`
+/// (synchronous only — no nested block_on).
+pub(super) async fn refresh_skills_ui(ui_weak: slint::Weak<AppWindow>) {
     let items = build_skills_model(crate::flags::DEFAULT_MODE_ID).await;
-    ui.set_skills(ModelRc::new(VecModel::from(items)));
+    let ui_weak = ui_weak.clone();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            ui.set_skills(ModelRc::new(VecModel::from(items)));
+        }
+    });
 }

@@ -94,17 +94,18 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
 
         let app_state = &*app_state_arc_send;
         let Some(_system) = app_state.get_agentic_system() else {
-            if let Some(ui) = ui_weak.upgrade() {
-                set_session_error(&ui, "Agentic system not initialized. Please restart.");
-            }
+            // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+            set_session_error(ui_weak.clone(), "Agentic system not initialized. Please restart.");
             return;
         };
 
         let session_id = app_state.get_current_session_id();
         if session_id.is_empty() {
-            if let Some(ui) = ui_weak.upgrade() {
-                set_input_error(&ui, "No session selected. Please create or select a session first.");
-            }
+            // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+            set_input_error(
+                ui_weak.clone(),
+                "No session selected. Please create or select a session first.",
+            );
             return;
         };
 
@@ -122,9 +123,8 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, "Global coordinator not available.");
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
                     app_state.set_streaming_session(None);
                     return;
                 };
@@ -133,7 +133,7 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_else(|_| ".".to_string());
 
-                                // 2026-07-18 (W3a-4): route submissions through the dialog
+                // 2026-07-18 (W3a-4): route submissions through the dialog
                 // scheduler so in-turn messages are enqueued (per-session depth
                 // cap 20) instead of rejected by the Processing guard. The
                 // scheduler's outcome handler auto-dispatches the next queued
@@ -172,13 +172,8 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                                 // indicator — the current turn is still running.
                                 // Turn handoff is收敛 by the event bridge when
                                 // the active turn ends and the queued turn starts.
-                                if let Some(ui) = ui_clone.upgrade() {
-                                    set_banner_message(
-                                        &ui,
-                                        "已排队，将在当前回复完成后发送",
-                                        "",
-                                    );
-                                }
+                                // 2026-07-18 (D2j): background thread — pass weak directly.
+                                set_banner_message(ui_clone.clone(), "已排队，将在当前回复完成后发送", "");
                                 Ok(())
                             }
                             Err(e) => Err(format!("Failed to send message: {e}")),
@@ -205,9 +200,8 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                 };
 
                 if let Err(e) = submit_ok {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, e);
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_clone.clone(), e);
                     // 2026-07-18 (W3a-4): do NOT clear the streaming indicator
                     // here — its lifecycle is owned by the event bridge. Clearing
                     // on submit failure was the original bug that dropped the
@@ -215,42 +209,26 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                     return;
                 }
 
-                // Refresh messages after response completes
-                if let Some(ui) = ui_clone.upgrade() {
-                    let sid_clone = sid.clone();
-                    let ui_weak2 = ui.as_weak();
-                    // 2026-06-26 (review follow-up #2): dispatch the
-                    // entire refresh onto the event loop thread. The
-                    // original code reached `ui.set_messages(...)` from
-                    // a non-UI thread (a `std::thread::spawn` →
-                    // `rt2.block_on` → `ui_weak2.upgrade()` chain),
-                    // which Slint 1.16 silently drops. `ModelRc` is
-                    // `!Send` (it's `Rc`-backed), so the model cannot
-                    // be moved across thread boundaries. The fix is to
-                    // fetch the data and build the model INSIDE the
-                    // dispatched closure, on the UI thread, by spinning
-                    // up a fresh current-thread runtime there. The
-                    // outer `std::thread::spawn` is no longer needed
-                    // and is removed. The model fetch is a single
-                    // session read (fast), so the brief UI freeze is
-                    // acceptable. Same root cause as `bff005a` /
-                    // `748f628` / `5b7deeb`. Cleanup review's
-                    // observation #1.
-                    let _ = slint::invoke_from_event_loop(move || {
-                        let Some(ui) = ui_weak2.upgrade() else {
-                            return;
-                        };
-                        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
-                        if let Ok(rt) = rt {
-                            let _ = rt.block_on(async {
-                                if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-                                    if let Ok(msgs) = c.get_messages(&sid_clone).await {
-                                        ui.set_messages(build_messages_model(&msgs, None));
-                                    }
-                                }
-                            });
-                        }
-                    });
+                // Refresh messages after response completes.
+                // 2026-07-18 (D2j-fix): background thread fetches messages,
+                // then dispatches model build + set onto the UI thread via
+                // invoke_from_event_loop. ModelRc is !Send, so messages are
+                // moved into the closure and the model is built inside (on
+                // the UI thread). No nested block_on inside the invoke
+                // closure (would panic: "Cannot start a runtime from within
+                // a runtime").
+                let sid_clone = sid.clone();
+                let ui_weak2 = ui_clone.clone();
+                if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
+                    if let Ok(msgs) = c.get_messages(&sid_clone).await {
+                        let ui_weak_for_msgs = ui_weak2.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak_for_msgs.upgrade() {
+                                let model = build_messages_model(&msgs, None);
+                                ui.set_messages(model);
+                            }
+                        });
+                    }
                 }
             });
         });
@@ -275,9 +253,8 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
         );
         let app_state = &*app_state_arc2;
         let Some(_system) = app_state.get_agentic_system() else {
-            if let Some(ui) = ui_weak3.upgrade() {
-                set_session_error(&ui, "Agentic system not initialized. Please restart.");
-            }
+            // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+            set_session_error(ui_weak3.clone(), "Agentic system not initialized. Please restart.");
             return;
         };
 
@@ -297,9 +274,8 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, "Global coordinator not available.");
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
                     return;
                 };
 
@@ -347,17 +323,23 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
                             },
                         );
 
-                        if let Some(ui) = ui_clone.upgrade() {
-                            ui.set_current_session_id(SharedString::from(sid.clone()));
-                            // Refresh sessions and messages
-                            refresh_sessions_ui(&ui, &sid).await;
-                            refresh_messages_ui(&ui, &sid, None).await;
-                        }
+                        // 2026-07-18 (D2j): background thread — set_current_session_id
+                        // must run on UI thread; refresh functions take weak and
+                        // dispatch internally.
+                        let ui_weak_for_set = ui_clone.clone();
+                        let sid_for_set = sid.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak_for_set.upgrade() {
+                                ui.set_current_session_id(SharedString::from(sid_for_set));
+                            }
+                        });
+                        // Refresh sessions and messages — pass weak directly.
+                        refresh_sessions_ui(ui_clone.clone(), &sid).await;
+                        refresh_messages_ui(ui_clone.clone(), &sid, None).await;
                     }
                     Err(e) => {
-                        if let Some(ui) = ui_clone.upgrade() {
-                            set_session_error(&ui, format!("Failed to create session: {e}"));
-                        }
+                        // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                        set_session_error(ui_clone.clone(), format!("Failed to create session: {e}"));
                     }
                 }
             });
@@ -388,6 +370,7 @@ pub(super) fn register_switch_session_callback(ui: &AppWindow, app_state: &Arc<A
         app_state.set_current_session_id(sid_str.clone());
         app_state.set_load_more_cursor(None); // Reset pagination on session switch
 
+        // 2026-07-18 (D2j): UI thread — keep upgrade; background thread passes weak.
         if let Some(ui) = ui_weak4.upgrade() {
             ui.set_current_session_id(SharedString::from(sid_str.clone()));
             // Refresh messages for the switched session
@@ -399,9 +382,8 @@ pub(super) fn register_switch_session_callback(ui: &AppWindow, app_state: &Arc<A
                     .build()
                     .expect("failed to build tokio runtime");
                 rt.block_on(async move {
-                    if let Some(ui) = ui_weak_msg.upgrade() {
-                        refresh_messages_ui(&ui, &sid_clone, None).await;
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
+                    refresh_messages_ui(ui_weak_msg.clone(), &sid_clone, None).await;
                 });
             });
         }
@@ -466,27 +448,24 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
                         // report stale issues for it.
                         app_state.forget_session_meta(&sid_str);
 
-                        if let Some(ui) = ui_clone.upgrade() {
-                            // 2026-07-18 (D2b fix): clear current-session
-                            // Slint properties via event loop when the
-                            // deleted session was the active one.
-                            let was_current = current_sid == sid_str;
-                            let ui_weak_clear = ui.as_weak();
-                            let _ = slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = ui_weak_clear.upgrade() {
-                                    if was_current {
-                                        ui.set_current_session_id(SharedString::from(""));
-                                        ui.set_current_session_name(SharedString::from(""));
-                                    }
+                        // 2026-07-18 (D2j): background thread — clear current-session
+                        // Slint properties via event loop when the deleted session
+                        // was the active one; refresh_sessions_ui takes weak.
+                        let was_current = current_sid == sid_str;
+                        let ui_weak_clear = ui_clone.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak_clear.upgrade() {
+                                if was_current {
+                                    ui.set_current_session_id(SharedString::from(""));
+                                    ui.set_current_session_name(SharedString::from(""));
                                 }
-                            });
-                            refresh_sessions_ui(&ui, "").await;
-                        }
+                            }
+                        });
+                        refresh_sessions_ui(ui_clone.clone(), "").await;
                     }
                     Err(e) => {
-                        if let Some(ui) = ui_clone.upgrade() {
-                            set_session_error(&ui, format!("Failed to delete session: {e}"));
-                        }
+                        // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                        set_session_error(ui_clone.clone(), format!("Failed to delete session: {e}"));
                     }
                 }
             });
@@ -542,9 +521,8 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
         );
         let app_state = &*app_state_arc7;
         let Some(_system) = app_state.get_agentic_system() else {
-            if let Some(ui) = ui_weak7.upgrade() {
-                set_session_error(&ui, "Agentic system not initialized. Please restart.");
-            }
+            // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+            set_session_error(ui_weak7.clone(), "Agentic system not initialized. Please restart.");
             return;
         };
         let ui_clone = ui_weak7.clone();
@@ -601,15 +579,15 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                     return;
                 }
 
-                // Refresh the session list to reflect the change
-                if let Some(ui) = ui_clone.upgrade() {
-                    refresh_sessions_ui(&ui, "").await;
-                    // Phase C.4: also refresh the Inspector skills model so
-                    // the `●` badge reflects the new enabled state. Without
-                    // this the toggle would persist but the UI wouldn't
-                    // re-render until the next manual reload.
-                    refresh_skills_ui(&ui).await;
-                }
+                // 2026-07-18 (D2j-fix): background thread — both refresh
+                // functions take weak and dispatch their own UI sets
+                // internally. No invoke_from_event_loop wrapper needed.
+                refresh_sessions_ui(ui_clone.clone(), "").await;
+                // Phase C.4: also refresh the Inspector skills model so
+                // the `●` badge reflects the new enabled state. Without
+                // this the toggle would persist but the UI wouldn't
+                // re-render until the next manual reload.
+                refresh_skills_ui(ui_clone.clone()).await;
 
                 // Phase I.6: structured log of the result so manual
                 // tests can grep the toggle outcome. `new_enabled`
@@ -668,18 +646,23 @@ pub(super) fn register_load_more_messages_callback(ui: &AppWindow, app_state: &A
                         let cursor_id = messages.last().map(|m| m.id.clone());
                         app_state.set_load_more_cursor(cursor_id);
 
-                        // Reload full message list to get proper ordering
+                        // 2026-07-18 (D2j): background thread — fetch messages
+                        // (Send-safe Vec), then dispatch model build + set onto
+                        // UI thread via invoke_from_event_loop. ModelRc is !Send
+                        // so it must be constructed inside the closure.
                         if let Ok(all_msgs) = coordinator.get_messages(&sid).await {
-                            if let Some(ui) = ui_clone.upgrade() {
-                                let model = build_messages_model(&all_msgs, None);
-                                ui.set_messages(model);
-                            }
+                            let ui_weak_for_msgs = ui_clone.clone();
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(ui) = ui_weak_for_msgs.upgrade() {
+                                    let model = build_messages_model(&all_msgs, None);
+                                    ui.set_messages(model);
+                                }
+                            });
                         }
                     }
                     Err(e) => {
-                        if let Some(ui) = ui_clone.upgrade() {
-                            set_session_error(&ui, format!("Failed to load more messages: {e}"));
-                        }
+                        // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                        set_session_error(ui_clone.clone(), format!("Failed to load more messages: {e}"));
                     }
                 }
             });
@@ -699,6 +682,7 @@ pub(super) fn register_refresh_sessions_callback(ui: &AppWindow, app_state: &Arc
         let ui_clone = ui_weak9.clone();
         let current_session = app_state.get_current_session_id();
 
+        let ui_clone_for_refresh = ui_clone.clone();
         std::thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -706,9 +690,8 @@ pub(super) fn register_refresh_sessions_callback(ui: &AppWindow, app_state: &Arc
                 .expect("failed to build runtime for refresh-sessions");
             let current_session = current_session;
             rt.block_on(async move {
-                if let Some(ui) = ui_clone.upgrade() {
-                    refresh_sessions_ui(&ui, &current_session).await;
-                }
+                // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
+                refresh_sessions_ui(ui_clone_for_refresh.clone(), &current_session).await;
             });
         });
     });
@@ -729,6 +712,7 @@ pub(super) fn register_refresh_messages_callback(ui: &AppWindow, app_state: &Arc
         // Phase I.2: see note in on_new_session — Arc clone into spawn.
         let app_state_for_spawn = Arc::clone(&app_state_arc10);
 
+        let ui_clone_for_refresh = ui_clone.clone();
         std::thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -737,9 +721,13 @@ pub(super) fn register_refresh_messages_callback(ui: &AppWindow, app_state: &Arc
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 app_state.set_load_more_cursor(None); // Reset pagination on full refresh
-                if let Some(ui) = ui_clone.upgrade() {
-                    refresh_messages_ui(&ui, &sid, app_state.get_streaming_session().as_deref()).await;
-                }
+                                                      // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
+                refresh_messages_ui(
+                    ui_clone_for_refresh.clone(),
+                    &sid,
+                    app_state.get_streaming_session().as_deref(),
+                )
+                .await;
             });
         });
     });
@@ -797,9 +785,8 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
         let active_turn = app_state.get_active_turn_id();
 
         let Some(turn_id) = active_turn else {
-            if let Some(ui) = ui_weak_stop.upgrade() {
-                set_inline_error(&ui, "当前没有正在运行的回复");
-            }
+            // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+            set_inline_error(ui_weak_stop.clone(), "当前没有正在运行的回复");
             return;
         };
 
@@ -811,17 +798,14 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
                 .build()
                 .expect("failed to build tokio runtime for stop-streaming");
             rt.block_on(async move {
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator()
-                else {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, "Global coordinator not available.");
-                    }
+                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
                     return;
                 };
                 if let Err(e) = coordinator.cancel_dialog_turn(&sid, &turn_id).await {
-                    if let Some(ui) = ui_clone.upgrade() {
-                        set_session_error(&ui, format!("停止失败: {e}"));
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_clone.clone(), format!("停止失败: {e}"));
                 }
                 // On success, DialogTurnCancelled event cleans up the UI.
             });
@@ -861,42 +845,42 @@ pub(super) fn register_rename_session_callback(ui: &AppWindow, app_state: &Arc<A
             };
             rt.block_on(async move {
                 let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        set_session_error(&ui, "Global coordinator not available.");
-                    }
+                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                    set_session_error(ui_weak.clone(), "Global coordinator not available.");
                     return;
                 };
                 match coordinator.update_session_title(&sid, &name).await {
                     Ok(normalized) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            let ui_weak2 = ui.as_weak();
-                            let sid_for_dispatch = sid.clone();
-                            let normalized_for_dispatch = normalized.clone();
-                            // 2026-07-18 (D2b fix): move the Arc into the
-                            // event-loop closure so it outlives the block_on
-                            // scope; re-read current session id at dispatch.
-                            let app_state_in_closure = Arc::clone(&app_state_for_spawn);
+                        // 2026-07-18 (D2j-fix): background thread — dispatch
+                        // only the sync setter via invoke_from_event_loop;
+                        // then drive refresh_sessions_ui directly (it handles
+                        // its own UI dispatch). No nested block_on inside the
+                        // invoke closure (would panic).
+                        let ui_weak2 = ui_weak.clone();
+                        let sid_for_dispatch = sid.clone();
+                        let normalized_for_dispatch = normalized.clone();
+                        let app_state_for_refresh = Arc::clone(&app_state_for_spawn);
+                        let sid_clone = sid_for_dispatch.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak2.upgrade() {
+                                ui.set_current_session_id(SharedString::from(sid_clone));
+                            }
+                        });
+                        let current_now = app_state_for_refresh.get_current_session_id();
+                        refresh_sessions_ui(ui_weak.clone(), &current_now).await;
+                        if sid_for_dispatch == current_now {
+                            let ui_weak_for_name = ui_weak.clone();
+                            let name = normalized_for_dispatch.clone();
                             let _ = slint::invoke_from_event_loop(move || {
-                                let Some(ui) = ui_weak2.upgrade() else {
-                                    return;
-                                };
-                                // refresh_sessions_ui is async — drive it with a
-                                // fresh current-thread runtime on the UI thread.
-                                let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
-                                if let Ok(rt) = rt {
-                                    let current_now = app_state_in_closure.get_current_session_id();
-                                    let _ = rt.block_on(refresh_sessions_ui(&ui, &current_now));
-                                    if sid_for_dispatch == current_now {
-                                        ui.set_current_session_name(SharedString::from(normalized_for_dispatch));
-                                    }
+                                if let Some(ui) = ui_weak_for_name.upgrade() {
+                                    ui.set_current_session_name(SharedString::from(name));
                                 }
                             });
                         }
                     }
                     Err(e) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            set_session_error(&ui, format!("Failed to rename session: {e}"));
-                        }
+                        // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                        set_session_error(ui_weak.clone(), format!("Failed to rename session: {e}"));
                     }
                 }
             });
