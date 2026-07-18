@@ -8,6 +8,7 @@ use northhing_agent_runtime::user_questions::{
     build_cancelled_user_question_result, validate_ask_user_question_input, AskUserQuestionInput,
 };
 use serde_json::{json, Value};
+use std::time::Duration;
 use tracing::{debug, warn};
 use uuid::Uuid;
 
@@ -212,24 +213,66 @@ Usage notes:
             tool_id
         );
 
-        // 7. Wait for user answer until the user responds, cancels, or the turn is cancelled.
-        match rx.await {
-            Ok(response) => {
-                debug!("AskUserQuestion tool received user response, tool_id: {}", tool_id);
-                let result = build_answered_user_question_result(&tool_input, response.answers);
+        // 7. Wait for user answer, cancellation, or timeout.
+        // 2026-07-18 (W3a-1): Replaced bare rx.await with tokio::select! to
+        // prevent turn-task leaks when no consumer exists for
+        // ToolAwaitingUserInput (desktop) or when the dialog turn is cancelled.
+        let timeout_secs = context
+            .custom_data
+            .get("__ask_user_timeout_secs")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(300);
 
+        tokio::select! {
+            answer = rx => match answer {
+                Ok(response) => {
+                    debug!("AskUserQuestion tool received user response, tool_id: {}", tool_id);
+                    let result = build_answered_user_question_result(&tool_input, response.answers);
+                    Ok(vec![ToolResult::Result {
+                        data: result.data,
+                        result_for_assistant: Some(result.result_for_assistant),
+                        image_attachments: None,
+                    }])
+                }
+                Err(_) => {
+                    warn!("AskUserQuestion tool channel closed, tool_id: {}", tool_id);
+                    let result = build_cancelled_user_question_result(&tool_input);
+                    Ok(vec![ToolResult::Result {
+                        data: result.data,
+                        result_for_assistant: Some(result.result_for_assistant),
+                        image_attachments: None,
+                    }])
+                }
+            },
+            _ = async {
+                match context.cancellation_token() {
+                    Some(token) => token.cancelled().await,
+                    None => std::future::pending::<()>().await,
+                }
+            } => {
+                user_input_manager().cancel(&tool_id);
+                warn!("AskUserQuestion tool cancelled via CancellationToken, tool_id: {}", tool_id);
+                let result = build_cancelled_user_question_result(&tool_input);
                 Ok(vec![ToolResult::Result {
                     data: result.data,
                     result_for_assistant: Some(result.result_for_assistant),
                     image_attachments: None,
                 }])
             }
-            Err(_) => {
-                warn!("AskUserQuestion tool channel closed, tool_id: {}", tool_id);
-                let result = build_cancelled_user_question_result(&tool_input);
+            _ = tokio::time::sleep(Duration::from_secs(timeout_secs)) => {
+                user_input_manager().cancel(&tool_id);
+                warn!(
+                    "AskUserQuestion tool timed out after {}s, tool_id: {}",
+                    timeout_secs, tool_id
+                );
+                // 2026-07-18 (W3a-1): Reuse cancelled structure with timeout note.
                 Ok(vec![ToolResult::Result {
-                    data: result.data,
-                    result_for_assistant: Some(result.result_for_assistant),
+                    data: json!({
+                        "questions_count": tool_input.questions.len(),
+                        "status": "cancelled",
+                        "reason": "timed_out"
+                    }),
+                    result_for_assistant: Some("User input request timed out.".to_string()),
                     image_attachments: None,
                 }])
             }
@@ -240,8 +283,11 @@ Usage notes:
 #[cfg(test)]
 mod tests {
     use super::AskUserQuestionTool;
-    use crate::agentic::tools::framework::{Tool, ToolUseContext};
+    use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
+    use crate::agentic::tools::user_input_manager::user_input_manager;
     use std::collections::HashMap;
+    use std::time::Duration;
+    use tokio_util::sync::CancellationToken;
 
     fn context_with_custom_data(custom_data: HashMap<String, serde_json::Value>) -> ToolUseContext {
         ToolUseContext {
@@ -257,6 +303,35 @@ mod tests {
             runtime_handles: northhing_runtime_ports::ToolRuntimeHandles::default(),
             actor_runtime: None,
         }
+    }
+
+    fn context_with_cancellation_token(tool_id: &str, token: CancellationToken) -> ToolUseContext {
+        ToolUseContext {
+            tool_call_id: Some(tool_id.to_string()),
+            agent_type: None,
+            session_id: None,
+            dialog_turn_id: None,
+            workspace: None,
+            unlocked_collapsed_tools: Vec::new(),
+            custom_data: HashMap::new(),
+            computer_use_host: None,
+            runtime_tool_restrictions: Default::default(),
+            runtime_handles: northhing_runtime_ports::ToolRuntimeHandles::new(None, Some(token)),
+            actor_runtime: None,
+        }
+    }
+
+    fn valid_input() -> serde_json::Value {
+        serde_json::json!({
+            "questions": [{
+                "question": "Which path should be used?",
+                "header": "Path",
+                "options": [
+                    { "label": "A", "description": "Use A" },
+                    { "label": "B", "description": "Use B" }
+                ]
+            }]
+        })
     }
 
     #[tokio::test]
@@ -291,5 +366,89 @@ mod tests {
             .expect("required array")
             .iter()
             .any(|value| value == "multiSelect"));
+    }
+
+    // 2026-07-18 (W3a-1): Verify normal answer path does not regress after
+    // rx.await was replaced with tokio::select!.
+    #[tokio::test]
+    async fn ask_user_question_receives_answer_normally() {
+        let tool = AskUserQuestionTool::new();
+        let token = CancellationToken::new();
+        let context = context_with_cancellation_token("test-answer-1", token.clone());
+        let input = valid_input();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            user_input_manager()
+                .send_answer("test-answer-1", serde_json::json!({ "0": "A" }))
+                .expect("send_answer should succeed");
+        });
+
+        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            ToolResult::Result { data, result_for_assistant, .. } => {
+                assert_eq!(data["status"], "answered");
+                assert_eq!(data["answers"]["0"], "A");
+                assert!(result_for_assistant.as_ref().unwrap().contains("Which path should be used?"));
+            }
+            _ => panic!("expected Result variant"),
+        }
+        assert!(!user_input_manager().has_pending("test-answer-1"));
+    }
+
+    // 2026-07-18 (W3a-1): CancellationToken trigger must produce a cancelled
+    // result and leave no residual channel in USER_INPUT_MANAGER.
+    #[tokio::test]
+    async fn ask_user_question_cancelled_by_token_returns_cancelled_and_clears_manager() {
+        let tool = AskUserQuestionTool::new();
+        let token = CancellationToken::new();
+        let context = context_with_cancellation_token("test-cancel-1", token.clone());
+        let input = valid_input();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            token.cancel();
+        });
+
+        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            ToolResult::Result { data, result_for_assistant, .. } => {
+                assert_eq!(data["status"], "cancelled");
+                assert!(result_for_assistant.as_ref().unwrap().contains("cancelled"));
+            }
+            _ => panic!("expected Result variant"),
+        }
+        assert!(!user_input_manager().has_pending("test-cancel-1"));
+    }
+
+    // 2026-07-18 (W3a-1): Timeout must produce a cancelled/timeout result and
+    // leave no residual channel in USER_INPUT_MANAGER.
+    #[tokio::test]
+    async fn ask_user_question_timeout_returns_timeout_result_and_clears_manager() {
+        let tool = AskUserQuestionTool::new();
+        let token = CancellationToken::new();
+        let mut context = context_with_cancellation_token("test-timeout-1", token.clone());
+        context.custom_data.insert(
+            "__ask_user_timeout_secs".to_string(),
+            serde_json::json!(1),
+        );
+        let input = valid_input();
+
+        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            ToolResult::Result { data, result_for_assistant, .. } => {
+                assert_eq!(data["status"], "cancelled");
+                assert_eq!(data["reason"], "timed_out");
+                assert!(result_for_assistant.as_ref().unwrap().contains("timed out"));
+            }
+            _ => panic!("expected Result variant"),
+        }
+        assert!(!user_input_manager().has_pending("test-timeout-1"));
     }
 }

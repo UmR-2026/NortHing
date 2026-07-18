@@ -148,7 +148,7 @@ impl ToolPipeline {
 
         let summary = summarize_dialog_turn_cancellation(tasks.iter().map(|task| tool_task_state_kind(&task.state)));
 
-        for task in tasks {
+        for task in &tasks {
             if should_cancel_tool_state(tool_task_state_kind(&task.state)) {
                 debug!(
                     "Cancelling tool: tool_id={}, state={:?}",
@@ -160,6 +160,20 @@ impl ToolPipeline {
                 debug!(
                     "Skipping tool (state not cancellable): tool_id={}, state={:?}",
                     task.tool_call.tool_id, task.state
+                );
+            }
+        }
+
+        // 2026-07-18 (W3a-1): Clean up pending user-input channels for this turn
+        // so AskUserQuestion tools waiting on rx.await are unblocked when the
+        // dialog turn is cancelled. Without this, those channels would leak.
+        let manager = crate::agentic::tools::user_input_manager::user_input_manager();
+        for task in &tasks {
+            let tool_id = &task.tool_call.tool_id;
+            if manager.cancel(tool_id) {
+                debug!(
+                    "Cleared user-input channel during turn cancel: tool_id={}",
+                    tool_id
                 );
             }
         }
