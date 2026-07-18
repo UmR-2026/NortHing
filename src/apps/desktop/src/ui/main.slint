@@ -263,12 +263,16 @@ export component AppWindow inherits Window {
                 is-streaming: root.is-streaming;
                 // Phase 4: G2=c inline error (second channel)
                 inline-error: root.chat-inline-error;
+                // 2026-07-18 (D2d): model picker bindings.
+                providers: root.providers-list;
+                default-model-provider-id: root.default-model-provider-id;
 
                 send-message(text) => { root.send-message(text); }
                 load-more-messages => { root.load-more-messages(); }
                 stop-streaming => { root.stop-streaming(); }
                 export-markdown => { root.export-markdown(); }
                 open-session-settings => { root.open-session-settings(); }
+                set-default-model(id) => { root.set-default-model(id); }
             }
 
             InspectorView {

@@ -26,10 +26,10 @@ export component WelcomeView inherits Rectangle {
     in-out property <string> step1-path: "";
     in-out property <bool> step1-advanced-skip: false;
     in-out property <string> step2-name: "";
-    in-out property <string> step2-type: "anthropic";
-    in-out property <string> step2-base-url: "https://api.anthropic.com";
+    in-out property <string> step2-type: "custom-openai";
+    in-out property <string> step2-base-url: "";
     in-out property <string> step2-api-key: "";
-    in-out property <string> step2-model: "claude-sonnet-4-5";
+    in-out property <string> step2-model: "";
     in-out property <bool> step2-enabled: true;
     in-out property <bool> step2-test-in-flight: false;
     in-out property <string> step2-test-result: "";
@@ -169,14 +169,14 @@ export component WelcomeView inherits Rectangle {
                     spacing: MaterialTheme.spacing-xs;
                     width: parent.width;
 
+                    // 2026-07-18 (D2d): type tabs reduced to the two
+                    // custom-compatible options; user fills base-url by hand.
                     for opt in [
-                        { value: "anthropic", label: "Anthropic" },
-                        { value: "openai", label: "OpenAI" },
                         { value: "custom-openai", label: "OpenAI 兼容" },
                         { value: "custom-anthropic", label: "Anthropic 兼容" }
                     ]: Rectangle {
                         height: 32px;
-                        width: (parent.width - 3 * MaterialTheme.spacing-xs) / 4;
+                        width: (parent.width - 1 * MaterialTheme.spacing-xs) / 2;
                         padding: MaterialTheme.spacing-xs;
                         background: opt.value == root.step2-type
                             ? MaterialTheme.current-primary()
@@ -186,22 +186,8 @@ export component WelcomeView inherits Rectangle {
                             height: parent.height;
                             clicked => {
                                 root.step2-type = opt.value;
-                                if opt.value == "anthropic" {
-                                    root.step2-base-url = "https://api.anthropic.com";
-                                    root.step2-model = "claude-sonnet-4-5";
-                                }
-                                if opt.value == "openai" {
-                                    root.step2-base-url = "https://api.openai.com/v1";
-                                    root.step2-model = "gpt-4o";
-                                }
-                                if opt.value == "custom-openai" {
-                                    root.step2-base-url = "";
-                                    root.step2-model = "";
-                                }
-                                if opt.value == "custom-anthropic" {
-                                    root.step2-base-url = "";
-                                    root.step2-model = "";
-                                }
+                                root.step2-base-url = "";
+                                root.step2-model = "";
                             }
                         }
                         Text {

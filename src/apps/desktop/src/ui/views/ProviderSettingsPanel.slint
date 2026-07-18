@@ -22,6 +22,10 @@ export component ProviderSettingsPanel inherits Rectangle {
     in property <[ProviderItem]> providers: [];
     in property <string> default-model-provider-id: "";
 
+    // 2026-07-18 (D2d): edit-id tracks which provider the form is editing.
+    // Empty string means "add new"; non-empty means "update existing".
+    in-out property <string> edit-id: "";
+
     // Phase 4+ will populate this from the workspace's IDENTITY.md +
     // builtin_skills discovery. For Phase 3 it's a placeholder.
     in property <[string]> builtin-skills: [];
@@ -69,15 +73,16 @@ export component ProviderSettingsPanel inherits Rectangle {
                 vertical-alignment: center;
             }
 
-            add-button := MaterialButton {
+                add-button := MaterialButton {
                 text: root.providers.length == 0 ? AppStrings.provider-add : "+";
                 clicked => {
                     root.add-form-visible = true;
+                    root.edit-id = "";
                     root.form-name = "";
-                    root.form-type = "anthropic";
-                    root.form-base-url = "https://api.anthropic.com";
+                    root.form-type = "custom-openai";
+                    root.form-base-url = "";
                     root.form-api-key = "";
-                    root.form-model = "claude-sonnet-4-5";
+                    root.form-model = "";
                     root.form-enabled = true;
                     root.form-test-result = "";
                 }
@@ -198,6 +203,23 @@ export component ProviderSettingsPanel inherits Rectangle {
                             clicked => { root.set-default-model(provider.id); }
                             disabled: !provider.enabled || root.default-model-provider-id == provider.id;
                         }
+
+                        // 2026-07-18 (D2d): edit per-row — fill the form with
+                        // this provider's values and set edit-id so save/test
+                        // call upsert-provider with the correct id.
+                        edit-button := MaterialButton {
+                            text: "编辑";
+                            clicked => {
+                                root.edit-id = provider.id;
+                                root.form-name = provider.name;
+                                root.form-type = provider.type;
+                                root.form-base-url = provider.base-url;
+                                root.form-model = provider.model;
+                                root.form-enabled = provider.enabled;
+                                root.form-test-result = "";
+                                root.add-form-visible = true;
+                            }
+                        }
                     }
                 }
 
@@ -231,9 +253,9 @@ export component ProviderSettingsPanel inherits Rectangle {
                             height: 40px;
                             spacing: MaterialTheme.spacing-xs;
 
+                            // 2026-07-18 (D2d): type tabs reduced to the two
+                            // custom-compatible options; user fills base-url by hand.
                             for opt in [
-                                { value: "anthropic", label: "Anthropic" },
-                                { value: "openai", label: "OpenAI" },
                                 { value: "custom-openai", label: "OpenAI 兼容" },
                                 { value: "custom-anthropic", label: "Anthropic 兼容" }
                             ]: Rectangle {
@@ -248,23 +270,8 @@ export component ProviderSettingsPanel inherits Rectangle {
                                     height: parent.height;
                                     clicked => {
                                         root.form-type = opt.value;
-                                        // Auto-fill base_url + default model per C-ii.
-                                        if opt.value == "anthropic" {
-                                            root.form-base-url = "https://api.anthropic.com";
-                                            root.form-model = "claude-sonnet-4-5";
-                                        }
-                                        if opt.value == "openai" {
-                                            root.form-base-url = "https://api.openai.com/v1";
-                                            root.form-model = "gpt-4o";
-                                        }
-                                        if opt.value == "custom-openai" {
-                                            root.form-base-url = "";
-                                            root.form-model = "";
-                                        }
-                                        if opt.value == "custom-anthropic" {
-                                            root.form-base-url = "";
-                                            root.form-model = "";
-                                        }
+                                        root.form-base-url = "";
+                                        root.form-model = "";
                                     }
                                 }
                                 Text {
@@ -364,27 +371,30 @@ export component ProviderSettingsPanel inherits Rectangle {
                                 text: root.form-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
                                 disabled: root.form-test-in-flight;
                                 clicked => {
-                                    // Save first (so the test runs against persisted config),
-                                    // then run the test. The Rust side calls test_provider
-                                    // callback for the second half and updates form-test-result.
-                                    root.upsert-provider("", root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
-                                    // Note: in a fuller impl we'd first save, then refetch the
-                                    // new id, then call test-provider. For Phase 3 we ask the
-                                    // Rust side to do both in upsert-provider when id is empty.
+                                    // 2026-07-18 (D2d): pass edit-id so editing an
+                                    // existing provider updates in place instead
+                                    // of pushing a duplicate.
+                                    root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
                                 }
                             }
 
                             save-btn := MaterialButton {
                                 text: AppStrings.save;
                                 clicked => {
-                                    root.upsert-provider("", root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                                    // 2026-07-18 (D2d): pass edit-id; clear it on
+                                    // success so the next add starts fresh.
+                                    root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
                                     root.add-form-visible = false;
+                                    root.edit-id = "";
                                 }
                             }
 
                             cancel-btn := MaterialButton {
                                 text: AppStrings.cancel;
-                                clicked => { root.add-form-visible = false; }
+                                clicked => {
+                                    root.add-form-visible = false;
+                                    root.edit-id = "";
+                                }
                             }
                         }
                     }

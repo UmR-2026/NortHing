@@ -9,7 +9,7 @@
 //   error display (G2=c second channel)
 // - Esc key (Q10=b): only when ChatPaneView focused → stop
 
-import { MaterialTheme, MessageItem } from "../theme.slint";
+import { MaterialTheme, MessageItem, ProviderItem } from "../theme.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
@@ -25,6 +25,12 @@ export component ChatPaneView inherits Rectangle {
     in property <string> current-session-model: "";
     in property <bool> current-session-broken: false;
     in property <string> inline-error: "";
+
+    // 2026-07-18 (D2d): model picker state.
+    in property <[ProviderItem]> providers: [];
+    in property <string> default-model-provider-id: "";
+    in-out property <bool> model-popup-open: false;
+    callback set-default-model(string);
 
     // Streaming / stop (C6=a/c)
     in property <bool> is-streaming: false;
@@ -82,11 +88,40 @@ export component ChatPaneView inherits Rectangle {
                         color: MaterialTheme.error;
                     }
 
-                    if root.current-session-model != "" && !root.current-session-broken: Text {
-                        text: "Model: " + root.current-session-model;
-                        font-size: MaterialTheme.font-size-caption;
-                        color: MaterialTheme.current-on-surface();
-                        opacity: 0.6;
+                    // 2026-07-18 (D2d): model picker pill — click to open
+                    // the provider popup. Hidden when no providers exist.
+                    if root.providers.length > 0 && !root.current-session-broken: Rectangle {
+                        height: 28px;
+                        padding: MaterialTheme.spacing-sm;
+                        background: MaterialTheme.current-primary().with-alpha(0.12);
+                        border-radius: 4px;
+
+                        TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => { root.model-popup-open = !root.model-popup-open; }
+                        }
+
+                        HorizontalLayout {
+                            spacing: MaterialTheme.spacing-xs;
+                            height: 28px;
+
+                            Text {
+                                text: root.current-session-model == "" ? "(选择模型)" : root.current-session-model;
+                                font-size: MaterialTheme.font-size-caption;
+                                color: MaterialTheme.current-on-surface();
+                                vertical-alignment: center;
+                                width: parent.width - 16px;
+                                overflow: elide;
+                            }
+
+                            Text {
+                                text: root.model-popup-open ? "▲" : "▼";
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-caption;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
                 }
 
@@ -297,6 +332,81 @@ export component ChatPaneView inherits Rectangle {
                     if input-text != "" && !root.current-session-broken {
                         root.send-message(input-text);
                         input-text = "";
+                    }
+                }
+            }
+        }
+    }
+
+    // 2026-07-18 (D2d): model picker popup overlay. Renders on top of
+    // the chat pane when model-popup-open is true. Lists enabled
+    // providers; clicking one sets it as default and closes.
+    // Placed at root Rectangle level (not inside the VerticalLayout)
+    // so x/y positioning is not auto-managed by the layout.
+    if root.model-popup-open: Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: #00000060;
+
+        Rectangle {
+            x: MaterialTheme.spacing-md;
+            y: 56px;
+            width: parent.width - 2 * MaterialTheme.spacing-md;
+            height: 240px;
+            background: MaterialTheme.current-surface();
+            border-radius: 8px;
+            padding: MaterialTheme.spacing-sm;
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                spacing: MaterialTheme.spacing-xs;
+
+                Text {
+                    text: "选择模型";
+                    font-size: MaterialTheme.font-size-caption;
+                    color: MaterialTheme.current-on-surface();
+                    opacity: 0.6;
+                    padding: MaterialTheme.spacing-sm;
+                }
+
+                Flickable {
+                    vertical-stretch: 1;
+                    width: parent.width;
+                    viewport-height: 200px;
+
+                    VerticalLayout {
+                        spacing: MaterialTheme.spacing-xs;
+                        width: parent.width;
+
+                        for p in providers: Rectangle {
+                            width: parent.width;
+                            height: 36px;
+                            padding: MaterialTheme.spacing-sm;
+                            visible: p.enabled;
+                            background: p.id == root.default-model-provider-id
+                                ? MaterialTheme.current-primary().with-alpha(0.18)
+                                : MaterialTheme.current-surface();
+
+                            TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => {
+                                    root.set-default-model(p.id);
+                                    root.model-popup-open = false;
+                                }
+                            }
+
+                            Text {
+                                text: p.name + " · " + p.model;
+                                font-size: MaterialTheme.font-size-body;
+                                color: MaterialTheme.current-on-surface();
+                                vertical-alignment: center;
+                                width: parent.width;
+                            }
+                        }
                     }
                 }
             }

@@ -188,6 +188,24 @@ pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_core::servic
     }
 }
 
+/// Compute which core model ids are "stale" — present in the core config
+/// but no longer referenced by any desktop provider. These are leftovers
+/// from providers that were edited into a new identity or deleted entirely.
+/// Returns the list of ids that should be removed from core to keep the
+/// two stores in sync (mirror semantics).
+pub(crate) fn compute_stale_core_model_ids(
+    existing_ids: &[String],
+    providers: &[ProviderConfig],
+) -> Vec<String> {
+    let provider_ids: std::collections::HashSet<&str> =
+        providers.iter().map(|p| p.id.as_str()).collect();
+    existing_ids
+        .iter()
+        .filter(|id| !provider_ids.contains(id.as_str()))
+        .cloned()
+        .collect()
+}
+
 /// Sync all desktop providers into the core `GlobalConfig.ai.models` list,
 /// then run `reconcile_models` so `default_models.primary` / `.fast` point
 /// at the first enabled model. Returns the number of providers synced.
@@ -195,6 +213,11 @@ pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_core::servic
 /// This is the "adapt-push" path: desktop owns the provider UI + storage,
 /// but the runtime reads from core — so on every provider change we push
 /// the corresponding `AIModelConfig` into core and let it reconcile.
+///
+/// 2026-07-18 (D2d): mirror semantics — after add/update, delete any core
+/// model whose id no longer appears in `settings.providers` so the two
+/// stores stay consistent (fixes the "10 models configured" stale-entry
+/// leak caused by provider edits that changed their id).
 pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<usize> {
     use northhing_core::service::config::get_global_config_service;
     let service = get_global_config_service().await?;
@@ -209,6 +232,15 @@ pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<us
             service.add_ai_model(model).await?;
         }
         count += 1;
+    }
+    // 2026-07-18 (D2d): delete stale core models that no longer match any
+    // desktop provider, then reconcile default slots.
+    let existing_ids: Vec<String> = existing.iter().map(|m| m.id.clone()).collect();
+    let stale_ids = compute_stale_core_model_ids(&existing_ids, &settings.providers);
+    for stale_id in &stale_ids {
+        if let Err(e) = service.delete_ai_model(stale_id).await {
+            tracing::warn!(target: "app_state", "delete stale core model '{stale_id}' failed: {e}");
+        }
     }
     service.reconcile_models("desktop-sync").await?;
     Ok(count)
@@ -1311,5 +1343,45 @@ mod tests {
         // After dedup, default_model should point at the kept entry (id-a).
         let dm = s.default_model.expect("default_model should be re-pointed");
         assert_eq!(dm.provider_id, "id-a");
+    }
+
+    // ===== 2026-07-18 (D2d): compute_stale_core_model_ids tests =====
+
+    #[test]
+    fn compute_stale_empty_existing_returns_empty() {
+        let providers = vec![provider_with_fields("id-a", "a", "https://a.com/v1", "sk", "gpt", true)];
+        let stale = super::compute_stale_core_model_ids(&[], &providers);
+        assert!(stale.is_empty(), "no existing ids → nothing stale");
+    }
+
+    #[test]
+    fn compute_stale_partial_overlap_returns_only_extra() {
+        let providers = vec![provider_with_fields("id-a", "a", "https://a.com/v1", "sk", "gpt", true)];
+        let existing = vec!["id-a".to_string(), "id-b".to_string(), "id-c".to_string()];
+        let stale = super::compute_stale_core_model_ids(&existing, &providers);
+        assert_eq!(stale.len(), 2);
+        assert!(stale.contains(&"id-b".to_string()));
+        assert!(stale.contains(&"id-c".to_string()));
+        assert!(!stale.contains(&"id-a".to_string()));
+    }
+
+    #[test]
+    fn compute_stale_all_stale_when_no_providers() {
+        let existing = vec!["id-a".to_string(), "id-b".to_string()];
+        let stale = super::compute_stale_core_model_ids(&existing, &[]);
+        assert_eq!(stale.len(), 2);
+        assert!(stale.contains(&"id-a".to_string()));
+        assert!(stale.contains(&"id-b".to_string()));
+    }
+
+    #[test]
+    fn compute_stale_no_stale_when_all_match() {
+        let providers = vec![
+            provider_with_fields("id-a", "a", "https://a.com/v1", "sk1", "gpt", true),
+            provider_with_fields("id-b", "b", "https://b.com/v1", "sk2", "claude", true),
+        ];
+        let existing = vec!["id-a".to_string(), "id-b".to_string()];
+        let stale = super::compute_stale_core_model_ids(&existing, &providers);
+        assert!(stale.is_empty(), "all existing ids matched → nothing stale");
     }
 }
