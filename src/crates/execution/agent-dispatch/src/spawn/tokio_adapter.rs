@@ -14,14 +14,11 @@
 //! Callers MUST NOT rely on this adapter for real work until Phase 2 lands.
 
 use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-
-use crate::telemetry::TelemetrySink;
 
 /// In-process spawn adapter.
 ///
@@ -101,37 +98,11 @@ impl TokioSpawnAdapter {
         })
     }
 
-    /// Pin the adapter's handle into a `Pin<Arc<Handle>>` for callers that need
-    /// a type-erased closure. Currently unused; reserved for future
-    /// `ActorRuntime::spawn_actor` API.
-    ///
-    /// TODO: remove in v0.2.0 if no consumer lands. See review P1-11.
-    pub(crate) fn as_handle(&self) -> Pin<Arc<Handle>> {
-        // SAFETY: `Arc<T>` already provides the immovability guarantee that
-        // `Pin<P>` requires on `P::Target`: once a value is owned by an `Arc`,
-        // it is never moved (only cloned or dropped). `Arc::clone` returns a
-        // fresh `Arc` owning the same heap allocation, so the inner `Handle`
-        // keeps the same address. `Pin::new_unchecked` here is a no-op marker
-        // that asserts "the inner `Handle` will not be moved after this point",
-        // which is true for any value reachable only through `Arc`.
-        unsafe { Pin::new_unchecked(self.handle.clone()) }
-    }
-
     /// Returns the inner handle for callers that need direct spawn access.
     pub fn handle(&self) -> &Handle {
         &self.handle
     }
 }
-
-/// Telemetry-aware variant reserved for Phase 2 wiring.
-///
-/// Phase 1 doesn't use this constructor; the real one will be:
-/// ```ignore
-/// pub fn with_telemetry(handle: Handle, telemetry: Arc<dyn TelemetrySink>) -> Self;
-/// ```
-/// Keep the shape here so the trait surface is stable.
-#[allow(dead_code)]
-fn _typecheck_telemetry_anchor(_t: Arc<dyn TelemetrySink>) {}
 
 #[cfg(test)]
 mod tests {

@@ -16,22 +16,10 @@
 /// Phase 2 of the impl plan has passed integration; the A2 long-running path
 /// now replaces the legacy `execute_hidden_subagent_phase1/2/3` for all
 /// `Task` tool invocations on the desktop app.
+///
+/// Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC)
+/// officially descoped 2026-07-20 — those flags have been deleted.
 pub const USE_LIGHTWEIGHT_ACTOR: bool = true;
-
-/// Enable the `ToolDispatcher` for one-shot subagent dispatches.
-///
-/// Flip to `true` **only after** Phase 1 of the impl plan passes integration.
-pub const USE_ONESHOT_DISPATCHER: bool = false;
-
-/// Allow actors to spawn in a separate process (IPC).
-///
-/// Flip to `true` **only after** Phase 3 of the impl plan lands.
-pub const USE_ACTOR_IPC: bool = false;
-
-/// Allow dispatches to run in a separate process (IPC).
-///
-/// Flip to `true` **only after** Phase 3 of the impl plan lands.
-pub const USE_DISPATCHER_IPC: bool = false;
 
 #[cfg(test)]
 mod tests {
@@ -41,15 +29,11 @@ mod tests {
     ///
     /// As of 2026-06-23 (spec
     /// `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`),
-    /// `USE_LIGHTWEIGHT_ACTOR` is ACTIVATED. The other three flags represent
-    /// future work (one-shot dispatcher + IPC adapters) and remain off.
-    /// If any of the three future flags ever flip, the flip must be paired
-    /// with a regression test (see `06-const-flag-usage.md` rule 4).
+    /// `USE_LIGHTWEIGHT_ACTOR` is ACTIVATED.
+    /// The Phase 3 IPC flags (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC /
+    /// USE_DISPATCHER_IPC) were descoped and deleted 2026-07-20.
     #[test]
     fn flags_phase_appropriate() {
         assert!(USE_LIGHTWEIGHT_ACTOR);
-        assert!(!USE_ONESHOT_DISPATCHER);
-        assert!(!USE_ACTOR_IPC);
-        assert!(!USE_DISPATCHER_IPC);
     }
 }

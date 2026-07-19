@@ -10,8 +10,7 @@
 use std::sync::{Arc, Mutex};
 
 use northhing_agent_dispatch::{
-    NoopTelemetrySink, TelemetryEvent, TelemetrySink, USE_ACTOR_IPC, USE_DISPATCHER_IPC,
-    USE_ONESHOT_DISPATCHER,
+    NoopTelemetrySink, TelemetryEvent, TelemetrySink,
 };
 
 /// A counting sink for integration testing.
@@ -113,22 +112,6 @@ fn event_display_format_is_stable() {
     for (event, expected) in cases {
         assert_eq!(event.to_string(), expected);
     }
-}
-
-/// This test mirrors `flags::tests::all_flags_default_off_in_phase_1` at
-/// the **integration** level (lives in `tests/` instead of `src/`) so the
-/// "dark launch" guarantee is exercised by the crate's public API surface,
-/// not just its private internals. If any flag flips to `true` without
-/// the regression test pair required by rule 4 of `06-const-flag-usage.md`,
-/// this test fires.
-/// Updated 2026-07-16: A2 activation (commit e5ae9b1) intentionally set
-/// `USE_LIGHTWEIGHT_ACTOR = true` per HANDOFF §0 "A2 ACTIVATED".
-/// The 3 IPC/dispatcher flags remain off — only those are still asserted.
-#[test]
-fn all_const_flags_default_off_in_phase_1() {
-    assert!(!USE_ONESHOT_DISPATCHER);
-    assert!(!USE_ACTOR_IPC);
-    assert!(!USE_DISPATCHER_IPC);
 }
 
 /// A round-trip through `Arc<dyn TelemetrySink>` exercising the counting
