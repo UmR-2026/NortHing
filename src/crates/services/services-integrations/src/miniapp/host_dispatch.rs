@@ -710,4 +710,37 @@ mod tests {
             result
         );
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn host_shell_exec_allows_clean_string_mode_command() {
+        // A clean string-mode command with no metacharacters should be allowed.
+        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let perms = MiniAppPermissions {
+            shell: Some(ShellPermissions {
+                allow: Some(vec!["git".to_string()]),
+            }),
+            ..Default::default()
+        };
+
+        let result = dispatch_host(
+            &perms,
+            "builtin-coding-selfie",
+            workspace_dir,
+            Some(workspace_dir),
+            &[],
+            "shell.exec",
+            json!({
+                "command": "git status",
+                "cwd": workspace_dir.to_string_lossy(),
+                "timeout": 8000,
+            }),
+        )
+        .await;
+
+        assert!(
+            result.is_ok(),
+            "clean string-mode command should be allowed, got: {:?}",
+            result
+        );
+    }
 }
