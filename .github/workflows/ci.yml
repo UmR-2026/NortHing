@@ -25,8 +25,7 @@ jobs:
   rust-build-check:
     name: Rust Build Check (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # v0.1.0-human-usable: was `needs: frontend-build`, removed because
-    # frontend-build is disabled (src/web-ui missing).
+
     strategy:
       fail-fast: false
       matrix:
@@ -41,14 +40,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/ci/setup-openssl-windows.ps1
-
-      # v0.1.0-human-usable: frontend-dist artifact no longer produced
-      # (frontend-build disabled). Step disabled to avoid CI failure.
-      # - name: Download frontend build artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: frontend-dist
-      #     path: dist
 
       - name: Create mobile-web dist directory (placeholder)
         shell: bash
@@ -104,16 +95,3 @@ jobs:
       - name: Run core Rust tests
         run: cargo test --locked -p northhing-core
 
-  # ── Frontend: build ────────────────────────────────────────────────
-  # v0.1.0-human-usable: DISABLED because src/web-ui does not exist.
-  # pnpm-workspace.yaml references src/web-ui which is missing from this repo.
-  # All frontend-build steps would fail and block rust-build-check.
-  frontend-build:
-    name: Frontend Build (DISABLED — src/web-ui missing)
-    runs-on: ubuntu-latest
-    if: false
-    steps:
-      - name: Placeholder — frontend disabled
-        run: echo "frontend-build disabled: src/web-ui not present"
-
-  # (Original frontend-build steps removed — see git history for pre-v0.1.0 body.)
