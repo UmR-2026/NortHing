@@ -121,6 +121,9 @@ pub async fn send_message(session_id: String, text: String) -> Result<(), String
 }
 
 async fn do_send_message(session_id: String, text: String) -> anyhow::Result<()> {
+    if text.trim().is_empty() {
+        anyhow::bail!("message text must not be empty");
+    }
     let scheduler = northhing_core::agentic::coordination::global_scheduler()
         .ok_or_else(|| anyhow::anyhow!("global scheduler not available"))?;
     let workspace = workspace_path();
@@ -220,10 +223,12 @@ fn ui_prefs_path() -> std::path::PathBuf {
 #[tauri::command]
 pub async fn get_ui_prefs() -> Result<UiPrefsDto, String> {
     let path = ui_prefs_path();
-    match std::fs::read_to_string(&path) {
+    tokio::task::spawn_blocking(move || match std::fs::read_to_string(&path) {
         Ok(raw) => serde_json::from_str(&raw).map_err(|e| e.to_string()),
         Err(_) => Ok(UiPrefsDto::default()),
-    }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -233,12 +238,17 @@ pub async fn set_ui_prefs(agent_name: String) -> Result<(), String> {
         return Err("agent name must not be empty".to_string());
     }
     let path = ui_prefs_path();
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
+    let parent = path.parent().map(|p| p.to_path_buf());
     let prefs = UiPrefsDto { agent_name: name };
     let raw = serde_json::to_string_pretty(&prefs).map_err(|e| e.to_string())?;
-    std::fs::write(&path, raw).map_err(|e| e.to_string())
+    tokio::task::spawn_blocking(move || {
+        if let Some(ref p) = parent {
+            std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(&path, raw).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

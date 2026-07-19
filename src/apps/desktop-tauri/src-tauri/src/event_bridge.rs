@@ -30,7 +30,7 @@ impl EventSubscriber for TauriEventBridge {
                 if let Err(e) = r {
                     tracing::warn!("chat-chunk emit failed: {e}");
                 } else {
-                    tracing::info!("chat-chunk emitted session={} len={}", session_id, text.len());
+                    tracing::debug!("chat-chunk emitted session={} len={}", session_id, text.len());
                 }
             }
             AgenticEvent::DialogTurnStarted { session_id, turn_id, .. } => {
@@ -77,16 +77,17 @@ pub fn register(app: &AppHandle) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         tracing::info!("desktop-tauri bridge: coordinator not ready, retry loop spawned");
         crate::core_rt::core_rt().spawn(async move {
-            loop {
+            for attempt in 1..=120 {
                 if let Some(coordinator) =
                     northhing_core::agentic::coordination::global_coordinator()
                 {
                     coordinator.subscribe_internal("desktop-tauri".to_string(), bridge);
                     tracing::info!("desktop-tauri bridge subscribed (via retry loop)");
-                    break;
+                    return;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
+            tracing::error!("desktop-tauri bridge: coordinator never became ready; giving up");
         });
         return;
     };
