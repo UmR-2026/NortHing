@@ -157,38 +157,4 @@ impl Default for TerminalEventEmitter {
     }
 }
 
-/// Callback-based event handler
-pub type EventCallback = Box<dyn Fn(TerminalEvent) + Send + Sync>;
 
-/// Event dispatcher that can register multiple callbacks
-pub struct EventDispatcher {
-    callbacks: Vec<EventCallback>,
-}
-
-impl EventDispatcher {
-    /// Create a new event dispatcher
-    pub fn new() -> Self {
-        Self { callbacks: Vec::new() }
-    }
-
-    /// Register a callback
-    pub fn on_event<F>(&mut self, callback: F)
-    where
-        F: Fn(TerminalEvent) + Send + Sync + 'static,
-    {
-        self.callbacks.push(Box::new(callback));
-    }
-
-    /// Dispatch an event to all callbacks
-    pub fn dispatch(&self, event: TerminalEvent) {
-        for callback in &self.callbacks {
-            callback(event.clone());
-        }
-    }
-}
-
-impl Default for EventDispatcher {
-    fn default() -> Self {
-        Self::new()
-    }
-}

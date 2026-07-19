@@ -15,14 +15,8 @@ pub enum GitError {
     #[error("Merge conflict: {0}")]
     MergeConflict(String),
 
-    #[error("Authentication failed: {0}")]
-    AuthenticationFailed(String),
-
     #[error("Network error: {0}")]
     NetworkError(String),
-
-    #[error("Parse error: {0}")]
-    ParseError(String),
 
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),

@@ -6,27 +6,6 @@ pub struct TimingStep {
     pub duration_ms: u128,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct TimingCollector {
-    steps: Vec<TimingStep>,
-}
-
-impl TimingCollector {
-    pub fn push_duration(&mut self, name: &'static str, duration_ms: u128) {
-        self.steps.push(TimingStep { name, duration_ms });
-    }
-
-    pub fn record_elapsed(&mut self, name: &'static str, started_at: Instant) -> u128 {
-        let duration_ms = elapsed_ms(started_at);
-        self.push_duration(name, duration_ms);
-        duration_ms
-    }
-
-    pub fn steps(&self) -> &[TimingStep] {
-        &self.steps
-    }
-}
-
 pub fn elapsed_ms(started_at: Instant) -> u128 {
     started_at.elapsed().as_millis()
 }

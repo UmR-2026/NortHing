@@ -80,9 +80,6 @@ pub enum TerminalError {
     #[error("Session error: {0}")]
     Session(String),
 
-    #[error("Shell error: {0}")]
-    Shell(String),
-
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -98,12 +95,6 @@ pub enum TerminalError {
     #[error("Serialization error: {0}")]
     Serialization(String),
 
-    #[error("Flow control error: {0}")]
-    FlowControl(String),
-
     #[error("Anyhow error: {0}")]
     Anyhow(#[from] anyhow::Error),
-
-    #[error("Command timeout: {0}")]
-    Timeout(String),
 }
