@@ -115,75 +115,39 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
         let ui_clone = ui_weak.clone();
         let sid = session_id.clone();
         let app_state_for_spawn = Arc::clone(&app_state_arc_send);
-        std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for UI callback");
-            rt.block_on(async move {
-                let app_state = &*app_state_for_spawn;
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
-                    app_state.set_streaming_session(None);
-                    return;
-                };
+        let app_state = &*app_state_arc_send;
+        let Some(turn_rt) = super::turn_runtime::turn_runtime() else {
+            // 2026-07-19 (W4): turn runtime missing — cannot dispatch without
+            // aborting the turn. Surface the error instead of hanging silently.
+            set_session_error(ui_clone.clone(), "Turn runtime not initialized. Please restart.");
+            app_state.set_streaming_session(None);
+            return;
+        };
+        turn_rt.spawn(async move {
+            let app_state = &*app_state_for_spawn;
+            let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+                // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                set_session_error(ui_clone.clone(), "Global coordinator not available.");
+                app_state.set_streaming_session(None);
+                return;
+            };
 
-                let workspace = std::env::current_dir()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|_| ".".to_string());
+            let workspace = std::env::current_dir()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|_| ".".to_string());
 
-                // 2026-07-18 (W3a-4): route submissions through the dialog
-                // scheduler so in-turn messages are enqueued (per-session depth
-                // cap 20) instead of rejected by the Processing guard. The
-                // scheduler's outcome handler auto-dispatches the next queued
-                // turn when the active turn ends.
-                let scheduler = northhing_core::agentic::coordination::global_scheduler();
-                let submit_ok = match scheduler {
-                    Some(scheduler) => {
-                        // 2026-07-18 (W3a-4): scheduler path — returns a
-                        // DialogSubmitOutcome distinguishing Started vs Queued.
-                        match scheduler
-                            .submit(
-                                sid.clone(),
-                                text_str,
-                                None,
-                                None,
-                                crate::flags::DEFAULT_MODE_ID.to_string(),
-                                Some(workspace),
-                                northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
-                                    northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
-                                ),
-                                None,
-                                None,
-                                None,
-                            )
-                            .await
-                        {
-                            Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Started { .. }) => {
-                                // turn started immediately; streaming indicator
-                                // already set optimistically at entry — lifecycle
-                                // is owned by the event bridge.
-                                Ok(())
-                            }
-                            Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Queued { .. }) => {
-                                // 2026-07-18 (W3a-4): message queued behind the
-                                // active turn. Show a banner; keep the streaming
-                                // indicator — the current turn is still running.
-                                // Turn handoff is收敛 by the event bridge when
-                                // the active turn ends and the queued turn starts.
-                                // 2026-07-18 (D2j): background thread — pass weak directly.
-                                set_banner_message(ui_clone.clone(), "已排队，将在当前回复完成后发送", "");
-                                Ok(())
-                            }
-                            Err(e) => Err(format!("Failed to send message: {e}")),
-                        }
-                    }
-                    // 2026-07-18 (W3a-4): fallback (theoretically unreachable
-                    // once desktop wiring is in place): keep the old direct-call
-                    // path. Returns () on success.
-                    None => coordinator
-                        .start_dialog_turn(
+            // 2026-07-18 (W3a-4): route submissions through the dialog
+            // scheduler so in-turn messages are enqueued (per-session depth
+            // cap 20) instead of rejected by the Processing guard. The
+            // scheduler's outcome handler auto-dispatches the next queued
+            // turn when the active turn ends.
+            let scheduler = northhing_core::agentic::coordination::global_scheduler();
+            let submit_ok = match scheduler {
+                Some(scheduler) => {
+                    // 2026-07-18 (W3a-4): scheduler path — returns a
+                    // DialogSubmitOutcome distinguishing Started vs Queued.
+                    match scheduler
+                        .submit(
                             sid.clone(),
                             text_str,
                             None,
@@ -194,43 +158,81 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                                 northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
                             ),
                             None,
+                            None,
+                            None,
                         )
                         .await
-                        .map_err(|e| format!("Failed to send message: {e}")),
-                };
-
-                if let Err(e) = submit_ok {
-                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                    set_session_error(ui_clone.clone(), e);
-                    // 2026-07-18 (W3a-4): do NOT clear the streaming indicator
-                    // here — its lifecycle is owned by the event bridge. Clearing
-                    // on submit failure was the original bug that dropped the
-                    // streaming state prematurely.
-                    return;
-                }
-
-                // Refresh messages after response completes.
-                // 2026-07-18 (D2j-fix): background thread fetches messages,
-                // then dispatches model build + set onto the UI thread via
-                // invoke_from_event_loop. ModelRc is !Send, so messages are
-                // moved into the closure and the model is built inside (on
-                // the UI thread). No nested block_on inside the invoke
-                // closure (would panic: "Cannot start a runtime from within
-                // a runtime").
-                let sid_clone = sid.clone();
-                let ui_weak2 = ui_clone.clone();
-                if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-                    if let Ok(msgs) = c.get_messages(&sid_clone).await {
-                        let ui_weak_for_msgs = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak_for_msgs.upgrade() {
-                                let model = build_messages_model(&msgs, None);
-                                ui.set_messages(model);
-                            }
-                        });
+                    {
+                        Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Started { .. }) => {
+                            // turn started immediately; streaming indicator
+                            // already set optimistically at entry — lifecycle
+                            // is owned by the event bridge.
+                            Ok(())
+                        }
+                        Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Queued { .. }) => {
+                            // 2026-07-18 (W3a-4): message queued behind the
+                            // active turn. Show a banner; keep the streaming
+                            // indicator — the current turn is still running.
+                            // Turn handoff is收敛 by the event bridge when
+                            // the active turn ends and the queued turn starts.
+                            // 2026-07-18 (D2j): background thread — pass weak directly.
+                            set_banner_message(ui_clone.clone(), "已排队，将在当前回复完成后发送", "");
+                            Ok(())
+                        }
+                        Err(e) => Err(format!("Failed to send message: {e}")),
                     }
                 }
-            });
+                // 2026-07-18 (W3a-4): fallback (theoretically unreachable
+                // once desktop wiring is in place): keep the old direct-call
+                // path. Returns () on success.
+                None => coordinator
+                    .start_dialog_turn(
+                        sid.clone(),
+                        text_str,
+                        None,
+                        None,
+                        crate::flags::DEFAULT_MODE_ID.to_string(),
+                        Some(workspace),
+                        northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
+                            northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
+                        ),
+                        None,
+                    )
+                    .await
+                    .map_err(|e| format!("Failed to send message: {e}")),
+            };
+
+            if let Err(e) = submit_ok {
+                // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
+                set_session_error(ui_clone.clone(), e);
+                // 2026-07-18 (W3a-4): do NOT clear the streaming indicator
+                // here — its lifecycle is owned by the event bridge. Clearing
+                // on submit failure was the original bug that dropped the
+                // streaming state prematurely.
+                return;
+            }
+
+            // Refresh messages after response completes.
+            // 2026-07-18 (D2j-fix): background thread fetches messages,
+            // then dispatches model build + set onto the UI thread via
+            // invoke_from_event_loop. ModelRc is !Send, so messages are
+            // moved into the closure and the model is built inside (on
+            // the UI thread). No nested block_on inside the invoke
+            // closure (would panic: "Cannot start a runtime from within
+            // a runtime").
+            let sid_clone = sid.clone();
+            let ui_weak2 = ui_clone.clone();
+            if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
+                if let Ok(msgs) = c.get_messages(&sid_clone).await {
+                    let ui_weak_for_msgs = ui_weak2.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak_for_msgs.upgrade() {
+                            let model = build_messages_model(&msgs, None);
+                            ui.set_messages(model);
+                        }
+                    });
+                }
+            }
         });
     });
 }

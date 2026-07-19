@@ -138,6 +138,10 @@ fn main() {
                 .build()
                 .expect("failed to build tokio runtime");
 
+            // W4: expose the long-lived worker runtime so turn dispatch
+            // spawns onto it instead of a throwaway per-callback runtime.
+            crate::app_state::turn_runtime::set_turn_runtime_handle(runtime.handle().clone());
+
             // Initialize core services
             if let Err(e) = runtime.block_on(initialize_core_services()) {
                 eprintln!("Error: failed to initialize core services: {e}");
