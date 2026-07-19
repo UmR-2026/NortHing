@@ -1,4 +1,6 @@
 mod core_rt;
+mod event_bridge;
+mod commands;
 
 fn main() {
     tracing_subscriber::fmt()
@@ -9,7 +11,16 @@ fn main() {
     core_rt::init_core_runtime();
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![])
+        .setup(|app| {
+            event_bridge::register(&app.handle());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::create_session,
+            commands::list_sessions,
+            commands::send_message,
+            commands::get_messages,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running northhing desktop");
 }
