@@ -5,6 +5,8 @@
 use super::types::{AgenticEvent, EventEnvelope};
 use crate::util::errors::NortHingResult;
 use dashmap::DashMap;
+use futures::FutureExt;
+use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use tracing::{debug, trace, warn};
 
@@ -57,8 +59,27 @@ impl EventRouter {
 
         // Send to all internal subscribers
         for (subscriber_id, subscriber) in subscribers {
-            if let Err(e) = subscriber.on_event(event).await {
-                warn!("Internal subscriber {} failed to process event: {}", subscriber_id, e);
+            let result = AssertUnwindSafe(subscriber.on_event(event))
+                .catch_unwind()
+                .await;
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    warn!("Internal subscriber {} failed to process event: {}", subscriber_id, e);
+                }
+                Err(panic_payload) => {
+                    let msg = if let Some(s) = panic_payload.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else if let Some(s) = panic_payload.downcast_ref::<String>() {
+                        s.clone()
+                    } else {
+                        "Unknown panic".to_string()
+                    };
+                    warn!(
+                        "Internal subscriber {} panicked while processing event: {:?}",
+                        subscriber_id, msg
+                    );
+                }
             }
         }
 
@@ -77,8 +98,27 @@ impl EventRouter {
         for envelope in envelopes {
             let event = &envelope.event;
             for (subscriber_id, subscriber) in &subscribers {
-                if let Err(e) = subscriber.on_event(event).await {
-                    warn!("Internal subscriber {} failed to process event: {}", subscriber_id, e);
+                let result = AssertUnwindSafe(subscriber.on_event(event))
+                    .catch_unwind()
+                    .await;
+                match result {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => {
+                        warn!("Internal subscriber {} failed to process event: {}", subscriber_id, e);
+                    }
+                    Err(panic_payload) => {
+                        let msg = if let Some(s) = panic_payload.downcast_ref::<&str>() {
+                            s.to_string()
+                        } else if let Some(s) = panic_payload.downcast_ref::<String>() {
+                            s.clone()
+                        } else {
+                            "Unknown panic".to_string()
+                        };
+                        warn!(
+                            "Internal subscriber {} panicked while processing event: {:?}",
+                            subscriber_id, msg
+                        );
+                    }
                 }
             }
         }

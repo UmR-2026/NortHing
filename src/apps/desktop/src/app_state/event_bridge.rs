@@ -35,70 +35,60 @@ impl DesktopEventBridge {
 
     /// Flush the accumulated draft to the UI by fetching the latest messages
     /// from the coordinator and appending a synthetic streaming assistant item.
-    fn flush_draft(&self, session_id: &str, draft: String) {
+    async fn flush_draft(&self, session_id: &str, draft: String) {
         let ui = self.ui.clone();
         let sid = session_id.to_string();
-        // 2026-07-18 (D2j-fix): event bridge subscription runs on a background
-        // thread. Fetch messages there, then dispatch only the sync UI set
-        // onto the UI thread via invoke_from_event_loop. No nested block_on
-        // inside the invoke closure (would panic: "Cannot start a runtime
-        // from within a runtime").
-        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
-        if let Ok(rt) = rt {
-            let _ = rt.block_on(async {
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    return;
-                };
-                match coordinator.get_messages(&sid).await {
-                    Ok(msgs) => {
-                        let base = build_messages_model(&msgs, None);
-                        let mut items: Vec<MessageItem> = base.iter().collect();
-                        items.push(slint_streaming_item(draft.clone()));
-                        let ui_weak = ui.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak.upgrade() {
-                                ui.set_messages(ModelRc::new(VecModel::from(items)));
-                            }
-                        });
+        // 2026-07-19 (W4b): on_event runs on the agentic routing task (worker
+        // runtime). Await the fetch directly — NEVER block_on or build a
+        // runtime here (panics: "Cannot start a runtime from within a
+        // runtime"; the panic also kills the routing task in system.rs).
+        // Only the sync UI set goes through invoke_from_event_loop.
+        let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+            return;
+        };
+        match coordinator.get_messages(&sid).await {
+            Ok(msgs) => {
+                let base = build_messages_model(&msgs, None);
+                let mut items: Vec<MessageItem> = base.iter().collect();
+                items.push(slint_streaming_item(draft.clone()));
+                let ui_weak = ui.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.set_messages(ModelRc::new(VecModel::from(items)));
                     }
-                    Err(_) => {
-                        let items = vec![slint_streaming_item(draft.clone())];
-                        let ui_weak = ui.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak.upgrade() {
-                                ui.set_messages(ModelRc::new(VecModel::from(items)));
-                            }
-                        });
+                });
+            }
+            Err(_) => {
+                let items = vec![slint_streaming_item(draft.clone())];
+                let ui_weak = ui.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.set_messages(ModelRc::new(VecModel::from(items)));
                     }
-                }
-            });
+                });
+            }
         }
     }
 
     /// Refresh messages from the coordinator (no synthetic item). Used for
     /// terminal states where the turn file is the source of truth.
-    fn refresh_messages(&self, session_id: &str) {
+    async fn refresh_messages(&self, session_id: &str) {
         let ui = self.ui.clone();
         let sid = session_id.to_string();
-        // 2026-07-18 (D2j-fix): event bridge subscription runs on a background
-        // thread. Fetch messages there, then dispatch only the sync UI set
-        // onto the UI thread via invoke_from_event_loop. No nested block_on
-        // inside the invoke closure (would panic).
-        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
-        if let Ok(rt) = rt {
-            let _ = rt.block_on(async {
-                if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-                    if let Ok(msgs) = c.get_messages(&sid).await {
-                        let ui_weak = ui.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak.upgrade() {
-                                let model = build_messages_model(&msgs, None);
-                                ui.set_messages(model);
-                            }
-                        });
+        // 2026-07-19 (W4b): on_event runs on the agentic routing task (worker
+        // runtime). Await the fetch directly — NEVER block_on or build a
+        // runtime here (panics: "Cannot start a runtime from within a
+        // runtime"; the panic also kills the routing task in system.rs).
+        if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
+            if let Ok(msgs) = c.get_messages(&sid).await {
+                let ui_weak = ui.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        let model = build_messages_model(&msgs, None);
+                        ui.set_messages(model);
                     }
-                }
-            });
+                });
+            }
         }
     }
 }
@@ -187,7 +177,7 @@ impl EventSubscriber for DesktopEventBridge {
                 };
                 if should_flush {
                     let draft = self.draft.lock().map(|d| d.clone()).unwrap_or_default();
-                    self.flush_draft(session_id, draft);
+                    self.flush_draft(session_id, draft).await;
                 }
             }
             AgenticEvent::DialogTurnCompleted { session_id, .. } => {
@@ -207,7 +197,7 @@ impl EventSubscriber for DesktopEventBridge {
                         ui.set_is_streaming(false);
                     }
                 });
-                self.refresh_messages(&sid);
+                self.refresh_messages(&sid).await;
             }
             AgenticEvent::DialogTurnCancelled { session_id, .. } => {
                 if session_id != &current_session {
@@ -226,7 +216,7 @@ impl EventSubscriber for DesktopEventBridge {
                         ui.set_is_streaming(false);
                     }
                 });
-                self.refresh_messages(&sid);
+                self.refresh_messages(&sid).await;
             }
             AgenticEvent::DialogTurnFailed {
                 session_id,
@@ -261,7 +251,7 @@ impl EventSubscriber for DesktopEventBridge {
                         set_session_error(ui.as_weak(), msg_clone);
                     }
                 });
-                self.refresh_messages(&sid);
+                self.refresh_messages(&sid).await;
             }
             // Other variants are ignored by the desktop bridge.
             _ => {}
