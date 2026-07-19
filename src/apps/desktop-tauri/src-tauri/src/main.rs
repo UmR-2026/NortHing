@@ -22,6 +22,8 @@ fn main() {
             commands::get_messages,
             commands::get_or_create_latest_session,
             commands::stop_streaming,
+            commands::get_ui_prefs,
+            commands::set_ui_prefs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running northhing desktop");

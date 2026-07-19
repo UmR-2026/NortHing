@@ -194,6 +194,53 @@ async fn do_stop_streaming(session_id: String, turn_id: String) -> anyhow::Resul
     Ok(())
 }
 
+// ---------- UI preferences (display-only; NOT the AI config) ----------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPrefsDto {
+    pub agent_name: String,
+}
+
+impl Default for UiPrefsDto {
+    fn default() -> Self {
+        Self {
+            agent_name: "northhing".to_string(),
+        }
+    }
+}
+
+fn ui_prefs_path() -> std::path::PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("northhing")
+        .join("config")
+        .join("desktop-ui.json")
+}
+
+#[tauri::command]
+pub async fn get_ui_prefs() -> Result<UiPrefsDto, String> {
+    let path = ui_prefs_path();
+    match std::fs::read_to_string(&path) {
+        Ok(raw) => serde_json::from_str(&raw).map_err(|e| e.to_string()),
+        Err(_) => Ok(UiPrefsDto::default()),
+    }
+}
+
+#[tauri::command]
+pub async fn set_ui_prefs(agent_name: String) -> Result<(), String> {
+    let name = agent_name.trim().to_string();
+    if name.is_empty() {
+        return Err("agent name must not be empty".to_string());
+    }
+    let path = ui_prefs_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let prefs = UiPrefsDto { agent_name: name };
+    let raw = serde_json::to_string_pretty(&prefs).map_err(|e| e.to_string())?;
+    std::fs::write(&path, raw).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn get_messages(session_id: String) -> Result<Vec<MessageDto>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();

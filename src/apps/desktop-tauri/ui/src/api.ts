@@ -58,6 +58,14 @@ export async function stopStreaming(
   return invoke<void>("stop_streaming", { sessionId, turnId });
 }
 
+export async function getUiPrefs(): Promise<{ agent_name: string }> {
+  return invoke<{ agent_name: string }>("get_ui_prefs");
+}
+
+export async function setUiPrefs(agentName: string): Promise<void> {
+  return invoke<void>("set_ui_prefs", { agentName });
+}
+
 export function onChunk(
   handler: (payload: ChatChunk) => void,
 ): Promise<() => void> {

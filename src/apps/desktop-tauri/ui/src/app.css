@@ -110,6 +110,169 @@ body {
   }
 }
 
+.wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: text;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.wordmark:hover {
+  background: var(--bg-elev);
+}
+
+.name-input {
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 2px 6px;
+  outline: none;
+  width: 180px;
+}
+
+.header-btn {
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.header-btn:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.header-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.options-wrap {
+  position: relative;
+}
+
+.options-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.options-menu label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.options-menu label:hover {
+  color: var(--text);
+}
+
+/* ---------- body row / artifacts ---------- */
+.body-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.artifacts {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-soft);
+  padding: 18px 16px;
+  overflow-y: auto;
+}
+
+.artifacts h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.artifacts-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  text-align: center;
+  padding: 32px 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- think block ---------- */
+.thinkblock {
+  margin: 0 0 8px;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+
+.thinkblock.live .think-toggle {
+  color: var(--accent);
+}
+
+.think-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 5px;
+  user-select: none;
+}
+
+.think-toggle:hover {
+  color: var(--text-dim);
+  background: var(--bg-elev);
+}
+
+.think-toggle .chevron {
+  display: inline-block;
+  transition: transform 0.12s;
+  font-size: 13px;
+}
+
+.think-toggle .chevron.open {
+  transform: rotate(90deg);
+}
+
+.think-body {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 /* ---------- messages ---------- */
 .messages {
   flex: 1;

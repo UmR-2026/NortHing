@@ -8,10 +8,73 @@ import {
   sendMessage,
   stopStreaming,
   getMessages,
+  getUiPrefs,
+  setUiPrefs,
   onChunk,
   onTurnState,
   type MessageDto,
 } from "./api";
+
+// ---------- think block parsing ----------
+
+interface ParsedContent {
+  think: string | null;
+  thinkDone: boolean;
+  body: string;
+}
+
+function parseThink(content: string): ParsedContent {
+  const OPEN = "<think>";
+  const CLOSE = "</think>";
+  let think = "";
+  let body = "";
+  let rest = content;
+  let done = false;
+  for (;;) {
+    const i = rest.indexOf(OPEN);
+    if (i === -1) {
+      body += rest;
+      break;
+    }
+    body += rest.slice(0, i);
+    rest = rest.slice(i + OPEN.length);
+    const j = rest.indexOf(CLOSE);
+    if (j === -1) {
+      think += rest;
+      rest = "";
+      break;
+    }
+    think += rest.slice(0, j);
+    done = true;
+    rest = rest.slice(j + CLOSE.length);
+  }
+  const trimmedThink = think.trim();
+  return { think: trimmedThink ? think : null, thinkDone: done, body: body.trimStart() };
+}
+
+function ThinkBlock({
+  text,
+  expanded,
+  live,
+  onToggle,
+}: {
+  text: string;
+  expanded: boolean;
+  live: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className={`thinkblock${live ? " live" : ""}`}>
+      <button className="think-toggle" onClick={onToggle}>
+        <span className={`chevron${expanded ? " open" : ""}`}>›</span>
+        思考过程{live ? "…" : ""}
+      </button>
+      {expanded && <div className="think-body">{text}</div>}
+    </div>
+  );
+}
+
+// ---------- markdown ----------
 
 function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
@@ -66,6 +129,8 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
+// ---------- app ----------
+
 function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageDto[]>([]);
@@ -74,18 +139,29 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
   const [debugLines, setDebugLines] = useState<string[]>([]);
+  const [debugOn, setDebugOn] = useState(false);
+  const [agentName, setAgentName] = useState("northhing");
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [artifactsOpen, setArtifactsOpen] = useState(false);
+  const [thinkDefaultOpen, setThinkDefaultOpen] = useState(false);
+  const [thinkOpenMap, setThinkOpenMap] = useState<Record<string, boolean>>({});
+  const [streamThinkOpen, setStreamThinkOpen] = useState(true);
+  const streamThinkManual = useRef(false);
   const streamingRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
-  const debugMode = useRef(window.location.hash === "#debug");
 
-  const debug = useCallback((line: string) => {
-    if (!debugMode.current) return;
-    setDebugLines((prev) => [...prev.slice(-19), `${new Date().toLocaleTimeString()} ${line}`]);
-  }, []);
+  const debug = useCallback(
+    (line: string) => {
+      if (!debugOn) return;
+      setDebugLines((prev) => [...prev.slice(-19), `${new Date().toLocaleTimeString()} ${line}`]);
+    },
+    [debugOn],
+  );
 
-  // Auto-scroll to bottom while the user hasn't scrolled up.
   useEffect(() => {
     const el = scrollRef.current;
     if (el && stickToBottom.current) {
@@ -93,28 +169,31 @@ function App() {
     }
   }, [messages, streamingText]);
 
-  // On mount: open the latest session (or create one) and load history.
   useEffect(() => {
+    getUiPrefs()
+      .then((p) => setAgentName(p.agent_name))
+      .catch(() => {});
     getOrCreateLatestSession()
       .then((id) => {
         setSessionId(id);
-        debug(`session: ${id}`);
         return getMessages(id);
       })
-      .then((msgs) => {
-        setMessages(msgs);
-        debug(`history: ${msgs.length} messages`);
-      })
+      .then((msgs) => setMessages(msgs))
       .catch((e) => debug(`init failed: ${String(e)}`));
   }, [debug]);
 
-  // Subscribe to core events.
   useEffect(() => {
     const unlistenChunk = onChunk((payload) => {
       debug(`chunk len=${payload.text.length}`);
       if (payload.session_id !== sessionId) return;
       streamingRef.current += payload.text;
       setStreamingText((prev) => prev + payload.text);
+      // Auto-collapse the think block once the answer body starts,
+      // unless the user toggled it manually during this turn.
+      const parsed = parseThink(streamingRef.current);
+      if (parsed.thinkDone && parsed.body && !streamThinkManual.current) {
+        setStreamThinkOpen(false);
+      }
     });
     const unlistenState = onTurnState((payload) => {
       debug(`turn-state ${payload.state}`);
@@ -124,6 +203,8 @@ function App() {
         if (payload.turn_id) setActiveTurnId(payload.turn_id);
         streamingRef.current = "";
         setStreamingText("");
+        streamThinkManual.current = false;
+        setStreamThinkOpen(true);
       } else if (
         payload.state === "completed" ||
         payload.state === "failed" ||
@@ -151,7 +232,7 @@ function App() {
             setTimeout(() => {
               getMessages(sessionId)
                 .then((msgs) => {
-                  debug(`refetch(${delay}ms): ${msgs.length} messages`);
+                  debug(`refetch(${delay}ms): ${msgs.length}`);
                   setMessages((prev) => (msgs.length >= prev.length ? msgs : prev));
                 })
                 .catch((e) => debug(`getMessages failed: ${String(e)}`));
@@ -194,59 +275,163 @@ function App() {
     }
   }, []);
 
+  const saveName = useCallback(() => {
+    const name = nameDraft.trim();
+    setEditingName(false);
+    if (!name || name === agentName) return;
+    setAgentName(name);
+    setUiPrefs(name).catch(() => {});
+  }, [nameDraft, agentName]);
+
   const showEmpty = messages.length === 0 && !streamingText;
+  const streamParsed = streamingText ? parseThink(streamingText) : null;
 
   return (
     <div className="app">
       <header className="header">
         <div className="logo-dot" />
-        <span className="wordmark">northhing</span>
-        <div className="header-spacer" />
+        {editingName ? (
+          <input
+            className="name-input"
+            autoFocus
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveName();
+              if (e.key === "Escape") setEditingName(false);
+            }}
+          />
+        ) : (
+          <span
+            className="wordmark"
+            title="点击改名"
+            onClick={() => {
+              setNameDraft(agentName);
+              setEditingName(true);
+            }}
+          >
+            {agentName}
+          </span>
+        )}
         <div className={`status-pill${isStreaming ? " streaming" : ""}`}>
           <span className="dot" />
           {isStreaming ? "回复中" : "就绪"}
         </div>
+        <div className="header-spacer" />
+        <button
+          className={`header-btn${artifactsOpen ? " active" : ""}`}
+          onClick={() => setArtifactsOpen((v) => !v)}
+        >
+          产物
+        </button>
+        <div className="options-wrap">
+          <button
+            className={`header-btn${optionsOpen ? " active" : ""}`}
+            onClick={() => setOptionsOpen((v) => !v)}
+          >
+            选项
+          </button>
+          {optionsOpen && (
+            <div className="options-menu">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={thinkDefaultOpen}
+                  onChange={(e) => setThinkDefaultOpen(e.target.checked)}
+                />
+                默认展开思考过程
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={debugOn}
+                  onChange={(e) => setDebugOn(e.target.checked)}
+                />
+                调试面板
+              </label>
+            </div>
+          )}
+        </div>
       </header>
 
-      <div
-        className="messages"
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-        }}
-      >
-        {showEmpty ? (
-          <div className="empty-state">
-            <div className="logo-dot" />
-            <p>有什么可以帮你？</p>
-          </div>
-        ) : (
-          <div className="messages-inner">
-            {messages.map((m) =>
-              m.role === "user" ? (
-                <div className="msg user" key={m.id}>
-                  <div className="bubble">{m.content}</div>
-                </div>
-              ) : m.role === "assistant" ? (
-                <div className="msg assistant" key={m.id}>
+      <div className="body-row">
+        <div
+          className="messages"
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+          }}
+        >
+          {showEmpty ? (
+            <div className="empty-state">
+              <div className="logo-dot" />
+              <p>有什么可以帮你？</p>
+            </div>
+          ) : (
+            <div className="messages-inner">
+              {messages.map((m) => {
+                if (m.role === "user") {
+                  return (
+                    <div className="msg user" key={m.id}>
+                      <div className="bubble">{m.content}</div>
+                    </div>
+                  );
+                }
+                if (m.role === "assistant") {
+                  const parsed = parseThink(m.content);
+                  const thinkOpen = thinkOpenMap[m.id] ?? thinkDefaultOpen;
+                  return (
+                    <div className="msg assistant" key={m.id}>
+                      <div className="avatar" />
+                      <div className="content">
+                        {parsed.think && (
+                          <ThinkBlock
+                            text={parsed.think}
+                            live={false}
+                            expanded={thinkOpen}
+                            onToggle={() =>
+                              setThinkOpenMap((prev) => ({ ...prev, [m.id]: !thinkOpen }))
+                            }
+                          />
+                        )}
+                        {parsed.body && <Markdown text={parsed.body} />}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+              {streamParsed && (
+                <div className="msg assistant">
                   <div className="avatar" />
                   <div className="content">
-                    <Markdown text={m.content} />
+                    {streamParsed.think && (
+                      <ThinkBlock
+                        text={streamParsed.think}
+                        live={!streamParsed.thinkDone}
+                        expanded={streamThinkOpen}
+                        onToggle={() => {
+                          streamThinkManual.current = true;
+                          setStreamThinkOpen((v) => !v);
+                        }}
+                      />
+                    )}
+                    {streamParsed.body && <Markdown text={streamParsed.body} />}
+                    <span className="caret" />
                   </div>
                 </div>
-              ) : null,
-            )}
-            {streamingText ? (
-              <div className="msg assistant">
-                <div className="avatar" />
-                <div className="content">
-                  <Markdown text={streamingText} />
-                  <span className="caret" />
-                </div>
-              </div>
-            ) : null}
-          </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {artifactsOpen && (
+          <aside className="artifacts">
+            <h3>生成产物</h3>
+            <div className="artifacts-empty">暂无产物</div>
+          </aside>
         )}
       </div>
 
@@ -278,7 +463,7 @@ function App() {
             </button>
           )}
         </div>
-        {debugMode.current && (
+        {debugOn && (
           <div className="debug-panel">
             {debugLines.map((l, i) => (
               <div key={i}>{l}</div>
