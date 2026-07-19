@@ -42,6 +42,7 @@ impl ConversationCoordinator {
             scheduler_notify_tx: OnceLock::new(),
             round_injection_source: OnceLock::new(),
             active_turns_per_session: Arc::new(dashmap::DashMap::new()),
+            active_turn_tasks: Arc::new(dashmap::DashMap::new()),
             thread_goal_runtime: Arc::new(ThreadGoalRuntime::new()),
         }
     }

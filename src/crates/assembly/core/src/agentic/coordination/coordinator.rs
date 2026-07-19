@@ -530,6 +530,10 @@ pub struct ConversationCoordinator {
     /// Map value is a counter shared between the coordinator and the spawn
     /// task; spawn task increments on entry and decrements on exit.
     pub active_turns_per_session: Arc<DashMap<String, Arc<AtomicUsize>>>,
+    /// In-flight dialog turn tasks keyed by dialog_turn_id. Storage + cleanup
+    /// only (no shutdown-await wiring). Allows callers to track or await
+    /// individual turn tasks.
+    pub active_turn_tasks: Arc<DashMap<String, tokio::task::JoinHandle<()>>>,
     pub thread_goal_runtime: Arc<ThreadGoalRuntime>,
 }
 // ══════════════════════════════════════════════════════════════════════

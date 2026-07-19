@@ -205,6 +205,7 @@ impl ExecutionEngine {
             success,
             new_messages,
             finish_reason,
+            partial_recovery_reason: state.last_partial_recovery_reason.clone(),
         }
     }
 }

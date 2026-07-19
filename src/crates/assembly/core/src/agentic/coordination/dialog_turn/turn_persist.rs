@@ -74,13 +74,18 @@ impl ConversationCoordinator {
         }
 
         if let Some(tx) = scheduler_notify_tx {
-            if let Err(error) = tx.try_send((
-                session_id.to_string(),
-                TurnOutcome::Completed {
-                    turn_id: turn_id.to_string(),
-                    final_response: final_response.clone(),
-                },
-            )) {
+            // Backpressure is correct here: the scheduler must drain turn
+            // outcomes, so await the send instead of dropping on a full buffer.
+            if let Err(error) = tx
+                .send((
+                    session_id.to_string(),
+                    TurnOutcome::Completed {
+                        turn_id: turn_id.to_string(),
+                        final_response: final_response.clone(),
+                    },
+                ))
+                .await
+            {
                 error!(
                     "Failed to notify scheduler of turn completion: session_id={}, turn_id={}, error={}",
                     session_id, turn_id, error
@@ -146,12 +151,17 @@ impl ConversationCoordinator {
         }
 
         if let Some(tx) = scheduler_notify_tx {
-            if let Err(error) = tx.try_send((
-                session_id.to_string(),
-                TurnOutcome::Cancelled {
-                    turn_id: turn_id.to_string(),
-                },
-            )) {
+            // Backpressure is correct here: the scheduler must drain turn
+            // outcomes, so await the send instead of dropping on a full buffer.
+            if let Err(error) = tx
+                .send((
+                    session_id.to_string(),
+                    TurnOutcome::Cancelled {
+                        turn_id: turn_id.to_string(),
+                    },
+                ))
+                .await
+            {
                 error!(
                     "Failed to notify scheduler of turn cancellation: session_id={}, turn_id={}, error={}",
                     session_id, turn_id, error
@@ -231,13 +241,18 @@ impl ConversationCoordinator {
         }
 
         if let Some(tx) = scheduler_notify_tx {
-            if let Err(notify_error) = tx.try_send((
-                session_id.to_string(),
-                TurnOutcome::Failed {
-                    turn_id: turn_id.to_string(),
-                    error: error_text.clone(),
-                },
-            )) {
+            // Backpressure is correct here: the scheduler must drain turn
+            // outcomes, so await the send instead of dropping on a full buffer.
+            if let Err(notify_error) = tx
+                .send((
+                    session_id.to_string(),
+                    TurnOutcome::Failed {
+                        turn_id: turn_id.to_string(),
+                        error: error_text.clone(),
+                    },
+                ))
+                .await
+            {
                 error!(
                     "Failed to notify scheduler of turn failure: session_id={}, turn_id={}, error={}",
                     session_id, turn_id, notify_error

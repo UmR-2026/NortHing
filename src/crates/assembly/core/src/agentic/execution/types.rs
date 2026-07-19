@@ -104,6 +104,10 @@ pub struct ExecutionResult {
     pub new_messages: Vec<Message>,
     /// Why the execution finished
     pub finish_reason: FinishReason,
+    /// When set, the turn finished but the last model round was a partial
+    /// recovery (stream aborted mid-way). Mirrors
+    /// `ExecutionTurnState::last_partial_recovery_reason` at completion time.
+    pub partial_recovery_reason: Option<String>,
 }
 
 /// Result of one `ExecutionEngine::tick` call.

@@ -104,27 +104,12 @@ impl ExecutionEngine {
             }
         }
 
-        // Emit dialog turn completed event
-        let duration_ms = elapsed_ms_u64(start_time);
-        let effective_finish_reason = state.finalization_reason.unwrap_or("complete");
-        let _ = self
-            .event_queue
-            .enqueue(
-                AgenticEvent::DialogTurnCompleted {
-                    session_id: context.session_id.clone(),
-                    turn_id: context.dialog_turn_id.clone(),
-                    total_rounds: state.completed_rounds,
-                    total_tools: state.total_tools,
-                    duration_ms,
-                    partial_recovery_reason: state.last_partial_recovery_reason.clone(),
-                    success: Some(result.success),
-                    finish_reason: Some(effective_finish_reason.to_string()),
-                },
-                None,
-            )
-            .await;
+        // NOTE: DialogTurnCompleted is now emitted in sub_handle_out.rs AFTER
+        // persistence succeeds, so consumers that refetch messages on the
+        // completed event see the latest assistant message. See C-4 fix.
 
         // Print dialog turn token statistics
+        let duration_ms = elapsed_ms_u64(start_time);
         if let Some(ref usage) = state.last_usage {
             info!(
                 "Dialog turn completed - Token stats: turn_id={}, rounds={}, tools={}, duration={}ms, prompt_tokens={}, completion_tokens={}, total_tokens={}",
