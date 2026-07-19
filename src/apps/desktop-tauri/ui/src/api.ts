@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 export interface SessionMetaDto {
@@ -49,13 +49,13 @@ export async function getMessages(
 export function onChunk(
   handler: (payload: ChatChunk) => void,
 ): Promise<() => void> {
-  return listen<ChatChunk>("chat://chunk", (event) => handler(event.payload));
+  return listen<ChatChunk>("chat-chunk", (event) => handler(event.payload));
 }
 
 export function onTurnState(
   handler: (payload: ChatTurnState) => void,
 ): Promise<() => void> {
-  return listen<ChatTurnState>("chat://turn-state", (event) =>
+  return listen<ChatTurnState>("chat-turn-state", (event) =>
     handler(event.payload),
   );
 }

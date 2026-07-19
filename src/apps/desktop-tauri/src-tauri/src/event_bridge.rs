@@ -1,4 +1,4 @@
-//! Event bridge: subscribes to core AgenticEvents and re-emits them as
+﻿//! Event bridge: subscribes to core AgenticEvents and re-emits them as
 //! Tauri frontend events. W4b discipline: emit is sync, no block_on,
 //! no new runtime, no get_messages in the subscriber.
 
@@ -23,26 +23,33 @@ impl EventSubscriber for TauriEventBridge {
     async fn on_event(&self, event: &AgenticEvent) -> NortHingResult<()> {
         match event {
             AgenticEvent::TextChunk { session_id, text, .. } => {
-                let _ = self.app.emit(
-                    "chat://chunk",
+                let r = self.app.emit(
+                    "chat-chunk",
                     serde_json::json!({ "session_id": session_id, "text": text }),
                 );
+                if let Err(e) = r {
+                    tracing::warn!("chat-chunk emit failed: {e}");
+                } else {
+                    tracing::info!("chat-chunk emitted session={} len={}", session_id, text.len());
+                }
             }
             AgenticEvent::DialogTurnStarted { session_id, .. } => {
-                let _ = self.app.emit(
-                    "chat://turn-state",
+                let r = self.app.emit(
+                    "chat-turn-state",
                     serde_json::json!({ "session_id": session_id, "state": "started" }),
                 );
+                tracing::info!("chat-turn-state started emit result={:?}", r);
             }
             AgenticEvent::DialogTurnCompleted { session_id, .. } => {
-                let _ = self.app.emit(
-                    "chat://turn-state",
+                let r = self.app.emit(
+                    "chat-turn-state",
                     serde_json::json!({ "session_id": session_id, "state": "completed" }),
                 );
+                tracing::info!("chat-turn-state completed emit result={:?}", r);
             }
             AgenticEvent::DialogTurnCancelled { session_id, .. } => {
                 let _ = self.app.emit(
-                    "chat://turn-state",
+                    "chat-turn-state",
                     serde_json::json!({ "session_id": session_id, "state": "cancelled" }),
                 );
             }
@@ -52,7 +59,7 @@ impl EventSubscriber for TauriEventBridge {
                 ..
             } => {
                 let _ = self.app.emit(
-                    "chat://turn-state",
+                    "chat-turn-state",
                     serde_json::json!({ "session_id": session_id, "state": "failed", "error": error }),
                 );
             }
@@ -68,12 +75,14 @@ impl EventSubscriber for TauriEventBridge {
 pub fn register(app: &AppHandle) {
     let bridge = TauriEventBridge::new(app.clone());
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
+        tracing::info!("desktop-tauri bridge: coordinator not ready, retry loop spawned");
         crate::core_rt::core_rt().spawn(async move {
             loop {
                 if let Some(coordinator) =
                     northhing_core::agentic::coordination::global_coordinator()
                 {
                     coordinator.subscribe_internal("desktop-tauri".to_string(), bridge);
+                    tracing::info!("desktop-tauri bridge subscribed (via retry loop)");
                     break;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -82,4 +91,5 @@ pub fn register(app: &AppHandle) {
         return;
     };
     coordinator.subscribe_internal("desktop-tauri".to_string(), bridge);
+    tracing::info!("desktop-tauri bridge subscribed (direct)");
 }
