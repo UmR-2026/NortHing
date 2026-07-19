@@ -296,7 +296,7 @@ mod tests {
         // Render, audit, and continuation turns reuse the hidden planning
         // session and its pinned skill-derived project contract. The
         // bundle is minified, so structural checks read the source.
-        let adapter_source = include_str!("builtin/assets/ppt-live/src/bitfun-backend-adapter.js");
+        let adapter_source = include_str!("builtin/assets/ppt-live/src/northhing-backend-adapter.js");
         assert!(adapter_source.contains("sessionId: options.sessionId"));
         assert!(adapter_source.contains("user::northhing-system::ppt-design"));
         assert!(adapter_source.contains("references/editable-pptx.md"));

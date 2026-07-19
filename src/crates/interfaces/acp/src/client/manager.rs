@@ -1,4 +1,4 @@
-// R19 split: facade for bitfun-acp ACP client service.
+// R19 split: facade for northhing-acp ACP client service.
 // File: src/crates/interfaces/acp/src/client/manager.rs
 // Origin: manager.rs (2519 lines god-object, Kimi P1 critical)
 //

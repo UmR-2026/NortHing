@@ -116,4 +116,3 @@ py build.py && py embed.py
 
 - Kimi K3 全量 review: `C:\Users\UmR\WorkBuddy\2026-07-17-02-25-47\northing-deep-review.md`
 - QClaw code review: `.handoffs/review-commit-997e14e_20260717.md`
-- BitFun 旧 workspace: `C:\Users\UmR\.bitfun\personal_assistant\workspace\`
