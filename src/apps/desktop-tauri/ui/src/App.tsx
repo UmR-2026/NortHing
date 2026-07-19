@@ -206,18 +206,19 @@ function App() {
   debugRef.current = debug;
 
   const scheduleRefetch = useCallback((sid: string) => {
-    [400, 1500].forEach((delay) => {
-      const id = window.setTimeout(() => {
-        if (!mountedRef.current) return;
-        getMessages(sid)
-          .then((msgs) => {
-            debugRef.current(`refetch(${delay}ms): ${msgs.length}`);
-            setMessages((prev) => (msgs.length >= prev.length ? msgs : prev));
-          })
-          .catch((e) => debugRef.current(`getMessages failed: ${String(e)}`));
-      }, delay);
-      pendingTimeouts.current.push(id);
-    });
+    // Single reconcile pass. Since C-4 (2026-07-19) the completed event is
+    // emitted AFTER persistence, so one refetch is authoritative; the old
+    // double-timeout + length-compare workaround is gone.
+    const id = window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      getMessages(sid)
+        .then((msgs) => {
+          debugRef.current(`refetch: ${msgs.length}`);
+          setMessages(msgs);
+        })
+        .catch((e) => debugRef.current(`getMessages failed: ${String(e)}`));
+    }, 250);
+    pendingTimeouts.current.push(id);
   }, []);
 
   const clearPendingTimeouts = useCallback(() => {
@@ -272,6 +273,10 @@ function App() {
         if (kind === "chunk") {
           streamingRef.current += payload.text;
           setStreamingText((prev) => prev + payload.text);
+        } else if (kind === "state" && payload.state !== "started") {
+          // A terminal turn-state arrived before the session resolved:
+          // reconcile from the backend instead of finalizing the draft.
+          scheduleRefetch(sid);
         }
       });
     };
