@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
@@ -87,10 +88,13 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
         <button
           className="codeblock-copy"
           onClick={() => {
-            navigator.clipboard.writeText(text).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            });
+            navigator.clipboard
+              .writeText(text)
+              .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              })
+              .catch(() => {});
           }}
         >
           {copied ? "已复制" : "复制"}
@@ -129,7 +133,38 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
+// ---------- error boundary ----------
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="error-fallback">
+          <p>渲染出错：{String(this.state.error.message ?? this.state.error)}</p>
+          <button className="header-btn" onClick={() => this.setState({ error: null })}>
+            重试
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ---------- app ----------
+
+let localMsgCounter = 0;
+function nextLocalId(prefix: string): string {
+  localMsgCounter += 1;
+  return `${prefix}-${Date.now()}-${localMsgCounter}`;
+}
 
 function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -140,6 +175,8 @@ function App() {
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
   const [debugLines, setDebugLines] = useState<string[]>([]);
   const [debugOn, setDebugOn] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [failedMsgIds, setFailedMsgIds] = useState<Set<string>>(new Set());
   const [agentName, setAgentName] = useState("northhing");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -153,6 +190,9 @@ function App() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
+  const pendingTimeouts = useRef<number[]>([]);
+  const pendingEvents = useRef<Array<{ kind: "chunk" | "state"; payload: any }>>([]);
+  const mountedRef = useRef(true);
 
   const debug = useCallback(
     (line: string) => {
@@ -161,6 +201,37 @@ function App() {
     },
     [debugOn],
   );
+  // Keep the latest debug in a ref so effects never depend on it (C-2).
+  const debugRef = useRef(debug);
+  debugRef.current = debug;
+
+  const scheduleRefetch = useCallback((sid: string) => {
+    [400, 1500].forEach((delay) => {
+      const id = window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        getMessages(sid)
+          .then((msgs) => {
+            debugRef.current(`refetch(${delay}ms): ${msgs.length}`);
+            setMessages((prev) => (msgs.length >= prev.length ? msgs : prev));
+          })
+          .catch((e) => debugRef.current(`getMessages failed: ${String(e)}`));
+      }, delay);
+      pendingTimeouts.current.push(id);
+    });
+  }, []);
+
+  const clearPendingTimeouts = useCallback(() => {
+    pendingTimeouts.current.forEach((id) => window.clearTimeout(id));
+    pendingTimeouts.current = [];
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearPendingTimeouts();
+    };
+  }, [clearPendingTimeouts]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -170,21 +241,46 @@ function App() {
   }, [messages, streamingText]);
 
   useEffect(() => {
+    let cancelled = false;
     getUiPrefs()
-      .then((p) => setAgentName(p.agent_name))
+      .then((p) => {
+        if (!cancelled) setAgentName(p.agent_name);
+      })
       .catch(() => {});
     getOrCreateLatestSession()
-      .then((id) => {
+      .then(async (id) => {
+        if (cancelled) return;
         setSessionId(id);
-        return getMessages(id);
+        const msgs = await getMessages(id);
+        if (!cancelled) setMessages(msgs);
       })
-      .then((msgs) => setMessages(msgs))
-      .catch((e) => debug(`init failed: ${String(e)}`));
-  }, [debug]);
+      .catch((e) => {
+        if (!cancelled) setInitError(String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
+  // Subscribe to core events. Events arriving before the session id is
+  // known are buffered and replayed once it resolves (I-7).
   useEffect(() => {
+    const flushPending = (sid: string) => {
+      const queued = pendingEvents.current.splice(0);
+      queued.forEach(({ kind, payload }) => {
+        if (payload.session_id !== sid) return;
+        if (kind === "chunk") {
+          streamingRef.current += payload.text;
+          setStreamingText((prev) => prev + payload.text);
+        }
+      });
+    };
     const unlistenChunk = onChunk((payload) => {
-      debug(`chunk len=${payload.text.length}`);
+      debugRef.current(`chunk len=${payload.text.length}`);
+      if (!sessionId) {
+        pendingEvents.current.push({ kind: "chunk", payload });
+        return;
+      }
       if (payload.session_id !== sessionId) return;
       streamingRef.current += payload.text;
       setStreamingText((prev) => prev + payload.text);
@@ -196,7 +292,11 @@ function App() {
       }
     });
     const unlistenState = onTurnState((payload) => {
-      debug(`turn-state ${payload.state}`);
+      debugRef.current(`turn-state ${payload.state}`);
+      if (!sessionId) {
+        pendingEvents.current.push({ kind: "state", payload });
+        return;
+      }
       if (payload.session_id !== sessionId) return;
       if (payload.state === "started") {
         setIsStreaming(true);
@@ -220,32 +320,23 @@ function App() {
         setStreamingText("");
         if (draft) {
           const assistantMsg: MessageDto = {
-            id: `local-assistant-${Date.now()}`,
+            id: nextLocalId("local-assistant"),
             role: "assistant",
             content: draft,
             is_streaming: false,
           };
           setMessages((prev) => [...prev, assistantMsg]);
         }
-        if (sessionId) {
-          [400, 1500].forEach((delay) => {
-            setTimeout(() => {
-              getMessages(sessionId)
-                .then((msgs) => {
-                  debug(`refetch(${delay}ms): ${msgs.length}`);
-                  setMessages((prev) => (msgs.length >= prev.length ? msgs : prev));
-                })
-                .catch((e) => debug(`getMessages failed: ${String(e)}`));
-            }, delay);
-          });
-        }
+        scheduleRefetch(sessionId);
       }
     });
+    flushPending(sessionId ?? "");
     return () => {
+      clearPendingTimeouts();
       unlistenChunk.then((f) => f()).catch(() => {});
       unlistenState.then((f) => f()).catch(() => {});
     };
-  }, [sessionId, debug]);
+  }, [sessionId, scheduleRefetch, clearPendingTimeouts]);
 
   const handleSend = useCallback(() => {
     if (!sessionId || !input.trim() || isStreaming) return;
@@ -253,19 +344,24 @@ function App() {
     setInput("");
     stickToBottom.current = true;
     const userMsg: MessageDto = {
-      id: `local-${Date.now()}`,
+      id: nextLocalId("local"),
       role: "user",
       content: text,
       is_streaming: false,
     };
     setMessages((prev) => [...prev, userMsg]);
-    sendMessage(sessionId, text).catch((e) => debug(`send_message failed: ${String(e)}`));
-  }, [sessionId, input, isStreaming, debug]);
+    sendMessage(sessionId, text).catch((e) => {
+      debugRef.current(`send_message failed: ${String(e)}`);
+      setFailedMsgIds((prev) => new Set(prev).add(userMsg.id));
+    });
+  }, [sessionId, input, isStreaming]);
 
   const handleStop = useCallback(() => {
     if (!sessionId || !activeTurnId) return;
-    stopStreaming(sessionId, activeTurnId).catch((e) => debug(`stop failed: ${String(e)}`));
-  }, [sessionId, activeTurnId, debug]);
+    stopStreaming(sessionId, activeTurnId).catch((e) =>
+      debugRef.current(`stop failed: ${String(e)}`),
+    );
+  }, [sessionId, activeTurnId]);
 
   const autosize = useCallback(() => {
     const el = textareaRef.current;
@@ -364,21 +460,45 @@ function App() {
             stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
           }}
         >
-          {showEmpty ? (
+          {initError ? (
+            <div className="empty-state">
+              <div className="logo-dot" />
+              <p>初始化失败：{initError}</p>
+              <button
+                className="header-btn"
+                onClick={() => {
+                  setInitError(null);
+                  getOrCreateLatestSession()
+                    .then((id) => {
+                      setSessionId(id);
+                      return getMessages(id);
+                    })
+                    .then((msgs) => setMessages(msgs))
+                    .catch((e) => setInitError(String(e)));
+                }}
+              >
+                重试
+              </button>
+            </div>
+          ) : showEmpty ? (
             <div className="empty-state">
               <div className="logo-dot" />
               <p>有什么可以帮你？</p>
             </div>
           ) : (
-            <div className="messages-inner">
-              {messages.map((m) => {
-                if (m.role === "user") {
-                  return (
-                    <div className="msg user" key={m.id}>
-                      <div className="bubble">{m.content}</div>
-                    </div>
-                  );
-                }
+            <ErrorBoundary>
+              <div className="messages-inner">
+                {messages.map((m) => {
+                  if (m.role === "user") {
+                    return (
+                      <div className="msg user" key={m.id}>
+                        <div className={`bubble${failedMsgIds.has(m.id) ? " failed" : ""}`}>
+                          {m.content}
+                          {failedMsgIds.has(m.id) && <div className="msg-failed-tag">发送失败</div>}
+                        </div>
+                      </div>
+                    );
+                  }
                 if (m.role === "assistant") {
                   const parsed = parseThink(m.content);
                   const thinkOpen = thinkOpenMap[m.id] ?? thinkDefaultOpen;
@@ -420,10 +540,11 @@ function App() {
                     )}
                     {streamParsed.body && <Markdown text={streamParsed.body} />}
                     <span className="caret" />
-                  </div>
-                </div>
-              )}
-            </div>
+                   </div>
+                 </div>
+               )}
+              </div>
+            </ErrorBoundary>
           )}
         </div>
 
