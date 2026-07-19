@@ -14,4 +14,4 @@ tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-northhing-core = { path = "../../../crates/assembly/core" }
+northhing-core = { path = "../../../crates/assembly/core", default-features = false, features = ["product-full"] }
