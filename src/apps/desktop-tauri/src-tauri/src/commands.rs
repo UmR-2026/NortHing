@@ -148,6 +148,53 @@ async fn do_send_message(session_id: String, text: String) -> anyhow::Result<()>
 }
 
 #[tauri::command]
+pub async fn get_or_create_latest_session() -> Result<String, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    crate::core_rt::core_rt().spawn(async move {
+        let r = do_get_or_create_latest_session()
+            .await
+            .map_err(|e| e.to_string());
+        let _ = tx.send(r);
+    });
+    rx.await.map_err(|_| "core runtime dropped".to_string())?
+}
+
+async fn do_get_or_create_latest_session() -> anyhow::Result<String> {
+    let coordinator = northhing_core::agentic::coordination::global_coordinator()
+        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
+    let workspace = workspace_path();
+    let summaries = coordinator.list_sessions(Path::new(&workspace)).await?;
+    if let Some(latest) = summaries
+        .into_iter()
+        .max_by_key(|s| system_time_to_ms(s.last_activity_at))
+    {
+        return Ok(latest.session_id);
+    }
+    do_create_session().await
+}
+
+#[tauri::command]
+pub async fn stop_streaming(session_id: String, turn_id: String) -> Result<(), String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    crate::core_rt::core_rt().spawn(async move {
+        let r = do_stop_streaming(session_id, turn_id)
+            .await
+            .map_err(|e| e.to_string());
+        let _ = tx.send(r);
+    });
+    rx.await.map_err(|_| "core runtime dropped".to_string())?
+}
+
+async fn do_stop_streaming(session_id: String, turn_id: String) -> anyhow::Result<()> {
+    let coordinator = northhing_core::agentic::coordination::global_coordinator()
+        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
+    coordinator
+        .cancel_dialog_turn(&session_id, &turn_id)
+        .await?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_messages(session_id: String) -> Result<Vec<MessageDto>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     crate::core_rt::core_rt().spawn(async move {

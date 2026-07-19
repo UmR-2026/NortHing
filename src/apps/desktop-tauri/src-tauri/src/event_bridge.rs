@@ -33,10 +33,10 @@ impl EventSubscriber for TauriEventBridge {
                     tracing::info!("chat-chunk emitted session={} len={}", session_id, text.len());
                 }
             }
-            AgenticEvent::DialogTurnStarted { session_id, .. } => {
+            AgenticEvent::DialogTurnStarted { session_id, turn_id, .. } => {
                 let r = self.app.emit(
                     "chat-turn-state",
-                    serde_json::json!({ "session_id": session_id, "state": "started" }),
+                    serde_json::json!({ "session_id": session_id, "turn_id": turn_id, "state": "started" }),
                 );
                 tracing::info!("chat-turn-state started emit result={:?}", r);
             }

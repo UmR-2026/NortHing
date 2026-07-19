@@ -21,6 +21,7 @@ export interface ChatChunk {
 
 export interface ChatTurnState {
   session_id: string;
+  turn_id?: string;
   state: "started" | "completed" | "failed" | "cancelled";
   error?: string;
 }
@@ -44,6 +45,17 @@ export async function getMessages(
   sessionId: string,
 ): Promise<MessageDto[]> {
   return invoke<MessageDto[]>("get_messages", { sessionId });
+}
+
+export async function getOrCreateLatestSession(): Promise<string> {
+  return invoke<string>("get_or_create_latest_session");
+}
+
+export async function stopStreaming(
+  sessionId: string,
+  turnId: string,
+): Promise<void> {
+  return invoke<void>("stop_streaming", { sessionId, turnId });
 }
 
 export function onChunk(

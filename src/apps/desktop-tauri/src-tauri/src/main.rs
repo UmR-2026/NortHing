@@ -20,6 +20,8 @@ fn main() {
             commands::list_sessions,
             commands::send_message,
             commands::get_messages,
+            commands::get_or_create_latest_session,
+            commands::stop_streaming,
         ])
         .run(tauri::generate_context!())
         .expect("error while running northhing desktop");
