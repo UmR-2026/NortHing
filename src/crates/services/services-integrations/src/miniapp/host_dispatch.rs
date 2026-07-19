@@ -365,10 +365,13 @@ async fn dispatch_shell(
 
     // Reject string-mode commands that contain shell metacharacters. Without
     // this, an allowlisted `git` miniapp could run `git status && del /s /q C:\`
-    // because the whole string is handed to `cmd /C` / `sh -c`. The safe form
-    // is the `args` array, which spawns the program directly without a shell.
+    // because the whole string is handed to `cmd /C` / `sh -c`. Newlines are
+    // also rejected since they act as command separators in shell string mode
+    // (e.g. "git status\nrm -rf /" would pass the first-token allowlist but
+    // inject a second command). The safe form is the `args` array, which spawns
+    // the program directly without a shell.
     if plan.argv.is_none() {
-        let metacharacters = ['&', '|', ';', '>', '<', '`', '$', '(', ')'];
+        let metacharacters = ['&', '|', ';', '>', '<', '`', '$', '(', ')', '\n', '\r'];
         if plan.command.chars().any(|c| metacharacters.contains(&c)) {
             return Err(deny(format!(
                 "String-mode shell.exec command contains shell metacharacters and will not be executed: '{}'. Pass 'args' array instead to bypass the shell.",
@@ -601,6 +604,110 @@ mod tests {
             err.message().contains("metacharacters"),
             "error should mention metacharacters, got: {}",
             err.message()
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn host_shell_exec_rejects_string_mode_with_newline_injection() {
+        // A newline acts as a command separator in string mode. Even when the
+        // first token is allowlisted, "git status\nrm -rf /" should be denied.
+        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let perms = MiniAppPermissions {
+            shell: Some(ShellPermissions {
+                allow: Some(vec!["git".to_string()]),
+            }),
+            ..Default::default()
+        };
+
+        let result = dispatch_host(
+            &perms,
+            "builtin-coding-selfie",
+            workspace_dir,
+            Some(workspace_dir),
+            &[],
+            "shell.exec",
+            json!({
+                "command": "git status\nrm -rf /",
+                "cwd": workspace_dir.to_string_lossy(),
+                "timeout": 8000,
+            }),
+        )
+        .await;
+
+        assert!(
+            result.is_err(),
+            "string-mode command with newline injection should be denied"
+        );
+        let err = result.unwrap_err();
+        assert_eq!(err.kind(), MiniAppHostDispatchErrorKind::Validation);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn host_shell_exec_rejects_string_mode_with_crlf_injection() {
+        // Carriage return is also a command separator in string mode.
+        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let perms = MiniAppPermissions {
+            shell: Some(ShellPermissions {
+                allow: Some(vec!["git".to_string()]),
+            }),
+            ..Default::default()
+        };
+
+        let result = dispatch_host(
+            &perms,
+            "builtin-coding-selfie",
+            workspace_dir,
+            Some(workspace_dir),
+            &[],
+            "shell.exec",
+            json!({
+                "command": "git status\r\nrm -rf /",
+                "cwd": workspace_dir.to_string_lossy(),
+                "timeout": 8000,
+            }),
+        )
+        .await;
+
+        assert!(
+            result.is_err(),
+            "string-mode command with CRLF injection should be denied"
+        );
+        let err = result.unwrap_err();
+        assert_eq!(err.kind(), MiniAppHostDispatchErrorKind::Validation);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn host_shell_exec_allows_args_array_with_newline_in_arg() {
+        // When using the args-array form, the newline is passed as argv and
+        // does NOT go through a shell, so it is safe.
+        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let perms = MiniAppPermissions {
+            shell: Some(ShellPermissions {
+                allow: Some(vec!["git".to_string()]),
+            }),
+            ..Default::default()
+        };
+
+        let result = dispatch_host(
+            &perms,
+            "builtin-coding-selfie",
+            workspace_dir,
+            Some(workspace_dir),
+            &[],
+            "shell.exec",
+            json!({
+                "args": ["git", "log", "--format=%s\n%s"],
+                "cwd": workspace_dir.to_string_lossy(),
+                "timeout": 8000,
+            }),
+        )
+        .await;
+
+        // Should succeed — argv bypasses the shell, newline is just an arg.
+        assert!(
+            result.is_ok(),
+            "args-array form with newline in argument should be allowed, got: {:?}",
+            result
         );
     }
 }
