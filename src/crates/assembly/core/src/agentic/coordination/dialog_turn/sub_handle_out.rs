@@ -292,90 +292,118 @@ impl ConversationCoordinator {
                     );
                 }
             }
-            let workspace_turn_status = match execution_engine
-                .execute_dialog_turn(effective_agent_type_clone.clone(), messages, execution_context)
-                .await
-            {
-                Ok(execution_result) => {
-                    // Capture emit data before persistence consumes the result.
-                    // The DialogTurnCompleted event is emitted AFTER persistence
-                    // so consumers that refetch messages see the latest assistant
-                    // message (C-4 fix).
-                    let completed_event = AgenticEvent::DialogTurnCompleted {
-                        session_id: session_id_clone.clone(),
-                        turn_id: turn_id_clone.clone(),
-                        total_rounds: execution_result.total_rounds,
-                        total_tools: execution_result.total_tools,
-                        duration_ms: execution_result.duration_ms,
-                        partial_recovery_reason: execution_result.partial_recovery_reason.clone(),
-                        success: Some(execution_result.success),
-                        finish_reason: Some(execution_result.finish_reason.as_str().to_string()),
-                    };
-                    let status = Some(
-                        Self::persist_completed_dialog_turn(
-                            session_manager.as_ref(),
-                            scheduler_notify_tx.as_ref(),
-                            &session_id_clone,
-                            &turn_id_clone,
-                            &execution_result,
-                        )
-                        .await
-                        .0,
-                    );
-                    (status, Some(completed_event))
-                }
-                Err(e) => {
-                    if matches!(&e, NortHingError::Cancelled(_)) {
-                        (
-                            Some(
-                                Self::persist_cancelled_dialog_turn(
-                                    event_queue.as_ref(),
-                                    session_manager.as_ref(),
-                                    scheduler_notify_tx.as_ref(),
-                                    &session_id_clone,
-                                    &turn_id_clone,
-                                )
-                                .await,
-                            ),
-                            None,
-                        )
-                    } else {
-                        (
-                            Some(
-                                Self::persist_failed_dialog_turn(
-                                    event_queue.as_ref(),
-                                    session_manager.as_ref(),
-                                    scheduler_notify_tx.as_ref(),
-                                    &session_id_clone,
-                                    &turn_id_clone,
-                                    &e,
-                                )
-                                .await,
-                            ),
-                            None,
-                        )
+            // W3a-3: inline watchdog — execution + finalization both happen inside the
+            // spawned task; the select! just races completion against timeout.
+            // This replaces the old separate watchdog task (lines 420-475).
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            let turn_done_token_for_cancel = turn_done_token_clone.clone();
+            let session_id_for_cancel = session_id_clone.clone();
+            let turn_id_for_cancel = turn_id_clone.clone();
+            tokio::spawn(async move {
+                let workspace_turn_status = match execution_engine
+                    .execute_dialog_turn(effective_agent_type_clone.clone(), messages, execution_context)
+                    .await
+                {
+                    Ok(execution_result) => {
+                        let completed_event = AgenticEvent::DialogTurnCompleted {
+                            session_id: session_id_clone.clone(),
+                            turn_id: turn_id_clone.clone(),
+                            total_rounds: execution_result.total_rounds,
+                            total_tools: execution_result.total_tools,
+                            duration_ms: execution_result.duration_ms,
+                            partial_recovery_reason: execution_result.partial_recovery_reason.clone(),
+                            success: Some(execution_result.success),
+                            finish_reason: Some(execution_result.finish_reason.as_str().to_string()),
+                        };
+                        let status = Some(
+                            Self::persist_completed_dialog_turn(
+                                session_manager.as_ref(),
+                                scheduler_notify_tx.as_ref(),
+                                &session_id_clone,
+                                &turn_id_clone,
+                                &execution_result,
+                            )
+                            .await
+                            .0,
+                        );
+                        (status, Some(completed_event))
                     }
+                    Err(e) => {
+                        if matches!(&e, NortHingError::Cancelled(_)) {
+                            (
+                                Some(
+                                    Self::persist_cancelled_dialog_turn(
+                                        event_queue.as_ref(),
+                                        session_manager.as_ref(),
+                                        scheduler_notify_tx.as_ref(),
+                                        &session_id_clone,
+                                        &turn_id_clone,
+                                    )
+                                    .await,
+                                ),
+                                None,
+                            )
+                        } else {
+                            (
+                                Some(
+                                    Self::persist_failed_dialog_turn(
+                                        event_queue.as_ref(),
+                                        session_manager.as_ref(),
+                                        scheduler_notify_tx.as_ref(),
+                                        &session_id_clone,
+                                        &turn_id_clone,
+                                        &e,
+                                    )
+                                    .await,
+                                ),
+                                None,
+                            )
+                        }
+                    }
+                };
+                // Finalization + event emission now inside the spawned task so all
+                // workspace_turn_status data is available without moving variables out.
+                Self::finalize_persisted_turn_in_workspace_if_needed(
+                    session_manager.as_ref(),
+                    &session_id_clone,
+                    &turn_id_clone,
+                    turn_index,
+                    &effective_agent_type_clone,
+                    &user_input_for_workspace,
+                    session_workspace_path.as_deref(),
+                    session_storage_path_for_finalize.as_deref(),
+                    workspace_turn_status.0.clone(),
+                    user_message_metadata_clone,
+                )
+                .await;
+                if let Some(ref completed_event) = workspace_turn_status.1 {
+                    let _ = event_queue.enqueue(completed_event.clone(), None).await;
+                }
+                let _ = tx.send(workspace_turn_status);
+            });
+
+            // W3a-3 watchdog: race execution+finalization against timeout.
+            let workspace_turn_status = tokio::select! {
+                result = rx => {
+                    result.unwrap_or((None, None))
+                }
+                _ = tokio::time::sleep(turn_watchdog_timeout()) => {
+                    turn_done_token_for_cancel.cancel();
+                    warn!(
+                        "Turn watchdog timeout: session_id={}, turn_id={}, timeout_secs={}",
+                        session_id_for_cancel,
+                        turn_id_for_cancel,
+                        turn_watchdog_timeout().as_secs()
+                    );
+                    if let Some(coordinator) = global_coordinator() {
+                        let _ = coordinator
+                            .cancel_dialog_turn(&session_id_for_cancel, &turn_id_for_cancel)
+                            .await;
+                    }
+                    // Task continues in background — it will clean up on cancellation.
+                    (None, None)
                 }
             };
-            Self::finalize_persisted_turn_in_workspace_if_needed(
-                session_manager.as_ref(),
-                &session_id_clone,
-                &turn_id_clone,
-                turn_index,
-                &effective_agent_type_clone,
-                &user_input_for_workspace,
-                session_workspace_path.as_deref(),
-                session_storage_path_for_finalize.as_deref(),
-                workspace_turn_status.0,
-                user_message_metadata_clone,
-            )
-            .await;
-            // Emit DialogTurnCompleted AFTER persistence succeeds. Only on the
-            // success path; failure/cancelled paths keep their existing
-            // DialogTurnFailed/DialogTurnCancelled semantics.
-            if let Some(completed_event) = workspace_turn_status.1 {
-                let _ = event_queue.enqueue(completed_event, None).await;
-            }
             // Signal the watchdog that this turn task has finished (success or
             // failure) so it can exit without waiting out the full timeout.
             turn_done_token_clone.cancel();
@@ -386,62 +414,6 @@ impl ConversationCoordinator {
         // Store the JoinHandle so callers can track/await this turn task.
         self.active_turn_tasks
             .insert(turn_id.clone(), turn_task);
-        // 2026-07-18 (W3a-3): Turn watchdog. After the timeout, if this turn
-        // is still the active processing turn for the session, trigger
-        // cancellation via the coordinator. The cancel path includes the
-        // convergence fallback (persist_cancelled_dialog_turn) so the UI
-        // converges to Idle even if the turn task is stuck in an
-        // uninterruptible await. State check is by session_manager
-        // (Processing + current_turn_id match) to avoid cancelling a newer
-        // turn that replaced this one.
-        let session_manager_for_watchdog = self.session_manager.clone();
-        let session_id_for_watchdog = session_id.clone();
-        let turn_id_for_watchdog = turn_id.clone();
-        let watchdog_token = turn_done_token;
-        tokio::spawn(async move {
-            // Wait for either the timeout or the turn task finishing. If the
-            // turn task finishes first, exit without triggering cancellation.
-            tokio::select! {
-                _ = tokio::time::sleep(turn_watchdog_timeout()) => {}
-                _ = watchdog_token.cancelled() => {
-                    debug!(
-                        "Turn watchdog: turn task finished before timeout, exiting: session_id={}, turn_id={}",
-                        session_id_for_watchdog,
-                        turn_id_for_watchdog
-                    );
-                    return;
-                }
-            }
-            let still_active = session_manager_for_watchdog
-                .get_session(&session_id_for_watchdog)
-                .map(|session| {
-                    matches!(
-                        &session.state,
-                        SessionState::Processing { current_turn_id, .. }
-                            if current_turn_id == &turn_id_for_watchdog
-                    )
-                })
-                .unwrap_or(false);
-            if still_active {
-                warn!(
-                    "Turn watchdog timeout: session_id={}, turn_id={}, timeout_secs={}",
-                    session_id_for_watchdog,
-                    turn_id_for_watchdog,
-                    turn_watchdog_timeout().as_secs()
-                );
-                if let Some(coordinator) = global_coordinator() {
-                    if let Err(error) = coordinator
-                        .cancel_dialog_turn(&session_id_for_watchdog, &turn_id_for_watchdog)
-                        .await
-                    {
-                        warn!(
-                            "Watchdog cancel failed: session_id={}, turn_id={}, error={}",
-                            session_id_for_watchdog, turn_id_for_watchdog, error
-                        );
-                    }
-                }
-            }
-        });
         active_registration.disarm();
         Ok(())
     }

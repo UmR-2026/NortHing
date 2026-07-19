@@ -145,6 +145,9 @@ impl ConversationCoordinator {
                     .update_session_state(&session_id, SessionState::Idle)
                     .await?;
 
+                // Compact-path emission: unlike the main dialog turn path (which
+                // emits via sub_handle_out after persistence), compact turns bypass
+                // sub_handle_out, so this self-emit is the only DialogTurnCompleted event.
                 self.emit_event(AgenticEvent::DialogTurnCompleted {
                     session_id,
                     turn_id,
