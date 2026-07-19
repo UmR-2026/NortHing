@@ -72,7 +72,7 @@
 
 ### 3.6 docs/ 下的 web-ui / 已死引用
 
-已实证含 `src/web-ui` 引用的文档（12+）：`docs/architecture/core-decomposition.md`、`docs/architecture/deep-review.md`、`docs/architecture/i18n.md`、`docs/development/i18n.md`、`docs/features/session-runtime-usage-report-design.md`、`docs/handoffs/2026-06-25-bitfun-decomposition.md`、`MiniApp/Skills/miniapp-dev/SKILL.md` 等。
+已实证含 `src/web-ui` 引用的文档（12+）：`docs/architecture/core-decomposition.md`、`docs/architecture/deep-review.md`、`docs/architecture/i18n.md`、`docs/development/i18n.md`、`docs/features/session-runtime-usage-report-design.md`、`MiniApp/Skills/miniapp-dev/SKILL.md` 等。
 - 历史交接（docs/handoffs/2026-06-* 及更早）：文件头加 `> Frozen historical snapshot (pre-v0.1.0). Describes surfaces that may be absent/frozen.` 一行，不改正文。
 - 现行架构文档：web-ui 引用改为现状注记或移除。
 

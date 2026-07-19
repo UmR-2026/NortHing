@@ -115,3 +115,6 @@ VERSIONS_DIR=.
 # Local credentials (never commit)
 /memory/credentials.md
 
+
+__pycache__/
+*.pyc
