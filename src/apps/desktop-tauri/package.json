@@ -1,0 +1,14 @@
+{
+  "name": "northhing-desktop-tauri",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "type-check": "pnpm --dir ui run type-check"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

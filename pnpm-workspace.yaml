@@ -4,4 +4,6 @@ packages:
   # - "src/web-ui"
   - "src/mobile-web"
   - "northing-installer"
+  - "src/apps/desktop-tauri"
+  - "src/apps/desktop-tauri/ui"
   - "tests/e2e"

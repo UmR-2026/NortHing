@@ -34,6 +34,7 @@ members = [
 
 exclude = [
     "northing-installer/src-tauri",
+    "src/apps/desktop-tauri/src-tauri",
 ]	
 
 resolver = "2"
