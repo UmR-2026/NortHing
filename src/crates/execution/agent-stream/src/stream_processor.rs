@@ -19,7 +19,7 @@ use northhing_events::{AgenticEvent, AgenticEventPriority as EventPriority, Tool
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 /// Stream processor
 pub struct StreamProcessor {
@@ -534,6 +534,13 @@ impl StreamProcessor {
                         provider_metadata,
                     } = response;
                     ctx.mark_first_stream_chunk();
+                    info!(
+                        "W4-P: first stream chunk arrived session_id={} round_id={} chunk_text={} tool_call={}",
+                        ctx.session_id,
+                        ctx.round_id,
+                        ctx.text_chunks_count,
+                        ctx.tool_calls.len()
+                    );
 
                     // Handle thinking_signature
                     if let Some(signature) = thinking_signature {

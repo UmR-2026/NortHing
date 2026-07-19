@@ -58,6 +58,9 @@ impl ExecutionEngine {
     ) -> NortHingResult<ExecutionTurnState> {
         debug!("Initializing dialog turn: dialog_turn_id={}", context.dialog_turn_id);
 
+        // W4-P: elapsed reference for the diagnostic probes below.
+        let w4_start = std::time::Instant::now();
+
         // 1. Get current agent
         let agent_registry = agent_registry();
         if let Some(workspace) = context.workspace.as_ref() {
@@ -93,16 +96,38 @@ impl ExecutionEngine {
             model_id
         );
 
+        let w4_thread = std::thread::current();
+        info!(
+            "W4-P: before get_global_ai_client_factory thread={:?} elapsed_ms={}",
+            w4_thread.name(),
+            w4_start.elapsed().as_millis()
+        );
         let ai_client_factory = get_global_ai_client_factory()
             .await
             .map_err(|e| NortHingError::AIClient(format!("Failed to get AI client factory: {}", e)))?;
+        info!(
+            "W4-P: after get_global_ai_client_factory elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
 
+        info!(
+            "W4-P: before get_client_resolved elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let ai_client = ai_client_factory
             .get_client_resolved(&model_id)
             .await
             .map_err(|e| NortHingError::AIClient(format!("Failed to get AI client (model_id={}): {}", model_id, e)))?;
+        info!(
+            "W4-P: after get_client_resolved elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
 
         // Primary model vision capability
+        info!(
+            "W4-P: before config_service_block elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let (resolved_primary_model_id, primary_supports_image_understanding) = {
             let config_service = get_global_config_service().await.ok();
             if let Some(service) = config_service {
@@ -137,6 +162,10 @@ impl ExecutionEngine {
                 (model_id.clone(), false)
             }
         };
+        info!(
+            "W4-P: after config_service_block elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
 
         let model_context_window = ai_client.config.context_window as usize;
         let session_max_tokens = session.config.max_context_tokens;
@@ -155,12 +184,20 @@ impl ExecutionEngine {
             ContextProfilePolicy::for_agent_context(&agent_type, is_review_subagent, model_capability_profile);
 
         // 3. Get available tools
+        info!(
+            "W4-P: before get_agent_tool_policy elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let tool_policy = agent_registry
             .get_agent_tool_policy(
                 &agent_type,
                 context.workspace.as_ref().map(|workspace| workspace.root_path()),
             )
             .await;
+        info!(
+            "W4-P: after get_agent_tool_policy elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let allowed_tools = tool_policy.allowed_tools.clone();
         let enable_tools = context
             .context
@@ -178,6 +215,10 @@ impl ExecutionEngine {
             None,
         );
 
+        info!(
+            "W4-P: before resolve_tool_manifest elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let tool_manifest = if enable_tools {
             Some(
                 resolve_tool_manifest(
@@ -190,15 +231,27 @@ impl ExecutionEngine {
         } else {
             None
         };
+        info!(
+            "W4-P: after resolve_tool_manifest elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let collapsed_tools = tool_manifest
             .as_ref()
             .map(|manifest| manifest.collapsed_tool_names.clone())
             .unwrap_or_default();
+        info!(
+            "W4-P: before build_tool_listing_sections elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let tool_listing_sections = if let Some(manifest) = tool_manifest.as_ref() {
             Self::build_tool_listing_sections(manifest, &tool_description_context).await
         } else {
             ToolListingSections::default()
         };
+        info!(
+            "W4-P: after build_tool_listing_sections elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let runtime_context_needs = tool_manifest
             .as_ref()
             .map(|manifest| RuntimeContextNeeds::from_tool_names(manifest.allowed_tool_names.iter()))
@@ -216,6 +269,10 @@ impl ExecutionEngine {
             current_agent.name(),
             ai_client.config.model
         );
+        info!(
+            "W4-P: before build_prompt_context elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let prompt_context = Self::build_prompt_context(
             context,
             &ai_client.config.model,
@@ -224,6 +281,14 @@ impl ExecutionEngine {
             runtime_context_needs,
         )
         .await;
+        info!(
+            "W4-P: after build_prompt_context elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
+        info!(
+            "W4-P: before build_cached_prepended_prompt_reminders elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let prepended_reminders = self
             .build_cached_prepended_prompt_reminders(
                 &context.session_id,
@@ -232,9 +297,21 @@ impl ExecutionEngine {
                 &context.context,
             )
             .await;
+        info!(
+            "W4-P: after build_cached_prepended_prompt_reminders elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
+        info!(
+            "W4-P: before resolve_cached_system_prompt elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let system_prompt = self
             .resolve_cached_system_prompt(&context.session_id, current_agent.as_ref(), prompt_context.as_ref())
             .await?;
+        info!(
+            "W4-P: after resolve_cached_system_prompt elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         debug!("System prompt built, length: {} bytes", system_prompt.len());
 
         let system_prompt_message = Message::system(system_prompt.clone());
@@ -274,6 +351,10 @@ impl ExecutionEngine {
             execution_context_vars,
         };
 
+        info!(
+            "W4-P: init_turn_impl return elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         Ok(ExecutionTurnState::from_setup(setup))
     }
 }

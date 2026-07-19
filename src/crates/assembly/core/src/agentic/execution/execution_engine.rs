@@ -155,7 +155,18 @@ impl ExecutionEngine {
         initial_messages: Vec<Message>,
         context: &ExecutionContext,
     ) -> NortHingResult<ExecutionTurnState> {
-        self.init_turn_impl(agent_type, initial_messages, context).await
+        let w4_start = std::time::Instant::now();
+        let w4_thread = std::thread::current();
+        info!(
+            "W4-P: init_turn enter thread={:?} elapsed_ms=0",
+            w4_thread.name(),
+        );
+        let result = self.init_turn_impl(agent_type, initial_messages, context).await;
+        info!(
+            "W4-P: init_turn exit elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
+        result
     }
 
     pub async fn tick(

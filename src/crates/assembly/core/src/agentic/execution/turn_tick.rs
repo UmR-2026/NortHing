@@ -58,6 +58,9 @@ impl ExecutionEngine {
         // A2: Phase 2 — extracted loop body from execute_dialog_turn_impl.
         // Each call executes one model round (compression + LLM + tools + accumulate + decide).
 
+        // W4-P: elapsed reference for the diagnostic probes below.
+        let w4_start = std::time::Instant::now();
+
         const MAX_CONSECUTIVE_COMPRESSION_FAILURES: u32 = 3;
         const MAX_FAILED_TOOL_RECOVERY_ATTEMPTS: usize = 3;
         const MAX_PARTIAL_CONTINUATION_ATTEMPTS: usize = 3;
@@ -251,6 +254,10 @@ impl ExecutionEngine {
         )
         .await?;
 
+        info!(
+            "W4-P: before execute_round elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
         let round_result = self
             .round_executor
             .execute_round(
@@ -261,6 +268,10 @@ impl ExecutionEngine {
                 Some(state.context_window),
             )
             .await?;
+        info!(
+            "W4-P: after execute_round elapsed_ms={}",
+            w4_start.elapsed().as_millis()
+        );
 
         debug!(
             "Model round completed: round_index={}, has_more_rounds={}, tool_calls={}",

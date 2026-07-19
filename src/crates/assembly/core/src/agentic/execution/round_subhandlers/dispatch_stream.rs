@@ -10,12 +10,14 @@ use super::round_state::{DispatchOutcome, RoundState};
 use crate::util::elapsed_ms_u64;
 use crate::util::errors::{NortHingError, NortHingResult};
 use std::time::Instant;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 impl RoundExecutor {
     /// Run the stream attempt loop with retry policy. Returns DispatchOutcome on
     /// success or propagates Err.
     pub(crate) async fn dispatch_stream(&self, state: &mut RoundState) -> NortHingResult<DispatchOutcome> {
+        // W4-P: elapsed reference for the diagnostic probes below.
+        let w4_start = std::time::Instant::now();
         let outcome = loop {
             // Check cancellation before opening a model stream. This catches
             // early cancellation registered before the first round starts.
@@ -28,6 +30,14 @@ impl RoundExecutor {
             }
 
             let request_started_at = Instant::now();
+            let w4_thread = std::thread::current();
+            info!(
+                "W4-P: before send_message_stream thread={:?} attempt={}/{} elapsed_ms={}",
+                w4_thread.name(),
+                state.attempt_index + 1,
+                state.max_attempts,
+                w4_start.elapsed().as_millis()
+            );
             debug!(
                 "Sending request: model={}, messages={}, tools={}, attempt={}/{}",
                 state.context.model_name,
