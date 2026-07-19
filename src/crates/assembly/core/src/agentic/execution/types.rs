@@ -58,7 +58,6 @@ pub struct RoundContext {
     /// Cooperative interrupt checked by tool execution so round injections can be
     /// applied after the currently running atomic tool/batch finishes.
     pub steering_interrupt: Option<DialogRoundInjectionInterrupt>,
-    pub cancellation_token: CancellationToken,
     pub workspace_services: Option<WorkspaceServices>,
     pub recover_partial_on_cancel: bool,
 }

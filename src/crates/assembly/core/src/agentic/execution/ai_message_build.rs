@@ -91,7 +91,6 @@ impl ExecutionEngine {
             delegation_policy: context.delegation_policy,
             runtime_tool_restrictions: context.runtime_tool_restrictions.clone(),
             steering_interrupt: None,
-            cancellation_token: CancellationToken::new(),
             workspace_services: context.workspace_services.clone(),
             recover_partial_on_cancel: context.recover_partial_on_cancel,
         };

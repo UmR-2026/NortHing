@@ -232,9 +232,6 @@ impl ExecutionEngine {
                     Arc::clone(source),
                 )
             }),
-            // Overwritten by prepare_stream with the turn-level token from
-            // RoundExecutor::cancellation_tokens; the value here is never used.
-            cancellation_token: CancellationToken::new(),
             workspace_services: context.workspace_services.clone(),
             recover_partial_on_cancel: context.recover_partial_on_cancel,
         };

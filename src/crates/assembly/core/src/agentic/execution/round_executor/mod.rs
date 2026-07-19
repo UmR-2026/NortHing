@@ -143,7 +143,6 @@ mod tests {
             delegation_policy: DelegationPolicy::top_level(),
             runtime_tool_restrictions: ToolRuntimeRestrictions::default(),
             steering_interrupt: None,
-            cancellation_token: CancellationToken::new(),
             workspace_services: None,
             recover_partial_on_cancel: false,
         }
