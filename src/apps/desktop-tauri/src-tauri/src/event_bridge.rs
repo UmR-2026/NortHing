@@ -77,7 +77,7 @@ pub fn register(app: &AppHandle) {
     let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
         tracing::info!("desktop-tauri bridge: coordinator not ready, retry loop spawned");
         crate::core_rt::core_rt().spawn(async move {
-            for attempt in 1..=120 {
+            for _attempt in 1..=120 {
                 if let Some(coordinator) =
                     northhing_core::agentic::coordination::global_coordinator()
                 {

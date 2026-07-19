@@ -30,13 +30,13 @@ pub fn init_core_runtime() {
                 .build()
                 .expect("failed to build core runtime");
             let _ = CORE_RT.set(runtime.handle().clone());
+            // Signal to caller that CORE_RT handle is now available.
+            let _ = tx.send(());
             if let Err(e) = runtime.block_on(init_services()) {
                 eprintln!("Error: failed to initialize core services: {e}");
             } else {
                 CORE_READY.store(true, std::sync::atomic::Ordering::SeqCst);
             }
-            // Signal to caller that CORE_RT is now set.
-            let _ = tx.send(());
             // Keep the runtime alive for the app lifetime (shutdown channel
             // mirrors desktop main.rs and preserves graceful MCP shutdown).
             let (_tx, rx) = std::sync::mpsc::channel::<()>();
@@ -44,7 +44,7 @@ pub fn init_core_runtime() {
         })
         .expect("failed to spawn core runtime thread");
     rx.recv_timeout(std::time::Duration::from_secs(10))
-        .expect("core runtime init timed out — CORE_RT was never set; init is broken");
+        .expect("core runtime handle was never set — thread failed to start");
 }
 
 async fn init_services() -> anyhow::Result<()> {
