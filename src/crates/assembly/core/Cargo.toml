@@ -108,6 +108,9 @@ northhing-services-integrations = { path = "../../services/services-integrations
 # Product domain owner crate
 northhing-product-domains = { path = "../../contracts/product-domains", default-features = false, optional = true }
 
+# Kernel-api facade contracts (K1b1: core passthrough impl)
+northhing-kernel-api = { path = "../../contracts/kernel-api" }
+
 # Tool runtime
 tool-runtime = { path = "../../execution/tool-execution", optional = true }
 

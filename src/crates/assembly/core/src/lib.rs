@@ -23,6 +23,8 @@ pub(crate) mod product_domain_runtime;
 #[cfg(feature = "product-full")]
 pub mod product_runtime;
 pub mod service; // Workspace, Config, FileSystem, Terminal, Git
+#[cfg(feature = "product-full")]
+pub mod kernel_facade; // Kernel-api facade: pure passthrough impl (K1b1)
 #[cfg(all(feature = "service-integrations", feature = "product-full"))]
 pub(crate) mod service_agent_runtime;
 pub mod util; // General types, errors, helper functions // Unified error facade (re-exports util::errors)
