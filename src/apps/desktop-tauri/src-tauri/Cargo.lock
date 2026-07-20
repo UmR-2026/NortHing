@@ -3382,7 +3382,6 @@ dependencies = [
  "northhing-services-core",
  "northhing-services-integrations",
  "northhing-tool-packs",
- "northhing-transport",
  "notify",
  "rand 0.8.7",
  "regex",
@@ -3597,21 +3596,6 @@ dependencies = [
 [[package]]
 name = "northhing-tool-packs"
 version = "0.2.10"
-
-[[package]]
-name = "northhing-transport"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "dashmap",
- "northhing-events",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "notify"
