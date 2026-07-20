@@ -6,7 +6,7 @@
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
@@ -69,10 +69,21 @@ impl KernelFacade {
     /// the target turn id.
     async fn find_session_for_turn(&self, turn_id: &str) -> Option<String> {
         // The coordinator does not expose a turn→session index, so we scan
-        // the in-memory session store. This is O(n) over sessions but
-        // acceptable for the passthrough facade.
-        if let Ok(store) = self.coordinator().session_manager().list_sessions_safe().await {
-            for session in store {
+        // by listing all sessions and checking dialog_turn_ids on each.
+        let workspace = default_workspace_path();
+        let Ok(summaries) = self
+            .coordinator()
+            .list_sessions(Path::new(&workspace))
+            .await
+        else {
+            return None;
+        };
+        for summary in summaries {
+            if let Some(session) = self
+                .coordinator()
+                .session_manager()
+                .get_session(&summary.session_id)
+            {
                 if session.dialog_turn_ids.iter().any(|t| t == turn_id) {
                     return Some(session.session_id);
                 }
@@ -89,15 +100,15 @@ impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
     async fn init_core(&self) -> Result<(), KernelError> {
         initialize_global_config()
             .await
-            .map_err(|e| KernelError::runtime(format!("initialize_global_config failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("initialize_global_config failed: {e}")))?;
 
         AIClientFactory::initialize_global()
             .await
-            .map_err(|e| KernelError::runtime(format!("AIClientFactory init failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("AIClientFactory init failed: {e}")))?;
 
         let system = init_agentic_system()
             .await
-            .map_err(|e| KernelError::runtime(format!("init_agentic_system failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("init_agentic_system failed: {e}")))?;
 
         let coordinator = system.coordinator.clone();
         let session_manager = coordinator.session_manager().clone();
@@ -107,7 +118,7 @@ impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
         let injection_ok =
             coordinator.set_round_injection_source(scheduler.round_injection_monitor());
         if !notifier_ok || !injection_ok {
-            return Err(KernelError::runtime("dialog scheduler wiring conflict"));
+            return Err(KernelError::Runtime("dialog scheduler wiring conflict".to_string()));
         }
 
         set_global_scheduler(scheduler.clone());
@@ -160,7 +171,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .create_session(name, config.agent_type, core_config)
             .await
-            .map_err(|e| KernelError::runtime(format!("create_session failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("create_session failed: {e}")))?;
         Ok(session.session_id)
     }
 
@@ -170,7 +181,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .list_sessions(Path::new(&workspace))
             .await
-            .map_err(|e| KernelError::runtime(format!("list_sessions failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("list_sessions failed: {e}")))?;
         Ok(summaries.into_iter().map(summary_to_dto).collect())
     }
 
@@ -179,8 +190,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .session_manager()
             .get_session(id)
-            .await
-            .map_err(|e| KernelError::runtime(format!("get_session failed: {e}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
         Ok(session_to_dto(&session))
     }
 
@@ -189,11 +199,11 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .resolve_session_workspace_path(id)
             .await
-            .ok_or_else(|| KernelError::not_found(format!("session not found: {id}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
         self.coordinator()
             .delete_session(&workspace, id)
             .await
-            .map_err(|e| KernelError::runtime(format!("delete_session failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("delete_session failed: {e}")))?;
         Ok(())
     }
 
@@ -201,7 +211,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
         self.coordinator()
             .update_session_title(id, name)
             .await
-            .map_err(|e| KernelError::runtime(format!("rename_session failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("rename_session failed: {e}")))?;
         Ok(())
     }
 
@@ -210,7 +220,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .get_messages(session_id)
             .await
-            .map_err(|e| KernelError::runtime(format!("get_messages failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("get_messages failed: {e}")))?;
         Ok(messages.into_iter().map(message_to_dto).collect())
     }
 
@@ -219,16 +229,16 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .coordinator()
             .resolve_session_workspace_path(id)
             .await
-            .ok_or_else(|| KernelError::not_found(format!("session not found: {id}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
         let metadata = self
             .coordinator()
             .session_manager()
             .load_session_metadata(&workspace, id)
             .await
-            .map_err(|e| KernelError::runtime(format!("load_session_metadata failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("load_session_metadata failed: {e}")))?;
         match metadata {
             Some(m) => Ok(metadata_to_dto(&m)),
-            None => Err(KernelError::not_found(format!(
+            None => Err(KernelError::NotFound(format!(
                 "session metadata not found: {id}"
             ))),
         }
@@ -240,7 +250,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
             .resolve_session_workspace_path(&request.parent_session_id)
             .await
             .ok_or_else(|| {
-                KernelError::not_found(format!(
+                KernelError::NotFound(format!(
                     "parent session not found: {}",
                     request.parent_session_id
                 ))
@@ -248,13 +258,17 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
         let branch_name = request
             .name
             .unwrap_or_else(|| format!("branch-{}", system_time_to_ms()));
-        let result = crate::service::git::create_branch(&workspace, &branch_name, None)
-            .await
-            .map_err(|e| KernelError::runtime(format!("create_branch failed: {e}")))?;
+        let result = northhing_services_integrations::git::GitService::create_branch(
+            &workspace,
+            &branch_name,
+            None,
+        )
+        .await
+        .map_err(|e| KernelError::Runtime(format!("create_branch failed: {e}")))?;
         if result.success {
             Ok(branch_name)
         } else {
-            Err(KernelError::runtime(
+            Err(KernelError::Runtime(
                 result.error.unwrap_or_else(|| "git create_branch failed".to_string()),
             ))
         }
@@ -273,7 +287,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 impl northhing_kernel_api::KernelTurnApi for KernelFacade {
     async fn submit_turn(&self, input: TurnInputDto) -> Result<DialogSubmitOutcomeDto, KernelError> {
         let scheduler = global_scheduler().ok_or_else(|| {
-            KernelError::runtime("global scheduler not available — init_core not called")
+            KernelError::Runtime("global scheduler not available — init_core not called".to_string())
         })?;
         let policy = crate::agentic::coordination::DialogSubmissionPolicy::for_source(
             crate::agentic::coordination::DialogTriggerSource::DesktopApi,
@@ -292,7 +306,7 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
                 None,
             )
             .await
-            .map_err(|e| KernelError::runtime(format!("submit_turn failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("submit_turn failed: {e}")))?;
         Ok(outcome_to_dto(outcome))
     }
 
@@ -300,11 +314,11 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
         let session_id = self
             .find_session_for_turn(turn_id)
             .await
-            .ok_or_else(|| KernelError::not_found(format!("turn not found: {turn_id}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("turn not found: {turn_id}")))?;
         self.coordinator()
             .cancel_dialog_turn(&session_id, turn_id)
             .await
-            .map_err(|e| KernelError::runtime(format!("stop_turn failed: {e}")))?;
+            .map_err(|e| KernelError::Runtime(format!("stop_turn failed: {e}")))?;
         Ok(())
     }
 
@@ -316,33 +330,33 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
         let session_id = self
             .find_session_for_turn(turn_id)
             .await
-            .ok_or_else(|| KernelError::not_found(format!("turn not found: {turn_id}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("turn not found: {turn_id}")))?;
         let workspace = self
             .coordinator()
             .resolve_session_workspace_path(&session_id)
             .await
-            .ok_or_else(|| KernelError::not_found(format!("session not found: {session_id}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {session_id}")))?;
         let session = self
             .coordinator()
             .session_manager()
             .get_session(&session_id)
-            .await
-            .map_err(|e| KernelError::runtime(format!("get_session failed: {e}")))?;
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {session_id}")))?;
         let turn_index = session
             .dialog_turn_ids
             .iter()
             .position(|t| t == turn_id)
             .ok_or_else(|| {
-                KernelError::not_found(format!("turn not found in session: {turn_id}"))
+                KernelError::NotFound(format!("turn not found in session: {turn_id}"))
             })?;
         let turn = self
             .coordinator()
             .session_manager()
+            .persistence_manager
             .load_dialog_turn(&workspace, &session_id, turn_index)
             .await
-            .map_err(|e| KernelError::runtime(format!("load_dialog_turn failed: {e}")))?
+            .map_err(|e| KernelError::Runtime(format!("load_dialog_turn failed: {e}")))?
             .ok_or_else(|| {
-                KernelError::not_found(format!("turn not found in storage: {turn_id}"))
+                KernelError::NotFound(format!("turn not found in storage: {turn_id}"))
             })?;
         Ok(TurnStateDto {
             state: turn_status_to_kind(&turn.status),
@@ -357,10 +371,12 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
 impl northhing_kernel_api::KernelEventsApi for KernelFacade {
     async fn subscribe_events(
         &self,
-        callback: Box<dyn Fn(KernelEventDto) + Send>,
+        callback: Box<dyn Fn(KernelEventDto) + Send + 'static>,
     ) -> SubscriptionId {
         let id = format!("sub-{}", uuid::Uuid::new_v4());
-        let subscriber = Arc::new(KernelEventSubscriber { callback });
+        let subscriber = KernelEventSubscriber {
+            callback: Arc::new(Mutex::new(callback)),
+        };
         self.coordinator()
             .subscribe_internal(id.clone(), subscriber);
         id
@@ -372,19 +388,27 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
     }
 
     async fn emit_backend_event(&self, event: BackendEventDto) -> Result<(), KernelError> {
-        crate::infrastructure::events::BackendEventManager::emit_backend_event(
-            &event.event_type,
-            event.payload,
-        )
-        .await
-        .map_err(|e| KernelError::runtime(format!("emit_backend_event failed: {e}")))
+        let be = crate::infrastructure::events::BackendEvent::Custom {
+            event_name: event.event_type,
+            payload: event.payload.unwrap_or(serde_json::Value::Null),
+        };
+        crate::infrastructure::events::emit_global_event(be)
+            .await
+            .map_err(|e| KernelError::Runtime(format!("emit_backend_event failed: {e}")))
     }
 }
 
 // ── Event subscriber adapter ─────────────────────────────────────────────────
 
 struct KernelEventSubscriber {
-    callback: Box<dyn Fn(KernelEventDto) + Send>,
+    callback: Arc<Mutex<Box<dyn Fn(KernelEventDto) + Send + 'static>>>,
+}
+
+impl KernelEventSubscriber {
+    fn invoke_callback(&self, dto: KernelEventDto) {
+        let guard = self.callback.lock().unwrap();
+        (guard)(dto);
+    }
 }
 
 #[async_trait]
@@ -394,7 +418,7 @@ impl crate::agentic::events::EventSubscriber for KernelEventSubscriber {
         event: &crate::agentic::events::AgenticEvent,
     ) -> crate::util::errors::NortHingResult<()> {
         if let Some(dto) = agentic_event_to_dto(event) {
-            (self.callback)(dto);
+            self.invoke_callback(dto);
         }
         Ok(())
     }
@@ -428,7 +452,7 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
             ..
         } => Some(KernelEventDto::TurnState {
             session_id: session_id.clone(),
-            turn_id: turn_id.clone().unwrap_or_default(),
+            turn_id: turn_id.clone(),
             state: TurnStateKind::Completed,
             duration_ms: Some(*duration_ms),
         }),
@@ -438,7 +462,7 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
             ..
         } => Some(KernelEventDto::TurnState {
             session_id: session_id.clone(),
-            turn_id: turn_id.clone().unwrap_or_default(),
+            turn_id: turn_id.clone(),
             state: TurnStateKind::Cancelled,
             duration_ms: None,
         }),
@@ -493,10 +517,10 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
     }
 }
 
-fn summary_to_dto(s: &crate::agentic::core::SessionSummary) -> SessionSummaryDto {
+fn summary_to_dto(s: crate::agentic::core::SessionSummary) -> SessionSummaryDto {
     SessionSummaryDto {
-        id: s.session_id.clone(),
-        name: s.session_name.clone(),
+        id: s.session_id,
+        name: s.session_name,
         updated_at: system_time_to_ms_i64(s.last_activity_at),
     }
 }
@@ -532,7 +556,7 @@ fn message_to_dto(m: Message) -> MessageDto {
             MessageContent::Text(t) => MessageContentDto::Text(t.clone()),
             MessageContent::Multimodal { text, images } => MessageContentDto::Multimodal {
                 text: text.clone(),
-                images: images.clone(),
+                images: images.iter().filter_map(|img| img.image_path.clone()).collect(),
             },
             MessageContent::ToolResult {
                 tool_id,
@@ -540,6 +564,7 @@ fn message_to_dto(m: Message) -> MessageDto {
                 result,
                 result_for_assistant,
                 is_error,
+                ..
             } => MessageContentDto::ToolResult {
                 tool_id: tool_id.clone(),
                 tool_name: tool_name.clone(),
@@ -558,7 +583,7 @@ fn message_to_dto(m: Message) -> MessageDto {
                     .iter()
                     .map(|tc| ToolCallStub {
                         tool_name: tc.tool_name.clone(),
-                        arguments: tc.arguments.clone(),
+                        arguments: Some(tc.arguments.clone()),
                         is_error: tc.is_error,
                     })
                     .collect(),
@@ -569,7 +594,7 @@ fn message_to_dto(m: Message) -> MessageDto {
 }
 
 fn metadata_to_dto(
-    m: &northhing_services_core::session::session_metadata::SessionMetadata,
+    m: &northhing_services_core::session::SessionMetadata,
 ) -> SessionMetadataDto {
     SessionMetadataDto {
         session_id: m.session_id.clone(),
@@ -590,13 +615,13 @@ fn metadata_to_dto(
         message_count: m.message_count,
         tool_call_count: m.tool_call_count,
         status: match m.status {
-            northhing_services_core::session::session_metadata::SessionStatus::Active => {
+            northhing_services_core::session::SessionStatus::Active => {
                 SessionStatusDto::Active
             }
-            northhing_services_core::session::session_metadata::SessionStatus::Archived => {
+            northhing_services_core::session::SessionStatus::Archived => {
                 SessionStatusDto::Archived
             }
-            northhing_services_core::session::session_metadata::SessionStatus::Completed => {
+            northhing_services_core::session::SessionStatus::Completed => {
                 SessionStatusDto::Completed
             }
         },
@@ -640,14 +665,13 @@ fn outcome_to_dto(o: crate::agentic::coordination::DialogSubmitOutcome) -> Dialo
 }
 
 fn turn_status_to_kind(
-    s: &northhing_services_core::session::dialog_turn::DialogTurnStatus,
+    s: &northhing_services_core::session::TurnStatus,
 ) -> TurnStateKind {
-    use northhing_services_core::session::dialog_turn::DialogTurnStatus;
     match s {
-        DialogTurnStatus::Started | DialogTurnStatus::InProgress => TurnStateKind::Started,
-        DialogTurnStatus::Completed => TurnStateKind::Completed,
-        DialogTurnStatus::Failed => TurnStateKind::Failed,
-        DialogTurnStatus::Cancelled => TurnStateKind::Cancelled,
+        northhing_services_core::session::TurnStatus::InProgress => TurnStateKind::Started,
+        northhing_services_core::session::TurnStatus::Completed => TurnStateKind::Completed,
+        northhing_services_core::session::TurnStatus::Error => TurnStateKind::Failed,
+        northhing_services_core::session::TurnStatus::Cancelled => TurnStateKind::Cancelled,
     }
 }
 
