@@ -57,26 +57,35 @@ pub use northhing_kernel_api::turn::{
 static FACADE_READY: AtomicBool = AtomicBool::new(false);
 
 pub struct KernelFacade {
-    coordinator: Arc<crate::agentic::coordination::ConversationCoordinator>,
+    /// Set by `init_core()` after `init_agentic_system()` succeeds. Never `panic`/expect.
+    coordinator: OnceLock<Arc<crate::agentic::coordination::ConversationCoordinator>>,
 }
 
 static FACADE: OnceLock<Arc<KernelFacade>> = OnceLock::new();
 
-/// Returns the global `KernelFacade` instance. Panics if the coordinator has
-/// not been initialized (i.e. `init_core` was never called).
+/// Returns the global `KernelFacade` instance. Safe to call before `init_core()`;
+/// facade methods return `KernelError::Internal` until the coordinator is set.
 pub fn kernel_facade() -> Arc<KernelFacade> {
     FACADE.get_or_init(|| Arc::new(KernelFacade::new())).clone()
 }
 
 impl KernelFacade {
     fn new() -> Self {
-        let coordinator = global_coordinator()
-            .expect("kernel_facade() called before init_core() — coordinator not available");
-        Self { coordinator }
+        Self {
+            coordinator: OnceLock::new(),
+        }
     }
 
-    fn coordinator(&self) -> &Arc<crate::agentic::coordination::ConversationCoordinator> {
-        &self.coordinator
+    /// Sets the coordinator after `init_agentic_system()` succeeds. Idempotent —
+    /// if already set, this is a no-op (prevents double-initialization issues).
+    fn set_coordinator(&self, coordinator: Arc<crate::agentic::coordination::ConversationCoordinator>) {
+        let _ = self.coordinator.set(coordinator);
+    }
+
+    fn coordinator(&self) -> Result<&Arc<crate::agentic::coordination::ConversationCoordinator>, KernelError> {
+        self.coordinator.get().ok_or_else(|| {
+            KernelError::Internal("coordinator not yet initialized — call init_core() first".to_string())
+        })
     }
 
     /// Best-effort lookup of the session that owns a given turn. Scans the
@@ -85,17 +94,19 @@ impl KernelFacade {
     async fn find_session_for_turn(&self, turn_id: &str) -> Option<String> {
         // The coordinator does not expose a turn→session index, so we scan
         // by listing all sessions and checking dialog_turn_ids on each.
+        let coordinator = match self.coordinator() {
+            Ok(c) => c,
+            Err(_) => return None,
+        };
         let workspace = default_workspace_path();
-        let Ok(summaries) = self
-            .coordinator()
+        let Ok(summaries) = coordinator
             .list_sessions(Path::new(&workspace))
             .await
         else {
             return None;
         };
         for summary in summaries {
-            if let Some(session) = self
-                .coordinator()
+            if let Some(session) = coordinator
                 .session_manager()
                 .get_session(&summary.session_id)
             {
@@ -183,7 +194,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
         }
         let name = format!("session-{}", system_time_to_ms());
         let session = self
-            .coordinator()
+            .coordinator()?
             .create_session(name, config.agent_type, core_config)
             .await
             .map_err(|e| KernelError::Runtime(format!("create_session failed: {e}")))?;
@@ -193,7 +204,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
     async fn list_sessions(&self) -> Result<Vec<SessionSummaryDto>, KernelError> {
         let workspace = default_workspace_path();
         let summaries = self
-            .coordinator()
+            .coordinator()?
             .list_sessions(Path::new(&workspace))
             .await
             .map_err(|e| KernelError::Runtime(format!("list_sessions failed: {e}")))?;
@@ -202,7 +213,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 
     async fn get_session(&self, id: &SessionId) -> Result<SessionDto, KernelError> {
         let session = self
-            .coordinator()
+            .coordinator()?
             .session_manager()
             .get_session(id)
             .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
@@ -211,11 +222,11 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 
     async fn delete_session(&self, id: &SessionId) -> Result<(), KernelError> {
         let workspace = self
-            .coordinator()
+            .coordinator()?
             .resolve_session_workspace_path(id)
             .await
             .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
-        self.coordinator()
+        self.coordinator()?
             .delete_session(&workspace, id)
             .await
             .map_err(|e| KernelError::Runtime(format!("delete_session failed: {e}")))?;
@@ -223,7 +234,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
     }
 
     async fn rename_session(&self, id: &SessionId, name: &str) -> Result<(), KernelError> {
-        self.coordinator()
+        self.coordinator()?
             .update_session_title(id, name)
             .await
             .map_err(|e| KernelError::Runtime(format!("rename_session failed: {e}")))?;
@@ -232,7 +243,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 
     async fn get_messages(&self, session_id: &SessionId) -> Result<Vec<MessageDto>, KernelError> {
         let messages = self
-            .coordinator()
+            .coordinator()?
             .get_messages(session_id)
             .await
             .map_err(|e| KernelError::Runtime(format!("get_messages failed: {e}")))?;
@@ -241,12 +252,12 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 
     async fn get_session_metadata(&self, id: &SessionId) -> Result<SessionMetadataDto, KernelError> {
         let workspace = self
-            .coordinator()
+            .coordinator()?
             .resolve_session_workspace_path(id)
             .await
             .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
         let metadata = self
-            .coordinator()
+            .coordinator()?
             .session_manager()
             .load_session_metadata(&workspace, id)
             .await
@@ -261,7 +272,7 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 
     async fn create_branch(&self, request: SessionBranchDto) -> Result<BranchId, KernelError> {
         let workspace = self
-            .coordinator()
+            .coordinator()?
             .resolve_session_workspace_path(&request.parent_session_id)
             .await
             .ok_or_else(|| {
@@ -335,7 +346,7 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
             .find_session_for_turn(turn_id)
             .await
             .ok_or_else(|| KernelError::NotFound(format!("turn not found: {turn_id}")))?;
-        self.coordinator()
+        self.coordinator()?
             .cancel_dialog_turn(&session_id, turn_id)
             .await
             .map_err(|e| KernelError::Runtime(format!("stop_turn failed: {e}")))?;
@@ -352,12 +363,12 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
             .await
             .ok_or_else(|| KernelError::NotFound(format!("turn not found: {turn_id}")))?;
         let workspace = self
-            .coordinator()
+            .coordinator()?
             .resolve_session_workspace_path(&session_id)
             .await
             .ok_or_else(|| KernelError::NotFound(format!("session not found: {session_id}")))?;
         let session = self
-            .coordinator()
+            .coordinator()?
             .session_manager()
             .get_session(&session_id)
             .ok_or_else(|| KernelError::NotFound(format!("session not found: {session_id}")))?;
@@ -369,7 +380,7 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
                 KernelError::NotFound(format!("turn not found in session: {turn_id}"))
             })?;
         let turn = self
-            .coordinator()
+            .coordinator()?
             .session_manager()
             .persistence_manager
             .load_dialog_turn(&workspace, &session_id, turn_index)
@@ -396,17 +407,19 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
         // NOTE: Unlike event_bridge.rs:75-96 which uses a 500ms retry pattern
         // for reconnect, this facade directly subscribes assuming init_core has
         // already been called and the coordinator is stable.
+        let coordinator = self.coordinator().expect(
+            "subscribe_events called before init_core() — desktop must call init_core() first",
+        );
         let id = format!("sub-{}", uuid::Uuid::new_v4());
         let subscriber = KernelEventSubscriber {
             callback: Arc::new(Mutex::new(callback)),
         };
-        self.coordinator()
-            .subscribe_internal(id.clone(), subscriber);
+        coordinator.subscribe_internal(id.clone(), subscriber);
         id
     }
 
     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError> {
-        self.coordinator().unsubscribe_internal(&id);
+        self.coordinator()?.unsubscribe_internal(&id);
         Ok(())
     }
 
@@ -572,7 +585,7 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
                 call_id: tool_id.clone(),
                 name: tool_name.clone(),
                 phase: ToolCallPhase::Completed,
-                summary: format!("cancelled: {}", first_line_truncated(reason)),
+                summary: first_line_truncated(&format!("cancelled: {reason}")),
                 detail: Some(truncate_4000(reason)),
             })),
             _ => None,
@@ -1643,6 +1656,24 @@ mod tests {
         }
     }
 
+    fn make_cancelled_event(reason: String) -> AgenticEvent {
+        AgenticEvent::ToolEvent {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            tool_event: ToolEventData::Cancelled {
+                tool_id: "call-abc".into(),
+                tool_name: "Bash".into(),
+                reason,
+                duration_ms: None,
+                queue_wait_ms: None,
+                preflight_ms: None,
+                confirmation_wait_ms: None,
+                execution_ms: None,
+            },
+        }
+    }
+
     #[test]
     fn test_first_line_truncated() {
         assert_eq!(first_line_truncated("hello world\nsecond line"), "hello world");
@@ -1717,5 +1748,18 @@ mod tests {
         let dto = agentic_event_to_dto(&event).unwrap();
         let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
         assert!(tc.summary.len() <= 120, "summary should be truncated to 120 chars");
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_cancelled_summary_with_prefix_truncated_to_120() {
+        // Regression: "cancelled: " prefix (11 chars) must not push summary over 120.
+        // Total "cancelled: <reason>" capped at 120 chars (not 11 + trunc(reason)).
+        let long_reason = "x".repeat(200);
+        let event = make_cancelled_event(long_reason);
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(tc.summary.starts_with("cancelled:"), "summary should have cancelled prefix");
+        assert!(tc.summary.len() <= 120, "summary including prefix must be ≤ 120 chars, got {}", tc.summary.len());
+        assert!(tc.detail.is_some());
     }
 }
