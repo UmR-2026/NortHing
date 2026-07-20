@@ -9,8 +9,6 @@
 | Crate | 职责 | 本地文档 |
 |---|---|---|
 | `ai-adapters` | AI provider 请求/响应 adapter 与 stream protocol glue | [AGENTS.md](ai-adapters/AGENTS.md) |
-| `api-layer` | 产品宿主共用的后端 API adapter surface | [AGENTS.md](api-layer/AGENTS.md) |
-| `transport` | Event transport emitter 与宿主 transport adapter | [AGENTS.md](transport/AGENTS.md) |
 | `webdriver` | Embedded WebDriver protocol 与浏览器自动化 adapter | [AGENTS.md](webdriver/AGENTS.md) |
 
 ## 放置规则

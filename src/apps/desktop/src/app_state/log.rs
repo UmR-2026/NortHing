@@ -18,8 +18,7 @@ struct LogCommand {
 /// Phase P4 (2026-06-22): replaces the per-call `std::thread::spawn` +
 /// `tokio::runtime::Builder` anti-pattern with a single `OnceLock`-
 /// initialised `mpsc::unbounded_channel` + one persistent consumer
-/// thread.  This matches the `EventBus` pattern in
-/// `northhing_transport::event_bus`.
+/// thread.
 static LOG_CHANNEL: OnceLock<mpsc::UnboundedSender<LogCommand>> = OnceLock::new();
 
 /// Handle to the background consumer thread, stored for graceful

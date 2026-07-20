@@ -21,7 +21,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 |---|---|---|---|---|---|
 | 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`src/mobile-web`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、relay、Web UI、mobile web、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
-| 3 | 适配器 | `src/crates/adapters` | AI/API/transport/WebDriver 协议适配器与外部提供方翻译 | `ai-adapters`、`api-layer`、`transport`、`webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+| 3 | 适配器 | `src/crates/adapters` | AI/WebDriver 协议适配器与外部提供方翻译 | `ai-adapters`、`webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语、MiniApp 运行时 IO 以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
 | 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、harness、stream、DeepReview 策略/报告、typed-service、tool-contract、tool-group 以及 tool-execution 构件 | `agent-runtime`、`agent-stream`、`tool-contracts`、`harness`、`runtime-services`、`tool-provider-groups`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
 | 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
@@ -133,7 +133,7 @@ await api.invoke('your_command', { request: { ... } });
 
 改动以下任一项需要 flag flip + 集成测试，并在同一 commit 更新本节。
 
-- **桌面包名是 `northhing`（Slint）**，不是 `northhing-desktop`。agent-dispatch flags：`USE_LIGHTWEIGHT_ACTOR = true`；`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` = false（`src/crates/execution/agent-dispatch/src/flags.rs`）。
+- **桌面包名是 `northhing`（Slint）**，不是 `northhing-desktop`。agent-dispatch flags：只剩 `USE_LIGHTWEIGHT_ACTOR = true`；Phase 3 IPC（`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` + IpcSpawnAdapter）已于 2026-07-20 descope 并删除。
 - **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。桌面 `AppSettings` 仍是 UI owner，经 `sync_providers_to_core` 适配推送到 core（见 `95e29ba`）。禁止再出现第二个运行时可读的配置文件。
 - **UI 线程纪律**：非事件循环线程写 Slint 属性会被静默丢弃。所有此类写入必须走 `slint::invoke_from_event_loop`（`error_banners.rs` 的 helper 已封装，直接复用，见 `ad349f9`）。
 - **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入；MiniApp string 模式命令含 shell 元字符一律拒绝。
@@ -170,7 +170,7 @@ await api.invoke('your_command', { request: { ... } });
 | 区域契约或共享词条 | `pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit` |
 | Web UI i18n 运行时、命名空间加载或直接的 `i18nService.t(...)` 使用 | `pnpm run i18n:contract:test && pnpm run type-check:web && pnpm --dir src/web-ui run test:run src/infrastructure/i18n/core/I18nService.test.ts` |
 | Mobile Web UI、状态、配对、断连或重连行为 | `pnpm --dir src/mobile-web run type-check`；行为变化时附加手工配对/重连说明 |
-| `core`、`transport`、`api-layer`、适配器或服务中的共享 Rust 逻辑 | `cargo check --workspace`，并在行为变化时附加最近的聚焦 `cargo test` |
+| `core`、适配器或服务中的共享 Rust 逻辑 | `cargo check --workspace`，并在行为变化时附加最近的聚焦 `cargo test` |
 | 桌面集成、Tauri API、浏览器/电脑使用或仅桌面行为 | `cargo check -p northhing-desktop`，并在行为变化时附加聚焦桌面测试 |
 | 由桌面冒烟/功能流程覆盖的行为 | 优先使用最近的聚焦 E2E/冒烟检查；除非构建行为变化，否则依赖 CI 完成广覆盖构建/测试 |
 | `src/crates/adapters/ai-adapters` | 使用上面相关的 Rust 检查；仅当流契约变化时附加 `cargo test -p northhing-agent-stream` |

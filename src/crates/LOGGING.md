@@ -35,7 +35,7 @@
 Use shared timing helpers from `northhing_core::util::timing` when recording internal durations.
 
 ```rust
-use northhing_core::util::{elapsed_ms_u64, TimingCollector};
+use northhing_core::util::elapsed_ms_u64;
 use std::time::Instant;
 
 let started_at = Instant::now();
@@ -45,7 +45,7 @@ debug!("Git status completed: repo_path={}, duration_ms={}", repo_path, duration
 
 Rules:
 
-1. Prefer `elapsed_ms`, `elapsed_ms_u64`, and `TimingCollector` over repeated `Instant::now()` plus `elapsed().as_millis()` formatting
+1. Prefer `elapsed_ms` and `elapsed_ms_u64` over repeated `Instant::now()` plus `elapsed().as_millis()` formatting
 2. Use `duration_ms` for Rust diagnostic log keys
 3. Preserve existing protocol and model field names such as `duration_ms`, `execution_time_ms`, or `response_time_ms` when they are part of events, API responses, or persisted state
 4. Avoid introducing timing logs into tight loops or high-frequency runtime paths unless the diagnostic value clearly justifies it

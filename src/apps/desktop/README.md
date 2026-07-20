@@ -35,7 +35,7 @@ cargo run -p northhing
 - **Three-region layout**: Sidebar (sessions), ChatPane (messages), Inspector (skills/settings)
 - **Material Design**: Custom Material components with dark/light theme
 - **Slint reactive UI**: Declarative `.slint` markup with Rust backend binding
-- **Transport adapter**: `SlintTransportAdapter` bridges `AgenticEvent` to UI updates
+- **Event bridge**: backend events stream to UI updates over the desktop event bridge
 - **wgpu + software fallback**: Auto-fallback if GPU rendering fails
 
 ## Rollback Flags
@@ -51,7 +51,6 @@ const SESSION_TREE_VIEW: bool = false;        // A6 will enable
 
 - `slint` 1.16+ (UI framework)
 - `northhing-core` (business logic)
-- `northhing-transport` (event bridge)
 - `tokio` (async runtime)
 
 ## File Structure

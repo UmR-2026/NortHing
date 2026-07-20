@@ -2,7 +2,7 @@
 //!
 //! Pattern source: `.agents/reference/actor/06-const-flag-usage.md`.
 //!
-//! All four flags **default to `false`**. Flipping any of them requires:
+//! Only one flag remains. Flipping it requires:
 //!   1. Integration test passing with flag = `true` (and `false` regression).
 //!   2. `PROJECT_STATE.md` update recording the new state.
 //!   3. Rollback stays one-line (`const FLAG: bool = false;` + commit).
