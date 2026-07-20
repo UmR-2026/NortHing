@@ -100,33 +100,30 @@ impl TauriEventBridge {
     }
 }
 
-/// Register the bridge with the kernel facade. If the facade isn't ready yet,
-/// retry every 500ms on the core runtime until core_ready() is true
-/// (initialization race).
+/// Register the bridge with the kernel facade. Spawns a long-lived task on
+/// core_rt that awaits subscribe_events properly. If the facade isn't ready yet,
+/// retries every 500ms until core_ready() is true (initialization race).
 pub fn register(app: &AppHandle) {
     let bridge = TauriEventBridge::new(app.clone());
-    if kernel_facade().core_ready() {
-        // Facade already initialized, subscribe directly
-        let callback = Box::new(move |event: KernelEventDto| {
-            bridge.on_kernel_event(event);
-        });
-        kernel_facade().subscribe_events(callback);
-        tracing::info!("desktop-tauri bridge subscribed (direct)");
-    } else {
-        tracing::info!("desktop-tauri bridge: facade not ready, retry loop spawned");
-        crate::core_rt::core_rt().spawn(async move {
+    crate::core_rt::core_rt().spawn(async move {
+        // Wait for facade to be ready if needed
+        if !kernel_facade().core_ready() {
+            tracing::info!("desktop-tauri bridge: facade not ready, retry loop spawned");
             for _attempt in 1..=120 {
                 if kernel_facade().core_ready() {
-                    let callback = Box::new(move |event: KernelEventDto| {
-                        bridge.on_kernel_event(event);
-                    });
-                    kernel_facade().subscribe_events(callback);
-                    tracing::info!("desktop-tauri bridge subscribed (via retry loop)");
-                    return;
+                    break;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
-            tracing::error!("desktop-tauri bridge: facade never became ready; giving up");
+            if !kernel_facade().core_ready() {
+                tracing::error!("desktop-tauri bridge: facade never became ready; giving up");
+                return;
+            }
+        }
+        let callback = Box::new(move |event: KernelEventDto| {
+            bridge.on_kernel_event(event);
         });
-    }
+        let _subscription_id = kernel_facade().subscribe_events(callback).await;
+        tracing::info!("desktop-tauri bridge subscribed (direct)");
+    });
 }

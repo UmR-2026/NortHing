@@ -173,15 +173,9 @@ pub async fn stop_streaming(session_id: String, turn_id: String) -> Result<(), S
     rx.await.map_err(|_| "core runtime dropped".to_string())?
 }
 
-// K2-fallback: stop_streaming uses coordinator directly because facade stop_turn
-// requires finding session_id from turn_id (find_session_for_turn), which adds
-// overhead for the stop path. Direct coordinator cancel is more efficient here.
-async fn do_stop_streaming(session_id: String, turn_id: String) -> anyhow::Result<()> {
-    let coordinator = northhing_core::agentic::coordination::global_coordinator()
-        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
-    coordinator
-        .cancel_dialog_turn(&session_id, &turn_id)
-        .await?;
+async fn do_stop_streaming(_session_id: String, turn_id: String) -> anyhow::Result<()> {
+    let facade = kernel_facade();
+    facade.stop_turn(&turn_id).await?;
     Ok(())
 }
 
