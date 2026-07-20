@@ -8,6 +8,8 @@
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+
+use tokio::sync::Mutex as AsyncMutex;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -55,6 +57,16 @@ pub use northhing_kernel_api::turn::{
 // ── KernelFacade ────────────────────────────────────────────────────────────
 
 static FACADE_READY: AtomicBool = AtomicBool::new(false);
+
+// Concurrent-safe idempotent gate for init_core.
+// NotStarted → InProgress(guard) → Ready  or  NotStarted → Ready (fast path)
+static INIT_STATE: AsyncMutex<InitState> = AsyncMutex::const_new(InitState::NotStarted);
+
+enum InitState {
+    NotStarted,
+    InProgress,
+    Ready,
+}
 
 pub struct KernelFacade {
     /// Set by `init_core()` after `init_agentic_system()` succeeds. Never `panic`/expect.
@@ -124,6 +136,28 @@ impl KernelFacade {
 #[async_trait]
 impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
     async fn init_core(&self) -> Result<(), KernelError> {
+        // Fast path: already ready
+        if FACADE_READY.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        loop {
+            let mut guard = INIT_STATE.lock().await;
+            match *guard {
+                InitState::Ready => return Ok(()),
+                InitState::InProgress => {
+                    drop(guard);
+                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                }
+                InitState::NotStarted => {
+                    *guard = InitState::InProgress;
+                    drop(guard);
+                    break;
+                }
+            }
+        }
+
+        // --- actual initialization ---
         initialize_global_config()
             .await
             .map_err(|e| KernelError::Runtime(format!("initialize_global_config failed: {e}")))?;
@@ -166,6 +200,14 @@ impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
             Err(e) => warn!("failed to fetch global config service: {e}"),
         }
 
+        // Inject coordinator into facade — must succeed before marking ready.
+        self.set_coordinator(coordinator.clone());
+
+        // Mark INIT_STATE as Ready and FACADE_READY as true.
+        {
+            let mut guard = INIT_STATE.lock().await;
+            *guard = InitState::Ready;
+        }
         FACADE_READY.store(true, Ordering::SeqCst);
         info!("kernel facade core initialized (K1b1)");
         Ok(())
@@ -407,9 +449,13 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
         // NOTE: Unlike event_bridge.rs:75-96 which uses a 500ms retry pattern
         // for reconnect, this facade directly subscribes assuming init_core has
         // already been called and the coordinator is stable.
-        let coordinator = self.coordinator().expect(
-            "subscribe_events called before init_core() — desktop must call init_core() first",
-        );
+        let coordinator = match self.coordinator() {
+            Ok(c) => c,
+            Err(e) => {
+                warn!("subscribe_events called before init_core(): {e}");
+                return "not-initialized".to_string();
+            }
+        };
         let id = format!("sub-{}", uuid::Uuid::new_v4());
         let subscriber = KernelEventSubscriber {
             callback: Arc::new(Mutex::new(callback)),
@@ -1762,4 +1808,32 @@ mod tests {
         assert!(tc.summary.len() <= 120, "summary including prefix must be ≤ 120 chars, got {}", tc.summary.len());
         assert!(tc.detail.is_some());
     }
+
+    // ── Lifecycle tests ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_facade_construction_no_panic() {
+        // KernelFacade can be constructed without panicking, even if coordinator
+        // has not been set (e.g. desktop calls kernel_facade() before init_core).
+        let facade = KernelFacade::new();
+        // coordinator() on an un-initialized facade must return Err, not panic.
+        assert!(facade.coordinator().is_err());
+    }
+
+    #[test]
+    fn test_result_methods_return_error_before_init() {
+        // Verify that facade methods return KernelError (not panic) when called
+        // before init_core has been invoked.
+        let facade = kernel_facade();
+        // coordinator() returns Err before init — verify it is an error, not panic.
+        match facade.coordinator() {
+            Ok(_) => panic!("coordinator() should be Err before init_core"),
+            Err(KernelError::Internal(_)) => {} // expected
+            Err(other) => panic!("expected KernelError::Internal, got {:?}", other),
+        }
+    }
+
+    // test_idempotent_init_core_fast_path removed: INIT_STATE is a static that persists
+    // across parallel test runs making it unreliable. The async Mutex gate and
+    // FACADE_READY fast-path are tested via integration.
 }
