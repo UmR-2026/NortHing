@@ -5709,7 +5709,6 @@ dependencies = [
  "northhing-core",
  "northhing-events",
  "northhing-runtime-ports",
- "northhing-transport",
  "parking_lot",
  "rfd",
  "serde",
@@ -5827,19 +5826,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "northhing-api-layer"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "northhing-transport",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "northhing-cli"
 version = "0.2.10"
 dependencies = [
@@ -5941,7 +5927,6 @@ dependencies = [
  "northhing-services-integrations",
  "northhing-test-support",
  "northhing-tool-packs",
- "northhing-transport",
  "notify",
  "rand 0.8.7",
  "readability-js",
@@ -6054,20 +6039,12 @@ version = "0.2.10"
 dependencies = [
  "anyhow",
  "axum",
- "base64 0.22.1",
- "chrono",
  "dashmap",
- "futures-util",
  "northhing-relay-core",
- "rand 0.8.7",
- "serde",
- "serde_json",
- "sha2",
  "tokio",
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
@@ -6193,23 +6170,6 @@ dependencies = [
 [[package]]
 name = "northhing-tool-packs"
 version = "0.2.10"
-
-[[package]]
-name = "northhing-transport"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "dashmap",
- "northhing-events",
- "serde",
- "serde_json",
- "slint",
- "tauri",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "northhing-webdriver"
