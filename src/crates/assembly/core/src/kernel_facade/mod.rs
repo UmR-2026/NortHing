@@ -746,6 +746,55 @@ fn first_line_error(detail: &str) -> String {
     }
 }
 
+/// Maps `MCPServerStatus` to `MCPServerStatusKind` DTO.
+fn map_mcp_status_kind(
+    status: crate::service::mcp::MCPServerStatus,
+) -> northhing_kernel_api::settings::MCPServerStatusKind {
+    match status {
+        crate::service::mcp::MCPServerStatus::Connected
+        | crate::service::mcp::MCPServerStatus::Healthy => {
+            northhing_kernel_api::settings::MCPServerStatusKind::Connected
+        }
+        crate::service::mcp::MCPServerStatus::Starting
+        | crate::service::mcp::MCPServerStatus::Uninitialized
+        | crate::service::mcp::MCPServerStatus::Reconnecting => {
+            northhing_kernel_api::settings::MCPServerStatusKind::Starting
+        }
+        crate::service::mcp::MCPServerStatus::NeedsAuth => {
+            northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                message: "needs authentication".to_string(),
+            }
+        }
+        crate::service::mcp::MCPServerStatus::Failed => {
+            northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                message: "runtime reported failure".to_string(),
+            }
+        }
+        crate::service::mcp::MCPServerStatus::Stopping
+        | crate::service::mcp::MCPServerStatus::Stopped => {
+            northhing_kernel_api::settings::MCPServerStatusKind::Disabled
+        }
+    }
+}
+
+/// Maps a probe result (timeout-wrapped Result<MCPServerStatus>) to `MCPServerStatusKind`.
+/// Used by `get_inspector_data` where the probe result has three cases: Ok(status), Ok(err), Err(timeout).
+#[allow(clippy::type_complexity)]
+fn map_mcp_probe_status(
+    probe_status: Result<
+        Result<crate::service::mcp::MCPServerStatus, crate::util::errors::NortHingError>,
+        tokio::time::error::Elapsed,
+    >,
+) -> northhing_kernel_api::settings::MCPServerStatusKind {
+    match probe_status {
+        Ok(Ok(status)) => map_mcp_status_kind(status),
+        Ok(Err(_)) => northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+            message: "status probe failed".to_string(),
+        },
+        Err(_) => northhing_kernel_api::settings::MCPServerStatusKind::ProbeTimeout,
+    }
+}
+
 // ── KernelSettingsApi ─────────────────────────────────────────────────────────
 
 #[async_trait]
@@ -1061,31 +1110,7 @@ impl northhing_kernel_api::KernelSettingsApi for KernelFacade {
         .map_err(|e| KernelError::Runtime(format!("get_mcp_status: {e}")))?;
         Ok(MCPServerStatusDto {
             id: id.to_string(),
-            status: match status {
-                crate::service::mcp::MCPServerStatus::Connected
-                | crate::service::mcp::MCPServerStatus::Healthy => {
-                    northhing_kernel_api::settings::MCPServerStatusKind::Connected
-                }
-                crate::service::mcp::MCPServerStatus::Starting
-                | crate::service::mcp::MCPServerStatus::Uninitialized
-                | crate::service::mcp::MCPServerStatus::Reconnecting => {
-                    northhing_kernel_api::settings::MCPServerStatusKind::Starting
-                }
-                crate::service::mcp::MCPServerStatus::NeedsAuth => {
-                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
-                        message: "needs authentication".to_string(),
-                    }
-                }
-                crate::service::mcp::MCPServerStatus::Failed => {
-                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
-                        message: "runtime reported failure".to_string(),
-                    }
-                }
-                crate::service::mcp::MCPServerStatus::Stopping
-                | crate::service::mcp::MCPServerStatus::Stopped => {
-                    northhing_kernel_api::settings::MCPServerStatusKind::Disabled
-                }
-            },
+            status: map_mcp_status_kind(status),
         })
     }
 
@@ -1344,6 +1369,9 @@ impl northhing_kernel_api::KernelUsageApi for KernelFacade {
     }
 
     async fn render_usage_markdown(&self, report: &UsageReportDto) -> String {
+        // NOTE: Cannot forward to `render_usage_report_markdown` because UsageReportDto
+        // is not type-isomorphic with SessionUsageReport — requires a DTO→SessionUsageReport
+        // adapter (P2 trait extension territory). Hand-written format retained as fallback.
         format!(
             "## Usage Report\n\nSession: {}\n\nTotal tokens: {}\nPrompt tokens: {}\nCompletion tokens: {}\nTurn count: {}\nTool call count: {}",
             report.session_id,
@@ -1441,37 +1469,7 @@ impl northhing_kernel_api::KernelPlatformApi for KernelFacade {
                             mcp_svc.server_manager().get_server_status(&config.id),
                         )
                         .await;
-                        let kind = match probe_status {
-                            Ok(Ok(status)) => match status {
-                                crate::service::mcp::MCPServerStatus::Connected
-                                | crate::service::mcp::MCPServerStatus::Healthy => {
-                                    northhing_kernel_api::settings::MCPServerStatusKind::Connected
-                                }
-                                crate::service::mcp::MCPServerStatus::Starting
-                                | crate::service::mcp::MCPServerStatus::Uninitialized
-                                | crate::service::mcp::MCPServerStatus::Reconnecting => {
-                                    northhing_kernel_api::settings::MCPServerStatusKind::Starting
-                                }
-                                crate::service::mcp::MCPServerStatus::NeedsAuth => {
-                                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
-                                        message: "needs authentication".to_string(),
-                                    }
-                                }
-                                crate::service::mcp::MCPServerStatus::Failed => {
-                                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
-                                        message: "runtime reported failure".to_string(),
-                                    }
-                                }
-                                crate::service::mcp::MCPServerStatus::Stopping
-                                | crate::service::mcp::MCPServerStatus::Stopped => {
-                                    northhing_kernel_api::settings::MCPServerStatusKind::Disabled
-                                }
-                            },
-                            Ok(Err(_)) => northhing_kernel_api::settings::MCPServerStatusKind::Failed {
-                                message: "status probe failed".to_string(),
-                            },
-                            Err(_) => northhing_kernel_api::settings::MCPServerStatusKind::ProbeTimeout,
-                        };
+                        let kind = map_mcp_probe_status(probe_status);
                         statuses.push(northhing_kernel_api::settings::MCPServerStatusDto {
                             id: config.id,
                             status: kind,
