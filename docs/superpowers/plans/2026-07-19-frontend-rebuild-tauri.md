@@ -240,6 +240,16 @@ async fn init_services() -> anyhow::Result<()> {
 - Task 1.5: composer（autosize textarea、发送态、停止按钮 → cancel 命令）
 - 每 Task 验证：`type-check` + 人工/自动化截图走查；commit 每 Task 一个。
 
+## F1.5 — Turn 轨迹（workbuddy 式对话流内多级折叠，2026-07-20 用户拍板）
+
+> **合流说明（2026-07-20）**：本阶段的工具事件面直接定义在 kernel facade 上——与 `docs/architecture/agent-kernel-northstar.md` 的 K1/K2 合并为同一批 ticket（先 K1 facade 定稿 → K2 desktop-tauri 切 facade 时同步落地 `chat-tool` 事件），避免在旧面上盖新楼。
+
+**验收**: assistant 回复以 turn 为单位的容器渲染：顶部一行「任务耗时 Xs」可折叠头；容器内按时间序排列多个折叠节——「思考过程」（现有 inline think，自动展开/正文开始自动收起语义保留）、每个工具调用一节（「已执行 1 条命令」「已创建 1 个文件」式摘要行 + 展开看详情）；正文 markdown 在容器末尾。头部右上角只保留一个「设置」按钮——「产物」「选项」两个按钮删除，「默认展开思考过程」开关随思考过程入流而废弃，「调试面板」开关迁入设置页（F2 落地前先藏进设置占位）。
+
+- Task 1.5.1: **后端工具事件补发**——core 侧把 tool-call 生命周期（started: 工具名+参数摘要；completed: 成功/失败+结果摘要）经事件桥发到前端，新增 Tauri 事件 `chat-tool`（payload `{ session_id, turn_id, call_id, phase, name, summary, detail? }`）。挂点排查：`InlineThinkParser` 同层（ai-adapters stream handler）或 agent-stream 的 tool-call accumulation 处，选 chunk 已携带 tool_call 信息的位置（W4-P 探针显示 chunk 有 `tool_call` 计数）。同时 turn-state completed payload 补 `duration_ms`（core 已有 token stats/duration 日志，透出即可）。
+- Task 1.5.2: **前端 TurnTrace 组件**——消息渲染从「ThinkBlock+Markdown」改为「TurnContainer（耗时头 + 有序 trace 节列表 + 正文）」；流式期间 trace 节实时追加；历史消息从持久化内容重建（think 仍在文本里可 parseThink；工具轨迹若无持久化则历史消息降级为只显示思考+正文，trace 仅对 live turn 完整——持久化工具轨迹列为后续打磨）。
+- Task 1.5.3: **头部瘦身**——删「产物」「选项」按钮与对应 state/aside/menu；右上角放单个「设置」按钮（F2 前可先开占位面板，把调试面板开关挪进去）。
+
 ## F2 — 设置 / onboarding / Inspector 迁移（含测试连接修复）
 
 **验收**: 设置页全量功能（provider CRUD、设为默认、**测试连接真实可用**：结果就地显示 ✓/失败原因，in-flight 态禁用按钮）；workspace 管理；skills 开关；MCP 状态；onboarding 首启流程；Inspector（model pill 显示模型名而非 wire format——修遗留小问题）。
@@ -267,4 +277,4 @@ async fn init_services() -> anyhow::Result<()> {
 - **F0.3 是全网最高点**：runtime 拓扑与事件链在新壳里第一公里；挂了按 systematic-debugging 处理，禁止边猜边改。
 - Tauri 命令的 async 运行在 Tauri 自己的 runtime——所有 core 调用必须经 `core_rt().spawn` 转发（F0.3 命令模式即如此），否则 reqwest/锁/runtime 上下文会出 W4 同类问题。
 - 主仓 `cargo check -p northhing` 必须始终绿；desktop-tauri 不参与主 workspace。
-- 工作量预估：F0 ≈ 1-2 个 coder 单，F1 ≈ 3-5 单，F2 ≈ 3-4 单，F3 ≈ 1 单，F4 为编排/验收工作。
+- 工作量预估：F0 ≈ 1-2 个 coder 单，F1 ≈ 3-5 单，F1.5 ≈ 2-3 单（后端事件补发是最高点），F2 ≈ 3-4 单，F3 ≈ 1 单，F4 为编排/验收工作。
