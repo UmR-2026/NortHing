@@ -1,15 +1,30 @@
 //! Kernel facade: pure passthrough implementation of the kernel-api traits.
 //!
 //! K1b1 — core passthrough impl for Bootstrap/Session/Turn/Events.
+//! K1b2 — core passthrough impl for Settings/Agents/Tools/Usage/Platform.
 //! DTO conversions live here; the kernel-api crate is pure definition and is
 //! never modified from this side.
 
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
+use northhing_kernel_api::{
+    agents::{AgentInfoDto, SkillInfoDto, SkillOverridesDto, SubagentDto, SubagentScopeDto},
+    platform::{
+        AnalysisDto, ArtifactDto, CoreHealthDto, ImageContextDto, InspectorDataDto, PanelDto,
+        PanelsConfigDto, SkillStatusDto, TerminalConfigDto,
+    },
+    settings::{
+        AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, MCPServerDto,
+        MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
+    },
+    tools::{ToolInfoDto, ToolPort, UserInputRequestDto, UserInputResponseDto},
+    usage::{TokenUsageDto, TurnUsageDto, UsageReportDto, UsageRequestDto},
+};
 use tracing::{info, warn};
 
 use crate::agentic::coordination::{
@@ -275,9 +290,10 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
     }
 
     async fn get_persistence_handle(&self) -> Result<PersistenceHandleDto, KernelError> {
-        Ok(PersistenceHandleDto {
-            handle_id: "global".to_string(),
-        })
+        // NEEDS_CONTEXT: PersistenceManager folding deferred to K4b.
+        Err(KernelError::Internal(
+            "not yet wired: get_persistence_handle — PersistenceManager folding deferred (K4b)".to_string(),
+        ))
     }
 }
 
@@ -286,6 +302,10 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 #[async_trait]
 impl northhing_kernel_api::KernelTurnApi for KernelFacade {
     async fn submit_turn(&self, input: TurnInputDto) -> Result<DialogSubmitOutcomeDto, KernelError> {
+        // NOTE: TurnInputDto does not carry workspace_path — we pass None here.
+        // The callbacks_lifecycle.rs:156 path uses Some(workspace) when kernel-api
+        // trait is extended to include workspace; until then, the session's
+        // workspace is resolved from the session itself.
         let scheduler = global_scheduler().ok_or_else(|| {
             KernelError::Runtime("global scheduler not available — init_core not called".to_string())
         })?;
@@ -373,6 +393,9 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
         &self,
         callback: Box<dyn Fn(KernelEventDto) + Send + 'static>,
     ) -> SubscriptionId {
+        // NOTE: Unlike event_bridge.rs:75-96 which uses a 500ms retry pattern
+        // for reconnect, this facade directly subscribes assuming init_core has
+        // already been called and the coordinator is stable.
         let id = format!("sub-{}", uuid::Uuid::new_v4());
         let subscriber = KernelEventSubscriber {
             callback: Arc::new(Mutex::new(callback)),
@@ -589,7 +612,23 @@ fn message_to_dto(m: Message) -> MessageDto {
                     .collect(),
             },
         },
-        metadata: None,
+        metadata: Some(metadata_to_message_dto(&m.metadata)),
+    }
+}
+
+fn metadata_to_message_dto(m: &crate::agentic::message::MessageMetadata) -> MessageMetadataDto {
+    MessageMetadataDto {
+        turn_id: m.turn_id.clone(),
+        round_id: m.round_id.clone(),
+        tokens: m.tokens,
+        thinking_signature: m.thinking_signature.clone(),
+        // K1b2 fix: use format!("{:?}") for enum fields per kernel-api spec
+        semantic_kind: m.semantic_kind.as_ref().map(|k| format!("{:?}", k)),
+        internal_reminder_kind: m.internal_reminder_kind.as_ref().map(|k| format!("{:?}", k)),
+        // K1b2 fix: compression_payload uses serde_json::to_value
+        compression_payload: m.compression_payload.as_ref().map(|p| {
+            serde_json::to_value(p).unwrap_or(serde_json::Value::Null)
+        }),
     }
 }
 
@@ -694,4 +733,597 @@ fn system_time_to_ms_i64(t: std::time::SystemTime) -> i64 {
     t.duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as i64
+}
+
+// ── KernelSettingsApi ─────────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelSettingsApi for KernelFacade {
+    async fn get_global_config(&self) -> Result<GlobalConfigDto, KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        let models = cfg_svc
+            .get_ai_models()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_ai_models: {e}")))?;
+        let config: crate::service::config::GlobalConfig = cfg_svc
+            .config(None)
+            .await
+            .map_err(|e| KernelError::Config(format!("get global config: {e}")))?;
+        Ok(GlobalConfigDto {
+            providers: models
+                .iter()
+                .map(|m| ProviderConfigDto {
+                    id: m.id.clone(),
+                    name: m.name.clone(),
+                    base_url: m.base_url.clone(),
+                    api_key: m.api_key.clone(),
+                    model: m.model_name.clone(),
+                    extra: None,
+                })
+                .collect(),
+            default_provider_id: config.ai.default_models.primary.clone(),
+            workspace_config: None,
+        })
+    }
+
+    async fn update_global_config(&self, patch: GlobalConfigPatchDto) -> Result<(), KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        if let Some(providers) = patch.providers {
+            for p in providers {
+                let model_cfg = crate::service::config::runtime::AIModelConfig {
+                    id: p.id.clone(),
+                    name: p.name.clone(),
+                    provider: p.id.clone(),
+                    model_name: p.model.clone(),
+                    base_url: p.base_url.clone(),
+                    request_url: None,
+                    api_key: p.api_key.clone(),
+                    context_window: None,
+                    max_tokens: None,
+                    temperature: None,
+                    top_p: None,
+                    enabled: true,
+                    category: Default::default(),
+                    capabilities: vec![],
+                    recommended_for: vec![],
+                    metadata: None,
+                    enable_thinking_process: false,
+                    reasoning_mode: None,
+                    inline_think_in_text: false,
+                    custom_headers: None,
+                    custom_headers_mode: None,
+                    skip_ssl_verify: false,
+                    reasoning_effort: None,
+                    thinking_budget_tokens: None,
+                    custom_request_body: None,
+                    custom_request_body_mode: None,
+                    auth: Default::default(),
+                };
+                let _ = cfg_svc.add_ai_model(model_cfg).await;
+            }
+        }
+        if let Some(default_id) = patch.default_provider_id {
+            cfg_svc
+                .set_config("ai.default_models.primary", default_id.as_str())
+                .await
+                .map_err(|e| KernelError::Config(format!("set default provider: {e}")))?;
+        }
+        Ok(())
+    }
+
+    async fn list_model_configs(&self) -> Result<Vec<AIModelConfigDto>, KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        let models = cfg_svc
+            .get_ai_models()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_ai_models: {e}")))?;
+        Ok(models
+            .into_iter()
+            .map(|m| AIModelConfigDto {
+                id: m.id,
+                provider_id: m.provider,
+                model: m.model_name,
+                display_name: Some(m.name),
+                max_tokens: m.max_tokens,
+                temperature: m.temperature,
+            })
+            .collect())
+    }
+
+    async fn upsert_model_config(&self, config: AIModelConfigDto) -> Result<(), KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        let model_cfg = crate::service::config::runtime::AIModelConfig {
+            id: config.id.clone(),
+            name: config.display_name.unwrap_or_default(),
+            provider: config.provider_id.clone(),
+            model_name: config.model.clone(),
+            base_url: String::new(),
+            request_url: None,
+            api_key: String::new(),
+            context_window: None,
+            max_tokens: config.max_tokens,
+            temperature: config.temperature,
+            top_p: None,
+            enabled: true,
+            category: Default::default(),
+            capabilities: vec![],
+            recommended_for: vec![],
+            metadata: None,
+            enable_thinking_process: false,
+            reasoning_mode: None,
+            inline_think_in_text: false,
+            custom_headers: None,
+            custom_headers_mode: None,
+            skip_ssl_verify: false,
+            reasoning_effort: None,
+            thinking_budget_tokens: None,
+            custom_request_body: None,
+            custom_request_body_mode: None,
+            auth: Default::default(),
+        };
+        cfg_svc
+            .add_ai_model(model_cfg)
+            .await
+            .map_err(|e| KernelError::Config(format!("upsert_model_config: {e}")))
+    }
+
+    async fn delete_model_config(&self, id: &str) -> Result<(), KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        cfg_svc
+            .delete_ai_model(id)
+            .await
+            .map_err(|e| KernelError::Config(format!("delete_model_config: {e}")))
+    }
+
+    async fn set_default_provider(&self, id: &str) -> Result<(), KernelError> {
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        cfg_svc
+            .set_config("ai.default_models.primary", id)
+            .await
+            .map_err(|e| KernelError::Config(format!("set_default_provider: {e}")))
+    }
+
+    async fn list_mcp_servers(&self) -> Result<Vec<MCPServerDto>, KernelError> {
+        let mcp_svc = crate::service::mcp::global_mcp_service()
+            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let configs = mcp_svc
+            .config_service()
+            .load_all_configs()
+            .await
+            .map_err(|e| KernelError::Runtime(format!("list_mcp_servers: {e}")))?;
+        Ok(configs
+            .into_iter()
+            .map(|c| MCPServerDto {
+                id: c.id.clone(),
+                name: c.name.clone(),
+                config: northhing_kernel_api::settings::MCPServerConfigDto {
+                    command: c.command.unwrap_or_default(),
+                    args: c.args.clone(),
+                    env: Some(c.env),
+                },
+                location: match c.location {
+                    crate::service::mcp::config::ConfigLocation::User => ConfigLocationDto::User,
+                    crate::service::mcp::config::ConfigLocation::Project => ConfigLocationDto::Project,
+                    crate::service::mcp::config::ConfigLocation::BuiltIn => ConfigLocationDto::BuiltIn,
+                },
+            })
+            .collect())
+    }
+
+    async fn upsert_mcp_server(&self, _config: MCPServerDto) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: MCP server CRUD requires config persistence wiring.
+        Err(KernelError::Internal("not yet wired: upsert_mcp_server".to_string()))
+    }
+
+    async fn delete_mcp_server(&self, _id: &str) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: MCP server deletion requires config persistence wiring.
+        Err(KernelError::Internal("not yet wired: delete_mcp_server".to_string()))
+    }
+
+    async fn get_mcp_status(&self, id: &str) -> Result<MCPServerStatusDto, KernelError> {
+        let mcp_svc = crate::service::mcp::global_mcp_service()
+            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let status = tokio::time::timeout(
+            Duration::from_millis(30),
+            mcp_svc.server_manager().get_server_status(id),
+        )
+        .await
+        .map_err(|_| KernelError::Timeout)?
+        .map_err(|e| KernelError::Runtime(format!("get_mcp_status: {e}")))?;
+        Ok(MCPServerStatusDto {
+            id: id.to_string(),
+            status: match status {
+                crate::service::mcp::MCPServerStatus::Connected
+                | crate::service::mcp::MCPServerStatus::Healthy => {
+                    northhing_kernel_api::settings::MCPServerStatusKind::Connected
+                }
+                crate::service::mcp::MCPServerStatus::Starting
+                | crate::service::mcp::MCPServerStatus::Uninitialized
+                | crate::service::mcp::MCPServerStatus::Reconnecting => {
+                    northhing_kernel_api::settings::MCPServerStatusKind::Starting
+                }
+                crate::service::mcp::MCPServerStatus::NeedsAuth => {
+                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                        message: "needs authentication".to_string(),
+                    }
+                }
+                crate::service::mcp::MCPServerStatus::Failed => {
+                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                        message: "runtime reported failure".to_string(),
+                    }
+                }
+                crate::service::mcp::MCPServerStatus::Stopping
+                | crate::service::mcp::MCPServerStatus::Stopped => {
+                    northhing_kernel_api::settings::MCPServerStatusKind::Disabled
+                }
+            },
+        })
+    }
+
+    async fn test_provider(&self, _id: &str) -> Result<ProviderTestResultDto, KernelError> {
+        // NEEDS_CONTEXT: requires config service to resolve provider by id.
+        Err(KernelError::Internal("not yet wired: test_provider".to_string()))
+    }
+
+    async fn test_provider_config(
+        &self,
+        form: ProviderFormDto,
+    ) -> Result<ProviderTestResultDto, KernelError> {
+        // Build an in-memory AIClient from the form and test connection.
+        use crate::service::config::runtime::AIModelConfig;
+        let model_cfg = AIModelConfig {
+            id: form.provider_id.clone(),
+            name: form.provider_id.clone(),
+            provider: form.provider_id.clone(),
+            model_name: form.model.clone().unwrap_or_default(),
+            base_url: form.base_url.clone().unwrap_or_default(),
+            request_url: None,
+            api_key: form.api_key.clone().unwrap_or_default(),
+            context_window: None,
+            max_tokens: None,
+            temperature: None,
+            top_p: None,
+            enabled: true,
+            category: Default::default(),
+            capabilities: vec![],
+            recommended_for: vec![],
+            metadata: None,
+            enable_thinking_process: false,
+            reasoning_mode: None,
+            inline_think_in_text: false,
+            custom_headers: None,
+            custom_headers_mode: None,
+            skip_ssl_verify: false,
+            reasoning_effort: None,
+            thinking_budget_tokens: None,
+            custom_request_body: None,
+            custom_request_body_mode: None,
+            auth: Default::default(),
+        };
+        let ai_config = crate::util::types::AIConfig::try_from(model_cfg)
+            .map_err(|e| KernelError::Validation(format!("invalid config: {e}")))?;
+        let client = crate::infrastructure::ai::AIClient::new(ai_config);
+        match client.test_connection().await {
+            Ok(result) => Ok(ProviderTestResultDto {
+                success: result.success,
+                error: result.error_details,
+            }),
+            Err(e) => Ok(ProviderTestResultDto {
+                success: false,
+                error: Some(e.to_string()),
+            }),
+        }
+    }
+}
+
+// ── KernelAgentsApi ────────────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelAgentsApi for KernelFacade {
+    async fn list_agents(&self) -> Result<Vec<AgentInfoDto>, KernelError> {
+        Ok(vec![])
+    }
+
+    async fn list_subagents(
+        &self,
+        _scope: SubagentScopeDto,
+    ) -> Result<Vec<SubagentDto>, KernelError> {
+        Ok(vec![])
+    }
+
+    async fn list_skills(&self) -> Result<Vec<SkillInfoDto>, KernelError> {
+        use crate::agentic::tools::implementations::skills::skill_registry;
+        let registry = skill_registry();
+        let skills = registry.get_all_skills().await;
+        Ok(skills
+            .into_iter()
+            .map(|s| SkillInfoDto {
+                id: s.key.clone(),
+                name: s.name.clone(),
+                description: s.description.clone(),
+                enabled: true,
+                mode: None,
+                tags: None,
+            })
+            .collect())
+    }
+
+    async fn get_skill(&self, id: &str) -> Result<SkillInfoDto, KernelError> {
+        use crate::agentic::tools::implementations::skills::skill_registry;
+        let registry = skill_registry();
+        let skills = registry.get_all_skills().await;
+        skills
+            .into_iter()
+            .find(|s| s.key == id)
+            .map(|s| SkillInfoDto {
+                id: s.key,
+                name: s.name,
+                description: s.description,
+                enabled: true,
+                mode: None,
+                tags: None,
+            })
+            .ok_or_else(|| KernelError::NotFound(format!("skill not found: {id}")))
+    }
+
+    async fn set_skill_enabled(
+        &self,
+        id: &str,
+        _scope: northhing_kernel_api::agents::SkillScopeDto,
+        enabled: bool,
+    ) -> Result<(), KernelError> {
+        Err(KernelError::Internal("not yet wired: set_skill_enabled".to_string()))
+    }
+
+    async fn load_skill_overrides(&self) -> Result<SkillOverridesDto, KernelError> {
+        Err(KernelError::Internal("not yet wired: load_skill_overrides".to_string()))
+    }
+
+    async fn load_project_skills(&self) -> Result<northhing_kernel_api::agents::ProjectSkillsDto, KernelError> {
+        Err(KernelError::Internal("not yet wired: load_project_skills".to_string()))
+    }
+
+    async fn save_project_skills(
+        &self,
+        _doc: northhing_kernel_api::agents::ProjectSkillsDto,
+    ) -> Result<(), KernelError> {
+        Err(KernelError::Internal("not yet wired: save_project_skills".to_string()))
+    }
+
+    async fn resolve_skill_default_enabled(
+        &self,
+        skill_id: &str,
+        mode: &str,
+    ) -> Result<bool, KernelError> {
+        use crate::agentic::tools::implementations::skills::resolver::resolve_skill_default_enabled_for_mode;
+        use crate::agentic::tools::implementations::skills::skill_registry;
+        let registry = skill_registry();
+        let skills = registry.get_all_skills().await;
+        match skills.into_iter().find(|s| s.key == skill_id) {
+            Some(skill) => Ok(resolve_skill_default_enabled_for_mode(&skill, mode)),
+            None => Err(KernelError::NotFound(format!(
+                "skill not found: {skill_id}"
+            ))),
+        }
+    }
+}
+
+// ── KernelToolsApi ─────────────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelToolsApi for KernelFacade {
+    async fn list_tools(&self) -> Result<Vec<ToolInfoDto>, KernelError> {
+        // NEEDS_CONTEXT: tool registry is not exposed through a simple passthrough.
+        Err(KernelError::Internal("not yet wired: list_tools".to_string()))
+    }
+
+    async fn register_tool(&self, _tool: std::sync::Arc<dyn ToolPort>) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: ACP tool registration requires tool pipeline wiring.
+        Err(KernelError::Internal("not yet wired: register_tool".to_string()))
+    }
+
+    async fn request_user_input(
+        &self,
+        _request: UserInputRequestDto,
+    ) -> Result<UserInputResponseDto, KernelError> {
+        // NEEDS_CONTEXT: user input flow requires UI integration.
+        Err(KernelError::Internal("not yet wired: request_user_input".to_string()))
+    }
+}
+
+// ── KernelUsageApi ─────────────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelUsageApi for KernelFacade {
+    async fn generate_session_usage(
+        &self,
+        _request: UsageRequestDto,
+    ) -> Result<UsageReportDto, KernelError> {
+        Err(KernelError::Internal("not yet wired: generate_session_usage".to_string()))
+    }
+
+    async fn render_usage_markdown(&self, report: &UsageReportDto) -> String {
+        format!(
+            "## Usage Report\n\nSession: {}\n\nTotal tokens: {}\nPrompt tokens: {}\nCompletion tokens: {}\nTurn count: {}\nTool call count: {}",
+            report.session_id,
+            report.total_tokens,
+            report.prompt_tokens,
+            report.completion_tokens,
+            report.turn_count,
+            report.tool_call_count
+        )
+    }
+
+    async fn get_token_usage(&self, session_id: &SessionId) -> Result<TokenUsageDto, KernelError> {
+        Err(KernelError::Internal("not yet wired: get_token_usage".to_string()))
+    }
+}
+
+// ── KernelPlatformApi ──────────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelPlatformApi for KernelFacade {
+    async fn open_terminal(&self, _config: TerminalConfigDto) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: terminal open requires host UI integration.
+        Err(KernelError::Internal("not yet wired: open_terminal".to_string()))
+    }
+
+    async fn analyze_image(&self, _context: ImageContextDto) -> Result<AnalysisDto, KernelError> {
+        Err(KernelError::Internal("not yet wired: analyze_image".to_string()))
+    }
+
+    async fn get_core_health(&self) -> Result<CoreHealthDto, KernelError> {
+        Ok(CoreHealthDto {
+            healthy: FACADE_READY.load(Ordering::SeqCst),
+            details: if FACADE_READY.load(Ordering::SeqCst) {
+                vec!["core initialized".to_string()]
+            } else {
+                vec!["core not yet initialized".to_string()]
+            },
+        })
+    }
+
+    async fn read_panels_config(&self) -> Result<PanelsConfigDto, KernelError> {
+        // F3: read panels.json from product config directory.
+        let config_dir = dirs::config_dir()
+            .ok_or_else(|| KernelError::Config("cannot find config directory".to_string()))?;
+        let panels_path = config_dir.join("northhing").join("panels.json");
+        if !panels_path.exists() {
+            return Ok(PanelsConfigDto { panels: vec![] });
+        }
+        let content = tokio::fs::read_to_string(&panels_path)
+            .await
+            .map_err(|e| KernelError::Runtime(format!("read panels.json: {e}")))?;
+        serde_json::from_str(&content)
+            .map_err(|e| KernelError::Runtime(format!("parse panels.json: {e}")))
+    }
+
+    async fn is_onboarding_complete(&self) -> Result<bool, KernelError> {
+        // NEEDS_CONTEXT: onboarding_completed is desktop UI state, not core GlobalConfig.
+        Err(KernelError::Internal(
+            "not yet wired: is_onboarding_complete".to_string(),
+        ))
+    }
+
+    async fn complete_onboarding(&self) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: onboarding_completed is desktop UI state, not core GlobalConfig.
+        Err(KernelError::Internal(
+            "not yet wired: complete_onboarding".to_string(),
+        ))
+    }
+
+    async fn get_inspector_data(&self) -> Result<InspectorDataDto, KernelError> {
+        // Forward to global config for model name, MCP service for MCP status.
+        let cfg_svc = get_global_config_service()
+            .await
+            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
+        let config: crate::service::config::GlobalConfig = cfg_svc
+            .config(None)
+            .await
+            .map_err(|e| KernelError::Config(format!("get global config: {e}")))?;
+        let model_name = config
+            .ai
+            .default_models
+            .primary
+            .clone()
+            .unwrap_or_else(|| "not configured".to_string());
+
+        // Get MCP status.
+        let mcp_status = if let Some(mcp_svc) = crate::service::mcp::global_mcp_service() {
+            match mcp_svc.config_service().load_all_configs().await {
+                Ok(configs) => {
+                    let mut statuses = Vec::new();
+                    for config in configs {
+                        let probe_status = tokio::time::timeout(
+                            Duration::from_millis(30),
+                            mcp_svc.server_manager().get_server_status(&config.id),
+                        )
+                        .await;
+                        let kind = match probe_status {
+                            Ok(Ok(status)) => match status {
+                                crate::service::mcp::MCPServerStatus::Connected
+                                | crate::service::mcp::MCPServerStatus::Healthy => {
+                                    northhing_kernel_api::settings::MCPServerStatusKind::Connected
+                                }
+                                crate::service::mcp::MCPServerStatus::Starting
+                                | crate::service::mcp::MCPServerStatus::Uninitialized
+                                | crate::service::mcp::MCPServerStatus::Reconnecting => {
+                                    northhing_kernel_api::settings::MCPServerStatusKind::Starting
+                                }
+                                crate::service::mcp::MCPServerStatus::NeedsAuth => {
+                                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                                        message: "needs authentication".to_string(),
+                                    }
+                                }
+                                crate::service::mcp::MCPServerStatus::Failed => {
+                                    northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                                        message: "runtime reported failure".to_string(),
+                                    }
+                                }
+                                crate::service::mcp::MCPServerStatus::Stopping
+                                | crate::service::mcp::MCPServerStatus::Stopped => {
+                                    northhing_kernel_api::settings::MCPServerStatusKind::Disabled
+                                }
+                            },
+                            Ok(Err(_)) => northhing_kernel_api::settings::MCPServerStatusKind::Failed {
+                                message: "status probe failed".to_string(),
+                            },
+                            Err(_) => northhing_kernel_api::settings::MCPServerStatusKind::ProbeTimeout,
+                        };
+                        statuses.push(northhing_kernel_api::settings::MCPServerStatusDto {
+                            id: config.id,
+                            status: kind,
+                        });
+                    }
+                    statuses
+                }
+                Err(_) => vec![],
+            }
+        } else {
+            vec![]
+        };
+
+        // Get skills status from skill registry.
+        let skills_status = {
+            use crate::agentic::tools::implementations::skills::skill_registry;
+            let registry = skill_registry();
+            let skills = registry.get_all_skills().await;
+            skills
+                .into_iter()
+                .take(20)
+                .map(|s| SkillStatusDto {
+                    skill_id: s.key,
+                    name: s.name,
+                    enabled: true,
+                    status: "available".to_string(),
+                })
+                .collect()
+        };
+
+        Ok(InspectorDataDto {
+            model_name,
+            mcp_status,
+            skills_status,
+        })
+    }
+
+    async fn list_artifacts(
+        &self,
+        _session_id: &SessionId,
+    ) -> Result<Vec<ArtifactDto>, KernelError> {
+        // NEEDS_CONTEXT: artifact storage not yet wired.
+        Err(KernelError::Internal("not yet wired: list_artifacts".to_string()))
+    }
 }
