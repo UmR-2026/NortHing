@@ -511,19 +511,46 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
             crate::agentic::events::ToolEventData::Started {
                 tool_id,
                 tool_name,
+                params,
                 ..
-            } => Some(KernelEventDto::ToolCall(ToolCallDto {
-                session_id: session_id.clone(),
-                turn_id: turn_id.clone(),
-                call_id: tool_id.clone(),
-                name: tool_name.clone(),
-                phase: ToolCallPhase::Started,
-                summary: String::new(),
-                detail: None,
-            })),
+            } => {
+                let params_str = params.to_string();
+                let summary = extract_summary_from_params(params);
+                Some(KernelEventDto::ToolCall(ToolCallDto {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    call_id: tool_id.clone(),
+                    name: tool_name.clone(),
+                    phase: ToolCallPhase::Started,
+                    summary,
+                    detail: Some(truncate_4000(&params_str)),
+                }))
+            }
             crate::agentic::events::ToolEventData::Completed {
                 tool_id,
                 tool_name,
+                result,
+                result_for_assistant,
+                ..
+            } => {
+                let result_str = result.to_string();
+                let summary = first_line_truncated(
+                    result_for_assistant.as_deref().unwrap_or(&result_str),
+                );
+                Some(KernelEventDto::ToolCall(ToolCallDto {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    call_id: tool_id.clone(),
+                    name: tool_name.clone(),
+                    phase: ToolCallPhase::Completed,
+                    summary,
+                    detail: Some(truncate_4000(&result_str)),
+                }))
+            }
+            crate::agentic::events::ToolEventData::Failed {
+                tool_id,
+                tool_name,
+                error,
                 ..
             } => Some(KernelEventDto::ToolCall(ToolCallDto {
                 session_id: session_id.clone(),
@@ -531,8 +558,22 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
                 call_id: tool_id.clone(),
                 name: tool_name.clone(),
                 phase: ToolCallPhase::Completed,
-                summary: String::new(),
-                detail: None,
+                summary: first_line_truncated(error),
+                detail: Some(truncate_4000(error)),
+            })),
+            crate::agentic::events::ToolEventData::Cancelled {
+                tool_id,
+                tool_name,
+                reason,
+                ..
+            } => Some(KernelEventDto::ToolCall(ToolCallDto {
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                call_id: tool_id.clone(),
+                name: tool_name.clone(),
+                phase: ToolCallPhase::Completed,
+                summary: format!("cancelled: {}", first_line_truncated(reason)),
+                detail: Some(truncate_4000(reason)),
             })),
             _ => None,
         },
@@ -744,6 +785,32 @@ fn first_line_error(detail: &str) -> String {
     } else {
         first_line.chars().take(120).collect()
     }
+}
+
+/// Extracts first line, trims, and caps at 120 chars. Returns empty string if input is empty.
+fn first_line_truncated(s: &str) -> String {
+    s.lines().next().unwrap_or("").trim().chars().take(120).collect()
+}
+
+/// Truncates a string to at most 4000 characters (by char count).
+fn truncate_4000(s: &str) -> String {
+    s.chars().take(4000).collect()
+}
+
+/// Extracts a human-readable summary from tool-call params JSON.
+/// Tries "command", "path", "file_path", "content", "query" keys in order;
+/// falls back to the full params string. Result is first-line truncated to 120 chars.
+fn extract_summary_from_params(params: &serde_json::Value) -> String {
+    let candidates = ["command", "path", "file_path", "content", "query"];
+    for key in candidates {
+        if let Some(val) = params.get(key).and_then(|v| v.as_str()) {
+            let trimmed = val.trim();
+            if !trimmed.is_empty() {
+                return first_line_truncated(trimmed);
+            }
+        }
+    }
+    first_line_truncated(&params.to_string())
 }
 
 /// Maps `MCPServerStatus` to `MCPServerStatusKind` DTO.
@@ -1516,5 +1583,139 @@ impl northhing_kernel_api::KernelPlatformApi for KernelFacade {
     ) -> Result<Vec<ArtifactDto>, KernelError> {
         // NEEDS_CONTEXT: artifact storage not yet wired.
         Err(KernelError::Internal("not yet wired: list_artifacts".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agentic::events::{AgenticEvent, ToolEventData};
+    use northhing_kernel_api::events::KernelEventDto;
+
+    fn make_started_event(params: serde_json::Value) -> AgenticEvent {
+        AgenticEvent::ToolEvent {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            tool_event: ToolEventData::Started {
+                tool_id: "call-abc".into(),
+                tool_name: "Bash".into(),
+                params,
+                timeout_seconds: None,
+            },
+        }
+    }
+
+    fn make_completed_event(result: serde_json::Value, result_for_assistant: Option<String>) -> AgenticEvent {
+        AgenticEvent::ToolEvent {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            tool_event: ToolEventData::Completed {
+                tool_id: "call-abc".into(),
+                tool_name: "Bash".into(),
+                result,
+                result_for_assistant,
+                duration_ms: 100,
+                queue_wait_ms: None,
+                preflight_ms: None,
+                confirmation_wait_ms: None,
+                execution_ms: None,
+            },
+        }
+    }
+
+    fn make_failed_event(error: String) -> AgenticEvent {
+        AgenticEvent::ToolEvent {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            tool_event: ToolEventData::Failed {
+                tool_id: "call-abc".into(),
+                tool_name: "Bash".into(),
+                error,
+                duration_ms: None,
+                queue_wait_ms: None,
+                preflight_ms: None,
+                confirmation_wait_ms: None,
+                execution_ms: None,
+            },
+        }
+    }
+
+    #[test]
+    fn test_first_line_truncated() {
+        assert_eq!(first_line_truncated("hello world\nsecond line"), "hello world");
+        assert_eq!(first_line_truncated("   spaced  \nmore"), "spaced");
+        assert_eq!(first_line_truncated(""), "");
+        let long = "x".repeat(200);
+        assert_eq!(first_line_truncated(&long).len(), 120);
+    }
+
+    #[test]
+    fn test_truncate_4000() {
+        let long = "y".repeat(5000);
+        assert_eq!(truncate_4000(&long).len(), 4000);
+        assert_eq!(truncate_4000("short").len(), 5);
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_started_summary_from_command() {
+        let params = serde_json::json!({"command": "ls -la /tmp", "path": "/other"});
+        let event = make_started_event(params);
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(matches!(tc.phase, ToolCallPhase::Started));
+        assert!(!tc.summary.is_empty(), "summary should not be empty for command key");
+        assert!(tc.summary.starts_with("ls"));
+        assert!(tc.detail.is_some());
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_started_summary_fallback() {
+        let params = serde_json::json!({"unknown_field": "value"});
+        let event = make_started_event(params);
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(!tc.summary.is_empty());
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_completed_summary_and_detail() {
+        let result = serde_json::json!({"output": "done"});
+        let event = make_completed_event(result, Some("All good".into()));
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(matches!(tc.phase, ToolCallPhase::Completed));
+        assert_eq!(tc.summary, "All good");
+        assert!(tc.detail.is_some());
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_completed_result_fallback() {
+        let result = serde_json::json!({"output": "fallback result"});
+        let event = make_completed_event(result, None);
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(tc.summary.contains("output") || tc.summary.contains("fallback"));
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_failed_maps_to_completed_phase() {
+        let event = make_failed_event("connection refused".into());
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(matches!(tc.phase, ToolCallPhase::Completed), "Failed should map to Completed phase");
+        assert!(!tc.summary.is_empty(), "summary should not be empty for Failed");
+        assert!(tc.detail.is_some());
+    }
+
+    #[test]
+    fn test_agentic_event_to_dto_completed_truncation_at_120() {
+        let long_result = "x".repeat(200);
+        let event = make_completed_event(serde_json::json!(long_result), None);
+        let dto = agentic_event_to_dto(&event).unwrap();
+        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        assert!(tc.summary.len() <= 120, "summary should be truncated to 120 chars");
     }
 }
