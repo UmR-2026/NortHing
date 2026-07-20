@@ -5918,6 +5918,7 @@ dependencies = [
  "northhing-core-types",
  "northhing-events",
  "northhing-harness",
+ "northhing-kernel-api",
  "northhing-product-capabilities",
  "northhing-product-domains",
  "northhing-relay-core",
@@ -5990,6 +5991,19 @@ dependencies = [
  "async-trait",
  "thiserror 2.0.18",
  "tokio",
+]
+
+[[package]]
+name = "northhing-kernel-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "northhing-core-types",
+ "northhing-events",
+ "northhing-runtime-ports",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
