@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{Mutex as AsyncMutex, Notify};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -60,7 +60,71 @@ static FACADE_READY: AtomicBool = AtomicBool::new(false);
 
 // Concurrent-safe idempotent gate for init_core.
 // NotStarted → InProgress(guard) → Ready  or  NotStarted → Ready (fast path)
+// ── Init gate helper ──────────────────────────────────────────────────────────
+
+/// Generic init gate: handles the three-state Mutex + Notify wait/wake/take-over
+/// protocol so callers only provide the actual init future.
+///
+/// - Fast path: FACADE_READY already true → return Ok immediately.
+/// - InProgress: wait on INIT_NOTIFY, then re-check; if still InProgress return
+///   Internal error (timeout); if NotStarted (failed init reset it) → take over.
+/// - NotStarted: claim InProgress, run `init`, write final state, notify.
+async fn run_init_gate<Fut>(_facade: &KernelFacade, init: Fut) -> Result<(), KernelError>
+where
+    Fut: std::future::Future<Output = Result<(), KernelError>>,
+{
+    if FACADE_READY.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    let mut guard = INIT_STATE.lock().await;
+    match *guard {
+        InitState::Ready => return Ok(()),
+        InitState::InProgress => {
+            drop(guard);
+            INIT_NOTIFY.notified().await;
+            if FACADE_READY.load(Ordering::SeqCst) {
+                return Ok(());
+            }
+            let mut guard = INIT_STATE.lock().await;
+            if matches!(*guard, InitState::Ready) {
+                return Ok(());
+            }
+            if matches!(*guard, InitState::InProgress) {
+                return Err(KernelError::Internal(
+                    "init_core timed out waiting for concurrent initialization".to_string(),
+                ));
+            }
+            // NotStarted (failed init reset it) — fall through to take over.
+            *guard = InitState::InProgress;
+            drop(guard);
+        }
+        InitState::NotStarted => {
+            *guard = InitState::InProgress;
+            drop(guard);
+        }
+    }
+
+    let result = init.await;
+
+    {
+        let mut guard = INIT_STATE.lock().await;
+        match result {
+            Ok(()) => *guard = InitState::Ready,
+            Err(_) => *guard = InitState::NotStarted,
+        }
+    }
+    INIT_NOTIFY.notify_waiters();
+
+    if result.is_ok() {
+        FACADE_READY.store(true, Ordering::SeqCst);
+        info!("kernel facade core initialized (K1b1)");
+    }
+    result
+}
+
 static INIT_STATE: AsyncMutex<InitState> = AsyncMutex::const_new(InitState::NotStarted);
+static INIT_NOTIFY: Notify = Notify::const_new();
 
 enum InitState {
     NotStarted,
@@ -129,35 +193,11 @@ impl KernelFacade {
         }
         None
     }
-}
 
-// ── KernelBootstrapApi ──────────────────────────────────────────────────────
-
-#[async_trait]
-impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
-    async fn init_core(&self) -> Result<(), KernelError> {
-        // Fast path: already ready
-        if FACADE_READY.load(Ordering::SeqCst) {
-            return Ok(());
-        }
-
-        loop {
-            let mut guard = INIT_STATE.lock().await;
-            match *guard {
-                InitState::Ready => return Ok(()),
-                InitState::InProgress => {
-                    drop(guard);
-                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-                }
-                InitState::NotStarted => {
-                    *guard = InitState::InProgress;
-                    drop(guard);
-                    break;
-                }
-            }
-        }
-
-        // --- actual initialization ---
+    /// Inner initialization — runs after the gate lock is acquired.
+    /// Returns Ok(()) on success; failure variants are translated to KernelError
+    /// by the caller, which then resets INIT_STATE to NotStarted.
+    async fn init_core_inner(&self) -> Result<(), KernelError> {
         initialize_global_config()
             .await
             .map_err(|e| KernelError::Runtime(format!("initialize_global_config failed: {e}")))?;
@@ -203,14 +243,16 @@ impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
         // Inject coordinator into facade — must succeed before marking ready.
         self.set_coordinator(coordinator.clone());
 
-        // Mark INIT_STATE as Ready and FACADE_READY as true.
-        {
-            let mut guard = INIT_STATE.lock().await;
-            *guard = InitState::Ready;
-        }
-        FACADE_READY.store(true, Ordering::SeqCst);
-        info!("kernel facade core initialized (K1b1)");
         Ok(())
+    }
+}
+
+// ── KernelBootstrapApi ──────────────────────────────────────────────────────
+
+#[async_trait]
+impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
+    async fn init_core(&self) -> Result<(), KernelError> {
+        run_init_gate(self, self.init_core_inner()).await
     }
 
     fn core_ready(&self) -> bool {
@@ -488,7 +530,16 @@ struct KernelEventSubscriber {
 
 impl KernelEventSubscriber {
     fn invoke_callback(&self, dto: KernelEventDto) {
-        let guard = self.callback.lock().unwrap();
+        let guard = match self.callback.lock() {
+            Ok(g) => g,
+            Err(poisoned) => {
+                tracing::warn!(
+                    "KernelEventSubscriber callback lock poisoned, recovering: {}",
+                    poisoned
+                );
+                poisoned.into_inner()
+            }
+        };
         (guard)(dto);
     }
 }
@@ -1650,6 +1701,7 @@ mod tests {
     use super::*;
     use crate::agentic::events::{AgenticEvent, ToolEventData};
     use northhing_kernel_api::events::KernelEventDto;
+    use northhing_kernel_api::KernelSessionApi;
 
     fn make_started_event(params: serde_json::Value) -> AgenticEvent {
         AgenticEvent::ToolEvent {
@@ -1836,4 +1888,144 @@ mod tests {
     // test_idempotent_init_core_fast_path removed: INIT_STATE is a static that persists
     // across parallel test runs making it unreliable. The async Mutex gate and
     // FACADE_READY fast-path are tested via integration.
+
+    // ── Init gate lifecycle tests ─────────────────────────────────────────────
+    // Four scenarios run sequentially in one test to avoid static state interference.
+    // State is manually reset at the start of each scenario.
+
+    #[tokio::test]
+    async fn test_init_gate_lifecycle_all_scenarios() {
+        // Reset globals to a clean state for this test.
+        FACADE_READY.store(false, Ordering::SeqCst);
+        {
+            let mut guard = INIT_STATE.lock().await;
+            *guard = InitState::NotStarted;
+        }
+
+        // ── Scenario ①: Two concurrent calls — init runs exactly once ─────────
+        {
+            let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+            let call_count_clone = call_count.clone();
+
+            let facade = kernel_facade();
+
+            let fake_init = || async move {
+                call_count_clone.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                Ok(())
+            };
+
+            let (r1, r2) = tokio::join!(
+                run_init_gate(&facade, fake_init()),
+                run_init_gate(&facade, async move {
+                    let cc = call_count.clone();
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                    cc.fetch_add(1, Ordering::SeqCst);
+                    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                    Ok(())
+                })
+            );
+
+            assert!(r1.is_ok(), "first concurrent call should succeed");
+            assert!(r2.is_ok(), "second concurrent call should succeed");
+            // Only ONE of the two fake_inits actually runs to completion (the winner).
+            // The loser either waits on InProgress or retries after reset.
+            // Net effect: count should be exactly 1.
+            assert_eq!(call_count.load(Ordering::SeqCst), 1,
+                "init should run exactly once across concurrent calls");
+        }
+
+        // ── Scenario ②: Ready之后再调 — init count does not increase ──────────
+        {
+            FACADE_READY.store(false, Ordering::SeqCst);
+            {
+                let mut guard = INIT_STATE.lock().await;
+                *guard = InitState::NotStarted;
+            }
+
+            let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+            let facade = kernel_facade();
+
+            // Clone for r2 before r1 moves the original.
+            let call_count_for_r2 = call_count.clone();
+
+            // First call — succeeds and marks Ready.
+            let r1 = run_init_gate(&facade, async move {
+                let cc = call_count;
+                cc.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                Ok(())
+            }).await;
+            assert!(r1.is_ok(), "first init should succeed");
+
+            // Second call on already-Ready facade — fast path, no re-init.
+            let r2 = run_init_gate(&facade, async move {
+                let cc = call_count_for_r2;
+                cc.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }).await;
+            assert!(r2.is_ok(), "second call on Ready facade should succeed (idempotent)");
+            assert_eq!(call_count.load(Ordering::SeqCst), 1,
+                "init should not re-run when facade is already Ready");
+        }
+
+        // ── Scenario ③: First init fails → state resets → second init succeeds ─
+        {
+            FACADE_READY.store(false, Ordering::SeqCst);
+            {
+                let mut guard = INIT_STATE.lock().await;
+                *guard = InitState::NotStarted;
+            }
+
+            let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+            let facade = kernel_facade();
+
+            // Clone for r2 before r1 moves the original.
+            let call_count_for_r2 = call_count.clone();
+
+            // First call — returns error.
+            let r1 = run_init_gate(&facade, async move {
+                let cc = call_count;
+                cc.fetch_add(1, Ordering::SeqCst);
+                Err(KernelError::Internal("simulated init failure".to_string()))
+            }).await;
+            assert!(r1.is_err(), "first init should fail");
+            assert_eq!(call_count.load(Ordering::SeqCst), 1);
+            // State should be reset to NotStarted — verify by checking INIT_STATE.
+            {
+                let guard = INIT_STATE.lock().await;
+                assert!(matches!(*guard, InitState::NotStarted),
+                    "state should reset to NotStarted after failed init");
+            }
+
+            // Second call — now succeeds.
+            let r2 = run_init_gate(&facade, async move {
+                let cc = call_count_for_r2;
+                cc.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+                Ok(())
+            }).await;
+            assert!(r2.is_ok(), "retry after failure should succeed");
+            assert_eq!(call_count.load(Ordering::SeqCst), 2,
+                "second (retry) init should actually run");
+        }
+
+        // ── Scenario ④: list_sessions returns KernelError before init, not panic ──
+        {
+            FACADE_READY.store(false, Ordering::SeqCst);
+            {
+                let mut guard = INIT_STATE.lock().await;
+                *guard = InitState::NotStarted;
+            }
+
+            // Use a fresh KernelFacade (not the global) so coordinator is not set.
+            let facade = KernelFacade::new();
+            let result: Result<Vec<SessionSummaryDto>, KernelError> = facade.list_sessions().await;
+            match result {
+                Err(KernelError::Internal(_)) => {} // expected — not panic
+                Err(other) => panic!("expected KernelError::Internal before init, got {:?}", other),
+                Ok(_) => panic!("list_sessions should return error before init, not Ok"),
+            }
+        }
+    }
 }
