@@ -143,9 +143,6 @@ northhing-events = { path = "../../contracts/events" }
 northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
 northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
 
-# Transport layer dependency
-northhing-transport = { path = "../../adapters/transport" }
-
 # Tauri dependency (optional, enabled only when needed)
 tauri = { workspace = true, optional = true }
 

@@ -9,7 +9,6 @@ members = [
     "src/crates/assembly/core",
     "src/crates/adapters/ai-adapters",
     "src/crates/adapters/webdriver",
-    "src/crates/adapters/transport",
     "src/crates/services/services-core",
     "src/crates/services/services-integrations",
     "src/crates/services/terminal",

@@ -15,7 +15,6 @@ northhing-core = { path = "../../crates/assembly/core", default-features = false
 northhing-events = { path = "../../crates/contracts/events" }
 northhing-agent-dispatch = { path = "../../crates/execution/agent-dispatch" }
 northhing-runtime-ports = { path = "../../crates/contracts/runtime-ports" }
-northhing-transport = { path = "../../crates/adapters/transport", features = ["slint-adapter"] }
 
 # Async traits
 async-trait = { workspace = true }

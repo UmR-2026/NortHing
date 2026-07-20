@@ -22,7 +22,7 @@ crate dependencies inside each layer to the smallest set needed.
 |---|---|---|---|---|---|
 | 1 | Interfaces and entrypoints | `src/apps/*`, `src/mobile-web` *(frozen)*, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
-| 3 | Adapters | `src/crates/adapters` | AI/API/transport/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `transport`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+| 3 | Adapters | `src/crates/adapters` | AI/API/transport/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
 | 5 | Execution primitives | `src/crates/execution` | Portable agent, harness, stream, DeepReview policy/report, typed-service, tool-contract, tool-group, and tool-execution building blocks | `agent-runtime`, `agent-stream`, `tool-contracts`, `harness`, `runtime-services`, `tool-provider-groups`, `tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
 | 6 | Stable contracts and product domains | `src/crates/contracts` | Shared DTOs, event shapes, runtime ports, and product domain contracts/policies | `core-types`, `events`, `runtime-ports`, `product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
@@ -207,7 +207,7 @@ change directly affects build, packaging, or CI cannot protect the path.
 | Locale contract or shared terms | *[frozen: i18n engineering — run if unfrozen]* |
 | Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | *[missing: src/web-ui — not available in v0.1.0]* |
 | Mobile web UI, state, pairing, disconnect, or reconnect behavior | *[frozen: mobile-web — `pnpm --dir src/mobile-web run type-check`; run if unfrozen]* |
-| Shared Rust logic in `core`, `transport`, `api-layer`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
+| Shared Rust logic in `core`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
 | Desktop integration, Slint UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
 | `src/crates/adapters/ai-adapters` | Relevant Rust checks above; add `cargo test -p northhing-agent-stream` only when stream contracts changed |
