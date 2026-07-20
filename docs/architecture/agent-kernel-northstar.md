@@ -11,6 +11,8 @@
 - **P2 薄 facade（量化硬指标）**：宿主只见一个极薄 facade（命令面 + 事件订阅面），永不见 kernel 内部类型。**"薄"的数字约束**：K1 冻结时统计宿主实际调用面方法数 N（机械清单得出，写入本节），此后 facade 公开方法数 **≤ ⌈N × 1.2⌉**；任何超出 20% 余量的新增必须先在本文档记录评审结论（谁提出、为什么现有方法覆盖不了、能否合并进现有面）才允许加。facade 代码量同步设上限：**≤ 1500 行**（DTO + trait + 错误类型；测量：`tokei -t=Rust contracts/kernel-api/src`，排除注释与 `#[cfg(test)]` 模块），超线即停步审视是不是把业务逻辑偷渡进了 facade。
 
   **P2 评审记录（2026-07-20，K1 冻结）**：N = 44 → 上限 ⌈44×1.2⌉ = 53，K1 实发 53（合规）。F2-conditional 的 2 个占位方法（`start_mcp_server(id)`/`stop_mcp_server(id)`）以**注释形态**留在 trait 块——裁决（judge-m3）：P2 触发条件是"新增"不是"注释占位"，K1 零超额；占位不进公开面、不计数。三条闸门：① K1 验收的方法数按 AST 统计且排除注释行，并加 grep 守卫拒绝非注释的 start/stop_mcp_server 出现；② F2 实施 ticket 提交这两个方法前必须重跑本 P2 评审（带三要素：提出人/覆盖缺口分析/合并可行性——裁定：启停是运行时生命周期动作，无法合并进 get_mcp_status/delete_mcp_server）；③ 未经复审不得解注释提交。
+
+  **P2 评审记录（2026-07-20，K1a 验收）**：① ToolPort（ACP 工具边界 trait，4 sync + 1 async 方法）按设计 §3 口径**不计入 N=44**（N 只数 Kernel*Api + 自由函数）；K1a 实测 53 = 上限，无超额，coder 两次报"54"均为把 ToolPort::execute 计入的误数，结案。② 设计 §1.2 依赖写法勘误：内部 northhing-* 用 path 依赖（根 workspace.dependencies 只有第三方），已修订设计文档。
 - **P3 assembly 只做接线**：`assembly/core` 从"什么都装的 god crate"退化为 composition root——只负责 new 出各模块并注册进 kernel，不含业务逻辑。
 - **P4 编译扇出优先**：任何迁移步骤的验收都带编译指标——目标：改一个 leaf 模块（工具/provider/UI）时，重编范围不超出该模块及其直接反向依赖，**不触发 kernel 与全部宿主重编**。
 - **P5 行为不变**：这是结构迁移不是功能重写；每一步 `cargo check --workspace` + 相关测试全绿，e2e chat 不回归。
