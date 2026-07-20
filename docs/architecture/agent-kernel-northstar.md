@@ -68,7 +68,7 @@
 | facade DTO | —（不存在） | 全宿主（刻意：契约改动本就应全量） |
 | UI 前端 | desktop/desktop-tauri 自身 | 不变 |
 
-关键机制：facade crate **薄且稳定**（只随契约变），宿主依赖它而非 kernel；kernel 内部成为高频改动区但不再外溢。**cargo 机制约束（评审实证，违反则收益归零）**：① `kernel-api` 不得声明 `northhing-core` 的 `product-full` feature，只取 DTO/error 子集——否则 feature unification 把 rmcp/git2/reqwest 等重依赖重新传染给所有宿主；K1 验收含 `cargo tree -p kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` 零命中。② facade 不得 re-export kernel 内部泛型/derive 宏类型（泛型单态化与 derive 代码在宿主侧生成，会把 kernel 内部类型拉进宿主 rlib metadata）。③ desktop-tauri 在根 workspace `exclude` 里，所有涉及它的验收命令必须用 `--manifest-path` 单独跑。
+关键机制：facade crate **薄且稳定**（只随契约变），宿主依赖它而非 kernel；kernel 内部成为高频改动区但不再外溢。**cargo 机制约束（评审实证，违反则收益归零）**：① `kernel-api` 不得声明 `northhing-core` 的 `product-full` feature，只取 DTO/error 子集——否则 feature unification 把 rmcp/git2/reqwest 等重依赖重新传染给所有宿主；K1 验收含 `cargo tree -p kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` 零命中。② facade 不得 re-export kernel 内部泛型/derive 宏类型（泛型单态化与 derive 代码在宿主侧生成，会把 kernel 内部类型拉进宿主 rlib metadata）。③ desktop-tauri 在根 workspace `exclude` 里，所有涉及它的验收命令必须用 `--manifest-path` 单独跑（含 K2 验收补一条 `cargo tree --manifest-path src/apps/desktop-tauri/src-tauri/Cargo.toml -p northhing-kernel-api` 零命中——独立 Cargo.lock 解析可能不同于根 workspace）。④ **持续守卫（外部评审 2026-07-20）**：①② 的点态验收不够——feature unification 是全局 workspace 属性，后续任何 PR 给 contracts crate 加 optional feature 都会静默传染。CI 必须加 per-PR 守卫 job：`cargo tree -p northhing-kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` + `northhing-core` 零命中（成本 <5s），把机制 ① 从点态验收升级为持续不变量。
 
 ## 5. 迁移路线（tracer bullets，每步独立可验收）
 
