@@ -1,8 +1,6 @@
 //! Kernel events API and event DTOs.
 
-use crate::error::{KernelError, KernelResult};
-use crate::session::SessionId;
-use crate::turn::TurnId;
+use crate::error::KernelError;
 use crate::turn::TurnStateKind;
 
 // ── Event Subscription ID ─────────────────────────────────────────────────────

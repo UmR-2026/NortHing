@@ -1,7 +1,7 @@
 //! Kernel turn API and turn DTOs.
 
-use crate::error::{KernelError, KernelResult};
-use crate::session::{SessionId, MessageDto, MessageRoleDto, MessageContentDto};
+use crate::error::KernelError;
+use crate::session::SessionId;
 
 pub type TurnId = String;
 

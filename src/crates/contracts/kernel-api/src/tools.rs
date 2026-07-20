@@ -1,6 +1,6 @@
 //! Kernel tools API and tool DTOs.
 
-use crate::error::{KernelError, KernelResult};
+use crate::error::KernelError;
 use std::sync::Arc;
 
 // ── Tool DTOs ─────────────────────────────────────────────────────────────────

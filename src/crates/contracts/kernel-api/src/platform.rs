@@ -1,6 +1,6 @@
 //! Kernel platform API and platform DTOs.
 
-use crate::error::{KernelError, KernelResult};
+use crate::error::KernelError;
 use crate::session::SessionId;
 use crate::settings::MCPServerStatusDto;
 

@@ -1,6 +1,6 @@
 //! Kernel usage API and usage DTOs.
 
-use crate::error::{KernelError, KernelResult};
+use crate::error::KernelError;
 use crate::session::SessionId;
 
 // ── Usage DTOs ────────────────────────────────────────────────────────────────

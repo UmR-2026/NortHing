@@ -108,12 +108,17 @@ jobs:
         run: |
           # kernel-api must not depend on rmcp, git2, axum, tower-http, reqwest, or northhing-core
           DEPS=$(cargo tree -p northhing-kernel-api 2>/dev/null)
-          PROHIBITED="rmcp git2 axum tower-http reqwest northhing-core"
-          for crate in $PROHIBITED; do
+          # Third-party prohibited deps: substring match is safe
+          for crate in rmcp git2 axum tower-http reqwest; do
             if echo "$DEPS" | grep -q "$crate"; then
               echo "ERROR: kernel-api depends on prohibited crate: $crate"
               exit 1
             fi
           done
+          # northhing-core: use word-boundary match to avoid false positive on northhing-core-types
+          if echo "$DEPS" | grep -qE '(^|[^a-z0-9_-])northhing-core($|[^a-z0-9_-])'; then
+            echo "ERROR: kernel-api depends on prohibited crate: northhing-core"
+            exit 1
+          fi
           echo "kernel-api dependency guard passed"
 

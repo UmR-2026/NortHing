@@ -1,6 +1,6 @@
 //! Kernel bootstrap API.
 
-use crate::error::{KernelError, KernelResult};
+use crate::error::KernelError;
 
 #[async_trait::async_trait]
 pub trait KernelBootstrapApi: Send + Sync {

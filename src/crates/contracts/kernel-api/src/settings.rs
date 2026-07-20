@@ -1,7 +1,6 @@
 //! Kernel settings API and settings DTOs.
 
-use crate::error::{KernelError, KernelResult};
-use crate::session::SessionId;
+use crate::error::KernelError;
 
 // ── Settings DTOs ─────────────────────────────────────────────────────────────
 

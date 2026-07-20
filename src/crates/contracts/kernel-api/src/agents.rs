@@ -1,6 +1,6 @@
 //! Kernel agents API and agent/skill DTOs.
 
-use crate::error::{KernelError, KernelResult};
+use crate::error::KernelError;
 use crate::session::SessionId;
 
 // ── Agent/Skill DTOs ───────────────────────────────────────────────────────────

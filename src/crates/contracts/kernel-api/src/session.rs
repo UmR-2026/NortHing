@@ -1,7 +1,6 @@
 //! Kernel session API and session DTOs.
 
-use crate::error::{KernelError, KernelResult};
-use northhing_core_types::SessionKind;
+use crate::error::KernelError;
 
 // ── Session IDs ────────────────────────────────────────────────────────────────
 
@@ -46,16 +45,6 @@ pub enum SessionKindDto {
     Standard,
     Subagent,
     EphemeralChild,
-}
-
-impl From<SessionKind> for SessionKindDto {
-    fn from(kind: SessionKind) -> Self {
-        match kind {
-            SessionKind::Standard => SessionKindDto::Standard,
-            SessionKind::Subagent => SessionKindDto::Subagent,
-            SessionKind::EphemeralChild => SessionKindDto::EphemeralChild,
-        }
-    }
 }
 
 /// Session metadata DTO based on services-core SessionMetadata.
