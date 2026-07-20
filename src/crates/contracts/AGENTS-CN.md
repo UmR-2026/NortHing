@@ -10,6 +10,7 @@
 |---|---|---|
 | `core-types` | 共享 DTO、错误、session/surface 数据和小型 value type | [AGENTS.md](core-types/AGENTS.md) |
 | `events` | 事件 payload 和 emitter 契约 | [AGENTS.md](events/AGENTS.md) |
+| `kernel-api` | Host↔kernel facade：DTO、trait 签名和错误类型 | (none) |
 | `product-domains` | 产品领域 DTO、规则、策略和窄 port | [AGENTS.md](product-domains/AGENTS.md) |
 | `runtime-ports` | runtime owner crate 使用的 trait 和 port | [AGENTS.md](runtime-ports/AGENTS.md) |
 

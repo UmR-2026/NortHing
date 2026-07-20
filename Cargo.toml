@@ -26,6 +26,7 @@ members = [
     "src/crates/cli-internal",
     "src/crates/contracts/core-types",
     "src/crates/contracts/events",
+    "src/crates/contracts/kernel-api",
     "src/crates/contracts/runtime-ports",
     "tools/plan-compliance-checker",
 ]

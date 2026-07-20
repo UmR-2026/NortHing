@@ -1,0 +1,21 @@
+[package]
+name = "northhing-kernel-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Port crates (allowed) — using path deps per existing repo pattern
+northhing-core-types    = { path = "../core-types" }
+northhing-events        = { path = "../events" }
+northhing-runtime-ports = { path = "../runtime-ports" }
+# Async trait object stabilization
+async-trait = { workspace = true }
+# Basic serialization
+serde       = { workspace = true, features = ["derive"] }
+serde_json  = { workspace = true }
+# Error handling
+thiserror   = { workspace = true }
+
+# Prohibited dependencies (§4 mechanism constraint ①):
+# - northhing-core (any feature, including product-full)
+# - rmcp / git2 / axum / tower-http / reqwest (feature unification contagion chain)

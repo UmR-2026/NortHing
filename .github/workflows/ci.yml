@@ -95,3 +95,25 @@ jobs:
       - name: Run core Rust tests
         run: cargo test --locked -p northhing-core
 
+  # ── kernel-api dependency guard ─────────────────────────────────────
+  kernel-api-clean:
+    name: kernel-api dep guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check prohibited deps in kernel-api
+        run: |
+          # kernel-api must not depend on rmcp, git2, axum, tower-http, reqwest, or northhing-core
+          DEPS=$(cargo tree -p northhing-kernel-api 2>/dev/null)
+          PROHIBITED="rmcp git2 axum tower-http reqwest northhing-core"
+          for crate in $PROHIBITED; do
+            if echo "$DEPS" | grep -q "$crate"; then
+              echo "ERROR: kernel-api depends on prohibited crate: $crate"
+              exit 1
+            fi
+          done
+          echo "kernel-api dependency guard passed"
+
