@@ -1,10 +1,10 @@
-﻿//! Event bridge: subscribes to core AgenticEvents and re-emits them as
+﻿//! Event bridge: subscribes to core AgenticEvents via kernel facade and re-emits them as
 //! Tauri frontend events. W4b discipline: emit is sync, no block_on,
 //! no new runtime, no get_messages in the subscriber.
 
-use northhing_core::agentic::events::EventSubscriber;
-use northhing_core::util::errors::NortHingResult;
-use northhing_events::AgenticEvent;
+use northhing_core::kernel_facade::{kernel_facade, KernelFacade};
+use northhing_kernel_api::events::{KernelEventDto, ToolCallDto, ToolCallPhase};
+use northhing_kernel_api::{KernelEventsApi, KernelBootstrapApi};
 use tauri::AppHandle;
 use tauri::Emitter;
 
@@ -16,81 +16,117 @@ impl TauriEventBridge {
     fn new(app: AppHandle) -> Self {
         Self { app }
     }
-}
 
-#[async_trait::async_trait]
-impl EventSubscriber for TauriEventBridge {
-    async fn on_event(&self, event: &AgenticEvent) -> NortHingResult<()> {
-        match event {
-            AgenticEvent::TextChunk { session_id, text, .. } => {
-                let r = self.app.emit(
-                    "chat-chunk",
-                    serde_json::json!({ "session_id": session_id, "text": text }),
-                );
-                if let Err(e) = r {
-                    tracing::warn!("chat-chunk emit failed: {e}");
-                } else {
-                    tracing::debug!("chat-chunk emitted session={} len={}", session_id, text.len());
-                }
-            }
-            AgenticEvent::DialogTurnStarted { session_id, turn_id, .. } => {
-                let r = self.app.emit(
-                    "chat-turn-state",
-                    serde_json::json!({ "session_id": session_id, "turn_id": turn_id, "state": "started" }),
-                );
-                tracing::info!("chat-turn-state started emit result={:?}", r);
-            }
-            AgenticEvent::DialogTurnCompleted { session_id, .. } => {
-                let r = self.app.emit(
-                    "chat-turn-state",
-                    serde_json::json!({ "session_id": session_id, "state": "completed" }),
-                );
-                tracing::info!("chat-turn-state completed emit result={:?}", r);
-            }
-            AgenticEvent::DialogTurnCancelled { session_id, .. } => {
-                let _ = self.app.emit(
-                    "chat-turn-state",
-                    serde_json::json!({ "session_id": session_id, "state": "cancelled" }),
-                );
-            }
-            AgenticEvent::DialogTurnFailed {
-                session_id,
-                error,
-                ..
-            } => {
-                let _ = self.app.emit(
-                    "chat-turn-state",
-                    serde_json::json!({ "session_id": session_id, "state": "failed", "error": error }),
-                );
-            }
-            _ => {}
+    fn emit_chat_chunk(&self, session_id: &str, text: &str) {
+        let r = self.app.emit(
+            "chat-chunk",
+            serde_json::json!({ "session_id": session_id, "text": text }),
+        );
+        if let Err(e) = r {
+            tracing::warn!("chat-chunk emit failed: {e}");
+        } else {
+            tracing::debug!("chat-chunk emitted session={} len={}", session_id, text.len());
         }
-        Ok(())
+    }
+
+    fn emit_chat_turn_state(&self, session_id: &str, state: &str, turn_id: Option<&str>, duration_ms: Option<u64>, error: Option<&str>) {
+        let mut payload = serde_json::json!({
+            "session_id": session_id,
+            "state": state,
+        });
+        if let Some(tid) = turn_id {
+            payload["turn_id"] = serde_json::json!(tid);
+        }
+        if let Some(dm) = duration_ms {
+            payload["duration_ms"] = serde_json::json!(dm);
+        }
+        if let Some(err) = error {
+            payload["error"] = serde_json::json!(err);
+        }
+        let r = self.app.emit("chat-turn-state", payload);
+        tracing::info!("chat-turn-state emit result={:?}", r);
+    }
+
+    fn emit_chat_tool(&self, tool_call: &ToolCallDto) {
+        let phase_str = match tool_call.phase {
+            ToolCallPhase::Started => "started",
+            ToolCallPhase::Completed => "completed",
+        };
+        let mut payload = serde_json::json!({
+            "session_id": tool_call.session_id,
+            "turn_id": tool_call.turn_id,
+            "call_id": tool_call.call_id,
+            "phase": phase_str,
+            "name": tool_call.name,
+            "summary": tool_call.summary,
+        });
+        if let Some(ref detail) = tool_call.detail {
+            payload["detail"] = serde_json::json!(detail);
+        }
+        let r = self.app.emit("chat-tool", payload);
+        if let Err(e) = r {
+            tracing::warn!("chat-tool emit failed: {e}");
+        } else {
+            tracing::debug!("chat-tool emitted call_id={}", tool_call.call_id);
+        }
     }
 }
 
-/// Register the bridge with the global coordinator. If the coordinator
-/// isn't ready yet, retry every 500ms on the core runtime until it appears
+impl TauriEventBridge {
+    fn on_kernel_event(&self, event: KernelEventDto) {
+        match event {
+            KernelEventDto::TextChunk { session_id, text } => {
+                self.emit_chat_chunk(&session_id, &text);
+            }
+            KernelEventDto::TurnState { session_id, turn_id, state, duration_ms } => {
+                let state_str = match state {
+                    northhing_kernel_api::turn::TurnStateKind::Started => "started",
+                    northhing_kernel_api::turn::TurnStateKind::Completed => "completed",
+                    northhing_kernel_api::turn::TurnStateKind::Failed => "failed",
+                    northhing_kernel_api::turn::TurnStateKind::Cancelled => "cancelled",
+                };
+                self.emit_chat_turn_state(&session_id, state_str, Some(&turn_id), duration_ms, None);
+            }
+            KernelEventDto::ToolCall(tool_call) => {
+                self.emit_chat_tool(&tool_call);
+            }
+            KernelEventDto::Banner { level, message } => {
+                tracing::debug!("banner event (ignored for Tauri): {:?} - {}", level, message);
+            }
+            KernelEventDto::Error { message } => {
+                tracing::debug!("error event (ignored for Tauri): {}", message);
+            }
+        }
+    }
+}
+
+/// Register the bridge with the kernel facade. If the facade isn't ready yet,
+/// retry every 500ms on the core runtime until core_ready() is true
 /// (initialization race).
 pub fn register(app: &AppHandle) {
     let bridge = TauriEventBridge::new(app.clone());
-    let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-        tracing::info!("desktop-tauri bridge: coordinator not ready, retry loop spawned");
+    if kernel_facade().core_ready() {
+        // Facade already initialized, subscribe directly
+        let callback = Box::new(move |event: KernelEventDto| {
+            bridge.on_kernel_event(event);
+        });
+        kernel_facade().subscribe_events(callback);
+        tracing::info!("desktop-tauri bridge subscribed (direct)");
+    } else {
+        tracing::info!("desktop-tauri bridge: facade not ready, retry loop spawned");
         crate::core_rt::core_rt().spawn(async move {
             for _attempt in 1..=120 {
-                if let Some(coordinator) =
-                    northhing_core::agentic::coordination::global_coordinator()
-                {
-                    coordinator.subscribe_internal("desktop-tauri".to_string(), bridge);
+                if kernel_facade().core_ready() {
+                    let callback = Box::new(move |event: KernelEventDto| {
+                        bridge.on_kernel_event(event);
+                    });
+                    kernel_facade().subscribe_events(callback);
                     tracing::info!("desktop-tauri bridge subscribed (via retry loop)");
                     return;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
-            tracing::error!("desktop-tauri bridge: coordinator never became ready; giving up");
+            tracing::error!("desktop-tauri bridge: facade never became ready; giving up");
         });
-        return;
-    };
-    coordinator.subscribe_internal("desktop-tauri".to_string(), bridge);
-    tracing::info!("desktop-tauri bridge subscribed (direct)");
+    }
 }

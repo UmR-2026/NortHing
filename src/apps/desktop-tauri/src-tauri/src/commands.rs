@@ -4,7 +4,10 @@
 //! blocks_on or spawns a throwaway runtime.
 
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use northhing_core::kernel_facade::{kernel_facade, KernelFacade};
+use northhing_kernel_api::turn::{SubmissionPolicyDto, TriggerSourceDto, TurnInputDto};
+use northhing_kernel_api::session::{SessionConfigDto, KernelSessionApi};
+use northhing_kernel_api::KernelTurnApi;
 
 const DEFAULT_MODE_ID: &str = "agentic";
 
@@ -23,26 +26,26 @@ pub struct MessageDto {
     pub is_streaming: bool,
 }
 
-/// Extract the textual content of a core `MessageContent`.
-fn message_content_text(content: &northhing_core::agentic::core::MessageContent) -> String {
-    match content {
-        northhing_core::agentic::core::MessageContent::Text(t) => t.clone(),
-        northhing_core::agentic::core::MessageContent::Multimodal { text, .. } => text.clone(),
-        northhing_core::agentic::core::MessageContent::Mixed { text, .. } => text.clone(),
-        northhing_core::agentic::core::MessageContent::ToolResult {
-            result_for_assistant,
-            ..
-        } => result_for_assistant.clone().unwrap_or_default(),
+/// Map a kernel_api MessageRole to its wire string.
+fn message_role_str(role: &northhing_kernel_api::session::MessageRoleDto) -> String {
+    match role {
+        northhing_kernel_api::session::MessageRoleDto::User => "user".to_string(),
+        northhing_kernel_api::session::MessageRoleDto::Assistant => "assistant".to_string(),
+        northhing_kernel_api::session::MessageRoleDto::Tool => "tool".to_string(),
+        northhing_kernel_api::session::MessageRoleDto::System => "system".to_string(),
     }
 }
 
-/// Map a core `MessageRole` to its wire string.
-fn message_role_str(role: &northhing_core::agentic::core::MessageRole) -> String {
-    match role {
-        northhing_core::agentic::core::MessageRole::User => "user".to_string(),
-        northhing_core::agentic::core::MessageRole::Assistant => "assistant".to_string(),
-        northhing_core::agentic::core::MessageRole::Tool => "tool".to_string(),
-        northhing_core::agentic::core::MessageRole::System => "system".to_string(),
+/// Map kernel_api MessageContentDto to text string.
+fn message_content_text(content: &northhing_kernel_api::session::MessageContentDto) -> String {
+    match content {
+        northhing_kernel_api::session::MessageContentDto::Text(t) => t.clone(),
+        northhing_kernel_api::session::MessageContentDto::Multimodal { text, .. } => text.clone(),
+        northhing_kernel_api::session::MessageContentDto::Mixed { text, .. } => text.clone(),
+        northhing_kernel_api::session::MessageContentDto::ToolResult {
+            result_for_assistant,
+            ..
+        } => result_for_assistant.clone().unwrap_or_default(),
     }
 }
 
@@ -69,18 +72,15 @@ pub async fn create_session() -> Result<String, String> {
 }
 
 async fn do_create_session() -> anyhow::Result<String> {
-    let coordinator = northhing_core::agentic::coordination::global_coordinator()
-        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
+    let facade = kernel_facade();
     let workspace = workspace_path();
-    let config = northhing_core::agentic::core::SessionConfig {
-        workspace_path: Some(workspace.clone()),
-        ..Default::default()
+    let config = SessionConfigDto {
+        workspace_path: Some(workspace),
+        agent_type: DEFAULT_MODE_ID.to_string(),
+        model_name: String::new(),
     };
-    let name = format!("session-{}", system_time_to_ms(std::time::SystemTime::now()));
-    let session = coordinator
-        .create_session(name, DEFAULT_MODE_ID.to_string(), config)
-        .await?;
-    Ok(session.session_id)
+    let session_id = facade.create_session(config).await?;
+    Ok(session_id)
 }
 
 #[tauri::command]
@@ -94,16 +94,14 @@ pub async fn list_sessions() -> Result<Vec<SessionMetaDto>, String> {
 }
 
 async fn do_list_sessions() -> anyhow::Result<Vec<SessionMetaDto>> {
-    let coordinator = northhing_core::agentic::coordination::global_coordinator()
-        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
-    let workspace = workspace_path();
-    let summaries = coordinator.list_sessions(Path::new(&workspace)).await?;
+    let facade = kernel_facade();
+    let summaries = facade.list_sessions().await?;
     Ok(summaries
         .into_iter()
         .map(|s| SessionMetaDto {
-            id: s.session_id,
-            name: s.session_name,
-            updated_at: system_time_to_ms(s.last_activity_at),
+            id: s.id,
+            name: s.name,
+            updated_at: s.updated_at as u64,
         })
         .collect())
 }
@@ -124,30 +122,19 @@ async fn do_send_message(session_id: String, text: String) -> anyhow::Result<()>
     if text.trim().is_empty() {
         anyhow::bail!("message text must not be empty");
     }
-    let scheduler = northhing_core::agentic::coordination::global_scheduler()
-        .ok_or_else(|| anyhow::anyhow!("global scheduler not available"))?;
-    let workspace = workspace_path();
-    let outcome = scheduler
-        .submit(
-            session_id,
-            text,
-            None,
-            None,
-            DEFAULT_MODE_ID.to_string(),
-            Some(workspace),
-            northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
-                northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
-            ),
-            None,
-            None,
-            None,
-        )
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-    match outcome {
-        northhing_core::agentic::coordination::DialogSubmitOutcome::Started { .. }
-        | northhing_core::agentic::coordination::DialogSubmitOutcome::Queued { .. } => Ok(()),
-    }
+    let facade = kernel_facade();
+    let input = TurnInputDto {
+        session_id,
+        text,
+        mode: DEFAULT_MODE_ID.to_string(),
+        policy: SubmissionPolicyDto {
+            allow_subagent: true,
+            max_turns: None,
+        },
+        source: TriggerSourceDto::User,
+    };
+    facade.submit_turn(input).await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -163,15 +150,13 @@ pub async fn get_or_create_latest_session() -> Result<String, String> {
 }
 
 async fn do_get_or_create_latest_session() -> anyhow::Result<String> {
-    let coordinator = northhing_core::agentic::coordination::global_coordinator()
-        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
-    let workspace = workspace_path();
-    let summaries = coordinator.list_sessions(Path::new(&workspace)).await?;
+    let facade = kernel_facade();
+    let summaries = facade.list_sessions().await?;
     if let Some(latest) = summaries
         .into_iter()
-        .max_by_key(|s| system_time_to_ms(s.last_activity_at))
+        .max_by_key(|s| s.updated_at)
     {
-        return Ok(latest.session_id);
+        return Ok(latest.id);
     }
     do_create_session().await
 }
@@ -188,6 +173,9 @@ pub async fn stop_streaming(session_id: String, turn_id: String) -> Result<(), S
     rx.await.map_err(|_| "core runtime dropped".to_string())?
 }
 
+// K2-fallback: stop_streaming uses coordinator directly because facade stop_turn
+// requires finding session_id from turn_id (find_session_for_turn), which adds
+// overhead for the stop path. Direct coordinator cancel is more efficient here.
 async fn do_stop_streaming(session_id: String, turn_id: String) -> anyhow::Result<()> {
     let coordinator = northhing_core::agentic::coordination::global_coordinator()
         .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
@@ -262,9 +250,8 @@ pub async fn get_messages(session_id: String) -> Result<Vec<MessageDto>, String>
 }
 
 async fn do_get_messages(session_id: String) -> anyhow::Result<Vec<MessageDto>> {
-    let coordinator = northhing_core::agentic::coordination::global_coordinator()
-        .ok_or_else(|| anyhow::anyhow!("global coordinator not available"))?;
-    let messages = coordinator.get_messages(&session_id).await?;
+    let facade = kernel_facade();
+    let messages = facade.get_messages(&session_id).await?;
     Ok(messages
         .into_iter()
         .map(|m| MessageDto {
