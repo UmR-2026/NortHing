@@ -429,7 +429,7 @@ impl ConversationCoordinator {
         _agent_type: &str,
     ) {
         use crate::infrastructure::PathManager;
-        use crate::service::agent_memory::{append_facts, distill_facts_from_user_message, read_facts};
+        use crate::service::agent_memory::{append_facts_dedup, distill_facts_from_user_message};
 
         // Distill candidate facts from user input using keyword triggers
         let candidates = distill_facts_from_user_message(user_input, session_id, turn_id);
@@ -453,46 +453,13 @@ impl ConversationCoordinator {
         // Get the memory directory path
         let memory_dir = path_manager.project_memory_dir(&workspace_path_buf);
 
-        // Read existing facts for deduplication (exact text match)
-        // If read fails, warn and return — do not continue with empty set (would cause duplicates)
-        let existing_facts = match read_facts(&memory_dir).await {
-            Ok(facts) => facts,
-            Err(e) => {
-                warn!(
-                    "Facts: failed to read existing facts for deduplication, skipping append: session_id={}, turn_id={}, error={}",
-                    session_id, turn_id, e
-                );
-                return;
-            }
-        };
-
-        // Unified deduplication: history + batch (HashSet::insert returns false if already present)
-        let mut seen: std::collections::HashSet<String> =
-            existing_facts.iter().map(|f| f.text.clone()).collect();
-
-        let new_facts: Vec<_> = candidates
-            .into_iter()
-            .filter(|c| seen.insert(c.text.clone()))
-            .collect();
-
-        if new_facts.is_empty() {
-            debug!(
-                "Facts: no new facts to append (all duplicates): session_id={}, turn_id={}",
-                session_id, turn_id
-            );
-            return;
-        }
-
-        // Append new facts
-        if let Err(e) = append_facts(&memory_dir, &new_facts).await {
-            warn!(
-                "Facts: failed to append facts: session_id={}, turn_id={}, error={}",
-                session_id, turn_id, e
-            );
-        } else {
+        // Append with exact-text deduplication (history + batch). IO failures
+        // are logged inside append_facts_dedup and never propagated.
+        let appended = append_facts_dedup(&memory_dir, candidates).await;
+        if appended > 0 {
             debug!(
                 "Facts: appended {} facts: session_id={}, turn_id={}",
-                new_facts.len(),
+                appended,
                 session_id,
                 turn_id
             );

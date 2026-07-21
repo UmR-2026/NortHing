@@ -421,4 +421,27 @@ mod tests {
         // Cleanup
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
     }
+
+    #[tokio::test]
+    async fn prompt_injection_degrades_when_facts_file_unreadable() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        let memory_dir = crate::infrastructure::path_manager_arc().project_memory_dir(&workspace);
+        tokio::fs::create_dir_all(&memory_dir).await.unwrap();
+
+        // Make facts.jsonl a directory so read_facts hits an IO error.
+        tokio::fs::create_dir_all(memory_dir.join("facts.jsonl")).await.unwrap();
+
+        // Prompt build must still succeed and simply omit the facts section.
+        let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+        assert!(
+            !prompt.contains("# Remembered facts"),
+            "Prompt should omit '# Remembered facts' when facts.jsonl is unreadable"
+        );
+        assert!(prompt.contains("# auto memory"));
+
+        // Cleanup
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
 }

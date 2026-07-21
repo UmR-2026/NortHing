@@ -92,10 +92,43 @@ pub(crate) async fn append_facts(memory_dir: &Path, facts: &[Fact]) -> NortHingR
     Ok(())
 }
 
+/// Append candidate facts, skipping exact-text duplicates (history + batch).
+/// Returns the number of facts actually appended. IO errors are logged as
+/// warnings and result in no append (never propagated to the caller).
+pub(crate) async fn append_facts_dedup(memory_dir: &Path, candidates: Vec<Fact>) -> usize {
+    if candidates.is_empty() {
+        return 0;
+    }
+
+    let existing = match read_facts(memory_dir).await {
+        Ok(facts) => facts,
+        Err(e) => {
+            warn!(
+                "Facts: failed to read existing facts for deduplication, skipping append: {}",
+                e
+            );
+            return 0;
+        }
+    };
+
+    let mut seen: std::collections::HashSet<String> = existing.iter().map(|f| f.text.clone()).collect();
+    let new_facts: Vec<Fact> = candidates.into_iter().filter(|c| seen.insert(c.text.clone())).collect();
+
+    if new_facts.is_empty() {
+        return 0;
+    }
+
+    let appended = new_facts.len();
+    if let Err(e) = append_facts(memory_dir, &new_facts).await {
+        warn!("Facts: failed to append facts: {}", e);
+        return 0;
+    }
+    appended
+}
+
 /// Read all facts from the facts.jsonl file.
 /// Skips damaged lines with a warning.
-pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {
-    let facts_path = memory_dir.join(FACTS_FILE_NAME);
+pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {    let facts_path = memory_dir.join(FACTS_FILE_NAME);
 
     if !facts_path.exists() {
         return Ok(Vec::new());
@@ -767,5 +800,69 @@ DAMAGED LINE HERE
         let result = read_facts(&temp_dir).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
+    }
+
+    // --- append_facts_dedup tests (real production path) ---
+
+    #[tokio::test]
+    async fn append_facts_dedup_skips_existing_identical_text() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+
+        let existing = distill_facts_from_user_message("以后都用 pnpm", "s1", "t1");
+        assert_eq!(existing.len(), 1);
+        let appended_first = append_facts_dedup(&temp_dir, existing).await;
+        assert_eq!(appended_first, 1);
+        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+
+        // Same text again — production dedup must skip it.
+        let again = distill_facts_from_user_message("以后都用 pnpm", "s1", "t2");
+        let appended_second = append_facts_dedup(&temp_dir, again).await;
+        assert_eq!(appended_second, 0);
+        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+
+        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn append_facts_dedup_batch_internal_duplicates_write_once() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+
+        // Two identical candidates in one batch → only one written.
+        let batch = vec![
+            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+        assert_eq!(batch.len(), 2);
+
+        let appended = append_facts_dedup(&temp_dir, batch).await;
+        assert_eq!(appended, 1);
+        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+
+        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn append_facts_dedup_appends_distinct_facts() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+
+        let batch = vec![
+            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+            distill_facts_from_user_message("不要总是提交锁文件", "s1", "t1"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+        let appended = append_facts_dedup(&temp_dir, batch).await;
+        assert_eq!(appended, 2);
+        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 2);
+
+        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
     }
 }
