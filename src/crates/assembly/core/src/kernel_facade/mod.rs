@@ -397,18 +397,24 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 #[async_trait]
 impl northhing_kernel_api::KernelTurnApi for KernelFacade {
     async fn submit_turn(&self, input: TurnInputDto) -> Result<DialogSubmitOutcomeDto, KernelError> {
-        // TurnInputDto does not carry workspace_path. Resolve it from the
-        // session record (the scheduler restore path requires it when the
-        // session is not in memory); fall back to the default workspace.
+        // Workspace resolution priority:
+        // 1. input.workspace_path (explicit, from caller)
+        // 2. resolve_session_workspace_path (session record; needed for scheduler restore)
+        // 3. default_workspace_path (last resort)
         let scheduler = global_scheduler().ok_or_else(|| {
             KernelError::Runtime("global scheduler not available — init_core not called".to_string())
         })?;
-        let workspace = self
-            .coordinator()?
-            .resolve_session_workspace_path(&input.session_id)
-            .await
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(default_workspace_path);
+        let workspace = if let Some(ref wp) = input.workspace_path {
+            wp.clone()
+        } else {
+            match self.coordinator().ok() {
+                Some(c) => match c.resolve_session_workspace_path(&input.session_id).await {
+                    Some(p) => p.to_string_lossy().to_string(),
+                    None => default_workspace_path(),
+                },
+                None => default_workspace_path(),
+            }
+        };
         let policy = crate::agentic::coordination::DialogSubmissionPolicy::for_source(
             crate::agentic::coordination::DialogTriggerSource::DesktopApi,
         );
@@ -492,7 +498,7 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
     async fn subscribe_events(
         &self,
         callback: Box<dyn Fn(KernelEventDto) + Send + 'static>,
-    ) -> SubscriptionId {
+    ) -> Result<SubscriptionId, KernelError> {
         // NOTE: Unlike event_bridge.rs:75-96 which uses a 500ms retry pattern
         // for reconnect, this facade directly subscribes assuming init_core has
         // already been called and the coordinator is stable.
@@ -500,7 +506,9 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
             Ok(c) => c,
             Err(e) => {
                 warn!("subscribe_events called before init_core(): {e}");
-                return "not-initialized".to_string();
+                return Err(KernelError::Runtime(
+                    "kernel facade not initialized — init_core not called".to_string(),
+                ));
             }
         };
         let id = format!("sub-{}", uuid::Uuid::new_v4());
@@ -508,7 +516,7 @@ impl northhing_kernel_api::KernelEventsApi for KernelFacade {
             callback: Arc::new(Mutex::new(callback)),
         };
         coordinator.subscribe_internal(id.clone(), subscriber);
-        id
+        Ok(id)
     }
 
     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError> {

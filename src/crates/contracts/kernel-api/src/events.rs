@@ -72,7 +72,7 @@ pub struct BackendEventDto {
 pub trait KernelEventsApi: Send + Sync {
     /// Subscribe to kernel events (TextChunk/TurnState/ToolCall/Banner/Error).
     /// Source: #20 #21 #22
-    async fn subscribe_events(&self, callback: Box<dyn Fn(KernelEventDto) + Send>) -> SubscriptionId;
+    async fn subscribe_events(&self, callback: Box<dyn Fn(KernelEventDto) + Send>) -> Result<SubscriptionId, KernelError>;
 
     /// Unsubscribe from events.
     /// Source: #20

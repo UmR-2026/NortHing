@@ -15,6 +15,8 @@ pub struct TurnInputDto {
     pub mode: String,
     pub policy: SubmissionPolicyDto,
     pub source: TriggerSourceDto,
+    #[serde(default)]
+    pub workspace_path: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

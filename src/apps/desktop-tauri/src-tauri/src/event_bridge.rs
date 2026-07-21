@@ -123,7 +123,13 @@ pub fn register(app: &AppHandle) {
         let callback = Box::new(move |event: KernelEventDto| {
             bridge.on_kernel_event(event);
         });
-        let _subscription_id = kernel_facade().subscribe_events(callback).await;
+        let _subscription_id = match kernel_facade().subscribe_events(callback).await {
+            Ok(id) => id,
+            Err(e) => {
+                tracing::error!("desktop-tauri bridge: subscribe_events failed: {e}");
+                return;
+            }
+        };
         tracing::info!("desktop-tauri bridge subscribed (direct)");
     });
 }

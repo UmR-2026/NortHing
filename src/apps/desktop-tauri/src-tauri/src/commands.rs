@@ -132,6 +132,7 @@ async fn do_send_message(session_id: String, text: String) -> anyhow::Result<()>
             max_turns: None,
         },
         source: TriggerSourceDto::User,
+        workspace_path: Some(workspace_path()),
     };
     facade.submit_turn(input).await?;
     Ok(())
