@@ -394,25 +394,27 @@ function App() {
           {isStreaming ? "回复中" : "就绪"}
         </div>
         <div className="header-spacer" />
-        <button
-          className={`header-btn${settingsOpen ? " active" : ""}`}
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
-          设置
-        </button>
-        {settingsOpen && (
-          <div className="settings-panel">
-            <label>
-              <input
-                type="checkbox"
-                checked={debugOn}
-                onChange={(e) => setDebugOn(e.target.checked)}
-              />
-              调试面板
-            </label>
-            <div className="settings-placeholder">更多设置即将到来</div>
-          </div>
-        )}
+        <div className="settings-wrap">
+          <button
+            className={`header-btn${settingsOpen ? " active" : ""}`}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            设置
+          </button>
+          {settingsOpen && (
+            <div className="settings-panel">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={debugOn}
+                  onChange={(e) => setDebugOn(e.target.checked)}
+                />
+                调试面板
+              </label>
+              <div className="settings-placeholder">更多设置即将到来</div>
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="body-row">

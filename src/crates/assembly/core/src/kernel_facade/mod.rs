@@ -397,13 +397,18 @@ impl northhing_kernel_api::KernelSessionApi for KernelFacade {
 #[async_trait]
 impl northhing_kernel_api::KernelTurnApi for KernelFacade {
     async fn submit_turn(&self, input: TurnInputDto) -> Result<DialogSubmitOutcomeDto, KernelError> {
-        // NOTE: TurnInputDto does not carry workspace_path — we pass None here.
-        // The callbacks_lifecycle.rs:156 path uses Some(workspace) when kernel-api
-        // trait is extended to include workspace; until then, the session's
-        // workspace is resolved from the session itself.
+        // TurnInputDto does not carry workspace_path. Resolve it from the
+        // session record (the scheduler restore path requires it when the
+        // session is not in memory); fall back to the default workspace.
         let scheduler = global_scheduler().ok_or_else(|| {
             KernelError::Runtime("global scheduler not available — init_core not called".to_string())
         })?;
+        let workspace = self
+            .coordinator()?
+            .resolve_session_workspace_path(&input.session_id)
+            .await
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(default_workspace_path);
         let policy = crate::agentic::coordination::DialogSubmissionPolicy::for_source(
             crate::agentic::coordination::DialogTriggerSource::DesktopApi,
         );
@@ -414,7 +419,7 @@ impl northhing_kernel_api::KernelTurnApi for KernelFacade {
                 None,
                 None,
                 input.mode,
-                None,
+                Some(workspace),
                 policy,
                 None,
                 None,
