@@ -30,7 +30,8 @@ const REPLACEMENTS = [
   ['鈥攆', '—f'],
   ['鈥攂', '—b'],
   ['鈥?', '—'],   // 鈥 + literal ? (U+003F)
-  ['鈥?', '—'],   // 鈥 + U+E6C6 (em dash variant found in files)
+  ['\u9225\ue6c6', '—'],   // 鈥 + U+E6C6 (em dash variant found in files)
+  ['\u9241\u003f', '✅'],  // 鉁 + literal ? (✅ E2 9C 85 mangled)
   ['鈫扴', '→s'],
   ['鈫扙', '→B'],
   ['鈫抙', '→n'],

@@ -5,7 +5,7 @@ import path from 'path';
 const ROOT = path.join(process.cwd(), 'src', 'crates', 'assembly', 'core', 'builtin_skills');
 const FRONTMATTER_RE = new RegExp('^---\r?\n([\\s\\S]*?)\r?\n---');
 const BOM = /^\xEF\xBB\xBF/;
-const MOJIBAKE_LEAD = '[鈥鈫鈮鈺鈻鈹鈽鈿馃]';
+const MOJIBAKE_LEAD = '[鈥鈫鈮鈺鈻鈹鈽鈿馃鉁]';
 
 let bomFail = [];
 let fmFail = [];

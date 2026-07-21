@@ -368,7 +368,7 @@ GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
 ═════════════════════════════════
 ```
 
-**Fast path:** All paths covered →"Test review: All new code paths have test coverage 鉁? Continue.
+**Fast path:** All paths covered →"Test review: All new code paths have test coverage ✅ Continue.
 
 **Step 5. Add missing tests to the plan:**
 

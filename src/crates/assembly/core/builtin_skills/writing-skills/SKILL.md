@@ -164,10 +164,10 @@ description: Use when executing plans - dispatches subagent per task with code r
 # 鉂?BAD: Too much process detail
 description: Use for TDD - write test first, watch it fail, write minimal code, refactor
 
-# 鉁?GOOD: Just triggering conditions, no workflow summary
+# ✅GOOD: Just triggering conditions, no workflow summary
 description: Use when executing implementation plans with independent tasks in the current session
 
-# 鉁?GOOD: Triggering conditions only
+# ✅GOOD: Triggering conditions only
 description: Use when implementing any feature or bugfix, before writing implementation code
 ```
 
@@ -189,10 +189,10 @@ description: I can help you with async tests when they're flaky
 # 鉂?BAD: Mentions technology but skill isn't specific to it
 description: Use when tests use setTimeout/sleep and are flaky
 
-# 鉁?GOOD: Starts with "Use when", describes problem, no workflow
+# ✅GOOD: Starts with "Use when", describes problem, no workflow
 description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
 
-# 鉁?GOOD: Technology-specific skill with explicit trigger
+# ✅GOOD: Technology-specific skill with explicit trigger
 description: Use when using React Router and handling authentication redirects
 ```
 
@@ -207,8 +207,8 @@ Use words northhing would search for:
 ### 3. Descriptive Naming
 
 **Use active voice, verb-first:**
-- 鉁?`creating-skills` not `skill-creation`
-- 鉁?`condition-based-waiting` not `async-test-helpers`
+- ✅`creating-skills` not `skill-creation`
+- ✅`condition-based-waiting` not `async-test-helpers`
 
 ### 4. Token Efficiency (Critical)
 
@@ -226,7 +226,7 @@ Use words northhing would search for:
 # 鉂?BAD: Document all flags in SKILL.md
 search-conversations supports --text, --both, --after DATE, --before DATE, --limit N
 
-# 鉁?GOOD: Reference --help
+# ✅GOOD: Reference --help
 search-conversations supports multiple modes and filters. Run --help for details.
 ```
 
@@ -236,7 +236,7 @@ search-conversations supports multiple modes and filters. Run --help for details
 When searching, dispatch subagent with template...
 [20 lines of repeated instructions]
 
-# 鉁?GOOD: Reference other skill
+# ✅GOOD: Reference other skill
 Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
 ```
 
@@ -247,7 +247,7 @@ your human partner: "How did we handle authentication errors in React Router bef
 You: I'll search past conversations for React Router authentication patterns.
 [Dispatch subagent with search query: "React Router authentication error handling 401"]
 
-# 鉁?GOOD: Minimal example (20 words)
+# ✅GOOD: Minimal example (20 words)
 Partner: "How did we handle auth errors in React Router?"
 You: Searching...
 [Dispatch subagent →synthesis]
@@ -266,10 +266,10 @@ wc -w skills/path/SKILL.md
 ```
 
 **Name by what you DO or core insight:**
-- 鉁?`condition-based-waiting` > `async-test-helpers`
-- 鉁?`using-skills` not `skill-usage`
-- 鉁?`flatten-with-flags` > `data-structure-refactoring`
-- 鉁?`root-cause-tracing` > `debugging-techniques`
+- ✅`condition-based-waiting` > `async-test-helpers`
+- ✅`using-skills` not `skill-usage`
+- ✅`flatten-with-flags` > `data-structure-refactoring`
+- ✅`root-cause-tracing` > `debugging-techniques`
 
 **Gerunds (-ing) work well for processes:**
 - `creating-skills`, `testing-skills`, `debugging-with-logs`
@@ -280,8 +280,8 @@ wc -w skills/path/SKILL.md
 **When writing documentation that references other skills:**
 
 Use skill name only, with explicit requirement markers:
-- 鉁?Good: `**REQUIRED SUB-SKILL:** Use skill-name-here`
-- 鉁?Good: `**REQUIRED BACKGROUND:** You MUST understand skill-name-here`
+- ✅Good: `**REQUIRED SUB-SKILL:** Use skill-name-here`
+- ✅Good: `**REQUIRED BACKGROUND:** You MUST understand skill-name-here`
 - 鉂?Bad: `See skills/testing/some-skill` (unclear if required)
 - 鉂?Bad: `@skills/testing/some-skill/SKILL.md` (force-loads, burns context)
 

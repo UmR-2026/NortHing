@@ -143,7 +143,7 @@ const doc = new Document({
 new Paragraph({ children: [new TextRun("—Item")] })  // BAD
 new Paragraph({ children: [new TextRun("\u2022 Item")] })  // BAD
 
-// 鉁?CORRECT - use numbering config with LevelFormat.BULLET
+// ✅CORRECT - use numbering config with LevelFormat.BULLET
 const doc = new Document({
   numbering: {
     config: [

@@ -683,7 +683,7 @@ GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
 ═════════════════════════════════
 ```
 
-**Fast path:** All paths covered →"Step 3.4: All new code paths have test coverage 鉁? Continue.
+**Fast path:** All paths covered →"Step 3.4: All new code paths have test coverage ✅ Continue.
 
 **5. Generate tests for uncovered paths:**
 
@@ -1520,7 +1520,7 @@ ADVERSARIAL REVIEW SYNTHESIS (always-on, N lines):
   Unique to northhing structured review: [from earlier step]
   Unique to northhing adversarial: [from subagent]
   Unique to outside-voice sub-agent: [from codex adversarial or code review, if ran]
-  Models used: northhing structured 鉁? northhing adversarial 鉁?鉁? outside-voice sub-agent 鉁?鉁?────────────────────────────────────────────────────────────
+  Models used: northhing structured ✅ northhing adversarial ✅✅ outside-voice sub-agent ✅✅────────────────────────────────────────────────────────────
 ```
 
 High-confidence findings (agreed on by multiple sources) should be prioritized for fixes.

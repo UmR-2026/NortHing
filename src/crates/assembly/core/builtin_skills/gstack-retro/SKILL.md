@@ -135,7 +135,7 @@ Calculate and present these metrics in a summary table:
 | Detected sessions | N |
 | Avg LOC/session-hour | N |
 | Greptile signal | N% (Y catches, Z FPs) |
-| Test Health | N total tests 路 M added this period 路 K regression tests |
+| Test Health | N total tests · M added this period · K regression tests |
 
 Then show a **per-author leaderboard** immediately below:
 
@@ -159,7 +159,7 @@ Sort by commits descending. The current user (from `git config user.name`) alway
 
 Include in the metrics table:
 ```
-| Backlog Health | N open (X P0/P1, Y P2) 路 Z completed this period |
+| Backlog Health | N open (X P0/P1, Y P2) · Z completed this period |
 ```
 
 If TODOS.md doesn't exist, skip the Backlog Health row.
@@ -167,7 +167,7 @@ If TODOS.md doesn't exist, skip the Backlog Health row.
 **Skill Usage (if analytics exist):** Read `$HOME/.northhing/team/analytics/skill-usage.jsonl` if it exists. Filter entries within the retro time window by `ts` field. Separate skill activations (no `event` field) from hook fires (`event: "hook_fire"`). Aggregate by skill name. Present as:
 
 ```
-| Skill Usage | /ship(12) /qa(8) /review(5) 路 3 safety hook fires |
+| Skill Usage | /ship(12) /qa(8) /review(5) · 3 safety hook fires |
 ```
 
 If the JSONL file doesn't exist or has no entries in the window, skip the Skill Usage row.
@@ -653,7 +653,7 @@ align cleanly. Never truncate project names.
 ┃ [USER NAME] —Week of [date]
 ▁▁──────────────────────────────────────────────────────────────
 ┃┃ [N] commits across [M] projects
-┃ +[X]k LOC added 路 [Y]k LOC deleted 路 [Z]k net
+┃ +[X]k LOC added · [Y]k LOC deleted · [Z]k net
 ┃ [N] AI coding sessions (CC: X, outside-voice sub-agent: Y, Gemini: Z)
 ┃ [N]-day shipping streak 🔥
 ┃┃ PROJECTS
