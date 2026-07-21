@@ -31,7 +31,7 @@ function ThinkSection({
 }) {
   if (!think) return null;
   return (
-    <div className="thinkblock">
+    <div className={`thinkblock${live ? " live" : ""}`}>
       <button className="think-toggle" onClick={onThinkToggle}>
         <span className={`chevron${thinkOpen ? " open" : ""}`}>›</span>
         思考过程{live && !thinkDone ? "…" : ""}

@@ -68,7 +68,7 @@ export function MessageList({
     if (el && stickToBottom.current) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages, streamingText, stickToBottom]);
+  }, [messages, streamingText]);
 
   const showEmpty = messages.length === 0 && !streamingText;
   const streamParsed = streamingText ? parseThink(streamingText) : null;
