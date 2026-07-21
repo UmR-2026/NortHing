@@ -1902,6 +1902,19 @@ mod tests {
     // across parallel test runs making it unreliable. The async Mutex gate and
     // FACADE_READY fast-path are tested via integration.
 
+    #[tokio::test]
+    async fn test_subscribe_events_returns_err_before_init() {
+        use northhing_kernel_api::KernelEventsApi;
+        let facade = KernelFacade::new();
+        let callback = Box::new(|_event: KernelEventDto| {});
+        let result = facade.subscribe_events(callback).await;
+        match result {
+            Err(KernelError::Runtime(_)) => {} // expected
+            Err(other) => panic!("expected KernelError::Runtime before init, got {:?}", other),
+            Ok(_) => panic!("subscribe_events should return Err before init_core"),
+        }
+    }
+
     // ── Init gate lifecycle tests ─────────────────────────────────────────────
     // Four scenarios run sequentially in one test to avoid static state interference.
     // State is manually reset at the start of each scenario.
