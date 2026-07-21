@@ -48,6 +48,10 @@ impl ActiveDialogTurnStore {
         self.inner.contains_key(session_id)
     }
 
+    pub fn get(&self, session_id: &str) -> Option<ActiveDialogTurn> {
+        self.inner.get(session_id).map(|r| r.value().clone())
+    }
+
     pub fn suppression_key_for_requester(
         &self,
         target_session_id: &str,

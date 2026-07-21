@@ -9,6 +9,7 @@ use northhing_agent_runtime::scheduler::{
     resolve_agent_session_reply_action, resolve_turn_outcome_lifecycle_plan, ActiveDialogTurnStore,
     AgentSessionReplyAction, AgentSessionReplyPlan, DialogReplySuppressionSet, DialogTurnQueue,
     GoalContinuationAfterTurnAction, SessionAbortFlags, TurnOutcomeQueueAction, TurnOutcomeStatus,
+    is_stale_turn_outcome,
 };
 use northhing_runtime_ports::{DialogSessionStateFact, MAX_THREAD_GOAL_AUTO_CONTINUATIONS};
 use std::sync::Arc;
@@ -46,6 +47,16 @@ impl DialogScheduler {
 
     async fn run_outcome_handler(&self, mut outcome_rx: mpsc::Receiver<(String, TurnOutcome)>) {
         while let Some((session_id, outcome)) = outcome_rx.recv().await {
+            if is_stale_turn_outcome(&self.active_turns, &session_id, outcome.turn_id()) {
+                debug!(
+                    "Ignoring stale turn outcome: session_id={}, outcome_turn_id={}",
+                    session_id,
+                    outcome.turn_id()
+                );
+                let _drained = self.round_injection_buffer.drain_for_turn(&session_id, outcome.turn_id());
+                continue;
+            }
+
             let lifecycle_plan = resolve_turn_outcome_lifecycle_plan(&outcome, self.active_turns.contains(&session_id));
 
             // Only drop steering messages targeted at the *finished* turn. We
