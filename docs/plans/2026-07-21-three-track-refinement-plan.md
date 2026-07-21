@@ -48,6 +48,8 @@
 | B4 turn failed 正路由 + error_kind + result_count | ✅ judge PASS | `062959f` |
 | B5 stale outcome 守卫 | ❌ judge FAIL（设计缺陷）→ **已 revert**，转设计先行 | `48f4ce2`+`c7eb712`(revert) |
 | B6 K3 闸门 | NO-GO（用户拍板，转低风险替代） | — |
+| C1 agent 身份重写（对等同事） | ✅ CLI exec 实证（独立智能体+LongCat-2.0 自报） | `0704ceb` |
+| C2 Episode Log Phase 1 | ✅ judge FAIL（placeholder 测试+跨 round bug）→返修→PASS | `159c10d` |
 
 **B5 复盘（设计先行要点，judge 复审产出）**：①`None→stale` 假设不成立——coordinator 直连路径（`AgentSubmissionPort::submit_message` subagent_ports.rs:93-133 直连 `start_dialog_turn`）与"outcome 先到、active 后插入"竞态下合法 outcome 无 active 记录；②get-check-then-remove 非原子（TOCTOU），应改 dashmap `remove_if` 按 expected turn_id 原子消费；③stale 分支的 `drain_for_turn` 会误吞新 turn 的 CurrentRunningTurn injection，需 `drain_exact_turn`；④重设计方向：outcome 分类（Matching/DifferentActive/MissingFirstOutcome/AlreadyProcessed，tombstone 集）+ scheduler-owned turn 在 coordinator spawn 前登记 turn id + 直连路径统一路由或保留旧生命周期 + 集成测试矩阵（直连+排队/早到/插入竞态/重复/cancelled/goal continuation）。**环境敏感测试家族**（tests_cancel/tests_timeout/tests_concurrent/tests_error，假设"本机无 LLM 微秒失败"）需改注入确定性 fake backend——独立测试基建单。
 
