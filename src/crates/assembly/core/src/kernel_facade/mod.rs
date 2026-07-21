@@ -42,6 +42,7 @@ use crate::service::mcp::{set_global_mcp_service, MCPService};
 
 pub use northhing_kernel_api::events::{
     BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase,
+    TurnPhaseKind,
 };
 pub use northhing_kernel_api::session::{
     BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto,
@@ -563,7 +564,7 @@ impl crate::agentic::events::EventSubscriber for KernelEventSubscriber {
         &self,
         event: &crate::agentic::events::AgenticEvent,
     ) -> crate::util::errors::NortHingResult<()> {
-        if let Some(dto) = agentic_event_to_dto(event) {
+        for dto in agentic_event_to_dtos(event) {
             self.invoke_callback(dto);
         }
         Ok(())
@@ -572,59 +573,87 @@ impl crate::agentic::events::EventSubscriber for KernelEventSubscriber {
 
 // ── DTO conversions (helper functions — avoid orphan From impls) ─────────────
 
-fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<KernelEventDto> {
+fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<KernelEventDto> {
     use crate::agentic::events::AgenticEvent;
+    use northhing_kernel_api::events::TurnPhaseKind;
     match event {
         AgenticEvent::TextChunk {
-            session_id, text, ..
-        } => Some(KernelEventDto::TextChunk {
+            session_id,
+            turn_id,
+            text,
+            ..
+        } => vec![
+            KernelEventDto::TextChunk {
+                session_id: session_id.clone(),
+                text: text.clone(),
+            },
+            KernelEventDto::TurnPhase {
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                phase: TurnPhaseKind::Generating,
+                tool_name: None,
+            },
+        ],
+        AgenticEvent::ThinkingChunk {
+            session_id,
+            turn_id,
+            ..
+        } => vec![KernelEventDto::TurnPhase {
             session_id: session_id.clone(),
-            text: text.clone(),
-        }),
+            turn_id: turn_id.clone(),
+            phase: TurnPhaseKind::Thinking,
+            tool_name: None,
+        }],
         AgenticEvent::DialogTurnStarted {
             session_id,
             turn_id,
             ..
-        } => Some(KernelEventDto::TurnState {
-            session_id: session_id.clone(),
-            turn_id: turn_id.clone(),
-            state: TurnStateKind::Started,
-            duration_ms: None,
-        }),
+        } => vec![
+            KernelEventDto::TurnState {
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                state: TurnStateKind::Started,
+                duration_ms: None,
+            },
+            KernelEventDto::TurnPhase {
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                phase: TurnPhaseKind::Thinking,
+                tool_name: None,
+            },
+        ],
         AgenticEvent::DialogTurnCompleted {
             session_id,
             turn_id,
             duration_ms,
             ..
-        } => Some(KernelEventDto::TurnState {
+        } => vec![KernelEventDto::TurnState {
             session_id: session_id.clone(),
             turn_id: turn_id.clone(),
             state: TurnStateKind::Completed,
             duration_ms: Some(*duration_ms),
-        }),
+        }],
         AgenticEvent::DialogTurnCancelled {
             session_id,
             turn_id,
             ..
-        } => Some(KernelEventDto::TurnState {
+        } => vec![KernelEventDto::TurnState {
             session_id: session_id.clone(),
             turn_id: turn_id.clone(),
             state: TurnStateKind::Cancelled,
             duration_ms: None,
-        }),
+        }],
         AgenticEvent::DialogTurnFailed {
-            session_id,
-            turn_id,
             error,
             ..
-        } => Some(KernelEventDto::Error {
+        } => vec![KernelEventDto::Error {
             message: error.clone(),
-        }),
+        }],
         AgenticEvent::SystemError {
             error, ..
-        } => Some(KernelEventDto::Error {
+        } => vec![KernelEventDto::Error {
             message: error.clone(),
-        }),
+        }],
         AgenticEvent::ToolEvent {
             session_id,
             turn_id,
@@ -639,15 +668,23 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
             } => {
                 let params_str = params.to_string();
                 let summary = extract_summary_from_params(params);
-                Some(KernelEventDto::ToolCall(ToolCallDto {
-                    session_id: session_id.clone(),
-                    turn_id: turn_id.clone(),
-                    call_id: tool_id.clone(),
-                    name: tool_name.clone(),
-                    phase: ToolCallPhase::Started,
-                    summary,
-                    detail: Some(truncate_4000(&params_str)),
-                }))
+                vec![
+                    KernelEventDto::ToolCall(ToolCallDto {
+                        session_id: session_id.clone(),
+                        turn_id: turn_id.clone(),
+                        call_id: tool_id.clone(),
+                        name: tool_name.clone(),
+                        phase: ToolCallPhase::Started,
+                        summary,
+                        detail: Some(truncate_4000(&params_str)),
+                    }),
+                    KernelEventDto::TurnPhase {
+                        session_id: session_id.clone(),
+                        turn_id: turn_id.clone(),
+                        phase: TurnPhaseKind::ToolUse,
+                        tool_name: Some(tool_name.clone()),
+                    },
+                ]
             }
             crate::agentic::events::ToolEventData::Completed {
                 tool_id,
@@ -660,47 +697,71 @@ fn agentic_event_to_dto(event: &crate::agentic::events::AgenticEvent) -> Option<
                 let summary = first_line_truncated(
                     result_for_assistant.as_deref().unwrap_or(&result_str),
                 );
-                Some(KernelEventDto::ToolCall(ToolCallDto {
-                    session_id: session_id.clone(),
-                    turn_id: turn_id.clone(),
-                    call_id: tool_id.clone(),
-                    name: tool_name.clone(),
-                    phase: ToolCallPhase::Completed,
-                    summary,
-                    detail: Some(truncate_4000(&result_str)),
-                }))
+                vec![
+                    KernelEventDto::ToolCall(ToolCallDto {
+                        session_id: session_id.clone(),
+                        turn_id: turn_id.clone(),
+                        call_id: tool_id.clone(),
+                        name: tool_name.clone(),
+                        phase: ToolCallPhase::Completed,
+                        summary,
+                        detail: Some(truncate_4000(&result_str)),
+                    }),
+                    KernelEventDto::TurnPhase {
+                        session_id: session_id.clone(),
+                        turn_id: turn_id.clone(),
+                        phase: TurnPhaseKind::Generating,
+                        tool_name: None,
+                    },
+                ]
             }
             crate::agentic::events::ToolEventData::Failed {
                 tool_id,
                 tool_name,
                 error,
                 ..
-            } => Some(KernelEventDto::ToolCall(ToolCallDto {
-                session_id: session_id.clone(),
-                turn_id: turn_id.clone(),
-                call_id: tool_id.clone(),
-                name: tool_name.clone(),
-                phase: ToolCallPhase::Completed,
-                summary: first_line_truncated(error),
-                detail: Some(truncate_4000(error)),
-            })),
+            } => vec![
+                KernelEventDto::ToolCall(ToolCallDto {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    call_id: tool_id.clone(),
+                    name: tool_name.clone(),
+                    phase: ToolCallPhase::Completed,
+                    summary: first_line_truncated(error),
+                    detail: Some(truncate_4000(error)),
+                }),
+                KernelEventDto::TurnPhase {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    phase: TurnPhaseKind::Generating,
+                    tool_name: None,
+                },
+            ],
             crate::agentic::events::ToolEventData::Cancelled {
                 tool_id,
                 tool_name,
                 reason,
                 ..
-            } => Some(KernelEventDto::ToolCall(ToolCallDto {
-                session_id: session_id.clone(),
-                turn_id: turn_id.clone(),
-                call_id: tool_id.clone(),
-                name: tool_name.clone(),
-                phase: ToolCallPhase::Completed,
-                summary: first_line_truncated(&format!("cancelled: {reason}")),
-                detail: Some(truncate_4000(reason)),
-            })),
-            _ => None,
+            } => vec![
+                KernelEventDto::ToolCall(ToolCallDto {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    call_id: tool_id.clone(),
+                    name: tool_name.clone(),
+                    phase: ToolCallPhase::Completed,
+                    summary: first_line_truncated(&format!("cancelled: {reason}")),
+                    detail: Some(truncate_4000(reason)),
+                }),
+                KernelEventDto::TurnPhase {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    phase: TurnPhaseKind::Generating,
+                    tool_name: None,
+                },
+            ],
+            _ => vec![],
         },
-        _ => None,
+        _ => vec![],
     }
 }
 
@@ -1802,76 +1863,158 @@ mod tests {
     }
 
     #[test]
-    fn test_agentic_event_to_dto_started_summary_from_command() {
+    fn test_agentic_event_to_dtos_started_summary_from_command() {
         let params = serde_json::json!({"command": "ls -la /tmp", "path": "/other"});
         let event = make_started_event(params);
-        let dto = agentic_event_to_dto(&event).unwrap();
+        let dtos = agentic_event_to_dtos(&event);
+        assert!(!dtos.is_empty(), "expected at least one DTO");
+        let dto = &dtos[0];
         let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
         assert!(matches!(tc.phase, ToolCallPhase::Started));
         assert!(!tc.summary.is_empty(), "summary should not be empty for command key");
         assert!(tc.summary.starts_with("ls"));
         assert!(tc.detail.is_some());
+        // Second DTO should be TurnPhase with ToolUse
+        assert!(dtos.len() >= 2, "expected TurnPhase after ToolCall");
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::ToolUse, .. }));
     }
 
     #[test]
-    fn test_agentic_event_to_dto_started_summary_fallback() {
+    fn test_agentic_event_to_dtos_started_summary_fallback() {
         let params = serde_json::json!({"unknown_field": "value"});
         let event = make_started_event(params);
-        let dto = agentic_event_to_dto(&event).unwrap();
-        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else { panic!("expected ToolCall") };
         assert!(!tc.summary.is_empty());
     }
 
     #[test]
-    fn test_agentic_event_to_dto_completed_summary_and_detail() {
+    fn test_agentic_event_to_dtos_completed_summary_and_detail() {
         let result = serde_json::json!({"output": "done"});
         let event = make_completed_event(result, Some("All good".into()));
-        let dto = agentic_event_to_dto(&event).unwrap();
+        let dtos = agentic_event_to_dtos(&event);
+        let dto = &dtos[0];
         let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
         assert!(matches!(tc.phase, ToolCallPhase::Completed));
         assert_eq!(tc.summary, "All good");
         assert!(tc.detail.is_some());
+        // Second DTO should be TurnPhase with Generating
+        assert!(dtos.len() >= 2, "expected TurnPhase after ToolCall");
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Generating, .. }));
     }
 
     #[test]
-    fn test_agentic_event_to_dto_completed_result_fallback() {
+    fn test_agentic_event_to_dtos_completed_result_fallback() {
         let result = serde_json::json!({"output": "fallback result"});
         let event = make_completed_event(result, None);
-        let dto = agentic_event_to_dto(&event).unwrap();
-        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else { panic!("expected ToolCall") };
         assert!(tc.summary.contains("output") || tc.summary.contains("fallback"));
     }
 
     #[test]
-    fn test_agentic_event_to_dto_failed_maps_to_completed_phase() {
+    fn test_agentic_event_to_dtos_failed_maps_to_completed_phase() {
         let event = make_failed_event("connection refused".into());
-        let dto = agentic_event_to_dto(&event).unwrap();
-        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 2, "Failed should produce ToolCall and TurnPhase");
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else { panic!("expected ToolCall") };
         assert!(matches!(tc.phase, ToolCallPhase::Completed), "Failed should map to Completed phase");
         assert!(!tc.summary.is_empty(), "summary should not be empty for Failed");
         assert!(tc.detail.is_some());
+        // Second DTO is TurnPhase Generating with session_id/turn_id透传
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Generating, tool_name: None, .. }));
+        if let KernelEventDto::TurnPhase { session_id, turn_id, .. } = &dtos[1] {
+            assert_eq!(session_id, "s1");
+            assert_eq!(turn_id, "t1");
+        }
     }
 
     #[test]
-    fn test_agentic_event_to_dto_completed_truncation_at_120() {
+    fn test_agentic_event_to_dtos_completed_truncation_at_120() {
         let long_result = "x".repeat(200);
         let event = make_completed_event(serde_json::json!(long_result), None);
-        let dto = agentic_event_to_dto(&event).unwrap();
-        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else { panic!("expected ToolCall") };
         assert!(tc.summary.len() <= 120, "summary should be truncated to 120 chars");
     }
 
     #[test]
-    fn test_agentic_event_to_dto_cancelled_summary_with_prefix_truncated_to_120() {
+    fn test_agentic_event_to_dtos_cancelled_summary_with_prefix_truncated_to_120() {
         // Regression: "cancelled: " prefix (11 chars) must not push summary over 120.
         // Total "cancelled: <reason>" capped at 120 chars (not 11 + trunc(reason)).
         let long_reason = "x".repeat(200);
         let event = make_cancelled_event(long_reason);
-        let dto = agentic_event_to_dto(&event).unwrap();
-        let KernelEventDto::ToolCall(tc) = dto else { panic!("expected ToolCall") };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 2, "Cancelled should produce ToolCall and TurnPhase");
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else { panic!("expected ToolCall") };
         assert!(tc.summary.starts_with("cancelled:"), "summary should have cancelled prefix");
         assert!(tc.summary.len() <= 120, "summary including prefix must be ≤ 120 chars, got {}", tc.summary.len());
         assert!(tc.detail.is_some());
+        // Second DTO is TurnPhase Generating with session_id/turn_id透传
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Generating, tool_name: None, .. }));
+        if let KernelEventDto::TurnPhase { session_id, turn_id, .. } = &dtos[1] {
+            assert_eq!(session_id, "s1");
+            assert_eq!(turn_id, "t1");
+        }
+    }
+
+    // ── Turn phase tests ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_agentic_event_to_dtos_thinking_chunk_produces_phase_only() {
+        let event = AgenticEvent::ThinkingChunk {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            content: "Let me think...".into(),
+            is_end: false,
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 1, "ThinkingChunk should produce exactly one TurnPhase DTO");
+        assert!(matches!(&dtos[0], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Thinking, .. }));
+    }
+
+    #[test]
+    fn test_agentic_event_to_dtos_text_chunk_produces_text_and_phase() {
+        let event = AgenticEvent::TextChunk {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            round_id: "r1".into(),
+            text: "Hello world".into(),
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 2, "TextChunk should produce TextChunk and TurnPhase");
+        assert!(matches!(&dtos[0], KernelEventDto::TextChunk { .. }));
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Generating, .. }));
+    }
+
+    #[test]
+    fn test_agentic_event_to_dtos_tool_started_carries_tool_name() {
+        let params = serde_json::json!({"command": "ls"});
+        let event = make_started_event(params);
+        let dtos = agentic_event_to_dtos(&event);
+        // First is ToolCall, second is TurnPhase
+        assert!(matches!(&dtos[0], KernelEventDto::ToolCall(_)));
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::ToolUse, tool_name: Some(_), .. }));
+        if let KernelEventDto::TurnPhase { tool_name, .. } = &dtos[1] {
+            assert_eq!(tool_name.as_ref().unwrap(), "Bash");
+        }
+    }
+
+    #[test]
+    fn test_agentic_event_to_dtos_dialog_turn_started_produces_state_and_phase() {
+        let event = AgenticEvent::DialogTurnStarted {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            turn_index: 0,
+            user_input: "hello".into(),
+            original_user_input: None,
+            user_message_metadata: None,
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 2, "DialogTurnStarted should produce TurnState and TurnPhase");
+        assert!(matches!(&dtos[0], KernelEventDto::TurnState { state: TurnStateKind::Started, .. }));
+        assert!(matches!(&dtos[1], KernelEventDto::TurnPhase { phase: TurnPhaseKind::Thinking, .. }));
     }
 
     // ── Lifecycle tests ─────────────────────────────────────────────────────

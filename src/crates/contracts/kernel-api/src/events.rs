@@ -39,6 +39,17 @@ pub enum BannerLevel {
     Error,
 }
 
+// ── TurnPhaseKind ─────────────────────────────────────────────────────────────
+
+/// FROZEN turn phase kinds for first-class turn phase events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TurnPhaseKind {
+    Thinking,
+    Generating,
+    ToolUse,
+}
+
 // ── KernelEventDto ─────────────────────────────────────────────────────────────
 
 /// FROZEN KernelEventDto enum (Schema §5).
@@ -54,6 +65,13 @@ pub enum KernelEventDto {
         duration_ms: Option<u64>,
     },
     ToolCall(ToolCallDto),
+    TurnPhase {
+        session_id: String,
+        turn_id: String,
+        phase: TurnPhaseKind,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tool_name: Option<String>,
+    },
     Banner { level: BannerLevel, message: String },
     Error { message: String },
 }

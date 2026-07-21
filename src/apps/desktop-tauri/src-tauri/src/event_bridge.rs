@@ -3,7 +3,7 @@
 //! no new runtime, no get_messages in the subscriber.
 
 use northhing_core::kernel_facade::{kernel_facade, KernelFacade};
-use northhing_kernel_api::events::{KernelEventDto, ToolCallDto, ToolCallPhase};
+use northhing_kernel_api::events::{KernelEventDto, ToolCallDto, ToolCallPhase, TurnPhaseKind};
 use northhing_kernel_api::{KernelEventsApi, KernelBootstrapApi};
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -70,6 +70,28 @@ impl TauriEventBridge {
             tracing::debug!("chat-tool emitted call_id={}", tool_call.call_id);
         }
     }
+
+    fn emit_chat_turn_phase(&self, session_id: &str, turn_id: &str, phase: TurnPhaseKind, tool_name: Option<&str>) {
+        let phase_str = match phase {
+            TurnPhaseKind::Thinking => "thinking",
+            TurnPhaseKind::Generating => "generating",
+            TurnPhaseKind::ToolUse => "tool_use",
+        };
+        let mut payload = serde_json::json!({
+            "session_id": session_id,
+            "turn_id": turn_id,
+            "phase": phase_str,
+        });
+        if let Some(tn) = tool_name {
+            payload["tool_name"] = serde_json::json!(tn);
+        }
+        let r = self.app.emit("chat-turn-phase", payload);
+        if let Err(e) = r {
+            tracing::warn!("chat-turn-phase emit failed: {e}");
+        } else {
+            tracing::debug!("chat-turn-phase emitted session={} turn={} phase={}", session_id, turn_id, phase_str);
+        }
+    }
 }
 
 impl TauriEventBridge {
@@ -89,6 +111,9 @@ impl TauriEventBridge {
             }
             KernelEventDto::ToolCall(tool_call) => {
                 self.emit_chat_tool(&tool_call);
+            }
+            KernelEventDto::TurnPhase { session_id, turn_id, phase, tool_name } => {
+                self.emit_chat_turn_phase(&session_id, &turn_id, phase, tool_name.as_deref());
             }
             KernelEventDto::Banner { level, message } => {
                 tracing::debug!("banner event (ignored for Tauri): {:?} - {}", level, message);
