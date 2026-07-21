@@ -53,6 +53,9 @@ mod util;
 // Insights module
 pub mod insights;
 
+// Episode log module (growth experience storage)
+pub mod episodes;
+
 pub use agents::*;
 pub use context_profile::*;
 pub use coordination::*;

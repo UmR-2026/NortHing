@@ -20,6 +20,7 @@ pub mod tools;
 pub mod usage;
 pub mod platform;
 pub mod util;
+pub mod memory;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
 
@@ -59,4 +60,5 @@ pub use platform::{
     KernelPlatformApi, TerminalConfigDto, ImageContextDto, AnalysisDto, CoreHealthDto,
     PanelsConfigDto, PanelDto, InspectorDataDto, SkillStatusDto, ArtifactDto,
 };
+pub use memory::{EpisodeDto, KernelMemoryApi, ToolFailureRecordDto, ToolUseRecordDto};
 pub use util::strip_prompt_markup;

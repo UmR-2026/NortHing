@@ -13,7 +13,7 @@ use crate::agentic::execution::ExecutionResult;
 use crate::agentic::session::SessionManager;
 use crate::util::errors::NortHingError;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 impl ConversationCoordinator {
     pub(crate) async fn persist_completed_dialog_turn(
@@ -285,19 +285,124 @@ impl ConversationCoordinator {
             return;
         }
 
-        if let (Some(workspace_path), Some(status)) = (workspace_path, status) {
-            Self::finalize_turn_in_workspace(
-                session_id,
-                turn_id,
-                turn_index,
-                agent_type,
-                user_input,
-                workspace_path,
-                resolved_session_storage_path,
-                status,
-                user_message_metadata,
-            )
-            .await;
+        // Check both options are Some before extracting to avoid move issues
+        let (Some(wp), Some(st)) = (workspace_path, status) else {
+            return;
+        };
+
+        // Clone status since we need to pass it to both finalize and episode logging
+        let st_for_episode = st.clone();
+
+        Self::finalize_turn_in_workspace(
+            session_id,
+            turn_id,
+            turn_index,
+            agent_type,
+            user_input,
+            wp,
+            resolved_session_storage_path,
+            st,
+            user_message_metadata,
+        )
+        .await;
+
+        // Hook: distill episode and append to growth log.
+        // Must not fail the finalize flow - warn on any error.
+        Self::append_episode_log_entry(
+            session_id,
+            turn_id,
+            turn_index,
+            agent_type,
+            user_input,
+            &wp,
+            resolved_session_storage_path,
+            st_for_episode,
+        )
+        .await;
+    }
+
+    /// Distill and append episode log entry after turn finalization.
+    /// Failures are logged as warnings and do not propagate.
+    async fn append_episode_log_entry(
+        session_id: &str,
+        turn_id: &str,
+        turn_index: usize,
+        agent_type: &str,
+        user_input: &str,
+        workspace_path: &str,
+        resolved_session_storage_path: Option<&std::path::Path>,
+        status: crate::service::session::TurnStatus,
+    ) {
+        use crate::agentic::episodes;
+        use crate::agentic::episodes::types::EpisodeOutcome;
+        use crate::agentic::persistence::PersistenceManager;
+        use crate::infrastructure::PathManager;
+
+        // Map TurnStatus to EpisodeOutcome
+        let outcome = match status {
+            crate::service::session::TurnStatus::Completed => EpisodeOutcome::Completed,
+            crate::service::session::TurnStatus::Error => EpisodeOutcome::Failed,
+            crate::service::session::TurnStatus::Cancelled => EpisodeOutcome::Cancelled,
+            _ => return, // Skip other statuses (e.g., InProgress)
+        };
+
+        let path_manager = match PathManager::new() {
+            Ok(pm) => std::sync::Arc::new(pm),
+            Err(e) => {
+                warn!("Episode log: failed to create PathManager: {}", e);
+                return;
+            }
+        };
+
+        let workspace_path_buf = match resolved_session_storage_path {
+            Some(p) => p.to_path_buf(),
+            None => std::path::PathBuf::from(workspace_path),
+        };
+
+        // Compute workspace slug BEFORE moving path_manager into PersistenceManager
+        let slug = path_manager.workspace_slug(&workspace_path_buf);
+
+        let persistence_manager = match PersistenceManager::new(path_manager) {
+            Ok(manager) => manager,
+            Err(e) => {
+                warn!("Episode log: failed to create PersistenceManager: {}", e);
+                return;
+            }
+        };
+
+        // Read the persisted turn
+        let turn = match persistence_manager
+            .load_dialog_turn(&workspace_path_buf, session_id, turn_index)
+            .await
+        {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                warn!(
+                    "Episode log: turn not found for distillation: session_id={}, turn_id={}",
+                    session_id, turn_id
+                );
+                return;
+            }
+            Err(e) => {
+                warn!(
+                    "Episode log: failed to load turn for distillation: session_id={}, turn_id={}, error={}",
+                    session_id, turn_id, e
+                );
+                return;
+            }
+        };
+
+        // Task summary: first 120 chars of user_input
+        let task_summary = user_input.chars().take(120).collect::<String>();
+
+        // Distill and append
+        let episode = episodes::distill_episode(&turn, task_summary, slug, agent_type.to_string(), outcome);
+
+        if let Err(e) = episodes::append_episode(&episode).await {
+            warn!(
+                "Episode log: failed to append episode: session_id={}, turn_id={}, error={}",
+                session_id, turn_id, e
+            );
         }
     }
 }

@@ -83,6 +83,17 @@ impl PathManager {
         self.project_runtime_root(workspace_path).join("memory")
     }
 
+    /// Get the workspace slug for a given workspace path.
+    /// Returns a filesystem-safe, human-readable slug: a lowercased ASCII prefix
+    /// (non-ASCII characters become `-`, consecutive `-` collapsed) with a
+    /// short SHA-256 hex suffix derived from the full canonical path.
+    ///
+    /// This is the public interface to the internal slug computation used by
+    /// project_runtime_root and other project-scoped paths.
+    pub fn workspace_slug(&self, workspace_path: &Path) -> String {
+        self.project_runtime_slug(workspace_path)
+    }
+
     /// Derive the runtime slug for a workspace path. Returns a
     /// filesystem-safe, human-readable slug: a lowercased ASCII prefix
     /// (non-ASCII characters become `-`, consecutive `-` collapsed) with a
