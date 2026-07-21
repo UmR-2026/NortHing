@@ -2,7 +2,9 @@ use crate::infrastructure::path_manager_arc;
 use crate::util::errors::*;
 use std::path::{Path, PathBuf};
 use tokio::fs;
-use tracing::debug;
+use tracing::{debug, warn};
+
+use super::facts::{read_facts, select_facts_for_prompt};
 
 const MEMORY_DIR_NAME: &str = "memory";
 const MEMORY_INDEX_FILE: &str = "memory.md";
@@ -106,7 +108,7 @@ pub(crate) async fn build_workspace_agent_memory_prompt(workspace_root: &Path) -
     let memory_dir = memory_dir_path(workspace_root);
     let memory_dir_display = format_path_for_prompt(&memory_dir);
 
-    Ok(format!(
+    let base_prompt = format!(
         r#"# auto memory
 
 You have a persistent, file-based memory system at `{memory_dir_display}`. This directory already exists — write to it directly with the Write/Edit tool (do not run mkdir or check for its existence).
@@ -236,7 +238,30 @@ Memory is one of several persistence mechanisms available to you as you assist t
 - When to use or update a plan instead of memory: If you are about to start a non-trivial implementation task and would like to reach alignment with the user on your approach you should use a Plan rather than saving this information to memory. Similarly, if you already have a plan within the conversation and you have changed your approach persist that change by updating the plan rather than saving a memory.
 - When to use or update tasks instead of memory: When you need to break your work in current conversation into discrete steps or keep track of your progress use tasks instead of saving to memory. Tasks are great for persisting information about the work that needs to be done in the current conversation, but memory should be reserved for information that will be useful in future conversations.
 "#
-    ))
+    );
+
+    // Append remembered facts if available
+    let facts_section = match read_facts(&memory_dir).await {
+        Ok(facts) => {
+            let selected = select_facts_for_prompt(&facts, 1000);
+            if selected.is_empty() {
+                String::new()
+            } else {
+                let items = selected
+                    .iter()
+                    .map(|f| format!("- {}", f.text))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                format!("\n\n# Remembered facts\n\n{}", items)
+            }
+        }
+        Err(e) => {
+            warn!("Failed to read facts for prompt injection: {}", e);
+            String::new()
+        }
+    };
+
+    Ok(format!("{}{}", base_prompt, facts_section))
 }
 
 pub(crate) async fn build_workspace_memory_files_context(workspace_root: &Path) -> NortHingResult<Option<String>> {
@@ -307,4 +332,93 @@ High-level index for the durable workspace memory space.{index_description_suffi
 Topic-oriented durable memory files available in this workspace.{topic_description_suffix}
 {topic_files_content}"#
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::facts::{
+        append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope,
+    };
+    use crate::service::agent_memory::build_workspace_agent_memory_prompt;
+
+    fn make_fact(text: &str) -> Fact {
+        Fact {
+            schema_version: 1,
+            id: uuid::Uuid::new_v4().to_string(),
+            text: text.to_string(),
+            provenance: FactProvenance {
+                session_id: "s1".to_string(),
+                turn_id: "t1".to_string(),
+            },
+            confidence: FactConfidence::High,
+            scope: FactScope::Workspace,
+            created_at: 1000,
+        }
+    }
+
+    #[tokio::test]
+    async fn prompt_injection_with_facts_includes_remembered_facts_section() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        // Create memory dir with a fact
+        let memory_dir = crate::infrastructure::path_manager_arc().project_memory_dir(&workspace);
+        tokio::fs::create_dir_all(&memory_dir).await.unwrap();
+
+        let fact = make_fact("I prefer pnpm");
+        append_facts(&memory_dir, &[fact]).await.unwrap();
+
+        // Build prompt
+        let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+
+        // Should contain the remembered facts section
+        assert!(
+            prompt.contains("# Remembered facts"),
+            "Prompt should contain '# Remembered facts' section"
+        );
+        assert!(
+            prompt.contains("- I prefer pnpm"),
+            "Prompt should contain the fact text"
+        );
+
+        // Cleanup
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn prompt_injection_without_facts_excludes_remembered_facts_section() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        // Build prompt with empty memory dir (no facts)
+        let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+
+        // Should NOT contain the remembered facts section
+        assert!(
+            !prompt.contains("# Remembered facts"),
+            "Prompt should NOT contain '# Remembered facts' section when no facts exist"
+        );
+
+        // Cleanup
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn prompt_injection_with_select_facts_budget_limit() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        let memory_dir = crate::infrastructure::path_manager_arc().project_memory_dir(&workspace);
+        tokio::fs::create_dir_all(&memory_dir).await.unwrap();
+
+        // Create a fact that uses tokens
+        let fact = make_fact("short");
+        append_facts(&memory_dir, &[fact]).await.unwrap();
+
+        let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+        assert!(prompt.contains("# Remembered facts"));
+
+        // Cleanup
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
 }

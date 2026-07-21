@@ -319,6 +319,18 @@ impl ConversationCoordinator {
             st_for_episode,
         )
         .await;
+
+        // Hook: distill facts from user input and append to facts store.
+        // Must not fail the finalize flow - warn on any error.
+        Self::append_facts_entry(
+            session_id,
+            turn_id,
+            &wp,
+            resolved_session_storage_path,
+            user_input,
+            agent_type,
+        )
+        .await;
     }
 
     /// Distill and append episode log entry after turn finalization.
@@ -402,6 +414,87 @@ impl ConversationCoordinator {
             warn!(
                 "Episode log: failed to append episode: session_id={}, turn_id={}, error={}",
                 session_id, turn_id, e
+            );
+        }
+    }
+
+    /// Distill candidate facts from user input and append to facts store.
+    /// Failures are logged as warnings and do not propagate.
+    async fn append_facts_entry(
+        session_id: &str,
+        turn_id: &str,
+        workspace_path: &str,
+        resolved_session_storage_path: Option<&std::path::Path>,
+        user_input: &str,
+        _agent_type: &str,
+    ) {
+        use crate::infrastructure::PathManager;
+        use crate::service::agent_memory::{append_facts, distill_facts_from_user_message, read_facts};
+
+        // Distill candidate facts from user input using keyword triggers
+        let candidates = distill_facts_from_user_message(user_input, session_id, turn_id);
+        if candidates.is_empty() {
+            return;
+        }
+
+        let path_manager = match PathManager::new() {
+            Ok(pm) => std::sync::Arc::new(pm),
+            Err(e) => {
+                warn!("Facts: failed to create PathManager: {}", e);
+                return;
+            }
+        };
+
+        let workspace_path_buf = match resolved_session_storage_path {
+            Some(p) => p.to_path_buf(),
+            None => std::path::PathBuf::from(workspace_path),
+        };
+
+        // Get the memory directory path
+        let memory_dir = path_manager.project_memory_dir(&workspace_path_buf);
+
+        // Read existing facts for deduplication (exact text match)
+        // If read fails, warn and return — do not continue with empty set (would cause duplicates)
+        let existing_facts = match read_facts(&memory_dir).await {
+            Ok(facts) => facts,
+            Err(e) => {
+                warn!(
+                    "Facts: failed to read existing facts for deduplication, skipping append: session_id={}, turn_id={}, error={}",
+                    session_id, turn_id, e
+                );
+                return;
+            }
+        };
+
+        // Unified deduplication: history + batch (HashSet::insert returns false if already present)
+        let mut seen: std::collections::HashSet<String> =
+            existing_facts.iter().map(|f| f.text.clone()).collect();
+
+        let new_facts: Vec<_> = candidates
+            .into_iter()
+            .filter(|c| seen.insert(c.text.clone()))
+            .collect();
+
+        if new_facts.is_empty() {
+            debug!(
+                "Facts: no new facts to append (all duplicates): session_id={}, turn_id={}",
+                session_id, turn_id
+            );
+            return;
+        }
+
+        // Append new facts
+        if let Err(e) = append_facts(&memory_dir, &new_facts).await {
+            warn!(
+                "Facts: failed to append facts: session_id={}, turn_id={}, error={}",
+                session_id, turn_id, e
+            );
+        } else {
+            debug!(
+                "Facts: appended {} facts: session_id={}, turn_id={}",
+                new_facts.len(),
+                session_id,
+                turn_id
             );
         }
     }
