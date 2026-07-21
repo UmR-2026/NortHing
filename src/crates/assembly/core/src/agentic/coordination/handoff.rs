@@ -33,11 +33,21 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use async_trait::async_trait;
+use tokio_util::sync::CancellationToken;
+
+use northhing_agent_dispatch::ActorRuntime;
 
 use crate::agentic::coordination::coordinator::{
     ConversationCoordinator, HiddenSubagentExecutionRequest, SubagentResult,
 };
 use crate::util::errors::{NortHingError, NortHingResult};
+
+/// Default timeout for subagent execution when no explicit timeout is provided.
+/// This value is used as a fallback when the caller does not specify a timeout.
+/// Reference: W3a-2 uses 300s as the default for tools/confirm; 600s here
+/// provides a reasonable upper bound for subagent execution which may involve
+/// multiple tool calls and longer reasoning chains.
+pub const SUBAGENT_DEFAULT_TIMEOUT_SECONDS: u64 = 600;
 
 // ═══════════════════════════════════════════════════════════════════
 // Trait
@@ -94,7 +104,19 @@ pub(crate) trait SubAgentHandoff: Send + Sync {
     /// `turn_id` is a stable id used by the per-turn counter; the same
     /// `turn_id` from two consecutive calls in the same turn triggers
     /// `HandoffError::TooManyCallsInTurn`.
-    async fn handoff(&self, turn_id: &str, input: Self::Input) -> NortHingResult<Self::Output>;
+    ///
+    /// `cancel_token` - optional cancellation token to propagate to the subagent.
+    /// `timeout_seconds` - optional timeout in seconds; if `None`, uses
+    ///   `SUBAGENT_DEFAULT_TIMEOUT_SECONDS` as the default.
+    /// `actor_runtime` - optional actor runtime for lightweight actor path.
+    async fn handoff(
+        &self,
+        turn_id: &str,
+        input: Self::Input,
+        cancel_token: Option<&CancellationToken>,
+        timeout_seconds: Option<u64>,
+        actor_runtime: Option<&Arc<ActorRuntime>>,
+    ) -> NortHingResult<Self::Output>;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -282,9 +304,19 @@ impl SubAgentHandoff for CoordinatorHiddenSubagentHandoff {
     type Input = HiddenSubagentExecutionRequest;
     type Output = SubagentResult;
 
-    async fn handoff(&self, turn_id: &str, input: Self::Input) -> NortHingResult<Self::Output> {
+    async fn handoff(
+        &self,
+        turn_id: &str,
+        input: Self::Input,
+        cancel_token: Option<&CancellationToken>,
+        timeout_seconds: Option<u64>,
+        actor_runtime: Option<&Arc<ActorRuntime>>,
+    ) -> NortHingResult<Self::Output> {
         // Per-turn enforcement: only one handoff per turn.
         self.counter.try_record(turn_id)?;
+
+        // Apply default timeout if not specified.
+        let timeout_seconds = timeout_seconds.or(Some(SUBAGENT_DEFAULT_TIMEOUT_SECONDS));
 
         // Pull the global coordinator (legacy entry point). Each call
         // clones the `Arc` (matches the `a1_path` pattern — the global
@@ -301,7 +333,7 @@ impl SubAgentHandoff for CoordinatorHiddenSubagentHandoff {
         // is removed (target: post-0.1.0).
         #[allow(deprecated)]
         let result = coordinator
-            .execute_hidden_subagent_internal(input, None, None, None)
+            .execute_hidden_subagent_internal(input, cancel_token, timeout_seconds, actor_runtime)
             .await
             .map_err(NortHingError::from)?;
 

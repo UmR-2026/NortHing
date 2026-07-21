@@ -129,20 +129,20 @@ impl ConversationCoordinator {
     pub(crate) async fn execute_subagent(
         &self,
         request: SubagentExecutionRequest,
-        _cancel_token: Option<&CancellationToken>,
-        _timeout_seconds: Option<u64>,
-        _actor_runtime: Option<&Arc<ActorRuntime>>,
+        cancel_token: Option<&CancellationToken>,
+        timeout_seconds: Option<u64>,
+        actor_runtime: Option<&Arc<ActorRuntime>>,
     ) -> NortHingResult<SubagentResult> {
         let hidden_request = self.resolve_hidden_subagent_execution_request(request).await?;
         let turn_id = subagent_turn_id(&hidden_request);
         let handoff = CoordinatorHiddenSubagentHandoff::new();
-        handoff.handoff(&turn_id, hidden_request).await
+        handoff.handoff(&turn_id, hidden_request, cancel_token, timeout_seconds, actor_runtime).await
     }
 
     pub(crate) async fn start_background_subagent(
         &self,
         request: SubagentExecutionRequest,
-        _timeout_seconds: Option<u64>,
+        timeout_seconds: Option<u64>,
         _actor_runtime: Option<&Arc<ActorRuntime>>,
     ) -> NortHingResult<BackgroundSubagentStartResult> {
         let request = self.resolve_hidden_subagent_execution_request(request).await?;
@@ -163,14 +163,9 @@ impl ConversationCoordinator {
         let background_task_id = format!("bg-subagent-{}", uuid::Uuid::new_v4());
         let background_task_id_for_delivery = background_task_id.clone();
         let task_description = request.user_input_text.clone();
-        // B-2: cancel token wiring is currently dropped at the handoff
-        // boundary (the canonical `CoordinatorHiddenSubagentHandoff` does
-        // not yet plumb per-call cancel through to the global coordinator's
-        // phase2 loop). It is preserved as a derived `parent_cancel_token`
-        // step above so a follow-up R73+ handoff enhancement can thread it
-        // through without re-introducing the lookup. The child's per-turn
-        // enforcement (via `TurnHandoffCounter`) remains in force.
-        let _parent_cancel_token = self
+        // Derive cancel token from parent dialog turn; this is plumbed through
+        // to the handoff boundary now (C5b-G1 fix).
+        let parent_cancel_token = self
             .execution_engine
             .cancel_token_for_dialog_turn(&subagent_parent_info.dialog_turn_id)
             .map(|token| token.child_token());
@@ -183,7 +178,10 @@ impl ConversationCoordinator {
         let handoff = CoordinatorHiddenSubagentHandoff::new();
 
         tokio::spawn(async move {
-            let handoff_result = handoff.handoff(&turn_id, request).await;
+            // Note: actor_runtime is not propagated to background handoff because
+            // the original code ignored it ( underscore prefix). The background
+            // subagent path uses the standard phase1/2/3 path via execute_hidden_subagent_internal.
+            let handoff_result = handoff.handoff(&turn_id, request, parent_cancel_token.as_ref(), timeout_seconds, None).await;
             let (delivery_text, display_text) = match handoff_result {
                 Ok(result) => (
                     super::so_types::format_background_subagent_delivery_text(

@@ -1,10 +1,10 @@
 use northhing_agent_runtime::thread_goal::{
     billable_tokens_from_counts, build_objective_updated_plan, build_set_thread_goal_result,
-    build_thread_goal_continuation_plan, clear_thread_goal_patch, goal_continuation_submit_retry_delay_ms,
-    goal_tool_response, is_usage_limit_message, should_record_thread_goal_token_usage,
-    should_skip_goal_continuation_after_turn, should_skip_goal_for_turn, thread_goal_event_payload,
-    thread_goal_from_custom_metadata, thread_goal_patch, thread_goal_status_is_resumable, SetThreadGoalRequest,
-    ThreadGoalContinuationFacts, ThreadGoalRuntime, ThreadGoalTokenUsageFacts,
+    build_thread_goal_continuation_plan, clear_thread_goal_patch, effective_subagent_timeout_seconds,
+    goal_continuation_submit_retry_delay_ms, goal_tool_response, is_usage_limit_message,
+    should_record_thread_goal_token_usage, should_skip_goal_continuation_after_turn, should_skip_goal_for_turn,
+    thread_goal_event_payload, thread_goal_from_custom_metadata, thread_goal_patch, thread_goal_status_is_resumable,
+    SetThreadGoalRequest, ThreadGoalContinuationFacts, ThreadGoalRuntime, ThreadGoalTokenUsageFacts,
 };
 use northhing_runtime_ports::{
     ThreadGoal, ThreadGoalStatus, MAX_GOAL_CONTINUATIONS, MAX_THREAD_GOAL_AUTO_CONTINUATIONS, THREAD_GOAL_METADATA_KEY,
@@ -332,4 +332,41 @@ fn turn_filtering_and_retry_policies_preserve_goal_mode_semantics() {
     assert!(is_usage_limit_message("insufficient_quota: billing hard limit"));
     assert!(!is_usage_limit_message("tool failed"));
     assert_eq!(MAX_GOAL_CONTINUATIONS, 100);
+}
+
+/// C5b-G1: Test that `effective_subagent_timeout_seconds` correctly handles None input.
+/// When no timeout is specified and parent goal mode is not active, the function
+/// returns None (the handoff boundary applies SUBAGENT_DEFAULT_TIMEOUT_SECONDS=600
+/// before calling into phase1, which then calls this function with the resolved value).
+#[test]
+fn effective_subagent_timeout_seconds_none_input_returns_none_without_parent_goal() {
+    // None timeout + no parent goal = None (no timeout enforced)
+    // Note: the handoff layer applies a default (600s) before this function is called,
+    // so this documents the raw function behavior when None is passed directly.
+    assert_eq!(effective_subagent_timeout_seconds(None, false), None);
+}
+
+#[test]
+fn effective_subagent_timeout_seconds_none_input_with_parent_goal_returns_none() {
+    // None timeout + parent goal active = None (goal mode disables timeout)
+    assert_eq!(effective_subagent_timeout_seconds(None, true), None);
+}
+
+#[test]
+fn effective_subagent_timeout_seconds_with_value_returns_filtered_value() {
+    // Positive timeout + no parent goal = the timeout value
+    assert_eq!(effective_subagent_timeout_seconds(Some(300), false), Some(300));
+    assert_eq!(effective_subagent_timeout_seconds(Some(600), false), Some(600));
+}
+
+#[test]
+fn effective_subagent_timeout_seconds_zero_is_filtered_to_none() {
+    // Zero timeout is filtered out (treated as "no timeout")
+    assert_eq!(effective_subagent_timeout_seconds(Some(0), false), None);
+}
+
+#[test]
+fn effective_subagent_timeout_seconds_parent_goal_overrides_any_timeout() {
+    // Parent goal active ignores any timeout
+    assert_eq!(effective_subagent_timeout_seconds(Some(1), true), None);
 }
