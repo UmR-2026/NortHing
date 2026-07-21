@@ -1,8 +1,8 @@
-﻿---
+---
 name: qa-only
 description: |
   Report-only QA testing. Systematically tests a web application and produces a
-  structured report with health score, screenshots, and repro steps 鈥?but never
+  structured report with health score, screenshots, and repro steps —but never
   fixes anything. Use when asked to "just report bugs", "qa report only", or
   "test but don't fix". For the full test-fix-verify loop, use /qa instead.
   Proactively suggest when the user wants a bug report without any code changes. (gstack)
@@ -11,7 +11,7 @@ description: |
 
 # /qa-only: Report-Only QA Testing
 
-You are a QA engineer. Test web applications like a real user 鈥?click everything, fill every form, check every state. Produce a structured report with evidence. **NEVER fix anything.**
+You are a QA engineer. Test web applications like a real user —click everything, fill every form, check every state. Produce a structured report with evidence. **NEVER fix anything.**
 
 ## northhing Team Mode Dispatch
 
@@ -35,7 +35,7 @@ When this skill is invoked by northhing Team Mode, this skill supplies the repor
 | Scope | Full app (or diff-scoped) | `Focus on the billing page` |
 | Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
 
-**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case 鈥?the user just shipped code on a branch and wants to verify it works.
+**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case —the user just shipped code on a branch and wants to verify it works.
 
 **Browser/desktop QA tooling:** Use northhing built-in browser/computer-use capability. Do not install, build, or call any external browse binary. Capture screenshots, snapshots, console errors, and repro evidence through northhing tooling and save artifacts under `.northhing/team/qa-reports/`.
 
@@ -80,16 +80,16 @@ This is the **primary mode** for developers verifying their work. When the user 
    ```
 
 2. **Identify affected pages/routes** from the changed files:
-   - Controller/route files 鈫?which URL paths they serve
-   - View/template/component files 鈫?which pages render them
-   - Model/service files 鈫?which pages use those models (check controllers that reference them)
-   - CSS/style files 鈫?which pages include those stylesheets
-   - API endpoints 鈫?test them directly with `northhing browser/computer-use js "await fetch('/api/...')"`
-   - Static pages (markdown, HTML) 鈫?navigate to them directly
+   - Controller/route files →which URL paths they serve
+   - View/template/component files →which pages render them
+   - Model/service files →which pages use those models (check controllers that reference them)
+   - CSS/style files →which pages include those stylesheets
+   - API endpoints →test them directly with `northhing browser/computer-use js "await fetch('/api/...')"`
+   - Static pages (markdown, HTML) →navigate to them directly
 
-   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode 鈥?navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior 鈥?always verify the app still works.
+   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode —navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior —always verify the app still works.
 
-3. **Detect the running app** 鈥?check common local dev ports:
+3. **Detect the running app** —check common local dev ports:
    ```bash
    northhing browser/computer-use goto http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
    northhing browser/computer-use goto http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
@@ -104,7 +104,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - If the change was interactive (forms, buttons, flows), test the interaction end-to-end
    - Use `snapshot -D` before and after actions to verify the change had the expected effect
 
-5. **Cross-reference with commit messages and PR description** to understand *intent* 鈥?what should the change do? Verify it actually does that.
+5. **Cross-reference with commit messages and PR description** to understand *intent* —what should the change do? Verify it actually does that.
 
 6. **Check TODOS.md** (if it exists) for known bugs or issues related to the changed files. If a TODO describes a bug that this branch should fix, add it to your test plan. If you find a new bug during QA that isn't in TODOS.md, note it in the report.
 
@@ -171,10 +171,10 @@ northhing browser/computer-use console --errors               # any errors on la
 ```
 
 **Detect framework** (note in report metadata):
-- `__next` in HTML or `_next/data` requests 鈫?Next.js
-- `csrf-token` meta tag 鈫?Rails
-- `wp-content` in URLs 鈫?WordPress
-- Client-side routing with no page reloads 鈫?SPA
+- `__next` in HTML or `_next/data` requests →Next.js
+- `csrf-token` meta tag →Rails
+- `wp-content` in URLs →WordPress
+- Client-side routing with no page reloads →SPA
 
 **For SPAs:** The `links` command may return few results because navigation is client-side. Use `snapshot -i` to find nav elements (buttons, menu items) instead.
 
@@ -190,13 +190,13 @@ northhing browser/computer-use console --errors
 
 Then follow the **per-page exploration checklist** (see `qa/references/issue-taxonomy.md`):
 
-1. **Visual scan** 鈥?Look at the annotated screenshot for layout issues
-2. **Interactive elements** 鈥?Click buttons, links, controls. Do they work?
-3. **Forms** 鈥?Fill and submit. Test empty, invalid, edge cases
-4. **Navigation** 鈥?Check all paths in and out
-5. **States** 鈥?Empty state, loading, error, overflow
-6. **Console** 鈥?Any new JS errors after interactions?
-7. **Responsiveness** 鈥?Check mobile viewport if relevant:
+1. **Visual scan** —Look at the annotated screenshot for layout issues
+2. **Interactive elements** —Click buttons, links, controls. Do they work?
+3. **Forms** —Fill and submit. Test empty, invalid, edge cases
+4. **Navigation** —Check all paths in and out
+5. **States** —Empty state, loading, error, overflow
+6. **Console** —Any new JS errors after interactions?
+7. **Responsiveness** —Check mobile viewport if relevant:
    ```bash
    northhing browser/computer-use viewport 375x812
    northhing browser/computer-use screenshot "$REPORT_DIR/screenshots/page-mobile.png"
@@ -205,11 +205,11 @@ Then follow the **per-page exploration checklist** (see `qa/references/issue-tax
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
 
-**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist 鈥?just check: loads? Console errors? Broken links visible?
+**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist —just check: loads? Console errors? Broken links visible?
 
 ### Phase 5: Document
 
-Document each issue **immediately when found** 鈥?don't batch them.
+Document each issue **immediately when found** —don't batch them.
 
 **Two evidence tiers:**
 
@@ -240,11 +240,11 @@ northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-
 ### Phase 6: Wrap Up
 
 1. **Compute health score** using the rubric below
-2. **Write "Top 3 Things to Fix"** 鈥?the 3 highest-severity issues
-3. **Write console health summary** 鈥?aggregate all console errors seen across pages
+2. **Write "Top 3 Things to Fix"** —the 3 highest-severity issues
+3. **Write console health summary** —aggregate all console errors seen across pages
 4. **Update severity counts** in the summary table
-5. **Fill in report metadata** 鈥?date, duration, pages visited, screenshot count, framework
-6. **Save baseline** 鈥?write `baseline.json` with:
+5. **Fill in report metadata** —date, duration, pages visited, screenshot count, framework
+6. **Save baseline** —write `baseline.json` with:
    ```json
    {
      "date": "YYYY-MM-DD",
@@ -268,21 +268,21 @@ northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-
 Compute each category score (0-100), then take the weighted average.
 
 ### Console (weight: 15%)
-- 0 errors 鈫?100
-- 1-3 errors 鈫?70
-- 4-10 errors 鈫?40
-- 10+ errors 鈫?10
+- 0 errors →100
+- 1-3 errors →70
+- 4-10 errors →40
+- 10+ errors →10
 
 ### Links (weight: 10%)
-- 0 broken 鈫?100
-- Each broken link 鈫?-15 (minimum 0)
+- 0 broken →100
+- Each broken link →-15 (minimum 0)
 
 ### Per-Category Scoring (Visual, Functional, UX, Content, Performance, Accessibility)
 Each category starts at 100. Deduct per finding:
-- Critical issue 鈫?-25
-- High issue 鈫?-15
-- Medium issue 鈫?-8
-- Low issue 鈫?-3
+- Critical issue →-25
+- High issue →-15
+- Medium issue →-8
+- Low issue →-3
 Minimum 0 per category.
 
 ### Weights
@@ -306,14 +306,14 @@ Minimum 0 per category.
 
 ### Next.js
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
-- Monitor `_next/data` requests in network 鈥?404s indicate broken data fetching
-- Test client-side navigation (click links, don't just `goto`) 鈥?catches routing issues
+- Monitor `_next/data` requests in network —404s indicate broken data fetching
+- Test client-side navigation (click links, don't just `goto`) —catches routing issues
 - Check for CLS (Cumulative Layout Shift) on pages with dynamic content
 
 ### Rails
 - Check for N+1 query warnings in console (if development mode)
 - Verify CSRF token presence in forms
-- Test Turbo/Stimulus integration 鈥?do page transitions work smoothly?
+- Test Turbo/Stimulus integration —do page transitions work smoothly?
 - Check for flash messages appearing and dismissing correctly
 
 ### WordPress
@@ -323,9 +323,9 @@ Minimum 0 per category.
 - Check for mixed content warnings (common with WP)
 
 ### General SPA (React, Vue, Angular)
-- Use `snapshot -i` for navigation 鈥?`links` command misses client-side routes
-- Check for stale state (navigate away and back 鈥?does data refresh?)
-- Test browser back/forward 鈥?does the app handle history correctly?
+- Use `snapshot -i` for navigation —`links` command misses client-side routes
+- Check for stale state (navigate away and back —does data refresh?)
+- Test browser back/forward —does the app handle history correctly?
 - Check for memory leaks (monitor console after extended use)
 
 ---
@@ -340,10 +340,10 @@ Minimum 0 per category.
 6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
 7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
 8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
-9. **Never delete output files.** Screenshots and reports accumulate 鈥?that's intentional.
+9. **Never delete output files.** Screenshots and reports accumulate —that's intentional.
 10. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
-11. **Show screenshots to the user.** After every `northhing browser/computer-use screenshot`, `northhing browser/computer-use snapshot -a -o`, or `northhing browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical 鈥?without it, screenshots are invisible to the user.
-12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior 鈥?always open the browser and test.
+11. **Show screenshots to the user.** After every `northhing browser/computer-use screenshot`, `northhing browser/computer-use snapshot -a -o`, or `northhing browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical —without it, screenshots are invisible to the user.
+12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior —always open the browser and test.
 
 ---
 
@@ -363,13 +363,13 @@ Write to `$HOME/.northhing/team/projects/{slug}/{user}-{branch}-test-outcome-{da
 
 ```
 .northhing/team/qa-reports/
-鈹溾攢鈹€ qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
-鈹溾攢鈹€ screenshots/
-鈹?  鈹溾攢鈹€ initial.png                        # Landing page annotated screenshot
-鈹?  鈹溾攢鈹€ issue-001-step-1.png               # Per-issue evidence
-鈹?  鈹溾攢鈹€ issue-001-result.png
-鈹?  鈹斺攢鈹€ ...
-鈹斺攢鈹€ baseline.json                          # For regression mode
+═══ qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
+═══ screenshots/
+═  ═══ initial.png                        # Landing page annotated screenshot
+═  ═══ issue-001-step-1.png               # Per-issue evidence
+═  ═══ issue-001-result.png
+═  ╔╔═ ...
+╔╔═ baseline.json                          # For regression mode
 ```
 
 Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`

@@ -318,6 +318,7 @@ pub fn custom_subagent_read_markdown_str(
     contents: &str,
     kind: CustomSubagentKind,
 ) -> Result<CustomSubagentDefinition, String> {
+    let contents = contents.strip_prefix('\u{feff}').unwrap_or(contents);
     let regex =
         Regex::new(r"(?s)^---\r?\n(.*?)\r?\n---").map_err(|error| format!("Failed to create regex: {error}"))?;
     let captures = regex

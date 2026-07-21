@@ -1,4 +1,4 @@
-﻿---
+---
 name: qa
 description: |
   Systematically QA test a web application and fix bugs found. Runs QA testing,
@@ -12,9 +12,9 @@ description: |
   Voice triggers (speech-to-text aliases): "quality check", "test the app", "run QA".
 ---
 
-# /qa: Test 鈫?Fix 鈫?Verify
+# /qa: Test →Fix →Verify
 
-You are a QA engineer AND a bug-fix engineer. Test web applications like a real user 鈥?click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
+You are a QA engineer AND a bug-fix engineer. Test web applications like a real user —click everything, fill every form, check every state. When you find bugs, fix them in source code with atomic commits, then re-verify. Produce a structured report with before/after evidence.
 
 ## northhing Team Mode Dispatch
 
@@ -44,7 +44,7 @@ When this skill is invoked by northhing Team Mode, this skill supplies the QA me
 - **Standard:** + medium severity (default)
 - **Exhaustive:** + low/cosmetic severity
 
-**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case 鈥?the user just shipped code on a branch and wants to verify it works.
+**If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case —the user just shipped code on a branch and wants to verify it works.
 
 **Browser session detection:** Use northhing browser/computer-use state to detect whether an existing user browser session is available.
 If `CDP_MODE=true`: skip cookie import prompts (the real browser already has cookies), skip user-agent overrides (real browser has real user-agent), and skip headless detection workarounds. The user's real auth sessions are already available.
@@ -59,9 +59,9 @@ If the output is non-empty (working tree is dirty), **STOP** and use AskUserQues
 
 "Your working tree has uncommitted changes. /qa needs a clean tree so each bug fix gets its own atomic commit."
 
-- A) Commit my changes 鈥?commit all current changes with a descriptive message, then start QA
-- B) Stash my changes 鈥?stash, run QA, pop the stash after
-- C) Abort 鈥?I'll clean up manually
+- A) Commit my changes —commit all current changes with a descriptive message, then start QA
+- B) Stash my changes —stash, run QA, pop the stash after
+- C) Abort —I'll clean up manually
 
 RECOMMENDATION: Choose A because uncommitted work should be preserved as a commit before QA adds its own fix commits.
 
@@ -100,14 +100,14 @@ Print "Test framework detected: {name} ({N} existing tests). Skipping bootstrap.
 Read 2-3 existing test files to learn conventions (naming, imports, assertion style, setup patterns).
 Store conventions as prose context for use in Phase 8e.5 or Step 3.4. **Skip the rest of bootstrap.**
 
-**If BOOTSTRAP_DECLINED** appears: Print "Test bootstrap previously declined 鈥?skipping." **Skip the rest of bootstrap.**
+**If BOOTSTRAP_DECLINED** appears: Print "Test bootstrap previously declined —skipping." **Skip the rest of bootstrap.**
 
 **If NO runtime detected** (no config files found): Use AskUserQuestion:
 "I couldn't detect your project's language. What runtime are you using?"
 Options: A) Node.js/TypeScript B) Ruby/Rails C) Python D) Go E) Rust F) PHP G) Elixir H) This project doesn't need tests.
-If user picks H 鈫?write `.northhing/team/no-test-bootstrap` and continue without tests.
+If user picks H →write `.northhing/team/no-test-bootstrap` and continue without tests.
 
-**If runtime detected but no test framework 鈥?bootstrap:**
+**If runtime detected but no test framework —bootstrap:**
 
 ### B2. Research best practices
 
@@ -124,22 +124,22 @@ If WebSearch is unavailable, use this built-in knowledge table:
 | Next.js | vitest + @testing-library/react + playwright | jest + cypress |
 | Python | pytest + pytest-cov | unittest |
 | Go | stdlib testing + testify | stdlib only |
-| Rust | cargo test (built-in) + mockall | 鈥?|
+| Rust | cargo test (built-in) + mockall | —|
 | PHP | phpunit + mockery | pest |
-| Elixir | ExUnit (built-in) + ex_machina | 鈥?|
+| Elixir | ExUnit (built-in) + ex_machina | —|
 
 ### B3. Framework selection
 
 Use AskUserQuestion:
 "I detected this is a [Runtime/Framework] project with no test framework. I researched current best practices. Here are the options:
-A) [Primary] 鈥?[rationale]. Includes: [packages]. Supports: unit, integration, smoke, e2e
-B) [Alternative] 鈥?[rationale]. Includes: [packages]
-C) Skip 鈥?don't set up testing right now
+A) [Primary] —[rationale]. Includes: [packages]. Supports: unit, integration, smoke, e2e
+B) [Alternative] —[rationale]. Includes: [packages]
+C) Skip —don't set up testing right now
 RECOMMENDATION: Choose A because [reason based on project context]"
 
-If user picks C 鈫?write `.northhing/team/no-test-bootstrap`. Tell user: "If you change your mind later, delete `.northhing/team/no-test-bootstrap` and re-run." Continue without tests.
+If user picks C →write `.northhing/team/no-test-bootstrap`. Tell user: "If you change your mind later, delete `.northhing/team/no-test-bootstrap` and re-run." Continue without tests.
 
-If multiple runtimes detected (monorepo) 鈫?ask which runtime to set up first, with option to do both sequentially.
+If multiple runtimes detected (monorepo) →ask which runtime to set up first, with option to do both sequentially.
 
 ### B4. Install and configure
 
@@ -148,7 +148,7 @@ If multiple runtimes detected (monorepo) 鈫?ask which runtime to set up first, 
 3. Create directory structure (test/, spec/, etc.)
 4. Create one example test matching the project's code to verify setup works
 
-If package installation fails 鈫?debug once. If still failing 鈫?revert with `git checkout -- package.json package-lock.json` (or equivalent for the runtime). Warn user and continue without tests.
+If package installation fails →debug once. If still failing →revert with `git checkout -- package.json package-lock.json` (or equivalent for the runtime). Warn user and continue without tests.
 
 ### B4.5. First real tests
 
@@ -156,8 +156,8 @@ Generate 3-5 real tests for existing code:
 
 1. **Find recently changed files:** `git log --since=30.days --name-only --format="" | sort | uniq -c | sort -rn | head -10`
 2. **Prioritize by risk:** Error handlers > business logic with conditionals > API endpoints > pure functions
-3. **For each file:** Write one test that tests real behavior with meaningful assertions. Never `expect(x).toBeDefined()` 鈥?test what the code DOES.
-4. Run each test. Passes 鈫?keep. Fails 鈫?fix once. Still fails 鈫?delete silently.
+3. **For each file:** Write one test that tests real behavior with meaningful assertions. Never `expect(x).toBeDefined()` —test what the code DOES.
+4. Run each test. Passes →keep. Fails →fix once. Still fails →delete silently.
 5. Generate at least 1 test, cap at 5.
 
 Never import secrets, API keys, or credentials in test files. Use environment variables or test fixtures.
@@ -169,7 +169,7 @@ Never import secrets, API keys, or credentials in test files. Use environment va
 {detected test command}
 ```
 
-If tests fail 鈫?debug once. If still failing 鈫?revert all bootstrap changes and warn user.
+If tests fail →debug once. If still failing →revert all bootstrap changes and warn user.
 
 ### B5.5. CI/CD pipeline
 
@@ -179,21 +179,21 @@ ls -d .github/ 2>/dev/null && echo "CI:github"
 ls .gitlab-ci.yml .circleci/ bitrise.yml 2>/dev/null
 ```
 
-If `.github/` exists (or no CI detected 鈥?default to GitHub Actions):
+If `.github/` exists (or no CI detected —default to GitHub Actions):
 Create `.github/workflows/test.yml` with:
 - `runs-on: ubuntu-latest`
 - Appropriate setup action for the runtime (setup-node, setup-ruby, setup-python, etc.)
 - The same test command verified in B5
 - Trigger: push + pull_request
 
-If non-GitHub CI detected 鈫?skip CI generation with note: "Detected {provider} 鈥?CI pipeline generation supports GitHub Actions only. Add test step to your existing pipeline manually."
+If non-GitHub CI detected →skip CI generation with note: "Detected {provider} —CI pipeline generation supports GitHub Actions only. Add test step to your existing pipeline manually."
 
 ### B6. Create TESTING.md
 
-First check: If TESTING.md already exists 鈫?read it and update/append rather than overwriting. Never destroy existing content.
+First check: If TESTING.md already exists →read it and update/append rather than overwriting. Never destroy existing content.
 
 Write TESTING.md with:
-- Philosophy: "100% test coverage is the key to great vibe coding. Tests let you move fast, trust your instincts, and ship with confidence 鈥?without them, vibe coding is just yolo coding. With tests, it's a superpower."
+- Philosophy: "100% test coverage is the key to great vibe coding. Tests let you move fast, trust your instincts, and ship with confidence —without them, vibe coding is just yolo coding. With tests, it's a superpower."
 - Framework name and version
 - How to run tests (the verified command from B5)
 - Test layers: Unit tests (what, where, when), Integration tests, Smoke tests, E2E tests
@@ -201,13 +201,13 @@ Write TESTING.md with:
 
 ### B7. Update AGENTS.md
 
-First check: If AGENTS.md already has a `## Testing` section 鈫?skip. Don't duplicate.
+First check: If AGENTS.md already has a `## Testing` section →skip. Don't duplicate.
 
 Append a `## Testing` section:
 - Run command and test directory
 - Reference to TESTING.md
 - Test expectations:
-  - 100% test coverage is the goal 鈥?tests make vibe coding safe
+  - 100% test coverage is the goal —tests make vibe coding safe
   - When writing new functions, write a corresponding test
   - When fixing a bug, write a regression test
   - When adding error handling, write a test that triggers the error
@@ -267,16 +267,16 @@ This is the **primary mode** for developers verifying their work. When the user 
    ```
 
 2. **Identify affected pages/routes** from the changed files:
-   - Controller/route files 鈫?which URL paths they serve
-   - View/template/component files 鈫?which pages render them
-   - Model/service files 鈫?which pages use those models (check controllers that reference them)
-   - CSS/style files 鈫?which pages include those stylesheets
-   - API endpoints 鈫?test them directly with `northhing browser/computer-use js "await fetch('/api/...')"`
-   - Static pages (markdown, HTML) 鈫?navigate to them directly
+   - Controller/route files →which URL paths they serve
+   - View/template/component files →which pages render them
+   - Model/service files →which pages use those models (check controllers that reference them)
+   - CSS/style files →which pages include those stylesheets
+   - API endpoints →test them directly with `northhing browser/computer-use js "await fetch('/api/...')"`
+   - Static pages (markdown, HTML) →navigate to them directly
 
-   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode 鈥?navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior 鈥?always verify the app still works.
+   **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode —navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior —always verify the app still works.
 
-3. **Detect the running app** 鈥?check common local dev ports:
+3. **Detect the running app** —check common local dev ports:
    ```bash
    northhing browser/computer-use goto http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
    northhing browser/computer-use goto http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
@@ -291,7 +291,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - If the change was interactive (forms, buttons, flows), test the interaction end-to-end
    - Use `snapshot -D` before and after actions to verify the change had the expected effect
 
-5. **Cross-reference with commit messages and PR description** to understand *intent* 鈥?what should the change do? Verify it actually does that.
+5. **Cross-reference with commit messages and PR description** to understand *intent* —what should the change do? Verify it actually does that.
 
 6. **Check TODOS.md** (if it exists) for known bugs or issues related to the changed files. If a TODO describes a bug that this branch should fix, add it to your test plan. If you find a new bug during QA that isn't in TODOS.md, note it in the report.
 
@@ -358,10 +358,10 @@ northhing browser/computer-use console --errors               # any errors on la
 ```
 
 **Detect framework** (note in report metadata):
-- `__next` in HTML or `_next/data` requests 鈫?Next.js
-- `csrf-token` meta tag 鈫?Rails
-- `wp-content` in URLs 鈫?WordPress
-- Client-side routing with no page reloads 鈫?SPA
+- `__next` in HTML or `_next/data` requests →Next.js
+- `csrf-token` meta tag →Rails
+- `wp-content` in URLs →WordPress
+- Client-side routing with no page reloads →SPA
 
 **For SPAs:** The `links` command may return few results because navigation is client-side. Use `snapshot -i` to find nav elements (buttons, menu items) instead.
 
@@ -377,13 +377,13 @@ northhing browser/computer-use console --errors
 
 Then follow the **per-page exploration checklist** (see `qa/references/issue-taxonomy.md`):
 
-1. **Visual scan** 鈥?Look at the annotated screenshot for layout issues
-2. **Interactive elements** 鈥?Click buttons, links, controls. Do they work?
-3. **Forms** 鈥?Fill and submit. Test empty, invalid, edge cases
-4. **Navigation** 鈥?Check all paths in and out
-5. **States** 鈥?Empty state, loading, error, overflow
-6. **Console** 鈥?Any new JS errors after interactions?
-7. **Responsiveness** 鈥?Check mobile viewport if relevant:
+1. **Visual scan** —Look at the annotated screenshot for layout issues
+2. **Interactive elements** —Click buttons, links, controls. Do they work?
+3. **Forms** —Fill and submit. Test empty, invalid, edge cases
+4. **Navigation** —Check all paths in and out
+5. **States** —Empty state, loading, error, overflow
+6. **Console** —Any new JS errors after interactions?
+7. **Responsiveness** —Check mobile viewport if relevant:
    ```bash
    northhing browser/computer-use viewport 375x812
    northhing browser/computer-use screenshot "$REPORT_DIR/screenshots/page-mobile.png"
@@ -392,11 +392,11 @@ Then follow the **per-page exploration checklist** (see `qa/references/issue-tax
 
 **Depth judgment:** Spend more time on core features (homepage, dashboard, checkout, search) and less on secondary pages (about, terms, privacy).
 
-**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist 鈥?just check: loads? Console errors? Broken links visible?
+**Quick mode:** Only visit homepage + top 5 navigation targets from the Orient phase. Skip the per-page checklist —just check: loads? Console errors? Broken links visible?
 
 ### Phase 5: Document
 
-Document each issue **immediately when found** 鈥?don't batch them.
+Document each issue **immediately when found** —don't batch them.
 
 **Two evidence tiers:**
 
@@ -427,11 +427,11 @@ northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-
 ### Phase 6: Wrap Up
 
 1. **Compute health score** using the rubric below
-2. **Write "Top 3 Things to Fix"** 鈥?the 3 highest-severity issues
-3. **Write console health summary** 鈥?aggregate all console errors seen across pages
+2. **Write "Top 3 Things to Fix"** —the 3 highest-severity issues
+3. **Write console health summary** —aggregate all console errors seen across pages
 4. **Update severity counts** in the summary table
-5. **Fill in report metadata** 鈥?date, duration, pages visited, screenshot count, framework
-6. **Save baseline** 鈥?write `baseline.json` with:
+5. **Fill in report metadata** —date, duration, pages visited, screenshot count, framework
+6. **Save baseline** —write `baseline.json` with:
    ```json
    {
      "date": "YYYY-MM-DD",
@@ -455,21 +455,21 @@ northhing browser/computer-use snapshot -i -a -o "$REPORT_DIR/screenshots/issue-
 Compute each category score (0-100), then take the weighted average.
 
 ### Console (weight: 15%)
-- 0 errors 鈫?100
-- 1-3 errors 鈫?70
-- 4-10 errors 鈫?40
-- 10+ errors 鈫?10
+- 0 errors →100
+- 1-3 errors →70
+- 4-10 errors →40
+- 10+ errors →10
 
 ### Links (weight: 10%)
-- 0 broken 鈫?100
-- Each broken link 鈫?-15 (minimum 0)
+- 0 broken →100
+- Each broken link →-15 (minimum 0)
 
 ### Per-Category Scoring (Visual, Functional, UX, Content, Performance, Accessibility)
 Each category starts at 100. Deduct per finding:
-- Critical issue 鈫?-25
-- High issue 鈫?-15
-- Medium issue 鈫?-8
-- Low issue 鈫?-3
+- Critical issue →-25
+- High issue →-15
+- Medium issue →-8
+- Low issue →-3
 Minimum 0 per category.
 
 ### Weights
@@ -493,14 +493,14 @@ Minimum 0 per category.
 
 ### Next.js
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
-- Monitor `_next/data` requests in network 鈥?404s indicate broken data fetching
-- Test client-side navigation (click links, don't just `goto`) 鈥?catches routing issues
+- Monitor `_next/data` requests in network —404s indicate broken data fetching
+- Test client-side navigation (click links, don't just `goto`) —catches routing issues
 - Check for CLS (Cumulative Layout Shift) on pages with dynamic content
 
 ### Rails
 - Check for N+1 query warnings in console (if development mode)
 - Verify CSRF token presence in forms
-- Test Turbo/Stimulus integration 鈥?do page transitions work smoothly?
+- Test Turbo/Stimulus integration —do page transitions work smoothly?
 - Check for flash messages appearing and dismissing correctly
 
 ### WordPress
@@ -510,9 +510,9 @@ Minimum 0 per category.
 - Check for mixed content warnings (common with WP)
 
 ### General SPA (React, Vue, Angular)
-- Use `snapshot -i` for navigation 鈥?`links` command misses client-side routes
-- Check for stale state (navigate away and back 鈥?does data refresh?)
-- Test browser back/forward 鈥?does the app handle history correctly?
+- Use `snapshot -i` for navigation —`links` command misses client-side routes
+- Check for stale state (navigate away and back —does data refresh?)
+- Test browser back/forward —does the app handle history correctly?
 - Check for memory leaks (monitor console after extended use)
 
 ---
@@ -527,10 +527,10 @@ Minimum 0 per category.
 6. **Check console after every interaction.** JS errors that don't surface visually are still bugs.
 7. **Test like a user.** Use realistic data. Walk through complete workflows end-to-end.
 8. **Depth over breadth.** 5-10 well-documented issues with evidence > 20 vague descriptions.
-9. **Never delete output files.** Screenshots and reports accumulate 鈥?that's intentional.
+9. **Never delete output files.** Screenshots and reports accumulate —that's intentional.
 10. **Use `snapshot -C` for tricky UIs.** Finds clickable divs that the accessibility tree misses.
-11. **Show screenshots to the user.** After every `northhing browser/computer-use screenshot`, `northhing browser/computer-use snapshot -a -o`, or `northhing browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical 鈥?without it, screenshots are invisible to the user.
-12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior 鈥?always open the browser and test.
+11. **Show screenshots to the user.** After every `northhing browser/computer-use screenshot`, `northhing browser/computer-use snapshot -a -o`, or `northhing browser/computer-use responsive` command, use the Read tool on the output file(s) so the user can see them inline. For `responsive` (3 files), Read all three. This is critical —without it, screenshots are invisible to the user.
+12. **Never refuse to use the browser.** When the user invokes /qa or /qa-only, they are requesting browser-based testing. Never suggest evals, unit tests, or other alternatives as a substitute. Even if the diff appears to have no UI changes, backend changes affect app behavior —always open the browser and test.
 
 Record baseline health score at end of Phase 6.
 
@@ -540,15 +540,15 @@ Record baseline health score at end of Phase 6.
 
 ```
 .northhing/team/qa-reports/
-鈹溾攢鈹€ qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
-鈹溾攢鈹€ screenshots/
-鈹?  鈹溾攢鈹€ initial.png                        # Landing page annotated screenshot
-鈹?  鈹溾攢鈹€ issue-001-step-1.png               # Per-issue evidence
-鈹?  鈹溾攢鈹€ issue-001-result.png
-鈹?  鈹溾攢鈹€ issue-001-before.png               # Before fix (if fixed)
-鈹?  鈹溾攢鈹€ issue-001-after.png                # After fix (if fixed)
-鈹?  鈹斺攢鈹€ ...
-鈹斺攢鈹€ baseline.json                          # For regression mode
+═══ qa-report-{domain}-{YYYY-MM-DD}.md    # Structured report
+═══ screenshots/
+═  ═══ initial.png                        # Landing page annotated screenshot
+═  ═══ issue-001-step-1.png               # Per-issue evidence
+═  ═══ issue-001-result.png
+═  ═══ issue-001-before.png               # Before fix (if fixed)
+═  ═══ issue-001-after.png                # After fix (if fixed)
+═  ╔╔═ ...
+╔╔═ baseline.json                          # For regression mode
 ```
 
 Report filenames use the domain and date: `qa-report-myapp-com-2026-03-12.md`
@@ -584,18 +584,18 @@ For each fixable issue, in severity order:
 ### 8b. Fix
 
 - Read the source code, understand the context
-- Make the **minimal fix** 鈥?smallest change that resolves the issue
+- Make the **minimal fix** —smallest change that resolves the issue
 - Do NOT refactor surrounding code, add features, or "improve" unrelated things
 
 ### 8c. Commit
 
 ```bash
 git add <only-changed-files>
-git commit -m "fix(qa): ISSUE-NNN 鈥?short description"
+git commit -m "fix(qa): ISSUE-NNN —short description"
 ```
 
 - One commit per fix. Never bundle multiple fixes.
-- Message format: `fix(qa): ISSUE-NNN 鈥?short description`
+- Message format: `fix(qa): ISSUE-NNN —short description`
 
 ### 8d. Re-test
 
@@ -615,7 +615,7 @@ northhing browser/computer-use snapshot -D
 
 - **verified**: re-test confirms the fix works, no new errors introduced
 - **best-effort**: fix applied but couldn't fully verify (e.g., needs auth state, external service)
-- **reverted**: regression detected 鈫?`git revert HEAD` 鈫?mark issue as "deferred"
+- **reverted**: regression detected →`git revert HEAD` →mark issue as "deferred"
 
 ### 8e.5. Regression Test
 
@@ -642,16 +642,16 @@ The test MUST:
 - If you found adjacent edge cases while tracing, test those too (e.g., null input, empty array, boundary value)
 - Include full attribution comment:
   ```
-  // Regression: ISSUE-NNN 鈥?{what broke}
+  // Regression: ISSUE-NNN —{what broke}
   // Found by /qa on {YYYY-MM-DD}
   // Report: .northhing/team/qa-reports/qa-report-{domain}-{date}.md
   ```
 
 Test type decision:
-- Console error / JS exception / logic bug 鈫?unit or integration test
-- Broken form / API failure / data flow bug 鈫?integration test with request/response
-- Visual bug with JS behavior (broken dropdown, animation) 鈫?component test
-- Pure CSS 鈫?skip (caught by QA reruns)
+- Console error / JS exception / logic bug →unit or integration test
+- Broken form / API failure / data flow bug →integration test with request/response
+- Visual bug with JS behavior (broken dropdown, animation) →component test
+- Pure CSS →skip (caught by QA reruns)
 
 Generate unit tests. Mock all external dependencies (DB, API, Redis, file system).
 
@@ -664,9 +664,9 @@ Use auto-incrementing names to avoid collisions: check existing `{name}.regressi
 ```
 
 **4. Evaluate:**
-- Passes 鈫?commit: `git commit -m "test(qa): regression test for ISSUE-NNN 鈥?{desc}"`
-- Fails 鈫?fix test once. Still failing 鈫?delete test, defer.
-- Taking >2 min exploration 鈫?skip and defer.
+- Passes →commit: `git commit -m "test(qa): regression test for ISSUE-NNN —{desc}"`
+- Fails →fix test once. Still failing →delete test, defer.
+- Taking >2 min exploration →skip and defer.
 
 **5. WTF-likelihood exclusion:** Test commits don't count toward the heuristic.
 
@@ -696,7 +696,7 @@ After all fixes are applied:
 
 1. Re-run QA on all affected pages
 2. Compute final health score
-3. **If final score is WORSE than baseline:** WARN prominently 鈥?something regressed
+3. **If final score is WORSE than baseline:** WARN prominently —something regressed
 
 ---
 
@@ -722,10 +722,10 @@ Write to `$HOME/.northhing/team/projects/{slug}/{user}-{branch}-test-outcome-{da
 - Total issues found
 - Fixes applied (verified: X, best-effort: Y, reverted: Z)
 - Deferred issues
-- Health score delta: baseline 鈫?final
+- Health score delta: baseline →final
 
 **PR Summary:** Include a one-line summary suitable for PR descriptions:
-> "QA found N issues, fixed M, health score X 鈫?Y."
+> "QA found N issues, fixed M, health score X →Y."
 
 ---
 
@@ -733,8 +733,8 @@ Write to `$HOME/.northhing/team/projects/{slug}/{user}-{branch}-test-outcome-{da
 
 If the repo has a `TODOS.md`:
 
-1. **New deferred bugs** 鈫?add as TODOs with severity, category, and repro steps
-2. **Fixed bugs that were in TODOS.md** 鈫?annotate with "Fixed by /qa on {branch}, {date}"
+1. **New deferred bugs** →add as TODOs with severity, category, and repro steps
+2. **Fixed bugs that were in TODOS.md** →annotate with "Fixed by /qa on {branch}, {date}"
 
 ---
 
@@ -767,6 +767,6 @@ already knows. A good test: would this insight save time in a future session? If
 
 11. **Clean working tree required.** If dirty, use AskUserQuestion to offer commit/stash/abort before proceeding.
 12. **One commit per fix.** Never bundle multiple fixes into one commit.
-13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests 鈥?only create new test files.
+13. **Only modify tests when generating regression tests in Phase 8e.5.** Never modify CI configuration. Never modify existing tests —only create new test files.
 14. **Revert on regression.** If a fix makes things worse, `git revert HEAD` immediately.
 15. **Self-regulate.** Follow the WTF-likelihood heuristic. When in doubt, stop and ask.

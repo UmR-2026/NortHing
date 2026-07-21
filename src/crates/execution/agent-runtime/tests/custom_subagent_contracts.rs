@@ -150,3 +150,15 @@ fn custom_subagent_markdown_parse_errors_match_legacy_prefixes() {
         .expect_err("missing front matter should fail");
     assert_eq!(missing_front_matter, "Failed to capture content");
 }
+
+#[test]
+fn custom_subagent_read_markdown_str_handles_bom_prefix() {
+    let with_bom =
+        "\u{feff}---\nname: BomTest\ndescription: Test BOM tolerance\n---\n# Prompt";
+    let result = custom_subagent_read_markdown_str(with_bom, CustomSubagentKind::User);
+    assert!(result.is_ok(), "should parse with BOM prefix: {:?}", result.err());
+    let def = result.unwrap();
+    assert_eq!(def.name, "BomTest");
+    assert_eq!(def.description, "Test BOM tolerance");
+    assert!(def.prompt.starts_with("# Prompt"));
+}

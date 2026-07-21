@@ -12,6 +12,7 @@ impl FrontMatterMarkdown {
 
     /// Parse front matter from string and return metadata and body
     pub fn load_str(content: &str) -> Result<(Value, String), String> {
+        let content = content.strip_prefix('\u{feff}').unwrap_or(content);
         let front_matter_pattern = r"(?s)^---\r?\n(.*?)\r?\n---";
         let re = regex::Regex::new(front_matter_pattern).map_err(|e| format!("Failed to create regex: {}", e))?;
         let caps = re
@@ -36,5 +37,30 @@ impl FrontMatterMarkdown {
         let yaml_str = serde_yaml::to_string(metadata).map_err(|e| format!("Failed to serialize YAML: {}", e))?;
         let content = format!("---\n{}\n---\n\n{}", yaml_str.trim_end(), body.trim_start());
         std::fs::write(path, content).map_err(|e| format!("Failed to write markdown file: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_str_handles_bom_prefix() {
+        let with_bom = "\u{feff}---\nname: test\n---\n# Hello";
+        let result = FrontMatterMarkdown::load_str(with_bom);
+        assert!(result.is_ok(), "should parse with BOM prefix");
+        let (meta, body) = result.unwrap();
+        assert_eq!(meta.get("name").and_then(|v| v.as_str()), Some("test"));
+        assert!(body.starts_with("# Hello"));
+    }
+
+    #[test]
+    fn load_str_handles_no_bom() {
+        let no_bom = "---\nname: test\n---\n# Hello";
+        let result = FrontMatterMarkdown::load_str(no_bom);
+        assert!(result.is_ok());
+        let (meta, body) = result.unwrap();
+        assert_eq!(meta.get("name").and_then(|v| v.as_str()), Some("test"));
+        assert!(body.starts_with("# Hello"));
     }
 }

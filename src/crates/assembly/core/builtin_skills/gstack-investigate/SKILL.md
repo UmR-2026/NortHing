@@ -1,4 +1,4 @@
-﻿---
+---
 name: investigate
 description: |
   Systematic debugging with root cause investigation. Four phases: investigate,
@@ -50,7 +50,7 @@ Gather context before forming any hypothesis.
 
 Use only northhing in-session memory, project docs, `.northhing/team/` artifacts, git history, TODO files, and prior design/review artifacts. Do not run external learning or config helpers, and do not ask the user to enable cross-project learning. If a relevant prior artifact is found, cite it as: `Prior northhing context applied: <source>`.
 
-Output: **"Root cause hypothesis: ..."** 鈥?a specific, testable claim about what is wrong and why.
+Output: **"Root cause hypothesis: ..."** —a specific, testable claim about what is wrong and why.
 
 ---
 
@@ -94,10 +94,10 @@ Check if this bug matches a known pattern:
 
 Also check:
 - `TODOS.md` for related known issues
-- `git log` for prior fixes in the same area 鈥?**recurring bugs in the same files are an architectural smell**, not a coincidence
+- `git log` for prior fixes in the same area —**recurring bugs in the same files are an architectural smell**, not a coincidence
 
 **External pattern search:** If the bug doesn't match a known pattern above, WebSearch for:
-- "{framework} {generic error type}" 鈥?**sanitize first:** strip hostnames, IPs, file paths, SQL, customer data. Search the error category, not the raw message.
+- "{framework} {generic error type}" —**sanitize first:** strip hostnames, IPs, file paths, SQL, customer data. Search the error category, not the raw message.
 - "{library} {component} known issues"
 
 If WebSearch is unavailable, skip this search and proceed with hypothesis testing. If a documented solution or known dependency bug surfaces, present it as a candidate hypothesis in Phase 3.
@@ -110,22 +110,22 @@ Before writing ANY fix, verify your hypothesis.
 
 1. **Confirm the hypothesis:** Add a temporary log statement, assertion, or debug output at the suspected root cause. Run the reproduction. Does the evidence match?
 
-2. **If the hypothesis is wrong:** Before forming the next hypothesis, consider searching for the error. **Sanitize first** 鈥?strip hostnames, IPs, file paths, SQL fragments, customer identifiers, and any internal/proprietary data from the error message. Search only the generic error type and framework context: "{component} {sanitized error type} {framework version}". If the error message is too specific to sanitize safely, skip the search. If WebSearch is unavailable, skip and proceed. Then return to Phase 1. Gather more evidence. Do not guess.
+2. **If the hypothesis is wrong:** Before forming the next hypothesis, consider searching for the error. **Sanitize first** —strip hostnames, IPs, file paths, SQL fragments, customer identifiers, and any internal/proprietary data from the error message. Search only the generic error type and framework context: "{component} {sanitized error type} {framework version}". If the error message is too specific to sanitize safely, skip the search. If WebSearch is unavailable, skip and proceed. Then return to Phase 1. Gather more evidence. Do not guess.
 
 3. **3-strike rule:** If 3 hypotheses fail, **STOP**. Use AskUserQuestion:
    ```
    3 hypotheses tested, none match. This may be an architectural issue
    rather than a simple bug.
 
-   A) Continue investigating 鈥?I have a new hypothesis: [describe]
-   B) Escalate for human review 鈥?this needs someone who knows the system
-   C) Add logging and wait 鈥?instrument the area and catch it next time
+   A) Continue investigating —I have a new hypothesis: [describe]
+   B) Escalate for human review —this needs someone who knows the system
+   C) Add logging and wait —instrument the area and catch it next time
    ```
 
-**Red flags** 鈥?if you see any of these, slow down:
-- "Quick fix for now" 鈥?there is no "for now." Fix it right or escalate.
-- Proposing a fix before tracing data flow 鈥?you're guessing.
-- Each fix reveals a new problem elsewhere 鈥?wrong layer, not wrong code.
+**Red flags** —if you see any of these, slow down:
+- "Quick fix for now" —there is no "for now." Fix it right or escalate.
+- Proposing a fix before tracing data flow —you're guessing.
+- Each fix reveals a new problem elsewhere —wrong layer, not wrong code.
 
 ---
 
@@ -146,9 +146,9 @@ Once root cause is confirmed:
 5. **If the fix touches >5 files:** Use AskUserQuestion to flag the blast radius:
    ```
    This fix touches N files. That's a large blast radius for a bug fix.
-   A) Proceed 鈥?the root cause genuinely spans these files
-   B) Split 鈥?fix the critical path now, defer the rest
-   C) Rethink 鈥?maybe there's a more targeted approach
+   A) Proceed —the root cause genuinely spans these files
+   B) Split —fix the critical path now, defer the rest
+   C) Rethink —maybe there's a more targeted approach
    ```
 
 ---
@@ -162,7 +162,7 @@ Run the test suite and paste the output.
 Output a structured debug report:
 ```
 DEBUG REPORT
-鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+────────────────────────────────────────
 Symptom:         [what the user observed]
 Root cause:      [what was actually wrong]
 Fix:             [what was changed, with file:line references]
@@ -170,7 +170,7 @@ Evidence:        [test output, reproduction attempt showing fix works]
 Regression test: [file:line of the new test]
 Related:         [TODOS.md items, prior bugs in same area, architectural notes]
 Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
-鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+────────────────────────────────────────
 ```
 
 ## Capture Learnings
@@ -202,11 +202,11 @@ already knows. A good test: would this insight save time in a future session? If
 
 ## Important Rules
 
-- **3+ failed fix attempts 鈫?STOP and question the architecture.** Wrong architecture, not failed hypothesis.
+- **3+ failed fix attempts →STOP and question the architecture.** Wrong architecture, not failed hypothesis.
 - **Never apply a fix you cannot verify.** If you can't reproduce and confirm, don't ship it.
 - **Never say "this should fix it."** Verify and prove it. Run the tests.
-- **If fix touches >5 files 鈫?AskUserQuestion** about blast radius before proceeding.
+- **If fix touches >5 files →AskUserQuestion** about blast radius before proceeding.
 - **Completion status:**
-  - DONE 鈥?root cause found, fix applied, regression test written, all tests pass
-  - DONE_WITH_CONCERNS 鈥?fixed but cannot fully verify (e.g., intermittent bug, requires staging)
-  - BLOCKED 鈥?root cause unclear after investigation, escalated
+  - DONE —root cause found, fix applied, regression test written, all tests pass
+  - DONE_WITH_CONCERNS —fixed but cannot fully verify (e.g., intermittent bug, requires staging)
+  - BLOCKED —root cause unclear after investigation, escalated

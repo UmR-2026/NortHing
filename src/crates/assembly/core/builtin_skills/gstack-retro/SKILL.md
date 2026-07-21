@@ -1,4 +1,4 @@
-﻿---
+---
 name: retro
 description: |
   Weekly engineering retrospective. Analyzes commit history, work patterns,
@@ -8,7 +8,7 @@ description: |
   Proactively suggest at the end of a work week or sprint. (gstack)
 ---
 
-# /retro 鈥?Weekly Engineering Retrospective
+# /retro —Weekly Engineering Retrospective
 
 Generates a comprehensive engineering retrospective analyzing commit history, work patterns, and code quality metrics. Team-aware: identifies the user running the command, then analyzes every contributor with per-person praise and growth opportunities. Designed for a senior IC/CTO-level builder using northhing as a force multiplier.
 
@@ -25,32 +25,32 @@ When this skill is invoked by northhing Team Mode, this skill supplies the retro
 When the user types `/retro`, run this skill.
 
 ## Arguments
-- `/retro` 鈥?default: last 7 days
-- `/retro 24h` 鈥?last 24 hours
-- `/retro 14d` 鈥?last 14 days
-- `/retro 30d` 鈥?last 30 days
-- `/retro compare` 鈥?compare current window vs prior same-length window
-- `/retro compare 14d` 鈥?compare with explicit window
-- `/retro global` 鈥?cross-project retro across all AI coding tools (7d default)
-- `/retro global 14d` 鈥?cross-project retro with explicit window
+- `/retro` —default: last 7 days
+- `/retro 24h` —last 24 hours
+- `/retro 14d` —last 14 days
+- `/retro 30d` —last 30 days
+- `/retro compare` —compare current window vs prior same-length window
+- `/retro compare 14d` —compare with explicit window
+- `/retro global` —cross-project retro across all AI coding tools (7d default)
+- `/retro global 14d` —cross-project retro with explicit window
 
 ## Instructions
 
-Parse the argument to determine the time window. Default to 7 days if no argument given. All times should be reported in the user's **local timezone** (use the system default 鈥?do NOT set `TZ`).
+Parse the argument to determine the time window. Default to 7 days if no argument given. All times should be reported in the user's **local timezone** (use the system default —do NOT set `TZ`).
 
-**Midnight-aligned windows:** For day (`d`) and week (`w`) units, compute an absolute start date at local midnight, not a relative string. For example, if today is 2026-03-18 and the window is 7 days: the start date is 2026-03-11. Use `--since="2026-03-11T00:00:00"` for git log queries 鈥?the explicit `T00:00:00` suffix ensures git starts from midnight. Without it, git uses the current wall-clock time (e.g., `--since="2026-03-11"` at 11pm means 11pm, not midnight). For week units, multiply by 7 to get days (e.g., `2w` = 14 days back). For hour (`h`) units, use `--since="N hours ago"` since midnight alignment does not apply to sub-day windows.
+**Midnight-aligned windows:** For day (`d`) and week (`w`) units, compute an absolute start date at local midnight, not a relative string. For example, if today is 2026-03-18 and the window is 7 days: the start date is 2026-03-11. Use `--since="2026-03-11T00:00:00"` for git log queries —the explicit `T00:00:00` suffix ensures git starts from midnight. Without it, git uses the current wall-clock time (e.g., `--since="2026-03-11"` at 11pm means 11pm, not midnight). For week units, multiply by 7 to get days (e.g., `2w` = 14 days back). For hour (`h`) units, use `--since="N hours ago"` since midnight alignment does not apply to sub-day windows.
 
 **Argument validation:** If the argument doesn't match a number followed by `d`, `h`, or `w`, the word `compare` (optionally followed by a window), or the word `global` (optionally followed by a window), show this usage and stop:
 ```
 Usage: /retro [window | compare | global]
-  /retro              鈥?last 7 days (default)
-  /retro 24h          鈥?last 24 hours
-  /retro 14d          鈥?last 14 days
-  /retro 30d          鈥?last 30 days
-  /retro compare      鈥?compare this period vs prior period
-  /retro compare 14d  鈥?compare with explicit window
-  /retro global       鈥?cross-project retro across all AI tools (7d default)
-  /retro global 14d   鈥?cross-project retro with explicit window
+  /retro              —last 7 days (default)
+  /retro 24h          —last 24 hours
+  /retro 14d          —last 14 days
+  /retro 30d          —last 30 days
+  /retro compare      —compare this period vs prior period
+  /retro compare 14d  —compare with explicit window
+  /retro global       —cross-project retro across all AI tools (7d default)
+  /retro global 14d   —cross-project retro with explicit window
 ```
 
 **If the first argument is `global`:** Skip the normal repo-scoped retro (Steps 1-14). Instead, follow the **Global Retrospective** flow at the end of this document. The optional second argument is the time window (default 7d). This mode does NOT require being inside a git repo.
@@ -69,7 +69,7 @@ git config user.name
 git config user.email
 ```
 
-The name returned by `git config user.name` is **"you"** 鈥?the person reading this retro. All other authors are teammates. Use this to orient the narrative: "your" commits vs teammate contributions.
+The name returned by `git config user.name` is **"you"** —the person reading this retro. All other authors are teammates. Use this to orient the narrative: "your" commits vs teammate contributions.
 
 Run ALL of these git commands in parallel (they are independent):
 
@@ -130,7 +130,7 @@ Calculate and present these metrics in a summary table:
 | Net LOC added | N |
 | Test LOC (insertions) | N |
 | Test LOC ratio | N% |
-| Version range | vX.Y.Z.W 鈫?vX.Y.Z.W |
+| Version range | vX.Y.Z.W →vX.Y.Z.W |
 | Active days | N |
 | Detected sessions | N |
 | Avg LOC/session-hour | N |
@@ -180,8 +180,8 @@ If the JSONL file doesn't exist or has no entries in the window, skip the Skill 
 
 If moments exist, list them:
 ```
-  EUREKA /office-hours (branch: garrytan/auth-rethink): "Session tokens don't need server storage 鈥?browser crypto API makes client-side JWT validation viable"
-  EUREKA /plan-eng-review (branch: garrytan/cache-layer): "Redis isn't needed here 鈥?Bun's built-in LRU cache handles this workload"
+  EUREKA /office-hours (branch: garrytan/auth-rethink): "Session tokens don't need server storage —browser crypto API makes client-side JWT validation viable"
+  EUREKA /plan-eng-review (branch: garrytan/cache-layer): "Redis isn't needed here —Bun's built-in LRU cache handles this workload"
 ```
 
 If the JSONL file doesn't exist or has no entries in the window, skip the Eureka Moments row.
@@ -191,9 +191,9 @@ If the JSONL file doesn't exist or has no entries in the window, skip the Eureka
 Show hourly histogram in local time using bar chart:
 
 ```
-Hour  Commits  鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅
- 00:    4      鈻堚枅鈻堚枅
- 07:    5      鈻堚枅鈻堚枅鈻? ...
+Hour  Commits  ████████████████
+ 00:    4      ████
+ 07:    5      ████▔ ...
 ```
 
 Identify and call out:
@@ -224,11 +224,11 @@ Calculate:
 Categorize by conventional commit prefix (feat/fix/refactor/test/chore/docs). Show as percentage bar:
 
 ```
-feat:     20  (40%)  鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅
-fix:      27  (54%)  鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻?refactor:  2  ( 4%)  鈻堚枅
+feat:     20  (40%)  ████████████████████
+fix:      27  (54%)  ██████████████████████████▔refactor:  2  ( 4%)  ██
 ```
 
-Flag if fix ratio exceeds 50% 鈥?this signals a "ship fast, fix fast" pattern that may indicate review gaps.
+Flag if fix ratio exceeds 50% —this signals a "ship fast, fix fast" pattern that may indicate review gaps.
 
 ### Step 6: Hotspot Analysis
 
@@ -258,23 +258,23 @@ From commit diffs, estimate PR sizes and bucket them:
 
 For each contributor (including the current user), compute:
 
-1. **Commits and LOC** 鈥?total commits, insertions, deletions, net LOC
-2. **Areas of focus** 鈥?which directories/files they touched most (top 3)
-3. **Commit type mix** 鈥?their personal feat/fix/refactor/test breakdown
-4. **Session patterns** 鈥?when they code (their peak hours), session count
-5. **Test discipline** 鈥?their personal test LOC ratio
-6. **Biggest ship** 鈥?their single highest-impact commit or PR in the window
+1. **Commits and LOC** —total commits, insertions, deletions, net LOC
+2. **Areas of focus** —which directories/files they touched most (top 3)
+3. **Commit type mix** —their personal feat/fix/refactor/test breakdown
+4. **Session patterns** —when they code (their peak hours), session count
+5. **Test discipline** —their personal test LOC ratio
+6. **Biggest ship** —their single highest-impact commit or PR in the window
 
-**For the current user ("You"):** This section gets the deepest treatment. Include all the detail from the solo retro 鈥?session analysis, time patterns, focus score. Frame it in first person: "Your peak hours...", "Your biggest ship..."
+**For the current user ("You"):** This section gets the deepest treatment. Include all the detail from the solo retro —session analysis, time patterns, focus score. Frame it in first person: "Your peak hours...", "Your biggest ship..."
 
 **For each teammate:** Write 2-3 sentences covering what they worked on and their pattern. Then:
 
-- **Praise** (1-2 specific things): Anchor in actual commits. Not "great work" 鈥?say exactly what was good. Examples: "Shipped the entire auth middleware rewrite in 3 focused sessions with 45% test coverage", "Every PR under 200 LOC 鈥?disciplined decomposition."
-- **Opportunity for growth** (1 specific thing): Frame as a leveling-up suggestion, not criticism. Anchor in actual data. Examples: "Test ratio was 12% this week 鈥?adding test coverage to the payment module before it gets more complex would pay off", "5 fix commits on the same file suggest the original PR could have used a review pass."
+- **Praise** (1-2 specific things): Anchor in actual commits. Not "great work" —say exactly what was good. Examples: "Shipped the entire auth middleware rewrite in 3 focused sessions with 45% test coverage", "Every PR under 200 LOC —disciplined decomposition."
+- **Opportunity for growth** (1 specific thing): Frame as a leveling-up suggestion, not criticism. Anchor in actual data. Examples: "Test ratio was 12% this week —adding test coverage to the payment module before it gets more complex would pay off", "5 fix commits on the same file suggest the original PR could have used a review pass."
 
-**If only one contributor (solo repo):** Skip the team breakdown and proceed as before 鈥?the retro is personal.
+**If only one contributor (solo repo):** Skip the team breakdown and proceed as before —the retro is personal.
 
-**If there are Co-Authored-By trailers:** Parse `Co-Authored-By:` lines in commit messages. Credit those authors for the commit alongside the primary author. Note AI co-authors (e.g., `noreply@example.com`) but do not include them as team members 鈥?instead, track "AI-assisted commits" as a separate metric.
+**If there are Co-Authored-By trailers:** Parse `Co-Authored-By:` lines in commit messages. Credit those authors for the commit alongside the primary author. Note AI co-authors (e.g., `noreply@example.com`) but do not include them as team members —instead, track "AI-assisted commits" as a separate metric.
 
 ## Capture Learnings
 
@@ -315,14 +315,14 @@ If the time window is 14 days or more, split into weekly buckets and show trends
 Count consecutive days with at least 1 commit to origin/<default>, going back from today. Track both team streak and personal streak:
 
 ```bash
-# Team streak: all unique commit dates (local time) 鈥?no hard cutoff
+# Team streak: all unique commit dates (local time) —no hard cutoff
 git log origin/<default> --format="%ad" --date=format:"%Y-%m-%d" | sort -u
 
 # Personal streak: only the current user's commits
 git log origin/<default> --author="<user_name>" --format="%ad" --date=format:"%Y-%m-%d" | sort -u
 ```
 
-Count backward from today 鈥?how many consecutive days have at least one commit? This queries the full history so streaks of any length are reported accurately. Display both:
+Count backward from today —how many consecutive days have at least one commit? This queries the full history so streaks of any length are reported accurately. Display both:
 - "Team shipping streak: 47 consecutive days"
 - "Your shipping streak: 32 consecutive days"
 
@@ -338,15 +338,15 @@ ls -t .context/retros/*.json 2>/dev/null
 **If prior retros exist:** Load the most recent one using the Read tool. Calculate deltas for key metrics and include a **Trends vs Last Retro** section:
 ```
                     Last        Now         Delta
-Test ratio:         22%    鈫?   41%         鈫?9pp
-Sessions:           10     鈫?   14          鈫?
-LOC/hour:           200    鈫?   350         鈫?5%
-Fix ratio:          54%    鈫?   30%         鈫?4pp (improving)
-Commits:            32     鈫?   47          鈫?7%
-Deep sessions:      3      鈫?   5           鈫?
+Test ratio:         22%    →   41%         →9pp
+Sessions:           10     →   14          →
+LOC/hour:           200    →   350         →5%
+Fix ratio:          54%    →   30%         →4pp (improving)
+Commits:            32     →   47          →7%
+Deep sessions:      3      →   5           →
 ```
 
-**If no prior retros exist:** Skip the comparison section and append: "First retro recorded 鈥?run again next week to see trends."
+**If no prior retros exist:** Skip the comparison section and append: "First retro recorded —run again next week to see trends."
 
 ### Step 13: Save Retro History
 
@@ -446,7 +446,7 @@ Week of Mar 1: 47 commits (3 contributors), 3.2k LOC, 38% tests, 12 PRs, peak: 1
 (from Step 2)
 
 ### Trends vs Last Retro
-(from Step 11, loaded before save 鈥?skip if first retro)
+(from Step 11, loaded before save —skip if first retro)
 
 ### Time & Session Patterns
 (from Steps 3-4)
@@ -473,10 +473,10 @@ Narrative covering:
 
 ### Test Health
 - Total test files: N (from command 10)
-- Tests added this period: M (from command 12 鈥?test files changed)
+- Tests added this period: M (from command 12 —test files changed)
 - Regression test commits: list `test(qa):` and `test(design):` and `test: coverage` commits from command 11
-- If prior retro exists and has `test_health`: show delta "Test count: {last} 鈫?{now} (+{delta})"
-- If test ratio < 20%: flag as growth area 鈥?"100% test coverage is the goal. Tests make vibe coding safe."
+- If prior retro exists and has `test_health`: show delta "Test count: {last} →{now} (+{delta})"
+- If test ratio < 20%: flag as growth area —"100% test coverage is the goal. Tests make vibe coding safe."
 
 ### Plan Completion
 Check review JSONL logs for plan completion data from /ship runs this period:
@@ -518,22 +518,22 @@ This is the section the user cares most about. Include:
 - **Where to level up** (1-2 specific, actionable suggestions)
 
 ### Team Breakdown
-(from Step 9, for each teammate 鈥?skip if solo repo)
+(from Step 9, for each teammate —skip if solo repo)
 
 For each teammate (sorted by commits descending), write a section:
 
 #### [Name]
 - **What they shipped**: 2-3 sentences on their contributions, areas of focus, and commit patterns
-- **Praise**: 1-2 specific things they did well, anchored in actual commits. Be genuine 鈥?what would you actually say in a 1:1? Examples:
-  - "Cleaned up the entire auth module in 3 small, reviewable PRs 鈥?textbook decomposition"
+- **Praise**: 1-2 specific things they did well, anchored in actual commits. Be genuine —what would you actually say in a 1:1? Examples:
+  - "Cleaned up the entire auth module in 3 small, reviewable PRs —textbook decomposition"
   - "Added integration tests for every new endpoint, not just happy paths"
   - "Fixed the N+1 query that was causing 2s load times on the dashboard"
 - **Opportunity for growth**: 1 specific, constructive suggestion. Frame as investment, not criticism. Examples:
-  - "Test coverage on the payment module is at 8% 鈥?worth investing in before the next feature lands on top of it"
-  - "Most commits land in a single burst 鈥?spacing work across the day could reduce context-switching fatigue"
-  - "All commits land between 1-4am 鈥?sustainable pace matters for code quality long-term"
+  - "Test coverage on the payment module is at 8% —worth investing in before the next feature lands on top of it"
+  - "Most commits land in a single burst —spacing work across the day could reduce context-switching fatigue"
+  - "All commits land between 1-4am —sustainable pace matters for code quality long-term"
 
-**AI collaboration note:** If many commits have `Co-Authored-By` AI trailers (e.g., northhing, Copilot), note the AI-assisted commit percentage as a team metric. Frame it neutrally 鈥?"N% of commits were AI-assisted" 鈥?without judgment.
+**AI collaboration note:** If many commits have `Co-Authored-By` AI trailers (e.g., northhing, Copilot), note the AI-assisted commit percentage as a team metric. Frame it neutrally —"N% of commits were AI-assisted" —without judgment.
 
 ### Top 3 Team Wins
 Identify the 3 highest-impact things shipped in the window across the whole team. For each:
@@ -554,7 +554,7 @@ Small, practical, realistic. Each must be something that takes <5 minutes to ado
 
 ## Global Retrospective Mode
 
-When the user runs `/retro global` (or `/retro global 14d`), follow this flow instead of the repo-scoped Steps 1-14. This mode works from any directory 鈥?it does NOT require being inside a git repo.
+When the user runs `/retro global` (or `/retro global 14d`), follow this flow instead of the repo-scoped Steps 1-14. This mode works from any directory —it does NOT require being inside a git repo.
 
 ### Global Step 1: Compute time window
 
@@ -607,7 +607,7 @@ For each repo, get commit dates (capped at 365 days):
 git -C <path> log origin/$DEFAULT --since="365 days ago" --format="%ad" --date=format:"%Y-%m-%d" | sort -u
 ```
 
-Union all dates across all repos. Count backward from today 鈥?how many consecutive days have at least one commit to ANY repo? If the streak hits 365 days, display as "365+ days".
+Union all dates across all repos. Count backward from today —how many consecutive days have at least one commit to ANY repo? If the streak hits 365 days, display as "365+ days".
 
 ### Global Step 5: Compute context switching metric
 
@@ -627,48 +627,48 @@ From the discovery JSON, analyze tool usage patterns:
 
 Structure the output with the **shareable personal card first**, then the full
 team/project breakdown below. The personal card is designed to be screenshot-friendly
-鈥?everything someone would want to share on X/Twitter in one clean block.
+—everything someone would want to share on X/Twitter in one clean block.
 
 ---
 
 **Tweetable summary** (first line, before everything else):
 ```
-Week of Mar 14: 5 projects, 138 commits, 250k LOC across 5 repos | 48 AI sessions | Streak: 52d 馃敟
+Week of Mar 14: 5 projects, 138 commits, 250k LOC across 5 repos | 48 AI sessions | Streak: 52d 🔥
 ```
 
-## 馃殌 Your Week: [user name] 鈥?[date range]
+## 📊 Your Week: [user name] —[date range]
 
 This section is the **shareable personal card**. It contains ONLY the current user's
-stats 鈥?no team data, no project breakdowns. Designed to screenshot and post.
+stats —no team data, no project breakdowns. Designed to screenshot and post.
 
 Use the user identity from `git config user.name` to filter all per-repo git data.
 Aggregate across all repos to compute personal totals.
 
-Render as a single visually clean block. Left border only 鈥?no right border (LLMs
+Render as a single visually clean block. Left border only —no right border (LLMs
 can't align right borders reliably). Pad repo names to the longest name so columns
 align cleanly. Never truncate project names.
 
 ```
-鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
-鈺? [USER NAME] 鈥?Week of [date]
-鈺犫晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
-鈺?鈺? [N] commits across [M] projects
-鈺? +[X]k LOC added 路 [Y]k LOC deleted 路 [Z]k net
-鈺? [N] AI coding sessions (CC: X, outside-voice sub-agent: Y, Gemini: Z)
-鈺? [N]-day shipping streak 馃敟
-鈺?鈺? PROJECTS
-鈺? 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
-鈺? [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
-鈺? [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
-鈺? [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
-鈺?鈺? SHIP OF THE WEEK
-鈺? [PR title] 鈥?[LOC] lines across [N] files
-鈺?鈺? TOP WORK
-鈺? 鈥?[1-line description of biggest theme]
-鈺? 鈥?[1-line description of second theme]
-鈺? 鈥?[1-line description of third theme]
-鈺?鈺? Powered by gstack
-鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+▔▔──────────────────────────────────────────────────────────────
+┃ [USER NAME] —Week of [date]
+▁▁──────────────────────────────────────────────────────────────
+┃┃ [N] commits across [M] projects
+┃ +[X]k LOC added 路 [Y]k LOC deleted 路 [Z]k net
+┃ [N] AI coding sessions (CC: X, outside-voice sub-agent: Y, Gemini: Z)
+┃ [N]-day shipping streak 🔥
+┃┃ PROJECTS
+┃ ═════════════════════════════════════════════════════════
+┃ [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
+┃ [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
+┃ [repo_name_full]        [N] commits    +[X]k LOC    [solo/team]
+┃┃ SHIP OF THE WEEK
+┃ [PR title] —[LOC] lines across [N] files
+┃┃ TOP WORK
+┃ —[1-line description of biggest theme]
+┃ —[1-line description of second theme]
+┃ —[1-line description of third theme]
+┃┃ Powered by gstack
+─────────────────────────────────────────────────────────────────────────────────
 ```
 
 **Rules for the personal card:**
@@ -676,13 +676,13 @@ align cleanly. Never truncate project names.
 - Sort repos by user's commit count descending.
 - **Never truncate repo names.** Use the full repo name (e.g., `analyze_transcripts`
   not `analyze_trans`). Pad the name column to the longest repo name so all columns
-  align. If names are long, widen the box 鈥?the box width adapts to content.
+  align. If names are long, widen the box —the box width adapts to content.
 - For LOC, use "k" formatting for thousands (e.g., "+64.0k" not "+64010").
 - Role: "solo" if user is the only contributor, "team" if others contributed.
 - Ship of the Week: the user's single highest-LOC PR across ALL repos.
 - Top Work: 3 bullet points summarizing the user's major themes, inferred from
-  commit messages. Not individual commits 鈥?synthesize into themes.
-  E.g., "Built /retro global 鈥?cross-project retrospective with AI session discovery"
+  commit messages. Not individual commits —synthesize into themes.
+  E.g., "Built /retro global —cross-project retrospective with AI session discovery"
   not "feat: global session discovery" + "feat: /retro global template".
 - The card must be self-contained. Someone seeing ONLY this block should understand
   the user's week without any surrounding context.
@@ -695,7 +695,7 @@ align cleanly. Never truncate project names.
 
 ## Global Engineering Retro: [date range]
 
-Everything below is the full analysis 鈥?team data, project breakdowns, patterns.
+Everything below is the full analysis —team data, project breakdowns, patterns.
 This is the "deep dive" that follows the shareable card.
 
 ### All Projects Overview
@@ -726,15 +726,15 @@ to filter. Include:
 - Your commit type mix (feat/fix/refactor/chore/docs breakdown)
 - Your biggest ship in this repo (highest-LOC commit or PR)
 
-If the user is the only contributor, say "Solo project 鈥?all commits are yours."
+If the user is the only contributor, say "Solo project —all commits are yours."
 If the user has 0 commits in a repo (team project they didn't touch this period),
-say "No commits this period 鈥?[N] AI sessions only." and skip the breakdown.
+say "No commits this period —[N] AI sessions only." and skip the breakdown.
 
 Format:
 ```
 **Your contributions:** 47/244 commits (19%), +4.2k/-0.3k LOC
   Key work: Writer Chat, email blocking, security hardening
-  Biggest ship: PR #605 鈥?Writer Chat eats the admin bar (2,457 ins, 46 files)
+  Biggest ship: PR #605 —Writer Chat eats the admin bar (2,457 ins, 46 files)
   Mix: feat(3) fix(2) chore(1)
 ```
 
@@ -746,9 +746,9 @@ Format:
 
 ### Tool Usage Analysis
 Per-tool breakdown with behavioral patterns:
-- northhing: N sessions across M repos 鈥?patterns observed
-- outside-voice sub-agent: N sessions across M repos 鈥?patterns observed
-- Gemini: N sessions across M repos 鈥?patterns observed
+- northhing: N sessions across M repos —patterns observed
+- outside-voice sub-agent: N sessions across M repos —patterns observed
+- Gemini: N sessions across M repos —patterns observed
 
 ### Ship of the Week (Global)
 Highest-impact PR across ALL projects. Identify by LOC and commit messages.
@@ -768,11 +768,11 @@ setopt +o nomatch 2>/dev/null || true  # zsh compat
 ls -t $HOME/.northhing/team/retros/global-*.json 2>/dev/null | head -5
 ```
 
-**Only compare against a prior retro with the same `window` value** (e.g., 7d vs 7d). If the most recent prior retro has a different window, skip comparison and note: "Prior global retro used a different window 鈥?skipping comparison."
+**Only compare against a prior retro with the same `window` value** (e.g., 7d vs 7d). If the most recent prior retro has a different window, skip comparison and note: "Prior global retro used a different window —skipping comparison."
 
 If a matching prior retro exists, load it with the Read tool. Show a **Trends vs Last Global Retro** table with deltas for key metrics: total commits, LOC, sessions, streak, context switches/day.
 
-If no prior global retros exist, append: "First global retro recorded 鈥?run again next week to see trends."
+If no prior global retros exist, append: "First global retro recorded —run again next week to see trends."
 
 ### Global Step 9: Save snapshot
 
@@ -825,7 +825,7 @@ Use the Write tool to save JSON to `$HOME/.northhing/team/retros/global-${today}
 
 When the user runs `/retro compare` (or `/retro compare 14d`):
 
-1. Compute metrics for the current window (default 7d) using the midnight-aligned start date (same logic as the main retro 鈥?e.g., if today is 2026-03-18 and window is 7d, use `--since="2026-03-11T00:00:00"`)
+1. Compute metrics for the current window (default 7d) using the midnight-aligned start date (same logic as the main retro —e.g., if today is 2026-03-18 and window is 7d, use `--since="2026-03-11T00:00:00"`)
 2. Compute metrics for the immediately prior same-length window using both `--since` and `--until` with midnight-aligned dates to avoid overlap (e.g., for a 7d window starting 2026-03-11: prior window is `--since="2026-03-04T00:00:00" --until="2026-03-11T00:00:00"`)
 3. Show a side-by-side comparison table with deltas and arrows
 4. Write a brief narrative highlighting the biggest improvements and regressions
@@ -834,15 +834,15 @@ When the user runs `/retro compare` (or `/retro compare 14d`):
 ## Tone
 
 - Encouraging but candid, no coddling
-- Specific and concrete 鈥?always anchor in actual commits/code
-- Skip generic praise ("great job!") 鈥?say exactly what was good and why
+- Specific and concrete —always anchor in actual commits/code
+- Skip generic praise ("great job!") —say exactly what was good and why
 - Frame improvements as leveling up, not criticism
-- **Praise should feel like something you'd actually say in a 1:1** 鈥?specific, earned, genuine
-- **Growth suggestions should feel like investment advice** 鈥?"this is worth your time because..." not "you failed at..."
+- **Praise should feel like something you'd actually say in a 1:1** —specific, earned, genuine
+- **Growth suggestions should feel like investment advice** —"this is worth your time because..." not "you failed at..."
 - Never compare teammates against each other negatively. Each person's section stands on its own.
 - Keep total output around 3000-4500 words (slightly longer to accommodate team sections)
 - Use markdown tables and code blocks for data, prose for narrative
-- Output directly to the conversation 鈥?do NOT write to filesystem (except the `.context/retros/` JSON snapshot)
+- Output directly to the conversation —do NOT write to filesystem (except the `.context/retros/` JSON snapshot)
 
 ## Important Rules
 
@@ -852,6 +852,6 @@ When the user runs `/retro compare` (or `/retro compare 14d`):
 - If the window has zero commits, say so and suggest a different window
 - Round LOC/hour to nearest 50
 - Treat merge commits as PR boundaries
-- Do not read AGENTS.md or other docs 鈥?this skill is self-contained
+- Do not read AGENTS.md or other docs —this skill is self-contained
 - On first run (no prior retros), skip comparison sections gracefully
 - **Global mode:** Does NOT require being inside a git repo. Saves snapshots to `$HOME/.northhing/team/retros/` (not `.context/retros/`). Gracefully skip AI tools that aren't installed. Only compare against prior global retros with the same window value. If streak hits 365d cap, display as "365+ days".

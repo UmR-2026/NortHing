@@ -1,4 +1,4 @@
-﻿---
+---
 name: writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
@@ -15,7 +15,7 @@ You write test cases (pressure scenarios with subagents), watch them fail (basel
 
 **Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
 
-**CORE PRINCIPLE:** This skill adapts the RED-GREEN-REFACTOR cycle to documentation 鈥?write a failing test (baseline scenario), write the skill, verify it works, then close loopholes.
+**CORE PRINCIPLE:** This skill adapts the RED-GREEN-REFACTOR cycle to documentation —write a failing test (baseline scenario), write the skill, verify it works, then close loopholes.
 
 **Official guidance:** For northhing bundled skills, keep instructions self-contained, tool-accurate, and independent of external assistant runtimes. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
 
@@ -40,7 +40,7 @@ A **skill** is a reference guide for proven techniques, patterns, or tools. Skil
 | **Watch it fail** | Document exact rationalizations agent uses |
 | **Minimal code** | Write skill addressing those specific violations |
 | **Watch it pass** | Verify agent now complies |
-| **Refactor cycle** | Find new rationalizations 鈫?plug 鈫?re-verify |
+| **Refactor cycle** | Find new rationalizations →plug →re-verify |
 
 The entire skill creation process follows RED-GREEN-REFACTOR.
 
@@ -56,7 +56,7 @@ The entire skill creation process follows RED-GREEN-REFACTOR.
 - One-off solutions
 - Standard practices well-documented elsewhere
 - Project-specific conventions (put in AGENTS.md)
-- Mechanical constraints (if it's enforceable with regex/validation, automate it鈥攕ave documentation for judgment calls)
+- Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
 
 ## Skill Types
 
@@ -250,7 +250,7 @@ You: I'll search past conversations for React Router authentication patterns.
 # 鉁?GOOD: Minimal example (20 words)
 Partner: "How did we handle auth errors in React Router?"
 You: Searching...
-[Dispatch subagent 鈫?synthesis]
+[Dispatch subagent →synthesis]
 ```
 
 **Eliminate redundancy:**
@@ -308,9 +308,9 @@ digraph when_flowchart {
 - "When to use A vs B" decisions
 
 **Never use flowcharts for:**
-- Reference material 鈫?Tables, lists
-- Code examples 鈫?Markdown blocks
-- Linear instructions 鈫?Numbered lists
+- Reference material →Tables, lists
+- Code examples →Markdown blocks
+- Linear instructions →Numbered lists
 - Labels without semantic meaning (step1, helper2)
 
 See @graphviz-conventions.dot for graphviz style rules.
@@ -326,9 +326,9 @@ See @graphviz-conventions.dot for graphviz style rules.
 **One excellent example beats many mediocre ones**
 
 Choose most relevant language:
-- Testing techniques 鈫?TypeScript/JavaScript
-- System debugging 鈫?Shell/Python
-- Data processing 鈫?Python
+- Testing techniques →TypeScript/JavaScript
+- System debugging →Shell/Python
+- Data processing →Python
 
 **Good example:**
 - Complete and runnable
@@ -445,13 +445,13 @@ Different skill types need different test approaches:
 
 | Excuse | Reality |
 |--------|---------|
-| "Skill is obviously clear" | Clear to you 鈮?clear to other agents. Test it. |
+| "Skill is obviously clear" | Clear to you ✓clear to other agents. Test it. |
 | "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
 | "Testing is overkill" | Untested skills have issues. Always. 15 min testing saves hours. |
 | "I'll test if problems emerge" | Problems = agents can't use skill. Test BEFORE deploying. |
 | "Too tedious to test" | Testing is less tedious than debugging bad skill in production. |
 | "I'm confident it's good" | Overconfidence guarantees issues. Test anyway. |
-| "Academic review is enough" | Reading 鈮?using. Test application scenarios. |
+| "Academic review is enough" | Reading ✓using. Test application scenarios. |
 | "No time to test" | Deploying untested skill wastes more time fixing it later. |
 
 **All of these mean: Test before deploying. No exceptions.**
@@ -649,7 +649,7 @@ How future northhing finds your skill:
 **Creating skills IS TDD for process documentation.**
 
 Same Iron Law: No skill without failing test first.
-Same cycle: RED (baseline) 鈫?GREEN (write skill) 鈫?REFACTOR (close loopholes).
+Same cycle: RED (baseline) →GREEN (write skill) →REFACTOR (close loopholes).
 Same benefits: Better quality, fewer surprises, bulletproof results.
 
 If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.

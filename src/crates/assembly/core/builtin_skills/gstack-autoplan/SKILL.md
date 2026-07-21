@@ -1,7 +1,7 @@
-﻿---
+---
 name: autoplan
 description: |
- Auto-review pipeline 鈥?reads the full CEO, design, eng, and DX review skills from disk
+ Auto-review pipeline —reads the full CEO, design, eng, and DX review skills from disk
  and runs them sequentially with auto-decisions using 6 decision principles. Surfaces
  taste decisions (close approaches, borderline scope, codex disagreements) at a final
  approval gate. One command, fully reviewed plan out.
@@ -12,12 +12,12 @@ description: |
  Voice triggers (speech-to-text aliases): "auto plan", "automatic review".
 ---
 
-# /autoplan 鈥?Auto-Review Pipeline
+# /autoplan —Auto-Review Pipeline
 
 One command. Rough plan in, fully reviewed plan out.
 
 /autoplan reads the full CEO, design, eng, and DX review skill files from disk and follows
-them at full depth 鈥?same rigor, same sections, same methodology as running each skill
+them at full depth —same rigor, same sections, same methodology as running each skill
 manually. The only difference: intermediate AskUserQuestion calls are auto-decided using
 the 6 principles below. Taste decisions (where reasonable people could disagree) are
 surfaced at a final approval gate.
@@ -28,12 +28,12 @@ surfaced at a final approval gate.
 
 These rules auto-answer every intermediate question:
 
-1. **Choose completeness** 鈥?Ship the whole thing. Pick the approach that covers more edge cases.
-2. **Boil lakes** 鈥?Fix everything in the blast radius (files modified by this plan + direct importers). Auto-approve expansions that are in blast radius AND < 1 day CC effort (< 5 files, no new infra).
-3. **Pragmatic** 鈥?If two options fix the same thing, pick the cleaner one. 5 seconds choosing, not 5 minutes.
-4. **DRY** 鈥?Duplicates existing functionality鈥?Reject. Reuse what exists.
-5. **Explicit over clever** 鈥?10-line obvious fix > 200-line abstraction. Pick what a new contributor reads in 30 seconds.
-6. **Bias toward action** 鈥?Merge > review cycles > stale deliberation. Flag concerns but don't block.
+1. **Choose completeness** —Ship the whole thing. Pick the approach that covers more edge cases.
+2. **Boil lakes** —Fix everything in the blast radius (files modified by this plan + direct importers). Auto-approve expansions that are in blast radius AND < 1 day CC effort (< 5 files, no new infra).
+3. **Pragmatic** —If two options fix the same thing, pick the cleaner one. 5 seconds choosing, not 5 minutes.
+4. **DRY** —Duplicates existing functionality—Reject. Reuse what exists.
+5. **Explicit over clever** —10-line obvious fix > 200-line abstraction. Pick what a new contributor reads in 30 seconds.
+6. **Bias toward action** —Merge > review cycles > stale deliberation. Flag concerns but don't block.
 
 **Conflict resolution (context-dependent tiebreakers):**
 - **CEO phase:** P1 (completeness) + P2 (boil lakes) dominate.
@@ -46,15 +46,15 @@ These rules auto-answer every intermediate question:
 
 Every auto-decision is classified:
 
-**Mechanical** 鈥?one clearly right answer. Auto-decide silently.
+**Mechanical** —one clearly right answer. Auto-decide silently.
 Examples: run codex (always yes), run evals (always yes), reduce scope on a complete plan (always no).
 
-**Taste** 鈥?reasonable people could disagree. Auto-decide with recommendation, but surface at the final gate. Three natural sources:
-1. **Close approaches** 鈥?top two are both viable with different tradeoffs.
-2. **Borderline scope** 鈥?in blast radius but 3-5 files, or ambiguous radius.
-3. **outside-voice sub-agent disagreements** 鈥?codex recommends differently and has a valid point.
+**Taste** —reasonable people could disagree. Auto-decide with recommendation, but surface at the final gate. Three natural sources:
+1. **Close approaches** —top two are both viable with different tradeoffs.
+2. **Borderline scope** —in blast radius but 3-5 files, or ambiguous radius.
+3. **outside-voice sub-agent disagreements** —codex recommends differently and has a valid point.
 
-**User Challenge** 鈥?both models agree the user's stated direction should change.
+**User Challenge** —both models agree the user's stated direction should change.
 This is qualitatively different from taste decisions. When northhing and outside-voice sub-agent both
 recommend merging, splitting, adding, or removing features/skills/workflows that
 the user specified, this is a User Challenge. It is NEVER auto-decided.
@@ -78,11 +78,11 @@ preference." The user still decides, but the framing is appropriately urgent.
 
 ---
 
-## Sequential Execution 鈥?MANDATORY
+## Sequential Execution —MANDATORY
 
-Phases MUST execute in strict order: CEO 鈫?Design 鈫?Eng 鈫?DX.
+Phases MUST execute in strict order: CEO →Design →Eng →DX.
 Each phase MUST complete fully before the next begins.
-NEVER run phases in parallel 鈥?each builds on the previous.
+NEVER run phases in parallel —each builds on the previous.
 
 Between each phase, emit a phase-transition summary and verify that all required
 outputs from the prior phase are written before starting the next.
@@ -96,9 +96,9 @@ the ANALYSIS. Every section in the loaded skill files must still be executed at 
 same depth as the interactive version. The only thing that changes is who answers the
 AskUserQuestion: you do, using the 6 principles, instead of the user.
 
-**Two exceptions 鈥?never auto-decided:**
-1. Premises (Phase 1) 鈥?require human judgment about what problem to solve.
-2. User Challenges 鈥?when both models agree the user's stated direction should change
+**Two exceptions —never auto-decided:**
+1. Premises (Phase 1) —require human judgment about what problem to solve.
+2. User Challenges —when both models agree the user's stated direction should change
  (merge, split, add, remove features/workflows). The user always has context models
  lack. See Decision Classification above.
 
@@ -117,13 +117,13 @@ AskUserQuestion: you do, using the 6 principles, instead of the user.
 - Produce a summary instead of the required output (e.g., "architecture looks good"
  instead of the ASCII dependency graph the section requires)
 
-"No issues found" is a valid output for a section 鈥?but only after doing the analysis.
+"No issues found" is a valid output for a section —but only after doing the analysis.
 State what you examined and why nothing was flagged (1-2 sentences minimum).
 "Skipped" is never valid for a non-skip-listed section.
 
 ---
 
-## Filesystem Boundary 鈥?outside-voice sub-agent Prompts
+## Filesystem Boundary —outside-voice sub-agent Prompts
 
 All prompts sent to outside-voice sub-agent (via `northhing Task outside-voice dispatch` or `northhing Task outside-voice review`) MUST be prefixed with
 this boundary instruction:
@@ -188,11 +188,11 @@ Read each file using the Read tool:
 - `the bundled plan-eng-review skill via the Skill tool`
 - `the relevant built-in developer-experience review methodology, if present` (only if DX scope detected)
 
-**Section skip list 鈥?when following a loaded skill file, SKIP these sections
+**Section skip list —when following a loaded skill file, SKIP these sections
 (they are already handled by /autoplan):**
 - Preamble (run first)
 - AskUserQuestion Format
-- Completeness Principle 鈥?Boil the Lake
+- Completeness Principle —Boil the Lake
 - Search Before Building
 - Completion Status Protocol
 - Telemetry (run last)
@@ -200,7 +200,7 @@ Read each file using the Read tool:
 - Review Readiness Dashboard
 - Plan File Review Report
 - Prerequisite Skill Offer (BENEFITS_FROM)
-- Outside Voice 鈥?Independent Plan Challenge
+- Outside Voice —Independent Plan Challenge
 - Design Outside Voices (parallel)
 
 Follow ONLY the review-specific methodology, sections, and required outputs.
@@ -212,22 +212,22 @@ Loaded review skills from disk. Starting full review pipeline with auto-decision
 
 ## Phase 1: CEO Review (Strategy & Scope)
 
-Follow plan-ceo-review/SKILL.md 鈥?all sections, full depth.
-Override: every AskUserQuestion 鈫?auto-decide using the 6 principles.
+Follow plan-ceo-review/SKILL.md —all sections, full depth.
+Override: every AskUserQuestion →auto-decide using the 6 principles.
 
 **Override rules:**
 - Mode selection: SELECTIVE EXPANSION
 - Premises: accept reasonable ones (P6), challenge only clearly wrong ones
-- **GATE: Present premises to user for confirmation** 鈥?this is the ONE AskUserQuestion
+- **GATE: Present premises to user for confirmation** —this is the ONE AskUserQuestion
  that is NOT auto-decided. Premises require human judgment.
 - Alternatives: pick highest completeness (P1). If tied, pick simplest (P5).
- If top 2 are close 鈫?mark TASTE DECISION.
-- Scope expansion: in blast radius + <1d CC 鈫?approve (P2). Outside 鈫?defer to TODOS.md (P3).
- Duplicates 鈫?reject (P4). Borderline (3-5 files) 鈫?mark TASTE DECISION.
+ If top 2 are close →mark TASTE DECISION.
+- Scope expansion: in blast radius + <1d CC →approve (P2). Outside →defer to TODOS.md (P3).
+ Duplicates →reject (P4). Borderline (3-5 files) →mark TASTE DECISION.
 - All 10 review sections: run fully, auto-decide each issue, log every decision.
 - Dual voices: always run BOTH independent subagent AND outside-voice sub-agent if available (P6).
  Run them sequentially in foreground. First the independent subagent (Task tool,
- foreground 鈥?do NOT use run_in_background), then outside-voice sub-agent (Bash). Both must
+ foreground —do NOT use run_in_background), then outside-voice sub-agent (Bash). Both must
  complete before building the consensus table.
 
  **outside-voice sub-agent CEO voice** (via Bash):
@@ -236,9 +236,9 @@ Override: every AskUserQuestion 鈫?auto-decide using the 6 principles.
 Use the northhing Task tool to dispatch this prompt to a suitable independent read-only outside-voice sub-agent.
 
  You are a CEO/founder advisor reviewing a development plan.
- Challenge the strategic foundations: Are the premises valid or assumed鈥?Is this the
- right problem to solve, or is there a reframing that would be 10x more impactful鈥?What alternatives were dismissed too quickly鈥?What competitive or market risks are
- unaddressed鈥?What scope decisions will look foolish in 6 months鈥?Be adversarial.
+ Challenge the strategic foundations: Are the premises valid or assumed—Is this the
+ right problem to solve, or is there a reframing that would be 10x more impactful—What alternatives were dismissed too quickly—What competitive or market risks are
+ unaddressed—What scope decisions will look foolish in 6 months—Be adversarial.
  No compliments. Just the strategic blind spots.
  File: <plan_path>" -C "$_REPO_ROOT" -s read-only --enable web_search_cached
  ```
@@ -247,42 +247,42 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  **Independent CEO subagent** (via Task tool):
  "Read the plan file at <plan_path>. You are an independent CEO/strategist
  reviewing this plan. You have NOT seen any prior review. Evaluate:
- 1. Is this the right problem to solve鈥?Could a reframing yield 10x impact鈥?2. Are the premises stated or just assumed鈥?Which ones could be wrong鈥?3. What's the 6-month regret scenario 鈥?what will look foolish鈥?4. What alternatives were dismissed without sufficient analysis鈥?5. What's the competitive risk 鈥?could someone else solve this first/better鈥?For each finding: what's wrong, severity (critical/high/medium), and the fix."
+ 1. Is this the right problem to solve—Could a reframing yield 10x impact—2. Are the premises stated or just assumed—Which ones could be wrong—3. What's the 6-month regret scenario —what will look foolish—4. What alternatives were dismissed without sufficient analysis—5. What's the competitive risk —could someone else solve this first/better—For each finding: what's wrong, severity (critical/high/medium), and the fix."
 
- **Error handling:** Both calls block in foreground. outside-voice sub-agent auth/timeout/empty 鈫?proceed with
- independent subagent only, tagged `[single-model]`. If independent subagent also fails 鈫? "Outside voices unavailable 鈥?continuing with primary review."
+ **Error handling:** Both calls block in foreground. outside-voice sub-agent auth/timeout/empty →proceed with
+ independent subagent only, tagged `[single-model]`. If independent subagent also fails → "Outside voices unavailable —continuing with primary review."
 
- **Degradation matrix:** Both fail 鈫?"single-reviewer mode". outside-voice sub-agent only 鈫? tag `[codex-only]`. Subagent only 鈫?tag `[subagent-only]`.
+ **Degradation matrix:** Both fail →"single-reviewer mode". outside-voice sub-agent only → tag `[codex-only]`. Subagent only →tag `[subagent-only]`.
 
 - Strategy choices: if codex disagrees with a premise or scope decision with valid
- strategic reason 鈫?TASTE DECISION. If both models agree the user's stated structure
- should change (merge, split, add, remove) 鈫?USER CHALLENGE (never auto-decided).
+ strategic reason →TASTE DECISION. If both models agree the user's stated structure
+ should change (merge, split, add, remove) →USER CHALLENGE (never auto-decided).
 
 **Required execution checklist (CEO):**
 
-Step 0 (0A-0F) 鈥?run each sub-step and produce:
+Step 0 (0A-0F) —run each sub-step and produce:
 - 0A: Premise challenge with specific premises named and evaluated
-- 0B: Existing code leverage map (sub-problems 鈫?existing code)
-- 0C: Dream state diagram (CURRENT 鈫?THIS PLAN 鈫?12-MONTH IDEAL)
+- 0B: Existing code leverage map (sub-problems →existing code)
+- 0C: Dream state diagram (CURRENT →THIS PLAN →12-MONTH IDEAL)
 - 0C-bis: Implementation alternatives table (2-3 approaches with effort/risk/pros/cons)
 - 0D: Mode-specific analysis with scope decisions logged
-- 0E: Temporal interrogation (HOUR 1 鈫?HOUR 6+)
+- 0E: Temporal interrogation (HOUR 1 →HOUR 6+)
 - 0F: Mode selection confirmation
 
 Step 0.5 (Dual Voices): Run independent subagent (foreground Task tool) first, then
-outside-voice sub-agent (Bash). Present outside-voice sub-agent output under CODEX SAYS (CEO 鈥?strategy challenge)
-header. Present subagent output under INDEPENDENT SUBAGENT (CEO 鈥?strategic independence)
+outside-voice sub-agent (Bash). Present outside-voice sub-agent output under CODEX SAYS (CEO —strategy challenge)
+header. Present subagent output under INDEPENDENT SUBAGENT (CEO —strategic independence)
 header. Produce CEO consensus table:
 
 ```
-CEO DUAL VOICES 鈥?CONSENSUS TABLE:
-鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺? Dimension Task outside-voice sub-agent Consensus
- 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
- 1. Premises valid鈥?2. Right problem to solve鈥?3. Scope calibration correct鈥?4. Alternatives sufficiently explored鈥?5. Competitive/market risks covered鈥?6. 6-month trajectory sound鈥?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?CONFIRMED = both agree. DISAGREE = models differ (鈫?taste decision).
+CEO DUAL VOICES —CONSENSUS TABLE:
+──────────────────────────────────────────────────────────────┃ Dimension Task outside-voice sub-agent Consensus
+ ════════════════════════════════════ ═══════ ═══════ ═════════
+ 1. Premises valid—2. Right problem to solve—3. Scope calibration correct—4. Alternatives sufficiently explored—5. Competitive/market risks covered—6. 6-month trajectory sound—──────────────────────────────────────────────────────────────┃CONFIRMED = both agree. DISAGREE = models differ (→taste decision).
 Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = flagged regardless.
 ```
 
-Sections 1-10 鈥?for EACH section, run the evaluation criteria from the loaded skill file:
+Sections 1-10 —for EACH section, run the evaluation criteria from the loaded skill file:
 - Sections WITH findings: full analysis, auto-decide each issue, log to audit trail
 - Sections with NO findings: 1-2 sentences stating what was examined and why nothing
  was flagged. NEVER compress a section to just its name in a table row.
@@ -298,7 +298,7 @@ Sections 1-10 鈥?for EACH section, run the evaluation criteria from the loaded 
 
 **PHASE 1 COMPLETE.** Emit phase-transition summary:
 > **Phase 1 complete.** outside-voice sub-agent: [N concerns]. independent subagent: [N issues].
-> Consensus: [X/6 confirmed, Y disagreements 鈫?surfaced at gate].
+> Consensus: [X/6 confirmed, Y disagreements →surfaced at gate].
 > Passing to Phase 2.
 
 Do NOT begin Phase 2 until all Phase 1 outputs are written to the plan file
@@ -313,10 +313,10 @@ and the premise gate has been passed.
 - [ ] Premise gate passed (user confirmed)
 - [ ] Phase-transition summary emitted
 
-## Phase 2: Design Review (conditional 鈥?skip if no UI scope)
+## Phase 2: Design Review (conditional —skip if no UI scope)
 
-Follow plan-design-review/SKILL.md 鈥?all 7 dimensions, full depth.
-Override: every AskUserQuestion 鈫?auto-decide using the 6 principles.
+Follow plan-design-review/SKILL.md —all 7 dimensions, full depth.
+Override: every AskUserQuestion →auto-decide using the 6 principles.
 
 **Override rules:**
 - Focus areas: all relevant dimensions (P1)
@@ -334,43 +334,43 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  UI/UX design decisions.
 
  Also consider these findings from the CEO review phase:
- <insert CEO dual voice findings summary 鈥?key concerns, disagreements>
+ <insert CEO dual voice findings summary —key concerns, disagreements>
 
- Does the information hierarchy serve the user or the developer鈥?Are interaction
+ Does the information hierarchy serve the user or the developer—Are interaction
  states (loading, empty, error, partial) specified or left to the implementer's
- imagination鈥?Is the responsive strategy intentional or afterthought鈥?Are
+ imagination—Is the responsive strategy intentional or afterthought—Are
  accessibility requirements (keyboard nav, contrast, touch targets) specified or
- aspirational鈥?Does the plan describe specific UI decisions or generic patterns鈥?What design decisions will haunt the implementer if left ambiguous鈥?Be opinionated. No hedging." -C "$_REPO_ROOT" -s read-only --enable web_search_cached
+ aspirational—Does the plan describe specific UI decisions or generic patterns—What design decisions will haunt the implementer if left ambiguous—Be opinionated. No hedging." -C "$_REPO_ROOT" -s read-only --enable web_search_cached
  ```
  Timeout: 10 minutes
 
  **Independent design subagent** (via Task tool):
  "Read the plan file at <plan_path>. You are an independent senior product designer
  reviewing this plan. You have NOT seen any prior review. Evaluate:
- 1. Information hierarchy: what does the user see first, second, third鈥?Is it right鈥?2. Missing states: loading, empty, error, success, partial 鈥?which are unspecified鈥?3. User journey: what's the emotional arc鈥?Where does it break鈥?4. Specificity: does the plan describe SPECIFIC UI or generic patterns鈥?5. What design decisions will haunt the implementer if left ambiguous鈥?For each finding: what's wrong, severity (critical/high/medium), and the fix."
- NO prior-phase context 鈥?subagent must be truly independent.
+ 1. Information hierarchy: what does the user see first, second, third—Is it right—2. Missing states: loading, empty, error, success, partial —which are unspecified—3. User journey: what's the emotional arc—Where does it break—4. Specificity: does the plan describe SPECIFIC UI or generic patterns—5. What design decisions will haunt the implementer if left ambiguous—For each finding: what's wrong, severity (critical/high/medium), and the fix."
+ NO prior-phase context —subagent must be truly independent.
 
  Error handling: same as Phase 1 (both foreground/blocking, degradation matrix applies).
 
 - Design choices: if codex disagrees with a design decision with valid UX reasoning
- 鈫?TASTE DECISION. Scope changes both models agree on 鈫?USER CHALLENGE.
+ →TASTE DECISION. Scope changes both models agree on →USER CHALLENGE.
 
 **Required execution checklist (Design):**
 
 1. Step 0 (Design Scope): Rate completeness 0-10. Check DESIGN.md. Map existing patterns.
 
 2. Step 0.5 (Dual Voices): Run independent subagent (foreground) first, then outside-voice sub-agent. Present under
- CODEX SAYS (design 鈥?UX challenge) and INDEPENDENT SUBAGENT (design 鈥?independent review)
+ CODEX SAYS (design —UX challenge) and INDEPENDENT SUBAGENT (design —independent review)
  headers. Produce design litmus scorecard (consensus table). Use the litmus scorecard
  format from plan-design-review. Include CEO phase findings in outside-voice sub-agent prompt ONLY
- (not independent subagent 鈥?stays independent).
+ (not independent subagent —stays independent).
 
 3. Passes 1-7: Run each from loaded skill. Rate 0-10. Auto-decide each issue.
- DISAGREE items from scorecard 鈫?raised in the relevant pass with both perspectives.
+ DISAGREE items from scorecard →raised in the relevant pass with both perspectives.
 
 **PHASE 2 COMPLETE.** Emit phase-transition summary:
 > **Phase 2 complete.** outside-voice sub-agent: [N concerns]. independent subagent: [N issues].
-> Consensus: [X/Y confirmed, Z disagreements 鈫?surfaced at gate].
+> Consensus: [X/Y confirmed, Z disagreements →surfaced at gate].
 > Passing to Phase 3.
 
 Do NOT begin Phase 3 until all Phase 2 outputs (if run) are written to the plan file.
@@ -386,8 +386,8 @@ Do NOT begin Phase 3 until all Phase 2 outputs (if run) are written to the plan 
 
 ## Phase 3: Eng Review + Dual Voices
 
-Follow plan-eng-review/SKILL.md 鈥?all sections, full depth.
-Override: every AskUserQuestion 鈫?auto-decide using the 6 principles.
+Follow plan-eng-review/SKILL.md —all sections, full depth.
+Override: every AskUserQuestion →auto-decide using the 6 principles.
 
 **Override rules:**
 - Scope challenge: never reduce (P2)
@@ -402,7 +402,7 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  and hidden complexity. Be adversarial.
 
  Also consider these findings from prior review phases:
- CEO: <insert CEO consensus table summary 鈥?key concerns, DISAGREEs>
+ CEO: <insert CEO consensus table summary —key concerns, DISAGREEs>
  Design: <insert Design consensus table summary, or 'skipped, no UI scope'>
 
  File: <plan_path>" -C "$_REPO_ROOT" -s read-only --enable web_search_cached
@@ -412,12 +412,12 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  **Independent eng subagent** (via Task tool):
  "Read the plan file at <plan_path>. You are an independent senior engineer
  reviewing this plan. You have NOT seen any prior review. Evaluate:
- 1. Architecture: Is the component structure sound鈥?Coupling concerns鈥?2. Edge cases: What breaks under 10x load鈥?What's the nil/empty/error path鈥?3. Tests: What's missing from the test plan鈥?What would break at 2am Friday鈥?4. Security: New attack surface鈥?Auth boundaries鈥?Input validation鈥?5. Hidden complexity: What looks simple but isn't鈥?For each finding: what's wrong, severity, and the fix."
- NO prior-phase context 鈥?subagent must be truly independent.
+ 1. Architecture: Is the component structure sound—Coupling concerns—2. Edge cases: What breaks under 10x load—What's the nil/empty/error path—3. Tests: What's missing from the test plan—What would break at 2am Friday—4. Security: New attack surface—Auth boundaries—Input validation—5. Hidden complexity: What looks simple but isn't—For each finding: what's wrong, severity, and the fix."
+ NO prior-phase context —subagent must be truly independent.
 
  Error handling: same as Phase 1 (both foreground/blocking, degradation matrix applies).
 
-- Architecture choices: explicit over clever (P5). If codex disagrees with valid reason 鈫?TASTE DECISION. Scope changes both models agree on 鈫?USER CHALLENGE.
+- Architecture choices: explicit over clever (P5). If codex disagrees with valid reason →TASTE DECISION. Scope changes both models agree on →USER CHALLENGE.
 - Evals: always include all relevant suites (P1)
 - Test plan: generate artifact at `$HOME/.northhing/team/projects/$SLUG/{user}-{branch}-test-plan-{datetime}.md`
 - TODOS.md: collect all deferred scope expansions from Phase 1, auto-write
@@ -428,15 +428,15 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  sub-problem to existing code. Run the complexity check. Produce concrete findings.
 
 2. Step 0.5 (Dual Voices): Run independent subagent (foreground) first, then outside-voice sub-agent. Present
- outside-voice sub-agent output under CODEX SAYS (eng 鈥?architecture challenge) header. Present subagent
- output under INDEPENDENT SUBAGENT (eng 鈥?independent review) header. Produce eng consensus
+ outside-voice sub-agent output under CODEX SAYS (eng —architecture challenge) header. Present subagent
+ output under INDEPENDENT SUBAGENT (eng —independent review) header. Produce eng consensus
  table:
 
 ```
-ENG DUAL VOICES 鈥?CONSENSUS TABLE:
-鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺? Dimension Task outside-voice sub-agent Consensus
- 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
- 1. Architecture sound鈥?2. Test coverage sufficient鈥?3. Performance risks addressed鈥?4. Security threats covered鈥?5. Error paths handled鈥?6. Deployment risk manageable鈥?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?CONFIRMED = both agree. DISAGREE = models differ (鈫?taste decision).
+ENG DUAL VOICES —CONSENSUS TABLE:
+──────────────────────────────────────────────────────────────┃ Dimension Task outside-voice sub-agent Consensus
+ ════════════════════════════════════ ═══════ ═══════ ═════════
+ 1. Architecture sound—2. Test coverage sufficient—3. Performance risks addressed—4. Security threats covered—5. Error paths handled—6. Deployment risk manageable—──────────────────────────────────────────────────────────────┃CONFIRMED = both agree. DISAGREE = models differ (→taste decision).
 Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = flagged regardless.
 ```
 
@@ -446,12 +446,12 @@ Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = fl
 4. Section 2 (Code Quality): Identify DRY violations, naming issues, complexity.
  Reference specific files and patterns. Auto-decide each finding.
 
-5. **Section 3 (Test Review) 鈥?NEVER SKIP OR COMPRESS.**
+5. **Section 3 (Test Review) —NEVER SKIP OR COMPRESS.**
  This section requires reading actual code, not summarizing from memory.
  - Read the diff or the plan's affected files
  - Build the test diagram: list every NEW UX flow, data flow, codepath, and branch
- - For EACH item in the diagram: what type of test covers it鈥?Does one exist鈥?Gaps鈥?For LLM/prompt changes: which eval suites must run鈥?Auto-deciding test gaps means: identify the gap 鈫?decide whether to add a test
- or defer (with rationale and principle) 鈫?log the decision. It does NOT mean
+ - For EACH item in the diagram: what type of test covers it—Does one exist—Gaps—For LLM/prompt changes: which eval suites must run—Auto-deciding test gaps means: identify the gap →decide whether to add a test
+ or defer (with rationale and principle) →log the decision. It does NOT mean
  skipping the analysis.
  - Write the test plan artifact to disk
 
@@ -469,18 +469,18 @@ Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = fl
 
 **PHASE 3 COMPLETE.** Emit phase-transition summary:
 > **Phase 3 complete.** outside-voice sub-agent: [N concerns]. independent subagent: [N issues].
-> Consensus: [X/6 confirmed, Y disagreements 鈫?surfaced at gate].
+> Consensus: [X/6 confirmed, Y disagreements →surfaced at gate].
 > Passing to Phase 3.5 (DX Review) or Phase 4 (Final Gate).
 
 ---
 
-## Phase 3.5: DX Review (conditional 鈥?skip if no developer-facing scope)
+## Phase 3.5: DX Review (conditional —skip if no developer-facing scope)
 
-Follow plan-devex-review/SKILL.md 鈥?all 8 DX dimensions, full depth.
-Override: every AskUserQuestion 鈫?auto-decide using the 6 principles.
+Follow plan-devex-review/SKILL.md —all 8 DX dimensions, full depth.
+Override: every AskUserQuestion →auto-decide using the 6 principles.
 
 **Skip condition:** If DX scope was NOT detected in Phase 0, skip this phase entirely.
-Log: "Phase 3.5 skipped 鈥?no developer-facing scope detected."
+Log: "Phase 3.5 skipped —no developer-facing scope detected."
 
 **Override rules:**
 - Mode selection: DX POLISH
@@ -505,21 +505,21 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  Eng: <insert Eng consensus summary>
 
  You are a developer who has never seen this product. Evaluate:
- 1. Time to hello world: how many steps from zero to working鈥?Target is under 5 minutes.
- 2. Error messages: when something goes wrong, does the dev know what, why, and how to fix鈥?3. API/CLI design: are names guessable鈥?Are defaults sensible鈥?Is it consistent鈥?4. Docs: can a dev find what they need in under 2 minutes鈥?Are examples copy-paste-complete鈥?5. Upgrade path: can devs upgrade without fear鈥?Migration guides鈥?Deprecation warnings鈥?Be adversarial. Think like a developer who is evaluating this against 3 competitors." -C "$_REPO_ROOT" -s read-only --enable web_search_cached
+ 1. Time to hello world: how many steps from zero to working—Target is under 5 minutes.
+ 2. Error messages: when something goes wrong, does the dev know what, why, and how to fix—3. API/CLI design: are names guessable—Are defaults sensible—Is it consistent—4. Docs: can a dev find what they need in under 2 minutes—Are examples copy-paste-complete—5. Upgrade path: can devs upgrade without fear—Migration guides—Deprecation warnings—Be adversarial. Think like a developer who is evaluating this against 3 competitors." -C "$_REPO_ROOT" -s read-only --enable web_search_cached
  ```
  Timeout: 10 minutes
 
  **Independent DX subagent** (via Task tool):
  "Read the plan file at <plan_path>. You are an independent DX engineer
  reviewing this plan. You have NOT seen any prior review. Evaluate:
- 1. Getting started: how many steps from zero to hello world鈥?What's the TTHW鈥?2. API/CLI ergonomics: naming consistency, sensible defaults, progressive disclosure鈥?3. Error handling: does every error path specify problem + cause + fix + docs link鈥?4. Documentation: copy-paste examples鈥?Information architecture鈥?Interactive elements鈥?5. Escape hatches: can developers override every opinionated default鈥?For each finding: what's wrong, severity (critical/high/medium), and the fix."
- NO prior-phase context 鈥?subagent must be truly independent.
+ 1. Getting started: how many steps from zero to hello world—What's the TTHW—2. API/CLI ergonomics: naming consistency, sensible defaults, progressive disclosure—3. Error handling: does every error path specify problem + cause + fix + docs link—4. Documentation: copy-paste examples—Information architecture—Interactive elements—5. Escape hatches: can developers override every opinionated default—For each finding: what's wrong, severity (critical/high/medium), and the fix."
+ NO prior-phase context —subagent must be truly independent.
 
  Error handling: same as Phase 1 (both foreground/blocking, degradation matrix applies).
 
 - DX choices: if codex disagrees with a DX decision with valid developer empathy reasoning
- 鈫?TASTE DECISION. Scope changes both models agree on 鈫?USER CHALLENGE.
+ →TASTE DECISION. Scope changes both models agree on →USER CHALLENGE.
 
 **Required execution checklist (DX):**
 
@@ -527,19 +527,19 @@ Use the northhing Task tool to dispatch this prompt to a suitable independent re
  Rate initial DX completeness 0-10. Assess TTHW.
 
 2. Step 0.5 (Dual Voices): Run independent subagent (foreground) first, then outside-voice sub-agent. Present
- under CODEX SAYS (DX 鈥?developer experience challenge) and INDEPENDENT SUBAGENT
- (DX 鈥?independent review) headers. Produce DX consensus table:
+ under CODEX SAYS (DX —developer experience challenge) and INDEPENDENT SUBAGENT
+ (DX —independent review) headers. Produce DX consensus table:
 
 ```
-DX DUAL VOICES 鈥?CONSENSUS TABLE:
-鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺? Dimension Task outside-voice sub-agent Consensus
- 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
- 1. Getting started < 5 min鈥?2. API/CLI naming guessable鈥?3. Error messages actionable鈥?4. Docs findable & complete鈥?5. Upgrade path safe鈥?6. Dev environment friction-free鈥?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?CONFIRMED = both agree. DISAGREE = models differ (鈫?taste decision).
+DX DUAL VOICES —CONSENSUS TABLE:
+──────────────────────────────────────────────────────────────┃ Dimension Task outside-voice sub-agent Consensus
+ ════════════════════════════════════ ═══════ ═══════ ═════════
+ 1. Getting started < 5 min—2. API/CLI naming guessable—3. Error messages actionable—4. Docs findable & complete—5. Upgrade path safe—6. Dev environment friction-free—──────────────────────────────────────────────────────────────┃CONFIRMED = both agree. DISAGREE = models differ (→taste decision).
 Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = flagged regardless.
 ```
 
 3. Passes 1-8: Run each from loaded skill. Rate 0-10. Auto-decide each issue.
- DISAGREE items from consensus table 鈫?raised in the relevant pass with both perspectives.
+ DISAGREE items from consensus table →raised in the relevant pass with both perspectives.
 
 4. DX Scorecard: Produce the full scorecard with all 8 dimensions scored.
 
@@ -551,9 +551,9 @@ Missing voice = N/A (not CONFIRMED). Single critical finding from one voice = fl
 - TTHW assessment with target
 
 **PHASE 3.5 COMPLETE.** Emit phase-transition summary:
-> **Phase 3.5 complete.** DX overall: [N]/10. TTHW: [N] min 鈫?[target] min.
+> **Phase 3.5 complete.** DX overall: [N]/10. TTHW: [N] min →[target] min.
 > outside-voice sub-agent: [N concerns]. independent subagent: [N issues].
-> Consensus: [X/6 confirmed, Y disagreements 鈫?surfaced at gate].
+> Consensus: [X/6 confirmed, Y disagreements →surfaced at gate].
 > Passing to Phase 4 (Final Gate).
 
 ---
@@ -592,7 +592,7 @@ produced. Check the plan file and conversation for each item.
 - [ ] Dual voices ran (outside-voice sub-agent + independent subagent, or noted unavailable)
 - [ ] CEO consensus table produced
 
-**Phase 2 (Design) outputs 鈥?only if UI scope detected:**
+**Phase 2 (Design) outputs —only if UI scope detected:**
 - [ ] All 7 dimensions evaluated with scores
 - [ ] Issues identified and auto-decided
 - [ ] Dual voices ran (or noted unavailable/skipped with phase)
@@ -610,7 +610,7 @@ produced. Check the plan file and conversation for each item.
 - [ ] Dual voices ran (outside-voice sub-agent + independent subagent, or noted unavailable)
 - [ ] Eng consensus table produced
 
-**Phase 3.5 (DX) outputs 鈥?only if DX scope detected:**
+**Phase 3.5 (DX) outputs —only if DX scope detected:**
 - [ ] All 8 DX dimensions evaluated with scores
 - [ ] Developer journey map produced
 - [ ] Developer empathy narrative written
@@ -626,7 +626,7 @@ produced. Check the plan file and conversation for each item.
 - [ ] Decision Audit Trail has at least one row per auto-decision (not empty)
 
 If ANY checkbox above is missing, go back and produce the missing output. Max 2
-attempts 鈥?if still missing after retrying twice, proceed to the gate with a warning
+attempts —if still missing after retrying twice, proceed to the gate with a warning
 noting which items are incomplete. Do not loop indefinitely.
 
 ---
@@ -653,15 +653,15 @@ Both models recommend: [the change]
 Why: [reasoning]
 What we might be missing: [blind spots]
 If we're wrong, the cost is: [downside of changing]
-[If security/feasibility: "鈿狅笍 Both models flag this as a security/feasibility risk,
+[If security/feasibility: "✅ Both models flag this as a security/feasibility risk,
 not just a preference."]
 
-Your call 鈥?your original direction stands unless you explicitly change it.
+Your call —your original direction stands unless you explicitly change it.
 
 ### Your Choices (taste decisions)
 [For each taste decision:]
 **Choice [N]: [title]** (from [phase])
-I recommend [X] 鈥?[principle]. But [Y] is also viable:
+I recommend [X] —[principle]. But [Y] is also viable:
  [1-sentence downstream impact if you pick Y]
 
 ### Auto-Decided: [M] decisions [see Decision Audit Trail in plan file]
@@ -678,8 +678,8 @@ I recommend [X] 鈥?[principle]. But [Y] is also viable:
 
 ### Cross-Phase Themes
 [For any concern that appeared in 2+ phases' dual voices independently:]
-**Theme: [topic]** 鈥?flagged in [Phase 1, Phase 3]. High-confidence signal.
-[If no themes span phases:] "No cross-phase themes 鈥?each phase's concerns were distinct."
+**Theme: [topic]** —flagged in [Phase 1, Phase 3]. High-confidence signal.
+[If no themes span phases:] "No cross-phase themes —each phase's concerns were distinct."
 
 ### Deferred to TODOS.md
 [Items auto-deferred with reasons]
@@ -703,7 +703,7 @@ AskUserQuestion options:
 - A: mark APPROVED, write review logs, suggest /ship
 - B: ask which overrides, apply, re-present gate
 - C: answer freeform, re-present gate
-- D: make changes, re-run affected phases (scope鈫?B, design鈫?, test plan鈫?, arch鈫?). Max 3 cycles.
+- D: make changes, re-run affected phases (scope→B, design→, test plan→, arch→). Max 3 cycles.
 - E: start over
 
 ---
@@ -760,8 +760,8 @@ Suggest next step: `/ship` when ready to create the PR.
 ## Important Rules
 
 - **Never abort.** The user chose /autoplan. Respect that choice. Surface all taste decisions, never redirect to interactive review.
-- **Two gates.** The non-auto-decided AskUserQuestions are: (1) premise confirmation in Phase 1, and (2) User Challenges 鈥?when both models agree the user's stated direction should change. Everything else is auto-decided using the 6 principles.
+- **Two gates.** The non-auto-decided AskUserQuestions are: (1) premise confirmation in Phase 1, and (2) User Challenges —when both models agree the user's stated direction should change. Everything else is auto-decided using the 6 principles.
 - **Log every decision.** No silent auto-decisions. Every choice gets a row in the audit trail.
-- **Full depth means full depth.** Do not compress or skip sections from the loaded skill files (except the skip list in Phase 0). "Full depth" means: read the code the section asks you to read, produce the outputs the section requires, identify every issue, and decide each one. A one-sentence summary of a section is not "full depth" 鈥?it is a skip. If you catch yourself writing fewer than 3 sentences for any review section, you are likely compressing.
-- **Artifacts are deliverables.** Test plan artifact, failure modes registry, error/rescue table, ASCII diagrams 鈥?these must exist on disk or in the plan file when the review completes. If they don't exist, the review is incomplete.
-- **Sequential order.** CEO 鈫?Design 鈫?Eng 鈫?DX. Each phase builds on the last.
+- **Full depth means full depth.** Do not compress or skip sections from the loaded skill files (except the skip list in Phase 0). "Full depth" means: read the code the section asks you to read, produce the outputs the section requires, identify every issue, and decide each one. A one-sentence summary of a section is not "full depth" —it is a skip. If you catch yourself writing fewer than 3 sentences for any review section, you are likely compressing.
+- **Artifacts are deliverables.** Test plan artifact, failure modes registry, error/rescue table, ASCII diagrams —these must exist on disk or in the plan file when the review completes. If they don't exist, the review is incomplete.
+- **Sequential order.** CEO →Design →Eng →DX. Each phase builds on the last.
