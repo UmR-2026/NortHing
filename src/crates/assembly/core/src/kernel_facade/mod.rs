@@ -69,7 +69,7 @@ static FACADE_READY: AtomicBool = AtomicBool::new(false);
 /// - InProgress: wait on INIT_NOTIFY, then re-check; if still InProgress return
 ///   Internal error (timeout); if NotStarted (failed init reset it) → take over.
 /// - NotStarted: claim InProgress, run `init`, write final state, notify.
-async fn run_init_gate<Fut>(_facade: &KernelFacade, init: Fut) -> Result<(), KernelError>
+async fn run_init_gate<Fut>(init: Fut) -> Result<(), KernelError>
 where
     Fut: std::future::Future<Output = Result<(), KernelError>>,
 {
@@ -118,7 +118,7 @@ where
 
     if result.is_ok() {
         FACADE_READY.store(true, Ordering::SeqCst);
-        info!("kernel facade core initialized (K1b1)");
+        info!("kernel facade core initialized");
     }
     result
 }
@@ -252,7 +252,7 @@ impl KernelFacade {
 #[async_trait]
 impl northhing_kernel_api::KernelBootstrapApi for KernelFacade {
     async fn init_core(&self) -> Result<(), KernelError> {
-        run_init_gate(self, self.init_core_inner()).await
+        run_init_gate(self.init_core_inner()).await
     }
 
     fn core_ready(&self) -> bool {
@@ -1907,18 +1907,17 @@ mod tests {
             let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
             let call_count_clone = call_count.clone();
 
-            let facade = kernel_facade();
-
             let fake_init = || async move {
                 call_count_clone.fetch_add(1, Ordering::SeqCst);
                 tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
                 Ok(())
             };
 
+            let call_count_for_r2 = call_count.clone();
             let (r1, r2) = tokio::join!(
-                run_init_gate(&facade, fake_init()),
-                run_init_gate(&facade, async move {
-                    let cc = call_count.clone();
+                run_init_gate(fake_init()),
+                run_init_gate(async move {
+                    let cc = call_count_for_r2;
                     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                     cc.fetch_add(1, Ordering::SeqCst);
                     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -1944,13 +1943,13 @@ mod tests {
             }
 
             let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
-            let facade = kernel_facade();
 
             // Clone for r2 before r1 moves the original.
             let call_count_for_r2 = call_count.clone();
+            let call_count_for_assert = call_count.clone();
 
             // First call — succeeds and marks Ready.
-            let r1 = run_init_gate(&facade, async move {
+            let r1 = run_init_gate(async move {
                 let cc = call_count;
                 cc.fetch_add(1, Ordering::SeqCst);
                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
@@ -1959,13 +1958,13 @@ mod tests {
             assert!(r1.is_ok(), "first init should succeed");
 
             // Second call on already-Ready facade — fast path, no re-init.
-            let r2 = run_init_gate(&facade, async move {
+            let r2 = run_init_gate(async move {
                 let cc = call_count_for_r2;
                 cc.fetch_add(1, Ordering::SeqCst);
                 Ok(())
             }).await;
             assert!(r2.is_ok(), "second call on Ready facade should succeed (idempotent)");
-            assert_eq!(call_count.load(Ordering::SeqCst), 1,
+            assert_eq!(call_count_for_assert.load(Ordering::SeqCst), 1,
                 "init should not re-run when facade is already Ready");
         }
 
@@ -1978,19 +1977,19 @@ mod tests {
             }
 
             let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
-            let facade = kernel_facade();
 
             // Clone for r2 before r1 moves the original.
             let call_count_for_r2 = call_count.clone();
+            let call_count_for_assert = call_count.clone();
 
             // First call — returns error.
-            let r1 = run_init_gate(&facade, async move {
+            let r1 = run_init_gate(async move {
                 let cc = call_count;
                 cc.fetch_add(1, Ordering::SeqCst);
                 Err(KernelError::Internal("simulated init failure".to_string()))
             }).await;
             assert!(r1.is_err(), "first init should fail");
-            assert_eq!(call_count.load(Ordering::SeqCst), 1);
+            assert_eq!(call_count_for_assert.load(Ordering::SeqCst), 1);
             // State should be reset to NotStarted — verify by checking INIT_STATE.
             {
                 let guard = INIT_STATE.lock().await;
@@ -1999,14 +1998,14 @@ mod tests {
             }
 
             // Second call — now succeeds.
-            let r2 = run_init_gate(&facade, async move {
+            let r2 = run_init_gate(async move {
                 let cc = call_count_for_r2;
                 cc.fetch_add(1, Ordering::SeqCst);
                 tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
                 Ok(())
             }).await;
             assert!(r2.is_ok(), "retry after failure should succeed");
-            assert_eq!(call_count.load(Ordering::SeqCst), 2,
+            assert_eq!(call_count_for_assert.load(Ordering::SeqCst), 2,
                 "second (retry) init should actually run");
         }
 
