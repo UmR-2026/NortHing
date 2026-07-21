@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface HeaderProps {
   agentName: string;
@@ -12,6 +12,18 @@ export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRenam
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (settingsWrapRef.current && !settingsWrapRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [settingsOpen]);
 
   const saveName = () => {
     setEditingName(false);
@@ -51,7 +63,7 @@ export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRenam
         {isStreaming ? "回复中" : "就绪"}
       </div>
       <div className="header-spacer" />
-      <div className="settings-wrap">
+      <div className="settings-wrap" ref={settingsWrapRef}>
         <button
           className={`header-btn${settingsOpen ? " active" : ""}`}
           onClick={() => setSettingsOpen((v) => !v)}

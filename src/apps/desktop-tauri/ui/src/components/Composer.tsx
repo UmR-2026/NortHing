@@ -67,7 +67,7 @@ export function Composer({
           </button>
         )}
       </div>
-      {debugOn && (
+      {debugOn && debugLines.length > 0 && (
         <div className="debug-panel">
           {debugLines.map((l, i) => (
             <div key={i}>{l}</div>
