@@ -157,13 +157,17 @@ body {
   background: var(--accent-soft);
 }
 
-.options-wrap {
-  position: relative;
+/* ---------- body row ---------- */
+.body-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
-.options-menu {
+/* ---------- settings panel ---------- */
+.settings-panel {
   position: absolute;
-  right: 0;
+  right: 18px;
   top: calc(100% + 6px);
   z-index: 20;
   display: flex;
@@ -177,7 +181,7 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
-.options-menu label {
+.settings-panel label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -187,39 +191,115 @@ body {
   user-select: none;
 }
 
-.options-menu label:hover {
+.settings-panel label:hover {
   color: var(--text);
 }
 
-/* ---------- body row / artifacts ---------- */
-.body-row {
-  flex: 1;
+.settings-placeholder {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+/* ---------- trace header ---------- */
+.trace-header {
+  margin-bottom: 6px;
+}
+
+.trace-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 5px;
+  user-select: none;
+}
+
+.trace-header-btn:hover {
+  color: var(--text);
+  background: var(--bg-elev);
+}
+
+/* ---------- trace sections ---------- */
+.trace-sections {
   display: flex;
-  min-height: 0;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
-.artifacts {
-  width: 300px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border-soft);
-  padding: 18px 16px;
-  overflow-y: auto;
+/* ---------- tool section ---------- */
+.tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.artifacts h3 {
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 600;
+.tool-section.live .tool-summary {
+  color: var(--accent);
+}
+
+.tool-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
-.artifacts-empty {
+.tool-chevron-btn {
+  background: none;
+  border: none;
   color: var(--text-faint);
+  cursor: pointer;
+  padding: 0;
   font-size: 13px;
-  text-align: center;
-  padding: 32px 0;
-  border: 1px dashed var(--border);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tool-chevron-btn:hover {
+  color: var(--text-dim);
+}
+
+.tool-chevron-placeholder {
+  display: inline-block;
+  width: 13px;
+}
+
+.tool-name {
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.tool-summary-text {
+  color: var(--text-dim);
+}
+
+.tool-live-badge {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.tool-detail {
+  margin: 2px 0 4px 18px;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-code);
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  overflow-x: auto;
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
 }
 
 /* ---------- think block ---------- */

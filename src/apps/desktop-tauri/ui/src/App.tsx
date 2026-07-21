@@ -1,8 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import React from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import "highlight.js/styles/github-dark.css";
 import "./app.css";
 import {
   getOrCreateLatestSession,
@@ -13,8 +10,10 @@ import {
   setUiPrefs,
   onChunk,
   onTurnState,
+  onToolEvent,
   type MessageDto,
 } from "./api";
+import { TurnContainer, type ToolTraceEntry } from "./TurnTrace";
 
 // ---------- think block parsing ----------
 
@@ -51,86 +50,6 @@ function parseThink(content: string): ParsedContent {
   }
   const trimmedThink = think.trim();
   return { think: trimmedThink ? think : null, thinkDone: done, body: body.trimStart() };
-}
-
-function ThinkBlock({
-  text,
-  expanded,
-  live,
-  onToggle,
-}: {
-  text: string;
-  expanded: boolean;
-  live: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={`thinkblock${live ? " live" : ""}`}>
-      <button className="think-toggle" onClick={onToggle}>
-        <span className={`chevron${expanded ? " open" : ""}`}>›</span>
-        思考过程{live ? "…" : ""}
-      </button>
-      {expanded && <div className="think-body">{text}</div>}
-    </div>
-  );
-}
-
-// ---------- markdown ----------
-
-function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
-  const [copied, setCopied] = useState(false);
-  const lang = /language-(\w+)/.exec(className || "")?.[1] ?? "";
-  const text = String(children ?? "").replace(/\n$/, "");
-  return (
-    <div className="codeblock">
-      <div className="codeblock-head">
-        <span>{lang || "code"}</span>
-        <button
-          className="codeblock-copy"
-          onClick={() => {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1200);
-              })
-              .catch(() => {});
-          }}
-        >
-          {copied ? "已复制" : "复制"}
-        </button>
-      </div>
-      <pre>
-        <code className={className}>{children}</code>
-      </pre>
-    </div>
-  );
-}
-
-function Markdown({ text }: { text: string }) {
-  return (
-    <div className="md">
-      <ReactMarkdown
-        rehypePlugins={[rehypeHighlight]}
-        components={{
-          pre: ({ children }) => <>{children}</>,
-          code: ({ className, children, ...props }) => {
-            const isBlock = /language-/.test(className || "") || String(children).includes("\n");
-            if (isBlock) {
-              return <CodeBlock className={className}>{children}</CodeBlock>;
-            }
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
-        {text}
-      </ReactMarkdown>
-    </div>
-  );
 }
 
 // ---------- error boundary ----------
@@ -180,18 +99,20 @@ function App() {
   const [agentName, setAgentName] = useState("northhing");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const [artifactsOpen, setArtifactsOpen] = useState(false);
-  const [thinkDefaultOpen, setThinkDefaultOpen] = useState(false);
+  const [liveTools, setLiveTools] = useState<ToolTraceEntry[]>([]);
+  const [traceMap, setTraceMap] = useState<Record<string, { tools: ToolTraceEntry[]; durationMs?: number }>>({});
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [thinkOpenMap, setThinkOpenMap] = useState<Record<string, boolean>>({});
   const [streamThinkOpen, setStreamThinkOpen] = useState(true);
   const streamThinkManual = useRef(false);
+  const liveToolsRef = useRef<ToolTraceEntry[]>([]);
   const streamingRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
   const pendingTimeouts = useRef<number[]>([]);
-  const pendingEvents = useRef<Array<{ kind: "chunk" | "state"; payload: any }>>([]);
+  const pendingEvents = useRef<Array<{ kind: "chunk" | "state" | "tool"; payload: any }>>([]);
   const mountedRef = useRef(true);
 
   const debug = useCallback(
@@ -274,9 +195,21 @@ function App() {
           streamingRef.current += payload.text;
           setStreamingText((prev) => prev + payload.text);
         } else if (kind === "state" && payload.state !== "started") {
-          // A terminal turn-state arrived before the session resolved:
-          // reconcile from the backend instead of finalizing the draft.
           scheduleRefetch(sid);
+        } else if (kind === "tool") {
+          // Replay tool event: upsert into liveToolsRef
+          setLiveTools((prev) => {
+            const existing = prev.findIndex((t) => t.call_id === payload.call_id);
+            let next: ToolTraceEntry[];
+            if (existing >= 0) {
+              next = [...prev];
+              next[existing] = { ...next[existing], ...payload };
+            } else {
+              next = [...prev, payload];
+            }
+            liveToolsRef.current = next;
+            return next;
+          });
         }
       });
     };
@@ -289,8 +222,6 @@ function App() {
       if (payload.session_id !== sessionId) return;
       streamingRef.current += payload.text;
       setStreamingText((prev) => prev + payload.text);
-      // Auto-collapse the think block once the answer body starts,
-      // unless the user toggled it manually during this turn.
       const parsed = parseThink(streamingRef.current);
       if (parsed.thinkDone && parsed.body && !streamThinkManual.current) {
         setStreamThinkOpen(false);
@@ -310,6 +241,9 @@ function App() {
         setStreamingText("");
         streamThinkManual.current = false;
         setStreamThinkOpen(true);
+        setLiveTools([]);
+        setElapsedSec(0);
+        liveToolsRef.current = [];
       } else if (
         payload.state === "completed" ||
         payload.state === "failed" ||
@@ -317,9 +251,6 @@ function App() {
       ) {
         setIsStreaming(false);
         setActiveTurnId(null);
-        // Optimistically finalize the streamed draft: the backend persists
-        // the assistant message slightly AFTER DialogTurnCompleted fires,
-        // so an immediate getMessages would miss it (race observed 2026-07-19).
         const draft = streamingRef.current;
         streamingRef.current = "";
         setStreamingText("");
@@ -331,17 +262,60 @@ function App() {
             is_streaming: false,
           };
           setMessages((prev) => [...prev, assistantMsg]);
+          // Save trace snapshot into traceMap
+          setTraceMap((prev) => ({
+            ...prev,
+            [assistantMsg.id]: {
+              tools: liveToolsRef.current,
+              durationMs: payload.duration_ms,
+            },
+          }));
         }
+        setLiveTools([]);
+        liveToolsRef.current = [];
         scheduleRefetch(sessionId);
       }
+    });
+    const unlistenTool = onToolEvent((payload) => {
+      debugRef.current(`tool ${payload.phase} ${payload.name} ${payload.call_id}`);
+      if (!sessionId) {
+        pendingEvents.current.push({ kind: "tool", payload });
+        return;
+      }
+      if (payload.session_id !== sessionId) return;
+      setLiveTools((prev) => {
+        const existing = prev.findIndex((t) => t.call_id === payload.call_id);
+        let next: ToolTraceEntry[];
+        if (existing >= 0) {
+          next = [...prev];
+          next[existing] = { ...next[existing], ...payload };
+        } else {
+          next = [...prev, payload];
+        }
+        liveToolsRef.current = next;
+        return next;
+      });
     });
     flushPending(sessionId ?? "");
     return () => {
       clearPendingTimeouts();
       unlistenChunk.then((f) => f()).catch(() => {});
       unlistenState.then((f) => f()).catch(() => {});
+      unlistenTool.then((f) => f()).catch(() => {});
     };
   }, [sessionId, scheduleRefetch, clearPendingTimeouts]);
+
+  // elapsedSec ticker while streaming
+  useEffect(() => {
+    if (!isStreaming) {
+      setElapsedSec(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setElapsedSec((s) => s + 1);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isStreaming]);
 
   const handleSend = useCallback(() => {
     if (!sessionId || !input.trim() || isStreaming) return;
@@ -421,39 +395,24 @@ function App() {
         </div>
         <div className="header-spacer" />
         <button
-          className={`header-btn${artifactsOpen ? " active" : ""}`}
-          onClick={() => setArtifactsOpen((v) => !v)}
+          className={`header-btn${settingsOpen ? " active" : ""}`}
+          onClick={() => setSettingsOpen((v) => !v)}
         >
-          产物
+          设置
         </button>
-        <div className="options-wrap">
-          <button
-            className={`header-btn${optionsOpen ? " active" : ""}`}
-            onClick={() => setOptionsOpen((v) => !v)}
-          >
-            选项
-          </button>
-          {optionsOpen && (
-            <div className="options-menu">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={thinkDefaultOpen}
-                  onChange={(e) => setThinkDefaultOpen(e.target.checked)}
-                />
-                默认展开思考过程
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={debugOn}
-                  onChange={(e) => setDebugOn(e.target.checked)}
-                />
-                调试面板
-              </label>
-            </div>
-          )}
-        </div>
+        {settingsOpen && (
+          <div className="settings-panel">
+            <label>
+              <input
+                type="checkbox"
+                checked={debugOn}
+                onChange={(e) => setDebugOn(e.target.checked)}
+              />
+              调试面板
+            </label>
+            <div className="settings-placeholder">更多设置即将到来</div>
+          </div>
+        )}
       </header>
 
       <div className="body-row">
@@ -506,59 +465,45 @@ function App() {
                   }
                 if (m.role === "assistant") {
                   const parsed = parseThink(m.content);
-                  const thinkOpen = thinkOpenMap[m.id] ?? thinkDefaultOpen;
+                  const trace = traceMap[m.id];
+                  const thinkOpen = thinkOpenMap[m.id] ?? false;
                   return (
-                    <div className="msg assistant" key={m.id}>
-                      <div className="avatar" />
-                      <div className="content">
-                        {parsed.think && (
-                          <ThinkBlock
-                            text={parsed.think}
-                            live={false}
-                            expanded={thinkOpen}
-                            onToggle={() =>
-                              setThinkOpenMap((prev) => ({ ...prev, [m.id]: !thinkOpen }))
-                            }
-                          />
-                        )}
-                        {parsed.body && <Markdown text={parsed.body} />}
-                      </div>
-                    </div>
+                    <TurnContainer
+                      key={m.id}
+                      live={false}
+                      think={parsed.think}
+                      thinkDone={parsed.thinkDone}
+                      body={parsed.body}
+                      trace={trace ?? { tools: [] }}
+                      thinkOpen={thinkOpen}
+                      onThinkToggle={() =>
+                        setThinkOpenMap((prev) => ({ ...prev, [m.id]: !thinkOpen }))
+                      }
+                    />
                   );
                 }
                 return null;
               })}
               {streamParsed && (
-                <div className="msg assistant">
-                  <div className="avatar" />
-                  <div className="content">
-                    {streamParsed.think && (
-                      <ThinkBlock
-                        text={streamParsed.think}
-                        live={!streamParsed.thinkDone}
-                        expanded={streamThinkOpen}
-                        onToggle={() => {
-                          streamThinkManual.current = true;
-                          setStreamThinkOpen((v) => !v);
-                        }}
-                      />
-                    )}
-                    {streamParsed.body && <Markdown text={streamParsed.body} />}
-                    <span className="caret" />
-                   </div>
-                 </div>
-               )}
+                <TurnContainer
+                  live={true}
+                  think={streamParsed.think}
+                  thinkDone={streamParsed.thinkDone}
+                  body={streamParsed.body}
+                  trace={{ tools: liveTools }}
+                  thinkOpen={streamThinkOpen}
+                  onThinkToggle={() => {
+                    streamThinkManual.current = true;
+                    setStreamThinkOpen((v) => !v);
+                  }}
+                  showCaret={true}
+                  elapsedSec={elapsedSec}
+                />
+              )}
               </div>
             </ErrorBoundary>
           )}
         </div>
-
-        {artifactsOpen && (
-          <aside className="artifacts">
-            <h3>生成产物</h3>
-            <div className="artifacts-empty">暂无产物</div>
-          </aside>
-        )}
       </div>
 
       <footer className="composer">
