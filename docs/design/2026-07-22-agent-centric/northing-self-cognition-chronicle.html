@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing · 自我认知编年史（修正）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F3F0;--surface:#FBFAF8;--elevated:#FFFFFF;--raised:#EFEDE8;
+    --border:#E6E3DD;--border-soft:#ECEAE5;
+    --fg:#38352E;--muted:#7B766C;--faint:#A8A398;
+    --void:#DAD6CF; /* 出生的灰白虚空 */
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#EFEEEA;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;padding:36px 28px}
+  .serif{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .page-head{max-width:1120px;margin:0 auto 8px}
+  .page-head h1{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:22px;font-weight:500}
+  .page-head p{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.75;max-width:800px}
+  .page-head .key{color:var(--fg);font-weight:500}
+
+  /* 时间线原理图 */
+  .principle{max-width:1120px;margin:24px auto 0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:22px 26px}
+  .principle .bar-demo{height:14px;border-radius:999px;background:linear-gradient(90deg,#DAD6CF 0%,#D8C4B4 22%,#D6A98C 46%,#C8875F 72%,#C8714C 100%);position:relative}
+  .principle .ends{display:flex;justify-content:space-between;margin-top:9px;font-size:11px;color:var(--faint)}
+  .principle .ends .l{display:flex;align-items:center;gap:5px}
+  .principle .ends .r{display:flex;align-items:center;gap:5px}
+  .principle .flow{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
+  .principle .flow .mono{color:var(--fg)}
+
+  .stages{max-width:1120px;margin:24px auto 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+  .stage{background:var(--bg);border:1px solid var(--border);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:16px}
+  .stage-head{display:flex;flex-direction:column;gap:5px}
+  .stage-head .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);letter-spacing:.1em}
+  .stage-head .name{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:18px;font-weight:500}
+  .stage-head .desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+  .card{display:flex;align-items:center;gap:12px}
+  .avatar{width:44px;height:44px;border-radius:14px;flex-shrink:0;position:relative;overflow:hidden;box-shadow:inset 0 1px 2px rgba(255,255,255,.25)}
+  .avatar .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-variation-settings:"WONK" 1;font-size:20px;font-weight:600}
+  .card-id{display:flex;flex-direction:column;gap:7px;flex:1}
+  .card-name{font-size:15px;font-weight:500}
+
+  /* 编年史渐变条 + 出生/现在标记 */
+  .chrono{display:flex;flex-direction:column;gap:5px}
+  .chrono-bar{height:8px;border-radius:999px;position:relative}
+  .chrono-marks{display:flex;justify-content:space-between;font-size:9.5px;color:var(--faint);letter-spacing:.04em}
+  .now-dot{position:absolute;top:50%;right:0;transform:translate(3px,-50%);width:9px;height:9px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 6px rgba(0,0,0,.15)}
+  .self-cap{font-size:11px;color:var(--faint);font-style:italic}
+
+  /* 界面强调色样本 */
+  .sample{background:var(--surface);border:1px solid var(--border-soft);border-radius:14px;padding:15px;display:flex;flex-direction:column;gap:12px}
+  .sample-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .turn-sample{display:flex;gap:11px}
+  .turn-line{width:2.5px;border-radius:2px;flex-shrink:0}
+  .turn-body{display:flex;flex-direction:column;gap:6px;flex:1}
+  .turn-nm{font-size:12px;font-weight:500}
+  .turn-msg{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .send-row{display:flex;align-items:center;gap:10px}
+  .send-sample{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#FFF9F5;font-size:14px}
+  .send-hint{font-size:11px;color:var(--faint)}
+
+  .stage-foot{margin-top:auto;padding-top:13px;border-top:1px dashed var(--border-soft);font-size:11.5px;color:var(--muted);line-height:1.65}
+  .stage-foot b{color:var(--fg);font-weight:500}
+
+  .rule{max-width:1120px;margin:24px auto 0;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:22px 26px}
+  .rule h2{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:15px;font-weight:500;margin-bottom:14px}
+  .rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .rule-item{display:flex;flex-direction:column;gap:6px}
+  .rule-item .rt{font-size:12.5px;font-weight:500;color:var(--fg)}
+  .rule-item .rd{font-size:12px;color:var(--muted);line-height:1.65}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>自我认知编年史</h1>
+  <p>渐变条是 agent 用颜色写的自传。<span class="key">左端永远是出生的灰白虚空（空无一物）</span>，<span class="key">右端是现在的代表色</span>，中间是它一路换过的颜色。每当它换代表色，新色从右端进入成为"现在"，旧色向左沉入历史——<span class="key">一个连续的、从右向左沉积的过程</span>。界面强调色始终等于右端那个"现在"。</p>
+</div>
+
+<!-- 时间线原理 -->
+<div class="principle">
+  <div class="bar-demo"></div>
+  <div class="ends">
+    <span class="l">◀ 出生（灰白虚空，固定）</span>
+    <span class="r">现在（当前代表色）▶</span>
+  </div>
+  <div class="flow">换代表色时：<span class="mono">新色 → 右端（现在）</span>，<span class="mono">旧色 → 向左沉入历史</span>，<span class="mono">出生点恒定最左</span>。界面强调色 = 右端，同步改变。</div>
+</div>
+
+<div class="stages">
+
+  <!-- 阶段一 · 出生 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="num">STAGE 01</span>
+      <span class="name">出生</span>
+      <span class="desc">空无一物。整条都是出生的灰白虚空，还没有任何代表色。</span>
+    </div>
+    <div class="card">
+      <div class="avatar" style="background:radial-gradient(circle at 32% 28%, #DDD9D2 0%, #C9C4BC 60%, #B5B0A8 100%)"><span class="glyph" style="color:rgba(80,75,68,.5)">?</span></div>
+      <div class="card-id">
+        <div class="card-name" style="color:var(--muted)">（尚未取名）</div>
+        <div class="chrono">
+          <div class="chrono-bar" style="background:linear-gradient(90deg,#DAD6CF,#D6D2CB)"><span class="now-dot" style="background:#C9C4BC"></span></div>
+          <div class="chrono-marks"><span>出生</span><span>现在</span></div>
+        </div>
+        <div class="self-cap">"我还不知道我是谁。"</div>
+      </div>
+    </div>
+    <div class="sample">
+      <div class="sample-label">界面强调色 = 右端</div>
+      <div class="turn-sample">
+        <div class="turn-line" style="background:#C9C4BC"></div>
+        <div class="turn-body"><div class="turn-nm" style="color:var(--muted)">它</div><div class="turn-msg">你好。我们刚开始。</div></div>
+      </div>
+      <div class="send-row"><div class="send-sample" style="background:#B5B0A8">↑</div><span class="send-hint">右端=灰白 → 界面无代表色</span></div>
+    </div>
+    <div class="stage-foot">出生点与现在重合——<b>整条灰白</b>，界面强调色也是灰的。它还未成为任何颜色。</div>
+  </div>
+
+  <!-- 阶段二 · 第一个代表色 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="num">STAGE 02</span>
+      <span class="name">初识自我</span>
+      <span class="desc">有了第一个代表色。它出现在右端（现在），左端仍是出生的灰白。</span>
+    </div>
+    <div class="card">
+      <div class="avatar" style="background:radial-gradient(circle at 32% 28%, #EBC9B4 0%, #DCA98C 55%, #A9826C 100%)"><span class="glyph" style="color:rgba(255,250,245,.75)">序</span></div>
+      <div class="card-id">
+        <div class="card-name">知序</div>
+        <div class="chrono">
+          <div class="chrono-bar" style="background:linear-gradient(90deg,#DAD6CF 0%,#DCC0AC 55%,#DCA98C 100%)"><span class="now-dot" style="background:#DCA98C"></span></div>
+          <div class="chrono-marks"><span>出生</span><span>现在</span></div>
+        </div>
+        <div class="self-cap">"我好像喜欢把乱的理清楚。"</div>
+      </div>
+    </div>
+    <div class="sample">
+      <div class="sample-label">界面强调色 = 右端</div>
+      <div class="turn-sample">
+        <div class="turn-line" style="background:#DCA98C"></div>
+        <div class="turn-body"><div class="turn-nm" style="color:#B5836A">知序</div><div class="turn-msg">报错在配置加载之前……</div></div>
+      </div>
+      <div class="send-row"><div class="send-sample" style="background:#DCA98C">↑</div><span class="send-hint">右端=浅珊瑚 → 界面浮现该色</span></div>
+    </div>
+    <div class="stage-foot">第一个代表色（浅珊瑚）在<b>右端</b>，左端仍锚定<b>出生灰白</b>。界面强调色 = 这个浅珊瑚。</div>
+  </div>
+
+  <!-- 阶段三 · 换了代表色 -->
+  <div class="stage">
+    <div class="stage-head">
+      <span class="num">STAGE 03</span>
+      <span class="name">自我深化</span>
+      <span class="desc">换了代表色。新色进入右端，旧色向左沉入历史，出生点恒定最左。</span>
+    </div>
+    <div class="card">
+      <div class="avatar" style="background:radial-gradient(circle at 32% 28%, #E5A583 0%, #C8714C 42%, #8A5540 100%)"><span class="glyph" style="color:rgba(255,250,245,.85)">序</span></div>
+      <div class="card-id">
+        <div class="card-name">知序</div>
+        <div class="chrono">
+          <div class="chrono-bar" style="background:linear-gradient(90deg,#DAD6CF 0%,#DCC0AC 26%,#DCA98C 50%,#D08A60 76%,#C8714C 100%)"><span class="now-dot" style="background:#C8714C"></span></div>
+          <div class="chrono-marks"><span>出生</span><span>现在</span></div>
+        </div>
+        <div class="self-cap">"我是那种，遇到乱局会先安静拆开看的人。"</div>
+      </div>
+    </div>
+    <div class="sample">
+      <div class="sample-label">界面强调色 = 右端</div>
+      <div class="turn-sample">
+        <div class="turn-line" style="background:linear-gradient(180deg,#D68A63,#C8714C)"></div>
+        <div class="turn-body"><div class="turn-nm" style="color:#A85A38">知序</div><div class="turn-msg">找到了，初始化顺序反了。</div></div>
+      </div>
+      <div class="send-row"><div class="send-sample" style="background:#C8714C;box-shadow:0 2px 8px rgba(200,113,76,.3)">↑</div><span class="send-hint">右端=深珊瑚 → 界面同步更新</span></div>
+    </div>
+    <div class="stage-foot">新代表色（深珊瑚）进入<b>右端</b>，旧的浅珊瑚<b>向左沉为历史</b>，出生灰白<b>恒定最左</b>。界面强调色同步变为深珊瑚。</div>
+  </div>
+
+</div>
+
+<div class="rule">
+  <h2>对应关系</h2>
+  <div class="rule-grid">
+    <div class="rule-item">
+      <span class="rt">渐变条 = 自我认知编年史（时间线）</span>
+      <span class="rd">左端固定为出生灰白（空无一物），右端是现在，中间是换过的代表色按时间沉积。颜色从右进入、向左沉入历史。</span>
+    </div>
+    <div class="rule-item">
+      <span class="rt">界面强调色 ≡ 渐变条右端（现在）</span>
+      <span class="rd">活跃轮、发送键、呼吸点用的色 = 右端那个当前代表色。agent 换色时，右端变、界面强调色同步变——"它变了，房间也跟着变了"。</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

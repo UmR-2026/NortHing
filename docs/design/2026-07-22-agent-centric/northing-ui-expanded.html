@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing · 展开态（三栏）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --drive-300:#E5A583;--drive-400:#D68A63;--drive-500:#C8714C;--drive-600:#A85A38;
+    --abyss-300:#6FB5AD;--abyss-400:#4A968E;--abyss-500:#2F7A73;--abyss-600:#1F5F5B;
+    --bg:#13100D;--surface:#1A1512;--elevated:#221C17;--raised:#2B241D;
+    --surface-cool:#15171A;--elevated-cool:#1D2124;--raised-cool:#252A2E;
+    --border:#352B23;--border-soft:#261E18;
+    --border-warm:rgba(200,113,76,.13);--border-cool:rgba(47,122,115,.16);
+    --fg:#ECE2D6;--muted:#9C8D7E;--faint:#7E7163;
+    --r-sm:9px;--r-md:14px;--r-lg:18px;--r-pill:999px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0C0908;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;padding:20px;display:flex;justify-content:center}
+  .serif{font-family:'Fraunces',serif}.mono{font-family:'JetBrains Mono',monospace}
+  @keyframes breathe{0%,100%{opacity:.7;transform:scale(.985)}50%{opacity:1;transform:scale(1.015)}}
+  @keyframes caret{0%,100%{opacity:1}50%{opacity:.15}}
+  .app{width:1340px;height:780px;background:var(--bg);border:1px solid var(--border-soft);border-radius:var(--r-lg);overflow:hidden;display:flex;box-shadow:0 26px 80px -24px rgba(30,18,10,.75)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--drive-400);box-shadow:0 0 8px var(--drive-500);animation:breathe 4s ease-in-out infinite;flex-shrink:0}
+
+  /* ===== 通用模块 ===== */
+  .module{border-radius:var(--r-md);overflow:hidden}
+  .mod-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}
+  .mod-head .mt{font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:.02em}
+  .mod-head .chev{margin-left:auto;color:var(--faint);font-size:10px}
+  .mod-body{padding:2px 12px 12px}
+  .badge{font-size:10px;padding:1.5px 8px;border-radius:var(--r-pill)}
+  .badge.hot{background:rgba(200,113,76,.16);color:var(--drive-300)}
+  .badge.count{background:var(--raised);color:var(--muted)}
+  .badge.cool{background:rgba(47,122,115,.16);color:var(--abyss-300)}
+
+  /* ===== 左栏：它的内在（暖） ===== */
+  .sidebar{width:258px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;padding:13px 12px;gap:9px}
+  .sidebar.left{background:var(--surface);border-right:1px solid var(--border-soft)}
+  .side-head{display:flex;align-items:center;gap:8px;padding:2px 4px 4px}
+  .side-head .zt{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .side-head .collapse{margin-left:auto;width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;font-size:12px}
+  .side-head .collapse:hover{background:var(--elevated);color:var(--muted)}
+  .left .module{background:var(--elevated);border:1px solid var(--border-warm)}
+
+  /* presence 名片 */
+  .pres{display:flex;align-items:center;gap:12px;padding:13px 12px 11px}
+  .avatar{width:44px;height:44px;border-radius:14px;flex-shrink:0;position:relative;overflow:hidden;
+    background:radial-gradient(circle at 32% 28%, #E5A583 0%, #C8714C 42%, #7A4A35 100%);
+    box-shadow:0 2px 12px rgba(200,113,76,.28), inset 0 1px 2px rgba(255,255,255,.18)}
+  .avatar::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 68% 70%, rgba(47,122,115,.5) 0%, transparent 46%)}
+  .avatar .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:20px;color:rgba(20,12,8,.55);font-weight:600}
+  .pres-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .pres-name{font-size:16.5px;font-weight:500}
+  .pres-state{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted)}
+  .pres-self{width:100%;height:3.5px;border-radius:var(--r-pill);margin-top:6px;
+    background:linear-gradient(90deg,#3A5B63 0%,#4E6E68 26%,#7A7258 50%,#A87B52 70%,var(--drive-500) 88%,var(--drive-400) 100%)}
+  .mood{font-size:12px;color:var(--drive-300);opacity:.85;line-height:1.6;padding:0 12px 6px}
+  .self-cap{font-size:11px;color:var(--abyss-300);opacity:.8;line-height:1.6;padding:0 12px 12px}
+
+  .subs{display:flex;flex-direction:column;gap:9px}
+  .sub{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted)}
+  .sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .sdot.run{background:var(--drive-400);box-shadow:0 0 6px var(--drive-500);animation:breathe 2.5s infinite}
+  .sdot.idle{background:var(--faint)}
+  .sub .tag{margin-left:auto;font-size:10px;color:var(--faint)}
+  .cand{display:flex;flex-direction:column;gap:8px}
+  .cand-item{background:var(--raised);border:1px solid var(--border-soft);border-radius:var(--r-sm);padding:9px 11px}
+  .cand-item .ct{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--drive-300)}
+  .cand-item .ct .ci{color:var(--drive-400)}
+  .cand-item .ct .stag{margin-left:auto;font-size:9.5px;color:var(--drive-400);background:rgba(200,113,76,.14);padding:1.5px 7px;border-radius:var(--r-pill)}
+  .cand-item .cb{font-size:10.5px;color:var(--faint);margin-top:5px;font-family:'JetBrains Mono',monospace}
+  .cand-item.solid{background:transparent}
+  .cand-item.solid .ct{color:var(--muted)}
+  .cand-item.solid .ct .ci{color:var(--abyss-300)}
+  .cand-item.solid .ct .stag{color:var(--faint);background:var(--elevated)}
+  .aware{display:flex;flex-direction:column}
+  .aware-item{display:flex;gap:10px;padding:8px 0}
+  .aware-item + .aware-item{border-top:1px solid var(--border-soft)}
+  .aware-item .ad{width:6px;height:6px;border-radius:50%;background:var(--abyss-400);margin-top:6px;flex-shrink:0}
+  .aware-item .at{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .aware-item .at b{color:var(--fg);font-weight:400}
+  .aware-item .ats{font-size:10px;color:var(--faint);margin-top:2px;font-family:'JetBrains Mono',monospace}
+
+  /* ===== 中：对话 + 操控台 ===== */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;
+    background:
+      radial-gradient(ellipse 130% 70% at 50% -8%, rgba(200,113,76,.05) 0%, transparent 42%),
+      radial-gradient(ellipse 110% 80% at 50% 112%, rgba(47,122,115,.07) 0%, transparent 52%),
+      var(--bg)}
+  .topbar{display:flex;align-items:center;gap:12px;padding:15px 26px 13px;border-bottom:1px solid var(--border-soft)}
+  .topbar .sess{font-size:14px;font-weight:500;color:var(--muted)}
+  .topbar .ctx{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+  .topbar .ctx b{color:var(--muted);font-weight:400}
+  .brand{display:flex;align-items:center;gap:7px;opacity:.5;padding-left:14px;border-left:1px solid var(--border-soft)}
+  .brand .bt{font-family:'Fraunces',serif;font-size:12px;color:var(--muted)}
+  .stream{flex:1;overflow-y:auto;padding:22px 28px;display:flex;flex-direction:column}
+  .stream .inner{max-width:620px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+  .turn{display:flex;flex-direction:column;gap:10px;position:relative}
+  .turn.sediment{opacity:.45;filter:saturate(.6) brightness(.94)}
+  .turn.active{padding-left:16px}
+  .turn.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:2px;background:linear-gradient(180deg,var(--drive-500),var(--drive-600))}
+  .turn-head{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--faint)}
+  .turn-head .nm{font-size:13px;font-weight:500;color:var(--muted)}
+  .turn.active .turn-head .nm{color:var(--drive-300)}
+  .turn-head .ts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px}
+  .msg{font-size:15px;line-height:1.8;font-weight:300}
+  .turn.active .msg{font-weight:400}
+  .user-bubble{align-self:flex-end;max-width:76%;background:rgba(200,113,76,.1);border:1px solid rgba(200,113,76,.2);border-radius:var(--r-md);padding:11px 16px;font-size:15px;line-height:1.75}
+  .think{font-size:12.5px;color:var(--muted);font-style:italic;line-height:1.7;border-left:2px solid var(--abyss-600);padding-left:12px}
+  .tools{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px 12px;color:var(--muted)}
+  .turn.active .chip{background:rgba(200,113,76,.06);border-color:rgba(200,113,76,.18)}
+  .chip .ci{color:var(--abyss-300);font-family:'JetBrains Mono',monospace;font-size:11px}
+  .chip .cd{color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:10px}
+  .turn-meta{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+  .turn-meta .mi b{color:var(--muted);font-weight:400}
+  .turn-meta .live{color:var(--drive-400)}
+  .deck-wrap{padding:8px 28px 20px}
+  .deck{max-width:620px;margin:0 auto;background:var(--raised);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px -12px rgba(0,0,0,.5)}
+  .deck::before{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,rgba(200,113,76,.5),transparent)}
+  .deck-input{display:flex;align-items:flex-end;gap:10px;padding:14px 16px 10px}
+  .deck-input textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-size:14.5px;font-weight:300;line-height:1.6;height:26px}
+  .deck-input textarea::placeholder{color:var(--faint)}
+  .send{width:36px;height:36px;border-radius:11px;background:var(--drive-500);border:none;color:#14100D;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 14px rgba(200,113,76,.4)}
+  .deck-bar{display:flex;align-items:center;gap:5px;padding:8px 12px;border-top:1px solid var(--border-soft)}
+  .db{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:1px solid transparent;padding:5px 10px;border-radius:var(--r-sm);cursor:pointer;transition:.15s}
+  .db:hover{background:var(--elevated);border-color:var(--border-soft);color:var(--fg)}
+  .db .di{font-size:12.5px;color:var(--faint)}
+  .db .chev{color:var(--faint);font-size:9px}
+  .db.pill{border-color:var(--border-soft);background:var(--elevated)}
+  .db.access{color:var(--abyss-300)}
+  .db.access .di{color:var(--abyss-400)}
+  .deck-bar .sp{margin-left:auto}
+  .deck-bar .ctx2{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);padding:0 6px}
+  .mic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;font-size:13px}
+  .mic:hover{background:var(--elevated);color:var(--muted)}
+
+  /* ===== 右栏：身外之物（冷） ===== */
+  .sidebar.right{background:var(--surface-cool);border-left:1px solid var(--border-soft)}
+  .right .module{background:var(--elevated-cool);border:1px solid var(--border-cool)}
+  .right .mod-head .mt{color:var(--muted)}
+  .now-card{background:var(--raised-cool);border:1px solid var(--border-cool);border-left:2px solid var(--drive-500);border-radius:var(--r-sm);padding:11px 12px}
+  .now-card .nt{font-size:13px;color:var(--fg);line-height:1.5}
+  .now-card .ns{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--drive-400);margin-top:8px}
+  .now-bar{height:3.5px;border-radius:var(--r-pill);background:var(--border);margin-top:9px;overflow:hidden}
+  .now-bar i{display:block;height:100%;width:64%;background:var(--drive-500)}
+  .art{display:flex;align-items:center;gap:10px;padding:8px 0}
+  .art + .art{border-top:1px solid var(--border-soft)}
+  .art .ai{width:28px;height:28px;border-radius:7px;background:var(--raised-cool);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--abyss-300);flex-shrink:0}
+  .art .fn{font-size:12.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .art .st{font-size:10.5px;color:var(--faint);margin-top:1px}
+  .art .st.new{color:var(--drive-400)}
+  .tab-row{display:flex;gap:6px}
+  .wtab{flex:1;text-align:center;font-size:11.5px;color:var(--muted);padding:7px;border-radius:var(--r-sm);background:var(--raised-cool);cursor:pointer}
+  .wtab.active{color:var(--fg);background:var(--border)}
+  .empty-hint{font-size:11.5px;color:var(--faint);line-height:1.6;padding:4px 0}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 左：它的内在（暖） -->
+  <aside class="sidebar left">
+    <div class="side-head"><span class="zt">它的内在</span><span class="collapse">«</span></div>
+
+    <div class="module">
+      <div class="pres">
+        <div class="avatar"><span class="glyph">序</span></div>
+        <div class="pres-id">
+          <div class="pres-name">知序</div>
+          <div class="pres-state"><span class="dot"></span> 正在思考 · 12s</div>
+          <div class="pres-self"></div>
+        </div>
+      </div>
+      <div class="mood">"今天想把这件事做透。"</div>
+      <div class="self-cap">我是那种，遇到乱局会先安静下来、把它拆开再看的人。</div>
+    </div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">它的子进程</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="subs">
+          <div class="sub"><span class="sdot run"></span> Explore <span class="tag">搜索中</span></div>
+          <div class="sub"><span class="sdot idle"></span> FileFinder <span class="tag">待命</span></div>
+          <div class="sub"><span class="sdot idle"></span> TestAgent <span class="tag">待命</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">技能候选</span><span class="badge hot">锻造中 1</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="cand">
+          <div class="cand-item"><div class="ct"><span class="ci">✦</span> 初始化顺序检查 <span class="stag">候选中</span></div><div class="cb">依据 · 同类失败 ×3</div></div>
+          <div class="cand-item solid"><div class="ct"><span class="ci">◆</span> 模块拆分 <span class="stag">已固化</span></div></div>
+          <div class="cand-item solid"><div class="ct"><span class="ci">◆</span> 错误定位 <span class="stag">已固化</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">意识更新</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="aware">
+          <div class="aware-item"><span class="ad"></span><div><div class="at">意识到：<b>配置应先于会话加载</b></div><div class="ats">本轮</div></div></div>
+          <div class="aware-item"><span class="ad"></span><div><div class="at">代表色更新为 <b>暖珊瑚</b></div><div class="ats">2 天前</div></div></div>
+          <div class="aware-item"><span class="ad"></span><div><div class="at">完成 <b>登录模块重构</b></div><div class="ats">昨天</div></div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中：对话 + 操控台 -->
+  <main class="main">
+    <div class="topbar">
+      <span class="sess">登录模块重构</span>
+      <span class="ctx">ctx <b>62%</b> · 会话 <b>1h 24m</b></span>
+      <span class="brand">
+        <svg width="16" height="16" viewBox="0 0 240 240"><g fill="none" stroke="#9C8D7E" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="8"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="12"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="16"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#9C8D7E" stroke-width="14" stroke-linecap="round"/></svg>
+        <span class="bt">northing</span>
+      </span>
+    </div>
+    <div class="stream">
+      <div class="inner">
+        <div class="turn sediment">
+          <div class="turn-head"><span class="nm">知序</span><span class="ts">14:02</span></div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+        <div class="turn">
+          <div class="turn-head"><span class="nm" style="color:var(--muted)">你</span><span class="ts">14:31</span></div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+        <div class="turn active">
+          <div class="turn-head"><span class="dot"></span><span class="nm">知序</span><span class="ts">现在</span></div>
+          <div class="think">报错在配置加载之前……应该是初始化顺序的问题。</div>
+          <div class="tools">
+            <span class="chip"><span class="ci">▸ read</span> src/main.rs <span class="cd">·212行</span></span>
+            <span class="chip"><span class="ci">▸ grep</span> "init_config" <span class="cd">·3处</span></span>
+          </div>
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--drive-400);animation:caret 1.2s infinite">▍</span></div>
+          <div class="turn-meta"><span class="mi">◇ <b>Claude 4.6</b></span><span class="mi live">◔ <b>1.2k</b> tok · 生成中</span><span class="mi">⏱ <b>12s</b></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="deck-wrap">
+      <div class="deck">
+        <div class="deck-input">
+          <textarea placeholder="说点什么……  @ 引用文件   / 调用技能"></textarea>
+          <button class="send">↑</button>
+        </div>
+        <div class="deck-bar">
+          <button class="db"><span class="di">＋</span></button>
+          <button class="db pill"><span class="di">▦</span> 工作目录 <span class="chev">▾</span></button>
+          <button class="db"><span class="di">◐</span> 思考·深 <span class="chev">▾</span></button>
+          <button class="db"><span class="di">◇</span> Claude 4.6 <span class="chev">▾</span></button>
+          <button class="db access"><span class="di">◈</span> 完全自治 <span class="chev">▾</span></button>
+          <span class="sp"></span>
+          <span class="ctx2">ctx 38%</span>
+          <div class="mic">🎤</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右：身外之物（冷） -->
+  <aside class="sidebar right">
+    <div class="side-head"><span class="zt">身外之物</span><span class="collapse">»</span></div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">此刻的任务</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="now-card">
+          <div class="nt">修复初始化顺序</div>
+          <div class="ns"><span class="dot"></span> 进行中 · 正在对调两步</div>
+          <div class="now-bar"><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">产物</span><span class="badge count">4</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="art"><div class="ai">rs</div><div style="min-width:0"><div class="fn">src/main.rs</div><div class="st new">它刚修改 · 未审阅</div></div></div>
+        <div class="art"><div class="ai">md</div><div style="min-width:0"><div class="fn">重构说明.md</div><div class="st new">它新建</div></div></div>
+        <div class="art"><div class="ai">txt</div><div style="min-width:0"><div class="fn">报错日志.txt</div><div class="st">你上传的</div></div></div>
+      </div>
+    </div>
+
+    <div class="module">
+      <div class="mod-head"><span class="mt">浏览 · 画布</span><span class="chev">▾</span></div>
+      <div class="mod-body">
+        <div class="tab-row"><div class="wtab active">文件浏览</div><div class="wtab">画布</div></div>
+        <div class="empty-hint" style="margin-top:10px">工作区的文件与画布在这里。你和它都能打开、改动。</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+</body>
+</html>

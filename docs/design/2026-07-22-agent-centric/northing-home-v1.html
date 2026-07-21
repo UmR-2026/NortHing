@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing · 主页 v1（咨询室）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* agent 代表色（它带来的温度） */
+    --rep-300:#E5A583;--rep-400:#D68A63;--rep-500:#C8714C;--rep-600:#A85A38;
+    /* 深渊（次要冷色） */
+    --abyss-400:#5A9B93;--abyss-500:#3F837B;
+    /* 咨询室白灰基底 */
+    --bg:#F4F3F0;--surface:#FBFAF8;--elevated:#FFFFFF;--raised:#EFEDE8;
+    --border:#E6E3DD;--border-soft:#ECEAE5;
+    --fg:#38352E;--muted:#7B766C;--faint:#A8A398;
+    --r-sm:9px;--r-md:14px;--r-lg:18px;--r-pill:999px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#E9E7E2;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;padding:24px;display:flex;justify-content:center}
+  .serif{font-family:'Fraunces',serif}.mono{font-family:'JetBrains Mono',monospace}
+  @keyframes breathe{0%,100%{opacity:.65;transform:scale(.985)}50%{opacity:1;transform:scale(1.015)}}
+  @keyframes caret{0%,100%{opacity:1}50%{opacity:.15}}
+  .app{width:1180px;height:760px;background:var(--bg);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;box-shadow:0 30px 80px -28px rgba(80,70,55,.4);position:relative}
+
+  /* 收起态把手 */
+  .handle{position:absolute;top:0;bottom:0;width:30px;display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:22px;z-index:20;cursor:pointer}
+  .handle.left{left:0}
+  .handle.right{right:0}
+  .handle .hi{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--faint);transition:.15s}
+  .handle .hi:hover{background:var(--raised);color:var(--muted)}
+  .handle .vlabel{writing-mode:vertical-rl;font-size:9px;letter-spacing:.18em;color:var(--faint);margin-top:4px}
+
+  /* 主空间（咨询室的安静） */
+  .space{flex:1;margin:0 30px;display:flex;flex-direction:column;position:relative;
+    background:radial-gradient(ellipse 100% 65% at 50% -4%, rgba(200,113,76,.045) 0%, transparent 55%), var(--bg);}
+
+  /* 顶栏：agent 名片 + 设置 + 品牌 */
+  .topbar{display:flex;align-items:center;gap:13px;padding:20px 8px 16px}
+  .avatar{width:44px;height:44px;border-radius:14px;flex-shrink:0;position:relative;overflow:hidden;
+    background:radial-gradient(circle at 32% 28%, #E5A583 0%, #C8714C 42%, #8A5540 100%);
+    box-shadow:0 3px 14px rgba(200,113,76,.3), inset 0 1px 2px rgba(255,255,255,.25)}
+  .avatar::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 68% 72%, rgba(63,131,123,.45) 0%, transparent 46%)}
+  .avatar .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:20px;color:rgba(255,250,245,.85);font-weight:600}
+  .card-id{display:flex;flex-direction:column;gap:3px}
+  .card-name{font-size:16.5px;font-weight:500;letter-spacing:.01em}
+  .card-state{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 7px var(--rep-400);animation:breathe 4s ease-in-out infinite}
+  .card-self{width:118px;height:3.5px;border-radius:var(--r-pill);margin-top:5px;
+    background:linear-gradient(90deg,#8FA6A2 0%,#A6A794 30%,#C09A78 62%,var(--rep-500) 88%,var(--rep-400) 100%)}
+  /* 设置（头像旁） */
+  .settings{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;font-size:15px;margin-left:2px;transition:.15s}
+  .settings:hover{background:var(--raised);color:var(--muted)}
+  /* 品牌印记 */
+  .brand{margin-left:auto;display:flex;align-items:center;gap:7px;opacity:.45}
+  .brand .bt{font-family:'Fraunces',serif;font-size:12px;color:var(--muted);letter-spacing:.04em}
+
+  /* 对话 */
+  .stream{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:6px 8px 14px}
+  .stream .inner{max-width:660px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+  .turn{display:flex;flex-direction:column;gap:10px;position:relative}
+  .turn.sediment{opacity:.5}
+  .turn.active{padding-left:16px}
+  .turn.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2.5px;border-radius:2px;background:linear-gradient(180deg,var(--rep-400),var(--rep-500))}
+  .turn-head{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--faint)}
+  .turn-head .nm{font-size:13px;font-weight:500;color:var(--muted)}
+  .turn.active .turn-head .nm{color:var(--rep-600)}
+  .turn-head .ts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px}
+  .msg{font-size:15px;line-height:1.82;font-weight:300;color:var(--fg)}
+  .turn.active .msg{font-weight:400}
+  .user-bubble{align-self:flex-end;max-width:76%;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-md);padding:11px 16px;font-size:15px;line-height:1.78;box-shadow:0 1px 4px rgba(80,70,55,.05)}
+  .think{font-size:12.5px;color:var(--muted);font-style:italic;line-height:1.7;border-left:2px solid var(--abyss-400);padding-left:12px}
+  .tools{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px 12px;color:var(--muted)}
+  .turn.active .chip{border-color:rgba(200,113,76,.3);background:#FCF6F2}
+  .chip .ci{color:var(--abyss-500);font-family:'JetBrains Mono',monospace;font-size:11px}
+  .chip .cd{color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:10px}
+  .turn-meta{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+  .turn-meta .mi b{color:var(--muted);font-weight:400}
+  .turn-meta .live{color:var(--rep-500)}
+
+  /* 操控台 */
+  .deck-wrap{padding:6px 8px 20px}
+  .deck{max-width:660px;margin:0 auto;background:var(--elevated);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 6px 24px -10px rgba(80,70,55,.18)}
+  .deck-input{display:flex;align-items:flex-end;gap:10px;padding:14px 16px 10px}
+  .deck-input textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-size:14.5px;font-weight:300;line-height:1.6;height:26px}
+  .deck-input textarea::placeholder{color:var(--faint)}
+  .send{width:36px;height:36px;border-radius:11px;background:var(--rep-500);border:none;color:#FFF9F5;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(200,113,76,.35)}
+  .deck-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;border-top:1px solid var(--border-soft)}
+  .db{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:1px solid transparent;padding:5px 9px;border-radius:var(--r-sm);cursor:pointer;transition:.15s}
+  .db:hover{background:var(--raised);color:var(--fg)}
+  .db .di{font-size:12.5px;color:var(--faint)}
+  .db .chev{color:var(--faint);font-size:9px}
+  .db.dir{color:var(--muted)}
+  .db.access{color:var(--abyss-500)}
+  .db.access .di{color:var(--abyss-400)}
+  /* 思考强度分段条 */
+  .think-ctrl{display:inline-flex;align-items:center;gap:8px;padding:5px 9px}
+  .think-ctrl .tl{font-size:12px;color:var(--muted)}
+  .think-bar{display:flex;gap:3px}
+  .think-bar .seg{width:13px;height:6px;border-radius:3px;background:var(--border)}
+  .think-bar .seg.on{background:var(--rep-400)}
+  /* 上下文圆环 */
+  .ctx-ring{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;cursor:pointer}
+  .ctx-ring .cl{font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace}
+  .deck-bar .sp{margin-left:auto}
+  .mic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;font-size:13px}
+  .mic:hover{background:var(--raised);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="handle left"><div class="hi">☰</div><span class="vlabel">它的内在</span></div>
+  <div class="handle right"><div class="hi">▤</div><span class="vlabel">身外之物</span></div>
+
+  <div class="space">
+    <!-- 顶栏：名片 + 设置 + 品牌 -->
+    <div class="topbar">
+      <div class="avatar"><span class="glyph">序</span></div>
+      <div class="card-id">
+        <div class="card-name">知序</div>
+        <div class="card-state"><span class="dot"></span> 正在思考 · 12s</div>
+        <div class="card-self"></div>
+      </div>
+      <div class="settings">⚙</div>
+      <div class="brand">
+        <svg width="17" height="17" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="8"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="12"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="16"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="14" stroke-linecap="round"/></svg>
+        <span class="bt">northing</span>
+      </div>
+    </div>
+
+    <!-- 对话 -->
+    <div class="stream">
+      <div class="inner">
+        <div class="turn sediment">
+          <div class="turn-head"><span class="nm">知序</span><span class="ts">14:02</span></div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+        <div class="turn">
+          <div class="turn-head"><span class="nm" style="color:var(--muted)">你</span><span class="ts">14:31</span></div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+        <div class="turn active">
+          <div class="turn-head"><span class="dot"></span><span class="nm">知序</span><span class="ts">现在</span></div>
+          <div class="think">报错在配置加载之前……应该是初始化顺序的问题。</div>
+          <div class="tools">
+            <span class="chip"><span class="ci">▸ read</span> src/main.rs <span class="cd">·212行</span></span>
+            <span class="chip"><span class="ci">▸ grep</span> "init_config" <span class="cd">·3处</span></span>
+          </div>
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--rep-500);animation:caret 1.2s infinite">▍</span></div>
+          <div class="turn-meta"><span class="mi">◇ <b>Claude 4.6</b></span><span class="mi live">◔ <b>1.2k</b> tok · 生成中</span><span class="mi">⏱ <b>12s</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操控台 -->
+    <div class="deck-wrap">
+      <div class="deck">
+        <div class="deck-input">
+          <textarea placeholder="说点什么……  @ 引用文件   / 调用技能"></textarea>
+          <button class="send">↑</button>
+        </div>
+        <div class="deck-bar">
+          <button class="db"><span class="di">＋</span></button>
+          <div class="think-ctrl"><span class="tl">思考</span><span class="think-bar"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></span></div>
+          <button class="db dir"><span class="di">▦</span> ~/northing</button>
+          <button class="db"><span class="di">◇</span> Claude 4.6 <span class="chev">▾</span></button>
+          <button class="db access"><span class="di">◈</span> 完全自治 <span class="chev">▾</span></button>
+          <span class="sp"></span>
+          <div class="ctx-ring" title="上下文已用 38%">
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="7.5" fill="none" stroke="#E6E3DD" stroke-width="2.5"/>
+              <circle cx="10" cy="10" r="7.5" fill="none" stroke="#C8714C" stroke-width="2.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" stroke-linecap="round" transform="rotate(-90 10 10)"/>
+            </svg>
+            <span class="cl">38%</span>
+          </div>
+          <div class="mic">🎤</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -83,6 +83,14 @@ For the full script list, see [`package.json`](package.json).
 
 ## Global rules
 
+### Housekeeping rules (2026-07-22, apply to every commit)
+
+1. **顺手清配额**: a commit may include small in-scope debt fixes found nearby (outdated docs, missing tests, file growth past 800 lines) — no separate cleanup task needed; keep them traceable in the commit message.
+2. **Doc sync as hard rule**: changing crate structure (add/remove crate, move paths) requires updating `docs/status/surfaces.md` in the same commit; resolving a tech-debt item requires flipping its ledger status in the same commit. No "doc later".
+3. **God-file defense**: production `.rs` files over 800 lines raise review pressure; over 1000 lines must be split or carry a `// allow-god-file` justification comment at the top of the file. New modules start below the line.
+4. **Concurrency test binding**: changes touching `tokio::select!`, cancellation tokens, or timeout races must ship with at least one automated test; judge review does not substitute. Other change types may rely on judge review.
+5. **Coding curfew**: no coding work after 03:00 daily (user health rule, recorded 2026-07-22).
+
 ### Internationalization
 
 > **v0.1.0 status**: Desktop UI uses hardcoded Chinese. i18n engineering is frozen.
