@@ -82,6 +82,7 @@ interface TurnContainerProps {
   trace: TurnTraceData;
   thinkOpen: boolean;
   onThinkToggle: () => void;
+  agentName: string;
   showCaret?: boolean;
   elapsedSec?: number;
 }
@@ -94,39 +95,48 @@ export function TurnContainer({
   trace,
   thinkOpen,
   onThinkToggle,
+  agentName,
   showCaret,
   elapsedSec,
 }: TurnContainerProps): JSX.Element {
   const [traceOpen, setTraceOpen] = useState(true);
 
   const hasTools = trace.tools.length > 0;
+  const runningTool = live ? trace.tools.find((t) => t.phase === "started") : undefined;
 
-  const headerLabel = live
-    ? elapsedSec !== undefined
-      ? `执行中 · ${elapsedSec}s`
-      : "执行中…"
-    : trace.durationMs !== undefined
-    ? `任务耗时 ${(trace.durationMs / 1000).toFixed(1)}s`
-    : "";
+  let statusLabel = "生成回复中";
+  if (think && !thinkDone) statusLabel = "深度思考";
+  else if (runningTool) statusLabel = `执行工具 · ${runningTool.name}`;
+  const statusText = live ? `${statusLabel} · ${elapsedSec ?? 0}s` : null;
+
+  const durationLabel =
+    !live && trace.durationMs !== undefined
+      ? `任务耗时 ${(trace.durationMs / 1000).toFixed(1)}s`
+      : null;
+
+  const sectionsVisible = (think || hasTools) && (live || traceOpen || !durationLabel);
 
   return (
     <div className="msg assistant">
-      <div className="avatar" />
-      <div className="content">
-        {headerLabel && (
-          <div className="trace-header">
-            <button
-              className={`trace-header-btn${live ? " live" : ""}`}
-              onClick={() => setTraceOpen((v) => !v)}
-            >
-              <span className={`chevron${traceOpen ? " open" : ""}`}>›</span>
-              {live && <span className="pulse-dot" />}
-              {headerLabel}
-            </button>
-          </div>
+      <div className="agent-row">
+        <div className="avatar" />
+        <span className="agent-name">{agentName}</span>
+        {statusText && (
+          <span className="agent-status">
+            <span className="pulse-dot" />
+            {statusText}
+          </span>
         )}
-
-        {traceOpen && (think || hasTools) && (
+        <span className="agent-row-spacer" />
+        {durationLabel && (
+          <button className="trace-header-btn" onClick={() => setTraceOpen((v) => !v)}>
+            <span className={`chevron${traceOpen ? " open" : ""}`}>›</span>
+            {durationLabel}
+          </button>
+        )}
+      </div>
+      <div className="content">
+        {sectionsVisible && (
           <div className="trace-sections">
             <ThinkSection
               think={think}
@@ -139,16 +149,6 @@ export function TurnContainer({
               <ToolSection key={t.call_id} entry={t} />
             ))}
           </div>
-        )}
-
-        {!traceOpen && !hasTools && think && (
-          <ThinkSection
-            think={think}
-            live={live}
-            thinkDone={thinkDone}
-            thinkOpen={thinkOpen}
-            onThinkToggle={onThinkToggle}
-          />
         )}
 
         {body && <Markdown text={body} />}

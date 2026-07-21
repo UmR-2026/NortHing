@@ -29,6 +29,8 @@ class ErrorBoundary extends React.Component<
 }
 
 interface MessageListProps {
+  agentName: string;
+  isStreaming: boolean;
   messages: MessageDto[];
   streamingText: string;
   liveTools: ToolTraceEntry[];
@@ -46,6 +48,8 @@ interface MessageListProps {
 }
 
 export function MessageList({
+  agentName,
+  isStreaming,
   messages,
   streamingText,
   liveTools,
@@ -70,7 +74,7 @@ export function MessageList({
     }
   }, [messages, streamingText]);
 
-  const showEmpty = messages.length === 0 && !streamingText;
+  const showEmpty = messages.length === 0 && !streamingText && !isStreaming;
   const streamParsed = streamingText ? parseThink(streamingText) : null;
 
   return (
@@ -124,6 +128,7 @@ export function MessageList({
                     <TurnContainer
                       key={m.id}
                       live={false}
+                      agentName={agentName}
                       think={parsed.think}
                       thinkDone={parsed.thinkDone}
                       body={parsed.body}
@@ -135,12 +140,13 @@ export function MessageList({
                 }
                 return null;
               })}
-              {streamParsed && (
+              {(isStreaming || streamParsed) && (
                 <TurnContainer
                   live
-                  think={streamParsed.think}
-                  thinkDone={streamParsed.thinkDone}
-                  body={streamParsed.body}
+                  agentName={agentName}
+                  think={streamParsed?.think ?? null}
+                  thinkDone={streamParsed?.thinkDone ?? false}
+                  body={streamParsed?.body ?? ""}
                   trace={{ tools: liveTools }}
                   thinkOpen={streamThinkOpen}
                   onThinkToggle={onStreamThinkToggle}

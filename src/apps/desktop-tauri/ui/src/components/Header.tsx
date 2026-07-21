@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const appWindow = getCurrentWindow();
@@ -49,28 +49,13 @@ function WindowControls() {
 
 interface HeaderProps {
   agentName: string;
-  isStreaming: boolean;
-  debugOn: boolean;
-  onToggleDebug: (on: boolean) => void;
   onRename: (name: string) => void;
+  onOpenSettings: () => void;
 }
 
-export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRename }: HeaderProps) {
+export function Header({ agentName, onRename, onOpenSettings }: HeaderProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsWrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!settingsOpen) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (settingsWrapRef.current && !settingsWrapRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [settingsOpen]);
 
   const saveName = () => {
     setEditingName(false);
@@ -105,36 +90,14 @@ export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRenam
           {agentName}
         </span>
       )}
-      <div className={`status-pill${isStreaming ? " streaming" : ""}`}>
-        <span className="dot" />
-        {isStreaming ? "回复中" : "就绪"}
-      </div>
       <div
         className="header-drag"
         data-tauri-drag-region
         onDoubleClick={() => appWindow.toggleMaximize()}
       />
-      <div className="settings-wrap" ref={settingsWrapRef}>
-        <button
-          className={`header-btn${settingsOpen ? " active" : ""}`}
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
-          设置
-        </button>
-        {settingsOpen && (
-          <div className="settings-panel">
-            <label className="settings-item">
-              <input
-                type="checkbox"
-                checked={debugOn}
-                onChange={(e) => onToggleDebug(e.target.checked)}
-              />
-              调试面板
-            </label>
-            <div className="settings-placeholder">更多设置即将到来</div>
-          </div>
-        )}
-      </div>
+      <button className="header-btn" onClick={onOpenSettings}>
+        设置
+      </button>
       <WindowControls />
     </header>
   );
