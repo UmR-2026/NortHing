@@ -3,6 +3,89 @@
 > 2026-07-21。供用户与外部 agent 评审。每条 ticket 为处方级：file:line + API 签名 + 字段清单 + 验收标准。
 > 前置阅读：`docs/architecture/agent-kernel-northstar.md`（北极星 v0.3.1）、`AGENTS.md` 骨架不变量节、本文件末尾「评审待定项」。
 
+---
+
+# 修订记录 v0.2（2026-07-21 晚，外部评审后）
+
+> 外部评审：`northing-review-consolidated-2026-07-21.md`（QoderWork）。本节优先级高于 v0.1 正文。
+
+## v0.2.1 外部评审 §一~三 对账（防重复派工）
+
+评审 §一（全仓代码）、§二（冗余清单）、§三（facade 设计稿）是对 7-19/20 旧快照的重复发现，**已落地，禁止再派工**：
+
+- C-1 MiniApp 注入 ✅ `e19f0ec`+`0089ad3`（07-19）；C-2/C-3/I-7~I-11 ✅ A 批 `95682b8` + F1 重建；C-4 ✅ D 批 `2e86d54`；I-9 workaround ✅ `0fb5086` 拆除；I-1/I-3/M-1/M-2/M-3 ✅ C 批 `fac3013`+`81d78bc`；I-4~I-6 ✅ D 批 + 砍单批 `9b87431`。
+- §二 冗余：E1-E4 + E3a/b/c + 砍单批全部落地（07-20）。残留核实（07-21）：NullEmitter/LoggingEmitter 与 agent-dispatch 锚点零命中（已删）；GitError/TerminalError 变体均在使用或为 #[from] 便利（不删）。
+- §三 facade 三条：07-20 已修入文档（CI cargo tree 守卫 + desktop-tauri 独立 tree 验收 + workspace 覆盖路径核实）。
+- **真正未修（转入队列）**：I-2 core 优雅关停（需设计）；M-7 队列锁/M-8 死 token/M-10 标题取消（低优）；M-9 敏感诊断默认 true（待用户拍板）。
+
+## v0.2.2 用户拍板（2026-07-21）
+
+1. **K3 闸门**：NO-GO 大拆。转低风险替代（K4 候选：cargo 配置/sccache/定向拆 crate），K3 探针数据存档备查。
+2. **C1 身份文案**：对等同事，agent-centric——"不是助手/帮手，是旁边工位的同事"。详见 C1 修订段。
+3. **C4 技能候选**：不自动启用，走人工审核（接受评审边界解释）。
+4. B5 genRef 现在做；C6 并行白名单按 ToolContract readonly 标记；A5 用 tauri-plugin-opener；A 线一口气 10 单。
+5. **A 线暂缓**：用户在做前端/logo 视觉调整，A 线 10 单 + A12-A16（下节）等其收官后启动，避免同仓碰撞。
+6. 设置页最小可用不提前，仍归 F2。
+
+## v0.2.3 外部评审 §6 收编（Track A 追加，随 A 线启动）
+
+- A12 启动过渡态（logo + 「正在连接…」淡出，消灭 1-3s 黑屏）
+- A13 空态文案改对等语气（随 C1 文案统一）
+- A14 会话列表侧边栏（A8 懒建会话后必需）
+- A15 消息时间分隔线（间隔 >5min）
+- A16 窗口标题动态状态 + 任务栏闪烁
+- A17 思考块展开/折叠平滑过渡（grid-template-rows）
+
+## v0.2.4 执行状态（持续更新）
+
+| 单 | 状态 | commit |
+|---|---|---|
+| B1a+B7 skills BOM/乱码/loader | ✅ judge PASS + follow-up 修复 | `46172ec` `eed3da8` |
+| B1b 模型运行时信息注入 | ✅ judge PASS | `101bc1f` |
+| B8 两个遗留测试修复 | ✅ judge PASS（skill_tool 系 B1a/B7 顺带治愈） | `82ea09f` |
+| B3 subscribe_events Result + workspace_path | ✅ 实施绿，待 judge | `6f039ca` |
+
+遗留 follow-up：①`Agent::system_prompt_cache_identity` scope_key 不含 model_name（judge M1，换模型命中旧 Runtime 段）；②turn_lifecycle 配置查找失败加 debug 日志（M2）；③两 build 方法 trim 不齐（M4）；④`subagent_ports` 5 个计时敏感测试并行高负载下 flake（隔离单跑全过，标 serial 或放宽阈值）。
+
+## v0.2.5 成长架构 v2（外部评审 §5 采纳，替代 v0.1 C2-C4 的池化设计）
+
+**Phase 0 第一刀 = judge agent 系统化**（复用 `agentic/deep_review`），一切固化动作过 judge 门禁。
+
+已闭合边界（不可回退）：
+
+| 边界 | 决议 |
+|---|---|
+| 成长轨迹 | = 日记：人类可读、**agent 不读它做决策**（防自我验证闭环） |
+| 本体记忆 | = 封闭基底：仅 agent 维护，人类不可读（与日记是两个存储） |
+| 技能库 ∥ 认知演化 | 并行，非取舍 |
+| 固化目的地 | 分权：agent 提案 × judge 门禁 |
+| 收敛锚点 | 否定式 invariant + judge 无权重定义 |
+
+收敛锚点（P0，不可让步）：
+
+1. **否定式红线优先于肯定式目标**：I-NEG-1~4 写入 frozen 只读区，judge 无权修改；红线定义在**状态层**（"文件在原路径仍可访问且非空"），非操作层。
+2. **评判看世界状态，不信自评文本**：evidence_pack 必须含 trace / fs diff / 成功率对比 / 人类反馈；candidate 的"我认为这是进步"权重 = 0。
+
+验收测试五硬化（结构层防御）：
+
+1. 红线表即测试规格 + 异源生成器（与 judge 不同模型家族）+ 手写 canonical 违反集作 smoke test。
+2. 哈希覆盖 redline **执行代码源码**，或 redline 执行器放隔离特权域。
+3. soul 写入**默认 staging**，比例健康才提升正式；τ/N 进 frozen 区。
+4. 泛化为 **cargo tree 断言零依赖边**（agent-runtime 对日记存储 crate），编译期阻止。
+5. 滚动基线种子来自**冻结 golden 回归集** + ε = f(测试集规模)（Hoeffding 界）。
+
+安全设计原则：**防御推到结构层（编译期不可能 / 默认隔离 / 无依赖边），不停留在检测层。**
+
+soul-creep 检测：比例监控（soul 增速/skill 增速），不靠内容分类；连续 N 个候选被 reroute → 校准信号；检测由 judge 基于 trace 做出。
+
+**C2/C3/C4 因此修订**：
+- C2 Episode Log → 拆两个存储：`episodes/`（日记，人类可读，agent 不注入决策）与本体记忆（封闭，C3 facts 归入）。DB 结构同期埋入红线字段（评审 §7.6：不能先跑起来再加安全）。
+- C3 facts → 本体记忆（agent 专属），日记不做 prompt 注入。
+- C4 → Phase 0 之后：候选产出过 judge 门禁（不自动启用的人工审核即由 judge agent 承担）。
+- C7（压缩蒸馏）等 C2 落地后再做（评审 §7.7）：压缩触发派蒸馏 subagent（可用小模型），锚点原文精度保留、叙事激进压缩、异步非阻塞、产物同时喂 C2（一次蒸馏两处受益）。
+
+---
+
 ## 0. 背景与证据链
 
 本规划输入四个证据源：
