@@ -11,7 +11,6 @@
 //! - `sched_state.rs`         — state stores + injection sources.
 //! - `sched_filter.rs`        — pure decide / resolve functions (this file).
 
-use super::sched_state::ActiveDialogTurnStore;
 use super::sched_types::{
     ActiveDialogTurn, AgentSessionReplyAction, AgentSessionReplyPlan, BackgroundDeliveryAction,
     BackgroundDeliveryFacts, BackgroundInjectionKind, DialogSteeringAction, GoalContinuationAfterTurnAction,
@@ -207,13 +206,5 @@ pub fn resolve_dialog_steering_action(
             turn_id: turn_id.to_string(),
             steering_id,
         },
-    }
-}
-
-/// Whether an incoming outcome belongs to a superseded or already-finished turn.
-pub fn is_stale_turn_outcome(store: &ActiveDialogTurnStore, session_id: &str, outcome_turn_id: &str) -> bool {
-    match store.get(session_id) {
-        Some(active) => active.turn_id() != outcome_turn_id,
-        None => true,
     }
 }

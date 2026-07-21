@@ -38,7 +38,7 @@ mod sched_types;
 pub use sched_filter::{
     build_thread_goal_objective_updated_delivery_plan, build_thread_goal_resumed_delivery_plan,
     resolve_agent_session_reply_action, resolve_background_delivery_action, resolve_background_delivery_injection,
-    resolve_dialog_steering_action, resolve_turn_outcome_lifecycle_plan, is_stale_turn_outcome,
+    resolve_dialog_steering_action, resolve_turn_outcome_lifecycle_plan,
 };
 pub use sched_state::{
     ActiveDialogTurnStore, DialogReplySuppressionSet, DialogRoundInjectionInterrupt, DialogTurnQueue,
@@ -55,51 +55,6 @@ pub use sched_types::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northhing_runtime_ports::{DialogSubmissionPolicy, DialogTriggerSource};
-
-    #[test]
-    fn is_stale_turn_outcome_same_turn_id_is_not_stale() {
-        let store = ActiveDialogTurnStore::default();
-        store.insert(
-            "session_1",
-            ActiveDialogTurn::new(
-                "turn_1".to_string(),
-                None,
-                "test".to_string(),
-                "input".to_string(),
-                None,
-                DialogSubmissionPolicy::for_source(DialogTriggerSource::AgentSession),
-                None,
-            ),
-        );
-
-        assert!(!is_stale_turn_outcome(&store, "session_1", "turn_1"));
-    }
-
-    #[test]
-    fn is_stale_turn_outcome_different_turn_id_is_stale() {
-        let store = ActiveDialogTurnStore::default();
-        store.insert(
-            "session_1",
-            ActiveDialogTurn::new(
-                "turn_1".to_string(),
-                None,
-                "test".to_string(),
-                "input".to_string(),
-                None,
-                DialogSubmissionPolicy::for_source(DialogTriggerSource::AgentSession),
-                None,
-            ),
-        );
-
-        assert!(is_stale_turn_outcome(&store, "session_1", "turn_2"));
-    }
-
-    #[test]
-    fn is_stale_turn_outcome_no_active_turn_is_stale() {
-        let store = ActiveDialogTurnStore::default();
-        assert!(is_stale_turn_outcome(&store, "session_1", "turn_1"));
-    }
 
     #[test]
     fn outcome_lifecycle_dispatches_completed_turn_and_verifies_goal() {
