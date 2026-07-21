@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import "highlight.js/styles/github-dark.css";
+import { useState } from "react";
+import { Markdown } from "./Markdown";
 
 export interface ToolTraceEntry {
   call_id: string;
@@ -15,66 +13,6 @@ export interface TurnTraceData {
   tools: ToolTraceEntry[];
   durationMs?: number;
 }
-
-// ---------- markdown ----------
-
-function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
-  const [copied, setCopied] = useState(false);
-  const lang = /language-(\w+)/.exec(className || "")?.[1] ?? "";
-  const text = String(children ?? "").replace(/\n$/, "");
-  return (
-    <div className="codeblock">
-      <div className="codeblock-head">
-        <span>{lang || "code"}</span>
-        <button
-          className="codeblock-copy"
-          onClick={() => {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1200);
-              })
-              .catch(() => {});
-          }}
-        >
-          {copied ? "已复制" : "复制"}
-        </button>
-      </div>
-      <pre>
-        <code className={className}>{children}</code>
-      </pre>
-    </div>
-  );
-}
-
-function Markdown({ text }: { text: string }) {
-  return (
-    <div className="md">
-      <ReactMarkdown
-        rehypePlugins={[rehypeHighlight]}
-        components={{
-          pre: ({ children }) => <>{children}</>,
-          code: ({ className, children, ...props }) => {
-            const isBlock = /language-/.test(className || "") || String(children).includes("\n");
-            if (isBlock) {
-              return <CodeBlock className={className}>{children}</CodeBlock>;
-            }
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
-        {text}
-      </ReactMarkdown>
-    </div>
-  );
-}
-
-export { Markdown, CodeBlock };
 
 // ---------- think section ----------
 
@@ -120,9 +58,14 @@ function ToolSection({ entry }: { entry: ToolTraceEntry }) {
         ) : (
           <span className="tool-chevron-placeholder" />
         )}
-        <span className="tool-name">[{entry.name}]</span>
+        <span className="tool-name">{entry.name}</span>
         <span className="tool-summary-text">{entry.summary}</span>
-        {isLive && <span className="tool-live-badge">…进行中</span>}
+        {isLive && (
+          <span className="tool-live-badge">
+            <span className="pulse-dot" />
+            进行中
+          </span>
+        )}
       </div>
       {open && hasDetail && <pre className="tool-detail">{entry.detail}</pre>}
     </div>
@@ -160,7 +103,7 @@ export function TurnContainer({
 
   const headerLabel = live
     ? elapsedSec !== undefined
-      ? `执行中 …${elapsedSec}s`
+      ? `执行中 · ${elapsedSec}s`
       : "执行中…"
     : trace.durationMs !== undefined
     ? `任务耗时 ${(trace.durationMs / 1000).toFixed(1)}s`
@@ -172,8 +115,12 @@ export function TurnContainer({
       <div className="content">
         {headerLabel && (
           <div className="trace-header">
-            <button className="trace-header-btn" onClick={() => setTraceOpen((v) => !v)}>
+            <button
+              className={`trace-header-btn${live ? " live" : ""}`}
+              onClick={() => setTraceOpen((v) => !v)}
+            >
               <span className={`chevron${traceOpen ? " open" : ""}`}>›</span>
+              {live && <span className="pulse-dot" />}
               {headerLabel}
             </button>
           </div>
