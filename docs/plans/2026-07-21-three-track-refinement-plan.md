@@ -43,9 +43,15 @@
 | B1a+B7 skills BOM/乱码/loader | ✅ judge PASS + follow-up 修复 | `46172ec` `eed3da8` |
 | B1b 模型运行时信息注入 | ✅ judge PASS | `101bc1f` |
 | B8 两个遗留测试修复 | ✅ judge PASS（skill_tool 系 B1a/B7 顺带治愈） | `82ea09f` |
-| B3 subscribe_events Result + workspace_path | ✅ 实施绿，待 judge | `6f039ca` |
+| B3 subscribe_events Result + workspace_path | ✅ judge PASS + Err 路径测试补齐 | `6f039ca` `4f251da` |
+| B2-core turn 相位一等事件 | ✅ judge FAIL→返修→PASS | `9493450` |
+| B4 turn failed 正路由 + error_kind + result_count | ✅ judge PASS | `062959f` |
+| B5 stale outcome 守卫 | ❌ judge FAIL（设计缺陷）→ **已 revert**，转设计先行 | `48f4ce2`+`c7eb712`(revert) |
+| B6 K3 闸门 | NO-GO（用户拍板，转低风险替代） | — |
 
-遗留 follow-up：①`Agent::system_prompt_cache_identity` scope_key 不含 model_name（judge M1，换模型命中旧 Runtime 段）；②turn_lifecycle 配置查找失败加 debug 日志（M2）；③两 build 方法 trim 不齐（M4）；④`subagent_ports` 5 个计时敏感测试并行高负载下 flake（隔离单跑全过，标 serial 或放宽阈值）。
+**B5 复盘（设计先行要点，judge 复审产出）**：①`None→stale` 假设不成立——coordinator 直连路径（`AgentSubmissionPort::submit_message` subagent_ports.rs:93-133 直连 `start_dialog_turn`）与"outcome 先到、active 后插入"竞态下合法 outcome 无 active 记录；②get-check-then-remove 非原子（TOCTOU），应改 dashmap `remove_if` 按 expected turn_id 原子消费；③stale 分支的 `drain_for_turn` 会误吞新 turn 的 CurrentRunningTurn injection，需 `drain_exact_turn`；④重设计方向：outcome 分类（Matching/DifferentActive/MissingFirstOutcome/AlreadyProcessed，tombstone 集）+ scheduler-owned turn 在 coordinator spawn 前登记 turn id + 直连路径统一路由或保留旧生命周期 + 集成测试矩阵（直连+排队/早到/插入竞态/重复/cancelled/goal continuation）。**环境敏感测试家族**（tests_cancel/tests_timeout/tests_concurrent/tests_error，假设"本机无 LLM 微秒失败"）需改注入确定性 fake backend——独立测试基建单。
+
+遗留 follow-up：①`Agent::system_prompt_cache_identity` scope_key 不含 model_name（judge M1，换模型命中旧 Runtime 段）；②turn_lifecycle 配置查找失败加 debug 日志（M2）；③两 build 方法 trim 不齐（M4）；④subagent_ports 环境敏感测试家族改造（见上）；⑤`scheduler` active remove 原子化已并入 B5 重设计。
 
 ## v0.2.5 成长架构 v2（外部评审 §5 采纳，替代 v0.1 C2-C4 的池化设计）
 
