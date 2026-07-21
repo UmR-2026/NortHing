@@ -112,10 +112,45 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 56px;
-  padding: 0 20px;
+  height: 48px;
+  padding: 0 0 0 16px;
   border-bottom: 1px solid var(--border-soft);
   flex-shrink: 0;
+  user-select: none;
+}
+
+.header-drag {
+  flex: 1;
+  align-self: stretch;
+}
+
+.window-controls {
+  display: flex;
+  align-self: stretch;
+  margin-left: 4px;
+}
+
+.win-btn {
+  width: 42px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.win-btn:hover {
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+
+.win-btn.close:hover {
+  background: #e81123;
+  color: #fff;
 }
 
 .logo-dot {
@@ -188,10 +223,6 @@ button {
 .status-pill.streaming .dot {
   background: var(--accent);
   animation: pulse 1s ease-in-out infinite;
-}
-
-.header-spacer {
-  flex: 1;
 }
 
 .header-btn {

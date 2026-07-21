@@ -1,4 +1,51 @@
 import { useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
+const appWindow = getCurrentWindow();
+
+function WindowControls() {
+  const [maximized, setMaximized] = useState(false);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    appWindow
+      .isMaximized()
+      .then(setMaximized)
+      .catch(() => {});
+    appWindow
+      .onResized(() => {
+        appWindow
+          .isMaximized()
+          .then(setMaximized)
+          .catch(() => {});
+      })
+      .then((f) => {
+        unlisten = f;
+      })
+      .catch(() => {});
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
+  return (
+    <div className="window-controls">
+      <button className="win-btn" title="最小化" onClick={() => appWindow.minimize()}>
+        –
+      </button>
+      <button
+        className="win-btn"
+        title={maximized ? "还原" : "最大化"}
+        onClick={() => appWindow.toggleMaximize()}
+      >
+        {maximized ? "❐" : "□"}
+      </button>
+      <button className="win-btn close" title="关闭" onClick={() => appWindow.close()}>
+        ✕
+      </button>
+    </div>
+  );
+}
 
 interface HeaderProps {
   agentName: string;
@@ -62,7 +109,11 @@ export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRenam
         <span className="dot" />
         {isStreaming ? "回复中" : "就绪"}
       </div>
-      <div className="header-spacer" />
+      <div
+        className="header-drag"
+        data-tauri-drag-region
+        onDoubleClick={() => appWindow.toggleMaximize()}
+      />
       <div className="settings-wrap" ref={settingsWrapRef}>
         <button
           className={`header-btn${settingsOpen ? " active" : ""}`}
@@ -84,6 +135,7 @@ export function Header({ agentName, isStreaming, debugOn, onToggleDebug, onRenam
           </div>
         )}
       </div>
+      <WindowControls />
     </header>
   );
 }
