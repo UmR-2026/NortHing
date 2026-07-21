@@ -50,6 +50,7 @@
 | B6 K3 闸门 | NO-GO（用户拍板，转低风险替代） | — |
 | C1 agent 身份重写（对等同事） | ✅ CLI exec 实证（独立智能体+LongCat-2.0 自报） | `0704ceb` |
 | C2 Episode Log Phase 1 | ✅ judge FAIL（placeholder 测试+跨 round bug）→返修→PASS | `159c10d` |
+| C3 结构化记忆 facts | ✅ judge FAIL×2（placeholder 测试+主段越界+去重缺陷）→返修+编排者收尾→PASS | `8e4eab2` `d7e6b62` |
 
 **B5 复盘（设计先行要点，judge 复审产出）**：①`None→stale` 假设不成立——coordinator 直连路径（`AgentSubmissionPort::submit_message` subagent_ports.rs:93-133 直连 `start_dialog_turn`）与"outcome 先到、active 后插入"竞态下合法 outcome 无 active 记录；②get-check-then-remove 非原子（TOCTOU），应改 dashmap `remove_if` 按 expected turn_id 原子消费；③stale 分支的 `drain_for_turn` 会误吞新 turn 的 CurrentRunningTurn injection，需 `drain_exact_turn`；④重设计方向：outcome 分类（Matching/DifferentActive/MissingFirstOutcome/AlreadyProcessed，tombstone 集）+ scheduler-owned turn 在 coordinator spawn 前登记 turn id + 直连路径统一路由或保留旧生命周期 + 集成测试矩阵（直连+排队/早到/插入竞态/重复/cancelled/goal continuation）。**环境敏感测试家族**（tests_cancel/tests_timeout/tests_concurrent/tests_error，假设"本机无 LLM 微秒失败"）需改注入确定性 fake backend——独立测试基建单。
 
