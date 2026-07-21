@@ -265,3 +265,43 @@ fn workspace_context_renders_related_directories_without_description() {
     assert!(workspace_context.contains("  - monorepo/packages/payments"));
     assert!(!workspace_context.contains("payments —"));
 }
+
+#[tokio::test]
+async fn runtime_model_info_injected_when_all_fields_present() {
+    let context = PromptBuilderContext::new("workspace/root", Some("session-1".to_string()), Some("test-model".to_string()))
+        .with_context_window(128000)
+        .with_max_output_tokens(8192);
+    let prompt = PromptBuilder::new(context)
+        .build_prompt_from_template("")
+        .await
+        .expect("prompt should build");
+
+    assert!(prompt.contains("Current model: test-model"));
+    assert!(prompt.contains("Context window: 128000 tokens"));
+    assert!(prompt.contains("Max output: 8192 tokens"));
+}
+
+#[tokio::test]
+async fn runtime_model_info_omits_window_and_output_when_not_set() {
+    let context = PromptBuilderContext::new("workspace/root", Some("session-1".to_string()), Some("test-model".to_string()));
+    let prompt = PromptBuilder::new(context)
+        .build_prompt_from_template("")
+        .await
+        .expect("prompt should build");
+
+    assert!(prompt.contains("Current model: test-model"));
+    assert!(!prompt.contains("Context window:"));
+    assert!(!prompt.contains("Max output:"));
+}
+
+#[tokio::test]
+async fn runtime_model_info_absent_when_model_name_is_none() {
+    let context = PromptBuilderContext::new("workspace/root", Some("session-1".to_string()), None);
+    let prompt = PromptBuilder::new(context)
+        .build_prompt_from_template("")
+        .await
+        .expect("prompt should build");
+
+    assert!(!prompt.contains("# Runtime"));
+    assert!(!prompt.contains("Current model:"));
+}

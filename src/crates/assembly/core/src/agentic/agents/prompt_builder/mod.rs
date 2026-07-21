@@ -98,6 +98,10 @@ pub struct PromptBuilderContext {
     pub runtime_context_needs: RuntimeContextNeeds,
     /// Remote mobile/bot turns need `computer://` links for file delivery.
     pub remote_file_delivery_channel: bool,
+    /// Context window size from model config (tokens).
+    pub context_window: Option<u32>,
+    /// Max output tokens from model config.
+    pub max_output_tokens: Option<u32>,
 }
 
 impl PromptBuilderContext {
@@ -113,6 +117,8 @@ impl PromptBuilderContext {
             tool_listing_sections: ToolListingSections::default(),
             runtime_context_needs: RuntimeContextNeeds::default(),
             remote_file_delivery_channel: false,
+            context_window: None,
+            max_output_tokens: None,
         }
     }
 
@@ -148,6 +154,16 @@ impl PromptBuilderContext {
 
     pub fn with_remote_file_delivery_channel(mut self, enabled: bool) -> Self {
         self.remote_file_delivery_channel = enabled;
+        self
+    }
+
+    pub fn with_context_window(mut self, context_window: u32) -> Self {
+        self.context_window = Some(context_window);
+        self
+    }
+
+    pub fn with_max_output_tokens(mut self, max_output_tokens: u32) -> Self {
+        self.max_output_tokens = Some(max_output_tokens);
         self
     }
 }

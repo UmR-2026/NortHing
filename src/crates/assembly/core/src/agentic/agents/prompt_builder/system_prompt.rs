@@ -114,6 +114,19 @@ The configured **primary model does not accept image inputs**. When using **`Com
             );
         }
 
+        // Inject runtime model info (agent-prompt layer only).
+        if self.context.model_name.is_some() {
+            let mut runtime_lines = vec![format!("# Runtime\n- Current model: {}", self.context.model_name.as_ref().unwrap())];
+            if let Some(ctx_window) = self.context.context_window {
+                runtime_lines.push(format!("- Context window: {} tokens", ctx_window));
+            }
+            if let Some(max_out) = self.context.max_output_tokens {
+                runtime_lines.push(format!("- Max output: {} tokens", max_out));
+            }
+            runtime_lines.push("Use the context window as your budget: prefer targeted reads over whole-file dumps for large files, and summarize rather than repeat long content.".to_string());
+            result.push_str(&format!("\n\n{}", runtime_lines.join("\n")));
+        }
+
         Ok(result.trim().to_string())
     }
 
@@ -184,6 +197,19 @@ The configured **primary model does not accept image inputs**. When using **`Com
         if result.contains(PLACEHOLDER_VISUAL_MODE) {
             let visual_mode = self.get_visual_mode_instruction().await;
             result = result.replace(PLACEHOLDER_VISUAL_MODE, &visual_mode);
+        }
+
+        // Inject runtime model info (agent-prompt layer only).
+        if self.context.model_name.is_some() {
+            let mut runtime_lines = vec![format!("# Runtime\n- Current model: {}", self.context.model_name.as_ref().unwrap())];
+            if let Some(ctx_window) = self.context.context_window {
+                runtime_lines.push(format!("- Context window: {} tokens", ctx_window));
+            }
+            if let Some(max_out) = self.context.max_output_tokens {
+                runtime_lines.push(format!("- Max output: {} tokens", max_out));
+            }
+            runtime_lines.push("Use the context window as your budget: prefer targeted reads over whole-file dumps for large files, and summarize rather than repeat long content.".to_string());
+            result.push_str(&format!("\n\n{}", runtime_lines.join("\n")));
         }
 
         Ok(result)

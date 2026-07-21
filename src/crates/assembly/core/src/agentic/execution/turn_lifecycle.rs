@@ -107,7 +107,7 @@ impl ExecutionEngine {
             .and_then(|value| value.parse::<bool>().ok())
             .unwrap_or(false);
 
-        build_prompt_context_for_workspace(
+        let mut prompt_context = build_prompt_context_for_workspace(
             workspace,
             workspace.workspace_id.as_deref(),
             &context.session_id,
@@ -117,7 +117,19 @@ impl ExecutionEngine {
             runtime_context_needs,
         )
         .await
-        .map(|prompt_context| prompt_context.with_remote_file_delivery_channel(remote_file_delivery_channel))
+        .map(|ctx| ctx.with_remote_file_delivery_channel(remote_file_delivery_channel))?;
+
+        // Look up model config and fill context_window / max_output_tokens.
+        if let Ok(config_service) = get_global_config_service().await {
+            if let Ok(models) = config_service.get_ai_models().await {
+                if let Some(model_config) = models.iter().find(|m| m.name == model_name) {
+                    prompt_context.context_window = model_config.context_window;
+                    prompt_context.max_output_tokens = model_config.max_tokens;
+                }
+            }
+        }
+
+        Some(prompt_context)
     }
 
     pub(super) async fn build_cached_prepended_prompt_reminders(
