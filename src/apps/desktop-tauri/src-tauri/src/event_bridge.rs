@@ -29,7 +29,7 @@ impl TauriEventBridge {
         }
     }
 
-    fn emit_chat_turn_state(&self, session_id: &str, state: &str, turn_id: Option<&str>, duration_ms: Option<u64>, error: Option<&str>) {
+    fn emit_chat_turn_state(&self, session_id: &str, state: &str, turn_id: Option<&str>, duration_ms: Option<u64>, error: Option<&str>, error_kind: Option<&str>) {
         let mut payload = serde_json::json!({
             "session_id": session_id,
             "state": state,
@@ -42,6 +42,9 @@ impl TauriEventBridge {
         }
         if let Some(err) = error {
             payload["error"] = serde_json::json!(err);
+        }
+        if let Some(kind) = error_kind {
+            payload["error_kind"] = serde_json::json!(kind);
         }
         let r = self.app.emit("chat-turn-state", payload);
         tracing::info!("chat-turn-state emit result={:?}", r);
@@ -100,14 +103,18 @@ impl TauriEventBridge {
             KernelEventDto::TextChunk { session_id, text } => {
                 self.emit_chat_chunk(&session_id, &text);
             }
-            KernelEventDto::TurnState { session_id, turn_id, state, duration_ms } => {
+            KernelEventDto::TurnState { session_id, turn_id, state, duration_ms, error, error_kind } => {
                 let state_str = match state {
                     northhing_kernel_api::turn::TurnStateKind::Started => "started",
                     northhing_kernel_api::turn::TurnStateKind::Completed => "completed",
                     northhing_kernel_api::turn::TurnStateKind::Failed => "failed",
                     northhing_kernel_api::turn::TurnStateKind::Cancelled => "cancelled",
                 };
-                self.emit_chat_turn_state(&session_id, state_str, Some(&turn_id), duration_ms, None);
+                let error_kind_str = error_kind.map(|k| match k {
+                    northhing_kernel_api::events::TurnErrorKind::Recoverable => "recoverable",
+                    northhing_kernel_api::events::TurnErrorKind::Fatal => "fatal",
+                });
+                self.emit_chat_turn_state(&session_id, state_str, Some(&turn_id), duration_ms, error.as_deref(), error_kind_str);
             }
             KernelEventDto::ToolCall(tool_call) => {
                 self.emit_chat_tool(&tool_call);

@@ -7,6 +7,16 @@ use crate::turn::TurnStateKind;
 
 pub type SubscriptionId = String;
 
+// ── TurnErrorKind ─────────────────────────────────────────────────────────────
+
+/// Classifies whether a turn failure is recoverable or fatal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TurnErrorKind {
+    Recoverable,
+    Fatal,
+}
+
 // ── FROZEN ToolCallDto (Schema §5.1) ──────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -19,6 +29,8 @@ pub struct ToolCallDto {
     pub summary: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_count: Option<u32>,
 }
 
 /// FROZEN ToolCallPhase (Schema §5.1).
@@ -63,6 +75,10 @@ pub enum KernelEventDto {
         state: TurnStateKind,
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        error_kind: Option<TurnErrorKind>,
     },
     ToolCall(ToolCallDto),
     TurnPhase {

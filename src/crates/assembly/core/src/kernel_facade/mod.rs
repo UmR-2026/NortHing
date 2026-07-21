@@ -42,7 +42,7 @@ use crate::service::mcp::{set_global_mcp_service, MCPService};
 
 pub use northhing_kernel_api::events::{
     BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase,
-    TurnPhaseKind,
+    TurnErrorKind, TurnPhaseKind,
 };
 pub use northhing_kernel_api::session::{
     BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto,
@@ -573,6 +573,16 @@ impl crate::agentic::events::EventSubscriber for KernelEventSubscriber {
 
 // ── DTO conversions (helper functions — avoid orphan From impls) ─────────────
 
+fn turn_error_kind(category: Option<&northhing_core_types::ErrorCategory>) -> TurnErrorKind {
+    match category {
+        Some(northhing_core_types::ErrorCategory::Network)
+        | Some(northhing_core_types::ErrorCategory::Timeout)
+        | Some(northhing_core_types::ErrorCategory::RateLimit)
+        | Some(northhing_core_types::ErrorCategory::ProviderUnavailable) => TurnErrorKind::Recoverable,
+        _ => TurnErrorKind::Fatal,
+    }
+}
+
 fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<KernelEventDto> {
     use crate::agentic::events::AgenticEvent;
     use northhing_kernel_api::events::TurnPhaseKind;
@@ -614,6 +624,8 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                 turn_id: turn_id.clone(),
                 state: TurnStateKind::Started,
                 duration_ms: None,
+                error: None,
+                error_kind: None,
             },
             KernelEventDto::TurnPhase {
                 session_id: session_id.clone(),
@@ -632,6 +644,8 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
             turn_id: turn_id.clone(),
             state: TurnStateKind::Completed,
             duration_ms: Some(*duration_ms),
+            error: None,
+            error_kind: None,
         }],
         AgenticEvent::DialogTurnCancelled {
             session_id,
@@ -642,13 +656,26 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
             turn_id: turn_id.clone(),
             state: TurnStateKind::Cancelled,
             duration_ms: None,
+            error: None,
+            error_kind: None,
         }],
         AgenticEvent::DialogTurnFailed {
+            session_id,
+            turn_id,
             error,
+            error_category,
             ..
-        } => vec![KernelEventDto::Error {
-            message: error.clone(),
-        }],
+        } => {
+            let classify = turn_error_kind(error_category.as_ref());
+            vec![KernelEventDto::TurnState {
+                session_id: session_id.clone(),
+                turn_id: turn_id.clone(),
+                state: TurnStateKind::Failed,
+                duration_ms: None,
+                error: Some(error.clone()),
+                error_kind: Some(classify),
+            }]
+        }
         AgenticEvent::SystemError {
             error, ..
         } => vec![KernelEventDto::Error {
@@ -677,6 +704,7 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                         phase: ToolCallPhase::Started,
                         summary,
                         detail: Some(truncate_4000(&params_str)),
+                        result_count: None,
                     }),
                     KernelEventDto::TurnPhase {
                         session_id: session_id.clone(),
@@ -697,6 +725,7 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                 let summary = first_line_truncated(
                     result_for_assistant.as_deref().unwrap_or(&result_str),
                 );
+                let result_count = result.as_array().map(|a| a.len() as u32);
                 vec![
                     KernelEventDto::ToolCall(ToolCallDto {
                         session_id: session_id.clone(),
@@ -706,6 +735,7 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                         phase: ToolCallPhase::Completed,
                         summary,
                         detail: Some(truncate_4000(&result_str)),
+                        result_count,
                     }),
                     KernelEventDto::TurnPhase {
                         session_id: session_id.clone(),
@@ -729,6 +759,7 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                     phase: ToolCallPhase::Completed,
                     summary: first_line_truncated(error),
                     detail: Some(truncate_4000(error)),
+                    result_count: None,
                 }),
                 KernelEventDto::TurnPhase {
                     session_id: session_id.clone(),
@@ -751,6 +782,7 @@ fn agentic_event_to_dtos(event: &crate::agentic::events::AgenticEvent) -> Vec<Ke
                     phase: ToolCallPhase::Completed,
                     summary: first_line_truncated(&format!("cancelled: {reason}")),
                     detail: Some(truncate_4000(reason)),
+                    result_count: None,
                 }),
                 KernelEventDto::TurnPhase {
                     session_id: session_id.clone(),
@@ -1774,6 +1806,7 @@ impl northhing_kernel_api::KernelPlatformApi for KernelFacade {
 mod tests {
     use super::*;
     use crate::agentic::events::{AgenticEvent, ToolEventData};
+    use northhing_core_types::ErrorCategory;
     use northhing_kernel_api::events::KernelEventDto;
     use northhing_kernel_api::KernelSessionApi;
 
@@ -2195,5 +2228,82 @@ mod tests {
                 Ok(_) => panic!("list_sessions should return error before init, not Ok"),
             }
         }
+    }
+
+    // ── TurnState error_kind tests (B4) ─────────────────────────────────────────
+
+    #[test]
+    fn test_dialog_turn_failed_network_is_recoverable() {
+        let event = AgenticEvent::DialogTurnFailed {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            error: "connection refused".into(),
+            error_category: Some(ErrorCategory::Network),
+            error_detail: None,
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        assert_eq!(dtos.len(), 1, "DialogTurnFailed should produce exactly one DTO");
+        let KernelEventDto::TurnState { state, error, error_kind, .. } = &dtos[0] else {
+            panic!("expected TurnState, got {:?}", &dtos[0]);
+        };
+        assert!(matches!(state, TurnStateKind::Failed));
+        assert_eq!(error.as_ref(), Some(&"connection refused".to_string()));
+        assert!(matches!(error_kind, Some(TurnErrorKind::Recoverable)));
+    }
+
+    #[test]
+    fn test_dialog_turn_failed_auth_is_fatal() {
+        let event = AgenticEvent::DialogTurnFailed {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            error: "invalid api key".into(),
+            error_category: Some(ErrorCategory::Auth),
+            error_detail: None,
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::TurnState { state, error_kind, .. } = &dtos[0] else {
+            panic!("expected TurnState");
+        };
+        assert!(matches!(state, TurnStateKind::Failed));
+        assert!(matches!(error_kind, Some(TurnErrorKind::Fatal)));
+    }
+
+    #[test]
+    fn test_dialog_turn_failed_no_category_is_fatal() {
+        let event = AgenticEvent::DialogTurnFailed {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+            error: "unknown error".into(),
+            error_category: None,
+            error_detail: None,
+        };
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::TurnState { state, error_kind, .. } = &dtos[0] else {
+            panic!("expected TurnState");
+        };
+        assert!(matches!(state, TurnStateKind::Failed));
+        assert!(matches!(error_kind, Some(TurnErrorKind::Fatal)));
+    }
+
+    #[test]
+    fn test_tool_completed_result_count_array() {
+        let result = serde_json::json!([{"id": 1}, {"id": 2}, {"id": 3}]);
+        let event = make_completed_event(result, None);
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else {
+            panic!("expected ToolCall");
+        };
+        assert_eq!(tc.result_count, Some(3));
+    }
+
+    #[test]
+    fn test_tool_completed_result_count_object_is_none() {
+        let result = serde_json::json!({"output": "done"});
+        let event = make_completed_event(result, None);
+        let dtos = agentic_event_to_dtos(&event);
+        let KernelEventDto::ToolCall(tc) = &dtos[0] else {
+            panic!("expected ToolCall");
+        };
+        assert_eq!(tc.result_count, None);
     }
 }
