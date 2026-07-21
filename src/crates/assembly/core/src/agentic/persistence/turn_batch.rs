@@ -59,29 +59,34 @@ impl PersistenceManager {
         &self,
         indexed_paths: Vec<(usize, PathBuf)>,
     ) -> NortHingResult<ReadTurnPathsResult> {
-        let mut turns = Vec::with_capacity(indexed_paths.len());
+        let mut turns_with_indices: Vec<(usize, DialogTurnData)> = Vec::with_capacity(indexed_paths.len());
         let mut missing_turn_file_count = 0usize;
         let mut max_turn_read_duration_ms = 0u64;
-        let reads = stream::iter(indexed_paths.into_iter().map(|(_, path)| {
+
+        let reads = stream::iter(indexed_paths.into_iter().map(|(index, path)| {
             let manager = self;
             async move {
                 let started_at = Instant::now();
                 let result = manager.read_json_optional::<StoredDialogTurnFile>(&path).await;
-                (result, started_at.elapsed().as_millis() as u64)
+                (index, result, started_at.elapsed().as_millis() as u64)
             }
         }))
         .buffered(SESSION_TURN_READ_CONCURRENCY)
         .collect::<Vec<_>>()
         .await;
 
-        for (result, duration_ms) in reads {
+        for (index, result, duration_ms) in reads {
             max_turn_read_duration_ms = max_turn_read_duration_ms.max(duration_ms);
             if let Some(file) = result? {
-                turns.push(file.turn);
+                turns_with_indices.push((index, file.turn));
             } else {
                 missing_turn_file_count += 1;
             }
         }
+
+        // Sort by index to restore original order (concurrent reads may complete out of order)
+        turns_with_indices.sort_by_key(|(index, _)| *index);
+        let turns = turns_with_indices.into_iter().map(|(_, turn)| turn).collect();
 
         Ok(ReadTurnPathsResult {
             turns,

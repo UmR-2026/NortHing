@@ -49,7 +49,9 @@ impl PersistenceManager {
         // B-3: audit parent-turn link chain for the requested range.
         // Walk the turns directory for this session; if any index in the
         // range is missing, return None so caller falls back to full scan.
-        let turns_dir = workspace_path.join("sessions").join(session_id).join("turns");
+        // Use session_layout.turns_dir to get the correct path (under project_sessions_dir),
+        // not workspace_path.join("sessions") which is a different location.
+        let turns_dir = self.session_layout(workspace_path).turns_dir(session_id);
         // Note: walk the full session turn dir (not just the requested range)
         // for the parent-link audit, since a gap outside the range still
         // indicates a corrupted chain.
