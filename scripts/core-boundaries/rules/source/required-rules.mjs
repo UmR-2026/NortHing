@@ -881,7 +881,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/agent-runtime/src/scheduler.rs',
+    path: 'src/crates/execution/agent-runtime/src/scheduler/sched_types.rs',
     reason:
       'agent-runtime scheduler owner must keep portable queue, background delivery, steering, reply, and round injection decisions outside concrete core session IO',
     patterns: [
@@ -892,10 +892,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub struct ActiveDialogTurn\b/,
         message: 'missing active dialog turn owner',
-      },
-      {
-        regex: /\bpub struct ActiveDialogTurnStore\b/,
-        message: 'missing active dialog turn store owner',
       },
       {
         regex: /\bpub enum AgentSessionReplyAction\b/,
@@ -918,12 +914,43 @@ export const requiredContentRules = [
         message: 'missing background injection kind contract',
       },
       {
-        regex: /\bpub struct DialogReplySuppressionSet\b/,
-        message: 'missing dialog reply suppression set owner',
-      },
-      {
         regex: /\bpub enum DialogSteeringAction\b/,
         message: 'missing dialog steering action contract',
+      },
+      {
+        regex: /\bfollow_up_submission_policy\b/,
+        message: 'missing background follow-up submission policy helper',
+      },
+      {
+        regex: /\bSubmitAgentSessionFollowUp\b/,
+        message: 'missing agent-session follow-up action variant',
+      },
+      {
+        regex: /\bInjectIntoRunningTurn\b/,
+        message: 'missing running-turn injection action variant',
+      },
+      {
+        regex: /\bpub enum TurnOutcome\b/,
+        message: 'missing turn outcome contract',
+      },
+      {
+        regex: /\bpub enum TurnOutcomeQueueAction\b/,
+        message: 'missing turn outcome queue action contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/scheduler/sched_state.rs',
+    reason:
+      'agent-runtime scheduler owner must keep portable queue, background delivery, steering, reply, and round injection decisions outside concrete core session IO',
+    patterns: [
+      {
+        regex: /\bpub struct ActiveDialogTurnStore\b/,
+        message: 'missing active dialog turn store owner',
+      },
+      {
+        regex: /\bpub struct DialogReplySuppressionSet\b/,
+        message: 'missing dialog reply suppression set owner',
       },
       {
         regex: /\bpub struct DialogTurnQueue\b/,
@@ -933,6 +960,17 @@ export const requiredContentRules = [
         regex: /\bpub struct SessionAbortFlags\b/,
         message: 'missing session abort flags owner',
       },
+      {
+        regex: /\bpub struct SessionRoundInjectionBuffer\b/,
+        message: 'missing session round injection buffer owner',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/scheduler/sched_filter.rs',
+    reason:
+      'agent-runtime scheduler owner must keep portable queue, background delivery, steering, reply, and round injection decisions outside concrete core session IO',
+    patterns: [
       {
         regex: /\bpub fn resolve_agent_session_reply_action\b/,
         message: 'missing agent-session reply action resolver',
@@ -948,30 +986,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub fn resolve_dialog_steering_action\b/,
         message: 'missing dialog steering action resolver',
-      },
-      {
-        regex: /\bfollow_up_submission_policy\b/,
-        message: 'missing background follow-up submission policy helper',
-      },
-      {
-        regex: /\bSubmitAgentSessionFollowUp\b/,
-        message: 'missing agent-session follow-up action variant',
-      },
-      {
-        regex: /\bInjectIntoRunningTurn\b/,
-        message: 'missing running-turn injection action variant',
-      },
-      {
-        regex: /\bpub struct SessionRoundInjectionBuffer\b/,
-        message: 'missing session round injection buffer owner',
-      },
-      {
-        regex: /\bpub enum TurnOutcome\b/,
-        message: 'missing turn outcome contract',
-      },
-      {
-        regex: /\bpub enum TurnOutcomeQueueAction\b/,
-        message: 'missing turn outcome queue action contract',
       },
     ],
   },
@@ -2421,7 +2435,7 @@ export const requiredContentRules = [
         message: 'MiniApp product domain facade must stay behind product-domains',
       },
       {
-        regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub\(crate\) mod service_agent_runtime\b/s,
+        regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub\(crate\) mod service_agent_runtime\b/s,
         message: 'service agent runtime owner assembly must stay behind service-integrations',
       },
     ],
@@ -2468,11 +2482,11 @@ export const requiredContentRules = [
         message: 'git service facade must stay behind service-integrations',
       },
       {
-        regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub mod mcp\b/s,
+        regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub mod mcp\b/s,
         message: 'MCP service facade must stay behind service-integrations',
       },
       {
-        regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub mod remote_connect\b/s,
+        regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub mod remote_connect\b/s,
         message: 'remote-connect service facade must stay behind service-integrations',
       },
       {
