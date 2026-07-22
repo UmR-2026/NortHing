@@ -28,11 +28,8 @@ impl EvidencePack {
             Self::check_slot_count("human_feedback", &feedbacks.len())?;
         }
 
-        // Check success_rate slot counts
-        match (&self.success_rate.baseline, &self.success_rate.candidate) {
-            (RateSample::Present { .. }, RateSample::Present { .. }) => {}
-            _ => {}
-        }
+        // success_rate is a mandatory slot; RateSample::NoBaselineYet is a valid explicit value
+        // so no additional validation is needed here beyond the struct field being present
 
         // Validate traces
         for (i, trace) in self.traces.iter().enumerate() {
@@ -120,9 +117,13 @@ impl EvidencePack {
     }
 
     /// Check if a path or origin comes from the episode/diary blacklist.
+    /// "northhing" here is the runtime data directory name (matching the literal
+    /// used in episodes store.rs), NOT the repository name.
+    /// Paths are normalized to forward slashes before matching to handle
+    /// Windows backslash separators.
     fn is_episode_source(value: &str) -> bool {
-        // Blacklist: northhing/episodes path or episodes jsonl files
-        value.contains("northhing/episodes") || value.contains("episodes.jsonl")
+        let normalized = value.replace('\\', "/");
+        normalized.contains("northhing/episodes") || normalized.contains("episodes.jsonl")
     }
 
     /// Calculate total character budget used by all evidence.
@@ -310,6 +311,25 @@ mod tests {
             err,
             EvidenceRejection::EpisodeSourceBlacklisted { path }
             if path.contains("northhing/episodes")
+        ));
+    }
+
+    #[test]
+    fn path_with_northhing_backslash_episodes_rejected() {
+        // Windows backslash path must also be rejected after normalization
+        let mut pack = make_valid_pack();
+        pack.fs_diffs = vec![FsDiffEvidence {
+            path: r"C:\Users\X\AppData\Roaming\northhing\episodes\slug.jsonl".to_string(),
+            before_digest: "abc".to_string(),
+            after_digest: "def".to_string(),
+            added: 1,
+            removed: 0,
+        }];
+        let err = pack.validate().unwrap_err();
+        assert!(matches!(
+            err,
+            EvidenceRejection::EpisodeSourceBlacklisted { path }
+            if path.contains("northhing\\episodes") || path.contains("northhing/episodes")
         ));
     }
 

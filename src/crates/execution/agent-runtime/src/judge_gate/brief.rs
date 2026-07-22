@@ -1,7 +1,7 @@
 //! Judge brief builder - constructs the prompt sent to the judge gate.
 
 use super::redlines::REDLINE_TABLE;
-use super::types::{subject_digest, GateRequest};
+use super::types::*;
 
 const VERDICT_JSON_BEGIN: &str = "VERDICT_JSON_BEGIN";
 const VERDICT_JSON_END: &str = "VERDICT_JSON_END";
@@ -57,7 +57,7 @@ pub fn build_judge_brief(request: &GateRequest) -> String {
     brief.push_str("S1: success_rate comparison\n");
 
     // Human feedback
-    if let super::types::HumanFeedbackSlot::Present(ref feedbacks) = request.evidence.human_feedback {
+    if let HumanFeedbackSlot::Present(ref feedbacks) = request.evidence.human_feedback {
         for (i, fb) in feedbacks.iter().enumerate() {
             brief.push_str(&format!("H{}: origin={}, excerpt=\"{}\"\n", i + 1, fb.origin, fb.excerpt));
         }
@@ -89,8 +89,8 @@ pub fn build_judge_brief(request: &GateRequest) -> String {
     brief.push_str(&format!("## Subject Digest (for receipt binding)\n"));
     brief.push_str(&format!("Subject digest: {}\n", subject_digest_str));
 
-    // Debug assert budget
-    debug_assert!(
+    // Budget check: input evidence is already validated ≤12k, brief adds fixed overhead
+    assert!(
         brief.len() <= BRIEF_BUDGET_LIMIT + evidence_ids_list.len() + 100,
         "Brief exceeds budget limit"
     );

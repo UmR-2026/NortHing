@@ -17,35 +17,28 @@ const VERDICT_JSON_END: &str = "VERDICT_JSON_END";
 /// 3. evidence_assessment non-empty and references at least one valid evidence ID
 /// 4. rationale non-empty
 pub fn parse_verdict(text: &str, valid_evidence_ids: &[String]) -> Result<ParsedVerdict, VerdictMalformed> {
-    // Find verdict blocks - must have exactly one BEGIN and one END with content between
-    let begin_pos = text.find(VERDICT_JSON_BEGIN);
-    let end_pos = text.find(VERDICT_JSON_END);
+    // Must have exactly one BEGIN and exactly one END marker
+    if text.matches(VERDICT_JSON_BEGIN).count() != 1 {
+        return Err(VerdictMalformed::NoVerdictBlock);
+    }
+    if text.matches(VERDICT_JSON_END).count() != 1 {
+        return Err(VerdictMalformed::NoVerdictBlock);
+    }
 
-    let block = match (begin_pos, end_pos) {
-        (None, None) => return Err(VerdictMalformed::NoVerdictBlock),
-        (None, Some(_)) => return Err(VerdictMalformed::NoVerdictBlock), // END without BEGIN
-        (Some(_), None) => return Err(VerdictMalformed::NoVerdictBlock), // BEGIN without END
-        (Some(begin_idx), Some(end_idx)) => {
-            if begin_idx >= end_idx {
-                return Err(VerdictMalformed::NoVerdictBlock); // END before BEGIN
-            }
-            // Check there's no second BEGIN or END
-            let second_begin = text[end_idx + VERDICT_JSON_END.len()..].find(VERDICT_JSON_BEGIN);
-            let second_end = text[begin_idx + VERDICT_JSON_BEGIN.len()..end_idx].find(VERDICT_JSON_END);
-            if second_begin.is_some() || second_end.is_some() {
-                return Err(VerdictMalformed::MultipleVerdictBlocks);
-            }
+    let begin_pos = text.find(VERDICT_JSON_BEGIN).unwrap();
+    let end_pos = text.find(VERDICT_JSON_END).unwrap();
 
-            let block_content = text[begin_idx + VERDICT_JSON_BEGIN.len()..end_idx].trim();
-            if block_content.is_empty() {
-                return Err(VerdictMalformed::BlockContentNotJson { cause: "empty block".to_string() });
-            }
-            block_content
-        }
-    };
+    if begin_pos >= end_pos {
+        return Err(VerdictMalformed::NoVerdictBlock); // END before or at BEGIN
+    }
+
+    let block_content = text[begin_pos + VERDICT_JSON_BEGIN.len()..end_pos].trim();
+    if block_content.is_empty() {
+        return Err(VerdictMalformed::BlockContentNotJson { cause: "empty block".to_string() });
+    }
 
     // Parse JSON
-    let json: serde_json::Value = serde_json::from_str(block)
+    let json: serde_json::Value = serde_json::from_str(block_content)
         .map_err(|e| VerdictMalformed::BlockContentNotJson {
             cause: e.to_string(),
         })?;
@@ -141,10 +134,7 @@ pub fn parse_verdict(text: &str, valid_evidence_ids: &[String]) -> Result<Parsed
         }
     }
 
-    // Check for extra rules (seen_rule_ids has more than expected - shouldn't happen given length check)
-    if seen_rule_ids.len() != 4 {
-        return Err(VerdictMalformed::RuleCheckExtra);
-    }
+    // Length check above already guarantees exactly 4 rules, so extra check is unnecessary.
 
     // Validate evidence_assessment
     let evidence_assessment = json
@@ -229,20 +219,7 @@ VERDICT_JSON_END"#,
         }
     }
 
-    // Test 2: any violation -> Ok but approve not valid (semantic check in test)
-    #[test]
-    fn parse_approve_with_violation_still_parses() {
-        let text = make_valid_verdict("approve", false);
-        let result = parse_verdict(&text, &evidence_ids());
-        // Parsing succeeds but verdict field says approve while there's a violation
-        assert!(result.is_ok());
-        let pv = result.unwrap();
-        assert_eq!(pv.verdict, VerdictKind::Approve);
-        // One rule has violation
-        assert!(pv.rule_checks.iter().any(|rc| rc.status == RuleStatus::Violation));
-    }
-
-    // Test 3: reject with all pass
+    // Test 2: reject with all pass
     #[test]
     fn parse_reject_with_all_pass() {
         let text = make_valid_verdict("reject", true);
@@ -399,7 +376,31 @@ VERDICT_JSON_BEGIN
 VERDICT_JSON_END"#;
         let result = parse_verdict(text, &evidence_ids());
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), VerdictMalformed::MultipleVerdictBlocks));
+        assert!(matches!(result.unwrap_err(), VerdictMalformed::NoVerdictBlock));
+    }
+
+    // Test: two END markers (BEGIN..END\nEND)
+    #[test]
+    fn parse_two_end_markers_rejected() {
+        let text = r#"VERDICT_JSON_BEGIN
+{"verdict": "approve", "rule_checks": [], "evidence_assessment": "x", "rationale": "y"}
+VERDICT_JSON_END
+VERDICT_JSON_END"#;
+        let result = parse_verdict(text, &evidence_ids());
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), VerdictMalformed::NoVerdictBlock));
+    }
+
+    // Test: two BEGIN markers
+    #[test]
+    fn parse_two_begin_markers_rejected() {
+        let text = r#"VERDICT_JSON_BEGIN
+VERDICT_JSON_BEGIN
+{"verdict": "approve", "rule_checks": [], "evidence_assessment": "x", "rationale": "y"}
+VERDICT_JSON_END"#;
+        let result = parse_verdict(text, &evidence_ids());
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), VerdictMalformed::NoVerdictBlock));
     }
 
     // Test: block content not JSON

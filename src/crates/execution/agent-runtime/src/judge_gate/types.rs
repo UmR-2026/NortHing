@@ -194,7 +194,8 @@ pub enum VerdictMalformed {
     RuleCheckMissing { rule_id: String },
     RuleCheckDuplicate { rule_id: String },
     RuleCheckUnknown { rule_id: String },
-    RuleCheckExtra,
+    // RuleCheckExtra removed — with length==4 enforced first, extra rules are
+    // structurally impossible (would require >4 items in a length-4 array).
     RuleStatusInvalid { rule_id: String, value: String },
     EvidenceAssessmentEmpty,
     EvidenceAssessmentNoReference,
@@ -216,7 +217,6 @@ impl fmt::Display for VerdictMalformed {
             VerdictMalformed::RuleCheckMissing { rule_id } => write!(f, "rule check missing: {}", rule_id),
             VerdictMalformed::RuleCheckDuplicate { rule_id } => write!(f, "rule check duplicate: {}", rule_id),
             VerdictMalformed::RuleCheckUnknown { rule_id } => write!(f, "rule check unknown: {}", rule_id),
-            VerdictMalformed::RuleCheckExtra => write!(f, "extra rule check found"),
             VerdictMalformed::RuleStatusInvalid { rule_id, value } => {
                 write!(f, "rule status invalid for {}: {}", rule_id, value)
             }
@@ -277,8 +277,8 @@ mod tests {
 
     #[test]
     fn subject_digest_format() {
+        // FIPS 180-4 test vector "hello"
         let digest = subject_digest(b"hello");
-        // sha256 of "hello" is 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
         assert_eq!(
             digest,
             "sha256:v1:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
