@@ -5760,6 +5760,7 @@ version = "0.2.10"
 dependencies = [
  "async-trait",
  "dashmap",
+ "hex",
  "northhing-runtime-ports",
  "northhing-runtime-services",
  "northhing-test-support",
@@ -5767,8 +5768,10 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "sha2",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
