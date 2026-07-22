@@ -413,7 +413,24 @@ function checkCrateLayoutRules() {
 }
 
 function forbiddenRuleTextForPath(path) {
-  return forbiddenContentRules
+  const direct = forbiddenContentRules
+    .filter((rule) => rule.path === path)
+    .flatMap((rule) => rule.patterns)
+    .map((pattern) => pattern.regex.source)
+    .join('\n');
+  if (direct) {
+    return direct;
+  }
+  const underPath = path.replace(/\.rs$/, '');
+  return forbiddenContentUnderRules
+    .filter((rule) => rule.path === underPath)
+    .flatMap((rule) => rule.patterns)
+    .map((pattern) => pattern.regex.source)
+    .join('\n');
+}
+
+function forbiddenUnderRuleTextForPath(path) {
+  return forbiddenContentUnderRules
     .filter((rule) => rule.path === path)
     .flatMap((rule) => rule.patterns)
     .map((pattern) => pattern.regex.source)
@@ -883,6 +900,7 @@ export function runCoreBoundaryCheck() {
       forbiddenContentUnderRules,
       facadeOnlyFiles,
       forbiddenRuleTextForPath,
+      forbiddenUnderRuleTextForPath,
       regexSourceContainsContract,
       createFacadeLineChecker,
       escapeRegex,

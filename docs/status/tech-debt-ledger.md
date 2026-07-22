@@ -125,7 +125,7 @@
 - **Symptom**: `node scripts/check-core-boundaries.mjs` crashes with ENOENT on 34 rule paths referencing pre-split god files (now directories) and absent `src/web-ui`. Behind the crash sit dozens of accumulated boundary failures (crate layout for relay-core/agent-dispatch/test-support/cli-internal, services-integrations optional-dep gates, desktop-tauri product-full coverage, etc.) — the checker is not wired into CI, so rot went unnoticed.
 - **Evidence**: 2026-07-22 session crash output; partial repair `7bbe512` (deleted crates dropped, `service_agent_runtime` rules remapped to `sar_*.rs` split); `scripts/core-boundaries/self-test.mjs` is orphaned (not in package.json or workflows).
 - **Proposed fix**: Epic, three parts — (1) finish per-path remap per `7bbe512` paradigm (forbidden → `forbiddenContentUnderRules` dir entries; required → per-file split by symbol location; delete absent web-ui rules); (2) triage pre-existing failures into rule updates vs repo fixes (needs architecture decisions, e.g. desktop-tauri coverage, relay-core layout); (3) wire into CI so it cannot rot again. Note: C4 judge_gate zero-dep-edge rule is already added and structurally verified (agent-runtime Cargo.toml has no northhing-core dep).
-- **Status**: active
+- **Status**: active — stage 1 done 2026-07-23 (checker runs without ENOENT; ~34 stale paths remapped per `7bbe512` paradigm, judge-qw verified 25+ remaps symbol-correct; self-test synced to remap). Remaining: stage 2 (triage pre-existing violation backlog — `check-core-boundaries.test.mjs` default-run assertion exits 1 until cleared) + stage 3 (wire into CI).
 
 ## Change Protocol
 

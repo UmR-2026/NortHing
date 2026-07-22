@@ -152,36 +152,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool.rs',
-    patterns: [
-      {
-        regex: /\bsubmit_with_prepended_messages\b/,
-        message:
-          'SessionMessage must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
-      },
-      {
-        regex: /\bcoordinator\s*\.\s*resolve_session_workspace_path\b/,
-        message:
-          'SessionMessage target workspace resolution must flow through AgentRuntime session-management port, not direct coordinator access',
-      },
-      {
-        regex: /\bresolve_session_workspace_path\s*\(\s*&?target_session_id\b/,
-        message:
-          'SessionMessage target workspace resolution must use AgentSessionWorkspaceRequest, not legacy direct session id calls',
-      },
-      {
-        regex: /\bcoordinator\s*\.\s*list_sessions\b/,
-        message:
-          'SessionMessage target session lookup must flow through AgentRuntime session-management port, not direct coordinator access',
-      },
-      {
-        regex: /\blist_sessions\s*\(\s*(?:Path::new|workspace_path)\b/,
-        message:
-          'SessionMessage target session lookup must use AgentSessionListRequest, not legacy path arguments',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_control_tool.rs',
     patterns: [
       {
@@ -228,41 +198,6 @@ export const forbiddenContentRules = [
         regex: /\bsubmit_with_prepended_messages\b/,
         message:
           'Cron scheduled jobs must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/cron_tool.rs',
-    patterns: [
-      {
-        regex: /\bcoordinator\s*\.\s*resolve_session_workspace_path\b/,
-        message:
-          'CronTool target workspace resolution must flow through AgentRuntime session-management port, not direct coordinator access',
-      },
-      {
-        regex: /\bresolve_session_workspace_path\s*\(\s*&?session_id\b/,
-        message:
-          'CronTool target workspace resolution must use AgentSessionWorkspaceRequest, not legacy direct session id calls',
-      },
-      {
-        regex: /\bcoordinator\s*\.\s*list_sessions\b/,
-        message:
-          'CronTool target session lookup must flow through AgentRuntime session-management port, not direct coordinator access',
-      },
-      {
-        regex: /\blist_sessions\s*\(\s*(?:Path::new|workspace_path)\b/,
-        message:
-          'CronTool target session lookup must use AgentSessionListRequest, not legacy path arguments',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs',
-    patterns: [
-      {
-        regex: /\bscheduler\s*\.\s*deliver_background_result\b/,
-        message:
-          'Bash background delivery must flow through AgentRuntime lifecycle delivery port, not direct DialogScheduler',
       },
     ],
   },
@@ -433,91 +368,6 @@ export const forbiddenContentRules = [
         regex: /cancelled coverage/,
         message:
           'core DeepReview task adapter must not re-own cancelled reviewer presentation; use northhing-agent-runtime::deep_review::task_execution',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool.rs',
-    patterns: [
-      {
-        regex: /\bDeepReviewIncrementalCache\b/,
-        message:
-          'TaskTool must not directly inspect DeepReview incremental cache internals; use deep_review_task_adapter',
-      },
-      {
-        regex: /deepReviewCache/,
-        message:
-          'TaskTool must not directly parse DeepReview cache payloads; use deep_review_task_adapter',
-      },
-      {
-        regex: /<partial_result status=/,
-        message:
-          'TaskTool must not re-own DeepReview task completion result presentation; use deep_review_task_adapter',
-      },
-      {
-        regex: /completed successfully with result:/,
-        message:
-          'TaskTool must not re-own DeepReview task completion result presentation; use deep_review_task_adapter',
-      },
-      {
-        regex: /Retries used:/,
-        message:
-          'TaskTool must not re-own DeepReview retry guidance presentation; use deep_review_task_adapter',
-      },
-      {
-        regex: /DeepReview automatic retry elapsed guard exceeded/,
-        message:
-          'TaskTool must not re-own DeepReview auto-retry admission policy; use deep_review_task_adapter',
-      },
-      {
-        regex: /cancelled coverage/,
-        message:
-          'TaskTool must not re-own DeepReview cancelled reviewer presentation; use deep_review_task_adapter',
-      },
-      {
-        regex: /\bprovider_capacity_retry_attempts\b/,
-        message:
-          'TaskTool must not re-own DeepReview provider capacity retry attempts; use deep_review_task_adapter',
-      },
-      {
-        regex: /\bprovider_capacity_queue_elapsed_ms\b/,
-        message:
-          'TaskTool must not re-own DeepReview provider capacity queue elapsed aggregation; use deep_review_task_adapter',
-      },
-      {
-        regex: /\bDEEP_REVIEW_PROVIDER_CAPACITY_MAX_RETRY_ATTEMPTS\b/,
-        message:
-          'TaskTool must not re-own DeepReview provider capacity retry limits; use deep_review_task_adapter',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/code_review_tool.rs',
-    patterns: [
-      {
-        regex: /"kind"\s*:\s*"cache_hit"/,
-        message:
-          'CodeReviewTool must not re-own DeepReview cache-hit reliability signal shaping; use deep_review_report',
-      },
-      {
-        regex: /"kind"\s*:\s*"cache_miss"/,
-        message:
-          'CodeReviewTool must not re-own DeepReview cache-miss reliability signal shaping; use deep_review_report',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/agents/prompt_builder/prompt_builder_impl.rs',
-    patterns: [
-      {
-        regex: /\bComputer use \/ `key_chord`\b/,
-        message:
-          'core prompt builder must not re-own ComputerUse environment guidance; use northhing-agent-runtime::prompt',
-      },
-      {
-        regex: /\bfn computer_use_key_chord_guidance\b/,
-        message:
-          'core prompt builder must not re-own prompt environment guidance helpers; use northhing-agent-runtime::prompt',
       },
     ],
   },
@@ -1021,21 +871,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/agents/prompt_builder/prompt_builder_impl.rs',
-    patterns: [
-      {
-        regex: /\bpub\s+struct\s+ToolListingSections\b/,
-        message:
-          'core prompt builder must not own tool-listing reminder facts; use northhing-agent-runtime prompt contracts',
-      },
-      {
-        regex: /\bpub\s+struct\s+PrependedPromptReminders\b/,
-        message:
-          'core prompt builder must not own prepended-reminder ordering facts; use northhing-agent-runtime prompt contracts',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/execution/types.rs',
     patterns: [
       {
@@ -1062,71 +897,6 @@ export const forbiddenContentRules = [
         regex: /SessionState::Error\s*\{[^}]*\}\s*=>\s*"error"/,
         message:
           'core event types must not own session-state wire labels; use northhing-agent-runtime events',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
-    patterns: [
-      {
-        regex: /\bconst\s+MAX_QUEUE_DEPTH\b/,
-        message:
-          'core scheduler must not own dialog queue capacity; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /\bstd::collections::VecDeque\b/,
-        message:
-          'core scheduler must not own dialog queue storage; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /\bdashmap::DashMap\b/,
-        message:
-          'core scheduler must not own scheduler state maps; use northhing-agent-runtime scheduler stores',
-      },
-      {
-        regex: /\bstruct\s+ActiveTurn\b/,
-        message:
-          'core scheduler must not own active-turn facts; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /\bfn\s+format_agent_session_reply\b/,
-        message:
-          'core scheduler must not own agent-session reply text assembly; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /automated reply to a previous SessionMessage call/,
-        message:
-          'core scheduler must not own agent-session reply reminder text; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /RoundInjectionKind::UserSteering/,
-        message:
-          'core scheduler must not own steering injection construction; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /RoundInjectionTarget::ExactTurn/,
-        message:
-          'core scheduler must not own steering exact-turn targeting; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /RoundInjectionKind::ThreadGoalObjectiveUpdated/,
-        message:
-          'core scheduler must not own thread-goal background injection construction; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /RoundInjectionKind::BackgroundResult/,
-        message:
-          'core scheduler must not own background result injection construction; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /RoundInjectionTarget::CurrentRunningTurn/,
-        message:
-          'core scheduler must not own current-turn background injection targeting; use northhing-agent-runtime scheduler',
-      },
-      {
-        regex: /\bfn\s+turn_outcome_kind\s*\(/,
-        message:
-          'core scheduler must not own turn-outcome event facts; use northhing-agent-runtime events',
       },
     ],
   },
@@ -1209,97 +979,12 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs',
-    patterns: [
-      {
-        regex: /framework::(?:\{[^}]*\bToolUseContext\b[^}]*\}|\bToolUseContext\b)/,
-        message:
-          'tool pipeline must import ToolUseContext from tool_context_runtime, not the framework re-export',
-      },
-      {
-        regex: /\bfn serialize_result_for_assistant\b/,
-        message:
-          'core tool pipeline must not own provider-neutral assistant result rendering; use northhing-agent-tools',
-      },
-      {
-        regex: /\bconst TOOL_ERROR_ARGUMENTS_PREVIEW_BYTES\b/,
-        message:
-          'core tool pipeline must not own tool error argument preview limits; use northhing-agent-tools',
-      },
-      {
-        regex: /\bfn truncate_arguments_preview\b/,
-        message:
-          'core tool pipeline must not own tool error argument preview rendering; use northhing-agent-tools',
-      },
-      {
-        regex: /\bfn truncate_raw_arguments_preview\b/,
-        message:
-          'core tool pipeline must not own raw tool argument preview rendering; use northhing-agent-tools',
-      },
-      {
-        regex: /\bconst USER_STEERING_INTERRUPTED_MESSAGE\b/,
-        message:
-          'core tool pipeline must not own steering-interrupted result presentation; use northhing-agent-tools',
-      },
-      {
-        regex: /\bfn build_truncation_recovery_notice\b/,
-        message:
-          'core tool pipeline must not own truncation recovery notice policy; use northhing-agent-tools',
-      },
-      {
-        regex: /\bfn is_write_like_tool_name\b/,
-        message:
-          'core tool pipeline must not own write-like truncation classification; use northhing-agent-tools',
-      },
-      {
-        regex: /\bstruct\s+ToolBatch\b/,
-        message:
-          'core tool pipeline must not own portable batching DTOs; use tool-runtime::pipeline',
-      },
-      {
-        regex: /\bfn\s+partition_tool_batches\b/,
-        message:
-          'core tool pipeline must not own portable batching strategy; use tool-runtime::pipeline',
-      },
-      {
-        regex: /Duration::from_millis\(100\s*\*\s*attempts/,
-        message:
-          'core tool pipeline must not own retry backoff policy; use tool-runtime::pipeline',
-      },
-      {
-        regex: /\blet\s+mut\s+cancelled_count\b/,
-        message:
-          'core tool pipeline must not own dialog-turn cancellation summary policy; use tool-runtime::pipeline',
-      },
-      {
-        regex: /ToolConfirmationOutcome::(?:Rejected|ChannelClosed|Timeout)/,
-        message:
-          'core tool pipeline must not own confirmation wait-result mapping; use northhing-agent-runtime',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/tools/pipeline/state_manager.rs',
     patterns: [
       {
         regex: /\bstats\.(?:queued|waiting|running|streaming|awaiting_confirmation|completed|failed|cancelled)\s*\+=/,
         message:
           'core tool state manager must not own provider-neutral state counting; use tool-runtime::pipeline',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime.rs',
-    patterns: [
-      {
-        regex: /remote_workspace_git_metadata_unavailable|workspace_unavailable|git_status_unavailable:/,
-        message:
-          'core tool context must not own light-checkpoint summary policy; use northhing-agent-runtime::checkpoint',
-      },
-      {
-        regex: /format!\(\s*"staged=\{\}, unstaged=\{\}, untracked=\{\}"/,
-        message:
-          'core tool context must not own local git dirty-state checkpoint formatting; use northhing-agent-runtime::checkpoint',
       },
     ],
   },
@@ -1360,36 +1045,6 @@ export const forbiddenContentRules = [
         regex: /\benum\s+DialogTriggerSource\b/,
         message:
           'core coordinator must not redefine DialogTriggerSource; use northhing-runtime-ports',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
-    patterns: [
-      {
-        regex: /\benum\s+DialogQueuePriority\b/,
-        message:
-          'core scheduler must not redefine DialogQueuePriority; use northhing-runtime-ports',
-      },
-      {
-        regex: /\bstruct\s+DialogSubmissionPolicy\b/,
-        message:
-          'core scheduler must not redefine DialogSubmissionPolicy; use northhing-runtime-ports',
-      },
-      {
-        regex: /\benum\s+DialogSubmitOutcome\b/,
-        message:
-          'core scheduler must not redefine DialogSubmitOutcome; use northhing-runtime-ports',
-      },
-      {
-        regex: /\bstruct\s+AgentSessionReplyRoute\b/,
-        message:
-          'core scheduler must not redefine AgentSessionReplyRoute; use northhing-runtime-ports',
-      },
-      {
-        regex: /\benum\s+DialogSteerOutcome\b/,
-        message:
-          'core scheduler must not redefine DialogSteerOutcome; use northhing-runtime-ports',
       },
     ],
   },
@@ -1666,116 +1321,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/manager.rs',
-    patterns: [
-      {
-        regex: /\bbuild_runtime_state\b/,
-        message:
-          'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_source_revision\b/,
-        message:
-          'core MiniApp manager must not build source revisions directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_deps_revision\b/,
-        message:
-          'core MiniApp manager must not build dependency revisions directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bapp\.version\s*\+=\s*1\b/,
-        message:
-          'core MiniApp manager must not own version increments for lifecycle transitions; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bapp\.runtime\s*=/,
-        message:
-          'core MiniApp manager must not own runtime-state replacement for lifecycle transitions; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_created_app\b/,
-        message:
-          'core MiniApp manager must not own create workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_update_patch\b/,
-        message:
-          'core MiniApp manager must not own update workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bprepare_draft_app\b/,
-        message:
-          'core MiniApp manager must not own draft creation workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_source_sync_result\b/,
-        message:
-          'core MiniApp manager must not own draft source-sync workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_permission_update_result\b/,
-        message:
-          'core MiniApp manager must not own draft permission workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_to_active\b/,
-        message:
-          'core MiniApp manager must not own apply-draft workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_customization_metadata\b/,
-        message:
-          'core MiniApp manager must not own draft customization workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bmark_builtin_update_available_metadata\b/,
-        message:
-          'core MiniApp manager must not own built-in update workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bdecline_builtin_update_metadata\b/,
-        message:
-          'core MiniApp manager must not own built-in update decline workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bprepare_imported_meta\b/,
-        message:
-          'core MiniApp manager must not own import metadata rehome planning; use product-domain import bundle plan',
-      },
-      {
-        regex: /\bbuild_import_fallbacks\b/,
-        message:
-          'core MiniApp manager must not own import fallback planning; use product-domain import bundle plan',
-      },
-      {
-        regex: /\bbuild_import_bundle_plan\b/,
-        message:
-          'core MiniApp manager must not own import bundle planning; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bread_import_meta_json\b/,
-        message:
-          'core MiniApp manager must not own import metadata IO; use MiniAppRuntimeFacade import ports',
-      },
-      {
-        regex: /\bwrite_import_bundle\b/,
-        message:
-          'core MiniApp manager must not own import bundle IO; use MiniAppRuntimeFacade import ports',
-      },
-      {
-        regex: /\bworkspace_dir_string\b/,
-        message:
-          'core MiniApp manager must not own compile workspace path adaptation; use MiniAppCompileRequest',
-      },
-      {
-        regex: /\bresolve_policy\s*\(/,
-        message:
-          'core MiniApp manager must not own permission policy path adaptation; use MiniAppPermissionPolicyRequest',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/tools/restrictions.rs',
     patterns: [
       {
@@ -1820,26 +1365,6 @@ export const forbiddenContentRules = [
         regex: /Component::ParentDir/,
         message:
           'core workspace path facade must not redefine host path normalization; use northhing-agent-tools',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/registry.rs',
-    patterns: [
-      {
-        regex: /\bstruct DynamicToolMetadata\b/,
-        message:
-          'core tool registry must not own dynamic tool metadata storage; use northhing-agent-tools ToolRegistry',
-      },
-      {
-        regex: /\btools\s*:\s*IndexMap\b/,
-        message:
-          'core tool registry must not own the generic tool map; use northhing-agent-tools ToolRegistry',
-      },
-      {
-        regex: /\bdynamic_tools\s*:\s*IndexMap\b/,
-        message:
-          'core tool registry must not own the dynamic tool map; use northhing-agent-tools ToolRegistry',
       },
     ],
   },
@@ -2693,16 +2218,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool.rs',
-    patterns: [
-      {
-        regex: /\bcreate_session_with_workspace_and_creator\b/,
-        message:
-          'SessionMessage must not bypass the service/agent runtime owner when creating sessions',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/service/announcement/state_store.rs',
     patterns: [
       {
@@ -2716,53 +2231,6 @@ export const forbiddenContentRules = [
       {
         regex: /\bserde_json::from_str\b/,
         message: 'core announcement state store facade must not own state deserialization; use the integrations state store',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/bash_tool.rs',
-    reason:
-      'BashTool must stay as terminal/session/checkpoint glue and must not re-own reusable shell execution helpers',
-    patterns: [
-      {
-        regex: /\bconst\s+MAX_OUTPUT_LENGTH\b/,
-        message: 'Bash output rendering budget is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bconst\s+BANNED_COMMANDS\b/,
-        message: 'Bash banned-command policy is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+detect_osascript_keystroke_non_ascii\b/,
-        message: 'Bash osascript keystroke guard is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+detect_osascript_im_app\b/,
-        message: 'Bash IM AppleScript guard is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+truncate_output_preserving_tail\b/,
-        message: 'Bash output truncation is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+command_for_working_directory\b/,
-        message: 'Bash working-directory command wrapping is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+render_result\b/,
-        message: 'Bash local result rendering is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+render_remote_result\b/,
-        message: 'Bash remote result rendering is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+format_background_command_delivery_text\b/,
-        message: 'Bash background-result delivery text is owned by tool-runtime::shell',
-      },
-      {
-        regex: /\bfn\s+format_background_command_error_text\b/,
-        message: 'Bash background-result error text is owned by tool-runtime::shell',
       },
     ],
   },
@@ -2978,6 +2446,510 @@ export const forbiddenContentUnderRules = [
         regex: /\bepisodes::/,
         message:
           'judge_gate protocol must not import episodes (zero dependency edge requirement)',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool',
+    reason:
+      'SessionMessage must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
+    patterns: [
+      {
+        regex: /\bsubmit_with_prepended_messages\b/,
+        message: 'SessionMessage must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
+      },
+      {
+        regex: /\bcoordinator\s*\.\s*resolve_session_workspace_path\b/,
+        message:
+          'SessionMessage target workspace resolution must flow through AgentRuntime session-management port, not direct coordinator access',
+      },
+      {
+        regex: /\bresolve_session_workspace_path\s*\(\s*&?target_session_id\b/,
+        message:
+          'SessionMessage target workspace resolution must use AgentSessionWorkspaceRequest, not legacy direct session id calls',
+      },
+      {
+        regex: /\bcoordinator\s*\.\s*list_sessions\b/,
+        message:
+          'SessionMessage target session lookup must flow through AgentRuntime session-management port, not direct coordinator access',
+      },
+      {
+        regex: /\blist_sessions\s*\(\s*(?:Path::new|workspace_path)\b/,
+        message: 'SessionMessage target session lookup must use AgentSessionListRequest, not legacy path arguments',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/cron_tool',
+    reason:
+      'CronTool target workspace resolution must flow through AgentRuntime session-management port, not direct coordinator access',
+    patterns: [
+      {
+        regex: /\bcoordinator\s*\.\s*resolve_session_workspace_path\b/,
+        message:
+          'CronTool target workspace resolution must flow through AgentRuntime session-management port, not direct coordinator access',
+      },
+      {
+        regex: /\bresolve_session_workspace_path\s*\(\s*&?session_id\b/,
+        message:
+          'CronTool target workspace resolution must use AgentSessionWorkspaceRequest, not legacy direct session id calls',
+      },
+      {
+        regex: /\bcoordinator\s*\.\s*list_sessions\b/,
+        message:
+          'CronTool target session lookup must flow through AgentRuntime session-management port, not direct coordinator access',
+      },
+      {
+        regex: /\blist_sessions\s*\(\s*(?:Path::new|workspace_path)\b/,
+        message: 'CronTool target session lookup must use AgentSessionListRequest, not legacy path arguments',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/bash_tool',
+    reason:
+      'Bash background delivery must flow through AgentRuntime lifecycle delivery port, not direct DialogScheduler',
+    patterns: [
+      {
+        regex: /\bscheduler\s*\.\s*deliver_background_result\b/,
+        message:
+          'Bash background delivery must flow through AgentRuntime lifecycle delivery port, not direct DialogScheduler',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool',
+    reason:
+      'TaskTool must not directly inspect DeepReview incremental cache internals; use deep_review_task_adapter',
+    patterns: [
+      {
+        regex: /\bDeepReviewIncrementalCache\b/,
+        message:
+          'TaskTool must not directly inspect DeepReview incremental cache internals; use deep_review_task_adapter',
+      },
+      {
+        regex: /deepReviewCache/,
+        message: 'TaskTool must not directly parse DeepReview cache payloads; use deep_review_task_adapter',
+      },
+      {
+        regex: /<partial_result status=/,
+        message:
+          'TaskTool must not re-own DeepReview task completion result presentation; use deep_review_task_adapter',
+      },
+      {
+        regex: /completed successfully with result:/,
+        message:
+          'TaskTool must not re-own DeepReview task completion result presentation; use deep_review_task_adapter',
+      },
+      {
+        regex: /Retries used:/,
+        message: 'TaskTool must not re-own DeepReview retry guidance presentation; use deep_review_task_adapter',
+      },
+      {
+        regex: /DeepReview automatic retry elapsed guard exceeded/,
+        message: 'TaskTool must not re-own DeepReview auto-retry admission policy; use deep_review_task_adapter',
+      },
+      {
+        regex: /cancelled coverage/,
+        message: 'TaskTool must not re-own DeepReview cancelled reviewer presentation; use deep_review_task_adapter',
+      },
+      {
+        regex: /\bprovider_capacity_retry_attempts\b/,
+        message: 'TaskTool must not re-own DeepReview provider capacity retry attempts; use deep_review_task_adapter',
+      },
+      {
+        regex: /\bprovider_capacity_queue_elapsed_ms\b/,
+        message:
+          'TaskTool must not re-own DeepReview provider capacity queue elapsed aggregation; use deep_review_task_adapter',
+      },
+      {
+        regex: /\bDEEP_REVIEW_PROVIDER_CAPACITY_MAX_RETRY_ATTEMPTS\b/,
+        message: 'TaskTool must not re-own DeepReview provider capacity retry limits; use deep_review_task_adapter',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/code_review_tool',
+    reason:
+      'CodeReviewTool must not re-own DeepReview cache-hit reliability signal shaping; use deep_review_report',
+    patterns: [
+      {
+        regex: /"kind"\s*:\s*"cache_hit"/,
+        message:
+          'CodeReviewTool must not re-own DeepReview cache-hit reliability signal shaping; use deep_review_report',
+      },
+      {
+        regex: /"kind"\s*:\s*"cache_miss"/,
+        message:
+          'CodeReviewTool must not re-own DeepReview cache-miss reliability signal shaping; use deep_review_report',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/agents/prompt_builder',
+    reason:
+      'core prompt builder must not re-own ComputerUse environment guidance; use northhing-agent-runtime::prompt',
+    patterns: [
+      {
+        regex: /\bComputer use \/ `key_chord`\b/,
+        message:
+          'core prompt builder must not re-own ComputerUse environment guidance; use northhing-agent-runtime::prompt',
+      },
+      {
+        regex: /\bfn computer_use_key_chord_guidance\b/,
+        message:
+          'core prompt builder must not re-own prompt environment guidance helpers; use northhing-agent-runtime::prompt',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/agents/prompt_builder',
+    reason:
+      'core prompt builder must not own tool-listing reminder facts; use northhing-agent-runtime prompt contracts',
+    patterns: [
+      {
+        regex: /\bpub\s+struct\s+ToolListingSections\b/,
+        message:
+          'core prompt builder must not own tool-listing reminder facts; use northhing-agent-runtime prompt contracts',
+      },
+      {
+        regex: /\bpub\s+struct\s+PrependedPromptReminders\b/,
+        message:
+          'core prompt builder must not own prepended-reminder ordering facts; use northhing-agent-runtime prompt contracts',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler',
+    reason:
+      'core scheduler must not own dialog queue capacity; use northhing-agent-runtime scheduler',
+    patterns: [
+      {
+        regex: /\bconst\s+MAX_QUEUE_DEPTH\b/,
+        message: 'core scheduler must not own dialog queue capacity; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /\bstd::collections::VecDeque\b/,
+        message: 'core scheduler must not own dialog queue storage; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /\bdashmap::DashMap\b/,
+        message: 'core scheduler must not own scheduler state maps; use northhing-agent-runtime scheduler stores',
+      },
+      {
+        regex: /\bstruct\s+ActiveTurn\b/,
+        message: 'core scheduler must not own active-turn facts; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /\bfn\s+format_agent_session_reply\b/,
+        message: 'core scheduler must not own agent-session reply text assembly; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /automated reply to a previous SessionMessage call/,
+        message: 'core scheduler must not own agent-session reply reminder text; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /RoundInjectionKind::UserSteering/,
+        message: 'core scheduler must not own steering injection construction; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /RoundInjectionTarget::ExactTurn/,
+        message: 'core scheduler must not own steering exact-turn targeting; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /RoundInjectionKind::ThreadGoalObjectiveUpdated/,
+        message:
+          'core scheduler must not own thread-goal background injection construction; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /RoundInjectionKind::BackgroundResult/,
+        message:
+          'core scheduler must not own background result injection construction; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /RoundInjectionTarget::CurrentRunningTurn/,
+        message:
+          'core scheduler must not own current-turn background injection targeting; use northhing-agent-runtime scheduler',
+      },
+      {
+        regex: /\bfn\s+turn_outcome_kind\s*\(/,
+        message: 'core scheduler must not own turn-outcome event facts; use northhing-agent-runtime events',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline',
+    reason:
+      'tool pipeline must import ToolUseContext from tool_context_runtime, not the framework re-export',
+    patterns: [
+      {
+        regex: /framework::(?:\{[^}]*\bToolUseContext\b[^}]*\}|\bToolUseContext\b)/,
+        message: 'tool pipeline must import ToolUseContext from tool_context_runtime, not the framework re-export',
+      },
+      {
+        regex: /\bfn serialize_result_for_assistant\b/,
+        message:
+          'core tool pipeline must not own provider-neutral assistant result rendering; use northhing-agent-tools',
+      },
+      {
+        regex: /\bconst TOOL_ERROR_ARGUMENTS_PREVIEW_BYTES\b/,
+        message: 'core tool pipeline must not own tool error argument preview limits; use northhing-agent-tools',
+      },
+      {
+        regex: /\bfn truncate_arguments_preview\b/,
+        message: 'core tool pipeline must not own tool error argument preview rendering; use northhing-agent-tools',
+      },
+      {
+        regex: /\bfn truncate_raw_arguments_preview\b/,
+        message: 'core tool pipeline must not own raw tool argument preview rendering; use northhing-agent-tools',
+      },
+      {
+        regex: /\bconst USER_STEERING_INTERRUPTED_MESSAGE\b/,
+        message: 'core tool pipeline must not own steering-interrupted result presentation; use northhing-agent-tools',
+      },
+      {
+        regex: /\bfn build_truncation_recovery_notice\b/,
+        message: 'core tool pipeline must not own truncation recovery notice policy; use northhing-agent-tools',
+      },
+      {
+        regex: /\bfn is_write_like_tool_name\b/,
+        message: 'core tool pipeline must not own write-like truncation classification; use northhing-agent-tools',
+      },
+      {
+        regex: /\bstruct\s+ToolBatch\b/,
+        message: 'core tool pipeline must not own portable batching DTOs; use tool-runtime::pipeline',
+      },
+      {
+        regex: /\bfn\s+partition_tool_batches\b/,
+        message: 'core tool pipeline must not own portable batching strategy; use tool-runtime::pipeline',
+      },
+      {
+        regex: /Duration::from_millis\(100\s*\*\s*attempts/,
+        message: 'core tool pipeline must not own retry backoff policy; use tool-runtime::pipeline',
+      },
+      {
+        regex: /\blet\s+mut\s+cancelled_count\b/,
+        message: 'core tool pipeline must not own dialog-turn cancellation summary policy; use tool-runtime::pipeline',
+      },
+      {
+        regex: /ToolConfirmationOutcome::(?:Rejected|ChannelClosed|Timeout)/,
+        message: 'core tool pipeline must not own confirmation wait-result mapping; use northhing-agent-runtime',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime',
+    reason:
+      'core tool context must not own light-checkpoint summary policy; use northhing-agent-runtime::checkpoint',
+    patterns: [
+      {
+        regex: /remote_workspace_git_metadata_unavailable|workspace_unavailable|git_status_unavailable:/,
+        message:
+          'core tool context must not own light-checkpoint summary policy; use northhing-agent-runtime::checkpoint',
+      },
+      {
+        regex: /format!\(\s*"staged=\{\}, unstaged=\{\}, untracked=\{\}"/,
+        message:
+          'core tool context must not own local git dirty-state checkpoint formatting; use northhing-agent-runtime::checkpoint',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler',
+    reason: 'core scheduler must not redefine DialogQueuePriority; use northhing-runtime-ports',
+    patterns: [
+      {
+        regex: /\benum\s+DialogQueuePriority\b/,
+        message: 'core scheduler must not redefine DialogQueuePriority; use northhing-runtime-ports',
+      },
+      {
+        regex: /\bstruct\s+DialogSubmissionPolicy\b/,
+        message: 'core scheduler must not redefine DialogSubmissionPolicy; use northhing-runtime-ports',
+      },
+      {
+        regex: /\benum\s+DialogSubmitOutcome\b/,
+        message: 'core scheduler must not redefine DialogSubmitOutcome; use northhing-runtime-ports',
+      },
+      {
+        regex: /\bstruct\s+AgentSessionReplyRoute\b/,
+        message: 'core scheduler must not redefine AgentSessionReplyRoute; use northhing-runtime-ports',
+      },
+      {
+        regex: /\benum\s+DialogSteerOutcome\b/,
+        message: 'core scheduler must not redefine DialogSteerOutcome; use northhing-runtime-ports',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/miniapp/manager',
+    reason:
+      'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
+    patterns: [
+      {
+        regex: /\bbuild_runtime_state\b/,
+        message: 'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
+      },
+      {
+        regex: /\bbuild_source_revision\b/,
+        message: 'core MiniApp manager must not build source revisions directly; use product-domain lifecycle helpers',
+      },
+      {
+        regex: /\bbuild_deps_revision\b/,
+        message:
+          'core MiniApp manager must not build dependency revisions directly; use product-domain lifecycle helpers',
+      },
+      {
+        regex: /\bapp\.version\s*\+=\s*1\b/,
+        message:
+          'core MiniApp manager must not own version increments for lifecycle transitions; use product-domain lifecycle helpers',
+      },
+      {
+        regex: /\bapp\.runtime\s*=/,
+        message:
+          'core MiniApp manager must not own runtime-state replacement for lifecycle transitions; use product-domain lifecycle helpers',
+      },
+      {
+        regex: /\bbuild_created_app\b/,
+        message: 'core MiniApp manager must not own create workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bapply_update_patch\b/,
+        message: 'core MiniApp manager must not own update workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bprepare_draft_app\b/,
+        message: 'core MiniApp manager must not own draft creation workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bapply_draft_source_sync_result\b/,
+        message: 'core MiniApp manager must not own draft source-sync workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bapply_draft_permission_update_result\b/,
+        message: 'core MiniApp manager must not own draft permission workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bapply_draft_to_active\b/,
+        message: 'core MiniApp manager must not own apply-draft workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bapply_draft_customization_metadata\b/,
+        message: 'core MiniApp manager must not own draft customization workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bmark_builtin_update_available_metadata\b/,
+        message: 'core MiniApp manager must not own built-in update workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bdecline_builtin_update_metadata\b/,
+        message:
+          'core MiniApp manager must not own built-in update decline workflow assembly; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bprepare_imported_meta\b/,
+        message:
+          'core MiniApp manager must not own import metadata rehome planning; use product-domain import bundle plan',
+      },
+      {
+        regex: /\bbuild_import_fallbacks\b/,
+        message: 'core MiniApp manager must not own import fallback planning; use product-domain import bundle plan',
+      },
+      {
+        regex: /\bbuild_import_bundle_plan\b/,
+        message: 'core MiniApp manager must not own import bundle planning; use MiniAppRuntimeFacade',
+      },
+      {
+        regex: /\bread_import_meta_json\b/,
+        message: 'core MiniApp manager must not own import metadata IO; use MiniAppRuntimeFacade import ports',
+      },
+      {
+        regex: /\bwrite_import_bundle\b/,
+        message: 'core MiniApp manager must not own import bundle IO; use MiniAppRuntimeFacade import ports',
+      },
+      {
+        regex: /\bworkspace_dir_string\b/,
+        message: 'core MiniApp manager must not own compile workspace path adaptation; use MiniAppCompileRequest',
+      },
+      {
+        regex: /\bresolve_policy\s*\(/,
+        message:
+          'core MiniApp manager must not own permission policy path adaptation; use MiniAppPermissionPolicyRequest',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/registry',
+    reason:
+      'core tool registry must not own dynamic tool metadata storage; use northhing-agent-tools ToolRegistry',
+    patterns: [
+      {
+        regex: /\bstruct DynamicToolMetadata\b/,
+        message:
+          'core tool registry must not own dynamic tool metadata storage; use northhing-agent-tools ToolRegistry',
+      },
+      {
+        regex: /\btools\s*:\s*IndexMap\b/,
+        message: 'core tool registry must not own the generic tool map; use northhing-agent-tools ToolRegistry',
+      },
+      {
+        regex: /\bdynamic_tools\s*:\s*IndexMap\b/,
+        message: 'core tool registry must not own the dynamic tool map; use northhing-agent-tools ToolRegistry',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool',
+    reason: 'SessionMessage must not bypass the service/agent runtime owner when creating sessions',
+    patterns: [
+      {
+        regex: /\bcreate_session_with_workspace_and_creator\b/,
+        message: 'SessionMessage must not bypass the service/agent runtime owner when creating sessions',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/bash_tool',
+    reason: 'Bash output rendering budget is owned by tool-runtime::shell',
+    patterns: [
+      {
+        regex: /\bconst\s+MAX_OUTPUT_LENGTH\b/,
+        message: 'Bash output rendering budget is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bconst\s+BANNED_COMMANDS\b/,
+        message: 'Bash banned-command policy is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+detect_osascript_keystroke_non_ascii\b/,
+        message: 'Bash osascript keystroke guard is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+detect_osascript_im_app\b/,
+        message: 'Bash IM AppleScript guard is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+truncate_output_preserving_tail\b/,
+        message: 'Bash output truncation is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+command_for_working_directory\b/,
+        message: 'Bash working-directory command wrapping is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+render_result\b/,
+        message: 'Bash local result rendering is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+render_remote_result\b/,
+        message: 'Bash remote result rendering is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+format_background_command_delivery_text\b/,
+        message: 'Bash background-result delivery text is owned by tool-runtime::shell',
+      },
+      {
+        regex: /\bfn\s+format_background_command_error_text\b/,
+        message: 'Bash background-result error text is owned by tool-runtime::shell',
       },
     ],
   },

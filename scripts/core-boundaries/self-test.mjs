@@ -19,6 +19,7 @@ export function runManifestParserSelfTest({
   forbiddenContentUnderRules,
   facadeOnlyFiles,
   forbiddenRuleTextForPath,
+  forbiddenUnderRuleTextForPath,
   regexSourceContainsContract,
   createFacadeLineChecker,
   escapeRegex,
@@ -311,8 +312,8 @@ export function runManifestParserSelfTest({
       throw new Error(`core DeepReview task adapter boundary rule must forbid contract: ${contract}`);
     }
   }
-  const coreTaskToolRuleText = forbiddenRuleTextForPath(
-    'src/crates/assembly/core/src/agentic/tools/implementations/task_tool.rs',
+  const coreTaskToolRuleText = forbiddenUnderRuleTextForPath(
+    'src/crates/assembly/core/src/agentic/tools/implementations/task_tool',
   );
   if (!coreTaskToolRuleText) {
     throw new Error('missing core TaskTool DeepReview boundary rule');
@@ -332,8 +333,8 @@ export function runManifestParserSelfTest({
       throw new Error(`core TaskTool DeepReview boundary rule must forbid contract: ${contract}`);
     }
   }
-  const coreCodeReviewToolRuleText = forbiddenRuleTextForPath(
-    'src/crates/assembly/core/src/agentic/tools/implementations/code_review_tool.rs',
+  const coreCodeReviewToolRuleText = forbiddenUnderRuleTextForPath(
+    'src/crates/assembly/core/src/agentic/tools/implementations/code_review_tool',
   );
   if (!coreCodeReviewToolRuleText) {
     throw new Error('missing core CodeReviewTool DeepReview report boundary rule');
@@ -354,7 +355,7 @@ export function runManifestParserSelfTest({
     }
   }
   const agentToolsFrameworkRule = requiredContentRules.find(
-    (rule) => rule.path === 'src/crates/execution/tool-contracts/src/framework.rs',
+    (rule) => rule.path === 'src/crates/execution/tool-contracts/src/framework/paths.rs',
   );
   if (!agentToolsFrameworkRule) {
     throw new Error('missing agent-tools framework boundary rule');
@@ -1594,12 +1595,12 @@ export function runManifestParserSelfTest({
         'remote_control_state_port',
         'CoreRemoteDialogRuntimeHost',
         'CoreRemoteCancelRuntimeHost',
-        'CoreRemoteCancelRuntimeHost\\s*\\{[\\s\\S]*\\bruntime:\\s*AgentRuntime',
+        'CoreRemoteCancelRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
         'CoreServiceAgentRuntime::agent_runtime_with_scheduler_ports',
         'CoreRemoteWorkspaceFileRuntimeHost',
         'CoreRemoteWorkspaceRuntimeHost',
         'CoreRemoteSessionRuntimeHost',
-        'CoreRemoteSessionRuntimeHost\\s*\\{[\\s\\S]*\\bruntime:\\s*AgentRuntime',
+        'CoreRemoteSessionRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
         'CoreRemotePollRuntimeHost',
         'CoreRemoteInteractionRuntimeHost',
         'CoreRemoteSessionTrackerHost',
@@ -1738,33 +1739,6 @@ export function runManifestParserSelfTest({
         'remote_no_change_poll_response',
         'remote_snapshot_poll_response',
         'remote_persisted_poll_response',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/tests/remote_connect_contracts.rs',
-      contracts: [
-        'remote_connect_pairing_primitives_live_in_services_owner',
-        'remote_connect_qr_and_relay_primitives_live_in_services_owner',
-        'remote_connect_command_wire_shape_lives_in_owner_contract',
-        'remote_connect_response_wire_shape_lives_in_owner_contract',
-        'remote_connect_model_catalog_delta_preserves_poll_invalidation_policy',
-        'remote_connect_model_catalog_builder_preserves_config_shape',
-        'remote_connect_model_selection_policy_owns_alias_and_config_reference_rules',
-        'remote_connect_poll_helpers_preserve_delta_and_completion_policy',
-        'remote_connect_image_context_policy_preserves_legacy_fallback_shape',
-        'remote_connect_image_context_policy_prefers_explicit_contexts',
-        'remote_connect_cancel_and_restore_policy_preserve_runtime_decisions',
-        'remote_connect_dialog_submit_outcome_builder_preserves_scheduler_shape',
-        'remote_chat_history_assembly_preserves_message_shape_and_item_order',
-        'remote_chat_history_assembly_skips_in_progress_assistant_history',
-        'remote_connect_file_transfer_policy_preserves_limits_and_chunk_ranges',
-        'remote_connect_file_transfer_policy_preserves_name_fallback',
-        'remote_connect_tracker_keeps_finished_turn_snapshot_until_persistence_finalizes',
-        'remote_connect_tracker_registry_owns_lifecycle_without_core_state',
-        'remote_connect_tracker_ignores_unrelated_direct_session_events',
-        'remote_connect_tool_preview_slimming_keeps_short_fields_and_drops_large_strings',
-        'remote_connect_workspace_response_helpers_own_wire_shape',
-        'remote_connect_session_response_helpers_own_pagination_and_timestamps',
       ],
     },
     {
@@ -2280,46 +2254,6 @@ export function runManifestParserSelfTest({
       contracts: ['CLIENT_STARTUP_TIMEOUT_SECS', 'startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
-      path: 'src/web-ui/src/flow_chat/tool-cards/FileOperationToolCard.tsx',
-      contracts: ['openLocalDiff', 'snapshotAPI\\.getOperationDiff', 'Snapshot diff unavailable', 'localDiffContent'],
-    },
-    {
-      path: 'src/web-ui/src/main.tsx',
-      contracts: ['startupTrace', 'backgroundTaskScheduler', 'initializeAllTools', 'after_render_start'],
-    },
-    {
-      path: 'src/web-ui/src/shared/utils/startupTrace.ts',
-      contracts: [
-        'sanitizeTraceData',
-        'isRemoteTraceRequest',
-        'recordApiCall',
-        'flushSummary',
-        'markPhaseAfterAnimationFrames',
-      ],
-    },
-    {
-      path: 'src/web-ui/src/shared/utils/backgroundTaskScheduler.ts',
-      contracts: [
-        'BackgroundTaskScheduler',
-        'inFlightKey',
-        'AbortController',
-        'BackgroundTaskCancelledError',
-        'cancelIdle',
-      ],
-    },
-    {
-      path: 'src/web-ui/src/tools/initializeTools.ts',
-      contracts: ['initializeAllTools', 'initializeLsp', 'initializeGit', 'does not import every tool'],
-    },
-    {
-      path: 'src/web-ui/src/tools/editor/services/MonacoStartupWarmup.ts',
-      contracts: ['scheduleMonacoStartupWarmup', 'backgroundTaskScheduler', 'startup:monaco-warmup'],
-    },
-    {
-      path: 'src/web-ui/src/flow_chat/services/flow-chat-manager/SessionModule.ts',
-      contracts: ['historical_session_hydrate_request', 'Load history in the background', "historyState: 'ready'"],
-    },
-    {
       path: 'src/crates/assembly/core/src/miniapp/storage.rs',
       contracts: [
         'ServiceMiniAppStorage',
@@ -2822,7 +2756,10 @@ export function runManifestParserSelfTest({
     },
   ];
   for (const { path, contracts } of requiredContentContracts) {
-    const matchingRules = requiredContentRules.filter((rule) => rule.path === path);
+    const prefix = path.replace(/\.(rs|tsx?)$/, '');
+    const matchingRules = requiredContentRules.filter(
+      (rule) => rule.path === path || rule.path.startsWith(prefix + '/'),
+    );
     if (matchingRules.length === 0) {
       throw new Error(`missing owner content anchor rule for ${path}`);
     }

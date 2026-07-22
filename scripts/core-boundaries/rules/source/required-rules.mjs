@@ -229,7 +229,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/agent-runtime/src/prompt_cache.rs',
+    path: 'src/crates/execution/agent-runtime/src/prompt_cache/cache_types.rs',
     reason:
       'agent-runtime must own prompt-cache policy, identities, DTOs, scope keys, and in-memory runtime store',
     patterns: [
@@ -245,6 +245,13 @@ export const requiredContentRules = [
         regex: /\bpub fn prompt_cache_scope_key\b/,
         message: 'missing agent-runtime prompt-cache scope-key helper',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/prompt_cache/cache_store.rs',
+    reason:
+      'agent-runtime must own prompt-cache policy, identities, DTOs, scope keys, and in-memory runtime store',
+    patterns: [
       {
         regex: /\bpub struct SessionPromptCacheStore\b/,
         message: 'missing agent-runtime in-memory prompt-cache store',
@@ -385,7 +392,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/agent-runtime/src/deep_review/report.rs',
+    path: 'src/crates/execution/agent-runtime/src/deep_review/report/report_findings.rs',
     reason:
       'agent-runtime DeepReview report owner must keep provider-neutral packet metadata, reliability signals, and cache update logic out of core',
     patterns: [
@@ -393,6 +400,13 @@ export const requiredContentRules = [
         regex: /\bpub fn fill_deep_review_packet_metadata\b/,
         message: 'missing DeepReview packet metadata owner function',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/deep_review/report/report_score.rs',
+    reason:
+      'agent-runtime DeepReview report owner must keep provider-neutral packet metadata, reliability signals, and cache update logic out of core',
+    patterns: [
       {
         regex: /\bpub fn fill_deep_review_reliability_signals\b/,
         message: 'missing DeepReview reliability signal owner function',
@@ -405,6 +419,13 @@ export const requiredContentRules = [
         regex: /\bpub fn fill_deep_review_cache_update_signals\b/,
         message: 'missing DeepReview cache update reliability signal owner function',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/deep_review/report/report_summary.rs',
+    reason:
+      'agent-runtime DeepReview report owner must keep provider-neutral packet metadata, reliability signals, and cache update logic out of core',
+    patterns: [
       {
         regex: /\bpub fn deep_review_cache_from_completed_reviewers\b/,
         message: 'missing DeepReview cache update owner function',
@@ -1344,7 +1365,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/cron_tool.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/cron_tool/execution.rs',
     reason:
       'CronTool must resolve and validate target agent sessions through the service/agent runtime owner before scheduling jobs',
     patterns: [
@@ -1449,17 +1470,13 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_deep_review_policy.rs',
     reason:
       'TaskTool must keep DeepReview retry/result presentation as a facade call instead of re-owning provider-neutral policy text or data shaping',
     patterns: [
       {
         regex: /deep_review_task_adapter::should_emit_deep_review_retry_guidance/,
         message: 'missing TaskTool DeepReview retry guidance emission facade call',
-      },
-      {
-        regex: /deep_review_task_adapter::deep_review_retry_guidance/,
-        message: 'missing TaskTool DeepReview retry guidance facade call',
       },
       {
         regex: /deep_review_task_adapter::auto_retry_suppression_reason/,
@@ -1470,13 +1487,31 @@ export const requiredContentRules = [
         message: 'missing TaskTool DeepReview auto-retry admission facade call',
       },
       {
-        regex: /deep_review_task_adapter::deep_review_task_completion_result/,
-        message: 'missing TaskTool DeepReview completion result facade call',
-      },
-      {
         regex: /deep_review_task_adapter::deep_review_cancelled_reviewer_result/,
         message: 'missing TaskTool DeepReview cancelled reviewer result facade call',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_agents.rs',
+    reason:
+      'TaskTool must keep DeepReview retry/result presentation as a facade call instead of re-owning provider-neutral policy text or data shaping',
+    patterns: [
+      {
+        regex: /deep_review_task_adapter::deep_review_retry_guidance/,
+        message: 'missing TaskTool DeepReview retry guidance facade call',
+      },
+      {
+        regex: /deep_review_task_adapter::deep_review_task_completion_result/,
+        message: 'missing TaskTool DeepReview completion result facade call',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_subagent.rs',
+    reason:
+      'TaskTool must keep DeepReview retry/result presentation as a facade call instead of re-owning provider-neutral policy text or data shaping',
+    patterns: [
       {
         regex: /DeepReviewProviderCapacityRetryRuntime::default/,
         message: 'missing TaskTool DeepReview provider retry runtime state owner usage',
@@ -1614,7 +1649,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/exec_retry.rs',
     reason:
       'core tool pipeline must delegate portable confirmation planning and failure mapping to agent-runtime while retaining UI/channel side effects',
     patterns: [
@@ -2051,7 +2086,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/exec_retry.rs',
     reason:
       'core tool pipeline must preserve latest-main truncation behavior through agent-tools delegation and keep per-tool denial behavior until tool runtime ownership migrates',
     patterns: [
@@ -2059,6 +2094,13 @@ export const requiredContentRules = [
         regex: /\bbuild_tool_call_truncation_recovery_notice\b/,
         message: 'missing tool-call truncation recovery notice owner delegation',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/mod.rs',
+    reason:
+      'core tool pipeline must preserve latest-main truncation behavior through agent-tools delegation and keep per-tool denial behavior until tool runtime ownership migrates',
+    patterns: [
       {
         regex: /\btruncation_notice_for_interactive_tools_does_not_claim_file_write\b/,
         message: 'missing interactive-tool truncation recovery regression',
@@ -2478,7 +2520,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/service/workspace_runtime/service.rs',
+    path: 'src/crates/assembly/core/src/service/workspace_runtime/service/init.rs',
     reason:
       'workspace runtime binding helpers may depend on agentic runtime only in full product builds and must reuse services-core for session index rebuilds',
     patterns: [
@@ -2491,16 +2533,23 @@ export const requiredContentRules = [
         message: 'WorkspaceBinding runtime helper must stay behind product-full',
       },
       {
+        regex: /\bmetadata_file_count\b/,
+        message: 'workspace runtime merge must preserve metadata-file count semantics',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/workspace_runtime/service/sync.rs',
+    reason:
+      'workspace runtime binding helpers may depend on agentic runtime only in full product builds and must reuse services-core for session index rebuilds',
+    patterns: [
+      {
         regex: /\bSessionMetadataStore\b/,
         message: 'workspace runtime session merge must reuse services-core metadata store',
       },
       {
         regex: /\.rebuild_index\(\)/,
         message: 'workspace runtime session merge must delegate index rebuild to services-core',
-      },
-      {
-        regex: /\bmetadata_file_count\b/,
-        message: 'workspace runtime merge must preserve metadata-file count semantics',
       },
     ],
   },
@@ -2601,7 +2650,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/services/services-integrations/src/remote_ssh/remote_exec.rs',
+    path: 'src/crates/services/services-integrations/src/remote_ssh/remote_exec/manager.rs',
     reason:
       'services-integrations remote_ssh remote_exec owns model-facing remote shell process lifecycle and stdin/control semantics',
     patterns: [
@@ -2613,6 +2662,13 @@ export const requiredContentRules = [
         regex: /\bGLOBAL_REMOTE_EXEC_MANAGER\b/,
         message: 'missing global remote exec manager compatibility owner',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/remote_exec/output.rs',
+    reason:
+      'services-integrations remote_ssh remote_exec owns model-facing remote shell process lifecycle and stdin/control semantics',
+    patterns: [
       {
         regex: /\bremote_exec_session_ids_match_local_test_baseline\b/,
         message: 'missing remote exec session-id compatibility regression',
@@ -2992,7 +3048,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/tool-contracts/src/framework.rs',
+    path: 'src/crates/execution/tool-contracts/src/framework/manifest.rs',
     reason:
       'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
     patterns: [
@@ -3001,20 +3057,12 @@ export const requiredContentRules = [
         message: 'missing shared GetToolSpec manifest name contract',
       },
       {
-        regex: /\bpub enum ToolExposure\b/,
-        message: 'missing lightweight tool exposure contract',
-      },
-      {
         regex: /\bpub struct ToolManifestPolicyTool\b/,
         message: 'missing pure tool manifest policy input contract',
       },
       {
         regex: /\bpub fn resolve_tool_manifest_policy\b/,
         message: 'missing pure tool manifest policy resolver',
-      },
-      {
-        regex: /\bfn default_exposure\b/,
-        message: 'missing generic tool exposure contract',
       },
       {
         regex: /\bpub fn build_tool_manifest_policy_tools\b/,
@@ -3033,48 +3081,12 @@ export const requiredContentRules = [
         message: 'missing prompt-visible manifest definition builder',
       },
       {
-        regex: /\bpub trait ContextualToolManifestItem\b/,
-        message: 'missing generic contextual manifest item adapter contract',
-      },
-      {
-        regex: /\bpub trait ToolCatalogSnapshotProvider\b/,
-        message: 'missing generic tool catalog snapshot provider contract',
-      },
-      {
-        regex: /\bpub trait GetToolSpecCatalogProvider\b/,
-        message: 'missing generic GetToolSpec catalog provider contract',
-      },
-      {
         regex: /\bpub struct ContextualVisibleTools\b/,
         message: 'missing generic contextual visible-tools result contract',
       },
       {
         regex: /\bpub struct ContextualToolManifest\b/,
         message: 'missing generic contextual tool manifest result contract',
-      },
-      {
-        regex: /\bpub async fn resolve_contextual_visible_tools\b/,
-        message: 'missing generic contextual visible-tools resolver',
-      },
-      {
-        regex: /\bpub async fn resolve_contextual_tool_manifest\b/,
-        message: 'missing generic contextual tool manifest resolver',
-      },
-      {
-        regex: /\bpub async fn resolve_contextual_visible_tools_from_provider\b/,
-        message: 'missing provider-backed contextual visible-tools resolver',
-      },
-      {
-        regex: /\bpub async fn resolve_contextual_tool_manifest_from_provider\b/,
-        message: 'missing provider-backed contextual manifest resolver',
-      },
-      {
-        regex: /\bpub async fn build_get_tool_spec_catalog_description_from_provider\b/,
-        message: 'missing provider-backed GetToolSpec catalog description builder',
-      },
-      {
-        regex: /\bpub async fn resolve_get_tool_spec_detail_from_provider\b/,
-        message: 'missing provider-backed GetToolSpec detail resolver',
       },
       {
         regex: /\bpub fn build_get_tool_spec_description\b/,
@@ -3089,32 +3101,12 @@ export const requiredContentRules = [
         message: 'missing pure GetToolSpec detail contract',
       },
       {
-        regex: /\bpub fn summarize_get_tool_spec_collapsed_tools\b/,
-        message: 'missing pure GetToolSpec collapsed summary helper',
-      },
-      {
-        regex: /\bpub async fn resolve_get_tool_spec_detail\b/,
-        message: 'missing generic GetToolSpec detail resolver',
-      },
-      {
         regex: /\bpub fn build_get_tool_spec_catalog_description\b/,
         message: 'missing pure GetToolSpec catalog description builder',
       },
       {
-        regex: /\bpub fn get_tool_spec_input_schema\b/,
-        message: 'missing pure GetToolSpec input schema contract',
-      },
-      {
-        regex: /\bpub fn get_tool_spec_short_description\b/,
-        message: 'missing pure GetToolSpec short description contract',
-      },
-      {
         regex: /\bpub fn render_get_tool_spec_tool_use_message\b/,
         message: 'missing pure GetToolSpec tool-use message renderer',
-      },
-      {
-        regex: /\bpub fn get_tool_spec_is_readonly\b/,
-        message: 'missing pure GetToolSpec readonly metadata contract',
       },
       {
         regex: /\bpub fn get_tool_spec_is_concurrency_safe\b/,
@@ -3153,24 +3145,39 @@ export const requiredContentRules = [
         message: 'missing pure GetToolSpec execution plan resolver',
       },
       {
-        regex: /\bpub async fn resolve_get_tool_spec_execution_result_from_provider\b/,
-        message: 'missing provider-backed GetToolSpec execution result resolver',
-      },
-      {
-        regex: /\bpub struct GetToolSpecRuntime\b/,
-        message: 'missing provider-backed GetToolSpec runtime facade',
-      },
-      {
-        regex: /\bpub async fn call_results\b/,
-        message: 'missing provider-backed GetToolSpec Tool-result vector adapter facade',
-      },
-      {
         regex: /\bpub struct GetToolSpecLoadObservation\b/,
         message: 'missing pure GetToolSpec load observation contract',
       },
       {
         regex: /\bpub fn collect_loaded_collapsed_tool_names\b/,
         message: 'missing pure collapsed-tool load collection contract',
+      },
+      {
+        regex: /\bpub fn sort_tool_manifest_definitions\b/,
+        message: 'missing prompt-visible manifest ordering helper',
+      },
+      {
+        regex: /\bpub fn get_tool_spec_input_schema\b/,
+        message: 'missing pure GetToolSpec input schema contract',
+      },
+      {
+        regex: /\bpub fn get_tool_spec_short_description\b/,
+        message: 'missing pure GetToolSpec short description contract',
+      },
+      {
+        regex: /\bpub fn get_tool_spec_is_readonly\b/,
+        message: 'missing pure GetToolSpec readonly metadata contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/types.rs',
+    reason:
+      'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
+    patterns: [
+      {
+        regex: /\bpub enum ToolExposure\b/,
+        message: 'missing lightweight tool exposure contract',
       },
       {
         regex: /\bpub enum CollapsedToolUsageError\b/,
@@ -3188,6 +3195,88 @@ export const requiredContentRules = [
         regex: /\bpub fn validate_collapsed_tool_usage\b/,
         message: 'missing collapsed-tool execution gate policy',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/catalog.rs',
+    reason:
+      'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
+    patterns: [
+      {
+        regex: /\bfn default_exposure\b/,
+        message: 'missing generic tool exposure contract',
+      },
+      {
+        regex: /\bpub trait ContextualToolManifestItem\b/,
+        message: 'missing generic contextual manifest item adapter contract',
+      },
+      {
+        regex: /\bpub trait ToolCatalogSnapshotProvider\b/,
+        message: 'missing generic tool catalog snapshot provider contract',
+      },
+      {
+        regex: /\bpub trait GetToolSpecCatalogProvider\b/,
+        message: 'missing generic GetToolSpec catalog provider contract',
+      },
+      {
+        regex: /\bpub async fn resolve_contextual_visible_tools\b/,
+        message: 'missing generic contextual visible-tools resolver',
+      },
+      {
+        regex: /\bpub async fn resolve_contextual_tool_manifest\b/,
+        message: 'missing generic contextual tool manifest resolver',
+      },
+      {
+        regex: /\bpub async fn resolve_contextual_visible_tools_from_provider\b/,
+        message: 'missing provider-backed contextual visible-tools resolver',
+      },
+      {
+        regex: /\bpub async fn resolve_contextual_tool_manifest_from_provider\b/,
+        message: 'missing provider-backed contextual manifest resolver',
+      },
+      {
+        regex: /\bpub async fn build_get_tool_spec_catalog_description_from_provider\b/,
+        message: 'missing provider-backed GetToolSpec catalog description builder',
+      },
+      {
+        regex: /\bpub async fn resolve_get_tool_spec_detail_from_provider\b/,
+        message: 'missing provider-backed GetToolSpec detail resolver',
+      },
+      {
+        regex: /\bpub fn summarize_get_tool_spec_collapsed_tools\b/,
+        message: 'missing pure GetToolSpec collapsed summary helper',
+      },
+      {
+        regex: /\bpub async fn resolve_get_tool_spec_detail\b/,
+        message: 'missing generic GetToolSpec detail resolver',
+      },
+      {
+        regex: /\bpub async fn resolve_get_tool_spec_execution_result_from_provider\b/,
+        message: 'missing provider-backed GetToolSpec execution result resolver',
+      },
+      {
+        regex: /\bpub struct GetToolSpecRuntime\b/,
+        message: 'missing provider-backed GetToolSpec runtime facade',
+      },
+      {
+        regex: /\bpub async fn call_results\b/,
+        message: 'missing provider-backed GetToolSpec Tool-result vector adapter facade',
+      },
+      {
+        regex: /\bpub async fn resolve_readonly_enabled_tools\b/,
+        message: 'missing generic readonly enabled tool filter',
+      },
+      {
+        regex: /\bpub struct ToolCatalogRuntime\b/,
+        message: 'missing provider-backed tool catalog runtime facade',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/paths.rs',
+    reason:
+      'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
+    patterns: [
       {
         regex: /\bpub fn is_tool_path_allowed_by_resolved_roots\b/,
         message: 'missing provider-neutral path policy root matcher',
@@ -3212,10 +3301,13 @@ export const requiredContentRules = [
         regex: /\bpub fn build_tool_session_runtime_artifact_reference\b/,
         message: 'missing provider-neutral session runtime artifact reference builder',
       },
-      {
-        regex: /\bpub fn sort_tool_manifest_definitions\b/,
-        message: 'missing prompt-visible manifest ordering helper',
-      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/registry.rs',
+    reason:
+      'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
+    patterns: [
       {
         regex: /\bpub struct StaticToolProviderGroup\b/,
         message: 'missing generic static provider group container',
@@ -3267,14 +3359,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub fn get_collapsed_tool_names\b/,
         message: 'missing generic collapsed-tool registry catalog query',
-      },
-      {
-        regex: /\bpub async fn resolve_readonly_enabled_tools\b/,
-        message: 'missing generic readonly enabled tool filter',
-      },
-      {
-        regex: /\bpub struct ToolCatalogRuntime\b/,
-        message: 'missing provider-backed tool catalog runtime facade',
       },
     ],
   },
@@ -3456,7 +3540,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_types.rs',
     reason:
       'core scheduler must preserve legacy submission policy import path while runtime-ports owns portable dialog policy contracts',
     patterns: [
@@ -3465,16 +3549,37 @@ export const requiredContentRules = [
           /pub use northhing_runtime_ports::\{[\s\S]*AgentSessionReplyRoute[\s\S]*DialogQueuePriority[\s\S]*DialogSteerOutcome[\s\S]*DialogSubmissionPolicy[\s\S]*DialogSubmitOutcome[\s\S]*\};/,
         message: 'missing dialog submission policy compatibility re-export',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_submit.rs',
+    reason:
+      'core scheduler must preserve legacy submission policy import path while runtime-ports owns portable dialog policy contracts',
+    patterns: [
       {
         regex:
           /use northhing_runtime_ports::\{(?=[\s\S]*DialogSessionStateFact)(?=[\s\S]*DialogSubmitQueueAction)(?=[\s\S]*DialogSubmitQueueFacts)(?=[\s\S]*resolve_dialog_submit_queue_action)[\s\S]*\};/,
         message: 'missing dialog scheduler decision contract import',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_lifecycle.rs',
+    reason:
+      'core scheduler must preserve legacy submission policy import path while runtime-ports owns portable dialog policy contracts',
+    patterns: [
       {
         regex:
           /use northhing_agent_runtime::scheduler::\{(?=[\s\S]*ActiveDialogTurn)(?=[\s\S]*ActiveDialogTurnStore)(?=[\s\S]*AgentSessionReplyAction)(?=[\s\S]*AgentSessionReplyPlan)(?=[\s\S]*BackgroundDeliveryAction)(?=[\s\S]*BackgroundDeliveryFacts)(?=[\s\S]*BackgroundInjectionKind)(?=[\s\S]*DialogReplySuppressionSet)(?=[\s\S]*DialogSteeringAction)(?=[\s\S]*DialogTurnQueue)(?=[\s\S]*SessionAbortFlags)(?=[\s\S]*resolve_agent_session_reply_action)(?=[\s\S]*resolve_background_delivery_action)(?=[\s\S]*resolve_background_delivery_injection)(?=[\s\S]*resolve_dialog_steering_action)[\s\S]*\};/,
         message: 'missing agent-runtime scheduler owner imports',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_background.rs',
+    reason:
+      'core scheduler must preserve legacy submission policy import path while runtime-ports owns portable dialog policy contracts',
+    patterns: [
       {
         regex: /\bBackgroundResult\b/,
         message: 'missing background-result injection owner delegation',
@@ -3895,7 +4000,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool/tool.rs',
     reason:
       'SessionMessage must create, resolve, validate, and submit target agent sessions through the service/agent runtime lifecycle owner',
     patterns: [
@@ -3903,6 +4008,13 @@ export const requiredContentRules = [
         regex: /\bCoreServiceAgentRuntime::agent_runtime_with_dialog_turns\b/,
         message: 'missing service/agent runtime lifecycle owner routing',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool/sm_send.rs',
+    reason:
+      'SessionMessage must create, resolve, validate, and submit target agent sessions through the service/agent runtime lifecycle owner',
+    patterns: [
       {
         regex: /\bAgentSessionCreateRequest\b/,
         message: 'missing port-backed agent session creation request',
@@ -3932,17 +4044,24 @@ export const requiredContentRules = [
         message: 'missing port-backed dialog turn request',
       },
       {
-        regex: /\bAgentDialogPrependedReminder\b/,
-        message: 'missing portable prepended reminder request',
-      },
-      {
         regex: /\bsubmit_dialog_turn\b/,
         message: 'missing dialog lifecycle submission',
       },
     ],
   },
   {
-    path: 'src/crates/services/services-integrations/src/remote_connect.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool/sm_resolve.rs',
+    reason:
+      'SessionMessage must create, resolve, validate, and submit target agent sessions through the service/agent runtime lifecycle owner',
+    patterns: [
+      {
+        regex: /\bAgentDialogPrependedReminder\b/,
+        message: 'missing portable prepended reminder request',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/mod.rs',
     reason:
       'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
     patterns: [
@@ -3975,7 +4094,8 @@ export const requiredContentRules = [
         message: 'missing remote-connect encryption compatibility export',
       },
       {
-        regex: /pub use pairing::\{[\s\S]*\bPairingChallenge\b[\s\S]*\bPairingProtocol\b[\s\S]*\bPairingResponse\b[\s\S]*\bPairingState\b[\s\S]*\bQrPayload\b[\s\S]*\}/,
+        regex:
+          /pub use pairing::\{[\s\S]*\bPairingChallenge\b[\s\S]*\bPairingProtocol\b[\s\S]*\bPairingResponse\b[\s\S]*\bPairingState\b[\s\S]*\bQrPayload\b[\s\S]*\}/,
         message: 'missing remote-connect pairing compatibility export',
       },
       {
@@ -3983,9 +4103,33 @@ export const requiredContentRules = [
         message: 'missing remote-connect QR compatibility export',
       },
       {
-        regex: /pub use relay_client::\{[\s\S]*\bConnectionState\b[\s\S]*\bRelayClient\b[\s\S]*\bRelayEvent\b[\s\S]*\bRelayMessage\b[\s\S]*\}/,
+        regex:
+          /pub use relay_client::\{[\s\S]*\bConnectionState\b[\s\S]*\bRelayClient\b[\s\S]*\bRelayEvent\b[\s\S]*\bRelayMessage\b[\s\S]*\}/,
         message: 'missing remote-connect relay compatibility export',
       },
+      {
+        regex: /\bpub trait RemoteCommandRuntimeHost\b/,
+        message: 'missing remote command runtime host contract',
+      },
+      {
+        regex: /\bpub async fn handle_remote_command\b/,
+        message: 'missing remote command routing owner',
+      },
+      {
+        regex: /\bpub enum RemoteCommand\b/,
+        message: 'missing remote command wire contract',
+      },
+      {
+        regex: /\bpub enum RemoteResponse\b/,
+        message: 'missing remote response wire contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_session_state.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
       {
         regex: /\bpub struct RemoteSessionStateTracker\b/,
         message: 'missing remote session state tracker owner',
@@ -4003,16 +4147,19 @@ export const requiredContentRules = [
         message: 'missing remote tracker registry owner',
       },
       {
-        regex: /\bpub fn make_slim_tool_params\b/,
-        message: 'missing remote tool preview slimming helper',
-      },
-      {
         regex: /\bfn handle_agentic_event\b/,
         message: 'missing tracker event reducer',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_request_builders.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
       {
-        regex: /\bpub fn resolve_remote_agent_type\b/,
-        message: 'missing remote agent type helper',
+        regex: /\bpub fn make_slim_tool_params\b/,
+        message: 'missing remote tool preview slimming helper',
       },
       {
         regex: /\bpub struct RemoteImageContext\b/,
@@ -4035,34 +4182,6 @@ export const requiredContentRules = [
         message: 'missing remote restore-target helper',
       },
       {
-        regex: /\bpub enum RemoteCancelDecision\b/,
-        message: 'missing remote cancel decision contract',
-      },
-      {
-        regex: /\bpub fn resolve_remote_cancel_decision\b/,
-        message: 'missing remote cancel decision resolver',
-      },
-      {
-        regex: /\bpub struct RemoteCancelTaskRequest\b/,
-        message: 'missing remote cancel task request contract',
-      },
-      {
-        regex: /\bpub trait RemoteCancelRuntimeHost\b/,
-        message: 'missing remote cancel runtime host port',
-      },
-      {
-        regex: /\bpub async fn cancel_remote_task\b/,
-        message: 'missing remote cancel orchestration owner',
-      },
-      {
-        regex: /\bpub trait RemoteDialogRuntimeHost\b/,
-        message: 'missing remote dialog runtime host port',
-      },
-      {
-        regex: /\bpub async fn submit_remote_dialog\b/,
-        message: 'missing remote dialog orchestration owner',
-      },
-      {
         regex: /\bpub struct RemoteChatHistoryTurn\b/,
         message: 'missing remote chat history turn DTO',
       },
@@ -4077,162 +4196,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub fn build_remote_chat_messages\b/,
         message: 'missing remote chat history assembly owner',
-      },
-      {
-        regex: /\bpub const REMOTE_FILE_MAX_READ_BYTES\b/,
-        message: 'missing remote file max-read policy',
-      },
-      {
-        regex: /\bpub const REMOTE_FILE_MAX_CHUNK_BYTES\b/,
-        message: 'missing remote file chunk policy',
-      },
-      {
-        regex: /\bpub fn resolve_remote_file_chunk_range\b/,
-        message: 'missing remote file chunk range helper',
-      },
-      {
-        regex: /\bpub fn remote_file_display_name\b/,
-        message: 'missing remote file display-name fallback',
-      },
-      {
-        regex: /\bpub fn resolve_remote_workspace_path\b/,
-        message: 'missing remote workspace path resolver',
-      },
-      {
-        regex: /\bpub fn detect_remote_mime_type\b/,
-        message: 'missing remote MIME detector',
-      },
-      {
-        regex: /\bpub async fn read_remote_workspace_file\b/,
-        message: 'missing remote workspace full-file reader',
-      },
-      {
-        regex: /\bpub async fn read_remote_workspace_file_chunk\b/,
-        message: 'missing remote workspace chunk reader',
-      },
-      {
-        regex: /\bpub async fn read_remote_workspace_file_info\b/,
-        message: 'missing remote workspace file-info reader',
-      },
-      {
-        regex: /\bRemoteWorkspaceFileRuntimeHost\b/,
-        message: 'missing remote workspace file runtime host contract',
-      },
-      {
-        regex: /\bRemoteWorkspaceRuntimeHost\b/,
-        message: 'missing remote workspace runtime host contract',
-      },
-      {
-        regex: /\bRemoteInitialSyncRuntimeHost\b/,
-        message: 'missing remote initial-sync runtime host contract',
-      },
-      {
-        regex: /\bRemoteSessionRuntimeHost\b/,
-        message: 'missing remote session runtime host contract',
-      },
-      {
-        regex: /\bRemotePollRuntimeHost\b/,
-        message: 'missing remote poll runtime host contract',
-      },
-      {
-        regex: /\bRemoteInteractionRuntimeHost\b/,
-        message: 'missing remote interaction runtime host contract',
-      },
-      {
-        regex: /\bpub async fn handle_remote_workspace_file_command\b/,
-        message: 'missing remote workspace file command owner handler',
-      },
-      {
-        regex: /\bpub async fn handle_remote_workspace_command\b/,
-        message: 'missing remote workspace command owner handler',
-      },
-      {
-        regex: /\bpub async fn generate_remote_initial_sync\b/,
-        message: 'missing remote initial-sync owner handler',
-      },
-      {
-        regex: /\bpub async fn handle_remote_session_command\b/,
-        message: 'missing remote session command owner handler',
-      },
-      {
-        regex: /\bpub async fn handle_remote_poll_command\b/,
-        message: 'missing remote poll command owner handler',
-      },
-      {
-        regex: /\bpub async fn handle_remote_interaction_command\b/,
-        message: 'missing remote interaction command owner handler',
-      },
-      {
-        regex: /\bpub trait RemoteCommandRuntimeHost\b/,
-        message: 'missing remote command runtime host contract',
-      },
-      {
-        regex: /\bpub async fn handle_remote_command\b/,
-        message: 'missing remote command routing owner',
-      },
-      {
-        regex: /\bpub fn remote_file_content_response\b/,
-        message: 'missing remote file content response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_file_chunk_response\b/,
-        message: 'missing remote file chunk response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_file_info_response\b/,
-        message: 'missing remote file-info response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_dialog_submit_response\b/,
-        message: 'missing remote dialog response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_task_cancel_response\b/,
-        message: 'missing remote task cancel response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_interaction_accepted_response\b/,
-        message: 'missing remote interaction response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_answer_question_response\b/,
-        message: 'missing remote answer response assembly helper',
-      },
-      {
-        regex: /\bRemoteWorkspaceFacts\b/,
-        message: 'missing remote workspace response facts DTO',
-      },
-      {
-        regex: /\bRemoteSessionMetadata\b/,
-        message: 'missing remote session response metadata DTO',
-      },
-      {
-        regex: /\bpub fn remote_workspace_info_response\b/,
-        message: 'missing remote workspace-info response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_recent_workspaces_response\b/,
-        message: 'missing remote recent-workspaces response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_assistant_list_response\b/,
-        message: 'missing remote assistant-list response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_session_info\b/,
-        message: 'missing remote session response facts helper',
-      },
-      {
-        regex: /\bpub fn remote_session_list_response\b/,
-        message: 'missing remote session-list response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_initial_sync_response\b/,
-        message: 'missing remote initial-sync response assembly helper',
-      },
-      {
-        regex: /\bpub fn remote_messages_response\b/,
-        message: 'missing remote messages response assembly helper',
       },
       {
         regex: /\bpub struct RemoteDefaultModelsConfig\b/,
@@ -4282,9 +4245,86 @@ export const requiredContentRules = [
         regex: /\bpub fn remote_model_selection_needs_config\b/,
         message: 'missing remote model selection config-gate policy',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_workspace_resolver.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
       {
-        regex: /\bpub enum RemoteCommand\b/,
-        message: 'missing remote command wire contract',
+        regex: /\bpub fn resolve_remote_agent_type\b/,
+        message: 'missing remote agent type helper',
+      },
+      {
+        regex: /\bpub const REMOTE_FILE_MAX_READ_BYTES\b/,
+        message: 'missing remote file max-read policy',
+      },
+      {
+        regex: /\bpub const REMOTE_FILE_MAX_CHUNK_BYTES\b/,
+        message: 'missing remote file chunk policy',
+      },
+      {
+        regex: /\bpub fn resolve_remote_file_chunk_range\b/,
+        message: 'missing remote file chunk range helper',
+      },
+      {
+        regex: /\bpub fn resolve_remote_workspace_path\b/,
+        message: 'missing remote workspace path resolver',
+      },
+      {
+        regex: /\bpub fn detect_remote_mime_type\b/,
+        message: 'missing remote MIME detector',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_cancel_handlers.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
+      {
+        regex: /\bpub enum RemoteCancelDecision\b/,
+        message: 'missing remote cancel decision contract',
+      },
+      {
+        regex: /\bpub fn resolve_remote_cancel_decision\b/,
+        message: 'missing remote cancel decision resolver',
+      },
+      {
+        regex: /\bpub struct RemoteCancelTaskRequest\b/,
+        message: 'missing remote cancel task request contract',
+      },
+      {
+        regex: /\bpub trait RemoteCancelRuntimeHost\b/,
+        message: 'missing remote cancel runtime host port',
+      },
+      {
+        regex: /\bpub async fn cancel_remote_task\b/,
+        message: 'missing remote cancel orchestration owner',
+      },
+      {
+        regex: /\bpub fn remote_task_cancel_response\b/,
+        message: 'missing remote task cancel response assembly helper',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_dialog_handlers.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
+      {
+        regex: /\bpub trait RemoteDialogRuntimeHost\b/,
+        message: 'missing remote dialog runtime host port',
+      },
+      {
+        regex: /\bpub async fn submit_remote_dialog\b/,
+        message: 'missing remote dialog orchestration owner',
+      },
+      {
+        regex: /\bpub fn remote_dialog_submit_response\b/,
+        message: 'missing remote dialog response assembly helper',
       },
       {
         regex: /\bpub enum RemoteDialogSchedulerOutcomeFact\b/,
@@ -4294,29 +4334,107 @@ export const requiredContentRules = [
         regex: /\bpub fn remote_dialog_submit_outcome_from_scheduler\b/,
         message: 'missing remote dialog submit outcome assembly owner',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_file_io.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
       {
-        regex: /\bpub enum RemoteResponse\b/,
-        message: 'missing remote response wire contract',
+        regex: /\bpub fn remote_file_display_name\b/,
+        message: 'missing remote file display-name fallback',
       },
       {
-        regex: /\bpub fn should_send_remote_model_catalog\b/,
-        message: 'missing remote model catalog poll policy',
+        regex: /\bpub async fn read_remote_workspace_file\b/,
+        message: 'missing remote workspace full-file reader',
       },
       {
-        regex: /\bpub fn remote_model_catalog_poll_delta\b/,
-        message: 'missing remote model catalog poll delta helper',
+        regex: /\bpub async fn read_remote_workspace_file_chunk\b/,
+        message: 'missing remote workspace chunk reader',
       },
       {
-        regex: /\bpub fn remote_no_change_poll_response\b/,
-        message: 'missing remote no-change poll response helper',
+        regex: /\bpub async fn read_remote_workspace_file_info\b/,
+        message: 'missing remote workspace file-info reader',
       },
       {
-        regex: /\bpub fn remote_snapshot_poll_response\b/,
-        message: 'missing remote snapshot poll response helper',
+        regex: /\bpub fn remote_file_content_response\b/,
+        message: 'missing remote file content response assembly helper',
       },
       {
-        regex: /\bpub fn remote_persisted_poll_response\b/,
-        message: 'missing remote persisted poll response helper',
+        regex: /\bpub fn remote_file_chunk_response\b/,
+        message: 'missing remote file chunk response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_file_info_response\b/,
+        message: 'missing remote file-info response assembly helper',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_session_handlers.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
+      {
+        regex: /\bRemoteWorkspaceFileRuntimeHost\b/,
+        message: 'missing remote workspace file runtime host contract',
+      },
+      {
+        regex: /\bRemoteWorkspaceRuntimeHost\b/,
+        message: 'missing remote workspace runtime host contract',
+      },
+      {
+        regex: /\bRemoteSessionRuntimeHost\b/,
+        message: 'missing remote session runtime host contract',
+      },
+      {
+        regex: /\bRemotePollRuntimeHost\b/,
+        message: 'missing remote poll runtime host contract',
+      },
+      {
+        regex: /\bRemoteInteractionRuntimeHost\b/,
+        message: 'missing remote interaction runtime host contract',
+      },
+      {
+        regex: /\bpub async fn handle_remote_workspace_file_command\b/,
+        message: 'missing remote workspace file command owner handler',
+      },
+      {
+        regex: /\bpub async fn handle_remote_workspace_command\b/,
+        message: 'missing remote workspace command owner handler',
+      },
+      {
+        regex: /\bpub async fn handle_remote_interaction_command\b/,
+        message: 'missing remote interaction command owner handler',
+      },
+      {
+        regex: /\bpub fn remote_interaction_accepted_response\b/,
+        message: 'missing remote interaction response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_answer_question_response\b/,
+        message: 'missing remote answer response assembly helper',
+      },
+      {
+        regex: /\bRemoteWorkspaceFacts\b/,
+        message: 'missing remote workspace response facts DTO',
+      },
+      {
+        regex: /\bRemoteSessionMetadata\b/,
+        message: 'missing remote session response metadata DTO',
+      },
+      {
+        regex: /\bpub fn remote_workspace_info_response\b/,
+        message: 'missing remote workspace-info response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_recent_workspaces_response\b/,
+        message: 'missing remote recent-workspaces response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_assistant_list_response\b/,
+        message: 'missing remote assistant-list response assembly helper',
       },
       {
         regex: /\bremote_workspace_handler_preserves_response_shapes\b/,
@@ -4341,7 +4459,66 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/services/services-integrations/tests/remote_connect_contracts.rs',
+    path: 'src/crates/services/services-integrations/src/remote_connect/remote_session_response_builders.rs',
+    reason:
+      'services-integrations must own remote-connect wire/response assembly and preserve remote owner compatibility re-exports',
+    patterns: [
+      {
+        regex: /\bRemoteInitialSyncRuntimeHost\b/,
+        message: 'missing remote initial-sync runtime host contract',
+      },
+      {
+        regex: /\bpub async fn generate_remote_initial_sync\b/,
+        message: 'missing remote initial-sync owner handler',
+      },
+      {
+        regex: /\bpub async fn handle_remote_session_command\b/,
+        message: 'missing remote session command owner handler',
+      },
+      {
+        regex: /\bpub async fn handle_remote_poll_command\b/,
+        message: 'missing remote poll command owner handler',
+      },
+      {
+        regex: /\bpub fn remote_session_info\b/,
+        message: 'missing remote session response facts helper',
+      },
+      {
+        regex: /\bpub fn remote_session_list_response\b/,
+        message: 'missing remote session-list response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_initial_sync_response\b/,
+        message: 'missing remote initial-sync response assembly helper',
+      },
+      {
+        regex: /\bpub fn remote_messages_response\b/,
+        message: 'missing remote messages response assembly helper',
+      },
+      {
+        regex: /\bpub fn should_send_remote_model_catalog\b/,
+        message: 'missing remote model catalog poll policy',
+      },
+      {
+        regex: /\bpub fn remote_model_catalog_poll_delta\b/,
+        message: 'missing remote model catalog poll delta helper',
+      },
+      {
+        regex: /\bpub fn remote_no_change_poll_response\b/,
+        message: 'missing remote no-change poll response helper',
+      },
+      {
+        regex: /\bpub fn remote_snapshot_poll_response\b/,
+        message: 'missing remote snapshot poll response helper',
+      },
+      {
+        regex: /\bpub fn remote_persisted_poll_response\b/,
+        message: 'missing remote persisted poll response helper',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/pairing_qr_relay.rs',
     reason: 'remote-connect owner crate must keep focused behavior contracts',
     patterns: [
       {
@@ -4352,6 +4529,12 @@ export const requiredContentRules = [
         regex: /\bremote_connect_qr_and_relay_primitives_live_in_services_owner\b/,
         message: 'missing remote-connect QR/relay owner contract test',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/session_wire_and_responses.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
       {
         regex: /\bremote_connect_command_wire_shape_lives_in_owner_contract\b/,
         message: 'missing remote command wire contract test',
@@ -4360,6 +4543,24 @@ export const requiredContentRules = [
         regex: /\bremote_connect_response_wire_shape_lives_in_owner_contract\b/,
         message: 'missing remote response wire contract test',
       },
+      {
+        regex: /\bremote_connect_execution_response_helpers_preserve_wire_shape\b/,
+        message: 'missing remote execution response helper contract test',
+      },
+      {
+        regex: /\bremote_connect_workspace_response_helpers_own_wire_shape\b/,
+        message: 'missing remote workspace response assembly regression',
+      },
+      {
+        regex: /\bremote_connect_session_response_helpers_own_pagination_and_timestamps\b/,
+        message: 'missing remote session response assembly regression',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/model_catalog_tracker_poll.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
       {
         regex: /\bremote_connect_model_catalog_delta_preserves_poll_invalidation_policy\b/,
         message: 'missing remote model catalog delta contract test',
@@ -4377,6 +4578,28 @@ export const requiredContentRules = [
         message: 'missing remote poll helper contract test',
       },
       {
+        regex: /\bremote_connect_tracker_keeps_finished_turn_snapshot_until_persistence_finalizes\b/,
+        message: 'missing tracker completion contract test',
+      },
+      {
+        regex: /\bremote_connect_tracker_registry_owns_lifecycle_without_core_state\b/,
+        message: 'missing tracker registry owner test',
+      },
+      {
+        regex: /\bremote_connect_tracker_ignores_unrelated_direct_session_events\b/,
+        message: 'missing tracker unrelated-event guard test',
+      },
+      {
+        regex: /\bremote_connect_tool_preview_slimming_keeps_short_fields_and_drops_large_strings\b/,
+        message: 'missing remote tool preview slimming test',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/submission_images.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
+      {
         regex: /\bremote_connect_image_context_policy_preserves_legacy_fallback_shape\b/,
         message: 'missing legacy image context fallback test',
       },
@@ -4388,6 +4611,20 @@ export const requiredContentRules = [
         regex: /\bremote_connect_image_context_adapter_owns_portable_conversion_shape\b/,
         message: 'missing image context adapter contract test',
       },
+      {
+        regex: /\bremote_chat_history_assembly_preserves_message_shape_and_item_order\b/,
+        message: 'missing remote chat history assembly shape/order test',
+      },
+      {
+        regex: /\bremote_chat_history_assembly_skips_in_progress_assistant_history\b/,
+        message: 'missing remote chat history in-progress guard test',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/dialog_cancel_contracts.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
       {
         regex: /\bremote_connect_cancel_and_restore_policy_preserve_runtime_decisions\b/,
         message: 'missing cancel/restore policy test',
@@ -4409,13 +4646,23 @@ export const requiredContentRules = [
         message: 'missing restore failure tolerance test',
       },
       {
-        regex: /\bremote_chat_history_assembly_preserves_message_shape_and_item_order\b/,
-        message: 'missing remote chat history assembly shape/order test',
+        regex: /\bremote_connect_cancel_runtime_restores_missing_session_before_cancel\b/,
+        message: 'missing remote cancel restore/order regression',
       },
       {
-        regex: /\bremote_chat_history_assembly_skips_in_progress_assistant_history\b/,
-        message: 'missing remote chat history in-progress guard test',
+        regex: /\bremote_connect_cancel_runtime_preserves_stale_and_idle_errors_without_restore\b/,
+        message: 'missing remote cancel stale/idle regression',
       },
+      {
+        regex: /\bremote_connect_cancel_runtime_preserves_restore_failure_error\b/,
+        message: 'missing remote cancel restore failure regression',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/file_transfer.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
       {
         regex: /\bremote_connect_file_transfer_policy_preserves_limits_and_chunk_ranges\b/,
         message: 'missing remote file transfer policy test',
@@ -4444,10 +4691,12 @@ export const requiredContentRules = [
         regex: /\bremote_connect_file_command_handler_owns_owner_flow_and_uses_host_root\b/,
         message: 'missing remote file command handler owner-flow test',
       },
-      {
-        regex: /\bremote_connect_execution_response_helpers_preserve_wire_shape\b/,
-        message: 'missing remote execution response helper contract test',
-      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/tests/command_runtime.rs',
+    reason: 'remote-connect owner crate must keep focused behavior contracts',
+    patterns: [
       {
         regex: /\bremote_connect_command_owner_routes_send_message_and_prefers_explicit_images\b/,
         message: 'missing remote command routing image/source regression',
@@ -4455,42 +4704,6 @@ export const requiredContentRules = [
       {
         regex: /\bremote_connect_command_owner_preserves_cancel_and_group_routing\b/,
         message: 'missing remote command routing group/cancel regression',
-      },
-      {
-        regex: /\bremote_connect_tracker_keeps_finished_turn_snapshot_until_persistence_finalizes\b/,
-        message: 'missing tracker completion contract test',
-      },
-      {
-        regex: /\bremote_connect_tracker_registry_owns_lifecycle_without_core_state\b/,
-        message: 'missing tracker registry owner test',
-      },
-      {
-        regex: /\bremote_connect_tracker_ignores_unrelated_direct_session_events\b/,
-        message: 'missing tracker unrelated-event guard test',
-      },
-      {
-        regex: /\bremote_connect_tool_preview_slimming_keeps_short_fields_and_drops_large_strings\b/,
-        message: 'missing remote tool preview slimming test',
-      },
-      {
-        regex: /\bremote_connect_cancel_runtime_restores_missing_session_before_cancel\b/,
-        message: 'missing remote cancel restore/order regression',
-      },
-      {
-        regex: /\bremote_connect_cancel_runtime_preserves_stale_and_idle_errors_without_restore\b/,
-        message: 'missing remote cancel stale/idle regression',
-      },
-      {
-        regex: /\bremote_connect_cancel_runtime_preserves_restore_failure_error\b/,
-        message: 'missing remote cancel restore failure regression',
-      },
-      {
-        regex: /\bremote_connect_workspace_response_helpers_own_wire_shape\b/,
-        message: 'missing remote workspace response assembly regression',
-      },
-      {
-        regex: /\bremote_connect_session_response_helpers_own_pagination_and_timestamps\b/,
-        message: 'missing remote session response assembly regression',
       },
     ],
   },
@@ -4628,41 +4841,13 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_submit.rs',
     reason:
       'core scheduler keeps remote queue policy semantics until agent-runtime migration is reviewed',
     patterns: [
       {
-        regex: /\bremote_queue_policy_preserves_confirmation_boundary\b/,
-        message: 'missing remote queue policy regression',
-      },
-      {
         regex: /\bimpl AgentDialogTurnPort for DialogScheduler\b/,
         message: 'missing dialog lifecycle port implementation',
-      },
-      {
-        regex: /\bimpl AgentLifecycleDeliveryPort for DialogScheduler\b/,
-        message: 'missing lifecycle delivery port implementation',
-      },
-      {
-        regex: /\bimpl AgentTurnCancellationPort for DialogScheduler\b/,
-        message: 'missing requester-aware cancellation port implementation',
-      },
-      {
-        regex: /\bAgentBackgroundResultRequest\b/,
-        message: 'missing background result lifecycle request adapter',
-      },
-      {
-        regex: /\bAgentThreadGoalDeliveryRequest\b/,
-        message: 'missing thread-goal lifecycle request adapter',
-      },
-      {
-        regex: /\bAgentThreadGoalDeliveryKind::ObjectiveUpdated\b/,
-        message: 'missing thread-goal objective-updated lifecycle adapter',
-      },
-      {
-        regex: /\bcancel_active_turn_for_session_from_requester\b/,
-        message: 'missing requester-aware cancellation adapter',
       },
       {
         regex: /\bagent_dialog_turn_image_contexts\b/,
@@ -4671,6 +4856,10 @@ export const requiredContentRules = [
       {
         regex: /\bagent_dialog_turn_prepended_messages\b/,
         message: 'missing dialog lifecycle prepended reminder adapter',
+      },
+      {
+        regex: /\bremote_queue_policy_preserves_confirmation_boundary\b/,
+        message: 'missing remote queue policy regression',
       },
       {
         regex: /\bagent_dialog_turn_attachments_preserve_remote_image_context\b/,
@@ -4691,7 +4880,52 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/registry.rs',
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_thread_goal.rs',
+    reason:
+      'core scheduler keeps remote queue policy semantics until agent-runtime migration is reviewed',
+    patterns: [
+      {
+        regex: /\bimpl AgentLifecycleDeliveryPort for DialogScheduler\b/,
+        message: 'missing lifecycle delivery port implementation',
+      },
+      {
+        regex: /\bAgentBackgroundResultRequest\b/,
+        message: 'missing background result lifecycle request adapter',
+      },
+      {
+        regex: /\bAgentThreadGoalDeliveryRequest\b/,
+        message: 'missing thread-goal lifecycle request adapter',
+      },
+      {
+        regex: /\bAgentThreadGoalDeliveryKind::ObjectiveUpdated\b/,
+        message: 'missing thread-goal objective-updated lifecycle adapter',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_background.rs',
+    reason:
+      'core scheduler keeps remote queue policy semantics until agent-runtime migration is reviewed',
+    patterns: [
+      {
+        regex: /\bimpl AgentTurnCancellationPort for DialogScheduler\b/,
+        message: 'missing requester-aware cancellation port implementation',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_cancel.rs',
+    reason:
+      'core scheduler keeps remote queue policy semantics until agent-runtime migration is reviewed',
+    patterns: [
+      {
+        regex: /\bcancel_active_turn_for_session_from_requester\b/,
+        message: 'missing requester-aware cancellation adapter',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/registry/registry_global.rs',
     reason:
       'core registry must stay a compatibility container that delegates product tool runtime assembly through the core owner module',
     patterns: [
@@ -4708,20 +4942,34 @@ export const requiredContentRules = [
         message: 'missing product tool runtime owner delegation',
       },
       {
-        regex: /\bget_collapsed_tool_names\b/,
-        message: 'missing collapsed-tool catalog owner',
-      },
-      {
         regex: /\bresolve_product_readonly_enabled_tools\b/,
         message: 'missing product tool catalog readonly facade delegation',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/registry/tests.rs',
+    reason:
+      'core registry must stay a compatibility container that delegates product tool runtime assembly through the core owner module',
+    patterns: [
       {
         regex: /\bproduct_tool_runtime_owner_preserves_registry_contract\b/,
         message: 'missing collapsed-tool manifest migration baseline',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/registry/registry_lookup.rs',
+    reason:
+      'core registry must stay a compatibility container that delegates product tool runtime assembly through the core owner module',
+    patterns: [
       {
         regex: /\binner\.is_tool_collapsed\b/,
         message: 'missing collapsed exposure lookup delegation',
+      },
+      {
+        regex: /\bget_collapsed_tool_names\b/,
+        message: 'missing collapsed-tool catalog owner',
       },
     ],
   },
@@ -4929,7 +5177,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/tool-contracts/src/framework.rs',
+    path: 'src/crates/execution/tool-contracts/src/framework/types.rs',
     reason: 'agent-tools owns portable tool facts plus generic registry and provider contracts',
     patterns: [
       {
@@ -4944,6 +5192,12 @@ export const requiredContentRules = [
         regex: /\bpub enum ToolWorkspaceKind\b/,
         message: 'missing portable workspace kind contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/registry.rs',
+    reason: 'agent-tools owns portable tool facts plus generic registry and provider contracts',
+    patterns: [
       {
         regex: /\bpub trait StaticToolProvider\b/,
         message: 'missing static tool provider contract',
@@ -4976,6 +5230,12 @@ export const requiredContentRules = [
         regex: /\bpub fn install_static_provider\b/,
         message: 'missing static provider registry installer',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/manifest.rs',
+    reason: 'agent-tools owns portable tool facts plus generic registry and provider contracts',
+    patterns: [
       {
         regex: /\bpub fn build_get_tool_spec_duplicate_load_result\b/,
         message: 'missing provider-neutral GetToolSpec duplicate-load result helper',
@@ -4988,6 +5248,12 @@ export const requiredContentRules = [
         regex: /\bpub fn resolve_get_tool_spec_execution_plan\b/,
         message: 'missing provider-neutral GetToolSpec execution plan helper',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/tool-contracts/src/framework/catalog.rs',
+    reason: 'agent-tools owns portable tool facts plus generic registry and provider contracts',
+    patterns: [
       {
         regex: /\bpub async fn resolve_get_tool_spec_execution_result_from_provider\b/,
         message: 'missing provider-backed GetToolSpec execution result helper',
@@ -5115,7 +5381,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime/context_init.rs',
     reason:
       'core must keep ToolUseContext runtime/service bindings centralized while ToolUseContext and concrete tools remain core-owned',
     patterns: [
@@ -5124,6 +5390,29 @@ export const requiredContentRules = [
         message: 'missing ToolUseContext owner type',
       },
       {
+        regex: /\bunlocked_collapsed_tools\b/,
+        message: 'missing collapsed-tool unlock state',
+      },
+      {
+        regex: /\bimpl ToolUseContext\b/,
+        message: 'missing ToolUseContext runtime binding owner impl',
+      },
+      {
+        regex: /\bbuild_tool_use_context_for_task\b/,
+        message: 'missing tool pipeline context materialization binding',
+      },
+      {
+        regex: /\bbuild_tool_description_context\b/,
+        message: 'missing tool manifest description context materialization binding',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime/context_format.rs',
+    reason:
+      'core must keep ToolUseContext runtime/service bindings centralized while ToolUseContext and concrete tools remain core-owned',
+    patterns: [
+      {
         regex: /\bto_tool_context_facts\b/,
         message: 'missing portable ToolUseContext facts projection',
       },
@@ -5131,6 +5420,13 @@ export const requiredContentRules = [
         regex: /\bimpl PortableToolContextProvider for ToolUseContext\b/,
         message: 'missing portable ToolUseContext facts provider impl',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime/mod.rs',
+    reason:
+      'core must keep ToolUseContext runtime/service bindings centralized while ToolUseContext and concrete tools remain core-owned',
+    patterns: [
       {
         regex: /\btool_context_facts_omit_runtime_owner_fields_even_when_context_is_populated\b/,
         message: 'missing portable facts runtime-owner leak guard',
@@ -5144,13 +5440,40 @@ export const requiredContentRules = [
         message: 'missing cancellation token runtime-only facts guard',
       },
       {
-        regex: /\bunlocked_collapsed_tools\b/,
-        message: 'missing collapsed-tool unlock state',
+        regex: /\bcall_records_deep_review_read_file_measurement_without_touching_result\b/,
+        message: 'missing Deep Review post-call hook regression in runtime owner',
       },
       {
-        regex: /\bimpl ToolUseContext\b/,
-        message: 'missing ToolUseContext runtime binding owner impl',
+        regex: /\bworkspace_path_resolution_rejects_absolute_paths_outside_remote_workspace\b/,
+        message: 'missing remote workspace containment regression',
       },
+      {
+        regex: /\bruntime_uri_resolution_rejects_different_workspace_scope\b/,
+        message: 'missing runtime artifact scope regression',
+      },
+      {
+        regex: /\bpath_policy_allows_only_configured_local_roots\b/,
+        message: 'missing path policy enforcement regression',
+      },
+      {
+        regex: /\btool_call_runtime_hook_returns_cancelled_before_impl_completes\b/,
+        message: 'missing tool-call cancellation regression',
+      },
+      {
+        regex: /\btool_task_context_materialization_preserves_runtime_fields\b/,
+        message: 'missing tool task context materialization regression',
+      },
+      {
+        regex: /\btool_description_context_preserves_manifest_custom_data_shape\b/,
+        message: 'missing tool description context regression',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime/context_persist.rs',
+    reason:
+      'core must keep ToolUseContext runtime/service bindings centralized while ToolUseContext and concrete tools remain core-owned',
+    patterns: [
       {
         regex: /\brecord_light_checkpoint\b/,
         message: 'missing Deep Review checkpoint binding',
@@ -5163,6 +5486,13 @@ export const requiredContentRules = [
         regex: /\bLightCheckpointWorkspaceFacts::LocalWorkspace\b/,
         message: 'missing local checkpoint facts delegation',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/tool_context_runtime/context_runtime.rs',
+    reason:
+      'core must keep ToolUseContext runtime/service bindings centralized while ToolUseContext and concrete tools remain core-owned',
+    patterns: [
       {
         regex: /\bcall_with_tool_runtime_hooks\b/,
         message: 'missing tool-call cancellation/post-call hook binding',
@@ -5170,18 +5500,6 @@ export const requiredContentRules = [
       {
         regex: /\bcall_tool_with_runtime_hooks\b/,
         message: 'missing unified Tool::call runtime hook facade',
-      },
-      {
-        regex: /\bcall_records_deep_review_read_file_measurement_without_touching_result\b/,
-        message: 'missing Deep Review post-call hook regression in runtime owner',
-      },
-      {
-        regex: /\bbuild_tool_use_context_for_task\b/,
-        message: 'missing tool pipeline context materialization binding',
-      },
-      {
-        regex: /\bbuild_tool_description_context\b/,
-        message: 'missing tool manifest description context materialization binding',
       },
       {
         regex: /\bensure_current_workspace_runtime\b/,
@@ -5219,52 +5537,16 @@ export const requiredContentRules = [
         regex: /\bbuild_tool_session_runtime_artifact_reference\b/,
         message: 'missing session runtime artifact reference owner delegation',
       },
-      {
-        regex: /\bworkspace_path_resolution_rejects_absolute_paths_outside_remote_workspace\b/,
-        message: 'missing remote workspace containment regression',
-      },
-      {
-        regex: /\bruntime_uri_resolution_rejects_different_workspace_scope\b/,
-        message: 'missing runtime artifact scope regression',
-      },
-      {
-        regex: /\bpath_policy_allows_only_configured_local_roots\b/,
-        message: 'missing path policy enforcement regression',
-      },
-      {
-        regex: /\btool_call_runtime_hook_returns_cancelled_before_impl_completes\b/,
-        message: 'missing tool-call cancellation regression',
-      },
-      {
-        regex: /\btool_task_context_materialization_preserves_runtime_fields\b/,
-        message: 'missing tool task context materialization regression',
-      },
-      {
-        regex: /\btool_description_context_preserves_manifest_custom_data_shape\b/,
-        message: 'missing tool description context regression',
-      },
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/exec_retry.rs',
     reason:
       'core must continue carrying collapsed-tool unlock state while delegating provider-neutral execution gate policy to agent-tools',
     patterns: [
       {
         regex: /\bvalidate_tool_execution_admission\b/,
         message: 'missing provider-neutral tool execution admission gate delegation',
-      },
-      {
-        regex: /\bunlocked_collapsed_tools\b/,
-        message: 'missing collapsed-tool unlock state propagation',
-      },
-      {
-        regex: /\bpipeline_preserves_core_owned_tool_context_without_portable_runtime_leak\b/,
-        message: 'missing ToolUseContext runtime boundary regression',
-      },
-      {
-        regex: /\bGetToolSpec\b/,
-        message: 'missing GetToolSpec gating contract',
       },
       {
         regex: /\brender_tool_result_for_assistant\b/,
@@ -5285,6 +5567,32 @@ export const requiredContentRules = [
       {
         regex: /\bbuild_tool_call_truncation_recovery_notice\b/,
         message: 'missing truncation recovery notice owner delegation',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_pre.rs',
+    reason:
+      'core must continue carrying collapsed-tool unlock state while delegating provider-neutral execution gate policy to agent-tools',
+    patterns: [
+      {
+        regex: /\bunlocked_collapsed_tools\b/,
+        message: 'missing collapsed-tool unlock state propagation',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/mod.rs',
+    reason:
+      'core must continue carrying collapsed-tool unlock state while delegating provider-neutral execution gate policy to agent-tools',
+    patterns: [
+      {
+        regex: /\bpipeline_preserves_core_owned_tool_context_without_portable_runtime_leak\b/,
+        message: 'missing ToolUseContext runtime boundary regression',
+      },
+      {
+        regex: /\bGetToolSpec\b/,
+        message: 'missing GetToolSpec gating contract',
       },
     ],
   },
@@ -5457,7 +5765,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_deep_review_policy.rs',
     reason:
       'core Task tool must continue owning fork-aware background subagent launch semantics until a reviewed agent-runtime port preserves delivery behavior',
     patterns: [
@@ -5469,13 +5777,16 @@ export const requiredContentRules = [
         regex: /\bSubagentContextMode::Fork\b/,
         message: 'missing forked subagent context mode path',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_subagent.rs',
+    reason:
+      'core Task tool must continue owning fork-aware background subagent launch semantics until a reviewed agent-runtime port preserves delivery behavior',
+    patterns: [
       {
         regex: /delegation_policy\(\)\.spawn_child\(\)/,
         message: 'missing child delegation policy propagation',
-      },
-      {
-        regex: /"run_in_background"/,
-        message: 'missing Task run_in_background schema flag',
       },
       {
         regex: /\bstart_background_subagent\b/,
@@ -5500,7 +5811,18 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
+    path: 'src/crates/assembly/core/src/agentic/tools/implementations/task_tool/task_tool_input.rs',
+    reason:
+      'core Task tool must continue owning fork-aware background subagent launch semantics until a reviewed agent-runtime port preserves delivery behavior',
+    patterns: [
+      {
+        regex: /"run_in_background"/,
+        message: 'missing Task run_in_background schema flag',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_background.rs',
     reason:
       'core scheduler keeps concrete background delivery entry points while northhing-agent-runtime owns running-turn injection construction',
     patterns: [
@@ -5512,6 +5834,13 @@ export const requiredContentRules = [
         regex: /\bresolve_background_delivery_injection\b/,
         message: 'missing runtime-owned background injection construction',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_lifecycle.rs',
+    reason:
+      'core scheduler keeps concrete background delivery entry points while northhing-agent-runtime owns running-turn injection construction',
+    patterns: [
       {
         regex: /DialogTriggerSource::AgentSession/,
         message: 'missing idle-session agent-session follow-up turn source',
@@ -5519,7 +5848,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/apps/cli/src/ui/startup.rs',
+    path: 'src/apps/cli/src/ui/startup/selectors.rs',
     reason:
       'CLI mode-aware subagent management remains an app-layer product surface until agent registry migration has CLI equivalence coverage',
     patterns: [
@@ -5864,167 +6193,6 @@ export const requiredContentRules = [
       {
         regex: /\bformats_startup_timeout_error_message\b/,
         message: 'missing ACP startup timeout regression',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/flow_chat/tool-cards/FileOperationToolCard.tsx',
-    reason:
-      'web-ui file operation surface must continue owning snapshot-to-local diff fallback until product surface migration is reviewed',
-    patterns: [
-      {
-        regex: /\bopenLocalDiff\b/,
-        message: 'missing local tool diff fallback',
-      },
-      {
-        regex: /snapshotAPI\.getOperationDiff/,
-        message: 'missing snapshot operation diff path',
-      },
-      {
-        regex: /Snapshot diff unavailable/,
-        message: 'missing snapshot-unavailable fallback diagnostic',
-      },
-      {
-        regex: /\blocalDiffContent\b/,
-        message: 'missing local diff content fallback state',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/main.tsx',
-    reason:
-      'web startup scheduling and trace orchestration remain web product-surface behavior, not core contract runtime',
-    patterns: [
-      {
-        regex: /\bstartupTrace\b/,
-        message: 'missing web startup trace surface',
-      },
-      {
-        regex: /\bbackgroundTaskScheduler\b/,
-        message: 'missing deferred startup scheduler surface',
-      },
-      {
-        regex: /\binitializeAllTools\b/,
-        message: 'missing narrow tool-startup entry integration',
-      },
-      {
-        regex: /\bafter_render_start\b/,
-        message: 'missing post-render startup phase',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/shared/utils/startupTrace.ts',
-    reason:
-      'web startup trace classification and redaction remain web infrastructure behavior until a telemetry contract is reviewed',
-    patterns: [
-      {
-        regex: /\bfunction sanitizeTraceData\b/,
-        message: 'missing startup trace sanitization',
-      },
-      {
-        regex: /\bexport function isRemoteTraceRequest\b/,
-        message: 'missing remote request classifier',
-      },
-      {
-        regex: /\brecordApiCall\b/,
-        message: 'missing startup API-call trace recorder',
-      },
-      {
-        regex: /\bflushSummary\b/,
-        message: 'missing bounded startup summary flush',
-      },
-      {
-        regex: /\bmarkPhaseAfterAnimationFrames\b/,
-        message: 'missing frame-delayed startup marker',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/shared/utils/backgroundTaskScheduler.ts',
-    reason:
-      'web background startup scheduling remains web infrastructure behavior and must preserve dedupe/cancel semantics',
-    patterns: [
-      {
-        regex: /\bexport class BackgroundTaskScheduler\b/,
-        message: 'missing background task scheduler',
-      },
-      {
-        regex: /\binFlightKey\b/,
-        message: 'missing in-flight dedupe key',
-      },
-      {
-        regex: /\bAbortController\b/,
-        message: 'missing cancellation controller',
-      },
-      {
-        regex: /\bBackgroundTaskCancelledError\b/,
-        message: 'missing cancellation error contract',
-      },
-      {
-        regex: /\bcancelIdle\b/,
-        message: 'missing idle callback cancellation',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/tools/initializeTools.ts',
-    reason:
-      'web tool startup must stay behind a narrow app-layer entry instead of importing product tools through shared contracts',
-    patterns: [
-      {
-        regex: /\bexport async function initializeAllTools\b/,
-        message: 'missing narrow tool startup entry',
-      },
-      {
-        regex: /\binitializeLsp\b/,
-        message: 'missing LSP startup initializer call',
-      },
-      {
-        regex: /\binitializeGit\b/,
-        message: 'missing Git startup initializer call',
-      },
-      {
-        regex: /does not import every tool/,
-        message: 'missing narrow startup import guard',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/tools/editor/services/MonacoStartupWarmup.ts',
-    reason:
-      'Monaco startup warmup remains a deferred web-app optimization, not a core runtime dependency',
-    patterns: [
-      {
-        regex: /\bexport function scheduleMonacoStartupWarmup\b/,
-        message: 'missing deferred Monaco warmup entry',
-      },
-      {
-        regex: /\bbackgroundTaskScheduler\b/,
-        message: 'missing background scheduler integration',
-      },
-      {
-        regex: /startup:monaco-warmup/,
-        message: 'missing Monaco warmup dedupe key',
-      },
-    ],
-  },
-  {
-    path: 'src/web-ui/src/flow_chat/services/flow-chat-manager/SessionModule.ts',
-    reason:
-      'flow-chat history hydration remains web startup/product-surface behavior until a UI equivalence plan exists',
-    patterns: [
-      {
-        regex: /\bhistorical_session_hydrate_request\b/,
-        message: 'missing historical session hydrate trace',
-      },
-      {
-        regex: /Load history in the background/,
-        message: 'missing non-blocking history load contract',
-      },
-      {
-        regex: /\bhistoryState: 'ready'/,
-        message: 'missing history-ready state contract',
       },
     ],
   },
@@ -6761,7 +6929,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/manager.rs',
+    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs',
     reason:
       'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
     patterns: [
@@ -6769,6 +6937,37 @@ export const requiredContentRules = [
         regex: /\bMiniAppRuntimeFacade\b/,
         message: 'missing product-domain MiniApp runtime-state facade use',
       },
+      {
+        regex: /\bCoreProductDomainRuntime\b/,
+        message: 'missing core-owned product-domain runtime owner delegation',
+      },
+      {
+        regex: /\bMiniAppCompileRequest::from_paths\b/,
+        message: 'missing product-domain MiniApp compile request/path delegation',
+      },
+      {
+        regex: /\bcompile_with_request\b/,
+        message: 'missing product-domain MiniApp compile facade delegation',
+      },
+      {
+        regex: /\bMiniAppPermissionPolicyRequest::from_paths\b/,
+        message: 'missing product-domain MiniApp permission policy request/path delegation',
+      },
+      {
+        regex: /\bresolve_policy_with_request\b/,
+        message: 'missing product-domain MiniApp permission policy facade delegation',
+      },
+      {
+        regex: /\bMiniAppCompilePort\b/,
+        message: 'missing core MiniApp compile port adapter for product-domain import workflow',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs',
+    reason:
+      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
+    patterns: [
       {
         regex: /\bcreate_app\b/,
         message: 'missing product-domain MiniApp create workflow facade delegation',
@@ -6802,36 +7001,12 @@ export const requiredContentRules = [
         message: 'missing product-domain MiniApp built-in update decline workflow facade delegation',
       },
       {
-        regex: /\bCoreProductDomainRuntime\b/,
-        message: 'missing core-owned product-domain runtime owner delegation',
-      },
-      {
         regex: /\bpersist_sync_from_fs_result_for_app\b/,
         message: 'missing product-domain MiniApp sync-from-fs facade delegation',
       },
       {
         regex: /\bcompile_source\b/,
         message: 'missing core MiniApp compile compatibility entry point',
-      },
-      {
-        regex: /\bMiniAppCompileRequest::from_paths\b/,
-        message: 'missing product-domain MiniApp compile request/path delegation',
-      },
-      {
-        regex: /\bcompile_with_request\b/,
-        message: 'missing product-domain MiniApp compile facade delegation',
-      },
-      {
-        regex: /\bMiniAppPermissionPolicyRequest::from_paths\b/,
-        message: 'missing product-domain MiniApp permission policy request/path delegation',
-      },
-      {
-        regex: /\bresolve_policy_with_request\b/,
-        message: 'missing product-domain MiniApp permission policy facade delegation',
-      },
-      {
-        regex: /\bMiniAppCompilePort\b/,
-        message: 'missing core MiniApp compile port adapter for product-domain import workflow',
       },
       {
         regex: /\bMiniAppImportFromPathRequest\b/,
@@ -6841,6 +7016,13 @@ export const requiredContentRules = [
         regex: /\.import_from_path\s*\(/,
         message: 'missing product-domain MiniApp import workflow facade delegation',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/miniapp/manager/mod.rs',
+    reason:
+      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
+    patterns: [
       {
         regex: /\bruntime_preflight_preserves_recompile_sync_rollback_and_deps_state\b/,
         message: 'missing MiniApp manager runtime preflight regression test',
