@@ -96,7 +96,7 @@ impl ConversationCoordinator {
         (crate::service::session::TurnStatus::Completed, final_response)
     }
 
-    pub(super) async fn persist_cancelled_dialog_turn(
+    pub(crate) async fn persist_cancelled_dialog_turn(
         event_queue: &EventQueue,
         session_manager: &SessionManager,
         scheduler_notify_tx: Option<&mpsc::Sender<(String, TurnOutcome)>>,

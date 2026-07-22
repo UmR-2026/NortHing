@@ -12,7 +12,86 @@ use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, warn};
 
+/// Outcome for the abort-exit helper — carries the reason plus any needed payload.
+#[derive(Debug)]
+pub(crate) enum SubagentAbortExit {
+    Cancelled,
+    TimedOut(String), // timeout_error_message
+}
+
 impl ConversationCoordinator {
+    /// Persist and finalize a subagent exit that did not reach phase3.
+    ///
+    /// Handles both Cancelled and TimedOut branches, ensuring the dialog turn
+    /// is persisted, finalized (with episode coverage), and the registry entry
+    /// is removed.
+    pub(crate) async fn persist_aborted_subagent_exit(
+        &self,
+        session_id: &str,
+        dialog_turn_id: &str,
+        turn_index: usize,
+        agent_type: &str,
+        user_input_text: &str,
+        subagent_workspace_path: Option<&str>,
+        subagent_session_storage_path: Option<&std::path::Path>,
+        exit: SubagentAbortExit,
+    ) -> NortHingError {
+        match exit {
+            SubagentAbortExit::Cancelled => {
+                Self::persist_cancelled_dialog_turn(
+                    self.event_queue.as_ref(),
+                    self.session_manager.as_ref(),
+                    None,
+                    session_id,
+                    dialog_turn_id,
+                )
+                .await;
+                Self::finalize_persisted_turn_in_workspace_if_needed(
+                    self.session_manager.as_ref(),
+                    session_id,
+                    dialog_turn_id,
+                    turn_index,
+                    agent_type,
+                    user_input_text,
+                    subagent_workspace_path,
+                    subagent_session_storage_path,
+                    Some(crate::service::session::TurnStatus::Cancelled),
+                    None,
+                )
+                .await;
+                self.subagent_timeout_registry.write().await.remove(session_id);
+                NortHingError::Cancelled("Subagent task has been cancelled".to_string())
+            }
+            SubagentAbortExit::TimedOut(msg) => {
+                let err = NortHingError::Timeout(msg);
+                Self::persist_failed_dialog_turn(
+                    self.event_queue.as_ref(),
+                    self.session_manager.as_ref(),
+                    None,
+                    session_id,
+                    dialog_turn_id,
+                    &err,
+                )
+                .await;
+                Self::finalize_persisted_turn_in_workspace_if_needed(
+                    self.session_manager.as_ref(),
+                    session_id,
+                    dialog_turn_id,
+                    turn_index,
+                    agent_type,
+                    user_input_text,
+                    subagent_workspace_path,
+                    subagent_session_storage_path,
+                    Some(crate::service::session::TurnStatus::Error),
+                    None,
+                )
+                .await;
+                self.subagent_timeout_registry.write().await.remove(session_id);
+                err
+            }
+        }
+    }
+
     /// Phase 2: start dialog turn, spawn execution task, run deadline/cancel/join loop.
     /// Returns SubagentPhase2Output on success (where result is the execution result).
     /// On cancelled/timed_out returns Err (phase3_* helpers already cleaned up).
@@ -307,12 +386,32 @@ impl ConversationCoordinator {
                 })
             }
             SubagentExecutionOutcome::Cancelled => {
-                // Return error directly — phase3 not called for cancellation
-                Err(NortHingError::Cancelled("Subagent task has been cancelled".to_string()))
+                Err(self
+                    .persist_aborted_subagent_exit(
+                        &session_id,
+                        &dialog_turn_id,
+                        turn_index,
+                        &agent_type,
+                        &user_input_text,
+                        subagent_workspace_path.as_deref(),
+                        subagent_session_storage_path.as_deref(),
+                        SubagentAbortExit::Cancelled,
+                    )
+                    .await)
             }
             SubagentExecutionOutcome::TimedOut => {
-                // Return error directly — phase3 not called for timeout
-                Err(NortHingError::Timeout(timeout_error_message))
+                Err(self
+                    .persist_aborted_subagent_exit(
+                        &session_id,
+                        &dialog_turn_id,
+                        turn_index,
+                        &agent_type,
+                        &user_input_text,
+                        subagent_workspace_path.as_deref(),
+                        subagent_session_storage_path.as_deref(),
+                        SubagentAbortExit::TimedOut(timeout_error_message),
+                    )
+                    .await)
             }
         }
     }

@@ -47,7 +47,7 @@ use crate::util::errors::{NortHingError, NortHingResult};
 /// Reference: W3a-2 uses 300s as the default for tools/confirm; 600s here
 /// provides a reasonable upper bound for subagent execution which may involve
 /// multiple tool calls and longer reasoning chains.
-pub const SUBAGENT_DEFAULT_TIMEOUT_SECONDS: u64 = 600;
+pub(crate) const SUBAGENT_DEFAULT_TIMEOUT_SECONDS: u64 = 600;
 
 // ═══════════════════════════════════════════════════════════════════
 // Trait
