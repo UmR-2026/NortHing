@@ -11,14 +11,14 @@
 - **Symptom**: When a dialog turn is running, `on_send_message` does not check `streaming_session` state. The UI does not disable the input box. User messages submitted during an active turn may be silently dropped or cause state corruption.
 - **Evidence**: `src/apps/desktop/src/app_state/callbacks_lifecycle.rs:22-67` — `on_send_message` closure does not gate on `app_state.get_streaming_session()`. `src/apps/desktop/src/ui/main.slint:92,258` — `is-streaming` bound to visual state only, not input disable.
 - **Proposed fix**: (1) Gate `on_send_message` on streaming state; queue messages when active. (2) Or disable input box via `is-streaming` binding. (3) Implement `DialogSteeringAction` / `RoundInjection` consumption path for queued messages.
-- **Status**: active
+- **Status**: `resolved` — fixed by `1b5225d` (W3a-4, 2026-07-18): DialogScheduler queues messages during active turns
 
 ### P0-2: Hang triple — AskUserQuestion no timeout + tool execution no cancel select + turn no overall timeout
 
 - **Symptom**: (1) `AskUserQuestion` waits indefinitely for user input — no `timeout` field. (2) Tool execution does not respond to cancel token within AskUserQuestion's blocking future. (3) Main dialog turn has no overall timeout (only subagent has `timeout_seconds`).
 - **Evidence**: `src/crates/execution/agent-runtime/src/user_questions.rs:1-80` — no timeout. `src/crates/assembly/core/src/agentic/coordination/subagent_orchestrator/so_lifecycle/lifecycle.rs:142` — subagent has timeout, main turn does not. Search for `turn_timeout` / `TURN_TIMEOUT` in `src/` returns no matches.
 - **Proposed fix**: (1) Add `timeout_ms` to AskUserQuestion with default (e.g. 5 min). (2) Wrap user input wait in `tokio::select!` with cancel token. (3) Add configurable turn-level timeout (e.g. 30 min) that auto-cancels and emits `DialogTurnFailed`.
-- **Status**: active
+- **Status**: `resolved` — fixed by `3de7ced` / `26f392e` / `ad5ffa0` (W3a-1/2/3, 2026-07-18): AskUserQuestion timeout+cancel, 300s tool/confirmation defaults, turn watchdog + cancel convergence
 
 ## P1 — Safety and reliability
 
@@ -43,12 +43,14 @@
 - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
 - **Status**: active
 
-### P1-4: Mobile-web re-pairing has no guidance + desktop Rust i18n mojibake
+### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
 
-- **Symptom**: (1) `PairingPage.tsx` has pairing logic but no re-pairing guidance when connection drops. (2) Desktop Rust code has widespread GBK/UTF-8 encoding corruption in Chinese strings (e.g. `"褰撳墠娌℃湁姝ｅ湪杩愯鐨勫洖澶?"` instead of "当前没有正在运行的回复").
-- **Evidence**: `src/mobile-web/src/pages/PairingPage.tsx` — no re-pair UI. `src/apps/desktop/src/app_state/callbacks_lifecycle.rs:534` — mojibake. `settings.rs:88-89` — mojibake. `event_bridge.rs:229` — mojibake.
-- **Proposed fix**: (1) Add re-pair guidance UI to PairingPage. (2) Fix all mojibake strings in desktop Rust code (re-encode as proper UTF-8). (3) Consider migrating desktop to i18n system when unfrozen.
-- **Status**: active (mobile-web: frozen surface; mojibake: active surface)
+- **Symptom**: `PairingPage.tsx` has pairing logic but no re-pairing guidance when connection drops.
+- **Evidence**: `src/mobile-web/src/pages/PairingPage.tsx` — no re-pair UI.
+- **Proposed fix**: Add re-pair guidance UI to PairingPage.
+- **Status**: active (mobile-web: frozen surface)
+
+> **P1-4 desktop mojibake — split off and resolved**: GBK/UTF-8 corruption in desktop Rust Chinese strings was present in earlier snapshots but is not present in the current codebase. The desktop code now carries proper UTF-8 Chinese strings (e.g. `"当前没有正在运行的回复"`, `"已排队，将在当前回复完成后发送"`, `"LLM 调用失败: {error}"`). The fix was absorbed into the desktop rewrites (W3a-4 / D2j / W4 commits, 2026-07-18–19); no single dedicated commit.
 
 ### P1-5: Relay server defaults to 0.0.0.0 with no authentication
 
@@ -99,6 +101,19 @@
 - **Symptom**: `EventQueue` drops new events when full (`max_queue_size: 10000`), logs `warn!`, returns `Ok` (false success). `StreamEventSink::enqueue` ignores return value with `let _ =`. Critical events (e.g. `DialogTurnFailed`) may be silently lost.
 - **Evidence**: `src/crates/assembly/core/src/agentic/events/queue.rs:85` — drops + returns `Ok`. `queue.rs:127` — `let _ = EventQueue::enqueue(...)`.
 - **Proposed fix**: (1) Return `Err` when full, let caller decide. (2) Never drop `Critical` priority events. (3) `StreamEventSink` should handle `Err` with error-level log.
+- **Status**: active
+
+### P2-7: subagent_ports test family is environment-sensitive (assumes no-LLM microsecond failure)
+
+- **Symptom**: tests_cancel / tests_timeout / tests_concurrent / tests_error / tests_parent_chain assume dev environment has no LLM and init_turn fails in microseconds; on machines with available LLM configuration these tests fail reliably (unrelated to code correctness).
+- **Evidence**: `src/crates/assembly/core/src/agentic/coordination/tests/subagent_ports/tests_cancel.rs:7-12` (test doc comment self-documents the assumption); `docs/plans/2026-07-21-three-track-refinement-plan.md` §v0.2.4 B5 retro section.
+- **Proposed fix**: Inject a deterministic fake AI backend (独立测试基建单), replacing the implicit assumption on local machine configuration.
+- **Status**: active
+
+### P2-8: kernel_facade/mod.rs god file (2213 lines)
+
+- **Symptom**: `src/crates/assembly/core/src/kernel_facade/mod.rs` is 2213 lines, exceeding the AGENTS.md house rule #3强制拆分线 of 1000 lines.
+- **Proposed fix**: Split into modules per R-family conventions (lifecycle / dto / api / tests); already in backend queue.
 - **Status**: active
 
 ## Change Protocol

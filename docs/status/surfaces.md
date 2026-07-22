@@ -23,6 +23,7 @@ These compile and may have partial functionality, but are **not** shipped, not t
 | **Mobile Web** | `src/mobile-web/` | 🧊 Frozen | PWA shell; re-pairing flow unguided, i18n has mojibake. |
 | **MiniApp UI** | `src/crates/contracts/product-domains/src/miniapp/` | 🧊 Frozen | Built-in mini-apps (PPT live, etc.) are experimental. String-mode shell commands rejected by `guard_command_execution`. |
 | **SDLC Harness** | `src/crates/execution/harness/` | 🧊 Frozen | Test/eval harness; not user-facing. |
+| **Tauri Desktop (candidate)** | `src/apps/desktop-tauri` | 🧊 Frozen | Tauri 2 + React candidate for the next baseline; flips at F4. src-tauri is its own cargo workspace (excluded from main). |
 
 ## Active Capability Crates (Agent Toolbox)
 
@@ -42,8 +43,7 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `terminal` | `src/crates/services/terminal` | Terminal service |
 | `ai-adapters` | `src/crates/adapters/ai-adapters` | AI provider adapters |
 | `webdriver` | `src/crates/adapters/webdriver` | WebDriver adapter |
-| `api-layer` | `src/crates/adapters/api-layer` | API layer |
-| `transport` | `src/crates/adapters/transport` | Transport layer |
+| `kernel-api` | `src/crates/contracts/kernel-api` | Kernel facade contracts — product surfaces reach core only through this facade (K1) |
 | `acp` | `src/crates/interfaces/acp` | ACP interface |
 | `product-capabilities` | `src/crates/assembly/product-capabilities` | Product capability assembly |
 | `product-domains` | `src/crates/contracts/product-domains` | Product domain contracts |
