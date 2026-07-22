@@ -241,6 +241,7 @@ slint = "1.16"
 slint-build = "1.16"
 
 [profile.dev]
+debug = "line-tables-only"
 split-debuginfo = "packed"
 incremental = true
 
