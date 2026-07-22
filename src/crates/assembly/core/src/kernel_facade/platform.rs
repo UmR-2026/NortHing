@@ -16,6 +16,7 @@ use crate::service::mcp::global_mcp_service;
 #[async_trait]
 impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
     async fn open_terminal(&self, _config: TerminalConfigDto) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: terminal open requires host UI integration.
         Err(KernelError::Internal("not yet wired: open_terminal".to_string()))
     }
 
@@ -35,6 +36,7 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
     }
 
     async fn read_panels_config(&self) -> Result<PanelsConfigDto, KernelError> {
+        // F3: read panels.json from product config directory.
         let config_dir = dirs::config_dir()
             .ok_or_else(|| KernelError::Config("cannot find config directory".to_string()))?;
         let panels_path = config_dir.join("northhing").join("config").join("panels.json");
@@ -49,18 +51,21 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
     }
 
     async fn is_onboarding_complete(&self) -> Result<bool, KernelError> {
+        // NEEDS_CONTEXT: onboarding_completed is desktop UI state, not core GlobalConfig.
         Err(KernelError::Internal(
             "not yet wired: is_onboarding_complete".to_string(),
         ))
     }
 
     async fn complete_onboarding(&self) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: onboarding_completed is desktop UI state, not core GlobalConfig.
         Err(KernelError::Internal(
             "not yet wired: complete_onboarding".to_string(),
         ))
     }
 
     async fn get_inspector_data(&self) -> Result<InspectorDataDto, KernelError> {
+        // Forward to global config for model name, MCP service for MCP status.
         let cfg_svc = get_global_config_service()
             .await
             .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
@@ -75,6 +80,7 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
             .clone()
             .unwrap_or_else(|| "not configured".to_string());
 
+        // Get MCP status.
         let mcp_status = if let Some(mcp_svc) = global_mcp_service() {
             match mcp_svc.config_service().load_all_configs().await {
                 Ok(configs) => {
@@ -129,6 +135,7 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
         &self,
         _session_id: &super::SessionId,
     ) -> Result<Vec<ArtifactDto>, KernelError> {
+        // NEEDS_CONTEXT: artifact storage not yet wired.
         Err(KernelError::Internal("not yet wired: list_artifacts".to_string()))
     }
 }

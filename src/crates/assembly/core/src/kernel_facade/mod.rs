@@ -29,6 +29,7 @@ pub use northhing_kernel_api::turn::{
 };
 
 pub struct KernelFacade {
+    /// Set by `init_core()` after `init_agentic_system()` succeeds. Never `panic`/expect.
     coordinator: OnceLock<Arc<crate::agentic::coordination::ConversationCoordinator>>,
 }
 

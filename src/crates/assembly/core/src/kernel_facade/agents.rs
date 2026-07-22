@@ -26,6 +26,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
         scope: SubagentScopeDto,
     ) -> Result<Vec<SubagentDto>, KernelError> {
         let registry = crate::agentic::agents::agent_registry();
+        // workspace_path not available in SubagentScopeDto; pass None until trait is extended.
         let subagents = registry.get_subagents_info(None).await;
         Ok(subagents
             .into_iter()
@@ -49,7 +50,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
                 id: s.key.clone(),
                 name: s.name.clone(),
                 description: s.description.clone(),
-                enabled: false,
+                enabled: false, // enabled state is mode-dependent; requires mode context
                 mode: None,
                 tags: None,
             })
@@ -67,7 +68,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
                 id: s.key,
                 name: s.name,
                 description: s.description,
-                enabled: false,
+                enabled: false, // enabled state is mode-dependent; requires mode context
                 mode: None,
                 tags: None,
             })
@@ -80,14 +81,17 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
         _scope: northhing_kernel_api::agents::SkillScopeDto,
         _enabled: bool,
     ) -> Result<(), KernelError> {
+        // NEEDS_CONTEXT: mode_id required but not present in SkillScopeDto.
         Err(KernelError::Internal("not yet wired: set_skill_enabled — mode_id not in scope".to_string()))
     }
 
     async fn load_skill_overrides(&self) -> Result<SkillOverridesDto, KernelError> {
+        // NEEDS_CONTEXT: mode_id required but not present in trait signature.
         Err(KernelError::Internal("not yet wired: load_skill_overrides — mode_id not available".to_string()))
     }
 
     async fn load_project_skills(&self) -> Result<northhing_kernel_api::agents::ProjectSkillsDto, KernelError> {
+        // NEEDS_CONTEXT: workspace_path required but not present in trait signature.
         Err(KernelError::Internal("not yet wired: load_project_skills — workspace_path not available".to_string()))
     }
 
@@ -107,6 +111,8 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
             .map_err(|e| KernelError::Config(format!("load_project_mode_skills_document_local: {e}")))?;
 
         for skill_entry in &doc.skills {
+            // mode_id is not in ProjectSkillEntry; use default profile.
+            // NEEDS_CONTEXT: proper implementation requires mode_id per skill.
             let _ = set_disabled_mode_skills_in_document(
                 &mut document,
                 "default",

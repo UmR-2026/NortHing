@@ -16,6 +16,9 @@ impl northhing_kernel_api::KernelUsageApi for super::KernelFacade {
     }
 
     async fn render_usage_markdown(&self, report: &UsageReportDto) -> String {
+        // NOTE: Cannot forward to `render_usage_report_markdown` because UsageReportDto
+        // is not type-isomorphic with SessionUsageReport — requires a DTO→SessionUsageReport
+        // adapter (P2 trait extension territory). Hand-written format retained as fallback.
         format!(
             "## Usage Report\n\nSession: {}\n\nTotal tokens: {}\nPrompt tokens: {}\nCompletion tokens: {}\nTurn count: {}\nTool call count: {}",
             report.session_id,
@@ -28,6 +31,7 @@ impl northhing_kernel_api::KernelUsageApi for super::KernelFacade {
     }
 
     async fn get_token_usage(&self, _session_id: &SessionId) -> Result<TokenUsageDto, KernelError> {
+        // NEEDS_CONTEXT: requires TokenUsageService access and PersistenceManager.
         Err(KernelError::Internal("not yet wired: get_token_usage".to_string()))
     }
 }

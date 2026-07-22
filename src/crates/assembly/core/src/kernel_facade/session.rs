@@ -139,6 +139,7 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
     }
 
     async fn get_persistence_handle(&self) -> Result<super::PersistenceHandleDto, KernelError> {
+        // NEEDS_CONTEXT: PersistenceManager folding deferred to K4b.
         Err(KernelError::Internal(
             "not yet wired: get_persistence_handle — PersistenceManager folding deferred (K4b)".to_string(),
         ))

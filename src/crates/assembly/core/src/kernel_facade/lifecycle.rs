@@ -86,6 +86,8 @@ pub(super) enum InitState {
 
 impl super::KernelFacade {
     /// Inner initialization — runs after the gate lock is acquired.
+    /// Returns Ok(()) on success; failure variants are translated to KernelError
+    /// by the caller, which then resets INIT_STATE to NotStarted.
     async fn init_core_inner(&self) -> Result<(), KernelError> {
         initialize_global_config()
             .await
