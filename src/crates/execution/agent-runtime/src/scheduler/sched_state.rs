@@ -402,16 +402,17 @@ mod tests {
         let queue = DialogTurnQueue::<String>::with_max_depth(2);
         let sid = "s1";
 
-        // Fill to max
+        // Fill to max — all same priority (Normal) so a buggy sorted-insert or push_back
+        // implementation for requeue_front would produce wrong ordering
         queue.enqueue(sid, "first".into(), DialogQueuePriority::Normal).unwrap();
         queue.enqueue(sid, "second".into(), DialogQueuePriority::Normal).unwrap();
         assert_eq!(queue.depth(sid), 2);
 
-        // requeue_front bypasses the max_depth guard
-        queue.requeue_front(sid, "requeued".into(), DialogQueuePriority::High);
-        assert_eq!(queue.depth(sid), 3); // max+1
+        // requeue_front bypasses the max_depth guard (depth goes to max+1)
+        queue.requeue_front(sid, "requeued".into(), DialogQueuePriority::Normal);
+        assert_eq!(queue.depth(sid), 3); // max+1,钉住bypass语义
 
-        // Requeued item comes out first
+        // Requeued item must come out first (push_front, not push_back)
         assert_eq!(queue.dequeue_next(sid), Some("requeued".into()));
         assert_eq!(queue.dequeue_next(sid), Some("first".into()));
         assert_eq!(queue.dequeue_next(sid), Some("second".into()));
@@ -594,15 +595,32 @@ mod tests {
     #[test]
     fn abort_flags_mark_contains_clear_per_session() {
         let flags = SessionAbortFlags::default();
-        let sid = "s1";
+        let s1 = "s1";
+        let s2 = "s2";
 
-        assert!(!flags.contains(sid));
+        // Both sessions start unmarked
+        assert!(!flags.contains(s1));
+        assert!(!flags.contains(s2));
 
-        flags.mark(sid);
-        assert!(flags.contains(sid));
+        // Mark s1: only s1 is flagged
+        flags.mark(s1);
+        assert!(flags.contains(s1));
+        assert!(!flags.contains(s2));
 
-        flags.clear(sid);
-        assert!(!flags.contains(sid));
+        // Mark s2: both flagged
+        flags.mark(s2);
+        assert!(flags.contains(s1));
+        assert!(flags.contains(s2));
+
+        // Clear s1: s1 unflagged, s2 still flagged
+        flags.clear(s1);
+        assert!(!flags.contains(s1));
+        assert!(flags.contains(s2));
+
+        // Clear s2: both unflagged
+        flags.clear(s2);
+        assert!(!flags.contains(s1));
+        assert!(!flags.contains(s2));
     }
 
     // ── NoopDialogRoundInjectionSource ─────────────────────────────────────
