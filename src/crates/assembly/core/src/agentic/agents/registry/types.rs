@@ -6,7 +6,7 @@ use crate::agentic::agents::{
 };
 use crate::agentic::deep_review_policy::{
     REVIEWER_ARCHITECTURE_AGENT_TYPE, REVIEWER_BUSINESS_LOGIC_AGENT_TYPE, REVIEWER_FRONTEND_AGENT_TYPE,
-    REVIEWER_PERFORMANCE_AGENT_TYPE, REVIEWER_SECURITY_AGENT_TYPE, REVIEW_JUDGE_AGENT_TYPE,
+    REVIEWER_PERFORMANCE_AGENT_TYPE, REVIEWER_SECURITY_AGENT_TYPE, REVIEW_JUDGE_AGENT_TYPE, GATE_JUDGE_AGENT_TYPE,
 };
 pub use northhing_agent_runtime::agents::{
     SubAgentSource, SubagentListScope, SubagentOverrideState, SubagentQueryContext, SubagentStateReason,
@@ -200,5 +200,6 @@ pub(crate) fn is_review_agent_entry(entry: &AgentEntry) -> bool {
             | REVIEWER_ARCHITECTURE_AGENT_TYPE
             | REVIEWER_FRONTEND_AGENT_TYPE
             | REVIEW_JUDGE_AGENT_TYPE
+            | GATE_JUDGE_AGENT_TYPE
     )
 }

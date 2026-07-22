@@ -2935,4 +2935,48 @@ export const forbiddenContentUnderRules = [
       },
     ],
   },
+  {
+    path: 'src/crates/assembly/core/src/agentic/judge_gate',
+    reason:
+      'judge_gate adapter must not depend on northhing-core or episodes storage (zero dependency edge, C4 Phase 0 §5.1)',
+    patterns: [
+      {
+        regex: /\bnorthhing_core::/,
+        message:
+          'judge_gate adapter must not import northhing_core (zero dependency edge requirement)',
+      },
+      {
+        regex: /\bnorthhing-core::/,
+        message:
+          'judge_gate adapter must not import northhing-core (zero dependency edge requirement)',
+      },
+      {
+        regex: /\bepisodes::/,
+        message:
+          'judge_gate adapter must not import episodes (zero dependency edge requirement)',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/judge_gate',
+    reason:
+      'judge_gate protocol layer must not depend on northhing-core or episodes storage (zero dependency edge, C4 Phase 0 §5.1)',
+    patterns: [
+      {
+        regex: /\bnorthhing_core::/,
+        message:
+          'judge_gate protocol must not import northhing_core (zero dependency edge requirement)',
+      },
+      {
+        regex: /\bnorthhing-core::/,
+        message:
+          'judge_gate protocol must not import northhing-core (zero dependency edge requirement)',
+      },
+      {
+        regex: /\bepisodes::/,
+        message:
+          'judge_gate protocol must not import episodes (zero dependency edge requirement)',
+      },
+    ],
+  },
 ];

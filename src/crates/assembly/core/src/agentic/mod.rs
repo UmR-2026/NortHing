@@ -56,6 +56,9 @@ pub mod insights;
 // Episode log module (growth experience storage)
 pub mod episodes;
 
+// Judge gate adapter module
+pub(crate) mod judge_gate;
+
 pub use agents::*;
 pub use context_profile::*;
 pub use coordination::*;

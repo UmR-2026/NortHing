@@ -14,7 +14,8 @@ pub use brief::build_judge_brief;
 pub use redlines::{redline_ids, REDLINE_TABLE};
 pub use types::{
     subject_digest, ActionKind, ApprovedGateReceipt, EvidencePack,
-    EvidenceRejection, GateExecutionContext, GateRequest, GateVerdict, ParsedVerdict, RateSample,
-    RejectClass, RuleCheck, RuleStatus, VerdictKind, VerdictMalformed,
+    EvidenceRejection, FsDiffEvidence, GateExecutionContext, GateRequest, GateVerdict,
+    HumanFeedbackSlot, ParsedVerdict, RateSample, RejectClass, RuleCheck, RuleStatus,
+    SuccessRateComparison, ToolTraceEvidence, VerdictKind, VerdictMalformed, AbsentReason,
 };
 pub use verdict::parse_verdict;

@@ -29,24 +29,7 @@ impl PathManager {
     /// - macOS: ~/Library/Application Support/northhing/skills/
     /// - Linux: ~/.local/share/northhing/skills/
     pub fn user_skills_dir(&self) -> PathBuf {
-        if cfg!(target_os = "windows") {
-            dirs::data_dir()
-                .unwrap_or_else(|| PathBuf::from("C:\\ProgramData"))
-                .join("northhing")
-                .join("skills")
-        } else if cfg!(target_os = "macos") {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("/tmp"))
-                .join("Library")
-                .join("Application Support")
-                .join("northhing")
-                .join("skills")
-        } else {
-            dirs::data_local_dir()
-                .unwrap_or_else(|| PathBuf::from("/tmp"))
-                .join("northhing")
-                .join("skills")
-        }
+        self.user_root.join("skills")
     }
 
     /// Get northhing-managed built-in skills directory under the user skills root.

@@ -33,7 +33,7 @@ pub use northhing_agent_runtime::deep_review::{
     DeepReviewRunManifestGate, DeepReviewRuntimeDiagnostics, DeepReviewSharedContextDuplicate,
     DeepReviewSharedContextMeasurementSnapshot, DeepReviewStrategyLevel, DeepReviewSubagentRole,
     ReviewStrategyManifestProfile, ReviewTeamDefinition, ReviewTeamExecutionPolicyDefinition, ReviewTeamRoleDefinition,
-    CONDITIONAL_REVIEWER_AGENT_TYPES, CORE_REVIEWER_AGENT_TYPES, DEEP_REVIEW_AGENT_TYPE,
+    CONDITIONAL_REVIEWER_AGENT_TYPES, CORE_REVIEWER_AGENT_TYPES, DEEP_REVIEW_AGENT_TYPE, GATE_JUDGE_AGENT_TYPE,
     REVIEWER_ARCHITECTURE_AGENT_TYPE, REVIEWER_BUSINESS_LOGIC_AGENT_TYPE, REVIEWER_FRONTEND_AGENT_TYPE,
     REVIEWER_PERFORMANCE_AGENT_TYPE, REVIEWER_SECURITY_AGENT_TYPE, REVIEW_FIXER_AGENT_TYPE, REVIEW_JUDGE_AGENT_TYPE,
 };

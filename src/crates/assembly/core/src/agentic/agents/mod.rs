@@ -22,8 +22,8 @@ pub use definitions::modes::{
     AgenticMode, ClawMode, CoworkMode, DebugMode, DeepResearchMode, MultitaskMode, PlanMode, TeamMode,
 };
 pub use definitions::review::{
-    ArchitectureReviewerAgent, BusinessLogicReviewerAgent, FrontendReviewerAgent, PerformanceReviewerAgent,
-    ReviewFixerAgent, ReviewJudgeAgent, SecurityReviewerAgent,
+    ArchitectureReviewerAgent, BusinessLogicReviewerAgent, FrontendReviewerAgent, GateJudgeAgent,
+    PerformanceReviewerAgent, ReviewFixerAgent, ReviewJudgeAgent, SecurityReviewerAgent,
 };
 pub use definitions::shared::ReadonlySubagent;
 pub use definitions::subagents::{

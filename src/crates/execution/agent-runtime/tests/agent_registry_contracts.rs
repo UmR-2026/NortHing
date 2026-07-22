@@ -177,6 +177,7 @@ fn builtin_agent_definition_catalog_preserves_order_categories_models_and_visibi
             "CodeReview",
             "DeepReview",
             "GenerateDoc",
+            "GateJudge",
         ]
     );
 

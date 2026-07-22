@@ -9,6 +9,8 @@ pub const REVIEWER_SECURITY_AGENT_TYPE: &str = "ReviewSecurity";
 pub const REVIEWER_ARCHITECTURE_AGENT_TYPE: &str = "ReviewArchitecture";
 pub const REVIEWER_FRONTEND_AGENT_TYPE: &str = "ReviewFrontend";
 
+pub const GATE_JUDGE_AGENT_TYPE: &str = "GateJudge";
+
 pub const CORE_REVIEWER_AGENT_TYPES: [&str; 4] = [
     REVIEWER_BUSINESS_LOGIC_AGENT_TYPE,
     REVIEWER_PERFORMANCE_AGENT_TYPE,

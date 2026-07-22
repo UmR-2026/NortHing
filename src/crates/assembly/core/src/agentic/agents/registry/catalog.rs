@@ -3,8 +3,9 @@ use super::visibility::SubagentVisibilityPolicy;
 use crate::agentic::agents::{
     Agent, AgenticMode, ArchitectureReviewerAgent, BusinessLogicReviewerAgent, ClawMode, CodeReviewAgent,
     ComputerUseMode, CoworkMode, DebugMode, DeepResearchMode, DeepReviewAgent, ExploreAgent, FileFinderAgent,
-    FrontendReviewerAgent, GeneralPurposeAgent, GenerateDocAgent, MultitaskMode, PerformanceReviewerAgent, PlanMode,
-    ResearchSpecialistAgent, ReviewFixerAgent, ReviewJudgeAgent, SecurityReviewerAgent, TeamMode,
+    FrontendReviewerAgent, GateJudgeAgent, GeneralPurposeAgent, GenerateDocAgent, MultitaskMode,
+    PerformanceReviewerAgent, PlanMode, ResearchSpecialistAgent, ReviewFixerAgent, ReviewJudgeAgent,
+    SecurityReviewerAgent, TeamMode,
 };
 use northhing_agent_runtime::agents as runtime_agents;
 use std::sync::Arc;
@@ -73,6 +74,7 @@ fn builtin_agent_factory(id: &str) -> Option<fn() -> Arc<dyn Agent>> {
         "CodeReview" => || Arc::new(CodeReviewAgent::new()),
         "DeepReview" => || Arc::new(DeepReviewAgent::new()),
         "GenerateDoc" => || Arc::new(GenerateDocAgent::new()),
+        "GateJudge" => || Arc::new(GateJudgeAgent::new()),
         _ => return None,
     };
     Some(factory)
