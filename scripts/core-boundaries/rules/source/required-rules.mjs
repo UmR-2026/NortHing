@@ -80,10 +80,6 @@ export const requiredContentRules = [
         message: 'missing agent runtime facade type',
       },
       {
-        regex: /\bpub struct AgentRuntimeBuilder\b/,
-        message: 'missing agent runtime builder',
-      },
-      {
         regex: /\bAgentSubmissionPort\b/,
         message: 'missing agent submission port dependency',
       },
@@ -92,20 +88,12 @@ export const requiredContentRules = [
         message: 'missing agent dialog turn lifecycle port dependency',
       },
       {
-        regex: /\bwith_dialog_turn_port\b/,
-        message: 'missing agent dialog turn lifecycle builder hook',
-      },
-      {
         regex: /\bsubmit_dialog_turn\b/,
         message: 'missing agent dialog turn lifecycle entrypoint',
       },
       {
         regex: /\bAgentLifecycleDeliveryPort\b/,
         message: 'missing agent lifecycle delivery port dependency',
-      },
-      {
-        regex: /\bwith_lifecycle_delivery_port\b/,
-        message: 'missing agent lifecycle delivery builder hook',
       },
       {
         regex: /\bdeliver_background_result\b/,
@@ -124,10 +112,6 @@ export const requiredContentRules = [
         message: 'missing agent session management port dependency',
       },
       {
-        regex: /\bwith_session_management_port\b/,
-        message: 'missing agent session management builder hook',
-      },
-      {
         regex: /\bMissingSessionManagementPort\b/,
         message: 'missing agent session management missing-port guard',
       },
@@ -144,10 +128,6 @@ export const requiredContentRules = [
         message: 'missing agent session workspace resolution entrypoint',
       },
       {
-        regex: /\bsession_management_delegates_to_registered_port\b/,
-        message: 'missing agent session management port delegation regression',
-      },
-      {
         regex: /\bRuntimeServices\b/,
         message: 'missing typed runtime services injection',
       },
@@ -156,13 +136,58 @@ export const requiredContentRules = [
         message: 'missing runtime event envelope contract',
       },
       {
-        regex: /\bpub struct AgentEventStream\b/,
-        message: 'missing agent runtime event stream contract',
+        regex: /\bpub async fn run\b/,
+        message: 'missing agent runtime run entrypoint',
+      },
+      {
+        regex: /\bpub async fn publish_event\b/,
+        message: 'missing explicit runtime event publish entrypoint',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/runtime_builder.rs',
+    reason:
+      'agent-runtime must expose a narrow port-backed SDK facade without depending on core, apps, or concrete service managers',
+    patterns: [
+      {
+        regex: /\bpub struct AgentRuntimeBuilder\b/,
+        message: 'missing agent runtime builder',
+      },
+      {
+        regex: /\bwith_dialog_turn_port\b/,
+        message: 'missing agent dialog turn lifecycle builder hook',
+      },
+      {
+        regex: /\bwith_lifecycle_delivery_port\b/,
+        message: 'missing agent lifecycle delivery builder hook',
+      },
+      {
+        regex: /\bwith_session_management_port\b/,
+        message: 'missing agent session management builder hook',
       },
       {
         regex: /\bpub fn with_event_stream\b/,
         message: 'missing agent runtime event stream builder hook',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/runtime_event_stream.rs',
+    reason:
+      'agent-runtime must expose a narrow port-backed SDK facade without depending on core, apps, or concrete service managers',
+    patterns: [
+      {
+        regex: /\bpub struct AgentEventStream\b/,
+        message: 'missing agent runtime event stream contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/runtime_types.rs',
+    reason:
+      'agent-runtime must expose a narrow port-backed SDK facade without depending on core, apps, or concrete service managers',
+    patterns: [
       {
         regex: /\bpub enum SessionSelector\b/,
         message: 'missing session selector contract',
@@ -175,13 +200,16 @@ export const requiredContentRules = [
         regex: /\bpub struct AgentRunHandle\b/,
         message: 'missing agent run handle contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/tests.rs',
+    reason:
+      'agent-runtime must expose a narrow port-backed SDK facade without depending on core, apps, or concrete service managers',
+    patterns: [
       {
-        regex: /\bpub async fn run\b/,
-        message: 'missing agent runtime run entrypoint',
-      },
-      {
-        regex: /\bpub async fn publish_event\b/,
-        message: 'missing explicit runtime event publish entrypoint',
+        regex: /\bsession_management_delegates_to_registered_port\b/,
+        message: 'missing agent session management port delegation regression',
       },
       {
         regex: /\bpublish_event_uses_runtime_services_event_sink\b/,
@@ -294,57 +322,13 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/agent-runtime/src/deep_review/task_execution.rs',
+    path: 'src/crates/execution/agent-runtime/src/deep_review/task_completion_and_cache.rs',
     reason:
       'agent-runtime DeepReview task execution owner must keep provider-neutral packet matching, retry validation, capacity timing, and capacity-skipped presentation out of core',
     patterns: [
       {
         regex: /\bpub fn deep_review_packet_id_for_cache\b/,
         message: 'missing DeepReview packet id cache owner function',
-      },
-      {
-        regex: /\bpub fn ensure_deep_review_retry_coverage\b/,
-        message: 'missing DeepReview bounded retry coverage owner function',
-      },
-      {
-        regex: /\bpub fn provider_capacity_queue_wait_seconds_for_attempt\b/,
-        message: 'missing DeepReview provider capacity backoff owner function',
-      },
-      {
-        regex: /\bpub fn capacity_decision_for_provider_error_facts\b/,
-        message: 'missing DeepReview provider capacity error decision owner function',
-      },
-      {
-        regex: /\bpub fn local_reviewer_capacity_queue_decision\b/,
-        message: 'missing DeepReview local reviewer capacity decision owner function',
-      },
-      {
-        regex: /\bpub fn decide_provider_capacity_queue_step\b/,
-        message: 'missing DeepReview provider capacity queue step owner function',
-      },
-      {
-        regex: /\bpub struct DeepReviewProviderCapacityQueueRuntime\b/,
-        message: 'missing DeepReview provider capacity queue runtime owner',
-      },
-      {
-        regex: /\bpub struct DeepReviewProviderCapacityRetryRuntime\b/,
-        message: 'missing DeepReview provider capacity retry runtime owner',
-      },
-      {
-        regex: /\bpub enum DeepReviewProviderCapacityRetryDecision\b/,
-        message: 'missing DeepReview provider capacity retry decision owner',
-      },
-      {
-        regex: /\bpub fn decide_blocked_reviewer_admission_queue_step\b/,
-        message: 'missing DeepReview reviewer admission queue step owner function',
-      },
-      {
-        regex: /\bpub struct DeepReviewReviewerAdmissionQueueRuntime\b/,
-        message: 'missing DeepReview reviewer admission queue runtime owner',
-      },
-      {
-        regex: /\bstruct QueueWaitTimer\b/,
-        message: 'missing DeepReview queue wait timing owner',
       },
       {
         regex: /\bpub fn deep_review_task_completion_result\b/,
@@ -370,13 +354,78 @@ export const requiredContentRules = [
         regex: /\bpub fn ensure_deep_review_auto_retry_allowed\b/,
         message: 'missing DeepReview auto-retry admission owner function',
       },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/deep_review/retry_runtime.rs',
+    reason:
+      'agent-runtime DeepReview task execution owner must keep provider-neutral packet matching, retry validation, capacity timing, and capacity-skipped presentation out of core',
+    patterns: [
       {
-        regex: /\bpub fn capacity_skip_result_for_local_queue_outcome\b/,
-        message: 'missing DeepReview local capacity-skipped presentation owner function',
+        regex: /\bpub fn ensure_deep_review_retry_coverage\b/,
+        message: 'missing DeepReview bounded retry coverage owner function',
+      },
+      {
+        regex: /\bpub fn provider_capacity_queue_wait_seconds_for_attempt\b/,
+        message: 'missing DeepReview provider capacity backoff owner function',
+      },
+      {
+        regex: /\bpub struct DeepReviewProviderCapacityRetryRuntime\b/,
+        message: 'missing DeepReview provider capacity retry runtime owner',
+      },
+      {
+        regex: /\bpub enum DeepReviewProviderCapacityRetryDecision\b/,
+        message: 'missing DeepReview provider capacity retry decision owner',
+      },
+      {
+        regex: /\bstruct QueueWaitTimer\b/,
+        message: 'missing DeepReview queue wait timing owner',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/deep_review/provider_capacity_queue.rs',
+    reason:
+      'agent-runtime DeepReview task execution owner must keep provider-neutral packet matching, retry validation, capacity timing, and capacity-skipped presentation out of core',
+    patterns: [
+      {
+        regex: /\bpub fn capacity_decision_for_provider_error_facts\b/,
+        message: 'missing DeepReview provider capacity error decision owner function',
+      },
+      {
+        regex: /\bpub fn decide_provider_capacity_queue_step\b/,
+        message: 'missing DeepReview provider capacity queue step owner function',
+      },
+      {
+        regex: /\bpub struct DeepReviewProviderCapacityQueueRuntime\b/,
+        message: 'missing DeepReview provider capacity queue runtime owner',
       },
       {
         regex: /\bpub fn capacity_skip_result_for_provider_queue_outcome\b/,
         message: 'missing DeepReview provider capacity-skipped presentation owner function',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/execution/agent-runtime/src/deep_review/reviewer_admission_queue.rs',
+    reason:
+      'agent-runtime DeepReview task execution owner must keep provider-neutral packet matching, retry validation, capacity timing, and capacity-skipped presentation out of core',
+    patterns: [
+      {
+        regex: /\bpub fn local_reviewer_capacity_queue_decision\b/,
+        message: 'missing DeepReview local reviewer capacity decision owner function',
+      },
+      {
+        regex: /\bpub fn decide_blocked_reviewer_admission_queue_step\b/,
+        message: 'missing DeepReview reviewer admission queue step owner function',
+      },
+      {
+        regex: /\bpub struct DeepReviewReviewerAdmissionQueueRuntime\b/,
+        message: 'missing DeepReview reviewer admission queue runtime owner',
+      },
+      {
+        regex: /\bpub fn capacity_skip_result_for_local_queue_outcome\b/,
+        message: 'missing DeepReview local capacity-skipped presentation owner function',
       },
     ],
   },
@@ -2728,7 +2777,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/contracts/runtime-ports/src/lib.rs',
+    path: 'src/crates/contracts/runtime-ports/src/agent/agent_types.rs',
     reason:
       'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
     patterns: [
@@ -2745,9 +2794,201 @@ export const requiredContentRules = [
         message: 'missing runtime event sink contract',
       },
       {
+        regex: /\bpub fn remote_image\b/,
+        message: 'missing remote image attachment helper contract',
+      },
+      {
+        regex: /\bpub trait AgentLifecycleDeliveryPort\b/,
+        message: 'missing agent lifecycle delivery port contract',
+      },
+      {
+        regex: /\brequester_session_id\b/,
+        message: 'missing requester-aware turn cancellation contract',
+      },
+      {
+        regex: /\bpub trait AgentSessionManagementPort\b/,
+        message: 'missing agent session management port contract',
+      },
+      {
+        regex: /\bpub struct CompressionContract\b/,
+        message: 'missing compression contract',
+      },
+      {
+        regex: /\bpub struct CompressionContractItem\b/,
+        message: 'missing compression contract item',
+      },
+      {
+        regex: /\bpub struct RelatedPath\b/,
+        message: 'missing related path request-context contract',
+      },
+      {
+        regex: /\bpub struct DelegationPolicy\b/,
+        message: 'missing delegation policy contract',
+      },
+      {
+        regex: /\bpub enum SubagentContextMode\b/,
+        message: 'missing subagent context mode contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/agent/mod.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
+      {
         regex: /\bpub struct AgentSessionCreateResult\b[\s\S]*\bpub session_name: String\b/,
         message: 'agent session create result must return the persisted session name',
       },
+      {
+        regex: /\bpub struct AgentDialogTurnRequest\b/,
+        message: 'missing agent dialog turn lifecycle request contract',
+      },
+      {
+        regex: /\bpub struct AgentDialogPrependedReminder\b/,
+        message: 'missing agent dialog prepended reminder contract',
+      },
+      {
+        regex: /\bpub struct AgentBackgroundResultRequest\b/,
+        message: 'missing background result lifecycle request contract',
+      },
+      {
+        regex: /\bpub struct AgentSessionListRequest\b/,
+        message: 'missing agent session list request contract',
+      },
+      {
+        regex: /\bpub struct AgentSessionSummary\b/,
+        message: 'missing agent session summary contract',
+      },
+      {
+        regex: /\bpub struct AgentSessionDeleteRequest\b/,
+        message: 'missing agent session delete request contract',
+      },
+      {
+        regex: /\bpub struct AgentSessionWorkspaceRequest\b/,
+        message: 'missing agent session workspace request contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/agent/agent_dialog.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
+      {
+        regex: /\bpub trait AgentDialogTurnPort\b/,
+        message: 'missing agent dialog turn lifecycle port contract',
+      },
+      {
+        regex: /\bpub type DialogTriggerSource = AgentSubmissionSource\b/,
+        message: 'missing dialog trigger source compatibility contract',
+      },
+      {
+        regex: /\bpub enum DialogQueuePriority\b/,
+        message: 'missing dialog queue priority contract',
+      },
+      {
+        regex: /\bpub struct DialogSubmissionPolicy\b/,
+        message: 'missing dialog submission policy contract',
+      },
+      {
+        regex: /\bpub enum DialogSubmitOutcome\b/,
+        message: 'missing dialog submit outcome contract',
+      },
+      {
+        regex: /\bpub enum DialogSessionStateFact\b/,
+        message: 'missing dialog session state fact contract',
+      },
+      {
+        regex: /\bpub struct DialogSubmitQueueFacts\b/,
+        message: 'missing dialog submit queue facts contract',
+      },
+      {
+        regex: /\bpub enum DialogSubmitQueueAction\b/,
+        message: 'missing dialog submit queue action contract',
+      },
+      {
+        regex: /\bpub const fn resolve_dialog_submit_queue_action\b/,
+        message: 'missing dialog submit queue action resolver',
+      },
+      {
+        regex: /\bpub fn should_suppress_agent_session_cancelled_reply\b/,
+        message: 'missing agent-session cancel suppression contract',
+      },
+      {
+        regex: /\bpub enum DialogTurnOutcomeKind\b/,
+        message: 'missing dialog turn outcome kind contract',
+      },
+      {
+        regex: /\bpub const fn should_skip_agent_session_reply\b/,
+        message: 'missing agent-session reply skip contract',
+      },
+      {
+        regex: /\bpub struct AgentSessionReplyRoute\b/,
+        message: 'missing agent session reply route contract',
+      },
+      {
+        regex: /\bpub enum DialogSteerOutcome\b/,
+        message: 'missing dialog steer outcome contract',
+      },
+      {
+        regex: /\bpub enum RoundInjectionKind\b/,
+        message: 'missing round injection kind contract',
+      },
+      {
+        regex: /\bpub enum RoundInjectionTarget\b/,
+        message: 'missing round injection target contract',
+      },
+      {
+        regex: /\bpub struct RoundInjection\b/,
+        message: 'missing round injection message contract',
+      },
+      {
+        regex: /\bpub trait DialogRoundInjectionSource\b/,
+        message: 'missing dialog round injection source contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/agent/agent_thread_goal.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
+      {
+        regex: /\bpub enum AgentThreadGoalDeliveryKind\b/,
+        message: 'missing thread-goal lifecycle delivery kind contract',
+      },
+      {
+        regex: /\bpub struct AgentThreadGoalDeliveryRequest\b/,
+        message: 'missing thread-goal lifecycle delivery request contract',
+      },
+      {
+        regex: /\bpub enum ThreadGoalStatus\b/,
+        message: 'missing thread goal status contract',
+      },
+      {
+        regex: /\bpub struct ThreadGoal\b/,
+        message: 'missing thread goal contract',
+      },
+      {
+        regex: /\bpub struct SetThreadGoalResult\b/,
+        message: 'missing set thread goal result contract',
+      },
+      {
+        regex: /\bpub struct ThreadGoalContinuationPlan\b/,
+        message: 'missing thread goal continuation plan contract',
+      },
+      {
+        regex: /\bpub struct ThreadGoalToolResponse\b/,
+        message: 'missing thread goal tool response contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/remote.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
       {
         regex: /\bpub struct RemoteWorkspaceFacts\b/,
         message: 'missing remote workspace facts contract',
@@ -2772,14 +3013,13 @@ export const requiredContentRules = [
         regex: /\bpub trait RemoteInitialSyncRuntimeHost\b/,
         message: 'missing remote initial sync runtime host contract',
       },
-      {
-        regex: /\bremote_workspace_contracts_preserve_workspace_and_session_facts\b/,
-        message: 'missing remote workspace contract regression',
-      },
-      {
-        regex: /\bremote_projection_contract_preserves_file_chunk_identity\b/,
-        message: 'missing remote projection contract regression',
-      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/session_workspace.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
       {
         regex: /\bpub trait WorkspaceFileSystem\b/,
         message: 'missing workspace file-system port contract',
@@ -2804,66 +3044,32 @@ export const requiredContentRules = [
         regex: /\bpub struct WorkspaceDirEntry\b/,
         message: 'missing workspace dir-entry contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/runtime_facade_tests.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
+      {
+        regex: /\bremote_workspace_contracts_preserve_workspace_and_session_facts\b/,
+        message: 'missing remote workspace contract regression',
+      },
+      {
+        regex: /\bremote_projection_contract_preserves_file_chunk_identity\b/,
+        message: 'missing remote projection contract regression',
+      },
       {
         regex: /\bworkspace_services_contract_is_runtime_port_owned\b/,
         message: 'missing workspace service ownership regression',
       },
-      {
-        regex: /\bpub fn remote_image\b/,
-        message: 'missing remote image attachment helper contract',
-      },
-      {
-        regex: /\bpub struct AgentDialogTurnRequest\b/,
-        message: 'missing agent dialog turn lifecycle request contract',
-      },
-      {
-        regex: /\bpub struct AgentDialogPrependedReminder\b/,
-        message: 'missing agent dialog prepended reminder contract',
-      },
-      {
-        regex: /\bpub trait AgentDialogTurnPort\b/,
-        message: 'missing agent dialog turn lifecycle port contract',
-      },
-      {
-        regex: /\bpub struct AgentBackgroundResultRequest\b/,
-        message: 'missing background result lifecycle request contract',
-      },
-      {
-        regex: /\bpub enum AgentThreadGoalDeliveryKind\b/,
-        message: 'missing thread-goal lifecycle delivery kind contract',
-      },
-      {
-        regex: /\bpub struct AgentThreadGoalDeliveryRequest\b/,
-        message: 'missing thread-goal lifecycle delivery request contract',
-      },
-      {
-        regex: /\bpub trait AgentLifecycleDeliveryPort\b/,
-        message: 'missing agent lifecycle delivery port contract',
-      },
-      {
-        regex: /\brequester_session_id\b/,
-        message: 'missing requester-aware turn cancellation contract',
-      },
-      {
-        regex: /\bpub struct AgentSessionListRequest\b/,
-        message: 'missing agent session list request contract',
-      },
-      {
-        regex: /\bpub struct AgentSessionSummary\b/,
-        message: 'missing agent session summary contract',
-      },
-      {
-        regex: /\bpub struct AgentSessionDeleteRequest\b/,
-        message: 'missing agent session delete request contract',
-      },
-      {
-        regex: /\bpub struct AgentSessionWorkspaceRequest\b/,
-        message: 'missing agent session workspace request contract',
-      },
-      {
-        regex: /\bpub trait AgentSessionManagementPort\b/,
-        message: 'missing agent session management port contract',
-      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/agent_facade_tests.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
       {
         regex: /\bagent_session_management_contracts_serialize_stable_shape\b/,
         message: 'missing agent session management serialization regression',
@@ -2881,100 +3087,32 @@ export const requiredContentRules = [
         message: 'missing thread-goal lifecycle request regression',
       },
       {
-        regex: /\bpub type DialogTriggerSource = AgentSubmissionSource\b/,
-        message: 'missing dialog trigger source compatibility contract',
-      },
-      {
         regex: /\bdialog_trigger_source_reuses_agent_submission_source_contract\b/,
         message: 'missing dialog trigger source alias regression',
-      },
-      {
-        regex: /\bpub enum DialogQueuePriority\b/,
-        message: 'missing dialog queue priority contract',
-      },
-      {
-        regex: /\bpub struct DialogSubmissionPolicy\b/,
-        message: 'missing dialog submission policy contract',
       },
       {
         regex: /\bdialog_submission_policy_preserves_current_surface_queue_defaults\b/,
         message: 'missing dialog submission policy regression',
       },
       {
-        regex: /\bpub enum DialogSubmitOutcome\b/,
-        message: 'missing dialog submit outcome contract',
-      },
-      {
         regex: /\bdialog_submit_outcome_preserves_started_and_queued_fields\b/,
         message: 'missing dialog submit outcome regression',
-      },
-      {
-        regex: /\bpub enum DialogSessionStateFact\b/,
-        message: 'missing dialog session state fact contract',
-      },
-      {
-        regex: /\bpub struct DialogSubmitQueueFacts\b/,
-        message: 'missing dialog submit queue facts contract',
-      },
-      {
-        regex: /\bpub enum DialogSubmitQueueAction\b/,
-        message: 'missing dialog submit queue action contract',
-      },
-      {
-        regex: /\bpub const fn resolve_dialog_submit_queue_action\b/,
-        message: 'missing dialog submit queue action resolver',
       },
       {
         regex: /\bdialog_submit_queue_action_preserves_current_scheduler_routing_policy\b/,
         message: 'missing dialog submit queue action regression',
       },
       {
-        regex: /\bpub fn should_suppress_agent_session_cancelled_reply\b/,
-        message: 'missing agent-session cancel suppression contract',
-      },
-      {
-        regex: /\bpub enum DialogTurnOutcomeKind\b/,
-        message: 'missing dialog turn outcome kind contract',
-      },
-      {
-        regex: /\bpub const fn should_skip_agent_session_reply\b/,
-        message: 'missing agent-session reply skip contract',
-      },
-      {
         regex: /\bagent_session_reply_decisions_preserve_cancel_suppression_boundary\b/,
         message: 'missing agent-session reply decision regression',
-      },
-      {
-        regex: /\bpub struct AgentSessionReplyRoute\b/,
-        message: 'missing agent session reply route contract',
       },
       {
         regex: /\bagent_session_reply_route_keeps_requester_fields\b/,
         message: 'missing agent session reply route regression',
       },
       {
-        regex: /\bpub enum DialogSteerOutcome\b/,
-        message: 'missing dialog steer outcome contract',
-      },
-      {
         regex: /\bdialog_steer_outcome_preserves_buffered_fields\b/,
         message: 'missing dialog steer outcome regression',
-      },
-      {
-        regex: /\bpub enum RoundInjectionKind\b/,
-        message: 'missing round injection kind contract',
-      },
-      {
-        regex: /\bpub enum RoundInjectionTarget\b/,
-        message: 'missing round injection target contract',
-      },
-      {
-        regex: /\bpub struct RoundInjection\b/,
-        message: 'missing round injection message contract',
-      },
-      {
-        regex: /\bpub trait DialogRoundInjectionSource\b/,
-        message: 'missing dialog round injection source contract',
       },
       {
         regex: /\bround_injection_contract_keeps_kind_and_target_identity\b/,
@@ -2985,26 +3123,6 @@ export const requiredContentRules = [
         message: 'missing round injection source contract regression',
       },
       {
-        regex: /\bpub enum ThreadGoalStatus\b/,
-        message: 'missing thread goal status contract',
-      },
-      {
-        regex: /\bpub struct ThreadGoal\b/,
-        message: 'missing thread goal contract',
-      },
-      {
-        regex: /\bpub struct SetThreadGoalResult\b/,
-        message: 'missing set thread goal result contract',
-      },
-      {
-        regex: /\bpub struct ThreadGoalContinuationPlan\b/,
-        message: 'missing thread goal continuation plan contract',
-      },
-      {
-        regex: /\bpub struct ThreadGoalToolResponse\b/,
-        message: 'missing thread goal tool response contract',
-      },
-      {
         regex: /\bthread_goal_active_status_includes_budget_limited\b/,
         message: 'missing thread goal status contract regression',
       },
@@ -3013,40 +3131,27 @@ export const requiredContentRules = [
         message: 'missing thread goal tool response wire-shape regression',
       },
       {
-        regex: /\bpub struct CompressionContract\b/,
-        message: 'missing compression contract',
-      },
-      {
-        regex: /\bpub struct CompressionContractItem\b/,
-        message: 'missing compression contract item',
-      },
-      {
-        regex: /\bcompression_contract_renders_model_visible_fields\b/,
-        message: 'missing compression contract rendering regression',
-      },
-      {
-        regex: /\bpub struct RelatedPath\b/,
-        message: 'missing related path request-context contract',
-      },
-      {
-        regex: /\brelated_path_serializes_as_request_context_fact\b/,
-        message: 'missing related path serialization regression',
-      },
-      {
-        regex: /\bpub struct DelegationPolicy\b/,
-        message: 'missing delegation policy contract',
-      },
-      {
-        regex: /\bpub enum SubagentContextMode\b/,
-        message: 'missing subagent context mode contract',
-      },
-      {
         regex: /\bdelegation_policy_child_blocks_recursive_spawn_without_losing_depth\b/,
         message: 'missing delegation policy contract regression',
       },
       {
         regex: /\bsubagent_context_mode_preserves_fork_wire_value\b/,
         message: 'missing subagent context mode contract regression',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/contracts/runtime-ports/src/port_facade_tests.rs',
+    reason:
+      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
+    patterns: [
+      {
+        regex: /\bcompression_contract_renders_model_visible_fields\b/,
+        message: 'missing compression contract rendering regression',
+      },
+      {
+        regex: /\brelated_path_serializes_as_request_context_fact\b/,
+        message: 'missing related path serialization regression',
       },
     ],
   },
