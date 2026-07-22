@@ -1,6 +1,6 @@
 # C4 Phase 0 设计稿 v0.2：技能锻造 judge 门禁（judge gate primitive）
 
-> 2026-07-22。状态：**judge 设计评审一轮 FAIL → 按修复指引返修，待复审 + 用户拍板**。
+> 2026-07-22。状态：**judge 设计评审 Approved；§10 六项用户已拍板（2026-07-22）：①GateJudge 专用 agent；②红线表照 §8 frozen；③过门即启用；④五硬化照 §10.4 分期；⑤审计位置 user_data_dir()/judge-gate/；⑥人类反馈槽允许 Absent(封闭理由)。进入实施。**
 > 前置：`docs/plans/2026-07-21-three-track-refinement-plan.md` §v0.2.5（成长架构 v2 已闭合边界，本文不重复论证，直接遵守）。
 > v0.1 → v0.2 变更：修复裁决协议红线绕过、改 advisory gate 为 receipt 结构门、审计迁出 logs_dir 且 approve 绑定审计落盘、证据四槽强类型化、红线治理矛盾消除、模块按分层拆分（纯协议下沉 agent-runtime）、新增专用 GateJudge agent、确定性 fake runner 测试、撤回五硬化单方面延期（改列用户拍板项）。
 
@@ -181,11 +181,11 @@ pub(crate) async fn promote_candidate_skill(receipt: ApprovedGateReceipt, candid
 10. 验收命令（本设计可达成基线）：`cargo check --workspace`、`cargo check -p northhing-core --features product-full`、`cargo test -p northhing-agent-runtime`、`cargo test -p northhing-core --features product-full --lib agentic::judge_gate`。**环境敏感家族**（subagent_ports tests_cancel×2/tests_timeout/tests_error/tests_parent_chain/tests_concurrent 共 6 个，本机有 LLM 配置时稳定失败，已登记 tech-debt-ledger P2-7）不在本单验收范围，其结构性修复归 P2-7 测试基建单。
 11. 手工实证（用户在场）：真实候选 promote 过门一次，审计/episode（judge turn 落盘，C5b-G2/G3 链路）可查。
 
-## 10. 待用户拍板（v0.2 修订后）
+## 10. 拍板记录（2026-07-22，全部照推荐通过）
 
-1. **GateJudge 专用 agent**（推荐，§5.2）vs 字面复用 `ReviewJudge`（需接受其系统 prompt 语义错位并靠 user brief 覆盖）——是否认可「复用机制 ≠ 复用同名 agent」满足计划 :61。
-2. **红线表 v1 逐字文本**（§8）。
-3. **promote 后默认启用**：计划 :93 已定（候选过 judge 门即启用），本稿按此执行，仅再确认一次；如需「过门后仍默认禁用」须加 per-mode disabled override。
-4. **五硬化分期**（judge 裁定 v0.1 无权单方面延期，须用户拍板）：#1（红线即测试规格+canonical 违反集）→ 本稿已纳入 Phase 0（§9.1 解析矩阵即 canonical 违反集；异源生成器留 Phase 1）；#4（零依赖边）→ 本稿提前至 Phase 0（§2/§5.1/§9.9）；#2（哈希覆盖/隔离域）与 #5（golden 回归+Hoeffding）→ 建议 Phase 1 随 C4 正篇同立；#3（soul staging）→ 无 soul 写入前不触发。是否照此分期。
-5. **审计位置** `user_data_dir()/judge-gate/`（已核实免疫 cleanup）——或另指。
-6. **证据人类反馈槽**：四槽强制但允许 `Absent(封闭理由)`（本稿方案）vs 一律强制 Present（更严，但 Phase 0 多数请求无人类反馈可引）——计划 :76「必须含人类反馈」的解释请确认。
+1. GateJudge 专用 agent ✅（§5.2，含 4 注册触点）。
+2. 红线表 v1 照 §8 逐字 frozen ✅。
+3. 技能候选过门即默认启用 ✅（计划 :93 解释确认）。
+4. 五硬化分期照 §9/§10.4 执行：#1 解析矩阵（canonical 违反集）+ #4 零依赖边守卫入 Phase 0；#2/#5 随 C4 正篇（Phase 1）；#3 不触发 ✅。
+5. 审计位置 `user_data_dir()/judge-gate/` ✅。
+6. 人类反馈槽允许 `Absent(封闭理由)` ✅。
