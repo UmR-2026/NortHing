@@ -1378,6 +1378,21 @@ export const requiredContentRules = [
         message: 'missing manual trigger owner delegation',
       },
       {
+        regex: /\bclear_pending_trigger\b/,
+        message: 'missing pending trigger clear owner delegation',
+      },
+      {
+        regex: /\bCoreServiceAgentRuntime::agent_runtime_with_dialog_turns\b/,
+        message: 'missing scheduled-job dialog lifecycle owner binding',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/cron/service_impl.rs',
+    reason:
+      'core cron service may own concrete storage and schedule parsing, while scheduled-job state and dialog submission flow through agent-runtime owners',
+    patterns: [
+      {
         regex: /\bapply_due_scheduled_trigger\b/,
         message: 'missing scheduled trigger owner delegation',
       },
@@ -1390,40 +1405,39 @@ export const requiredContentRules = [
         message: 'missing enqueue failure owner delegation',
       },
       {
-        regex: /\brecover_interrupted_turn_after_restart\b/,
-        message: 'missing restart recovery owner delegation',
-      },
-      {
         regex: /\bpending_is_due\b/,
         message: 'missing pending due owner delegation',
-      },
-      {
-        regex: /\bnext_wakeup_at_ms\b/,
-        message: 'missing wakeup owner delegation',
-      },
-      {
-        regex: /\bclear_pending_trigger\b/,
-        message: 'missing pending trigger clear owner delegation',
       },
       {
         regex: /\bScheduledJobEnqueueFailureAction\b/,
         message: 'missing enqueue failure action owner delegation',
       },
       {
-        regex: /\bCoreServiceAgentRuntime::agent_runtime_with_dialog_turns\b/,
-        message: 'missing scheduled-job dialog lifecycle owner binding',
-      },
-      {
         regex: /\bAgentDialogTurnRequest\b/,
         message: 'missing scheduled-job dialog lifecycle request',
       },
       {
-        regex: /\bAgentDialogPrependedReminder\b/,
-        message: 'missing scheduled-job portable prepended reminder',
-      },
-      {
         regex: /\bsubmit_dialog_turn\b/,
         message: 'missing scheduled-job dialog lifecycle submission',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/cron/service_helpers.rs',
+    reason:
+      'core cron service may own concrete storage and schedule parsing, while scheduled-job state and dialog submission flow through agent-runtime owners',
+    patterns: [
+      {
+        regex: /\brecover_interrupted_turn_after_restart\b/,
+        message: 'missing restart recovery owner delegation',
+      },
+      {
+        regex: /\bnext_wakeup_at_ms\b/,
+        message: 'missing wakeup owner delegation',
+      },
+      {
+        regex: /\bAgentDialogPrependedReminder\b/,
+        message: 'missing scheduled-job portable prepended reminder',
       },
     ],
   },
@@ -2064,9 +2078,20 @@ export const requiredContentRules = [
       'core persistence manager must keep workspace identity, runtime preflight, state/turn/prompt-cache IO while services-core owns session metadata store CRUD/index rebuild IO and construction rules',
     patterns: [
       {
-        regex: /\bbuild_persisted_session_metadata\s*\(\s*SessionMetadataBuildFacts\s*\{/,
-        message: 'missing services-core session metadata construction delegation',
+        regex: /\bresolve_workspace_session_identity\b/,
+        message: 'missing workspace identity resolution before metadata construction',
       },
+      {
+        regex: /\bLOCAL_WORKSPACE_SSH_HOST\b/,
+        message: 'missing local workspace hostname compatibility fallback',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/persistence/metadata_subhandlers.rs',
+    reason:
+      'core persistence manager must keep workspace identity, runtime preflight, state/turn/prompt-cache IO while services-core owns session metadata store CRUD/index rebuild IO and construction rules',
+    patterns: [
       {
         regex: /\bsession_metadata_store\s*\(\s*&self,\s*workspace_path:\s*&Path\s*\)\s*->\s*SessionMetadataStore\b/,
         message: 'missing services-core session metadata store adapter',
@@ -2092,25 +2117,43 @@ export const requiredContentRules = [
         message: 'missing metadata load delegation to services-core store',
       },
       {
-        regex: /\.delete_session_dir_and_index\(session_id\)/,
-        message: 'missing metadata delete delegation to services-core store',
-      },
-      {
         regex: /\bensure_runtime_for_write\(workspace_path\)\.await\?/,
         message: 'missing runtime preflight before metadata write',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/persistence/session_subhandlers.rs',
+    reason:
+      'core persistence manager must keep workspace identity, runtime preflight, state/turn/prompt-cache IO while services-core owns session metadata store CRUD/index rebuild IO and construction rules',
+    patterns: [
       {
-        regex: /\bresolve_workspace_session_identity\b/,
-        message: 'missing workspace identity resolution before metadata construction',
+        regex: /\bbuild_persisted_session_metadata\s*\(\s*SessionMetadataBuildFacts\s*\{/,
+        message: 'missing services-core session metadata construction delegation',
       },
       {
-        regex: /\bLOCAL_WORKSPACE_SSH_HOST\b/,
-        message: 'missing local workspace hostname compatibility fallback',
+        regex: /\.delete_session_dir_and_index\(session_id\)/,
+        message: 'missing metadata delete delegation to services-core store',
       },
     ],
   },
   {
     path: 'src/crates/assembly/core/src/agentic/session/session_manager.rs',
+    reason:
+      'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
+    patterns: [
+      {
+        regex: /\bpub async fn clone_prompt_cache\b/,
+        message: 'missing prompt cache clone runtime entry point',
+      },
+      {
+        regex: /\bpub async fn start_dialog_turn_with_existing_context\b/,
+        message: 'missing existing-context dialog turn entry point',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/session/session_manager_metadata.rs',
     reason:
       'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
     patterns: [
@@ -2130,18 +2173,24 @@ export const requiredContentRules = [
         regex: /\bcollect_hidden_subagent_cascade_ids\(/,
         message: 'missing services-core hidden subagent cascade delegation',
       },
-      {
-        regex: /\bpub async fn clone_prompt_cache\b/,
-        message: 'missing prompt cache clone runtime entry point',
-      },
-      {
-        regex: /\bpub async fn start_dialog_turn_with_existing_context\b/,
-        message: 'missing existing-context dialog turn entry point',
-      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/session_manager_lifecycle_tests_restore_dialog.rs',
+    reason:
+      'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
+    patterns: [
       {
         regex: /\bstart_dialog_turn_with_existing_context_persists_turn_and_snapshot\b/,
         message: 'missing existing-context dialog turn persistence regression',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/session/session_manager_metadata_tests_prompt_cache_persistence.rs',
+    reason:
+      'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
+    patterns: [
       {
         regex: /\bclone_prompt_cache_copies_runtime_and_persisted_entries\b/,
         message: 'missing prompt cache clone runtime/disk regression',
@@ -2568,7 +2617,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/service/workspace/manager.rs',
+    path: 'src/crates/assembly/core/src/service/workspace/manager_lifecycle.rs',
     reason:
       'workspace metadata may omit git worktree enrichment when service integrations are disabled',
     patterns: [
@@ -2576,6 +2625,13 @@ export const requiredContentRules = [
         regex: /#\[cfg\(feature = "service-integrations"\)\]\s*use crate::service::git::GitService\b/s,
         message: 'GitService import must stay gated for no-default builds',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/workspace/workspace_info_impl.rs',
+    reason:
+      'workspace metadata may omit git worktree enrichment when service integrations are disabled',
+    patterns: [
       {
         regex: /#\[cfg\(not\(feature = "service-integrations"\)\)\]\s*\{\s*let _ = workspace_root;\s*return None;\s*\}/s,
         message: 'no-default worktree enrichment fallback must remain explicit',
@@ -2699,13 +2755,27 @@ export const requiredContentRules = [
         message: 'missing SSH connection manager owner',
       },
       {
-        regex: /\brussh::client::connect_stream\b/,
-        message: 'missing russh connection owner path',
-      },
-      {
         regex: /\bSftpSession\b/,
         message: 'missing SFTP session owner path',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/mgr_lifecycle_handlers.rs',
+    reason:
+      'services-integrations remote_ssh manager owns russh connection, known-host, saved connection, SFTP, PTY channel, and port-forward concrete behavior',
+    patterns: [
+      {
+        regex: /\brussh::client::connect_stream\b/,
+        message: 'missing russh connection owner path',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/manager_tests.rs',
+    reason:
+      'services-integrations remote_ssh manager owns russh connection, known-host, saved connection, SFTP, PTY channel, and port-forward concrete behavior',
+    patterns: [
       {
         regex: /\bprunes_password_connection_without_vault_entry\b/,
         message: 'missing saved credential pruning regression',
@@ -3637,6 +3707,21 @@ export const requiredContentRules = [
         message: 'missing session management port adapter',
       },
       {
+        regex: /impl northhing_runtime_ports::RemoteControlStatePort for ConversationCoordinator/,
+        message: 'missing remote control state port adapter',
+      },
+      {
+        regex: /pub use northhing_runtime_ports::DialogTriggerSource;/,
+        message: 'missing dialog trigger source compatibility re-export',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/subagent_ports.rs',
+    reason:
+      'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
+    patterns: [
+      {
         regex: /\bruntime_session_summary\b/,
         message: 'missing session summary adapter helper',
       },
@@ -3645,16 +3730,8 @@ export const requiredContentRules = [
         message: 'missing runtime session summary contract binding',
       },
       {
-        regex: /impl northhing_runtime_ports::RemoteControlStatePort for ConversationCoordinator/,
-        message: 'missing remote control state port adapter',
-      },
-      {
         regex: /agent submission port does not yet accept generic attachments/,
         message: 'missing generic attachment guard on agent submission port',
-      },
-      {
-        regex: /pub use northhing_runtime_ports::DialogTriggerSource;/,
-        message: 'missing dialog trigger source compatibility re-export',
       },
     ],
   },
@@ -3751,7 +3828,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/service/workspace/manager.rs',
+    path: 'src/crates/assembly/core/src/service/workspace/manager_accessors.rs',
     reason:
       'core workspace manager must preserve legacy related-path import path while runtime-ports owns portable request-context facts',
     patterns: [
@@ -4002,10 +4079,6 @@ export const requiredContentRules = [
         message: 'missing core remote interaction runtime host binding',
       },
       {
-        regex: /\bRemoteExecutionDispatcher\b/,
-        message: 'missing remote execution dispatcher binding',
-      },
-      {
         regex: /\bImageContextData\b/,
         message: 'missing core image context binding',
       },
@@ -4060,6 +4133,17 @@ export const requiredContentRules = [
       {
         regex: /\bcore_service_agent_runtime_owner_keeps_scheduler_lifecycle_port_contracts\b/,
         message: 'missing scheduler lifecycle port contract regression',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs',
+    reason:
+      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+    patterns: [
+      {
+        regex: /\bRemoteExecutionDispatcher\b/,
+        message: 'missing remote execution dispatcher binding',
       },
     ],
   },
@@ -4941,7 +5025,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router.rs',
+    path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
     reason:
       'remote-connect bot must route concrete agent runtime port bindings through the core service/agent runtime owner',
     patterns: [
@@ -5724,18 +5808,46 @@ export const requiredContentRules = [
         regex: /\bcollect_product_unlocked_collapsed_tools\b/,
         message: 'missing product runtime collapsed-tool unlock state handoff',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/execution/turn_tick.rs',
+    reason:
+      'core execution must pass collapsed-tool unlock state through product runtime owner and keep DeepResearch post-turn hooks',
+    patterns: [
       {
         regex: /\bunlocked_collapsed_tools\b/,
         message: 'missing collapsed-tool unlock propagation into round context',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/execution/turn_init.rs',
+    reason:
+      'core execution must pass collapsed-tool unlock state through product runtime owner and keep DeepResearch post-turn hooks',
+    patterns: [
       {
         regex: /\bcollapsed_tool_names\b/,
         message: 'missing manifest collapsed-tool handoff',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/execution/turn_lifecycle.rs',
+    reason:
+      'core execution must pass collapsed-tool unlock state through product runtime owner and keep DeepResearch post-turn hooks',
+    patterns: [
       {
         regex: /\bGetToolSpec\b/,
         message: 'missing GetToolSpec execution contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/execution/turn_main_loop.rs',
+    reason:
+      'core execution must pass collapsed-tool unlock state through product runtime owner and keep DeepResearch post-turn hooks',
+    patterns: [
       {
         regex: /\bcitation_renumber\b/,
         message: 'missing DeepResearch citation renumber hook',
@@ -6076,20 +6188,34 @@ export const requiredContentRules = [
       'core workspace runtime must continue owning startup remote-workspace guards until workspace service migration is reviewed',
     patterns: [
       {
+        regex: /\bWorkspaceKind::Remote\b/,
+        message: 'missing remote workspace branch',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/workspace/admin.rs',
+    reason:
+      'core workspace runtime must continue owning startup remote-workspace guards until workspace service migration is reviewed',
+    patterns: [
+      {
         regex: /\bprepare_startup_restored_workspaces\b/,
         message: 'missing restored-workspace startup guard',
       },
       {
-        regex: /\bWorkspaceKind::Remote\b/,
-        message: 'missing remote workspace branch',
+        regex: /\bsshHost\b/,
+        message: 'missing remote workspace host metadata contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/service/workspace/service_init.rs',
+    reason:
+      'core workspace runtime must continue owning startup remote-workspace guards until workspace service migration is reviewed',
+    patterns: [
       {
         regex: /\bensure_remote_workspace_runtime\b/,
         message: 'missing remote workspace runtime ensure call',
-      },
-      {
-        regex: /\bsshHost\b/,
-        message: 'missing remote workspace host metadata contract',
       },
     ],
   },
@@ -6113,6 +6239,13 @@ export const requiredContentRules = [
         regex: /\bpub struct WorkspaceSearchRepoConfig\b/,
         message: 'missing stable workspace-search repo config contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/workspace_search/service_search.rs',
+    reason:
+      'services-integrations workspace_search must own local flashgrep fallback and session lifecycle',
+    patterns: [
       {
         regex: /\bwith_scan_fallback\b/,
         message: 'missing flashgrep scan fallback request flag',
@@ -6198,16 +6331,8 @@ export const requiredContentRules = [
       'services-integrations remote SSH workspace_search must own remote flashgrep concrete session, fallback, and binary lifecycle behind provider traits',
     patterns: [
       {
-        regex: /\bpub trait RemoteWorkspaceSearchProvider\b/,
-        message: 'missing remote search provider boundary',
-      },
-      {
         regex: /\bpub struct RemoteWorkspaceSearchService\b/,
         message: 'missing remote workspace search service owner',
-      },
-      {
-        regex: /\bpub struct RemoteWorkspaceSearchStdioProtocol\b/,
-        message: 'missing narrow remote stdio protocol facade',
       },
       {
         regex: /\bREMOTE_STDIO_SESSIONS\b/,
@@ -6218,13 +6343,42 @@ export const requiredContentRules = [
         message: 'missing remote search context lifecycle owner',
       },
       {
-        regex: /\ballow_scan_fallback:\s*true\b/,
-        message: 'missing remote scan fallback contract',
-      },
-      {
         regex: /\bfallback_query\b/,
         message: 'missing FilesWithMatches fallback query',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/protocol.rs',
+    reason:
+      'services-integrations remote SSH workspace_search must own remote flashgrep concrete session, fallback, and binary lifecycle behind provider traits',
+    patterns: [
+      {
+        regex: /\bpub trait RemoteWorkspaceSearchProvider\b/,
+        message: 'missing remote search provider boundary',
+      },
+      {
+        regex: /\bpub struct RemoteWorkspaceSearchStdioProtocol\b/,
+        message: 'missing narrow remote stdio protocol facade',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/repo_session.rs',
+    reason:
+      'services-integrations remote SSH workspace_search must own remote flashgrep concrete session, fallback, and binary lifecycle behind provider traits',
+    patterns: [
+      {
+        regex: /\ballow_scan_fallback:\s*true\b/,
+        message: 'missing remote scan fallback contract',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/service_helpers.rs',
+    reason:
+      'services-integrations remote SSH workspace_search must own remote flashgrep concrete session, fallback, and binary lifecycle behind provider traits',
+    patterns: [
       {
         regex: /\bremote_search_rejects_non_linux_before_stdio_open\b/,
         message: 'missing remote OS gate regression',
@@ -6305,6 +6459,13 @@ export const requiredContentRules = [
         regex: /\bCLIENT_STARTUP_TIMEOUT_SECS\b/,
         message: 'missing ACP startup timeout duration contract',
       },
+    ],
+  },
+  {
+    path: 'src/crates/interfaces/acp/src/client/manager_errors.rs',
+    reason:
+      'ACP surface runtime must continue owning startup timeout diagnostics until ACP migration is reviewed',
+    patterns: [
       {
         regex: /\bstartup_timeout_error_message\b/,
         message: 'missing ACP startup timeout diagnostic formatter',
@@ -6360,18 +6521,6 @@ export const requiredContentRules = [
         message: 'missing MiniApp storage integration error type',
       },
       {
-        regex: /\bMiniAppImportBundleWriteRequest\b/,
-        message: 'missing services-owned MiniApp import bundle write request',
-      },
-      {
-        regex: /\bread_import_meta_json\b/,
-        message: 'missing services-owned MiniApp import metadata read',
-      },
-      {
-        regex: /\bwrite_import_bundle\b/,
-        message: 'missing services-owned MiniApp import bundle IO',
-      },
-      {
         regex: /\btokio::fs::read_to_string\b/,
         message: 'missing services-owned MiniApp storage file reads',
       },
@@ -6391,6 +6540,32 @@ export const requiredContentRules = [
         regex: /\bimpl MiniAppStoragePort for MiniAppStorage\b/,
         message: 'missing MiniApp storage port implementation in integrations owner',
       },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
+    reason:
+      'services-integrations must own MiniApp filesystem storage, draft, customization, and version IO behind the miniapp-runtime feature',
+    patterns: [
+      {
+        regex: /\bMiniAppImportBundleWriteRequest\b/,
+        message: 'missing services-owned MiniApp import bundle write request',
+      },
+      {
+        regex: /\bread_import_meta_json\b/,
+        message: 'missing services-owned MiniApp import metadata read',
+      },
+      {
+        regex: /\bwrite_import_bundle\b/,
+        message: 'missing services-owned MiniApp import bundle IO',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
+    reason:
+      'services-integrations must own MiniApp filesystem storage, draft, customization, and version IO behind the miniapp-runtime feature',
+    patterns: [
       {
         regex: /\bstorage_port_adapter_preserves_existing_file_lifecycle\b/,
         message: 'missing MiniApp storage port behavior regression test',

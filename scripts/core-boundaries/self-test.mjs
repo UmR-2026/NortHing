@@ -1282,18 +1282,28 @@ export function runManifestParserSelfTest({
       path: 'src/crates/assembly/core/src/service/cron/service.rs',
       contracts: [
         'mark_manual_trigger',
+        'clear_pending_trigger',
+        'CoreServiceAgentRuntime::agent_runtime_with_dialog_turns',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/service/cron/service_impl.rs',
+      contracts: [
         'apply_due_scheduled_trigger',
         'mark_enqueued',
         'mark_enqueue_failed',
-        'recover_interrupted_turn_after_restart',
         'pending_is_due',
-        'next_wakeup_at_ms',
-        'clear_pending_trigger',
         'ScheduledJobEnqueueFailureAction',
-        'CoreServiceAgentRuntime::agent_runtime_with_dialog_turns',
         'AgentDialogTurnRequest',
-        'AgentDialogPrependedReminder',
         'submit_dialog_turn',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/service/cron/service_helpers.rs',
+      contracts: [
+        'recover_interrupted_turn_after_restart',
+        'next_wakeup_at_ms',
+        'AgentDialogPrependedReminder',
       ],
     },
     {
@@ -1331,9 +1341,15 @@ export function runManifestParserSelfTest({
       contracts: [
         'clone_prompt_cache',
         'start_dialog_turn_with_existing_context',
-        'start_dialog_turn_with_existing_context_persists_turn_and_snapshot',
-        'clone_prompt_cache_copies_runtime_and_persisted_entries',
       ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/session_manager_lifecycle_tests_restore_dialog.rs',
+      contracts: ['start_dialog_turn_with_existing_context_persists_turn_and_snapshot'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/session/session_manager_metadata_tests_prompt_cache_persistence.rs',
+      contracts: ['clone_prompt_cache_copies_runtime_and_persisted_entries'],
     },
     {
       path: 'src/crates/assembly/core/src/agentic/persistence/session_branch.rs',
@@ -1363,7 +1379,7 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/assembly/core/src/agentic/persistence/manager.rs',
+      path: 'src/crates/assembly/core/src/agentic/persistence/metadata_subhandlers.rs',
       contracts: [
         'SessionMetadataStore',
         'session_metadata_store',
@@ -1372,9 +1388,12 @@ export function runManifestParserSelfTest({
         'list_metadata_including_internal',
         'save_metadata',
         'load_metadata',
-        'delete_session_dir_and_index',
         'ensure_runtime_for_write',
       ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/persistence/session_subhandlers.rs',
+      contracts: ['delete_session_dir_and_index'],
     },
     {
       path: 'src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline.rs',
@@ -1547,11 +1566,16 @@ export function runManifestParserSelfTest({
         'SessionTranscriptReader',
         'AgentTurnCancellationPort',
         'AgentSessionManagementPort',
+        'RemoteControlStatePort',
+        'DialogTriggerSource',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/coordination/subagent_ports.rs',
+      contracts: [
         'runtime_session_summary',
         'AgentSessionSummary',
-        'RemoteControlStatePort',
         'generic attachments',
-        'DialogTriggerSource',
       ],
     },
     {
@@ -1608,7 +1632,7 @@ export function runManifestParserSelfTest({
       contracts: ['northhing_runtime_ports', 'CompressionContract', 'CompressionContractItem'],
     },
     {
-      path: 'src/crates/assembly/core/src/service/workspace/manager.rs',
+      path: 'src/crates/assembly/core/src/service/workspace/manager_accessors.rs',
       contracts: ['northhing_runtime_ports', 'RelatedPath'],
     },
     {
@@ -2022,13 +2046,23 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/assembly/core/src/agentic/execution/execution_engine.rs',
-      contracts: [
-        'collect_product_unlocked_collapsed_tools',
-        'unlocked_collapsed_tools',
-        'collapsed_tool_names',
-        'GetToolSpec',
-        'citation_renumber',
-      ],
+      contracts: ['collect_product_unlocked_collapsed_tools'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/execution/turn_tick.rs',
+      contracts: ['unlocked_collapsed_tools'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/execution/turn_init.rs',
+      contracts: ['collapsed_tool_names'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/execution/turn_lifecycle.rs',
+      contracts: ['GetToolSpec'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/execution/turn_main_loop.rs',
+      contracts: ['citation_renumber'],
     },
     {
       path: 'src/crates/assembly/core/src/agentic/tools/product_runtime/unlock_state.rs',
@@ -2187,7 +2221,15 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/assembly/core/src/service/workspace/service.rs',
-      contracts: ['prepare_startup_restored_workspaces', 'WorkspaceKind::Remote', 'ensure_remote_workspace_runtime', 'sshHost'],
+      contracts: ['WorkspaceKind::Remote'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/service/workspace/admin.rs',
+      contracts: ['prepare_startup_restored_workspaces', 'sshHost'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/service/workspace/service_init.rs',
+      contracts: ['ensure_remote_workspace_runtime'],
     },
     {
       path: 'src/crates/services/services-integrations/src/workspace_search/mod.rs',
@@ -2195,7 +2237,11 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/services/services-integrations/src/workspace_search/service.rs',
-      contracts: ['WorkspaceSearchRepoConfig', 'with_scan_fallback'],
+      contracts: ['WorkspaceSearchRepoConfig'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/workspace_search/service_search.rs',
+      contracts: ['with_scan_fallback'],
     },
     {
       path: 'src/crates/services/services-integrations/src/workspace_search/result_mapping.rs',
@@ -2221,7 +2267,19 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/service.rs',
-      contracts: ['RemoteWorkspaceSearchProvider', 'RemoteWorkspaceSearchService', 'RemoteWorkspaceSearchStdioProtocol', 'REMOTE_STDIO_SESSIONS', 'ensure_remote_search_context', 'allow_scan_fallback', 'fallback_query', 'remote_search_rejects_non_linux_before_stdio_open'],
+      contracts: ['RemoteWorkspaceSearchService', 'REMOTE_STDIO_SESSIONS', 'ensure_remote_search_context', 'fallback_query'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/protocol.rs',
+      contracts: ['RemoteWorkspaceSearchProvider', 'RemoteWorkspaceSearchStdioProtocol'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/repo_session.rs',
+      contracts: ['allow_scan_fallback'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/remote_ssh/workspace_search/service_helpers.rs',
+      contracts: ['remote_search_rejects_non_linux_before_stdio_open'],
     },
     {
       path: 'src/crates/assembly/core/src/service/search/mod.rs',
@@ -2300,8 +2358,12 @@ export function runManifestParserSelfTest({
       contracts: ['feature = "product-full"', 'mode_config_canonicalizer'],
     },
     {
-      path: 'src/crates/assembly/core/src/service/workspace/manager.rs',
-      contracts: ['feature = "service-integrations"', 'GitService', 'return None'],
+      path: 'src/crates/assembly/core/src/service/workspace/manager_lifecycle.rs',
+      contracts: ['feature = "service-integrations"', 'GitService'],
+    },
+    {
+      path: 'src/crates/assembly/core/src/service/workspace/workspace_info_impl.rs',
+      contracts: ['return None'],
     },
     {
       path: 'src/crates/assembly/core/src/service/workspace_runtime/service.rs',
@@ -2316,7 +2378,11 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/interfaces/acp/src/client/manager.rs',
-      contracts: ['CLIENT_STARTUP_TIMEOUT_SECS', 'startup_timeout_error_message', 'formats_startup_timeout_error_message'],
+      contracts: ['CLIENT_STARTUP_TIMEOUT_SECS'],
+    },
+    {
+      path: 'src/crates/interfaces/acp/src/client/manager_errors.rs',
+      contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
       path: 'src/crates/assembly/core/src/miniapp/storage.rs',
@@ -2334,14 +2400,24 @@ export function runManifestParserSelfTest({
       contracts: [
         'pub struct MiniAppStorage',
         'MiniAppStorageError',
-        'MiniAppImportBundleWriteRequest',
-        'read_import_meta_json',
-        'write_import_bundle',
         'tokio::fs::read_to_string',
         'tokio::fs::write',
         'tokio::fs::remove_dir_all',
         'MiniAppStorageLayout',
         'MiniAppStoragePort',
+      ],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
+      contracts: [
+        'MiniAppImportBundleWriteRequest',
+        'read_import_meta_json',
+        'write_import_bundle',
+      ],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
+      contracts: [
         'storage_port_adapter_preserves_existing_file_lifecycle',
         'import_bundle_io_preserves_copy_and_fallback_contract',
       ],
@@ -2482,7 +2558,7 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router.rs',
+      path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
       contracts: [
         'CoreServiceAgentRuntime',
         'agent_runtime',
@@ -2520,7 +2596,15 @@ export function runManifestParserSelfTest({
     },
     {
       path: 'src/crates/services/services-integrations/src/remote_ssh/manager.rs',
-      contracts: ['SSHConnectionManager', 'russh::client::connect_stream', 'SftpSession', 'prunes_password_connection_without_vault_entry'],
+      contracts: ['SSHConnectionManager', 'SftpSession'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/remote_ssh/mgr_lifecycle_handlers.rs',
+      contracts: ['russh::client::connect_stream'],
+    },
+    {
+      path: 'src/crates/services/services-integrations/src/remote_ssh/manager_tests.rs',
+      contracts: ['prunes_password_connection_without_vault_entry'],
     },
     {
       path: 'src/crates/services/services-integrations/src/remote_ssh/remote_exec.rs',
