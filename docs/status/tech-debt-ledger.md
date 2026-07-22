@@ -127,6 +127,41 @@
 - **Proposed fix**: Epic, three parts — (1) finish per-path remap per `7bbe512` paradigm (forbidden → `forbiddenContentUnderRules` dir entries; required → per-file split by symbol location; delete absent web-ui rules); (2) triage pre-existing failures into rule updates vs repo fixes (needs architecture decisions, e.g. desktop-tauri coverage, relay-core layout); (3) wire into CI so it cannot rot again. Note: C4 judge_gate zero-dep-edge rule is already added and structurally verified (agent-runtime Cargo.toml has no northhing-core dep).
 - **Status**: active — stage 1 done 2026-07-23 (checker runs without ENOENT; ~34 stale paths remapped per `7bbe512` paradigm, judge-qw verified 25+ remaps symbol-correct; self-test synced to remap). Stage 2 triage done 2026-07-23 (230 violations classified: 25 stale rules fixed — scheduler god-split into `scheduler/sched_{types,state,filter}.rs` + 3 `#[cfg]` gates aligned to the stricter actual `all(service-integrations, product-full)` gate, all grep-verified, no contract loosened — dropping the count to 205; 181 stale rules blocked by self-test anchors — stage 2b cleared 112 (runtime-ports 79 + task_execution 20 + runtime.rs 13) and stage 2c cleared 56 more (groups 4-15 + group16 2/7), all via the byte-conserved per-sibling anchor-split paradigm, judge-qw verified; checker violations 230 -> 37. Remaining 37: 13 need architecture decisions, 7 real violations (symbol absent), 10 stale-regex needing regex correction (full-path impl / pub->pub(crate) etc.), 7 need source-side verification — see `docs/status/2026-07-23-p2-9-stage2-triage.md`). Remaining work: the 10 regex corrections + 7 source verifications + 13 architecture decisions + stage 3 (wire into CI; `check-core-boundaries.test.mjs` default-run assertion exits 1 until the backlog clears).
 
+### P2-10: 5 new god-files (house rule #3), 2 over 1000 lines, none registered or justified
+
+- **Symptom**: House rule #3 requires production `.rs` > 1000 lines to be split or carry `// allow-god-file`; > 800 raises review pressure. Five files exceed 800 with no justification comment and no ledger entry; two exceed 1000 (mandatory split).
+- **Evidence**: `src/apps/desktop/src/app_state/settings.rs` (~1488 lines), `src/apps/desktop/src/app_state/callbacks_settings.rs` (~1100 lines) — both > 1000, no `allow-god-file`. `cli/ui/theme.rs` (~854), `src/apps/desktop/src/app_state/callbacks_lifecycle.rs` (~834), `src/crates/assembly/core/src/agentic/judge_gate/mod.rs` (~813, newly created in C4 Phase 0 already over the line). Found by external review 2026-07-23 + orchestrator scan.
+- **Proposed fix**: Split the two > 1000 files (settings panel is a recurring split source — consider a settings/ module family); for the three > 800, split or add `// allow-god-file` with reason. Register a split plan.
+- **Status**: active
+
+### P2-11: judge_gate ApprovedGateReceipt consumed-set is in-process; restart can reuse a consumed receipt
+
+- **Symptom**: The set of consumed gate receipts lives in process memory. If a `promote` consumes a receipt but the persisting write fails (power loss / crash), a restart resets the consumed set, allowing the same receipt to be replayed — breaking the consume-once guarantee that backs red line #2 (un-gated artifacts must not appear where the agent can auto-hit them).
+- **Evidence**: External review 2026-07-23 §四.6; `src/crates/assembly/core/src/agentic/judge_gate/` receipt consumption path (consumed set not persisted — verify exact location when fixing).
+- **Proposed fix**: Persist the consumed-receipt set (append-only, per red line #4) so consumption survives restart; or make promote idempotent + write-ahead so a failed promote cannot be replayed into a different outcome.
+- **Status**: active
+
+### P2-12: episodes "agent does not read" boundary is convention-layer, not structure-layer (HIGH PRIORITY)
+
+- **Symptom**: C2's invariant "the agent does not read its own episodes for decisions" (anti self-validation loop) is enforced only by convention — no code reads episodes into the prompt today, but nothing structurally prevents it. A future prompt-builder edit could wire episodes in and silently open the self-validation loop, undermining C4's whole point.
+- **Evidence**: External review 2026-07-23 §1 / §四.5; the episodes store under `src/crates/assembly/core/src/agentic/` has no read-side guard.
+- **Proposed fix**: Upgrade to structure-layer — a cargo boundary assertion or path blacklist (like the core-boundaries checker) that fails the build if any prompt-builder path imports the episodes store. Make it as physically hard to break as C4's receipt gate.
+- **Status**: active (high priority — protects the no-self-whitewash invariant)
+
+### P2-13: C1 identity rewritten but agentic_mode.md behavior section not tuned
+
+- **Symptom**: C1 rewrote the identity (IDE tool -> independent colleague): agentic_mode.md front half says "not an IDE, not a coding tool", but the back half is still large blocks of programming guidance. Identity and behavior are split.
+- **Evidence**: External review 2026-07-23 §三 / high-priority.3; the agentic_mode.md identity section vs its programming-guidance section.
+- **Proposed fix**: Reconcile the behavior section with the new identity — reframe the programming guidance for the "independent colleague" stance or trim it; resolve the "not a coding tool" vs coding-guidance contradiction deliberately.
+- **Status**: active
+
+### P2-14: C3 facts dedup is exact-text (fragile); confidence all Med / scope all Workspace (paths unimplemented)
+
+- **Symptom**: facts.jsonl dedup uses exact text match — cannot absorb whitespace/wording variants, so the store bloats with near-duplicates. confidence is always Med and scope always Workspace; the High/Low/Global production paths are not implemented.
+- **Evidence**: External review 2026-07-23 §四.4 / §四.8; C3 facts distillation code.
+- **Proposed fix**: Normalize before dedup (or similarity-based dedup); implement confidence/scope derivation paths or remove the unused enum variants.
+- **Status**: active (low priority)
+
 ## Change Protocol
 
 - **New entry**: Add with next available ID, include evidence (file:line), proposed fix, and status.
