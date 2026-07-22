@@ -17,8 +17,6 @@ export const noCoreDependencyCrates = [
   'product-domains',
   'terminal',
   'tool-runtime',
-  'transport',
-  'api-layer',
   'webdriver',
 ];
 

@@ -6,6 +6,7 @@ export const crateLayoutRules = [
   { crateName: 'events', layer: 'contracts', path: 'src/crates/contracts/events' },
   { crateName: 'product-domains', layer: 'contracts', path: 'src/crates/contracts/product-domains' },
   { crateName: 'runtime-ports', layer: 'contracts', path: 'src/crates/contracts/runtime-ports' },
+  { crateName: 'kernel-api', layer: 'contracts', path: 'src/crates/contracts/kernel-api' },
 
   { crateName: 'agent-runtime', layer: 'execution', path: 'src/crates/execution/agent-runtime' },
   { crateName: 'agent-stream', layer: 'execution', path: 'src/crates/execution/agent-stream' },
@@ -23,8 +24,6 @@ export const crateLayoutRules = [
 
   { crateName: 'acp', layer: 'interfaces', path: 'src/crates/interfaces/acp' },
   { crateName: 'ai-adapters', layer: 'adapters', path: 'src/crates/adapters/ai-adapters' },
-  { crateName: 'api-layer', layer: 'adapters', path: 'src/crates/adapters/api-layer' },
-  { crateName: 'transport', layer: 'adapters', path: 'src/crates/adapters/transport' },
   { crateName: 'webdriver', layer: 'adapters', path: 'src/crates/adapters/webdriver' },
 
   { crateName: 'core', layer: 'assembly', path: 'src/crates/assembly/core' },

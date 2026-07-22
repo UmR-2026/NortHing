@@ -152,16 +152,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/service_agent_runtime.rs',
-    patterns: [
-      {
-        regex: /\bself\.scheduler\s*\.\s*submit\b/,
-        message:
-          'remote dialog runtime host must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_message_tool.rs',
     patterns: [
       {
@@ -2779,6 +2769,18 @@ export const forbiddenContentRules = [
 ];
 
 export const forbiddenContentUnderRules = [
+  {
+    path: 'src/crates/assembly/core/src/service_agent_runtime',
+    reason:
+      'core service/agent runtime owner must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
+    patterns: [
+      {
+        regex: /\bself\.scheduler\s*\.\s*submit\b/,
+        message:
+          'remote dialog runtime host must submit through AgentRuntime dialog lifecycle port, not direct DialogScheduler',
+      },
+    ],
+  },
   {
     path: 'src/crates/assembly/core/src',
     reason:
