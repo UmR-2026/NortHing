@@ -95,6 +95,8 @@ pub fn builtin_agent_definition_specs() -> Vec<BuiltinAgentDefinitionSpec> {
             SubagentVisibilityPolicy::restricted(["DeepResearch"]),
         ),
         builtin_agent_spec("FileFinder", SubAgent, "primary", SubagentVisibilityPolicy::public()),
+        builtin_agent_spec("Test", SubAgent, "fast", SubagentVisibilityPolicy::public()),
+        builtin_agent_spec("Refactor", SubAgent, "fast", SubagentVisibilityPolicy::public()),
         builtin_agent_spec(
             "ReviewBusinessLogic",
             SubAgent,
@@ -152,6 +154,8 @@ pub fn default_model_id_for_builtin_agent(agent_type: &str) -> &'static str {
         "Explore" | "FileFinder" | "CodeReview" | "GenerateDoc" => "primary",
         "GeneralPurpose"
         | "ResearchSpecialist"
+        | "Test"
+        | "Refactor"
         | "DeepReview"
         | "ReviewBusinessLogic"
         | "ReviewPerformance"

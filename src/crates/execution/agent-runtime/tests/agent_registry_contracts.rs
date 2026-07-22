@@ -167,6 +167,8 @@ fn builtin_agent_definition_catalog_preserves_order_categories_models_and_visibi
             "GeneralPurpose",
             "ResearchSpecialist",
             "FileFinder",
+            "Test",
+            "Refactor",
             "ReviewBusinessLogic",
             "ReviewPerformance",
             "ReviewSecurity",
@@ -183,7 +185,7 @@ fn builtin_agent_definition_catalog_preserves_order_categories_models_and_visibi
 
     assert_eq!(specs[0].category, BuiltinAgentCategory::Mode);
     assert_eq!(specs[8].category, BuiltinAgentCategory::SubAgent);
-    assert_eq!(specs[20].category, BuiltinAgentCategory::Hidden);
+    assert_eq!(specs[22].category, BuiltinAgentCategory::Hidden);
     assert_eq!(default_model_id_for_builtin_agent("agentic"), "auto");
     assert_eq!(default_model_id_for_builtin_agent("Explore"), "primary");
     assert_eq!(default_model_id_for_builtin_agent("GeneralPurpose"), "fast");

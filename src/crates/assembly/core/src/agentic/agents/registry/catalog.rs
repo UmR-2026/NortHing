@@ -4,8 +4,8 @@ use crate::agentic::agents::{
     Agent, AgenticMode, ArchitectureReviewerAgent, BusinessLogicReviewerAgent, ClawMode, CodeReviewAgent,
     ComputerUseMode, CoworkMode, DebugMode, DeepResearchMode, DeepReviewAgent, ExploreAgent, FileFinderAgent,
     FrontendReviewerAgent, GateJudgeAgent, GeneralPurposeAgent, GenerateDocAgent, MultitaskMode,
-    PerformanceReviewerAgent, PlanMode, ResearchSpecialistAgent, ReviewFixerAgent, ReviewJudgeAgent,
-    SecurityReviewerAgent, TeamMode,
+    PerformanceReviewerAgent, PlanMode, RefactorAgent, ResearchSpecialistAgent, ReviewFixerAgent, ReviewJudgeAgent,
+    SecurityReviewerAgent, TeamMode, TestAgent,
 };
 use northhing_agent_runtime::agents as runtime_agents;
 use std::sync::Arc;
@@ -64,6 +64,8 @@ fn builtin_agent_factory(id: &str) -> Option<fn() -> Arc<dyn Agent>> {
         "GeneralPurpose" => || Arc::new(GeneralPurposeAgent::new()),
         "ResearchSpecialist" => || Arc::new(ResearchSpecialistAgent::new()),
         "FileFinder" => || Arc::new(FileFinderAgent::new()),
+        "Test" => || Arc::new(TestAgent::new()),
+        "Refactor" => || Arc::new(RefactorAgent::new()),
         "ReviewBusinessLogic" => || Arc::new(BusinessLogicReviewerAgent::new()),
         "ReviewPerformance" => || Arc::new(PerformanceReviewerAgent::new()),
         "ReviewSecurity" => || Arc::new(SecurityReviewerAgent::new()),

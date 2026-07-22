@@ -347,6 +347,8 @@ async fn prompt_stability_task_visible_subagents_are_sorted_deterministically() 
         "Explore",
         "FileFinder",
         "GeneralPurpose",
+        "Refactor",
+        "Test",
         "zBuiltin",
         "AProject",
         "zProject",

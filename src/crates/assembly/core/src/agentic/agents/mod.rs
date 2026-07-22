@@ -27,7 +27,8 @@ pub use definitions::review::{
 };
 pub use definitions::shared::ReadonlySubagent;
 pub use definitions::subagents::{
-    ComputerUseMode, ExploreAgent, FileFinderAgent, GeneralPurposeAgent, ResearchSpecialistAgent,
+    ComputerUseMode, ExploreAgent, FileFinderAgent, GeneralPurposeAgent, RefactorAgent, ResearchSpecialistAgent,
+    TestAgent,
 };
 use indexmap::IndexMap;
 pub use northhing_agent_runtime::agents::{
