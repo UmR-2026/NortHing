@@ -50,7 +50,11 @@
 - **Proposed fix**: Add re-pair guidance UI to PairingPage.
 - **Status**: active (mobile-web: frozen surface)
 
-> **P1-4 desktop mojibake — split off and resolved**: GBK/UTF-8 corruption in desktop Rust Chinese strings was present in earlier snapshots but is not present in the current codebase. The desktop code now carries proper UTF-8 Chinese strings (e.g. `"当前没有正在运行的回复"`, `"已排队，将在当前回复完成后发送"`, `"LLM 调用失败: {error}"`). The fix was absorbed into the desktop rewrites (W3a-4 / D2j / W4 commits, 2026-07-18–19); no single dedicated commit.
+### P1-4b: ~~Desktop Rust i18n mojibake~~ (resolved)
+
+- **Symptom**: GBK/UTF-8 corruption in desktop Rust Chinese strings (e.g. mojibake where "当前没有正在运行的回复" belonged).
+- **Resolution**: Not present in the current codebase — grep for `褰` / `鈥` across `src/apps/desktop/src/` returns zero matches (verified 2026-07-22). The desktop code now carries proper UTF-8 Chinese strings (e.g. `"当前没有正在运行的回复"`, `"已排队，将在当前回复完成后发送"`, `"LLM 调用失败: {error}"`). The cited location was rewritten by `ad349f9` (desktop event bridge, 2026-07-17; found via `git log --follow -S "当前没有正在运行的回复"`); remaining fixes absorbed into the W3a-4 / D2j desktop rewrites (2026-07-18).
+- **Status**: resolved (`ad349f9` + W3a-4 rewrites, verified 2026-07-22)
 
 ### P1-5: Relay server defaults to 0.0.0.0 with no authentication
 
