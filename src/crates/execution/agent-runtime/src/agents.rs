@@ -140,7 +140,7 @@ pub fn builtin_agent_definition_specs() -> Vec<BuiltinAgentDefinitionSpec> {
         builtin_agent_spec("CodeReview", Hidden, "primary", SubagentVisibilityPolicy::default()),
         builtin_agent_spec("DeepReview", Hidden, "fast", SubagentVisibilityPolicy::default()),
         builtin_agent_spec("GenerateDoc", Hidden, "primary", SubagentVisibilityPolicy::default()),
-        builtin_agent_spec("GateJudge", Hidden, "fast", SubagentVisibilityPolicy::default()),
+        builtin_agent_spec("GateJudge", Hidden, "fast", SubagentVisibilityPolicy::hidden(["agentic"])),
     ]
 }
 

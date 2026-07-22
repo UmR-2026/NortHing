@@ -114,7 +114,33 @@ impl GovernanceOverrideEntry {
 /// Get the audit directory path per design spec §6:
 /// user_data_dir()/judge-gate/
 pub(crate) fn audit_dir() -> PathBuf {
+    #[cfg(test)]
+    if let Some(dir) = AUDIT_DIR_OVERRIDE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone()
+    {
+        return dir;
+    }
     path_manager_arc().user_data_dir().join(AUDIT_DIR)
+}
+
+/// Test-only override for the audit directory. Always pair with `TEST_ENV_LOCK`
+/// so parallel tests do not race on the override.
+#[cfg(test)]
+static AUDIT_DIR_OVERRIDE: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
+
+/// Serializes tests that mutate global test-only overrides (audit dir, etc.).
+#[cfg(test)]
+pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Point the audit directory at a test-owned location (`None` restores the
+/// production default). Poison-tolerant: overrides are best-effort test state.
+#[cfg(test)]
+pub(crate) fn set_audit_dir_override_for_tests(dir: Option<PathBuf>) {
+    *AUDIT_DIR_OVERRIDE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = dir;
 }
 
 /// Get today's audit file path.
@@ -138,7 +164,9 @@ pub(crate) fn append_audit_entry(entry: &AuditEntry) -> std::io::Result<()> {
     ensure_audit_dir()?;
     let path = today_audit_path();
 
-    let _guard = APPEND_LOCK.lock().unwrap();
+    let _guard = APPEND_LOCK.lock().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::Other, format!("audit lock poisoned: {:?}", e))
+    })?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -165,7 +193,9 @@ pub(crate) fn append_governance_override(entry: &GovernanceOverrideEntry) -> std
     ensure_audit_dir()?;
     let path = today_audit_path();
 
-    let _guard = APPEND_LOCK.lock().unwrap();
+    let _guard = APPEND_LOCK.lock().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::Other, format!("audit lock poisoned: {:?}", e))
+    })?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -254,5 +284,122 @@ mod tests {
         assert!(regex::Regex::new(r"audit-\d{8}\.jsonl")
             .unwrap()
             .is_match(&filename));
+    }
+
+    fn unique_test_dir(tag: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "northhing-judge-gate-test-{}-{}",
+            tag,
+            uuid::Uuid::new_v4()
+        ))
+    }
+
+    fn make_entry(verdict: &str) -> AuditEntry {
+        AuditEntry::new(
+            ActionKind::PromoteSkillCandidate,
+            "sha256:v1:abc123".to_string(),
+            "1 traces, 1 fs_diffs, S1".to_string(),
+            verdict.to_string(),
+            vec![],
+            None,
+            None,
+            Some(42),
+        )
+    }
+
+    #[test]
+    fn append_then_read_back_fields_match() {
+        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let dir = unique_test_dir("readback");
+        set_audit_dir_override_for_tests(Some(dir.clone()));
+
+        let entry = make_entry("approve");
+        let entry_id = entry.entry_id.clone();
+        append_audit_entry(&entry).expect("append should succeed");
+
+        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+        assert_eq!(lines.len(), 1);
+        let parsed: serde_json::Value = serde_json::from_str(lines[0]).expect("line should be valid JSON");
+        assert_eq!(parsed["entry_id"], entry_id);
+        assert_eq!(parsed["verdict"], "approve");
+        assert_eq!(parsed["action_kind"], "promote_skill_candidate");
+        assert_eq!(parsed["subject_digest"], "sha256:v1:abc123");
+        assert_eq!(parsed["duration_ms"], 42);
+
+        set_audit_dir_override_for_tests(None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn append_governance_override_and_read_back() {
+        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let dir = unique_test_dir("governance");
+        set_audit_dir_override_for_tests(Some(dir.clone()));
+
+        let entry = GovernanceOverrideEntry::new(
+            "sha256:v1:gov".to_string(),
+            "manual redline amendment".to_string(),
+            "user-root-authority".to_string(),
+        );
+        append_governance_override(&entry).expect("governance append should succeed");
+
+        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+        let parsed: serde_json::Value =
+            serde_json::from_str(content.lines().next().unwrap()).expect("line should be valid JSON");
+        assert_eq!(parsed["action_kind"], "governance_override");
+        assert_eq!(parsed["operator"], "user-root-authority");
+        assert_eq!(parsed["reason"], "manual redline amendment");
+
+        set_audit_dir_override_for_tests(None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn audit_write_failure_returns_err_not_panic() {
+        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        // Point the audit dir at an existing FILE: create_dir_all on a file path fails.
+        let file_path = unique_test_dir("blocked");
+        std::fs::write(&file_path, b"not a directory").unwrap();
+        set_audit_dir_override_for_tests(Some(file_path.clone()));
+
+        let result = append_audit_entry(&make_entry("approve"));
+        assert!(result.is_err(), "append to an unwritable audit dir must return Err");
+
+        set_audit_dir_override_for_tests(None);
+        let _ = std::fs::remove_file(&file_path);
+    }
+
+    #[tokio::test]
+    async fn concurrent_50_appends_no_lost_lines_all_unique_ids() {
+        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let dir = unique_test_dir("concurrent");
+        set_audit_dir_override_for_tests(Some(dir.clone()));
+
+        let mut handles = Vec::new();
+        for _ in 0..50 {
+            handles.push(tokio::spawn(async move {
+                append_audit_entry(&make_entry("approve"))
+            }));
+        }
+        let results = futures::future::join_all(handles).await;
+        for result in results {
+            result.expect("append task should not panic").expect("append should succeed");
+        }
+
+        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+        assert_eq!(lines.len(), 50, "all 50 appends must be preserved");
+
+        let mut ids = std::collections::HashSet::new();
+        for line in lines {
+            let parsed: serde_json::Value = serde_json::from_str(line).expect("each line must be valid JSON");
+            let id = parsed["entry_id"].as_str().expect("entry_id must be a string").to_string();
+            assert!(ids.insert(id), "entry_id must be unique per line");
+        }
+        assert_eq!(ids.len(), 50);
+
+        set_audit_dir_override_for_tests(None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -313,3 +313,54 @@ impl SkillRegistry {
         cache.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_skill_md(dir: &std::path::Path, name: &str) {
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(
+            dir.join("SKILL.md"),
+            format!("---\nname: {}\ndescription: {} skill\n---\n\n# {}\n", name, name, name),
+        )
+        .unwrap();
+    }
+
+    /// I-NEG-2 structural defense: the loader scans exactly one directory level,
+    /// so `candidates/<name>/SKILL.md` (nested) is never loadable, while a
+    /// direct `candidates/SKILL.md` child WOULD be scanned - the hazard the
+    /// judge-gate candidate writer must never create.
+    #[tokio::test]
+    async fn loader_scan_ignores_nested_candidates_but_would_catch_direct_child() {
+        let root = std::env::temp_dir().join(format!(
+            "northhing-skill-scan-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        write_skill_md(&root.join("good-skill"), "good-skill");
+        write_skill_md(&root.join("candidates").join("hidden-skill"), "hidden-skill");
+        write_skill_md(&root.join("candidates"), "rogue-candidates-root");
+
+        let entry = SkillRootEntry {
+            path: root.clone(),
+            level: SkillLocation::User,
+            slot: NORTHHING_USER_SLOT,
+            priority: 0,
+            is_builtin: false,
+        };
+        let scanned = SkillRegistry::scan_skills_in_dir(&entry).await;
+        let names: Vec<String> = scanned.iter().map(|s| s.info.dir_name.clone()).collect();
+
+        assert!(names.contains(&"good-skill".to_string()), "top-level skill must be scanned");
+        assert!(
+            !names.contains(&"hidden-skill".to_string()),
+            "nested candidates/<name>/SKILL.md must never be loadable (I-NEG-2)"
+        );
+        assert!(
+            names.contains(&"candidates".to_string()),
+            "a direct candidates/SKILL.md child IS scanned - the promote path must never create it"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}

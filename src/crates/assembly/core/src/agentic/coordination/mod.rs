@@ -46,4 +46,4 @@ pub use self::scheduler::{
 pub use self::turn_outcome::TurnOutcome;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

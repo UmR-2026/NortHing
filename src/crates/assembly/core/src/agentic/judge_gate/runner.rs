@@ -4,7 +4,7 @@
 //! Production use `SubagentJudgeRunner` which delegates to the GateJudge subagent
 //! via `ConversationCoordinator::execute_subagent`.
 
-use crate::agentic::coordination::{global_coordinator, SubagentExecutionRequest};
+use crate::agentic::coordination::{SubagentExecutionRequest, ConversationCoordinator};
 use crate::agentic::deep_review_policy::GATE_JUDGE_AGENT_TYPE;
 use crate::agentic::tools::pipeline::SubagentParentInfo;
 use crate::util::errors::{NortHingError, NortHingResult};
@@ -33,7 +33,7 @@ pub(crate) trait JudgeRunner: Send + Sync {
     /// Run the judge gate evaluation.
     ///
     /// # Arguments
-    /// * `coordinator` - The conversation coordinator (unused for fake runners)
+    /// * `coordinator` - The conversation coordinator
     /// * `brief` - The judge brief string to send to the judge
     /// * `ctx` - The gate execution context
     ///
@@ -42,7 +42,7 @@ pub(crate) trait JudgeRunner: Send + Sync {
     /// * `Err(JudgeRunError)` - If execution failed
     async fn run_judge(
         &self,
-        coordinator: &Arc<dyn std::any::Any + Send + Sync>,
+        coordinator: &Arc<ConversationCoordinator>,
         brief: String,
         ctx: &GateExecutionContext,
     ) -> Result<String, JudgeRunError>;
@@ -61,17 +61,10 @@ impl SubagentJudgeRunner {
 impl JudgeRunner for SubagentJudgeRunner {
     async fn run_judge(
         &self,
-        coordinator: &Arc<dyn std::any::Any + Send + Sync>,
+        coordinator: &Arc<ConversationCoordinator>,
         brief: String,
         ctx: &GateExecutionContext,
     ) -> Result<String, JudgeRunError> {
-        // Downcast coordinator to ConversationCoordinator
-        let coordinator = coordinator
-            .downcast_ref::<crate::agentic::coordination::ConversationCoordinator>()
-            .ok_or_else(|| {
-                JudgeRunError::Unavailable("coordinator downcast failed".to_string())
-            })?;
-
         // Build subagent parent info
         // Per task spec: parent_session_id = "judge-gate" or ctx.parent_session_id,
         // parent_dialog_turn_id = audit_correlation_id or new uuid
@@ -142,13 +135,15 @@ impl Default for SubagentJudgeRunner {
 }
 
 /// FakeJudgeRunner for testing - returns configurable responses.
-/// Moved out of #[cfg(test)] so it can be used by sibling test modules.
+/// Defined at crate level but #[cfg(test)] so only available in tests.
+#[cfg(test)]
 pub(crate) struct FakeJudgeRunner {
     pub verdict_text: Option<String>,
     pub error: Option<JudgeRunError>,
     pub delay_ms: Option<u64>,
 }
 
+#[cfg(test)]
 impl FakeJudgeRunner {
     pub fn new() -> Self {
         Self {
@@ -177,17 +172,19 @@ impl FakeJudgeRunner {
     }
 }
 
+#[cfg(test)]
 impl Default for FakeJudgeRunner {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[cfg(test)]
 #[async_trait::async_trait]
 impl JudgeRunner for FakeJudgeRunner {
     async fn run_judge(
         &self,
-        _coordinator: &Arc<dyn std::any::Any + Send + Sync>,
+        _coordinator: &Arc<ConversationCoordinator>,
         _brief: String,
         _ctx: &GateExecutionContext,
     ) -> Result<String, JudgeRunError> {
@@ -208,26 +205,49 @@ impl JudgeRunner for FakeJudgeRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::agentic::coordination::tests::build_isolated_coordinator;
+    use northhing_agent_runtime::judge_gate::GateExecutionContext;
 
-    #[test]
-    fn fake_judge_runner_returns_configured_verdict() {
+    fn test_ctx() -> GateExecutionContext {
+        GateExecutionContext {
+            workspace_path: None,
+            parent_session_id: None,
+            parent_turn_id: None,
+            timeout_seconds: Some(60),
+            cancel_token: None,
+            audit_correlation_id: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn fake_judge_runner_returns_configured_verdict() {
         let runner = FakeJudgeRunner::new()
             .with_verdict_text(r#"VERDICT_JSON_BEGIN
 {"verdict":"approve","rule_checks":[{"rule":"I-NEG-1","status":"pass"},{"rule":"I-NEG-2","status":"pass"},{"rule":"I-NEG-3","status":"pass"},{"rule":"I-NEG-4","status":"pass"}],"evidence_assessment":"T1, F1","rationale":"All rules pass."}
 VERDICT_JSON_END"#.to_string())
             .with_delay_ms(10);
 
-        assert!(runner.verdict_text.is_some());
-        assert!(runner.error.is_none());
+        let (coordinator, _session_manager) = build_isolated_coordinator();
+        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("approve"));
     }
 
-    #[test]
-    fn fake_judge_runner_returns_error() {
+    #[tokio::test]
+    async fn fake_judge_runner_returns_timeout_error() {
         let runner = FakeJudgeRunner::new().with_error(JudgeRunError::Timeout);
-        assert!(runner.error.is_some());
-        match runner.error {
-            Some(JudgeRunError::Timeout) => {}
-            _ => panic!("expected Timeout"),
-        }
+
+        let (coordinator, _session_manager) = build_isolated_coordinator();
+        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+        assert!(matches!(result, Err(JudgeRunError::Timeout)));
+    }
+
+    #[tokio::test]
+    async fn fake_judge_runner_returns_unavailable_when_no_verdict() {
+        let runner = FakeJudgeRunner::new();
+
+        let (coordinator, _session_manager) = build_isolated_coordinator();
+        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+        assert!(matches!(result, Err(JudgeRunError::Unavailable(_))));
     }
 }

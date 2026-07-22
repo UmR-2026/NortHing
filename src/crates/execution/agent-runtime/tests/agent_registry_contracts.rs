@@ -202,6 +202,33 @@ fn builtin_agent_definition_catalog_preserves_order_categories_models_and_visibi
     assert!(computer_use.visibility_policy.can_access_from_parent(Some("Team")));
     assert!(!computer_use.visibility_policy.can_access_from_parent(Some("agentic")));
 
+    // GateJudge: hidden, not in global registry, restricted to agentic parent
+    let gate_judge = specs
+        .iter()
+        .find(|spec| spec.id == "GateJudge")
+        .expect("GateJudge spec should exist");
+    assert_eq!(
+        gate_judge.visibility_policy.summary().exposure,
+        BuiltinSubagentExposure::Hidden
+    );
+    assert!(
+        !gate_judge.visibility_policy.summary().show_in_global_registry,
+        "GateJudge should not appear in global registry"
+    );
+    assert!(
+        gate_judge
+            .visibility_policy
+            .can_access_from_parent(Some("agentic")),
+        "GateJudge should only be callable from agentic parent"
+    );
+    assert!(
+        !gate_judge
+            .visibility_policy
+            .can_access_from_parent(Some("DeepReview")),
+        "GateJudge should not be callable from DeepReview"
+    );
+    assert_eq!(gate_judge.default_model_id, "fast");
+
     let research_specialist = specs
         .iter()
         .find(|spec| spec.id == "ResearchSpecialist")
