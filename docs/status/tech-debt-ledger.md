@@ -118,6 +118,13 @@
 
 - **Symptom**: `src/crates/assembly/core/src/kernel_facade/mod.rs` is 2213 lines, exceeding the AGENTS.md house rule #3强制拆分线 of 1000 lines.
 - **Proposed fix**: Split into modules per R-family conventions (lifecycle / dto / api / tests); already in backend queue.
+- **Status**: resolved (`b15ad46` + `792ff8d`, 2026-07-22: split into 14 files, mod.rs 73 lines, judge-m3 PASS)
+
+### P2-9: core-boundaries checker fully broken (34 stale rule paths + pre-existing failure backlog)
+
+- **Symptom**: `node scripts/check-core-boundaries.mjs` crashes with ENOENT on 34 rule paths referencing pre-split god files (now directories) and absent `src/web-ui`. Behind the crash sit dozens of accumulated boundary failures (crate layout for relay-core/agent-dispatch/test-support/cli-internal, services-integrations optional-dep gates, desktop-tauri product-full coverage, etc.) — the checker is not wired into CI, so rot went unnoticed.
+- **Evidence**: 2026-07-22 session crash output; partial repair `7bbe512` (deleted crates dropped, `service_agent_runtime` rules remapped to `sar_*.rs` split); `scripts/core-boundaries/self-test.mjs` is orphaned (not in package.json or workflows).
+- **Proposed fix**: Epic, three parts — (1) finish per-path remap per `7bbe512` paradigm (forbidden → `forbiddenContentUnderRules` dir entries; required → per-file split by symbol location; delete absent web-ui rules); (2) triage pre-existing failures into rule updates vs repo fixes (needs architecture decisions, e.g. desktop-tauri coverage, relay-core layout); (3) wire into CI so it cannot rot again. Note: C4 judge_gate zero-dep-edge rule is already added and structurally verified (agent-runtime Cargo.toml has no northhing-core dep).
 - **Status**: active
 
 ## Change Protocol
