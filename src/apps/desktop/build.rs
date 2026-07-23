@@ -9,4 +9,5 @@ fn main() {
     println!("cargo:rerun-if-changed=src/ui/main.slint");
     println!("cargo:rerun-if-changed=src/ui/components");
     println!("cargo:rerun-if-changed=src/ui/views");
+    println!("cargo:rerun-if-changed=src/ui/fonts");
 }
