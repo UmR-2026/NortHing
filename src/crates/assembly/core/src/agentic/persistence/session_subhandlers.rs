@@ -18,7 +18,7 @@ use crate::agentic::skill_agent_snapshot::TurnSkillAgentSnapshot;
 use crate::infrastructure::PathManager;
 use crate::service::remote_ssh::workspace_state::{resolve_workspace_session_identity, LOCAL_WORKSPACE_SSH_HOST};
 use crate::service::session::{
-    DialogTurnData, SessionMetadata, SessionTranscriptExport, SessionTranscriptExportOptions,
+    DialogTurnData, SessionMetadata, SessionStatus, SessionTranscriptExport, SessionTranscriptExportOptions,
     SessionTranscriptIndexEntry, ToolItemData, TranscriptLineRange, SESSION_STORAGE_SCHEMA_VERSION,
 };
 use crate::service::workspace_runtime::WorkspaceRuntimeService;
@@ -318,6 +318,7 @@ impl PersistenceManager {
                 created_at: Self::unix_ms_to_system_time(metadata.created_at),
                 last_activity_at: Self::unix_ms_to_system_time(metadata.last_active_at),
                 state,
+                status: metadata.status,
                 parent_session_id: metadata.relationship.as_ref().and_then(|r| r.parent_session_id.clone()),
             });
         }
@@ -333,12 +334,28 @@ impl PersistenceManager {
         }
         Ok(())
     }
+
+    /// Marks the persisted metadata of a session as `Archived`.
+    /// Idempotent: an already-archived session is left untouched and still reports `Ok(true)`.
+    /// Returns `Ok(false)` when the session has no persisted metadata in this workspace.
+    pub async fn archive_session(&self, workspace_path: &Path, session_id: &str) -> NortHingResult<bool> {
+        let Some(mut metadata) = self.load_session_metadata(workspace_path, session_id).await? else {
+            return Ok(false);
+        };
+        if metadata.status != SessionStatus::Archived {
+            metadata.status = SessionStatus::Archived;
+            self.save_session_metadata(workspace_path, &metadata).await?;
+        }
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::PersistenceManager;
+    use crate::agentic::core::{SessionKind, SessionStatus};
     use crate::infrastructure::PathManager;
+    use crate::service::session::SessionMetadata;
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
     use uuid::Uuid;
@@ -389,5 +406,132 @@ mod tests {
             !manager.project_sessions_dir(workspace.path()).exists(),
             "listing sessions should not create the runtime sessions directory"
         );
+    }
+
+    fn standard_metadata(id: &str, name: &str) -> SessionMetadata {
+        SessionMetadata::new(
+            id.to_string(),
+            name.to_string(),
+            "code".to_string(),
+            "test-model".to_string(),
+        )
+    }
+
+    #[tokio::test]
+    async fn archive_session_marks_metadata_archived_idempotently() {
+        let workspace = TestWorkspace::new();
+        let manager = PersistenceManager::new(workspace.path_manager()).expect("persistence manager");
+        let metadata = standard_metadata("session-archive", "Archive me");
+        manager
+            .save_session_metadata(workspace.path(), &metadata)
+            .await
+            .expect("save metadata");
+
+        let archived = manager
+            .archive_session(workspace.path(), "session-archive")
+            .await
+            .expect("archive session");
+        assert!(archived, "existing metadata should be archived");
+
+        let loaded = manager
+            .load_session_metadata(workspace.path(), "session-archive")
+            .await
+            .expect("load metadata")
+            .expect("metadata exists");
+        assert_eq!(loaded.status, SessionStatus::Archived);
+
+        let archived_again = manager
+            .archive_session(workspace.path(), "session-archive")
+            .await
+            .expect("archive again");
+        assert!(archived_again, "archiving an archived session is idempotent");
+        let reloaded = manager
+            .load_session_metadata(workspace.path(), "session-archive")
+            .await
+            .expect("reload metadata")
+            .expect("metadata exists");
+        assert_eq!(reloaded.status, SessionStatus::Archived);
+    }
+
+    #[tokio::test]
+    async fn archive_session_unknown_id_reports_missing_metadata() {
+        let workspace = TestWorkspace::new();
+        let manager = PersistenceManager::new(workspace.path_manager()).expect("persistence manager");
+
+        let archived = manager
+            .archive_session(workspace.path(), "no-such-session")
+            .await
+            .expect("archive unknown session");
+        assert!(!archived, "unknown session id has no metadata to archive");
+    }
+
+    #[tokio::test]
+    async fn persistence_list_sessions_excludes_subagent_and_projects_status() {
+        let workspace = TestWorkspace::new();
+        let manager = PersistenceManager::new(workspace.path_manager()).expect("persistence manager");
+
+        let standard = standard_metadata("session-standard", "Standard session");
+        let mut subagent = standard_metadata("session-subagent", "Subagent session");
+        subagent.session_kind = SessionKind::Subagent;
+        manager
+            .save_session_metadata(workspace.path(), &standard)
+            .await
+            .expect("save standard metadata");
+        manager
+            .save_session_metadata(workspace.path(), &subagent)
+            .await
+            .expect("save subagent metadata");
+
+        let summaries = manager.list_sessions(workspace.path()).await.expect("list sessions");
+        assert_eq!(summaries.len(), 1, "subagent metadata must not leak into user lists");
+        assert_eq!(summaries[0].session_id, "session-standard");
+        assert_eq!(summaries[0].status, SessionStatus::Active);
+
+        manager
+            .archive_session(workspace.path(), "session-standard")
+            .await
+            .expect("archive standard session");
+        let summaries = manager.list_sessions(workspace.path()).await.expect("list sessions");
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(
+            summaries[0].status,
+            SessionStatus::Archived,
+            "list projects persisted status"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_sessions_isolates_workspaces_and_projects_status() {
+        let workspace_a = TestWorkspace::new();
+        let workspace_b = TestWorkspace::new();
+        let manager = PersistenceManager::new(workspace_a.path_manager()).expect("persistence manager");
+
+        let session_a = standard_metadata("session-a", "Workspace A session");
+        let mut session_b = standard_metadata("session-b", "Workspace B session");
+        session_b.status = SessionStatus::Archived;
+        manager
+            .save_session_metadata(workspace_a.path(), &session_a)
+            .await
+            .expect("save workspace a metadata");
+        manager
+            .save_session_metadata(workspace_b.path(), &session_b)
+            .await
+            .expect("save workspace b metadata");
+
+        let list_a = manager
+            .list_sessions(workspace_a.path())
+            .await
+            .expect("list workspace a");
+        let list_b = manager
+            .list_sessions(workspace_b.path())
+            .await
+            .expect("list workspace b");
+
+        let ids_a: Vec<&str> = list_a.iter().map(|summary| summary.session_id.as_str()).collect();
+        let ids_b: Vec<&str> = list_b.iter().map(|summary| summary.session_id.as_str()).collect();
+        assert_eq!(ids_a, vec!["session-a"], "workspace a keeps only its own sessions");
+        assert_eq!(ids_b, vec!["session-b"], "workspace b keeps only its own sessions");
+        assert_eq!(list_a[0].status, SessionStatus::Active);
+        assert_eq!(list_b[0].status, SessionStatus::Archived);
     }
 }

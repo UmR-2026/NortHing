@@ -19,10 +19,7 @@ impl KernelEventSubscriber {
         let guard = match self.callback.lock() {
             Ok(g) => g,
             Err(poisoned) => {
-                tracing::warn!(
-                    "KernelEventSubscriber callback lock poisoned, recovering: {}",
-                    poisoned
-                );
+                tracing::warn!("KernelEventSubscriber callback lock poisoned, recovering: {}", poisoned);
                 poisoned.into_inner()
             }
         };
@@ -92,8 +89,8 @@ fn turn_error_kind(category: Option<&northhing_core_types::ErrorCategory>) -> su
 
 /// Converts an AgenticEvent to one or more KernelEventDto.
 pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto> {
-    use AgenticEvent;
     use northhing_kernel_api::events::TurnPhaseKind;
+    use AgenticEvent;
     match event {
         AgenticEvent::TextChunk {
             session_id,
@@ -113,9 +110,7 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             },
         ],
         AgenticEvent::ThinkingChunk {
-            session_id,
-            turn_id,
-            ..
+            session_id, turn_id, ..
         } => vec![KernelEventDto::TurnPhase {
             session_id: session_id.clone(),
             turn_id: turn_id.clone(),
@@ -123,9 +118,7 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             tool_name: None,
         }],
         AgenticEvent::DialogTurnStarted {
-            session_id,
-            turn_id,
-            ..
+            session_id, turn_id, ..
         } => vec![
             KernelEventDto::TurnState {
                 session_id: session_id.clone(),
@@ -156,9 +149,7 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
             error_kind: None,
         }],
         AgenticEvent::DialogTurnCancelled {
-            session_id,
-            turn_id,
-            ..
+            session_id, turn_id, ..
         } => vec![KernelEventDto::TurnState {
             session_id: session_id.clone(),
             turn_id: turn_id.clone(),
@@ -184,11 +175,7 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
                 error_kind: Some(classify),
             }]
         }
-        AgenticEvent::SystemError {
-            error, ..
-        } => vec![KernelEventDto::Error {
-            message: error.clone(),
-            }],
+        AgenticEvent::SystemError { error, .. } => vec![KernelEventDto::Error { message: error.clone() }],
         AgenticEvent::ToolEvent {
             session_id,
             turn_id,
@@ -311,6 +298,11 @@ pub(crate) fn summary_to_dto(s: crate::agentic::core::SessionSummary) -> super::
         id: s.session_id,
         name: s.session_name,
         updated_at: crate::kernel_facade::helpers::system_time_to_ms_i64(s.last_activity_at),
+        status: match s.status {
+            crate::agentic::core::SessionStatus::Active => super::SessionStatusDto::Active,
+            crate::agentic::core::SessionStatus::Archived => super::SessionStatusDto::Archived,
+            crate::agentic::core::SessionStatus::Completed => super::SessionStatusDto::Completed,
+        },
     }
 }
 

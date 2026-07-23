@@ -222,7 +222,6 @@ export const dependencyProfileRules = [
       'aes-gcm',
       'northhing-product-capabilities',
       'northhing-product-domains',
-      'northhing-relay-server',
       'northhing-tool-packs',
       'chrono-tz',
       'cron',
@@ -443,7 +442,6 @@ export const dependencyProfileRules = [
     forbiddenNonOptionalDeps: [
       'aes-gcm',
       'anyhow',
-      'async-trait',
       'base64',
       'northhing-product-domains',
       'northhing-runtime-ports',
@@ -462,7 +460,6 @@ export const dependencyProfileRules = [
       'tokio-util',
       'tokio-tungstenite',
       'uuid',
-      'northhing-relay-server',
     ],
   },
 ];

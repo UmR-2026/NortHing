@@ -206,9 +206,10 @@ pub struct SessionMetadata {
 }
 
 /// Session status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum SessionStatus {
+    #[default]
     Active,
     Archived,
     Completed,

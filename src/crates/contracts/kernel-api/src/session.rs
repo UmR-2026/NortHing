@@ -23,6 +23,15 @@ pub struct SessionSummaryDto {
     pub id: SessionId,
     pub name: String,
     pub updated_at: i64,
+    pub status: SessionStatusDto,
+}
+
+/// Sessions of one workspace, used by the cross-workspace archive listing.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceSessionsDto {
+    pub workspace_path: String,
+    pub sessions: Vec<SessionSummaryDto>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -152,7 +161,10 @@ pub enum MessageRoleDto {
 #[serde(rename_all = "snake_case")]
 pub enum MessageContentDto {
     Text(String),
-    Multimodal { text: String, images: Vec<String> },
+    Multimodal {
+        text: String,
+        images: Vec<String>,
+    },
     ToolResult {
         tool_id: String,
         tool_name: String,
@@ -218,6 +230,14 @@ pub trait KernelSessionApi: Send + Sync {
     /// List session summaries.
     /// Source: #12
     async fn list_sessions(&self) -> Result<Vec<SessionSummaryDto>, KernelError>;
+
+    /// Archive a session. Idempotent: archiving an already-archived session succeeds.
+    /// Returns `KernelError::NotFound` for unknown session ids.
+    async fn archive_session(&self, id: &SessionId) -> Result<(), KernelError>;
+
+    /// List session summaries grouped by workspace, ordered by workspace last access
+    /// (most recent first). The default workspace is always included.
+    async fn list_sessions_all_workspaces(&self) -> Result<Vec<WorkspaceSessionsDto>, KernelError>;
 
     /// Get a single session detail (includes state/kind).
     /// Source: #13 #14

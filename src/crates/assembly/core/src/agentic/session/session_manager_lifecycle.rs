@@ -8,7 +8,7 @@ use super::session_manager::SessionManagerConfig;
 
 use crate::agentic::core::{
     new_turn_id, CompressionContract, CompressionState, InternalReminderKind, Message, MessageSemanticKind,
-    ProcessingPhase, Session, SessionConfig, SessionKind, SessionState, SessionSummary, TurnStats,
+    ProcessingPhase, Session, SessionConfig, SessionKind, SessionState, SessionStatus, SessionSummary, TurnStats,
 };
 use crate::agentic::image_analysis::ImageContextData;
 use crate::agentic::persistence::PersistenceManager;
@@ -439,6 +439,7 @@ impl SessionManager {
                         created_at: session.created_at,
                         last_activity_at: session.last_activity_at,
                         state: session.state.clone(),
+                        status: SessionStatus::Active,
                         // Phase D.2: project `parent_session_id` from
                         // the in-memory `Session::relationship` field.
                         // Today this is always `None` because no caller

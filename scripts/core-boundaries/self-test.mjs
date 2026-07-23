@@ -534,7 +534,7 @@ export function runManifestParserSelfTest({
     throw new Error('services-integrations default profile must forbid non-optional uuid');
   }
   const coreProfile = dependencyProfileRules.find((rule) => rule.crateName === 'core');
-  for (const dep of ['git2', 'rmcp', 'image', 'tool-runtime', 'northhing-relay-server']) {
+  for (const dep of ['git2', 'rmcp', 'image', 'tool-runtime']) {
     if (!coreProfile?.forbiddenNonOptionalDeps.includes(dep)) {
       throw new Error(`core no-default profile must forbid non-optional ${dep}`);
     }
@@ -554,7 +554,7 @@ export function runManifestParserSelfTest({
       throw new Error(`core optional dependency owner rule must cover forbidden dependency ${dep}`);
     }
   }
-  for (const dep of ['git2', 'rmcp', 'image', 'tool-runtime', 'northhing-relay-server']) {
+  for (const dep of ['git2', 'rmcp', 'image', 'tool-runtime']) {
     if (!coreOptionalOwnerDeps.has(dep)) {
       throw new Error(`core optional dependency owner rule must cover ${dep}`);
     }
@@ -586,7 +586,7 @@ export function runManifestParserSelfTest({
   const productDomainsOptionalOwnerRule = optionalDependencyFeatureOwnerRules.find(
     (rule) => rule.crateName === 'product-domains',
   );
-  for (const dep of ['dirs', 'log', 'sha2']) {
+  for (const dep of ['dirs', 'sha2']) {
     if (!productDomainsOptionalOwnerRule?.dependencies.some((dependency) => dependency.depName === dep)) {
       throw new Error(`product-domains optional dependency owner rule must cover ${dep}`);
     }

@@ -1,5 +1,6 @@
 use super::state::SessionState;
 pub use northhing_core_types::SessionKind;
+pub use northhing_services_core::session::SessionStatus;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use uuid::Uuid;
@@ -259,6 +260,11 @@ pub struct SessionSummary {
     pub created_at: SystemTime,
     pub last_activity_at: SystemTime,
     pub state: SessionState,
+    /// Lifecycle status projected from persisted metadata.
+    /// The persistence path carries the real stored status; the in-memory
+    /// path defaults to `Active` because `SessionState` has no archived notion.
+    #[serde(default)]
+    pub status: SessionStatus,
     /// Parent session ID for subagent sessions. `None` for root sessions.
     ///
     /// Phase C.1 (2026-06-19): added to enable the sidebar tree view. Existing

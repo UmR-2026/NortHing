@@ -9,56 +9,52 @@
 
 #![allow(clippy::too_many_arguments)]
 
-pub mod error;
-pub mod bootstrap;
-pub mod session;
-pub mod turn;
-pub mod events;
-pub mod settings;
 pub mod agents;
-pub mod tools;
-pub mod usage;
-pub mod platform;
-pub mod util;
+pub mod bootstrap;
+pub mod error;
+pub mod events;
 pub mod memory;
+pub mod platform;
+pub mod session;
+pub mod settings;
+pub mod tools;
+pub mod turn;
+pub mod usage;
+pub mod util;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
 
-pub use error::{KernelError, KernelResult};
-pub use bootstrap::KernelBootstrapApi;
-pub use session::{
-    KernelSessionApi, SessionId, BranchId, SessionConfigDto, SessionSummaryDto, SessionDto,
-    SessionStateDto, SessionKindDto, SessionMetadataDto, SessionRelationshipDto, SessionStatusDto,
-    SessionBranchDto, PersistenceHandleDto, MessageDto, MessageRoleDto, MessageContentDto,
-    MessageMetadataDto, ToolCallStub,
-};
-pub use turn::{
-    KernelTurnApi, TurnId, TurnInputDto, SubmissionPolicyDto, TriggerSourceDto,
-    DialogSubmitOutcomeDto, TurnStateDto, TurnStateKind,
-};
-pub use events::{
-    KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase, BannerLevel,
-    KernelEventDto, BackendEventDto,
-};
-pub use settings::{
-    KernelSettingsApi, GlobalConfigDto, GlobalConfigPatchDto, AIModelConfigDto,
-    MCPServerDto, MCPServerConfigDto, MCPServerStatusDto, ConfigLocationDto,
-    ProviderTestResultDto, ProviderFormDto, ProviderConfigDto,
-};
 pub use agents::{
-    KernelAgentsApi, AgentInfoDto, SubagentDto, SubagentScopeDto, SkillInfoDto,
-    SkillScopeDto, SkillOverridesDto, SkillOverrideEntry, ProjectSkillsDto, ProjectSkillEntry,
+    AgentInfoDto, KernelAgentsApi, ProjectSkillEntry, ProjectSkillsDto, SkillInfoDto, SkillOverrideEntry,
+    SkillOverridesDto, SkillScopeDto, SubagentDto, SubagentScopeDto,
 };
-pub use tools::{
-    KernelToolsApi, ToolPort, ToolInfoDto, ToolRenderOptionsDto, ToolResultDto,
-    ToolUseContextDto, ValidationResultDto, UserInputRequestDto, UserInputResponseDto,
-};
-pub use usage::{
-    KernelUsageApi, UsageRequestDto, UsageReportDto, TurnUsageDto, TokenUsageDto,
-};
-pub use platform::{
-    KernelPlatformApi, TerminalConfigDto, ImageContextDto, AnalysisDto, CoreHealthDto,
-    PanelsConfigDto, PanelDto, InspectorDataDto, SkillStatusDto, ArtifactDto,
+pub use bootstrap::KernelBootstrapApi;
+pub use error::{KernelError, KernelResult};
+pub use events::{
+    BackendEventDto, BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase,
 };
 pub use memory::{EpisodeDto, KernelMemoryApi, ToolFailureRecordDto, ToolUseRecordDto};
+pub use platform::{
+    AnalysisDto, ArtifactDto, CoreHealthDto, ImageContextDto, InspectorDataDto, KernelPlatformApi, PanelDto,
+    PanelsConfigDto, SkillStatusDto, TerminalConfigDto,
+};
+pub use session::{
+    BranchId, KernelSessionApi, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto,
+    PersistenceHandleDto, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionKindDto,
+    SessionMetadataDto, SessionRelationshipDto, SessionStateDto, SessionStatusDto, SessionSummaryDto, ToolCallStub,
+    WorkspaceSessionsDto,
+};
+pub use settings::{
+    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, KernelSettingsApi, MCPServerConfigDto,
+    MCPServerDto, MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
+};
+pub use tools::{
+    KernelToolsApi, ToolInfoDto, ToolPort, ToolRenderOptionsDto, ToolResultDto, ToolUseContextDto, UserInputRequestDto,
+    UserInputResponseDto, ValidationResultDto,
+};
+pub use turn::{
+    DialogSubmitOutcomeDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto, TurnStateDto,
+    TurnStateKind,
+};
+pub use usage::{KernelUsageApi, TokenUsageDto, TurnUsageDto, UsageReportDto, UsageRequestDto};
 pub use util::strip_prompt_markup;

@@ -14,18 +14,16 @@ use crate::agentic::core::SessionConfig;
 
 // Re-exports for DTO types used in trait method signatures
 pub use northhing_kernel_api::events::{
-    BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase,
-    TurnErrorKind, TurnPhaseKind,
+    BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase, TurnErrorKind,
+    TurnPhaseKind,
 };
 pub use northhing_kernel_api::session::{
-    BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto,
-    PersistenceHandleDto, SessionBranchDto, SessionConfigDto, SessionDto, SessionId,
-    SessionKindDto, SessionMetadataDto, SessionRelationshipDto, SessionStateDto,
-    SessionStatusDto, SessionSummaryDto, ToolCallStub,
+    BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, PersistenceHandleDto,
+    SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionKindDto, SessionMetadataDto,
+    SessionRelationshipDto, SessionStateDto, SessionStatusDto, SessionSummaryDto, ToolCallStub, WorkspaceSessionsDto,
 };
 pub use northhing_kernel_api::turn::{
-    DialogSubmitOutcomeDto, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto,
-    TurnStateDto, TurnStateKind,
+    DialogSubmitOutcomeDto, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto, TurnStateDto, TurnStateKind,
 };
 
 pub struct KernelFacade {
@@ -51,7 +49,9 @@ impl KernelFacade {
         let _ = self.coordinator.set(coordinator);
     }
 
-    pub(super) fn coordinator(&self) -> Result<&Arc<crate::agentic::coordination::ConversationCoordinator>, KernelError> {
+    pub(super) fn coordinator(
+        &self,
+    ) -> Result<&Arc<crate::agentic::coordination::ConversationCoordinator>, KernelError> {
         self.coordinator.get().ok_or_else(|| {
             KernelError::Internal("coordinator not yet initialized — call init_core() first".to_string())
         })
@@ -59,16 +59,16 @@ impl KernelFacade {
 }
 
 // Sibling modules
-mod lifecycle;
-mod session;
-mod turn;
-mod events;
-mod dto;
-mod helpers;
-mod settings;
 mod agents;
-mod tools;
-mod usage;
-mod platform;
+mod dto;
+mod events;
+mod helpers;
+mod lifecycle;
 mod memory;
+mod platform;
+mod session;
+mod settings;
 mod tests;
+mod tools;
+mod turn;
+mod usage;

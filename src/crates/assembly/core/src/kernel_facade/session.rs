@@ -5,7 +5,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::session::{
-    BranchId, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
+    BranchId, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto, WorkspaceSessionsDto,
 };
 
 use crate::agentic::core::SessionConfig;
@@ -44,6 +44,63 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
             .into_iter()
             .map(crate::kernel_facade::events::summary_to_dto)
             .collect())
+    }
+
+    async fn archive_session(&self, id: &SessionId) -> Result<(), KernelError> {
+        let workspace = self
+            .coordinator()?
+            .resolve_session_workspace_path(id)
+            .await
+            .ok_or_else(|| KernelError::NotFound(format!("session not found: {id}")))?;
+        let archived = self
+            .coordinator()?
+            .session_manager()
+            .persistence_manager
+            .archive_session(&workspace, id)
+            .await
+            .map_err(|e| KernelError::Runtime(format!("archive_session failed: {e}")))?;
+        if archived {
+            Ok(())
+        } else {
+            Err(KernelError::NotFound(format!("session metadata not found: {id}")))
+        }
+    }
+
+    async fn list_sessions_all_workspaces(&self) -> Result<Vec<WorkspaceSessionsDto>, KernelError> {
+        let coordinator = self.coordinator()?;
+        let mut workspace_paths: Vec<String> = match crate::service::workspace::global_workspace_service() {
+            Some(service) => {
+                let mut infos = service.list_workspace_infos().await;
+                infos.sort_by(|left, right| right.last_accessed.cmp(&left.last_accessed));
+                infos
+                    .into_iter()
+                    .map(|info| info.root_path.to_string_lossy().to_string())
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        let default_workspace = crate::kernel_facade::helpers::default_workspace_path();
+        if !workspace_paths.iter().any(|path| path == &default_workspace) {
+            workspace_paths.push(default_workspace);
+        }
+
+        let mut grouped = Vec::with_capacity(workspace_paths.len());
+        for workspace_path in workspace_paths {
+            let summaries = coordinator
+                .session_manager()
+                .persistence_manager
+                .list_sessions(Path::new(&workspace_path))
+                .await
+                .map_err(|e| KernelError::Runtime(format!("list_sessions failed: {e}")))?;
+            grouped.push(WorkspaceSessionsDto {
+                workspace_path,
+                sessions: summaries
+                    .into_iter()
+                    .map(crate::kernel_facade::events::summary_to_dto)
+                    .collect(),
+            });
+        }
+        Ok(grouped)
     }
 
     async fn get_session(&self, id: &SessionId) -> Result<SessionDto, KernelError> {
@@ -102,9 +159,7 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
             .map_err(|e| KernelError::Runtime(format!("load_session_metadata failed: {e}")))?;
         match metadata {
             Some(m) => Ok(crate::kernel_facade::dto::metadata_to_dto(&m)),
-            None => Err(KernelError::NotFound(format!(
-                "session metadata not found: {id}"
-            ))),
+            None => Err(KernelError::NotFound(format!("session metadata not found: {id}"))),
         }
     }
 
@@ -113,22 +168,13 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
             .coordinator()?
             .resolve_session_workspace_path(&request.parent_session_id)
             .await
-            .ok_or_else(|| {
-                KernelError::NotFound(format!(
-                    "parent session not found: {}",
-                    request.parent_session_id
-                ))
-            })?;
+            .ok_or_else(|| KernelError::NotFound(format!("parent session not found: {}", request.parent_session_id)))?;
         let branch_name = request
             .name
             .unwrap_or_else(|| format!("branch-{}", crate::kernel_facade::helpers::system_time_to_ms()));
-        let result = northhing_services_integrations::git::GitService::create_branch(
-            &workspace,
-            &branch_name,
-            None,
-        )
-        .await
-        .map_err(|e| KernelError::Runtime(format!("create_branch failed: {e}")))?;
+        let result = northhing_services_integrations::git::GitService::create_branch(&workspace, &branch_name, None)
+            .await
+            .map_err(|e| KernelError::Runtime(format!("create_branch failed: {e}")))?;
         if result.success {
             Ok(branch_name)
         } else {

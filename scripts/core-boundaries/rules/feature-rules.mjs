@@ -12,7 +12,6 @@ export const optionalDependencyFeatureOwnerRules = [
       { depName: 'northhing-ai-adapters', ownerFeatures: ['ai-adapter-runtime'] },
       { depName: 'northhing-product-capabilities', ownerFeatures: ['product-capabilities'] },
       { depName: 'northhing-product-domains', ownerFeatures: ['product-domains'] },
-      { depName: 'northhing-relay-server', ownerFeatures: ['service-integrations'] },
       { depName: 'northhing-tool-packs', ownerFeatures: ['tool-packs'] },
       { depName: 'chrono-tz', ownerFeatures: ['product-full'] },
       { depName: 'cron', ownerFeatures: ['product-full'] },
@@ -48,14 +47,9 @@ export const optionalDependencyFeatureOwnerRules = [
       { depName: 'aes-gcm', ownerFeatures: ['mcp', 'remote-connect', 'remote-ssh-concrete'] },
       { depName: 'anyhow', ownerFeatures: ['mcp', 'remote-connect', 'remote-ssh-concrete'] },
       {
-        depName: 'async-trait',
-        ownerFeatures: ['mcp', 'remote-connect', 'remote-ssh-concrete', 'workspace-search'],
-      },
-      {
         depName: 'base64',
         ownerFeatures: ['mcp', 'miniapp-runtime', 'remote-connect', 'remote-ssh-concrete'],
       },
-      { depName: 'northhing-agent-runtime', ownerFeatures: ['deep-research'] },
       { depName: 'northhing-product-domains', ownerFeatures: ['function-agents', 'miniapp-runtime'] },
       { depName: 'northhing-runtime-ports', ownerFeatures: ['remote-connect'] },
       {
@@ -101,7 +95,6 @@ export const optionalDependencyFeatureOwnerRules = [
       'product-domains optional runtime dependencies must stay owned by explicit product-domain features',
     dependencies: [
       { depName: 'dirs', ownerFeatures: ['miniapp'] },
-      { depName: 'log', ownerFeatures: ['function-agents'] },
       { depName: 'sha2', ownerFeatures: ['miniapp'] },
       { depName: 'which', ownerFeatures: ['miniapp'] },
     ],
