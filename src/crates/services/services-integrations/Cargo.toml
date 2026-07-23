@@ -61,7 +61,7 @@ schannel = { version = "0.1", optional = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
-northhing-test-support = { path = "../../test-support" }
+northhing-test-support = { path = "../../support/test-support" }
 
 [features]
 default = []

@@ -29,4 +29,4 @@ win32job = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-northhing-test-support = { path = "../../test-support" }
+northhing-test-support = { path = "../../support/test-support" }

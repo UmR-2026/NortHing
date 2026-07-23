@@ -25,4 +25,4 @@ tokio-util = { workspace = true }
 [dev-dependencies]
 async-trait = { workspace = true }
 tokio = { workspace = true }
-northhing-test-support = { path = "../../test-support" }
+northhing-test-support = { path = "../../support/test-support" }

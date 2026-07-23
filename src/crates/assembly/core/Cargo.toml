@@ -160,7 +160,7 @@ rustls-native-certs = "0.8"
 schannel = "0.1"
 
 [dev-dependencies]
-northhing-test-support = { path = "../../test-support" }
+northhing-test-support = { path = "../../support/test-support" }
 
 [features]
 # Empty default: product surface must be opted into explicitly via `features`

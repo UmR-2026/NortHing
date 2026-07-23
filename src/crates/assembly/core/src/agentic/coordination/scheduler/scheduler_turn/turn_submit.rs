@@ -461,3 +461,74 @@ impl AgentDialogTurnPort for DialogScheduler {
         .map_err(|error| PortError::new(PortErrorKind::Backend, error))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use northhing_runtime_ports::{DialogSessionStateFact, DialogTriggerSource};
+
+    #[test]
+    fn remote_queue_policy_preserves_confirmation_boundary() {
+        let facts = DialogSubmitQueueFacts {
+            session_state: DialogSessionStateFact::Idle,
+            queue_has_items: false,
+            policy: DialogSubmissionPolicy::for_source(DialogTriggerSource::DesktopUi),
+        };
+        let action = resolve_dialog_submit_queue_action(facts);
+        assert!(matches!(action, DialogSubmitQueueAction::StartImmediately));
+    }
+
+    #[test]
+    fn agent_dialog_turn_attachments_preserve_remote_image_context() {
+        let attachments = vec![AgentInputAttachment {
+            kind: "remote_image".to_string(),
+            id: "img-1".to_string(),
+            metadata: {
+                let mut m = serde_json::Map::new();
+                m.insert("dataUrl".to_string(), serde_json::json!("data:image/png;base64,abc"));
+                m.insert("mimeType".to_string(), serde_json::json!("image/png"));
+                m
+            },
+        }];
+        let result = agent_dialog_turn_image_contexts(&attachments).unwrap();
+        let contexts = result.expect("should produce image contexts");
+        assert_eq!(contexts.len(), 1);
+        assert_eq!(contexts[0].id, "img-1");
+        assert_eq!(contexts[0].mime_type, "image/png");
+    }
+
+    #[test]
+    fn agent_dialog_turn_attachments_reject_unknown_kind() {
+        let attachments = vec![AgentInputAttachment {
+            kind: "pdf_document".to_string(),
+            id: "file-1".to_string(),
+            metadata: serde_json::Map::new(),
+        }];
+        let result = agent_dialog_turn_image_contexts(&attachments);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("unsupported agent dialog attachment kind"));
+    }
+
+    #[test]
+    fn agent_dialog_turn_prepended_reminders_preserve_session_message_kind() {
+        let reminders = vec![AgentDialogPrependedReminder {
+            kind: "session_message_request".to_string(),
+            text: "hello from session".to_string(),
+        }];
+        let result = agent_dialog_turn_prepended_messages(&reminders).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn agent_dialog_turn_prepended_reminders_reject_unknown_kind() {
+        let reminders = vec![AgentDialogPrependedReminder {
+            kind: "unknown_kind".to_string(),
+            text: "should fail".to_string(),
+        }];
+        let result = agent_dialog_turn_prepended_messages(&reminders);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("unsupported agent dialog prepended reminder kind"));
+    }
+}

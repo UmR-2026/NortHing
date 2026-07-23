@@ -30,8 +30,8 @@ export const crateLayoutRules = [
 
   { crateName: 'relay-core', layer: 'services', path: 'src/crates/services/relay-core' },
   { crateName: 'agent-dispatch', layer: 'execution', path: 'src/crates/execution/agent-dispatch' },
-  { crateName: 'test-support', layer: 'support', path: 'src/crates/test-support' },
-  { crateName: 'cli-internal', layer: 'support', path: 'src/crates/cli-internal' },
+  { crateName: 'test-support', layer: 'support', path: 'src/crates/support/test-support' },
+  { crateName: 'cli-internal', layer: 'support', path: 'src/crates/support/cli-internal' },
 ];
 
 export const crateLayoutLayerNames = [

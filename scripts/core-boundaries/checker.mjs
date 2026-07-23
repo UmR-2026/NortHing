@@ -606,12 +606,12 @@ function checkProductCoreFeatureAssemblyCoverage() {
 function checkCoreDefaultProductFullFeature() {
   const manifestPath = join(crateDirForName('core'), 'Cargo.toml');
   const features = parseManifestFeatures(readText(manifestPath).split(/\r?\n/));
-  if (!featureReferencesFeature(features.get('default'), 'product-full')) {
+  if (featureReferencesFeature(features.get('default'), 'product-full')) {
     failures.push({
       path: manifestPath,
       line: features.get('default')?.line ?? 1,
       message:
-        'northhing-core default feature must remain product-full until a separate product matrix review changes it',
+        'northhing-core default feature must stay empty; product surfaces opt in explicitly via consumer features',
     });
   }
 }

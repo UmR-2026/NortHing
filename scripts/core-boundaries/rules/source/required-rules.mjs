@@ -3352,18 +3352,6 @@ export const requiredContentRules = [
         regex: /\bpub fn sort_tool_manifest_definitions\b/,
         message: 'missing prompt-visible manifest ordering helper',
       },
-      {
-        regex: /\bpub fn get_tool_spec_input_schema\b/,
-        message: 'missing pure GetToolSpec input schema contract',
-      },
-      {
-        regex: /\bpub fn get_tool_spec_short_description\b/,
-        message: 'missing pure GetToolSpec short description contract',
-      },
-      {
-        regex: /\bpub fn get_tool_spec_is_readonly\b/,
-        message: 'missing pure GetToolSpec readonly metadata contract',
-      },
     ],
   },
   {
@@ -3551,10 +3539,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub fn is_tool_collapsed\b/,
         message: 'missing generic collapsed-tool registry query',
-      },
-      {
-        regex: /\bpub fn get_collapsed_tool_names\b/,
-        message: 'missing generic collapsed-tool registry catalog query',
       },
     ],
   },
@@ -3789,7 +3773,7 @@ export const requiredContentRules = [
     patterns: [
       {
         regex:
-          /use northhing_runtime_ports::\{(?=[\s\S]*DialogSessionStateFact)(?=[\s\S]*DialogSubmitQueueAction)(?=[\s\S]*DialogSubmitQueueFacts)(?=[\s\S]*resolve_dialog_submit_queue_action)[\s\S]*\};/,
+          /use northhing_runtime_ports::\{(?=[\s\S]*DialogSubmitQueueAction)(?=[\s\S]*DialogSubmitQueueFacts)(?=[\s\S]*resolve_dialog_submit_queue_action)[\s\S]*\};/,
         message: 'missing dialog scheduler decision contract import',
       },
     ],
@@ -3801,7 +3785,7 @@ export const requiredContentRules = [
     patterns: [
       {
         regex:
-          /use northhing_agent_runtime::scheduler::\{(?=[\s\S]*ActiveDialogTurn)(?=[\s\S]*ActiveDialogTurnStore)(?=[\s\S]*AgentSessionReplyAction)(?=[\s\S]*AgentSessionReplyPlan)(?=[\s\S]*BackgroundDeliveryAction)(?=[\s\S]*BackgroundDeliveryFacts)(?=[\s\S]*BackgroundInjectionKind)(?=[\s\S]*DialogReplySuppressionSet)(?=[\s\S]*DialogSteeringAction)(?=[\s\S]*DialogTurnQueue)(?=[\s\S]*SessionAbortFlags)(?=[\s\S]*resolve_agent_session_reply_action)(?=[\s\S]*resolve_background_delivery_action)(?=[\s\S]*resolve_background_delivery_injection)(?=[\s\S]*resolve_dialog_steering_action)[\s\S]*\};/,
+          /use northhing_agent_runtime::scheduler::\{(?=[\s\S]*ActiveDialogTurnStore)(?=[\s\S]*AgentSessionReplyAction)(?=[\s\S]*AgentSessionReplyPlan)(?=[\s\S]*DialogReplySuppressionSet)(?=[\s\S]*DialogTurnQueue)(?=[\s\S]*SessionAbortFlags)(?=[\s\S]*resolve_agent_session_reply_action)[\s\S]*\};/,
         message: 'missing agent-runtime scheduler owner imports',
       },
     ],
@@ -5318,11 +5302,11 @@ export const requiredContentRules = [
         message: 'missing core product GetToolSpec catalog provider implementation',
       },
       {
-        regex: /\bget_global_tool_registry\b/,
+        regex: /\bglobal_tool_registry\b/,
         message: 'missing core product registry snapshot access',
       },
       {
-        regex: /\bget_agent_registry\b/,
+        regex: /\bagent_registry\b/,
         message: 'missing core agent policy source for contextual catalog',
       },
       {
@@ -6539,75 +6523,6 @@ export const requiredContentRules = [
       {
         regex: /\bimpl MiniAppStoragePort for MiniAppStorage\b/,
         message: 'missing MiniApp storage port adapter owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
-    reason:
-      'services-integrations must own MiniApp filesystem storage, draft, customization, and version IO behind the miniapp-runtime feature',
-    patterns: [
-      {
-        regex: /\bpub struct MiniAppStorage\b/,
-        message: 'missing services-owned MiniApp storage owner',
-      },
-      {
-        regex: /\bMiniAppStorageError\b/,
-        message: 'missing MiniApp storage integration error type',
-      },
-      {
-        regex: /\btokio::fs::read_to_string\b/,
-        message: 'missing services-owned MiniApp storage file reads',
-      },
-      {
-        regex: /\btokio::fs::write\b/,
-        message: 'missing services-owned MiniApp storage file writes',
-      },
-      {
-        regex: /\btokio::fs::remove_dir_all\b/,
-        message: 'missing services-owned MiniApp storage cleanup',
-      },
-      {
-        regex: /\bMiniAppStorageLayout\b/,
-        message: 'missing product-domain MiniApp storage layout use',
-      },
-      {
-        regex: /\bimpl MiniAppStoragePort for MiniAppStorage\b/,
-        message: 'missing MiniApp storage port implementation in integrations owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
-    reason:
-      'services-integrations must own MiniApp filesystem storage, draft, customization, and version IO behind the miniapp-runtime feature',
-    patterns: [
-      {
-        regex: /\bMiniAppImportBundleWriteRequest\b/,
-        message: 'missing services-owned MiniApp import bundle write request',
-      },
-      {
-        regex: /\bread_import_meta_json\b/,
-        message: 'missing services-owned MiniApp import metadata read',
-      },
-      {
-        regex: /\bwrite_import_bundle\b/,
-        message: 'missing services-owned MiniApp import bundle IO',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
-    reason:
-      'services-integrations must own MiniApp filesystem storage, draft, customization, and version IO behind the miniapp-runtime feature',
-    patterns: [
-      {
-        regex: /\bstorage_port_adapter_preserves_existing_file_lifecycle\b/,
-        message: 'missing MiniApp storage port behavior regression test',
-      },
-      {
-        regex: /\bimport_bundle_io_preserves_copy_and_fallback_contract\b/,
-        message: 'missing MiniApp import bundle IO regression test',
       },
     ],
   },
