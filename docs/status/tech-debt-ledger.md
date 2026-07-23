@@ -132,7 +132,7 @@
 - **Symptom**: House rule #3 requires production `.rs` > 1000 lines to be split or carry `// allow-god-file`; > 800 raises review pressure. Five files exceed 800 with no justification comment and no ledger entry; two exceed 1000 (mandatory split).
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs` (~1488 lines), `src/apps/desktop/src/app_state/callbacks_settings.rs` (~1100 lines) — both > 1000, no `allow-god-file`. `cli/ui/theme.rs` (~854), `src/apps/desktop/src/app_state/callbacks_lifecycle.rs` (~834), `src/crates/assembly/core/src/agentic/judge_gate/mod.rs` (~813, newly created in C4 Phase 0 already over the line). Found by external review 2026-07-23 + orchestrator scan.
 - **Proposed fix**: Split the two > 1000 files (settings panel is a recurring split source — consider a settings/ module family); for the three > 800, split or add `// allow-god-file` with reason. Register a split plan.
-- **Status**: active
+- **Status**: active — 2 of 2 >1000 files split (`ecbe76e`, 2026-07-23: settings.rs → settings/ 6-file module family max 654L; callbacks_settings.rs → callbacks_settings/ 6-file module family max 269L; cargo check + 47 tests pass). Remaining: 3 files >800 need split or `// allow-god-file` (cli/ui/theme.rs ~854, callbacks_lifecycle.rs ~834, judge_gate/mod.rs ~813).
 
 ### P2-11: judge_gate ApprovedGateReceipt consumed-set is in-process; restart can reuse a consumed receipt
 
