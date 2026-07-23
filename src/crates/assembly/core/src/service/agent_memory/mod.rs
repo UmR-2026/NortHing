@@ -1,6 +1,7 @@
 mod auto_memory;
 mod facts;
 mod instruction_context;
+mod memory_db;
 
 pub(crate) use auto_memory::build_workspace_agent_memory_prompt;
 pub(crate) use auto_memory::build_workspace_memory_files_context;

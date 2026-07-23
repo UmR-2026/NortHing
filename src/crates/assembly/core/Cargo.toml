@@ -117,6 +117,9 @@ tool-runtime = { path = "../../execution/tool-execution", optional = true }
 # terminal
 terminal-core = { path = "../../services/terminal" }
 
+# SQLite
+rusqlite = { workspace = true }
+
 # I18n internationalization
 fluent-bundle = { workspace = true }
 unic-langid = { workspace = true }

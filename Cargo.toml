@@ -194,6 +194,9 @@ webkit2gtk = "2.0"
 # Windows-specific dependencies
 win32job = "2.0"
 
+# SQLite
+rusqlite = { version = "0.32", features = ["bundled"] }
+
 # I18n internationalization
 fluent-bundle = "0.15"
 unic-langid = "0.9"
