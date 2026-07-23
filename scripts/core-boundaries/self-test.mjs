@@ -1337,9 +1337,14 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/assembly/core/src/agentic/session/session_manager.rs',
+      path: 'src/crates/assembly/core/src/agentic/session/session_persistence/prompt_cache.rs',
       contracts: [
         'clone_prompt_cache',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/session/session_persistence/turn_lifecycle.rs',
+      contracts: [
         'start_dialog_turn_with_existing_context',
       ],
     },
@@ -1562,20 +1567,35 @@ export function runManifestParserSelfTest({
     {
       path: 'src/crates/assembly/core/src/agentic/coordination/coordinator.rs',
       contracts: [
-        'AgentSubmissionPort',
-        'SessionTranscriptReader',
-        'AgentTurnCancellationPort',
-        'AgentSessionManagementPort',
-        'RemoteControlStatePort',
         'DialogTriggerSource',
       ],
     },
     {
       path: 'src/crates/assembly/core/src/agentic/coordination/subagent_ports.rs',
       contracts: [
+        'AgentSubmissionPort',
         'runtime_session_summary',
         'AgentSessionSummary',
         'generic attachments',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/coordination/session_ports.rs',
+      contracts: [
+        'SessionTranscriptReader',
+        'AgentSessionManagementPort',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/coordination/turn_ports.rs',
+      contracts: [
+        'AgentTurnCancellationPort',
+      ],
+    },
+    {
+      path: 'src/crates/assembly/core/src/agentic/coordination/remote_ports.rs',
+      contracts: [
+        'RemoteControlStatePort',
       ],
     },
     {

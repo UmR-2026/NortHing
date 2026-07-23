@@ -2138,7 +2138,7 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/session/session_manager.rs',
+    path: 'src/crates/assembly/core/src/agentic/session/session_persistence/prompt_cache.rs',
     reason:
       'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
     patterns: [
@@ -2146,6 +2146,13 @@ export const requiredContentRules = [
         regex: /\bpub\(crate\) async fn clone_prompt_cache\b/,
         message: 'missing prompt cache clone runtime entry point',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/session/session_persistence/turn_lifecycle.rs',
+    reason:
+      'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
+    patterns: [
       {
         regex: /\bpub\(crate\) async fn start_dialog_turn_with_existing_context\b/,
         message: 'missing existing-context dialog turn entry point',
@@ -3691,28 +3698,56 @@ export const requiredContentRules = [
       'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
     patterns: [
       {
-        regex: /impl northhing_runtime_ports::AgentSubmissionPort for ConversationCoordinator/,
+        regex: /pub use northhing_runtime_ports::DialogTriggerSource;/,
+        message: 'missing dialog trigger source compatibility re-export',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/subagent_ports.rs',
+    reason:
+      'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
+    patterns: [
+      {
+        regex: /impl (?:northhing_runtime_ports::)?AgentSubmissionPort for ConversationCoordinator/,
         message: 'missing agent submission port adapter',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/session_ports.rs',
+    reason:
+      'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
+    patterns: [
       {
-        regex: /impl northhing_runtime_ports::SessionTranscriptReader for ConversationCoordinator/,
+        regex: /impl (?:northhing_runtime_ports::)?SessionTranscriptReader for ConversationCoordinator/,
         message: 'missing session transcript reader adapter',
       },
       {
-        regex: /impl northhing_runtime_ports::AgentTurnCancellationPort for ConversationCoordinator/,
-        message: 'missing turn cancellation port adapter',
-      },
-      {
-        regex: /impl northhing_runtime_ports::AgentSessionManagementPort for ConversationCoordinator/,
+        regex: /impl (?:northhing_runtime_ports::)?AgentSessionManagementPort for ConversationCoordinator/,
         message: 'missing session management port adapter',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/turn_ports.rs',
+    reason:
+      'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
+    patterns: [
       {
-        regex: /impl northhing_runtime_ports::RemoteControlStatePort for ConversationCoordinator/,
-        message: 'missing remote control state port adapter',
+        regex: /impl (?:northhing_runtime_ports::)?AgentTurnCancellationPort for ConversationCoordinator/,
+        message: 'missing turn cancellation port adapter',
       },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/coordination/remote_ports.rs',
+    reason:
+      'core must keep current coordinator port adapters and attachment guard until remote runtime migration is reviewed',
+    patterns: [
       {
-        regex: /pub use northhing_runtime_ports::DialogTriggerSource;/,
-        message: 'missing dialog trigger source compatibility re-export',
+        regex: /impl (?:northhing_runtime_ports::)?RemoteControlStatePort for ConversationCoordinator/,
+        message: 'missing remote control state port adapter',
       },
     ],
   },
