@@ -12,6 +12,7 @@
 //! - `mod.rs` - `evaluate()` and `promote_candidate_skill()` orchestration
 
 pub(crate) mod audit;
+pub(crate) mod receipt_store;
 pub(crate) mod runner;
 
 use crate::agentic::coordination::ConversationCoordinator;
@@ -30,7 +31,7 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 static CONSUMED_RECEIPTS: std::sync::LazyLock<Mutex<HashSet<String>>> =
-    std::sync::LazyLock::new(|| Mutex::new(HashSet::new()));
+    std::sync::LazyLock::new(|| Mutex::new(receipt_store::load_consumed_receipts()));
 
 const SKILL_MD_FILENAME: &str = "SKILL.md";
 const CANDIDATES_DIR: &str = "candidates";
@@ -348,6 +349,7 @@ async fn promote_candidate_skill_to(
                         receipt.receipt_id
                     )));
                 }
+                receipt_store::persist_receipt_action(&receipt.receipt_id, "consumed");
                 consumed.insert(receipt.receipt_id.clone());
                 true
             }
@@ -376,6 +378,7 @@ async fn promote_candidate_skill_to(
         // Release consumed mark since promotion failed
         if consumed_marked {
             if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                 consumed.remove(&receipt.receipt_id);
             }
         }
@@ -390,6 +393,7 @@ async fn promote_candidate_skill_to(
         // Release consumed mark since promotion failed
         if consumed_marked {
             if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                 consumed.remove(&receipt.receipt_id);
             }
         }
@@ -412,6 +416,7 @@ async fn promote_candidate_skill_to(
             // Release consumed mark since promotion failed
             if consumed_marked {
                 if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                    receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                     consumed.remove(&receipt.receipt_id);
                 }
             }
@@ -436,6 +441,7 @@ async fn promote_candidate_skill_to(
             // Release consumed mark since promotion failed
             if consumed_marked {
                 if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                    receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                     consumed.remove(&receipt.receipt_id);
                 }
             }
@@ -448,6 +454,7 @@ async fn promote_candidate_skill_to(
         // Release consumed mark since promotion failed
         if consumed_marked {
             if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                 consumed.remove(&receipt.receipt_id);
             }
         }
@@ -458,6 +465,7 @@ async fn promote_candidate_skill_to(
         // Release consumed mark since promotion failed
         if consumed_marked {
             if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
                 consumed.remove(&receipt.receipt_id);
             }
         }
