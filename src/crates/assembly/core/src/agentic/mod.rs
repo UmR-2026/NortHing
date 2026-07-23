@@ -46,6 +46,7 @@ pub mod system;
 
 // Agents module
 pub mod agents;
+pub mod identity;
 pub mod workspace;
 
 mod util;

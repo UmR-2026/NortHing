@@ -3,6 +3,7 @@ use super::{
     PLACEHOLDER_DEEP_RESEARCH_REPORT_LINK, PLACEHOLDER_LANGUAGE_PREFERENCE, PLACEHOLDER_PERSONA,
     PLACEHOLDER_SESSION_ID, PLACEHOLDER_VISUAL_MODE,
 };
+use crate::agentic::identity::{identity_exists, load_identity};
 use crate::agentic::remote_file_delivery::user_workspace_relative_file_link;
 use crate::service::agent_memory::build_workspace_agent_memory_prompt;
 use crate::service::bootstrap::build_workspace_persona_prompt;
@@ -11,6 +12,35 @@ use std::path::Path;
 use tracing::warn;
 
 impl PromptBuilder {
+    async fn build_workspace_persona_with_identity(&self, workspace: &Path) -> String {
+        let persona = match build_workspace_persona_prompt(workspace).await {
+            Ok(prompt) => prompt.unwrap_or_default(),
+            Err(e) => {
+                warn!(
+                    "Failed to build workspace persona prompt: path={} error={}",
+                    workspace.display(),
+                    e
+                );
+                String::new()
+            }
+        };
+
+        if identity_exists() {
+            if let Some(identity_content) = load_identity() {
+                let mut result = persona;
+                if !result.is_empty() {
+                    result.push_str("\n\n");
+                }
+                result.push_str("# Self-cognition\n\n");
+                result.push_str(&identity_content);
+                result.push_str("\n\n");
+                return result;
+            }
+        }
+
+        persona
+    }
+
     pub async fn build_prompt_from_template(&self, template: &str) -> NortHingResult<String> {
         let mut result = template.to_string();
 
@@ -21,17 +51,7 @@ impl PromptBuilder {
                     .to_string()
             } else {
                 let workspace = Path::new(&self.context.workspace_path);
-                match build_workspace_persona_prompt(workspace).await {
-                    Ok(prompt) => prompt.unwrap_or_default(),
-                    Err(e) => {
-                        warn!(
-                            "Failed to build workspace persona prompt: path={} error={}",
-                            workspace.display(),
-                            e
-                        );
-                        String::new()
-                    }
-                }
+                self.build_workspace_persona_with_identity(workspace).await
             };
             result = result.replace(PLACEHOLDER_PERSONA, &persona);
         }
@@ -144,17 +164,7 @@ The configured **primary model does not accept image inputs**. When using **`Com
                     .to_string()
             } else {
                 let workspace = Path::new(&self.context.workspace_path);
-                match build_workspace_persona_prompt(workspace).await {
-                    Ok(prompt) => prompt.unwrap_or_default(),
-                    Err(e) => {
-                        warn!(
-                            "Failed to build workspace persona prompt: path={} error={}",
-                            workspace.display(),
-                            e
-                        );
-                        String::new()
-                    }
-                }
+                self.build_workspace_persona_with_identity(workspace).await
             };
             result = result.replace(PLACEHOLDER_PERSONA, &persona);
         }
