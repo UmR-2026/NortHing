@@ -27,6 +27,11 @@ export const crateLayoutRules = [
   { crateName: 'webdriver', layer: 'adapters', path: 'src/crates/adapters/webdriver' },
 
   { crateName: 'core', layer: 'assembly', path: 'src/crates/assembly/core' },
+
+  { crateName: 'relay-core', layer: 'services', path: 'src/crates/services/relay-core' },
+  { crateName: 'agent-dispatch', layer: 'execution', path: 'src/crates/execution/agent-dispatch' },
+  { crateName: 'test-support', layer: 'support', path: 'src/crates/test-support' },
+  { crateName: 'cli-internal', layer: 'support', path: 'src/crates/cli-internal' },
 ];
 
 export const crateLayoutLayerNames = [
@@ -36,6 +41,7 @@ export const crateLayoutLayerNames = [
   'services',
   'execution',
   'contracts',
+  'support',
 ];
 
 const crateLayoutByName = new Map(crateLayoutRules.map((rule) => [rule.crateName, rule]));
