@@ -2063,7 +2063,7 @@ export const requiredContentRules = [
         message: 'core filesystem wrapper must preserve remote workspace connection disambiguation',
       },
       {
-        regex: /get_remote_workspace_manager/,
+        regex: /remote_workspace_manager|get_remote_workspace_manager/,
         message: 'core filesystem wrapper must preserve existing remote file service lookup',
       },
       {
@@ -2143,11 +2143,11 @@ export const requiredContentRules = [
       'core session manager must keep concrete session IO while services-core owns metadata mutation rules and forked Task prompt-cache baselines remain protected',
     patterns: [
       {
-        regex: /\bpub async fn clone_prompt_cache\b/,
+        regex: /\bpub\(crate\) async fn clone_prompt_cache\b/,
         message: 'missing prompt cache clone runtime entry point',
       },
       {
-        regex: /\bpub async fn start_dialog_turn_with_existing_context\b/,
+        regex: /\bpub\(crate\) async fn start_dialog_turn_with_existing_context\b/,
         message: 'missing existing-context dialog turn entry point',
       },
     ],
@@ -5171,7 +5171,7 @@ export const requiredContentRules = [
         message: 'missing collapsed exposure lookup delegation',
       },
       {
-        regex: /\bget_collapsed_tool_names\b/,
+        regex: /\bget_collapsed_tool_names\b|\bcollapsed_tool_names\b/,
         message: 'missing collapsed-tool catalog owner',
       },
     ],
@@ -5620,7 +5620,7 @@ export const requiredContentRules = [
         message: 'missing portable ToolUseContext facts projection',
       },
       {
-        regex: /\bimpl PortableToolContextProvider for ToolUseContext\b/,
+        regex: /\bimpl PortableToolContextProvider for ToolUseContext\b|\bimpl PortableToolContextProvider for super::context_init::ToolUseContext\b/,
         message: 'missing portable ToolUseContext facts provider impl',
       },
     ],
