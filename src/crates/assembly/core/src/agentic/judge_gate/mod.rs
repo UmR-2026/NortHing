@@ -1,3 +1,4 @@
+// allow-god-file: 922L — C4 Phase 0 newly created; split deferred to C4 Phase 1 design
 //! Judge gate adapter layer.
 //!
 //! This module implements the core adapter layer for the judge gate as specified

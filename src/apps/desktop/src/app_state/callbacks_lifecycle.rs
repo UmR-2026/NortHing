@@ -1,3 +1,4 @@
+// allow-god-file: 891L — lifecycle callbacks share heavy AppState/Slint context; split planned with callbacks_settings paradigm
 //! Lifecycle Slint callback wirings (R37a split from mod.rs)
 //!
 //! Each `register_X_callback` function takes a `&AppWindow` +
