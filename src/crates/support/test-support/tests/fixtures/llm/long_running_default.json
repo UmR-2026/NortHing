@@ -1,0 +1,38 @@
+{
+  "profileId": "long_running_default",
+  "agentType": "deep-research",
+  "rounds": [
+    {
+      "roundId": "r0",
+      "text": "Round 0: planning research scope"
+    },
+    {
+      "roundId": "r1",
+      "text": "Round 1: searching for primary sources",
+      "toolCall": {
+        "toolName": "web_search",
+        "arguments": {
+          "query": "sub-agent orchestration hardening 2026",
+          "maxResults": 5
+        }
+      }
+    },
+    {
+      "roundId": "r2",
+      "text": "Round 2: fetching first source"
+    },
+    {
+      "roundId": "r3",
+      "text": "Round 3: cross-referencing claims"
+    },
+    {
+      "roundId": "r4",
+      "text": "Round 4: drafting summary"
+    },
+    {
+      "roundId": "r5",
+      "text": "Round 5: research complete",
+      "isFinal": true
+    }
+  ]
+}

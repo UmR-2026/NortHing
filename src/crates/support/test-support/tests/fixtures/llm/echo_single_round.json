@@ -1,0 +1,11 @@
+{
+  "profileId": "echo_single_round",
+  "agentType": "echo-agent",
+  "rounds": [
+    {
+      "roundId": "r0",
+      "text": "Echo: hello from offline profile",
+      "isFinal": true
+    }
+  ]
+}

@@ -153,7 +153,7 @@
 - **Symptom**: C1 rewrote the identity (IDE tool -> independent colleague): agentic_mode.md front half says "not an IDE, not a coding tool", but the back half is still large blocks of programming guidance. Identity and behavior are split.
 - **Evidence**: External review 2026-07-23 §三 / high-priority.3; the agentic_mode.md identity section vs its programming-guidance section.
 - **Proposed fix**: Reconcile the behavior section with the new identity — reframe the programming guidance for the "independent colleague" stance or trim it; resolve the "not a coding tool" vs coding-guidance contradiction deliberately.
-- **Status**: active
+- **Status**: resolved (2026-07-23) — identity removed from agentic_mode.md (capability layer); self-cognition is a separate persona layer generated at first entry (see docs/design/2026-07-23-self-cognition/first-entry-design.md); "Doing tasks" reframed as conditional
 
 ### P2-14: C3 facts dedup is exact-text (fragile); confidence all Med / scope all Workspace (paths unimplemented)
 

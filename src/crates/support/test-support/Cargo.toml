@@ -1,0 +1,15 @@
+[package]
+name = "northhing-test-support"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Shared test helpers for northhing"
+
+[lib]
+name = "northhing_test_support"
+crate-type = ["rlib"]
+
+[dependencies]
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
