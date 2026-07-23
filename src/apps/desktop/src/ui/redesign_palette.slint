@@ -1,0 +1,148 @@
+// ============================================================================
+// redesign_palette.slint — northing 重设计调色板（FR-T1，生成器产出）
+// ----------------------------------------------------------------------------
+// 本文件由生成器自动产出——勿手改数值；改动请改源头后重跑：
+//   源：docs/design/2026-07-22-frontend-redesign/tokens-draft.css（OKLCH 单一事实源）
+//   生成器：docs/design/2026-07-22-frontend-redesign/oklch-to-srgb.py（零依赖标准库）
+//   重跑：python oklch-to-srgb.py
+//
+// 转换口径：OKLCH -> OKLab -> 线性 sRGB -> gamma 编码；越界通道在线性段截断
+// clamp[0,1]（逐通道，非色域映射）。本次生成色域截断：无（全部 token 落 sRGB 色域内）。
+//
+// 与 theme.slint（MaterialTheme）并存、互不干扰；FR-T3 起组件逐步换绑到本调色板，
+// 组件侧统一读 RedesignTheme.t.<token>。
+// ============================================================================
+
+// 完整 token 集（忠实 tokens-draft.css 命名，kebab-case 沿用 slint 惯例）
+export struct RedesignTokens {
+    // 基底（亮=咨询室白灰 / 暗=灰黑锚；plan §5：明暗是房间的时间，中性安全恒在）
+    bg: color,
+    surface: color,
+    elevated: color,
+    raised: color,
+    border: color,
+    border-soft: color,
+    fg: color,
+    muted: color,
+    faint: color,
+    // 代表色色阶（v1 出生态 S=C=0 灰阶；§4 S=自我浮现度，出生 C=0 灰白，
+    // 成长=C 上升、颜色从基底浮现。等亮度两模式同值，编年史读法一致。
+    // 回退预案（plan §5）：Phase 3 延期则切默认珊瑚——把各 rep-* 行注释中的
+    // fallback C 恢复即可（L+H 与灰阶逐档对齐，属单变量级切换：整组 rep-* 一次换 C）
+    rep-300: color,
+    rep-400: color,
+    rep-500: color,
+    rep-600: color,
+    // 深渊青色阶（哲学常量：思考/深处，非 agent 色；等亮度两模式同值）
+    abyss-300: color,
+    abyss-400: color,
+    abyss-500: color,
+    // 异常态危险色（plan §12：低饱和陶红，双色；[T3] P2.1 定稿）
+    danger: color,
+    // 字号三档 + 正文/名字（handoff §8：小字端严格收敛，层级靠颜色+字体承担）
+    fs-sm: length,
+    fs-md: length,
+    fs-lg: length,
+    fs-body: length,
+    fs-name: length,
+    // 间距 4 基数阶梯（4×1/2/3/4/6/8）
+    s1: length,
+    s2: length,
+    s3: length,
+    s4: length,
+    s5: length,
+    s6: length,
+    // 圆角阶梯
+    r-sm: length,
+    r-md: length,
+    r-lg: length,
+    r-pill: length,
+}
+
+// 亮/暗两个常量实例 + dark 三元翻转（参 theme.slint getter 精神，
+// 以 struct 三元代替逐 token getter；FR-T5 接「跟随系统/亮/暗」显示模式）。
+export global RedesignTheme {
+    // 暗色开关。默认 true，与现网 MaterialTheme.dark-mode 默认一致；
+    // tokens-draft.css 以 light 兼作 :root 默认，翻转仅改变本全局取值。
+    in-out property <bool> dark: true;
+
+    // LIGHT —— 心理咨询室白灰（tokens-draft.css :root / [data-theme="light"]）
+    out property <RedesignTokens> LIGHT: {
+        bg: #F4F3F0, // oklch(0.9641 0.0041 91.45) · 主背景 <- #F4F3F0
+        surface: #FBFAF8, // oklch(0.9853 0.0029 84.56) · 卡片底 <- #FBFAF8
+        elevated: #FFFFFF, // oklch(1.0000 0.0000 89.88) · 浮起卡片 <- #FFFFFF
+        raised: #EFEDE8, // oklch(0.9463 0.0070 88.64) · 控件底 <- #EFEDE8
+        border: #E6E3DD, // oklch(0.9165 0.0087 84.57) · 边框 <- #E6E3DD
+        border-soft: #ECEAE5, // oklch(0.9372 0.0070 88.64) · 弱边框 <- #ECEAE5
+        fg: #38352E, // oklch(0.3297 0.0127 87.56) · 正文 <- #38352E
+        muted: #7B766C, // oklch(0.5673 0.0162 84.59) · 次级 <- #7B766C
+        faint: #A8A398, // oklch(0.7165 0.0167 86.44) · 弱化(≥4.0:1) <- #A8A398
+        rep-300: #B6B6B6, // oklch(0.7748 0 48.96) · 大面积 (灰; 珊瑚 fallback C=0.0892 <- #E5A583)
+        rep-400: #9F9F9F, // oklch(0.7030 0 47.60) · 发光/竖线 (灰; 珊瑚 fallback C=0.1075 <- #D68A63)
+        rep-500: #8B8B8B, // oklch(0.6383 0 43.22) · 强调≡渐变右端 (灰; 珊瑚 fallback C=0.1214 <- #C8714C)
+        rep-600: #727272, // oklch(0.5529 0 43.44) · hover/深 (灰; 珊瑚 fallback C=0.1129 <- #A85A38)
+        abyss-300: #7AABA4, // oklch(0.7044 0.0532 185.05) · <- #7AABA4
+        abyss-400: #5A9B93, // oklch(0.6436 0.0681 185.58) · <- #5A9B93
+        abyss-500: #3F837B, // oklch(0.5633 0.0703 185.32) · <- #3F837B
+        danger: #A45950, // oklch(0.550 0.100 28) · 陶红 hue≈28°，低饱和
+        fs-sm: 10px,
+        fs-md: 11.5px,
+        fs-lg: 13px,
+        fs-body: 15px,
+        fs-name: 16px,
+        s1: 4px,
+        s2: 8px,
+        s3: 12px,
+        s4: 16px,
+        s5: 24px,
+        s6: 32px,
+        r-sm: 9px,
+        r-md: 14px,
+        r-lg: 18px,
+        r-pill: 999px
+    };
+
+    // DARK —— 灰黑锚（tokens-draft.css [data-theme="dark"]；[T1][T4] 亮度台阶为推导值，P1.1 走查定稿）
+    out property <RedesignTokens> DARK: {
+        bg: #151411, // oklch(0.190 0.006 88)
+        surface: #1C1A17, // oklch(0.220 0.006 88)
+        elevated: #23211F, // oklch(0.250 0.005 88)
+        raised: #2A2925, // oklch(0.280 0.007 88)
+        border: #3A3833, // oklch(0.340 0.008 88)
+        border-soft: #32302C, // oklch(0.310 0.007 88)
+        fg: #EBE8E0, // oklch(0.930 0.010 88)
+        muted: #9C988F, // oklch(0.680 0.013 88)
+        faint: #74716A, // oklch(0.550 0.012 88)
+        rep-300: #B6B6B6, // oklch(0.7748 0 48.96)
+        rep-400: #9F9F9F, // oklch(0.7030 0 47.60)
+        rep-500: #8B8B8B, // oklch(0.6383 0 43.22)
+        rep-600: #727272, // oklch(0.5529 0 43.44)
+        abyss-300: #7AABA4, // oklch(0.7044 0.0532 185.05)
+        abyss-400: #5A9B93, // oklch(0.6436 0.0681 185.58)
+        abyss-500: #3F837B, // oklch(0.5633 0.0703 185.32)
+        danger: #C37D73, // oklch(0.660 0.090 28)
+        fs-sm: 10px,
+        fs-md: 11.5px,
+        fs-lg: 13px,
+        fs-body: 15px,
+        fs-name: 16px,
+        s1: 4px,
+        s2: 8px,
+        s3: 12px,
+        s4: 16px,
+        s5: 24px,
+        s6: 32px,
+        r-sm: 9px,
+        r-md: 14px,
+        r-lg: 18px,
+        r-pill: 999px
+    };
+
+    // 当前生效 token 集：dark ? DARK : LIGHT
+    out property <RedesignTokens> t: dark ? DARK : LIGHT;
+
+    // 动效时长常量（设计人格「慢重向下一次性」；retarget-notes：CSS 动效翻译为
+    // slint property animation，保守动效恰是 Slint 主场）
+    out property <duration> dur-normal: 350ms; // 常规过渡（如工具 chip 暖->冷）
+    out property <duration> dur-once: 1200ms; // 一次性入场动效
+}
