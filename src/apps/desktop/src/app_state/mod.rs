@@ -75,7 +75,7 @@ mod phase_i_tests {
 
     use super::sessions::{build_messages_model, build_sessions_model};
     use northhing_core::agentic::core::{
-        Message, MessageContent, MessageRole, SessionKind, SessionState, SessionSummary,
+        Message, MessageContent, MessageRole, SessionKind, SessionState, SessionStatus, SessionSummary,
     };
     use northhing_core::agentic::message::MessageMetadata;
     use slint::Model;
@@ -99,6 +99,7 @@ mod phase_i_tests {
             created_at: SystemTime::now(),
             last_activity_at: SystemTime::now(),
             state: SessionState::Idle,
+            status: SessionStatus::Active,
             parent_session_id: parent_id.map(String::from),
         }
     }
