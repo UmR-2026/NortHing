@@ -139,7 +139,7 @@
 - **Symptom**: The set of consumed gate receipts lives in process memory. If a `promote` consumes a receipt but the persisting write fails (power loss / crash), a restart resets the consumed set, allowing the same receipt to be replayed — breaking the consume-once guarantee that backs red line #2 (un-gated artifacts must not appear where the agent can auto-hit them).
 - **Evidence**: External review 2026-07-23 §四.6; `src/crates/assembly/core/src/agentic/judge_gate/` receipt consumption path (consumed set not persisted — verify exact location when fixing).
 - **Proposed fix**: Persist the consumed-receipt set (append-only, per red line #4) so consumption survives restart; or make promote idempotent + write-ahead so a failed promote cannot be replayed into a different outcome.
-- **Status**: active
+- **Status**: resolved (`47b6202`, 2026-07-23: `receipt_store.rs` — append-only JSONL at `data_dir/judge-gate/consumed_receipts.jsonl`; LazyLock init replays log; persist on consume/release; best-effort non-blocking; 26 judge_gate tests pass)
 
 ### P2-12: episodes "agent does not read" boundary is convention-layer, not structure-layer (HIGH PRIORITY)
 
