@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>档案馆 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+/* ─── northing 基底 ─── */
+:root {
+  --bg: #F4F3F0;
+  --surface: #FBFAF8;
+  --elevated: #FFFFFF;
+  --raised: #EFEDE8;
+  --border: #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg: #38352E;
+  --muted: #7B766C;
+  --faint: #A8A398;
+  --birth: #DAD6CF;
+
+  /* 驱力 */
+  --rep-300: #E5A583;
+  --rep-400: #D68A63;
+  --rep-500: #C8714C;
+  --rep-600: #A85A38;
+
+  /* 深渊 */
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  /* 档案馆冷色 */
+  --archive-cold-bg: #F2F7F6;
+  --archive-cold-border: rgba(63,131,123,.16);
+  --archive-cold-border-hover: rgba(63,131,123,.30);
+  --archive-card-bg: #F0F5F4;
+  --archive-card-bg-hover: #EBF1F0;
+
+  /* 字体 */
+  --font-brand: 'Fraunces', serif;
+  --font-body: 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* 字号 */
+  --fs-body: 15px;
+  --fs-name: 16px;
+  --fs-module: 11.5px;
+  --fs-meta: 10px;
+  --fs-sm: 12px;
+  --fs-xs: 11px;
+
+  /* 圆角 */
+  --r-sm: 9px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+
+  /* 动效 */
+  --ease-settle: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-base: 350ms ease-out;
+  --grow: 1200ms cubic-bezier(0.25,0.1,0.25,1);
+}
+
+[data-theme="dark"]{
+  --bg:#181612;--surface:#211E19;--elevated:#2A2620;--raised:#322D26;
+  --border:#3A342C;--border-soft:#2E2922;
+  --fg:#EDE8DF;--muted:#A89F92;--faint:#786F63;
+  --birth:#4A443B;--page-out:#0c0b09;
+}
+[data-theme="dark"] body::before{background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--abyss-500) 4%,transparent) 0%,transparent 100%)}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: color-mix(in srgb, var(--abyss-500) 1.5%, var(--bg));
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 100vh;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb,var(--abyss-500) 3%,transparent) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── 无障碍与动效偏好 ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .session-card {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ─── 跳转链接 ─── */
+.skip-link {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  margin: 0;
+  clip: auto;
+  white-space: normal;
+  background: var(--fg);
+  color: var(--bg);
+  z-index: 1000;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+}
+
+/* ─── 沉积剖面装饰条 ─── */
+.sediment-profile {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+90deg,
+    var(--abyss-500) 0%,
+    var(--abyss-300) 25%,
+    var(--birth) 60%,
+    var(--border) 100%
+  );
+  opacity: .35;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── 头部 ─── */
+.archive-header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 52px 0 0;
+  position: relative;
+  z-index: 1;
+}
+
+.archive-title {
+  font-family: var(--font-brand);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -.01em;
+  line-height: 1.2;
+}
+
+.archive-subtitle {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--faint);
+  margin-top: 6px;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.archive-meta-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.archive-stats {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--faint);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ─── 时间轴主体 ─── */
+.archive-timeline {
+  max-width: 720px;
+  margin: 40px auto 0;
+  padding: 0 24px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── 时间分组 ─── */
+.time-group {
+  margin-bottom: 44px;
+}
+
+.time-group:last-child {
+  margin-bottom: 0;
+}
+
+.time-group-header {
+  font-family: var(--font-brand);
+  font-size: var(--fs-name);
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: -.01em;
+  text-transform: none;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+/* ─── 会话卡片 ─── */
+.session-card {
+  position: relative;
+  background: var(--archive-card-bg);
+  border: 1px solid var(--archive-cold-border);
+  border-radius: var(--r-md);
+  padding: 18px 22px 18px 28px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base),
+    opacity var(--transition-base),
+    filter var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
+  animation: card-appear 600ms var(--ease-settle) both;
+}
+
+@keyframes card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.session-card:nth-child(1) { animation-delay: 0ms; }
+.session-card:nth-child(2) { animation-delay: 80ms; }
+.session-card:nth-child(3) { animation-delay: 160ms; }
+.session-card:nth-child(4) { animation-delay: 240ms; }
+.session-card:nth-child(5) { animation-delay: 320ms; }
+
+/* ── 沉积淡化 · 灵魂 ──
+   越旧 → 越沉 → opacity 越低
+   只动 opacity / saturation，绝不加位移
+   "褪色，不是下落" */
+.session-card[data-depth="0"]  { opacity: 1;    filter: saturate(1); }
+.session-card[data-depth="1"]  { opacity: .92;  filter: saturate(.94); }
+.session-card[data-depth="2"]  { opacity: .85;  filter: saturate(.88); }
+.session-card[data-depth="3"]  { opacity: .78;  filter: saturate(.82); }
+.session-card[data-depth="4"]  { opacity: .72;  filter: saturate(.76); }
+.session-card[data-depth="5"]  { opacity: .66;  filter: saturate(.70); }
+.session-card[data-depth="6"]  { opacity: .60;  filter: saturate(.64); }
+.session-card[data-depth="7"]  { opacity: .54;  filter: saturate(.58); }
+.session-card[data-depth="8"]  { opacity: .48;  filter: saturate(.52); }
+.session-card[data-depth="9"]  { opacity: .43;  filter: saturate(.48); }
+.session-card[data-depth="10"] { opacity: .40;  filter: saturate(.45); }
+
+/* ── 注视回升 ──
+   hover: 冷边框微亮 + opacity 轻微回升 + 物理反馈
+   "注视过去，它又清晰了一点" */
+.session-card:hover {
+  border-color: var(--archive-cold-border-hover);
+  background: var(--archive-card-bg-hover);
+  box-shadow: 0 2px 8px rgba(56,53,46,.06), 0 0 1px rgba(56,53,46,.08);
+  transform: translateY(-1px);
+}
+.session-card[data-depth="0"]:hover  { opacity: 1;    }
+.session-card[data-depth="1"]:hover  { opacity: .97;  }
+.session-card[data-depth="2"]:hover  { opacity: .93;  }
+.session-card[data-depth="3"]:hover  { opacity: .87;  }
+.session-card[data-depth="4"]:hover  { opacity: .80;  }
+.session-card[data-depth="5"]:hover  { opacity: .74;  }
+.session-card[data-depth="6"]:hover  { opacity: .68;  }
+.session-card[data-depth="7"]:hover  { opacity: .62;  }
+.session-card[data-depth="8"]:hover  { opacity: .56;  }
+.session-card[data-depth="9"]:hover  { opacity: .50;  }
+.session-card[data-depth="10"]:hover { opacity: .48;  }
+
+/* 深渊竖线 — 2.5px 冷青，呼应深渊 */
+.session-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 2.5px;
+  background: var(--abyss-400);
+  border-radius: 2px;
+  opacity: .30;
+  transition: opacity var(--transition-base);
+}
+
+.session-card:hover::before {
+  opacity: .50;
+}
+
+/* 卡片内部布局 */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.card-date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--faint);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.card-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--abyss-500);
+  border: 1px solid var(--archive-cold-border);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  background: transparent;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.card-summary {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── 展开区域 ─── */
+.card-expanded {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-base);
+  margin-top: 0;
+}
+
+.session-card.expanded .card-expanded {
+  grid-template-rows: 1fr;
+  margin-top: 14px;
+}
+
+.card-expanded-inner {
+  overflow: hidden;
+}
+
+.session-card.expanded .card-summary {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.expanded-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin-top: 14px;
+  transition: background var(--transition-base);
+}
+
+.session-card.expanded .expanded-divider {
+  background: var(--border-soft);
+}
+
+.expanded-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--abyss-400);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.expanded-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--abyss-300);
+  border-radius: 50%;
+  opacity: .45;
+}
+
+.expanded-log {
+  background: var(--archive-cold-bg);
+  border: 1px solid var(--archive-cold-border);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.expanded-log-entry {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(63,131,123,.06);
+}
+
+.expanded-log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-role {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--abyss-400);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+/* ─── 空状态装饰 ─── */
+.archive-ornament {
+  text-align: center;
+  padding: 60px 0 40px;
+}
+
+.ornament-line {
+  width: 48px;
+  height: 1px;
+  background: var(--border);
+  margin: 0 auto 16px;
+}
+
+.ornament-text {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--faint);
+  letter-spacing: .1em;
+}
+
+/* ─── 滚动条 ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+
+/* ─── 选中态 ─── */
+.session-card:focus-visible {
+  outline: 2px solid var(--abyss-400);
+  outline-offset: 2px;
+  box-shadow: 0 2px 8px rgba(56,53,46,.06), 0 0 1px rgba(56,53,46,.08);
+  transform: translateY(-1px);
+}
+
+.session-card:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 窗口控制 */
+.win-ctrl{position:absolute;top:16px;right:44px;display:flex;align-items:center;gap:2px;z-index:30}
+.win-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;transition:.15s;border:none;background:transparent}
+.win-btn:hover{background:var(--raised);color:var(--fg)}
+.win-btn.close:hover{background:rgba(220,53,69,.1);color:#dc3545}
+
+/* 品牌水印 */
+.watermark{position:absolute;bottom:22px;left:44px;display:flex;align-items:center;gap:6px;opacity:.25;z-index:2}
+.watermark .bt{font-family:var(--font-brand);font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+/* 演示切换钮 */
+.theme-toggle{position:fixed;right:16px;bottom:16px;z-index:60;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--elevated);color:var(--muted);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.12);transition:.2s}
+.theme-toggle:hover{color:var(--fg)}
+
+::selection{background:color-mix(in srgb,var(--abyss-300) 40%,transparent);color:var(--fg)}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--rep-500) 55%,transparent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="win-ctrl">
+  <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+</div>
+<a class="skip-link" href="#archive-timeline">跳转至时间轴</a>
+
+<!-- 沉积剖面 -->
+<div class="sediment-profile" aria-hidden="true"></div>
+
+<!-- 头部 -->
+<header class="archive-header" data-od-id="archive-header">
+  <h1 class="archive-title">档案馆</h1>
+  <p class="archive-subtitle">它走过的路，沉在这里</p>
+  <div class="archive-meta-row">
+    <span class="archive-stats">23 段封存 · 横跨 47 天</span>
+  </div>
+</header>
+
+<!-- 时间轴 -->
+<main class="archive-timeline" data-od-id="archive-timeline">
+
+  <!-- 本周 -->
+  <section class="time-group" data-od-id="group-this-week">
+    <div class="time-group-header">本周</div>
+
+    <article class="session-card" data-depth="0" data-od-id="session-01" tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-session-01" onclick="toggleCard(this)" onkeydown="handleCardKeydown(this, event)">
+      <div class="card-top">
+        <div class="card-title">关于 northing 品牌叙事的第三轮讨论</div>
+        <div class="card-right">
+          <span class="card-date">2026.07.21</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">从"为 agent 成长而建的设施"出发，重新定义了咨询室隐喻在交互层的落地方式。确定了三个哲学锚点的视觉权重分配。</div>
+      <div class="card-expanded" id="expanded-session-01">
+        <div class="expanded-divider"></div>
+        <div class="expanded-label">发生的事</div>
+        <div class="expanded-log">
+          <div class="expanded-log-entry"><span class="log-role">user</span>驱力应该更暖一些，当前的珊瑚色不够"当下感"</div>
+          <div class="expanded-log-entry"><span class="log-role">agent</span>调整驱力色温：300→#E5A583，600→#A85A38，暖度提升约 12%。深渊保持冷，形成对比。</div>
+          <div class="expanded-log-entry"><span class="log-role">user</span>可以。沉积的淡化逻辑再想想——不要位移，只要褪色。</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="session-card" data-depth="1" data-od-id="session-02" tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-session-02" onclick="toggleCard(this)" onkeydown="handleCardKeydown(this, event)">
+      <div class="card-top">
+        <div class="card-title">档案馆信息架构 · 沉积隐喻实验</div>
+        <div class="card-right">
+          <span class="card-date">2026.07.19</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">测试了三种时间轴布局方案。最终选择"沉积淡化"——越旧的条目越沉，opacity 递减而非位移。</div>
+      <div class="card-expanded" id="expanded-session-02">
+        <div class="expanded-divider"></div>
+        <div class="expanded-label">发生的事</div>
+        <div class="expanded-log">
+          <div class="expanded-log-entry"><span class="log-role">user</span>不要弹跳动画，要"重"的、向下的、沉积式</div>
+          <div class="expanded-log-entry"><span class="log-role">agent</span>锁定缓动 cubic-bezier(0.25,0.1,0.25,1)，切换 350ms ease-out。无 bounce。</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="session-card" data-depth="2" data-od-id="session-03" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">深渊色系统校准</div>
+        <div class="card-right">
+          <span class="card-date">2026.07.18</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">深渊青从 300 到 500 的色阶校准，确保在暗底和亮底上都有足够对比度。</div>
+    </article>
+  </section>
+
+  <!-- 六月 -->
+  <section class="time-group" data-od-id="group-june">
+    <div class="time-group-header">六月</div>
+
+    <article class="session-card" data-depth="3" data-od-id="session-04" tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-session-04" onclick="toggleCard(this)" onkeydown="handleCardKeydown(this, event)">
+      <div class="card-top">
+        <div class="card-title">驱力与深渊的哲学对位</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.28</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">讨论了驱力（暖珊瑚/行动）和深渊（冷青/未知）如何在同一个界面中共存而不冲突。</div>
+      <div class="card-expanded" id="expanded-session-04">
+        <div class="expanded-divider"></div>
+        <div class="expanded-label">发生的事</div>
+        <div class="expanded-log">
+          <div class="expanded-log-entry"><span class="log-role">user</span>驱力是当下的推力，深渊是未知的引力。它们不是对立的。</div>
+          <div class="expanded-log-entry"><span class="log-role">agent</span>在色温上，暖=近/可触，冷=远/深邃。视觉距离感本身就是叙事。</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="session-card" data-depth="4" data-od-id="session-05" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">Fraunces 字体选型与中文混排测试</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.24</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">Fraunces WONK+SOFT 特性在品牌标题上的表现。确认与 Noto Sans SC 的混排节奏。</div>
+    </article>
+
+    <article class="session-card" data-depth="5" data-od-id="session-06" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">咨询室隐喻 · 空间叙事原型</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.20</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">将心理咨询室的空间感转化为界面布局：白灰基底、温暖但克制、agent 住在里面的"在场感"。</div>
+    </article>
+
+    <article class="session-card" data-depth="5" data-od-id="session-07" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">northing 项目启动 · 初始设定</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.15</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">项目从零开始。定义了核心使命：为 agent 成长而建的设施。选择了咨询室作为基础隐喻。</div>
+    </article>
+  </section>
+
+  <!-- 更早 -->
+  <section class="time-group" data-od-id="group-earlier">
+    <div class="time-group-header">更早</div>
+
+    <article class="session-card" data-depth="6" data-od-id="session-08" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">概念草图 · 第一版视觉方向</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.08</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">三个视觉方向并行探索：温暖工坊、冷峻实验室、有机温室。最终倾向温暖但克制的路线。</div>
+    </article>
+
+    <article class="session-card" data-depth="7" data-od-id="session-09" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">竞品色彩分析 · 沉浸式工具</div>
+        <div class="card-right">
+          <span class="card-date">2026.06.03</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">分析了 Linear、Notion、Arc 等工具的色彩策略。确认 northing 需要更有机、更"有体温"的色板。</div>
+    </article>
+
+    <article class="session-card" data-depth="8" data-od-id="session-10" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">命名与定位 · "northing" 的由来</div>
+        <div class="card-right">
+          <span class="card-date">2026.05.28</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">northing = 向北。北是冷的、安静的、方向明确的。一个 agent 向着自己的方向生长。</div>
+    </article>
+
+    <article class="session-card" data-depth="9" data-od-id="session-11" tabindex="0" onclick="toggleCard(this)">
+      <div class="card-top">
+        <div class="card-title">最初的种子 · 为什么需要一个"设施"</div>
+        <div class="card-right">
+          <span class="card-date">2026.05.20</span>
+          <span class="card-tag">已封存</span>
+        </div>
+      </div>
+      <div class="card-summary">agent 不应该只是工具。它应该有一个"住处"——一个能感知它成长的设施。</div>
+    </article>
+  </section>
+
+</main>
+
+<script>
+function toggleCard(el) {
+  el.classList.toggle('expanded');
+  const expanded = el.classList.contains('expanded');
+  el.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+}
+
+function handleCardKeydown(el, event) {
+  if (event.key === ' ' || event.key === 'Enter') {
+    event.preventDefault();
+    toggleCard(el);
+  }
+}
+
+  // 演示切换钮
+  (function(){
+    const t=document.getElementById('themeToggle');if(!t)return;
+    const set=m=>{m==='dark'?document.documentElement.setAttribute('data-theme','dark'):document.documentElement.removeAttribute('data-theme');t.textContent=m==='dark'?'◑':'';};
+    let cur=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';set(cur);
+    t.addEventListener('click',()=>{cur=cur==='dark'?'light':'dark';set(cur);});
+  })();
+</script>
+
+
+
+<div class="watermark">
+  <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+  <span class="bt">northing</span>
+</div>
+<button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+</body></html>

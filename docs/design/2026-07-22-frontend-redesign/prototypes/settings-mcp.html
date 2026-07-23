@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>设置 · MCP 服务器 · northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rep-300: #E5A583;
+    --rep-400: #D68A63;
+    --rep-500: #C8714C;
+    --rep-600: #A85A38;
+    --abyss-300: #7AABA4;
+    --abyss-400: #5A9B93;
+    --abyss-500: #3F837B;
+    --bg: #F4F3F0;
+    --surface: #FBFAF8;
+    --elevated: #FFFFFF;
+    --raised: #EFEDE8;
+    --border: #E6E3DD;
+    --border-soft: #ECEAE5;
+    --fg: #38352E;
+    --muted: #7B766C;
+    --faint: #A8A398;
+    --birth: #DAD6CF;
+    --s1: 4px;
+    --s2: 8px;
+    --s3: 12px;
+    --s4: 16px;
+    --s5: 24px;
+    --s6: 32px;
+    --fs-sm: 10px;
+    --fs-md: 11.5px;
+    --fs-lg: 13px;
+    --r-sm: 9px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --r-pill: 999px;
+    --grow: 1200ms cubic-bezier(0.25,0.1,0.25,1);
+    --page-out: #1a1917;
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  [data-theme="dark"] {
+    --bg: #181612;
+    --surface: #211E19;
+    --elevated: #2A2620;
+    --raised: #322D26;
+    --border: #3A342C;
+    --border-soft: #2E2922;
+    --fg: #EDE8DF;
+    --muted: #A89F92;
+    --faint: #786F63;
+    --birth: #4A443B;
+    --page-out: #0c0b09;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--page-out);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--grow);
+  }
+
+  /* 设置页淡雾：底色 1.5% + 顶晕 2% */
+  .app {
+    display: flex;
+    height: 100vh;
+    width: 1280px;
+    margin: 0 auto;
+    background: color-mix(in srgb, var(--rep-500) 1.5%, var(--bg));
+    position: relative;
+    transition: background var(--grow);
+  }
+  .app::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 2%, transparent) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background var(--grow);
+  }
+  .app > .nav,
+  .app > .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 窗口控制 */
+  .win-ctrl {
+    position: absolute;
+    top: 16px;
+    right: 44px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    z-index: 30;
+  }
+  .win-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    cursor: pointer;
+    transition: .15s;
+    border: none;
+    background: transparent;
+  }
+  .win-btn:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+  .win-btn.close:hover {
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+  }
+
+  /* 水印 */
+  .watermark {
+    position: absolute;
+    bottom: 22px;
+    left: 44px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: .25;
+    z-index: 2;
+  }
+  .watermark .bt {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+
+  /* 演示切换钮 */
+  .theme-toggle {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 60;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    transition: .2s;
+  }
+  .theme-toggle:hover {
+    color: var(--fg);
+  }
+
+  /* 渗透 */
+  ::selection {
+    background: color-mix(in srgb, var(--rep-300) 40%, transparent);
+    color: var(--fg);
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--rep-500) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* Left nav */
+  .nav {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 36px 20px 36px 28px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .nav-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .nav-group + .nav-group {
+    padding-top: 8px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    font-size: 15px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 350ms var(--ease-out), color 350ms var(--ease-out);
+    text-decoration: none;
+    user-select: none;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .nav-item:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .nav-item.active {
+    background: var(--raised);
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  .nav-item.active::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: var(--rep-500);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* Right content */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 36px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .content-inner {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  /* Section header */
+  .section-header {
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .section-heading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .section-name {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .section-hint {
+    font-size: 13px;
+    color: var(--faint);
+    line-height: 1.4;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: var(--r-pill);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background 350ms var(--ease-out), transform 180ms var(--ease-out), box-shadow 350ms var(--ease-out);
+    white-space: nowrap;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--rep-500);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(200, 113, 76, 0.18);
+  }
+
+  .btn-primary:hover {
+    background: var(--rep-600);
+    box-shadow: 0 4px 12px rgba(200, 113, 76, 0.22);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 20px;
+    transition: box-shadow 350ms var(--ease-out), border-color 350ms var(--ease-out);
+  }
+
+  .card + .card { margin-top: 12px; }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .card-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .pill-raised {
+    background: var(--raised);
+    color: var(--fg);
+    border: 1px solid transparent;
+  }
+
+  .pill-abyss {
+    background: transparent;
+    color: var(--abyss-500);
+    border: 1px solid var(--abyss-300);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    word-break: break-all;
+  }
+
+  .mono-faint { color: var(--faint); }
+  .mono-muted { color: var(--muted); }
+
+  .card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--abyss-500);
+    margin-bottom: 4px;
+  }
+
+  .card-status.error {
+    color: var(--rep-500);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .card-tools-count {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Toggle */
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: var(--r-pill);
+    transition: background 350ms var(--ease-out);
+    cursor: pointer;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    transition: transform 350ms var(--ease-out);
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: var(--rep-500);
+  }
+
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+
+  .toggle input:focus-visible + .toggle-track {
+    outline: 2px solid var(--rep-400);
+    outline-offset: 2px;
+  }
+
+  /* Expandable tools */
+  .tools-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 400ms var(--ease-out), opacity 350ms var(--ease-out), margin 350ms var(--ease-out);
+    margin-top: 0;
+  }
+
+  .tools-panel.open {
+    max-height: 300px;
+    opacity: 1;
+    margin-top: 16px;
+  }
+
+  .tools-label {
+    font-size: 11.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .tools-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tool-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    background: #F2F7F6;
+    color: var(--abyss-500);
+    border: 1px solid var(--abyss-300);
+    border-radius: var(--r-pill);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  /* Add form */
+  .add-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 500ms var(--ease-out), opacity 350ms var(--ease-out), margin 350ms var(--ease-out);
+    margin-top: 0;
+  }
+
+  .add-panel.open {
+    max-height: 900px;
+    opacity: 1;
+    margin-top: 16px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-label {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--fg);
+    outline: none;
+    transition: border-color 350ms var(--ease-out), box-shadow 350ms var(--ease-out);
+  }
+
+  .form-input:focus {
+    border-color: var(--rep-400);
+    box-shadow: 0 0 0 3px rgba(214, 138, 99, 0.15);
+  }
+
+  .form-input::placeholder { color: var(--faint); }
+
+  /* Segmented control */
+  .segments {
+    display: flex;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .segment {
+    flex: 1;
+    padding: 7px 10px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: background 350ms var(--ease-out), color 350ms var(--ease-out), box-shadow 350ms var(--ease-out);
+    white-space: nowrap;
+  }
+
+  .segment:hover { color: var(--fg); }
+
+  .segment.active {
+    background: var(--elevated);
+    color: var(--fg);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    font-weight: 500;
+  }
+
+  .segment:focus-visible {
+    outline: 2px solid var(--rep-400);
+    outline-offset: 1px;
+  }
+
+  /* Env rows */
+  .env-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .env-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .env-row .form-input { flex: 1; }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 350ms var(--ease-out), color 350ms var(--ease-out), border-color 350ms var(--ease-out);
+    flex-shrink: 0;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .icon-btn:hover {
+    background: var(--raised);
+    color: var(--fg);
+    border-color: var(--border-soft);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .hidden { display: none !important; }
+
+  .card-expand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--rep-500);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 2px;
+    transition: color 350ms var(--ease-out);
+  }
+
+  .link-btn:hover { color: var(--rep-600); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- Left nav -->
+  <nav class="nav" aria-label="设置导航">
+    <div class="nav-title">设置</div>
+
+    <div class="nav-group" role="group" aria-label="偏好">
+      <a class="nav-item" href="#">通用</a>
+      <a class="nav-item" href="#">自我认知</a>
+    </div>
+
+    <div class="nav-group" role="group" aria-label="能力">
+      <a class="nav-item" href="#">模型</a>
+      <a class="nav-item" href="#">工作区</a>
+      <a class="nav-item" href="#">技能</a>
+      <a class="nav-item active" href="#" aria-current="page">MCP 服务器</a>
+    </div>
+
+    <div class="nav-group" role="group" aria-label="安全">
+      <a class="nav-item" href="#">访问权限</a>
+    </div>
+  </nav>
+
+  <!-- Right content -->
+  <main class="content">
+    <div class="content-inner">
+      <div class="section-header">
+        <div class="section-title">MCP 服务器</div>
+        <div class="section-heading-row">
+          <div>
+            <h1 class="section-name">MCP 服务器</h1>
+            <p class="section-hint">为 agent 接入外部工具。</p>
+          </div>
+          <button class="btn btn-primary" id="addServerBtn" type="button">添加服务器</button>
+        </div>
+      </div>
+
+      <!-- Server cards -->
+      <div class="card" data-server="codegraph">
+        <div class="card-expand-row">
+          <div class="card-main">
+            <div class="card-name">codegraph</div>
+            <div class="card-meta">
+              <span class="pill pill-raised">stdio</span>
+            </div>
+            <div class="mono mono-faint" style="margin-bottom:6px;">npx codegraph-mcp</div>
+            <div class="card-status">
+              <span class="status-dot"></span>
+              <span>已连接</span>
+            </div>
+            <div class="card-tools-count">12 个工具</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" type="button">编辑</button>
+            <button class="btn btn-ghost btn-sm" type="button">删除</button>
+            <label class="toggle" aria-label="启用 codegraph">
+              <input type="checkbox" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="tools-panel" id="tools-codegraph">
+          <div class="tools-label">工具</div>
+          <div class="tools-list">
+            <span class="tool-chip">codegraph_explore</span>
+            <span class="tool-chip">read_file</span>
+            <span class="tool-chip">grep</span>
+            <span class="tool-chip">search_symbols</span>
+            <span class="tool-chip">get_dependencies</span>
+            <span class="tool-chip">list_commits</span>
+            <span class="tool-chip">read_blob</span>
+            <span class="tool-chip">file_tree</span>
+            <span class="tool-chip">get_file_history</span>
+            <span class="tool-chip">find_references</span>
+            <span class="tool-chip">get_ast_node</span>
+            <span class="tool-chip">run_query</span>
+          </div>
+        </div>
+
+        <button class="link-btn" style="margin-top:12px; width:100%; text-align:center;" data-toggle-tools="tools-codegraph" type="button">展开工具</button>
+      </div>
+
+      <div class="card" data-server="design-service">
+        <div class="card-main">
+          <div class="card-name">设计服务</div>
+          <div class="card-meta">
+            <span class="pill pill-abyss">streamable-http</span>
+          </div>
+          <div class="mono mono-faint" style="margin-bottom:6px;">http://127.0.0.1:12972/mcp</div>
+          <div class="card-status">
+            <span class="status-dot"></span>
+            <span>已连接</span>
+          </div>
+          <div class="card-tools-count">8 个工具</div>
+          <div class="card-actions" style="padding-top:4px;">
+            <button class="btn btn-ghost btn-sm" type="button">编辑</button>
+            <button class="btn btn-ghost btn-sm" type="button">删除</button>
+            <label class="toggle" aria-label="启用设计服务">
+              <input type="checkbox" checked>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-server="old-sse">
+        <div class="card-main">
+          <div class="card-name">旧 SSE</div>
+          <div class="card-meta">
+            <span class="pill pill-raised">sse</span>
+          </div>
+          <div class="mono mono-faint" style="margin-bottom:6px;">http://127.0.0.1:8931/sse</div>
+          <div class="card-status error">
+            <span class="status-dot"></span>
+            <span>连接失败</span>
+          </div>
+          <div class="card-actions" style="padding-top:4px;">
+            <button class="btn btn-ghost btn-sm" type="button">编辑</button>
+            <button class="btn btn-ghost btn-sm" type="button">删除</button>
+            <label class="toggle" aria-label="启用旧 SSE">
+              <input type="checkbox">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add server panel -->
+      <div class="add-panel" id="addServerPanel">
+        <div class="card">
+          <div class="section-title" style="margin-bottom:12px;">添加服务器</div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label class="form-label" for="serverName">名称</label>
+              <input class="form-input" id="serverName" type="text" placeholder="例如：codegraph" autocomplete="off">
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">传输方式</label>
+              <div class="segments" role="tablist" aria-label="传输方式">
+                <button class="segment active" role="tab" data-transport="stdio" aria-selected="true" type="button">stdio</button>
+                <button class="segment" role="tab" data-transport="sse" aria-selected="false" type="button">sse</button>
+                <button class="segment" role="tab" data-transport="streamable-http" aria-selected="false" type="button">streamable-http</button>
+              </div>
+            </div>
+
+            <div class="form-row" id="fieldCommand">
+              <label class="form-label" for="serverCommand">Command</label>
+              <input class="form-input" id="serverCommand" type="text" placeholder="npx" autocomplete="off">
+            </div>
+
+            <div class="form-row" id="fieldArgs">
+              <label class="form-label" for="serverArgs">Args</label>
+              <input class="form-input" id="serverArgs" type="text" placeholder="-y @some/mcp" autocomplete="off">
+            </div>
+
+            <div class="form-row" hidden id="fieldUrl">
+              <label class="form-label" for="serverUrl">URL</label>
+              <input class="form-input" id="serverUrl" type="url" placeholder="http://127.0.0.1:12972/mcp" autocomplete="off">
+            </div>
+
+            <div class="form-row" id="fieldEnv">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <label class="form-label" style="margin-bottom:0;">环境变量</label>
+                <button class="btn btn-ghost btn-sm" id="addEnvBtn" type="button">+ 添加</button>
+              </div>
+              <div class="env-list" id="envList"></div>
+            </div>
+
+            <div class="form-row">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <label class="form-label" style="margin-bottom:0;">启用</label>
+                <label class="toggle" aria-label="启用新服务器">
+                  <input type="checkbox" checked id="newServerEnabled">
+                  <span class="toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-ghost" id="cancelAddBtn" type="button">取消</button>
+              <button class="btn btn-primary" type="button">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+
+<script>
+  (function() {
+    const addBtn = document.getElementById('addServerBtn');
+    const addPanel = document.getElementById('addServerPanel');
+    const cancelBtn = document.getElementById('cancelAddBtn');
+    const segments = document.querySelectorAll('[data-transport]');
+    const fieldCommand = document.getElementById('fieldCommand');
+    const fieldArgs = document.getElementById('fieldArgs');
+    const fieldUrl = document.getElementById('fieldUrl');
+    const fieldEnv = document.getElementById('fieldEnv');
+    const envList = document.getElementById('envList');
+    const addEnvBtn = document.getElementById('addEnvBtn');
+
+    let currentTransport = 'stdio';
+
+    function openAddPanel() {
+      addPanel.classList.add('open');
+      addBtn.style.display = 'none';
+      resetForm();
+    }
+
+    function closeAddPanel() {
+      addPanel.classList.remove('open');
+      addBtn.style.display = 'inline-flex';
+    }
+
+    function resetForm() {
+      document.getElementById('serverName').value = '';
+      document.getElementById('serverCommand').value = '';
+      document.getElementById('serverArgs').value = '';
+      document.getElementById('serverUrl').value = '';
+      document.getElementById('newServerEnabled').checked = true;
+      envList.innerHTML = '';
+      setTransport('stdio');
+    }
+
+    function setTransport(t) {
+      currentTransport = t;
+      segments.forEach(btn => {
+        const active = btn.dataset.transport === t;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+
+      const isStdio = t === 'stdio';
+      fieldCommand.classList.toggle('hidden', !isStdio);
+      fieldArgs.classList.toggle('hidden', !isStdio);
+      fieldUrl.classList.toggle('hidden', isStdio);
+      fieldEnv.classList.toggle('hidden', !isStdio);
+    }
+
+    function addEnvRow(key, value) {
+      const row = document.createElement('div');
+      row.className = 'env-row';
+      row.innerHTML = `
+        <input class="form-input" type="text" placeholder="KEY" value="${key || ''}" autocomplete="off">
+        <input class="form-input" type="text" placeholder="VALUE" value="${value || ''}" autocomplete="off">
+        <button class="icon-btn" type="button" aria-label="删除环境变量" data-remove>&times;</button>
+      `;
+      row.querySelector('[data-remove]').addEventListener('click', () => {
+        row.remove();
+      });
+      envList.appendChild(row);
+    }
+
+    addBtn.addEventListener('click', openAddPanel);
+    cancelBtn.addEventListener('click', closeAddPanel);
+
+    segments.forEach(btn => {
+      btn.addEventListener('click', () => setTransport(btn.dataset.transport));
+    });
+
+    addEnvBtn.addEventListener('click', () => addEnvRow('', ''));
+
+    // Toggle tools panel for codegraph card
+    document.querySelectorAll('[data-toggle-tools]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const panelId = btn.dataset.toggleTools;
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        const isOpen = panel.classList.contains('open');
+        panel.classList.toggle('open', !isOpen);
+        btn.textContent = isOpen ? '展开工具' : '收起工具';
+      });
+    });
+
+    // Initialize one env row for stdio
+    addEnvRow('', '');
+
+    /* 演示切换钮 */
+    const tt = document.getElementById('themeToggle');
+    if (tt) {
+      const setTheme = (m) => {
+        m === 'dark'
+          ? document.documentElement.setAttribute('data-theme', 'dark')
+          : document.documentElement.removeAttribute('data-theme');
+        tt.textContent = m === 'dark' ? '◑' : '◐';
+      };
+      let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      setTheme(cur);
+      tt.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; setTheme(cur); });
+    }
+  })();
+</script>
+</body>
+</html>

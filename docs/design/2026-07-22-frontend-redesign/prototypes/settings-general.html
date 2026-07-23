@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>设置 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,WONK,SOFT@9..144,100..900,0..1,0..100&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rep-300: #E5A583;
+    --rep-400: #D68A63;
+    --rep-500: #C8714C;
+    --rep-600: #A85A38;
+    --abyss-300: #7AABA4;
+    --abyss-400: #5A9B93;
+    --abyss-500: #3F837B;
+    --bg: #F4F3F0;
+    --surface: #FBFAF8;
+    --elevated: #FFFFFF;
+    --raised: #EFEDE8;
+    --border: #E6E3DD;
+    --border-soft: #ECEAE5;
+    --fg: #38352E;
+    --muted: #7B766C;
+    --faint: #A8A398;
+    --birth: #DAD6CF;
+
+    --font-display: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+    --font-body: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    --r-sm: 9px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --r-pill: 999px;
+    --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    --page-out: #1a1917;
+
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-out: ease-out;
+    --toggle-duration: 350ms;
+  }
+
+  [data-theme="dark"] {
+    --bg: #181612;
+    --surface: #211E19;
+    --elevated: #2A2620;
+    --raised: #322D26;
+    --border: #3A342C;
+    --border-soft: #2E2922;
+    --fg: #EDE8DF;
+    --muted: #A89F92;
+    --faint: #786F63;
+    --birth: #4A443B;
+    --page-out: #0c0b09;
+  }
+
+  @keyframes auraBreath {
+    0%, 100% { opacity: .35; transform: scale(.96); }
+    50% { opacity: .7; transform: scale(1.04); }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    background: var(--page-out);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--grow);
+  }
+
+  /* Layout shell — 设置页淡雾：底色平铺 1.5% + 顶晕 2%（衰减 100%） */
+  .shell {
+    display: flex;
+    width: 1280px;
+    height: 800px;
+    background: color-mix(in srgb, var(--rep-500) 1.5%, var(--bg));
+    position: relative;
+    transition: background var(--grow);
+  }
+
+  .shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 2%, transparent) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background var(--grow);
+  }
+
+  /* 内容层 z-index 只点名（不用 * 通配，避免压垮 absolute 的窗口控制/水印） */
+  .shell > .nav, .shell > .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 窗口 chrome — 照抄范式 */
+  .win-ctrl {
+    position: absolute;
+    top: 16px;
+    right: 44px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    z-index: 30;
+  }
+
+  .win-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    cursor: pointer;
+    transition: .15s;
+    border: none;
+    background: transparent;
+  }
+
+  .win-btn:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .win-btn.close:hover {
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+  }
+
+  .watermark {
+    position: absolute;
+    bottom: 22px;
+    left: 44px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: .25;
+    z-index: 2;
+  }
+
+  .watermark .bt {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+
+  /* Left nav */
+  .nav {
+    width: 240px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-soft);
+    padding: 40px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    background: var(--surface);
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .nav-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--fg);
+    padding: 0 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-group-title {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    padding: 0 16px;
+    margin-bottom: 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: var(--r-sm);
+    font-size: 15px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease), box-shadow var(--toggle-duration) var(--ease);
+    user-select: none;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+  }
+
+  .nav-item:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .nav-item.active {
+    background: var(--raised);
+    color: var(--fg);
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(56, 53, 46, 0.04);
+  }
+
+  .nav-item-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  .nav-item.active .nav-item-icon {
+    opacity: 1;
+  }
+
+  /* Right content */
+  .content {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 32px;
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .card-title {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    margin-bottom: 24px;
+  }
+
+  /* Form elements */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .field:last-child {
+    margin-bottom: 0;
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .field-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .field-label {
+    font-size: 15px;
+    color: var(--fg);
+    font-weight: 400;
+  }
+
+  .field-hint {
+    font-size: 13px;
+    color: var(--faint);
+    line-height: 1.4;
+  }
+
+  .field-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--faint);
+    margin-top: 2px;
+  }
+
+  /* Inputs */
+  .input {
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--fg);
+    outline: none;
+    transition: border-color var(--toggle-duration) var(--ease), box-shadow var(--toggle-duration) var(--ease), background var(--grow);
+  }
+
+  .input::placeholder {
+    color: var(--faint);
+  }
+
+  .input:hover {
+    border-color: var(--border);
+  }
+
+  .input:focus {
+    border-color: var(--rep-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 8%, transparent);
+  }
+
+  .select {
+    position: relative;
+    width: 100%;
+    max-width: 240px;
+  }
+
+  .select-trigger {
+    width: 100%;
+    height: 40px;
+    padding: 0 40px 0 14px;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: border-color var(--toggle-duration) var(--ease), box-shadow var(--toggle-duration) var(--ease), background var(--grow);
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .select-trigger:hover {
+    border-color: var(--muted);
+  }
+
+  .select-trigger:focus {
+    border-color: var(--rep-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 8%, transparent);
+  }
+
+  .select-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  /* Segmented control */
+  .segment-group {
+    display: flex;
+    background: var(--bg);
+    border-radius: var(--r-sm);
+    padding: 3px;
+    gap: 2px;
+    width: fit-content;
+    transition: background var(--grow);
+  }
+
+  .segment {
+    position: relative;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: var(--font-body);
+    transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease), box-shadow var(--toggle-duration) var(--ease);
+    white-space: nowrap;
+  }
+
+  .segment:hover {
+    color: var(--fg);
+  }
+
+  .segment.active {
+    background: var(--raised);
+    color: var(--fg);
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(56, 53, 46, 0.06), 0 1px 1px rgba(56, 53, 46, 0.04);
+  }
+
+  .segment-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+
+  .swatch-system {
+    background: linear-gradient(135deg, #fff 50%, #38352E 50%);
+  }
+
+  .swatch-light {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+  }
+
+  .swatch-dark {
+    background: #38352E;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: background var(--toggle-duration) var(--ease);
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 18px;
+    height: 18px;
+    background: var(--surface);
+    border-radius: var(--r-pill);
+    box-shadow: 0 1px 3px rgba(56, 53, 46, 0.12);
+    transition: transform var(--toggle-duration) var(--ease);
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: var(--rep-500);
+  }
+
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(20px);
+  }
+
+  .toggle input:focus-visible + .toggle-track {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 12%, transparent);
+  }
+
+  /* Identity section */
+  .identity-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  /* 头像光环 — 照范式 .avatar-wrap::after（auraBreath） */
+  .avatar-wrap {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .avatar-wrap::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: var(--r-lg);
+    background: radial-gradient(circle, color-mix(in srgb, var(--rep-400) 20%, transparent), transparent 70%);
+    animation: auraBreath 6s ease-in-out infinite;
+    transition: background var(--grow);
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--r-md);
+    position: relative;
+    background:
+      radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, color-mix(in srgb, var(--rep-600) 72%, #241a12) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: background var(--grow);
+  }
+
+  .avatar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(63, 131, 123, 0.25);
+    border-radius: inherit;
+  }
+
+  .avatar-letter {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    color: #FFFFFF;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+  }
+
+  .avatar.breathing {
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rep-500) 15%, transparent); }
+    50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--rep-500) 0%, transparent); }
+  }
+
+  .agent-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--fg);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+  }
+
+  /* Chronicle bar */
+  .chronicle {
+    width: 100%;
+    height: 6px;
+    border-radius: var(--r-pill);
+    background: linear-gradient(90deg, var(--birth) 0%, var(--rep-500) 100%);
+    position: relative;
+    margin-bottom: 24px;
+    transition: background var(--grow);
+  }
+
+  .now-dot {
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--rep-500);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--border);
+    transition: background var(--grow);
+  }
+
+  /* Identity quote */
+  .identity-quote {
+    border-left: 3px solid var(--abyss-400);
+    background: rgba(63, 131, 123, 0.05);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--fg);
+    margin-bottom: 24px;
+  }
+
+  /* Representative color */
+  .color-representative {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--rep-500);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rep-500) 12%, transparent), 0 0 12px color-mix(in srgb, var(--rep-500) 15%, transparent);
+    flex-shrink: 0;
+    transition: background var(--grow), box-shadow var(--grow);
+  }
+
+  .color-label {
+    font-size: 13px;
+    color: var(--faint);
+  }
+
+  /* Danger zone */
+  .danger-zone {
+    border-top: 1px solid var(--border-soft);
+    padding-top: 24px;
+    margin-top: 24px;
+  }
+
+  .danger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-family: var(--font-body);
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: color var(--toggle-duration) var(--ease), border-color var(--toggle-duration) var(--ease), background var(--toggle-duration) var(--ease);
+  }
+
+  .danger-btn:hover {
+    color: var(--rep-500);
+    border-color: var(--rep-500);
+  }
+
+  .danger-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 12%, transparent);
+  }
+
+  .danger-confirm {
+    margin-top: 12px;
+    background: var(--raised);
+    border-radius: var(--r-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height var(--toggle-duration) var(--ease), opacity var(--toggle-duration) var(--ease), margin var(--toggle-duration) var(--ease), padding var(--toggle-duration) var(--ease), background var(--grow);
+  }
+
+  .danger-confirm.open {
+    max-height: 80px;
+    opacity: 1;
+    margin-top: 12px;
+    padding: 14px 16px;
+  }
+
+  .danger-confirm-text {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .danger-confirm-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-sm {
+    padding: 6px 14px;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    border: none;
+    transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    color: var(--fg);
+    border-color: var(--muted);
+  }
+
+  .btn-rep-ghost {
+    background: color-mix(in srgb, var(--rep-500) 8%, transparent);
+    color: var(--rep-500);
+    border: 1px solid color-mix(in srgb, var(--rep-500) 20%, transparent);
+  }
+
+  .btn-rep-ghost:hover {
+    background: color-mix(in srgb, var(--rep-500) 14%, transparent);
+  }
+
+  .btn-sm:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 12%, transparent);
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border-soft);
+    margin: 24px 0;
+  }
+
+  /* Field group */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .field-group-title {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  /* Scrollbar */
+  .content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: var(--r-pill);
+  }
+
+  .content::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+  }
+
+  /* 渗透补强 — 照抄范式 */
+  ::selection {
+    background: color-mix(in srgb, var(--rep-300) 40%, transparent);
+    color: var(--fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--rep-500) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* 暗色皮肤 — 照抄范式变量覆盖 + 辉光降档 */
+  [data-theme="dark"] .shell::before {
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 5%, transparent) 0%, transparent 100%);
+  }
+
+  [data-theme="dark"] .avatar::before {
+    background: rgba(63, 131, 123, .3);
+  }
+
+  [data-theme="dark"] .nav-item.active {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  }
+
+  [data-theme="dark"] .segment.active {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .35), 0 1px 1px rgba(0, 0, 0, .25);
+  }
+
+  [data-theme="dark"] .toggle-track::after {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+
+  [data-theme="dark"] .color-swatch {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rep-500) 16%, transparent), 0 0 14px color-mix(in srgb, var(--rep-500) 20%, transparent);
+  }
+
+  /* 演示用亮/暗切换钮 — plan §2b */
+  .theme-toggle {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 60;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    transition: .2s;
+  }
+
+  .theme-toggle:hover {
+    color: var(--fg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- Left Navigation -->
+  <nav class="nav">
+    <div class="nav-title">设置</div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">偏好</div>
+      <button class="nav-item active" data-target="general">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        通用
+      </button>
+      <button class="nav-item" data-target="identity">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        自我认知
+      </button>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">能力</div>
+      <button class="nav-item" data-target="models">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><rect x="6" y="10" width="12" height="12" rx="2"/></svg>
+        </span>
+        模型
+      </button>
+      <button class="nav-item" data-target="workspace">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </span>
+        工作区
+      </button>
+      <button class="nav-item" data-target="skills">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
+        技能
+      </button>
+      <button class="nav-item" data-target="mcp">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.83 1.01 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        MCP 服务器
+      </button>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">安全</div>
+      <button class="nav-item" data-target="access">
+        <span class="nav-item-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        访问权限
+      </button>
+    </div>
+  </nav>
+
+  <!-- Right Content -->
+  <main class="content" data-od-id="settings-content">
+    <!-- 通用 Card -->
+    <section class="card" data-od-id="card-general">
+      <div class="card-title">通用</div>
+
+      <div class="field">
+        <label class="field-label" for="codename">临时代号</label>
+        <input id="codename" class="input" type="text" value="知序" data-od-id="input-codename">
+        <div class="field-hint">它长大后可能给自己取新名字。</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">显示模式</label>
+        <div class="segment-group" data-od-id="segment-appearance">
+          <button class="segment" data-value="system">
+            <span class="segment-swatch swatch-system"></span>跟随系统
+          </button>
+          <button class="segment active" data-value="light">
+            <span class="segment-swatch swatch-light"></span>亮
+          </button>
+          <button class="segment" data-value="dark">
+            <span class="segment-swatch swatch-dark"></span>暗
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="language">语言</label>
+        <div class="select">
+          <button class="select-trigger" id="language" data-od-id="select-language">简体中文</button>
+          <span class="select-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">启动行为</label>
+        <div class="segment-group" data-od-id="segment-launch">
+          <button class="segment active" data-value="last-workspace">上次的工作区</button>
+          <button class="segment" data-value="welcome">欢迎页</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">关闭按钮</label>
+        <div class="segment-group" data-od-id="segment-close">
+          <button class="segment active" data-value="quit">退出</button>
+          <button class="segment" data-value="minimize">最小化到托盘</button>
+          <button class="segment" data-value="ask">询问</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field-group">
+        <div class="field-row">
+          <div>
+            <div class="field-label">自动更新</div>
+            <div class="field-hint">有新版本时自动下载并安装</div>
+          </div>
+          <label class="toggle" data-od-id="toggle-auto-update">
+            <input type="checkbox" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <div class="field-label">退出时确认</div>
+            <div class="field-hint">关闭窗口前询问是否保存</div>
+          </div>
+          <label class="toggle" data-od-id="toggle-exit-confirm">
+            <input type="checkbox" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <div>
+            <div class="field-label">遥测</div>
+            <div class="field-hint">默认关闭，不收集个人数据</div>
+          </div>
+          <label class="toggle" data-od-id="toggle-telemetry">
+            <input type="checkbox">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- 自我认知 Card -->
+    <section class="card" data-od-id="card-identity">
+      <div class="card-title">自我认知</div>
+
+      <div class="identity-header">
+        <div class="avatar-wrap">
+          <div class="avatar breathing" data-od-id="avatar-zhixu">
+            <span class="avatar-letter">序</span>
+          </div>
+        </div>
+        <div class="agent-name">知序</div>
+      </div>
+
+      <div class="chronicle">
+        <div class="now-dot"></div>
+      </div>
+
+      <div class="identity-quote" data-od-id="identity-quote">
+        我是知序，UmR 的同事。知序说话简洁，偏向安静地观察，在需要时提供清晰、有用的信息。
+      </div>
+
+      <div class="color-representative">
+        <div class="color-swatch" data-od-id="color-swatch"></div>
+        <div class="color-label">代表色由它自己更换，无需确认——identity 是它自己的事。</div>
+      </div>
+
+      <div class="danger-zone">
+        <button class="danger-btn" id="dangerBtn" data-od-id="btn-reset-identity">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          清空重来
+        </button>
+        <div class="danger-confirm" id="dangerConfirm" data-od-id="confirm-reset">
+          <div class="danger-confirm-text">清空后它回到出生（灰白），无法撤销。</div>
+          <div class="danger-confirm-actions">
+            <button class="btn-sm btn-ghost" id="cancelReset">取消</button>
+            <button class="btn-sm btn-rep-ghost" id="confirmReset">确认清空</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+
+<script>
+  // Segment controls
+  document.querySelectorAll('.segment-group').forEach(group => {
+    group.querySelectorAll('.segment').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.segment').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  });
+
+  // Danger zone inline confirmation
+  const dangerBtn = document.getElementById('dangerBtn');
+  const dangerConfirm = document.getElementById('dangerConfirm');
+  const cancelReset = document.getElementById('cancelReset');
+  const confirmReset = document.getElementById('confirmReset');
+
+  dangerBtn.addEventListener('click', () => {
+    dangerConfirm.classList.toggle('open');
+  });
+
+  cancelReset.addEventListener('click', () => {
+    dangerConfirm.classList.remove('open');
+  });
+
+  confirmReset.addEventListener('click', () => {
+    dangerConfirm.classList.remove('open');
+    // In a real app, this would trigger the reset
+  });
+
+  // Close danger confirm when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!dangerBtn.contains(e.target) && !dangerConfirm.contains(e.target)) {
+      dangerConfirm.classList.remove('open');
+    }
+  });
+
+  // Select interaction (visual only for this shell)
+  const selectTrigger = document.getElementById('language');
+  selectTrigger.addEventListener('click', () => {
+    // Visual feedback for the dropdown shell
+    selectTrigger.style.borderColor = 'var(--rep-500)';
+    setTimeout(() => {
+      selectTrigger.style.borderColor = '';
+    }, 200);
+  });
+
+  // 演示用亮/暗切换（默认跟随系统）— plan §2b
+  (function(){
+    const t = document.getElementById('themeToggle'); if (!t) return;
+    const set = m => { m === 'dark' ? document.documentElement.setAttribute('data-theme','dark') : document.documentElement.removeAttribute('data-theme'); t.textContent = m === 'dark' ? '◑' : '◐'; };
+    let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; set(cur);
+    t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
+  })();
+</script>
+</body>
+</html>

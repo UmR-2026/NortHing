@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>northing · 知序 · 空态</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* ─── design tokens ─── */
+:root {
+  /* drive · representative color */
+  --rep-300:     #E5A583;
+  --rep-400:     #D68A63;
+  --rep-500:     #C8714C;
+  --rep-600:     #A85A38;
+  /* abyss · cool cyan */
+  --abyss-300:   #7AABA4;
+  --abyss-400:   #5A9B93;
+  --abyss-500:   #3F837B;
+  /* base · counseling room */
+  --bg:          #F4F3F0;
+  --surface:     #FBFAF8;
+  --elevated:    #FFFFFF;
+  --raised:      #EFEDE8;
+  --border:      #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:          #38352E;
+  --muted:       #7B766C;
+  --faint:       #A8A398;
+  /* birth gray-white */
+  --birth:       #DAD6CF;
+  /* type */
+  --font-brand:  'Fraunces', Georgia, serif;
+  --font-body:   'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:   'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  /* spacing */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  /* radii */
+  --r-sm:   9px;
+  --r-md:   14px;
+  --r-lg:   18px;
+  --r-pill: 999px;
+  /* motion */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur:  350ms;
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  --page-out: #1a1917;
+}
+
+/* ─── dark skin · same skeleton, different skin ─── */
+[data-theme="dark"] {
+  --bg:          #181612;
+  --surface:     #211E19;
+  --elevated:    #2A2620;
+  --raised:      #322D26;
+  --border:      #3A342C;
+  --border-soft: #2E2922;
+  --fg:          #EDE8DF;
+  --muted:       #A89F92;
+  --faint:       #786F63;
+  --birth:       #4A443B;
+  --page-out:    #0c0b09;
+}
+[data-theme="dark"] #app::before { background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 5%, transparent) 0%, transparent 100%); }
+[data-theme="dark"] #app.speaking::before { background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 8%, transparent) 0%, transparent 100%); }
+[data-theme="dark"] .presence::before { background: radial-gradient(ellipse 50% 50% at 50% 28%, color-mix(in srgb, var(--rep-500) 18%, transparent) 0%, color-mix(in srgb, var(--rep-500) 6%, transparent) 36%, transparent 70%); }
+[data-theme="dark"] .avatar::after { background: radial-gradient(circle at 68% 72%, rgba(63, 131, 123, .3) 0%, transparent 46%); }
+
+/* ─── reset ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 15px; }
+body {
+  font-family: var(--font-body);
+  color: var(--fg);
+  background: var(--page-out);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.65; transform: scale(0.985); }
+  50%      { opacity: 1; transform: scale(1.015); }
+}
+@keyframes auraBreath {
+  0%, 100% { opacity: 0.35; transform: scale(0.96); }
+  50%      { opacity: 0.7; transform: scale(1.04); }
+}
+@keyframes moodIn { to { opacity: 0.55; } }
+@keyframes moodPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.65; }
+}
+
+/* ─── layout shell · 整屋空气染色 ─── */
+#app {
+  width: 1280px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--rep-500) 3.5%, var(--bg));
+  box-shadow: 0 30px 80px -28px rgba(0, 0, 0, .5);
+  transition: background var(--grow);
+}
+/* 顶晕 — 大椭圆，衰减到 100% 才透明，整窗浸色 */
+#app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 7%, transparent) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background var(--grow);
+}
+/* 底部冷雾 */
+#app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 30% at 50% 100%, color-mix(in srgb, var(--abyss-500) 1.5%, transparent) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* 输入聚焦整屋升档 */
+#app.speaking { background: color-mix(in srgb, var(--rep-500) 4.5%, var(--bg)); }
+#app.speaking::before { background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 10%, transparent) 0%, transparent 100%); }
+
+/* 内容层 z-index — 只点名，不用 #app>* 通配 */
+#app > .presence, #app > .main-row, #app > .deck-wrap { position: relative; z-index: 1; }
+
+/* ─── 窗口控制 ─── */
+.win-ctrl { position: absolute; top: 16px; right: 44px; display: flex; align-items: center; gap: 2px; z-index: 30; }
+.win-btn { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--faint); cursor: pointer; transition: .15s; border: none; background: transparent; }
+.win-btn:hover { background: var(--raised); color: var(--fg); }
+.win-btn.close:hover { background: rgba(220, 53, 69, .1); color: #dc3545; }
+
+/* ─── 品牌水印 — 左下角 ─── */
+.watermark { position: absolute; bottom: 22px; left: 44px; display: flex; align-items: center; gap: 6px; opacity: .25; z-index: 2; }
+.watermark .bt { font-family: var(--font-brand); font-variation-settings: "WONK" 1, "SOFT" 60; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+
+/* ─── 在场区 ─── */
+.presence {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 0 20px;
+  flex-shrink: 0;
+  position: relative;
+}
+/* 体温光晕 */
+.presence::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 560px;
+  height: 360px;
+  background: radial-gradient(ellipse 50% 50% at 50% 28%, color-mix(in srgb, var(--rep-500) 30%, transparent) 0%, color-mix(in srgb, var(--rep-500) 10%, transparent) 36%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  transition: background var(--grow);
+}
+.avatar-wrap { position: relative; width: 64px; height: 64px; }
+.avatar-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 24px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rep-400) 20%, transparent), transparent 70%);
+  animation: auraBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-lg);
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, color-mix(in srgb, var(--rep-600) 72%, #241a12) 100%);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--rep-500) 28%, transparent), inset 0 1px 3px rgba(255, 255, 255, .25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--grow), box-shadow var(--grow), transform .3s ease;
+}
+.avatar:hover { transform: scale(1.04); }
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 68% 72%, rgba(63, 131, 123, .4) 0%, transparent 46%);
+}
+.avatar-char {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-brand);
+  font-size: 26px;
+  font-weight: 600;
+  color: rgba(255, 250, 245, .88);
+  font-feature-settings: "WONK" 1, "SOFT" 60;
+}
+.p-name {
+  font-family: var(--font-brand);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .01em;
+}
+.p-state { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); }
+.p-state .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 7px var(--rep-400);
+  animation: breathe 6s ease-in-out infinite;
+  transition: background var(--grow), box-shadow var(--grow);
+}
+.p-chrono {
+  width: 140px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--birth) 0%, color-mix(in srgb, var(--rep-300) 62%, var(--birth)) 55%, var(--rep-500) 88%, var(--rep-400) 100%);
+  transition: background var(--grow);
+}
+.p-mood {
+  font-size: 11.5px;
+  color: var(--faint);
+  font-style: italic;
+  opacity: 0;
+  animation: moodIn 3s ease 1.5s forwards, moodPulse 8s ease-in-out 4.5s infinite;
+  max-width: 320px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ─── main row (handles + stream) ─── */
+.main-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* handles */
+.handle {
+  width: 34px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  cursor: pointer;
+}
+.handle-left {
+  box-shadow: inset -8px 0 14px -10px color-mix(in srgb, var(--rep-400) 34%, transparent);
+  transition: box-shadow var(--grow);
+}
+.handle-right {
+  box-shadow: inset 8px 0 14px -10px rgba(63, 131, 123, .3);
+}
+
+/* growth signal */
+.growth-signal {
+  position: absolute;
+  top: 20px;
+  left: 5px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 6px var(--rep-400);
+  transition: background var(--grow), box-shadow var(--grow);
+}
+
+/* chevron btn */
+.btn-chevron {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.btn-chevron:hover {
+  background: var(--raised);
+  color: var(--muted);
+}
+.btn-chevron svg { width: 14px; height: 14px; }
+
+/* vertical label */
+.handle-label {
+  writing-mode: vertical-rl;
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  margin-top: var(--s1);
+}
+
+/* ─── stream (conversation area · empty state) ─── */
+.stream {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 60px 0;
+  position: relative;
+  min-width: 0;
+}
+
+/* empty state core */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 480px;
+  animation: emptyFadeIn 1.8s var(--ease) both;
+  position: relative;
+}
+@keyframes emptyFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* opening line */
+.opening-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+  position: relative;
+}
+.opening-name {
+  font-family: var(--font-brand);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--rep-500);
+  font-feature-settings: "WONK" 1, "SOFT" 60;
+  letter-spacing: 0.01em;
+  transition: color var(--grow);
+}
+.opening-dot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.opening-text {
+  font-size: 15px;
+  color: var(--fg);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+/* just-written shimmer */
+.opening-shimmer {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--rep-300) 50%, transparent 100%);
+  opacity: 0;
+  animation: shimmerIn 2.5s var(--ease) 0.6s both;
+  transition: background var(--grow);
+}
+@keyframes shimmerIn {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+
+/* hint */
+.opening-hint {
+  font-size: 12px;
+  color: var(--faint);
+  margin-top: 14px;
+  line-height: 1.5;
+}
+
+/* ─── deck (input area) ─── */
+.deck-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px var(--s2) 20px;
+  flex-shrink: 0;
+}
+.deck {
+  width: 100%;
+  max-width: 660px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 6px 24px -10px rgba(80, 70, 55, .18);
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+  position: relative;
+}
+/* rep gradient line top */
+.deck::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rep-500) 40%, transparent), transparent);
+  transition: background var(--grow);
+}
+/* focus-within glow */
+.deck:focus-within {
+  border-color: color-mix(in srgb, var(--rep-500) 35%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 8%, transparent), 0 6px 24px -10px rgba(80, 70, 55, .18);
+}
+
+/* input row */
+.deck-input {
+  display: flex;
+  align-items: flex-end;
+  padding: 14px var(--s4) 10px;
+  gap: 10px;
+  position: relative;
+}
+.deck-input textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2px 0;
+  min-height: 26px;
+  max-height: 120px;
+}
+.deck-input textarea::placeholder {
+  color: var(--faint);
+}
+
+/* send button */
+.btn-send {
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  background: var(--rep-500);
+  border: none;
+  color: #FFF9F5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, box-shadow var(--grow);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--rep-500) 28%, transparent);
+}
+.btn-send:hover {
+  background: var(--rep-600);
+}
+.btn-send svg { width: 16px; height: 16px; }
+
+/* deck bar */
+.deck-bar {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border-soft);
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.deck-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  white-space: nowrap;
+}
+.deck-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.deck-btn svg {
+  width: 13px; height: 13px;
+  flex-shrink: 0;
+}
+.deck-btn .di { color: var(--faint); display: inline-flex; }
+.deck-btn .di.rep { color: var(--rep-500); transition: color var(--grow); }
+
+/* thinking segments */
+.think-seg {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.seg-bar {
+  width: 18px; height: 4px;
+  border-radius: 2px;
+  transition: background var(--dur) var(--ease);
+}
+.seg-bar.on  { background: var(--rep-400); }
+.seg-bar.off { background: var(--border); }
+
+/* model/autonomy labels */
+.deck-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  white-space: nowrap;
+}
+.deck-label:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.deck-label .chev {
+  font-size: 8px;
+  opacity: 0.5;
+}
+.deck-label.cyan {
+  color: var(--abyss-500);
+}
+
+.deck-bar-spacer { flex: 1; }
+
+/* ctx ring */
+.ctx-ring {
+  width: 26px; height: 26px;
+  position: relative;
+  flex-shrink: 0;
+}
+.ctx-ring svg {
+  width: 26px; height: 26px;
+  transform: rotate(-90deg);
+}
+.ctx-ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2.5;
+}
+.ctx-ring-fg {
+  fill: none;
+  stroke: var(--abyss-500);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 69.1;
+  stroke-dashoffset: 60.8;
+}
+.ctx-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--abyss-500);
+  letter-spacing: -0.02em;
+}
+
+/* ─── 渗透补强 ─── */
+::selection { background: color-mix(in srgb, var(--rep-300) 40%, transparent); color: var(--fg); }
+:focus-visible { outline: 2px solid color-mix(in srgb, var(--rep-500) 55%, transparent); outline-offset: 2px; }
+
+/* ─── 演示用亮/暗切换钮 ─── */
+.theme-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--elevated); color: var(--muted); cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 0, 0, .12); transition: .2s; }
+.theme-toggle:hover { color: var(--fg); }
+
+/* ─── reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════ 窗口控制 ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- ══════ 品牌水印 — 左下角 ══════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══════ 在场区 ══════ -->
+  <div class="presence" data-od-id="presence">
+    <div class="avatar-wrap">
+      <div class="avatar">
+        <span class="avatar-char">序</span>
+      </div>
+    </div>
+    <div class="p-name">知序</div>
+    <div class="p-state"><span class="dot"></span> 在场</div>
+    <div class="p-chrono" data-od-id="chronicle-bar"></div>
+    <div class="p-mood">"我在。你想从哪里开始？"</div>
+  </div>
+
+  <!-- ══════ main row ══════ -->
+  <div class="main-row">
+
+    <!-- left handle -->
+    <div class="handle handle-left" data-od-id="handle-left">
+      <span class="growth-signal"></span>
+      <button class="btn-chevron" data-od-id="btn-chevron-left" aria-label="展开内里">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <span class="handle-label">内里</span>
+    </div>
+
+    <!-- stream -->
+    <div class="stream" data-od-id="stream">
+      <div class="empty-state">
+        <div class="opening-line" data-od-id="opening-line">
+          <span class="opening-name">知序</span>
+          <span class="opening-dot"></span>
+          <span class="opening-text">我在。你想从哪里开始？</span>
+          <div class="opening-shimmer"></div>
+        </div>
+        <span class="opening-hint">直接说话即可 · @ 引用文件 · / 调用技能</span>
+      </div>
+    </div>
+
+    <!-- right handle -->
+    <div class="handle handle-right" data-od-id="handle-right">
+      <button class="btn-chevron" data-od-id="btn-chevron-right" aria-label="展开外界">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+      <span class="handle-label">外界</span>
+    </div>
+  </div>
+
+  <!-- ══════ deck ══════ -->
+  <div class="deck-wrap">
+    <div class="deck" data-od-id="deck">
+
+      <!-- input row -->
+      <div class="deck-input">
+        <textarea
+          rows="1"
+          placeholder="说点什么……  @ 引用文件   / 调用技能"
+          aria-label="对话输入"
+        ></textarea>
+        <button class="btn-send" data-od-id="btn-send" aria-label="发送">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/>
+            <polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- deck bar -->
+      <div class="deck-bar">
+        <button class="deck-btn" data-od-id="btn-add" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+
+        <!-- thinking segments -->
+        <div class="think-seg" data-od-id="think-seg">
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar off"></span>
+          <span class="seg-bar off"></span>
+        </div>
+
+        <button class="deck-btn" data-od-id="btn-dir" aria-label="目录">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          ~/northing
+        </button>
+
+        <div class="deck-bar-spacer"></div>
+
+        <div class="deck-label" data-od-id="sel-model">
+          ◇ Claude 4.6 <span class="chev">▾</span>
+        </div>
+
+        <div class="deck-label cyan" data-od-id="sel-autonomy">
+          ◈ 自治·完全 <span class="chev">▾</span>
+        </div>
+
+        <button class="deck-btn" data-od-id="btn-settings" title="设置" aria-label="设置">
+          <span class="di">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+        </button>
+
+        <!-- ctx ring -->
+        <div class="ctx-ring" data-od-id="ctx-ring">
+          <svg viewBox="0 0 26 26">
+            <circle class="ctx-ring-bg" cx="13" cy="13" r="11"/>
+            <circle class="ctx-ring-fg" cx="13" cy="13" r="11"/>
+          </svg>
+          <span class="ctx-label">12%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+
+<script>
+(function(){
+  const deck=document.querySelector('.deck');
+  const app=document.getElementById('app')||document.querySelector('.app')||document.body;
+  if(deck){deck.addEventListener('focusin',()=>app.classList.add('speaking'));deck.addEventListener('focusout',()=>app.classList.remove('speaking'));}
+})();
+(function(){
+  const t=document.getElementById('themeToggle');if(!t)return;
+  const set=m=>{m==='dark'?document.documentElement.setAttribute('data-theme','dark'):document.documentElement.removeAttribute('data-theme');t.textContent=m==='dark'?'◑':'◐';};
+  let cur=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';set(cur);
+  t.addEventListener('click',()=>{cur=cur==='dark'?'light':'dark';set(cur);});
+})();
+</script>
+</body>
+</html>

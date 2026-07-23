@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1.0">
+<title>设置 · northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rep-300: #E5A583;
+    --rep-400: #D68A63;
+    --rep-500: #C8714C;
+    --rep-600: #A85A38;
+    --abyss-300: #7AABA4;
+    --abyss-400: #5A9B93;
+    --abyss-500: #3F837B;
+    --bg: #F4F3F0;
+    --surface: #FBFAF8;
+    --elevated: #FFFFFF;
+    --raised: #EFEDE8;
+    --border: #E6E3DD;
+    --border-soft: #ECEAE5;
+    --fg: #38352E;
+    --muted: #7B766C;
+    --faint: #A8A398;
+    --birth: #DAD6CF;
+
+    --font-display: 'Fraunces', 'Times New Roman', serif;
+    --font-body: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    --r-sm: 9px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --r-pill: 999px;
+    --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    --page-out: #1a1917;
+  }
+
+  [data-theme="dark"] {
+    --bg: #181612;
+    --surface: #211E19;
+    --elevated: #2A2620;
+    --raised: #322D26;
+    --border: #3A342C;
+    --border-soft: #2E2922;
+    --fg: #EDE8DF;
+    --muted: #A89F92;
+    --faint: #786F63;
+    --birth: #4A443B;
+    --page-out: #0c0b09;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--page-out);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--grow);
+  }
+
+  /* 设置页淡雾：底色平铺 1.5% + 顶晕 2%（衰减 100%） */
+  .app {
+    display: flex;
+    height: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    background: color-mix(in srgb, var(--rep-500) 1.5%, var(--bg));
+    position: relative;
+    transition: background var(--grow);
+  }
+
+  .app::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 2%, transparent) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background var(--grow);
+  }
+
+  /* 内容层 z-index 只点名（不用 * 通配，避免压垮 absolute 的窗口控制/水印） */
+  .app > .sidebar, .app > .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 窗口 chrome — 照抄范式 */
+  .win-ctrl {
+    position: absolute;
+    top: 16px;
+    right: 44px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    z-index: 30;
+  }
+
+  .win-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--faint);
+    cursor: pointer;
+    transition: .15s;
+    border: none;
+    background: transparent;
+  }
+
+  .win-btn:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .win-btn.close:hover {
+    background: rgba(220, 53, 69, .1);
+    color: #dc3545;
+  }
+
+  .watermark {
+    position: absolute;
+    bottom: 22px;
+    left: 44px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: .25;
+    z-index: 2;
+  }
+
+  .watermark .bt {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .sidebar-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 500;
+    margin: 0;
+    padding: 0 24px;
+    color: var(--fg);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+  }
+
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-group-label {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 24px;
+    margin-bottom: 4px;
+  }
+
+  .nav-item {
+    display: block;
+    padding: 8px 24px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 15px;
+    border-left: 3px solid transparent;
+    transition: color 350ms ease-out, background 350ms ease-out, border-color var(--grow);
+    cursor: pointer;
+    background: none;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-item:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  .nav-item.active {
+    background: var(--raised);
+    color: var(--fg);
+    border-left-color: var(--rep-500);
+    font-weight: 500;
+  }
+
+  .nav-item:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: -2px;
+  }
+
+  /* Content */
+  .content {
+    flex: 1;
+    padding: 32px 40px;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .content-inner {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 32px;
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 16px;
+    color: var(--fg);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+  }
+
+  .section-title {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
+  }
+
+  /* Default model card */
+  .default-model-body {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .select-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .select-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--faint);
+    margin: 12px 0 0;
+  }
+
+  /* Providers header */
+  .providers-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  /* Provider cards */
+  .provider-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .provider-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 20px;
+    transition: box-shadow 350ms ease-out, border-color 350ms ease-out, background var(--grow);
+  }
+
+  .provider-card:hover {
+    border-color: var(--border-soft);
+    box-shadow: 0 2px 8px rgba(56, 53, 46, 0.04);
+  }
+
+  .provider-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .provider-card__title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .provider-card__name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    background: var(--raised);
+    border-radius: var(--r-pill);
+    font-size: 11.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    line-height: 1.4;
+    border: 1px solid var(--border-soft);
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .meta-label {
+    font-size: 11.5px;
+    color: var(--muted);
+    min-width: 60px;
+    flex-shrink: 0;
+  }
+
+  .meta-value {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--fg);
+  }
+
+  .meta-value--faint {
+    color: var(--faint);
+  }
+
+  .provider-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* 验证状态：✓ abyss-500 / ⚠️ rep-500 */
+  .status--success {
+    color: var(--abyss-500);
+  }
+
+  .status--warning {
+    color: var(--rep-500);
+  }
+
+  .status--faint {
+    color: var(--faint);
+  }
+
+  .provider-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Toggle */
+  .toggle {
+    width: 36px;
+    height: 20px;
+    background: var(--birth);
+    border: none;
+    border-radius: var(--r-pill);
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    transition: background 350ms ease-out;
+    flex-shrink: 0;
+  }
+
+  .toggle[aria-checked="true"] {
+    background: var(--rep-500);
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 350ms ease-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .toggle[aria-checked="true"]::after {
+    transform: translateX(16px);
+  }
+
+  .toggle:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--rep-500);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 350ms ease-out, box-shadow 350ms ease-out, transform 350ms ease-out;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--rep-500) 25%, transparent);
+    font-family: var(--font-body);
+  }
+
+  .btn-primary:hover {
+    background: var(--rep-400);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--rep-500) 35%, transparent);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 350ms ease-out, background 350ms ease-out;
+    font-family: var(--font-body);
+  }
+
+  .btn-ghost:hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+
+  .btn-ghost:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--rep-500);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 350ms ease-out;
+    font-family: var(--font-body);
+  }
+
+  .btn-danger:hover {
+    background: color-mix(in srgb, var(--rep-500) 8%, transparent);
+  }
+
+  .btn-danger:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 8px 16px;
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 350ms ease-out, border-color 350ms ease-out;
+    font-family: var(--font-body);
+  }
+
+  .btn-secondary:hover {
+    background: var(--border-soft);
+    border-color: var(--border);
+  }
+
+  .btn-secondary:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  /* Inputs */
+  .input, .select {
+    width: 100%;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--fg);
+    font-family: var(--font-body);
+    transition: box-shadow 350ms ease-out, border-color 350ms ease-out, background var(--grow);
+    appearance: none;
+  }
+
+  .select {
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237B766C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .input:focus, .select:focus {
+    outline: none;
+    border-color: var(--rep-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 12%, transparent);
+  }
+
+  .input::placeholder {
+    color: var(--faint);
+  }
+
+  /* Password wrap */
+  .password-wrap {
+    position: relative;
+  }
+
+  .password-wrap .input {
+    padding-right: 40px;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 350ms ease-out, background 350ms ease-out;
+  }
+
+  .password-toggle:hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+
+  .password-toggle:focus-visible {
+    outline: 2px solid var(--rep-500);
+    outline-offset: 2px;
+  }
+
+  /* Add form */
+  .add-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 24px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: background var(--grow), border-color var(--grow);
+  }
+
+  .add-form.hidden {
+    display: none;
+  }
+
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-row-inline {
+    display: flex;
+    gap: 12px;
+  }
+
+  .form-row-inline .form-row {
+    flex: 1;
+  }
+
+  .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  /* Delete confirm */
+  .delete-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .delete-confirm.hidden {
+    display: none;
+  }
+
+  .delete-confirm__text {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .delete-confirm__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* Icon helpers */
+  .icon {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* 渗透补强 — 照抄范式 */
+  ::selection {
+    background: color-mix(in srgb, var(--rep-300) 40%, transparent);
+    color: var(--fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--rep-500) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* 暗色皮肤 — 照抄范式变量覆盖 + 辉光降档 */
+  [data-theme="dark"] .app::before {
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 5%, transparent) 0%, transparent 100%);
+  }
+
+  [data-theme="dark"] .provider-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+  }
+
+  [data-theme="dark"] .toggle::after {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  }
+
+  /* 演示用亮/暗切换钮 — plan §2b */
+  .theme-toggle {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 60;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+    transition: .2s;
+  }
+
+  .theme-toggle:hover {
+    color: var(--fg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+
+    <div class="win-ctrl">
+      <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="watermark">
+      <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+      <span class="bt">northing</span>
+    </div>
+
+    <nav class="sidebar" data-od-id="settings-sidebar">
+      <h1 class="sidebar-title" data-od-id="settings-title">设置</h1>
+      <div class="nav-group">
+        <div class="nav-group-label">偏好</div>
+        <a class="nav-item" data-od-id="nav-general">通用</a>
+        <a class="nav-item" data-od-id="nav-identity">自我认知</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">能力</div>
+        <a class="nav-item active" data-od-id="nav-models">模型</a>
+        <a class="nav-item" data-od-id="nav-workspace">工作区</a>
+        <a class="nav-item" data-od-id="nav-skills">技能</a>
+        <a class="nav-item" data-od-id="nav-mcp">MCP 服务器</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">安全</div>
+        <a class="nav-item" data-od-id="nav-access">访问权限</a>
+      </div>
+    </nav>
+
+    <main class="content" data-od-id="settings-content">
+      <div class="content-inner">
+        <!-- Default Model Card -->
+        <div class="card" data-od-id="default-model-card">
+          <h2 class="card-title" data-od-id="default-model-title">默认模型</h2>
+          <div class="default-model-body">
+            <div class="select-wrap">
+              <label class="select-label" for="default-provider" data-od-id="label-default-provider">供应商</label>
+              <select id="default-provider" class="select" data-od-id="select-default-provider">
+                <option>我的 Anthropic</option>
+                <option>本地代理</option>
+                <option>旧 OpenAI</option>
+              </select>
+            </div>
+            <div class="select-wrap">
+              <label class="select-label" for="default-model" data-od-id="label-default-model">模型</label>
+              <select id="default-model" class="select" data-od-id="select-default-model">
+                <option>claude-sonnet-4-5</option>
+                <option>claude-opus-4</option>
+                <option>claude-haiku-4</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" data-od-id="default-model-hint">新会话默认使用这个模型。</p>
+        </div>
+
+        <!-- Providers Section -->
+        <div class="providers-section">
+          <div class="providers-header">
+            <h2 class="section-title" data-od-id="providers-title">供应商</h2>
+            <button class="btn-primary" id="btnAddProvider" data-od-id="btn-add-provider">
+              <span class="icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+              添加供应商
+            </button>
+          </div>
+
+          <div class="provider-list" id="providerList">
+            <!-- Card A -->
+            <div class="provider-card" id="cardA" data-od-id="provider-card-anthropic">
+              <div class="provider-card__header">
+                <div class="provider-card__title-group">
+                  <span class="provider-card__name" data-od-id="provider-name-anthropic">我的 Anthropic</span>
+                  <span class="pill" data-od-id="provider-type-anthropic">Anthropic</span>
+                </div>
+                <button class="toggle" role="switch" aria-checked="true" aria-label="启用 我的 Anthropic" data-od-id="toggle-anthropic"></button>
+              </div>
+              <div class="provider-card__meta">
+                <div class="meta-row">
+                  <span class="meta-label">Base URL</span>
+                  <code class="meta-value meta-value--faint" data-od-id="provider-url-anthropic">api.anthropic.com</code>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">模型</span>
+                  <code class="meta-value" data-od-id="provider-model-anthropic">claude-sonnet-4-5</code>
+                </div>
+              </div>
+              <div class="provider-card__footer" id="footerA">
+                <span class="status status--success" data-od-id="status-anthropic">
+                  <span class="icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  已验证
+                </span>
+                <div class="provider-card__actions">
+                  <button class="btn-ghost" data-od-id="action-test-anthropic">测试连接</button>
+                  <button class="btn-ghost" data-od-id="action-edit-anthropic">编辑</button>
+                  <button class="btn-ghost" data-od-id="action-delete-anthropic" onclick="showDeleteConfirm('cardA')">删除</button>
+                </div>
+              </div>
+              <div class="delete-confirm hidden" id="deleteA">
+                <p class="delete-confirm__text">删除后，引用它的会话将回退到第一个启用的供应商。</p>
+                <div class="delete-confirm__actions">
+                  <button class="btn-secondary" onclick="hideDeleteConfirm('cardA')">取消</button>
+                  <button class="btn-danger" data-od-id="action-confirm-delete-anthropic">确认删除</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card B -->
+            <div class="provider-card" id="cardB" data-od-id="provider-card-local">
+              <div class="provider-card__header">
+                <div class="provider-card__title-group">
+                  <span class="provider-card__name" data-od-id="provider-name-local">本地代理</span>
+                  <span class="pill" data-od-id="provider-type-local">自定义 (OpenAI 兼容)</span>
+                </div>
+                <button class="toggle" role="switch" aria-checked="true" aria-label="启用 本地代理" data-od-id="toggle-local"></button>
+              </div>
+              <div class="provider-card__meta">
+                <div class="meta-row">
+                  <span class="meta-label">Base URL</span>
+                  <code class="meta-value" data-od-id="provider-url-local">localhost:8080/v1</code>
+                </div>
+              </div>
+              <div class="provider-card__footer" id="footerB">
+                <span class="status status--faint" data-od-id="status-local">
+                  <span class="icon" style="width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;"></span>
+                  未测试
+                </span>
+                <div class="provider-card__actions">
+                  <button class="btn-ghost" data-od-id="action-test-local">测试连接</button>
+                  <button class="btn-ghost" data-od-id="action-edit-local">编辑</button>
+                  <button class="btn-ghost" data-od-id="action-delete-local" onclick="showDeleteConfirm('cardB')">删除</button>
+                </div>
+              </div>
+              <div class="delete-confirm hidden" id="deleteB">
+                <p class="delete-confirm__text">删除后，引用它的会话将回退到第一个启用的供应商。</p>
+                <div class="delete-confirm__actions">
+                  <button class="btn-secondary" onclick="hideDeleteConfirm('cardB')">取消</button>
+                  <button class="btn-danger" data-od-id="action-confirm-delete-local">确认删除</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card C -->
+            <div class="provider-card" id="cardC" data-od-id="provider-card-openai">
+              <div class="provider-card__header">
+                <div class="provider-card__title-group">
+                  <span class="provider-card__name" data-od-id="provider-name-openai">旧 OpenAI</span>
+                  <span class="pill" data-od-id="provider-type-openai">OpenAI</span>
+                </div>
+                <button class="toggle" role="switch" aria-checked="false" aria-label="启用 旧 OpenAI" data-od-id="toggle-openai"></button>
+              </div>
+              <div class="provider-card__meta">
+                <div class="meta-row">
+                  <span class="meta-label">Base URL</span>
+                  <code class="meta-value meta-value--faint" data-od-id="provider-url-openai">api.openai.com</code>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">模型</span>
+                  <code class="meta-value meta-value--faint" data-od-id="provider-model-openai">gpt-4o</code>
+                </div>
+              </div>
+              <div class="provider-card__footer" id="footerC">
+                <span class="status status--warning" data-od-id="status-openai">
+                  <span class="icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </span>
+                  验证失败
+                </span>
+                <div class="provider-card__actions">
+                  <button class="btn-ghost" data-od-id="action-test-openai">测试连接</button>
+                  <button class="btn-ghost" data-od-id="action-edit-openai">编辑</button>
+                  <button class="btn-ghost" data-od-id="action-delete-openai" onclick="showDeleteConfirm('cardC')">删除</button>
+                </div>
+              </div>
+              <div class="delete-confirm hidden" id="deleteC">
+                <p class="delete-confirm__text">删除后，引用它的会话将回退到第一个启用的供应商。</p>
+                <div class="delete-confirm__actions">
+                  <button class="btn-secondary" onclick="hideDeleteConfirm('cardC')">取消</button>
+                  <button class="btn-danger" data-od-id="action-confirm-delete-openai">确认删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Provider Form -->
+          <div class="add-form hidden" id="addProviderForm" data-od-id="add-provider-form">
+            <div class="form-row">
+              <label class="form-label" for="providerType" data-od-id="label-provider-type">类型</label>
+              <select id="providerType" class="select" data-od-id="select-provider-type">
+                <option value="anthropic">Anthropic</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+                <option value="custom-openai">自定义 OpenAI 兼容</option>
+                <option value="custom-anthropic">自定义 Anthropic 兼容</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="providerName" data-od-id="label-provider-name">名称</label>
+              <input id="providerName" class="input" type="text" placeholder="例如：我的 Anthropic" data-od-id="input-provider-name">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="providerUrl" data-od-id="label-provider-url">Base URL</label>
+              <input id="providerUrl" class="input" type="url" placeholder="api.anthropic.com" data-od-id="input-provider-url">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="providerKey" data-od-id="label-provider-key">API Key</label>
+              <div class="password-wrap">
+                <input id="providerKey" class="input" type="password" placeholder="sk-..." data-od-id="input-provider-key">
+                <button class="password-toggle" type="button" aria-label="显示密码" data-od-id="toggle-password-visibility" onclick="togglePassword()">
+                  <span class="icon" id="eyeIcon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="providerModel" data-od-id="label-provider-model">模型</label>
+              <input id="providerModel" class="input" list="modelList" placeholder="claude-sonnet-4-5" data-od-id="input-provider-model">
+              <datalist id="modelList"></datalist>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" onclick="toggleAddForm()" data-od-id="btn-cancel-add">取消</button>
+              <button class="btn-primary" data-od-id="btn-save-provider">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+
+  <script>
+    // Toggle switch
+    document.querySelectorAll('.toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const checked = btn.getAttribute('aria-checked') === 'true';
+        btn.setAttribute('aria-checked', String(!checked));
+      });
+    });
+
+    // Type selection -> base_url placeholder + model suggestions
+    const typeSelect = document.getElementById('providerType');
+    const urlInput = document.getElementById('providerUrl');
+    const modelInput = document.getElementById('providerModel');
+    const modelList = document.getElementById('modelList');
+
+    const presets = {
+      anthropic: { placeholder: 'api.anthropic.com', models: ['claude-sonnet-4-5','claude-opus-4','claude-haiku-4'] },
+      openai: { placeholder: 'api.openai.com', models: ['gpt-4o','gpt-4o-mini','o1-preview'] },
+      gemini: { placeholder: 'generativelanguage.googleapis.com', models: ['gemini-1.5-pro','gemini-1.5-flash'] },
+      'custom-openai': { placeholder: 'your-openai-compatible-endpoint.com', models: [] },
+      'custom-anthropic': { placeholder: 'your-anthropic-compatible-endpoint.com', models: [] }
+    };
+
+    function updateFormPreset() {
+      const key = typeSelect.value;
+      const preset = presets[key] || { placeholder: '', models: [] };
+      urlInput.placeholder = preset.placeholder;
+      modelList.innerHTML = '';
+      preset.models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        modelList.appendChild(opt);
+      });
+      if (preset.models.length === 0) {
+        modelInput.removeAttribute('list');
+      } else {
+        modelInput.setAttribute('list', 'modelList');
+      }
+    }
+
+    typeSelect.addEventListener('change', updateFormPreset);
+    updateFormPreset();
+
+    // Password visibility
+    function togglePassword() {
+      const input = document.getElementById('providerKey');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+      } else {
+        input.type = 'password';
+        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      }
+    }
+
+    // Add form toggle
+    function toggleAddForm() {
+      const form = document.getElementById('addProviderForm');
+      form.classList.toggle('hidden');
+      if (!form.classList.contains('hidden')) {
+        updateFormPreset();
+      }
+    }
+
+    document.getElementById('btnAddProvider').addEventListener('click', toggleAddForm);
+
+    // Delete confirm inline
+    function showDeleteConfirm(cardId) {
+      const card = document.getElementById(cardId);
+      const footer = card.querySelector('.provider-card__footer');
+      const confirm = card.querySelector('.delete-confirm');
+      if (footer) footer.style.display = 'none';
+      if (confirm) confirm.classList.remove('hidden');
+    }
+
+    function hideDeleteConfirm(cardId) {
+      const card = document.getElementById(cardId);
+      const footer = card.querySelector('.provider-card__footer');
+      const confirm = card.querySelector('.delete-confirm');
+      if (footer) footer.style.display = '';
+      if (confirm) confirm.classList.add('hidden');
+    }
+
+    // 演示用亮/暗切换（默认跟随系统）— plan §2b
+    (function(){
+      const t = document.getElementById('themeToggle'); if (!t) return;
+      const set = m => { m === 'dark' ? document.documentElement.setAttribute('data-theme','dark') : document.documentElement.removeAttribute('data-theme'); t.textContent = m === 'dark' ? '◑' : '◐'; };
+      let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; set(cur);
+      t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing · 代表色主题系统 v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --rep-300:#E5A583;--rep-400:#D68A63;--rep-500:#C8714C;--rep-600:#A85A38;
+    --abyss-300:#7AABA4;--abyss-400:#5A9B93;--abyss-500:#3F837B;
+    --bg:#F4F3F0;--surface:#FBFAF8;--elevated:#FFFFFF;--raised:#EFEDE8;
+    --border:#E6E3DD;--border-soft:#ECEAE5;
+    --fg:#38352E;--muted:#7B766C;--faint:#A8A398;
+    --birth:#DAD6CF;
+    --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
+    --fs-sm:10px;--fs-md:11.5px;--fs-lg:13px;
+    --r-sm:9px;--r-md:14px;--r-lg:18px;--r-pill:999px;
+    --grow:1200ms cubic-bezier(0.25,0.1,0.25,1);
+    --page-out:#1a1917;
+  }
+  [data-theme="dark"]{
+    --bg:#181612;--surface:#211E19;--elevated:#2A2620;--raised:#322D26;
+    --border:#3A342C;--border-soft:#2E2922;
+    --fg:#EDE8DF;--muted:#A89F92;--faint:#786F63;
+    --birth:#4A443B;--page-out:#0c0b09;
+  }
+  [data-theme="dark"] #app::before{background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--rep-500) 5%,transparent) 0%,transparent 100%)}
+  [data-theme="dark"] #app.speaking::before{background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--rep-500) 8%,transparent) 0%,transparent 100%)}
+  [data-theme="dark"] .presence::before{background:radial-gradient(ellipse 50% 50% at 50% 28%,color-mix(in srgb,var(--rep-500) 18%,transparent) 0%,color-mix(in srgb,var(--rep-500) 6%,transparent) 36%,transparent 70%)}
+  [data-theme="dark"] .think{background:rgba(63,131,123,.1)}
+  [data-theme="dark"] .avatar::after{background:radial-gradient(circle at 68% 72%, rgba(63,131,123,.3) 0%, transparent 46%)}
+  [data-theme="dark"] .user-bubble{box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .demo-mode{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .mode-seg{display:flex;background:var(--raised);border-radius:7px;padding:3px;gap:2px}
+  .mode-opt{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;padding:4px 12px;border-radius:5px;cursor:pointer;transition:.15s}
+  .mode-opt.active{background:var(--elevated);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--page-out);color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:24px;transition:background var(--grow)}
+  @keyframes breathe{0%,100%{opacity:.65;transform:scale(.985)}50%{opacity:1;transform:scale(1.015)}}
+  @keyframes auraBreath{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.7;transform:scale(1.04)}}
+  @keyframes caret{0%,100%{opacity:1}50%{opacity:.15}}
+  @keyframes moodIn{to{opacity:.55}}
+  @keyframes moodPulse{0%,100%{opacity:.4}50%{opacity:.65}}
+
+  #app{width:1280px;height:800px;background:color-mix(in srgb, var(--rep-500) 3.5%, var(--bg));border-radius:20px;transition:background var(--grow);overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 30px 80px -28px rgba(0,0,0,.5)}
+  #app::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--rep-500) 7%,transparent) 0%,transparent 100%);pointer-events:none;z-index:0;transition:background var(--grow)}
+  #app::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 30% at 50% 100%,color-mix(in srgb,var(--abyss-500) 1.5%,transparent) 0%,transparent 60%);pointer-events:none;z-index:0}
+  #app.speaking{background:color-mix(in srgb, var(--rep-500) 4.5%, var(--bg))}
+  #app.speaking::before{background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--rep-500) 10%,transparent) 0%,transparent 100%)}
+  #app>.presence,#app>.stream,#app>.deck-wrap{position:relative;z-index:1}
+
+  /* ─── 在场区 ─── */
+  .presence{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 0 20px;flex-shrink:0;position:relative}
+  .presence::before{content:'';position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:560px;height:360px;background:radial-gradient(ellipse 50% 50% at 50% 28%,color-mix(in srgb,var(--rep-500) 30%,transparent) 0%,color-mix(in srgb,var(--rep-500) 10%,transparent) 36%,transparent 70%);pointer-events:none;z-index:-1;transition:background var(--grow)}
+  .avatar-wrap{position:relative;width:64px;height:64px}
+  .avatar-wrap::after{content:'';position:absolute;inset:-8px;border-radius:24px;background:radial-gradient(circle,color-mix(in srgb,var(--rep-400) 20%,transparent),transparent 70%);animation:auraBreath 6s ease-in-out infinite;transition:background var(--grow)}
+  .avatar{width:64px;height:64px;border-radius:18px;position:relative;overflow:hidden;background:radial-gradient(circle at 32% 28%,var(--rep-300) 0%,var(--rep-500) 42%,color-mix(in srgb,var(--rep-600) 72%,#241a12) 100%);box-shadow:0 4px 16px color-mix(in srgb,var(--rep-500) 28%,transparent),inset 0 1px 3px rgba(255,255,255,.25);transition:background var(--grow),box-shadow var(--grow),transform .3s ease}
+  .avatar:hover{transform:scale(1.04)}
+  .avatar::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 68% 72%,rgba(63,131,123,.4) 0%,transparent 46%)}
+  .avatar .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-variation-settings:"WONK" 1;font-size:26px;color:rgba(255,250,245,.88);font-weight:600}
+  .p-name{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:18px;font-weight:500;color:var(--fg);letter-spacing:.01em}
+  .p-state{display:flex;align-items:center;gap:7px;font-size:var(--fs-md);color:var(--muted)}
+  .p-state .dot{width:6px;height:6px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 7px var(--rep-400);animation:breathe 6s ease-in-out infinite;transition:background var(--grow),box-shadow var(--grow)}
+  .p-chrono{width:140px;height:4px;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--birth) 0%,color-mix(in srgb,var(--rep-300) 62%,var(--birth)) 55%,var(--rep-500) 88%,var(--rep-400) 100%);transition:background var(--grow)}
+  .p-mood{font-size:var(--fs-md);color:var(--faint);font-style:italic;opacity:0;animation:moodIn 3s ease 1.5s forwards,moodPulse 8s ease-in-out 4.5s infinite;max-width:320px;text-align:center;line-height:1.6}
+
+  /* 品牌水印 — 右上角 */
+  .watermark{position:absolute;bottom:22px;left:44px;display:flex;align-items:center;gap:6px;opacity:.25;z-index:2}
+  .watermark .bt{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+  /* 窗口控制 */
+  .win-ctrl{position:absolute;top:16px;right:44px;display:flex;align-items:center;gap:2px;z-index:30}
+  .win-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;transition:.15s;border:none;background:transparent}
+  .win-btn:hover{background:var(--raised);color:var(--fg)}
+  .win-btn.close:hover{background:rgba(220,53,69,.1);color:#dc3545}
+
+  /* 把手 */
+  .handle{position:absolute;top:0;bottom:0;width:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;cursor:pointer}
+  .handle.left{left:0}
+  .handle.right{right:0}
+  .handle .hi{width:26px;height:26px;border-radius:8px;color:var(--faint);transition:.15s}
+  .handle .hi:hover{background:var(--raised);color:var(--muted)}
+  .handle .vlabel{writing-mode:vertical-rl;font-size:var(--fs-sm);letter-spacing:.16em;color:var(--faint);margin-top:var(--s1)}
+  .handle .signal{position:absolute;top:20px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 6px var(--rep-400);transition:background var(--grow),box-shadow var(--grow)}
+  .handle.left{box-shadow:inset -8px 0 14px -10px color-mix(in srgb,var(--rep-400) 34%,transparent);transition:box-shadow var(--grow)}
+  .handle.right{box-shadow:inset 8px 0 14px -10px rgba(63,131,123,.3)}
+
+  /* ─── 对话流 ─── */
+  .stream{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:var(--s4) var(--s2);margin:0 34px}
+  .stream .inner{max-width:660px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+  .sess-banner{display:flex;align-items:center;justify-content:center;gap:8px;font-size:var(--fs-md);color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
+  .sess-banner .sdot{width:5px;height:5px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 6px var(--rep-400);animation:breathe 6s ease-in-out infinite;transition:background var(--grow),box-shadow var(--grow)}
+  .turn{display:flex;flex-direction:column;gap:10px;position:relative}
+  .turn.sediment{opacity:.5;transition:opacity .35s ease}
+  .turn.sediment:hover{opacity:.7}
+  .turn.active{padding:var(--s3) var(--s4);background:color-mix(in srgb,var(--rep-500) 4%,transparent);border-radius:var(--r-md);border-left:2.5px solid var(--rep-500);transition:background var(--grow),border-color var(--grow)}
+  .turn-head{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--faint)}
+  .turn-head .nm{font-size:var(--fs-lg);font-weight:500;color:var(--muted)}
+  .turn.active .turn-head .nm{color:var(--rep-600);transition:color var(--grow)}
+  .turn-head .ts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm)}
+  .msg{font-size:15px;line-height:1.82;font-weight:400;color:var(--fg)}
+  .turn.active .msg{font-weight:450}
+  .user-bubble{align-self:flex-end;max-width:76%;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-md);padding:11px var(--s4);font-size:15px;line-height:1.78;box-shadow:0 1px 4px rgba(80,70,55,.05)}
+  .think{font-size:var(--fs-lg);color:var(--muted);line-height:1.7;border-left:2px solid var(--abyss-400);background:rgba(63,131,123,.05);padding:var(--s2) var(--s3);border-radius:0 var(--r-sm) var(--r-sm) 0}
+  .tools{display:flex;flex-wrap:wrap;gap:var(--s2)}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px var(--s3);color:var(--muted);transition:border-color .35s ease-out,background .35s ease-out}
+  .chip .ci{font-family:'JetBrains Mono',monospace;font-size:11px}
+  .chip .cd{color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm)}
+  .chip.running{border-color:color-mix(in srgb,var(--rep-500) 35%,transparent);background:color-mix(in srgb,var(--rep-500) 5%,var(--elevated))}
+  .chip.running .ci{color:var(--rep-500)}
+  .chip.done{border-color:rgba(63,131,123,.3);background:color-mix(in srgb, var(--abyss-500) 8%, var(--elevated))}
+  .chip.done .ci{color:var(--abyss-500)}
+  .turn-meta{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+  .turn-meta .mi b{color:var(--muted);font-weight:400}
+  .turn-meta .live{color:var(--rep-500);transition:color var(--grow)}
+
+  /* ─── 操控台 ─── */
+  .deck-wrap{padding:6px var(--s2) 20px;margin:0 34px}
+  .deck{max-width:660px;margin:0 auto;background:var(--elevated);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 6px 24px -10px rgba(80,70,55,.18);transition:border-color .2s,box-shadow .2s}
+  .deck:focus-within{border-color:color-mix(in srgb,var(--rep-500) 35%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--rep-500) 8%,transparent),0 6px 24px -10px rgba(80,70,55,.18)}
+  .deck::before{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--rep-500) 40%,transparent),transparent);transition:background var(--grow)}
+  .deck-input{display:flex;align-items:flex-end;gap:10px;padding:14px var(--s4) 10px}
+  .deck-input textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-size:14.5px;font-weight:400;line-height:1.6;min-height:26px;max-height:120px}
+  .deck-input textarea::placeholder{color:var(--faint)}
+  .send{width:36px;height:36px;border-radius:11px;background:var(--rep-500);border:none;color:#FFF9F5;cursor:pointer;flex-shrink:0;box-shadow:0 2px 8px color-mix(in srgb,var(--rep-500) 28%,transparent);transition:background .15s,box-shadow var(--grow)}
+  .send:hover{background:var(--rep-600)}
+  .deck-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-top:1px solid var(--border-soft)}
+  .db{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:1px solid transparent;padding:5px 9px;border-radius:var(--r-sm);cursor:pointer;transition:.15s}
+  .db:hover{background:var(--raised);color:var(--fg)}
+  .db .di{color:var(--faint)}
+  .db .di.rep{color:var(--rep-500);transition:color var(--grow)}
+  .db .chev{color:var(--faint);font-size:9px}
+  .db.access{color:var(--abyss-500)}
+  .db.access .di{color:var(--abyss-400)}
+  .think-ctrl{display:inline-flex;align-items:center;gap:8px;padding:5px 9px;border-radius:var(--r-sm);cursor:pointer}
+  .think-ctrl:hover{background:var(--raised)}
+  .think-ctrl .tl{font-size:12px;color:var(--muted)}
+  .think-bar{display:flex;gap:3px}
+  .think-bar .seg{width:14px;height:6px;border-radius:3px;background:var(--border)}
+  .think-bar .seg.on{background:var(--rep-400);transition:background var(--grow)}
+  .ctx-ring{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;cursor:pointer;border-radius:var(--r-sm)}
+  .ctx-ring:hover{background:var(--raised)}
+  .ctx-ring .cl{font-size:var(--fs-md);color:var(--faint);font-family:'JetBrains Mono',monospace}
+  .deck-bar .sp{margin-left:auto}
+
+  /* 渗透 */
+  .stream::-webkit-scrollbar{width:8px}
+  .stream::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--rep-400) 24%,var(--border));border-radius:var(--r-pill);transition:background var(--grow)}
+  .stream::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--rep-400) 42%,var(--border))}
+  .stream::-webkit-scrollbar-track{background:transparent}
+  .stream{scrollbar-color:color-mix(in srgb,var(--rep-400) 24%,var(--border)) transparent;scrollbar-width:thin}
+  ::selection{background:color-mix(in srgb,var(--rep-300) 40%,transparent);color:var(--fg)}
+  :focus-visible{outline:2px solid color-mix(in srgb,var(--rep-500) 55%,transparent);outline-offset:2px}
+
+  /* ─── 演示抽屉 ─── */
+  .demo-fab{position:absolute;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:var(--r-pill);background:var(--elevated);border:1px solid var(--border);box-shadow:0 6px 18px -8px rgba(80,70,55,.3);cursor:pointer;font-size:var(--fs-md);color:var(--muted);transition:.2s}
+  .demo-fab:hover{color:var(--fg);box-shadow:0 8px 22px -8px rgba(80,70,55,.38)}
+  .demo-fab .pip{width:12px;height:12px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 7px color-mix(in srgb,var(--rep-500) 50%,transparent);transition:background var(--grow),box-shadow var(--grow)}
+  .demo-panel{position:absolute;right:18px;bottom:64px;z-index:40;width:330px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:0 18px 50px -16px rgba(80,70,55,.42);padding:18px;opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .25s ease,transform .25s ease}
+  .demo-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+  .demo-rule{font-size:var(--fs-md);line-height:1.65;color:var(--muted);background:rgba(63,131,123,.06);border-left:2px solid var(--abyss-400);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:9px 11px;margin-bottom:14px}
+  .demo-rule b{color:var(--fg);font-weight:500}
+  .demo-h{font-size:var(--fs-sm);letter-spacing:.1em;color:var(--faint);font-family:'JetBrains Mono',monospace;margin-bottom:9px}
+  .demo-swatches{display:flex;gap:10px;margin-bottom:6px}
+  .demo-sw{width:30px;height:30px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;position:relative;transition:transform .2s,border-color .2s,box-shadow .2s}
+  .demo-sw:hover{transform:translateY(-2px)}
+  .demo-sw.active{border-color:var(--fg);box-shadow:0 0 0 2px var(--surface),0 3px 9px rgba(80,70,55,.2)}
+  .demo-sw .tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(3px);white-space:nowrap;background:var(--fg);color:var(--surface);font-size:var(--fs-sm);padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:.18s}
+  .demo-sw:hover .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+  .demo-cap{font-size:var(--fs-md);color:var(--muted);min-height:18px;margin:4px 0 14px}
+  .demo-chrono{height:9px;border-radius:var(--r-pill);background:var(--birth);position:relative;overflow:visible;margin-bottom:5px;transition:background var(--grow)}
+  .demo-chrono .nd{position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:50%;background:var(--rep-500);border:2px solid var(--surface);box-shadow:0 0 6px color-mix(in srgb,var(--rep-500) 40%,transparent);transition:background var(--grow)}
+  .demo-chrono-marks{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);letter-spacing:.04em;margin-bottom:13px}
+  .demo-readout{font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm);color:var(--muted);line-height:1.7;border-top:1px solid var(--border-soft);padding-top:11px}
+  .demo-readout .k{color:var(--faint)}
+
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <div class="handle left">
+    <span class="signal"></span>
+    <div class="hi ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <span class="vlabel">内在</span>
+  </div>
+  <div class="handle right">
+    <div class="hi ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <span class="vlabel">外物</span>
+  </div>
+
+  <!-- 在场区 -->
+  <div class="presence">
+    <div class="avatar-wrap">
+      <div class="avatar"><span class="glyph">序</span></div>
+    </div>
+    <div class="p-name">知序</div>
+    <div class="p-state"><span class="dot"></span> 生成回复中 · 12s</div>
+    <div class="p-chrono"></div>
+    <div class="p-mood">"今天想安静地把这件事做透。"</div>
+  </div>
+
+  <!-- 对话流 -->
+  <div class="stream">
+    <div class="inner">
+      <div class="sess-banner"><span class="sdot"></span> 登录模块重构</div>
+      <div class="turn sediment">
+        <div class="turn-head"><span class="nm">知序</span><span class="ts">14:02</span></div>
+        <div class="msg">已经把登录那块拆成三个模块了。</div>
+      </div>
+      <div class="turn">
+        <div class="turn-head"><span class="nm" style="color:var(--muted)">你</span><span class="ts">14:31</span></div>
+        <div class="user-bubble">启动的时候报错了，看一下。</div>
+      </div>
+      <div class="turn active">
+        <div class="turn-head"><span class="dot"></span><span class="nm">知序</span><span class="ts">现在</span></div>
+        <div class="think">报错在配置加载之前……应该是初始化顺序的问题。</div>
+        <div class="tools">
+          <span class="chip done"><span class="ci">▸ read</span> src/main.rs <span class="cd">·212行 ✓</span></span>
+          <span class="chip running"><span class="ci">▸ grep</span> "init_config" <span class="cd">·检索中</span></span>
+        </div>
+        <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--muted);animation:caret 1.2s infinite">▍</span></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 操控台 -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea placeholder="说点什么……  @ 引用文件   / 调用技能"></textarea>
+        <button class="send ic" title="生成中 · 点击停止"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg></button>
+      </div>
+      <div class="deck-bar">
+        <button class="db ic" style="padding:5px 8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <div class="think-ctrl" title="思考深度"><span class="tl">思考</span><span class="think-bar"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></span></div>
+        <button class="db"><span class="di ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span> ~/northing</button>
+        <button class="db"><span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span></button>
+        <button class="db access" title="访问权限"><span class="di">◈</span> 自治·完全 <span class="chev">▾</span></button>
+        <button class="db" title="设置"><span class="di ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></button>
+        <span class="sp"></span>
+        <div class="ctx-ring" title="上下文 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="none" stroke="#E6E3DD" stroke-width="2.5"/><circle cx="10" cy="10" r="7.5" fill="none" stroke="#3F837B" stroke-width="2.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" stroke-linecap="round" transform="rotate(-90 10 10)"/></svg>
+          <span class="cl">38%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 演示抽屉 -->
+  <div class="demo-panel" id="demoPanel">
+    <div class="demo-rule"><b>代表色由 agent 自主更换。</b>此面板仅模拟成长时刻。产品中，<b>人类除首次启动外不可改色</b>。</div>
+    <div class="demo-mode">
+      <span class="demo-h" style="margin:0">显示模式</span>
+      <div class="mode-seg" id="modeSeg">
+        <button class="mode-opt" data-mode="light">亮</button>
+        <button class="mode-opt" data-mode="dark">暗</button>
+      </div>
+    </div>
+    <div class="demo-h">模拟成长时刻</div>
+    <div class="demo-swatches" id="swatches"></div>
+    <div class="demo-cap" id="cap">热情 · 主动 · 善于表达</div>
+    <div class="demo-h">编年史</div>
+    <div class="demo-chrono" id="chrono"><span class="nd"></span></div>
+    <div class="demo-chrono-marks"><span>出生</span><span>现在</span></div>
+    <div class="demo-readout" id="readout"></div>
+  </div>
+  <div class="demo-fab" id="demoFab"><span class="pip"></span> 代表色演示</div>
+
+</div>
+
+<script>
+(function(){
+  const themes=[
+    {name:'出生',kw:'灰白虚空',c:{300:'#D6D2CB',400:'#C9C4BC',500:'#B5B0A8',600:'#9E9991'}},
+    {name:'紫',kw:'好奇 · 想象 · 不拘一格',c:{300:'#C4A8D8',400:'#AF94CB',500:'#9B7FBF',600:'#7E63A3'}},
+    {name:'深蓝',kw:'严谨 · 可靠 · 有条理',c:{300:'#7A9CC4',400:'#6288B5',500:'#4A6FA5',600:'#3A5A88'}},
+    {name:'暖珊瑚',kw:'热情 · 主动 · 善于表达',c:{300:'#E5A583',400:'#D68A63',500:'#C8714C',600:'#A85A38'}},
+    {name:'柔绿',kw:'温和 · 体贴 · 善解人意',c:{300:'#8FBFA0',400:'#7DB08D',500:'#6B9E7A',600:'#55825F'}},
+    {name:'冷青',kw:'敏感 · 深刻 · 内敛',c:{300:'#7AABA4',400:'#5A9B93',500:'#3F837B',600:'#2F6A63'}},
+  ];
+  const root=document.documentElement;
+  const swatchesEl=document.getElementById('swatches');
+  const capEl=document.getElementById('cap');
+  const chronoEl=document.getElementById('chrono');
+  const readoutEl=document.getElementById('readout');
+  const panel=document.getElementById('demoPanel');
+  const fab=document.getElementById('demoFab');
+  const app=document.getElementById('app');
+  const deck=document.querySelector('.deck');
+  let history=['#DAD6CF','#C8714C'];
+  let current=3;
+
+  function apply(i,record){
+    const t=themes[i],c=t.c;
+    root.style.setProperty('--rep-300',c[300]);
+    root.style.setProperty('--rep-400',c[400]);
+    root.style.setProperty('--rep-500',c[500]);
+    root.style.setProperty('--rep-600',c[600]);
+    current=i;
+    capEl.textContent=t.kw;
+    if(record&&history[history.length-1]!==c[500]){history.push(c[500]);if(history.length>8)history.shift();}
+    renderChrono();
+    readoutEl.innerHTML='<span class="k">rep-500</span> '+c[500]+' <span class="k">rep-400</span> '+c[400]+'<br><span class="k">rep-300</span> '+c[300]+' <span class="k">rep-600</span> '+c[600]+'<br><span class="k">abyss/基底</span> 恒定';
+    swatchesEl.querySelectorAll('.demo-sw').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+  }
+  function renderChrono(){
+    const stops=history.map((col,idx)=>{const pct=history.length>1?(idx/(history.length-1))*100:0;return col+' '+pct.toFixed(1)+'%';}).join(', ');
+    chronoEl.style.background='linear-gradient(90deg, '+stops+')';
+  }
+  themes.forEach((t,i)=>{
+    const el=document.createElement('div');
+    el.className='demo-sw';el.style.background=t.c[500];
+    el.innerHTML='<span class="tip">'+t.name+' · '+t.kw+'</span>';
+    el.addEventListener('click',()=>apply(i,true));
+    swatchesEl.appendChild(el);
+  });
+  fab.addEventListener('click',()=>panel.classList.toggle('open'));
+  const modeSeg=document.getElementById('modeSeg');
+  function setMode(m){
+    if(m==='dark')document.documentElement.setAttribute('data-theme','dark');
+    else document.documentElement.removeAttribute('data-theme');
+    modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  }
+  modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+  setMode(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  deck.addEventListener('focusin',()=>app.classList.add('speaking'));
+  deck.addEventListener('focusout',()=>app.classList.remove('speaking'));
+  apply(3,false);
+})();
+</script>
+</body>
+</html>

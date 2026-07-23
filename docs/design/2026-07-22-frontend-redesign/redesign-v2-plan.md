@@ -1,7 +1,8 @@
 # Redesign v2 — 全页面更新 Plan（最终态）
 
-> **真值声明**：`northing-theme-system.html`（OD 数据目录，项目 `northing-theme-system`）的 **CSS 是唯一视觉真值**。本 plan 是结构清单 + 逐页差异说明；plan 文字与范式文件冲突时，**一律以范式文件为准**，照抄其变量与规则，不要自创浓度/圆角/位置数值。
-> 范式文件路径：`C:\Users\UmR\AppData\Roaming\Open Design\namespaces\release-stable-win\data\projects\northing-theme-system\northing-theme-system.html`
+> **真值声明**：`northing-theme-system.html` 的 **CSS 是唯一视觉真值**。本 plan 是结构清单 + 逐页差异说明；plan 文字与范式文件冲突时，**一律以范式文件为准**，照抄其变量与规则，不要自创浓度/圆角/位置数值。
+> 范式文件路径（OD 编辑沙盒）：`C:\Users\UmR\AppData\Roaming\Open Design\namespaces\release-stable-win\data\projects\northing-theme-system\northing-theme-system.html`
+> **仓库内归档副本（git 追踪，离线可查，与 OD 于 2026-07-24 同步）**：`northing/docs/design/2026-07-22-frontend-redesign/prototypes/theme-system.html`（其余 8 页 + README 同目录）。**归档约定**：prototypes/ = 归档基线，OD = 迭代沙盒；OD 再迭代定稿后须同步回 prototypes/ 并 commit。索引见 `prototypes/README.md`。
 
 ## 0. v2 范式核心变化（vs v1）
 

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>northing · 设置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F4F3F0;
+    --surface: #FBFAF8;
+    --elevated: #FFFFFF;
+    --raised: #EFEDE8;
+    --border: #E6E3DD;
+    --border-soft: #ECEAE5;
+    --fg: #38352E;
+    --muted: #7B766C;
+    --faint: #A8A398;
+    --rep-300: #E5A583;
+    --rep-400: #D68A63;
+    --rep-500: #C8714C;
+    --rep-600: #A85A38;
+    --abyss-300: #7AABA4;
+    --abyss-400: #5A9B93;
+    --abyss-500: #3F837B;
+    --birth: #DAD6CF;
+    --page-out: #1a1917;
+
+    --font-display: "Fraunces", "Songti SC", "STSong", "SimSun", serif;
+    --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", Consolas, monospace;
+
+    --r-sm: 9px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --r-pill: 999px;
+    --grow: 1200ms cubic-bezier(0.25,0.1,0.25,1);
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --dur: 350ms;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  [data-theme="dark"]{
+    --bg:#181612;--surface:#211E19;--elevated:#2A2620;--raised:#322D26;
+    --border:#3A342C;--border-soft:#2E2922;
+    --fg:#EDE8DF;--muted:#A89F92;--faint:#786F63;
+    --birth:#4A443B;--page-out:#0c0b09;
+  }
+  [data-theme="dark"] .shell::before{background:radial-gradient(ellipse 160% 120% at 50% 4%,color-mix(in srgb,var(--rep-500) 5%,transparent) 0%,transparent 100%)}
+  [data-theme="dark"] .presence::before{background:radial-gradient(ellipse 50% 50% at 50% 28%,color-mix(in srgb,var(--rep-500) 18%,transparent) 0%,color-mix(in srgb,var(--rep-500) 6%,transparent) 36%,transparent 70%)}
+  [data-theme="dark"] .think{background:rgba(63,131,123,.1)}
+  [data-theme="dark"] .avatar::after{background:radial-gradient(circle at 68% 72%, rgba(63,131,123,.3) 0%, transparent 46%)}
+  [data-theme="dark"] .user-bubble{box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+  /* Layout shell */
+  .shell {
+    display: flex;
+    height: 100vh;
+    width: 1280px;
+    max-width: 100%;
+    margin: 0 auto;
+    background: color-mix(in srgb, var(--rep-500) 1.5%, var(--bg));
+    overflow: hidden;
+    position: relative;
+  }
+  .shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb,var(--rep-500) 2%,transparent) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background var(--grow);
+  }
+
+  /* Nav */
+  .nav {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 36px 24px;
+    border-right: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    background: var(--surface);
+    position: relative;
+    z-index: 1;
+  }
+  .nav-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav-group-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--faint);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 12px;
+    margin-bottom: 4px;
+  }
+  .nav-item {
+    display: block;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 15px;
+    padding: 9px 12px;
+    border-radius: var(--r-sm);
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .nav-item:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+  .nav-item.active {
+    background: var(--raised);
+    color: var(--rep-500);
+    font-weight: 500;
+  }
+
+  /* Content */
+  .content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 36px 40px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .content-inner {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Section label */
+  .section-eyebrow {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 4px 0 6px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 32px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--fg);
+    margin: 0 0 6px;
+    line-height: 1.35;
+  }
+  .card-hint {
+    font-size: 13.5px;
+    color: var(--faint);
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+
+  /* Segmented control (large) */
+  .seg {
+    display: inline-flex;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    padding: 4px;
+    gap: 4px;
+  }
+  .seg-option {
+    position: relative;
+    padding: 14px 22px;
+    border-radius: var(--r-pill);
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .seg-option:hover:not(.is-active) {
+    color: var(--fg);
+    background: rgba(255,255,255,0.5);
+  }
+  .seg-option.is-active {
+    background: var(--elevated);
+    color: var(--rep-500);
+    box-shadow: 0 1px 2px rgba(56,53,46,0.06), 0 4px 12px rgba(56,53,46,0.06);
+  }
+  .seg-desc {
+    font-size: 13px;
+    color: var(--faint);
+    margin-top: 10px;
+    line-height: 1.5;
+    min-height: 20px;
+    transition: opacity 200ms var(--ease);
+  }
+
+  /* Mini segment (per-mode) */
+  .mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mode-row:last-child { border-bottom: none; }
+  .mode-name {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+  }
+  .mode-seg {
+    display: inline-flex;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    padding: 3px;
+    gap: 3px;
+  }
+  .mode-seg-opt {
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    border: none;
+    background: transparent;
+    color: var(--faint);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    line-height: 1.3;
+  }
+  .mode-seg-opt:hover:not(.is-active) { color: var(--muted); }
+  .mode-seg-opt.is-active {
+    background: var(--elevated);
+    color: var(--rep-500);
+    box-shadow: 0 1px 2px rgba(56,53,46,0.05);
+  }
+  .mode-seg-opt.is-default { color: var(--faint); }
+
+  /* Denylist */
+  .deny-card {
+    background: #F2F7F6;
+    border: 1px solid var(--abyss-300);
+    border-radius: var(--r-sm);
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--abyss-500);
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .deny-row { display: flex; gap: 10px; align-items: baseline; }
+  .deny-prefix { color: var(--muted); user-select: none; }
+  .deny-expand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    border: none;
+    background: transparent;
+    color: var(--abyss-500);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    margin-top: 10px;
+  }
+  .deny-expand:hover { background: rgba(63,131,123,0.08); color: var(--abyss-400); }
+  .deny-expand[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+  .chevron {
+    display: inline-block;
+    transition: transform var(--dur) var(--ease);
+    font-size: 10px;
+    opacity: 0.7;
+  }
+  .deny-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height var(--dur) var(--ease), opacity 250ms var(--ease), margin var(--dur) var(--ease);
+    margin-top: 0;
+  }
+  .deny-add.is-open {
+    max-height: 60px;
+    opacity: 1;
+    margin-top: 10px;
+  }
+  .deny-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .deny-input:focus {
+    border-color: var(--rep-400);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-400) 15%, transparent);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: var(--r-sm);
+    border: none;
+    background: var(--abyss-500);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--dur) var(--ease), transform 120ms var(--ease);
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--abyss-400); }
+  .btn:active { transform: translateY(1px); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--abyss-500);
+    padding: 6px 10px;
+    font-weight: 500;
+  }
+  .btn-ghost:hover { background: rgba(63,131,123,0.08); color: var(--abyss-400); }
+
+  /* Audit */
+  .audit-path {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    background: var(--raised);
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 12px;
+  }
+
+  /* 窗口控制 */
+  .win-ctrl{position:absolute;top:16px;right:44px;display:flex;align-items:center;gap:2px;z-index:30}
+  .win-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;transition:.15s;border:none;background:transparent}
+  .win-btn:hover{background:var(--raised);color:var(--fg)}
+  .win-btn.close:hover{background:rgba(220,53,69,.1);color:#dc3545}
+
+  /* 品牌水印 */
+  .watermark{position:absolute;bottom:22px;left:44px;display:flex;align-items:center;gap:6px;opacity:.25;z-index:2}
+  .watermark .bt{font-family:var(--font-display);font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+  /* 演示切换钮 */
+  .theme-toggle{position:fixed;right:16px;bottom:16px;z-index:60;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--elevated);color:var(--muted);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.12);transition:.2s}
+  .theme-toggle:hover{color:var(--fg)}
+
+  /* 选中态与焦点 */
+  ::selection{background:color-mix(in srgb,var(--rep-300) 40%,transparent);color:var(--fg)}
+  :focus-visible{outline:2px solid color-mix(in srgb,var(--rep-500) 55%,transparent);outline-offset:2px}
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="win-ctrl">
+      <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    </div>
+    <nav class="nav" aria-label="设置导航">
+      <div class="nav-title">设置</div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">偏好</div>
+        <a class="nav-item" href="#general">通用</a>
+        <a class="nav-item" href="#self">自我认知</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">能力</div>
+        <a class="nav-item" href="#model">模型</a>
+        <a class="nav-item" href="#workspace">工作区</a>
+        <a class="nav-item" href="#skills">技能</a>
+        <a class="nav-item" href="#mcp">MCP 服务器</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">安全</div>
+        <a class="nav-item active" href="#access" aria-current="page">访问权限</a>
+      </div>
+    </nav>
+
+    <main class="content">
+      <div class="content-inner">
+        <div class="section-eyebrow">访问权限</div>
+
+        <!-- Card 1: 自治档 -->
+        <section class="card" aria-labelledby="card-autonomy">
+          <h2 class="card-title" id="card-autonomy">自治档</h2>
+          <div class="seg" role="radiogroup" aria-label="自治档选择">
+            <button class="seg-option is-active" role="radio" aria-checked="true" data-value="permissive" data-desc="agent 执行命令不打断你。适合信任的编码模式。">
+              自治·完全
+            </button>
+            <button class="seg-option" role="radio" aria-checked="false" data-value="strict" data-desc="每条 shell 命令执行前先问你。">
+              需确认
+            </button>
+          </div>
+          <p class="seg-desc" aria-live="polite">agent 执行命令不打断你。适合信任的编码模式。</p>
+        </section>
+
+        <!-- Card 2: 每模式覆盖 -->
+        <section class="card" aria-labelledby="card-overrides">
+          <h2 class="card-title" id="card-overrides">每模式覆盖</h2>
+          <p class="card-hint">编码相关模式默认完全自治；可为单个模式改档。</p>
+          <div class="mode-list" role="list" id="mode-list">
+            <!-- rows injected by JS -->
+          </div>
+        </section>
+
+        <!-- Card 3: 命令黑名单 -->
+        <section class="card" aria-labelledby="card-denylist">
+          <h2 class="card-title" id="card-denylist">命令黑名单</h2>
+          <p class="card-hint">这些危险命令永远被拦截，无论自治档。</p>
+
+          <button class="deny-expand" id="deny-toggle" aria-expanded="false">
+            <span>编辑黑名单</span>
+            <span class="chevron" aria-hidden="true">▼</span>
+          </button>
+
+          <div class="deny-card" aria-label="内置危险命令">
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>rm -rf 危险目标</span></div>
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>dd of=\\.\\physicaldrive</span></div>
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>mkfs 格式化</span></div>
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>format c:</span></div>
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>:(){ :|:& };: fork 炸弹</span></div>
+            <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>shutdown / reboot</span></div>
+          </div>
+
+          <div class="deny-add" id="deny-add">
+            <input class="deny-input" id="deny-input" type="text" placeholder="输入命令模式..." aria-label="添加黑名单命令" />
+            <button class="btn" id="deny-add-btn">添加</button>
+          </div>
+        </section>
+
+        <!-- Card 4: 审计日志 -->
+        <section class="card" aria-labelledby="card-audit">
+          <h2 class="card-title" id="card-audit">审计日志</h2>
+          <p class="card-hint">每条 shell 命令的决策（允许 / 拦截 / 确认）都记录在案。</p>
+          <div class="audit-path" aria-label="审计日志路径">.northing/audit.log</div>
+          <button class="btn-ghost deny-expand" style="margin-top:0">查看审计日志</button>
+        </section>
+      </div>
+    </main>
+    <div class="watermark">
+      <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+      <span class="bt">northing</span>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+  </div>
+
+  <script>
+    (function() {
+      // Data: modes with default and current
+      const modes = [
+        { id: 'agentic', label: 'agentic', default: 'permissive', current: 'permissive' },
+        { id: 'plan', label: 'plan', default: 'permissive', current: 'permissive' },
+        { id: 'debug', label: 'debug', default: 'permissive', current: 'permissive' },
+        { id: 'multitask', label: 'multitask', default: 'permissive', current: 'permissive' },
+        { id: 'team', label: 'team', default: 'permissive', current: 'permissive' },
+        { id: 'cowork', label: 'cowork', default: 'permissive', current: 'permissive' },
+        { id: 'claw', label: 'claw', default: 'permissive', current: 'permissive' },
+        { id: 'admin', label: 'admin', default: 'permissive', current: 'strict' },
+      ];
+
+      const modeList = document.getElementById('mode-list');
+
+      function renderModes() {
+        modeList.innerHTML = '';
+        modes.forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'mode-row';
+          row.setAttribute('role', 'listitem');
+
+          const name = document.createElement('span');
+          name.className = 'mode-name';
+          name.textContent = m.label;
+
+          const seg = document.createElement('div');
+          seg.className = 'mode-seg';
+          seg.setAttribute('role', 'radiogroup');
+          seg.setAttribute('aria-label', m.label + ' 自治档');
+
+          ['permissive', 'strict'].forEach(val => {
+            const opt = document.createElement('button');
+            opt.className = 'mode-seg-opt';
+            opt.setAttribute('role', 'radio');
+            opt.setAttribute('aria-checked', m.current === val ? 'true' : 'false');
+            opt.dataset.value = val;
+            opt.dataset.mode = m.id;
+            opt.textContent = val === 'permissive' ? '完全' : '确认';
+            if (m.current === val) {
+              opt.classList.add('is-active');
+              if (m.current !== m.default) opt.classList.add('is-overridden');
+            } else {
+              opt.classList.add('is-default');
+            }
+            opt.addEventListener('click', () => {
+              m.current = val;
+              renderModes();
+            });
+            seg.appendChild(opt);
+          });
+
+          row.appendChild(name);
+          row.appendChild(seg);
+          modeList.appendChild(row);
+        });
+      }
+      renderModes();
+
+      // Global autonomy segment
+      const globalSeg = document.querySelector('.seg[aria-label="自治档选择"]');
+      const descEl = document.querySelector('.seg-desc');
+      globalSeg.addEventListener('click', e => {
+        const btn = e.target.closest('.seg-option');
+        if (!btn) return;
+        globalSeg.querySelectorAll('.seg-option').forEach(b => {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-checked', 'false');
+        });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-checked', 'true');
+        descEl.textContent = btn.dataset.desc;
+        // Brief fade to signal change
+        descEl.style.opacity = '0';
+        requestAnimationFrame(() => {
+          descEl.style.opacity = '1';
+        });
+      });
+
+      // Denylist expand
+      const toggle = document.getElementById('deny-toggle');
+      const addWrap = document.getElementById('deny-add');
+      toggle.addEventListener('click', () => {
+        const open = addWrap.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+
+      // Denylist add (demo)
+      const input = document.getElementById('deny-input');
+      const addBtn = document.getElementById('deny-add-btn');
+      addBtn.addEventListener('click', () => {
+        const v = input.value.trim();
+        if (!v) return;
+        const card = document.querySelector('.deny-card');
+        const row = document.createElement('div');
+        row.className = 'deny-row';
+        row.innerHTML = '<span class="deny-prefix" aria-hidden="true">•</span><span>' + v.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>';
+        card.appendChild(row);
+        input.value = '';
+      });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') addBtn.click();
+      });
+
+      // 演示切换钮
+      (function(){
+        const t=document.getElementById('themeToggle');if(!t)return;
+        const set=m=>{m==='dark'?document.documentElement.setAttribute('data-theme','dark'):document.documentElement.removeAttribute('data-theme');t.textContent=m==='dark'?'◑':'';};
+        let cur=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';set(cur);
+        t.addEventListener('click',()=>{cur=cur==='dark'?'light':'dark';set(cur);});
+      })();
+    })();
+  </script>
+</body>
+</html>
