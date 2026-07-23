@@ -146,7 +146,7 @@
 - **Symptom**: C2's invariant "the agent does not read its own episodes for decisions" (anti self-validation loop) is enforced only by convention — no code reads episodes into the prompt today, but nothing structurally prevents it. A future prompt-builder edit could wire episodes in and silently open the self-validation loop, undermining C4's whole point.
 - **Evidence**: External review 2026-07-23 §1 / §四.5; the episodes store under `src/crates/assembly/core/src/agentic/` has no read-side guard.
 - **Proposed fix**: Upgrade to structure-layer — a cargo boundary assertion or path blacklist (like the core-boundaries checker) that fails the build if any prompt-builder path imports the episodes store. Make it as physically hard to break as C4's receipt gate.
-- **Status**: active (high priority — protects the no-self-whitewash invariant)
+- **Status**: resolved (2026-07-23: added `forbiddenContentUnderRules` entries in `scripts/core-boundaries/rules/source/forbidden-rules.mjs` — `read_episodes` and `episodes::store::read` forbidden under `agentic/agents/` and `agentic/execution/`; checker + self-test pass; kernel_facade/memory.rs UI display path unaffected)
 
 ### P2-13: C1 identity rewritten but agentic_mode.md behavior section not tuned
 

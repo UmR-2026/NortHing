@@ -2953,4 +2953,33 @@ export const forbiddenContentUnderRules = [
       },
     ],
   },
+  {
+    path: 'src/crates/assembly/core/src/agentic/agents',
+    reason:
+      'C2 invariant: agents must not read their own episodes for prompt/decision building (prevents self-validation loops)',
+    patterns: [
+      {
+        regex: /\bread_episodes\b/,
+        message:
+          'prompt-building path must not read episodes; episodes are write-only for the agent (C2 no-self-validation invariant)',
+      },
+      {
+        regex: /\bepisodes::store::read\b/,
+        message:
+          'prompt-building path must not access the episodes read store (C2 no-self-validation invariant)',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/execution',
+    reason:
+      'C2 invariant: turn execution must not read episodes into prompts (prevents self-validation loops); distill/append are write-side and allowed',
+    patterns: [
+      {
+        regex: /\bread_episodes\b/,
+        message:
+          'turn execution must not read episodes into prompt context; episodes are write-only for the agent (C2 no-self-validation invariant)',
+      },
+    ],
+  },
 ];
