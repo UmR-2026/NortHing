@@ -59,12 +59,11 @@
 |---|---|---|---|
 | **T0** | 核对单（不动码）：① init_core 是否内化 desktop bootstrap 全序列（config→agentic→scheduler→mcp 全局注册）——judge-lc 已预核 lifecycle.rs:91-136 序列完整，T0 复核确认即可 ② `test_provider_config` 返回粒度 vs 设置页需求 ③ `get_mcp_status` DTO vs McpCatalogPort 消费点 ④ debug_log 下沉目标 crate 选址 ⑤ **D2 深化（judge-lc 复审新增，按用户拍板 A' 修订）**：facade `get_mcp_status` 返回的 `MCPServerStatusDto`（kind+message）是否够承载 mcp_adapter 映射层所需的 8 态折叠信息（现 mcp_adapter.rs:86-100 折叠逻辑留在 adapter，不迁移）；Inspector 消费侧从单次 list_servers 改为 list+per-id status 的 N+1 调用模式对刷新延迟的影响评估 + `inspector.rs:44-46` 配套修改方案 | — | 核对报告；发现 core 侧缺陷则先出 core 侧小单补齐（不动 facade 签名） |
 | **T1** | bootstrap 收编：main.rs + agent/agentic_system.rs 全序列塌缩为 `init_core()`；删 `set_global_scheduler`/`set_global_mcp_service`/`initialize_global_config` 直连 | main.rs(4)、agentic_system.rs(5) | `cargo check -p northhing` 绿；GUI 冒烟（启动→会话列表加载） |
-| **T2** | turn 主链路（最大片）：submit/stop/事件订阅/Message DTO 迁移（**不含 log.rs**——其 2 处引用全属 debug_log 域，按 D1 留 T5，judge-lc 复审修正） | callbacks_lifecycle(27)、event_bridge(5)、actor(2)、mod(2)、state(4)、create_ui(4) | check 绿 + GUI 冒烟（发消息→流式 TextChunk→ToolCall→TurnState 完成/失败/取消）+  focused desktop 测试 |
-| **T3** | sessions 域 | sessions.rs(19) | check 绿 + 会话 CRUD/分支/消息加载冒烟 |
-| **T4** | settings/skills/mcp/inspector：config 读写、provider CRUD+test、skills 面板、MCP 面板（mcp_adapter 改纯映射层，D2-A'）、inspector 数据面 | settings/sync(4)、settings/tests(2)、provider(1)、provider_test(2)、skills(2)、inspector(3)、inspector_model_status(2)、mcp_adapter(改造) | check 绿 + 设置页全流程冒烟（改 provider→test→保存→skills 开关→MCP 状态） |
+| **T23**（T2+T3 合并，2026-07-25 重切分） | turn+session 数据流簇（最大片）：submit/stop/事件订阅/Message DTO 迁移 + sessions 域。合并理由：sessions.rs 的转换函数签名（`build_messages_model`/`refresh_sessions_ui` 等）被 callbacks_lifecycle/event_bridge/create_ui/mod 四处调用，T2/T3 分单并行会在共享签名上互撞（实测耦合发现） | callbacks_lifecycle(27)、event_bridge(5)、actor(2)、mod(2)、state(4)、create_ui(4)、sessions(19) | check 绿 + GUI 冒烟（发消息→流式 TextChunk→ToolCall→TurnState 完成/失败/取消；会话 CRUD/分支/消息加载）+ focused desktop 测试 |
+| **T4** | settings/skills/mcp/inspector：config 读写、provider CRUD+test、skills 面板、MCP 面板（mcp_adapter 改纯映射层，D2-A'）、inspector 数据面（**前置依赖 T4p**：provider_test 迁移需 ProviderFormDto.provider_type） | settings/sync(4)、settings/tests(2)、provider(1)、provider_test(2)、skills(2)、inspector(3)、inspector_model_status(2)、mcp_adapter(改造) | check 绿 + 设置页全流程冒烟（改 provider→test→保存→skills 开关→MCP 状态） |
 | **T5** | 清扫验收：D1 debug-log 微 crate 落地（`contracts/debug-log`，用户拍板新 crate）+ 全仓 `northhing_core::` 在 desktop/src 清零 grep 守卫（按 §6 豁免清单：kernel_facade 手柄、shutdown_mcp_servers、w4_repro）+ K0 编译指标对比 | log(2) 等 8 文件 | `rg "northhing_core::" src/apps/desktop/src` 仅剩豁免行；`cargo tree -p northhing-kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` 零命中；增量 check 实测对比 K0 基线（目标 min(30s, 基线×0.5)，未达成不阻塞但记录给 K3 闸门） |
 
-依赖：T0 → T1 →（T2 ∥ T3 ∥ T4 文件集不相交可并行）→ T5。每片 judge 验收后 commit；T2 是重灾区单独 judge。
+依赖：T0 → T1 →（T23 ∥ T4p → T4，文件集不相交可并行；T23 与 T4 亦不相交）→ T5。每片 judge 验收后 commit；T23 是重灾区单独 judge。
 
 ## 6. 不变量与红线
 
