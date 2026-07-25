@@ -107,3 +107,15 @@ facade 与旧路径在整个 K 线期间并存（northstar §5 K2 回退条款�
 5. facade DTO → **缺字段可补**（加字段不占 P2 方法额度，reviewer 确认即可）
 
 设计稿状态：**定稿**。judge-lc 审判记录：一轮 FAIL（3 条：T2 误含 log.rs / T0 缺 D2 深化项 / grep 花括号盲区）→ 全部修复 → 二轮 APPROVED。
+
+## 11. T0 核对结论（2026-07-25，编排者执行，全部关闭）
+
+| # | 核对项 | 结论 |
+|---|---|---|
+| ① | init_core 内化 bootstrap 全序列 | ✅ 完整（judge-lc 预核 `kernel_facade/lifecycle.rs:91-136`：config→ai_factory→agentic→scheduler(notifier+injection)→mcp(new+global+bg init)→set_coordinator，与 desktop 现行序列逐步对应） |
+| ② | test_provider* 返回粒度 | ✅ `ProviderTestResultDto{success,error}` 够用（error 已是 first_line，desktop 侧自行 120 字符截断 + last_verified_* 持久化留在 desktop AppSettings，正确分层）。**但发现 1 个 DTO 缺口**：`ProviderFormDto`（kernel-api/settings.rs:105-113）缺 provider wire format 字段——desktop `provider_to_ai_model_config` 用 `provider_wire_format(&p.provider_type)` 决定 AIModelConfig.provider（影响 AIClient 端点形态），而 facade `test_provider_config` 实现误用 `provider: form.provider_id`（kernel_facade/settings.rs:362）→ **新增 T4p 小单**：ProviderFormDto 加 `provider_type: Option<String>` 可选字段 + 实现侧改用它（拍板项 5 授权，DTO 加字段不占 P2 额度；serde optional 向后兼容） |
+| ③ | get_mcp_status DTO vs McpCatalogPort | ✅ 覆盖（`MCPServerStatusDto` kind+message，`MCPServerStatusKind::Failed{message}` 承载 NeedsAuth reason；judge-lc 预核 settings.rs:80-93） |
+| ④ | debug-log crate 选址 | ✅ `contracts/debug-log` 新微 crate（用户拍板）；T5 落地，同 commit 更新 `docs/status/surfaces.md`（家规②） |
+| ⑤ | D2 深化（N+1 / 8 态折叠 / inspector 配套） | ✅ 8 态折叠信息够用（见③），折叠逻辑留 mcp_adapter 映射层（方案 A'）；N+1 配套方案：`build_mcp_status_string`（inspector.rs:17-47）改为 facade `list_mcp_servers` + `futures::future::join_all` 并发 per-id `get_mcp_status`，`render_status` 纯函数保留；MCP 实例数典型 <10，并发后延迟与现状同阶，无预算风险 |
+
+**T0 产出**：T4p 小单立项（ProviderFormDto.provider_type）；其余核对项无需 core 侧补单。T1 可开工。
