@@ -1,44 +1,33 @@
-//! Adapter: `MCPService` → `McpCatalogPort`.
+//! Adapter: kernel facade → `McpCatalogPort`.
 //!
-//! Phase F.3 (2026-06-19): bridges the producer-side
-//! `northhing-core::service::mcp::MCPService` to the
-//! `northhing-runtime-ports::McpCatalogPort` consumer boundary. The
-//! desktop Inspector (`create_ui`) consumes this adapter when refreshing
-//! the `mcp_status` Slint property.
+//! Phase F.3 (2026-06-19): bridges the kernel facade's MCP read surface
+//! to the `northhing-runtime-ports::McpCatalogPort` consumer boundary.
+//! The desktop Inspector (`create_ui`) consumes this adapter when
+//! refreshing the `mcp_status` Slint property.
 //!
-//! ## Shape
+//! ## Shape (K4a-T4)
 //!
-//! - Reads the user-side config via `mcp_service.config_service().load_all_configs()`.
-//! - Probes runtime status via
-//!   `mcp_service.server_manager().get_server_status(&id)` with a 30ms
-//!   timeout — same as the CLI's `print_mcp_servers`.
-//! - Maps the producer-side `MCPServerStatus` enum to the
+//! - Reads the server list via facade `list_mcp_servers`.
+//! - Probes runtime status via concurrent per-id `get_mcp_status`
+//!   (N+1 pattern; MCP count is small, latency is same-order).
+//! - Maps the facade `MCPServerStatusKind` enum to the
 //!   `McpServerStatusDto` declared in runtime-ports.
 //!
-//! The constructor accepts an `Arc<MCPService>` so callers can share
-//! the service with other desktop consumers (Phase 3 may want the
-//! `mcp.dynamic_tool.list` query too).
+//! The constructor accepts an `Arc<KernelFacade>` so callers can share
+//! the facade handle with other desktop consumers.
 
 use std::sync::Arc;
-use std::time::Duration;
 
-use northhing_core::service::mcp::{MCPServerConfig, MCPServerStatus, MCPService};
+use northhing_core::kernel_facade::KernelFacade;
+use northhing_kernel_api::settings::MCPServerStatusKind;
 use northhing_runtime_ports::{
     format_mcp_status, format_mcp_status_err, McpCatalogError, McpCatalogReader, McpServerDto, McpServerStatusDto,
 };
 
-// Note: the marker `McpCatalogPort` (extends `RuntimeServicePort`) is
-// referenced via fully-qualified path in the impl below to avoid an
-// unused-import warning.
-
-/// Default probe timeout — matches the CLI's `print_mcp_servers`
-/// behavior (`tokio::time::timeout(Duration::from_millis(30), ...)`).
-const PROBE_TIMEOUT: Duration = Duration::from_millis(30);
-
-/// Adapter wrapping an `MCPService` so the desktop can read the MCP
-/// catalog through the runtime-ports boundary.
+/// Adapter wrapping a kernel facade handle so the desktop can read the
+/// MCP catalog through the runtime-ports boundary.
 pub struct McpCatalogAdapter {
-    service: Arc<MCPService>,
+    facade: Arc<KernelFacade>,
 }
 
 impl std::fmt::Debug for McpCatalogAdapter {
@@ -48,74 +37,57 @@ impl std::fmt::Debug for McpCatalogAdapter {
 }
 
 impl McpCatalogAdapter {
-    /// Build an adapter over an existing `MCPService`. Caller retains
-    /// ownership of `service` (it's `Arc`-shared).
-    pub fn new(service: Arc<MCPService>) -> Self {
-        Self { service }
-    }
-
-    /// Convenience: probe a single server's status, mapping the
-    /// producer-side enum onto the port DTO. The `enabled` flag
-    /// wins: if the user disabled the server, status is `Disabled`
-    /// regardless of runtime state.
-    async fn probe_status(&self, config: &MCPServerConfig) -> McpServerStatusDto {
-        if !config.enabled {
-            return McpServerStatusDto::Disabled;
-        }
-        match tokio::time::timeout(
-            PROBE_TIMEOUT,
-            self.service.server_manager().get_server_status(&config.id),
-        )
-        .await
-        {
-            Ok(Ok(status)) => map_status(status),
-            Ok(Err(_err)) => McpServerStatusDto::Failed {
-                message: "status probe failed".into(),
-            },
-            Err(_elapsed) => McpServerStatusDto::ProbeTimeout,
-        }
+    /// Build an adapter over an existing facade handle. Caller retains
+    /// ownership of `facade` (it's `Arc`-shared).
+    pub fn new(facade: Arc<KernelFacade>) -> Self {
+        Self { facade }
     }
 }
 
-/// Map producer-side `MCPServerStatus` to port DTO. The producer enum
-/// has 9 variants; we fold `Uninitialized` / `Starting` / `Reconnecting`
-/// into `Starting`, treat `Healthy` as `Connected`, surface `Failed`
-/// with the message placeholder (the producer side doesn't carry a
-/// message on the enum), and treat the rest as the closest consumer
-/// match.
-fn map_status(status: MCPServerStatus) -> McpServerStatusDto {
-    match status {
-        MCPServerStatus::Connected | MCPServerStatus::Healthy => McpServerStatusDto::Connected,
-        MCPServerStatus::Starting | MCPServerStatus::Uninitialized | MCPServerStatus::Reconnecting => {
-            McpServerStatusDto::Starting
-        }
-        MCPServerStatus::NeedsAuth => McpServerStatusDto::Failed {
-            message: "needs authentication".into(),
+/// Map facade `MCPServerStatusKind` to port DTO. The facade enum
+/// already folds the 9 producer-side variants into 5; this is a 1:1
+/// mapping that keeps the adapter as the single place where the
+/// runtime-ports shape is constructed.
+fn map_status(kind: &MCPServerStatusKind) -> McpServerStatusDto {
+    match kind {
+        MCPServerStatusKind::Connected => McpServerStatusDto::Connected,
+        MCPServerStatusKind::Starting => McpServerStatusDto::Starting,
+        MCPServerStatusKind::Disabled => McpServerStatusDto::Disabled,
+        MCPServerStatusKind::Failed { message } => McpServerStatusDto::Failed {
+            message: message.clone(),
         },
-        MCPServerStatus::Failed => McpServerStatusDto::Failed {
-            message: "runtime reported failure".into(),
-        },
-        MCPServerStatus::Stopping | MCPServerStatus::Stopped => McpServerStatusDto::Disabled,
+        MCPServerStatusKind::ProbeTimeout => McpServerStatusDto::ProbeTimeout,
     }
 }
 
 #[async_trait::async_trait]
 impl McpCatalogReader for McpCatalogAdapter {
     async fn list_servers(&self) -> Result<Vec<McpServerDto>, McpCatalogError> {
+        use northhing_kernel_api::KernelSettingsApi;
+
         let configs = self
-            .service
-            .config_service()
-            .load_all_configs()
+            .facade
+            .list_mcp_servers()
             .await
-            .map_err(|e| McpCatalogError::new(format!("load_all_configs: {e}")))?;
+            .map_err(|e| McpCatalogError::new(format!("list_mcp_servers: {e}")))?;
+
+        let ids: Vec<String> = configs.iter().map(|c| c.id.clone()).collect();
+        let statuses =
+            futures::future::join_all(ids.iter().map(|id| self.facade.get_mcp_status(id)).collect::<Vec<_>>()).await;
 
         let mut servers = Vec::with_capacity(configs.len());
-        for config in &configs {
-            let status = self.probe_status(config).await;
+        for (config, status_result) in configs.iter().zip(statuses.into_iter()) {
+            let status = match status_result {
+                Ok(dto) => map_status(&dto.status),
+                Err(_) => McpServerStatusDto::Failed {
+                    message: "status probe failed".into(),
+                },
+            };
+            let enabled = !matches!(status, McpServerStatusDto::Disabled);
             servers.push(McpServerDto {
                 id: config.id.clone(),
                 name: config.name.clone(),
-                enabled: config.enabled,
+                enabled,
                 status,
             });
         }
@@ -149,29 +121,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn map_status_folds_uninitialized_into_starting() {
-        assert_eq!(map_status(MCPServerStatus::Uninitialized), McpServerStatusDto::Starting);
+    fn map_status_connected() {
+        assert_eq!(
+            map_status(&MCPServerStatusKind::Connected),
+            McpServerStatusDto::Connected
+        );
     }
 
     #[test]
-    fn map_status_treats_healthy_as_connected() {
-        assert_eq!(map_status(MCPServerStatus::Healthy), McpServerStatusDto::Connected);
+    fn map_status_starting() {
+        assert_eq!(map_status(&MCPServerStatusKind::Starting), McpServerStatusDto::Starting);
     }
 
     #[test]
     fn map_status_failed_carries_message() {
-        let s = map_status(MCPServerStatus::Failed);
+        let s = map_status(&MCPServerStatusKind::Failed {
+            message: "needs authentication".into(),
+        });
         match s {
             McpServerStatusDto::Failed { message } => {
-                assert_eq!(message, "runtime reported failure");
+                assert_eq!(message, "needs authentication");
             }
             other => panic!("expected Failed, got {other:?}"),
         }
     }
 
     #[test]
-    fn map_status_stopping_is_disabled() {
-        assert_eq!(map_status(MCPServerStatus::Stopping), McpServerStatusDto::Disabled);
+    fn map_status_disabled() {
+        assert_eq!(map_status(&MCPServerStatusKind::Disabled), McpServerStatusDto::Disabled);
+    }
+
+    #[test]
+    fn map_status_probe_timeout() {
+        assert_eq!(
+            map_status(&MCPServerStatusKind::ProbeTimeout),
+            McpServerStatusDto::ProbeTimeout
+        );
     }
 
     #[test]

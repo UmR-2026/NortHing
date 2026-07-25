@@ -12,19 +12,12 @@ use super::*;
 /// Gemini, OpenAI-compatible). We surface whatever is actually enabled in
 /// the user's `GlobalConfig.ai.models` so the displayed set stays honest.
 pub(super) async fn build_model_status_string() -> String {
+    use northhing_core::kernel_facade::kernel_facade;
+    use northhing_kernel_api::KernelSettingsApi;
     use std::collections::BTreeSet;
 
-    let config_service = match northhing_core::service::config::get_global_config_service().await {
-        Ok(svc) => svc,
-        Err(e) => {
-            eprintln!("Phase C.3: failed to fetch global config service: {e}");
-            return "Model: Not configured".to_string();
-        }
-    };
-
-    // `None` path == use the user's primary config (no per-workspace override).
-    let config: Result<northhing_core::service::config::GlobalConfig, _> = config_service.config(None).await;
-    let config = match config {
+    let facade = kernel_facade();
+    let config = match facade.get_global_config().await {
         Ok(c) => c,
         Err(e) => {
             eprintln!("Phase C.3: failed to read global config: {e}");
@@ -35,13 +28,15 @@ pub(super) async fn build_model_status_string() -> String {
     // Collect unique enabled providers (case-insensitive on the storage side,
     // but we sort lexicographically for stable UI rendering).
     let mut providers: BTreeSet<String> = BTreeSet::new();
-    for model in &config.ai.models {
-        if !model.enabled {
+    for model in &config.providers {
+        if model.enabled != Some(true) {
             continue;
         }
-        let trimmed = model.provider.trim();
-        if !trimmed.is_empty() {
-            providers.insert(trimmed.to_string());
+        if let Some(ref pt) = model.provider_type {
+            let trimmed = pt.trim();
+            if !trimmed.is_empty() {
+                providers.insert(trimmed.to_string());
+            }
         }
     }
 

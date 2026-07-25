@@ -5,8 +5,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::settings::{
-    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, MCPServerDto,
-    MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
+    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, MCPServerDto, MCPServerStatusDto,
+    ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
 };
 
 use crate::service::config::{get_global_config_service, GlobalConfig};
@@ -36,6 +36,8 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                     api_key: m.api_key.clone(),
                     model: m.model_name.clone(),
                     extra: None,
+                    enabled: Some(m.enabled),
+                    provider_type: Some(m.provider.clone()),
                 })
                 .collect(),
             default_provider_id: config.ai.default_models.primary.clone(),
@@ -123,6 +125,13 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 display_name: Some(m.name),
                 max_tokens: m.max_tokens,
                 temperature: m.temperature,
+                base_url: Some(m.base_url),
+                api_key: Some(m.api_key),
+                enabled: Some(m.enabled),
+                category: Some(category_to_str(&m.category)),
+                capabilities: Some(m.capabilities.iter().map(|c| capability_to_str(c)).collect()),
+                auth: Some(auth_to_str(&m.auth)),
+                inline_think_in_text: Some(m.inline_think_in_text),
             })
             .collect())
     }
@@ -142,21 +151,31 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 name: config.display_name.unwrap_or_else(|| existing_model.name.clone()),
                 provider: config.provider_id.clone(),
                 model_name: config.model.clone(),
-                base_url: existing_model.base_url.clone(),
+                base_url: config.base_url.unwrap_or_else(|| existing_model.base_url.clone()),
                 request_url: existing_model.request_url.clone(),
-                api_key: existing_model.api_key.clone(),
+                api_key: config.api_key.unwrap_or_else(|| existing_model.api_key.clone()),
                 context_window: existing_model.context_window,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,
                 top_p: existing_model.top_p,
-                enabled: existing_model.enabled,
-                category: existing_model.category.clone(),
-                capabilities: existing_model.capabilities.clone(),
+                enabled: config.enabled.unwrap_or(existing_model.enabled),
+                category: config
+                    .category
+                    .as_deref()
+                    .map(str_to_category)
+                    .unwrap_or_else(|| existing_model.category.clone()),
+                capabilities: config
+                    .capabilities
+                    .as_deref()
+                    .map(strs_to_capabilities)
+                    .unwrap_or_else(|| existing_model.capabilities.clone()),
                 recommended_for: existing_model.recommended_for.clone(),
                 metadata: existing_model.metadata.clone(),
                 enable_thinking_process: existing_model.enable_thinking_process,
                 reasoning_mode: existing_model.reasoning_mode.clone(),
-                inline_think_in_text: existing_model.inline_think_in_text,
+                inline_think_in_text: config
+                    .inline_think_in_text
+                    .unwrap_or(existing_model.inline_think_in_text),
                 custom_headers: existing_model.custom_headers.clone(),
                 custom_headers_mode: existing_model.custom_headers_mode.clone(),
                 skip_ssl_verify: existing_model.skip_ssl_verify,
@@ -164,7 +183,11 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 thinking_budget_tokens: existing_model.thinking_budget_tokens,
                 custom_request_body: existing_model.custom_request_body.clone(),
                 custom_request_body_mode: existing_model.custom_request_body_mode.clone(),
-                auth: existing_model.auth.clone(),
+                auth: config
+                    .auth
+                    .as_deref()
+                    .map(str_to_auth)
+                    .unwrap_or_else(|| existing_model.auth.clone()),
             }
         } else {
             crate::service::config::runtime::AIModelConfig {
@@ -172,21 +195,25 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 name: config.display_name.unwrap_or_default(),
                 provider: config.provider_id.clone(),
                 model_name: config.model.clone(),
-                base_url: String::new(),
+                base_url: config.base_url.unwrap_or_default(),
                 request_url: None,
-                api_key: String::new(),
+                api_key: config.api_key.unwrap_or_default(),
                 context_window: None,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,
                 top_p: None,
-                enabled: true,
-                category: Default::default(),
-                capabilities: vec![],
+                enabled: config.enabled.unwrap_or(true),
+                category: config.category.as_deref().map(str_to_category).unwrap_or_default(),
+                capabilities: config
+                    .capabilities
+                    .as_deref()
+                    .map(strs_to_capabilities)
+                    .unwrap_or_default(),
                 recommended_for: vec![],
                 metadata: None,
                 enable_thinking_process: false,
                 reasoning_mode: None,
-                inline_think_in_text: false,
+                inline_think_in_text: config.inline_think_in_text.unwrap_or(false),
                 custom_headers: None,
                 custom_headers_mode: None,
                 skip_ssl_verify: false,
@@ -194,7 +221,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 thinking_budget_tokens: None,
                 custom_request_body: None,
                 custom_request_body_mode: None,
-                auth: Default::default(),
+                auth: config.auth.as_deref().map(str_to_auth).unwrap_or_default(),
             }
         };
         if existing.is_some() {
@@ -232,8 +259,8 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
     }
 
     async fn list_mcp_servers(&self) -> Result<Vec<MCPServerDto>, KernelError> {
-        let mcp_svc = global_mcp_service()
-            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let mcp_svc =
+            global_mcp_service().ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
         let configs = mcp_svc
             .config_service()
             .load_all_configs()
@@ -259,8 +286,8 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
     }
 
     async fn upsert_mcp_server(&self, config: MCPServerDto) -> Result<(), KernelError> {
-        let mcp_svc = global_mcp_service()
-            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let mcp_svc =
+            global_mcp_service().ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
         let location = match config.location {
             northhing_kernel_api::settings::ConfigLocationDto::User => {
                 northhing_services_integrations::mcp::config::ConfigLocation::User
@@ -299,8 +326,8 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
     }
 
     async fn delete_mcp_server(&self, id: &str) -> Result<(), KernelError> {
-        let mcp_svc = global_mcp_service()
-            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let mcp_svc =
+            global_mcp_service().ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
         mcp_svc
             .config_service()
             .delete_server_config(id)
@@ -309,8 +336,8 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
     }
 
     async fn get_mcp_status(&self, id: &str) -> Result<MCPServerStatusDto, KernelError> {
-        let mcp_svc = global_mcp_service()
-            .ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
+        let mcp_svc =
+            global_mcp_service().ok_or_else(|| KernelError::Internal("MCP service not initialized".to_string()))?;
         let status = tokio::time::timeout(
             Duration::from_millis(30),
             mcp_svc.server_manager().get_server_status(id),
@@ -342,7 +369,9 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
         match client.test_connection().await {
             Ok(result) => Ok(ProviderTestResultDto {
                 success: result.success,
-                error: result.error_details.map(|d| crate::kernel_facade::helpers::first_line_error(&d)),
+                error: result
+                    .error_details
+                    .map(|d| crate::kernel_facade::helpers::first_line_error(&d)),
             }),
             Err(e) => Ok(ProviderTestResultDto {
                 success: false,
@@ -362,13 +391,93 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
         match client.test_connection().await {
             Ok(result) => Ok(ProviderTestResultDto {
                 success: result.success,
-                error: result.error_details.map(|d| crate::kernel_facade::helpers::first_line_error(&d)),
+                error: result
+                    .error_details
+                    .map(|d| crate::kernel_facade::helpers::first_line_error(&d)),
             }),
             Err(e) => Ok(ProviderTestResultDto {
                 success: false,
                 error: Some(crate::kernel_facade::helpers::first_line_error(&e.to_string())),
             }),
         }
+    }
+}
+
+fn category_to_str(c: &crate::service::config::ai::ModelCategory) -> String {
+    use crate::service::config::ai::ModelCategory::*;
+    match c {
+        GeneralChat => "general_chat",
+        Multimodal => "multimodal",
+        ImageGeneration => "image_generation",
+        Embedding => "embedding",
+        SearchEnhanced => "search_enhanced",
+        CodeSpecialized => "code_specialized",
+        SpeechRecognition => "speech_recognition",
+    }
+    .to_string()
+}
+
+fn str_to_category(s: &str) -> crate::service::config::ai::ModelCategory {
+    use crate::service::config::ai::ModelCategory::*;
+    match s {
+        "multimodal" => Multimodal,
+        "image_generation" => ImageGeneration,
+        "embedding" => Embedding,
+        "search_enhanced" => SearchEnhanced,
+        "code_specialized" => CodeSpecialized,
+        "speech_recognition" => SpeechRecognition,
+        _ => GeneralChat,
+    }
+}
+
+fn capability_to_str(c: &crate::service::config::ai::ModelCapability) -> String {
+    use crate::service::config::ai::ModelCapability::*;
+    match c {
+        TextChat => "text_chat",
+        ImageUnderstanding => "image_understanding",
+        ImageGeneration => "image_generation",
+        Embedding => "embedding",
+        Search => "search",
+        CodeSpecialized => "code_specialized",
+        FunctionCalling => "function_calling",
+        SpeechRecognition => "speech_recognition",
+    }
+    .to_string()
+}
+
+fn strs_to_capabilities(ss: &[String]) -> Vec<crate::service::config::ai::ModelCapability> {
+    use crate::service::config::ai::ModelCapability::*;
+    ss.iter()
+        .filter_map(|s| match s.as_str() {
+            "text_chat" => Some(TextChat),
+            "image_understanding" => Some(ImageUnderstanding),
+            "image_generation" => Some(ImageGeneration),
+            "embedding" => Some(Embedding),
+            "search" => Some(Search),
+            "code_specialized" => Some(CodeSpecialized),
+            "function_calling" => Some(FunctionCalling),
+            "speech_recognition" => Some(SpeechRecognition),
+            _ => None,
+        })
+        .collect()
+}
+
+fn auth_to_str(a: &crate::service::config::runtime::AuthConfig) -> String {
+    use crate::service::config::runtime::AuthConfig::*;
+    match a {
+        ApiKey => "api_key",
+        CodexCli => "codex_cli",
+        GeminiCli => "gemini_cli",
+    }
+    .to_string()
+}
+
+fn str_to_auth(s: &str) -> crate::service::config::runtime::AuthConfig {
+    use crate::service::config::runtime::AuthConfig::*;
+    match s {
+        "codex_cli" => CodexCli,
+        "gemini_cli" => GeminiCli,
+        _ => ApiKey,
     }
 }
 

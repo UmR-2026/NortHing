@@ -199,8 +199,8 @@ fn onboarding_completed_serde_default_false() {
     let full = serde_json::to_value(AppSettings::default()).expect("serialize default");
     let mut obj = full.as_object().expect("object").clone();
     obj.remove("onboarding_completed");
-    let s: AppSettings = serde_json::from_value(serde_json::Value::Object(obj))
-        .expect("deserialize without onboarding_completed");
+    let s: AppSettings =
+        serde_json::from_value(serde_json::Value::Object(obj)).expect("deserialize without onboarding_completed");
     assert!(!s.onboarding_completed, "missing field should default to false");
 }
 
@@ -347,10 +347,7 @@ fn provider_wire_format_mapping() {
     assert_eq!(provider_wire_format(&ProviderType::Anthropic), "anthropic");
     assert_eq!(provider_wire_format(&ProviderType::Openai), "openai");
     assert_eq!(provider_wire_format(&ProviderType::Gemini), "gemini");
-    assert_eq!(
-        provider_wire_format(&ProviderType::CustomOpenaiCompatible),
-        "openai"
-    );
+    assert_eq!(provider_wire_format(&ProviderType::CustomOpenaiCompatible), "openai");
     assert_eq!(
         provider_wire_format(&ProviderType::CustomAnthropicCompatible),
         "anthropic"
@@ -362,14 +359,14 @@ fn provider_to_ai_model_config_fields() {
     let p = ProviderConfig::new("我的 Anthropic".into(), ProviderType::Anthropic);
     let m = provider_to_ai_model_config(&p);
     assert_eq!(m.id, p.id);
-    assert_eq!(m.name, "我的 Anthropic");
-    assert_eq!(m.provider, "anthropic");
-    assert_eq!(m.model_name, p.model);
-    assert_eq!(m.api_key, p.api_key);
-    assert_eq!(m.enabled, p.enabled);
-    assert!(m.base_url.contains("anthropic"));
-    assert_eq!(m.category, northhing_core::service::config::ModelCategory::GeneralChat);
-    assert_eq!(m.auth, northhing_core::service::config::AuthConfig::ApiKey);
+    assert_eq!(m.display_name, Some("我的 Anthropic".to_string()));
+    assert_eq!(m.provider_id, "anthropic");
+    assert_eq!(m.model, p.model);
+    assert_eq!(m.api_key, Some(p.api_key.clone()));
+    assert_eq!(m.enabled, Some(p.enabled));
+    assert!(m.base_url.as_deref().unwrap_or("").contains("anthropic"));
+    assert_eq!(m.category, Some("general_chat".to_string()));
+    assert_eq!(m.auth, Some("api_key".to_string()));
 }
 
 #[test]
@@ -415,13 +412,7 @@ fn validate_provider_input_accepts_valid_anthropic() {
 
 #[test]
 fn validate_provider_input_accepts_valid_custom() {
-    let r = validate_provider_input(
-        "foo",
-        "custom-openai",
-        "https://example.com/v1",
-        "sk-x",
-        "gpt",
-    );
+    let r = validate_provider_input("foo", "custom-openai", "https://example.com/v1", "sk-x", "gpt");
     assert!(r.is_ok());
 }
 

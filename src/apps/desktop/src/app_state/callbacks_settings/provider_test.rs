@@ -1,10 +1,8 @@
 use super::load_app_settings_quiet;
 use super::save_app_settings_quiet;
-use crate::app_state::settings::{now_unix_secs, provider_to_ai_model_config, ProviderConfig};
+use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
-use northhing_core::infrastructure::ai::AIClient;
-use northhing_core::util::types::AIConfig;
 use slint::{ComponentHandle, SharedString};
 use std::sync::Arc;
 
@@ -83,28 +81,24 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                         return;
                     }
                 };
-                // Build an AIClient from the stored provider config.
-                let model_config = provider_to_ai_model_config(&provider);
-                let ai_config = match AIConfig::try_from(model_config) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        let ui_weak3 = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak3.upgrade() {
-                                ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from(e));
-                            }
-                        });
-                        return;
-                    }
+                // Test the provider connection via the kernel facade.
+                use northhing_core::kernel_facade::kernel_facade;
+                use northhing_kernel_api::settings::ProviderFormDto;
+                use northhing_kernel_api::KernelSettingsApi;
+                let facade = kernel_facade();
+                let form = ProviderFormDto {
+                    provider_id: provider.id.clone(),
+                    base_url: Some(provider.base_url.clone()),
+                    api_key: Some(provider.api_key.clone()),
+                    model: Some(provider.model.clone()),
+                    provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
                 };
-                let client = AIClient::new(ai_config);
-                match client.test_connection().await {
+                match facade.test_provider_config(form).await {
                     Ok(result) => {
                         let result_str = if result.success {
                             "ok".to_string()
                         } else {
-                            let detail = result.error_details.unwrap_or_default();
+                            let detail = result.error.unwrap_or_default();
                             // Take the first line, cap at 120 chars.
                             let first_line = detail.lines().next().unwrap_or("").trim();
                             if first_line.is_empty() {
@@ -208,28 +202,24 @@ pub(crate) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                 provider.api_key = api_key.to_string();
                 provider.model = model.to_string();
                 provider.enabled = enabled;
-                // Reuse the existing test chain: provider → model_config → AIConfig → AIClient.
-                let model_config = provider_to_ai_model_config(&provider);
-                let ai_config = match AIConfig::try_from(model_config) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        let ui_weak3 = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak3.upgrade() {
-                                ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from(e));
-                            }
-                        });
-                        return;
-                    }
+                // Test the provider connection via the kernel facade.
+                use northhing_core::kernel_facade::kernel_facade;
+                use northhing_kernel_api::settings::ProviderFormDto;
+                use northhing_kernel_api::KernelSettingsApi;
+                let facade = kernel_facade();
+                let form = ProviderFormDto {
+                    provider_id: provider.id.clone(),
+                    base_url: Some(provider.base_url.clone()),
+                    api_key: Some(provider.api_key.clone()),
+                    model: Some(provider.model.clone()),
+                    provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
                 };
-                let client = AIClient::new(ai_config);
-                match client.test_connection().await {
+                match facade.test_provider_config(form).await {
                     Ok(result) => {
                         let result_str = if result.success {
                             "ok".to_string()
                         } else {
-                            let detail = result.error_details.unwrap_or_default();
+                            let detail = result.error.unwrap_or_default();
                             let first_line = detail.lines().next().unwrap_or("").trim();
                             if first_line.is_empty() {
                                 "连接失败".to_string()

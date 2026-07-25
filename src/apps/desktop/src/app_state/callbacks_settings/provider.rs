@@ -74,12 +74,12 @@ pub(crate) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                 // Best-effort: remove the provider from core's model list
                 // and reconcile. Failure is non-fatal — the user's data is
                 // safe on disk; we just log and let the UI continue.
-                if let Ok(service) = northhing_core::service::config::get_global_config_service().await {
-                    if let Err(e) = service.delete_ai_model(&pid).await {
-                        tracing::warn!(target: "app_state", "delete-provider delete_ai_model failed: {e}");
-                    }
-                    if let Err(e) = service.reconcile_models("desktop-delete").await {
-                        tracing::warn!(target: "app_state", "delete-provider reconcile_models failed: {e}");
+                {
+                    use northhing_core::kernel_facade::kernel_facade;
+                    use northhing_kernel_api::KernelSettingsApi;
+                    let facade = kernel_facade();
+                    if let Err(e) = facade.delete_model_config(&pid).await {
+                        tracing::warn!(target: "app_state", "delete-provider delete_model_config failed: {e}");
                     }
                 }
 

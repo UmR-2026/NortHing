@@ -22,6 +22,7 @@ use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto, SessionD
 use northhing_kernel_api::turn::{
     DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnInputDto,
 };
+use northhing_kernel_api::KernelAgentsApi;
 use slint::{ComponentHandle, SharedString};
 use std::sync::Arc;
 
@@ -485,7 +486,12 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
             "app_state::on_toggle_skill:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user toggled skill",
-            Some([("skill", skill_name_str.clone()), ("mode", crate::flags::DEFAULT_MODE_ID.to_string()), ("", String::new()), ("", String::new())]),
+            Some([
+                ("skill", skill_name_str.clone()),
+                ("mode", crate::flags::DEFAULT_MODE_ID.to_string()),
+                ("", String::new()),
+                ("", String::new()),
+            ]),
         );
         let app_state = &*app_state_arc7;
         let Some(_system) = app_state.get_agentic_system() else {
@@ -501,48 +507,50 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                 .build()
                 .expect("failed to build tokio runtime for toggle-skill callback");
             rt.block_on(async move {
-                let skill = match northhing_core::agentic::tools::implementations::skills::skill_registry()
-                    .get_all_skills()
-                    .await
-                    .into_iter()
-                    .find(|s| s.key == skill_name_str)
-                {
-                    Some(s) => s,
-                    None => {
+                let facade = kernel_facade();
+                let skill = match facade.get_skill(&skill_name_str).await {
+                    Ok(s) => s,
+                    Err(_) => {
                         // Phase I.6: structured log instead of eprintln.
                         log_debug_event(
                             northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
                             "app_state::on_toggle_skill:not_found",
                             crate::flags::DEFAULT_MODE_ID,
                             "skill not found",
-                            Some([("skill", skill_name_str.clone()), ("", String::new()), ("", String::new()), ("", String::new())]),
+                            Some([
+                                ("skill", skill_name_str.clone()),
+                                ("", String::new()),
+                                ("", String::new()),
+                                ("", String::new()),
+                            ]),
                         );
                         return;
                     }
                 };
 
-                let default_enabled =
-                    northhing_core::agentic::tools::implementations::skills::resolver::resolve_skill_default_enabled_for_mode(
-                        &skill,
-                        crate::flags::DEFAULT_MODE_ID,
-                    );
+                let default_enabled = facade
+                    .resolve_skill_default_enabled(&skill.id, crate::flags::DEFAULT_MODE_ID)
+                    .await
+                    .unwrap_or(false);
                 let new_enabled = !default_enabled;
 
-                if let Err(e) = northhing_core::agentic::tools::implementations::skills::mode_overrides::set_user_mode_skill_state(
-                    crate::flags::DEFAULT_MODE_ID,
-                    &skill_name_str,
-                    new_enabled,
-                    default_enabled,
-                )
-                .await
-                {
+                let scope = northhing_kernel_api::agents::SkillScopeDto {
+                    scope_type: "user".to_string(),
+                    workspace_path: None,
+                };
+                if let Err(e) = facade.set_skill_enabled(&skill_name_str, scope, new_enabled).await {
                     // Phase I.6: structured log instead of eprintln.
                     log_debug_event(
                         northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
                         "app_state::on_toggle_skill:error",
                         crate::flags::DEFAULT_MODE_ID,
                         "set_user_mode_skill_state failed",
-                        Some([("skill", skill_name_str.clone()), ("error", format!("{e}")), ("", String::new()), ("", String::new())]),
+                        Some([
+                            ("skill", skill_name_str.clone()),
+                            ("error", format!("{e}")),
+                            ("", String::new()),
+                            ("", String::new()),
+                        ]),
                     );
                     return;
                 }
@@ -567,7 +575,10 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                     "skill toggle persisted",
                     Some([
                         ("skill", skill_name_str.clone()),
-                        ("new_state", if new_enabled { "enabled" } else { "disabled" }.to_string()),
+                        (
+                            "new_state",
+                            if new_enabled { "enabled" } else { "disabled" }.to_string(),
+                        ),
                         ("mode", crate::flags::DEFAULT_MODE_ID.to_string()),
                         ("", String::new()),
                     ]),

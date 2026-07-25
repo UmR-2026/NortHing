@@ -21,10 +21,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
             .collect())
     }
 
-    async fn list_subagents(
-        &self,
-        scope: SubagentScopeDto,
-    ) -> Result<Vec<SubagentDto>, KernelError> {
+    async fn list_subagents(&self, scope: SubagentScopeDto) -> Result<Vec<SubagentDto>, KernelError> {
         let registry = crate::agentic::agents::agent_registry();
         // workspace_path not available in SubagentScopeDto; pass None until trait is extended.
         let subagents = registry.get_subagents_info(None).await;
@@ -77,22 +74,63 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
 
     async fn set_skill_enabled(
         &self,
-        _id: &str,
-        _scope: northhing_kernel_api::agents::SkillScopeDto,
-        _enabled: bool,
+        id: &str,
+        scope: northhing_kernel_api::agents::SkillScopeDto,
+        enabled: bool,
     ) -> Result<(), KernelError> {
-        // NEEDS_CONTEXT: mode_id required but not present in SkillScopeDto.
-        Err(KernelError::Internal("not yet wired: set_skill_enabled — mode_id not in scope".to_string()))
+        use crate::agentic::tools::implementations::skills::mode_overrides::set_user_mode_skill_state;
+        use crate::agentic::tools::implementations::skills::resolver::resolve_skill_default_enabled_for_mode;
+        use crate::agentic::tools::implementations::skills::skill_registry;
+
+        let mode_id = "agentic";
+        match scope.scope_type.as_str() {
+            "user" => {
+                let registry = skill_registry();
+                let skills = registry.get_all_skills().await;
+                let skill = skills
+                    .into_iter()
+                    .find(|s| s.key == id)
+                    .ok_or_else(|| KernelError::NotFound(format!("skill not found: {id}")))?;
+                let default_enabled = resolve_skill_default_enabled_for_mode(&skill, mode_id);
+                set_user_mode_skill_state(mode_id, id, enabled, default_enabled)
+                    .await
+                    .map_err(|e| KernelError::Config(format!("set_user_mode_skill_state: {e}")))?;
+                Ok(())
+            }
+            other => Err(KernelError::Validation(format!("unsupported scope type: {other}"))),
+        }
     }
 
     async fn load_skill_overrides(&self) -> Result<SkillOverridesDto, KernelError> {
-        // NEEDS_CONTEXT: mode_id required but not present in trait signature.
-        Err(KernelError::Internal("not yet wired: load_skill_overrides — mode_id not available".to_string()))
+        use crate::agentic::tools::implementations::skills::mode_overrides::load_user_mode_skill_overrides;
+        use northhing_kernel_api::agents::SkillOverrideEntry;
+
+        let overrides = load_user_mode_skill_overrides("agentic")
+            .await
+            .map_err(|e| KernelError::Config(format!("load_user_mode_skill_overrides: {e}")))?;
+        let mut entries = Vec::new();
+        for skill_id in &overrides.enabled_skills {
+            entries.push(SkillOverrideEntry {
+                skill_id: skill_id.clone(),
+                key: "user_enabled".to_string(),
+                value: serde_json::Value::Bool(true),
+            });
+        }
+        for skill_id in &overrides.disabled_skills {
+            entries.push(SkillOverrideEntry {
+                skill_id: skill_id.clone(),
+                key: "user_enabled".to_string(),
+                value: serde_json::Value::Bool(false),
+            });
+        }
+        Ok(SkillOverridesDto { overrides: entries })
     }
 
     async fn load_project_skills(&self) -> Result<northhing_kernel_api::agents::ProjectSkillsDto, KernelError> {
         // NEEDS_CONTEXT: workspace_path required but not present in trait signature.
-        Err(KernelError::Internal("not yet wired: load_project_skills — workspace_path not available".to_string()))
+        Err(KernelError::Internal(
+            "not yet wired: load_project_skills — workspace_path not available".to_string(),
+        ))
     }
 
     async fn save_project_skills(
@@ -113,11 +151,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
         for skill_entry in &doc.skills {
             // mode_id is not in ProjectSkillEntry; use default profile.
             // NEEDS_CONTEXT: proper implementation requires mode_id per skill.
-            let _ = set_disabled_mode_skills_in_document(
-                &mut document,
-                "default",
-                vec![skill_entry.skill_id.clone()],
-            );
+            let _ = set_disabled_mode_skills_in_document(&mut document, "default", vec![skill_entry.skill_id.clone()]);
         }
 
         save_project_mode_skills_document_local(workspace_root, &document)
@@ -125,20 +159,14 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
             .map_err(|e| KernelError::Config(format!("save_project_mode_skills_document_local: {e}")))
     }
 
-    async fn resolve_skill_default_enabled(
-        &self,
-        skill_id: &str,
-        mode: &str,
-    ) -> Result<bool, KernelError> {
+    async fn resolve_skill_default_enabled(&self, skill_id: &str, mode: &str) -> Result<bool, KernelError> {
         use crate::agentic::tools::implementations::skills::resolver::resolve_skill_default_enabled_for_mode;
         use crate::agentic::tools::implementations::skills::skill_registry;
         let registry = skill_registry();
         let skills = registry.get_all_skills().await;
         match skills.into_iter().find(|s| s.key == skill_id) {
             Some(skill) => Ok(resolve_skill_default_enabled_for_mode(&skill, mode)),
-            None => Err(KernelError::NotFound(format!(
-                "skill not found: {skill_id}"
-            ))),
+            None => Err(KernelError::NotFound(format!("skill not found: {skill_id}"))),
         }
     }
 }

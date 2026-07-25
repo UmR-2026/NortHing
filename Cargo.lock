@@ -5740,6 +5740,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dirs",
+ "futures",
  "northhing-agent-dispatch",
  "northhing-core",
  "northhing-events",

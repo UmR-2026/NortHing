@@ -26,6 +26,7 @@ slint = { workspace = true, features = ["backend-winit"] }
 # Async runtime
 tokio = { workspace = true }
 tokio-util = { workspace = true }
+futures = { workspace = true }
 
 # Native file/folder dialogs (cross-platform). Slint has no built-in
 # file dialog; rfd wraps native Windows/macOS/Linux dialogs and is
