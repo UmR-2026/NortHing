@@ -221,6 +221,29 @@ impl ConversationCoordinator {
             ));
         }
 
+        if let Some(workspace) = workspace {
+            if !workspace.is_remote() {
+                match crate::service::agent_memory::build_query_aware_facts_reminder(
+                    workspace.root_path(),
+                    &user_input,
+                )
+                .await
+                {
+                    Ok(Some(memory_reminder)) => {
+                        prepended_messages.push(Message::internal_reminder(
+                            InternalReminderKind::MemoryRecall,
+                            memory_reminder,
+                        ));
+                    }
+                    Ok(None) => {}
+                    Err(e) => warn!(
+                        "Failed to build query-aware memory reminder: session_id={}, turn_index={}, error={}",
+                        session_id, turn_index, e
+                    ),
+                }
+            }
+        }
+
         Ok(WrappedUserInputPayload {
             content: user_input,
             prepended_messages,

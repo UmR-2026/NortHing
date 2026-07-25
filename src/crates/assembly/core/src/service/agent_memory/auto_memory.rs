@@ -244,25 +244,35 @@ Memory is one of several persistence mechanisms available to you as you assist t
         use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
         let workspace_key = workspace_root.to_string_lossy().to_string();
         let db_path = default_memory_db_path();
-        let facts: Vec<super::facts::Fact> = match MemoryDb::open(&db_path) {
-            Ok(db) => match db.get_facts(Some(&workspace_key)) {
-                Ok(db_facts) if !db_facts.is_empty() => db_facts,
-                _ => read_facts(&memory_dir).await.unwrap_or_default(),
-            },
-            Err(_) => read_facts(&memory_dir).await.unwrap_or_default(),
-        };
-        let selected = select_facts_for_prompt(&facts, 1000);
-        if !selected.is_empty() {
-            if let Ok(db_touch) = MemoryDb::open(&db_path) {
+        let mut db_facts: Vec<super::facts::Fact> = Vec::new();
+        let mut selected_for_touch: Vec<super::facts::Fact> = Vec::new();
+        let mut db_opened = false;
+        if let Ok(db) = MemoryDb::open(&db_path) {
+            db_opened = true;
+            db_facts = db.get_facts(Some(&workspace_key)).unwrap_or_default();
+            if db_facts.is_empty() {
+                db_facts = read_facts(&memory_dir).await.unwrap_or_default();
+            }
+            let selected = select_facts_for_prompt(&db_facts, 1000);
+            if !selected.is_empty() {
                 let now_ms = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_millis() as u64)
                     .unwrap_or(0);
                 for fact in &selected {
-                    let _ = db_touch.touch_fact(&fact.id, now_ms);
+                    let _ = db.touch_fact(&fact.id, now_ms);
                 }
+                selected_for_touch = selected;
             }
         }
+        if !db_opened {
+            db_facts = read_facts(&memory_dir).await.unwrap_or_default();
+        }
+        let selected = if selected_for_touch.is_empty() {
+            select_facts_for_prompt(&db_facts, 1000)
+        } else {
+            selected_for_touch
+        };
         if selected.is_empty() {
             String::new()
         } else {
@@ -276,6 +286,49 @@ Memory is one of several persistence mechanisms available to you as you assist t
     };
 
     Ok(format!("{}{}", base_prompt, facts_section))
+}
+
+pub(crate) async fn build_query_aware_facts_reminder(
+    workspace_root: &Path,
+    query: &str,
+) -> NortHingResult<Option<String>> {
+    use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+    if query.trim().is_empty() {
+        return Ok(None);
+    }
+    let workspace_key = workspace_root.to_string_lossy().to_string();
+    let db = match MemoryDb::open(&default_memory_db_path()) {
+        Ok(db) => db,
+        Err(_) => return Ok(None),
+    };
+    build_recall_reminder_from_db(&db, &workspace_key, query)
+}
+
+fn build_recall_reminder_from_db(
+    db: &crate::service::agent_memory::MemoryDb,
+    workspace_key: &str,
+    query: &str,
+) -> NortHingResult<Option<String>> {
+    let scored = match db.search_facts(query, Some(workspace_key), 5) {
+        Ok(scored) => scored,
+        Err(_) => return Ok(None),
+    };
+    if scored.is_empty() {
+        return Ok(None);
+    }
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let mut items = Vec::with_capacity(scored.len());
+    for entry in &scored {
+        let _ = db.touch_fact(&entry.fact.id, now_ms);
+        items.push(format!("- {}", entry.fact.text));
+    }
+    Ok(Some(format!(
+        "# Relevant memories for this turn\n\nThe following remembered facts may be relevant to the user's current message:\n\n{}",
+        items.join("\n")
+    )))
 }
 
 pub(crate) async fn build_workspace_memory_files_context(workspace_root: &Path) -> NortHingResult<Option<String>> {
@@ -456,6 +509,79 @@ mod tests {
         assert!(prompt.contains("# auto memory"));
 
         // Cleanup
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
+}
+
+#[cfg(test)]
+mod query_aware_tests {
+    use super::super::facts::{Fact, FactConfidence, FactProvenance, FactScope};
+    use crate::service::agent_memory::build_query_aware_facts_reminder;
+
+    fn make_fact(text: &str) -> Fact {
+        Fact {
+            schema_version: 1,
+            id: uuid::Uuid::new_v4().to_string(),
+            text: text.to_string(),
+            provenance: FactProvenance {
+                session_id: "s1".to_string(),
+                turn_id: "t1".to_string(),
+            },
+            confidence: FactConfidence::High,
+            scope: FactScope::Workspace,
+            created_at: 1000,
+        }
+    }
+
+    #[tokio::test]
+    async fn build_query_aware_facts_reminder_returns_none_for_empty_query() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        let result = build_query_aware_facts_reminder(&workspace, "   ").await.unwrap();
+        assert!(result.is_none());
+
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn build_query_aware_facts_reminder_returns_none_when_no_match() {
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        let result = build_query_aware_facts_reminder(&workspace, "zzzz_no_match_zzzz").await.unwrap();
+        assert!(result.is_none());
+
+        tokio::fs::remove_dir_all(&workspace).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn build_query_aware_facts_reminder_returns_some_with_matching_fact() {
+        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+
+        let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        tokio::fs::create_dir_all(&workspace).await.unwrap();
+
+        let workspace_key = workspace.to_string_lossy().to_string();
+        let db_path = default_memory_db_path();
+        let db = MemoryDb::open(&db_path).expect("open memory db");
+        let fact = make_fact("I prefer pnpm for JS projects");
+        db.insert_fact(&fact, Some(&workspace_key)).expect("insert fact");
+
+        let result = build_query_aware_facts_reminder(&workspace, "pnpm").await.unwrap();
+        assert!(result.is_some(), "Expected Some for matching query");
+        let text = result.unwrap();
+        assert!(
+            text.contains("I prefer pnpm for JS projects"),
+            "Reminder should contain fact text, got: {}",
+            text
+        );
+        assert!(
+            text.contains("# Relevant memories for this turn"),
+            "Reminder should contain expected heading, got: {}",
+            text
+        );
+
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
     }
 }

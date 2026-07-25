@@ -455,12 +455,26 @@ impl ConversationCoordinator {
 
         {
             use crate::service::agent_memory::{default_memory_db_path, Fact, MemoryDb};
-            use std::sync::Once;
-            static MIGRATED: Once = Once::new();
+            use std::collections::HashSet;
+            use std::sync::{Mutex, OnceLock};
+
+            static MIGRATED_WORKSPACES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 
             let db_path = default_memory_db_path();
             if let Ok(db) = MemoryDb::open(&db_path) {
-                MIGRATED.call_once(|| {
+                let mut should_migrate = false;
+                match MIGRATED_WORKSPACES.get_or_init(|| Mutex::new(HashSet::new())).lock() {
+                    Ok(mut migrated) => {
+                        if !migrated.contains(workspace_path) {
+                            migrated.insert(workspace_path.to_string());
+                            should_migrate = true;
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Facts: migration guard lock poisoned: {}", e);
+                    }
+                }
+                if should_migrate {
                     let memory_dir_for_migration = path_manager.project_memory_dir(&workspace_path_buf);
                     if let Ok(facts) = std::fs::read_to_string(memory_dir_for_migration.join("facts.jsonl")) {
                         for line in facts.lines() {
@@ -471,7 +485,7 @@ impl ConversationCoordinator {
                             }
                         }
                     }
-                });
+                }
 
                 for fact in &candidates {
                     if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {

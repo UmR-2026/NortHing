@@ -79,6 +79,7 @@ pub enum MessageSemanticKind {
 #[serde(rename_all = "snake_case")]
 pub enum InternalReminderKind {
     Generic,
+    MemoryRecall,
     SkillListingDiff,
     AgentListingDiff,
     AgentMode,
@@ -104,7 +105,9 @@ impl InternalReminderKind {
     pub fn should_drop_during_compaction(self) -> bool {
         matches!(
             self,
-            Self::SkillListingDiff
+            Self::Generic
+                | Self::MemoryRecall
+                | Self::SkillListingDiff
                 | Self::AgentListingDiff
                 | Self::LoopRecovery
                 | Self::PeriodicLoopRecovery
