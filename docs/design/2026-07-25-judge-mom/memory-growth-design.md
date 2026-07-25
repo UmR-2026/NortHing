@@ -141,3 +141,14 @@ CREATE TABLE IF NOT EXISTS fact_reviews (
 1. ~~蒸馏输入是否带上一轮 assistant 回复~~ → **带**（assistant 片段截 500 字符）。
 2. ~~FTS 近似去重阈值~~ → **本 tracer 不做**，精确文本去重即可，近似去重归 judge-mom（tracer 2）。
 3. ~~`distiller_model` 引用形态~~ → **"provider/model" 字符串**，解析失败回落主模型。
+
+## 9. 设计审判修正（judge-lc 2026-07-25，APPROVED-WITH-FIXES，无 BLOCKER）
+
+| # | 修正 | 落点 |
+|---|---|---|
+| M1 | GlobalConfig 在 `service/config/app_shell.rs:42`（types.rs 只是 re-export facade） | §5.4 文件清单已纠正；新增 `service/config/memory.rs` 仿 ai.rs 模式 |
+| M2 | `append_facts_entry` 拿不到 assistant 回复 → 签名加 `turn_index`，函数内仿 episode hook 用 PersistenceManager.load_dialog_turn 自取上一轮 assistant 文本（截 500 字符）， Warn-only | Tracer 1 处方 |
+| M3 | `fact_reviews` 表补 CRUD 测试（含 `supersede_fact` 方法使 status 过滤可测） | Tracer 1 Ticket A |
+| M4 | 远程 workspace 无廉价信号可判定 → 记为已知限制：写侧暂不门控（现状如此），读侧 query-aware 注入已跳过远程 | 已知限制 |
+| M5 | distiller_model="provider/model"：distiller 解析后遍历 `config.ai.models` 匹配 provider+model_name/name/id → 取其 id 走 `get_client_resolved`；解析失败/未配置 → "fast" → "primary" 回落链 | Tracer 1 Ticket B |
+| 其他 | AI 调用 = `AIClient::send_message(Vec<Message>, None)`（send.rs:70），tokio timeout 15s；migration 逻辑独立函数防 memory_db.rs 冲 800 行 | Tracer 1 处方 |
