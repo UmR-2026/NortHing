@@ -17,6 +17,8 @@ pub struct Fact {
     pub provenance: FactProvenance,
     pub confidence: FactConfidence,
     pub scope: FactScope,
+    #[serde(default = "default_fact_type")]
+    pub fact_type: FactType,
     pub created_at: u64,
 }
 
@@ -39,6 +41,19 @@ pub enum FactConfidence {
 pub enum FactScope {
     Workspace,
     Global,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FactType {
+    User,
+    Feedback,
+    Project,
+    Reference,
+}
+
+fn default_fact_type() -> FactType {
+    FactType::Feedback
 }
 
 impl Fact {
@@ -270,6 +285,7 @@ pub fn distill_facts_from_user_message(
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: now,
         });
     }
@@ -298,6 +314,7 @@ mod tests {
             },
             confidence,
             scope,
+            fact_type: FactType::Feedback,
             created_at,
         }
     }
@@ -362,6 +379,7 @@ mod tests {
                 },
                 confidence: FactConfidence::High,
                 scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
                 created_at: 1000,
             },
             Fact {
@@ -374,6 +392,7 @@ mod tests {
                 },
                 confidence: FactConfidence::High,
                 scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
                 created_at: 900,
             },
             Fact {
@@ -386,6 +405,7 @@ mod tests {
                 },
                 confidence: FactConfidence::High,
                 scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
                 created_at: 800,
             },
         ];
@@ -427,6 +447,7 @@ mod tests {
                 },
                 confidence: FactConfidence::High,
                 scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
                 created_at: 1000,
             },
             Fact {
@@ -439,6 +460,7 @@ mod tests {
                 },
                 confidence: FactConfidence::Med,
                 scope: FactScope::Global,
+                fact_type: FactType::Feedback,
                 created_at: 2000,
             },
         ];
@@ -462,9 +484,9 @@ mod tests {
         let facts_path = temp_dir.join(FACTS_FILE_NAME);
         tokio::fs::write(
             &facts_path,
-            r#"{"schema_version":1,"id":"good1","text":"OK","provenance":{"session_id":"s1","turn_id":"t1"},"confidence":"high","scope":"workspace","created_at":1000}
+            r#"{"schema_version":1,"id":"good1","text":"OK","provenance":{"session_id":"s1","turn_id":"t1"},"confidence":"high","scope":"workspace","fact_type":"feedback","created_at":1000}
 DAMAGED LINE HERE
-{"schema_version":1,"id":"good2","text":"Also OK","provenance":{"session_id":"s1","turn_id":"t2"},"confidence":"med","scope":"global","created_at":2000}"#,
+{"schema_version":1,"id":"good2","text":"Also OK","provenance":{"session_id":"s1","turn_id":"t2"},"confidence":"med","scope":"global","fact_type":"feedback","created_at":2000}"#,
         )
         .await
         .unwrap();
@@ -493,6 +515,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::High,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1000,
         }];
 
@@ -508,6 +531,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Global,
+            fact_type: FactType::Feedback,
             created_at: 2000,
         }];
 
@@ -611,6 +635,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::High,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at,
         }
     }
@@ -684,6 +709,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1234567890,
         };
         let json = serde_json::to_string(&fact).unwrap();
@@ -691,6 +717,13 @@ DAMAGED LINE HERE
         assert_eq!(parsed.id, "test-id");
         assert_eq!(parsed.confidence, FactConfidence::Med);
         assert_eq!(parsed.scope, FactScope::Workspace);
+    }
+
+    #[test]
+    fn serde_fact_missing_fact_type_defaults_to_feedback() {
+        let json = r#"{"schema_version":1,"id":"legacy","text":"old fact","provenance":{"session_id":"s1","turn_id":"t1"},"confidence":"high","scope":"workspace","created_at":1000}"#;
+        let parsed: Fact = serde_json::from_str(json).unwrap();
+        assert_eq!(parsed.fact_type, FactType::Feedback);
     }
 
     // --- Deduplication tests ---
@@ -710,6 +743,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::High,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1000,
         };
 
@@ -728,6 +762,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 2000,
         };
 
@@ -763,6 +798,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1000,
         };
         let fact2 = Fact {
@@ -775,6 +811,7 @@ DAMAGED LINE HERE
             },
             confidence: FactConfidence::Med,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1001,
         };
 

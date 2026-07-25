@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use super::facts::{Fact, FactConfidence, FactProvenance, FactScope};
+use super::facts::{Fact, FactConfidence, FactProvenance, FactScope, FactType};
 
 pub(crate) struct MemoryDb {
     conn: Mutex<Connection>,
@@ -15,6 +15,15 @@ pub(crate) struct ScoredFact {
     pub keyword_weight: f64,
     pub recency_boost: f64,
     pub score: f64,
+}
+
+pub(crate) struct FactReview {
+    pub id: String,
+    pub fact_id: String,
+    pub reviewer: String,
+    pub action: String,
+    pub reason: Option<String>,
+    pub created_at: u64,
 }
 
 impl MemoryDb {
@@ -90,11 +99,22 @@ impl MemoryDb {
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL,
                 updated_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS fact_reviews (
+                id TEXT PRIMARY KEY,
+                fact_id TEXT NOT NULL,
+                reviewer TEXT NOT NULL,
+                action TEXT NOT NULL,
+                reason TEXT,
+                created_at INTEGER NOT NULL
             );",
         )
         .map_err(|e| {
             NortHingError::service(format!("Failed to create memory db tables: {}", e))
         })?;
+
+        Self::migrate_facts_columns(&conn)?;
 
         let mut has_text_fts = false;
         let cols = conn.prepare("PRAGMA table_info(facts)").ok();
@@ -131,6 +151,38 @@ impl MemoryDb {
         Ok(())
     }
 
+    fn migrate_facts_columns(conn: &Connection) -> NortHingResult<()> {
+        let mut has_status = false;
+        let mut has_superseded_by = false;
+        let mut has_fact_type = false;
+        let cols = conn.prepare("PRAGMA table_info(facts)").ok();
+        if let Some(mut stmt) = cols {
+            let rows = stmt.query_map([], |row| row.get::<_, String>(1)).ok();
+            if let Some(cols) = rows {
+                for col in cols.filter_map(|c| c.ok()) {
+                    if col == "status" { has_status = true; }
+                    if col == "superseded_by" { has_superseded_by = true; }
+                    if col == "fact_type" { has_fact_type = true; }
+                }
+            }
+        }
+
+        if !has_status {
+            conn.execute("ALTER TABLE facts ADD COLUMN status TEXT NOT NULL DEFAULT 'active'", [])
+                .map_err(|e| NortHingError::service(format!("Failed to add status column: {}", e)))?;
+        }
+        if !has_superseded_by {
+            conn.execute("ALTER TABLE facts ADD COLUMN superseded_by TEXT", [])
+                .map_err(|e| NortHingError::service(format!("Failed to add superseded_by column: {}", e)))?;
+        }
+        if !has_fact_type {
+            conn.execute("ALTER TABLE facts ADD COLUMN fact_type TEXT NOT NULL DEFAULT 'feedback'", [])
+                .map_err(|e| NortHingError::service(format!("Failed to add fact_type column: {}", e)))?;
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn insert_fact(&self, fact: &Fact, workspace_key: Option<&str>) -> NortHingResult<()> {
         let scope = match fact.scope {
             FactScope::Workspace => "workspace",
@@ -141,14 +193,20 @@ impl MemoryDb {
             FactConfidence::Med => "med",
             FactConfidence::Low => "low",
         };
+        let fact_type = match fact.fact_type {
+            FactType::User => "user",
+            FactType::Feedback => "feedback",
+            FactType::Project => "project",
+            FactType::Reference => "reference",
+        };
 
         let conn = self.conn.lock().map_err(|e| {
             NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
         })?;
 
         conn.execute(
-            "INSERT OR IGNORE INTO facts (id, text, text_fts, scope, workspace_key, confidence, session_id, turn_id, created_at, last_mentioned_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT OR IGNORE INTO facts (id, text, text_fts, scope, workspace_key, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 fact.id,
                 fact.text,
@@ -160,6 +218,7 @@ impl MemoryDb {
                 fact.provenance.turn_id,
                 fact.created_at as i64,
                 fact.created_at as i64,
+                fact_type,
             ],
         )
         .map_err(|e| {
@@ -176,23 +235,23 @@ impl MemoryDb {
 
         let mut stmt = if let Some(ws) = workspace_key {
             conn.prepare(
-                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at
+                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type
                  FROM facts
-                 WHERE scope = 'global' OR (scope = 'workspace' AND workspace_key = ?1)
+                 WHERE status = 'active' AND (scope = 'global' OR (scope = 'workspace' AND workspace_key = ?1))
                  ORDER BY created_at ASC",
             )
             .map_err(|e| NortHingError::service(format!("Failed to prepare get_facts: {}", e)))?
         } else {
             conn.prepare(
-                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at
+                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type
                  FROM facts
-                 WHERE scope = 'global'
+                 WHERE status = 'active' AND scope = 'global'
                  ORDER BY created_at ASC",
             )
             .map_err(|e| NortHingError::service(format!("Failed to prepare get_facts: {}", e)))?
         };
 
-        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64)>> =
+        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, String)>> =
             if let Some(ws) = workspace_key {
                 stmt.query_map(params![ws], |row| {
                     Ok((
@@ -204,6 +263,7 @@ impl MemoryDb {
                         row.get::<_, String>(5)?,
                         row.get::<_, i64>(6)?,
                         row.get::<_, i64>(7)?,
+                        row.get::<_, String>(8)?,
                     ))
                 })
                 .map_err(|e| NortHingError::service(format!("Failed to query get_facts: {}", e)))?
@@ -219,6 +279,7 @@ impl MemoryDb {
                         row.get::<_, String>(5)?,
                         row.get::<_, i64>(6)?,
                         row.get::<_, i64>(7)?,
+                        row.get::<_, String>(8)?,
                     ))
                 })
                 .map_err(|e| NortHingError::service(format!("Failed to query get_facts: {}", e)))?
@@ -227,7 +288,7 @@ impl MemoryDb {
 
         let mut facts = Vec::new();
         for row in rows {
-            let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at) =
+            let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type) =
                 row.map_err(|e| NortHingError::service(format!("Failed to read fact row: {}", e)))?;
 
             let scope_enum = match scope.as_str() {
@@ -253,6 +314,19 @@ impl MemoryDb {
                 }
             };
 
+            let fact_type_enum = match fact_type.as_str() {
+                "user" => FactType::User,
+                "feedback" => FactType::Feedback,
+                "project" => FactType::Project,
+                "reference" => FactType::Reference,
+                _ => {
+                    return Err(NortHingError::service(format!(
+                        "Unknown fact_type: {}",
+                        fact_type
+                    )))
+                }
+            };
+
             facts.push(Fact {
                 schema_version: 1,
                 id,
@@ -263,6 +337,7 @@ impl MemoryDb {
                 },
                 confidence: confidence_enum,
                 scope: scope_enum,
+                fact_type: fact_type_enum,
                 created_at: created_at as u64,
             });
         }
@@ -328,11 +403,12 @@ impl MemoryDb {
 
         let mut stmt = if workspace_key.is_some() {
             conn.prepare(
-                "SELECT f.id, f.text, f.scope, f.confidence, f.session_id, f.turn_id, f.created_at, f.last_mentioned_at,
+                "SELECT f.id, f.text, f.scope, f.confidence, f.session_id, f.turn_id, f.created_at, f.last_mentioned_at, f.fact_type,
                         bm25(facts_fts) AS rank
                  FROM facts_fts
                  JOIN facts f ON f.rowid = facts_fts.rowid
                   WHERE facts_fts MATCH ?1
+                    AND f.status = 'active'
                     AND (f.scope = 'global' OR f.workspace_key = ?2)
                   ORDER BY rank
                   LIMIT ?3",
@@ -340,11 +416,12 @@ impl MemoryDb {
             .map_err(|e| NortHingError::service(format!("Failed to prepare search: {}", e)))?
         } else {
             conn.prepare(
-                "SELECT f.id, f.text, f.scope, f.confidence, f.session_id, f.turn_id, f.created_at, f.last_mentioned_at,
+                "SELECT f.id, f.text, f.scope, f.confidence, f.session_id, f.turn_id, f.created_at, f.last_mentioned_at, f.fact_type,
                         bm25(facts_fts) AS rank
                  FROM facts_fts
                  JOIN facts f ON f.rowid = facts_fts.rowid
                   WHERE facts_fts MATCH ?1
+                    AND f.status = 'active'
                     AND f.scope = 'global'
                   ORDER BY rank
                   LIMIT ?2",
@@ -354,7 +431,7 @@ impl MemoryDb {
 
         let keyword_map = Self::load_keyword_weights(&conn);
 
-        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, f64)>> =
+        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, String, f64)>> =
             if let Some(ws) = workspace_key {
                 stmt.query_map(params![match_expr, ws, candidate_limit], |row| {
                     Ok((
@@ -366,7 +443,8 @@ impl MemoryDb {
                         row.get::<_, String>(5)?,
                         row.get::<_, i64>(6)?,
                         row.get::<_, i64>(7)?,
-                        row.get::<_, f64>(8)?,
+                        row.get::<_, String>(8)?,
+                        row.get::<_, f64>(9)?,
                     ))
                 })
                 .map_err(|e| NortHingError::service(format!("Failed to search facts: {}", e)))?
@@ -382,7 +460,8 @@ impl MemoryDb {
                         row.get::<_, String>(5)?,
                         row.get::<_, i64>(6)?,
                         row.get::<_, i64>(7)?,
-                        row.get::<_, f64>(8)?,
+                        row.get::<_, String>(8)?,
+                        row.get::<_, f64>(9)?,
                     ))
                 })
                 .map_err(|e| NortHingError::service(format!("Failed to search facts: {}", e)))?
@@ -396,7 +475,7 @@ impl MemoryDb {
             .unwrap_or(0);
 
         for row in rows {
-            let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, rank) =
+            let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type, rank) =
                 row.map_err(|e| NortHingError::service(format!("Failed to read search row: {}", e)))?;
 
             let scope_enum = match scope.as_str() {
@@ -422,6 +501,19 @@ impl MemoryDb {
                 }
             };
 
+            let fact_type_enum = match fact_type.as_str() {
+                "user" => FactType::User,
+                "feedback" => FactType::Feedback,
+                "project" => FactType::Project,
+                "reference" => FactType::Reference,
+                _ => {
+                    return Err(NortHingError::service(format!(
+                        "Unknown fact_type: {}",
+                        fact_type
+                    )))
+                }
+            };
+
             let fact = Fact {
                 schema_version: 1,
                 id,
@@ -432,6 +524,7 @@ impl MemoryDb {
                 },
                 confidence: confidence_enum,
                 scope: scope_enum,
+                fact_type: fact_type_enum,
                 created_at: created_at as u64,
             };
 
@@ -587,6 +680,77 @@ impl MemoryDb {
         )
         .map_err(|e| {
             NortHingError::service(format!("Failed to ignore keyword: {}", e))
+        })?;
+
+        Ok(())
+    }
+
+    pub(crate) fn record_fact_review(&self, review: &FactReview) -> NortHingResult<()> {
+        let conn = self.conn.lock().map_err(|e| {
+            NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
+        })?;
+
+        conn.execute(
+            "INSERT INTO fact_reviews (id, fact_id, reviewer, action, reason, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                review.id,
+                review.fact_id,
+                review.reviewer,
+                review.action,
+                review.reason,
+                review.created_at as i64,
+            ],
+        )
+        .map_err(|e| {
+            NortHingError::service(format!("Failed to record fact review: {}", e))
+        })?;
+
+        Ok(())
+    }
+
+    pub(crate) fn reviews_for_fact(&self, fact_id: &str) -> NortHingResult<Vec<FactReview>> {
+        let conn = self.conn.lock().map_err(|e| {
+            NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
+        })?;
+
+        let mut stmt = conn.prepare(
+            "SELECT id, fact_id, reviewer, action, reason, created_at
+             FROM fact_reviews
+             WHERE fact_id = ?1
+             ORDER BY created_at ASC",
+        )
+        .map_err(|e| NortHingError::service(format!("Failed to prepare reviews_for_fact: {}", e)))?;
+
+        let rows = stmt
+            .query_map(params![fact_id], |row| {
+                Ok(FactReview {
+                    id: row.get::<_, String>(0)?,
+                    fact_id: row.get::<_, String>(1)?,
+                    reviewer: row.get::<_, String>(2)?,
+                    action: row.get::<_, String>(3)?,
+                    reason: row.get::<_, Option<String>>(4)?,
+                    created_at: row.get::<_, i64>(5)? as u64,
+                })
+            })
+            .map_err(|e| NortHingError::service(format!("Failed to query reviews_for_fact: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(rows)
+    }
+
+    pub(crate) fn supersede_fact(&self, fact_id: &str, superseded_by: Option<&str>, at_ms: u64) -> NortHingResult<()> {
+        let conn = self.conn.lock().map_err(|e| {
+            NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
+        })?;
+
+        conn.execute(
+            "UPDATE facts SET status = 'superseded', superseded_by = ?2 WHERE id = ?1",
+            params![fact_id, superseded_by],
+        )
+        .map_err(|e| {
+            NortHingError::service(format!("Failed to supersede fact: {}", e))
         })?;
 
         Ok(())

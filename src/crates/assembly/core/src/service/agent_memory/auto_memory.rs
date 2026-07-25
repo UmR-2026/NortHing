@@ -404,7 +404,7 @@ Topic-oriented durable memory files available in this workspace.{topic_descripti
 #[cfg(test)]
 mod tests {
     use super::super::facts::{
-        append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope,
+        append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType,
     };
     use crate::service::agent_memory::build_workspace_agent_memory_prompt;
 
@@ -419,6 +419,7 @@ mod tests {
             },
             confidence: FactConfidence::High,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1000,
         }
     }
@@ -515,7 +516,7 @@ mod tests {
 
 #[cfg(test)]
 mod query_aware_tests {
-    use super::super::facts::{Fact, FactConfidence, FactProvenance, FactScope};
+    use super::super::facts::{Fact, FactConfidence, FactProvenance, FactScope, FactType};
     use crate::service::agent_memory::build_query_aware_facts_reminder;
 
     fn make_fact(text: &str) -> Fact {
@@ -529,6 +530,7 @@ mod query_aware_tests {
             },
             confidence: FactConfidence::High,
             scope: FactScope::Workspace,
+            fact_type: FactType::Feedback,
             created_at: 1000,
         }
     }

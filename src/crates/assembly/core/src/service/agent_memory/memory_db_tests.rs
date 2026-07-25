@@ -43,6 +43,7 @@ fn insert_and_get_fact_round_trip() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -56,6 +57,7 @@ fn insert_and_get_fact_round_trip() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Global,
+        fact_type: FactType::Feedback,
         created_at: 2000,
     };
 
@@ -88,6 +90,7 @@ fn insert_duplicate_id_ignored() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -116,6 +119,7 @@ fn fts_search_matches_keyword() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -146,6 +150,7 @@ fn fts_search_chinese_bigram() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -173,6 +178,7 @@ fn fts_search_two_char_cjk() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -206,6 +212,7 @@ fn fts_search_respects_workspace_scope() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -219,6 +226,7 @@ fn fts_search_respects_workspace_scope() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 2000,
     };
 
@@ -232,6 +240,7 @@ fn fts_search_respects_workspace_scope() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Global,
+        fact_type: FactType::Feedback,
         created_at: 3000,
     };
 
@@ -284,6 +293,7 @@ fn keyword_weight_affects_scored_fact() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -313,6 +323,7 @@ fn ranking_fuses_three_factors() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -326,6 +337,7 @@ fn ranking_fuses_three_factors() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 2000,
     };
 
@@ -397,6 +409,7 @@ fn delete_fact_removes_from_fts() {
         },
         confidence: FactConfidence::High,
         scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
         created_at: 1000,
     };
 
@@ -420,6 +433,147 @@ fn empty_query_returns_empty() {
 
     let hits2 = db.search_facts("   ", Some("ws"), 10).unwrap();
     assert!(hits2.is_empty());
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+// --- New Ticket A tests ---
+
+#[test]
+fn fact_type_round_trip() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+    let db = MemoryDb::open(&db_path).unwrap();
+
+    let fact = Fact {
+        schema_version: 1,
+        id: "proj1".to_string(),
+        text: "project fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Project,
+        created_at: 1000,
+    };
+
+    db.insert_fact(&fact, Some("ws")).unwrap();
+    let all = db.get_facts(Some("ws")).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].fact_type, FactType::Project);
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn status_filter_hides_superseded() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+    let db = MemoryDb::open(&db_path).unwrap();
+
+    let active = Fact {
+        schema_version: 1,
+        id: "active1".to_string(),
+        text: "active fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 1000,
+    };
+
+    let to_supersede = Fact {
+        schema_version: 1,
+        id: "old1".to_string(),
+        text: "old fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 500,
+    };
+
+    db.insert_fact(&active, Some("ws")).unwrap();
+    db.insert_fact(&to_supersede, Some("ws")).unwrap();
+    db.supersede_fact("old1", Some("active1"), 2000).unwrap();
+
+    let all = db.get_facts(Some("ws")).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].id, "active1");
+
+    let search_hits = db.search_facts("fact", Some("ws"), 10).unwrap();
+    assert_eq!(search_hits.len(), 1);
+    assert_eq!(search_hits[0].fact.id, "active1");
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn fact_reviews_round_trip() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+    let db = MemoryDb::open(&db_path).unwrap();
+
+    let review1 = FactReview {
+        id: "r1".to_string(),
+        fact_id: "f1".to_string(),
+        reviewer: "judge-mom".to_string(),
+        action: "keep".to_string(),
+        reason: None,
+        created_at: 1000,
+    };
+
+    let review2 = FactReview {
+        id: "r2".to_string(),
+        fact_id: "f1".to_string(),
+        reviewer: "distiller".to_string(),
+        action: "downweight".to_string(),
+        reason: Some("stale".to_string()),
+        created_at: 2000,
+    };
+
+    db.record_fact_review(&review1).unwrap();
+    db.record_fact_review(&review2).unwrap();
+
+    let reviews = db.reviews_for_fact("f1").unwrap();
+    assert_eq!(reviews.len(), 2);
+    assert_eq!(reviews[0].created_at, 1000);
+    assert_eq!(reviews[0].reviewer, "judge-mom");
+    assert_eq!(reviews[1].created_at, 2000);
+    assert_eq!(reviews[1].action, "downweight");
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn migration_idempotent_on_reopen() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+
+    let _db1 = MemoryDb::open(&db_path).unwrap();
+    let _db2 = MemoryDb::open(&db_path).unwrap();
+
+    let conn = Connection::open(&db_path).unwrap();
+    let mut stmt = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' OR type='virtual'")
+        .unwrap();
+
+    let tables: Vec<String> = stmt
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect();
+
+    assert!(tables.contains(&"facts".to_string()));
+    assert!(tables.contains(&"fact_reviews".to_string()));
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
