@@ -453,6 +453,34 @@ impl ConversationCoordinator {
         // Get the memory directory path
         let memory_dir = path_manager.project_memory_dir(&workspace_path_buf);
 
+        {
+            use crate::service::agent_memory::{default_memory_db_path, Fact, MemoryDb};
+            use std::sync::Once;
+            static MIGRATED: Once = Once::new();
+
+            let db_path = default_memory_db_path();
+            if let Ok(db) = MemoryDb::open(&db_path) {
+                MIGRATED.call_once(|| {
+                    let memory_dir_for_migration = path_manager.project_memory_dir(&workspace_path_buf);
+                    if let Ok(facts) = std::fs::read_to_string(memory_dir_for_migration.join("facts.jsonl")) {
+                        for line in facts.lines() {
+                            let line = line.trim();
+                            if line.is_empty() { continue; }
+                            if let Ok(fact) = serde_json::from_str::<crate::service::agent_memory::Fact>(line) {
+                                let _ = db.insert_fact(&fact, Some(workspace_path));
+                            }
+                        }
+                    }
+                });
+
+                for fact in &candidates {
+                    if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {
+                        warn!("Facts: MemoryDb insert failed: {}", e);
+                    }
+                }
+            }
+        }
+
         // Append with exact-text deduplication (history + batch). IO failures
         // are logged inside append_facts_dedup and never propagated.
         let appended = append_facts_dedup(&memory_dir, candidates).await;
