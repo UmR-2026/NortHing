@@ -6,6 +6,7 @@
 
 use super::ai::AIConfig;
 use super::editor::EditorConfig;
+use super::memory::MemoryConfig;
 use super::terminal::TerminalConfig;
 use super::theme::ThemeConfig;
 use super::theme::ThemesConfig;
@@ -46,6 +47,8 @@ pub struct GlobalConfig {
     pub terminal: TerminalConfig,
     pub workspace: WorkspaceConfig,
     pub ai: AIConfig,
+    /// Memory subsystem configuration (distiller, judge-mom).
+    pub memory: MemoryConfig,
     /// Project-scoped overlays stored in the shared config document.
     #[serde(default, skip_serializing_if = "ProjectConfig::is_empty")]
     pub project: ProjectConfig,
@@ -228,6 +231,7 @@ impl Default for GlobalConfig {
             terminal: TerminalConfig::default(),
             workspace: WorkspaceConfig::default(),
             ai: AIConfig::default(),
+            memory: MemoryConfig::default(),
             project: ProjectConfig::default(),
             mcp_servers: None,
             acp_clients: None,

@@ -325,6 +325,7 @@ impl ConversationCoordinator {
         Self::append_facts_entry(
             session_id,
             turn_id,
+            turn_index,
             &wp,
             resolved_session_storage_path,
             user_input,
@@ -423,16 +424,38 @@ impl ConversationCoordinator {
     async fn append_facts_entry(
         session_id: &str,
         turn_id: &str,
+        turn_index: usize,
         workspace_path: &str,
         resolved_session_storage_path: Option<&std::path::Path>,
         user_input: &str,
         _agent_type: &str,
     ) {
+        use crate::agentic::persistence::PersistenceManager;
         use crate::infrastructure::PathManager;
-        use crate::service::agent_memory::{append_facts_dedup, distill_facts_from_user_message};
+        use crate::service::agent_memory::{append_facts_dedup, distill_facts_with_llm};
 
-        // Distill candidate facts from user input using keyword triggers
-        let candidates = distill_facts_from_user_message(user_input, session_id, turn_id);
+        // Load the previous turn's assistant text for context (design M2).
+        // Warn-only: any failure yields None and does not block the flow.
+        let last_assistant_text = if turn_index > 0 {
+            Self::load_last_assistant_text(
+                resolved_session_storage_path,
+                workspace_path,
+                session_id,
+                turn_index - 1,
+            )
+            .await
+        } else {
+            None
+        };
+
+        // Distill candidate facts from user input using LLM (with keyword fallback).
+        let candidates = distill_facts_with_llm(
+            user_input,
+            last_assistant_text.as_deref(),
+            session_id,
+            turn_id,
+        )
+        .await;
         if candidates.is_empty() {
             return;
         }
@@ -506,6 +529,81 @@ impl ConversationCoordinator {
                 session_id,
                 turn_id
             );
+        }
+    }
+
+    /// Load the last assistant text from a previous dialog turn (design M2).
+    /// Returns the last text item content across all model rounds, truncated to
+    /// 500 chars. Warn-only: any failure yields None.
+    async fn load_last_assistant_text(
+        resolved_session_storage_path: Option<&std::path::Path>,
+        workspace_path: &str,
+        session_id: &str,
+        prev_turn_index: usize,
+    ) -> Option<String> {
+        use crate::agentic::persistence::PersistenceManager;
+        use crate::infrastructure::PathManager;
+
+        let path_manager = match PathManager::new() {
+            Ok(pm) => std::sync::Arc::new(pm),
+            Err(e) => {
+                warn!("Facts: failed to create PathManager for assistant text: {}", e);
+                return None;
+            }
+        };
+
+        let workspace_path_buf = match resolved_session_storage_path {
+            Some(p) => p.to_path_buf(),
+            None => std::path::PathBuf::from(workspace_path),
+        };
+
+        let persistence_manager = match PersistenceManager::new(path_manager) {
+            Ok(pm) => pm,
+            Err(e) => {
+                warn!("Facts: failed to create PersistenceManager: {}", e);
+                return None;
+            }
+        };
+
+        let turn = match persistence_manager
+            .load_dialog_turn(&workspace_path_buf, session_id, prev_turn_index)
+            .await
+        {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                warn!(
+                    "Facts: turn not found for assistant text: session_id={}, turn_index={}",
+                    session_id, prev_turn_index
+                );
+                return None;
+            }
+            Err(e) => {
+                warn!(
+                    "Facts: failed to load turn for assistant text: session_id={}, turn_index={}, error={}",
+                    session_id, prev_turn_index, e
+                );
+                return None;
+            }
+        };
+
+        // Find the last text item across all model rounds (most recent assistant output).
+        let last_text = turn
+            .model_rounds
+            .iter()
+            .rev()
+            .find_map(|round| round.text_items.last().map(|item| item.content.clone()));
+
+        match last_text {
+            Some(text) if !text.trim().is_empty() => {
+                Some(text.chars().take(500).collect())
+            }
+            _ => {
+                warn!(
+                    "Facts: no assistant text found in turn: session_id={}, turn_index={}",
+                    session_id, prev_turn_index
+                );
+                None
+            }
         }
     }
 }

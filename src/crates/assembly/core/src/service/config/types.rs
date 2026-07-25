@@ -14,6 +14,7 @@ pub use super::ai::*;
 pub use super::app_shell::*;
 pub use super::editor::*;
 pub use super::events::*;
+pub use super::memory::*;
 pub use super::runtime::*;
 pub use super::terminal::*;
 pub use super::theme::*;

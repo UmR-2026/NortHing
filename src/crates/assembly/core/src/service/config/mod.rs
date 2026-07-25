@@ -12,6 +12,7 @@ pub mod events;
 pub mod factory;
 pub mod global;
 pub mod manager;
+pub mod memory;
 mod mgr_load;
 mod mgr_merge;
 mod mgr_validate;
