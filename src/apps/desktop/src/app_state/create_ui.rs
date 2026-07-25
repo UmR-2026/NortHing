@@ -33,6 +33,8 @@ use super::skills::refresh_skills_ui;
 use super::slint_glue::{AppWindow, MessageItem, SessionItem, SkillItem};
 use super::state::AppState;
 use anyhow::Result;
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::sync::Arc;
 
@@ -388,15 +390,7 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
         };
         rt.block_on(async move {
             let app_state = &*app_state_arc_startup;
-            let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                tracing::warn!("P0-A: global coordinator not available");
-                // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                set_session_error(
-                    ui_weak_startup.clone(),
-                    "Startup: global coordinator not available. Try restarting the app.",
-                );
-                return;
-            };
+            let facade = kernel_facade();
 
             let workspace = std::env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
@@ -404,17 +398,15 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
 
             let session_name = format!("Session {}", chrono::Local::now().format("%Y-%m-%d %H:%M"));
 
-            let config = northhing_core::agentic::core::SessionConfig {
+            let config = SessionConfigDto {
                 workspace_path: Some(workspace),
-                ..Default::default()
+                agent_type: crate::flags::DEFAULT_MODE_ID.to_string(),
+                model_name: String::new(),
+                name: Some(session_name),
             };
 
-            match coordinator
-                .create_session(session_name, crate::flags::DEFAULT_MODE_ID.to_string(), config)
-                .await
-            {
-                Ok(session) => {
-                    let sid = session.session_id.clone();
+            match facade.create_session(config).await {
+                Ok(sid) => {
                     app_state.set_current_session_id(sid.clone());
                     app_state.set_load_more_cursor(None);
 

@@ -17,6 +17,11 @@ use super::sessions::{build_messages_model, refresh_messages_ui, refresh_session
 use super::skills::refresh_skills_ui;
 use super::slint_glue::AppWindow;
 use super::state::{AppState, SessionMeta};
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto, SessionDto};
+use northhing_kernel_api::turn::{
+    DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnInputDto,
+};
 use slint::{ComponentHandle, SharedString};
 use std::sync::Arc;
 
@@ -126,51 +131,32 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
         };
         turn_rt.spawn(async move {
             let app_state = &*app_state_for_spawn;
-            let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                set_session_error(ui_clone.clone(), "Global coordinator not available.");
-                app_state.set_streaming_session(None);
-                return;
-            };
+            let facade = kernel_facade();
 
             let workspace = std::env::current_dir()
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_else(|_| ".".to_string());
 
             // 2026-07-18 (W3a-4): route submissions through the dialog
-            // scheduler so in-turn messages are enqueued (per-session depth
-            // cap 20) instead of rejected by the Processing guard. The
-            // scheduler's outcome handler auto-dispatches the next queued
-            // turn when the active turn ends.
-            let scheduler = northhing_core::agentic::coordination::global_scheduler();
-            let submit_ok = match scheduler {
-                Some(scheduler) => {
-                    // 2026-07-18 (W3a-4): scheduler path — returns a
-                    // DialogSubmitOutcome distinguishing Started vs Queued.
-                    match scheduler
-                        .submit(
-                            sid.clone(),
-                            text_str,
-                            None,
-                            None,
-                            crate::flags::DEFAULT_MODE_ID.to_string(),
-                            Some(workspace),
-                            northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
-                                northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
-                            ),
-                            None,
-                            None,
-                            None,
-                        )
-                        .await
-                    {
-                        Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Started { .. }) => {
-                            // turn started immediately; streaming indicator
-                            // already set optimistically at entry — lifecycle
-                            // is owned by the event bridge.
-                            Ok(())
-                        }
-                        Ok(northhing_core::agentic::coordination::DialogSubmitOutcome::Queued { .. }) => {
+            // scheduler via the facade's submit_turn so in-turn messages are
+            // enqueued (per-session depth cap 20) instead of rejected by the
+            // Processing guard. The facade's outcome handler auto-dispatches
+            // the next queued turn when the active turn ends.
+            let input = TurnInputDto {
+                session_id: sid.clone(),
+                text: text_str,
+                mode: crate::flags::DEFAULT_MODE_ID.to_string(),
+                policy: SubmissionPolicyDto {
+                    allow_subagent: false,
+                    max_turns: None,
+                },
+                source: TriggerSourceDto::User,
+                workspace_path: Some(workspace),
+            };
+            let submit_ok = match facade.submit_turn(input).await {
+                Ok(outcome) if outcome.accepted => {
+                    match outcome.outcome_kind {
+                        Some(DialogSubmitOutcomeKindDto::Queued) => {
                             // 2026-07-18 (W3a-4): message queued behind the
                             // active turn. Show a banner; keep the streaming
                             // indicator — the current turn is still running.
@@ -180,27 +166,14 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                             set_banner_message(ui_clone.clone(), "已排队，将在当前回复完成后发送", "");
                             Ok(())
                         }
-                        Err(e) => Err(format!("Failed to send message: {e}")),
+                        // Started (or unknown) — turn started immediately; streaming
+                        // indicator already set optimistically at entry — lifecycle
+                        // is owned by the event bridge.
+                        _ => Ok(()),
                     }
                 }
-                // 2026-07-18 (W3a-4): fallback (theoretically unreachable
-                // once desktop wiring is in place): keep the old direct-call
-                // path. Returns () on success.
-                None => coordinator
-                    .start_dialog_turn(
-                        sid.clone(),
-                        text_str,
-                        None,
-                        None,
-                        crate::flags::DEFAULT_MODE_ID.to_string(),
-                        Some(workspace),
-                        northhing_core::agentic::coordination::DialogSubmissionPolicy::for_source(
-                            northhing_core::agentic::coordination::DialogTriggerSource::DesktopApi,
-                        ),
-                        None,
-                    )
-                    .await
-                    .map_err(|e| format!("Failed to send message: {e}")),
+                Ok(outcome) => Err(format!("Failed to send message: {}", outcome.error.unwrap_or_default())),
+                Err(e) => Err(format!("Failed to send message: {e}")),
             };
 
             if let Err(e) = submit_ok {
@@ -223,8 +196,9 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
             // a runtime").
             let sid_clone = sid.clone();
             let ui_weak2 = ui_clone.clone();
-            if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-                if let Ok(msgs) = c.get_messages(&sid_clone).await {
+            let facade_for_msgs = kernel_facade();
+            match facade_for_msgs.get_messages(&sid_clone).await {
+                Ok(msgs) => {
                     let ui_weak_for_msgs = ui_weak2.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak_for_msgs.upgrade() {
@@ -232,6 +206,12 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                             ui.set_messages(model);
                         }
                     });
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        target: "app_state",
+                        "send_message: failed to refresh messages: {e}"
+                    );
                 }
             }
         });
@@ -276,11 +256,7 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
                 .expect("failed to build tokio runtime for UI callback");
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
-                    return;
-                };
+                let facade = kernel_facade();
 
                 let workspace = std::env::current_dir()
                     .map(|p| p.to_string_lossy().to_string())
@@ -291,20 +267,18 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
                 // 2026-06-26 (Phase 5): keep a clone of the workspace
                 // path so we can record session metadata for the
                 // Q6/Q7 integrity check. The `config` below takes
-                // ownership of `workspace` (a `String`).
+                // ownership of `workspace` (a `String$).
                 let workspace_path_for_meta = std::path::PathBuf::from(&workspace);
 
-                let config = northhing_core::agentic::core::SessionConfig {
+                let config = SessionConfigDto {
                     workspace_path: Some(workspace),
-                    ..Default::default()
+                    agent_type: crate::flags::DEFAULT_MODE_ID.to_string(),
+                    model_name: String::new(),
+                    name: Some(session_name),
                 };
 
-                match coordinator
-                    .create_session(session_name, crate::flags::DEFAULT_MODE_ID.to_string(), config)
-                    .await
-                {
-                    Ok(session) => {
-                        let sid = session.session_id.clone();
+                match facade.create_session(config).await {
+                    Ok(sid) => {
                         app_state.set_current_session_id(sid.clone());
                         app_state.set_load_more_cursor(None); // Reset pagination for new session
 
@@ -429,18 +403,9 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
                 .expect("failed to build tokio runtime for UI callback");
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    return;
-                };
+                let facade = kernel_facade();
 
-                let workspace = std::env::current_dir()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .unwrap_or_else(|_| ".".to_string());
-
-                match coordinator
-                    .delete_session(std::path::Path::new(&workspace), &sid_str)
-                    .await
-                {
+                match facade.delete_session(&sid_str).await {
                     Ok(_) => {
                         // If we deleted the current session, clear it
                         if current_sid == sid_str {
@@ -637,31 +602,48 @@ pub(super) fn register_load_more_messages_callback(ui: &AppWindow, app_state: &A
                 let cursor = app_state.get_load_more_cursor();
                 let limit = 50usize;
 
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    return;
-                };
+                let facade = kernel_facade();
 
-                let result = coordinator.get_messages_paginated(&sid, limit, cursor.as_deref()).await;
-
-                match result {
-                    Ok((messages, _has_more)) => {
-                        // Update cursor from the oldest message in this batch
-                        let cursor_id = messages.last().map(|m| m.id.clone());
-                        app_state.set_load_more_cursor(cursor_id);
+                // K4a-T23 (缺口4 adjudication): facade has no paginated API, so
+                // fetch the full message Vec and do client-side pagination here.
+                // UI behavior is unchanged — the model is still built from the
+                // full list, and the cursor tracks the last message of the current
+                // page for the next "load more" click.
+                match facade.get_messages(&sid).await {
+                    Ok(all_msgs) => {
+                        // Client-side pagination: find the cursor position and
+                        // advance by `limit` messages to compute the new cursor.
+                        let new_cursor = match &cursor {
+                            Some(cursor_id) => all_msgs.iter().position(|m| &m.id == cursor_id).and_then(|idx| {
+                                let end = (idx + 1 + limit).min(all_msgs.len());
+                                if idx + 1 < end {
+                                    Some(all_msgs[end - 1].id.clone())
+                                } else {
+                                    None
+                                }
+                            }),
+                            None => {
+                                let end = limit.min(all_msgs.len());
+                                if end > 0 {
+                                    Some(all_msgs[end - 1].id.clone())
+                                } else {
+                                    None
+                                }
+                            }
+                        };
+                        app_state.set_load_more_cursor(new_cursor);
 
                         // 2026-07-18 (D2j): background thread — fetch messages
                         // (Send-safe Vec), then dispatch model build + set onto
                         // UI thread via invoke_from_event_loop. ModelRc is !Send
                         // so it must be constructed inside the closure.
-                        if let Ok(all_msgs) = coordinator.get_messages(&sid).await {
-                            let ui_weak_for_msgs = ui_clone.clone();
-                            let _ = slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = ui_weak_for_msgs.upgrade() {
-                                    let model = build_messages_model(&all_msgs, None);
-                                    ui.set_messages(model);
-                                }
-                            });
-                        }
+                        let ui_weak_for_msgs = ui_clone.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak_for_msgs.upgrade() {
+                                let model = build_messages_model(&all_msgs, None);
+                                ui.set_messages(model);
+                            }
+                        });
                     }
                     Err(e) => {
                         // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
@@ -801,12 +783,8 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
                 .build()
                 .expect("failed to build tokio runtime for stop-streaming");
             rt.block_on(async move {
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                    set_session_error(ui_clone.clone(), "Global coordinator not available.");
-                    return;
-                };
-                if let Err(e) = coordinator.cancel_dialog_turn(&sid, &turn_id).await {
+                let facade = kernel_facade();
+                if let Err(e) = facade.stop_turn(&turn_id).await {
                     // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
                     set_session_error(ui_clone.clone(), format!("停止失败: {e}"));
                 }
@@ -847,13 +825,18 @@ pub(super) fn register_rename_session_callback(ui: &AppWindow, app_state: &Arc<A
                 }
             };
             rt.block_on(async move {
-                let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-                    // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
-                    set_session_error(ui_weak.clone(), "Global coordinator not available.");
-                    return;
-                };
-                match coordinator.update_session_title(&sid, &name).await {
-                    Ok(normalized) => {
+                let facade = kernel_facade();
+                // K4a-T23 (缺口6 adjudication): facade rename_session returns (),
+                // so read back the normalized name via get_session_metadata to update the UI.
+                match facade.rename_session(&sid, &name).await {
+                    Ok(()) => {
+                        // Read back the normalized name from the facade.
+                        let normalized = facade
+                            .get_session_metadata(&sid)
+                            .await
+                            .ok()
+                            .map(|m| m.session_name)
+                            .unwrap_or_else(|| name.clone());
                         // 2026-07-18 (D2j-fix): background thread — dispatch
                         // only the sync setter via invoke_from_event_loop;
                         // then drive refresh_sessions_ui directly (it handles

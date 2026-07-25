@@ -1,6 +1,6 @@
-//! Desktop event bridge — subscribes to core events and drives the Slint UI.
+//! Desktop event bridge — subscribes to kernel events via the facade and drives the Slint UI.
 //!
-//! Bridges the core `EventSubscriber` trait to the desktop UI: streams text
+//! Bridges the kernel facade `subscribe_events` API to the desktop UI: streams text
 //! chunks into the message list, toggles the streaming flag on turn
 //! start/cancel/complete/fail, surfaces turn-failure errors, and tracks the
 //! active turn id so the stop button can cancel it.
@@ -9,18 +9,19 @@ use super::error_banners::set_session_error;
 use super::sessions::build_messages_model;
 use super::slint_glue::{AppWindow, MessageItem};
 use super::state::AppState;
-use northhing_core::agentic::events::router::EventSubscriber;
-use northhing_core::util::errors::NortHingResult;
-use northhing_events::agentic::ErrorCategory;
-use northhing_events::AgenticEvent;
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi, SubscriptionId};
+use northhing_kernel_api::session::KernelSessionApi;
+use northhing_kernel_api::turn::TurnStateKind;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct DesktopEventBridge {
     ui: slint::Weak<AppWindow>,
     app_state: Arc<AppState>,
-    draft: std::sync::Mutex<String>,
-    last_flush: std::sync::Mutex<std::time::Instant>,
+    draft: Mutex<String>,
+    last_flush: Mutex<std::time::Instant>,
+    subscription_id: Mutex<Option<SubscriptionId>>,
 }
 
 impl DesktopEventBridge {
@@ -28,59 +29,114 @@ impl DesktopEventBridge {
         Self {
             ui,
             app_state,
-            draft: std::sync::Mutex::new(String::new()),
-            last_flush: std::sync::Mutex::new(std::time::Instant::now()),
+            draft: Mutex::new(String::new()),
+            last_flush: Mutex::new(std::time::Instant::now()),
+            subscription_id: Mutex::new(None),
         }
     }
 
-    /// Flush the accumulated draft to the UI by fetching the latest messages
-    /// from the coordinator and appending a synthetic streaming assistant item.
-    async fn flush_draft(&self, session_id: &str, draft: String) {
-        let ui = self.ui.clone();
-        let sid = session_id.to_string();
-        // 2026-07-19 (W4b): on_event runs on the agentic routing task (worker
-        // runtime). Await the fetch directly — NEVER block_on or build a
-        // runtime here (panics: "Cannot start a runtime from within a
-        // runtime"; the panic also kills the routing task in system.rs).
-        // Only the sync UI set goes through invoke_from_event_loop.
-        let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-            return;
-        };
-        match coordinator.get_messages(&sid).await {
-            Ok(msgs) => {
-                let base = build_messages_model(&msgs, None);
-                let mut items: Vec<MessageItem> = base.iter().collect();
-                items.push(slint_streaming_item(draft.clone()));
-                let ui_weak = ui.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        ui.set_messages(ModelRc::new(VecModel::from(items)));
+    /// Handle a kernel event (called from the facade subscription callback on the
+    /// worker runtime). Performs sync state mutations + UI dispatch inline; spawns
+    /// async tasks for the message-fetching terminal states.
+    fn handle_event(&self, event: &KernelEventDto) {
+        let current_session = self.app_state.get_current_session_id();
+
+        match event {
+            KernelEventDto::TurnState {
+                session_id,
+                turn_id,
+                state,
+                error,
+                ..
+            } => {
+                if session_id != &current_session {
+                    return;
+                }
+                match state {
+                    TurnStateKind::Started => {
+                        if let Ok(mut d) = self.draft.lock() {
+                            d.clear();
+                        }
+                        self.app_state.set_active_turn_id(Some(turn_id.clone()));
+                        self.app_state.set_streaming_session(Some(session_id.clone()));
+                        let ui = self.ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui.upgrade() {
+                                ui.set_is_streaming(true);
+                            }
+                        });
                     }
-                });
-            }
-            Err(_) => {
-                let items = vec![slint_streaming_item(draft.clone())];
-                let ui_weak = ui.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        ui.set_messages(ModelRc::new(VecModel::from(items)));
+                    TurnStateKind::Completed | TurnStateKind::Cancelled => {
+                        if let Ok(mut d) = self.draft.lock() {
+                            d.clear();
+                        }
+                        self.app_state.set_active_turn_id(None);
+                        self.app_state.set_streaming_session(None);
+                        let ui = self.ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui.upgrade() {
+                                ui.set_is_streaming(false);
+                            }
+                        });
+                        self.spawn_refresh_messages(session_id.clone());
                     }
-                });
+                    TurnStateKind::Failed => {
+                        if let Ok(mut d) = self.draft.lock() {
+                            d.clear();
+                        }
+                        self.app_state.set_active_turn_id(None);
+                        self.app_state.set_streaming_session(None);
+                        let msg = format!("LLM 调用失败: {}", error.as_deref().unwrap_or("unknown error"));
+                        let ui = self.ui.clone();
+                        let msg_clone = msg.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui.upgrade() {
+                                ui.set_is_streaming(false);
+                                set_session_error(ui.as_weak(), msg_clone);
+                            }
+                        });
+                        self.spawn_refresh_messages(session_id.clone());
+                    }
+                }
             }
+            KernelEventDto::TextChunk { session_id, text } => {
+                if session_id != &current_session {
+                    return;
+                }
+                {
+                    if let Ok(mut d) = self.draft.lock() {
+                        d.push_str(text);
+                    }
+                }
+                let should_flush = {
+                    let Ok(mut last) = self.last_flush.lock() else {
+                        return;
+                    };
+                    let now = std::time::Instant::now();
+                    if now.duration_since(*last).as_millis() >= 120 {
+                        *last = now;
+                        true
+                    } else {
+                        false
+                    }
+                };
+                if should_flush {
+                    let draft = self.draft.lock().map(|d| d.clone()).unwrap_or_default();
+                    self.spawn_flush_draft(session_id.clone(), draft);
+                }
+            }
+            // Other variants (ToolCall, TurnPhase, Banner, Error) are ignored by the
+            // desktop bridge — the original EventSubscriber impl ignored them too.
+            _ => {}
         }
     }
 
-    /// Refresh messages from the coordinator (no synthetic item). Used for
-    /// terminal states where the turn file is the source of truth.
-    async fn refresh_messages(&self, session_id: &str) {
+    /// Spawn an async task to refresh messages from the facade (terminal states).
+    fn spawn_refresh_messages(&self, session_id: String) {
         let ui = self.ui.clone();
-        let sid = session_id.to_string();
-        // 2026-07-19 (W4b): on_event runs on the agentic routing task (worker
-        // runtime). Await the fetch directly — NEVER block_on or build a
-        // runtime here (panics: "Cannot start a runtime from within a
-        // runtime"; the panic also kills the routing task in system.rs).
-        if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-            if let Ok(msgs) = c.get_messages(&sid).await {
+        tokio::spawn(async move {
+            let facade = kernel_facade();
+            if let Ok(msgs) = facade.get_messages(&session_id).await {
                 let ui_weak = ui.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = ui_weak.upgrade() {
@@ -89,7 +145,37 @@ impl DesktopEventBridge {
                     }
                 });
             }
-        }
+        });
+    }
+
+    /// Spawn an async task to flush the draft to the UI (streaming chunk).
+    fn spawn_flush_draft(&self, session_id: String, draft: String) {
+        let ui = self.ui.clone();
+        tokio::spawn(async move {
+            let facade = kernel_facade();
+            match facade.get_messages(&session_id).await {
+                Ok(msgs) => {
+                    let base = build_messages_model(&msgs, None);
+                    let mut items: Vec<MessageItem> = base.iter().collect();
+                    items.push(slint_streaming_item(draft.clone()));
+                    let ui_weak = ui.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_messages(ModelRc::new(VecModel::from(items)));
+                        }
+                    });
+                }
+                Err(_) => {
+                    let items = vec![slint_streaming_item(draft.clone())];
+                    let ui_weak = ui.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_messages(ModelRc::new(VecModel::from(items)));
+                        }
+                    });
+                }
+            }
+        });
     }
 }
 
@@ -107,170 +193,49 @@ fn slint_streaming_item(content: String) -> MessageItem {
     }
 }
 
-/// Map an `ErrorCategory` to a short Chinese suffix for the error banner.
-fn error_category_hint(category: &ErrorCategory) -> &'static str {
-    match category {
-        ErrorCategory::ProviderQuota => "（配额不足，请检查账户余额）",
-        ErrorCategory::ProviderBilling => "（套餐已到期或无效）",
-        ErrorCategory::Auth => "（鉴权失败，请检查 API Key）",
-        ErrorCategory::Permission => "（无权限访问该资源）",
-        ErrorCategory::RateLimit => "（请求过于频繁，请稍后重试）",
-        ErrorCategory::ProviderUnavailable => "（服务暂时不可用）",
-        ErrorCategory::Network => "（网络连接异常）",
-        ErrorCategory::Timeout => "（请求超时）",
-        ErrorCategory::ContextOverflow => "（上下文超出模型限制）",
-        ErrorCategory::InvalidRequest => "（请求格式无效）",
-        ErrorCategory::ContentPolicy => "（内容被策略阻止）",
-        ErrorCategory::ModelError => "（模型返回错误）",
-        ErrorCategory::Unknown => "",
-    }
-}
-
-#[async_trait::async_trait]
-impl EventSubscriber for DesktopEventBridge {
-    async fn on_event(&self, event: &AgenticEvent) -> NortHingResult<()> {
-        let current_session = self.app_state.get_current_session_id();
-
-        match event {
-            AgenticEvent::DialogTurnStarted {
-                session_id, turn_id, ..
-            } => {
-                if session_id != &current_session {
-                    return Ok(());
-                }
-                // Reset draft for the new turn.
-                if let Ok(mut d) = self.draft.lock() {
-                    d.clear();
-                }
-                self.app_state.set_active_turn_id(Some(turn_id.clone()));
-                self.app_state.set_streaming_session(Some(session_id.clone()));
-
-                let ui = self.ui.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui.upgrade() {
-                        ui.set_is_streaming(true);
-                    }
-                });
-            }
-            AgenticEvent::TextChunk { session_id, text, .. } => {
-                if session_id != &current_session {
-                    return Ok(());
-                }
-                // Append to draft, then release the lock immediately.
-                {
-                    if let Ok(mut d) = self.draft.lock() {
-                        d.push_str(text);
-                    }
-                }
-                // Throttle flushes to ≥120ms apart.
-                let should_flush = {
-                    let Ok(mut last) = self.last_flush.lock() else {
-                        return Ok(());
-                    };
-                    let now = std::time::Instant::now();
-                    if now.duration_since(*last).as_millis() >= 120 {
-                        *last = now;
-                        true
-                    } else {
-                        false
-                    }
-                };
-                if should_flush {
-                    let draft = self.draft.lock().map(|d| d.clone()).unwrap_or_default();
-                    self.flush_draft(session_id, draft).await;
-                }
-            }
-            AgenticEvent::DialogTurnCompleted { session_id, .. } => {
-                if session_id != &current_session {
-                    return Ok(());
-                }
-                if let Ok(mut d) = self.draft.lock() {
-                    d.clear();
-                }
-                self.app_state.set_active_turn_id(None);
-                self.app_state.set_streaming_session(None);
-
-                let ui = self.ui.clone();
-                let sid = session_id.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui.upgrade() {
-                        ui.set_is_streaming(false);
-                    }
-                });
-                self.refresh_messages(&sid).await;
-            }
-            AgenticEvent::DialogTurnCancelled { session_id, .. } => {
-                if session_id != &current_session {
-                    return Ok(());
-                }
-                if let Ok(mut d) = self.draft.lock() {
-                    d.clear();
-                }
-                self.app_state.set_active_turn_id(None);
-                self.app_state.set_streaming_session(None);
-
-                let ui = self.ui.clone();
-                let sid = session_id.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui.upgrade() {
-                        ui.set_is_streaming(false);
-                    }
-                });
-                self.refresh_messages(&sid).await;
-            }
-            AgenticEvent::DialogTurnFailed {
-                session_id,
-                error,
-                error_category,
-                ..
-            } => {
-                if session_id != &current_session {
-                    return Ok(());
-                }
-                if let Ok(mut d) = self.draft.lock() {
-                    d.clear();
-                }
-                self.app_state.set_active_turn_id(None);
-                self.app_state.set_streaming_session(None);
-
-                let mut msg = format!("LLM 调用失败: {error}");
-                if let Some(cat) = error_category {
-                    let hint = error_category_hint(cat);
-                    if !hint.is_empty() {
-                        msg.push_str(hint);
-                    }
-                }
-
-                let ui = self.ui.clone();
-                let sid = session_id.clone();
-                let msg_clone = msg.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(ui) = ui.upgrade() {
-                        ui.set_is_streaming(false);
-                        // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
-                        set_session_error(ui.as_weak(), msg_clone);
-                    }
-                });
-                self.refresh_messages(&sid).await;
-            }
-            // Other variants are ignored by the desktop bridge.
-            _ => {}
-        }
-        Ok(())
-    }
-}
-
-/// Construct the bridge and register it with the global coordinator.
+/// Construct the bridge and subscribe to kernel events via the facade.
 ///
-/// No-ops with a warning log if the coordinator isn't ready yet.
+/// No-ops with a warning log if the facade isn't ready yet.
 pub(super) fn register_desktop_event_bridge(ui: &AppWindow, app_state: &Arc<AppState>) {
-    let bridge = DesktopEventBridge::new(ui.as_weak(), Arc::clone(app_state));
-    if let Some(c) = northhing_core::agentic::coordination::global_coordinator() {
-        c.subscribe_internal("desktop-ui".to_string(), bridge);
+    let bridge = Arc::new(DesktopEventBridge::new(ui.as_weak(), Arc::clone(app_state)));
+
+    // subscribe_events is async; bridge it without nesting a tokio runtime.
+    // The actual subscription work is synchronous (just registers a subscriber),
+    // so we use block_in_place when a runtime is already running (e.g. tests),
+    // or a throwaway current-thread runtime otherwise.
+    let subscription_id = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let bridge_for_callback = Arc::clone(&bridge);
+                let callback = Box::new(move |event: KernelEventDto| {
+                    bridge_for_callback.handle_event(&event);
+                });
+                kernel_facade().subscribe_events(callback).await
+            })
+        })
     } else {
-        tracing::warn!(
-            target: "app_state",
-            "global coordinator not available; desktop event bridge not registered"
-        );
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build runtime for event bridge subscription")
+            .block_on(async {
+                let bridge_for_callback = Arc::clone(&bridge);
+                let callback = Box::new(move |event: KernelEventDto| {
+                    bridge_for_callback.handle_event(&event);
+                });
+                kernel_facade().subscribe_events(callback).await
+            })
+    };
+
+    match subscription_id {
+        Ok(id) => {
+            *bridge.subscription_id.lock().unwrap() = Some(id);
+        }
+        Err(e) => {
+            tracing::warn!(
+                target: "app_state",
+                "failed to subscribe to kernel events: {e}"
+            );
+        }
     }
 }

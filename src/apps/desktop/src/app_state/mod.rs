@@ -12,7 +12,7 @@
 //!
 //! The Slint-generated `ItemTreeVTable_static` macro internally
 //! emits `unsafe { ... }` blocks, so we can't apply
-//! `#![forbid(unsafe_code)]` to this file — the lint is intentionally
+//! `#![forbid(unsafe_code)]` to this file 鈥?the lint is intentionally
 //! omitted. Future maintainers adding code should stay in safe Rust
 //! (no new `unsafe { }` blocks in this file); grep for `unsafe` to
 //! audit.
@@ -61,46 +61,48 @@ use skills::refresh_skills_ui;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use slint_glue::{AppWindow, MessageItem, SessionItem, SkillItem};
 
-// ═══════════════════════════════════════════════════════════════════
-// Phase I.5 tests (2026-06-20)
-// ═══════════════════════════════════════════════════════════════════
-
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?// Phase I.5 tests (2026-06-20)
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 #[cfg(test)]
 mod phase_i_tests {
     //! Smoke tests for the Slint DTO projection helpers. These cover the
     //! pure functions (`build_sessions_model`, `session_summary_to_item`,
-    //! `build_messages_model`) — the higher-level `create_ui` test would
+    //! `build_messages_model`) 鈥?the higher-level `create_ui` test would
     //! need a real display handle and is left for future Phase I.x work
     //! (or for manual smoke-testing).
 
     use super::sessions::{build_messages_model, build_sessions_model};
-    use northhing_core::agentic::core::{
-        Message, MessageContent, MessageRole, SessionKind, SessionState, SessionStatus, SessionSummary,
+    use northhing_kernel_api::session::{
+        MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, SessionStateDto, SessionStatusDto,
+        SessionSummaryDto,
     };
-    use northhing_core::agentic::message::MessageMetadata;
     use slint::Model;
-    use std::time::SystemTime;
 
-    fn sample_summary(id: &str, parent_id: Option<&str>, depth_target_id: Option<&str>) -> SessionSummary {
-        // The `parent_session_id` field on SessionSummary is what the
+    fn sample_meta() -> MessageMetadataDto {
+        MessageMetadataDto {
+            turn_id: None,
+            round_id: None,
+            tokens: None,
+            thinking_signature: None,
+            semantic_kind: None,
+            internal_reminder_kind: None,
+            compression_payload: None,
+        }
+    }
+
+    fn sample_summary(id: &str, parent_id: Option<&str>, depth_target_id: Option<&str>) -> SessionSummaryDto {
+        // The `parent_session_id` field on SessionSummaryDto is what the
         // depth walker reads. `depth_target_id` is unused here (the
         // helper computes depth from parent links); kept in the
         // signature to make the test call sites self-documenting.
         let _ = depth_target_id;
-        SessionSummary {
-            session_id: id.into(),
-            session_name: format!("Session {id}"),
-            agent_type: "code".into(),
-            last_user_dialog_agent_type: None,
-            last_submitted_agent_type: None,
-            created_by: None,
-            kind: SessionKind::Standard,
-            turn_count: 0,
-            created_at: SystemTime::now(),
-            last_activity_at: SystemTime::now(),
-            state: SessionState::Idle,
-            status: SessionStatus::Active,
+        SessionSummaryDto {
+            id: id.into(),
+            name: format!("Session {id}"),
+            updated_at: 0,
+            status: SessionStatusDto::Active,
             parent_session_id: parent_id.map(String::from),
+            state: Some("idle".to_string()),
         }
     }
 
@@ -110,11 +112,11 @@ mod phase_i_tests {
         let summaries = vec![sample_summary("a", None, None)];
         let model = build_sessions_model(&summaries);
         // ModelRc exposes items via a VecModel we can downcast.
-        // For the smoke test we just check `len()` — depth is internal.
+        // For the smoke test we just check `len()` 鈥?depth is internal.
         assert_eq!(model.iter().count(), 1);
     }
 
-    /// Two levels of parent → child → grandchild yields depth 0/1/2.
+    /// Two levels of parent 鈫?child 鈫?grandchild yields depth 0/1/2.
     #[test]
     fn child_session_depth_walks_parent_chain() {
         let summaries = vec![
@@ -130,7 +132,7 @@ mod phase_i_tests {
         // rendering uses the same data and is verified by manual test.
     }
 
-    /// A cycle (a → b → a) must not loop forever — `build_sessions_model`
+    /// A cycle (a 鈫?b 鈫?a) must not loop forever 鈥?`build_sessions_model`
     /// caps depth at MAX_DEPTH = 8 and stops on the second visit.
     #[test]
     fn cycle_does_not_hang() {
@@ -141,13 +143,13 @@ mod phase_i_tests {
         let model = build_sessions_model(&summaries);
         assert_eq!(model.iter().count(), 2);
         // If the cycle detection regressed, this would hang the test
-        // runner — the assert_eq! failing is the secondary signal.
+        // runner 鈥?the assert_eq! failing is the secondary signal.
     }
 
     /// Empty input produces an empty model.
     #[test]
     fn empty_summaries_produces_empty_model() {
-        let summaries: Vec<SessionSummary> = vec![];
+        let summaries: Vec<SessionSummaryDto> = vec![];
         let model = build_sessions_model(&summaries);
         assert_eq!(model.iter().count(), 0);
     }
@@ -155,21 +157,21 @@ mod phase_i_tests {
     /// `build_messages_model` round-trips a few messages.
     #[test]
     fn build_messages_model_round_trip() {
-        let meta = MessageMetadata::default();
+        let meta = sample_meta();
         let msgs = vec![
-            Message {
+            MessageDto {
                 id: "m1".into(),
-                role: MessageRole::User,
-                content: MessageContent::Text("hello".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::User,
+                content: MessageContentDto::Text("hello".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m2".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("hi".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta,
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("hi".into()),
+                timestamp: 0,
+                metadata: Some(meta),
             },
         ];
         let model = build_messages_model(&msgs, None);
@@ -180,28 +182,28 @@ mod phase_i_tests {
     /// when streaming_session_id matches.
     #[test]
     fn build_messages_model_streaming_on_last_assistant() {
-        let meta = MessageMetadata::default();
+        let meta = sample_meta();
         let msgs = vec![
-            Message {
+            MessageDto {
                 id: "m1".into(),
-                role: MessageRole::User,
-                content: MessageContent::Text("hello".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::User,
+                content: MessageContentDto::Text("hello".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m2".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("hi".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("hi".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m3".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("there".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta,
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("there".into()),
+                timestamp: 0,
+                metadata: Some(meta),
             },
         ];
 
@@ -222,21 +224,21 @@ mod phase_i_tests {
     /// A7: streaming indicator is NOT shown when last message is user
     #[test]
     fn build_messages_model_no_streaming_when_last_is_user() {
-        let meta = MessageMetadata::default();
+        let meta = sample_meta();
         let msgs = vec![
-            Message {
+            MessageDto {
                 id: "m1".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("hi".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("hi".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m2".into(),
-                role: MessageRole::User,
-                content: MessageContent::Text("hello".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta,
+                role: MessageRoleDto::User,
+                content: MessageContentDto::Text("hello".into()),
+                timestamp: 0,
+                metadata: Some(meta),
             },
         ];
 
@@ -275,7 +277,7 @@ mod phase_i_tests {
     /// A7: streaming indicator is NOT shown when messages list is empty
     #[test]
     fn build_messages_model_empty_list_no_streaming() {
-        let msgs: Vec<Message> = vec![];
+        let msgs: Vec<MessageDto> = vec![];
         let model = build_messages_model(&msgs, Some("sess-1"));
         let items: Vec<_> = model.iter().collect();
         assert_eq!(items.len(), 0);
@@ -284,28 +286,28 @@ mod phase_i_tests {
     /// A7: streaming indicator is NOT shown on tool messages even when streaming
     #[test]
     fn build_messages_model_tool_message_never_streaming() {
-        let meta = MessageMetadata::default();
+        let meta = sample_meta();
         let msgs = vec![
-            Message {
+            MessageDto {
                 id: "m1".into(),
-                role: MessageRole::User,
-                content: MessageContent::Text("hello".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::User,
+                content: MessageContentDto::Text("hello".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m2".into(),
-                role: MessageRole::Tool,
-                content: MessageContent::Text("tool result".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::Tool,
+                content: MessageContentDto::Text("tool result".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m3".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("hi".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta,
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("hi".into()),
+                timestamp: 0,
+                metadata: Some(meta),
             },
         ];
 
@@ -320,28 +322,28 @@ mod phase_i_tests {
     /// A7: only the last assistant message streams, not all assistants
     #[test]
     fn build_messages_model_only_last_assistant_streams() {
-        let meta = MessageMetadata::default();
+        let meta = sample_meta();
         let msgs = vec![
-            Message {
+            MessageDto {
                 id: "m1".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("first".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("first".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m2".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("second".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta.clone(),
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("second".into()),
+                timestamp: 0,
+                metadata: Some(meta.clone()),
             },
-            Message {
+            MessageDto {
                 id: "m3".into(),
-                role: MessageRole::Assistant,
-                content: MessageContent::Text("third".into()),
-                timestamp: SystemTime::now(),
-                metadata: meta,
+                role: MessageRoleDto::Assistant,
+                content: MessageContentDto::Text("third".into()),
+                timestamp: 0,
+                metadata: Some(meta),
             },
         ];
 
@@ -352,10 +354,8 @@ mod phase_i_tests {
         assert!(items[2].is_streaming); // assistant (last)
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // K.2.4 Mock display test
-    // ═══════════════════════════════════════════════════════════════════
-
+    // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?    // K.2.4 Mock display test
+    // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
     use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
     use std::rc::Rc;
     use std::sync::Arc;

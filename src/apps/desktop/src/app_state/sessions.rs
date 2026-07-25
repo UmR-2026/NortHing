@@ -2,6 +2,10 @@
 
 use super::slint_glue::AppWindow;
 use super::*;
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::session::{
+    KernelSessionApi, MessageContentDto, MessageDto, MessageRoleDto, SessionSummaryDto,
+};
 use slint::{ModelRc, SharedString, VecModel};
 
 /// Format a SystemTime as a human-readable string
@@ -10,21 +14,24 @@ pub(super) fn format_time(time: std::time::SystemTime) -> String {
     datetime.format("%Y-%m-%d %H:%M").to_string()
 }
 
-/// Convert a core SessionSummary to a Slint SessionItem
-pub(super) fn session_summary_to_item(summary: &northhing_core::agentic::core::SessionSummary) -> SessionItem {
-    let is_active = matches!(
-        summary.state,
-        northhing_core::agentic::core::SessionState::Processing { .. }
-    );
+/// Format a Unix-millis timestamp as a human-readable string.
+pub(super) fn format_time_ms(timestamp_ms: i64) -> String {
+    let time = std::time::UNIX_EPOCH + std::time::Duration::from_millis(timestamp_ms as u64);
+    format_time(time)
+}
+
+/// Convert a SessionSummaryDto to a Slint SessionItem
+pub(super) fn session_summary_to_item(summary: &SessionSummaryDto) -> SessionItem {
+    let is_active = summary.state.as_deref() == Some("processing");
     // Phase C.1: parent_id uses an empty-string sentinel so the Slint struct
     // can stay Default-constructible while the Rust side threads `Option<String>`
     // through. `build_sessions_model` (below) computes depth from these
     // parent_id values.
     let parent_id = summary.parent_session_id.clone().unwrap_or_default();
     SessionItem {
-        id: SharedString::from(summary.session_id.clone()),
-        name: SharedString::from(summary.session_name.clone()),
-        timestamp: SharedString::from(format_time(summary.last_activity_at)),
+        id: SharedString::from(summary.id.clone()),
+        name: SharedString::from(summary.name.clone()),
+        timestamp: SharedString::from(format_time_ms(summary.updated_at)),
         is_active,
         parent_id: SharedString::from(parent_id),
         depth: 0, // Filled in by `build_sessions_model`.
@@ -37,29 +44,29 @@ pub(super) fn session_summary_to_item(summary: &northhing_core::agentic::core::S
     }
 }
 
-/// Convert a core Message to a Slint MessageItem
-pub(super) fn message_to_item(msg: &northhing_core::agentic::core::Message, is_streaming: bool) -> MessageItem {
+/// Convert a MessageDto to a Slint MessageItem
+pub(super) fn message_to_item(msg: &MessageDto, is_streaming: bool) -> MessageItem {
     let role = match msg.role {
-        northhing_core::agentic::core::MessageRole::User => "user",
-        northhing_core::agentic::core::MessageRole::Assistant => "assistant",
-        northhing_core::agentic::core::MessageRole::Tool => "tool",
-        northhing_core::agentic::core::MessageRole::System => "system",
+        MessageRoleDto::User => "user",
+        MessageRoleDto::Assistant => "assistant",
+        MessageRoleDto::Tool => "tool",
+        MessageRoleDto::System => "system",
     };
 
     let content = match &msg.content {
-        northhing_core::agentic::core::MessageContent::Text(t) => t.clone(),
-        northhing_core::agentic::core::MessageContent::Multimodal { text, .. } => text.clone(),
-        northhing_core::agentic::core::MessageContent::ToolResult {
+        MessageContentDto::Text(t) => t.clone(),
+        MessageContentDto::Multimodal { text, .. } => text.clone(),
+        MessageContentDto::ToolResult {
             result_for_assistant, ..
         } => result_for_assistant.clone().unwrap_or_default(),
-        northhing_core::agentic::core::MessageContent::Mixed { text, .. } => text.clone(),
+        MessageContentDto::Mixed { text, .. } => text.clone(),
     };
 
     MessageItem {
         id: SharedString::from(msg.id.clone()),
         role: SharedString::from(role),
         content: SharedString::from(content),
-        timestamp: SharedString::from(format_time(msg.timestamp)),
+        timestamp: SharedString::from(format_time_ms(msg.timestamp)),
         is_streaming,
         // Phase 4: tool call fields. Default to no tool calls; Rust
         // will populate these when extracting tool_call records from
@@ -71,9 +78,7 @@ pub(super) fn message_to_item(msg: &northhing_core::agentic::core::Message, is_s
 }
 
 /// Build a Slint ModelRc<SessionItem> from a list of summaries
-pub(super) fn build_sessions_model(
-    summaries: &[northhing_core::agentic::core::SessionSummary],
-) -> ModelRc<SessionItem> {
+pub(super) fn build_sessions_model(summaries: &[SessionSummaryDto]) -> ModelRc<SessionItem> {
     // Phase C.2: compute each session's depth in the subagent tree. The
     // tree can in principle be unbounded, but a hard cap protects the UI
     // from pathological data (e.g. a cycle created by a corrupt session).
@@ -128,7 +133,7 @@ pub(super) fn build_sessions_model(
 /// 2026-07-18 (D2b fix): build the session item Vec (Send-safe) without
 /// wrapping in ModelRc, so the background thread can produce data and the
 /// UI thread constructs the Rc-based model inside the event-loop closure.
-pub(super) fn build_sessions_items(summaries: &[northhing_core::agentic::core::SessionSummary]) -> Vec<SessionItem> {
+pub(super) fn build_sessions_items(summaries: &[SessionSummaryDto]) -> Vec<SessionItem> {
     const MAX_DEPTH: i32 = 8;
 
     let items: Vec<SessionItem> = summaries.iter().map(session_summary_to_item).collect();
@@ -175,7 +180,7 @@ pub(super) fn build_sessions_items(summaries: &[northhing_core::agentic::core::S
 /// A7: `streaming_session_id` marks the last assistant message as streaming
 /// when it matches the session being viewed.
 pub(super) fn build_messages_model(
-    messages: &[northhing_core::agentic::core::Message],
+    messages: &[MessageDto],
     streaming_session_id: Option<&str>,
 ) -> ModelRc<MessageItem> {
     let items: Vec<MessageItem> = messages
@@ -186,7 +191,7 @@ pub(super) fn build_messages_model(
             // when the session is actively streaming and the message is
             // an assistant message.
             let is_last = idx == messages.len().saturating_sub(1);
-            let is_assistant = matches!(msg.role, northhing_core::agentic::core::MessageRole::Assistant);
+            let is_assistant = matches!(msg.role, MessageRoleDto::Assistant);
             let is_streaming = streaming_session_id.is_some() && is_last && is_assistant;
             message_to_item(msg, is_streaming)
         })
@@ -196,16 +201,13 @@ pub(super) fn build_messages_model(
 
 /// 2026-07-18 (D2b fix): build the message item Vec (Send-safe) without
 /// wrapping in ModelRc — see `build_sessions_items` above.
-pub(super) fn build_messages_items(
-    messages: &[northhing_core::agentic::core::Message],
-    streaming_session_id: Option<&str>,
-) -> Vec<MessageItem> {
+pub(super) fn build_messages_items(messages: &[MessageDto], streaming_session_id: Option<&str>) -> Vec<MessageItem> {
     messages
         .iter()
         .enumerate()
         .map(|(idx, msg)| {
             let is_last = idx == messages.len().saturating_sub(1);
-            let is_assistant = matches!(msg.role, northhing_core::agentic::core::MessageRole::Assistant);
+            let is_assistant = matches!(msg.role, MessageRoleDto::Assistant);
             let is_streaming = streaming_session_id.is_some() && is_last && is_assistant;
             message_to_item(msg, is_streaming)
         })
@@ -225,15 +227,9 @@ pub(super) fn build_messages_items(
 /// background threads no longer need to `upgrade()` (which returns None on
 /// non-UI threads). The upgrade happens inside the invoke closure (UI thread).
 pub(super) async fn refresh_sessions_ui(ui_weak: slint::Weak<AppWindow>, current_session_id: &str) {
-    let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-        return;
-    };
+    let facade = kernel_facade();
 
-    let workspace = std::env::current_dir()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| ".".to_string());
-
-    let result = coordinator.list_sessions(std::path::Path::new(&workspace)).await;
+    let result = facade.list_sessions().await;
     match result {
         Ok(sessions) => {
             // Build the item Vec on the background thread (Send-safe);
@@ -271,9 +267,7 @@ pub(super) async fn refresh_messages_ui(
     session_id: &str,
     streaming_session_id: Option<&str>,
 ) {
-    let Some(coordinator) = northhing_core::agentic::coordination::global_coordinator() else {
-        return;
-    };
+    let facade = kernel_facade();
 
     if session_id.is_empty() {
         let ui_weak_empty = ui_weak.clone();
@@ -290,7 +284,8 @@ pub(super) async fn refresh_messages_ui(
         return;
     }
 
-    let result = coordinator.get_messages(session_id).await;
+    let session_id_string = session_id.to_string();
+    let result = facade.get_messages(&session_id_string).await;
     match result {
         Ok(messages) => {
             // Build item Vec on background thread; construct ModelRc on UI thread.
