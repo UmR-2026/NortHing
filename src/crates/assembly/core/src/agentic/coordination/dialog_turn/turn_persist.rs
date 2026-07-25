@@ -478,6 +478,7 @@ impl ConversationCoordinator {
                         warn!("Facts: MemoryDb insert failed: {}", e);
                     }
                 }
+                let _ = db.decay_all_weights(0.99, 0.1);
             }
         }
 

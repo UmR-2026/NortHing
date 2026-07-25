@@ -252,6 +252,17 @@ Memory is one of several persistence mechanisms available to you as you assist t
             Err(_) => read_facts(&memory_dir).await.unwrap_or_default(),
         };
         let selected = select_facts_for_prompt(&facts, 1000);
+        if !selected.is_empty() {
+            if let Ok(db_touch) = MemoryDb::open(&db_path) {
+                let now_ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                    .unwrap_or(0);
+                for fact in &selected {
+                    let _ = db_touch.touch_fact(&fact.id, now_ms);
+                }
+            }
+        }
         if selected.is_empty() {
             String::new()
         } else {
