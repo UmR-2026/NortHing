@@ -240,24 +240,27 @@ Memory is one of several persistence mechanisms available to you as you assist t
 "#
     );
 
-    // Append remembered facts if available
-    let facts_section = match read_facts(&memory_dir).await {
-        Ok(facts) => {
-            let selected = select_facts_for_prompt(&facts, 1000);
-            if selected.is_empty() {
-                String::new()
-            } else {
-                let items = selected
-                    .iter()
-                    .map(|f| format!("- {}", f.text))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                format!("\n\n# Remembered facts\n\n{}", items)
-            }
-        }
-        Err(e) => {
-            warn!("Failed to read facts for prompt injection: {}", e);
+    let facts_section = {
+        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+        let workspace_key = workspace_root.to_string_lossy().to_string();
+        let db_path = default_memory_db_path();
+        let facts: Vec<super::facts::Fact> = match MemoryDb::open(&db_path) {
+            Ok(db) => match db.get_facts(Some(&workspace_key)) {
+                Ok(db_facts) if !db_facts.is_empty() => db_facts,
+                _ => read_facts(&memory_dir).await.unwrap_or_default(),
+            },
+            Err(_) => read_facts(&memory_dir).await.unwrap_or_default(),
+        };
+        let selected = select_facts_for_prompt(&facts, 1000);
+        if selected.is_empty() {
             String::new()
+        } else {
+            let items = selected
+                .iter()
+                .map(|f| format!("- {}", f.text))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("\n\n# Remembered facts\n\n{}", items)
         }
     };
 
