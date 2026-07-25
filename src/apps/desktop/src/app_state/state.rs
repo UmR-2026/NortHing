@@ -10,8 +10,8 @@ use parking_lot::Mutex;
 
 /// App-level state shared between Slint UI callbacks and the async core
 pub struct AppState {
-    /// Handle to the agentic system (available after init)
-    pub agentic_system: std::sync::OnceLock<std::sync::Arc<northhing_core::agentic::system::AgenticSystem>>,
+    /// Tracks whether the kernel facade core has been initialized
+    pub core_ready: std::sync::OnceLock<()>,
     /// Currently active session ID (set by switch-session callback)
     current_session_id: Mutex<String>,
     /// Pagination cursor: message ID of the oldest loaded message (for load-more)
@@ -63,7 +63,7 @@ pub struct SessionMeta {
 impl AppState {
     pub fn new() -> Self {
         Self {
-            agentic_system: std::sync::OnceLock::new(),
+            core_ready: std::sync::OnceLock::new(),
             current_session_id: Mutex::new(String::new()),
             load_more_cursor: Mutex::new(None),
             show_subagents: Mutex::new(true),
@@ -93,14 +93,14 @@ impl AppState {
         self.actor_runtime.get().cloned()
     }
 
-    /// Set the agentic system reference after initialization
-    pub fn set_agentic_system(&self, system: std::sync::Arc<northhing_core::agentic::system::AgenticSystem>) {
-        let _ = self.agentic_system.set(system);
+    /// Mark the kernel facade core as initialized
+    pub fn set_core_ready(&self) {
+        let _ = self.core_ready.set(());
     }
 
     /// Get the agentic system, or None if not yet initialized
-    pub fn get_agentic_system(&self) -> Option<&std::sync::Arc<northhing_core::agentic::system::AgenticSystem>> {
-        self.agentic_system.get()
+    pub fn get_agentic_system(&self) -> Option<&()> {
+        self.core_ready.get()
     }
 
     /// K.2.3 follow-up: get the `ConversationCoordinator` (if
@@ -109,7 +109,7 @@ impl AppState {
     pub fn coordinator(
         &self,
     ) -> Option<std::sync::Arc<northhing_core::agentic::coordination::ConversationCoordinator>> {
-        self.agentic_system.get().map(|s| s.coordinator.clone())
+        northhing_core::agentic::coordination::global_coordinator()
     }
 
     /// Get the current session ID

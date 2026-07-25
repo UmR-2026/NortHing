@@ -3,12 +3,12 @@
 //! Slint + Material GUI application - the primary human-facing entry point.
 //! Pure single-process architecture: UI calls into northhing-core directly.
 
-mod agent;
 mod app_state;
 mod flags;
 mod mcp_adapter;
 
 use anyhow::Result;
+use northhing_kernel_api::KernelBootstrapApi;
 use std::sync::mpsc;
 use std::thread;
 
@@ -45,41 +45,13 @@ static APP_STATE: std::sync::LazyLock<
 
 // ======================== Core Initialization ========================
 
-async fn initialize_core_services() -> Result<agent::agentic_system::AgenticSystem> {
-    let system = agent::agentic_system::init_agentic_system_for_desktop().await?;
-    // Share the AgenticSystem with the UI callbacks via AppState
-    APP_STATE.set_agentic_system(std::sync::Arc::new(system.clone()));
-
-    // P0-D (2026-06-25): register a global MCPService so the inspector's
-    // `build_mcp_status_string` (and any future direct consumer) can read
-    // the live catalog without reconstructing it on every call. Mirrors
-    // the CLI's init pattern but writes to the SHARED global so cross-crate
-    // callers in assembly/core can find it via `get_global_mcp_service()`.
-    //
-    // The heavy `server_manager().initialize_all()` work runs in the
-    // background so GUI startup isn't blocked. The inspector will show
-    // "Connecting..." until the spawned task flips the status.
-    match northhing_core::service::config::get_global_config_service().await {
-        Ok(cfg_svc) => match northhing_core::service::mcp::MCPService::new(cfg_svc) {
-            Ok(mcp_service) => {
-                let mcp_service = std::sync::Arc::new(mcp_service);
-                northhing_core::service::mcp::set_global_mcp_service(mcp_service.clone());
-                tracing::info!("P0-D: registered global MCPService");
-
-                // Background initialization (does NOT block startup).
-                tokio::spawn(async move {
-                    match mcp_service.server_manager().initialize_all().await {
-                        Ok(_) => tracing::info!("P0-D: MCP servers initialized"),
-                        Err(e) => tracing::warn!("P0-D: failed to initialize MCP servers: {e}"),
-                    }
-                });
-            }
-            Err(e) => tracing::warn!("P0-D: failed to construct MCPService: {e}"),
-        },
-        Err(e) => tracing::warn!("P0-D: failed to fetch global config service: {e}"),
-    }
-
-    Ok(system)
+async fn initialize_core_services() -> Result<()> {
+    northhing_core::kernel_facade::kernel_facade()
+        .init_core()
+        .await
+        .map_err(|e| anyhow::anyhow!("init_core failed: {e}"))?;
+    APP_STATE.set_core_ready();
+    Ok(())
 }
 
 /// Shutdown MCP servers gracefully

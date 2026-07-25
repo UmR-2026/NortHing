@@ -5743,6 +5743,7 @@ dependencies = [
  "northhing-agent-dispatch",
  "northhing-core",
  "northhing-events",
+ "northhing-kernel-api",
  "northhing-runtime-ports",
  "parking_lot",
  "rfd",
