@@ -77,10 +77,12 @@ CREATE TABLE IF NOT EXISTS fact_reviews (
   ```rust
   pub(crate) async fn distill_facts_with_llm(
       user_input: &str,
+      last_assistant_text: Option<&str>,   // 上轮 assistant 回复片段（截 500 字符）
       session_id: &str,
       turn_id: &str,
   ) -> Vec<Fact>   // 失败/无配置/超时 → 回落 distill_facts_from_user_message
   ```
+  输入 = user_input + 上轮 assistant 片段（用户拍板：上下文更准，如"对，就这样"类确认；assistant 片段截 500 字符控成本）。
 - 蒸馏 prompt（system 固化）：输入用户消息，输出 JSON 数组，最多 3 条：
   ```json
   [{"text": "...", "fact_type": "user|feedback|project|reference",
@@ -91,7 +93,7 @@ CREATE TABLE IF NOT EXISTS fact_reviews (
   - `user_input.chars().count() < 20` 跳过；
   - 关键词命中（实时轨）当 turn 必蒸馏；未命中也蒸馏但走后台（本 tracer 简化为统一每 turn 异步一次）；
   - 超时 15s + 单次 max_tokens 上限；JSON 解析失败 → 关键词回落。
-- **dedup 升级**：`append_facts_dedup` 精确文本去重保留；新增 FTS 近似去重——候选 fact 先 `search_facts(text, ws, 1)`，若 top1 bm25 命中且文本相似度高（P0：top1.score 超阈值或文本包含关系）则 `touch_fact` 旧 fact 而不是新增（重复提及增加权重，对齐 decisions）。
+- **dedup**：本 tracer 只做现有精确文本去重（`append_facts_dedup`），FTS 近似去重**不做**，留给 judge-mom（tracer 2）统一处理（用户拍板）。
 - **写入**：走现有双写路径（MemoryDb INSERT OR IGNORE + JSONL append），`fact_type` 落新列。
 
 ### 5.3 配置（D2）
@@ -99,7 +101,7 @@ CREATE TABLE IF NOT EXISTS fact_reviews (
 ```json
 "memory": {
   "distiller_enabled": true,
-  "distiller_model": null        // null → 回落主会话模型；否则 provider/model 引用
+  "distiller_model": null        // null → 回落主会话模型；否则 "provider/model" 字符串，解析失败回落主模型（用户拍板）
 }
 ```
 - 读取：`get_global_config_service`；蒸馏客户端经 `get_global_ai_client_factory` 按配置模型构造。
@@ -134,8 +136,8 @@ CREATE TABLE IF NOT EXISTS fact_reviews (
 - 配置单一事实源 = core GlobalConfig，禁止第二份运行时可读配置（backbone invariant）。
 - 远程 workspace：后台蒸馏同样跳过（本地 DB 语义，与 query-aware 注入一致）。
 
-## 8. 开放问题（评审时定）
+## 8. 开放问题（已拍板 2026-07-25）
 
-1. 蒸馏输入是否带上一轮 assistant 回复片段（上下文更准 vs token 成本翻倍）？建议 P0 只喂 user_input。
-2. FTS 近似去重阈值：P0 用"文本互相包含 或 top1.score ≥ X"，X 取值靠实测调，先写死常量。
-3. `distiller_model` 的引用形态：直接写 `provider/model` 字符串 vs 引用 providers 数组条目 id？倾向字符串，解析失败回落主模型。
+1. ~~蒸馏输入是否带上一轮 assistant 回复~~ → **带**（assistant 片段截 500 字符）。
+2. ~~FTS 近似去重阈值~~ → **本 tracer 不做**，精确文本去重即可，近似去重归 judge-mom（tracer 2）。
+3. ~~`distiller_model` 引用形态~~ → **"provider/model" 字符串**，解析失败回落主模型。
