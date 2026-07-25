@@ -110,6 +110,10 @@ pub struct ProviderFormDto {
     pub api_key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Provider wire format ("anthropic"/"openai"/"gemini"). Falls back to
+    /// `provider_id` when absent (backward compat, K4a-T4p).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_type: Option<String>,
 }
 
 // ── KernelSettingsApi ──────────────────────────────────────────────────────────

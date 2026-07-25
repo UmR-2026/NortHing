@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::settings::{
     AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, MCPServerDto,
-    MCPServerStatusDto, ProviderConfigDto, ProviderTestResultDto,
+    MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
 };
 
 use crate::service::config::{get_global_config_service, GlobalConfig};
@@ -355,36 +355,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
         &self,
         form: northhing_kernel_api::settings::ProviderFormDto,
     ) -> Result<ProviderTestResultDto, KernelError> {
-        use crate::service::config::runtime::AIModelConfig;
-        let model_cfg = AIModelConfig {
-            id: form.provider_id.clone(),
-            name: form.provider_id.clone(),
-            provider: form.provider_id.clone(),
-            model_name: form.model.clone().unwrap_or_default(),
-            base_url: form.base_url.clone().unwrap_or_default(),
-            request_url: None,
-            api_key: form.api_key.clone().unwrap_or_default(),
-            context_window: None,
-            max_tokens: None,
-            temperature: None,
-            top_p: None,
-            enabled: true,
-            category: Default::default(),
-            capabilities: vec![],
-            recommended_for: vec![],
-            metadata: None,
-            enable_thinking_process: false,
-            reasoning_mode: None,
-            inline_think_in_text: false,
-            custom_headers: None,
-            custom_headers_mode: None,
-            skip_ssl_verify: false,
-            reasoning_effort: None,
-            thinking_budget_tokens: None,
-            custom_request_body: None,
-            custom_request_body_mode: None,
-            auth: Default::default(),
-        };
+        let model_cfg = form_to_model_config(&form);
         let ai_config = crate::util::types::AIConfig::try_from(model_cfg)
             .map_err(|e| KernelError::Validation(format!("invalid config: {e}")))?;
         let client = crate::infrastructure::ai::AIClient::new(ai_config);
@@ -398,5 +369,71 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 error: Some(crate::kernel_facade::helpers::first_line_error(&e.to_string())),
             }),
         }
+    }
+}
+
+/// Pure helper: convert a ProviderFormDto into the AIModelConfig used by
+/// `test_provider_config`. Extracted so the provider_type fallback logic can be
+/// unit-tested without network calls (K4a-T4p).
+fn form_to_model_config(form: &ProviderFormDto) -> crate::service::config::runtime::AIModelConfig {
+    crate::service::config::runtime::AIModelConfig {
+        id: form.provider_id.clone(),
+        name: form.provider_id.clone(),
+        provider: form.provider_type.clone().unwrap_or_else(|| form.provider_id.clone()),
+        model_name: form.model.clone().unwrap_or_default(),
+        base_url: form.base_url.clone().unwrap_or_default(),
+        request_url: None,
+        api_key: form.api_key.clone().unwrap_or_default(),
+        context_window: None,
+        max_tokens: None,
+        temperature: None,
+        top_p: None,
+        enabled: true,
+        category: Default::default(),
+        capabilities: vec![],
+        recommended_for: vec![],
+        metadata: None,
+        enable_thinking_process: false,
+        reasoning_mode: None,
+        inline_think_in_text: false,
+        custom_headers: None,
+        custom_headers_mode: None,
+        skip_ssl_verify: false,
+        reasoning_effort: None,
+        thinking_budget_tokens: None,
+        custom_request_body: None,
+        custom_request_body_mode: None,
+        auth: Default::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use northhing_kernel_api::settings::ProviderFormDto;
+
+    #[test]
+    fn test_form_to_model_config_uses_provider_type_when_present() {
+        let form = ProviderFormDto {
+            provider_id: "my-custom-id".into(),
+            base_url: None,
+            api_key: None,
+            model: None,
+            provider_type: Some("anthropic".into()),
+        };
+        let cfg = super::form_to_model_config(&form);
+        assert_eq!(cfg.provider, "anthropic");
+    }
+
+    #[test]
+    fn test_form_to_model_config_falls_back_to_provider_id_when_none() {
+        let form = ProviderFormDto {
+            provider_id: "my-custom-id".into(),
+            base_url: None,
+            api_key: None,
+            model: None,
+            provider_type: None,
+        };
+        let cfg = super::form_to_model_config(&form);
+        assert_eq!(cfg.provider, "my-custom-id");
     }
 }
