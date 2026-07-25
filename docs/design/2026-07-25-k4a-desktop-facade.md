@@ -70,7 +70,7 @@
 - **P2 零新增**：53 方法已满额。任何"facade 缺方法"的发现 → 停步，按 northstar P2 三要素（提出人/覆盖缺口分析/合并可行性）走评审，严禁顺手加。
 - **cargo 机制约束**（northstar §4）：kernel-api 不得引入 product-full feature 传染；facade 不得 re-export kernel 内部泛型/derive 类型；T5 含 `cargo tree` 零命中守卫。
 - **P5 行为不变**：每片 `cargo check --workspace` + focused 测试全绿 + GUI 冒烟。
-- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① `main.rs` 的 `kernel_facade()` 手柄调用 + `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）。T5 grep 守卫按此豁免清单执行。
+- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① `main.rs` 的 `kernel_facade()` 手柄调用 + `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）③ `actor.rs` 的 `set_actor_runtime` 注入 + `state.rs` 的 `coordinator()`（§12 缺口 5：TaskTool actor 注入路径，待 P2 评审决定是否开 facade 方法）。T5 grep 守卫按此豁免清单执行。
 - **并发改动带测试**（家规④）；god-file 防线：callbacks_lifecycle.rs 迁移时若超 800 行警戒，顺手拆分记 commit message（家规①）。
 - **UI 线程纪律**：事件订阅 callback 写 Slint 属性必须经 `slint::invoke_from_event_loop`（沿用 error_banners.rs 既有包装）。
 
@@ -118,3 +118,18 @@ facade 与旧路径在整个 K 线期间并存（northstar §5 K2 回退条款�
 | ⑤ | D2 深化（N+1 / 8 态折叠 / inspector 配套） | ✅ 8 态折叠信息够用（见③），折叠逻辑留 mcp_adapter 映射层（方案 A'）；N+1 配套方案：`build_mcp_status_string`（inspector.rs:17-47）改为 facade `list_mcp_servers` + `futures::future::join_all` 并发 per-id `get_mcp_status`，`render_status` 纯函数保留；MCP 实例数典型 <10，并发后延迟与现状同阶，无预算风险 |
 
 **T0 产出**：T4p 小单立项（ProviderFormDto.provider_type）；其余核对项无需 core 侧补单。T1 可开工。
+
+## 12. T23 缺口裁定（2026-07-25，coder-lc 首跑 BLOCKED 上报 8 缺口，编排者裁定）
+
+| # | 缺口 | 裁定 | 依据 |
+|---|---|---|---|
+| 1 | MessageDto 缺 timestamp | **加字段** `timestamp: i64` | 拍板项 5（DTO 加字段授权） |
+| 2 | SessionSummaryDto 缺 parent_session_id | **加字段** `parent_session_id: Option<String>` | 同上（子 agent 树 depth 计算需要） |
+| 3 | SessionSummaryDto 缺 processing 状态 | **加字段** `state: Option<String>`（core SessionState snake_case kind，desktop 判 `"processing"`） | 同上；stringly kind 比引入 SessionStateDto 更稳（serde 演进友好） |
+| 4 | 缺 get_messages_paginated 方法 | **不开新方法**：facade `get_messages` 本就返回全量（kernel_facade/session.rs:136-146 走 coordinator.get_messages，与 desktop 现状初始加载同源），load-more 改 desktop 侧本地分页 | P2 满额；功能 P5 保持；perf（长会话全量加载）记录为已知限制 |
+| 5 | 缺 set_actor_runtime 方法 | **豁免**：actor.rs:102-104 保留 `app_state.coordinator()` + `set_actor_runtime` 直连 core（USE_LIGHTWEIGHT_ACTOR=true 是骨干不变量，此注入是 TaskTool 功能路径非 demo）；state.rs `coordinator()` 因此保留不删。加入 §6 豁免清单③，标注"待 P2 评审决定是否开注入方法" | P2 满额；豁免先例（shutdown/w4_repro） |
+| 6 | rename_session 返回 () 而非归一化名 | **不改签名**：desktop rename 后 `get_session` 读归一化名（低频操作多一次调用可接受） | facade schema 冻结稳定性优先 |
+| 7 | DialogSubmitOutcomeDto 不区分 Started/Queued | **加字段** `outcome_kind: Option<DialogSubmitOutcomeKindDto>`（新小枚举 Started/Queued，serde optional 向后兼容） | 拍板项 5；Queued banner 行为需要 |
+| 8 | SessionConfigDto 缺 name | **加字段** `name: Option<String>`（desktop 生成 "Session YYYY-MM-DD HH:MM" 命名习惯保持） | 拍板项 5 |
+
+新增 ticket **T23q**（gap-fill：1/2/3/7/8 的 DTO 字段 + kernel_facade dto.rs 映射 + 测试），T23 待 T23q 落地后复工（coder-lc 原 session 续派）。§6 豁免清单更新：③ actor.rs set_actor_runtime + state.rs coordinator()。
