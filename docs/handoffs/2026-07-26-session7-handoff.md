@@ -78,3 +78,13 @@
 ## 7. 一句话状态
 
 K4a 六单落地四（T1/T4p/T23q/T23 主体），m3 复活回 judge 首选；T23 差 R2 订阅生命周期收尾（stash 有破碎草稿，建议新 session 重做），其后 T4→T5→K3 闸门。
+
+## 8. 宵禁后续作（2026-07-26 03:30-04:05，用户指示续作后入睡）
+
+- **T23 R2**：coder-s37 新 session 一次成（`d4c3520`：Drop+unsubscribe+幂等回归测试+lib.rs 死 re-export 删除方案 B），judge-m3 复验 APPROVED 11/11，T23 关闭，lc 的 stash 草稿已 drop
+- **qwen 规则澄清（用户）**：额度留编排者仅限 kimi k2/k3；qwen（qw 系）可派 subagent，唯一限制 = 晚 10 点前不用。models.md/CORE.md 误记已更正
+- **T4**：coder-qw 解禁首秀一次成（`12a5615`，14 文件，DTO 补 9 字段，实装 facade 两个桩方法），judge-m3 APPROVED-WITH-FIXES（无 BLOCKER；3 MINOR：MCPServerDto 加 enabled、SkillScopeDto 加 mode_id（可选）、reconcile 无需处理）→ 已并入设计稿 §13 T5 待办
+- **K4a 进度：6/7 单完成，仅剩 T5**（debug-log 微 crate + grep 守卫 + cargo tree 零命中 + K0 编译对比 + surfaces.md 同步 + T4 两条 MINOR）
+- 设计稿 §13 实施进度表已更新；验证基线：cargo check 0 err，desktop lib 71 绿，kernel_facade 31 绿
+
+**下 session 首单 = T5**（qw 窗口外则 lc；judge m3）。T5 后可找用户做 GUI 冒烟（T23/T4 改了发消息主链路+设置页+MCP/skills 面板），然后 K3 ROI 闸门评估。

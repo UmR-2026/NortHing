@@ -119,6 +119,25 @@ facade 与旧路径在整个 K 线期间并存（northstar §5 K2 回退条款�
 
 **T0 产出**：T4p 小单立项（ProviderFormDto.provider_type）；其余核对项无需 core 侧补单。T1 可开工。
 
+## 13. 实施进度（2026-07-26 04:00）
+
+| 单 | 状态 | commit | judge |
+|---|---|---|---|
+| T0 核对 | ✅ 关闭（§11） | — | 编排者 |
+| T1 bootstrap 收编 | ✅ | `85fdd35` | m3 PASS |
+| T4p ProviderFormDto.provider_type | ✅ | `a4ccc5a` | m3 PASS |
+| T23q DTO 补缺 ×5 | ✅ | `8a9b16e` | m3 PASS |
+| T23 turn+session 数据流 | ✅（R1 `95db64d` + R2 `d4c3520` 订阅生命周期/死 re-export） | m3 BLOCKED→R2 后 APPROVED 11/11 |
+| T4 settings/skills/mcp/inspector | ✅（`12a5615`，DTO 补 9 字段，实装 set_skill_enabled/load_skill_overrides 桩） | m3 APPROVED-WITH-FIXES |
+| T5 清扫验收 | ⬜ 唯一剩余 | — | — |
+
+**T5 待办清单**（除 §5 T5 行外，吸收 T4 三条 MINOR）：
+1. `contracts/debug-log` 微 crate + 8 文件 log_event/COMP_* 迁移 + `docs/status/surfaces.md` 同步（家规②）
+2. grep 守卫（§6 豁免清单口径）+ `cargo tree -p northhing-kernel-api` 零命中 + K0 编译对比
+3. T4 MINOR①：`MCPServerDto` 加 `enabled: Option<bool>`（DTO 字段授权），mcp_adapter 改读真实 config-level enabled（替代 Disabled 反推）
+4. T4 MINOR②（可选）：`SkillScopeDto` 加 `mode_id` 字段，agents.rs 去硬编码 "agentic"
+5. T4 MINOR③：无需处理（reconcile_models 移除已验证安全——set_config 隐式触发 reconcile）
+
 ## 12. T23 缺口裁定（2026-07-25，coder-lc 首跑 BLOCKED 上报 8 缺口，编排者裁定）
 
 | # | 缺口 | 裁定 | 依据 |
