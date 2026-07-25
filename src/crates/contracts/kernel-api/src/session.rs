@@ -16,6 +16,8 @@ pub struct SessionConfigDto {
     pub workspace_path: Option<String>,
     pub agent_type: String,
     pub model_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -24,6 +26,11 @@ pub struct SessionSummaryDto {
     pub name: String,
     pub updated_at: i64,
     pub status: SessionStatusDto,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_session_id: Option<String>,
+    /// Core SessionState kind, snake_case (e.g. "processing"). None for states the facade doesn't surface.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
 }
 
 /// Sessions of one workspace, used by the cross-workspace archive listing.
@@ -217,6 +224,8 @@ pub struct MessageDto {
     pub content: MessageContentDto,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<MessageMetadataDto>,
+    /// Unix timestamp in milliseconds since UNIX_EPOCH (matches core `Message.timestamp` SystemTime).
+    pub timestamp: i64,
 }
 
 // ── KernelSessionApi ───────────────────────────────────────────────────────────

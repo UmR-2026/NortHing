@@ -53,8 +53,8 @@ pub use tools::{
     UserInputResponseDto, ValidationResultDto,
 };
 pub use turn::{
-    DialogSubmitOutcomeDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto, TurnStateDto,
-    TurnStateKind,
+    DialogSubmitOutcomeDto, DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId,
+    TurnInputDto, TurnStateDto, TurnStateKind,
 };
 pub use usage::{KernelUsageApi, TokenUsageDto, TurnUsageDto, UsageReportDto, UsageRequestDto};
 pub use util::strip_prompt_markup;

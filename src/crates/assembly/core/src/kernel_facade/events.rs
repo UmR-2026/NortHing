@@ -303,6 +303,12 @@ pub(crate) fn summary_to_dto(s: crate::agentic::core::SessionSummary) -> super::
             crate::agentic::core::SessionStatus::Archived => super::SessionStatusDto::Archived,
             crate::agentic::core::SessionStatus::Completed => super::SessionStatusDto::Completed,
         },
+        parent_session_id: s.parent_session_id,
+        state: match s.state {
+            crate::agentic::core::SessionState::Idle => Some("idle".to_string()),
+            crate::agentic::core::SessionState::Processing { .. } => Some("processing".to_string()),
+            crate::agentic::core::SessionState::Error { .. } => Some("error".to_string()),
+        },
     }
 }
 

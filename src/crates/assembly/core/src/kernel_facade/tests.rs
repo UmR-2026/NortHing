@@ -5,9 +5,10 @@ use std::sync::Arc;
 
 use northhing_core_types::ErrorCategory;
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase, TurnPhaseKind};
-use northhing_kernel_api::turn::TurnStateKind;
 use northhing_kernel_api::memory::KernelMemoryApi;
-use northhing_kernel_api::session::SessionSummaryDto;
+use northhing_kernel_api::session::{MessageDto, SessionConfigDto, SessionSummaryDto};
+use northhing_kernel_api::settings::ProviderFormDto;
+use northhing_kernel_api::turn::{DialogSubmitOutcomeDto, DialogSubmitOutcomeKindDto, TurnStateKind};
 use northhing_kernel_api::KernelSessionApi;
 
 use crate::agentic::events::{AgenticEvent, ToolEventData};
@@ -284,7 +285,7 @@ async fn test_init_gate_lifecycle_all_scenarios() {
         *guard = InitState::NotStarted;
     }
 
-    // Scenario 1: Two concurrent calls — init runs exactly once
+    // Scenario 1: Two concurrent calls 鈥?init runs exactly once
     {
         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
         let call_count_clone = call_count.clone();
@@ -313,7 +314,7 @@ async fn test_init_gate_lifecycle_all_scenarios() {
             "init should run exactly once across concurrent calls");
     }
 
-    // Scenario 2: Ready之后再调 — init count does not increase
+    // Scenario 2: Ready涔嬪悗鍐嶈皟 鈥?init count does not increase
     {
         FACADE_READY.store(false, Ordering::SeqCst);
         {
@@ -343,7 +344,7 @@ async fn test_init_gate_lifecycle_all_scenarios() {
             "init should not re-run when facade is already Ready");
     }
 
-    // Scenario 3: First init fails → state resets → second init succeeds
+    // Scenario 3: First init fails 鈫?state resets 鈫?second init succeeds
     {
         FACADE_READY.store(false, Ordering::SeqCst);
         {
@@ -490,4 +491,111 @@ async fn test_list_episodes_dto_fields_are_correct() {
     assert!(result.is_ok());
     let episodes = result.unwrap();
     assert_eq!(episodes.len(), 0);
+}
+
+// 鈹€鈹€ K4a-T23q DTO gap-fill tests 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+
+#[test]
+fn test_message_to_dto_carries_timestamp() {
+    use crate::agentic::core::{Message, MessageContent, MessageRole};
+    use crate::kernel_facade::dto::message_to_dto;
+    use std::time::SystemTime;
+
+    let msg = Message {
+        id: "m1".into(),
+        role: MessageRole::User,
+        content: MessageContent::Text("hello".into()),
+        timestamp: SystemTime::UNIX_EPOCH + std::time::Duration::from_millis(1_700_000_000_000),
+        metadata: Default::default(),
+    };
+    let dto = message_to_dto(msg);
+    assert_eq!(dto.timestamp, 1_700_000_000_000);
+}
+
+#[test]
+fn test_summary_to_dto_carries_parent_and_state() {
+    use crate::agentic::core::{SessionState, SessionSummary, SessionStatus};
+    use crate::kernel_facade::events::summary_to_dto;
+    use std::time::SystemTime;
+
+    let summary = SessionSummary {
+        session_id: "s1".into(),
+        session_name: "test".into(),
+        agent_type: "agentic".into(),
+        last_user_dialog_agent_type: None,
+        last_submitted_agent_type: None,
+        created_by: None,
+        kind: northhing_core_types::SessionKind::Standard,
+        turn_count: 0,
+        created_at: SystemTime::UNIX_EPOCH,
+        last_activity_at: SystemTime::UNIX_EPOCH,
+        state: SessionState::Processing {
+            current_turn_id: "t1".into(),
+            phase: crate::agentic::core::ProcessingPhase::Thinking,
+        },
+        status: SessionStatus::Active,
+        parent_session_id: Some("parent-s1".into()),
+    };
+    let dto = summary_to_dto(summary);
+    assert_eq!(dto.parent_session_id, Some("parent-s1".to_string()));
+    assert_eq!(dto.state, Some("processing".to_string()));
+}
+
+#[test]
+fn test_outcome_to_dto_started_and_queued() {
+    use crate::agentic::coordination::DialogSubmitOutcome;
+    use crate::kernel_facade::dto::outcome_to_dto;
+
+    let started = outcome_to_dto(DialogSubmitOutcome::Started {
+        session_id: "s1".into(),
+        turn_id: "t1".into(),
+    });
+    assert_eq!(
+        started.outcome_kind,
+        Some(northhing_kernel_api::turn::DialogSubmitOutcomeKindDto::Started)
+    );
+
+    let queued = outcome_to_dto(DialogSubmitOutcome::Queued {
+        session_id: "s1".into(),
+        turn_id: "t2".into(),
+    });
+    assert_eq!(
+        queued.outcome_kind,
+        Some(northhing_kernel_api::turn::DialogSubmitOutcomeKindDto::Queued)
+    );
+}
+
+#[test]
+fn test_session_config_dto_name_round_trip() {
+    let dto = SessionConfigDto {
+        workspace_path: None,
+        agent_type: "agentic".into(),
+        model_name: "default".into(),
+        name: Some("my-session".into()),
+    };
+    let json = serde_json::to_string(&dto).unwrap();
+    let back: SessionConfigDto = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.name, Some("my-session".to_string()));
+}
+
+#[test]
+fn test_backward_compat_deserialization_missing_new_fields() {
+    // ProviderFormDto without provider_type (added by K4a-T4p)
+    let json = r#"{"provider_id":"openai","base_url":null,"api_key":null,"model":null}"#;
+    let dto: ProviderFormDto = serde_json::from_str(json).unwrap();
+    assert_eq!(dto.provider_id, "openai");
+    assert_eq!(dto.provider_type, None);
+
+    // SessionSummaryDto without parent_session_id / state (added by K4a-T23q)
+    let json2 = r#"{"id":"s1","name":"test","updated_at":0,"status":"active"}"#;
+    let dto2: SessionSummaryDto = serde_json::from_str(json2).unwrap();
+    assert_eq!(dto2.id, "s1");
+    assert_eq!(dto2.parent_session_id, None);
+    assert_eq!(dto2.state, None);
+
+    // DialogSubmitOutcomeDto without outcome_kind (added by K4a-T23q)
+    let json3 = r#"{"turn_id":"t1","accepted":true}"#;
+    let dto3: DialogSubmitOutcomeDto = serde_json::from_str(json3).unwrap();
+    assert_eq!(dto3.turn_id, "t1");
+    assert_eq!(dto3.outcome_kind, None);
 }

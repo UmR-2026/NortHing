@@ -34,6 +34,11 @@ pub enum TriggerSourceDto {
     System,
 }
 
+/// Distinguishes Started vs Queued submit outcomes (K4a-T23q).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DialogSubmitOutcomeKindDto { Started, Queued }
+
 /// Dialog submit outcome DTO (enumerated from core at implementation time).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DialogSubmitOutcomeDto {
@@ -41,6 +46,8 @@ pub struct DialogSubmitOutcomeDto {
     pub accepted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome_kind: Option<DialogSubmitOutcomeKindDto>,
 }
 
 /// FROZEN — TurnStateKind (C2 new).

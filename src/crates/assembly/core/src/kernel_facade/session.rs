@@ -24,7 +24,9 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
         if !config.model_name.is_empty() {
             core_config.model_id = Some(config.model_name.clone());
         }
-        let name = format!("session-{}", crate::kernel_facade::helpers::system_time_to_ms());
+        let name = config
+            .name
+            .unwrap_or_else(|| format!("session-{}", crate::kernel_facade::helpers::system_time_to_ms()));
         let session = self
             .coordinator()?
             .create_session(name, config.agent_type, core_config)

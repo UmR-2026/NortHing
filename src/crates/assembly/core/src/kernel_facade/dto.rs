@@ -56,6 +56,7 @@ pub(crate) fn message_to_dto(m: Message) -> MessageDto {
             },
         },
         metadata: Some(metadata_to_message_dto(&m.metadata)),
+        timestamp: crate::kernel_facade::helpers::system_time_to_ms_i64(m.timestamp),
     }
 }
 
@@ -134,11 +135,13 @@ pub(crate) fn outcome_to_dto(
             turn_id,
             accepted: true,
             error: None,
+            outcome_kind: Some(northhing_kernel_api::turn::DialogSubmitOutcomeKindDto::Started),
         },
         DialogSubmitOutcome::Queued { turn_id, .. } => DialogSubmitOutcomeDto {
             turn_id,
             accepted: true,
             error: None,
+            outcome_kind: Some(northhing_kernel_api::turn::DialogSubmitOutcomeKindDto::Queued),
         },
     }
 }
