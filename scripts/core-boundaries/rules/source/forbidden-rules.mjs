@@ -2234,6 +2234,16 @@ export const forbiddenContentRules = [
       },
     ],
   },
+  {
+    path: 'src/crates/assembly/core/src/service/agent_memory/auto_memory.rs',
+    patterns: [
+      {
+        regex: /\bjudge_memory\b/,
+        message:
+          'core agent prompt builder must not reference judge_memory; judge-mom state stays behind service::agent_memory::judge_memory',
+      },
+    ],
+  },
 ];
 
 export const forbiddenContentUnderRules = [
@@ -2979,6 +2989,30 @@ export const forbiddenContentUnderRules = [
         regex: /\bread_episodes\b/,
         message:
           'turn execution must not read episodes into prompt context; episodes are write-only for the agent (C2 no-self-validation invariant)',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/agents',
+    reason:
+      'core agent prompt/agent surface must not see judge memory; judge-mom state stays behind service::agent_memory::judge_memory',
+    patterns: [
+      {
+        regex: /\bjudge_memory\b/,
+        message:
+          'core agent prompt/agent surface must not see judge memory; judge-mom state stays behind service::agent_memory::judge_memory',
+      },
+    ],
+  },
+  {
+    path: 'src/crates/assembly/core/src/agentic/tools',
+    reason:
+      'core agent tool surface must not see judge memory; judge-mom state stays behind service::agent_memory::judge_memory',
+    patterns: [
+      {
+        regex: /\bjudge_memory\b/,
+        message:
+          'core agent tool surface must not see judge memory; judge-mom state stays behind service::agent_memory::judge_memory',
       },
     ],
   },

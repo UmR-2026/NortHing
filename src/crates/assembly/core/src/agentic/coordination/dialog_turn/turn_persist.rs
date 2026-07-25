@@ -14,6 +14,7 @@ use crate::agentic::session::SessionManager;
 use crate::util::errors::NortHingError;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
+use uuid;
 
 impl ConversationCoordinator {
     pub(crate) async fn persist_completed_dialog_turn(
@@ -432,7 +433,9 @@ impl ConversationCoordinator {
     ) {
         use crate::agentic::persistence::PersistenceManager;
         use crate::infrastructure::PathManager;
-        use crate::service::agent_memory::{append_facts_dedup, distill_facts_with_llm};
+        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+        use crate::service::agent_memory::{append_facts_dedup, distill_facts_with_llm, get_judge_state, set_judge_state};
+        use crate::service::agent_memory::FactReview;
 
         // Load the previous turn's assistant text for context (design M2).
         // Warn-only: any failure yields None and does not block the flow.
@@ -448,16 +451,85 @@ impl ConversationCoordinator {
             None
         };
 
+        // Open DB early for judge state operations.
+        let db_path = default_memory_db_path();
+        let db = MemoryDb::open(&db_path);
+
+        // Pause gate: check before distillation.
+        let distiller_paused = db
+            .as_ref()
+            .ok()
+            .and_then(|db| get_judge_state(db, "distiller_paused").ok().flatten())
+            .as_deref() == Some("true");
+
         // Distill candidate facts from user input using LLM (with keyword fallback).
-        let candidates = distill_facts_with_llm(
-            user_input,
-            last_assistant_text.as_deref(),
-            session_id,
-            turn_id,
-        )
-        .await;
+        let candidates = if distiller_paused {
+            Vec::new()
+        } else {
+            distill_facts_with_llm(
+                user_input,
+                last_assistant_text.as_deref(),
+                session_id,
+                turn_id,
+            )
+            .await
+        };
+
+        // Hit-rate counting and self-learning brake (before early return).
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        if let Ok(db) = &db {
+            let distill_turns = get_judge_state(db, "distill_turns")
+                .ok()
+                .flatten()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0)
+                + 1;
+            let distill_hit_turns = if !candidates.is_empty() {
+                get_judge_state(db, "distill_hit_turns")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0)
+                    + 1
+            } else {
+                get_judge_state(db, "distill_hit_turns")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0)
+            };
+
+            let _ = set_judge_state(db, "distill_turns", &distill_turns.to_string(), now_ms);
+            let _ = set_judge_state(db, "distill_hit_turns", &distill_hit_turns.to_string(), now_ms);
+
+            // Self-learning brake: auto-pause if 0 hits in >= 20 turns.
+            if distill_turns >= 20 && distill_hit_turns == 0 {
+                let _ = set_judge_state(db, "distiller_paused", "true", now_ms);
+                warn!("Distiller auto-paused: 0 hits in {} turns", distill_turns);
+            }
+        }
+
         if candidates.is_empty() {
             return;
+        }
+
+        // Quality accounting: record each candidate as a distiller review.
+        if let Ok(db) = &db {
+            for fact in &candidates {
+                let review = FactReview {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    fact_id: fact.id.clone(),
+                    reviewer: "distiller".to_string(),
+                    action: "keep".to_string(),
+                    reason: None,
+                    created_at: now_ms,
+                };
+                let _ = db.record_fact_review(&review);
+            }
         }
 
         let path_manager = match PathManager::new() {
@@ -527,7 +599,7 @@ impl ConversationCoordinator {
                 "Facts: appended {} facts: session_id={}, turn_id={}",
                 appended,
                 session_id,
-                turn_id
+                turn_id,
             );
         }
     }

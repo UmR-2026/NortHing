@@ -755,6 +755,38 @@ impl MemoryDb {
 
         Ok(())
     }
+
+    pub(crate) fn get_judge_mom_value(&self, key: &str) -> NortHingResult<Option<String>> {
+        let conn = self.conn.lock().map_err(|e| {
+            NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
+        })?;
+
+        let value: Option<String> = conn
+            .query_row(
+                "SELECT value FROM judge_mom WHERE key = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .ok();
+
+        Ok(value)
+    }
+
+    pub(crate) fn set_judge_mom_value(&self, key: &str, value: &str, at_ms: u64) -> NortHingResult<()> {
+        let conn = self.conn.lock().map_err(|e| {
+            NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
+        })?;
+
+        conn.execute(
+            "INSERT OR REPLACE INTO judge_mom (key, value, updated_at) VALUES (?1, ?2, ?3)",
+            params![key, value, at_ms as i64],
+        )
+        .map_err(|e| {
+            NortHingError::service(format!("Failed to set judge_mom value: {}", e))
+        })?;
+
+        Ok(())
+    }
 }
 
 pub(crate) fn default_memory_db_path() -> PathBuf {

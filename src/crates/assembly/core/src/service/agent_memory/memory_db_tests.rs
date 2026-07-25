@@ -577,3 +577,23 @@ fn migration_idempotent_on_reopen() {
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn judge_mom_kv_round_trip() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+    let db = MemoryDb::open(&db_path).unwrap();
+
+    // Unset key returns None.
+    assert!(db.get_judge_mom_value("missing").unwrap().is_none());
+
+    // Set and get round trip.
+    db.set_judge_mom_value("k1", "v1", 1000).unwrap();
+    assert_eq!(db.get_judge_mom_value("k1").unwrap(), Some("v1".to_string()));
+
+    // Overwrite returns new value.
+    db.set_judge_mom_value("k1", "v2", 2000).unwrap();
+    assert_eq!(db.get_judge_mom_value("k1").unwrap(), Some("v2".to_string()));
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
