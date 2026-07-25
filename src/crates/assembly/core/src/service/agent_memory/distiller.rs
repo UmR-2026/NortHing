@@ -53,15 +53,7 @@ pub(crate) async fn distill_facts_with_llm(
     }
 
     // c) Resolve the AI client (design M5).
-    let factory = match get_global_ai_client_factory().await {
-        Ok(f) => f,
-        Err(e) => {
-            warn!("Distiller: failed to get AI client factory: {}", e);
-            return distill_facts_from_user_message(user_input, session_id, turn_id);
-        }
-    };
-
-    let client = match resolve_distiller_client(&factory, &config).await {
+    let client = match resolve_distiller_client(&config).await {
         Some(c) => c,
         None => return distill_facts_from_user_message(user_input, session_id, turn_id),
     };
@@ -126,9 +118,16 @@ async fn read_distiller_config() -> Option<GlobalConfig> {
 /// in `config.ai.models` and use its id. Otherwise (or on any resolution
 /// failure) fall back to "fast".
 async fn resolve_distiller_client(
-    factory: &Arc<AIClientFactory>,
     config: &GlobalConfig,
 ) -> Option<Arc<AIClient>> {
+    let factory = match get_global_ai_client_factory().await {
+        Ok(f) => f,
+        Err(e) => {
+            warn!("Distiller: failed to get AI client factory: {}", e);
+            return None;
+        }
+    };
+
     let model_ref = config.memory.distiller_model.as_deref();
 
     let client = match model_ref {
@@ -173,6 +172,23 @@ async fn resolve_distiller_client(
             None
         }
     }
+}
+
+/// Resolve the memory LLM client for background tasks (dream, etc.).
+///
+/// Returns None if distiller is disabled, config is missing, or client
+/// resolution fails.
+pub(crate) async fn resolve_memory_llm_client() -> Option<Arc<AIClient>> {
+    let config = match read_distiller_config().await {
+        Some(c) => c,
+        None => return None,
+    };
+
+    if !config.memory.distiller_enabled {
+        return None;
+    }
+
+    resolve_distiller_client(&config).await
 }
 
 /// Build the distillation prompt messages.

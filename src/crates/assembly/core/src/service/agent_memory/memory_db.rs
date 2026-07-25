@@ -836,6 +836,8 @@ fn segment_for_fts(text: &str) -> String {
     out.join(" ")
 }
 
+mod dream;
+
 #[cfg(test)]
 #[path = "memory_db_tests.rs"]
 mod tests;

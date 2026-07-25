@@ -597,3 +597,96 @@ fn judge_mom_kv_round_trip() {
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn get_stale_facts_filters_and_orders() {
+    let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+    let db_path = temp_dir.join("memory.db");
+    let db = MemoryDb::open(&db_path).unwrap();
+
+    let now_ms = 5000u64;
+
+    // Fact 1: recent (not stale)
+    let recent = Fact {
+        schema_version: 1,
+        id: "recent".to_string(),
+        text: "recent fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 4000,
+    };
+
+    // Fact 2: stale active
+    let stale = Fact {
+        schema_version: 1,
+        id: "stale".to_string(),
+        text: "stale fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 1000,
+    };
+
+    // Fact 3: stale but superseded
+    let superseded = Fact {
+        schema_version: 1,
+        id: "superseded".to_string(),
+        text: "superseded fact".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 500,
+    };
+
+    db.insert_fact(&recent, Some("ws")).unwrap();
+    db.insert_fact(&stale, Some("ws")).unwrap();
+    db.insert_fact(&superseded, Some("ws")).unwrap();
+    db.supersede_fact("superseded", None, now_ms).unwrap();
+
+    // Only the stale active fact should be returned.
+    let stale_facts = db.get_stale_facts(Some("ws"), 2000, 10).unwrap();
+    assert_eq!(stale_facts.len(), 1);
+    assert_eq!(stale_facts[0].id, "stale");
+
+    // Verify ASC ordering: insert another stale fact with later created_at.
+    let stale2 = Fact {
+        schema_version: 1,
+        id: "stale2".to_string(),
+        text: "stale fact 2".to_string(),
+        provenance: FactProvenance {
+            session_id: "s1".to_string(),
+            turn_id: "t1".to_string(),
+        },
+        confidence: FactConfidence::High,
+        scope: FactScope::Workspace,
+        fact_type: FactType::Feedback,
+        created_at: 2000,
+    };
+    db.insert_fact(&stale2, Some("ws")).unwrap();
+
+    // Use a higher threshold so both stale facts are included.
+    let stale_facts2 = db.get_stale_facts(Some("ws"), 3000, 10).unwrap();
+    assert_eq!(stale_facts2.len(), 2);
+    // ASC by last_mentioned_at (which equals created_at on insert).
+    assert_eq!(stale_facts2[0].id, "stale");
+    assert_eq!(stale_facts2[1].id, "stale2");
+
+    // Verify limit.
+    let stale_facts3 = db.get_stale_facts(Some("ws"), 3000, 1).unwrap();
+    assert_eq!(stale_facts3.len(), 1);
+
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}

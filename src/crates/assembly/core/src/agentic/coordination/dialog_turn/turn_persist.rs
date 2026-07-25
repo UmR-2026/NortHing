@@ -602,6 +602,8 @@ impl ConversationCoordinator {
                 turn_id,
             );
         }
+
+        crate::service::agent_memory::run_dream_sweep(&workspace_path_buf).await;
     }
 
     /// Load the last assistant text from a previous dialog turn (design M2).
