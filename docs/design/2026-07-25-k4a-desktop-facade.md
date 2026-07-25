@@ -62,7 +62,7 @@
 | **T2** | turn 主链路（最大片）：submit/stop/事件订阅/Message DTO 迁移（**不含 log.rs**——其 2 处引用全属 debug_log 域，按 D1 留 T5，judge-lc 复审修正） | callbacks_lifecycle(27)、event_bridge(5)、actor(2)、mod(2)、state(4)、create_ui(4) | check 绿 + GUI 冒烟（发消息→流式 TextChunk→ToolCall→TurnState 完成/失败/取消）+  focused desktop 测试 |
 | **T3** | sessions 域 | sessions.rs(19) | check 绿 + 会话 CRUD/分支/消息加载冒烟 |
 | **T4** | settings/skills/mcp/inspector：config 读写、provider CRUD+test、skills 面板、MCP 面板（mcp_adapter 改纯映射层，D2-A'）、inspector 数据面 | settings/sync(4)、settings/tests(2)、provider(1)、provider_test(2)、skills(2)、inspector(3)、inspector_model_status(2)、mcp_adapter(改造) | check 绿 + 设置页全流程冒烟（改 provider→test→保存→skills 开关→MCP 状态） |
-| **T5** | 清扫验收：D1 debug-log 微 crate 落地（`contracts/debug-log`，用户拍板新 crate）+ 全仓 `northhing_core::` 在 desktop/src 清零 grep 守卫（w4_repro 豁免）+ Cargo.toml 依赖改造 + K0 编译指标对比 | log(2) 等 8 文件、desktop/Cargo.toml | `rg "northhing_core::" src/apps/desktop/src` 仅剩 w4_repro 豁免行；`cargo tree -p northhing-kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` 零命中；增量 check 实测对比 K0 基线（目标 min(30s, 基线×0.5)，未达成不阻塞但记录给 K3 闸门） |
+| **T5** | 清扫验收：D1 debug-log 微 crate 落地（`contracts/debug-log`，用户拍板新 crate）+ 全仓 `northhing_core::` 在 desktop/src 清零 grep 守卫（按 §6 豁免清单：kernel_facade 手柄、shutdown_mcp_servers、w4_repro）+ K0 编译指标对比 | log(2) 等 8 文件 | `rg "northhing_core::" src/apps/desktop/src` 仅剩豁免行；`cargo tree -p northhing-kernel-api` 对 `(rmcp|git2|axum|tower-http|reqwest)` 零命中；增量 check 实测对比 K0 基线（目标 min(30s, 基线×0.5)，未达成不阻塞但记录给 K3 闸门） |
 
 依赖：T0 → T1 →（T2 ∥ T3 ∥ T4 文件集不相交可并行）→ T5。每片 judge 验收后 commit；T2 是重灾区单独 judge。
 
@@ -71,7 +71,7 @@
 - **P2 零新增**：53 方法已满额。任何"facade 缺方法"的发现 → 停步，按 northstar P2 三要素（提出人/覆盖缺口分析/合并可行性）走评审，严禁顺手加。
 - **cargo 机制约束**（northstar §4）：kernel-api 不得引入 product-full feature 传染；facade 不得 re-export kernel 内部泛型/derive 类型；T5 含 `cargo tree` 零命中守卫。
 - **P5 行为不变**：每片 `cargo check --workspace` + focused 测试全绿 + GUI 冒烟。
-- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature；desktop 对 `northhing-core` 的依赖在 T5 结束时应从 Cargo.toml 移除（w4_repro bin 例外——若 bin 与 lib 同 Cargo.toml 则保留 core 依赖但 `rg` 守卫豁免仅限 w4_repro.rs；可在 T5 评估把 w4_repro 移到 `[[bin]]` required-features 或独立 manifest，届时裁定）。
+- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① `main.rs` 的 `kernel_facade()` 手柄调用 + `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）。T5 grep 守卫按此豁免清单执行。
 - **并发改动带测试**（家规④）；god-file 防线：callbacks_lifecycle.rs 迁移时若超 800 行警戒，顺手拆分记 commit message（家规①）。
 - **UI 线程纪律**：事件订阅 callback 写 Slint 属性必须经 `slint::invoke_from_event_loop`（沿用 error_banners.rs 既有包装）。
 
