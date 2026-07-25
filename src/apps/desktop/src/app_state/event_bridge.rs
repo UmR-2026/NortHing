@@ -179,6 +179,20 @@ impl DesktopEventBridge {
     }
 }
 
+impl Drop for DesktopEventBridge {
+    fn drop(&mut self) {
+        let id = self.subscription_id.lock().ok().and_then(|mut g| g.take());
+        let Some(id) = id else { return; };
+        let facade = kernel_facade();
+        let unsub = async move { let _ = facade.unsubscribe_events(id).await; };
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(unsub);
+        } else if let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            rt.block_on(unsub);
+        }
+    }
+}
+
 /// Build the synthetic streaming assistant message item.
 fn slint_streaming_item(content: String) -> MessageItem {
     MessageItem {
@@ -237,5 +251,34 @@ pub(super) fn register_desktop_event_bridge(ui: &AppWindow, app_state: &Arc<AppS
                 "failed to subscribe to kernel events: {e}"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use northhing_kernel_api::events::SubscriptionId;
+    use std::sync::Arc;
+
+    /// Regression test: Drop must take the subscription_id exactly once.
+    /// If the id is already taken (e.g. a prior cleanup), Drop must not panic
+    /// and must not attempt a second unsubscribe.
+    #[test]
+    fn drop_takes_subscription_id_idempotently() {
+        let bridge = DesktopEventBridge {
+            ui: slint::Weak::default(),
+            app_state: Arc::new(AppState::new()),
+            draft: Mutex::new(String::new()),
+            last_flush: Mutex::new(std::time::Instant::now()),
+            subscription_id: Mutex::new(Some("999".to_string())),
+        };
+
+        // Simulate a first cleanup that takes the id.
+        let first = bridge.subscription_id.lock().unwrap().take();
+        assert!(first.is_some());
+
+        // Drop the bridge — Drop impl will try to take again, get None, and return early.
+        // This must not panic.
+        drop(bridge);
     }
 }
