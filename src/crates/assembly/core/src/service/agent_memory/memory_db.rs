@@ -352,7 +352,7 @@ impl MemoryDb {
             .map_err(|e| NortHingError::service(format!("Failed to prepare search: {}", e)))?
         };
 
-        let keyword_map = self.load_keyword_weights();
+        let keyword_map = Self::load_keyword_weights(&conn);
 
         let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, f64)>> =
             if let Some(ws) = workspace_key {
@@ -466,12 +466,7 @@ impl MemoryDb {
         Ok(results)
     }
 
-    fn load_keyword_weights(&self) -> std::collections::HashMap<String, f64> {
-        let conn = match self.conn.lock() {
-            Ok(c) => c,
-            Err(_) => return std::collections::HashMap::new(),
-        };
-
+    fn load_keyword_weights(conn: &Connection) -> std::collections::HashMap<String, f64> {
         let mut stmt = match conn.prepare("SELECT keyword, weight FROM keyword_weights") {
             Ok(s) => s,
             Err(_) => return std::collections::HashMap::new(),
@@ -517,7 +512,7 @@ impl MemoryDb {
             for r in related {
                 related_set.insert(r.clone());
             }
-            let new_weight = (weight + 0.5).min(5.0);
+            let new_weight = (weight + 1.0).min(5.0);
             let new_count = count + 1;
             let new_related = serde_json::to_string(&related_set).map_err(|e| {
                 NortHingError::serialization(e.to_string())
