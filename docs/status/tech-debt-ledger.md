@@ -68,9 +68,9 @@
 ### P2-1: CLI has no release artifact + doctor false positives
 
 - **Symptom**: Two `doctor` entry points (`acp_cli::print_doctor` + `management::print_doctor`). Checks may report false positives (checks process existence, not actual connectivity). No CLI binary release configuration in CI.
-- **Evidence**: `src/apps/cli/src/acp_cli.rs`, `src/apps/cli/src/management.rs`, `src/apps/cli/src/main.rs` — `Commands::Doctor` + `McpAction::Doctor`. No release workflow for CLI binary.
+- **Evidence**: `src/apps/cli/src/acp_cli.rs`, `src/apps/cli/src/management.rs`, `src/apps/cli/src/main.rs` — `Commands::Doctor` + `McpAction::Doctor`.
 - **Proposed fix**: (1) Unify doctor commands. (2) Add actual connection tests. (3) Add CLI binary to GitHub Release workflow.
-- **Status**: active (CLI is frozen surface)
+- **Status**: `partial` — release artifact resolved (`.github/workflows/cli-package.yml` exists with cross-platform matrix + SHA256 + GitHub Release upload). Doctor unification still active (2 entry points remain, no connection tests).
 
 ### P2-2: No single-instance lock — two app instances corrupt config
 
