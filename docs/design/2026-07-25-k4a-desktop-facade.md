@@ -70,7 +70,7 @@
 - **P2 零新增**：53 方法已满额。任何"facade 缺方法"的发现 → 停步，按 northstar P2 三要素（提出人/覆盖缺口分析/合并可行性）走评审，严禁顺手加。
 - **cargo 机制约束**（northstar §4）：kernel-api 不得引入 product-full feature 传染；facade 不得 re-export kernel 内部泛型/derive 类型；T5 含 `cargo tree` 零命中守卫。
 - **P5 行为不变**：每片 `cargo check --workspace` + focused 测试全绿 + GUI 冒烟。
-- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① `main.rs` 的 `kernel_facade()` 手柄调用 + `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）③ `actor.rs` 的 `set_actor_runtime` 注入 + `state.rs` 的 `coordinator()`（§12 缺口 5：TaskTool actor 注入路径，待 P2 评审决定是否开 facade 方法）。T5 grep 守卫按此豁免清单执行。
+- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① desktop 各模块的 `kernel_facade()` 手柄调用与导入（单一全局 handle，见 `src/crates/assembly/core/src/kernel_facade/mod.rs:37`）+ `main.rs` 的 `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）③ `actor.rs` 的 `set_actor_runtime` 注入 + `state.rs` 的 `coordinator()`（§12 缺口 5：TaskTool actor 注入路径，待 P2 评审决定是否开 facade 方法）。T5 grep 守卫按此豁免清单执行。
 - **并发改动带测试**（家规④）；god-file 防线：callbacks_lifecycle.rs 迁移时若超 800 行警戒，顺手拆分记 commit message（家规①）。
 - **UI 线程纪律**：事件订阅 callback 写 Slint 属性必须经 `slint::invoke_from_event_loop`（沿用 error_banners.rs 既有包装）。
 
@@ -129,7 +129,9 @@ facade 与旧路径在整个 K 线期间并存（northstar §5 K2 回退条款�
 | T23q DTO 补缺 ×5 | ✅ | `8a9b16e` | m3 PASS |
 | T23 turn+session 数据流 | ✅（R1 `95db64d` + R2 `d4c3520` 订阅生命周期/死 re-export） | m3 BLOCKED→R2 后 APPROVED 11/11 |
 | T4 settings/skills/mcp/inspector | ✅（`12a5615`，DTO 补 9 字段，实装 set_skill_enabled/load_skill_overrides 桩） | m3 APPROVED-WITH-FIXES |
-| T5 清扫验收 | ⬜ 唯一剩余 | — | — |
+| T5 清扫验收 | ✅（`6eb6209`：debug-log 微 crate + MCPServerDto.enabled + SkillScopeDto.mode_id + 守卫三件套） | m3 APPROVED-WITH-FIXES |
+
+**K4a 完工（2026-07-26）**。K0 编译收益实测（judge-m3 重测，真正 leaf = tool-contracts）：touch 后增量 `cargo check --workspace` = **3.40s ≪ 14.93s 目标（min(30s, K0×0.5)），编译收益超额达成**。desktop 残留 `northhing_core::` 21 行全部命中 §6 豁免清单（judge 逐行核对）。按 northstar §5 K3 ROI 闸门条款：**编译目标已在 K4a 达成，K3（kernel 下沉）符合"降级为有空再做"条件**，待用户/闸门正式裁定。
 
 **T5 待办清单**（除 §5 T5 行外，吸收 T4 三条 MINOR）：
 1. `contracts/debug-log` 微 crate + 8 文件 log_event/COMP_* 迁移 + `docs/status/surfaces.md` 同步（家规②）
