@@ -11,6 +11,20 @@ export component SkillsSettingsPanel inherits Rectangle {
     background: MaterialTheme.current-background();
 
     in property <[SkillStateItem]> skills: [];
+    // 2026-07-27 (K4a R3, Bug C, fix #5): the per-workspace
+    // override cycle button is only rendered when the Rust
+    // side has confirmed the facade can resolve per-workspace
+    // data. The pre-fix code unconditionally rendered the
+    // button with `workspace-override == ""` (the "follow
+    // global" state), which silently no-op'd the user's
+    // clicks — the click callback wrote to AppSettings but
+    // nothing in the data flow read from there, so the
+    // override never took effect. That's a UX trap: the
+    // button LOOKED clickable but the click was a dead
+    // end. The honest path: hide the column when the
+    // data source is unavailable, and let the user know
+    // via the per-row label.
+    in property <bool> workspace-override-supported: false;
     callback set-skill-global(string, bool);  // (skill_id, enabled)
     callback set-skill-workspace(string, string);  // (skill_id, override: "" | "on" | "off")
 
@@ -111,7 +125,14 @@ HorizontalLayout {
                         }
 
                         // Workspace override cycle button ("" → "on" → "off" → "").
-                        workspace-cycle := Rectangle {
+                        // Gated on `workspace-override-supported`: when
+                        // the Rust side has confirmed the facade can
+                        // resolve per-workspace data, render the
+                        // interactive cycle button; otherwise show
+                        // a passive "跟随全局" label so the column
+                        // width is consistent but the user cannot
+                        // click a button that would silently no-op.
+                        if root.workspace-override-supported: workspace-cycle := Rectangle {
                             width: 140px;
                             height: 36px;
                             padding: MaterialTheme.spacing-xs;
@@ -133,6 +154,25 @@ HorizontalLayout {
                                     }
                                 }
                             }
+
+                            Text {
+                                text: skill.workspace-override == "" ? "跟随全局"
+                                    : skill.workspace-override == "on" ? "本工作文件夹: 开"
+                                    : "本工作文件夹: 关";
+                                color: MaterialTheme.current-on-surface();
+                                font-size: MaterialTheme.font-size-caption;
+                                vertical-alignment: center;
+                                horizontal-alignment: center;
+                                width: parent.width;
+                            }
+                        }
+                        if !root.workspace-override-supported: workspace-cycle-disabled := Rectangle {
+                            width: 140px;
+                            height: 36px;
+                            padding: MaterialTheme.spacing-xs;
+                            background: MaterialTheme.current-surface();
+                            border-radius: 4px;
+                            opacity: 0.5;
 
                             Text {
                                 text: skill.workspace-override == "" ? "跟随全局"

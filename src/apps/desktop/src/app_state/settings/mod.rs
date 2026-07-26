@@ -103,6 +103,9 @@ impl AppSettings {
 
     /// Spec Q1=a: detect P0-B legacy seeded placeholders so the Settings UI
     /// can offer a one-click cleanup banner.
+    #[allow(dead_code)] // only used in tests at the moment; the Settings UI
+                        // re-detects legacy entries through `legacy_placeholder_count` (refreshed
+                        // in `callbacks_settings::refresh::refresh_settings_lists`).
     pub fn has_legacy_placeholders(&self) -> bool {
         self.providers.iter().any(|p| p.id.contains("-default") && !p.enabled)
     }
@@ -141,9 +144,11 @@ impl AppSettings {
     pub fn upsert_provider(&mut self, mut p: ProviderConfig) {
         if let Some(slot) = self.providers.iter_mut().find(|x| x.id == p.id) {
             *slot = p;
-        } else if let Some(slot) = self.providers.iter_mut().find(|x| {
-            x.name == p.name && x.base_url == p.base_url && x.api_key == p.api_key
-        }) {
+        } else if let Some(slot) = self
+            .providers
+            .iter_mut()
+            .find(|x| x.name == p.name && x.base_url == p.base_url && x.api_key == p.api_key)
+        {
             // Keep the original id to avoid breaking session references.
             let keep_id = slot.id.clone();
             p.id = keep_id;
@@ -207,6 +212,12 @@ impl AppSettings {
         Some(removed)
     }
 
+    // 2026-07-27 (K4a R3, Bug D): kept for future restore when the
+    // Settings > MCP panel's add/delete handlers are rewired back
+    // through `AppSettings.mcp_servers` (the current path goes
+    // through the kernel facade's MCP service — see
+    // `callbacks_settings::refresh::refresh_settings_lists`).
+    #[allow(dead_code)]
     pub fn upsert_mcp(&mut self, m: MCPServerConfig) {
         if let Some(slot) = self.mcp_servers.iter_mut().find(|x| x.id == m.id) {
             *slot = m;
@@ -215,6 +226,8 @@ impl AppSettings {
         }
     }
 
+    // 2026-07-27 (K4a R3, Bug D): see `upsert_mcp` above.
+    #[allow(dead_code)]
     pub fn remove_mcp(&mut self, id: &str) -> Option<MCPServerConfig> {
         let pos = self.mcp_servers.iter().position(|m| m.id == id)?;
         Some(self.mcp_servers.remove(pos))

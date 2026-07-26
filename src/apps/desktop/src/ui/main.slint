@@ -68,6 +68,11 @@ export component AppWindow inherits Window {
     in-out property <int> current-workspace-index: -1;
     in-out property <string> default-model-provider-id: "";
     in-out property <int> legacy-placeholder-count: 0;
+    // 2026-07-27 (K4a R3, Bug C, fix #5): per-workspace
+    // override column gate. Wired from
+    // `refresh_settings_lists` (see
+    // `app_state::callbacks_settings::refresh::refresh_settings_lists`).
+    in-out property <bool> workspace-override-supported: false;
 
     // 2026-06-26 (Phase 3): Settings sub-panel callbacks (wired to AppState methods).
     callback upsert-provider(string, string, string, string, string, string, bool);
@@ -183,6 +188,7 @@ export component AppWindow inherits Window {
         skills: root.skills-list;
         mcp-servers: root.mcp-servers-list;
         workspaces: root.workspaces-list;
+        workspace-override-supported: root.workspace-override-supported;
         current-workspace-index: root.current-workspace-index;
         default-model-provider-id: root.default-model-provider-id;
         legacy-placeholder-count: root.legacy-placeholder-count;

@@ -51,6 +51,19 @@ export component SettingsView inherits Rectangle {
     in property <int> legacy-placeholder-count: 0;
     in property <string> provider-test-result: "";
     in property <bool> provider-test-in-flight: false;
+    // 2026-07-27 (K4a R3, Bug C, fix #5): the per-workspace
+    // override column in `SkillsSettingsPanel` is only
+    // rendered when this flag is true. The flag is computed
+    // server-side (`refresh_settings_lists`) by probing
+    // `facade.load_project_skills()` — the current facade
+    // implementation is a stub that returns
+    // `KernelError::Internal("not yet wired:
+    // load_project_skills — workspace_path not available")`,
+    // so the flag is always false. When a future K4a
+    // follow-up exposes the per-workspace data source, the
+    // flag will flip true and the cycle button reappears
+    // automatically.
+    in property <bool> workspace-override-supported: false;
 
     HorizontalLayout {
         width: parent.width;
@@ -213,6 +226,7 @@ export component SettingsView inherits Rectangle {
                     width: parent.width;
                     height: parent.height;
                     skills: root.skills;
+                    workspace-override-supported: root.workspace-override-supported;
                     set-skill-global(id, en) => { root.set-skill-global(id, en); }
                     set-skill-workspace(id, ov) => { root.set-skill-workspace(id, ov); }
                 }
