@@ -49,6 +49,8 @@ export component SettingsView inherits Rectangle {
     in property <int> current-workspace-index: -1;
     in property <string> default-model-provider-id: "";
     in property <int> legacy-placeholder-count: 0;
+    in property <string> provider-test-result: "";
+    in property <bool> provider-test-in-flight: false;
 
     HorizontalLayout {
         width: parent.width;
@@ -199,6 +201,8 @@ export component SettingsView inherits Rectangle {
                     providers: root.providers;
                     default-model-provider-id: root.default-model-provider-id;
                     legacy-placeholder-count: root.legacy-placeholder-count;
+                    provider-test-result: root.provider-test-result;
+                    provider-test-in-flight: root.provider-test-in-flight;
                     upsert-provider(n, t, b, k, m, e, en) => { root.upsert-provider(n, t, b, k, m, e, en); }
                     delete-provider(id) => { root.delete-provider(id); }
                     test-provider(id) => { root.test-provider(id); }

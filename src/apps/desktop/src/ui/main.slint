@@ -186,7 +186,10 @@ export component AppWindow inherits Window {
         current-workspace-index: root.current-workspace-index;
         default-model-provider-id: root.default-model-provider-id;
         legacy-placeholder-count: root.legacy-placeholder-count;
+        provider-test-result: root.provider-test-result;
+        provider-test-in-flight: root.provider-test-in-flight;
         close-settings => { root.current-route = "main"; }
+
         upsert-provider(id, name, type, base-url, api-key, model, enabled)
             => { root.upsert-provider(id, name, type, base-url, api-key, model, enabled); }
         delete-provider(id) => { root.delete-provider(id); }

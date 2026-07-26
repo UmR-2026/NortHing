@@ -43,6 +43,8 @@ export component ProviderSettingsPanel inherits Rectangle {
 
     // Legacy placeholder cleanup (Q1=a)
     in property <int> legacy-placeholder-count: 0;
+    in property <string> provider-test-result: "";
+    in property <bool> provider-test-in-flight: false;
     in-out property <bool> legacy-banner-dismissed: false;
 
     // Callbacks fired when the Slint UI needs the Rust side to do work.
@@ -120,6 +122,12 @@ export component ProviderSettingsPanel inherits Rectangle {
                     clicked => { root.legacy-banner-dismissed = true; }
                 }
             }
+        }
+
+        if root.provider-test-in-flight || root.provider-test-result != "": Text {
+            text: root.provider-test-in-flight ? AppStrings.provider-test-in-flight : root.provider-test-result;
+            color: root.provider-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
+            font-size: MaterialTheme.font-size-caption;
         }
 
         // Provider list (Flickable for scroll).
