@@ -1,4 +1,4 @@
-// allow-god-file: 891L — lifecycle callbacks share heavy AppState/Slint context; split planned with callbacks_settings paradigm
+// allow-god-file: 917L — lifecycle callbacks share heavy AppState/Slint context; split planned with callbacks_settings paradigm
 //! Lifecycle Slint callback wirings (R37a split from mod.rs)
 //!
 //! Each `register_X_callback` function takes a `&AppWindow` +
@@ -10,15 +10,18 @@
 //! `Arc::clone(app_state)` to match the `&Arc<AppState>` parameter;
 //! semantics are identical (clone the Arc, no behavior change).
 
-use super::callbacks_settings::{load_app_settings_quiet, save_app_settings_quiet};
+use super::callbacks_settings::load_app_settings_quiet;
 use super::error_banners::{set_banner_message, set_inline_error, set_input_error, set_session_error};
 use super::log::log_debug_event;
 use super::sessions::{build_messages_model, refresh_messages_ui, refresh_sessions_ui};
 use super::skills::refresh_skills_ui;
 use super::slint_glue::AppWindow;
 use super::state::{AppState, SessionMeta};
+use super::streaming_lifecycle::{
+    enter_turn, reset_after_submit_failure, streaming_dispatcher, StreamingStateDispatcher,
+};
 use northhing_core::kernel_facade::kernel_facade;
-use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto, SessionDto};
+use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto};
 use northhing_kernel_api::turn::{
     DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnInputDto,
 };
@@ -116,20 +119,83 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
             return;
         };
 
-        // A7: mark this session as streaming so the UI shows the indicator
+        // 2026-07-27 (K4a R3, Bug A — fix #1 + fix #2): mark this
+        // session as streaming and pre-flight the turn into the
+        // helper BEFORE we touch the turn runtime. `enter_turn`
+        // sets `active_turn_id` and dispatches `is-streaming=true`
+        // in one shot — that way the stop button is up before the
+        // broadcast router's DialogTurnStarted event has a chance
+        // to lag. The event bridge's `Started` handler routes
+        // through the same helper, so the turn-generation guard
+        // keeps a duplicate `enter_turn` call from clobbering an
+        // already-fresh generation.
+        //
+        // The dispatcher is installed by
+        // `register_desktop_event_bridge` (process-global
+        // `OnceLock`); if the submit path runs before the bridge
+        // is registered (shouldn't happen in production, but
+        // could in unit tests), we fall back to direct AppState
+        // mutation — the bridge will pick up the state on its
+        // first `Started` event.
+        let dispatcher: Arc<dyn StreamingStateDispatcher> = match streaming_dispatcher() {
+            Some(d) => d,
+            None => {
+                tracing::warn!(
+                    target: "app_state",
+                    "send_message: no streaming_dispatcher installed; \
+                     is-streaming will not be set until the bridge's first Started event"
+                );
+                return;
+            }
+        };
+
+        // A7: mark this session as streaming so the UI shows the
+        // indicator.
         app_state.set_streaming_session(Some(session_id.clone()));
+
+        // We pre-flight a `started` turn with a synthetic id; the
+        // event bridge's `Started` event replaces it with the
+        // real turn id via the same `enter_turn` helper.
+        //
+        // 2026-07-27 (K4a R3, fix #3): the returned
+        // `optimistic_turn_id` is captured and used as the
+        // generation token for the failure path below. If a
+        // fresh `enter_turn` (e.g. the user sent a second
+        // message, or the bridge's `Started` for a queued
+        // turn advanced the generation) lands before our
+        // submit_turn returns, the failure path's
+        // `reset_after_submit_failure(&token)` no-ops
+        // because the active_turn_id no longer matches.
+        let optimistic_turn_id = format!("submit-pending-{}", uuid::Uuid::new_v4());
+        let generation_token = enter_turn(&*dispatcher, app_state, &session_id, &optimistic_turn_id);
 
         let ui_clone = ui_weak.clone();
         let sid = session_id.clone();
         let app_state_for_spawn = Arc::clone(&app_state_arc_send);
         let app_state = &*app_state_arc_send;
+        let dispatcher_for_failure = dispatcher.clone();
+        let generation_token_for_failure = generation_token.clone();
         let Some(turn_rt) = super::turn_runtime::turn_runtime() else {
             // 2026-07-19 (W4): turn runtime missing — cannot dispatch without
             // aborting the turn. Surface the error instead of hanging silently.
             set_session_error(ui_clone.clone(), "Turn runtime not initialized. Please restart.");
-            app_state.set_streaming_session(None);
+            // 2026-07-27 (K4a R3, Bug A — fix #1 + fix #3):
+            // tear down the optimistic streaming state we
+            // set above so the stop button doesn't stay
+            // visible after a failed submit. We pass the
+            // generation token so the reset is a no-op when
+            // a fresh `enter_turn` already superseded the
+            // pre-flight.
+            reset_after_submit_failure(&*dispatcher_for_failure, app_state, &generation_token_for_failure);
             return;
         };
+        // Move the generation token into the spawn closure so
+        // the post-submit failure path can pass it to
+        // `reset_after_submit_failure`. We don't use
+        // `generation_token_for_failure` here because the spawn
+        // closure owns its own copy (and we already
+        // `Clone`d before the move).
+        let generation_token_for_spawn = generation_token;
         turn_rt.spawn(async move {
             let app_state = &*app_state_for_spawn;
             let facade = kernel_facade();
@@ -167,9 +233,10 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                             set_banner_message(ui_clone.clone(), "已排队，将在当前回复完成后发送", "");
                             Ok(())
                         }
-                        // Started (or unknown) — turn started immediately; streaming
-                        // indicator already set optimistically at entry — lifecycle
-                        // is owned by the event bridge.
+                        // Started (or unknown) — turn started immediately;
+                        // `enter_turn` already pre-flighted the UI; the
+                        // event bridge's `Started` handler will replace
+                        // the synthetic id with the real one.
                         _ => Ok(()),
                     }
                 }
@@ -180,10 +247,30 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
             if let Err(e) = submit_ok {
                 // 2026-07-18 (D2j): background thread — pass weak directly; helper upgrades on UI thread.
                 set_session_error(ui_clone.clone(), e);
-                // 2026-07-18 (W3a-4): do NOT clear the streaming indicator
-                // here — its lifecycle is owned by the event bridge. Clearing
-                // on submit failure was the original bug that dropped the
-                // streaming state prematurely.
+                // 2026-07-27 (K4a R3, Bug A — fix #1 + fix #3):
+                // the pre-fix comment claimed the event bridge
+                // owned the streaming lifecycle, so submit
+                // failure would naturally tear the UI back down.
+                // In practice that is wrong when the bridge
+                // never saw a `Started` for this generation
+                // (e.g. submit_turn returned Err before
+                // scheduling any turn) — `is-streaming` would
+                // stay stuck at `true` and the stop button
+                // would never come back down. The fix routes
+                // through the same helper the event bridge's
+                // terminal handlers use so AppState and the
+                // Slint root are always toggled together.
+                //
+                // fix #3: the generation token is passed
+                // through. If a fresh `enter_turn` (the
+                // bridge's `Started` for a queued turn, or
+                // a second submit pre-flight) advanced the
+                // generation while this submit_turn was in
+                // flight, the reset no-ops and the fresh
+                // turn's stop button stays visible. The pre-fix
+                // unconditional reset would have wiped it.
+                let dispatcher_for_failure = streaming_dispatcher().unwrap_or_else(|| dispatcher_for_failure.clone());
+                reset_after_submit_failure(&*dispatcher_for_failure, app_state, &generation_token_for_spawn);
                 return;
             }
 

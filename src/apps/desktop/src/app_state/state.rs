@@ -161,6 +161,44 @@ impl AppState {
         self.active_turn_id.lock().clone()
     }
 
+    /// 2026-07-27 (K4a R3, fix #2): atomic compare-and-clear of the
+    /// `active_turn_id`. Returns `true` when the field was
+    /// atomically set to `None` BECAUSE the current value
+    /// matched `expected_turn_id`; `false` when the field held
+    /// some other value (e.g. a fresh `enter_turn` already
+    /// superseded this generation, or the field was already
+    /// `None`).
+    ///
+    /// This is the missing primitive for the turn-generation
+    /// guards in `streaming_lifecycle::clear_turn` and
+    /// `streaming_lifecycle::enter_failed`. The pre-fix
+    /// sequence
+    ///     let cur = app_state.get_active_turn_id();
+    ///     // <-- enter_turn may write here -->
+    ///     if cur == expected { app_state.set_active_turn_id(None); }
+    /// is racy: a concurrent `enter_turn` (e.g. the bridge
+    /// firing `Started` for turn-2 while the submit-failure
+    /// path tries to clear turn-1) can interleave between the
+    /// get and the set, so we end up clearing a fresh
+    /// generation's state.
+    ///
+    /// The lock is held across the compare AND the clear, so
+    /// `enter_turn`'s subsequent write is serialized behind the
+    /// call (and vice-versa). Returns `true` only when the
+    /// observed value at the moment of the compare was
+    /// `Some(expected_turn_id)` — exactly the contract callers
+    /// need to decide whether to dispatch `set_is_streaming(false)`.
+    pub fn compare_and_clear_active_turn_id(&self, expected_turn_id: &str) -> bool {
+        let mut guard = self.active_turn_id.lock();
+        match guard.as_ref() {
+            Some(current) if current == expected_turn_id => {
+                *guard = None;
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// 2026-06-26 (Phase 5): record session metadata when a session
     /// is created. Used by `validate_session_integrity` in the live
     /// wire-up to detect Q6/Q7. Called from `on_new_session` after
