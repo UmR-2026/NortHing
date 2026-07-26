@@ -182,9 +182,13 @@ impl DesktopEventBridge {
 impl Drop for DesktopEventBridge {
     fn drop(&mut self) {
         let id = self.subscription_id.lock().ok().and_then(|mut g| g.take());
-        let Some(id) = id else { return; };
+        let Some(id) = id else {
+            return;
+        };
         let facade = kernel_facade();
-        let unsub = async move { let _ = facade.unsubscribe_events(id).await; };
+        let unsub = async move {
+            let _ = facade.unsubscribe_events(id).await;
+        };
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             handle.spawn(unsub);
         } else if let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() {
@@ -259,6 +263,31 @@ mod tests {
     use super::*;
     use northhing_kernel_api::events::SubscriptionId;
     use std::sync::Arc;
+
+    #[test]
+    fn started_event_tracks_active_turn_for_stop_path() {
+        let app_state = Arc::new(AppState::new());
+        app_state.set_current_session_id("session-1".to_string());
+        let bridge = DesktopEventBridge {
+            ui: slint::Weak::default(),
+            app_state: Arc::clone(&app_state),
+            draft: Mutex::new(String::new()),
+            last_flush: Mutex::new(std::time::Instant::now()),
+            subscription_id: Mutex::new(None),
+        };
+
+        bridge.handle_event(&KernelEventDto::TurnState {
+            session_id: "session-1".to_string(),
+            turn_id: "turn-1".to_string(),
+            state: TurnStateKind::Started,
+            duration_ms: None,
+            error: None,
+            error_kind: None,
+        });
+
+        assert_eq!(app_state.get_active_turn_id().as_deref(), Some("turn-1"));
+        assert_eq!(app_state.get_streaming_session().as_deref(), Some("session-1"));
+    }
 
     /// Regression test: Drop must take the subscription_id exactly once.
     /// If the id is already taken (e.g. a prior cleanup), Drop must not panic

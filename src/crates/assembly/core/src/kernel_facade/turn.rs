@@ -1,7 +1,5 @@
 //! KernelTurnApi implementation.
 
-use std::path::Path;
-
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::turn::{DialogSubmitOutcomeDto, TurnId, TurnInputDto, TurnStateDto};
@@ -10,35 +8,34 @@ use crate::agentic::coordination::global_scheduler;
 use crate::agentic::coordination::DialogSubmissionPolicy;
 use crate::agentic::coordination::DialogTriggerSource;
 
+fn session_owns_turn(dialog_turn_ids: &[String], turn_id: &str) -> bool {
+    dialog_turn_ids.iter().any(|id| id == turn_id)
+}
+
 impl super::KernelFacade {
-    /// Best-effort lookup of the session that owns a given turn. Scans the
-    /// in-memory session list for a session whose `dialog_turn_ids` contains
-    /// the target turn id.
+    /// Best-effort lookup of the session that owns a given turn. The in-memory
+    /// session map is authoritative for both active and queued scheduler turns.
     async fn find_session_for_turn(&self, turn_id: &str) -> Option<String> {
-        // The coordinator does not expose a turn→session index, so we scan
-        // by listing all sessions and checking dialog_turn_ids on each.
-        let coordinator = match self.coordinator() {
-            Ok(c) => c,
-            Err(_) => return None,
-        };
-        let workspace = crate::kernel_facade::helpers::default_workspace_path();
-        let Ok(summaries) = coordinator
-            .list_sessions(Path::new(&workspace))
-            .await
-        else {
-            return None;
-        };
-        for summary in summaries {
-            if let Some(session) = coordinator
-                .session_manager()
-                .get_session(&summary.session_id)
-            {
-                if session.dialog_turn_ids.iter().any(|t| t == turn_id) {
-                    return Some(session.session_id);
-                }
-            }
-        }
-        None
+        let coordinator = self.coordinator().ok()?;
+        coordinator
+            .session_manager()
+            .sessions
+            .iter()
+            .find(|session| session_owns_turn(&session.dialog_turn_ids, turn_id))
+            .map(|session| session.session_id.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::session_owns_turn;
+
+    #[test]
+    fn turn_lookup_matches_active_and_queued_turn_ids() {
+        let ids = vec!["active-turn".to_string(), "queued-turn".to_string()];
+        assert!(session_owns_turn(&ids, "active-turn"));
+        assert!(session_owns_turn(&ids, "queued-turn"));
+        assert!(!session_owns_turn(&ids, "other-turn"));
     }
 }
 
@@ -49,9 +46,8 @@ impl northhing_kernel_api::KernelTurnApi for super::KernelFacade {
         // 1. input.workspace_path (explicit, from caller)
         // 2. resolve_session_workspace_path (session record; needed for scheduler restore)
         // 3. default_workspace_path (last resort)
-        let scheduler = global_scheduler().ok_or_else(|| {
-            KernelError::Runtime("global scheduler not available — init_core not called".to_string())
-        })?;
+        let scheduler = global_scheduler()
+            .ok_or_else(|| KernelError::Runtime("global scheduler not available — init_core not called".to_string()))?;
         let workspace = if let Some(ref wp) = input.workspace_path {
             wp.clone()
         } else {
@@ -117,9 +113,7 @@ impl northhing_kernel_api::KernelTurnApi for super::KernelFacade {
             .dialog_turn_ids
             .iter()
             .position(|t| t == turn_id)
-            .ok_or_else(|| {
-                KernelError::NotFound(format!("turn not found in session: {turn_id}"))
-            })?;
+            .ok_or_else(|| KernelError::NotFound(format!("turn not found in session: {turn_id}")))?;
         let turn = self
             .coordinator()?
             .session_manager()
@@ -127,9 +121,7 @@ impl northhing_kernel_api::KernelTurnApi for super::KernelFacade {
             .load_dialog_turn(&workspace, &session_id, turn_index)
             .await
             .map_err(|e| KernelError::Runtime(format!("load_dialog_turn failed: {e}")))?
-            .ok_or_else(|| {
-                KernelError::NotFound(format!("turn not found in storage: {turn_id}"))
-            })?;
+            .ok_or_else(|| KernelError::NotFound(format!("turn not found in storage: {turn_id}")))?;
         Ok(TurnStateDto {
             state: crate::kernel_facade::dto::turn_status_to_kind(&turn.status),
             duration_ms: turn.duration_ms,
