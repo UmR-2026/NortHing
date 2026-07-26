@@ -21,6 +21,7 @@ export const crateLayoutRules = [
   { crateName: 'services-core', layer: 'services', path: 'src/crates/services/services-core' },
   { crateName: 'services-integrations', layer: 'services', path: 'src/crates/services/services-integrations' },
   { crateName: 'terminal', layer: 'services', path: 'src/crates/services/terminal' },
+  { crateName: 'debug-log', layer: 'services', path: 'src/crates/services/debug-log' },
 
   { crateName: 'acp', layer: 'interfaces', path: 'src/crates/interfaces/acp' },
   { crateName: 'ai-adapters', layer: 'adapters', path: 'src/crates/adapters/ai-adapters' },
