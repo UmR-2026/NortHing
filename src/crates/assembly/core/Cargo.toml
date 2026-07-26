@@ -105,6 +105,9 @@ northhing-services-core = { path = "../../services/services-core" }
 # Integration service owner crate
 northhing-services-integrations = { path = "../../services/services-integrations", default-features = false, features = ["remote-ssh"] }
 
+# Debug-mode runtime logging leaf crate (K4a-T5: log_event + COMP_* constants)
+northhing-debug-log = { path = "../../services/debug-log", optional = true }
+
 # Product domain owner crate
 northhing-product-domains = { path = "../../contracts/product-domains", default-features = false, optional = true }
 
@@ -189,6 +192,7 @@ product-full = [
     "dep:include_dir",
     "dep:indexmap",
     "dep:md5",
+    "dep:northhing-debug-log",
     "dep:similar",
     "dep:tool-runtime",
     "ssh-remote",

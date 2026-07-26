@@ -281,6 +281,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                     crate::service::mcp::config::ConfigLocation::Project => ConfigLocationDto::Project,
                     crate::service::mcp::config::ConfigLocation::BuiltIn => ConfigLocationDto::BuiltIn,
                 },
+                enabled: Some(c.enabled),
             })
             .collect())
     }
@@ -311,7 +312,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
             headers: Default::default(),
             url: None,
             auto_start: true,
-            enabled: true,
+            enabled: config.enabled.unwrap_or(true),
             location,
             capabilities: vec![],
             settings: Default::default(),

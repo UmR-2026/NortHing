@@ -41,7 +41,7 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
         // 80 chars in the data field to keep log lines scannable.
         let truncated: String = text_str.chars().take(80).collect();
         log_debug_event(
-            northhing_core::infrastructure::debug_log::COMP_MODE_ROUTING,
+            northhing_debug_log::COMP_MODE_ROUTING,
             "app_state::on_send_message:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user submitted text",
@@ -81,7 +81,7 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
                     // structured log + telemetry emit; the point is
                     // to prove the runtime path runs in production.
                     log_debug_event(
-                        northhing_core::infrastructure::debug_log::COMP_ACTOR_RUNTIME,
+                        northhing_debug_log::COMP_ACTOR_RUNTIME,
                         "actor::dispatch:tick",
                         &mode,
                         "one-shot dispatch actor ticked",
@@ -229,7 +229,7 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
         // coordinator.create_session — this log line only carries the
         // timestamp + mode so we can correlate with later events.
         log_debug_event(
-            northhing_core::infrastructure::debug_log::COMP_SESSION_LIFECYCLE,
+            northhing_debug_log::COMP_SESSION_LIFECYCLE,
             "app_state::on_new_session:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user clicked + (new session)",
@@ -332,7 +332,7 @@ pub(super) fn register_switch_session_callback(ui: &AppWindow, app_state: &Arc<A
     ui.on_switch_session(move |session_id| {
         let sid_str = session_id.to_string();
         log_debug_event(
-            northhing_core::infrastructure::debug_log::COMP_SESSION_LIFECYCLE,
+            northhing_debug_log::COMP_SESSION_LIFECYCLE,
             "app_state::on_switch_session:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user clicked sidebar session",
@@ -375,7 +375,7 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
     ui.on_delete_session(move |session_id| {
         let sid_str = session_id.to_string();
         log_debug_event(
-            northhing_core::infrastructure::debug_log::COMP_SESSION_LIFECYCLE,
+            northhing_debug_log::COMP_SESSION_LIFECYCLE,
             "app_state::on_delete_session:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user deleted session",
@@ -482,7 +482,7 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
     ui.on_toggle_skill(move |skill_name| {
         let skill_name_str = skill_name.to_string();
         log_debug_event(
-            northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
+            northhing_debug_log::COMP_SKILL_PANEL,
             "app_state::on_toggle_skill:enter",
             crate::flags::DEFAULT_MODE_ID,
             "user toggled skill",
@@ -513,7 +513,7 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                     Err(_) => {
                         // Phase I.6: structured log instead of eprintln.
                         log_debug_event(
-                            northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
+                            northhing_debug_log::COMP_SKILL_PANEL,
                             "app_state::on_toggle_skill:not_found",
                             crate::flags::DEFAULT_MODE_ID,
                             "skill not found",
@@ -537,11 +537,12 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                 let scope = northhing_kernel_api::agents::SkillScopeDto {
                     scope_type: "user".to_string(),
                     workspace_path: None,
+                    mode_id: Some(crate::flags::DEFAULT_MODE_ID.to_string()),
                 };
                 if let Err(e) = facade.set_skill_enabled(&skill_name_str, scope, new_enabled).await {
                     // Phase I.6: structured log instead of eprintln.
                     log_debug_event(
-                        northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
+                        northhing_debug_log::COMP_SKILL_PANEL,
                         "app_state::on_toggle_skill:error",
                         crate::flags::DEFAULT_MODE_ID,
                         "set_user_mode_skill_state failed",
@@ -569,7 +570,7 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
                 // tests can grep the toggle outcome. `new_enabled`
                 // already reflects the post-toggle state.
                 log_debug_event(
-                    northhing_core::infrastructure::debug_log::COMP_SKILL_PANEL,
+                    northhing_debug_log::COMP_SKILL_PANEL,
                     "app_state::on_toggle_skill:result",
                     crate::flags::DEFAULT_MODE_ID,
                     "skill toggle persisted",

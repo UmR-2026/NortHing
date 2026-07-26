@@ -1,6 +1,6 @@
 //! log module — see mod.rs for the wiring entry point.
 
-use northhing_core::infrastructure::debug_log::log_event;
+use northhing_debug_log::log_event;
 use std::sync::OnceLock;
 use tokio::sync::mpsc;
 
@@ -58,7 +58,7 @@ fn ensure_log_consumer() {
 
 /// Phase H (2026-06-20): fire-and-forget debug-log helper.
 ///
-/// Wraps `northhing_core::infrastructure::debug_log::log_event` via an
+/// Wraps `northhing_debug_log::log_event` via an
 /// `mpsc::unbounded_channel` so the sync Slint callbacks can record
 /// structured events without blocking.  Errors are swallowed (the
 /// underlying `log_event` is also non-blocking and silent on failure)

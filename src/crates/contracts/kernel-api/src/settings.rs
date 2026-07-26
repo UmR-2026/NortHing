@@ -92,6 +92,11 @@ pub struct MCPServerDto {
     pub name: String,
     pub config: MCPServerConfigDto,
     pub location: ConfigLocationDto,
+    /// Config-level enabled flag (K4a-T5 MINOR①). Lets consumers read the
+    /// real enabled state instead of reverse-inferring it from a runtime
+    /// `Disabled` status. `None` = unknown/unset → treat as enabled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

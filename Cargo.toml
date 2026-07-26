@@ -12,6 +12,7 @@ members = [
     "src/crates/services/services-core",
     "src/crates/services/services-integrations",
     "src/crates/services/terminal",
+    "src/crates/services/debug-log",
     "src/crates/assembly/product-capabilities",
     "src/crates/contracts/product-domains",
     "src/crates/execution/agent-dispatch",

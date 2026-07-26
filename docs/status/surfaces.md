@@ -41,6 +41,7 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `services-core` | `src/crates/services/services-core` | Core services |
 | `services-integrations` | `src/crates/services/services-integrations` | Integration services |
 | `terminal` | `src/crates/services/terminal` | Terminal service |
+| `debug-log` | `src/crates/services/debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` constants); shared by desktop and core, re-exported from core (K4a-T5) |
 | `ai-adapters` | `src/crates/adapters/ai-adapters` | AI provider adapters |
 | `webdriver` | `src/crates/adapters/webdriver` | WebDriver adapter |
 | `kernel-api` | `src/crates/contracts/kernel-api` | Kernel facade contracts — product surfaces reach core only through this facade (K1) |

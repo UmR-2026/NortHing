@@ -82,7 +82,7 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
         use crate::agentic::tools::implementations::skills::resolver::resolve_skill_default_enabled_for_mode;
         use crate::agentic::tools::implementations::skills::skill_registry;
 
-        let mode_id = "agentic";
+        let mode_id = scope.mode_id.as_deref().unwrap_or("agentic");
         match scope.scope_type.as_str() {
             "user" => {
                 let registry = skill_registry();

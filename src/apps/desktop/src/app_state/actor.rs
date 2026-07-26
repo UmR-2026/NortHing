@@ -66,7 +66,7 @@ pub(super) fn maybe_construct_actor_runtime(app_state: &AppState, ui: &AppWindow
             // Phase H (actor_runtime component): record the heartbeat
             // so manual tests can confirm the runtime is alive.
             log_debug_event(
-                northhing_core::infrastructure::debug_log::COMP_ACTOR_RUNTIME,
+                northhing_debug_log::COMP_ACTOR_RUNTIME,
                 "actor::heartbeat:tick",
                 crate::flags::DEFAULT_MODE_ID,
                 "heartbeat actor tick",
@@ -106,7 +106,7 @@ pub(super) fn maybe_construct_actor_runtime(app_state: &AppState, ui: &AppWindow
 
     // Phase H: log the activation so manual tests can grep for it.
     log_debug_event(
-        northhing_core::infrastructure::debug_log::COMP_ACTOR_RUNTIME,
+        northhing_debug_log::COMP_ACTOR_RUNTIME,
         "actor::runtime:activated",
         crate::flags::DEFAULT_MODE_ID,
         "ActorRuntime constructed at app boot",

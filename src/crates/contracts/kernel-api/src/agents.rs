@@ -43,6 +43,11 @@ pub struct SkillScopeDto {
     pub scope_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_path: Option<String>,
+    /// Agent mode the skill state applies to (K4a-T5 MINOR②). `None`
+    /// falls back to the default mode (`"agentic"`) at the implementation,
+    /// preserving the pre-existing hardcoded behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode_id: Option<String>,
 }
 
 /// Skill info DTO (includes mode field from #40 ModeSkillInfo folding).

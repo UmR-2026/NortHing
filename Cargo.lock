@@ -5743,6 +5743,7 @@ dependencies = [
  "futures",
  "northhing-agent-dispatch",
  "northhing-core",
+ "northhing-debug-log",
  "northhing-events",
  "northhing-kernel-api",
  "northhing-runtime-ports",
@@ -5956,6 +5957,7 @@ dependencies = [
  "northhing-agent-tools",
  "northhing-ai-adapters",
  "northhing-core-types",
+ "northhing-debug-log",
  "northhing-events",
  "northhing-harness",
  "northhing-kernel-api",
@@ -6009,6 +6011,18 @@ version = "0.2.10"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "northhing-debug-log"
+version = "0.2.10"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

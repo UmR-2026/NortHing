@@ -56,8 +56,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
         match rt {
             Ok(rt) => {
                 rt.block_on(async move {
-                    northhing_core::infrastructure::debug_log::log_event(
-                        northhing_core::infrastructure::debug_log::COMP_APP_LIFECYCLE,
+                    northhing_debug_log::log_event(
+                        northhing_debug_log::COMP_APP_LIFECYCLE,
                         crate::flags::DEFAULT_MODE_ID,
                         "app_state::create_ui:enter",
                         "desktop shell entering create_ui",

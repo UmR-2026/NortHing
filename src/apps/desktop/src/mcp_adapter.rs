@@ -60,6 +60,14 @@ fn map_status(kind: &MCPServerStatusKind) -> McpServerStatusDto {
     }
 }
 
+/// Resolve the catalog `enabled` flag from the facade config DTO
+/// (K4a-T5 MINOR①). Reads the real config-level enabled instead of
+/// reverse-inferring it from a runtime `Disabled` status; `None` keeps
+/// the pre-existing default (enabled) for backward compatibility.
+fn resolve_enabled(config: &northhing_kernel_api::settings::MCPServerDto) -> bool {
+    config.enabled.unwrap_or(true)
+}
+
 #[async_trait::async_trait]
 impl McpCatalogReader for McpCatalogAdapter {
     async fn list_servers(&self) -> Result<Vec<McpServerDto>, McpCatalogError> {
@@ -83,7 +91,7 @@ impl McpCatalogReader for McpCatalogAdapter {
                     message: "status probe failed".into(),
                 },
             };
-            let enabled = !matches!(status, McpServerStatusDto::Disabled);
+            let enabled = resolve_enabled(config);
             servers.push(McpServerDto {
                 id: config.id.clone(),
                 name: config.name.clone(),
@@ -157,6 +165,27 @@ mod tests {
             map_status(&MCPServerStatusKind::ProbeTimeout),
             McpServerStatusDto::ProbeTimeout
         );
+    }
+
+    #[test]
+    fn resolve_enabled_reads_config_field() {
+        use northhing_kernel_api::settings::{ConfigLocationDto, MCPServerConfigDto};
+
+        let mk = |enabled: Option<bool>| northhing_kernel_api::settings::MCPServerDto {
+            id: "a".into(),
+            name: "a".into(),
+            config: MCPServerConfigDto {
+                command: "cmd".into(),
+                args: vec![],
+                env: None,
+            },
+            location: ConfigLocationDto::User,
+            enabled,
+        };
+
+        assert!(resolve_enabled(&mk(None)), "None defaults to enabled (backward compat)");
+        assert!(resolve_enabled(&mk(Some(true))));
+        assert!(!resolve_enabled(&mk(Some(false))), "config-level disabled is honored");
     }
 
     #[test]
