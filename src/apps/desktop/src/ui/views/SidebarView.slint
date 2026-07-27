@@ -1,6 +1,7 @@
 // Sidebar View - Sessions and file tree (Phase 4 enhanced)
 
-import { MaterialTheme, SessionItem, WorkspaceItem } from "../theme.slint";
+import { SessionItem, WorkspaceItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialListItem } from "../components/MaterialList.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
@@ -62,7 +63,7 @@ export component SidebarView inherits Rectangle {
     callback clear-session-error();
     callback clear-input-error();
 
-    background: MaterialTheme.current-surface();
+    background: RedesignTheme.t.surface;
 
     // Phase 4: workspace switcher overlay (D4=b). Renders on top of
     // the sidebar when the user clicks the workspace pill at the top.
@@ -74,25 +75,25 @@ export component SidebarView inherits Rectangle {
         background: #00000060;
 
         Rectangle {
-            x: MaterialTheme.spacing-md;
+            x: RedesignTheme.t.s4;
             y: 56px;
-            width: parent.width - 2 * MaterialTheme.spacing-md;
+            width: parent.width - 2 * RedesignTheme.t.s4;
             height: 200px;
-            background: MaterialTheme.current-surface();
-            border-radius: 8px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.surface;
+            border-radius: RedesignTheme.t.r-md;
+            padding: RedesignTheme.t.s2;
 
             VerticalLayout {
                 width: parent.width;
                 height: parent.height;
-                spacing: MaterialTheme.spacing-xs;
+                spacing: RedesignTheme.t.s1;
 
                 Text {
                     text: "切换工作文件夹";
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.6;
-                    padding: MaterialTheme.spacing-sm;
+                    padding: RedesignTheme.t.s2;
                 }
 
                 Flickable {
@@ -101,16 +102,16 @@ export component SidebarView inherits Rectangle {
                     viewport-height: 160px;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         width: parent.width;
 
                         for ws in workspaces: Rectangle {
                             width: parent.width;
                             height: 36px;
-                            padding: MaterialTheme.spacing-sm;
+                            padding: RedesignTheme.t.s2;
                             background: ws.path == root.current-workspace-path
-                                ? MaterialTheme.current-primary().with-alpha(0.18)
-                                : MaterialTheme.current-surface();
+                                ? RedesignTheme.t.rep-500.with-alpha(0.18)
+                                : RedesignTheme.t.surface;
 
                             TouchArea {
                                 width: parent.width;
@@ -124,8 +125,8 @@ export component SidebarView inherits Rectangle {
                             Text {
                                 text: (ws.display-name == "" ? ws.path : ws.display-name)
                                     + (ws.is-current ? " ✓" : "");
-                                font-size: MaterialTheme.font-size-body;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
                                 vertical-alignment: center;
                                 width: parent.width;
                             }
@@ -148,18 +149,18 @@ export component SidebarView inherits Rectangle {
         background: #00000060;
 
         Rectangle {
-            x: MaterialTheme.spacing-md;
+            x: RedesignTheme.t.s4;
             y: 56px;
-            width: parent.width - 2 * MaterialTheme.spacing-md;
+            width: parent.width - 2 * RedesignTheme.t.s4;
             height: 120px;
-            background: MaterialTheme.current-surface();
-            border-radius: 8px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.surface;
+            border-radius: RedesignTheme.t.r-md;
+            padding: RedesignTheme.t.s2;
 
             VerticalLayout {
                 width: parent.width;
                 height: parent.height;
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
 
                 MaterialTextField {
                     placeholder: AppStrings.session-rename-placeholder;
@@ -168,7 +169,7 @@ export component SidebarView inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     height: 40px;
 
                     MaterialButton {
@@ -192,25 +193,25 @@ export component SidebarView inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: MaterialTheme.spacing-md;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s4;
+        spacing: RedesignTheme.t.s4;
 
         // P0-C: error banner. Renders only when session-error or
         // input-error is non-empty. The Rust side auto-clears after 5s;
         // the × button also clears immediately.
         if root.session-error != "" || root.input-error != "" : Rectangle {
             height: 56px;
-            background: MaterialTheme.dark-mode ? #CF6679 : #B00020;
-            border-radius: 4px;
+            background: RedesignTheme.t.danger;
+            border-radius: RedesignTheme.t.r-sm;
 
             HorizontalLayout {
-                padding: MaterialTheme.spacing-sm;
-                spacing: MaterialTheme.spacing-sm;
+                padding: RedesignTheme.t.s2;
+                spacing: RedesignTheme.t.s2;
 
                 Text {
                     text: root.session-error != "" ? root.session-error : root.input-error;
-                    color: MaterialTheme.dark-mode ? #000000 : #FFFFFF;
-                    font-size: MaterialTheme.font-size-caption;
+                    color: RedesignTheme.t.on-danger;
+                    font-size: RedesignTheme.t.fs-md;
                     wrap: word-wrap;
                     vertical-alignment: center;
                     horizontal-alignment: left;
@@ -239,9 +240,9 @@ export component SidebarView inherits Rectangle {
         if root.workspaces.length > 0: Rectangle {
             width: parent.width;
             height: 36px;
-            background: MaterialTheme.current-primary().with-alpha(0.12);
-            border-radius: 4px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.rep-500.with-alpha(0.12);
+            border-radius: RedesignTheme.t.r-sm;
+            padding: RedesignTheme.t.s2;
 
             TouchArea {
                 width: parent.width;
@@ -250,7 +251,7 @@ export component SidebarView inherits Rectangle {
             }
 
             HorizontalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 Text {
@@ -260,8 +261,8 @@ export component SidebarView inherits Rectangle {
                     // Slint 1.16 doesn't have a "current workspace" lookup
                     // — display the path; when only 1 workspace exists
                     // and none is "current", show the hint.
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.fg;
                     vertical-alignment: center;
                     width: parent.width - 24px;
                     overflow: elide;
@@ -269,8 +270,8 @@ export component SidebarView inherits Rectangle {
 
                 Text {
                     text: root.workspace-popup-open ? "▲" : "▼";
-                    color: MaterialTheme.current-on-surface();
-                    font-size: MaterialTheme.font-size-caption;
+                    color: RedesignTheme.t.fg;
+                    font-size: RedesignTheme.t.fs-md;
                     vertical-alignment: center;
                 }
             }
@@ -283,8 +284,8 @@ export component SidebarView inherits Rectangle {
 
             Text {
                 text: "Sessions";
-                font-size: MaterialTheme.font-size-title;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-lg;
+                color: RedesignTheme.t.fg;
                 font-weight: 600;
                 vertical-alignment: center;
             }
@@ -301,7 +302,7 @@ export component SidebarView inherits Rectangle {
         // the `toggle-show-subagents` callback bound from main.slint.
         if root.tree-view: HorizontalLayout {
             height: 28px;
-            spacing: MaterialTheme.spacing-xs;
+            spacing: RedesignTheme.t.s1;
 
             CheckBox {
                 checked: root.show-subagents;
@@ -310,8 +311,8 @@ export component SidebarView inherits Rectangle {
 
             Text {
                 text: "Show subagents";
-                font-size: MaterialTheme.font-size-caption;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-md;
+                color: RedesignTheme.t.fg;
                 opacity: 0.75;
             }
         }
@@ -322,14 +323,14 @@ export component SidebarView inherits Rectangle {
         // P0-C added the banner term; without it the list overflows when an
         // error is visible.
         Rectangle {
-            height: root.height - 80px - 48px - (root.tree-view ? 28px : 0px) - MaterialTheme.spacing-md * 2 - (root.session-error != "" || root.input-error != "" ? 56px + MaterialTheme.spacing-md : 0px);
+            height: root.height - 80px - 48px - (root.tree-view ? 28px : 0px) - RedesignTheme.t.s4 * 2 - (root.session-error != "" || root.input-error != "" ? 56px + RedesignTheme.t.s4 : 0px);
 
             Flickable {
                 width: parent.width;
                 height: parent.height;
 
                 VerticalLayout {
-                    spacing: MaterialTheme.spacing-xs;
+                    spacing: RedesignTheme.t.s1;
 
                     // Flat branch — byte-identical to pre-C.2 rendering.
                     // Active when `tree-view == false`. Selecting this
@@ -339,16 +340,16 @@ export component SidebarView inherits Rectangle {
                     // Uses root.width (not parent.width) to avoid a binding loop
                     // inside the HorizontalLayout — same pattern as the tree branch.
                     if !root.tree-view: VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         for session in sessions: HorizontalLayout {
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
                             visible: root.current-workspace-path == "" || session.workspace-path == root.current-workspace-path;
 
                             MaterialListItem {
                                 text: session.name + (session.is-workspace-broken ? " ⚠" : "");
                                 secondary-text: session.timestamp;
                                 selected: session.id == current-session-id;
-                                width: root.width - 80px - MaterialTheme.spacing-md * 2;
+                                width: root.width - 80px - RedesignTheme.t.s4 * 2;
 
                                 clicked => { root.switch-session(session.id); }
                             }
@@ -380,7 +381,7 @@ export component SidebarView inherits Rectangle {
                     // 2026-07-18 (D2b): tree branch keeps depth indent and
                     // adds ✎ / × buttons after each MaterialListItem.
                     if root.tree-view: VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         for session in sessions: HorizontalLayout {
                             spacing: 0px;
                             visible: root.current-workspace-path == "" || session.workspace-path == root.current-workspace-path;
@@ -401,14 +402,14 @@ export component SidebarView inherits Rectangle {
                             // the MaterialListItem + ✎ / × buttons. Uses
                             // root.width (not parent.width) to avoid a binding loop.
                             if root.show-subagents || session.depth == 0: HorizontalLayout {
-                                spacing: MaterialTheme.spacing-xs;
-                                width: root.width - session.depth * 16px - MaterialTheme.spacing-md * 2;
+                                spacing: RedesignTheme.t.s1;
+                                width: root.width - session.depth * 16px - RedesignTheme.t.s4 * 2;
 
                                 MaterialListItem {
                                     text: (session.parent-id != "" ? "↳ " : "") + session.name + (session.is-workspace-broken ? " ⚠" : "");
                                     secondary-text: session.timestamp;
                                     selected: session.id == current-session-id;
-                                    width: root.width - session.depth * 16px - 80px - MaterialTheme.spacing-md * 2;
+                                    width: root.width - session.depth * 16px - 80px - RedesignTheme.t.s4 * 2;
 
                                     clicked => { root.switch-session(session.id); }
                                 }
@@ -435,8 +436,8 @@ export component SidebarView inherits Rectangle {
 
                     if sessions.length == 0: Text {
                         text: "No sessions yet.\nClick + to create one.";
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
                         opacity: 0.5;
                         horizontal-alignment: center;
                         wrap: word-wrap;
@@ -460,8 +461,8 @@ export component SidebarView inherits Rectangle {
 
             Text {
                 text: "v0.1.0";
-                font-size: MaterialTheme.font-size-caption;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-md;
+                color: RedesignTheme.t.fg;
                 opacity: 0.3;
                 vertical-alignment: center;
             }

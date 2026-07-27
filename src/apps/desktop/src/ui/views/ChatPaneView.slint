@@ -9,7 +9,8 @@
 //   error display (G2=c second channel)
 // - Esc key (Q10=b): only when ChatPaneView focused → stop
 
-import { MaterialTheme, MessageItem, ProviderItem } from "../theme.slint";
+import { MessageItem, ProviderItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
@@ -47,26 +48,26 @@ export component ChatPaneView inherits Rectangle {
     // cleanly from inside a `for` loop.
     in-out property <string> expanded-message-id: "";
 
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     // Helper: pure function for "is message_id in expanded set".
     // Slint 1.16 doesn't have a public pure function for this at the
     // top level, so we inline the check at every use site.
 
     VerticalLayout {
-        padding: MaterialTheme.spacing-md;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s4;
+        spacing: RedesignTheme.t.s4;
         width: parent.width;
         height: parent.height;
 
         // ===== Session header =====
         if root.current-session-name != "": MaterialCard {
             width: parent.width;
-            card-padding: MaterialTheme.spacing-md;
+            card-padding: RedesignTheme.t.s4;
 
             HorizontalLayout {
                 height: 48px;
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 // Session name (with Q7 broken marker)
@@ -76,25 +77,25 @@ export component ChatPaneView inherits Rectangle {
 
                     Text {
                         text: root.current-session-name;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
                         font-weight: 600;
                         vertical-alignment: center;
                     }
 
                     if root.current-session-broken: Text {
                         text: AppStrings.session-broken-banner;
-                        font-size: MaterialTheme.font-size-caption;
-                        color: MaterialTheme.error;
+                        font-size: RedesignTheme.t.fs-md;
+                        color: RedesignTheme.t.danger;
                     }
 
                     // 2026-07-18 (D2d): model picker pill — click to open
                     // the provider popup. Hidden when no providers exist.
                     if root.providers.length > 0 && !root.current-session-broken: Rectangle {
                         height: 28px;
-                        padding: MaterialTheme.spacing-sm;
-                        background: MaterialTheme.current-primary().with-alpha(0.12);
-                        border-radius: 4px;
+                        padding: RedesignTheme.t.s2;
+                        background: RedesignTheme.t.rep-500.with-alpha(0.12);
+                        border-radius: RedesignTheme.t.r-sm;
 
                         TouchArea {
                             width: parent.width;
@@ -103,13 +104,13 @@ export component ChatPaneView inherits Rectangle {
                         }
 
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
                             height: 28px;
 
                             Text {
                                 text: root.current-session-model == "" ? "(选择模型)" : root.current-session-model;
-                                font-size: MaterialTheme.font-size-caption;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-md;
+                                color: RedesignTheme.t.fg;
                                 vertical-alignment: center;
                                 width: parent.width - 16px;
                                 overflow: elide;
@@ -117,8 +118,8 @@ export component ChatPaneView inherits Rectangle {
 
                             Text {
                                 text: root.model-popup-open ? "▲" : "▼";
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-caption;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-md;
                                 vertical-alignment: center;
                             }
                         }
@@ -151,7 +152,7 @@ export component ChatPaneView inherits Rectangle {
                     icon-size: 18px;
                     width: 32px;
                     height: 32px;
-                    background: MaterialTheme.error.with-alpha(0.15);
+                    background: RedesignTheme.t.danger.with-alpha(0.15);
                     clicked => { root.stop-streaming(); }
                 }
             }
@@ -167,7 +168,7 @@ export component ChatPaneView inherits Rectangle {
                 height: parent.height;
 
                 VerticalLayout {
-                    spacing: MaterialTheme.spacing-md;
+                    spacing: RedesignTheme.t.s4;
                     width: parent.width;
 
                     if messages.length == 0: Rectangle {
@@ -175,8 +176,8 @@ export component ChatPaneView inherits Rectangle {
 
                         Text {
                             text: "Welcome to northhing v0.1.0\n\nStart a conversation by typing below.";
-                            font-size: MaterialTheme.font-size-subtitle;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-name;
+                            color: RedesignTheme.t.fg;
                             opacity: 0.5;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -186,7 +187,7 @@ export component ChatPaneView inherits Rectangle {
                     }
 
                     for message in messages: VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         width: parent.width;
 
                         // Standard message bubble
@@ -195,35 +196,35 @@ export component ChatPaneView inherits Rectangle {
                             content: message.content;
                             timestamp: message.timestamp;
                             is-streaming: message.is-streaming;
-                            width: parent.width - MaterialTheme.spacing-md * 2;
+                            width: parent.width - RedesignTheme.t.s4 * 2;
                         }
 
                         // C5=c: inline tool call card (click to expand)
                         if message.tool-calls-count > 0: Rectangle {
-                            width: parent.width - MaterialTheme.spacing-md * 2;
-                            x: MaterialTheme.spacing-md;
+                            width: parent.width - RedesignTheme.t.s4 * 2;
+                            x: RedesignTheme.t.s4;
                             height: 36px;
-                            background: MaterialTheme.current-surface();
-                            border-radius: 4px;
-                            padding: MaterialTheme.spacing-sm;
+                            background: RedesignTheme.t.surface;
+                            border-radius: RedesignTheme.t.r-sm;
+                            padding: RedesignTheme.t.s2;
 
                             HorizontalLayout {
-                                spacing: MaterialTheme.spacing-sm;
+                                spacing: RedesignTheme.t.s2;
                                 width: parent.width;
 
                                 // The toggle chevron
                                 Text {
                                     text: root.expanded-message-id == message.id ? "▼" : "▶";
-                                    color: MaterialTheme.current-primary();
-                                    font-size: MaterialTheme.font-size-caption;
+                                    color: RedesignTheme.t.rep-500;
+                                    font-size: RedesignTheme.t.fs-md;
                                     vertical-alignment: center;
                                 }
 
                                 // The summary line
                                 Text {
                                     text: AppStrings.chat-tool-call-expanded + " (" + message.tool-calls-count + "): " + message.tool-calls-summary;
-                                    font-size: MaterialTheme.font-size-caption;
-                                    color: MaterialTheme.current-on-surface();
+                                    font-size: RedesignTheme.t.fs-md;
+                                    color: RedesignTheme.t.fg;
                                     vertical-alignment: center;
                                     width: parent.width - 32px;
                                 }
@@ -244,12 +245,12 @@ export component ChatPaneView inherits Rectangle {
 
                         // C5=c: expanded tool call detail
                         if message.tool-calls-json != "" && root.expanded-message-id == message.id: Rectangle {
-                            width: parent.width - MaterialTheme.spacing-md * 2;
-                            x: MaterialTheme.spacing-md;
+                            width: parent.width - RedesignTheme.t.s4 * 2;
+                            x: RedesignTheme.t.s4;
                             height: 200px;
-                            background: MaterialTheme.current-surface();
-                            border-radius: 4px;
-                            padding: MaterialTheme.spacing-sm;
+                            background: RedesignTheme.t.surface;
+                            border-radius: RedesignTheme.t.r-sm;
+                            padding: RedesignTheme.t.s2;
 
                             // Use a TextField for read-only display. Phase 5
                             // will replace this with the proper ToolCallCard
@@ -261,8 +262,8 @@ export component ChatPaneView inherits Rectangle {
 
                                 Text {
                                     text: message.tool-calls-json;
-                                    font-size: MaterialTheme.font-size-caption;
-                                    color: MaterialTheme.current-on-surface();
+                                    font-size: RedesignTheme.t.fs-md;
+                                    color: RedesignTheme.t.fg;
                                     wrap: word-wrap;
                                     width: parent.width;
                                 }
@@ -277,18 +278,18 @@ export component ChatPaneView inherits Rectangle {
         if root.inline-error != "": Rectangle {
             width: parent.width;
             height: 40px;
-            background: MaterialTheme.error.with-alpha(0.12);
-            border-radius: 4px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.danger.with-alpha(0.12);
+            border-radius: RedesignTheme.t.r-sm;
+            padding: RedesignTheme.t.s2;
 
             HorizontalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 Text {
                     text: root.inline-error;
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.error;
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.danger;
                     vertical-alignment: center;
                     width: parent.width - 32px;
                     wrap: word-wrap;
@@ -306,7 +307,7 @@ export component ChatPaneView inherits Rectangle {
         // ===== Input area =====
         HorizontalLayout {
             height: 80px;
-            spacing: MaterialTheme.spacing-sm;
+            spacing: RedesignTheme.t.s2;
 
             MaterialTextField {
                 width: parent.width - 80px;
@@ -351,25 +352,25 @@ export component ChatPaneView inherits Rectangle {
         background: #00000060;
 
         Rectangle {
-            x: MaterialTheme.spacing-md;
+            x: RedesignTheme.t.s4;
             y: 56px;
-            width: parent.width - 2 * MaterialTheme.spacing-md;
+            width: parent.width - 2 * RedesignTheme.t.s4;
             height: 240px;
-            background: MaterialTheme.current-surface();
-            border-radius: 8px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.surface;
+            border-radius: RedesignTheme.t.r-md;
+            padding: RedesignTheme.t.s2;
 
             VerticalLayout {
                 width: parent.width;
                 height: parent.height;
-                spacing: MaterialTheme.spacing-xs;
+                spacing: RedesignTheme.t.s1;
 
                 Text {
                     text: "选择模型";
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.6;
-                    padding: MaterialTheme.spacing-sm;
+                    padding: RedesignTheme.t.s2;
                 }
 
                 Flickable {
@@ -378,17 +379,17 @@ export component ChatPaneView inherits Rectangle {
                     viewport-height: 200px;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         width: parent.width;
 
                         for p in providers: Rectangle {
                             width: parent.width;
                             height: 36px;
-                            padding: MaterialTheme.spacing-sm;
+                            padding: RedesignTheme.t.s2;
                             visible: p.enabled;
                             background: p.id == root.default-model-provider-id
-                                ? MaterialTheme.current-primary().with-alpha(0.18)
-                                : MaterialTheme.current-surface();
+                                ? RedesignTheme.t.rep-500.with-alpha(0.18)
+                                : RedesignTheme.t.surface;
 
                             TouchArea {
                                 width: parent.width;
@@ -401,8 +402,8 @@ export component ChatPaneView inherits Rectangle {
 
                             Text {
                                 text: p.name + " · " + p.model;
-                                font-size: MaterialTheme.font-size-body;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
                                 vertical-alignment: center;
                                 width: parent.width;
                             }

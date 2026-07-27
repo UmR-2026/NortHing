@@ -7,13 +7,14 @@
 // Phase 4 is UI-only; the Rust side will wire callbacks to AppState in
 // Phase 5 (mirrors Phase 3 split).
 
-import { MaterialTheme, WorkspaceItem } from "../theme.slint";
+import { WorkspaceItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { AppStrings } from "../strings.slint";
 
 export component WorkspaceSettingsPanel inherits Rectangle {
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     in property <[WorkspaceItem]> workspaces: [];
     in property <int> current-workspace-index: -1;
@@ -44,8 +45,8 @@ export component WorkspaceSettingsPanel inherits Rectangle {
     VerticalLayout {
         width: parent.width;
         height: parent.height;
-        padding: MaterialTheme.spacing-lg;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s5;
+        spacing: RedesignTheme.t.s4;
 
         // Header: title + add button.
         HorizontalLayout {
@@ -54,8 +55,8 @@ export component WorkspaceSettingsPanel inherits Rectangle {
 
             Text {
                 text: AppStrings.workspace-add;
-                font-size: MaterialTheme.font-size-title;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-lg;
+                color: RedesignTheme.t.fg;
                 vertical-alignment: center;
             }
 
@@ -73,7 +74,7 @@ export component WorkspaceSettingsPanel inherits Rectangle {
         // Identity creator entry (per D3: "为当前 workspace 创建/更新 IDENTITY.md")
         if root.current-workspace-index >= 0: HorizontalLayout {
             height: 40px;
-            spacing: MaterialTheme.spacing-sm;
+            spacing: RedesignTheme.t.s2;
 
             identity-button := MaterialButton {
                 text: AppStrings.workspace-create-identity;
@@ -88,19 +89,19 @@ export component WorkspaceSettingsPanel inherits Rectangle {
             viewport-height: parent.height;
 
             VerticalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 // Empty state.
                 if root.workspaces.length == 0 && !root.add-form-visible: Rectangle {
                     height: 120px;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
 
                     Text {
                         text: AppStrings.workspace-empty;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
                         opacity: 0.7;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -110,22 +111,22 @@ export component WorkspaceSettingsPanel inherits Rectangle {
 
                 for workspace[idx] in workspaces: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         width: parent.width;
 
                         // Title row: display name + current marker
                         HorizontalLayout {
                             height: 28px;
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             width: parent.width;
 
                             Text {
                                 text: workspace.display-name == "" ? workspace.path : workspace.display-name;
-                                font-size: MaterialTheme.font-size-body;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
                                 font-weight: 600;
                                 vertical-alignment: center;
                                 horizontal-alignment: left;
@@ -134,8 +135,8 @@ export component WorkspaceSettingsPanel inherits Rectangle {
 
                             if workspace.is-current: Text {
                                 text: AppStrings.workspace-current-marker;
-                                font-size: MaterialTheme.font-size-caption;
-                                color: MaterialTheme.current-primary();
+                                font-size: RedesignTheme.t.fs-md;
+                                color: RedesignTheme.t.rep-500;
                                 font-weight: 600;
                                 vertical-alignment: center;
                                 width: 60px;
@@ -145,8 +146,8 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                         // Path row (small, gray)
                         Text {
                             text: workspace.path;
-                            font-size: MaterialTheme.font-size-caption;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.fg;
                             opacity: 0.6;
                             horizontal-alignment: left;
                             wrap: word-wrap;
@@ -158,10 +159,10 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                             text: workspace.identity-md-exists
                                 ? "IDENTITY.md: ✓"
                                 : "IDENTITY.md: (未创建)";
-                            font-size: MaterialTheme.font-size-caption;
+                            font-size: RedesignTheme.t.fs-md;
                             color: workspace.identity-md-exists
-                                ? MaterialTheme.current-primary()
-                                : MaterialTheme.current-on-surface();
+                                ? RedesignTheme.t.rep-500
+                                : RedesignTheme.t.fg;
                             opacity: workspace.identity-md-exists ? 1.0 : 0.5;
                             horizontal-alignment: left;
                         }
@@ -169,7 +170,7 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                         // Action row
                         HorizontalLayout {
                             height: 36px;
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             width: parent.width;
 
                             if !workspace.is-current: MaterialButton {
@@ -197,26 +198,26 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                 // ===== Add workspace form (D1 OS dialog flow) =====
                 if root.add-form-visible: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-sm;
+                        spacing: RedesignTheme.t.s2;
                         width: parent.width;
 
                         Text {
                             text: AppStrings.workspace-add;
-                            font-size: MaterialTheme.font-size-body;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-body;
+                            color: RedesignTheme.t.fg;
                             font-weight: 600;
                         }
 
                         // Picked path display
                         Text {
                             text: root.form-path == "" ? "(未选择文件夹)" : root.form-path;
-                            font-size: MaterialTheme.font-size-caption;
+                            font-size: RedesignTheme.t.fs-md;
                             color: root.form-path == ""
-                                ? MaterialTheme.current-on-surface()
-                                : MaterialTheme.current-primary();
+                                ? RedesignTheme.t.fg
+                                : RedesignTheme.t.rep-500;
                             opacity: root.form-path == "" ? 0.5 : 1.0;
                             wrap: word-wrap;
                             width: parent.width;
@@ -234,14 +235,14 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                         // path's basename via a hint text; user can override.
                         Text {
                             text: "(显示名称可留空，默认使用文件夹名)";
-                            font-size: MaterialTheme.font-size-caption;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.fg;
                             opacity: 0.5;
                         }
 
                         // Action row: "立即选择" (set as current) + "只添加不切换" + cancel
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             height: 40px;
                             width: parent.width;
 
@@ -288,32 +289,32 @@ export component WorkspaceSettingsPanel inherits Rectangle {
             y: (parent.height - 200px) / 2;
             width: 400px;
             height: 200px;
-            background: MaterialTheme.current-surface();
-            border-radius: 8px;
-            padding: MaterialTheme.spacing-lg;
+            background: RedesignTheme.t.surface;
+            border-radius: RedesignTheme.t.r-md;
+            padding: RedesignTheme.t.s5;
 
             VerticalLayout {
-                spacing: MaterialTheme.spacing-md;
+                spacing: RedesignTheme.t.s4;
                 width: parent.width;
                 height: parent.height;
 
                 Text {
                     text: AppStrings.workspace-remove-confirm-title;
-                    font-size: MaterialTheme.font-size-title;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-lg;
+                    color: RedesignTheme.t.fg;
                     font-weight: 600;
                 }
 
                 Text {
                     text: "将影响 " + root.confirm-remove-affected-sessions + " 个会话（这些会话将标记为工作文件夹已移除）。";
-                    font-size: MaterialTheme.font-size-body;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-body;
+                    color: RedesignTheme.t.fg;
                     wrap: word-wrap;
                     width: parent.width;
                 }
 
                 HorizontalLayout {
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     height: 40px;
                     width: parent.width;
 

@@ -3,7 +3,8 @@
 // Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
 // §6.5 (C-i inline expansion, C-iii loading state, C-iv empty state).
 
-import { MaterialTheme, ProviderItem } from "../theme.slint";
+import { ProviderItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
@@ -17,7 +18,7 @@ struct ProviderTypeOption {
 }
 
 export component ProviderSettingsPanel inherits Rectangle {
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     in property <[ProviderItem]> providers: [];
     in property <string> default-model-provider-id: "";
@@ -60,8 +61,8 @@ export component ProviderSettingsPanel inherits Rectangle {
     VerticalLayout {
         width: parent.width;
         height: parent.height;
-        padding: MaterialTheme.spacing-lg;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s5;
+        spacing: RedesignTheme.t.s4;
 
         // Header: title + add button.
         HorizontalLayout {
@@ -70,8 +71,8 @@ export component ProviderSettingsPanel inherits Rectangle {
 
             Text {
                 text: AppStrings.provider-add;
-                font-size: MaterialTheme.font-size-title;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-lg;
+                color: RedesignTheme.t.fg;
                 vertical-alignment: center;
             }
 
@@ -94,17 +95,17 @@ export component ProviderSettingsPanel inherits Rectangle {
         // Q1=a: legacy placeholder banner.
         if root.legacy-placeholder-count > 0 && !root.legacy-banner-dismissed: Rectangle {
             height: 56px;
-            background: MaterialTheme.current-primary().with-alpha(0.12);
-            border-radius: 4px;
-            padding: MaterialTheme.spacing-sm;
+            background: RedesignTheme.t.rep-500.with-alpha(0.12);
+            border-radius: RedesignTheme.t.r-sm;
+            padding: RedesignTheme.t.s2;
 
             HorizontalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
 
                 Text {
                     text: AppStrings.provider-cleanup-legacy-banner + " (n=" + root.legacy-placeholder-count + ")";
-                    color: MaterialTheme.current-on-surface();
-                    font-size: MaterialTheme.font-size-body;
+                    color: RedesignTheme.t.fg;
+                    font-size: RedesignTheme.t.fs-body;
                     vertical-alignment: center;
                     horizontal-alignment: left;
                     width: parent.width - 200px;
@@ -126,8 +127,8 @@ export component ProviderSettingsPanel inherits Rectangle {
 
         if root.provider-test-in-flight || root.provider-test-result != "": Text {
             text: root.provider-test-in-flight ? AppStrings.provider-test-in-flight : root.provider-test-result;
-            color: root.provider-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
-            font-size: MaterialTheme.font-size-caption;
+            color: root.provider-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
+            font-size: RedesignTheme.t.fs-md;
         }
 
         // Provider list (Flickable for scroll).
@@ -137,18 +138,18 @@ export component ProviderSettingsPanel inherits Rectangle {
             viewport-height: parent.height;
 
             VerticalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 if root.providers.length == 0 && !root.add-form-visible: Rectangle {
                     height: 120px;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
 
                     Text {
                         text: AppStrings.provider-empty;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
                         opacity: 0.7;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -158,39 +159,39 @@ export component ProviderSettingsPanel inherits Rectangle {
 
                 for provider in providers: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
                     height: 64px;
 
                     HorizontalLayout {
-                        spacing: MaterialTheme.spacing-md;
+                        spacing: RedesignTheme.t.s4;
                         width: parent.width;
 
                         verified-marker := Text {
                             text: provider.verified == "fail" ? "⚠️"
                                 : provider.verified == "ok" ? "✓"
                                 : "";
-                            color: provider.verified == "fail" ? MaterialTheme.error
-                                : MaterialTheme.current-primary();
-                            font-size: MaterialTheme.font-size-title;
+                            color: provider.verified == "fail" ? RedesignTheme.t.danger
+                                : RedesignTheme.t.rep-500;
+                            font-size: RedesignTheme.t.fs-lg;
                             vertical-alignment: center;
                             width: 24px;
                         }
 
                         info-box := VerticalLayout {
                             width: parent.width - 320px;
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
 
                             Text {
                                 text: provider.name + (provider.enabled ? "" : " (已禁用)");
-                                font-size: MaterialTheme.font-size-body;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
                                 font-weight: 600;
                             }
 
                             Text {
                                 text: provider.type + " · " + provider.model;
-                                font-size: MaterialTheme.font-size-caption;
-                                color: MaterialTheme.current-on-surface();
+                                font-size: RedesignTheme.t.fs-md;
+                                color: RedesignTheme.t.fg;
                                 opacity: 0.7;
                             }
                         }
@@ -234,16 +235,16 @@ export component ProviderSettingsPanel inherits Rectangle {
                 // ===== Add / edit form (inline expansion at bottom) =====
                 if root.add-form-visible: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-sm;
+                        spacing: RedesignTheme.t.s2;
                         width: parent.width;
 
                         Text {
                             text: root.form-name == "" ? AppStrings.provider-add : AppStrings.provider-edit;
-                            font-size: MaterialTheme.font-size-body;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-body;
+                            color: RedesignTheme.t.fg;
                             font-weight: 600;
                         }
 
@@ -259,7 +260,7 @@ export component ProviderSettingsPanel inherits Rectangle {
                         // For simplicity we use a horizontal button group.
                         HorizontalLayout {
                             height: 40px;
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
 
                             // 2026-07-18 (D2d): type tabs reduced to the two
                             // custom-compatible options; user fills base-url by hand.
@@ -269,10 +270,10 @@ export component ProviderSettingsPanel inherits Rectangle {
                             ]: Rectangle {
                                 height: 36px;
                                 width: 120px;
-                                padding: MaterialTheme.spacing-sm;
+                                padding: RedesignTheme.t.s2;
                                 background: opt.value == root.form-type
-                                    ? MaterialTheme.current-primary()
-                                    : MaterialTheme.current-surface();
+                                    ? RedesignTheme.t.rep-500
+                                    : RedesignTheme.t.surface;
                                 TouchArea {
                                     width: parent.width;
                                     height: parent.height;
@@ -285,9 +286,9 @@ export component ProviderSettingsPanel inherits Rectangle {
                                 Text {
                                     text: opt.label;
                                     color: opt.value == root.form-type
-                                        ? MaterialTheme.on-primary
-                                        : MaterialTheme.current-on-surface();
-                                    font-size: MaterialTheme.font-size-caption;
+                                        ? RedesignTheme.t.on-rep
+                                        : RedesignTheme.t.fg;
+                                    font-size: RedesignTheme.t.fs-md;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                     width: parent.width;
@@ -307,8 +308,8 @@ export component ProviderSettingsPanel inherits Rectangle {
                             text: root.form-type == "anthropic" || root.form-type == "custom-anthropic"
                                 ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
                                 : "填到 /v1 为止，客户端自动补 /chat/completions";
-                            font-size: MaterialTheme.font-size-caption;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.fg;
                             opacity: 0.6;
                             wrap: word-wrap;
                             width: parent.width;
@@ -333,14 +334,14 @@ export component ProviderSettingsPanel inherits Rectangle {
 
                         // Enabled toggle (B4)
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             height: 36px;
 
                             enabled-toggle := Rectangle {
                                 width: 48px;
                                 height: 24px;
-                                border-radius: 12px;
-                                background: root.form-enabled ? MaterialTheme.current-primary() : MaterialTheme.current-surface();
+                                border-radius: RedesignTheme.t.r-md;
+                                background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.surface;
 
                                 TouchArea {
                                     width: parent.width;
@@ -352,14 +353,14 @@ export component ProviderSettingsPanel inherits Rectangle {
                                     x: root.form-enabled ? 24px : 0px;
                                     width: 24px;
                                     height: 24px;
-                                    border-radius: 12px;
-                                    background: MaterialTheme.current-background();
+                                    border-radius: RedesignTheme.t.r-md;
+                                    background: RedesignTheme.t.bg;
                                 }
                             }
 
                             Text {
                                 text: AppStrings.provider-enabled-label;
-                                color: MaterialTheme.current-on-surface();
+                                color: RedesignTheme.t.fg;
                                 vertical-alignment: center;
                             }
                         }
@@ -368,13 +369,13 @@ export component ProviderSettingsPanel inherits Rectangle {
                         if root.form-test-result != "": Text {
                             text: root.form-test-result == "ok" ? AppStrings.provider-test-success
                                 : AppStrings.provider-test-failed-saved + " " + root.form-test-result;
-                            color: root.form-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
-                            font-size: MaterialTheme.font-size-caption;
+                            color: root.form-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
+                            font-size: RedesignTheme.t.fs-md;
                         }
 
                         // Action row: test + save + cancel
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             height: 40px;
 
                             test-btn := MaterialButton {
@@ -415,12 +416,12 @@ export component ProviderSettingsPanel inherits Rectangle {
         // Default model selector at the bottom (B5=b).
         HorizontalLayout {
             height: 48px;
-            spacing: MaterialTheme.spacing-sm;
+            spacing: RedesignTheme.t.s2;
 
             Text {
                 text: AppStrings.provider-default-model-label;
-                font-size: MaterialTheme.font-size-body;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-body;
+                color: RedesignTheme.t.fg;
                 vertical-alignment: center;
                 width: 200px;
             }
@@ -430,16 +431,16 @@ export component ProviderSettingsPanel inherits Rectangle {
             default-pick := Rectangle {
                 width: parent.width - 200px;
                 height: 36px;
-                padding: MaterialTheme.spacing-sm;
-                background: MaterialTheme.current-surface();
-                border-radius: 4px;
+                padding: RedesignTheme.t.s2;
+                background: RedesignTheme.t.surface;
+                border-radius: RedesignTheme.t.r-sm;
 
                 Text {
                     text: root.default-model-provider-id == "" ? "(未设置)" : root.default-model-provider_id;
-                    color: MaterialTheme.current-on-surface();
+                    color: RedesignTheme.t.fg;
                     vertical-alignment: center;
                     horizontal-alignment: left;
-                    font-size: MaterialTheme.font-size-body;
+                    font-size: RedesignTheme.t.fs-body;
                     width: parent.width;
                 }
             }

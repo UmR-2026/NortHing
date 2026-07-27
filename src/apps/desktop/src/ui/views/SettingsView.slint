@@ -2,7 +2,8 @@
 //
 // Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2.
 
-import { MaterialTheme, ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "../theme.slint";
+import { ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { AppStrings } from "../strings.slint";
@@ -12,7 +13,7 @@ import { MCPSettingsPanel } from "MCPSettingsPanel.slint";
 import { WorkspaceSettingsPanel } from "WorkspaceSettingsPanel.slint";
 
 export component SettingsView inherits Rectangle {
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     // A2=a: left menu item the user clicked. Slint enums are not
     // first-class in 1.16 — use a string property and match in panel.
@@ -74,21 +75,21 @@ export component SettingsView inherits Rectangle {
         Rectangle {
             width: 220px;
             height: parent.height;
-            background: MaterialTheme.current-surface();
+            background: RedesignTheme.t.surface;
 
             VerticalLayout {
                 width: parent.width;
                 height: parent.height;
-                padding: MaterialTheme.spacing-md;
+                padding: RedesignTheme.t.s4;
 
                 Text {
                     text: AppStrings.settings-open;
-                    font-size: MaterialTheme.font-size-title;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-lg;
+                    color: RedesignTheme.t.fg;
                     horizontal-alignment: left;
                 }
 
-                Rectangle { height: MaterialTheme.spacing-md; }
+                Rectangle { height: RedesignTheme.t.s4; }
 
                 // Menu items: simple clickable Rectangle + Text. Use a
                 // single selection pattern via `active-section`.
@@ -97,8 +98,8 @@ export component SettingsView inherits Rectangle {
                 nav-providers := Rectangle {
                     height: 48px;
                     background: root.active-section == "providers"
-                        ? MaterialTheme.current-primary().with-alpha(0.12)
-                        : MaterialTheme.current-surface();
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
                     TouchArea {
                         width: parent.width;
                         height: parent.height;
@@ -106,17 +107,17 @@ export component SettingsView inherits Rectangle {
                     }
                     Text {
                         text: AppStrings.settings-providers;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
-                        x: MaterialTheme.spacing-md;
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
                         vertical-alignment: center;
                     }
                 }
                 nav-workspaces := Rectangle {
                     height: 48px;
                     background: root.active-section == "workspaces"
-                        ? MaterialTheme.current-primary().with-alpha(0.12)
-                        : MaterialTheme.current-surface();
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
                     TouchArea {
                         width: parent.width;
                         height: parent.height;
@@ -124,17 +125,17 @@ export component SettingsView inherits Rectangle {
                     }
                     Text {
                         text: AppStrings.settings-workspaces;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
-                        x: MaterialTheme.spacing-md;
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
                         vertical-alignment: center;
                     }
                 }
                 nav-skills := Rectangle {
                     height: 48px;
                     background: root.active-section == "skills"
-                        ? MaterialTheme.current-primary().with-alpha(0.12)
-                        : MaterialTheme.current-surface();
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
                     TouchArea {
                         width: parent.width;
                         height: parent.height;
@@ -142,17 +143,17 @@ export component SettingsView inherits Rectangle {
                     }
                     Text {
                         text: AppStrings.settings-skills;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
-                        x: MaterialTheme.spacing-md;
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
                         vertical-alignment: center;
                     }
                 }
                 nav-mcp := Rectangle {
                     height: 48px;
                     background: root.active-section == "mcp"
-                        ? MaterialTheme.current-primary().with-alpha(0.12)
-                        : MaterialTheme.current-surface();
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
                     TouchArea {
                         width: parent.width;
                         height: parent.height;
@@ -160,17 +161,17 @@ export component SettingsView inherits Rectangle {
                     }
                     Text {
                         text: AppStrings.settings-mcp;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
-                        x: MaterialTheme.spacing-md;
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
                         vertical-alignment: center;
                     }
                 }
                 nav-general := Rectangle {
                     height: 48px;
                     background: root.active-section == "general"
-                        ? MaterialTheme.current-primary().with-alpha(0.12)
-                        : MaterialTheme.current-surface();
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
                     TouchArea {
                         width: parent.width;
                         height: parent.height;
@@ -178,9 +179,9 @@ export component SettingsView inherits Rectangle {
                     }
                     Text {
                         text: AppStrings.settings-general;
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
-                        x: MaterialTheme.spacing-md;
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
                         vertical-alignment: center;
                     }
                 }
@@ -200,12 +201,12 @@ export component SettingsView inherits Rectangle {
         Rectangle {
             width: parent.width - 220px;
             height: parent.height;
-            background: MaterialTheme.current-background();
+            background: RedesignTheme.t.bg;
 
             VerticalLayout {
                 width: parent.width;
                 height: parent.height;
-                padding: MaterialTheme.spacing-lg;
+                padding: RedesignTheme.t.s5;
 
                 // Sub-panel switcher (Phase 3). WorkplacesSettingsPanel is Phase 4.
                 if root.active-section == "providers": ProviderSettingsPanel {
@@ -253,13 +254,13 @@ export component SettingsView inherits Rectangle {
                 if root.active-section == "general": Rectangle {
                     vertical-stretch: 1;
                     width: parent.width;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
 
                     Text {
                         text: "通用设置将在后续版本提供。";
-                        font-size: MaterialTheme.font-size-body;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
                         opacity: 0.7;
                         wrap: word-wrap;
                         horizontal-alignment: center;

@@ -6,7 +6,7 @@
 // - Step 2: configure first AI service (Q3=c: "跳过" disabled + tooltip)
 // - Step 3: ready (D3 entry to IdentityCreatorView, or skip)
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
@@ -40,54 +40,54 @@ export component WelcomeView inherits Rectangle {
     // Rectangle ones. Use the inline check `(saved-id != "" && test-result == "ok")`
     // at every use site (next-step2 disabled, skip-step2 disabled, tooltip visible).
 
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     VerticalLayout {
         width: parent.width;
         height: parent.height;
         alignment: center;
-        padding: MaterialTheme.spacing-xl;
+        padding: RedesignTheme.t.s6;
 
         Text {
             text: AppStrings.welcome-title;
             font-size: 32px;
             font-weight: 700;
-            color: MaterialTheme.current-on-surface();
+            color: RedesignTheme.t.fg;
             horizontal-alignment: center;
         }
 
-        Rectangle { height: MaterialTheme.spacing-sm; }
+        Rectangle { height: RedesignTheme.t.s2; }
 
         Text {
             text: "第 " + root.current-step + " / 3 步";
-            font-size: MaterialTheme.font-size-caption;
-            color: MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-md;
+            color: RedesignTheme.t.fg;
             opacity: 0.5;
             horizontal-alignment: center;
         }
 
-        Rectangle { height: MaterialTheme.spacing-lg; }
+        Rectangle { height: RedesignTheme.t.s5; }
 
         if root.current-step == 1: MaterialCard {
             width: 600px;
             height: 280px;
-            card-padding: MaterialTheme.spacing-lg;
+            card-padding: RedesignTheme.t.s5;
             step1-view := VerticalLayout {
-                spacing: MaterialTheme.spacing-md;
+                spacing: RedesignTheme.t.s4;
                 width: parent.width;
                 height: parent.height;
 
                 Text {
                     text: AppStrings.welcome-step1-desc;
-                    font-size: MaterialTheme.font-size-title;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-lg;
+                    color: RedesignTheme.t.fg;
                     font-weight: 600;
                 }
 
                 Text {
                     text: "选择工作文件夹后，NortHing 会在该目录下保存会话、技能和工具集配置。";
-                    font-size: MaterialTheme.font-size-body;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-body;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.7;
                     wrap: word-wrap;
                     width: parent.width;
@@ -95,14 +95,14 @@ export component WelcomeView inherits Rectangle {
 
                 Rectangle {
                     height: 56px;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
-                    padding: MaterialTheme.spacing-sm;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
+                    padding: RedesignTheme.t.s2;
 
                     Text {
                         text: root.step1-path == "" ? "(未选择)" : root.step1-path;
-                        font-size: MaterialTheme.font-size-body;
-                        color: root.step1-path == "" ? MaterialTheme.current-on-surface() : MaterialTheme.current-primary();
+                        font-size: RedesignTheme.t.fs-body;
+                        color: root.step1-path == "" ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
                         opacity: root.step1-path == "" ? 0.5 : 1.0;
                         vertical-alignment: center;
                         horizontal-alignment: left;
@@ -113,7 +113,7 @@ export component WelcomeView inherits Rectangle {
 
                 HorizontalLayout {
                     height: 40px;
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     width: parent.width;
 
                     pick-button := MaterialButton {
@@ -144,16 +144,16 @@ export component WelcomeView inherits Rectangle {
         if root.current-step == 2: MaterialCard {
             width: 600px;
             height: 520px;
-            card-padding: MaterialTheme.spacing-lg;
+            card-padding: RedesignTheme.t.s5;
             step2-view := VerticalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
                 height: parent.height;
 
                 Text {
                     text: AppStrings.welcome-step2-desc;
-                    font-size: MaterialTheme.font-size-title;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-lg;
+                    color: RedesignTheme.t.fg;
                     font-weight: 600;
                 }
 
@@ -166,7 +166,7 @@ export component WelcomeView inherits Rectangle {
                 // Type buttons
                 HorizontalLayout {
                     height: 32px;
-                    spacing: MaterialTheme.spacing-xs;
+                    spacing: RedesignTheme.t.s1;
                     width: parent.width;
 
                     // 2026-07-18 (D2d): type tabs reduced to the two
@@ -176,11 +176,11 @@ export component WelcomeView inherits Rectangle {
                         { value: "custom-anthropic", label: "Anthropic 兼容" }
                     ]: Rectangle {
                         height: 32px;
-                        width: (parent.width - 1 * MaterialTheme.spacing-xs) / 2;
-                        padding: MaterialTheme.spacing-xs;
+                        width: (parent.width - 1 * RedesignTheme.t.s1) / 2;
+                        padding: RedesignTheme.t.s1;
                         background: opt.value == root.step2-type
-                            ? MaterialTheme.current-primary()
-                            : MaterialTheme.current-surface();
+                            ? RedesignTheme.t.rep-500
+                            : RedesignTheme.t.surface;
                         TouchArea {
                             width: parent.width;
                             height: parent.height;
@@ -193,9 +193,9 @@ export component WelcomeView inherits Rectangle {
                         Text {
                             text: opt.label;
                             color: opt.value == root.step2-type
-                                ? MaterialTheme.on-primary
-                                : MaterialTheme.current-on-surface();
-                            font-size: MaterialTheme.font-size-caption;
+                                ? RedesignTheme.t.on-rep
+                                : RedesignTheme.t.fg;
+                            font-size: RedesignTheme.t.fs-md;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                             width: parent.width;
@@ -214,8 +214,8 @@ export component WelcomeView inherits Rectangle {
                     text: root.step2-type == "anthropic" || root.step2-type == "custom-anthropic"
                         ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
                         : "填到 /v1 为止，客户端自动补 /chat/completions";
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.6;
                     wrap: word-wrap;
                     width: parent.width;
@@ -238,13 +238,13 @@ export component WelcomeView inherits Rectangle {
                     text: root.step2-test-result == "ok"
                         ? AppStrings.provider-test-success
                         : AppStrings.provider-test-failed-saved + " " + root.step2-test-result;
-                    color: root.step2-test-result == "ok" ? MaterialTheme.current-primary() : MaterialTheme.error;
-                    font-size: MaterialTheme.font-size-caption;
+                    color: root.step2-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
+                    font-size: RedesignTheme.t.fs-md;
                 }
 
                 HorizontalLayout {
                     height: 40px;
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     width: parent.width;
 
                     test-btn := MaterialButton {
@@ -288,8 +288,8 @@ export component WelcomeView inherits Rectangle {
 
                 if root.step2-api-key == "" || root.step2-name == "": Text {
                     text: "请输入名称和 API Key 以继续";
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.error;
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.danger;
                     opacity: 0.7;
                 }
             }
@@ -299,23 +299,23 @@ export component WelcomeView inherits Rectangle {
         if root.current-step == 3: MaterialCard {
             width: 600px;
             height: 280px;
-            card-padding: MaterialTheme.spacing-lg;
+            card-padding: RedesignTheme.t.s5;
             step3-view := VerticalLayout {
-                spacing: MaterialTheme.spacing-md;
+                spacing: RedesignTheme.t.s4;
                 width: parent.width;
                 height: parent.height;
 
                 Text {
                     text: AppStrings.welcome-step3-desc;
-                    font-size: MaterialTheme.font-size-title;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-lg;
+                    color: RedesignTheme.t.fg;
                     font-weight: 600;
                 }
 
                 Text {
                     text: "一切就绪。你可以现在开始聊天，也可以花 1 分钟让 AI 更好地了解你。";
-                    font-size: MaterialTheme.font-size-body;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-body;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.7;
                     wrap: word-wrap;
                     width: parent.width;
@@ -323,7 +323,7 @@ export component WelcomeView inherits Rectangle {
 
                 HorizontalLayout {
                     height: 40px;
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     width: parent.width;
 
                     identity-btn := MaterialButton {

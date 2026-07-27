@@ -5,7 +5,7 @@
 // 5 Q&A rounds + live preview of the generated IDENTITY.md.
 // Final preview is user-editable. Save writes to workspace root.
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
@@ -35,12 +35,12 @@ export component IdentityCreatorView inherits Rectangle {
         y: (parent.height - 540px) / 2;
         width: 800px;
         height: 540px;
-        background: MaterialTheme.current-background();
-        border-radius: 8px;
-        padding: MaterialTheme.spacing-lg;
+        background: RedesignTheme.t.bg;
+        border-radius: RedesignTheme.t.r-md;
+        padding: RedesignTheme.t.s5;
 
         VerticalLayout {
-            spacing: MaterialTheme.spacing-md;
+            spacing: RedesignTheme.t.s4;
             width: parent.width;
             height: parent.height;
 
@@ -51,39 +51,39 @@ export component IdentityCreatorView inherits Rectangle {
 
                 Text {
                     text: AppStrings.identity-title;
-                    font-size: MaterialTheme.font-size-title;
+                    font-size: RedesignTheme.t.fs-lg;
                     font-weight: 600;
-                    color: MaterialTheme.current-on-surface();
+                    color: RedesignTheme.t.fg;
                     vertical-alignment: center;
                     width: parent.width - 200px;
                 }
 
                 Text {
                     text: root.current-q + " / 5";
-                    font-size: MaterialTheme.font-size-caption;
-                    color: MaterialTheme.current-on-surface();
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.fg;
                     opacity: 0.6;
                     vertical-alignment: center;
                 }
             }
 
-            Rectangle { height: 1px; background: MaterialTheme.current-surface(); }
+            Rectangle { height: 1px; background: RedesignTheme.t.surface; }
 
             // Two-column body: Q&A on left, preview on right
             HorizontalLayout {
-                spacing: MaterialTheme.spacing-md;
+                spacing: RedesignTheme.t.s4;
                 vertical-stretch: 1;
                 width: parent.width;
 
                 // Left: question + answer
                 Rectangle {
-                    width: (parent.width - MaterialTheme.spacing-md) / 2;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
-                    padding: MaterialTheme.spacing-md;
+                    width: (parent.width - RedesignTheme.t.s4) / 2;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
+                    padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-sm;
+                        spacing: RedesignTheme.t.s2;
                         width: parent.width;
 
                         Text {
@@ -92,8 +92,8 @@ export component IdentityCreatorView inherits Rectangle {
                                 : root.current-q == 3 ? AppStrings.identity-prompt-q3
                                 : root.current-q == 4 ? AppStrings.identity-prompt-q4
                                 : AppStrings.identity-prompt-q5;
-                            font-size: MaterialTheme.font-size-body;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-body;
+                            color: RedesignTheme.t.fg;
                             font-weight: 600;
                             wrap: word-wrap;
                             width: parent.width;
@@ -122,8 +122,8 @@ export component IdentityCreatorView inherits Rectangle {
                         // LLM error display
                         if root.llm-error != "": Text {
                             text: "LLM 调用失败: " + root.llm-error + "（可手动编辑后保存）";
-                            font-size: MaterialTheme.font-size-caption;
-                            color: MaterialTheme.error;
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.danger;
                             wrap: word-wrap;
                             width: parent.width;
                         }
@@ -132,19 +132,19 @@ export component IdentityCreatorView inherits Rectangle {
 
                 // Right: live preview
                 Rectangle {
-                    width: (parent.width - MaterialTheme.spacing-md) / 2;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
-                    padding: MaterialTheme.spacing-md;
+                    width: (parent.width - RedesignTheme.t.s4) / 2;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
+                    padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-xs;
+                        spacing: RedesignTheme.t.s1;
                         width: parent.width;
 
                         Text {
                             text: "预览 IDENTITY.md";
-                            font-size: MaterialTheme.font-size-caption;
-                            color: MaterialTheme.current-on-surface();
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.fg;
                             opacity: 0.6;
                         }
 
@@ -163,7 +163,7 @@ export component IdentityCreatorView inherits Rectangle {
             // Footer buttons
             HorizontalLayout {
                 height: 40px;
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 back-btn := MaterialButton {

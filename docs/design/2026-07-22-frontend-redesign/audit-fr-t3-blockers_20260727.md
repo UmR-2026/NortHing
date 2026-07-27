@@ -115,14 +115,14 @@
 
 | 文件 | 行数 | MaterialTheme 引用数 | 复杂度 | 备注 |
 |---|---|---|---|---|
-| `views/ChatPaneView.slint` | 431 | 58 | **高** | 引用最多；含 current-primary/.with-alpha() 混色、error 色、spacing/font-size 全系；需拆 turn-meta、加活跃轮竖线+面 |
-| `views/ProviderSettingsPanel.slint` | 452 | 57 | **高** | 大量表单布局；current-primary 高频、error 验证态、spacing 全系；需 on-rep 补全 |
-| `views/SidebarView.slint` | 470 | 55 | **高** | 会话列表主组件；dark-mode 硬编码色 (#CF6679/#B00020/#000000/#FFFFFF) 需清；padding/spacing 密集；需适配 v2 沉积淡化+编年史 |
-| `views/WelcomeView.slint` | 364 | 47 | **高** | 首次启动页；v2 需重构为 onboarding 范式（在场区+光环+心境语）；spacing-xl 高频 |
-| `views/WorkspaceSettingsPanel.slint` | 336 | 42 | **高** | 工作区列表+技能覆盖；current-primary/.with-alpha() 高频 |
-| `views/SettingsView.slint` | 264 | 37 | **高** | 设置壳页；5 个 tab 卡片选中态用 current-primary().with-alpha(0.12)；需改 rep 染色 |
+| `views/ChatPaneView.slint` | 431 | 58 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑；结构重构（turn-meta 拆分、活跃轮竖线+面）仍属 FR-T3b |
+| `views/ProviderSettingsPanel.slint` | 452 | 57 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑 |
+| `views/SidebarView.slint` | 470 | 55 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑（#CF6679/#B00020→danger、#000/#FFF→danger/on-danger 已清）；沉积淡化+编年史仍属 FR-T3b |
+| `views/WelcomeView.slint` | 364 | 47 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑；onboarding 范式重构仍属 FR-T3b |
+| `views/WorkspaceSettingsPanel.slint` | 336 | 42 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑 |
+| `views/SettingsView.slint` | 264 | 37 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑（tab 选中态 rep-500.with-alpha(0.12)） |
 | `views/MCPSettingsPanel.slint` | 238 | 30 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑 |
-| `views/IdentityCreatorView.slint` | 218 | 25 | **高** | 身份创建器；v2 需映射到 onboarding 范式（五色板+诞生时刻）；结构重构 |
+| `views/IdentityCreatorView.slint` | 218 | 25 → 0 ✅ FR-T3 Phase4 | ~~高~~ token 已完成 | 2026-07-28 换绑；onboarding 范式重构仍属 FR-T3b |
 | `views/SkillsSettingsPanel.slint` | 153 | 25 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（开关 10px→r-pill） |
 | `views/InspectorView.slint` | 107 | 18 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（本地 dark-mode 属性保留） |
 | `components/ToolCallCard.slint` | 81 | 14 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（非 token 硬编码色保留） |
@@ -144,14 +144,16 @@
 
 ### 统计汇总
 
+> **2026-07-28 更新**：24 个需换绑文件全部完成（MaterialTheme 引用 528 → 仅剩 theme.slint 定义本身）。FR-T3a（token 补全 + 8 低 + AirTint/WindowChrome）、Phase3（8 中）、Phase4（7 高 token 换绑）三批落地。剩余 FR-T3b = 结构重构（turn-meta/沉积淡化/onboarding）+ 新建 v2 组件（PresenceBar/DeckBar/TurnContainer 等 11 个）+ 动画闭环 + Rust 窗口控制回调。
+
 | 指标 | 数值 |
 |---|---|
 | 需换绑的 .slint 文件总数 | **24**（不含 strings.slint + redesign_palette.slint） |
-| MaterialTheme 总引用数 | **528** |
-| 高复杂度文件 | **8** |
-| 中复杂度文件 | **8** |
-| 低复杂度文件 | **8** |
-| 含硬编码颜色的文件 | 至少 **4**（SidebarView、MaterialButton、ChatMessageBubble、main.slint） |
+| MaterialTheme 总引用数 | **528** → **0**（2026-07-28 除 theme.slint 定义外清零） |
+| 高复杂度文件 | **8** → token 换绑全部完成 |
+| 中复杂度文件 | **8** → 全部完成 |
+| 低复杂度文件 | **8** → 全部完成 |
+| 含硬编码颜色的文件 | 至少 **4** → SidebarView/MaterialButton 已清；ChatMessageBubble(#2D4A3E)/ToolCallCard(#2D2D2D 等非 token 色) 保留待 FR-T3b 组件重构时处理 |
 
 ---
 
