@@ -43,8 +43,8 @@ pub(super) mod turn_runtime;
 // Wildcard re-exports so `crate::app_state::{AppState, create_ui, ...}`
 // and `crate::app_state::set_session_error` keep working from callers
 // (main.rs, sessions.rs, etc.). Preserves the cross-crate import paths.
-pub use callbacks_lifecycle::*;
-pub use callbacks_settings::*;
+// (2026-07-27: callbacks_lifecycle/callbacks_settings glob re-exports removed —
+// their items are pub(super)/pub(crate) and were never visible downstream.)
 pub use create_ui::*;
 pub use error_banners::*;
 pub use state::*;
@@ -53,7 +53,7 @@ pub use state::*;
 // these imports was removed; the imports themselves are
 // now dead and would warn. Drop them.
 use slint::{ModelRc, SharedString, VecModel};
-use slint_glue::{AppWindow, MessageItem, SessionItem, SkillItem};
+use slint_glue::{MessageItem, SessionItem, SkillItem};
 
 // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?// Phase I.5 tests (2026-06-20)
 // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?

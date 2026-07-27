@@ -1,7 +1,5 @@
 //! inspector_model_status module — see mod.rs for the wiring entry point.
 
-use super::*;
-
 /// Phase C.3: build the Inspector `model-status` string from the live
 /// global config. Returns `"Model: Not configured"` when no providers are
 /// configured, otherwise `"Model: <p1>, <p2>, ... (n)"` with the unique

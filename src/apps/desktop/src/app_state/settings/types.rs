@@ -42,17 +42,6 @@ impl ProviderType {
             Self::CustomOpenaiCompatible | Self::CustomAnthropicCompatible => &[],
         }
     }
-
-    /// Slint-friendly display label (Chinese — matches AppStrings convention).
-    pub fn display_label(&self) -> &'static str {
-        match self {
-            Self::Anthropic => "Anthropic",
-            Self::Openai => "OpenAI",
-            Self::Gemini => "Gemini",
-            Self::CustomOpenaiCompatible => "自定义 (OpenAI 兼容)",
-            Self::CustomAnthropicCompatible => "自定义 (Anthropic 兼容)",
-        }
-    }
 }
 
 /// Single LLM provider entry.
@@ -137,6 +126,8 @@ pub struct SkillState {
 impl SkillState {
     /// Effective enable state for a given workspace: workspace override wins,
     /// otherwise fall back to global, otherwise default-on (true).
+    /// Used only by `#[cfg(test)]` in `tests.rs`.
+    #[allow(dead_code)]
     pub fn effective_in(&self, workspace: &Path) -> bool {
         self.workspace_overrides
             .get(workspace)
@@ -173,24 +164,6 @@ pub struct MCPServerConfig {
     pub last_verified_ok: Option<bool>,
     /// Tool names returned by the last successful `tools/list`.
     pub last_tools: Vec<String>,
-}
-
-impl MCPServerConfig {
-    pub fn new(name: String, transport: MCPTransport) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            name,
-            transport,
-            enabled: true,
-            command: None,
-            args: Vec::new(),
-            url: None,
-            env: HashMap::new(),
-            last_verified_at: None,
-            last_verified_ok: None,
-            last_tools: Vec::new(),
-        }
-    }
 }
 
 // ===== Default model =====

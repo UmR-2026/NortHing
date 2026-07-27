@@ -78,6 +78,12 @@ pub(super) fn message_to_item(msg: &MessageDto, is_streaming: bool) -> MessageIt
 }
 
 /// Build a Slint ModelRc<SessionItem> from a list of summaries
+///
+/// `#[allow(dead_code)]`: kept alive for the `#[cfg(test)]` smoke tests in
+/// `app_state/mod.rs::phase_i_tests` (depth-walk / cycle-detection coverage).
+/// Production paths use the Send-safe `build_sessions_items` + UI-thread
+/// `ModelRc::new(VecModel::from(...))` pair (D2b fix, 2026-07-18).
+#[allow(dead_code)]
 pub(super) fn build_sessions_model(summaries: &[SessionSummaryDto]) -> ModelRc<SessionItem> {
     // Phase C.2: compute each session's depth in the subagent tree. The
     // tree can in principle be unbounded, but a hard cap protects the UI

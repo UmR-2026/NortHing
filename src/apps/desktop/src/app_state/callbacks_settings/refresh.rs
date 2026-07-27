@@ -276,7 +276,7 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         }
     };
 
-    if let Err(e) = slint::invoke_from_event_loop(dispatch()) {
+    if let Err(_e) = slint::invoke_from_event_loop(dispatch()) {
         // 2026-07-18 (D2h): startup-race retry: the event loop may not be
         // ready yet when this is called early in app init. Wait 500ms and
         // retry with the same data (Arc-wrapped above).

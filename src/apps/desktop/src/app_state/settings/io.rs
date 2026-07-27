@@ -1,6 +1,6 @@
+use super::{AppSettings, ModelRef};
 use anyhow::{Context, Result};
 use std::path::PathBuf;
-use super::{AppSettings, ModelRef, now_unix_secs};
 
 // ===== Disk IO =====
 

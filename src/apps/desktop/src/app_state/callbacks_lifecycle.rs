@@ -529,7 +529,7 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
     });
 }
 
-pub(super) fn register_toggle_theme_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+pub(super) fn register_toggle_theme_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     // --- toggle-theme callback ---
     let ui_weak6 = ui.as_weak();
     ui.on_toggle_theme(move || {
@@ -817,7 +817,7 @@ pub(super) fn register_refresh_messages_callback(ui: &AppWindow, app_state: &Arc
     });
 }
 
-pub(super) fn register_clear_session_error_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+pub(super) fn register_clear_session_error_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     // --- P0-C: clear-error callbacks (banner × button) ---
     let ui_weak_clear_sess = ui.as_weak();
     ui.on_clear_session_error(move || {
@@ -827,7 +827,7 @@ pub(super) fn register_clear_session_error_callback(ui: &AppWindow, app_state: &
     });
 }
 
-pub(super) fn register_clear_input_error_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+pub(super) fn register_clear_input_error_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     let ui_weak_clear_in = ui.as_weak();
     ui.on_clear_input_error(move || {
         if let Some(ui) = ui_weak_clear_in.upgrade() {
@@ -836,7 +836,7 @@ pub(super) fn register_clear_input_error_callback(ui: &AppWindow, app_state: &Ar
     });
 }
 
-pub(super) fn register_dismiss_banner_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+pub(super) fn register_dismiss_banner_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     // --- 2026-06-26 (Phase 5): banner / inline-error clear callbacks ---
     // Q8=c dual channel: banner auto-dismisses after 5s (handled by
     // `schedule_error_clear`); inline error stays until the user clicks
@@ -850,7 +850,7 @@ pub(super) fn register_dismiss_banner_callback(ui: &AppWindow, app_state: &Arc<A
     });
 }
 
-pub(super) fn register_clear_inline_error_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+pub(super) fn register_clear_inline_error_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     let ui_weak_clear_inline = ui.as_weak();
     ui.on_clear_inline_error(move || {
         if let Some(ui) = ui_weak_clear_inline.upgrade() {
@@ -875,7 +875,7 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
         };
 
         let ui_clone = ui_weak_stop.clone();
-        let sid = session_id.clone();
+        let _sid = session_id.clone();
         std::thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()

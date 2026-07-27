@@ -22,8 +22,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use northhing_core::agentic::coordination::{
-    global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler,
-    DialogSubmissionPolicy, DialogSubmitOutcome, DialogTriggerSource,
+    global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler, DialogSubmissionPolicy,
+    DialogSubmitOutcome, DialogTriggerSource,
 };
 use northhing_core::agentic::core::{SessionConfig, SessionState};
 use northhing_core::agentic::system::init_agentic_system;
@@ -65,21 +65,16 @@ async fn init_core() -> Result<()> {
         .context("AIClientFactory::initialize_global failed")?;
     println!("W4-P: init_core: global AIClientFactory initialized");
 
-    let system = init_agentic_system()
-        .await
-        .context("init_agentic_system failed")?;
+    let system = init_agentic_system().await.context("init_agentic_system failed")?;
     println!("W4-P: init_core: agentic system initialized");
 
     let coordinator = system.coordinator.clone();
     let session_manager = coordinator.session_manager().clone();
     let scheduler = DialogScheduler::new(coordinator.clone(), session_manager);
     let notifier_ok = coordinator.set_scheduler_notifier(scheduler.outcome_sender());
-    let injection_ok =
-        coordinator.set_round_injection_source(scheduler.round_injection_monitor());
+    let injection_ok = coordinator.set_round_injection_source(scheduler.round_injection_monitor());
     if !notifier_ok || !injection_ok {
-        anyhow::bail!(
-            "scheduler wiring conflict: notifier={notifier_ok}, injection={injection_ok}"
-        );
+        anyhow::bail!("scheduler wiring conflict: notifier={notifier_ok}, injection={injection_ok}");
     }
     set_global_scheduler(scheduler);
     println!("W4-P: init_core: global scheduler initialized");
@@ -122,7 +117,7 @@ async fn create_session_and_submit() -> Result<(String, DialogSubmitOutcome)> {
 }
 
 /// Dispatch on a persistent runtime and poll until the turn leaves Processing.
-async fn dispatch_turn(input: &str) -> Result<String> {
+async fn dispatch_turn(_input: &str) -> Result<String> {
     let (sid, outcome) = create_session_and_submit().await?;
     let turn_id = match &outcome {
         DialogSubmitOutcome::Started { turn_id, .. } => turn_id.clone(),
@@ -284,7 +279,10 @@ async fn poll_session_stuck(sid: String) -> bool {
         let state = sm.get_session(&sid).map(|s| s.state.clone());
         match &state {
             Some(SessionState::Processing { phase, .. }) => {
-                println!("W4-P: run_desktop_faithful: session {sid} STUCK in Processing phase={:?} (round {i})", phase);
+                println!(
+                    "W4-P: run_desktop_faithful: session {sid} STUCK in Processing phase={:?} (round {i})",
+                    phase
+                );
                 stuck = true;
             }
             Some(SessionState::Idle) => {

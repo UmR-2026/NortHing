@@ -5,7 +5,7 @@ use crate::app_state::error_banners::{set_banner_message, set_inline_error};
 use crate::app_state::settings::ProviderConfig;
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
-use slint::{ComponentHandle, SharedString};
+use slint::ComponentHandle;
 use std::sync::Arc;
 
 // --- 2026-06-26 (Phase 5 wire-up): Settings sub-panel callbacks ---

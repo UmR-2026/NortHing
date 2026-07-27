@@ -5,7 +5,7 @@ use crate::app_state::error_banners::set_banner_message;
 use crate::app_state::settings::ModelRef;
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
-use slint::{ComponentHandle, SharedString};
+use slint::ComponentHandle;
 use std::sync::Arc;
 
 // 2026-07-18 (D2b): set-default-model handler. Finds the provider by id,

@@ -3,7 +3,7 @@ use super::save_app_settings_quiet;
 use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
-use slint::{ComponentHandle, SharedString};
+use slint::ComponentHandle;
 use std::sync::Arc;
 
 // 2026-06-26 (Phase 4 fix): test-provider handler. Resolves the provider

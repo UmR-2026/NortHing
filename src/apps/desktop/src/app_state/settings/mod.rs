@@ -43,7 +43,6 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use integrity::*;
 pub use io::*;
 pub use sync::*;
 pub use types::*;
