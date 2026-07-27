@@ -3,12 +3,13 @@
 // Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
 // E3=a (one-line display), E2=c (global + per-workspace toggle).
 
-import { MaterialTheme, SkillStateItem } from "../theme.slint";
+import { SkillStateItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { AppStrings } from "../strings.slint";
 
 export component SkillsSettingsPanel inherits Rectangle {
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     in property <[SkillStateItem]> skills: [];
     // 2026-07-27 (K4a R3, Bug C, fix #5): the per-workspace
@@ -31,23 +32,23 @@ export component SkillsSettingsPanel inherits Rectangle {
     VerticalLayout {
         width: parent.width;
         height: parent.height;
-        padding: MaterialTheme.spacing-lg;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s5;
+        spacing: RedesignTheme.t.s4;
 
         Text {
             text: AppStrings.settings-skills;
-            font-size: MaterialTheme.font-size-title;
-            color: MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-lg;
+            color: RedesignTheme.t.fg;
         }
 
         if root.skills.length == 0: Rectangle {
             height: 80px;
-            background: MaterialTheme.current-surface();
-            border-radius: 4px;
+            background: RedesignTheme.t.surface;
+            border-radius: RedesignTheme.t.r-sm;
 
             Text {
                 text: AppStrings.skills-empty;
-                color: MaterialTheme.current-on-surface();
+                color: RedesignTheme.t.muted;
                 opacity: 0.7;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -60,17 +61,17 @@ export component SkillsSettingsPanel inherits Rectangle {
             width: parent.width;
 
             VerticalLayout {
-                spacing: MaterialTheme.spacing-xs;
+                spacing: RedesignTheme.t.s1;
                 width: parent.width;
 
                 // E3=a: one-line display (name + description).
                 for skill in root.skills: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
                     height: 56px;
 
 HorizontalLayout {
-                            spacing: MaterialTheme.spacing-md;
+                            spacing: RedesignTheme.t.s4;
                             width: parent.width;
 
                             info := VerticalLayout {
@@ -79,27 +80,27 @@ HorizontalLayout {
 
                             Text {
                                 text: skill.name;
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-body;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-body;
                                 font-weight: 600;
                             }
                             Text {
                                 text: skill.description;
-                                color: MaterialTheme.current-on-surface();
+                                color: RedesignTheme.t.muted;
                                 opacity: 0.7;
-                                font-size: MaterialTheme.font-size-caption;
+                                font-size: RedesignTheme.t.fs-md;
                             }
                         }
 
                         // Global toggle.
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
                             width: 180px;
 
                             Text {
                                 text: AppStrings.skills-global-label;
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-caption;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-md;
                                 vertical-alignment: center;
                                 width: 50px;
                             }
@@ -107,8 +108,8 @@ HorizontalLayout {
                             global-toggle := Rectangle {
                                 width: 36px;
                                 height: 20px;
-                                border-radius: 10px;
-                                background: skill.global-enabled ? MaterialTheme.current-primary() : MaterialTheme.current-surface();
+                                border-radius: RedesignTheme.t.r-pill;
+                                background: skill.global-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.surface;
                                 TouchArea {
                                     width: parent.width;
                                     height: parent.height;
@@ -118,8 +119,8 @@ HorizontalLayout {
                                     x: skill.global-enabled ? 18px : 0px;
                                     width: 20px;
                                     height: 20px;
-                                    border-radius: 10px;
-                                    background: MaterialTheme.current-background();
+                                    border-radius: RedesignTheme.t.r-pill;
+                                    background: RedesignTheme.t.bg;
                                 }
                             }
                         }
@@ -135,9 +136,9 @@ HorizontalLayout {
                         if root.workspace-override-supported: workspace-cycle := Rectangle {
                             width: 140px;
                             height: 36px;
-                            padding: MaterialTheme.spacing-xs;
-                            background: MaterialTheme.current-surface();
-                            border-radius: 4px;
+                            padding: RedesignTheme.t.s1;
+                            background: RedesignTheme.t.surface;
+                            border-radius: RedesignTheme.t.r-sm;
 
                             TouchArea {
                                 width: parent.width;
@@ -159,8 +160,8 @@ HorizontalLayout {
                                 text: skill.workspace-override == "" ? "跟随全局"
                                     : skill.workspace-override == "on" ? "本工作文件夹: 开"
                                     : "本工作文件夹: 关";
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-caption;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-md;
                                 vertical-alignment: center;
                                 horizontal-alignment: center;
                                 width: parent.width;
@@ -169,17 +170,17 @@ HorizontalLayout {
                         if !root.workspace-override-supported: workspace-cycle-disabled := Rectangle {
                             width: 140px;
                             height: 36px;
-                            padding: MaterialTheme.spacing-xs;
-                            background: MaterialTheme.current-surface();
-                            border-radius: 4px;
+                            padding: RedesignTheme.t.s1;
+                            background: RedesignTheme.t.surface;
+                            border-radius: RedesignTheme.t.r-sm;
                             opacity: 0.5;
 
                             Text {
                                 text: skill.workspace-override == "" ? "跟随全局"
                                     : skill.workspace-override == "on" ? "本工作文件夹: 开"
                                     : "本工作文件夹: 关";
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-caption;
+                                color: RedesignTheme.t.faint;
+                                font-size: RedesignTheme.t.fs-md;
                                 vertical-alignment: center;
                                 horizontal-alignment: center;
                                 width: parent.width;

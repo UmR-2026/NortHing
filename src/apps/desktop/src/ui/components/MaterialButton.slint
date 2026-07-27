@@ -1,20 +1,20 @@
 // Material Button Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component MaterialButton inherits Rectangle {
     in property <string> text: "Button";
     in property <bool> primary: true;
     in property <bool> disabled: false;
-    in property <length> font-size: MaterialTheme.font-size-body;
+    in property <length> font-size: RedesignTheme.t.fs-body;
     
     callback clicked();
     
     height: 36px;
-    border-radius: 4px;
-    background: disabled ? #666666 : (primary ? MaterialTheme.current-primary() : transparent);
+    border-radius: RedesignTheme.t.r-sm;
+    background: disabled ? RedesignTheme.t.muted : (primary ? RedesignTheme.t.rep-500 : transparent);
     border-width: primary ? 0px : 1px;
-    border-color: disabled ? #888888 : MaterialTheme.current-primary();
+    border-color: disabled ? RedesignTheme.t.faint : RedesignTheme.t.rep-500;
     
     drop-shadow-color: primary ? #00000040 : transparent;
     drop-shadow-blur: primary ? 2px : 0px;
@@ -23,7 +23,7 @@ export component MaterialButton inherits Rectangle {
     Text {
         text: root.text;
         font-size: root.font-size;
-        color: disabled ? #AAAAAA : (primary ? MaterialTheme.on-primary : MaterialTheme.current-primary());
+        color: disabled ? RedesignTheme.t.faint : (primary ? RedesignTheme.t.on-rep : RedesignTheme.t.rep-500);
         horizontal-alignment: center;
         vertical-alignment: center;
     }

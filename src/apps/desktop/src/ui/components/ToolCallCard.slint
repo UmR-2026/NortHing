@@ -1,6 +1,6 @@
 // Tool Call Card Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "MaterialCard.slint";
 import { MaterialIconButton } from "MaterialIconButton.slint";
 
@@ -11,37 +11,37 @@ export component ToolCallCard inherits Rectangle {
     in property <string> tool-status: "running";
     in property <bool> expanded: false;
     
-    padding: MaterialTheme.spacing-sm;
+    padding: RedesignTheme.t.s2;
     
     MaterialCard {
-        width: parent.width - MaterialTheme.spacing-md;
-        card-padding: MaterialTheme.spacing-md;
+        width: parent.width - RedesignTheme.t.s4;
+        card-padding: RedesignTheme.t.s4;
         background: #2D2D2D;
         
         VerticalLayout {
-            spacing: MaterialTheme.spacing-sm;
+            spacing: RedesignTheme.t.s2;
             
             HorizontalLayout {
                 height: 36px;
                 alignment: space-between;
                 
                 HorizontalLayout {
-                    spacing: MaterialTheme.spacing-sm;
+                    spacing: RedesignTheme.t.s2;
                     alignment: center;
                     
                     Rectangle {
                         width: 8px;
                         height: 8px;
-                        border-radius: 4px;
-                        background: tool-status == "running" ? MaterialTheme.secondary
+                        border-radius: RedesignTheme.t.r-sm;
+                        background: tool-status == "running" ? RedesignTheme.t.abyss-500
                                 : tool-status == "completed" ? #4CAF50
-                                : MaterialTheme.error;
+                                : RedesignTheme.t.danger;
                     }
                     
                     Text {
                         text: "🔧 " + root.tool-name;
-                        font-size: MaterialTheme.font-size-subtitle;
-                        color: MaterialTheme.current-on-surface();
+                        font-size: RedesignTheme.t.fs-name;
+                        color: RedesignTheme.t.fg;
                         font-weight: 600;
                     }
                 }
@@ -54,8 +54,8 @@ export component ToolCallCard inherits Rectangle {
             
             if tool-params != "": Text {
                 text: tool-params;
-                font-size: MaterialTheme.font-size-caption;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-md;
+                color: RedesignTheme.t.muted;
                 opacity: 0.7;
                 wrap: word-wrap;
                 max-height: expanded ? 200px : 40px;
@@ -65,12 +65,12 @@ export component ToolCallCard inherits Rectangle {
             if expanded && tool-result != "": Rectangle {
                 height: 100px;
                 background: #1E1E1E;
-                border-radius: 4px;
-                padding: MaterialTheme.spacing-sm;
+                border-radius: RedesignTheme.t.r-sm;
+                padding: RedesignTheme.t.s2;
                 
                 Text {
                     text: root.tool-result;
-                    font-size: MaterialTheme.font-size-body;
+                    font-size: RedesignTheme.t.fs-body;
                     color: #D4D4D4;
                     font-family: "Consolas, monospace";
                     wrap: word-wrap;

@@ -3,14 +3,15 @@
 // Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
 // F1=a (form), F2=b (3 transports).
 
-import { MaterialTheme, MCPItem } from "../theme.slint";
+import { MCPItem } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { AppStrings } from "../strings.slint";
 
 export component MCPSettingsPanel inherits Rectangle {
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
 
     in property <[MCPItem]> mcp-servers: [];
     in-out property <bool> add-form-visible: false;
@@ -30,8 +31,8 @@ export component MCPSettingsPanel inherits Rectangle {
     VerticalLayout {
         width: parent.width;
         height: parent.height;
-        padding: MaterialTheme.spacing-lg;
-        spacing: MaterialTheme.spacing-md;
+        padding: RedesignTheme.t.s5;
+        spacing: RedesignTheme.t.s4;
 
         HorizontalLayout {
             height: 48px;
@@ -39,8 +40,8 @@ export component MCPSettingsPanel inherits Rectangle {
 
             Text {
                 text: AppStrings.settings-mcp;
-                font-size: MaterialTheme.font-size-title;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-lg;
+                color: RedesignTheme.t.fg;
                 vertical-alignment: center;
             }
 
@@ -64,17 +65,17 @@ export component MCPSettingsPanel inherits Rectangle {
             width: parent.width;
 
             VerticalLayout {
-                spacing: MaterialTheme.spacing-sm;
+                spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
                 if root.mcp-servers.length == 0 && !root.add-form-visible: Rectangle {
                     height: 80px;
-                    background: MaterialTheme.current-surface();
-                    border-radius: 4px;
+                    background: RedesignTheme.t.surface;
+                    border-radius: RedesignTheme.t.r-sm;
 
                     Text {
                         text: AppStrings.mcp-empty;
-                        color: MaterialTheme.current-on-surface();
+                        color: RedesignTheme.t.muted;
                         opacity: 0.7;
                         vertical-alignment: center;
                         horizontal-alignment: center;
@@ -84,21 +85,21 @@ export component MCPSettingsPanel inherits Rectangle {
 
                 for srv in root.mcp-servers: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
                     height: 56px;
 
                     HorizontalLayout {
-                        spacing: MaterialTheme.spacing-md;
+                        spacing: RedesignTheme.t.s4;
                         width: parent.width;
 
                         status := Text {
                             text: srv.verified == "fail" ? "⚠️"
                                 : srv.verified == "ok" ? "✓"
                                 : (srv.enabled ? "○" : "⨯");
-                            color: srv.verified == "fail" ? MaterialTheme.error
-                                : srv.enabled ? MaterialTheme.current-primary() : MaterialTheme.current-on-surface();
+                            color: srv.verified == "fail" ? RedesignTheme.t.danger
+                                : srv.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.fg;
                             width: 24px;
-                            font-size: MaterialTheme.font-size-title;
+                            font-size: RedesignTheme.t.fs-lg;
                             vertical-alignment: center;
                         }
 
@@ -108,15 +109,15 @@ export component MCPSettingsPanel inherits Rectangle {
 
                             Text {
                                 text: srv.name;
-                                color: MaterialTheme.current-on-surface();
-                                font-size: MaterialTheme.font-size-body;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-body;
                                 font-weight: 600;
                             }
                             Text {
                                 text: srv.transport + (srv.tool-count > 0 ? " · " + srv.tool-count + " 工具" : "");
-                                color: MaterialTheme.current-on-surface();
+                                color: RedesignTheme.t.muted;
                                 opacity: 0.7;
-                                font-size: MaterialTheme.font-size-caption;
+                                font-size: RedesignTheme.t.fs-md;
                             }
                         }
 
@@ -135,10 +136,10 @@ export component MCPSettingsPanel inherits Rectangle {
                 // ===== Add form (F1=a) =====
                 if root.add-form-visible: MaterialCard {
                     width: parent.width;
-                    card-padding: MaterialTheme.spacing-md;
+                    card-padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
-                        spacing: MaterialTheme.spacing-sm;
+                        spacing: RedesignTheme.t.s2;
                         width: parent.width;
 
                         MaterialTextField {
@@ -149,7 +150,7 @@ export component MCPSettingsPanel inherits Rectangle {
 
                         // Transport buttons (F2=b: 3 types)
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-xs;
+                            spacing: RedesignTheme.t.s1;
                             height: 40px;
 
                             for t-opt in [
@@ -158,10 +159,10 @@ export component MCPSettingsPanel inherits Rectangle {
                                 { value: "streamable-http", label: AppStrings.mcp-transport-streamable-http }
                             ]: Rectangle {
                                 height: 36px;
-                                padding: MaterialTheme.spacing-sm;
+                                padding: RedesignTheme.t.s2;
                                 background: t-opt.value == root.form-transport
-                                    ? MaterialTheme.current-primary()
-                                    : MaterialTheme.current-surface();
+                                    ? RedesignTheme.t.rep-500
+                                    : RedesignTheme.t.surface;
                                 TouchArea {
                                     width: parent.width;
                                     height: parent.height;
@@ -170,9 +171,9 @@ export component MCPSettingsPanel inherits Rectangle {
                                 Text {
                                     text: t-opt.label;
                                     color: t-opt.value == root.form-transport
-                                        ? MaterialTheme.on-primary
-                                        : MaterialTheme.current-on-surface();
-                                    font-size: MaterialTheme.font-size-caption;
+                                        ? RedesignTheme.t.on-rep
+                                        : RedesignTheme.t.fg;
+                                    font-size: RedesignTheme.t.fs-md;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                     width: parent.width;
@@ -182,7 +183,7 @@ export component MCPSettingsPanel inherits Rectangle {
 
                         // Transport-specific fields.
                         if root.form-transport == "stdio": VerticalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             width: parent.width;
 
                             MaterialTextField {
@@ -214,7 +215,7 @@ export component MCPSettingsPanel inherits Rectangle {
 
                         // Action row
                         HorizontalLayout {
-                            spacing: MaterialTheme.spacing-sm;
+                            spacing: RedesignTheme.t.s2;
                             height: 40px;
 
                             save-btn := MaterialButton {

@@ -13,12 +13,12 @@
 //   `ui.set_banner_message("")` after N seconds) — keeping the
 //   Slint component pure UI.
 // - `detail` empty → "详情" button hidden (per spec).
-// - Background: `MaterialTheme.error` (already exists in theme.slint).
+// - Background: `RedesignTheme.t.danger` (already exists in theme.slint).
 // - The `detail-clicked` callback fires when the user clicks
 //   "详情"; the parent (AppWindow) re-pushes the same error to the
 //   inline channel via the existing `set_inline_error` method.
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "MaterialButton.slint";
 import { MaterialIconButton } from "MaterialIconButton.slint";
 import { AppStrings } from "../strings.slint";
@@ -38,19 +38,19 @@ export component MaterialBanner inherits Rectangle {
     visible: root.message != "";
 
     height: 56px;
-    background: MaterialTheme.error;
-    border-radius: 4px;
+    background: RedesignTheme.t.danger;
+    border-radius: RedesignTheme.t.r-sm;
 
     HorizontalLayout {
-        padding: MaterialTheme.spacing-sm;
-        spacing: MaterialTheme.spacing-sm;
+        padding: RedesignTheme.t.s2;
+        spacing: RedesignTheme.t.s2;
         width: parent.width;
 
         // Error icon
         Text {
             text: "⚠";
-            color: MaterialTheme.on-error;
-            font-size: MaterialTheme.font-size-title;
+            color: RedesignTheme.t.on-danger;
+            font-size: RedesignTheme.t.fs-lg;
             vertical-alignment: center;
             width: 24px;
         }
@@ -58,8 +58,8 @@ export component MaterialBanner inherits Rectangle {
         // Message
         Text {
             text: root.message;
-            color: MaterialTheme.on-error;
-            font-size: MaterialTheme.font-size-body;
+            color: RedesignTheme.t.on-danger;
+            font-size: RedesignTheme.t.fs-body;
             vertical-alignment: center;
             horizontal-alignment: left;
             width: parent.width - 24px - 80px - 32px - 24px;
@@ -70,8 +70,8 @@ export component MaterialBanner inherits Rectangle {
         if root.detail != "": Rectangle {
             width: 80px;
             height: 32px;
-            background: MaterialTheme.on-error.with-alpha(0.12);
-            border-radius: 4px;
+            background: RedesignTheme.t.on-danger.with-alpha(0.12);
+            border-radius: RedesignTheme.t.r-sm;
 
             TouchArea {
                 width: parent.width;
@@ -81,8 +81,8 @@ export component MaterialBanner inherits Rectangle {
 
             Text {
                 text: AppStrings.error-detail-button;
-                color: MaterialTheme.on-error;
-                font-size: MaterialTheme.font-size-caption;
+                color: RedesignTheme.t.on-danger;
+                font-size: RedesignTheme.t.fs-md;
                 horizontal-alignment: center;
                 vertical-alignment: center;
                 width: parent.width;

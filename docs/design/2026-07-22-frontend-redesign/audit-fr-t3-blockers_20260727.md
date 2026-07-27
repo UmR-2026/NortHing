@@ -121,17 +121,17 @@
 | `views/WelcomeView.slint` | 364 | 47 | **高** | 首次启动页；v2 需重构为 onboarding 范式（在场区+光环+心境语）；spacing-xl 高频 |
 | `views/WorkspaceSettingsPanel.slint` | 336 | 42 | **高** | 工作区列表+技能覆盖；current-primary/.with-alpha() 高频 |
 | `views/SettingsView.slint` | 264 | 37 | **高** | 设置壳页；5 个 tab 卡片选中态用 current-primary().with-alpha(0.12)；需改 rep 染色 |
-| `views/MCPSettingsPanel.slint` | 238 | 30 | **中** | MCP 服务器列表；结构与 ProviderSettingsPanel 类似但更短 |
+| `views/MCPSettingsPanel.slint` | 238 | 30 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑 |
 | `views/IdentityCreatorView.slint` | 218 | 25 | **高** | 身份创建器；v2 需映射到 onboarding 范式（五色板+诞生时刻）；结构重构 |
-| `views/SkillsSettingsPanel.slint` | 153 | 25 | **中** | 技能列表；toggle 开关用 current-primary/current-surface |
-| `views/InspectorView.slint` | 107 | 18 | **中** | 检查器面板；border-color 用 current-on-surface 需改 t.border |
-| `components/ToolCallCard.slint` | 81 | 14 | **中** | 工具调用卡片；secondary/error 状态色需映射；spacing-sm/md |
-| `components/ChatMessageBubble.slint` | 67 | 13 | **中** | 消息气泡；role 色分支需重写（user→elevated, assistant→surface）；on-primary 需 on-rep |
-| `components/MaterialTextField.slint` | 52 | 13 | **中** | 输入框；border-color/current-on-surface/current-primary 需换绑；圆角 4px→r-sm(9px) |
-| `components/MaterialBanner.slint` | 104 | 12 | **中** | 横幅；error/on-error 全替换为 danger/on-danger；spacing 全系 |
+| `views/SkillsSettingsPanel.slint` | 153 | 25 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（开关 10px→r-pill） |
+| `views/InspectorView.slint` | 107 | 18 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（本地 dark-mode 属性保留） |
+| `components/ToolCallCard.slint` | 81 | 14 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（非 token 硬编码色保留） |
+| `components/ChatMessageBubble.slint` | 67 | 13 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（role 分支保留：user→elevated/assistant→surface） |
+| `components/MaterialTextField.slint` | 52 | 13 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑 |
+| `components/MaterialBanner.slint` | 104 | 12 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（error/on-error→danger/on-danger 全替换） |
 | `views/StatusBarView.slint` | 48 | 11 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（border→t.border 定稿） |
 | `components/MaterialList.slint` | 46 | 10 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（selected 态 rep-500/on-rep） |
-| `components/MaterialButton.slint` | 41 | 6 | **中** | 按钮；圆角 4px→r-sm(9px)；硬编码 #666666/#888888/#AAAAAA 需清；drop-shadow 需调 |
+| `components/MaterialButton.slint` | 41 | 6 → 0 ✅ FR-T3 Phase3 | ~~中~~ 已完成 | 2026-07-28 换绑（硬编码 #666/#888/#AAA 已清） |
 | `components/CodeBlock.slint` | 29 | 5 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（#D4D4D4 硬编码保留） |
 | `components/MaterialBadge.slint` | 21 | 4 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（error→danger、on-error→on-danger） |
 | `components/MaterialIconButton.slint` | 40 | 4 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（禁用态→t.faint） |

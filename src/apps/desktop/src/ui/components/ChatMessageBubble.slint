@@ -1,6 +1,6 @@
 // Chat Message Bubble Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "MaterialCard.slint";
 
 export component ChatMessageBubble inherits Rectangle {
@@ -10,54 +10,54 @@ export component ChatMessageBubble inherits Rectangle {
     in property <bool> is-streaming: false;
     
     pure function bubble-color() -> color {
-        if role == "user" { MaterialTheme.current-primary(); }
-        else if role == "assistant" { MaterialTheme.current-surface(); }
-        else if role == "system" { #666666; }
+        if role == "user" { RedesignTheme.t.elevated; }
+        else if role == "assistant" { RedesignTheme.t.surface; }
+        else if role == "system" { RedesignTheme.t.muted; }
         else if role == "tool" { #2D4A3E; }
-        else { MaterialTheme.current-surface(); }
+        else { RedesignTheme.t.surface; }
     }
     
     pure function text-color() -> color {
-        if role == "user" { MaterialTheme.on-primary; }
-        else { MaterialTheme.current-on-surface(); }
+        if role == "user" { RedesignTheme.t.on-rep; }
+        else { RedesignTheme.t.fg; }
     }
     
     // padding is layout-only in Slint; use card-padding on MaterialCard instead
-    // padding: MaterialTheme.spacing-sm;
+    // padding: RedesignTheme.t.s2;
     
     HorizontalLayout {
         alignment: role == "user" ? end : start;
         
         MaterialCard {
             width: root.width * 0.8;
-            card-padding: MaterialTheme.spacing-md;
+            card-padding: RedesignTheme.t.s4;
             background: root.bubble-color();
             
             VerticalLayout {
-                spacing: MaterialTheme.spacing-xs;
+                spacing: RedesignTheme.t.s1;
                 
                 Text {
                     text: root.content;
-                    font-size: MaterialTheme.font-size-body;
+                    font-size: RedesignTheme.t.fs-body;
                     color: root.text-color();
                     wrap: word-wrap;
                 }
                 
                 if is-streaming: Rectangle {
                     height: 2px;
-                    background: MaterialTheme.current-primary();
+                    background: RedesignTheme.t.rep-500;
                     
                     Rectangle {
                         width: 20px;
                         height: 2px;
-                        background: MaterialTheme.secondary;
+                        background: RedesignTheme.t.abyss-500;
                         x: mod(animation-tick(), 1000ms) / 1000ms * (parent.width - 20px);
                     }
                 }
                 
                 if timestamp != "": Text {
                     text: root.timestamp;
-                    font-size: MaterialTheme.font-size-caption;
+                    font-size: RedesignTheme.t.fs-md;
                     color: root.text-color();
                     opacity: 0.5;
                 }
