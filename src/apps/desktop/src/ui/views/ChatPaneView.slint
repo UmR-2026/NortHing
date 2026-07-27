@@ -16,6 +16,9 @@ import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { ChatMessageBubble } from "../components/ChatMessageBubble.slint";
+import { TurnContainer } from "../components/TurnContainer.slint";
+import { ThinkBlock } from "../components/ThinkBlock.slint";
+import { ToolChip } from "../components/ToolChip.slint";
 import { AppStrings } from "../strings.slint";
 
 export component ChatPaneView inherits Rectangle {
@@ -186,86 +189,91 @@ export component ChatPaneView inherits Rectangle {
                         }
                     }
 
-                    for message in messages: VerticalLayout {
-                        spacing: RedesignTheme.t.s1;
+                    for message[index] in messages: TurnContainer {
+                        active: message.is-streaming;
+                        sedimented: !message.is-streaming && index < messages.length - 1;
                         width: parent.width;
 
-                        // Standard message bubble
-                        ChatMessageBubble {
-                            role: message.role;
-                            content: message.content;
-                            timestamp: message.timestamp;
-                            is-streaming: message.is-streaming;
-                            width: parent.width - RedesignTheme.t.s4 * 2;
-                        }
+                        VerticalLayout {
+                            spacing: RedesignTheme.t.s1;
 
-                        // C5=c: inline tool call card (click to expand)
-                        if message.tool-calls-count > 0: Rectangle {
-                            width: parent.width - RedesignTheme.t.s4 * 2;
-                            x: RedesignTheme.t.s4;
-                            height: 36px;
-                            background: RedesignTheme.t.surface;
-                            border-radius: RedesignTheme.t.r-sm;
-                            padding: RedesignTheme.t.s2;
+                            // Standard message bubble
+                            ChatMessageBubble {
+                                role: message.role;
+                                content: message.content;
+                                timestamp: message.timestamp;
+                                is-streaming: message.is-streaming;
+                                width: parent.width - RedesignTheme.t.s4 * 2;
+                            }
 
-                            HorizontalLayout {
-                                spacing: RedesignTheme.t.s2;
-                                width: parent.width;
+                            // C5=c: inline tool call card (click to expand)
+                            if message.tool-calls-count > 0: Rectangle {
+                                width: parent.width - RedesignTheme.t.s4 * 2;
+                                x: RedesignTheme.t.s4;
+                                height: 36px;
+                                background: RedesignTheme.t.surface;
+                                border-radius: RedesignTheme.t.r-sm;
+                                padding: RedesignTheme.t.s2;
 
-                                // The toggle chevron
-                                Text {
-                                    text: root.expanded-message-id == message.id ? "▼" : "▶";
-                                    color: RedesignTheme.t.rep-500;
-                                    font-size: RedesignTheme.t.fs-md;
-                                    vertical-alignment: center;
-                                }
-
-                                // The summary line
-                                Text {
-                                    text: AppStrings.chat-tool-call-expanded + " (" + message.tool-calls-count + "): " + message.tool-calls-summary;
-                                    font-size: RedesignTheme.t.fs-md;
-                                    color: RedesignTheme.t.fg;
-                                    vertical-alignment: center;
-                                    width: parent.width - 32px;
-                                }
-
-                                TouchArea {
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s2;
                                     width: parent.width;
-                                    height: parent.height;
-                                    clicked => {
-                                        if root.expanded-message-id == message.id {
-                                            root.expanded-message-id = "";
-                                        } else {
-                                            root.expanded-message-id = message.id;
+
+                                    // The toggle chevron
+                                    Text {
+                                        text: root.expanded-message-id == message.id ? "▼" : "▶";
+                                        color: RedesignTheme.t.rep-500;
+                                        font-size: RedesignTheme.t.fs-md;
+                                        vertical-alignment: center;
+                                    }
+
+                                    // The summary line
+                                    Text {
+                                        text: AppStrings.chat-tool-call-expanded + " (" + message.tool-calls-count + "): " + message.tool-calls-summary;
+                                        font-size: RedesignTheme.t.fs-md;
+                                        color: RedesignTheme.t.fg;
+                                        vertical-alignment: center;
+                                        width: parent.width - 32px;
+                                    }
+
+                                    TouchArea {
+                                        width: parent.width;
+                                        height: parent.height;
+                                        clicked => {
+                                            if root.expanded-message-id == message.id {
+                                                root.expanded-message-id = "";
+                                            } else {
+                                                root.expanded-message-id = message.id;
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        // C5=c: expanded tool call detail
-                        if message.tool-calls-json != "" && root.expanded-message-id == message.id: Rectangle {
-                            width: parent.width - RedesignTheme.t.s4 * 2;
-                            x: RedesignTheme.t.s4;
-                            height: 200px;
-                            background: RedesignTheme.t.surface;
-                            border-radius: RedesignTheme.t.r-sm;
-                            padding: RedesignTheme.t.s2;
+                            // C5=c: expanded tool call detail
+                            if message.tool-calls-json != "" && root.expanded-message-id == message.id: Rectangle {
+                                width: parent.width - RedesignTheme.t.s4 * 2;
+                                x: RedesignTheme.t.s4;
+                                height: 200px;
+                                background: RedesignTheme.t.surface;
+                                border-radius: RedesignTheme.t.r-sm;
+                                padding: RedesignTheme.t.s2;
 
-                            // Use a TextField for read-only display. Phase 5
-                            // will replace this with the proper ToolCallCard
-                            // component when the data shape is finalized.
-                            Rectangle {
-                                width: parent.width;
-                                height: parent.height;
-                                background: #00000040;
-
-                                Text {
-                                    text: message.tool-calls-json;
-                                    font-size: RedesignTheme.t.fs-md;
-                                    color: RedesignTheme.t.fg;
-                                    wrap: word-wrap;
+                                // Use a TextField for read-only display. Phase 5
+                                // will replace this with the proper ToolCallCard
+                                // component when the data shape is finalized.
+                                Rectangle {
                                     width: parent.width;
+                                    height: parent.height;
+                                    background: #00000040;
+
+                                    Text {
+                                        text: message.tool-calls-json;
+                                        font-size: RedesignTheme.t.fs-md;
+                                        color: RedesignTheme.t.fg;
+                                        wrap: word-wrap;
+                                        width: parent.width;
+                                    }
                                 }
                             }
                         }

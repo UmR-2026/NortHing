@@ -1,0 +1,46 @@
+// ToolChip Component - 工具调用 chip（FR-T3b）
+//
+// pill 形，running/done 两态边框与文字色。Token 来自 RedesignTheme.t.*。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component ToolChip inherits Rectangle {
+    in property <string> name: "";
+    in property <bool> running: false;
+    in property <bool> done: false;
+
+    callback clicked();
+
+    border-radius: RedesignTheme.t.r-pill;
+    border-width: 1px;
+    border-color: root.running
+        ? RedesignTheme.t.rep-500
+        : root.done
+            ? RedesignTheme.t.abyss-500
+            : RedesignTheme.t.border;
+    animate border-color { duration: RedesignTheme.dur-normal; }
+
+    HorizontalLayout {
+        padding-top: RedesignTheme.t.s2;
+        padding-bottom: RedesignTheme.t.s2;
+        padding-left: RedesignTheme.t.s4;
+        padding-right: RedesignTheme.t.s4;
+
+        Text {
+            text: root.name;
+            color: root.running
+                ? RedesignTheme.t.rep-500
+                : root.done
+                    ? RedesignTheme.t.muted
+                    : RedesignTheme.t.fg;
+            font-size: RedesignTheme.t.fs-md;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => { root.clicked(); }
+    }
+}

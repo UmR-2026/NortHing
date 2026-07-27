@@ -1,0 +1,28 @@
+// ThinkBlock Component - 思考块（FR-T3b）
+//
+// 左缘 abyss-400 竖条 + 半透 abyss-500 底。Token 来自 RedesignTheme.t.*。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component ThinkBlock inherits Rectangle {
+    in property <string> content: "";
+
+    background: RedesignTheme.t.abyss-500.with-alpha(0.05);
+
+    HorizontalLayout {
+        spacing: RedesignTheme.t.s2;
+
+        // 左缘 2px 竖条（HorizontalLayout 默认纵向撑满高度）
+        Rectangle {
+            width: 2px;
+            background: RedesignTheme.t.abyss-400;
+        }
+
+        Text {
+            text: root.content;
+            color: RedesignTheme.t.muted;
+            font-size: RedesignTheme.t.fs-md;
+            wrap: word-wrap;
+        }
+    }
+}
