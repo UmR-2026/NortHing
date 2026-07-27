@@ -1,0 +1,27 @@
+// AirTint — 整屋空气染色：底色平铺 + 顶晕径向 + 底部冷雾。
+// 纯视觉，无回调。FR-T3 前置。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component AirTint inherits Rectangle {
+    // 底色平铺（rep 3.5% 饱和度空气感）
+    background: RedesignTheme.t.air-rep;
+
+    // 顶晕：径向渐变，at 参数绑 parent.width/2 表达式（resize 不偏移）
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height * 0.5;
+        background: @radial-gradient(circle at parent.width/2 0px, RedesignTheme.t.halo-rep 0%, transparent 60%);
+    }
+
+    // 底雾：abyss 1.5% 冷调
+    Rectangle {
+        x: 0;
+        y: parent.height * 0.7;
+        width: parent.width;
+        height: parent.height * 0.3;
+        background: @radial-gradient(circle at parent.width/2 parent.height, RedesignTheme.t.fog-abyss 0%, transparent 70%);
+    }
+}

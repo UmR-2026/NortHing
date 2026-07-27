@@ -1,12 +1,12 @@
 // Material Card Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component MaterialCard inherits Rectangle {
-    in property <length> card-padding: MaterialTheme.spacing-md;
+    in property <length> card-padding: RedesignTheme.t.s4;
     
-    background: MaterialTheme.current-surface();
-    border-radius: 8px;
+    background: RedesignTheme.t.surface;
+    border-radius: RedesignTheme.t.r-md;
     
     drop-shadow-color: #00000030;
     drop-shadow-blur: 4px;

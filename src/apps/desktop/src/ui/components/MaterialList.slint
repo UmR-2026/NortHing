@@ -1,6 +1,6 @@
 // Material List Item Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component MaterialListItem inherits Rectangle {
     in property <string> text: "";
@@ -11,23 +11,23 @@ export component MaterialListItem inherits Rectangle {
     callback clicked();
     
     height: 48px;
-    background: selected ? MaterialTheme.current-primary() : transparent;
-    border-radius: 4px;
+    background: selected ? RedesignTheme.t.rep-500 : transparent;
+    border-radius: RedesignTheme.t.r-sm;
     
     VerticalLayout {
-        padding: MaterialTheme.spacing-sm;
+        padding: RedesignTheme.t.s2;
         alignment: center;
         
         Text {
             text: root.text;
-            font-size: MaterialTheme.font-size-body;
-            color: selected ? MaterialTheme.on-primary : MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-body;
+            color: selected ? RedesignTheme.t.on-rep : RedesignTheme.t.fg;
         }
         
         if secondary-text != "": Text {
             text: root.secondary-text;
-            font-size: MaterialTheme.font-size-caption;
-            color: selected ? MaterialTheme.on-primary : MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-md;
+            color: selected ? RedesignTheme.t.on-rep : RedesignTheme.t.muted;
             opacity: 0.6;
         }
     }
@@ -39,7 +39,7 @@ export component MaterialListItem inherits Rectangle {
     
     states [
         hover when ta.has-hover && !selected: {
-            root.background: MaterialTheme.current-on-surface();
+            root.background: RedesignTheme.t.muted;
             root.opacity: 0.05;
         }
     ]

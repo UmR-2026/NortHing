@@ -97,10 +97,12 @@
 
 | 缺失 token | 用途 | 建议默认值 |
 |---|---|---|
-| `on-rep` | rep 色上的文字色（如发送按钮白字） | 亮 `#FFF9F5` / 暗 `#FFF9F5` |
-| `on-abyss` | abyss 色上的文字色 | 亮 `#FFFFFF` / 暗 `#FFFFFF` |
-| `on-danger` | danger 色上的文字色 | 亮 `#FFFFFF` / 暗 `#FFFFFF` |
+| ~~`on-rep`~~ ✅ FR-T3a | rep 色上的文字色（如发送按钮白字） | 已落地 `#FEF9F5`（两模式同值） |
+| ~~`on-abyss`~~ ✅ FR-T3a | abyss 色上的文字色 | 已落地 `#FFFFFF`（两模式同值） |
+| ~~`on-danger`~~ ✅ FR-T3a | danger 色上的文字色 | 已落地 `#FFFFFF`（两模式同值） |
 | `fs-headline` | 大标题（若需保留） | 可废弃，v2 不用此层级 |
+
+> FR-T3a 追加（2026-07-27）：另补 4 个预计算混色 token——`air-rep`（rep 3.5% 底染）、`halo-rep`（rep 7% 顶晕）、`fog-abyss`（abyss 1.5% 底雾）、`turn-active`（rep 4% 活跃轮面），供 AirTint/TurnContainer 使用。
 
 ---
 
@@ -127,15 +129,15 @@
 | `components/ChatMessageBubble.slint` | 67 | 13 | **中** | 消息气泡；role 色分支需重写（user→elevated, assistant→surface）；on-primary 需 on-rep |
 | `components/MaterialTextField.slint` | 52 | 13 | **中** | 输入框；border-color/current-on-surface/current-primary 需换绑；圆角 4px→r-sm(9px) |
 | `components/MaterialBanner.slint` | 104 | 12 | **中** | 横幅；error/on-error 全替换为 danger/on-danger；spacing 全系 |
-| `views/StatusBarView.slint` | 48 | 11 | **低** | 状态栏；border/current-on-surface/spacing 替换量小 |
-| `components/MaterialList.slint` | 46 | 10 | **低** | 列表项；selected 态用 current-primary/on-primary；spacing-sm |
+| `views/StatusBarView.slint` | 48 | 11 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（border→t.border 定稿） |
+| `components/MaterialList.slint` | 46 | 10 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（selected 态 rep-500/on-rep） |
 | `components/MaterialButton.slint` | 41 | 6 | **中** | 按钮；圆角 4px→r-sm(9px)；硬编码 #666666/#888888/#AAAAAA 需清；drop-shadow 需调 |
-| `components/CodeBlock.slint` | 29 | 5 | **低** | 代码块；仅 font-size-body/current-on-surface |
-| `components/MaterialBadge.slint` | 21 | 4 | **低** | 徽章；error→danger、on-error→on-danger、圆角 8px→r-md(14px) |
-| `components/MaterialIconButton.slint` | 40 | 4 | **低** | 图标按钮；current-on-surface → t.fg/muted |
-| `components/MaterialCard.slint` | 16 | 3 | **低** | 卡片；surface→t.surface、圆角 8px→r-md(14px)、shadow 需调 |
-| `components/MarkdownText.slint` | 14 | 3 | **低** | 纯文字；font-size-body + current-on-surface |
-| `main.slint` | 338 | 3 | **低** | 已 import RedesignTheme；仅需 current-background() → t.bg、dark-mode → dark |
+| `components/CodeBlock.slint` | 29 | 5 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（#D4D4D4 硬编码保留） |
+| `components/MaterialBadge.slint` | 21 | 4 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（error→danger、on-error→on-danger） |
+| `components/MaterialIconButton.slint` | 40 | 4 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑（禁用态→t.faint） |
+| `components/MaterialCard.slint` | 16 | 3 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑 |
+| `components/MarkdownText.slint` | 14 | 3 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑 |
+| `main.slint` | 338 | 3 → 0 ✅ FR-T3a | ~~低~~ 已完成 | 2026-07-27 换绑 + AirTint/WindowChrome 挂载（toggle 回调 FR-T3b 接线） |
 | `theme.slint` | 159 | 1 | **低** | 定义文件本身；FR-T3 后逐步废弃（struct 仍需保留） |
 | `strings.slint` | 134 | 0 | — | 无引用，无需改 |
 | `redesign_palette.slint` | 148 | 2 | — | 仅注释提及 MaterialTheme；无需改 |

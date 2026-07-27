@@ -1,14 +1,14 @@
 // Markdown Text Component (Simplified)
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component MarkdownText inherits Rectangle {
     in property <string> text: "";
     
     Text {
         text: root.text;
-        font-size: MaterialTheme.font-size-body;
-        color: MaterialTheme.current-on-surface();
+        font-size: RedesignTheme.t.fs-body;
+        color: RedesignTheme.t.fg;
         wrap: word-wrap;
     }
 }

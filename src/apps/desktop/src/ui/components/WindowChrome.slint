@@ -1,0 +1,73 @@
+// WindowChrome — 透明背景，左下品牌水印 + 左右把手。
+// FR-T3 前置；toggle-left/right 回调 FR-T3b 接线。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component WindowChrome inherits Rectangle {
+    // 透明背景，仅覆盖内容
+    background: transparent;
+
+    // 左下品牌水印
+    Text {
+        x: RedesignTheme.t.s3;
+        y: parent.height - RedesignTheme.t.s4;
+        text: "northing";
+        opacity: 0.25;
+        font-size: RedesignTheme.t.fs-md;
+        color: RedesignTheme.t.faint;
+        // TODO(FR-T5): Fraunces 自托管后切换 font-family
+    }
+
+    // 左把手（12px 宽，垂直居中）
+    Rectangle {
+        x: 0;
+        y: (parent.height - 48px) / 2;
+        width: 12px;
+        height: 48px;
+        background: transparent;
+
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.toggle-left(); }
+        }
+
+        Text {
+            text: "‹";
+            color: RedesignTheme.t.muted;
+            font-size: RedesignTheme.t.fs-lg;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+    }
+
+    // 右把手（12px 宽，垂直居中）
+    Rectangle {
+        x: parent.width - 12px;
+        y: (parent.height - 48px) / 2;
+        width: 12px;
+        height: 48px;
+        background: transparent;
+
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.toggle-right(); }
+        }
+
+        Text {
+            text: "›";
+            color: RedesignTheme.t.muted;
+            font-size: RedesignTheme.t.fs-lg;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+    }
+
+    callback toggle-left();
+    callback toggle-right();
+}

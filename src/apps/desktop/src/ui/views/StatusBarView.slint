@@ -1,6 +1,6 @@
 // Status Bar View - Bottom status bar
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component StatusBarView inherits Rectangle {
     in property <string> mcp-status: "MCP: Initializing...";
@@ -8,38 +8,38 @@ export component StatusBarView inherits Rectangle {
     in property <string> app-title: "northhing v0.1.0";
     in property <bool> dark-mode: true;
     
-    background: MaterialTheme.current-surface();
+    background: RedesignTheme.t.surface;
     border-width: 1px;
-    border-color: MaterialTheme.current-on-surface();
+    border-color: RedesignTheme.t.border;
     opacity: 0.1;
     
     HorizontalLayout {
-        padding: MaterialTheme.spacing-sm;
+        padding: RedesignTheme.t.s2;
         alignment: space-between;
         
         Text {
             text: root.app-title;
-            font-size: MaterialTheme.font-size-caption;
-            color: MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-md;
+            color: RedesignTheme.t.muted;
             opacity: 0.6;
             vertical-alignment: center;
         }
         
         HorizontalLayout {
-            spacing: MaterialTheme.spacing-lg;
+            spacing: RedesignTheme.t.s5;
             
             Text {
                 text: root.mcp-status;
-                font-size: MaterialTheme.font-size-caption;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-md;
+                color: RedesignTheme.t.muted;
                 opacity: 0.7;
                 vertical-alignment: center;
             }
             
             Text {
                 text: root.model-status;
-                font-size: MaterialTheme.font-size-caption;
-                color: MaterialTheme.current-on-surface();
+                font-size: RedesignTheme.t.fs-md;
+                color: RedesignTheme.t.muted;
                 opacity: 0.5;
                 vertical-alignment: center;
             }

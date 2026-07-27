@@ -88,6 +88,17 @@
 
   /* 异常态危险色（plan §12：低饱和陶红，双色）。[T3] P2.1 定稿 */
   --danger: oklch(0.550 0.100 28);  /* 陶红 hue≈28°，低饱和 */
+
+  /* 文字色（rep/abyss/danger 表面上的前景白） */
+  --on-rep: oklch(0.985 0.008 60);    /* #FFF9F5 */
+  --on-abyss: oklch(1 0 0);
+  --on-danger: oklch(1 0 0);
+
+  /* 语义混合色（OKLCH 混色，由生成器解析） */
+  --air-rep: color-mix(in oklch, var(--rep-500) 3.5%, var(--bg));
+  --halo-rep: color-mix(in oklch, var(--rep-500) 7%, var(--bg));
+  --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
+  --turn-active: color-mix(in oklch, var(--rep-500) 4%, var(--surface));
 }
 
 
@@ -122,6 +133,17 @@
 
   /* 异常态危险色（暗色略提亮以适应暗底）。[T3] P2.1 定稿 */
   --danger: oklch(0.660 0.090 28);
+
+  /* 文字色（rep/abyss/danger 表面上的前景白） */
+  --on-rep: oklch(0.985 0.008 60);    /* #FFF9F5 */
+  --on-abyss: oklch(1 0 0);
+  --on-danger: oklch(1 0 0);
+
+  /* 语义混合色（OKLCH 混色，由生成器解析） */
+  --air-rep: color-mix(in oklch, var(--rep-500) 3.5%, var(--bg));
+  --halo-rep: color-mix(in oklch, var(--rep-500) 7%, var(--bg));
+  --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
+  --turn-active: color-mix(in oklch, var(--rep-500) 4%, var(--surface));
 }
 
 

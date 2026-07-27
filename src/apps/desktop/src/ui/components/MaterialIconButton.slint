@@ -1,6 +1,6 @@
 // Material Icon Button Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component MaterialIconButton inherits Rectangle {
     in property <string> icon: "";
@@ -17,7 +17,7 @@ export component MaterialIconButton inherits Rectangle {
     Text {
         text: root.icon;
         font-size: root.icon-size;
-        color: disabled ? #888888 : MaterialTheme.current-on-surface();
+        color: disabled ? RedesignTheme.t.faint : RedesignTheme.t.fg;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -29,11 +29,11 @@ export component MaterialIconButton inherits Rectangle {
     
     states [
         hover when ta.has-hover: {
-            root.background: MaterialTheme.current-on-surface();
+            root.background: RedesignTheme.t.fg;
             root.opacity: 0.1;
         }
         pressed when ta.pressed: {
-            root.background: MaterialTheme.current-on-surface();
+            root.background: RedesignTheme.t.fg;
             root.opacity: 0.2;
         }
     ]

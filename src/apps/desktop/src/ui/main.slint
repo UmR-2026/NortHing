@@ -9,6 +9,8 @@ import { StatusBarView } from "views/StatusBarView.slint";
 import { SettingsView } from "views/SettingsView.slint";
 import { WelcomeView } from "views/WelcomeView.slint";
 import { MaterialBanner } from "components/MaterialBanner.slint";
+import { AirTint } from "components/AirTint.slint";
+import { WindowChrome } from "components/WindowChrome.slint";
 
 export component AppWindow inherits Window {
     title: "northhing";
@@ -16,7 +18,13 @@ export component AppWindow inherits Window {
     preferred-height: 800px;
     min-width: 800px;
     min-height: 600px;
-    background: MaterialTheme.current-background();
+    background: RedesignTheme.t.bg;
+
+    // FR-T3: 空气染色底层背景（z 序最底）
+    AirTint {
+        width: root.width;
+        height: root.height;
+    }
 
     // 2026-06-26 (Phase 2): route switching. Spec §6.1.
     // "main" — the regular 3-pane layout
@@ -153,7 +161,7 @@ export component AppWindow inherits Window {
     callback refresh-messages();
 
     changed dark-mode => {
-        MaterialTheme.dark-mode = dark-mode;
+        RedesignTheme.dark = dark-mode;
     }
 
     // 2026-06-26 (Phase 2): route switching via `if current-route == ...`.
@@ -341,4 +349,10 @@ export component AppWindow inherits Window {
             }
         }
     }   // close content Rectangle (inside if current-route == "main")
+
+    // FR-T3: 窗口装饰层（z 序最顶，toggle-left/right FR-T3b 接线）
+    WindowChrome {
+        width: root.width;
+        height: root.height;
+    }
 }   // close if current-route == "main"

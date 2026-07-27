@@ -1,6 +1,6 @@
 // Code Block Component
 
-import { MaterialTheme } from "../theme.slint";
+import { RedesignTheme } from "../redesign_palette.slint";
 
 export component CodeBlock inherits Rectangle {
     in property <string> code: "";
@@ -8,19 +8,19 @@ export component CodeBlock inherits Rectangle {
     
     background: #1E1E1E;
     border-radius: 4px;
-    padding: MaterialTheme.spacing-md;
+    padding: RedesignTheme.t.s4;
     
     VerticalLayout {
         if language != "": Text {
             text: language;
-            font-size: MaterialTheme.font-size-caption;
-            color: MaterialTheme.current-on-surface();
+            font-size: RedesignTheme.t.fs-md;
+            color: RedesignTheme.t.fg;
             opacity: 0.6;
         }
         
         Text {
             text: root.code;
-            font-size: MaterialTheme.font-size-body;
+            font-size: RedesignTheme.t.fs-body;
             color: #D4D4D4;
             font-family: "Consolas, monospace";
             wrap: word-wrap;

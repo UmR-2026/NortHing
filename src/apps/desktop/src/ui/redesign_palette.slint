@@ -39,6 +39,15 @@ export struct RedesignTokens {
     abyss-500: color,
     // 异常态危险色（plan §12：低饱和陶红，双色；[T3] P2.1 定稿）
     danger: color,
+    // 文字色（rep/abyss/danger 表面上的前景白）
+    on-rep: color,
+    on-abyss: color,
+    on-danger: color,
+    // 语义混合色（OKLCH 混色，由生成器解析）
+    air-rep: color,
+    halo-rep: color,
+    fog-abyss: color,
+    turn-active: color,
     // 字号三档 + 正文/名字（handoff §8：小字端严格收敛，层级靠颜色+字体承担）
     fs-sm: length,
     fs-md: length,
@@ -85,6 +94,13 @@ export global RedesignTheme {
         abyss-400: #5A9B93, // oklch(0.6436 0.0681 185.58) · <- #5A9B93
         abyss-500: #3F837B, // oklch(0.5633 0.0703 185.32) · <- #3F837B
         danger: #A45950, // oklch(0.550 0.100 28) · 陶红 hue≈28°，低饱和
+        on-rep: #FEF9F5, // oklch(0.985 0.008 60) · #FFF9F5
+        on-abyss: #FFFFFF, // oklch(1 0 0)
+        on-danger: #FFFFFF, // oklch(1 0 0)
+        air-rep: #F0EFEC, // oklch(0.9527 0.0040 91.45)
+        halo-rep: #ECEBE9, // oklch(0.9413 0.0038 91.45)
+        fog-abyss: #F1F1EE, // oklch(0.9581 0.0041 106.30)
+        turn-active: #F6F5F3, // oklch(0.9714 0.0028 84.56)
         fs-sm: 10px,
         fs-md: 11.5px,
         fs-lg: 13px,
@@ -121,6 +137,13 @@ export global RedesignTheme {
         abyss-400: #5A9B93, // oklch(0.6436 0.0681 185.58)
         abyss-500: #3F837B, // oklch(0.5633 0.0703 185.32)
         danger: #C37D73, // oklch(0.660 0.090 28)
+        on-rep: #FEF9F5, // oklch(0.985 0.008 60)
+        on-abyss: #FFFFFF, // oklch(1 0 0)
+        on-danger: #FFFFFF, // oklch(1 0 0)
+        air-rep: #181714, // oklch(0.2057 0.0058 88.00)
+        halo-rep: #1C1B18, // oklch(0.2214 0.0056 88.00)
+        fog-abyss: #161512, // oklch(0.1956 0.0059 98.26)
+        turn-active: #201E1B, // oklch(0.2367 0.0058 88.00)
         fs-sm: 10px,
         fs-md: 11.5px,
         fs-lg: 13px,

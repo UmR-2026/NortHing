@@ -27,6 +27,10 @@ DECL_RE = re.compile(r"--([a-zA-Z0-9-]+)\s*:\s*([^;]+);")
 OKLCH_RE = re.compile(
     r"^oklch\(\s*([0-9]*\.?[0-9]+)\s+([0-9]*\.?[0-9]+)\s+([0-9]*\.?[0-9]+)\s*\)$"
 )
+COLOR_MIX_RE = re.compile(
+    r"^color-mix\(in oklch,\s*var\(--([a-zA-Z0-9-]+)\)\s+"
+    r"([0-9]*\.?[0-9]+)%,\s*var\(--([a-zA-Z0-9-]+)\)\s*\)$"
+)
 PX_RE = re.compile(r"^([0-9]*\.?[0-9]+)px$")
 SOURCE_HEX_RE = re.compile(r"#([0-9A-Fa-f]{6})\b")
 
@@ -46,6 +50,8 @@ GROUP_COMMENTS = {
     ),
     "abyss": "深渊青色阶（哲学常量：思考/深处，非 agent 色；等亮度两模式同值）",
     "danger": "异常态危险色（plan §12：低饱和陶红，双色；[T3] P2.1 定稿）",
+    "on": "文字色（rep/abyss/danger 表面上的前景白）",
+    "mix": "语义混合色（OKLCH 混色，由生成器解析）",
     "fs": "字号三档 + 正文/名字（handoff §8：小字端严格收敛，层级靠颜色+字体承担）",
     "spacing": "间距 4 基数阶梯（4×1/2/3/4/6/8）",
     "radius": "圆角阶梯",
@@ -89,6 +95,52 @@ def oklch_to_hex(l_ok, c_ok, h_ok):
         u = 12.92 * u if u <= 0.0031308 else 1.055 * (u ** (1.0 / 2.4)) - 0.055
         out.append(int(round(u * 255)))
     return out[0], out[1], out[2], clamped
+
+
+def oklch_to_oklab(l, c, h):
+    h_rad = math.radians(h)
+    return l, c * math.cos(h_rad), c * math.sin(h_rad)
+
+
+def oklab_to_oklch(l, a, b):
+    c = math.sqrt(a * a + b * b)
+    h = math.degrees(math.atan2(b, a))
+    if h < 0:
+        h += 360
+    return l, c, h
+
+
+def resolve_color_mix_list(tokens):
+    by_name = {t["name"]: t for t in tokens}
+    resolved = {}
+
+    def _resolve(name):
+        if name in resolved:
+            return resolved[name]
+        tok = by_name[name]
+        if not tok.get("color_mix"):
+            resolved[name] = tok
+            return tok
+        c1 = _resolve(tok["color1"])
+        c2 = _resolve(tok["color2"])
+        w = tok["percentage"] / 100.0
+        l1, a1, b1 = oklch_to_oklab(c1["L"], c1["C"], c1["H"])
+        l2, a2, b2 = oklch_to_oklab(c2["L"], c2["C"], c2["H"])
+        lm = l1 * w + l2 * (1 - w)
+        am = a1 * w + a2 * (1 - w)
+        bm = b1 * w + b2 * (1 - w)
+        l, c, h = oklab_to_oklch(lm, am, bm)
+        result = {
+            "name": name, "L": l, "C": c, "H": h,
+            "raw": (f"{l:.4f}", f"{c:.4f}", f"{h:.2f}"),
+            "comment": tok["comment"],
+        }
+        resolved[name] = result
+        return result
+
+    for tok in tokens:
+        _resolve(tok["name"])
+    return [resolved[t["name"]] for t in tokens]
 
 
 def fmt_oklch(tok):
@@ -155,16 +207,28 @@ def parse_css(text):
             root_tokens.append((name, value, note))
         else:
             om = OKLCH_RE.match(value)
-            if not om:
-                fail(f'{cur} 块 token --{name} 值不是 oklch(): {value!r}')
-            (light if cur == "light" else dark).append({
-                "name": name,
-                "L": float(om.group(1)),
-                "C": float(om.group(2)),
-                "H": float(om.group(3)),
-                "raw": (om.group(1), om.group(2), om.group(3)),
-                "comment": note,
-            })
+            if om:
+                (light if cur == "light" else dark).append({
+                    "name": name,
+                    "L": float(om.group(1)),
+                    "C": float(om.group(2)),
+                    "H": float(om.group(3)),
+                    "raw": (om.group(1), om.group(2), om.group(3)),
+                    "comment": note,
+                })
+            else:
+                mm = COLOR_MIX_RE.match(value)
+                if mm:
+                    (light if cur == "light" else dark).append({
+                        "name": name,
+                        "color_mix": True,
+                        "color1": mm.group(1),
+                        "percentage": float(mm.group(2)),
+                        "color2": mm.group(3),
+                        "comment": note,
+                    })
+                else:
+                    fail(f'{cur} 块 token --{name} 值不是 oklch() 或 color-mix(): {value!r}')
     if not root_tokens:
         fail("未解析到 :root 结构 token 块")
     if not light:
@@ -183,6 +247,10 @@ def group_of(name):
         return "abyss"
     if name == "danger":
         return "danger"
+    if name.startswith("on-"):
+        return "on"
+    if name.startswith(("air-", "halo-", "fog-")) or name == "turn-active":
+        return "mix"
     if name.startswith("fs-"):
         return "fs"
     if re.match(r"^s\d+$", name):
@@ -362,6 +430,11 @@ def main():
             f"仅 light={sorted(set(light_names) - set(dark_names))}, "
             f"仅 dark={sorted(set(dark_names) - set(light_names))}"
         )
+    dark_by = {t["name"]: t for t in dark}
+
+    # 解析 color-mix 引用（OKLCH 混色：两色 OKLCH→OKLab 按权重线性插值→走既有管线）
+    light = resolve_color_mix_list(light)
+    dark = resolve_color_mix_list(dark)
     dark_by = {t["name"]: t for t in dark}
 
     # 转换
