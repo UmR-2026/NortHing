@@ -6,6 +6,7 @@ import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialListItem } from "../components/MaterialList.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { PresenceBar } from "../components/PresenceBar.slint";
 import { AppStrings } from "../strings.slint";
 // Phase G.3: pull in the standard Slint CheckBox for the
 // "Show subagents" toggle in the sidebar header.
@@ -195,6 +196,9 @@ export component SidebarView inherits Rectangle {
     VerticalLayout {
         padding: RedesignTheme.t.s4;
         spacing: RedesignTheme.t.s4;
+
+        // FR-T3b: 在场名片（PresenceBar）置侧栏内容最顶部，默认属性，不与既有逻辑接线。
+        PresenceBar { }
 
         // P0-C: error banner. Renders only when session-error or
         // input-error is non-empty. The Rust side auto-clears after 5s;

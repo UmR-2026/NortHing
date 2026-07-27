@@ -1,0 +1,18 @@
+// MoodText - 心境语：挂载后淡入到 0.9 的次级文本（FR-T3b 名片系）。
+// Token 全部来自 RedesignTheme.t.*（redesign_palette.slint）。
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component MoodText inherits Text {
+    in property <string> mood: "";
+
+    text: mood;
+    color: RedesignTheme.t.muted;
+    font-size: RedesignTheme.t.fs-md;
+
+    // 初始 opacity 0，挂载后淡入到 0.9：animate 声明过渡，init 启动时置 0.9 触发淡入。
+    opacity: 0;
+    animate opacity { duration: RedesignTheme.dur-once; }
+    init => {
+        root.opacity = 0.9;
+    }
+}

@@ -12,7 +12,7 @@
 import { MessageItem, ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
-import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { DeckBar } from "../components/DeckBar.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { ChatMessageBubble } from "../components/ChatMessageBubble.slint";
@@ -312,38 +312,21 @@ export component ChatPaneView inherits Rectangle {
             }
         }
 
-        // ===== Input area =====
-        HorizontalLayout {
-            height: 80px;
-            spacing: RedesignTheme.t.s2;
-
-            MaterialTextField {
-                width: parent.width - 80px;
-                height: 64px;
-                placeholder: AppStrings.chat-input-placeholder;
-                text <=> root.input-text;
-                multi-line: true;
-                disabled: root.current-session-broken;
-                accepted => {
-                    if input-text != "" {
-                        root.send-message(input-text);
-                        input-text = "";
-                    }
+        // ===== Input area (DeckBar, FR-T3b) =====
+        DeckBar {
+            width: parent.width;
+            text <=> root.input-text;
+            streaming: root.is-streaming;
+            model-name: root.current-session-model;
+            disabled: root.current-session-broken;
+            placeholder: AppStrings.chat-input-placeholder;
+            send => {
+                if input-text != "" && !root.current-session-broken {
+                    root.send-message(input-text);
+                    input-text = "";
                 }
             }
-
-            MaterialIconButton {
-                icon: "▶";
-                icon-size: 20px;
-                width: 48px;
-                height: 48px;
-                clicked => {
-                    if input-text != "" && !root.current-session-broken {
-                        root.send-message(input-text);
-                        input-text = "";
-                    }
-                }
-            }
+            stop => { root.stop-streaming(); }
         }
     }
 

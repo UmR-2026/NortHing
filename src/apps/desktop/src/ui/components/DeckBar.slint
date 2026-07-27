@@ -1,0 +1,136 @@
+// DeckBar - v2 操控台（FR-T3b）
+//
+// Spec: docs/design/2026-07-22-frontend-redesign/northing-frontend-design-handoff.md §7.2
+//   + docs/design/2026-07-22-frontend-redesign/northing-home-v1-final.html .deck / .deck-bar
+//
+// 单一组件两态一致：输入区 + 控制行（模型名 + 发送键）。发送键随 streaming
+// 变形：空闲=↑发送（rep 底）、生成中=■停止（danger 底）、空输入=禁用 opacity 0.4。
+// focus 态：边框 rep-500 + 外发光环（rep-400 35% / blur 8px）。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+
+export component DeckBar inherits Rectangle {
+    in-out property <string> text: "";
+    in property <bool> streaming: false;
+    in property <string> placeholder: "说点什么…… @ 引用文件 / 调用技能";
+    in property <string> model-name: "";
+    in property <bool> disabled: false;
+
+    callback send();
+    callback stop();
+
+    background: RedesignTheme.t.elevated;
+    border-radius: RedesignTheme.t.r-md;
+    border-width: 1px;
+    border-color: RedesignTheme.t.border;
+    drop-shadow-blur: 0px;
+    drop-shadow-color: transparent;
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // ===== 输入区 =====
+        Rectangle {
+            height: 52px;
+            width: parent.width;
+
+            if root.text == "" && root.placeholder != "": Text {
+                x: RedesignTheme.t.s4;
+                y: RedesignTheme.t.s3;
+                text: root.placeholder;
+                font-size: RedesignTheme.t.fs-body;
+                color: RedesignTheme.t.faint;
+                opacity: 0.5;
+            }
+
+            ti := TextInput {
+                x: RedesignTheme.t.s4;
+                y: RedesignTheme.t.s3;
+                width: parent.width - 2 * RedesignTheme.t.s4;
+                height: parent.height - 2 * RedesignTheme.t.s3;
+                text <=> root.text;
+                font-size: RedesignTheme.t.fs-body;
+                color: RedesignTheme.t.fg;
+                wrap: word-wrap;
+                enabled: !root.disabled;
+
+                accepted => { root.send(); }
+            }
+        }
+
+        // ===== 控制行分隔线（.deck-bar border-top） =====
+        Rectangle {
+            height: 1px;
+            width: parent.width;
+            background: RedesignTheme.t.border-soft;
+        }
+
+        // ===== 控制行：模型名 + 发送键 =====
+        Rectangle {
+            height: 44px;
+            width: parent.width;
+
+            HorizontalLayout {
+                padding-left: RedesignTheme.t.s4;
+                padding-right: RedesignTheme.t.s4;
+                padding-top: RedesignTheme.t.s1;
+                padding-bottom: RedesignTheme.t.s1;
+                spacing: RedesignTheme.t.s2;
+                width: parent.width;
+                height: parent.height;
+
+                Text {
+                    text: root.model-name;
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.rep-500;
+                    vertical-alignment: center;
+                }
+
+                // 推发送键到右（.deck-bar .sp { margin-left:auto }）
+                Rectangle { horizontal-stretch: 1; }
+
+                // 发送/停止键 36px 圆角 r-sm
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: RedesignTheme.t.r-sm;
+                    background: root.streaming
+                        ? RedesignTheme.t.danger
+                        : RedesignTheme.t.rep-500;
+                    opacity: (!root.streaming && root.text == "") ? 0.4 : 1.0;
+
+                    Text {
+                        text: root.streaming ? "■" : "↑";
+                        font-size: RedesignTheme.t.fs-lg;
+                        color: root.streaming
+                            ? RedesignTheme.t.on-danger
+                            : RedesignTheme.t.on-rep;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    ta := TouchArea {
+                        enabled: root.streaming || root.text != "";
+                        clicked => {
+                            if root.streaming {
+                                root.stop();
+                            } else {
+                                root.send();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // focus 态：边框 rep-500 + 外发光环
+    states [
+        focused when ti.has-focus: {
+            root.border-color: RedesignTheme.t.rep-500;
+            root.drop-shadow-blur: 8px;
+            root.drop-shadow-color: RedesignTheme.t.rep-400.with-alpha(0.35);
+        }
+    ]
+}

@@ -57,6 +57,8 @@ export component AppWindow inherits Window {
     // `parent-id` / `depth`. Bound from `app_state.rs` to the
     // `SESSION_TREE_VIEW` const in `main.rs`.
     in-out property <bool> session-tree-view: false;
+    // FR-T3b: left sidebar panel open state; wired to WindowChrome toggle-left.
+    in-out property <bool> left-panel-open: true;
     // Phase G.3: user-facing toggle for whether subagent (depth >= 1)
     // sessions are visible in the sidebar. Default true. Bound from
     // `app_state.rs::AppState::show_subagents`.
@@ -234,7 +236,7 @@ export component AppWindow inherits Window {
             width: parent.width;
             height: parent.height;
 
-            SidebarView {
+            if root.left-panel-open: SidebarView {
                 width: 280px;
                 height: parent.height;
                 sessions: root.sessions;
@@ -278,7 +280,7 @@ export component AppWindow inherits Window {
             }
 
             ChatPaneView {
-                width: parent.width - 280px - 240px;
+                width: parent.width - (root.left-panel-open ? 280px : 0px) - 240px;
                 height: parent.height;
                 messages: root.messages;
                 input-text <=> root.input-text;
@@ -354,5 +356,8 @@ export component AppWindow inherits Window {
     WindowChrome {
         width: root.width;
         height: root.height;
+        toggle-left => { root.left-panel-open = !root.left-panel-open; }
+        // FR-T3b 后续：右栏（世界面板）
+        toggle-right => { }
     }
 }   // close if current-route == "main"
