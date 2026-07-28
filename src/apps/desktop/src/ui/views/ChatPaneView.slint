@@ -82,18 +82,87 @@ export component ChatPaneView inherits Rectangle {
                     spacing: RedesignTheme.t.s4;
                     width: parent.width;
 
+                    // FR-T4-2: 空态开场白（empty-state.html .opening-line / .opening-hint）
                     if messages.length == 0: Rectangle {
-                        height: 200px;
+                        width: parent.width;
+                        vertical-stretch: 1;
 
-                        Text {
-                            text: "Welcome to northhing v0.1.0\n\nStart a conversation by typing below.";
-                            font-size: RedesignTheme.t.fs-name;
-                            color: RedesignTheme.t.fg;
-                            opacity: 0.5;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            wrap: word-wrap;
+                        HorizontalLayout {
+                            alignment: center;
                             width: parent.width;
+                            height: parent.height;
+
+                            VerticalLayout {
+                                // .empty-state 列（max-width 480）
+                                width: min(parent.width, 480px);
+                                alignment: center;
+
+                                // .opening-line（行：名字 + 点 + 文案），margin-bottom 10px
+                                Rectangle {
+                                    width: parent.width;
+                                    height: 24px;
+
+                                    HorizontalLayout {
+                                        alignment: center;
+                                        spacing: 6px;
+                                        width: parent.width;
+                                        height: parent.height;
+
+                                        // opening-name「知序」15px w500 rep-500
+                                        Text {
+                                            text: "知序";
+                                            font-size: RedesignTheme.t.fs-body;
+                                            font-weight: 500;
+                                            color: RedesignTheme.t.rep-500;
+                                            height: parent.height;
+                                            vertical-alignment: center;
+                                        }
+                                        // opening-dot 3×3 border
+                                        Rectangle {
+                                            width: 3px;
+                                            height: parent.height;
+                                            background: transparent;
+                                            Rectangle {
+                                                width: 3px;
+                                                height: 3px;
+                                                y: (parent.height - 3px) / 2;
+                                                border-radius: RedesignTheme.t.r-pill;
+                                                background: RedesignTheme.t.border;
+                                            }
+                                        }
+                                        // opening-text「我在。你想从哪里开始？」15px fg
+                                        Text {
+                                            text: "我在。你想从哪里开始？";
+                                            font-size: RedesignTheme.t.fs-body;
+                                            color: RedesignTheme.t.fg;
+                                            height: parent.height;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    // opening-shimmer 100×1 rep-300 渐变，bottom -6px 居中
+                                    Rectangle {
+                                        x: (parent.width - 100px) / 2;
+                                        y: parent.height + 6px;
+                                        width: 100px;
+                                        height: 1px;
+                                        background: @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-300 50%, transparent 100%);
+                                        opacity: root.shimmer-op;
+                                    }
+                                }
+
+                                // 间距：opening-line margin-bottom 10px + hint margin-top 14px
+                                Rectangle { height: 24px; background: transparent; }
+
+                                // opening-hint 12px faint
+                                Text {
+                                    text: "直接说话即可 · @ 引用文件 · / 调用技能";
+                                    font-size: 12px;
+                                    color: RedesignTheme.t.faint;
+                                    horizontal-alignment: center;
+                                    width: parent.width;
+                                }
+                            }
                         }
                     }
 
@@ -234,7 +303,7 @@ export component ChatPaneView inherits Rectangle {
 
         // ===== Input area (DeckBar, FR-T3b) - 660 居中 =====
         // FR-T4-1: DeckBar 包居中容器（width: min(parent.width - 2*s6, 660px)）
-        Rectangle {
+        deck-area := Rectangle {
             // DeckBar 内容高度 = 52(输入) + 1(分隔) + 44(控制行) = 97px
             height: 97px;
             width: parent.width;
@@ -274,9 +343,10 @@ export component ChatPaneView inherits Rectangle {
         height: parent.height;
         background: #00000060;
 
-        Rectangle {
+        popup := Rectangle {
+            // FR-T4-2: popup 移到 DeckBar 上方（绑 deck-area.y；原 y:56px 是头卡下方遗留）
             x: RedesignTheme.t.s4;
-            y: 56px;
+            y: deck-area.y - popup.height;
             width: parent.width - 2 * RedesignTheme.t.s4;
             height: 240px;
             background: RedesignTheme.t.surface;
@@ -348,8 +418,18 @@ export component ChatPaneView inherits Rectangle {
     // callback that fires stop-streaming when Esc is pressed and the
     // chat is focused. The main.slint Window will route Esc events
     // through this component's callback chain.
+    // FR-T4-2: 空态开场白 shimmer 一次性动画（animation-tick 驱动；mount 记起点）。
+    // empty-state.html @keyframes shimmerIn：0.6s 延迟 -> 2.5s 内 0->0.35(40%)->0。
+    property <duration> shimmer-mount: 0ms;
+    property <duration> shimmer-elapsed: animation-tick() - root.shimmer-mount;
+    property <float> shimmer-op:
+        (root.shimmer-elapsed < 600ms || root.shimmer-elapsed > 3100ms) ? 0.0
+        : (root.shimmer-elapsed < 1600ms
+            ? 0.35 * ((root.shimmer-elapsed - 600ms) / 1000ms)
+            : 0.35 * ((3100ms - root.shimmer-elapsed) / 1500ms));
+
     init => {
-        // No-op; focus tracking is set by main.slint binding to
-        // `chat-pane-focused` via the input-text binding.
+        root.shimmer-mount = animation-tick();
+        // 焦点跟踪由 main.slint 经 input-text 绑定驱动（原 no-op 注释移此）。
     }
 }

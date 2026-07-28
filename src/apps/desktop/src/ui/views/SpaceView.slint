@@ -13,6 +13,7 @@
 import { MessageItem, ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 import { ChatPaneView } from "ChatPaneView.slint";
+import { PresenceZone } from "../components/PresenceZone.slint";
 
 export component SpaceView inherits Rectangle {
     in property <[MessageItem]> messages: [];
@@ -44,10 +45,11 @@ export component SpaceView inherits Rectangle {
         width: parent.width;
         height: parent.height;
 
-        // 1. presence 占位（T4-2 替换为 PresenceZone）
-        Rectangle {
-            height: 120px;
+        // 1. presence 在场区（FR-T4-2：PresenceZone）
+        PresenceZone {
             width: parent.width;
+            vertical-stretch: 0;
+            streaming: root.is-streaming;
         }
 
         // 2 + 3. stream + deck（ChatPaneView 是 stream+deck 实现）

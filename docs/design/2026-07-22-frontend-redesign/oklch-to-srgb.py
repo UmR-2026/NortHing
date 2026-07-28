@@ -249,7 +249,7 @@ def group_of(name):
         return "danger"
     if name.startswith("on-"):
         return "on"
-    if name.startswith(("air-", "halo-", "fog-")) or name == "turn-active":
+    if name.startswith(("air-", "halo-", "fog-", "presence-")) or name == "turn-active":
         return "mix"
     if name.startswith("fs-"):
         return "fs"
