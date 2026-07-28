@@ -89,6 +89,11 @@ jobs:
           # PR caches are scoped to merge refs; main pushes own shared cache refreshes.
           save-if: ${{ github.event_name != 'pull_request' }}
 
+      - name: Generate i18n locale contract
+        shell: bash
+        run: node scripts/generate-i18n-contract.mjs
+        # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+
       - name: Check compilation
         run: cargo check --workspace --exclude northhing-cli --exclude northhing
 
