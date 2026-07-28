@@ -28,6 +28,7 @@ export component ChatPaneView inherits Rectangle {
     in property <string> current-session-model: "";
     in property <bool> current-session-broken: false;
     in property <string> inline-error: "";
+    in property <string> workspace-name: "";
 
     // 2026-07-18 (D2d): model picker state.
     in property <[ProviderItem]> providers: [];
@@ -316,6 +317,7 @@ export component ChatPaneView inherits Rectangle {
                 streaming: root.is-streaming;
                 model-name: root.current-session-model;
                 disabled: root.current-session-broken;
+                workspace-name: root.workspace-name;
                 placeholder: AppStrings.chat-input-placeholder;
                 // FR-T4-1: model picker + ⚙ 从会话头卡迁移到 DeckBar
                 model-clicked => { root.model-popup-open = !root.model-popup-open; }

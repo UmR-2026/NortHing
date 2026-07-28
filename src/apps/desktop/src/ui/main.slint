@@ -267,6 +267,7 @@ export component AppWindow inherits Window {
             current-session-broken: root.current-session-broken;
             is-streaming: root.is-streaming;
             inline-error: root.chat-inline-error;
+            workspace-name: root.current-workspace-index >= 0 ? root.workspaces-list[root.current-workspace-index].display-name : "";
             providers: root.providers-list;
             default-model-provider-id: root.default-model-provider-id;
 

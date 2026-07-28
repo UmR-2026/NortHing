@@ -23,6 +23,7 @@ export component SpaceView inherits Rectangle {
     in property <string> current-session-model: "";
     in property <bool> current-session-broken: false;
     in property <string> inline-error: "";
+    in property <string> workspace-name: "";
     in property <[ProviderItem]> providers: [];
     in property <string> default-model-provider-id: "";
     in-out property <bool> model-popup-open: false;
@@ -63,6 +64,7 @@ export component SpaceView inherits Rectangle {
             current-session-model: root.current-session-model;
             current-session-broken: root.current-session-broken;
             inline-error: root.inline-error;
+            workspace-name: root.workspace-name;
             providers: root.providers;
             default-model-provider-id: root.default-model-provider-id;
             model-popup-open <=> root.model-popup-open;

@@ -15,6 +15,9 @@ export component DeckBar inherits Rectangle {
     in property <string> placeholder: "说点什么…… @ 引用文件 / 调用技能";
     in property <string> model-name: "";
     in property <bool> disabled: false;
+    in property <string> workspace-name: "";
+    // FR-T4-7: 思考强度分段条占位（本地状态，无后端）
+    property<int> think-level: 1;
     // FR-T3b：输入聚焦外露（供 AirTint speaking 升档链路读取）
     out property <bool> focused: ti.has-focus;
 
@@ -34,6 +37,13 @@ export component DeckBar inherits Rectangle {
     VerticalLayout {
         padding: 0px;
         spacing: 0px;
+
+        // deck::before 顶部渐变线
+        Rectangle {
+            height: 1px;
+            width: parent.width;
+            background: @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-500.with-alpha(0.4) 50%, transparent 100%);
+        }
 
         // ===== 输入区 =====
         Rectangle {
@@ -71,7 +81,7 @@ export component DeckBar inherits Rectangle {
             background: RedesignTheme.t.border-soft;
         }
 
-        // ===== 控制行：模型名 + 发送键 =====
+        // ===== 控制行：⚙ / 模型名 / ＋ / 思考 / 工作目录 / access / ctx / mic / 发送 =====
         Rectangle {
             height: 44px;
             width: parent.width;
@@ -120,7 +130,151 @@ export component DeckBar inherits Rectangle {
                     }
                 }
 
-                // 推发送键到右（.deck-bar .sp { margin-left:auto }）
+                // ＋ 附件（.db 样式，占位 disabled）— TODO 数据源
+                Rectangle {
+                    padding-left: 5px; padding-right: 9px;
+                    padding-top: 5px; padding-bottom: 9px;
+                    border-radius: RedesignTheme.t.r-sm;
+                    border-width: 1px;
+                    border-color: transparent;
+                    opacity: 0.5;
+
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: center;
+
+                        Text {
+                            text: "+";
+                            font-size: 12px;
+                            color: RedesignTheme.t.faint;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 思考分段条（think-ctrl）— TODO 后端
+                Rectangle {
+                    padding-left: 5px; padding-right: 9px;
+                    padding-top: 5px; padding-bottom: 9px;
+                    border-radius: RedesignTheme.t.r-sm;
+
+                    think-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => {
+                            if root.think-level == 2 {
+                                root.think-level = 0;
+                            } else {
+                                root.think-level = root.think-level + 1;
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: center;
+
+                        Text {
+                            text: "思考";
+                            font-size: 12px;
+                            color: RedesignTheme.t.muted;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle {
+                            width: 14px; height: 6px; border-radius: 3px;
+                            background: 0 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
+                        }
+                        Rectangle {
+                            width: 14px; height: 6px; border-radius: 3px;
+                            background: 1 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
+                        }
+                        Rectangle {
+                            width: 14px; height: 6px; border-radius: 3px;
+                            background: 2 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
+                        }
+                    }
+                }
+
+                // 工作目录名 — 无 workspace 时 faint 占位
+                Text {
+                    text: root.workspace-name != "" ? root.workspace-name : "未选择工作文件夹";
+                    font-size: RedesignTheme.t.fs-md;
+                    color: root.workspace-name != "" ? RedesignTheme.t.fg : RedesignTheme.t.faint;
+                    vertical-alignment: center;
+                    max-width: 120px;
+                }
+
+                // 半自治 access（.db.access 样式，占位 disabled）— TODO settings-access 后端
+                Rectangle {
+                    padding-left: 5px; padding-right: 9px;
+                    padding-top: 5px; padding-bottom: 9px;
+                    border-radius: RedesignTheme.t.r-sm;
+                    border-width: 1px;
+                    border-color: transparent;
+                    opacity: 0.5;
+
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: center;
+
+                        Text {
+                            text: "●";
+                            font-size: 12px;
+                            color: RedesignTheme.t.abyss-400;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            text: "半自治";
+                            font-size: 12px;
+                            color: RedesignTheme.t.abyss-500;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // 上下文圆环（ctx-ring 占位）— TODO tokens 数据源
+                Rectangle {
+                    padding-left: 5px; padding-right: 9px;
+                    padding-top: 5px; padding-bottom: 9px;
+                    border-radius: RedesignTheme.t.r-sm;
+
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: center;
+
+                        Rectangle {
+                            width: 6px; height: 6px; border-radius: 3px;
+                            background: RedesignTheme.t.faint;
+                        }
+                        Text {
+                            text: "ctx 12%";
+                            font-size: RedesignTheme.t.fs-md;
+                            color: RedesignTheme.t.faint;
+                            vertical-alignment: center;
+                            font-family: "JetBrains Mono";
+                        }
+                    }
+                }
+
+                // 🎙 mic 占位 disabled
+                Rectangle {
+                    width: 30px; height: 30px;
+                    border-radius: 9px;
+                    opacity: 0.5;
+
+                    Text {
+                        text: "🎙";
+                        font-size: 14px;
+                        color: RedesignTheme.t.faint;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                }
+
+                // .sp 推右语义
                 Rectangle { horizontal-stretch: 1; }
 
                 // 发送/停止键 36px 圆角 r-sm
