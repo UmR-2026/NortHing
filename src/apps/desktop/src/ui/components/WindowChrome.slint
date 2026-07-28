@@ -8,6 +8,9 @@ export component WindowChrome inherits Rectangle {
     // 透明背景，仅覆盖内容
     background: transparent;
 
+    // FR-T4-3: signal 占位属性，供左把手信号点使用；后续可由 main.slint 注入
+    in property<bool> signal: false;
+
     // 左下品牌水印
     Text {
         x: RedesignTheme.t.s3;
@@ -27,8 +30,6 @@ export component WindowChrome inherits Rectangle {
         height: parent.height;
         background: transparent;
 
-        property<bool> signal: false;
-
         // 渗光近似条（右缘，rep-300 → 透明）
         Rectangle {
             x: parent.width - 8px;
@@ -46,7 +47,7 @@ export component WindowChrome inherits Rectangle {
             height: 6px;
             border-radius: 3px;
             background: RedesignTheme.t.rep-500;
-            visible: left-handle.signal;
+            visible: root.signal;
         }
 
         VerticalLayout {

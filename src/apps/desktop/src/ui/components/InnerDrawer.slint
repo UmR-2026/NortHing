@@ -8,12 +8,12 @@ export component InnerDrawer inherits Rectangle {
     callback open-archive();
     callback export-markdown();
 
-    // 透明遮罩
+    // 透明遮罩 — visible 关闭时整元素移出命中树，主区点击不再被吞
     Rectangle {
         width: parent.width;
         height: parent.height;
-        background: #000000;
-        opacity: root.open ? 0.5 : 0;
+        background: RedesignTheme.t.fg.with_alpha(0.5);
+        visible: root.open;
 
         TouchArea {
             width: parent.width;
@@ -31,7 +31,7 @@ export component InnerDrawer inherits Rectangle {
         background: RedesignTheme.t.surface;
         border-width: 1px;
         border-color: RedesignTheme.t.border;
-        drop-shadow-color: #00000040;
+        drop-shadow-color: RedesignTheme.t.fg.with_alpha(0.25);
         drop-shadow-blur: 8px;
         drop-shadow-offset-x: 4px;
 
@@ -111,6 +111,7 @@ export component InnerDrawer inherits Rectangle {
             Rectangle {
                 background: RedesignTheme.t.raised;
                 border-radius: RedesignTheme.t.r-sm;
+                opacity: 0.5;
 
                 // TODO(T4-4): T4-4 启用后移除 opacity: 0.5
                 HorizontalLayout {
