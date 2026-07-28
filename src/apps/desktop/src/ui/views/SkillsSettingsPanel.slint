@@ -1,7 +1,12 @@
-// SkillsSettingsPanel — Phase 3 sub-panel for g6 Skills
+// SkillsSettingsPanel - FR-T4-6b ws-skills 页对稿（settings-workspace-skills.html）
 //
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
-// E3=a (one-line display), E2=c (global + per-workspace toggle).
+// 设计真值：docs/design/2026-07-22-frontend-redesign/prototypes/settings-workspace-skills.html
+// 照设计稿 .section-skills 卡片 / .skill-list / .skill-row / .toggle 样式对稿。
+// 原型为「工作区 + 技能」合并页；本面板只渲染技能卡（工作区卡归
+// WorkspaceSettingsPanel，不在本批）。功能与回调不变（全局开关 set-skill-global、
+// 工作区覆盖三态循环 set-skill-workspace，受 workspace-override-supported 闸门控制）。
+// 设计稿的「N 个工作区已覆盖」计数徽章 + 可展开 overrides 面板为未来增强，
+// 数据需求见 t4-6b-report.md。
 
 import { SkillStateItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
@@ -9,7 +14,8 @@ import { MaterialCard } from "../components/MaterialCard.slint";
 import { AppStrings } from "../strings.slint";
 
 export component SkillsSettingsPanel inherits Rectangle {
-    background: RedesignTheme.t.bg;
+    // 透明：让 SettingsView 内容区淡雾透过卡片间隙显形（同 T4-6a 范式）。
+    background: transparent;
 
     in property <[SkillStateItem]> skills: [];
     // 2026-07-27 (K4a R3, Bug C, fix #5): the per-workspace
@@ -18,7 +24,7 @@ export component SkillsSettingsPanel inherits Rectangle {
     // data. The pre-fix code unconditionally rendered the
     // button with `workspace-override == ""` (the "follow
     // global" state), which silently no-op'd the user's
-    // clicks — the click callback wrote to AppSettings but
+    // clicks - the click callback wrote to AppSettings but
     // nothing in the data flow read from there, so the
     // override never took effect. That's a UX trap: the
     // button LOOKED clickable but the click was a dead
@@ -29,161 +35,201 @@ export component SkillsSettingsPanel inherits Rectangle {
     callback set-skill-global(string, bool);  // (skill_id, enabled)
     callback set-skill-workspace(string, string);  // (skill_id, override: "" | "on" | "off")
 
-    VerticalLayout {
+    Flickable {
         width: parent.width;
         height: parent.height;
-        padding: RedesignTheme.t.s5;
-        spacing: RedesignTheme.t.s4;
+        viewport-height: skills-layout.preferred-height;
 
-        Text {
-            text: AppStrings.settings-skills;
-            font-size: RedesignTheme.t.fs-lg;
-            color: RedesignTheme.t.fg;
-        }
-
-        if root.skills.length == 0: Rectangle {
-            height: 80px;
-            background: RedesignTheme.t.surface;
-            border-radius: RedesignTheme.t.r-sm;
-
-            Text {
-                text: AppStrings.skills-empty;
-                color: RedesignTheme.t.muted;
-                opacity: 0.7;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-            }
-        }
-
-        Flickable {
-            vertical-stretch: 1;
+        skills-layout := VerticalLayout {
             width: parent.width;
+            padding: RedesignTheme.t.s5;
+            spacing: RedesignTheme.t.s5; /* .content gap 24px */
 
-            VerticalLayout {
-                spacing: RedesignTheme.t.s1;
+            // ===== Skills card (.section-skills) =====
+            MaterialCard {
                 width: parent.width;
+                card-padding: RedesignTheme.t.s6;
 
-                // E3=a: one-line display (name + description).
-                for skill in root.skills: MaterialCard {
+                VerticalLayout {
                     width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
-                    height: 56px;
+                    padding: RedesignTheme.t.s6;
+                    spacing: RedesignTheme.t.s4;
 
-HorizontalLayout {
-                            spacing: RedesignTheme.t.s4;
+                    // skills-header: section-title + hint
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 4px; /* .skills-header inner */
+                        Text {
+                            text: AppStrings.settings-skills;
+                            font-size: RedesignTheme.t.fs-md; /* .section-title 11.5px */
+                            color: RedesignTheme.t.muted;
+                        }
+                        Text {
+                            text: "全局开关；单个工作区可单独覆盖。";
+                            font-size: RedesignTheme.t.fs-lg; /* .hint 13px */
+                            color: RedesignTheme.t.faint;
+                        }
+                    }
+
+                    // skill-list
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 10px; /* .skill-list gap */
+
+                        // empty state
+                        if root.skills.length == 0: Rectangle {
                             width: parent.width;
-
-                            info := VerticalLayout {
-                            width: parent.width - 360px;
-                            spacing: 0;
+                            height: 80px;
+                            background: RedesignTheme.t.surface;
+                            border-radius: RedesignTheme.t.r-sm;
 
                             Text {
-                                text: skill.name;
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-body;
-                                font-weight: 600;
-                            }
-                            Text {
-                                text: skill.description;
+                                text: AppStrings.skills-empty;
                                 color: RedesignTheme.t.muted;
                                 opacity: 0.7;
-                                font-size: RedesignTheme.t.fs-md;
-                            }
-                        }
-
-                        // Global toggle.
-                        HorizontalLayout {
-                            spacing: RedesignTheme.t.s1;
-                            width: 180px;
-
-                            Text {
-                                text: AppStrings.skills-global-label;
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-md;
+                                horizontal-alignment: center;
                                 vertical-alignment: center;
-                                width: 50px;
-                            }
-
-                            global-toggle := Rectangle {
-                                width: 36px;
-                                height: 20px;
-                                border-radius: RedesignTheme.t.r-pill;
-                                background: skill.global-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.surface;
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => { root.set-skill-global(skill.id, !skill.global-enabled); }
-                                }
-                                indicator := Rectangle {
-                                    x: skill.global-enabled ? 18px : 0px;
-                                    width: 20px;
-                                    height: 20px;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: RedesignTheme.t.bg;
-                                }
+                                width: parent.width;
                             }
                         }
 
-                        // Workspace override cycle button ("" → "on" → "off" → "").
-                        // Gated on `workspace-override-supported`: when
-                        // the Rust side has confirmed the facade can
-                        // resolve per-workspace data, render the
-                        // interactive cycle button; otherwise show
-                        // a passive "跟随全局" label so the column
-                        // width is consistent but the user cannot
-                        // click a button that would silently no-op.
-                        if root.workspace-override-supported: workspace-cycle := Rectangle {
-                            width: 140px;
-                            height: 36px;
-                            padding: RedesignTheme.t.s1;
-                            background: RedesignTheme.t.surface;
+                        // skill rows (.skill-row: r-sm, transparent bg/border, padding 14px 18px)
+                        for skill in root.skills: Rectangle {
+                            width: parent.width;
+                            height: skill-row-layout.preferred-height;
                             border-radius: RedesignTheme.t.r-sm;
+                            background: transparent;
+                            border-width: 1px;
+                            border-color: transparent;
 
-                            TouchArea {
+                            skill-row-layout := HorizontalLayout {
                                 width: parent.width;
-                                height: parent.height;
-                                clicked => {
-                                    // Cycle: "" → "on" → "off" → ""
-                                    // (string comparisons on string property)
-                                    if skill.workspace-override == "" {
-                                        root.set-skill-workspace(skill.id, "on");
-                                    } else if skill.workspace-override == "on" {
-                                        root.set-skill-workspace(skill.id, "off");
-                                    } else {
-                                        root.set-skill-workspace(skill.id, "");
+                                padding: RedesignTheme.t.s4; /* .skill-row padding 14px 18px (Slint uniform) */
+                                spacing: RedesignTheme.t.s3; /* .skill-row gap 14px */
+
+                                // skill-info (.skill-info flex 1)
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 2px; /* .skill-desc margin-top 2px */
+                                    Text {
+                                        text: skill.name;
+                                        color: RedesignTheme.t.fg;
+                                        font-size: RedesignTheme.t.fs-body; /* .skill-name 15px */
+                                        font-weight: 600;
+                                    }
+                                    Text {
+                                        text: skill.description;
+                                        color: RedesignTheme.t.faint; /* .skill-desc faint */
+                                        font-size: RedesignTheme.t.fs-lg; /* 13px */
                                     }
                                 }
-                            }
 
-                            Text {
-                                text: skill.workspace-override == "" ? "跟随全局"
-                                    : skill.workspace-override == "on" ? "本工作文件夹: 开"
-                                    : "本工作文件夹: 关";
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-md;
-                                vertical-alignment: center;
-                                horizontal-alignment: center;
-                                width: parent.width;
-                            }
-                        }
-                        if !root.workspace-override-supported: workspace-cycle-disabled := Rectangle {
-                            width: 140px;
-                            height: 36px;
-                            padding: RedesignTheme.t.s1;
-                            background: RedesignTheme.t.surface;
-                            border-radius: RedesignTheme.t.r-sm;
-                            opacity: 0.5;
+                                // skill-actions (.skill-actions gap 10px)
+                                HorizontalLayout {
+                                    spacing: 10px; /* .skill-actions gap */
 
-                            Text {
-                                text: skill.workspace-override == "" ? "跟随全局"
-                                    : skill.workspace-override == "on" ? "本工作文件夹: 开"
-                                    : "本工作文件夹: 关";
-                                color: RedesignTheme.t.faint;
-                                font-size: RedesignTheme.t.fs-md;
-                                vertical-alignment: center;
-                                horizontal-alignment: center;
-                                width: parent.width;
+                                    // global toggle (.toggle 36×20; off border / on rep-500; knob 14×14 surface)
+                                    VerticalLayout {
+                                        vertical-stretch: 1;
+                                        alignment: center;
+                                        global-toggle := Rectangle {
+                                            width: 36px;
+                                            height: 20px;
+                                            border-radius: RedesignTheme.t.r-pill;
+                                            background: skill.global-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+                                            TouchArea {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                clicked => { root.set-skill-global(skill.id, !skill.global-enabled); }
+                                            }
+                                            Rectangle {
+                                                x: skill.global-enabled ? 18px : 2px; /* .toggle translateX 16 + left 2 */
+                                                y: 2px; /* .toggle top 2 */
+                                                width: 14px;
+                                                height: 14px;
+                                                border-radius: RedesignTheme.t.r-pill;
+                                                background: RedesignTheme.t.surface;
+                                            }
+                                        }
+                                    }
+
+                                    // Workspace override cycle button ("" -> "on" -> "off" -> "").
+                                    // Gated on `workspace-override-supported`: when
+                                    // the Rust side has confirmed the facade can
+                                    // resolve per-workspace data, render the
+                                    // interactive cycle button; otherwise show
+                                    // a passive "跟随全局" label so the column
+                                    // width is consistent but the user cannot
+                                    // click a button that would silently no-op.
+                                    if root.workspace-override-supported: VerticalLayout {
+                                        vertical-stretch: 1;
+                                        alignment: center;
+                                        workspace-cycle := Rectangle {
+                                            width: 140px;
+                                            height: 36px;
+                                            border-radius: RedesignTheme.t.r-sm;
+                                            background: RedesignTheme.t.surface;
+                                            border-width: 1px;
+                                            border-color: RedesignTheme.t.border-soft;
+
+                                            HorizontalLayout {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                alignment: center;
+                                                Text {
+                                                    text: skill.workspace-override == "" ? "跟随全局"
+                                                        : skill.workspace-override == "on" ? "本工作文件夹: 开"
+                                                        : "本工作文件夹: 关";
+                                                    color: RedesignTheme.t.fg;
+                                                    font-size: RedesignTheme.t.fs-md;
+                                                    horizontal-alignment: center;
+                                                }
+                                            }
+
+                                            TouchArea {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                clicked => {
+                                                    // Cycle: "" -> "on" -> "off" -> ""
+                                                    if skill.workspace-override == "" {
+                                                        root.set-skill-workspace(skill.id, "on");
+                                                    } else if skill.workspace-override == "on" {
+                                                        root.set-skill-workspace(skill.id, "off");
+                                                    } else {
+                                                        root.set-skill-workspace(skill.id, "");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if !root.workspace-override-supported: VerticalLayout {
+                                        vertical-stretch: 1;
+                                        alignment: center;
+                                        workspace-cycle-disabled := Rectangle {
+                                            width: 140px;
+                                            height: 36px;
+                                            border-radius: RedesignTheme.t.r-sm;
+                                            background: RedesignTheme.t.surface;
+                                            border-width: 1px;
+                                            border-color: RedesignTheme.t.border-soft;
+                                            opacity: 0.5;
+
+                                            HorizontalLayout {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                alignment: center;
+                                                Text {
+                                                    text: skill.workspace-override == "" ? "跟随全局"
+                                                        : skill.workspace-override == "on" ? "本工作文件夹: 开"
+                                                        : "本工作文件夹: 关";
+                                                    color: RedesignTheme.t.faint;
+                                                    font-size: RedesignTheme.t.fs-md;
+                                                    horizontal-alignment: center;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

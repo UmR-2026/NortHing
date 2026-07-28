@@ -1,7 +1,11 @@
-// ProviderSettingsPanel — Phase 3 sub-panel for g1 Provider CRUD
+// ProviderSettingsPanel - FR-T4-6b models 页对稿（settings-models.html）
 //
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
-// §6.5 (C-i inline expansion, C-iii loading state, C-iv empty state).
+// 设计真值：docs/design/2026-07-22-frontend-redesign/prototypes/settings-models.html
+// T4-6b：照设计稿卡片/行距/字号/色档对稿。验证状态色档照 HTML L404 注释
+// （✓ abyss-500 / ⚠️ rep-500）；主操作与开启态用 rep-500。功能与回调签名不变
+// （provider 列表/编辑/测试/设默认/清理占位）。设计稿有而实现无的交互元素
+// （默认模型下拉选择器、卡片级启用开关）占位 display-only/disabled + TODO，
+// 数据需求见 t4-6b-report.md。
 
 import { ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
@@ -18,7 +22,8 @@ struct ProviderTypeOption {
 }
 
 export component ProviderSettingsPanel inherits Rectangle {
-    background: RedesignTheme.t.bg;
+    // 透明：让 SettingsView 内容区淡雾透过卡片间隙显形（同 T4-6a 范式）。
+    background: transparent;
 
     in property <[ProviderItem]> providers: [];
     in property <string> default-model-provider-id: "";
@@ -52,402 +57,583 @@ export component ProviderSettingsPanel inherits Rectangle {
     // Names match `spec §5.8 Pattern 2`.
     callback upsert-provider(string, string, string, string, string, string, bool);
         // (id-or-empty, name, type, base_url, api_key, model, enabled)
-        // — empty id means "create new"; non-empty means "update existing"
+        // - empty id means "create new"; non-empty means "update existing"
     callback delete-provider(string);
     callback test-provider(string);
     callback set-default-model(string);
     callback cleanup-legacy-placeholders();
 
-    VerticalLayout {
+    Flickable {
         width: parent.width;
         height: parent.height;
-        padding: RedesignTheme.t.s5;
-        spacing: RedesignTheme.t.s4;
+        viewport-height: provider-layout.preferred-height;
 
-        // Header: title + add button.
-        HorizontalLayout {
-            height: 48px;
-            alignment: space-between;
-
-            Text {
-                text: AppStrings.provider-add;
-                font-size: RedesignTheme.t.fs-lg;
-                color: RedesignTheme.t.fg;
-                vertical-alignment: center;
-            }
-
-                add-button := MaterialButton {
-                text: root.providers.length == 0 ? AppStrings.provider-add : "+";
-                clicked => {
-                    root.add-form-visible = true;
-                    root.edit-id = "";
-                    root.form-name = "";
-                    root.form-type = "custom-openai";
-                    root.form-base-url = "";
-                    root.form-api-key = "";
-                    root.form-model = "";
-                    root.form-enabled = true;
-                    root.form-test-result = "";
-                }
-            }
-        }
-
-        // Q1=a: legacy placeholder banner.
-        if root.legacy-placeholder-count > 0 && !root.legacy-banner-dismissed: Rectangle {
-            height: 56px;
-            background: RedesignTheme.t.rep-500.with-alpha(0.12);
-            border-radius: RedesignTheme.t.r-sm;
-            padding: RedesignTheme.t.s2;
-
-            HorizontalLayout {
-                spacing: RedesignTheme.t.s2;
-
-                Text {
-                    text: AppStrings.provider-cleanup-legacy-banner + " (n=" + root.legacy-placeholder-count + ")";
-                    color: RedesignTheme.t.fg;
-                    font-size: RedesignTheme.t.fs-body;
-                    vertical-alignment: center;
-                    horizontal-alignment: left;
-                    width: parent.width - 200px;
-                    wrap: word-wrap;
-                }
-
-                cleanup-button := MaterialButton {
-                    text: AppStrings.provider-cleanup-legacy-button;
-                    clicked => { root.cleanup-legacy-placeholders(); }
-                }
-
-                dismiss-button := MaterialButton {
-                    text: "×";
-                    width: 32px;
-                    clicked => { root.legacy-banner-dismissed = true; }
-                }
-            }
-        }
-
-        if root.provider-test-in-flight || root.provider-test-result != "": Text {
-            text: root.provider-test-in-flight ? AppStrings.provider-test-in-flight : root.provider-test-result;
-            color: root.provider-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
-            font-size: RedesignTheme.t.fs-md;
-        }
-
-        // Provider list (Flickable for scroll).
-        Flickable {
-            vertical-stretch: 1;
+        provider-layout := VerticalLayout {
             width: parent.width;
-            viewport-height: parent.height;
+            padding: RedesignTheme.t.s5;
+            spacing: 20px; /* settings-models.html .content-inner gap */
 
-            VerticalLayout {
-                spacing: RedesignTheme.t.s2;
+            // ===== Default Model card (.card default-model) =====
+            MaterialCard {
                 width: parent.width;
+                card-padding: RedesignTheme.t.s6;
 
-                if root.providers.length == 0 && !root.add-form-visible: Rectangle {
-                    height: 120px;
-                    background: RedesignTheme.t.surface;
-                    border-radius: RedesignTheme.t.r-sm;
+                VerticalLayout {
+                    width: parent.width;
+                    padding: RedesignTheme.t.s6;
+                    spacing: RedesignTheme.t.s4;
 
                     Text {
-                        text: AppStrings.provider-empty;
-                        font-size: RedesignTheme.t.fs-body;
+                        text: "默认模型";
+                        font-size: 18px; /* settings-models.html .card-title */
                         color: RedesignTheme.t.fg;
-                        opacity: 0.7;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                        font-weight: 600;
+                    }
+
+                    // default-model-body: 供应商 + 模型 two select-wraps
+                    HorizontalLayout {
                         width: parent.width;
+                        spacing: RedesignTheme.t.s4;
+
+                        // 供应商
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 6px; /* .select-wrap gap */
+                            Text {
+                                text: "供应商";
+                                font-size: RedesignTheme.t.fs-lg; /* .select-label 13px */
+                                color: RedesignTheme.t.muted;
+                            }
+                            // display-only：设默认由各行「设为默认」完成。
+                            // TODO 数据需求：全量下拉选择器（改默认供应商）需 Rust 侧 callback。
+                            Rectangle {
+                                height: 36px;
+                                border-radius: RedesignTheme.t.r-sm;
+                                background: RedesignTheme.t.elevated;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+
+                                Text {
+                                    text: root.default-model-provider-id == "" ? "(未设置)" : root.default-model-provider-id;
+                                    font-size: RedesignTheme.t.fs-body;
+                                    color: RedesignTheme.t.fg;
+                                    x: RedesignTheme.t.s3; /* .input padding 9px 12px */
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // 模型
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 6px;
+                            Text {
+                                text: "模型";
+                                font-size: RedesignTheme.t.fs-lg;
+                                color: RedesignTheme.t.muted;
+                            }
+                            // TODO 数据需求：默认供应商对应的 model 需 Rust 侧按
+                            // default-model-provider-id 查 ProviderItem.model 解析。现占位。
+                            Rectangle {
+                                height: 36px;
+                                border-radius: RedesignTheme.t.r-sm;
+                                background: RedesignTheme.t.elevated;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+
+                                Text {
+                                    text: "(未设置)";
+                                    font-size: RedesignTheme.t.fs-body;
+                                    color: RedesignTheme.t.muted;
+                                    x: RedesignTheme.t.s3;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "新会话默认使用这个模型。";
+                        font-size: RedesignTheme.t.fs-lg; /* .hint 13px */
+                        color: RedesignTheme.t.faint;
+                    }
+                }
+            }
+
+            // ===== Providers section =====
+            VerticalLayout {
+                width: parent.width;
+                spacing: RedesignTheme.t.s4;
+
+                // providers-header: section-title + 添加供应商
+                HorizontalLayout {
+                    width: parent.width;
+                    height: 36px;
+                    alignment: space-between;
+
+                    Text {
+                        text: "供应商";
+                        font-size: RedesignTheme.t.fs-md; /* .section-title 11.5px */
+                        color: RedesignTheme.t.muted;
+                        vertical-alignment: center;
+                    }
+
+                    add-button := MaterialButton {
+                        text: AppStrings.provider-add;
+                        clicked => {
+                            root.add-form-visible = true;
+                            root.edit-id = "";
+                            root.form-name = "";
+                            root.form-type = "custom-openai";
+                            root.form-base-url = "";
+                            root.form-api-key = "";
+                            root.form-model = "";
+                            root.form-enabled = true;
+                            root.form-test-result = "";
+                        }
                     }
                 }
 
-                for provider in providers: MaterialCard {
+                // provider-list
+                VerticalLayout {
                     width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
-                    height: 64px;
+                    spacing: RedesignTheme.t.s4; /* .provider-list gap 16px */
 
-                    HorizontalLayout {
-                        spacing: RedesignTheme.t.s4;
+                    // Q1=a: legacy placeholder banner.
+                    if root.legacy-placeholder-count > 0 && !root.legacy-banner-dismissed: Rectangle {
                         width: parent.width;
+                        height: 56px;
+                        background: RedesignTheme.t.rep-500.with-alpha(0.12);
+                        border-radius: RedesignTheme.t.r-sm;
 
-                        verified-marker := Text {
-                            text: provider.verified == "fail" ? "⚠️"
-                                : provider.verified == "ok" ? "✓"
-                                : "";
-                            color: provider.verified == "fail" ? RedesignTheme.t.danger
-                                : RedesignTheme.t.rep-500;
-                            font-size: RedesignTheme.t.fs-lg;
-                            vertical-alignment: center;
-                            width: 24px;
-                        }
-
-                        info-box := VerticalLayout {
-                            width: parent.width - 320px;
-                            spacing: RedesignTheme.t.s1;
+                        HorizontalLayout {
+                            width: parent.width;
+                            height: parent.height;
+                            padding: RedesignTheme.t.s2;
+                            spacing: RedesignTheme.t.s2;
 
                             Text {
-                                text: provider.name + (provider.enabled ? "" : " (已禁用)");
+                                text: AppStrings.provider-cleanup-legacy-banner + " (n=" + root.legacy-placeholder-count + ")";
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-body;
+                                vertical-alignment: center;
+                                wrap: word-wrap;
+                                horizontal-stretch: 1;
+                            }
+
+                            cleanup-button := MaterialButton {
+                                text: AppStrings.provider-cleanup-legacy-button;
+                                primary: false;
+                                clicked => { root.cleanup-legacy-placeholders(); }
+                            }
+
+                            dismiss-button := MaterialButton {
+                                text: "×";
+                                primary: false;
+                                width: 32px;
+                                clicked => { root.legacy-banner-dismissed = true; }
+                            }
+                        }
+                    }
+
+                    if root.provider-test-in-flight || root.provider-test-result != "": Text {
+                        text: root.provider-test-in-flight ? AppStrings.provider-test-in-flight : root.provider-test-result;
+                        color: root.provider-test-result == "ok" ? RedesignTheme.t.abyss-500 : RedesignTheme.t.rep-500;
+                        font-size: RedesignTheme.t.fs-md;
+                    }
+
+                    // empty state (Spec §6.5 C-iv)
+                    if root.providers.length == 0 && !root.add-form-visible: Rectangle {
+                        width: parent.width;
+                        height: 120px;
+                        background: RedesignTheme.t.surface;
+                        border-radius: RedesignTheme.t.r-sm;
+
+                        Text {
+                            text: AppStrings.provider-empty;
+                            font-size: RedesignTheme.t.fs-body;
+                            color: RedesignTheme.t.fg;
+                            opacity: 0.7;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                        }
+                    }
+
+                    // provider cards (.provider-card padding 20px)
+                    for provider in providers: MaterialCard {
+                        width: parent.width;
+                        card-padding: RedesignTheme.t.s5;
+
+                        VerticalLayout {
+                            width: parent.width;
+                            padding: RedesignTheme.t.s5;
+                            spacing: RedesignTheme.t.s3;
+
+                            // header: title-group(name + type pill) + enabled toggle
+                            HorizontalLayout {
+                                width: parent.width;
+                                spacing: RedesignTheme.t.s3;
+                                alignment: space-between;
+
+                                // title-group
+                                HorizontalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 10px; /* .provider-card__title-group gap */
+
+                                    Text {
+                                        text: provider.name + (provider.enabled ? "" : " (已禁用)");
+                                        font-size: RedesignTheme.t.fs-name; /* .provider-card__name 16px */
+                                        color: RedesignTheme.t.fg;
+                                        font-weight: 600;
+                                        vertical-alignment: center;
+                                        horizontal-stretch: 1;
+                                        overflow: elide; /* no ellipsis in Slint; elide approximates .name clip */
+                                    }
+
+                                    // type pill (.pill: raised bg, r-pill, fs-md muted, 1px border-soft)
+                                    type-pill := Rectangle {
+                                        height: 22px;
+                                        width: type-pill-layout.preferred-width;
+                                        border-radius: RedesignTheme.t.r-pill;
+                                        background: RedesignTheme.t.raised;
+                                        border-width: 1px;
+                                        border-color: RedesignTheme.t.border-soft;
+
+                                        type-pill-layout := HorizontalLayout {
+                                            Rectangle { width: 10px; /* .pill horizontal pad */ }
+                                            Text {
+                                                text: provider.type;
+                                                font-size: RedesignTheme.t.fs-md;
+                                                color: RedesignTheme.t.muted;
+                                                vertical-alignment: center;
+                                            }
+                                            Rectangle { width: 10px; }
+                                        }
+                                    }
+                                }
+
+                                // 卡片级启用开关占位（.toggle 36×20）。
+                                // TODO 数据需求：toggle 需 set-provider-enabled(id, bool) callback；
+                                // 现有 upsert-provider 缺 api-key 透传（ProviderItem 不含密钥），无法就地翻转。
+                                enabled-toggle := Rectangle {
+                                    width: 36px;
+                                    height: 20px;
+                                    border-radius: RedesignTheme.t.r-pill;
+                                    background: provider.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+
+                                    Rectangle {
+                                        x: provider.enabled ? 18px : 0px;
+                                        y: 2px;
+                                        width: 16px;
+                                        height: 16px;
+                                        border-radius: RedesignTheme.t.r-pill;
+                                        background: RedesignTheme.t.surface;
+                                    }
+                                }
+                            }
+
+                            // meta: Base URL / 模型（.meta-row label 11.5px muted min-w 60px + value 13px）
+                            VerticalLayout {
+                                width: parent.width;
+                                spacing: 6px; /* .meta-row margin-bottom 6px */
+
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s2;
+                                    Text {
+                                        text: "Base URL";
+                                        font-size: RedesignTheme.t.fs-md;
+                                        color: RedesignTheme.t.muted;
+                                        width: 60px; /* .meta-label min-width */
+                                    }
+                                    Text {
+                                        text: provider.base-url;
+                                        font-size: RedesignTheme.t.fs-lg; /* .meta-value 13px */
+                                        color: RedesignTheme.t.faint; /* .meta-value--faint */
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s2;
+                                    Text {
+                                        text: "模型";
+                                        font-size: RedesignTheme.t.fs-md;
+                                        color: RedesignTheme.t.muted;
+                                        width: 60px;
+                                    }
+                                    Text {
+                                        text: provider.model;
+                                        font-size: RedesignTheme.t.fs-lg;
+                                        color: RedesignTheme.t.fg;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            // footer divider (.provider-card__footer border-top 1px border-soft)
+                            Rectangle {
+                                width: parent.width;
+                                height: 1px;
+                                background: RedesignTheme.t.border-soft;
+                            }
+
+                            // footer: status + actions
+                            HorizontalLayout {
+                                width: parent.width;
+                                spacing: RedesignTheme.t.s1; /* .provider-card__actions gap 4px */
+                                alignment: space-between;
+
+                                // status (.status 10px; ✓ abyss-500 / ⚠️ rep-500 / 未测试 faint)
+                                Text {
+                                    text: provider.verified == "fail" ? "⚠️ 验证失败"
+                                        : provider.verified == "ok" ? "✓ 已验证"
+                                        : "未测试";
+                                    color: provider.verified == "fail" ? RedesignTheme.t.rep-500
+                                        : provider.verified == "ok" ? RedesignTheme.t.abyss-500
+                                        : RedesignTheme.t.faint;
+                                    font-size: RedesignTheme.t.fs-sm; /* .status 10px */
+                                    vertical-alignment: center;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s1;
+                                    test-button := MaterialButton {
+                                        text: AppStrings.provider-test-button;
+                                        primary: false;
+                                        clicked => { root.test-provider(provider.id); }
+                                    }
+                                    edit-button := MaterialButton {
+                                        text: AppStrings.provider-edit;
+                                        primary: false;
+                                        clicked => {
+                                            root.edit-id = provider.id;
+                                            root.form-name = provider.name;
+                                            root.form-type = provider.type;
+                                            root.form-base-url = provider.base-url;
+                                            root.form-model = provider.model;
+                                            root.form-enabled = provider.enabled;
+                                            root.form-test-result = "";
+                                            root.add-form-visible = true;
+                                        }
+                                    }
+                                    set-default-button := MaterialButton {
+                                        text: "设为默认";
+                                        primary: false;
+                                        clicked => { root.set-default-model(provider.id); }
+                                        disabled: !provider.enabled || root.default-model-provider-id == provider.id;
+                                    }
+                                    delete-button := MaterialButton {
+                                        text: AppStrings.provider-delete;
+                                        primary: false;
+                                        clicked => { root.delete-provider(provider.id); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ===== Add / edit form (.add-form padding 24px gap 16px) =====
+                    if root.add-form-visible: MaterialCard {
+                        width: parent.width;
+                        card-padding: RedesignTheme.t.s5;
+
+                        VerticalLayout {
+                            width: parent.width;
+                            padding: RedesignTheme.t.s5;
+                            spacing: RedesignTheme.t.s4;
+
+                            Text {
+                                text: root.form-name == "" ? AppStrings.provider-add : AppStrings.provider-edit;
                                 font-size: RedesignTheme.t.fs-body;
                                 color: RedesignTheme.t.fg;
                                 font-weight: 600;
                             }
 
-                            Text {
-                                text: provider.type + " · " + provider.model;
-                                font-size: RedesignTheme.t.fs-md;
-                                color: RedesignTheme.t.fg;
-                                opacity: 0.7;
+                            // Name
+                            MaterialTextField {
+                                placeholder: AppStrings.provider-name-label;
+                                text <=> root.form-name;
+                                width: parent.width;
                             }
-                        }
 
-                        test-button := MaterialButton {
-                            text: AppStrings.provider-test-button;
-                            clicked => { root.test-provider(provider.id); }
-                        }
-
-                        delete-button := MaterialButton {
-                            text: AppStrings.provider-delete;
-                            clicked => { root.delete-provider(provider.id); }
-                        }
-
-                        // 2026-07-18 (D2b): set-default-model per-row action.
-                        set-default-button := MaterialButton {
-                            text: "设为默认";
-                            clicked => { root.set-default-model(provider.id); }
-                            disabled: !provider.enabled || root.default-model-provider-id == provider.id;
-                        }
-
-                        // 2026-07-18 (D2d): edit per-row — fill the form with
-                        // this provider's values and set edit-id so save/test
-                        // call upsert-provider with the correct id.
-                        edit-button := MaterialButton {
-                            text: "编辑";
-                            clicked => {
-                                root.edit-id = provider.id;
-                                root.form-name = provider.name;
-                                root.form-type = provider.type;
-                                root.form-base-url = provider.base-url;
-                                root.form-model = provider.model;
-                                root.form-enabled = provider.enabled;
-                                root.form-test-result = "";
-                                root.add-form-visible = true;
-                            }
-                        }
-                    }
-                }
-
-                // ===== Add / edit form (inline expansion at bottom) =====
-                if root.add-form-visible: MaterialCard {
-                    width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
-
-                    VerticalLayout {
-                        spacing: RedesignTheme.t.s2;
-                        width: parent.width;
-
-                        Text {
-                            text: root.form-name == "" ? AppStrings.provider-add : AppStrings.provider-edit;
-                            font-size: RedesignTheme.t.fs-body;
-                            color: RedesignTheme.t.fg;
-                            font-weight: 600;
-                        }
-
-                        // Name
-                        MaterialTextField {
-                            placeholder: AppStrings.provider-name-label;
-                            text <=> root.form-name;
-                            width: parent.width;
-                        }
-
-                        // Type dropdown
-                        // Note: Slint 1.16 has ComboBox but it's basic.
-                        // For simplicity we use a horizontal button group.
-                        HorizontalLayout {
-                            height: 40px;
-                            spacing: RedesignTheme.t.s1;
-
-                            // 2026-07-18 (D2d): type tabs reduced to the two
-                            // custom-compatible options; user fills base-url by hand.
-                            for opt in [
-                                { value: "custom-openai", label: "OpenAI 兼容" },
-                                { value: "custom-anthropic", label: "Anthropic 兼容" }
-                            ]: Rectangle {
+                            // Type segmented control（.segments 风格；D2d 仅 2 个 custom 兼容档）
+                            Rectangle {
+                                width: parent.width;
                                 height: 36px;
-                                width: 120px;
-                                padding: RedesignTheme.t.s2;
-                                background: opt.value == root.form-type
-                                    ? RedesignTheme.t.rep-500
-                                    : RedesignTheme.t.surface;
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => {
-                                        root.form-type = opt.value;
-                                        root.form-base-url = "";
-                                        root.form-model = "";
+                                border-radius: RedesignTheme.t.r-sm;
+                                background: RedesignTheme.t.raised;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+
+                                HorizontalLayout {
+                                    x: 3px;
+                                    y: 3px;
+                                    width: parent.width - 6px;
+                                    height: parent.height - 6px;
+                                    spacing: 3px; /* .segments gap */
+
+                                    for opt in [
+                                        { value: "custom-openai", label: "OpenAI 兼容" },
+                                        { value: "custom-anthropic", label: "Anthropic 兼容" }
+                                    ]: Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: parent.height;
+                                        border-radius: RedesignTheme.t.r-sm;
+                                        background: opt.value == root.form-type
+                                            ? RedesignTheme.t.elevated
+                                            : transparent;
+
+                                        Text {
+                                            text: opt.label;
+                                            color: opt.value == root.form-type
+                                                ? RedesignTheme.t.fg
+                                                : RedesignTheme.t.muted;
+                                            font-size: RedesignTheme.t.fs-lg; /* .segment 13px */
+                                            font-weight: opt.value == root.form-type ? 600 : 400;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: parent.width;
+                                        }
+
+                                        TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            clicked => {
+                                                root.form-type = opt.value;
+                                                root.form-base-url = "";
+                                                root.form-model = "";
+                                            }
+                                        }
                                     }
                                 }
-                                Text {
-                                    text: opt.label;
-                                    color: opt.value == root.form-type
-                                        ? RedesignTheme.t.on-rep
-                                        : RedesignTheme.t.fg;
-                                    font-size: RedesignTheme.t.fs-md;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                    width: parent.width;
-                                }
-                            }
-                        }
-
-                        // Base URL
-                        MaterialTextField {
-                            placeholder: AppStrings.provider-base-url-label;
-                            text <=> root.form-base-url;
-                            width: parent.width;
-                        }
-
-                        // 2026-07-18 (D2c): endpoint hint caption — content varies by type.
-                        Text {
-                            text: root.form-type == "anthropic" || root.form-type == "custom-anthropic"
-                                ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
-                                : "填到 /v1 为止，客户端自动补 /chat/completions";
-                            font-size: RedesignTheme.t.fs-md;
-                            color: RedesignTheme.t.fg;
-                            opacity: 0.6;
-                            wrap: word-wrap;
-                            width: parent.width;
-                        }
-
-                        // API key (E2 password mode)
-                        // 2026-07-18 (D2e): dynamic placeholder — add mode shows the
-                        // normal label; edit mode reminds user that empty = keep existing.
-                        MaterialTextField {
-                            placeholder: root.edit-id == "" ? AppStrings.provider-api-key-label : "留空则保持原密钥";
-                            text <=> root.form-api-key;
-                            password: true;
-                            width: parent.width;
-                        }
-
-                        // Model (2026-07-18 D2c: plain text field, no preset dropdown)
-                        MaterialTextField {
-                            placeholder: AppStrings.provider-model-label;
-                            text <=> root.form-model;
-                            width: parent.width;
-                        }
-
-                        // Enabled toggle (B4)
-                        HorizontalLayout {
-                            spacing: RedesignTheme.t.s2;
-                            height: 36px;
-
-                            enabled-toggle := Rectangle {
-                                width: 48px;
-                                height: 24px;
-                                border-radius: RedesignTheme.t.r-md;
-                                background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.surface;
-
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => { root.form-enabled = !root.form-enabled; }
-                                }
-
-                                indicator := Rectangle {
-                                    x: root.form-enabled ? 24px : 0px;
-                                    width: 24px;
-                                    height: 24px;
-                                    border-radius: RedesignTheme.t.r-md;
-                                    background: RedesignTheme.t.bg;
-                                }
                             }
 
+                            // Base URL
+                            MaterialTextField {
+                                placeholder: AppStrings.provider-base-url-label;
+                                text <=> root.form-base-url;
+                                width: parent.width;
+                            }
+
+                            // 2026-07-18 (D2c): endpoint hint caption - content varies by type.
                             Text {
-                                text: AppStrings.provider-enabled-label;
+                                text: root.form-type == "anthropic" || root.form-type == "custom-anthropic"
+                                    ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
+                                    : "填到 /v1 为止，客户端自动补 /chat/completions";
+                                font-size: RedesignTheme.t.fs-md;
                                 color: RedesignTheme.t.fg;
-                                vertical-alignment: center;
+                                opacity: 0.6;
+                                wrap: word-wrap;
+                                width: parent.width;
                             }
-                        }
 
-                        // Test result (if any)
-                        if root.form-test-result != "": Text {
-                            text: root.form-test-result == "ok" ? AppStrings.provider-test-success
-                                : AppStrings.provider-test-failed-saved + " " + root.form-test-result;
-                            color: root.form-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
-                            font-size: RedesignTheme.t.fs-md;
-                        }
+                            // API key (E2 password mode; D2e dynamic placeholder)
+                            MaterialTextField {
+                                placeholder: root.edit-id == "" ? AppStrings.provider-api-key-label : "留空则保持原密钥";
+                                text <=> root.form-api-key;
+                                password: true;
+                                width: parent.width;
+                            }
 
-                        // Action row: test + save + cancel
-                        HorizontalLayout {
-                            spacing: RedesignTheme.t.s2;
-                            height: 40px;
+                            // Model (D2c: plain text field, no preset dropdown)
+                            MaterialTextField {
+                                placeholder: AppStrings.provider-model-label;
+                                text <=> root.form-model;
+                                width: parent.width;
+                            }
 
-                            test-btn := MaterialButton {
-                                text: root.form-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
-                                disabled: root.form-test-in-flight;
-                                clicked => {
-                                    // 2026-07-18 (D2d): pass edit-id so editing an
-                                    // existing provider updates in place instead
-                                    // of pushing a duplicate.
-                                    root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                            // Enabled toggle (B4)
+                            HorizontalLayout {
+                                width: parent.width;
+                                spacing: RedesignTheme.t.s2;
+                                height: 24px;
+
+                                form-enabled-toggle := Rectangle {
+                                    width: 36px;
+                                    height: 20px;
+                                    border-radius: RedesignTheme.t.r-pill;
+                                    background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+
+                                    TouchArea {
+                                        width: parent.width;
+                                        height: parent.height;
+                                        clicked => { root.form-enabled = !root.form-enabled; }
+                                    }
+
+                                    indicator := Rectangle {
+                                        x: root.form-enabled ? 18px : 0px;
+                                        y: 2px;
+                                        width: 16px;
+                                        height: 16px;
+                                        border-radius: RedesignTheme.t.r-pill;
+                                        background: RedesignTheme.t.surface;
+                                    }
+                                }
+
+                                Text {
+                                    text: AppStrings.provider-enabled-label;
+                                    color: RedesignTheme.t.fg;
+                                    font-size: RedesignTheme.t.fs-body;
+                                    vertical-alignment: center;
                                 }
                             }
 
-                            save-btn := MaterialButton {
-                                text: AppStrings.save;
-                                clicked => {
-                                    // 2026-07-18 (D2d): pass edit-id; clear it on
-                                    // success so the next add starts fresh.
-                                    root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
-                                    root.add-form-visible = false;
-                                    root.edit-id = "";
-                                }
+                            // Test result (if any)
+                            if root.form-test-result != "": Text {
+                                text: root.form-test-result == "ok" ? AppStrings.provider-test-success
+                                    : AppStrings.provider-test-failed-saved + " " + root.form-test-result;
+                                color: root.form-test-result == "ok" ? RedesignTheme.t.abyss-500 : RedesignTheme.t.rep-500;
+                                font-size: RedesignTheme.t.fs-md;
                             }
 
-                            cancel-btn := MaterialButton {
-                                text: AppStrings.cancel;
-                                clicked => {
-                                    root.add-form-visible = false;
-                                    root.edit-id = "";
+                            // Action row: test + save + cancel
+                            HorizontalLayout {
+                                width: parent.width;
+                                spacing: RedesignTheme.t.s2;
+                                height: 36px;
+                                alignment: end;
+
+                                test-btn := MaterialButton {
+                                    text: root.form-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
+                                    primary: false;
+                                    disabled: root.form-test-in-flight;
+                                    clicked => {
+                                        // 2026-07-18 (D2d): pass edit-id so editing an
+                                        // existing provider updates in place instead
+                                        // of pushing a duplicate.
+                                        root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                                    }
+                                }
+
+                                cancel-btn := MaterialButton {
+                                    text: AppStrings.cancel;
+                                    primary: false;
+                                    clicked => {
+                                        root.add-form-visible = false;
+                                        root.edit-id = "";
+                                    }
+                                }
+
+                                save-btn := MaterialButton {
+                                    text: AppStrings.save;
+                                    clicked => {
+                                        // 2026-07-18 (D2d): pass edit-id; clear it on
+                                        // success so the next add starts fresh.
+                                        root.upsert-provider(root.edit-id, root.form-name, root.form-type, root.form-base-url, root.form-api-key, root.form-model, root.form-enabled);
+                                        root.add-form-visible = false;
+                                        root.edit-id = "";
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }
-        }
-
-        // Default model selector at the bottom (B5=b).
-        HorizontalLayout {
-            height: 48px;
-            spacing: RedesignTheme.t.s2;
-
-            Text {
-                text: AppStrings.provider-default-model-label;
-                font-size: RedesignTheme.t.fs-body;
-                color: RedesignTheme.t.fg;
-                vertical-alignment: center;
-                width: 200px;
-            }
-
-            // 2026-07-18 (D2b): default-pick is now display-only — the
-            // "设为默认" action lives on each provider row below.
-            default-pick := Rectangle {
-                width: parent.width - 200px;
-                height: 36px;
-                padding: RedesignTheme.t.s2;
-                background: RedesignTheme.t.surface;
-                border-radius: RedesignTheme.t.r-sm;
-
-                Text {
-                    text: root.default-model-provider-id == "" ? "(未设置)" : root.default-model-provider_id;
-                    color: RedesignTheme.t.fg;
-                    vertical-alignment: center;
-                    horizontal-alignment: left;
-                    font-size: RedesignTheme.t.fs-body;
-                    width: parent.width;
                 }
             }
         }
     }
 }
 
-// Top-level `func` removed — Slint 1.16 only allows them inside
+// Top-level `func` removed - Slint 1.16 only allows them inside
 // component bodies. The model options are computed inline at the
 // `for` loop site above.

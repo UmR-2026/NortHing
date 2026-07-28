@@ -1,7 +1,12 @@
-// MCPSettingsPanel — Phase 3 sub-panel for g6 MCP
+// MCPSettingsPanel - FR-T4-6b mcp 页对稿（settings-mcp.html）
 //
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2,
-// F1=a (form), F2=b (3 transports).
+// 设计真值：docs/design/2026-07-22-frontend-redesign/prototypes/settings-mcp.html
+// 照设计稿 section-header / .card / .pill / .card-status / .segments / .add-panel
+// 样式对稿。验证状态色档：✓ 已连接 abyss-500 / ⚠️ 连接失败 rep-500（HTML
+// .card-status / .card-status.error）。功能与回调签名不变（upsert-mcp /
+// delete-mcp / test-mcp）。设计稿有而实现无的交互元素（卡片级启用开关、编辑
+// 按钮、mono 端点展示、可展开工具 chip 列表）占位 disabled/display-only + TODO，
+// 数据需求见 t4-6b-report.md。
 
 import { MCPItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
@@ -11,7 +16,8 @@ import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { AppStrings } from "../strings.slint";
 
 export component MCPSettingsPanel inherits Rectangle {
-    background: RedesignTheme.t.bg;
+    // 透明：让 SettingsView 内容区淡雾透过卡片间隙显形（同 T4-6a 范式）。
+    background: transparent;
 
     in property <[MCPItem]> mcp-servers: [];
     in-out property <bool> add-form-visible: false;
@@ -28,47 +34,72 @@ export component MCPSettingsPanel inherits Rectangle {
     callback delete-mcp(string);
     callback test-mcp(string);
 
-    VerticalLayout {
+    Flickable {
         width: parent.width;
         height: parent.height;
-        padding: RedesignTheme.t.s5;
-        spacing: RedesignTheme.t.s4;
+        viewport-height: mcp-layout.preferred-height;
 
-        HorizontalLayout {
-            height: 48px;
-            alignment: space-between;
+        mcp-layout := VerticalLayout {
+            width: parent.width;
+            padding: RedesignTheme.t.s5;
+            spacing: 20px; /* settings-mcp.html .section-header margin-bottom 20px */
 
-            Text {
-                text: AppStrings.settings-mcp;
-                font-size: RedesignTheme.t.fs-lg;
-                color: RedesignTheme.t.fg;
-                vertical-alignment: center;
-            }
+            // ===== section-header =====
+            VerticalLayout {
+                width: parent.width;
+                spacing: RedesignTheme.t.s2; /* .section-title margin-bottom 8px */
 
-            add-btn := MaterialButton {
-                text: root.mcp-servers.length == 0 ? AppStrings.mcp-add : "+";
-                clicked => {
-                    root.add-form-visible = true;
-                    root.form-name = "";
-                    root.form-transport = "stdio";
-                    root.form-command = "";
-                    root.form-args = "";
-                    root.form-url = "";
-                    root.form-env = "";
-                    root.form-enabled = true;
+                Text {
+                    text: AppStrings.settings-mcp;
+                    font-size: RedesignTheme.t.fs-md; /* .section-title 11.5px */
+                    color: RedesignTheme.t.muted;
+                }
+
+                // section-heading-row: name + hint + 添加服务器
+                HorizontalLayout {
+                    width: parent.width;
+                    spacing: RedesignTheme.t.s4; /* .section-heading-row gap 16px */
+                    alignment: space-between;
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 4px;
+                        Text {
+                            text: AppStrings.settings-mcp;
+                            font-size: 28px; /* settings-mcp.html .section-name */
+                            color: RedesignTheme.t.fg;
+                        }
+                        Text {
+                            text: "为 agent 接入外部工具。";
+                            font-size: RedesignTheme.t.fs-lg; /* .section-hint 13px */
+                            color: RedesignTheme.t.faint;
+                        }
+                    }
+
+                    add-btn := MaterialButton {
+                        text: AppStrings.mcp-add;
+                        clicked => {
+                            root.add-form-visible = true;
+                            root.form-name = "";
+                            root.form-transport = "stdio";
+                            root.form-command = "";
+                            root.form-args = "";
+                            root.form-url = "";
+                            root.form-env = "";
+                            root.form-enabled = true;
+                        }
+                    }
                 }
             }
-        }
 
-        Flickable {
-            vertical-stretch: 1;
-            width: parent.width;
-
+            // ===== cards wrapper (.card + .card margin-top 12px) =====
             VerticalLayout {
-                spacing: RedesignTheme.t.s2;
                 width: parent.width;
+                spacing: RedesignTheme.t.s3; /* .card + .card margin-top 12px */
 
+                // empty state
                 if root.mcp-servers.length == 0 && !root.add-form-visible: Rectangle {
+                    width: parent.width;
                     height: 80px;
                     background: RedesignTheme.t.surface;
                     border-radius: RedesignTheme.t.r-sm;
@@ -83,140 +114,349 @@ export component MCPSettingsPanel inherits Rectangle {
                     }
                 }
 
+                // server cards (.card padding 20px)
                 for srv in root.mcp-servers: MaterialCard {
                     width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
-                    height: 56px;
+                    card-padding: RedesignTheme.t.s5;
 
-                    HorizontalLayout {
-                        spacing: RedesignTheme.t.s4;
+                    VerticalLayout {
                         width: parent.width;
+                        padding: RedesignTheme.t.s5;
+                        spacing: RedesignTheme.t.s3;
 
-                        status := Text {
-                            text: srv.verified == "fail" ? "⚠️"
-                                : srv.verified == "ok" ? "✓"
-                                : (srv.enabled ? "○" : "⨯");
-                            color: srv.verified == "fail" ? RedesignTheme.t.danger
-                                : srv.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.fg;
-                            width: 24px;
-                            font-size: RedesignTheme.t.fs-lg;
-                            vertical-alignment: center;
-                        }
+                        // card-header: card-main + card-actions
+                        HorizontalLayout {
+                            width: parent.width;
+                            spacing: RedesignTheme.t.s4; /* .card-header gap 16px */
+                            alignment: space-between;
 
-                        info := VerticalLayout {
-                            width: parent.width - 280px;
-                            spacing: 0;
+                            // card-main
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: RedesignTheme.t.s2; /* .card-meta / status margin-bottom 6px */
 
-                            Text {
-                                text: srv.name;
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-body;
-                                font-weight: 600;
+                                Text {
+                                    text: srv.name;
+                                    font-size: RedesignTheme.t.fs-body; /* .card-name 15px */
+                                    color: RedesignTheme.t.fg;
+                                    font-weight: 600;
+                                }
+
+                                // card-meta: transport pill
+                                // .pill-raised (stdio/sse): raised bg, fg; .pill-abyss (streamable-http): transparent, abyss-500, abyss-300 border
+                                transport-pill := Rectangle {
+                                    height: 22px;
+                                    width: transport-pill-layout.preferred-width;
+                                    border-radius: RedesignTheme.t.r-pill;
+                                    background: srv.transport == "streamable-http" ? transparent : RedesignTheme.t.raised;
+                                    border-width: 1px;
+                                    border-color: srv.transport == "streamable-http" ? RedesignTheme.t.abyss-300 : transparent;
+
+                                    transport-pill-layout := HorizontalLayout {
+                                        Rectangle { width: 10px; /* .pill horizontal pad */ }
+                                        Text {
+                                            text: srv.transport;
+                                            font-size: RedesignTheme.t.fs-md;
+                                            color: srv.transport == "streamable-http" ? RedesignTheme.t.abyss-500 : RedesignTheme.t.fg;
+                                            vertical-alignment: center;
+                                        }
+                                        Rectangle { width: 10px; }
+                                    }
+                                }
+
+                                // TODO 数据需求：mono 端点展示（command+args 或 url）需 MCPItem
+                                // 增 command/url/args 字段（Rust 侧 MCPConfig 已有，DTO 未透传）。
+
+                                // card-status: dot + text (.card-status 13px; ✓ abyss-500 / ⚠️ rep-500)
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s2; /* .card-status gap 6px */
+                                    VerticalLayout {
+                                        vertical-stretch: 1;
+                                        alignment: center;
+                                        Rectangle {
+                                            width: 7px; /* .status-dot */
+                                            height: 7px;
+                                            border-radius: RedesignTheme.t.r-pill;
+                                            background: srv.verified == "fail" ? RedesignTheme.t.rep-500
+                                                : srv.verified == "ok" ? RedesignTheme.t.abyss-500
+                                                : RedesignTheme.t.faint;
+                                        }
+                                    }
+                                    Text {
+                                        text: srv.verified == "fail" ? "连接失败"
+                                            : srv.verified == "ok" ? "已连接"
+                                            : "未测试";
+                                        color: srv.verified == "fail" ? RedesignTheme.t.rep-500
+                                            : srv.verified == "ok" ? RedesignTheme.t.abyss-500
+                                            : RedesignTheme.t.faint;
+                                        font-size: RedesignTheme.t.fs-lg;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                // card-tools-count
+                                if srv.tool-count > 0: Text {
+                                    text: srv.tool-count + " 个工具";
+                                    font-size: RedesignTheme.t.fs-lg;
+                                    color: RedesignTheme.t.muted;
+                                }
                             }
-                            Text {
-                                text: srv.transport + (srv.tool-count > 0 ? " · " + srv.tool-count + " 工具" : "");
-                                color: RedesignTheme.t.muted;
-                                opacity: 0.7;
-                                font-size: RedesignTheme.t.fs-md;
+
+                            // card-actions (.card-actions gap 8px)
+                            VerticalLayout {
+                                vertical-stretch: 1;
+                                alignment: center;
+                                HorizontalLayout {
+                                    spacing: RedesignTheme.t.s2;
+                                    // 编辑占位：无 edit 流程。TODO: 接 edit-mcp 回调 + 表单复用。
+                                    MaterialButton {
+                                        text: AppStrings.provider-edit;
+                                        primary: false;
+                                        disabled: true;
+                                        clicked => { }
+                                    }
+                                    test-btn := MaterialButton {
+                                        text: AppStrings.mcp-test-button;
+                                        primary: false;
+                                        clicked => { root.test-mcp(srv.id); }
+                                    }
+                                    delete-btn := MaterialButton {
+                                        text: AppStrings.provider-delete;
+                                        primary: false;
+                                        clicked => { root.delete-mcp(srv.id); }
+                                    }
+                                    // 启用开关占位（.toggle 36×20）。TODO: 需 set-mcp-enabled(id,bool) callback。
+                                    VerticalLayout {
+                                        vertical-stretch: 1;
+                                        alignment: center;
+                                        enabled-toggle := Rectangle {
+                                            width: 36px;
+                                            height: 20px;
+                                            border-radius: RedesignTheme.t.r-pill;
+                                            background: srv.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+                                            Rectangle {
+                                                x: srv.enabled ? 18px : 2px;
+                                                y: 2px;
+                                                width: 16px;
+                                                height: 16px;
+                                                border-radius: RedesignTheme.t.r-pill;
+                                                background: RedesignTheme.t.surface;
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        }
-
-                        test-btn := MaterialButton {
-                            text: AppStrings.mcp-test-button;
-                            clicked => { root.test-mcp(srv.id); }
-                        }
-
-                        delete-btn := MaterialButton {
-                            text: AppStrings.provider-delete;
-                            clicked => { root.delete-mcp(srv.id); }
                         }
                     }
                 }
 
-                // ===== Add form (F1=a) =====
+                // ===== Add form (.add-panel .card padding 20px) =====
                 if root.add-form-visible: MaterialCard {
                     width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
+                    card-padding: RedesignTheme.t.s5;
 
                     VerticalLayout {
-                        spacing: RedesignTheme.t.s2;
                         width: parent.width;
+                        padding: RedesignTheme.t.s5;
+                        spacing: RedesignTheme.t.s3; /* .form-grid gap 14px */
 
-                        MaterialTextField {
-                            placeholder: AppStrings.mcp-name-label;
-                            text <=> root.form-name;
-                            width: parent.width;
+                        Text {
+                            text: AppStrings.mcp-add;
+                            font-size: RedesignTheme.t.fs-md; /* .section-title */
+                            color: RedesignTheme.t.muted;
                         }
 
-                        // Transport buttons (F2=b: 3 types)
-                        HorizontalLayout {
-                            spacing: RedesignTheme.t.s1;
-                            height: 40px;
+                        // 名称
+                        VerticalLayout {
+                            width: parent.width;
+                            spacing: 6px; /* .form-row gap */
+                            Text {
+                                text: AppStrings.mcp-name-label;
+                                font-size: RedesignTheme.t.fs-lg; /* .form-label 13px */
+                                color: RedesignTheme.t.muted;
+                            }
+                            MaterialTextField {
+                                placeholder: AppStrings.mcp-name-label;
+                                text <=> root.form-name;
+                                width: parent.width;
+                            }
+                        }
 
-                            for t-opt in [
-                                { value: "stdio", label: AppStrings.mcp-transport-stdio },
-                                { value: "sse", label: AppStrings.mcp-transport-sse },
-                                { value: "streamable-http", label: AppStrings.mcp-transport-streamable-http }
-                            ]: Rectangle {
+                        // 传输方式 segments (.segments: raised bg, 1px border, r-sm, gap 3px)
+                        VerticalLayout {
+                            width: parent.width;
+                            spacing: 6px;
+                            Text {
+                                text: AppStrings.mcp-transport-label;
+                                font-size: RedesignTheme.t.fs-lg;
+                                color: RedesignTheme.t.muted;
+                            }
+                            Rectangle {
+                                width: parent.width;
                                 height: 36px;
-                                padding: RedesignTheme.t.s2;
-                                background: t-opt.value == root.form-transport
-                                    ? RedesignTheme.t.rep-500
-                                    : RedesignTheme.t.surface;
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => { root.form-transport = t-opt.value; }
-                                }
-                                Text {
-                                    text: t-opt.label;
-                                    color: t-opt.value == root.form-transport
-                                        ? RedesignTheme.t.on-rep
-                                        : RedesignTheme.t.fg;
-                                    font-size: RedesignTheme.t.fs-md;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                    width: parent.width;
+                                border-radius: RedesignTheme.t.r-sm;
+                                background: RedesignTheme.t.raised;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+
+                                HorizontalLayout {
+                                    x: 3px;
+                                    y: 3px;
+                                    width: parent.width - 6px;
+                                    height: parent.height - 6px;
+                                    spacing: 3px; /* .segments gap */
+
+                                    for t-opt in [
+                                        { value: "stdio", label: AppStrings.mcp-transport-stdio },
+                                        { value: "sse", label: AppStrings.mcp-transport-sse },
+                                        { value: "streamable-http", label: AppStrings.mcp-transport-streamable-http }
+                                    ]: Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: parent.height;
+                                        border-radius: RedesignTheme.t.r-sm;
+                                        background: t-opt.value == root.form-transport
+                                            ? RedesignTheme.t.elevated
+                                            : transparent;
+
+                                        Text {
+                                            text: t-opt.label;
+                                            color: t-opt.value == root.form-transport
+                                                ? RedesignTheme.t.fg
+                                                : RedesignTheme.t.muted;
+                                            font-size: RedesignTheme.t.fs-lg; /* .segment 13px */
+                                            font-weight: t-opt.value == root.form-transport ? 600 : 400;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: parent.width;
+                                        }
+
+                                        TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            clicked => { root.form-transport = t-opt.value; }
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         // Transport-specific fields.
                         if root.form-transport == "stdio": VerticalLayout {
-                            spacing: RedesignTheme.t.s2;
                             width: parent.width;
+                            spacing: RedesignTheme.t.s3;
 
-                            MaterialTextField {
-                                placeholder: AppStrings.mcp-command-label;
-                                text <=> root.form-command;
+                            VerticalLayout {
                                 width: parent.width;
+                                spacing: 6px;
+                                Text {
+                                    text: AppStrings.mcp-command-label;
+                                    font-size: RedesignTheme.t.fs-lg;
+                                    color: RedesignTheme.t.muted;
+                                }
+                                MaterialTextField {
+                                    placeholder: AppStrings.mcp-command-label;
+                                    text <=> root.form-command;
+                                    width: parent.width;
+                                }
                             }
 
+                            VerticalLayout {
+                                width: parent.width;
+                                spacing: 6px;
+                                Text {
+                                    text: AppStrings.mcp-args-label;
+                                    font-size: RedesignTheme.t.fs-lg;
+                                    color: RedesignTheme.t.muted;
+                                }
+                                MaterialTextField {
+                                    placeholder: AppStrings.mcp-args-label;
+                                    text <=> root.form-args;
+                                    multi-line: true;
+                                    width: parent.width;
+                                }
+                            }
+                        }
+
+                        if root.form-transport == "sse" || root.form-transport == "streamable-http": VerticalLayout {
+                            width: parent.width;
+                            spacing: 6px;
+                            Text {
+                                text: AppStrings.mcp-url-label;
+                                font-size: RedesignTheme.t.fs-lg;
+                                color: RedesignTheme.t.muted;
+                            }
                             MaterialTextField {
-                                placeholder: AppStrings.mcp-args-label;
-                                text <=> root.form-args;
+                                placeholder: AppStrings.mcp-url-label;
+                                text <=> root.form-url;
+                                width: parent.width;
+                            }
+                        }
+
+                        // 环境变量（现行行为：始终显示；design 仅 stdio 显示，见报告）
+                        VerticalLayout {
+                            width: parent.width;
+                            spacing: 6px;
+                            Text {
+                                text: AppStrings.mcp-env-label;
+                                font-size: RedesignTheme.t.fs-lg;
+                                color: RedesignTheme.t.muted;
+                            }
+                            MaterialTextField {
+                                placeholder: AppStrings.mcp-env-label;
+                                text <=> root.form-env;
                                 multi-line: true;
                                 width: parent.width;
                             }
                         }
 
-                        if root.form-transport == "sse" || root.form-transport == "streamable-http": MaterialTextField {
-                            placeholder: AppStrings.mcp-url-label;
-                            text <=> root.form-url;
-                            width: parent.width;
-                        }
-
-                        MaterialTextField {
-                            placeholder: AppStrings.mcp-env-label;
-                            text <=> root.form-env;
-                            multi-line: true;
-                            width: parent.width;
-                        }
-
-                        // Action row
+                        // 启用开关（form-enabled，现有状态；.toggle 36×20）
                         HorizontalLayout {
+                            width: parent.width;
                             spacing: RedesignTheme.t.s2;
-                            height: 40px;
+                            height: 24px;
+                            alignment: space-between;
+
+                            Text {
+                                text: AppStrings.provider-enabled-label;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-lg;
+                                vertical-alignment: center;
+                            }
+                            form-enabled-toggle := Rectangle {
+                                width: 36px;
+                                height: 20px;
+                                border-radius: RedesignTheme.t.r-pill;
+                                background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+
+                                TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => { root.form-enabled = !root.form-enabled; }
+                                }
+
+                                Rectangle {
+                                    x: root.form-enabled ? 18px : 2px;
+                                    y: 2px;
+                                    width: 16px;
+                                    height: 16px;
+                                    border-radius: RedesignTheme.t.r-pill;
+                                    background: RedesignTheme.t.surface;
+                                }
+                            }
+                        }
+
+                        // Action row (.form-actions gap 8px)
+                        HorizontalLayout {
+                            width: parent.width;
+                            spacing: RedesignTheme.t.s2;
+                            height: 36px;
+                            alignment: end;
+
+                            cancel-btn := MaterialButton {
+                                text: AppStrings.cancel;
+                                primary: false;
+                                clicked => { root.add-form-visible = false; }
+                            }
 
                             save-btn := MaterialButton {
                                 text: AppStrings.save;
@@ -224,11 +464,6 @@ export component MCPSettingsPanel inherits Rectangle {
                                     root.upsert-mcp("", root.form-name, root.form-transport, root.form-command, root.form-args, root.form-url, root.form-env, root.form-enabled);
                                     root.add-form-visible = false;
                                 }
-                            }
-
-                            cancel-btn := MaterialButton {
-                                text: AppStrings.cancel;
-                                clicked => { root.add-form-visible = false; }
                             }
                         }
                     }
