@@ -13,7 +13,7 @@
 ## Global Constraints（每个 Task 隐含遵守）
 
 - 视觉数值照抄真值/对应页面设计稿，禁自创浓度/圆角/位置/字号。
-- 无硬编码 hex/px（生成器产物除外）；palette 只经 `docs/design/2026-07-22-frontend-redesign/oklch-to-srgb.py` 改。
+- 无硬编码**颜色 hex**（生成器产物除外）；palette 只经 `docs/design/2026-07-22-frontend-redesign/oklch-to-srgb.py` 改。**尺寸规则**（v3.1 明确，裁决 T4-2 judge 争议）：设计稿明示尺寸照抄可直写 px（如 520×340 光晕盒、140×4 chrono、18px p-name）；非设计稿尺寸必须走 token；间距/圆角/字号阶梯有 token 一律用 token。
 - 红线：品牌不染 rep；思考块 abyss 冷底；沉积轮褪色灰；用户气泡不染 rep；.msg 不染 rep；暗色禁纯黑/霓虹；暗色 ambient 亮暗对称。
 - 验证（每 Task 必跑）：`$env:CARGO_PROFILE_DEV_SPLIT_DEBUGINFO='off'; rustup run stable-x86_64-pc-windows-msvc cargo check -p northhing` 零 error 零新 warning。
 - 磁盘 diff 唯一事实来源；假汇报=永久停用；先盘后判。
