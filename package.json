@@ -18,6 +18,7 @@
     "i18n:contract:test:ci": "cross-env northhing_I18N_CONTRACT_TEST_PROFILE=ci node --test scripts/i18n-contract.test.mjs",
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "check:repo-hygiene": "node scripts/check-repo-hygiene.mjs",
+    "check:core-boundaries": "node scripts/check-core-boundaries.mjs",
     "fmt:rs": "node scripts/format-changed-rust.mjs",
     "build:mobile-web": "pnpm --dir src/mobile-web build",
     "prepare:mobile-web": "node scripts/mobile-web-build.cjs",
