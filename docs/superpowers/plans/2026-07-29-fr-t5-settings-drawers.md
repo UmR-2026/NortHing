@@ -30,6 +30,13 @@
 - [ ] **T5-11 降级项收尾**：deck-bar access 文案「自治·完全」、think 段数对真值、WindowChrome 把手 gap 10px + hover 背景。
 - [ ] **T5-12 onboarding 四字段+5 色板拍板**（用户未决；现 5 轮 Q&A 保留中）。
 
+## W5 功能断点（探索式 review 2026-07-29 发现，编排者取证确认）
+- [ ] **T5-13 Identity Creator Rust 接线**（P0，onboarding 卡死）：`llm-generate(question_id, answer, current_draft)` 无 handler（点了永久 spinner）、`on-saved(draft)` 无落盘。需：接现有 provider LLM 调用通路生成 identity 草稿 + 保存写 IDENTITY.md（sett­ings/sync.rs 通路）。Files: IdentityCreatorView.slint 透传 + callbacks/*.rs + app_state。属 Rust 功能单，任务书需先列通路设计。
+- [ ] **T5-14 export-markdown Rust 接线**：ArchiveView/InnerDrawer 4 处调用无 handler。实现：汇总当前会话消息 → markdown 文本 → rfd 保存对话框写文件（rfd 已在依赖，WelcomeView pick-folder 同款）。
+- [ ] **T5-15 open-session-settings 去向设计**（5 处调用无 handler）：会话级设置面板尚不存在——先拍板形态（modal？设置页会话分区？），暂可将 OuterDrawer 入口置 disabled+TODO 防裸奔。
+- [x] ~~FTS trigger CJK bug~~ **驳回**：review 误报。trigger 复制 `facts.text_fts` 列，插入路径已 `segment_for_fts`（memory_db.rs:64/87/213 取证），两条路都是分词文本。
+- [ ] **T5-16 housekeeping**：callbacks_lifecycle.rs 917 行（距 1000 拆分线 83 行）下次触及先拆；AGENTS.md 补 K4a invariant（northstar K5 要求，滞后 3 天）。
+
 ## 选派
 - W1：glm（壳/大页）+ ling（校订小改）；W2 POC：glm 或编排者亲自（Rust+架构）；W3：ling；W4：bp/mimo 机械单。
 - judge：m3 首选 / glm 备选。⛔ qw 无额度停派。
