@@ -10,6 +10,7 @@ import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { MoodText } from "../components/MoodText.slint";
 import { AppStrings } from "../strings.slint";
 import { IdentityCreatorView } from "IdentityCreatorView.slint";
 
@@ -316,35 +317,25 @@ export component WelcomeView inherits Rectangle {
                         height: 64px;
                         border-radius: RedesignTheme.t.r-lg;
                         background: RedesignTheme.t.raised;
-                        // 灰白光环 — 未选色时用 fg/raised 系 with_alpha，禁 hex
+                        // 灰白光环 — 未选色时用 fg/raised 系 with_alpha，禁 hex；
+                        // 脉冲照 PresenceZone animation-tick 范式（moodPulse 3s 周期）
                         aura := Rectangle {
                             x: -8px;
                             y: -8px;
                             width: parent.width + 16px;
                             height: parent.height + 16px;
-                            border-radius: 24px;
+                            border-radius: parent.width / 2;
                             background: RedesignTheme.t.fg.with_alpha(0.15);
-                            opacity: 0.6;
-                            animate opacity {
-                                duration: 3s;
-                                easing: ease-in-out;
-                            }
+                            opacity: 0.45 + 0.15 * Math.sin(animation-tick() / 3000ms * 360deg);
                         }
                     }
 
-                    mood-text := Text {
-                        text: "我还不知道我是谁。";
-                        font-size: RedesignTheme.t.fs-md;
+                    MoodText {
+                        mood: "我还不知道我是谁。";
                         color: RedesignTheme.t.faint;
-                        opacity: 0;
                         horizontal-alignment: center;
                         max-width: 320px;
                         wrap: word-wrap;
-                        animate opacity {
-                            duration: 3s;
-                            delay: 1.5s;
-                            easing: ease;
-                        }
                     }
                 }
 
