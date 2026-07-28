@@ -93,6 +93,9 @@ target-shared/
 # Local cargo target directory for isolated verification
 target-local/
 
+# MSVC-isolated run/build target dir (GNU-polluted main target/ workaround, 2026-07-28)
+target-msvc/
+
 # Ad-hoc code-rot scan artifacts (temporary investigation scripts/reports)
 _rot_scan*
 
