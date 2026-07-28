@@ -8,6 +8,7 @@ import { WelcomeView } from "views/WelcomeView.slint";
 import { MaterialBanner } from "components/MaterialBanner.slint";
 import { AirTint } from "components/AirTint.slint";
 import { WindowChrome } from "components/WindowChrome.slint";
+import { InnerDrawer } from "components/InnerDrawer.slint";
 
 export component AppWindow inherits Window {
     title: "northhing";
@@ -303,6 +304,15 @@ export component AppWindow inherits Window {
     // FR-T4-1: archive 路由占位（T4-4 填内容）
     if root.current-route == "archive": Rectangle {
         background: transparent;
+    }
+
+    // FR-T4-3: 左抽屉「内在」壳，跨路由覆盖，z 序在 SpaceView 之上、WindowChrome 之下
+    InnerDrawer {
+        width: root.width;
+        height: root.height;
+        open: root.left-panel-open;
+        close => { root.left-panel-open = false; }
+        export-markdown => { root.export-markdown(); root.left-panel-open = false; }
     }
 
     // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，
