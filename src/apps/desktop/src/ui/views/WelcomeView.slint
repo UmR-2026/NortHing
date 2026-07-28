@@ -298,12 +298,57 @@ export component WelcomeView inherits Rectangle {
         // ===== STEP 3: Ready =====
         if root.current-step == 3: MaterialCard {
             width: 600px;
-            height: 280px;
+            height: 340px;
             card-padding: RedesignTheme.t.s5;
             step3-view := VerticalLayout {
                 spacing: RedesignTheme.t.s4;
                 width: parent.width;
                 height: parent.height;
+
+                // Presence area — 出生态头像 + 心境语
+                presence-area := VerticalLayout {
+                    spacing: RedesignTheme.t.s2;
+                    width: parent.width;
+                    alignment: center;
+
+                    avatar-wrap := Rectangle {
+                        width: 64px;
+                        height: 64px;
+                        border-radius: RedesignTheme.t.r-lg;
+                        background: RedesignTheme.t.raised;
+                        // 灰白光环 — 未选色时用 fg/raised 系 with_alpha，禁 hex
+                        aura := Rectangle {
+                            x: -8px;
+                            y: -8px;
+                            width: parent.width + 16px;
+                            height: parent.height + 16px;
+                            border-radius: 24px;
+                            background: RedesignTheme.t.fg.with_alpha(0.15);
+                            opacity: 0.6;
+                            animate opacity {
+                                duration: 3s;
+                                easing: ease-in-out;
+                                loop: true;
+                            }
+                        }
+                    }
+
+                    mood-text := Text {
+                        text: "我还不知道我是谁。";
+                        font-size: RedesignTheme.t.fs-md;
+                        color: RedesignTheme.t.faint;
+                        font-style: italic;
+                        opacity: 0;
+                        horizontal-alignment: center;
+                        max-width: 320px;
+                        wrap: word-wrap;
+                        animate opacity {
+                            duration: 3s;
+                            delay: 1.5s;
+                            easing: ease;
+                        }
+                    }
+                }
 
                 Text {
                     text: AppStrings.welcome-step3-desc;
