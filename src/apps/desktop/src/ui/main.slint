@@ -215,6 +215,8 @@ export component AppWindow inherits Window {
     if root.current-route == "settings": SettingsView {
         width: root.width;
         height: root.height;
+        dark-mode: root.dark-mode;
+        toggle-theme => { root.toggle-theme(); }
         providers: root.providers-list;
         skills: root.skills-list;
         mcp-servers: root.mcp-servers-list;

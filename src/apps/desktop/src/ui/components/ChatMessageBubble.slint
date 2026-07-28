@@ -13,13 +13,13 @@ export component ChatMessageBubble inherits Rectangle {
         if role == "user" { RedesignTheme.t.elevated; }
         else if role == "assistant" { RedesignTheme.t.surface; }
         else if role == "system" { RedesignTheme.t.muted; }
-        else if role == "tool" { #2D4A3E; }
+        else if role == "tool" { RedesignTheme.t.archive-card-bg; }
         else { RedesignTheme.t.surface; }
     }
     
     pure function text-color() -> color {
-        if role == "user" { RedesignTheme.t.on-rep; }
-        else { RedesignTheme.t.fg; }
+        // 真值 theme-system.html：用户气泡文字继承 fg（亮态白底近白字曾不可读）
+        RedesignTheme.t.fg;
     }
     
     // padding is layout-only in Slint; use card-padding on MaterialCard instead

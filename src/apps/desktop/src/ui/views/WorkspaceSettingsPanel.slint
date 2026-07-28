@@ -282,7 +282,7 @@ export component WorkspaceSettingsPanel inherits Rectangle {
         y: 0;
         width: parent.width;
         height: parent.height;
-        background: #00000080;
+        background: RedesignTheme.t.scrim.with_alpha(0.5);
 
         Rectangle {
             x: (parent.width - 400px) / 2;
@@ -291,9 +291,9 @@ export component WorkspaceSettingsPanel inherits Rectangle {
             height: 200px;
             background: RedesignTheme.t.surface;
             border-radius: RedesignTheme.t.r-md;
-            padding: RedesignTheme.t.s5;
 
             VerticalLayout {
+                padding: RedesignTheme.t.s5;
                 spacing: RedesignTheme.t.s4;
                 width: parent.width;
                 height: parent.height;

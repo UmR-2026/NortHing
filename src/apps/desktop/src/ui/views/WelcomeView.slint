@@ -98,17 +98,21 @@ export component WelcomeView inherits Rectangle {
                     height: 56px;
                     background: RedesignTheme.t.surface;
                     border-radius: RedesignTheme.t.r-sm;
-                    padding: RedesignTheme.t.s2;
 
-                    Text {
-                        text: root.step1-path == "" ? "(未选择)" : root.step1-path;
-                        font-size: RedesignTheme.t.fs-body;
-                        color: root.step1-path == "" ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
-                        opacity: root.step1-path == "" ? 0.5 : 1.0;
-                        vertical-alignment: center;
-                        horizontal-alignment: left;
-                        wrap: word-wrap;
+                    HorizontalLayout {
+                        padding: RedesignTheme.t.s2;
                         width: parent.width;
+
+                        Text {
+                            text: root.step1-path == "" ? "(未选择)" : root.step1-path;
+                            font-size: RedesignTheme.t.fs-body;
+                            color: root.step1-path == "" ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
+                            opacity: root.step1-path == "" ? 0.5 : 1.0;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                            wrap: word-wrap;
+                            width: parent.width;
+                        }
                     }
                 }
 
@@ -178,7 +182,6 @@ export component WelcomeView inherits Rectangle {
                     ]: Rectangle {
                         height: 32px;
                         width: (parent.width - 1 * RedesignTheme.t.s1) / 2;
-                        padding: RedesignTheme.t.s1;
                         background: opt.value == root.step2-type
                             ? RedesignTheme.t.rep-500
                             : RedesignTheme.t.surface;
@@ -191,15 +194,21 @@ export component WelcomeView inherits Rectangle {
                                 root.step2-model = "";
                             }
                         }
-                        Text {
-                            text: opt.label;
-                            color: opt.value == root.step2-type
-                                ? RedesignTheme.t.on-rep
-                                : RedesignTheme.t.fg;
-                            font-size: RedesignTheme.t.fs-md;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                        HorizontalLayout {
+                            padding: RedesignTheme.t.s1;
                             width: parent.width;
+                            height: parent.height;
+
+                            Text {
+                                text: opt.label;
+                                color: opt.value == root.step2-type
+                                    ? RedesignTheme.t.on-rep
+                                    : RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-md;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                            }
                         }
                     }
                 }

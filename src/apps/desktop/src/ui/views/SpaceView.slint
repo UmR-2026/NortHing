@@ -38,7 +38,8 @@ export component SpaceView inherits Rectangle {
     callback open-settings();
     in-out property <string> expanded-message-id: "";
 
-    background: RedesignTheme.t.bg;
+    // 透明：让 main.slint 的 AirTint 整屋暖雾/speaking 升档透进来（FR-T4-10）
+    background: transparent;
 
     VerticalLayout {
         padding: 0px;

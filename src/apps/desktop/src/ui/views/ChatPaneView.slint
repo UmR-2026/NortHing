@@ -56,7 +56,8 @@ export component ChatPaneView inherits Rectangle {
     // cleanly from inside a `for` loop.
     in-out property <string> expanded-message-id: "";
 
-    background: RedesignTheme.t.bg;
+    // 透明：让 main.slint 的 AirTint 整屋暖雾透进来（FR-T4-10）
+    background: transparent;
 
     // Helper: pure function for "is message_id in expanded set".
     // Slint 1.16 doesn't have a public pure function for this at the
@@ -198,9 +199,9 @@ export component ChatPaneView inherits Rectangle {
                                 height: 36px;
                                 background: RedesignTheme.t.surface;
                                 border-radius: RedesignTheme.t.r-sm;
-                                padding: RedesignTheme.t.s2;
 
                                 HorizontalLayout {
+                                    padding: RedesignTheme.t.s2;
                                     spacing: RedesignTheme.t.s2;
                                     width: parent.width;
 
@@ -247,7 +248,6 @@ export component ChatPaneView inherits Rectangle {
                                 height: 200px;
                                 background: RedesignTheme.t.surface;
                                 border-radius: RedesignTheme.t.r-sm;
-                                padding: RedesignTheme.t.s2;
 
                                 // Use a TextField for read-only display. Phase 5
                                 // will replace this with the proper ToolCallCard
@@ -255,14 +255,19 @@ export component ChatPaneView inherits Rectangle {
                                 Rectangle {
                                     width: parent.width;
                                     height: parent.height;
-                                    background: #00000040;
+                                    background: RedesignTheme.t.shadow.with_alpha(0.25);
 
-                                    Text {
-                                        text: message.tool-calls-json;
-                                        font-size: RedesignTheme.t.fs-md;
-                                        color: RedesignTheme.t.fg;
-                                        wrap: word-wrap;
+                                    VerticalLayout {
+                                        padding: RedesignTheme.t.s2;
                                         width: parent.width;
+
+                                        Text {
+                                            text: message.tool-calls-json;
+                                            font-size: RedesignTheme.t.fs-md;
+                                            color: RedesignTheme.t.fg;
+                                            wrap: word-wrap;
+                                            width: parent.width;
+                                        }
                                     }
                                 }
                             }
@@ -278,9 +283,9 @@ export component ChatPaneView inherits Rectangle {
             height: 40px;
             background: RedesignTheme.t.danger.with-alpha(0.12);
             border-radius: RedesignTheme.t.r-sm;
-            padding: RedesignTheme.t.s2;
 
             HorizontalLayout {
+                padding: RedesignTheme.t.s2;
                 spacing: RedesignTheme.t.s2;
                 width: parent.width;
 
@@ -343,7 +348,7 @@ export component ChatPaneView inherits Rectangle {
         y: 0;
         width: parent.width;
         height: parent.height;
-        background: #00000060;
+        background: RedesignTheme.t.scrim.with_alpha(0.4);
 
         popup := Rectangle {
             // FR-T4-2: popup 移到 DeckBar 上方（绑 deck-area.y；原 y:56px 是头卡下方遗留）
@@ -353,19 +358,23 @@ export component ChatPaneView inherits Rectangle {
             height: 240px;
             background: RedesignTheme.t.surface;
             border-radius: RedesignTheme.t.r-md;
-            padding: RedesignTheme.t.s2;
 
             VerticalLayout {
+                padding: RedesignTheme.t.s2;
                 width: parent.width;
                 height: parent.height;
                 spacing: RedesignTheme.t.s1;
 
-                Text {
-                    text: "选择模型";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.fg;
-                    opacity: 0.6;
+                HorizontalLayout {
                     padding: RedesignTheme.t.s2;
+                    width: parent.width;
+
+                    Text {
+                        text: "选择模型";
+                        font-size: RedesignTheme.t.fs-md;
+                        color: RedesignTheme.t.fg;
+                        opacity: 0.6;
+                    }
                 }
 
                 Flickable {
@@ -380,7 +389,6 @@ export component ChatPaneView inherits Rectangle {
                         for p in providers: Rectangle {
                             width: parent.width;
                             height: 36px;
-                            padding: RedesignTheme.t.s2;
                             visible: p.enabled;
                             background: p.id == root.default-model-provider-id
                                 ? RedesignTheme.t.rep-500.with-alpha(0.18)
@@ -395,12 +403,18 @@ export component ChatPaneView inherits Rectangle {
                                 }
                             }
 
-                            Text {
-                                text: p.name + " · " + p.model;
-                                font-size: RedesignTheme.t.fs-body;
-                                color: RedesignTheme.t.fg;
-                                vertical-alignment: center;
+                            HorizontalLayout {
+                                padding: RedesignTheme.t.s2;
                                 width: parent.width;
+                                height: parent.height;
+
+                                Text {
+                                    text: p.name + " · " + p.model;
+                                    font-size: RedesignTheme.t.fs-body;
+                                    color: RedesignTheme.t.fg;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                }
                             }
                         }
                     }

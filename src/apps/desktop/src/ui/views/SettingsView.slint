@@ -299,9 +299,8 @@ export component SettingsView inherits Rectangle {
                     height: parent.height;
                     dark-mode: root.dark-mode;
                     toggle-theme => {
-                        // 透传 + 直接翻转 RedesignTheme.dark（main.slint 不在本批
-                        // 文件集，root.dark-mode 同步留待接线）。
-                        RedesignTheme.dark = !RedesignTheme.dark;
+                        // 主题所有权收归 AppWindow：只透传，由 main.slint 经
+                        // root.toggle-theme() 统一翻转 dark-mode 驱动 token。
                         root.toggle-theme();
                     }
                     edit-identity => { root.edit-identity(); }
