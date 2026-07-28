@@ -139,6 +139,16 @@ export component ArchiveView inherits Rectangle {
                         animate border-color { duration: 350ms; }
                         animate opacity { duration: 350ms; }
 
+                        // 卡片点击 TouchArea（置于内容之下，与 TurnContainer hover-ta
+                        // 惯例一致；export-touch 在 VerticalLayout 内 z 序更高，
+                        // 点击「导出」不被 card-touch 吞掉）
+                        card-touch := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            mouse-cursor: pointer;
+                            clicked => { root.open-session(session.id); }
+                        }
+
                         // 深渊竖线（archive.html .session-card::before L303-314）
                         // 2.5px abyss-400，opacity 0.30，hover 0.50
                         Rectangle {
@@ -252,14 +262,6 @@ export component ArchiveView inherits Rectangle {
                                     }
                                 }
                             }
-                        }
-
-                        // 卡片点击 TouchArea（置于内容之上，导出 TouchArea 更高 z 序）
-                        card-touch := TouchArea {
-                            width: parent.width;
-                            height: parent.height;
-                            mouse-cursor: pointer;
-                            clicked => { root.open-session(session.id); }
                         }
                     }
                 }
