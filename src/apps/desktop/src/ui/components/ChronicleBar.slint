@@ -3,8 +3,8 @@
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component ChronicleBar inherits Rectangle {
-    // 出生灰白（默认同 t.border 亮态值 #E6E3DD）；now 默认代表色 rep-500。
-    in property <color> birth: #E6E3DD;
+    // 出生灰白锚（默认 t.birth，明暗两态）；now 默认代表色 rep-500。
+    in property <color> birth: RedesignTheme.t.birth;
     in property <color> now: RedesignTheme.t.rep-500;
 
     height: 5px;

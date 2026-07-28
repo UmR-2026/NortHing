@@ -12,7 +12,7 @@ export component InnerDrawer inherits Rectangle {
     Rectangle {
         width: parent.width;
         height: parent.height;
-        background: RedesignTheme.t.fg.with_alpha(0.5);
+        background: RedesignTheme.t.scrim.with_alpha(0.5);
         visible: root.open;
 
         TouchArea {
@@ -31,7 +31,7 @@ export component InnerDrawer inherits Rectangle {
         background: RedesignTheme.t.surface;
         border-width: 1px;
         border-color: RedesignTheme.t.border;
-        drop-shadow-color: RedesignTheme.t.fg.with_alpha(0.25);
+        drop-shadow-color: RedesignTheme.t.shadow.with_alpha(0.25);
         drop-shadow-blur: 8px;
         drop-shadow-offset-x: 4px;
 

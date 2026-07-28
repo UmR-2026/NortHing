@@ -25,6 +25,10 @@ export struct RedesignTokens {
     fg: color,
     muted: color,
     faint: color,
+    // 未分组 token（css 新增，生成器自动收录）
+    birth: color,
+    scrim: color,
+    shadow: color,
     // 代表色色阶（v1 出生态 S=C=0 灰阶；§4 S=自我浮现度，出生 C=0 灰白，
     // 成长=C 上升、颜色从基底浮现。等亮度两模式同值，编年史读法一致。
     // 回退预案（plan §5）：Phase 3 延期则切默认珊瑚——把各 rep-* 行注释中的
@@ -97,6 +101,9 @@ export global RedesignTheme {
         fg: #38352E, // oklch(0.3297 0.0127 87.56) · 正文 <- #38352E
         muted: #7B766C, // oklch(0.5673 0.0162 84.59) · 次级 <- #7B766C
         faint: #A8A398, // oklch(0.7165 0.0167 86.44) · 弱化(≥4.0:1) <- #A8A398
+        birth: #DAD6CF, // oklch(0.8773 0.0105 81.79) · 出生灰白锚（编年史条最左端） <- #DAD6CF (theme-system.html L17)
+        scrim: #38352E, // oklch(0.3297 0.0127 87.56) · 遮罩暗化基底 <- #38352E (settings-general.html L225 亮态阴影 rgba(56,53,46,·))
+        shadow: #38352E, // oklch(0.3297 0.0127 87.56) · 阴影投射色 <- #38352E (settings-general.html L225/417/476 亮态阴影 rgba(56,53,46,·))
         rep-300: #B6B6B6, // oklch(0.7748 0 48.96) · 大面积 (灰; 珊瑚 fallback C=0.0892 <- #E5A583)
         rep-400: #9F9F9F, // oklch(0.7030 0 47.60) · 发光/竖线 (灰; 珊瑚 fallback C=0.1075 <- #D68A63)
         rep-500: #8B8B8B, // oklch(0.6383 0 43.22) · 强调≡渐变右端 (灰; 珊瑚 fallback C=0.1214 <- #C8714C)
@@ -150,6 +157,9 @@ export global RedesignTheme {
         fg: #EBE8E0, // oklch(0.930 0.010 88)
         muted: #9C988F, // oklch(0.680 0.013 88)
         faint: #74716A, // oklch(0.550 0.012 88)
+        birth: #4A443B, // oklch(0.3897 0.0169 78.09)
+        scrim: #000000, // oklch(0 0 0)
+        shadow: #000000, // oklch(0 0 0)
         rep-300: #B6B6B6, // oklch(0.7748 0 48.96)
         rep-400: #9F9F9F, // oklch(0.7030 0 47.60)
         rep-500: #8B8B8B, // oklch(0.6383 0 43.22)

@@ -79,7 +79,7 @@ export component AccessSettingsPanel inherits Rectangle {
                                     background: root.selected == 0
                                         ? RedesignTheme.t.elevated
                                         : transparent;
-                                    drop-shadow-color: root.selected == 0 ? RedesignTheme.t.fg.with-alpha(0.06) : transparent;
+                                    drop-shadow-color: root.selected == 0 ? RedesignTheme.t.shadow.with-alpha(0.06) : transparent;
                                     drop-shadow-blur: root.selected == 0 ? 8px : 0px;
                                     drop-shadow-offset-y: root.selected == 0 ? 2px : 0px;
                                     animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
@@ -111,7 +111,7 @@ export component AccessSettingsPanel inherits Rectangle {
                                     background: root.selected == 1
                                         ? RedesignTheme.t.elevated
                                         : transparent;
-                                    drop-shadow-color: root.selected == 1 ? RedesignTheme.t.fg.with-alpha(0.06) : transparent;
+                                    drop-shadow-color: root.selected == 1 ? RedesignTheme.t.shadow.with-alpha(0.06) : transparent;
                                     drop-shadow-blur: root.selected == 1 ? 8px : 0px;
                                     drop-shadow-offset-y: root.selected == 1 ? 2px : 0px;
                                     animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }

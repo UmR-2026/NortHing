@@ -28,7 +28,7 @@ export component IdentityCreatorView inherits Rectangle {
     in-out property <bool> llm-in-flight: false;
     in-out property <string> llm-error: "";
 
-    background: RedesignTheme.t.bg.with_alpha(0.5);
+    background: RedesignTheme.t.scrim.with_alpha(0.5);
 
     Rectangle {
         x: (parent.width - 800px) / 2;
@@ -37,12 +37,12 @@ export component IdentityCreatorView inherits Rectangle {
         height: 540px;
         background: RedesignTheme.t.bg;
         border-radius: RedesignTheme.t.r-md;
-        padding: RedesignTheme.t.s5;
 
         VerticalLayout {
             spacing: RedesignTheme.t.s4;
             width: parent.width;
             height: parent.height;
+            padding: RedesignTheme.t.s5;
 
             // Header
             HorizontalLayout {
@@ -80,11 +80,11 @@ export component IdentityCreatorView inherits Rectangle {
                     width: (parent.width - RedesignTheme.t.s4) / 2;
                     background: RedesignTheme.t.surface;
                     border-radius: RedesignTheme.t.r-sm;
-                    padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
                         spacing: RedesignTheme.t.s2;
                         width: parent.width;
+                        padding: RedesignTheme.t.s4;
 
                         Text {
                             text: root.current-q == 1 ? AppStrings.identity-prompt-q1
@@ -135,11 +135,11 @@ export component IdentityCreatorView inherits Rectangle {
                     width: (parent.width - RedesignTheme.t.s4) / 2;
                     background: RedesignTheme.t.surface;
                     border-radius: RedesignTheme.t.r-sm;
-                    padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
                         spacing: RedesignTheme.t.s1;
                         width: parent.width;
+                        padding: RedesignTheme.t.s4;
 
                         Text {
                             text: "预览 IDENTITY.md";
