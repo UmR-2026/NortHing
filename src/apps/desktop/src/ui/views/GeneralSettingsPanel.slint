@@ -4,9 +4,9 @@
 // 任务书 T4-6a 改动清单 §3：通用区（主题切换行）+ 自我认知区（头像光环 +
 // 名字「知序」硬编码占位 + 「编辑身份」行回调占位 TODO）。
 //
-// 主题切换：dark-mode 透传 prop + toggle-theme 透传回调（SettingsView 提供，
-// 因 main.slint 不在本批文件集内，SettingsView 直接翻转 RedesignTheme.dark
-// 使重设计调色板即时生效；root.dark-mode 同步留待 main.slint 接线）。
+// 主题切换：dark-mode 透传 prop + toggle-theme 透传回调；主题所有权收归
+// AppWindow（FR-T4-10b），main.slint 经 root.toggle-theme() 统一翻转
+// dark-mode 驱动 RedesignTheme.dark，本 panel 不直接改全局。
 // 自我认知：identity 数据通路仅 identity_md_path 存在性（Rust），MVP 卡用
 // 硬编码占位（同 T4-3 惯例），「编辑身份」回调占位待后端接入。
 

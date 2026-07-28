@@ -24,9 +24,8 @@ export component SettingsView inherits Rectangle {
     // Settings menus (A1+a: sidebar entry; A1+b: cog icon)
     callback close-settings();
 
-    // FR-T4-6a: 主题切换透传（dark-mode 绑 RedesignTheme.dark；toggle-theme
-    // 翻转 RedesignTheme.dark 使重设计调色板即时生效）。main.slint 未在本批
-    // 文件集内，root.dark-mode 同步留待 main.slint 接线时补 dark-mode 透传。
+    // FR-T4-10b: 主题所有权收归 AppWindow——dark-mode 由 main.slint 传入，
+    // toggle-theme 只透传上送，由 root 统一翻转并驱动 RedesignTheme.dark。
     in-out property <bool> dark-mode: RedesignTheme.dark;
     callback toggle-theme();
     // FR-T4-6a: 「编辑身份」行回调占位 TODO（接后端 identity 编辑通路）。
