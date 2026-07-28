@@ -132,14 +132,14 @@ export component DeckBar inherits Rectangle {
 
                 // ＋ 附件（.db 样式，占位 disabled）— TODO 数据源
                 Rectangle {
-                    padding-left: 5px; padding-right: 9px;
-                    padding-top: 5px; padding-bottom: 9px;
                     border-radius: RedesignTheme.t.r-sm;
                     border-width: 1px;
                     border-color: transparent;
                     opacity: 0.5;
 
                     HorizontalLayout {
+                        padding-left: 9px; padding-right: 9px;
+                        padding-top: 5px; padding-bottom: 5px;
                         spacing: 6px;
                         alignment: center;
 
@@ -154,8 +154,6 @@ export component DeckBar inherits Rectangle {
 
                 // 思考分段条（think-ctrl）— TODO 后端
                 Rectangle {
-                    padding-left: 5px; padding-right: 9px;
-                    padding-top: 5px; padding-bottom: 9px;
                     border-radius: RedesignTheme.t.r-sm;
 
                     think-ta := TouchArea {
@@ -171,6 +169,8 @@ export component DeckBar inherits Rectangle {
                     }
 
                     HorizontalLayout {
+                        padding-left: 9px; padding-right: 9px;
+                        padding-top: 5px; padding-bottom: 5px;
                         spacing: 8px;
                         alignment: center;
 
@@ -207,14 +207,14 @@ export component DeckBar inherits Rectangle {
 
                 // 半自治 access（.db.access 样式，占位 disabled）— TODO settings-access 后端
                 Rectangle {
-                    padding-left: 5px; padding-right: 9px;
-                    padding-top: 5px; padding-bottom: 9px;
                     border-radius: RedesignTheme.t.r-sm;
                     border-width: 1px;
                     border-color: transparent;
                     opacity: 0.5;
 
                     HorizontalLayout {
+                        padding-left: 9px; padding-right: 9px;
+                        padding-top: 5px; padding-bottom: 5px;
                         spacing: 6px;
                         alignment: center;
 
@@ -235,11 +235,11 @@ export component DeckBar inherits Rectangle {
 
                 // 上下文圆环（ctx-ring 占位）— TODO tokens 数据源
                 Rectangle {
-                    padding-left: 5px; padding-right: 9px;
-                    padding-top: 5px; padding-bottom: 9px;
                     border-radius: RedesignTheme.t.r-sm;
 
                     HorizontalLayout {
+                        padding-left: 9px; padding-right: 9px;
+                        padding-top: 5px; padding-bottom: 5px;
                         spacing: 6px;
                         alignment: center;
 
