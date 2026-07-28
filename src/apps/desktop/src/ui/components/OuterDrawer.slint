@@ -1,0 +1,192 @@
+// OuterDrawer - 右抽屉「外物」壳（FR-T4-5）
+
+import { RedesignTheme } from "../redesign_palette.slint";
+import { SkillItem } from "../theme.slint";
+
+export component OuterDrawer inherits Rectangle {
+    in property<bool> open: false;
+    in property<[SkillItem]> skills: [];
+    in property<string> mcp-status: "";
+    in property<bool> dark-mode: false;
+    callback close();
+    callback toggle-skill(string);
+    callback toggle-theme();
+    callback open-session-settings();
+
+    // 透明遮罩 — visible 关闭时整元素移出命中树，主区点击不再被吞
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: RedesignTheme.t.fg.with_alpha(0.5);
+        visible: root.open;
+
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.close(); }
+        }
+    }
+
+    // 抽屉面板（320px 全高，从右侧滑入）
+    Rectangle {
+        x: root.open ? parent.width - 320px : parent.width;
+        y: 0;
+        width: 320px;
+        height: parent.height;
+        background: RedesignTheme.t.surface;
+        border-width: 1px;
+        border-color: RedesignTheme.t.border;
+        drop-shadow-color: RedesignTheme.t.fg.with_alpha(0.25);
+        drop-shadow-blur: 8px;
+        drop-shadow-offset-x: -4px;
+
+        animate x { duration: 250ms; easing: ease-in-out; }
+
+        VerticalLayout {
+            padding: RedesignTheme.t.s4;
+            spacing: RedesignTheme.t.s3;
+
+            // 头部：「外物」+ 主题切换 + 关闭 ×
+            HorizontalLayout {
+                alignment: center;
+                spacing: RedesignTheme.t.s3;
+
+                Text {
+                    text: "外物";
+                    color: RedesignTheme.t.fg;
+                    font-size: RedesignTheme.t.fs-lg;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    width: 24px;
+                    height: 24px;
+                    clicked => { root.toggle-theme(); }
+
+                    Text {
+                        text: root.dark-mode ? "☀" : "🌙";
+                        color: RedesignTheme.t.muted;
+                        font-size: RedesignTheme.t.fs-lg;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                }
+
+                TouchArea {
+                    width: 24px;
+                    height: 24px;
+                    clicked => { root.close(); }
+
+                    Text {
+                        text: "×";
+                        color: RedesignTheme.t.muted;
+                        font-size: RedesignTheme.t.fs-lg;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                }
+            }
+
+            // 会话设置入口行
+            Rectangle {
+                background: RedesignTheme.t.raised;
+                border-radius: RedesignTheme.t.r-sm;
+
+                HorizontalLayout {
+                    padding: RedesignTheme.t.s3;
+                    alignment: center;
+
+                    Text {
+                        text: "会话设置 →";
+                        color: RedesignTheme.t.fg;
+                        font-size: RedesignTheme.t.fs-body;
+                    }
+                }
+
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => { root.open-session-settings(); root.close(); }
+                }
+            }
+
+            // Skills 区
+            Text {
+                text: "Skills";
+                color: RedesignTheme.t.faint;
+                font-size: RedesignTheme.t.fs-md;
+            }
+
+            Rectangle {
+                width: parent.width;
+                height: root.height - 48px - 48px - 32px - RedesignTheme.t.s4 * 3;
+
+                Flickable {
+                    width: parent.width;
+                    height: parent.height;
+
+                    VerticalLayout {
+                        spacing: RedesignTheme.t.s1;
+
+                        for skill in skills: HorizontalLayout {
+                            height: 40px;
+                            spacing: RedesignTheme.t.s2;
+
+                            Text {
+                                text: skill.name;
+                                color: RedesignTheme.t.fg;
+                                font-size: RedesignTheme.t.fs-body;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: skill.description;
+                                color: RedesignTheme.t.muted;
+                                font-size: RedesignTheme.t.fs-md;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                wrap: no-wrap;
+                            }
+
+                            TouchArea {
+                                width: 24px;
+                                height: 24px;
+                                clicked => { root.toggle-skill(skill.id); }
+
+                                Text {
+                                    text: skill.enabled ? "●" : "○";
+                                    color: skill.enabled ? RedesignTheme.t.abyss-500 : RedesignTheme.t.muted;
+                                    font-size: RedesignTheme.t.fs-body;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                    height: parent.height;
+                                }
+                            }
+                        }
+
+                        if skills.length == 0: Text {
+                            text: "No skills available.\nCheck your agent configuration.";
+                            font-size: RedesignTheme.t.fs-body;
+                            color: RedesignTheme.t.faint;
+                            opacity: 0.5;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+
+            // 底部 MCP 状态行
+            Text {
+                text: root.mcp-status;
+                color: RedesignTheme.t.faint;
+                font-size: RedesignTheme.t.fs-sm;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

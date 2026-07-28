@@ -10,6 +10,7 @@ import { MaterialBanner } from "components/MaterialBanner.slint";
 import { AirTint } from "components/AirTint.slint";
 import { WindowChrome } from "components/WindowChrome.slint";
 import { InnerDrawer } from "components/InnerDrawer.slint";
+import { OuterDrawer } from "components/OuterDrawer.slint";
 
 export component AppWindow inherits Window {
     title: "northhing";
@@ -326,6 +327,20 @@ export component AppWindow inherits Window {
         export-markdown => { root.export-markdown(); root.left-panel-open = false; }
         // FR-T4-4: 档案册入口 -> archive 路由 + 关抽屉
         open-archive => { root.current-route = "archive"; root.left-panel-open = false; }
+    }
+
+    // FR-T4-5: 右抽屉「外物」壳，跨路由覆盖，z 序与 InnerDrawer 同级
+    OuterDrawer {
+        width: root.width;
+        height: root.height;
+        open: root.right-panel-open;
+        skills: root.skills;
+        mcp-status: root.mcp-status;
+        dark-mode: root.dark-mode;
+        close => { root.right-panel-open = false; }
+        toggle-skill(id) => { root.toggle-skill(id); }
+        toggle-theme => { root.toggle-theme(); }
+        open-session-settings => { root.open-session-settings(); }
     }
 
     // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，
