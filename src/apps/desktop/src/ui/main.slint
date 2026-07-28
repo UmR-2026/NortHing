@@ -19,6 +19,11 @@ export component AppWindow inherits Window {
     min-width: 800px;
     min-height: 600px;
     background: RedesignTheme.t.bg;
+    // FR-T3b: frameless 窗口。slint 1.16 无 no-titlebar 属性（1.16/1.17
+    // 均仅有 no-frame），用 no-frame: true 移除标题栏 + 系统边框；
+    // 自绘窗口控制按钮见 WindowChrome.slint。自定义边缘 resize 出本单
+    // 范围（slint winit 后端 resize-border-width 可后续启用）。
+    no-frame: true;
 
     // FR-T3: 空气染色底层背景（z 序最底）
     AirTint {
@@ -171,6 +176,10 @@ export component AppWindow inherits Window {
     // Internal refresh callbacks (used by app_state to push updates)
     callback refresh-sessions();
     callback refresh-messages();
+    // FR-T3b: frameless 窗口自绘控制按钮回调，接 Rust slint::Window API。
+    callback window-minimize();
+    callback window-maximize();
+    callback window-close();
 
     changed dark-mode => {
         RedesignTheme.dark = dark-mode;
@@ -362,14 +371,19 @@ export component AppWindow inherits Window {
                 root.dismiss-banner();
             }
         }
-    }   // close content Rectangle (inside if current-route == "main")
+    }   // close content Rectangle (if current-route == "main" element ends here)
 
-    // FR-T3: 窗口装饰层（z 序最顶，toggle-left/right FR-T3b 接线）
+    // FR-T3/FR-T3b: 窗口装饰层--跨路由覆盖（AppWindow 直接子节点，
+    // 在三个 if route 块之后，welcome/settings/main 全路由可见）。
     WindowChrome {
         width: root.width;
         height: root.height;
         toggle-left => { root.left-panel-open = !root.left-panel-open; }
         // FR-T3b：右栏（InspectorView）开关，对称于左栏
         toggle-right => { root.right-panel-open = !root.right-panel-open; }
+        // FR-T3b：frameless 窗口控制按钮转发到 root 回调（Rust 侧接线）
+        window-minimize => { root.window-minimize(); }
+        window-maximize => { root.window-maximize(); }
+        window-close => { root.window-close(); }
     }
-}   // close if current-route == "main"
+}   // close AppWindow

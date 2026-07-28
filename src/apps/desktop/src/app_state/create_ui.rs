@@ -316,6 +316,30 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_set_default_model_callback(&ui, &app_state);
     register_rename_session_callback(&ui, &app_state);
 
+    // FR-T3b: frameless 窗口控制按钮接 Rust slint::Window API。
+    // minimize -> set_minimized(true); maximize -> toggle is_maximized;
+    // close -> hide()（hide 递减 window_count，归零自动 quit_event_loop，
+    // 见 i-slint-core window.rs Window::hide）。无 AppState 依赖。
+    let ui_weak_min = ui.as_weak();
+    ui.on_window_minimize(move || {
+        if let Some(ui) = ui_weak_min.upgrade() {
+            ui.window().set_minimized(true);
+        }
+    });
+    let ui_weak_max = ui.as_weak();
+    ui.on_window_maximize(move || {
+        if let Some(ui) = ui_weak_max.upgrade() {
+            let window = ui.window();
+            window.set_maximized(!window.is_maximized());
+        }
+    });
+    let ui_weak_close = ui.as_weak();
+    ui.on_window_close(move || {
+        if let Some(ui) = ui_weak_close.upgrade() {
+            let _ = ui.window().hide();
+        }
+    });
+
     // 2026-07-18 (D2b): initial settings-list backfill. Runs on a background
     // thread; refresh_settings_lists dispatches the 7 property sets onto
     // the UI thread internally. Harmless on both first-run and returning-user

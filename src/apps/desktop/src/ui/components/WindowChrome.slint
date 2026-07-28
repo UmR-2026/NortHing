@@ -1,5 +1,6 @@
-// WindowChrome — 透明背景，左下品牌水印 + 左右把手。
+// WindowChrome - 透明背景，左下品牌水印 + 左右把手 + 右上窗口控制按钮。
 // FR-T3 前置；toggle-left/right 回调 FR-T3b 接线。
+// FR-T3b: frameless 窗口自绘 −□× 三键，回调接 Rust window API。
 
 import { RedesignTheme } from "../redesign_palette.slint";
 
@@ -68,6 +69,99 @@ export component WindowChrome inherits Rectangle {
         }
     }
 
+    // 右上窗口控制按钮：最小化 / 最大化还原 / 关闭。
+    // FR-T3b: right 缩进 s6+s3(=44px) 让出把手渗光线，顶部 s3 带垂直居中。
+    // 纯 RedesignTheme token，无硬编码 hex。
+    Rectangle {
+        x: parent.width - (RedesignTheme.t.s6 + RedesignTheme.t.s3)
+            - (3 * RedesignTheme.t.s5 + 2 * RedesignTheme.t.s1);
+        y: RedesignTheme.t.s3;
+        width: 3 * RedesignTheme.t.s5 + 2 * RedesignTheme.t.s1;
+        height: RedesignTheme.t.s5;
+        background: transparent;
+
+        // 最小化（−）
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: RedesignTheme.t.s5;
+            height: RedesignTheme.t.s5;
+            border-radius: RedesignTheme.t.r-sm;
+            background: min-touch.has-hover ? RedesignTheme.t.raised : transparent;
+
+            min-touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.window-minimize(); }
+            }
+
+            Text {
+                text: "−";
+                color: min-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                font-size: RedesignTheme.t.fs-lg;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+        // 最大化 / 还原（□）
+        Rectangle {
+            x: RedesignTheme.t.s5 + RedesignTheme.t.s1;
+            y: 0;
+            width: RedesignTheme.t.s5;
+            height: RedesignTheme.t.s5;
+            border-radius: RedesignTheme.t.r-sm;
+            background: max-touch.has-hover ? RedesignTheme.t.raised : transparent;
+
+            max-touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.window-maximize(); }
+            }
+
+            Text {
+                text: "□";
+                color: max-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                font-size: RedesignTheme.t.fs-lg;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+        // 关闭（×）
+        Rectangle {
+            x: 2 * (RedesignTheme.t.s5 + RedesignTheme.t.s1);
+            y: 0;
+            width: RedesignTheme.t.s5;
+            height: RedesignTheme.t.s5;
+            border-radius: RedesignTheme.t.r-sm;
+            background: close-touch.has-hover ? RedesignTheme.t.danger : transparent;
+
+            close-touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.window-close(); }
+            }
+
+            Text {
+                text: "×";
+                color: close-touch.has-hover ? RedesignTheme.t.on-danger : RedesignTheme.t.muted;
+                font-size: RedesignTheme.t.fs-lg;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+    }
+
     callback toggle-left();
     callback toggle-right();
+    callback window-minimize();
+    callback window-maximize();
+    callback window-close();
 }
