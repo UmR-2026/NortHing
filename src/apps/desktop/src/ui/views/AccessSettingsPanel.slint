@@ -25,7 +25,7 @@ export component AccessSettingsPanel inherits Rectangle {
     Flickable {
         width: parent.width;
         height: parent.height;
-        viewport-height: access-layout.height;
+        viewport-height: access-layout.preferred-height;
 
         access-layout := VerticalLayout {
             width: parent.width;
@@ -211,7 +211,7 @@ export component AccessSettingsPanel inherits Rectangle {
                         // deny-card（abyss 冷调，照 settings-access.html .deny-card）
                         Rectangle {
                             width: parent.width;
-                            height: deny-list.height;
+                            height: deny-list.preferred-height;
                             border-radius: RedesignTheme.t.r-sm;
                             background: RedesignTheme.t.archive-card-bg;
                             border-width: 1px;
