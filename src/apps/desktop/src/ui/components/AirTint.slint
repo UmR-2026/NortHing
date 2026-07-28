@@ -4,8 +4,12 @@
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component AirTint inherits Rectangle {
-    // 底色平铺（rep 3.5% 饱和度空气感）
-    background: RedesignTheme.t.air-rep;
+    // speaking=true：输入聚焦时整屋空气染色升档（底 4.5% rep + 顶晕 10% rep）
+    in property <bool> speaking: false;
+
+    // 底色平铺（rep 空气感；speaking 时升档到 air-rep-speaking）
+    background: root.speaking ? RedesignTheme.t.air-rep-speaking : RedesignTheme.t.air-rep;
+    animate background { duration: 300ms; easing: ease-in-out; }
 
     // 顶晕：径向渐变，at 参数绑 parent.width/2 表达式（resize 不偏移）
     Rectangle {
@@ -13,7 +17,12 @@ export component AirTint inherits Rectangle {
         y: 0;
         width: parent.width;
         height: parent.height * 0.5;
-        background: @radial-gradient(circle at parent.width/2 0px, RedesignTheme.t.halo-rep 0%, transparent 60%);
+        // speaking 时顶晕首色升档到 halo-rep-speaking
+        property <color> halo-color: root.speaking
+            ? RedesignTheme.t.halo-rep-speaking
+            : RedesignTheme.t.halo-rep;
+        background: @radial-gradient(circle at parent.width/2 0px, halo-color 0%, transparent 60%);
+        animate background { duration: 300ms; easing: ease-in-out; }
     }
 
     // 底雾：abyss 1.5% 冷调

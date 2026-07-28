@@ -39,6 +39,9 @@ export component ChatPaneView inherits Rectangle {
     // Streaming / stop (C6=a/c)
     in property <bool> is-streaming: false;
 
+    // FR-T3b：DeckBar 输入聚焦外露（供 main.slint 驱动 AirTint speaking 升档）
+    out property <bool> input-focused: deck.focused;
+
     callback send-message(string);
     callback load-more-messages();
     callback stop-streaming();          // C6=c Esc / stop button
@@ -313,7 +316,7 @@ export component ChatPaneView inherits Rectangle {
         }
 
         // ===== Input area (DeckBar, FR-T3b) =====
-        DeckBar {
+        deck := DeckBar {
             width: parent.width;
             text <=> root.input-text;
             streaming: root.is-streaming;

@@ -24,6 +24,7 @@ export component AppWindow inherits Window {
     AirTint {
         width: root.width;
         height: root.height;
+        speaking: root.speaking;
     }
 
     // 2026-06-26 (Phase 2): route switching. Spec §6.1.
@@ -47,6 +48,10 @@ export component AppWindow inherits Window {
         if root.current-route == "settings" {
             root.refresh-settings();
         }
+        // FR-T3b：离开 main 路由时复位 speaking（welcome/settings 不染色）
+        if root.current-route != "main" {
+            root.speaking = false;
+        }
     }
 
     in-out property <string> app-title: "northhing v0.1.0";
@@ -59,6 +64,11 @@ export component AppWindow inherits Window {
     in-out property <bool> session-tree-view: false;
     // FR-T3b: left sidebar panel open state; wired to WindowChrome toggle-left.
     in-out property <bool> left-panel-open: true;
+    // FR-T3b: right inspector panel open state; wired to WindowChrome toggle-right.
+    in-out property <bool> right-panel-open: true;
+    // FR-T3b: 整屋 speaking 升档（DeckBar 聚焦 -> AirTint 染色加深）。
+    // ChatPaneView 在 main 路由内驱动；切到 welcome/settings 时复位 false。
+    in-out property <bool> speaking: false;
     // Phase G.3: user-facing toggle for whether subagent (depth >= 1)
     // sessions are visible in the sidebar. Default true. Bound from
     // `app_state.rs::AppState::show_subagents`.
@@ -279,8 +289,8 @@ export component AppWindow inherits Window {
                 open-settings => { root.current-route = "settings"; }
             }
 
-            ChatPaneView {
-                width: parent.width - (root.left-panel-open ? 280px : 0px) - 240px;
+            chat-pane := ChatPaneView {
+                width: parent.width - (root.left-panel-open ? 280px : 0px) - (root.right-panel-open ? 240px : 0px);
                 height: parent.height;
                 messages: root.messages;
                 input-text <=> root.input-text;
@@ -302,9 +312,11 @@ export component AppWindow inherits Window {
                 export-markdown => { root.export-markdown(); }
                 open-session-settings => { root.open-session-settings(); }
                 set-default-model(id) => { root.set-default-model(id); }
+                // FR-T3b：DeckBar 聚焦 -> 整屋 speaking 升档
+                changed input-focused => { root.speaking = chat-pane.input-focused; }
             }
 
-            InspectorView {
+            if root.right-panel-open: InspectorView {
                 width: 240px;
                 height: parent.height;
                 skills: root.skills;
@@ -357,7 +369,7 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         toggle-left => { root.left-panel-open = !root.left-panel-open; }
-        // FR-T3b 后续：右栏（世界面板）
-        toggle-right => { }
+        // FR-T3b：右栏（InspectorView）开关，对称于左栏
+        toggle-right => { root.right-panel-open = !root.right-panel-open; }
     }
 }   // close if current-route == "main"
