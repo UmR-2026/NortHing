@@ -1,0 +1,177 @@
+// GeneralSettingsPanel - FR-T4-6a 通用 + 自我认知 panel（壳）
+//
+// 设计真值：docs/design/2026-07-22-frontend-redesign/prototypes/settings-general.html
+// 任务书 T4-6a 改动清单 §3：通用区（主题切换行）+ 自我认知区（头像光环 +
+// 名字「知序」硬编码占位 + 「编辑身份」行回调占位 TODO）。
+//
+// 主题切换：dark-mode 透传 prop + toggle-theme 透传回调（SettingsView 提供，
+// 因 main.slint 不在本批文件集内，SettingsView 直接翻转 RedesignTheme.dark
+// 使重设计调色板即时生效；root.dark-mode 同步留待 main.slint 接线）。
+// 自我认知：identity 数据通路仅 identity_md_path 存在性（Rust），MVP 卡用
+// 硬编码占位（同 T4-3 惯例），「编辑身份」回调占位待后端接入。
+
+import { RedesignTheme } from "../redesign_palette.slint";
+import { MaterialCard } from "../components/MaterialCard.slint";
+import { MaterialButton } from "../components/MaterialButton.slint";
+import { AvatarWrap } from "../components/AvatarWrap.slint";
+
+export component GeneralSettingsPanel inherits Rectangle {
+    // 透明：让 SettingsView 内容区设置淡雾（air-rep-settings + halo-rep-settings）
+    // 透过卡片间隙显形（照 settings-general.html .content 透明、.shell 承雾范式）。
+    background: transparent;
+
+    // 主题切换透传：dark-mode 由 SettingsView 绑 RedesignTheme.dark；
+    // toggle-theme 由 SettingsView 翻转 RedesignTheme.dark。
+    in property <bool> dark-mode: RedesignTheme.dark;
+    callback toggle-theme();
+    // 「编辑身份」行回调占位 TODO（接后端 identity 编辑通路）。
+    callback edit-identity();
+
+    Flickable {
+        width: parent.width;
+        height: parent.height;
+        viewport-height: general-layout.height;
+
+        general-layout := VerticalLayout {
+            width: parent.width;
+            padding: RedesignTheme.t.s5;
+            spacing: RedesignTheme.t.s5;
+
+            // ===== 通用 Card =====
+            MaterialCard {
+                width: parent.width;
+                card-padding: RedesignTheme.t.s6;
+
+                VerticalLayout {
+                    width: parent.width;
+                    padding: RedesignTheme.t.s6;
+                    spacing: RedesignTheme.t.s5;
+
+                    Text {
+                        text: "通用";
+                        font-size: RedesignTheme.t.fs-md;
+                        color: RedesignTheme.t.muted;
+                    }
+
+                    // 主题切换行：暗色模式 toggle（dark-mode 透传 + toggle-theme 透传）
+                    HorizontalLayout {
+                        height: 40px;
+                        spacing: RedesignTheme.t.s4;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            spacing: RedesignTheme.t.s1;
+                            Text {
+                                text: "暗色模式";
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
+                            }
+                            Text {
+                                text: "切换亮/暗显示";
+                                font-size: RedesignTheme.t.fs-sm;
+                                color: RedesignTheme.t.faint;
+                            }
+                        }
+
+                        // Toggle switch（照 settings-general.html .toggle 44×24）
+                        Rectangle {
+                            width: 44px;
+                            height: 24px;
+                            border-radius: RedesignTheme.t.r-pill;
+                            background: root.dark-mode
+                                ? RedesignTheme.t.rep-500
+                                : RedesignTheme.t.border;
+                            animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
+
+                            // Knob 18×18，checked 右移 20px
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                y: 3px;
+                                x: root.dark-mode ? 23px : 3px;
+                                border-radius: RedesignTheme.t.r-pill;
+                                background: RedesignTheme.t.surface;
+                                drop-shadow-color: RedesignTheme.t.fg.with-alpha(0.12);
+                                drop-shadow-blur: 2px;
+                                drop-shadow-offset-y: 1px;
+                                animate x { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
+                            }
+
+                            TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => { root.toggle-theme(); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ===== 自我认知 Card =====
+            MaterialCard {
+                width: parent.width;
+                card-padding: RedesignTheme.t.s6;
+
+                VerticalLayout {
+                    width: parent.width;
+                    padding: RedesignTheme.t.s6;
+                    spacing: RedesignTheme.t.s5;
+
+                    Text {
+                        text: "自我认知";
+                        font-size: RedesignTheme.t.fs-md;
+                        color: RedesignTheme.t.muted;
+                    }
+
+                    // identity-header：头像 44px + 光环（AvatarWrap 复用）+ 名字「知序」硬编码占位
+                    HorizontalLayout {
+                        height: 50px;
+                        spacing: RedesignTheme.t.s3;
+                        alignment: start;
+
+                        AvatarWrap {
+                            size: 44px;
+                            initial: "序";
+                            breathing: true;
+                        }
+
+                        Text {
+                            text: "知序";
+                            font-size: RedesignTheme.t.fs-name;
+                            color: RedesignTheme.t.fg;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // 「编辑身份」行 -> edit-identity 回调占位 TODO
+                    HorizontalLayout {
+                        height: 40px;
+                        spacing: RedesignTheme.t.s3;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            spacing: RedesignTheme.t.s1;
+                            Text {
+                                text: "编辑身份";
+                                font-size: RedesignTheme.t.fs-body;
+                                color: RedesignTheme.t.fg;
+                            }
+                            Text {
+                                text: "通过对话让我更懂你";
+                                font-size: RedesignTheme.t.fs-sm;
+                                color: RedesignTheme.t.faint;
+                            }
+                        }
+
+                        MaterialButton {
+                            text: "编辑";
+                            primary: false;
+                            clicked => { root.edit-identity(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

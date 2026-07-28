@@ -100,6 +100,10 @@
   /* speaking 升档档（输入聚焦时整屋染色加深；theme-system.html .speaking 亮色数值） */
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 4.2%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
+  /* 设置页淡雾（settings-*.html .shell 规则：底色平铺 1.5% + 顶晕 2%；比全路由
+   * air-rep/halo-rep（3.5%/7%）更淡，给设置页单独的视觉分档。暗色 halo 上调见暗块） */
+  --air-rep-settings: color-mix(in oklch, var(--rep-500) 1.5%, var(--bg));
+  --halo-rep-settings: color-mix(in oklch, var(--rep-500) 2%, var(--bg));
   --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
   /* 档案馆顶晕冷雾（abyss 3%；archive.html body::before 冷雾顶晕） */
   --halo-abyss: color-mix(in oklch, var(--abyss-500) 3%, var(--bg));
@@ -161,6 +165,10 @@
   /* speaking 升档档（暗色按暗特性上调；theme-system.html .speaking 暗色数值） */
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 10%, var(--bg));
+  /* 设置页淡雾（settings-*.html .shell::before 暗色 halo 上调 2% -> 5%；底色 1.5%
+   * 沿用亮色，同 air-rep 基底雾亮暗同值的惯例，仅 halo 暗色上调补偿暗底感知） */
+  --air-rep-settings: color-mix(in oklch, var(--rep-500) 1.5%, var(--bg));
+  --halo-rep-settings: color-mix(in oklch, var(--rep-500) 5%, var(--bg));
   --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
   /* 档案馆顶晕冷雾（abyss 3%；archive.html body::before 冷雾顶晕） */
   --halo-abyss: color-mix(in oklch, var(--abyss-500) 3%, var(--bg));

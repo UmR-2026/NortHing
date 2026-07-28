@@ -11,16 +11,26 @@ import { ProviderSettingsPanel } from "ProviderSettingsPanel.slint";
 import { SkillsSettingsPanel } from "SkillsSettingsPanel.slint";
 import { MCPSettingsPanel } from "MCPSettingsPanel.slint";
 import { WorkspaceSettingsPanel } from "WorkspaceSettingsPanel.slint";
+import { GeneralSettingsPanel } from "GeneralSettingsPanel.slint";
+import { AccessSettingsPanel } from "AccessSettingsPanel.slint";
 
 export component SettingsView inherits Rectangle {
     background: RedesignTheme.t.bg;
 
     // A2=a: left menu item the user clicked. Slint enums are not
-    // first-class in 1.16 — use a string property and match in panel.
-    in-out property <string> active-section: "providers";  // providers|workspaces|skills|mcp|general
+    // first-class in 1.16 - use a string property and match in panel.
+    in-out property <string> active-section: "providers";  // providers|workspaces|skills|mcp|general|access
 
     // Settings menus (A1+a: sidebar entry; A1+b: cog icon)
     callback close-settings();
+
+    // FR-T4-6a: 主题切换透传（dark-mode 绑 RedesignTheme.dark；toggle-theme
+    // 翻转 RedesignTheme.dark 使重设计调色板即时生效）。main.slint 未在本批
+    // 文件集内，root.dark-mode 同步留待 main.slint 接线时补 dark-mode 透传。
+    in-out property <bool> dark-mode: RedesignTheme.dark;
+    callback toggle-theme();
+    // FR-T4-6a: 「编辑身份」行回调占位 TODO（接后端 identity 编辑通路）。
+    callback edit-identity();
 
     // Phase 3: pass-through callbacks for sub-panels. SettingsView
     // doesn't process them; main.slint wires them to AppState methods.
@@ -185,6 +195,25 @@ export component SettingsView inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
+                // FR-T4-6a: 访问权限 nav 项（照 settings-access.html 安全组）
+                nav-access := Rectangle {
+                    height: 48px;
+                    background: root.active-section == "access"
+                        ? RedesignTheme.t.rep-500.with-alpha(0.12)
+                        : RedesignTheme.t.surface;
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.active-section = "access"; }
+                    }
+                    Text {
+                        text: "访问权限";
+                        font-size: RedesignTheme.t.fs-body;
+                        color: RedesignTheme.t.fg;
+                        x: RedesignTheme.t.s4;
+                        vertical-alignment: center;
+                    }
+                }
 
                 // spacer pushes the close button to the bottom
                 Rectangle { vertical-stretch: 1; }
@@ -198,10 +227,24 @@ export component SettingsView inherits Rectangle {
         }
 
         // ===== Right detail panel (placeholder; sub-panels in Phase 3) =====
+        // FR-T4-6a: 设置页淡雾--底色平铺 air-rep-settings（1.5% rep）+ 顶晕
+        // halo-rep-settings（亮 2% / 暗 5%）径向，写法仿 AirTint。设置页在
+        // archive（abyss 冷雾）/ main（rep 3.5%/7% 暖雾）之外的视觉分档。
         Rectangle {
             width: parent.width - 220px;
             height: parent.height;
-            background: RedesignTheme.t.bg;
+            background: RedesignTheme.t.air-rep-settings;
+            animate background { duration: 300ms; easing: ease-in-out; }
+
+            // 顶晕径向（halo-rep-settings，衰减 60%）
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height * 0.5;
+                background: @radial-gradient(circle at parent.width/2 0px, RedesignTheme.t.halo-rep-settings 0%, transparent 60%);
+                animate background { duration: 300ms; easing: ease-in-out; }
+            }
 
             VerticalLayout {
                 width: parent.width;
@@ -251,22 +294,21 @@ export component SettingsView inherits Rectangle {
                     edit-identity-md(id) => { root.edit-identity-md(id); }
                     open-identity-creator => { root.open-identity-creator(); }
                 }
-                if root.active-section == "general": Rectangle {
-                    vertical-stretch: 1;
+                if root.active-section == "general": GeneralSettingsPanel {
                     width: parent.width;
-                    background: RedesignTheme.t.surface;
-                    border-radius: RedesignTheme.t.r-sm;
-
-                    Text {
-                        text: "通用设置将在后续版本提供。";
-                        font-size: RedesignTheme.t.fs-body;
-                        color: RedesignTheme.t.fg;
-                        opacity: 0.7;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        width: parent.width;
+                    height: parent.height;
+                    dark-mode: root.dark-mode;
+                    toggle-theme => {
+                        // 透传 + 直接翻转 RedesignTheme.dark（main.slint 不在本批
+                        // 文件集，root.dark-mode 同步留待接线）。
+                        RedesignTheme.dark = !RedesignTheme.dark;
+                        root.toggle-theme();
                     }
+                    edit-identity => { root.edit-identity(); }
+                }
+                if root.active-section == "access": AccessSettingsPanel {
+                    width: parent.width;
+                    height: parent.height;
                 }
             }
         }
