@@ -200,6 +200,13 @@ export component ChatPaneView inherits Rectangle {
                         VerticalLayout {
                             spacing: RedesignTheme.t.s1;
 
+                            // Phase 5: ThinkBlock above bubble when reasoning content exists.
+                            if message.think-content != "": ThinkBlock {
+                                content: message.think-content;
+                                width: parent.width - RedesignTheme.t.s4 * 2;
+                                x: RedesignTheme.t.s4;
+                            }
+
                             // Standard message bubble
                             ChatMessageBubble {
                                 role: message.role;
@@ -209,7 +216,7 @@ export component ChatPaneView inherits Rectangle {
                                 width: parent.width - RedesignTheme.t.s4 * 2;
                             }
 
-                            // C5=c: inline tool call card (click to expand)
+                            // Phase 5: ToolChip row as entry point for tool call details.
                             if message.tool-calls-count > 0: Rectangle {
                                 width: parent.width - RedesignTheme.t.s4 * 2;
                                 x: RedesignTheme.t.s4;
@@ -230,13 +237,18 @@ export component ChatPaneView inherits Rectangle {
                                         vertical-alignment: center;
                                     }
 
-                                    // The summary line
-                                    Text {
-                                        text: AppStrings.chat-tool-call-expanded + " (" + message.tool-calls-count + "): " + message.tool-calls-summary;
-                                        font-size: RedesignTheme.t.fs-md;
-                                        color: RedesignTheme.t.fg;
-                                        vertical-alignment: center;
-                                        width: parent.width - 32px;
+                                    // ToolChip row — one chip per tool name
+                                    for name in message.tool-names: ToolChip {
+                                        name: name;
+                                        running: message.is-streaming;
+                                        done: !message.is-streaming;
+                                        clicked => {
+                                            if root.expanded-message-id == message.id {
+                                                root.expanded-message-id = "";
+                                            } else {
+                                                root.expanded-message-id = message.id;
+                                            }
+                                        }
                                     }
 
                                     TouchArea {

@@ -34,7 +34,7 @@ use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi, SubscriptionId};
 use northhing_kernel_api::session::KernelSessionApi;
 use northhing_kernel_api::turn::TurnStateKind;
-use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::sync::{Arc, Mutex};
 
 pub struct DesktopEventBridge {
@@ -191,21 +191,20 @@ impl DesktopEventBridge {
             let facade = kernel_facade();
             match facade.get_messages(&session_id).await {
                 Ok(msgs) => {
-                    let base = build_messages_model(&msgs, None);
-                    let mut items: Vec<MessageItem> = base.iter().collect();
-                    items.push(slint_streaming_item(draft.clone()));
                     let ui_weak = ui.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
+                            let mut items = super::sessions::build_messages_items(&msgs, None);
+                            items.push(slint_streaming_item(draft.clone()));
                             ui.set_messages(ModelRc::new(VecModel::from(items)));
                         }
                     });
                 }
                 Err(_) => {
-                    let items = vec![slint_streaming_item(draft.clone())];
                     let ui_weak = ui.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(ui) = ui_weak.upgrade() {
+                            let items = vec![slint_streaming_item(draft.clone())];
                             ui.set_messages(ModelRc::new(VecModel::from(items)));
                         }
                     });
@@ -244,6 +243,8 @@ fn slint_streaming_item(content: String) -> MessageItem {
         tool_calls_count: 0,
         tool_calls_summary: SharedString::from(""),
         tool_calls_json: SharedString::from(""),
+        think_content: SharedString::from(""),
+        tool_names: ModelRc::new(VecModel::from(Vec::<SharedString>::new())),
     }
 }
 

@@ -65,10 +65,10 @@ mod phase_i_tests {
     //! need a real display handle and is left for future Phase I.x work
     //! (or for manual smoke-testing).
 
-    use super::sessions::{build_messages_model, build_sessions_model};
+    use super::sessions::{build_messages_model, build_sessions_model, message_to_item};
     use northhing_kernel_api::session::{
         MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, SessionStateDto, SessionStatusDto,
-        SessionSummaryDto,
+        SessionSummaryDto, ToolCallStub,
     };
     use slint::Model;
 
@@ -436,5 +436,66 @@ mod phase_i_tests {
         // returns None, we ignore it). Should not affect existing entries.
         app_state.forget_session_meta("does-not-exist");
         assert_eq!(app_state.session_metadata_snapshot().len(), 1);
+    }
+
+    /// Phase 5: message_to_item extracts reasoning_content and tool_calls from Mixed.
+    #[test]
+    fn message_to_item_mixed_extracts_think_and_tool_fields() {
+        let meta = sample_meta();
+        let msg = MessageDto {
+            id: "msg-mixed-1".into(),
+            role: MessageRoleDto::Assistant,
+            content: MessageContentDto::Mixed {
+                reasoning_content: Some("Let me think about this".into()),
+                text: "Here is the answer".into(),
+                tool_calls: vec![
+                    ToolCallStub {
+                        tool_name: "search".into(),
+                        arguments: None,
+                        is_error: false,
+                    },
+                    ToolCallStub {
+                        tool_name: "read_file".into(),
+                        arguments: Some(serde_json::json!({"path": "/tmp/test.txt"})),
+                        is_error: false,
+                    },
+                ],
+            },
+            timestamp: 0,
+            metadata: Some(meta),
+        };
+
+        let item = message_to_item(&msg, false);
+
+        assert_eq!(item.think_content.as_str(), "Let me think about this");
+        assert_eq!(item.tool_calls_count, 2);
+        assert_eq!(item.tool_calls_summary.as_str(), "search, read_file");
+        assert!(item.tool_calls_json.as_str().starts_with("["));
+        assert!(item.tool_calls_json.as_str().contains("search"));
+        assert!(item.tool_calls_json.as_str().contains("read_file"));
+
+        let names: Vec<String> = item.tool_names.iter().map(|s| s.to_string()).collect();
+        assert_eq!(names, vec!["search", "read_file"]);
+    }
+
+    /// Phase 5: non-Mixed messages get empty defaults for the new fields.
+    #[test]
+    fn message_to_item_non_mixed_has_empty_new_fields() {
+        let meta = sample_meta();
+        let msg = MessageDto {
+            id: "msg-text-1".into(),
+            role: MessageRoleDto::User,
+            content: MessageContentDto::Text("hello".into()),
+            timestamp: 0,
+            metadata: Some(meta),
+        };
+
+        let item = message_to_item(&msg, false);
+
+        assert_eq!(item.think_content.as_str(), "");
+        assert_eq!(item.tool_calls_count, 0);
+        assert_eq!(item.tool_calls_summary.as_str(), "");
+        assert_eq!(item.tool_calls_json.as_str(), "");
+        assert_eq!(item.tool_names.iter().count(), 0);
     }
 }

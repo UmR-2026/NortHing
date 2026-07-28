@@ -62,18 +62,49 @@ pub(super) fn message_to_item(msg: &MessageDto, is_streaming: bool) -> MessageIt
         MessageContentDto::Mixed { text, .. } => text.clone(),
     };
 
+    // Phase 5: extract reasoning_content and tool_calls from Mixed.
+    let (think_content, tool_calls_count, tool_calls_summary, tool_calls_json, tool_names) =
+        match &msg.content {
+            MessageContentDto::Mixed {
+                reasoning_content,
+                tool_calls,
+                ..
+            } => {
+                let think = reasoning_content
+                    .clone()
+                    .unwrap_or_default();
+                let count = tool_calls.len() as i32;
+                let summary = tool_calls
+                    .iter()
+                    .map(|tc| tc.tool_name.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let json = serde_json::to_string(tool_calls)
+                    .unwrap_or_else(|_| "[]".to_string());
+                let names = tool_calls
+                    .iter()
+                    .map(|tc| tc.tool_name.clone())
+                    .collect();
+                (think, count, summary, json, names)
+            }
+            _ => {
+                (String::new(), 0, String::new(), String::new(), Vec::new())
+            }
+        };
+
     MessageItem {
         id: SharedString::from(msg.id.clone()),
         role: SharedString::from(role),
         content: SharedString::from(content),
         timestamp: SharedString::from(format_time_ms(msg.timestamp)),
         is_streaming,
-        // Phase 4: tool call fields. Default to no tool calls; Rust
-        // will populate these when extracting tool_call records from
-        // message content (Phase 5).
-        tool_calls_count: 0,
-        tool_calls_summary: SharedString::from(""),
-        tool_calls_json: SharedString::from(""),
+        tool_calls_count,
+        tool_calls_summary: SharedString::from(tool_calls_summary),
+        tool_calls_json: SharedString::from(tool_calls_json),
+        think_content: SharedString::from(think_content),
+        tool_names: ModelRc::new(VecModel::from(
+            tool_names.into_iter().map(SharedString::from).collect::<Vec<_>>(),
+        )),
     }
 }
 
@@ -294,10 +325,11 @@ pub(super) async fn refresh_messages_ui(
     let result = facade.get_messages(&session_id_string).await;
     match result {
         Ok(messages) => {
-            // Build item Vec on background thread; construct ModelRc on UI thread.
-            let items = build_messages_items(&messages, streaming_session_id);
+            let ui_weak = ui_weak.clone();
+            let sid = streaming_session_id.map(|s| s.to_string());
             if let Err(e) = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui_weak.upgrade() {
+                    let items = build_messages_items(&messages, sid.as_deref());
                     ui.set_messages(ModelRc::new(VecModel::from(items)));
                 }
             }) {

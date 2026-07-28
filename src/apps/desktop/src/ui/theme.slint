@@ -99,6 +99,10 @@ export struct MessageItem {
     tool-calls-count: int,
     tool-calls-summary: string,
     tool-calls-json: string,
+    // Phase 5: reasoning content and tool call names for
+    // ThinkBlock / ToolChip rendering.
+    think-content: string,
+    tool-names: [string],
 }
 
 export struct SkillItem {
