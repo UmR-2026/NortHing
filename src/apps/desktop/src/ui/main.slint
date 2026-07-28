@@ -373,9 +373,9 @@ export component AppWindow inherits Window {
         }
     }   // close content Rectangle (if current-route == "main" element ends here)
 
-    // FR-T3/FR-T3b: 窗口装饰层--跨路由覆盖（AppWindow 直接子节点，
+    // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，
     // 在三个 if route 块之后，welcome/settings/main 全路由可见）。
-    WindowChrome {
+        WindowChrome {
         width: root.width;
         height: root.height;
         toggle-left => { root.left-panel-open = !root.left-panel-open; }
