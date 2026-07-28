@@ -73,7 +73,8 @@ AppWindow (frameless, AirTint + speaking 已有)
 
 **Interfaces:** Consumes: ChatPaneView 现 props/回调全集（会话名相关除外）；Produces: `SpaceView`（props/回调与 ChatPaneView 现存签名一致）+ root 新增 `open-settings` 已有回调复用。
 
-- [ ] Step 1：SpaceView VerticalLayout：presence 占位 → 消息流（inner 660 居中：`width: min(parent.width - 2*s6, 660px)` + 居中容器）→ deck-wrap（DeckBar 660 居中 + ⚙ 按钮入控制行 clicked→root.open-settings）。margin 0 34px。
+- [ ] Step 1：SpaceView VerticalLayout：presence 占位 → ChatPaneView（**保留为 stream+deck 实现**，SpaceView 是其居中容器，关系锁定不二选）→ margin 0 34px。ChatPaneView 内消息流与 DeckBar 加 660 居中约束（`width: min(parent.width - 2*s6, 660px)` + 居中容器）。presence 由 SpaceView 持有（T4-2 填）。
+- [ ] Step 1b：**model picker 触发器迁移**——现触发在会话头卡 L109（本 Task 删除），改到 DeckBar 模型名（Text 包 TouchArea，染 rep 已有；clicked → ChatPaneView.model-popup-open 翻转；popup 与 set-default-model 接线不丢）。
 - [ ] Step 2：main.slint main route 三栏 → SpaceView 单实例；StatusBarView/SidebarView/InspectorView 实例删除（文件保留）；sessions/skills/mcp-status 等 root 属性与回调保留（后续 Task 用）；**新增 archive 路由枚举值占位**（"archive"，T4-4 填内容）。
 - [ ] Step 3：banner/inline-error/model picker popup 接线不丢（发送/停止/加载更多/模型选择/export-markdown/open-session-settings 回调保留在 root，UI 入口本 Task 只有 ⚙；export/session-settings 入口 T4-3/T4-4/T4-5 接）。
 - [ ] Step 4：验证 + exe 冒烟 10s + commit `feat(desktop): FR-T4-1 单栏骨架 SpaceView + 一步拆双栏`；报告列明悬空回调/属性清单。
@@ -94,8 +95,8 @@ AppWindow (frameless, AirTint + speaking 已有)
 
 **Files:** Create `ui/components/InnerDrawer.slint`；Modify main.slint、WindowChrome.slint（把手双标签参数化）。
 
-- [ ] Step 1：把手升级（真值 L83-89）：34px 全高、竖排「内在」/「身外之物」（逐字竖排 Text）、signal dot（左，`signal: bool` 占位 false）、渗光（Slint 无 inset shadow，用 1px 内缘渐变条近似，报告注明降级）。
-- [ ] Step 2：InnerDrawer 左滑入 overlay（320px，250ms ease，surface+border+阴影，遮罩点击关闭，z 序 < win-ctrl）：① 自我认知卡（identity.md 摘要/「查看」跳设置页自我认知区）② **档案册入口行**（→ root.current-route = "archive"）③ **export-markdown 入口行**（接 root.export-markdown）。
+- [ ] Step 1：把手升级（真值 L83-89 + L202/206 文案 **「内在」/「外物」**，真值优先于口语"身外之物"）：34px 全高、竖排逐字 Text、signal dot（左，`signal: bool` 占位 false）、渗光（Slint 无 inset shadow，用 1px 内缘渐变条近似，报告注明降级）。
+- [ ] Step 2：InnerDrawer 左滑入 overlay（320px，250ms ease，surface+border+阴影，遮罩点击关闭，z 序 < win-ctrl）：① 自我认知卡（名字暂硬编码「知序」+ identity.md 摘要/「查看」跳设置页自我认知区；identity 名字接真实 prop 已记技术债）② **档案册入口行（本 Task 先 disabled，T4-4 落地后启用）**③ **export-markdown 入口行**（接 root.export-markdown）。
 - [ ] Step 3：验证 + commit `feat(desktop): FR-T4-3 左抽屉内在壳 + 把手升级`。
 
 ### Task T4-4：档案册 ArchiveView（archive.html 照抄）（glm）
@@ -117,7 +118,7 @@ AppWindow (frameless, AirTint + speaking 已有)
 
 ### Task T4-6：设置页 5 页布局迁移（glm ×2~3 批，按页分批）
 
-**Files:** Modify `ui/views/SettingsView.slint` + 各 panel（ProviderSettingsPanel/SkillsSettingsPanel/MCPSettingsPanel/WorkspaceSettingsPanel + 通用页）；对照 `prototypes/settings-*.html` 5 页。
+**Files:** Modify `ui/views/SettingsView.slint` + 各 panel（ProviderSettingsPanel/SkillsSettingsPanel/MCPSettingsPanel/WorkspaceSettingsPanel）；Create `ui/views/GeneralSettingsPanel.slint`（壳+通用+自我认知区，现无对应文件）+ `ui/views/AccessSettingsPanel.slint`（访问权限/自治档，**无后端，做壳+占位**，同 deck-bar 占位策略）；对照 `prototypes/settings-*.html` 5 页。
 
 - [ ] Step 1：设置页壳：淡雾（底 1.5% + 顶 2%，既有 token 检查补齐）+ 布局对 settings-general.html（壳+通用+自我认知区，头像光环）。
 - [ ] Step 2：models（settings-models.html）：⚠ 染 rep-500、连接态 abyss-500。
@@ -145,6 +146,7 @@ AppWindow (frameless, AirTint + speaking 已有)
 ### Task T4-9：win-ctrl 对齐 + 全面对稿（bp/mimo）
 
 - [ ] Step 1：win-ctrl：top 12→16px、按钮 24→28px、间距 4→2px、圆角→7px、close hover 浅红 tint（生成器加 `danger-tint`/`danger-fg` 亮暗两组）。
+- [ ] Step 1b：**水印对齐真值**：WindowChrome 水印 x s3(12)→left 44px、y 底 s4(16)→bottom 22px。
 - [ ] Step 2：DeckBar placeholder 换 v2 文案「说点什么…… @ 引用文件 / 调用技能」。
 - [ ] Step 3：turn-meta 行确认删除；judge 全面对稿表（presence/stream/deck/handles/watermark/win-ctrl/speaking/轮/think/chip/气泡/档案册/设置 5 页/onboarding）。
 - [ ] Step 4：验证 + commit `feat(desktop): FR-T4-9 win-ctrl 对齐 + 对稿收尾`。
@@ -161,16 +163,19 @@ AppWindow (frameless, AirTint + speaking 已有)
 - 左抽屉功能面：成长鉴定 / skill 生成。右抽屉功能面：subagent worktree / 生成产物 / comfyui。deck-bar 占位件的真实数据源（think 档位/自治档/ctx 占用/mic/附件后端）。
 - 窗口拖动/边缘 resize（slint 1.16 API 缺）。滚动条样式（POC 后定）。Fraunces 自托管（FR-T5 既有 TODO）。
 
-## 选派与并行策略
+## 选派与并行策略（v3 修订：main.slint 交叉全部串行化）
 
 | Task | coder | 备注 |
 |---|---|---|
 | T4-1 | glm | 独占先行（动 main.slint 根） |
-| T4-2 | glm | T4-1 后；可与 T4-3 并行（文件集不交叉） |
-| T4-3 | ling | 与 T4-2 并行 |
-| T4-4 | glm | T4-3 后（同改 main.slint） |
-| T4-5 | ling | 与 T4-4 并行（OuterDrawer/main.slint 有交叉则串行） |
-| T4-6 | glm+ling 分批 | 设置 5 页 |
-| T4-7/T4-8 | ling | 可并行（文件集不交叉） |
-| T4-9 | bp/mimo | 机械对齐 |
+| T4-2 | glm | 串行（T4-1 后；改 main.slint 绑 streaming） |
+| T4-3 | ling | 串行（改 main.slint + WindowChrome） |
+| T4-4 | glm | 串行（改 main.slint archive route） |
+| T4-5 | ling | 串行（改 main.slint） |
+| T4-6 | glm+ling 分批 | 设置 5 页（SettingsView/panels，与 main.slint 无交叉，其中一批可与 T4-7 并行） |
+| T4-7 | ling | DeckBar.slint（可与 T4-6 并行） |
+| T4-8 | ling | IdentityCreatorView/WelcomeView（可与 T4-6/T4-7 并行） |
+| T4-9 | bp/mimo | WindowChrome 机械对齐（T4-3 之后） |
 | 全程 | judge-m3 | 铁打 |
+
+中间态说明：T4-1→T4-3 期间把手点击无动作；T4-3 档案册入口 disabled 至 T4-4 启用。
