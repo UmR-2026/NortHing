@@ -20,6 +20,9 @@ export component DeckBar inherits Rectangle {
 
     callback send();
     callback stop();
+    // FR-T4-1: model picker + 设置入口从会话头卡迁移到 DeckBar 控制行
+    callback model-clicked();
+    callback settings-clicked();
 
     background: RedesignTheme.t.elevated;
     border-radius: RedesignTheme.t.r-md;
@@ -82,11 +85,39 @@ export component DeckBar inherits Rectangle {
                 width: parent.width;
                 height: parent.height;
 
+                // ⚙ 设置入口（muted 色，hover fg）— FR-T4-1 从会话头卡迁移
+                Rectangle {
+                    width: 28px;
+
+                    Text {
+                        text: "⚙";
+                        font-size: RedesignTheme.t.fs-lg;
+                        color: settings-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+
+                    settings-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.settings-clicked(); }
+                    }
+                }
+
+                // 模型名（可点开 model picker）— FR-T4-1 从会话头卡迁移
                 Text {
                     text: root.model-name;
                     font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.rep-500;
+                    color: model-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
                     vertical-alignment: center;
+
+                    model-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => { root.model-clicked(); }
+                    }
                 }
 
                 // 推发送键到右（.deck-bar .sp { margin-left:auto }）

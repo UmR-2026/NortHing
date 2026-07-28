@@ -14,7 +14,6 @@ import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { DeckBar } from "../components/DeckBar.slint";
 import { MaterialIconButton } from "../components/MaterialIconButton.slint";
-import { MaterialCard } from "../components/MaterialCard.slint";
 import { ChatMessageBubble } from "../components/ChatMessageBubble.slint";
 import { TurnContainer } from "../components/TurnContainer.slint";
 import { ThinkBlock } from "../components/ThinkBlock.slint";
@@ -47,6 +46,8 @@ export component ChatPaneView inherits Rectangle {
     callback stop-streaming();          // C6=c Esc / stop button
     callback export-markdown();         // C7=b export button
     callback open-session-settings();   // Q4=c session settings button
+    // FR-T4-1: ⚙ 入 deck -> settings 路由（从会话头卡迁移）
+    callback open-settings();
 
     // Track which message's tool calls are currently expanded.
     // Phase 4: single-expansion (one message at a time). Multi-expand
@@ -66,111 +67,15 @@ export component ChatPaneView inherits Rectangle {
         width: parent.width;
         height: parent.height;
 
-        // ===== Session header =====
-        if root.current-session-name != "": MaterialCard {
-            width: parent.width;
-            card-padding: RedesignTheme.t.s4;
-
-            HorizontalLayout {
-                height: 48px;
-                spacing: RedesignTheme.t.s2;
-                width: parent.width;
-
-                // Session name (with Q7 broken marker)
-                VerticalLayout {
-                    width: parent.width - 360px;
-                    spacing: 2px;
-
-                    Text {
-                        text: root.current-session-name;
-                        font-size: RedesignTheme.t.fs-body;
-                        color: RedesignTheme.t.fg;
-                        font-weight: 600;
-                        vertical-alignment: center;
-                    }
-
-                    if root.current-session-broken: Text {
-                        text: AppStrings.session-broken-banner;
-                        font-size: RedesignTheme.t.fs-md;
-                        color: RedesignTheme.t.danger;
-                    }
-
-                    // 2026-07-18 (D2d): model picker pill — click to open
-                    // the provider popup. Hidden when no providers exist.
-                    if root.providers.length > 0 && !root.current-session-broken: Rectangle {
-                        height: 28px;
-                        padding: RedesignTheme.t.s2;
-                        background: RedesignTheme.t.rep-500.with-alpha(0.12);
-                        border-radius: RedesignTheme.t.r-sm;
-
-                        TouchArea {
-                            width: parent.width;
-                            height: parent.height;
-                            clicked => { root.model-popup-open = !root.model-popup-open; }
-                        }
-
-                        HorizontalLayout {
-                            spacing: RedesignTheme.t.s1;
-                            height: 28px;
-
-                            Text {
-                                text: root.current-session-model == "" ? "(选择模型)" : root.current-session-model;
-                                font-size: RedesignTheme.t.fs-md;
-                                color: RedesignTheme.t.fg;
-                                vertical-alignment: center;
-                                width: parent.width - 16px;
-                                overflow: elide;
-                            }
-
-                            Text {
-                                text: root.model-popup-open ? "▲" : "▼";
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-md;
-                                vertical-alignment: center;
-                            }
-                        }
-                    }
-                }
-
-                Rectangle { vertical-stretch: 1; }
-
-                // Q4=c: session settings button
-                if !root.current-session-broken: MaterialIconButton {
-                    icon: "⚙";
-                    icon-size: 18px;
-                    width: 32px;
-                    height: 32px;
-                    clicked => { root.open-session-settings(); }
-                }
-
-                // C7=b: export markdown
-                if !root.current-session-broken: MaterialIconButton {
-                    icon: "↓";
-                    icon-size: 18px;
-                    width: 32px;
-                    height: 32px;
-                    clicked => { root.export-markdown(); }
-                }
-
-                // C6=c: stop button (only visible while streaming)
-                if root.is-streaming: MaterialIconButton {
-                    icon: "■";
-                    icon-size: 18px;
-                    width: 32px;
-                    height: 32px;
-                    background: RedesignTheme.t.danger.with-alpha(0.15);
-                    clicked => { root.stop-streaming(); }
-                }
-            }
-        }
-
         // ===== Messages area =====
         Rectangle {
             vertical-stretch: 1;
             width: parent.width;
 
+            // FR-T4-1: 660 居中约束（外层 Rectangle + x 表达式，Slint 无 max-width）
             Flickable {
-                width: parent.width;
+                width: min(parent.width - 2 * RedesignTheme.t.s6, 660px);
+                x: (parent.width - self.width) / 2;
                 height: parent.height;
 
                 VerticalLayout {
@@ -327,21 +232,33 @@ export component ChatPaneView inherits Rectangle {
             }
         }
 
-        // ===== Input area (DeckBar, FR-T3b) =====
-        deck := DeckBar {
+        // ===== Input area (DeckBar, FR-T3b) - 660 居中 =====
+        // FR-T4-1: DeckBar 包居中容器（width: min(parent.width - 2*s6, 660px)）
+        Rectangle {
+            // DeckBar 内容高度 = 52(输入) + 1(分隔) + 44(控制行) = 97px
+            height: 97px;
             width: parent.width;
-            text <=> root.input-text;
-            streaming: root.is-streaming;
-            model-name: root.current-session-model;
-            disabled: root.current-session-broken;
-            placeholder: AppStrings.chat-input-placeholder;
-            send => {
-                if input-text != "" && !root.current-session-broken {
-                    root.send-message(input-text);
-                    input-text = "";
+
+            deck := DeckBar {
+                width: min(parent.width - 2 * RedesignTheme.t.s6, 660px);
+                x: (parent.width - self.width) / 2;
+                height: parent.height;
+                text <=> root.input-text;
+                streaming: root.is-streaming;
+                model-name: root.current-session-model;
+                disabled: root.current-session-broken;
+                placeholder: AppStrings.chat-input-placeholder;
+                // FR-T4-1: model picker + ⚙ 从会话头卡迁移到 DeckBar
+                model-clicked => { root.model-popup-open = !root.model-popup-open; }
+                settings-clicked => { root.open-settings(); }
+                send => {
+                    if input-text != "" && !root.current-session-broken {
+                        root.send-message(input-text);
+                        input-text = "";
+                    }
                 }
+                stop => { root.stop-streaming(); }
             }
-            stop => { root.stop-streaming(); }
         }
     }
 

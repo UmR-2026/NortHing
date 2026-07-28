@@ -2,10 +2,7 @@
 
 import { MaterialTheme, SessionItem, MessageItem, SkillItem, ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "theme.slint";
 import { RedesignTheme } from "redesign_palette.slint";
-import { SidebarView } from "views/SidebarView.slint";
-import { ChatPaneView } from "views/ChatPaneView.slint";
-import { InspectorView } from "views/InspectorView.slint";
-import { StatusBarView } from "views/StatusBarView.slint";
+import { SpaceView } from "views/SpaceView.slint";
 import { SettingsView } from "views/SettingsView.slint";
 import { WelcomeView } from "views/WelcomeView.slint";
 import { MaterialBanner } from "components/MaterialBanner.slint";
@@ -249,105 +246,35 @@ export component AppWindow inherits Window {
         x: 0;
         y: 0;
         width: root.width;
-        height: root.height - 32px;
+        height: root.height;
 
-        HorizontalLayout {
-            width: parent.width;
+        // FR-T4-1: 单栏骨架 SpaceView（左右让出 34px 把手区）
+        space := SpaceView {
+            x: 34px;
+            y: 0;
+            width: parent.width - 68px;
             height: parent.height;
-
-            if root.left-panel-open: SidebarView {
-                width: 280px;
-                height: parent.height;
-                sessions: root.sessions;
-                current-session-id: root.current-session-id;
-                dark-mode: root.dark-mode;
-                // Phase C.2: tree-view is bound to the const flag at
-                // main.rs:62 (SESSION_TREE_VIEW). When false, the sidebar
-                // renders the legacy flat list — byte-identical to
-                // pre-C.2 behavior.
-                tree-view: root.session-tree-view;
-                // Phase G.3: show-subagents is a runtime-mutable flag
-                // flipped by the user via the sidebar checkbox. Default
-                // true so the tree view shows the full hierarchy on
-                // first launch.
-                show-subagents: root.show-subagents;
-                // Phase 4: workspace switcher (D4=b) + Q5=a filter.
-                workspaces: root.workspaces-list;
-                current-workspace-path: root.workspaces-list[root.current-workspace-index].path;
-                switch-workspace(path) => { root.switch-workspace(path); }
-                // P0-C: error banner channels. Either non-empty renders a
-                // red banner at the top of the sidebar; the user clicks × to
-                // clear (calls clear-session-error / clear-input-error).
-                session-error: root.session-error;
-                input-error: root.input-error;
-                clear-session-error => { root.clear-session-error(); }
-                clear-input-error => { root.clear-input-error(); }
-
-                new-session => { root.new-session(); }
-                switch-session(session-id) => { root.switch-session(session-id); }
-                delete-session(session-id) => { root.delete-session(session-id); }
-                rename-session(id, name) => { root.rename-session(id, name); }
-                toggle-show-subagents => { root.toggle-show-subagents(); }
-                // 2026-06-26 (Phase 2 + review follow-up): Settings entry —
-                // flips `current-route` directly in Slint. The original
-                // Phase 2 wired a Rust `ui.on_open_settings` handler to do
-                // the same thing, but `close-settings` was already pure
-                // Slint, so the FFI round-trip on the open path was
-                // asymmetric. Reviewer flagged the asymmetry as a style
-                // observation; collapse both paths to pure Slint.
-                open-settings => { root.current-route = "settings"; }
-            }
-
-            chat-pane := ChatPaneView {
-                width: parent.width - (root.left-panel-open ? 280px : 0px) - (root.right-panel-open ? 240px : 0px);
-                height: parent.height;
-                messages: root.messages;
-                input-text <=> root.input-text;
-                dark-mode: root.dark-mode;
-                // Phase 4: session header state
-                current-session-name: root.current-session-name;
-                current-session-model: root.current-session-model;
-                current-session-broken: root.current-session-broken;
-                is-streaming: root.is-streaming;
-                // Phase 4: G2=c inline error (second channel)
-                inline-error: root.chat-inline-error;
-                // 2026-07-18 (D2d): model picker bindings.
-                providers: root.providers-list;
-                default-model-provider-id: root.default-model-provider-id;
-
-                send-message(text) => { root.send-message(text); }
-                load-more-messages => { root.load-more-messages(); }
-                stop-streaming => { root.stop-streaming(); }
-                export-markdown => { root.export-markdown(); }
-                open-session-settings => { root.open-session-settings(); }
-                set-default-model(id) => { root.set-default-model(id); }
-                // FR-T3b：DeckBar 聚焦 -> 整屋 speaking 升档
-                changed input-focused => { root.speaking = chat-pane.input-focused; }
-            }
-
-            if root.right-panel-open: InspectorView {
-                width: 240px;
-                height: parent.height;
-                skills: root.skills;
-                model-status: root.model-status;
-                dark-mode: root.dark-mode;
-
-                toggle-skill(skill-id) => { root.toggle-skill(skill-id); }
-                toggle-theme => { root.toggle-theme(); }
-            }
-        }
-
-        // Status bar lives only on the main route (not in Welcome /
-        // Settings — those views manage their own chrome).
-        StatusBarView {
-            x: 0;
-            y: root.height - 32px;
-            width: root.width;
-            height: 32px;
-            mcp-status: root.mcp-status;
-            model-status: root.model-status;
-            app-title: root.app-title;
+            messages: root.messages;
+            input-text <=> root.input-text;
             dark-mode: root.dark-mode;
+            current-session-name: root.current-session-name;
+            current-session-model: root.current-session-model;
+            current-session-broken: root.current-session-broken;
+            is-streaming: root.is-streaming;
+            inline-error: root.chat-inline-error;
+            providers: root.providers-list;
+            default-model-provider-id: root.default-model-provider-id;
+
+            send-message(text) => { root.send-message(text); }
+            load-more-messages => { root.load-more-messages(); }
+            stop-streaming => { root.stop-streaming(); }
+            export-markdown => { root.export-markdown(); }
+            open-session-settings => { root.open-session-settings(); }
+            set-default-model(id) => { root.set-default-model(id); }
+            // FR-T4-1: ⚙ 入 deck -> settings 路由
+            open-settings => { root.current-route = "settings"; }
+            // FR-T3b：DeckBar 聚焦 -> 整屋 speaking 升档
+            changed input-focused => { root.speaking = space.input-focused; }
         }
 
         // 2026-06-26 (Phase 5): global MaterialBanner overlay.
@@ -357,7 +284,7 @@ export component AppWindow inherits Window {
         // chat-inline-error second channel (manual close).
         if root.banner-message != "": MaterialBanner {
             x: 0;
-            y: root.height - 32px - 56px;
+            y: root.height - 56px;
             width: root.width;
             height: 56px;
             message: root.banner-message;
@@ -371,7 +298,12 @@ export component AppWindow inherits Window {
                 root.dismiss-banner();
             }
         }
-    }   // close content Rectangle (if current-route == "main" element ends here)
+    }
+
+    // FR-T4-1: archive 路由占位（T4-4 填内容）
+    if root.current-route == "archive": Rectangle {
+        background: transparent;
+    }
 
     // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，
     // 在三个 if route 块之后，welcome/settings/main 全路由可见）。
