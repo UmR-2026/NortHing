@@ -52,6 +52,7 @@ GROUP_COMMENTS = {
     "danger": "异常态危险色（plan §12：低饱和陶红，双色；[T3] P2.1 定稿）",
     "on": "文字色（rep/abyss/danger 表面上的前景白）",
     "mix": "语义混合色（OKLCH 混色，由生成器解析）",
+    "archive": "档案馆冷色（abyss 冷系，禁 rep；archive.html L34-39）",
     "fs": "字号三档 + 正文/名字（handoff §8：小字端严格收敛，层级靠颜色+字体承担）",
     "spacing": "间距 4 基数阶梯（4×1/2/3/4/6/8）",
     "radius": "圆角阶梯",
@@ -251,6 +252,8 @@ def group_of(name):
         return "on"
     if name.startswith(("air-", "halo-", "fog-", "presence-")) or name == "turn-active":
         return "mix"
+    if name.startswith("archive-"):
+        return "archive"
     if name.startswith("fs-"):
         return "fs"
     if re.match(r"^s\d+$", name):

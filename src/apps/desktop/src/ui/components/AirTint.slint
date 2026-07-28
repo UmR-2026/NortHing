@@ -1,31 +1,36 @@
-// AirTint — 整屋空气染色：底色平铺 + 顶晕径向 + 底部冷雾。
+// AirTint - 整屋空气染色：底色平铺 + 顶晕径向 + 底部冷雾。
 // 纯视觉，无回调。FR-T3 前置。
+// FR-T4-4: cold=true 时切 abyss 冷雾（档案馆禁 rep），平铺/顶晕换 abyss 系。
 
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component AirTint inherits Rectangle {
     // speaking=true：输入聚焦时整屋空气染色升档（底 4.5% rep + 顶晕 10% rep）
     in property <bool> speaking: false;
+    // cold=true：档案馆冷雾（abyss 底 1.5% + 顶 3%），禁 rep 暖雾
+    in property <bool> cold: false;
 
-    // 底色平铺（rep 空气感；speaking 时升档到 air-rep-speaking）
-    background: root.speaking ? RedesignTheme.t.air-rep-speaking : RedesignTheme.t.air-rep;
+    // 底色平铺：cold -> fog-abyss（abyss 1.5%）；否则 rep 空气感，speaking 升档
+    background: root.cold
+        ? RedesignTheme.t.fog-abyss
+        : (root.speaking ? RedesignTheme.t.air-rep-speaking : RedesignTheme.t.air-rep);
     animate background { duration: 300ms; easing: ease-in-out; }
 
     // 顶晕：径向渐变，at 参数绑 parent.width/2 表达式（resize 不偏移）
+    // cold -> halo-abyss（abyss 3%）；否则 rep 顶晕，speaking 升档
     Rectangle {
         x: 0;
         y: 0;
         width: parent.width;
         height: parent.height * 0.5;
-        // speaking 时顶晕首色升档到 halo-rep-speaking
-        property <color> halo-color: root.speaking
-            ? RedesignTheme.t.halo-rep-speaking
-            : RedesignTheme.t.halo-rep;
+        property <color> halo-color: root.cold
+            ? RedesignTheme.t.halo-abyss
+            : (root.speaking ? RedesignTheme.t.halo-rep-speaking : RedesignTheme.t.halo-rep);
         background: @radial-gradient(circle at parent.width/2 0px, halo-color 0%, transparent 60%);
         animate background { duration: 300ms; easing: ease-in-out; }
     }
 
-    // 底雾：abyss 1.5% 冷调
+    // 底雾：abyss 1.5% 冷调（冷热模式共用，档案页底雾加深邃感）
     Rectangle {
         x: 0;
         y: parent.height * 0.7;

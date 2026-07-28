@@ -5,6 +5,7 @@ import { RedesignTheme } from "redesign_palette.slint";
 import { SpaceView } from "views/SpaceView.slint";
 import { SettingsView } from "views/SettingsView.slint";
 import { WelcomeView } from "views/WelcomeView.slint";
+import { ArchiveView } from "views/ArchiveView.slint";
 import { MaterialBanner } from "components/MaterialBanner.slint";
 import { AirTint } from "components/AirTint.slint";
 import { WindowChrome } from "components/WindowChrome.slint";
@@ -28,6 +29,8 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
         speaking: root.speaking;
+        // FR-T4-4: archive 路由切 abyss 冷雾（档案馆禁 rep 暖雾）
+        cold: root.current-route == "archive";
     }
 
     // 2026-06-26 (Phase 2): route switching. Spec §6.1.
@@ -301,9 +304,17 @@ export component AppWindow inherits Window {
         }
     }
 
-    // FR-T4-1: archive 路由占位（T4-4 填内容）
-    if root.current-route == "archive": Rectangle {
-        background: transparent;
+    // FR-T4-4: archive 路由 -- 档案册 ArchiveView（照 archive.html MVP）
+    if root.current-route == "archive": ArchiveView {
+        width: root.width;
+        height: root.height;
+        sessions: root.sessions;
+        back => { root.current-route = "main"; }
+        open-session(id) => {
+            root.switch-session(id);
+            root.current-route = "main";
+        }
+        export-markdown => { root.export-markdown(); }
     }
 
     // FR-T4-3: 左抽屉「内在」壳，跨路由覆盖，z 序在 SpaceView 之上、WindowChrome 之下
@@ -313,6 +324,8 @@ export component AppWindow inherits Window {
         open: root.left-panel-open;
         close => { root.left-panel-open = false; }
         export-markdown => { root.export-markdown(); root.left-panel-open = false; }
+        // FR-T4-4: 档案册入口 -> archive 路由 + 关抽屉
+        open-archive => { root.current-route = "archive"; root.left-panel-open = false; }
     }
 
     // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，

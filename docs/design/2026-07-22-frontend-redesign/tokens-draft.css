@@ -101,10 +101,20 @@
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 4.2%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
   --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
+  /* 档案馆顶晕冷雾（abyss 3%；archive.html body::before 冷雾顶晕） */
+  --halo-abyss: color-mix(in oklch, var(--abyss-500) 3%, var(--bg));
   --turn-active: color-mix(in oklch, var(--rep-500) 4%, var(--surface));
   /* 在场区体温光晕（presence::before；theme-system.html 亮 20%/7%） */
   --presence-halo-rep: color-mix(in oklch, var(--rep-500) 20%, var(--bg));
   --presence-halo-rep-soft: color-mix(in oklch, var(--rep-500) 7%, var(--bg));
+
+  /* 档案馆冷色（abyss 冷系，禁 rep；archive.html L34-39）
+   * cold-bg: 档案页底/展开区底（abyss 2% on bg）
+   * cold-border: 卡片冷边框（abyss 16% on bg，近似 rgba(63,131,123,.16)）
+   * card-bg: 卡片底（abyss 3% on surface） */
+  --archive-cold-bg: color-mix(in oklch, var(--abyss-500) 2%, var(--bg));
+  --archive-cold-border: color-mix(in oklch, var(--abyss-500) 16%, var(--bg));
+  --archive-card-bg: color-mix(in oklch, var(--abyss-500) 3%, var(--surface));
 }
 
 
@@ -152,10 +162,17 @@
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 10%, var(--bg));
   --fog-abyss: color-mix(in oklch, var(--abyss-500) 1.5%, var(--bg));
+  /* 档案馆顶晕冷雾（abyss 3%；archive.html body::before 冷雾顶晕） */
+  --halo-abyss: color-mix(in oklch, var(--abyss-500) 3%, var(--bg));
   --turn-active: color-mix(in oklch, var(--rep-500) 4%, var(--surface));
   /* 在场区体温光晕（presence::before；theme-system.html 暗 15%/5%） */
   --presence-halo-rep: color-mix(in oklch, var(--rep-500) 15%, var(--bg));
   --presence-halo-rep-soft: color-mix(in oklch, var(--rep-500) 5%, var(--bg));
+
+  /* 档案馆冷色（abyss 冷系，禁 rep；archive.html L34-39，暗色推导） */
+  --archive-cold-bg: color-mix(in oklch, var(--abyss-500) 2%, var(--bg));
+  --archive-cold-border: color-mix(in oklch, var(--abyss-500) 16%, var(--bg));
+  --archive-card-bg: color-mix(in oklch, var(--abyss-500) 3%, var(--surface));
 }
 
 

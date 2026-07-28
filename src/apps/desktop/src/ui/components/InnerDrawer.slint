@@ -107,22 +107,26 @@ export component InnerDrawer inherits Rectangle {
                 }
             }
 
-            // 档案册入口行
+            // 档案册入口行（FR-T4-4 启用）
             Rectangle {
                 background: RedesignTheme.t.raised;
                 border-radius: RedesignTheme.t.r-sm;
-                opacity: 0.5;
 
-                // TODO(T4-4): T4-4 启用后移除 opacity: 0.5
                 HorizontalLayout {
                     padding: RedesignTheme.t.s3;
                     alignment: center;
 
                     Text {
-                        text: "档案册 →";
+                        text: "档案册 ->";
                         color: RedesignTheme.t.fg;
                         font-size: RedesignTheme.t.fs-body;
                     }
+                }
+
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => { root.open-archive(); root.close(); }
                 }
             }
 
