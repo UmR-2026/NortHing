@@ -170,10 +170,19 @@ impl WebAssetStore for DiskAssetStore {
         if !dir.exists() {
             return;
         }
-        if let Some(canonical_base) = self.canonical_base_dir() {
-            if !Self::is_within(&canonical_base, &dir) || dir == canonical_base {
+        match self.canonical_base_dir() {
+            Some(canonical_base) if Self::is_within(&canonical_base, &dir) => {}
+            Some(_) => {
                 tracing::warn!(
                     "cleanup_room: rejecting unsafe path {} (outside base dir)",
+                    dir.display()
+                );
+                return;
+            }
+            None => {
+                tracing::warn!(
+                    "cleanup_room: cannot canonicalize base dir {} — refusing removal of {}",
+                    self.base_dir,
                     dir.display()
                 );
                 return;

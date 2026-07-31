@@ -155,6 +155,15 @@ impl ValidatedRelPath {
             return Err(RelPathError::ControlChar);
         }
         let normalized = s.replace('\\', "/");
+        // Windows drive-letter check applied upfront so it survives on non-Windows
+        // where Path::components sees `X:` as a plain Normal component (the leading
+        // `/` would only be caught by RootDir for absolute paths; relative
+        // `C:/abs` is otherwise accepted). This keeps the rule cross-platform.
+        for seg in normalized.split('/') {
+            if is_drive_letter(seg) {
+                return Err(RelPathError::Prefix);
+            }
+        }
         for segment in normalized.split('/') {
             if segment == "." {
                 return Err(RelPathError::CurDir);
@@ -165,6 +174,9 @@ impl ValidatedRelPath {
             match component {
                 Component::Normal(part) => {
                     let part = part.to_str().unwrap_or_default();
+                    // Extra drive-letter guard for any segment that slipped through
+                    // the upfront scan (e.g. `X:` without slash separators such as
+                    // `X:a` on some platforms); redundant on Windows but harmless.
                     if is_drive_letter(part) {
                         return Err(RelPathError::Prefix);
                     }
