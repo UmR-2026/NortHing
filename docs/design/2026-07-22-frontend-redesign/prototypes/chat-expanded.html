@@ -34,6 +34,15 @@
    *   .drawer-R   → Rectangle w=280 (right panel: 身外之物)
    * ====================================================================== */
 
+  /* ─── 名片晕染（R8）：顶晕锚定左上头像，rep 存在感空间化 ───
+   * 顶栏 padding 24 + 头像 44 → 头像中心 (46, 40)；大半径径向渐变向室内晕开。
+   * 透明度/色值过渡 350ms 由 layout.css .app::before 的 transition 承载。
+   * Slint: Rectangle { background: radial-gradient(circle 520 at 46,40, halo-rep-strong); z: 0; } */
+  .app::before,
+  [data-theme="dark"] .app::before {
+    background: radial-gradient(circle 520px at 46px 40px, var(--halo-rep-strong) 0%, transparent 100%);
+  }
+
   /* ─── 顶栏（~80px） ─── */
   /* Slint: HBox { height: 80; padding: 0 24px; } */
   .topbar {
@@ -651,13 +660,12 @@
 
         <span class="deck-bar-spacer"></span>
 
-        <!-- ctx 圆环 SVG 20×20（abyss-500 前景, 38%） -->
-        <div class="ctx-ring" title="上下文 38%" style="width:20px;height:20px">
+        <!-- ctx 圆环 SVG 20×20（abyss-500 前景, 38%）— R8：环内数字移除，hover 显示 data-tip -->
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%" style="width:20px;height:20px">
           <svg width="20" height="20" viewBox="0 0 20 20">
             <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
             <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
           </svg>
-          <span class="ctx-label" style="font-size:7px">38</span>
         </div>
       </div>
     </div>

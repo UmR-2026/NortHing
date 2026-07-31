@@ -31,6 +31,31 @@
    *   .handle-*   → Rectangle w=8 + TouchArea (toggle drawer + window resize)
    * ====================================================================== */
 
+  /* ─── 名片晕染（R8）：顶晕锚定左上头像位，rep 存在感空间化 ───
+   * 空态中心头像迁移完成后正落在此锚点；晕染先于头像就位，暗示"它住在这里"。
+   * Slint: Rectangle { background: radial-gradient(circle 520 at 46,40, halo-rep-strong); z: 0; } */
+  .app::before,
+  [data-theme="dark"] .app::before {
+    background: radial-gradient(circle 520px at 46px 40px, var(--halo-rep-strong) 0%, transparent 100%);
+  }
+
+  /* ─── 头像编排（R8）：初始隐藏顶栏头像，中心头像在场；输入触发一次性 FLIP 迁移 ───
+   * 顶栏头像位先空着（opacity 0，占位不偏移），迁移完成后 250ms 淡入。
+   * Slint: topbar-avatar.visible <=> migrated; animate opacity { duration:250ms; } */
+  .topbar .avatar-wrap {
+    opacity: 0;
+    transition: opacity 250ms ease;
+  }
+  .topbar .avatar-wrap.revealed {
+    opacity: 1;
+  }
+  /* 迁移启动后问候语 / helper 同步淡出（沉降式一次性，禁弹跳） */
+  .empty-state.leaving .opening-line,
+  .empty-state.leaving .opening-hint {
+    opacity: 0;
+    transition: opacity 500ms var(--ease);
+  }
+
   /* ─── 顶栏（~80px） — 与 chat-collapsed 同构 ─── */
   /* Slint: HBox { height: 80; padding: 0 24px; } */
   .topbar {
@@ -415,13 +440,12 @@
 
         <span class="deck-bar-spacer"></span>
 
-        <!-- ctx 圆环 SVG 20×20（空态 = 0%） -->
-        <div class="ctx-ring" title="上下文 0%" style="width:20px;height:20px">
+        <!-- ctx 圆环 SVG 20×20（空态 = 0%）— R8：环内数字移除，hover 显示 data-tip -->
+        <div class="ctx-ring" title="上下文 0%" data-tip="上下文已用 0%" style="width:20px;height:20px">
           <svg width="20" height="20" viewBox="0 0 20 20">
             <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
             <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="47.1" transform="rotate(-90 10 10)"/>
           </svg>
-          <span class="ctx-label" style="font-size:7px">0</span>
         </div>
       </div>
     </div>
@@ -453,6 +477,44 @@
     deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
     deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
   }
+
+  /* ── 头像编排（R8）：中心头像 → 顶栏头像位，一次性 FLIP 迁移 ──
+   * 触发：deck textarea 首次 focus（在「focus / 首次输入」中取 focus——落焦点即确立
+   *   开聊意图，比首个键入早一步，用户开始打字时头像已就位）。只触发一次。
+   * FLIP：getBoundingClientRect 量两点 → transform translate+scale 过渡 600ms
+   *   ease-in-out（沉降式，禁弹跳）→ 中心头像隐去、顶栏头像 fade-in 250ms。
+   * Slint: animate center-avatar.transform { duration:600ms; easing:ease-in-out; } →
+   *        topbar-avatar.visible = true（opacity 250ms）; center-avatar.visible = false */
+  var centerWrap = document.querySelector('.empty-state .avatar-wrap');
+  var topbarWrap = document.querySelector('.topbar .avatar-wrap');
+  var emptyState = document.querySelector('.empty-state');
+  var streamEl = document.querySelector('.stream');
+  var ta = document.querySelector('.deck-input textarea');
+  var migrated = false;
+
+  function migrateAvatar() {
+    if (migrated || !centerWrap || !topbarWrap) return;
+    migrated = true;
+    /* stream 的 overflow:hidden 会裁剪迁移路径，临时放开（头像始终在 .app 界内） */
+    if (streamEl) streamEl.style.overflow = 'visible';
+    var from = centerWrap.getBoundingClientRect();
+    var to = topbarWrap.getBoundingClientRect();
+    var dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+    var dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+    var s = to.width / from.width; /* 44 / 64 */
+    centerWrap.style.zIndex = '5';
+    centerWrap.style.transition = 'transform 600ms cubic-bezier(0.42,0,0.58,1)';
+    void centerWrap.offsetWidth; /* 强制回流，确保 transition 生效 */
+    centerWrap.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + s + ')';
+    emptyState.classList.add('leaving'); /* 问候语 / helper 同步淡出 */
+    setTimeout(function () {
+      centerWrap.style.transition = 'opacity 200ms ease';
+      centerWrap.style.opacity = '0';        /* 中心头像隐去 */
+      topbarWrap.classList.add('revealed');  /* 顶栏头像 fade-in 250ms */
+    }, 600);
+  }
+
+  if (ta) ta.addEventListener('focus', migrateAvatar);
 })();
 </script>
 <script src="shared/theme-switch.js"></script>

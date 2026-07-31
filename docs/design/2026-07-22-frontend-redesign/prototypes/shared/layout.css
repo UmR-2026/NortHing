@@ -96,6 +96,9 @@ body {
   background: var(--air-rep-speaking);
 }
 
+/* speaking 顶晕（R8 决议）：名片页的 .app::before 已改为锚定左上头像的晕染，
+ * 但 speaking 升档保留居中顶晕——输入聚焦时"整屋"均匀加深，而非只亮名片一角；
+ * 焦点离开后回落到锚定晕染。此为有意保留，非遗漏适配。 */
 .app.speaking::before {
   background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep-speaking) 0%, transparent 100%);
 }

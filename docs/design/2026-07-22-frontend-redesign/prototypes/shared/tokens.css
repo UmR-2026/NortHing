@@ -26,6 +26,12 @@
   inherits: true;
   initial-value: #F0EDEA;
 }
+/* R8：名片锚定晕染（anchored halo）——锚定左上头像的 rep 水彩晕，随主题/选色过渡 */
+@property --halo-rep-strong {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #EDEBE9;
+}
 
 
 /* ----------------------------------------------------------------------------
@@ -110,6 +116,7 @@
   /* ── 语义混合色（预计算 hex，color-mix(in srgb, rep coral on bg)） ── */
   --air-rep:             #F0EDED;  /* rep-500 6.5% on bg */
   --halo-rep:            #EDEBE9;  /* rep-500 10% on bg */
+  --halo-rep-strong:     #EDEBE9;  /* rep-500 10% on bg — 名片锚定晕染（R8，锚左上头像；与 halo-rep 同预计算值，独立 token 供锚定晕单独调档） */
   --air-rep-speaking:    #EEEBE8;  /* rep-500 7.5% on bg */
   --halo-rep-speaking:   #EBE8E5;  /* rep-500 11% on bg */
   --air-rep-settings:    #F2F0ED;  /* rep-500 3.5% on bg */
@@ -168,6 +175,7 @@
   /* ── 语义混合色（暗色预计算 hex，coral rep on dark base） ── */
   --air-rep:             #1C1A16;  /* rep-500 6.5% on bg */
   --halo-rep:            #201D19;  /* rep-500 10% on bg */
+  --halo-rep-strong:     #201D19;  /* rep-500 10% on bg — 名片锚定晕染（R8，锚左上头像；与 halo-rep 同预计算值，独立 token 供锚定晕单独调档） */
   --air-rep-speaking:    #221F1A;  /* rep-500 7.5% on bg */
   --halo-rep-speaking:   #26221C;  /* rep-500 11% on bg */
   --air-rep-settings:    #1A1814;  /* rep-500 3.5% on bg */

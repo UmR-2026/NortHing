@@ -53,12 +53,12 @@
     var(--air-rep);
 }
 
-/* Air-tint glow at top — 咨询室顶光，出生时刻的氛围底色 */
-/* Enhances shared .app::before with an additional subtle warm layer */
-/* Slint: Rectangle { background: radial-gradient(ellipse at top, halo-rep); z: 0; } */
+/* 名片晕染（R8）：选色页晕染锚定中心头像（circle at 50% 35%），rep 存在感空间化。
+ * 选色后由 repColors JS 同步写 --halo-rep-strong，晕染跟色流动（出生灰→所选代表色）。 */
+/* Slint: Rectangle { background: radial-gradient(circle 520 at 50%,35%, halo-rep-strong); z: 0; } */
 .app::before {
   background:
-    radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep) 0%, transparent 100%),
+    radial-gradient(circle 520px at 50% 35%, var(--halo-rep-strong) 0%, transparent 100%),
     radial-gradient(ellipse 70% 30% at 50% 0%, rgba(var(--rep-300-rgb), 0.05) 0%, transparent 60%);
 }
 
@@ -655,6 +655,8 @@
     root.style.setProperty('--rep-600-rgb', c['600-rgb']);
     root.style.setProperty('--air-rep', c.air);
     root.style.setProperty('--halo-rep', c.halo);
+    /* 名片锚定晕染（R8）：rep-500 10% on bg，与 halo 同预计算值，选色后跟色流动 */
+    root.style.setProperty('--halo-rep-strong', c.halo);
   }
 
   function resetRep() {
@@ -668,6 +670,7 @@
     root.style.setProperty('--rep-600-rgb', '158,153,145');
     root.style.setProperty('--air-rep', '#F0EDED');
     root.style.setProperty('--halo-rep', '#EDEBE9');
+    root.style.setProperty('--halo-rep-strong', '#EDEBE9');
   }
 
   // ─── Personality selection — TouchArea → selected ring + birth moment ───

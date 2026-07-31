@@ -35,14 +35,14 @@
   .app {
     background: var(--fog-abyss);
   }
-  .app::before {
-    background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-abyss) 0%, transparent 100%);
+  /* 名片晕染（R8）：顶晕锚定左上头像（40px 头像，中心 44,32），rep 存在感空间化——
+     冷底与底冷雾不变，仅顶晕由 abyss 改锚 rep；"它在这里，走过冷档案" */
+  .app::before,
+  [data-theme="dark"] .app::before {
+    background: radial-gradient(circle 520px at 44px 32px, var(--halo-rep-strong) 0%, transparent 100%);
   }
   [data-theme="dark"] .app {
     background: var(--fog-abyss);
-  }
-  [data-theme="dark"] .app::before {
-    background: radial-gradient(ellipse 150% 92% at 50% 1%, var(--halo-abyss) 0%, transparent 90%);
   }
 
   /* ─── 档案馆冷色 token（页面特有） ─── */

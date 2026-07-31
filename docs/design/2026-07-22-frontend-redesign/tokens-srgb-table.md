@@ -32,6 +32,7 @@
 | `on-danger` | `oklch(1 0 0)` | `#FFFFFF` | `oklch(1 0 0)` | `#FFFFFF` | — |
 | `air-rep` | `oklch(0.9527 0.0040 91.45)` | `#F0EDED` | `oklch(0.2057 0.0058 88.00)` | `#1C1A16` | rep-500 6.5% on bg |
 | `halo-rep` | `oklch(0.9413 0.0038 91.45)` | `#EDEBE9` | `oklch(0.2214 0.0056 88.00)` | `#201D19` | rep-500 10% on bg |
+| `halo-rep-strong` | `oklch(0.9413 0.0038 91.45)` | `#EDEBE9` | `oklch(0.2214 0.0056 88.00)` | `#201D19` | rep-500 10% on bg — 名片锚定晕染（R8，锚左上头像；与 halo-rep 同预计算值） |
 | `air-rep-speaking` | `oklch(0.9504 0.0039 91.45)` | `#EEEBE8` | `oklch(0.2259 0.0055 88.00)` | `#221F1A` | rep-500 7.5% on bg |
 | `halo-rep-speaking` | `oklch(0.9380 0.0038 91.45)` | `#EBE8E5` | `oklch(0.2348 0.0054 88.00)` | `#26221C` | rep-500 11% on bg |
 | `air-rep-settings` | `oklch(0.9592 0.0040 91.45)` | `#F2F0ED` | `oklch(0.1967 0.0059 88.00)` | `#1A1814` | rep-500 3.5% on bg |

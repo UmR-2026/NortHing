@@ -100,6 +100,8 @@
   /* 语义混合色（OKLCH 混色，由生成器解析） */
   --air-rep: color-mix(in oklch, var(--rep-500) 3.5%, var(--bg));
   --halo-rep: color-mix(in oklch, var(--rep-500) 7%, var(--bg));
+  /* 名片锚定晕染（R8）：锚左上头像的 rep 水彩晕，10% on bg（与 halo-rep 同浓度，独立 token 供锚定晕单独调档） */
+  --halo-rep-strong: color-mix(in oklch, var(--rep-500) 10%, var(--bg));
   /* speaking 升档档（输入聚焦时整屋染色加深；theme-system.html .speaking 亮色数值） */
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 4.2%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
@@ -168,6 +170,8 @@
   /* 语义混合色（OKLCH 混色，由生成器解析） */
   --air-rep: color-mix(in oklch, var(--rep-500) 3.5%, var(--bg));
   --halo-rep: color-mix(in oklch, var(--rep-500) 7%, var(--bg));
+  /* 名片锚定晕染（R8）：锚左上头像的 rep 水彩晕，10% on bg（与 halo-rep 同浓度，独立 token 供锚定晕单独调档） */
+  --halo-rep-strong: color-mix(in oklch, var(--rep-500) 10%, var(--bg));
   /* speaking 升档档（暗色按暗特性上调；theme-system.html .speaking 暗色数值） */
   --air-rep-speaking: color-mix(in oklch, var(--rep-500) 8%, var(--bg));
   --halo-rep-speaking: color-mix(in oklch, var(--rep-500) 10%, var(--bg));

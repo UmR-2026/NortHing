@@ -212,12 +212,13 @@
 
 .deck-bar-spacer { flex: 1; }
 
-/* ctx 圆环 */
+/* ctx 圆环 — R8：环内数字已移除，百分比改为 hover 自定义 tooltip（data-tip） */
 .ctx-ring {
   width: 26px;
   height: 26px;
   position: relative;
   flex-shrink: 0;
+  cursor: help;
 }
 
 .ctx-ring svg {
@@ -239,16 +240,34 @@
   stroke-linecap: round;
 }
 
-.ctx-label {
+/* ctx tooltip — hover 时在环上方浮出具体百分比（沉降式一次性 fade-in 200ms，禁循环）
+ * 读取 data-tip 属性（各页按实际百分比写，如 "上下文已用 38%"）；title 属性做兜底无障碍。
+ * Slint 映射：TooltipPopup { text: data-tip; } 由 TouchArea hover 触发，无 Web ::after 等价物。 */
+.ctx-ring::after {
+  content: attr(data-tip);
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-sm);
   color: var(--abyss-500);
-  letter-spacing: -0.02em;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
+  /* box-shadow: 0 2px 8px rgba(80,70,55,.12) */
+  filter: drop-shadow(0 2px 6px rgba(80,70,55,.12));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.ctx-ring:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 
@@ -744,25 +763,47 @@
   outline-offset: 2px;
 }
 
-/* 滚动条 */
-.stream::-webkit-scrollbar {
+/* ─── 全局滚动条（优雅化 R8：细条 + 圆角 thumb，禁原生上下箭头按钮） ───
+ * Slint 映射：ScrollView 无原生箭头按钮，thumb 自定义——
+ *   ScrollView {
+ *     vertical-scrollbar: Rectangle { width: 8; background: transparent;
+ *       Rectangle { background: border-soft; border-radius: pill; } }
+ *   }
+ * 即 web 的 ::-webkit-scrollbar-button { display:none } 在 Slint 天然成立。 */
+::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
-.stream::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--r-pill);
-}
-
-.stream::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
-}
-
-.stream::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.stream {
-  scrollbar-color: var(--border) transparent;
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* 禁出现上下箭头按钮（原生滚动条最不优雅的部分） */
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Firefox */
+* {
   scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+
+/* 抽屉 / 流区滚动容器预留滚动条槽位，防滚动出现时布局抖动 */
+.stream,
+.drawer-inner,
+.panel,
+.archive-content,
+.space-content {
+  scrollbar-gutter: stable;
 }
