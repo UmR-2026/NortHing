@@ -14,6 +14,7 @@ import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { AvatarWrap } from "../components/AvatarWrap.slint";
+import { ToggleSwitch } from "../components/ToggleSwitch.slint";
 
 export component GeneralSettingsPanel inherits Rectangle {
     // 透明：让 SettingsView 内容区设置淡雾（air-rep-settings + halo-rep-settings）
@@ -74,33 +75,12 @@ export component GeneralSettingsPanel inherits Rectangle {
                         }
 
                         // Toggle switch（照 settings-general.html .toggle 44×24）
-                        Rectangle {
-                            width: 44px;
-                            height: 24px;
-                            border-radius: RedesignTheme.t.r-pill;
-                            background: root.dark-mode
-                                ? RedesignTheme.t.rep-500
-                                : RedesignTheme.t.border;
-                            animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-
-                            // Knob 18×18，checked 右移 20px
-                            Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                y: 3px;
-                                x: root.dark-mode ? 23px : 3px;
-                                border-radius: RedesignTheme.t.r-pill;
-                                background: RedesignTheme.t.surface;
-                                drop-shadow-color: RedesignTheme.t.shadow.with-alpha(0.12);
-                                drop-shadow-blur: 2px;
-                                drop-shadow-offset-y: 1px;
-                                animate x { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-                            }
-
-                            TouchArea {
-                                width: parent.width;
-                                height: parent.height;
-                                clicked => { root.toggle-theme(); }
+                        VerticalLayout {
+                            vertical-stretch: 1;
+                            alignment: center;
+                            ToggleSwitch {
+                                value: root.dark-mode;
+                                toggled(val) => { root.toggle-theme(); }
                             }
                         }
                     }

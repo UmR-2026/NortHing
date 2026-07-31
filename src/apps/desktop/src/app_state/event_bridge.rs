@@ -34,7 +34,7 @@ use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi, SubscriptionId};
 use northhing_kernel_api::session::KernelSessionApi;
 use northhing_kernel_api::turn::TurnStateKind;
-use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::sync::{Arc, Mutex};
 
 pub struct DesktopEventBridge {
@@ -51,6 +51,13 @@ pub struct DesktopEventBridge {
     draft: Mutex<String>,
     last_flush: Mutex<std::time::Instant>,
     subscription_id: Mutex<Option<SubscriptionId>>,
+    /// Tracks the number of non-streaming (baseline) messages set during
+    /// the first flush of the current streaming turn. When `Some(n)`, the
+    /// model has `n + 1` rows (n baseline + 1 streaming item) and subsequent
+    /// flushes can update only the last row via `set_row_data(n, item)` (O(1))
+    /// instead of rebuilding the entire model (O(n)).
+    /// Reset to `None` on turn start and turn end.
+    streaming_base_count: Arc<Mutex<Option<usize>>>,
 }
 
 impl DesktopEventBridge {
@@ -78,6 +85,7 @@ impl DesktopEventBridge {
             draft: Mutex::new(String::new()),
             last_flush: Mutex::new(std::time::Instant::now()),
             subscription_id: Mutex::new(None),
+            streaming_base_count: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -103,11 +111,20 @@ impl DesktopEventBridge {
                         if let Ok(mut d) = self.draft.lock() {
                             d.clear();
                         }
+                        // Reset incremental streaming state for the new turn.
+                        if let Ok(mut m) = self.streaming_base_count.lock() {
+                            m.take();
+                        }
                         enter_turn(&*self.dispatcher, &self.app_state, session_id, turn_id);
                     }
                     TurnStateKind::Completed | TurnStateKind::Cancelled => {
                         if let Ok(mut d) = self.draft.lock() {
                             d.clear();
+                        }
+                        // Reset incremental streaming state; spawn_refresh_messages
+                        // will do a full rebuild as consistency correction.
+                        if let Ok(mut m) = self.streaming_base_count.lock() {
+                            m.take();
                         }
                         clear_turn(&*self.dispatcher, &self.app_state, turn_id);
                         self.spawn_refresh_messages(session_id.clone());
@@ -115,6 +132,10 @@ impl DesktopEventBridge {
                     TurnStateKind::Failed => {
                         if let Ok(mut d) = self.draft.lock() {
                             d.clear();
+                        }
+                        // Reset incremental streaming state.
+                        if let Ok(mut m) = self.streaming_base_count.lock() {
+                            m.take();
                         }
                         // 2026-07-27 (K4a R3, fix #1): pass
                         // the event's turn_id so a stale
@@ -185,32 +206,72 @@ impl DesktopEventBridge {
     }
 
     /// Spawn an async task to flush the draft to the UI (streaming chunk).
+    ///
+    /// Incremental update mode:
+    /// - First call in a turn (`streaming_base_count` is None): full fetch + build
+    ///   + `set_messages`, then store the baseline count for subsequent updates.
+    /// - Subsequent calls (`streaming_base_count` is `Some(n)`): only update the
+    ///   streaming item at index `n` via `set_row_data` (O(1)).
+    /// - Turn end (Completed/Cancelled/Failed): full refresh via `spawn_refresh_messages`.
     fn spawn_flush_draft(&self, session_id: String, draft: String) {
         let ui = self.ui.clone();
-        tokio::spawn(async move {
-            let facade = kernel_facade();
-            match facade.get_messages(&session_id).await {
-                Ok(msgs) => {
-                    let ui_weak = ui.clone();
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            let mut items = super::sessions::build_messages_items(&msgs, None);
-                            items.push(slint_streaming_item(draft.clone()));
-                            ui.set_messages(ModelRc::new(VecModel::from(items)));
-                        }
-                    });
+        let base_count = self.streaming_base_count.lock().ok().and_then(|g| *g);
+
+        if let Some(base) = base_count {
+            // Incremental path: update only the streaming item (last row) — o(1).
+            // Clone the guard so the closure can verify the turn hasn't ended
+            // (and state hasn't been reset / rebuilt by spawn_refresh_messages)
+            // before applying a stale set_row_data.
+            let streaming_base_count = self.streaming_base_count.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                // Guard: skip if turn ended and state was reset.
+                let current = streaming_base_count.lock().ok().and_then(|g| *g);
+                if current != Some(base) {
+                    return;
                 }
-                Err(_) => {
-                    let ui_weak = ui.clone();
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            let items = vec![slint_streaming_item(draft.clone())];
-                            ui.set_messages(ModelRc::new(VecModel::from(items)));
-                        }
-                    });
+                if let Some(ui) = ui.upgrade() {
+                    let model = ui.get_messages();
+                    let item = slint_streaming_item(draft);
+                    // Defensive bounds check: the model may have been
+                    // rebuilt between the guard check and here.
+                    if (base as usize) < model.row_count() {
+                        model.set_row_data(base, item);
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // First flush in this turn: full fetch + build.
+            let streaming_base_count = self.streaming_base_count.clone();
+            tokio::spawn(async move {
+                let facade = kernel_facade();
+                match facade.get_messages(&session_id).await {
+                    Ok(msgs) => {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui.upgrade() {
+                                let mut items = super::sessions::build_messages_items(&msgs, None);
+                                let base = items.len();
+                                items.push(slint_streaming_item(draft));
+                                ui.set_messages(ModelRc::new(VecModel::from(items)));
+                                if let Ok(mut sm) = streaming_base_count.lock() {
+                                    *sm = Some(base);
+                                }
+                            }
+                        });
+                    }
+                    Err(_) => {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui.upgrade() {
+                                let items = vec![slint_streaming_item(draft)];
+                                ui.set_messages(ModelRc::new(VecModel::from(items)));
+                                if let Ok(mut sm) = streaming_base_count.lock() {
+                                    *sm = Some(0);
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
     }
 }
 

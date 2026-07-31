@@ -33,8 +33,14 @@ export component MaterialButton inherits Rectangle {
         clicked => { root.clicked(); }
     }
     
+    animate background { duration: 150ms; easing: ease-in-out; }
+    animate opacity { duration: 150ms; easing: ease-in-out; }
+
     states [
-        hover when ta.pressed: {
+        hover when ta.has-hover && !root.disabled: {
+            root.background: primary ? RedesignTheme.t.rep-400 : RedesignTheme.t.raised;
+        }
+        pressed when ta.pressed: {
             root.opacity: 0.8;
         }
     ]

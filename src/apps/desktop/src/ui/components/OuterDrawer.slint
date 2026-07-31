@@ -13,16 +13,18 @@ export component OuterDrawer inherits Rectangle {
     callback toggle-theme();
     callback open-session-settings();
 
-    // 透明遮罩 — visible 关闭时整元素移出命中树，主区点击不再被吞
+    // 透明遮罩 — fade in/out via opacity
     Rectangle {
         width: parent.width;
         height: parent.height;
         background: RedesignTheme.t.scrim.with_alpha(0.5);
-        visible: root.open;
+        opacity: root.open ? 1 : 0;
+        animate opacity { duration: 250ms; easing: ease-in-out; }
 
         TouchArea {
             width: parent.width;
             height: parent.height;
+            enabled: root.open;
             clicked => { root.close(); }
         }
     }
@@ -58,43 +60,60 @@ export component OuterDrawer inherits Rectangle {
                     vertical-alignment: center;
                 }
 
-                TouchArea {
+                Rectangle {
                     width: 24px;
                     height: 24px;
-                    clicked => { root.toggle-theme(); }
+                    border-radius: 12px;
+                    background: theme-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    animate background { duration: 200ms; easing: ease-in-out; }
 
-                    Text {
-                        text: root.dark-mode ? "☀" : "🌙";
-                        color: RedesignTheme.t.muted;
-                        font-size: RedesignTheme.t.fs-lg;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    theme-ta := TouchArea {
                         width: parent.width;
                         height: parent.height;
+                        clicked => { root.toggle-theme(); }
+
+                        Text {
+                            text: root.dark-mode ? "☀" : "🌙";
+                            color: RedesignTheme.t.muted;
+                            font-size: RedesignTheme.t.fs-lg;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
                     }
                 }
 
-                TouchArea {
+                Rectangle {
                     width: 24px;
                     height: 24px;
-                    clicked => { root.close(); }
+                    border-radius: 12px;
+                    background: close-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    animate background { duration: 200ms; easing: ease-in-out; }
 
-                    Text {
-                        text: "×";
-                        color: RedesignTheme.t.muted;
-                        font-size: RedesignTheme.t.fs-lg;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    close-ta := TouchArea {
                         width: parent.width;
                         height: parent.height;
+                        clicked => { root.close(); }
+
+                        Text {
+                            text: "×";
+                            color: RedesignTheme.t.muted;
+                            font-size: RedesignTheme.t.fs-lg;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
                     }
                 }
             }
 
             // 会话设置入口行
             Rectangle {
-                background: RedesignTheme.t.raised;
+                background: settings-ta.has-hover ? RedesignTheme.t.border-soft : RedesignTheme.t.raised;
                 border-radius: RedesignTheme.t.r-sm;
+                animate background { duration: 200ms; easing: ease-in-out; }
 
                 HorizontalLayout {
                     padding: RedesignTheme.t.s3;
@@ -107,7 +126,7 @@ export component OuterDrawer inherits Rectangle {
                     }
                 }
 
-                TouchArea {
+                settings-ta := TouchArea {
                     width: parent.width;
                     height: parent.height;
                     clicked => { root.open-session-settings(); root.close(); }
@@ -132,29 +151,34 @@ export component OuterDrawer inherits Rectangle {
                     VerticalLayout {
                         spacing: RedesignTheme.t.s1;
 
-                        for skill in skills: HorizontalLayout {
+                        for skill in skills: Rectangle {
                             height: 40px;
-                            spacing: RedesignTheme.t.s2;
+                            background: skill-toggle-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                            animate background { duration: 200ms; easing: ease-in-out; }
 
-                            Text {
-                                text: skill.name;
-                                color: RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-body;
-                                vertical-alignment: center;
+                            HorizontalLayout {
+                                spacing: RedesignTheme.t.s2;
+
+                                Text {
+                                    text: skill.name;
+                                    color: RedesignTheme.t.fg;
+                                    font-size: RedesignTheme.t.fs-body;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: skill.description;
+                                    color: RedesignTheme.t.muted;
+                                    font-size: RedesignTheme.t.fs-md;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                    wrap: no-wrap;
+                                }
                             }
 
-                            Text {
-                                text: skill.description;
-                                color: RedesignTheme.t.muted;
-                                font-size: RedesignTheme.t.fs-md;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                                wrap: no-wrap;
-                            }
-
-                            TouchArea {
-                                width: 24px;
-                                height: 24px;
+                            skill-toggle-ta := TouchArea {
+                                width: parent.width;
+                                height: parent.height;
                                 clicked => { root.toggle-skill(skill.id); }
 
                                 Text {
@@ -163,7 +187,7 @@ export component OuterDrawer inherits Rectangle {
                                     font-size: RedesignTheme.t.fs-body;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
-                                    width: parent.width;
+                                    width: 24px;
                                     height: parent.height;
                                 }
                             }

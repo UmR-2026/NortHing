@@ -12,11 +12,11 @@
 use super::actor::maybe_construct_actor_runtime;
 use super::callbacks_lifecycle::{
     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
-    register_delete_session_callback, register_dismiss_banner_callback, register_load_more_messages_callback,
-    register_new_session_callback, register_refresh_messages_callback, register_refresh_sessions_callback,
-    register_rename_session_callback, register_send_message_callback, register_stop_streaming_callback,
-    register_switch_session_callback, register_toggle_show_subagents_callback, register_toggle_skill_callback,
-    register_toggle_theme_callback,
+    register_delete_session_callback, register_dismiss_banner_callback, register_export_markdown_callback,
+    register_load_more_messages_callback, register_new_session_callback, register_open_session_settings_callback,
+    register_refresh_messages_callback, register_refresh_sessions_callback, register_rename_session_callback,
+    register_send_message_callback, register_stop_streaming_callback, register_switch_session_callback,
+    register_toggle_show_subagents_callback, register_toggle_skill_callback, register_toggle_theme_callback,
 };
 use super::callbacks_settings::{
     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
@@ -315,6 +315,9 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // 2026-07-18 (D2b): default-model + rename-session callbacks.
     register_set_default_model_callback(&ui, &app_state);
     register_rename_session_callback(&ui, &app_state);
+    // 2026-07-30: export-markdown + open-session-settings callbacks.
+    register_export_markdown_callback(&ui, &app_state);
+    register_open_session_settings_callback(&ui, &app_state);
 
     // FR-T3b: frameless 窗口控制按钮接 Rust slint::Window API。
     // minimize -> set_minimized(true); maximize -> toggle is_maximized;

@@ -12,6 +12,9 @@ import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
+import { ToggleSwitch } from "../components/ToggleSwitch.slint";
+import { SegmentedControl, SegmentItem } from "../components/SegmentedControl.slint";
+import { Pill } from "../components/Pill.slint";
 import { AppStrings } from "../strings.slint";
 
 // Type options for the provider dropdown (C-ii).
@@ -69,7 +72,7 @@ export component ProviderSettingsPanel inherits Rectangle {
         viewport-height: provider-layout.preferred-height;
 
         provider-layout := VerticalLayout {
-            width: parent.width;
+            width: min(720px, parent.width);
             padding: RedesignTheme.t.s5;
             spacing: 20px; /* settings-models.html .content-inner gap */
 
@@ -263,11 +266,11 @@ export component ProviderSettingsPanel inherits Rectangle {
                     // provider cards (.provider-card padding 20px)
                     for provider in providers: MaterialCard {
                         width: parent.width;
-                        card-padding: RedesignTheme.t.s5;
+                        card-padding: 20px;
 
                         VerticalLayout {
                             width: parent.width;
-                            padding: RedesignTheme.t.s5;
+                            padding: 20px;
                             spacing: RedesignTheme.t.s3;
 
                             // header: title-group(name + type pill) + enabled toggle
@@ -291,45 +294,20 @@ export component ProviderSettingsPanel inherits Rectangle {
                                         overflow: elide; /* no ellipsis in Slint; elide approximates .name clip */
                                     }
 
-                                    // type pill (.pill: raised bg, r-pill, fs-md muted, 1px border-soft)
-                                    type-pill := Rectangle {
-                                        height: 22px;
-                                        width: type-pill-layout.preferred-width;
-                                        border-radius: RedesignTheme.t.r-pill;
-                                        background: RedesignTheme.t.raised;
-                                        border-width: 1px;
-                                        border-color: RedesignTheme.t.border-soft;
-
-                                        type-pill-layout := HorizontalLayout {
-                                            Rectangle { width: 10px; /* .pill horizontal pad */ }
-                                            Text {
-                                                text: provider.type;
-                                                font-size: RedesignTheme.t.fs-md;
-                                                color: RedesignTheme.t.muted;
-                                                vertical-alignment: center;
-                                            }
-                                            Rectangle { width: 10px; }
-                                        }
+                                    // type pill
+                                    Pill {
+                                        text: provider.type;
+                                        variant: "default";
                                     }
                                 }
 
-                                // 卡片级启用开关占位（.toggle 36×20）。
+                                // 卡片级启用开关（.toggle 36×20）
                                 // TODO 数据需求：toggle 需 set-provider-enabled(id, bool) callback；
                                 // 现有 upsert-provider 缺 api-key 透传（ProviderItem 不含密钥），无法就地翻转。
-                                enabled-toggle := Rectangle {
-                                    width: 36px;
-                                    height: 20px;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: provider.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
-
-                                    Rectangle {
-                                        x: provider.enabled ? 18px : 0px;
-                                        y: 2px;
-                                        width: 16px;
-                                        height: 16px;
-                                        border-radius: RedesignTheme.t.r-pill;
-                                        background: RedesignTheme.t.surface;
-                                    }
+                                ToggleSwitch {
+                                    value: provider.enabled;
+                                    small: true;
+                                    disabled: true; // display-only until callback available
                                 }
                             }
 
@@ -436,11 +414,11 @@ export component ProviderSettingsPanel inherits Rectangle {
                     // ===== Add / edit form (.add-form padding 24px gap 16px) =====
                     if root.add-form-visible: MaterialCard {
                         width: parent.width;
-                        card-padding: RedesignTheme.t.s5;
+                        card-padding: 20px;
 
                         VerticalLayout {
                             width: parent.width;
-                            padding: RedesignTheme.t.s5;
+                            padding: 20px;
                             spacing: RedesignTheme.t.s4;
 
                             Text {
@@ -457,7 +435,9 @@ export component ProviderSettingsPanel inherits Rectangle {
                                 width: parent.width;
                             }
 
-                            // Type segmented control（.segments 风格；D2d 仅 2 个 custom 兼容档）
+                            // Type segmented control
+                            // TODO: SegmentedControl 使用 [SegmentItem]{label} 模型，无法直接绑定
+                            // form-type (string) 双向映射。保留手工实现直到 Slint 支持模型类型转换。
                             Rectangle {
                                 width: parent.width;
                                 height: 36px;
@@ -471,7 +451,7 @@ export component ProviderSettingsPanel inherits Rectangle {
                                     y: 3px;
                                     width: parent.width - 6px;
                                     height: parent.height - 6px;
-                                    spacing: 3px; /* .segments gap */
+                                    spacing: 3px;
 
                                     for opt in [
                                         { value: "custom-openai", label: "OpenAI 兼容" },
@@ -489,7 +469,7 @@ export component ProviderSettingsPanel inherits Rectangle {
                                             color: opt.value == root.form-type
                                                 ? RedesignTheme.t.fg
                                                 : RedesignTheme.t.muted;
-                                            font-size: RedesignTheme.t.fs-lg; /* .segment 13px */
+                                            font-size: RedesignTheme.t.fs-lg;
                                             font-weight: opt.value == root.form-type ? 600 : 400;
                                             horizontal-alignment: center;
                                             vertical-alignment: center;
@@ -543,34 +523,18 @@ export component ProviderSettingsPanel inherits Rectangle {
                                 width: parent.width;
                             }
 
-                            // Enabled toggle (B4)
+                            // Enabled Toggle (B4)
                             HorizontalLayout {
                                 width: parent.width;
                                 spacing: RedesignTheme.t.s2;
                                 height: 24px;
-
-                                form-enabled-toggle := Rectangle {
-                                    width: 36px;
-                                    height: 20px;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
-
-                                    TouchArea {
-                                        width: parent.width;
-                                        height: parent.height;
-                                        clicked => { root.form-enabled = !root.form-enabled; }
-                                    }
-
-                                    indicator := Rectangle {
-                                        x: root.form-enabled ? 18px : 0px;
-                                        y: 2px;
-                                        width: 16px;
-                                        height: 16px;
-                                        border-radius: RedesignTheme.t.r-pill;
-                                        background: RedesignTheme.t.surface;
-                                    }
+                            
+                                ToggleSwitch {
+                                    value: root.form-enabled;
+                                    small: true;
+                                    toggled(value) => { root.form-enabled = value; }
                                 }
-
+                            
                                 Text {
                                     text: AppStrings.provider-enabled-label;
                                     color: RedesignTheme.t.fg;

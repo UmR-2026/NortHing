@@ -1,5 +1,12 @@
 // northhing Main Window - Three-region layout with Material Design
 
+// Brand font embedding (FR-T5)
+import "./fonts/Fraunces-Regular.ttf";
+import "./fonts/Fraunces-Display.ttf";
+import "./fonts/Fraunces-Italic.ttf";
+import "./fonts/NotoSansSC.ttf";
+import "./fonts/JetBrainsMono.ttf";
+
 import { MaterialTheme, SessionItem, MessageItem, SkillItem, ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "theme.slint";
 import { RedesignTheme } from "redesign_palette.slint";
 import { SpaceView } from "views/SpaceView.slint";
@@ -70,9 +77,9 @@ export component AppWindow inherits Window {
     // `SESSION_TREE_VIEW` const in `main.rs`.
     in-out property <bool> session-tree-view: false;
     // FR-T3b: left sidebar panel open state; wired to WindowChrome toggle-left.
-    in-out property <bool> left-panel-open: true;
+    in-out property <bool> left-panel-open: false;
     // FR-T3b: right inspector panel open state; wired to WindowChrome toggle-right.
-    in-out property <bool> right-panel-open: true;
+    in-out property <bool> right-panel-open: false;
     // FR-T3b: 整屋 speaking 升档（DeckBar 聚焦 -> AirTint 染色加深）。
     // ChatPaneView 在 main 路由内驱动；切到 welcome/settings 时复位 false。
     in-out property <bool> speaking: false;
@@ -255,11 +262,11 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
 
-        // FR-T4-1: 单栏骨架 SpaceView（左右让出 34px 把手区）
+        // FR-T4-1: 单栏骨架 SpaceView（左右让出 28px 把手区）
         space := SpaceView {
-            x: 34px;
+            x: 28px;
             y: 0;
-            width: parent.width - 68px;
+            width: parent.width - 56px;
             height: parent.height;
             messages: root.messages;
             input-text <=> root.input-text;
@@ -351,6 +358,8 @@ export component AppWindow inherits Window {
         WindowChrome {
         width: root.width;
         height: root.height;
+        inner-drawer-open: root.left-panel-open;
+        outer-drawer-open: root.right-panel-open;
         toggle-left => { root.left-panel-open = !root.left-panel-open; }
         // FR-T3b：右栏（InspectorView）开关，对称于左栏
         toggle-right => { root.right-panel-open = !root.right-panel-open; }

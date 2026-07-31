@@ -8,35 +8,46 @@ export component WindowChrome inherits Rectangle {
     // 透明背景，仅覆盖内容
     background: transparent;
 
+    // 抽屉状态（由 main.slint 传入，驱动箭头方向）
+    in property<bool> inner-drawer-open: false;
+    in property<bool> outer-drawer-open: false;
+
     // FR-T4-3: signal 占位属性，供左把手信号点使用；后续可由 main.slint 注入
     in property<bool> signal: false;
 
     // 左下品牌水印
-    Text {
+    watermark := Text {
         x: 44px;
         y: parent.height - 22px - self.height;
         text: "northing";
-        opacity: 0.25;
+        opacity: watermark-touch.has-hover ? 0.4 : 0.25;
         font-size: RedesignTheme.t.fs-md;
         color: RedesignTheme.t.faint;
-        // TODO(FR-T5): Fraunces 自托管后切换 font-family
+        font-family: "Fraunces";
+        animate opacity { duration: 200ms; easing: ease-in-out; }
+
+        watermark-touch := TouchArea {
+            width: parent.width;
+            height: parent.height;
+        }
     }
 
-    // 左把手（34px 全高，垂直居中）
+    // 左把手（28px 全高，垂直居中）
     left-handle := Rectangle {
         x: 0;
         y: 0;
-        width: 34px;
+        width: 28px;
         height: parent.height;
         background: transparent;
 
         // 渗光近似条（右缘，rep-300 → 透明）
         Rectangle {
-            x: parent.width - 8px;
+            x: parent.width - 6px;
             y: 0;
-            width: 8px;
+            width: 6px;
             height: parent.height;
-            background: @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-300 100%);
+            background: @linear-gradient(90deg, transparent 0%, left-touch.has-hover ? RedesignTheme.t.rep-400 : RedesignTheme.t.rep-300 100%);
+            animate background { duration: 200ms; easing: ease-in-out; }
         }
 
         // 信号点
@@ -55,11 +66,12 @@ export component WindowChrome inherits Rectangle {
             spacing: 4px;
 
             Text {
-                text: "‹";
-                color: RedesignTheme.t.muted;
+                text: root.inner-drawer-open ? "‹" : "›";
+                color: left-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
                 font-size: RedesignTheme.t.fs-lg;
                 horizontal-alignment: center;
                 width: parent.width;
+                animate color { duration: 200ms; easing: ease-in-out; }
             }
 
             Text {
@@ -71,18 +83,18 @@ export component WindowChrome inherits Rectangle {
             }
         }
 
-        TouchArea {
+        left-touch := TouchArea {
             width: parent.width;
             height: parent.height;
             clicked => { root.toggle-left(); }
         }
     }
 
-    // 右把手（34px 全高，垂直居中）
+    // 右把手（28px 全高，垂直居中）
     Rectangle {
-        x: parent.width - 34px;
+        x: parent.width - 28px;
         y: 0;
-        width: 34px;
+        width: 28px;
         height: parent.height;
         background: transparent;
 
@@ -90,9 +102,10 @@ export component WindowChrome inherits Rectangle {
         Rectangle {
             x: 0;
             y: 0;
-            width: 8px;
+            width: 6px;
             height: parent.height;
-            background: @linear-gradient(90deg, RedesignTheme.t.abyss-300 0%, transparent 100%);
+            background: @linear-gradient(90deg, right-touch.has-hover ? RedesignTheme.t.abyss-400 : RedesignTheme.t.abyss-300 0%, transparent 100%);
+            animate background { duration: 200ms; easing: ease-in-out; }
         }
 
         VerticalLayout {
@@ -100,11 +113,12 @@ export component WindowChrome inherits Rectangle {
             spacing: 4px;
 
             Text {
-                text: "›";
-                color: RedesignTheme.t.muted;
+                text: root.outer-drawer-open ? "›" : "‹";
+                color: right-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
                 font-size: RedesignTheme.t.fs-lg;
                 horizontal-alignment: center;
                 width: parent.width;
+                animate color { duration: 200ms; easing: ease-in-out; }
             }
 
             Text {
@@ -116,7 +130,7 @@ export component WindowChrome inherits Rectangle {
             }
         }
 
-        TouchArea {
+        right-touch := TouchArea {
             width: parent.width;
             height: parent.height;
             clicked => { root.toggle-right(); }
@@ -142,6 +156,7 @@ export component WindowChrome inherits Rectangle {
             height: 28px;
             border-radius: 7px;
             background: min-touch.has-hover ? RedesignTheme.t.raised : transparent;
+            animate background { duration: 150ms; }
 
             min-touch := TouchArea {
                 width: parent.width;
@@ -168,6 +183,7 @@ export component WindowChrome inherits Rectangle {
             height: 28px;
             border-radius: 7px;
             background: max-touch.has-hover ? RedesignTheme.t.raised : transparent;
+            animate background { duration: 150ms; }
 
             max-touch := TouchArea {
                 width: parent.width;
@@ -193,7 +209,8 @@ export component WindowChrome inherits Rectangle {
             width: 28px;
             height: 28px;
             border-radius: 7px;
-            background: close-touch.has-hover ? RedesignTheme.t.danger.with-alpha(0.1) : transparent;
+            background: close-touch.has-hover ? RedesignTheme.t.danger.with-alpha(0.18) : transparent;
+            animate background { duration: 150ms; }
 
             close-touch := TouchArea {
                 width: parent.width;

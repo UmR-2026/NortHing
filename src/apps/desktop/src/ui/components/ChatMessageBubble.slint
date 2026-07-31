@@ -8,6 +8,7 @@ export component ChatMessageBubble inherits Rectangle {
     in property <string> content: "";
     in property <string> timestamp: "";
     in property <bool> is-streaming: false;
+    in property <bool> active: false;
     
     pure function bubble-color() -> color {
         if role == "user" { RedesignTheme.t.elevated; }
@@ -28,17 +29,31 @@ export component ChatMessageBubble inherits Rectangle {
     HorizontalLayout {
         alignment: role == "user" ? end : start;
         
-        MaterialCard {
+        Rectangle {
             width: root.width * 0.8;
-            card-padding: RedesignTheme.t.s4;
+            // 用户气泡：稍小圆角 r-md；助手气泡：r-lg
+            border-radius: role == "user" ? RedesignTheme.t.r-md : RedesignTheme.t.r-lg;
             background: root.bubble-color();
+            clip: true;
+            
+            // 用户消息：极淡 rep 色调叠加 + 细描边效果
+            Rectangle {
+                width: parent.width;
+                height: parent.height;
+                border-radius: parent.border-radius;
+                border-width: role == "user" ? 1px : 0px;
+                border-color: role == "user" ? RedesignTheme.t.rep-400.with-alpha(0.12) : transparent;
+                background: role == "user" ? RedesignTheme.t.rep-400.with-alpha(0.04) : transparent;
+            }
             
             VerticalLayout {
+                padding: RedesignTheme.t.s4;
                 spacing: RedesignTheme.t.s1;
                 
                 Text {
                     text: root.content;
                     font-size: RedesignTheme.t.fs-body;
+                    font-weight: root.active && role == "assistant" ? 450 : 400;
                     color: root.text-color();
                     wrap: word-wrap;
                 }

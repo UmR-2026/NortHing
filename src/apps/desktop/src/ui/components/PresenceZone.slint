@@ -16,6 +16,7 @@ export component PresenceZone inherits Rectangle {
     in property <bool> streaming: false;
     in property <string> agent-name: "知序";
     in property <string> mood-text: "";
+    in property <bool> dark-mode: true;
 
     background: transparent;
 
@@ -32,6 +33,9 @@ export component PresenceZone inherits Rectangle {
             RedesignTheme.t.presence-halo-rep 0%,
             RedesignTheme.t.presence-halo-rep-soft 30%,
             transparent 64%);
+        // 8s 周期微弱呼吸，与 AvatarWrap 6s 错开形成层次感
+        // 暗色模式下光晕几乎不可见，提升基础不透明度 40%
+        opacity: (root.dark-mode ? 1.0 : 0.85) + 0.15 * Math.sin(animation-tick() / 8000ms * 360deg);
     }
 
     // ── 居中列：gap 8px，padding 36px 0 20px ──
@@ -51,12 +55,12 @@ export component PresenceZone inherits Rectangle {
             }
         }
 
-        // 2. p-name：18px weight 500
-        // TODO(FR-T5): Fraunces serif（可变字体未自托管，暂用默认字体）
+        // 2. p-name：18px weight 500 Fraunces serif
         HorizontalLayout {
             alignment: center;
             Text {
                 text: agent-name;
+                font-family: "Fraunces";
                 font-size: 18px;
                 font-weight: 500;
                 color: RedesignTheme.t.fg;

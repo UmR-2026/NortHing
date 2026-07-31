@@ -16,7 +16,7 @@ export component ToolCallCard inherits Rectangle {
     MaterialCard {
         width: parent.width - RedesignTheme.t.s4;
         card-padding: RedesignTheme.t.s4;
-        background: #2D2D2D;
+        background: RedesignTheme.t.surface;
         
         VerticalLayout {
             spacing: RedesignTheme.t.s2;
@@ -34,7 +34,7 @@ export component ToolCallCard inherits Rectangle {
                         height: 8px;
                         border-radius: RedesignTheme.t.r-sm;
                         background: tool-status == "running" ? RedesignTheme.t.abyss-500
-                                : tool-status == "completed" ? #4CAF50
+                                : tool-status == "completed" ? RedesignTheme.t.abyss-400
                                 : RedesignTheme.t.danger;
                     }
                     
@@ -64,14 +64,14 @@ export component ToolCallCard inherits Rectangle {
             
             if expanded && tool-result != "": Rectangle {
                 height: 100px;
-                background: #1E1E1E;
+                background: RedesignTheme.t.abyss-500;
                 border-radius: RedesignTheme.t.r-sm;
                 padding: RedesignTheme.t.s2;
                 
                 Text {
                     text: root.tool-result;
                     font-size: RedesignTheme.t.fs-body;
-                    color: #D4D4D4;
+                    color: RedesignTheme.t.muted;
                     font-family: "Consolas, monospace";
                     wrap: word-wrap;
                 }

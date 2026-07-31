@@ -13,6 +13,7 @@
 import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
+import { SegmentedControl, SegmentItem } from "../components/SegmentedControl.slint";
 
 export component AccessSettingsPanel inherits Rectangle {
     // 透明：让 SettingsView 内容区设置淡雾透过卡片间隙显形（同 GeneralSettingsPanel）。
@@ -56,86 +57,16 @@ export component AccessSettingsPanel inherits Rectangle {
                             font-weight: 600;
                         }
 
-                        // segment 容器（pill，raised 底 + border）
-                        Rectangle {
+                        // segment（pill，通用 SegmentedControl size=1 large）
+                        SegmentedControl {
                             width: parent.width;
-                            height: 48px;
-                            border-radius: RedesignTheme.t.r-pill;
-                            background: RedesignTheme.t.raised;
-                            border-width: 1px;
-                            border-color: RedesignTheme.t.border;
-
-                            HorizontalLayout {
-                                x: 4px;
-                                y: 4px;
-                                width: parent.width - 8px;
-                                height: parent.height - 8px;
-                                spacing: RedesignTheme.t.s1;
-
-                                // 选项 0：自治·完全
-                                Rectangle {
-                                    horizontal-stretch: 1;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: root.selected == 0
-                                        ? RedesignTheme.t.elevated
-                                        : transparent;
-                                    drop-shadow-color: root.selected == 0 ? RedesignTheme.t.shadow.with-alpha(0.06) : transparent;
-                                    drop-shadow-blur: root.selected == 0 ? 8px : 0px;
-                                    drop-shadow-offset-y: root.selected == 0 ? 2px : 0px;
-                                    animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-
-                                    Text {
-                                        text: "自治·完全";
-                                        font-size: RedesignTheme.t.fs-body;
-                                        color: root.selected == 0
-                                            ? RedesignTheme.t.rep-500
-                                            : RedesignTheme.t.muted;
-                                        font-weight: root.selected == 0 ? 600 : 400;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        width: parent.width;
-                                        animate color { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-                                    }
-
-                                    TouchArea {
-                                        width: parent.width;
-                                        height: parent.height;
-                                        clicked => { root.selected = 0; }
-                                    }
-                                }
-
-                                // 选项 1：需确认
-                                Rectangle {
-                                    horizontal-stretch: 1;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: root.selected == 1
-                                        ? RedesignTheme.t.elevated
-                                        : transparent;
-                                    drop-shadow-color: root.selected == 1 ? RedesignTheme.t.shadow.with-alpha(0.06) : transparent;
-                                    drop-shadow-blur: root.selected == 1 ? 8px : 0px;
-                                    drop-shadow-offset-y: root.selected == 1 ? 2px : 0px;
-                                    animate background { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-
-                                    Text {
-                                        text: "需确认";
-                                        font-size: RedesignTheme.t.fs-body;
-                                        color: root.selected == 1
-                                            ? RedesignTheme.t.rep-500
-                                            : RedesignTheme.t.muted;
-                                        font-weight: root.selected == 1 ? 600 : 400;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        width: parent.width;
-                                        animate color { duration: RedesignTheme.dur-normal; easing: ease-in-out; }
-                                    }
-
-                                    TouchArea {
-                                        width: parent.width;
-                                        height: parent.height;
-                                        clicked => { root.selected = 1; }
-                                    }
-                                }
-                            }
+                            size: 1;
+                            items: [
+                                { label: "自治·完全" },
+                                { label: "需确认" },
+                            ];
+                            selected-index: root.selected;
+                            selected(idx) => { root.selected = idx; }
                         }
 
                         // seg-desc（随选中档切换文案）

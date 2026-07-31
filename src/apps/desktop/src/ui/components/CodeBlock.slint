@@ -6,7 +6,7 @@ export component CodeBlock inherits Rectangle {
     in property <string> code: "";
     in property <string> language: "";
     
-    background: #1E1E1E;
+    background: RedesignTheme.t.abyss-500;
     border-radius: 4px;
     padding: RedesignTheme.t.s4;
     
@@ -21,7 +21,7 @@ export component CodeBlock inherits Rectangle {
         Text {
             text: root.code;
             font-size: RedesignTheme.t.fs-body;
-            color: #D4D4D4;
+            color: RedesignTheme.t.muted;
             font-family: "Consolas, monospace";
             wrap: word-wrap;
         }

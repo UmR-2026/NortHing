@@ -299,25 +299,11 @@ pub(super) fn enter_failed(dispatcher: &dyn StreamingStateDispatcher, app_state:
 /// `set_is_streaming(false)` regardless of the live
 /// generation. That was wrong in the interleaving case:
 ///
-///   T0: submit path pre-flights `enter_turn("submit-pending-uuid-A")`
-///   T1: submit path dispatches to the turn-runtime; result
-///       is pending in the worker thread
-///   T2: a SECOND submit / bridge event pre-flights
-///       `enter_turn("submit-pending-uuid-B")` (the
-///       `active_turn_id` is now B)
-///
-///   T3: T1's submit_turn returns Err (e.g. accepted=false)
-///   T4: the old reset_after_submit_failure runs, sees
-///       `active_turn_id == B`, and:
-///
-///     - clears B from AppState (silently erases the
-///       second turn's state),
-///     - dispatches set_is_streaming(false) while B is the
-///       live generation and the user is actively watching
-///       the stop button,
-///     - and the next "Started" event from B's actual
-///       execution path will re-set the property to true,
-///       causing a visible flicker.
+/// Concretely, the old code cleared `active_turn_id` and
+/// dispatched `set_is_streaming(false)` unconditionally,
+/// which in the interleaving case erased the second turn's
+/// state and caused a visible flicker when the fresh turn's
+/// first "Started" event re-asserted streaming.
 ///
 /// The fix: take a `generation: &str` (the return value of
 /// the matching `enter_turn`) and only clear / dispatch when

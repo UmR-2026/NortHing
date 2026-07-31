@@ -11,6 +11,7 @@
 import { SkillStateItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
+import { ToggleSwitch } from "../components/ToggleSwitch.slint";
 import { AppStrings } from "../strings.slint";
 
 export component SkillsSettingsPanel inherits Rectangle {
@@ -132,24 +133,9 @@ export component SkillsSettingsPanel inherits Rectangle {
                                     VerticalLayout {
                                         vertical-stretch: 1;
                                         alignment: center;
-                                        global-toggle := Rectangle {
-                                            width: 36px;
-                                            height: 20px;
-                                            border-radius: RedesignTheme.t.r-pill;
-                                            background: skill.global-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
-                                            TouchArea {
-                                                width: parent.width;
-                                                height: parent.height;
-                                                clicked => { root.set-skill-global(skill.id, !skill.global-enabled); }
-                                            }
-                                            Rectangle {
-                                                x: skill.global-enabled ? 18px : 2px; /* .toggle translateX 16 + left 2 */
-                                                y: 2px; /* .toggle top 2 */
-                                                width: 14px;
-                                                height: 14px;
-                                                border-radius: RedesignTheme.t.r-pill;
-                                                background: RedesignTheme.t.surface;
-                                            }
+                                        ToggleSwitch {
+                                            value: skill.global-enabled;
+                                            toggled(val) => { root.set-skill-global(skill.id, val); }
                                         }
                                     }
 

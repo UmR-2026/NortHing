@@ -1,4 +1,4 @@
-// AvatarWrap - 头像容器：径向渐变头像本体 + 呼吸光环（FR-T3b 名片系）。
+// AvatarWrap - 头像容器：径向渐变头像本体 + 双层呼吸光环（FR-T3b 名片系）。
 // Token 全部来自 RedesignTheme.t.*（redesign_palette.slint）。
 import { RedesignTheme } from "../redesign_palette.slint";
 
@@ -7,31 +7,44 @@ export component AvatarWrap inherits Rectangle {
     in property <string> initial: "知";
     in property <bool> breathing: true;
 
-    // 容器比头像大 6px，容下外圈光环。
-    width: size + 6px;
-    height: size + 6px;
+    // 容器比头像大 30px，容下外层大光环（内圈 6px + 外圈额外 24px）。
+    width: size + 30px;
+    height: size + 30px;
     background: transparent;
 
     // 呼吸缩放因子：breathing=true 时 ±1.5%（6s 周期），否则 1。
-    // 任务书给定 1 + 0.015 * Math.sin(animation-tick()/1ms * 0.001047)（弧度入参）。
-    // Slint 的 Math.sin 入参须为 angle(deg) 且无 Math.PI（POC 验证，
-    // slint-feasibility-poc.md §呼吸映射表），改用等价度数形式：周期 6000ms * 360deg，
-    // 效果一致（6s 周期 / ±1.5% 幅度）。
     property <float> breath: breathing ? 1 + 0.015 * Math.sin(animation-tick() / 6000ms * 360deg) : 1;
 
-    // 呼吸光环：外圈，比头像大 6px，圆角 r-lg，rep-400 边框，透明底。
-    // Slint 1.17 的 Rectangle 无 scale-x/scale-y 属性（编译器实测 Unknown property，
-    // POC「绑 scale-x/y」为未验闭环项），改用 width/height 等比缩放 + 居中 x/y 达到
-    // 等价的呼吸光环效果（尺寸随 animation-tick() 驱动）。
-    halo := Rectangle {
-        width: root.width * root.breath;
-        height: root.height * root.breath;
-        x: root.width * (1 - root.breath) / 2;
-        y: root.height * (1 - root.breath) / 2;
+    // 光环整体透明度：breathing 时 1.0，停止时 0.3，平滑过渡。
+    property <float> halo-opacity: breathing ? 1.0 : 0.3;
+    animate halo-opacity { duration: 300ms; easing: ease-in-out; }
+
+    // 外层光环：比内圈光环再大 12px（半径），opacity 固定 0.3 × halo-opacity。
+    outer-halo := Rectangle {
+        width: (root.size + 30px) * root.breath;
+        height: (root.size + 30px) * root.breath;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
         border-radius: RedesignTheme.t.r-lg;
         border-width: 1px;
         border-color: RedesignTheme.t.rep-400;
         background: transparent;
+        opacity: 0.3 * root.halo-opacity;
+        animate opacity { duration: 300ms; easing: ease-in-out; }
+    }
+
+    // 内层呼吸光环：外圈，比头像大 6px，圆角 r-lg，rep-400 边框，透明底。
+    halo := Rectangle {
+        width: (root.size + 6px) * root.breath;
+        height: (root.size + 6px) * root.breath;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        border-radius: RedesignTheme.t.r-lg;
+        border-width: 1px;
+        border-color: RedesignTheme.t.rep-400;
+        background: transparent;
+        opacity: root.halo-opacity;
+        animate opacity { duration: 300ms; easing: ease-in-out; }
     }
 
     // 头像本体：size×size，圆角 r-md，径向渐变 rep-300->rep-500，中央首字。

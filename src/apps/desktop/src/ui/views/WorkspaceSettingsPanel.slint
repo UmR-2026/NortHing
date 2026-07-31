@@ -11,6 +11,7 @@ import { WorkspaceItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
+import { ToggleSwitch } from "../components/ToggleSwitch.slint";
 import { AppStrings } from "../strings.slint";
 
 export component WorkspaceSettingsPanel inherits Rectangle {
@@ -109,9 +110,18 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                     }
                 }
 
-                for workspace[idx] in workspaces: MaterialCard {
+                for workspace[idx] in workspaces: Rectangle {
                     width: parent.width;
-                    card-padding: RedesignTheme.t.s4;
+                    background: row-touch.has-hover ? RedesignTheme.t.raised : transparent;
+                    border-radius: RedesignTheme.t.r-md;
+                    animate background { duration: 200ms; }
+                    drop-shadow-blur: row-touch.has-hover ? 8px : 0px;
+                    drop-shadow-color: #38352E0A;
+                    animate drop-shadow-blur { duration: 200ms; }
+
+                    MaterialCard {
+                        width: parent.width;
+                        card-padding: RedesignTheme.t.s4;
 
                     VerticalLayout {
                         spacing: RedesignTheme.t.s1;
@@ -192,6 +202,13 @@ export component WorkspaceSettingsPanel inherits Rectangle {
                                 }
                             }
                         }
+                    }
+                    } // MaterialCard
+
+                    row-touch := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        mouse-cursor: pointer;
                     }
                 }
 

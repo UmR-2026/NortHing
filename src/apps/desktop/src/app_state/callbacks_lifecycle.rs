@@ -21,7 +21,7 @@ use super::streaming_lifecycle::{
     enter_turn, reset_after_submit_failure, streaming_dispatcher, StreamingStateDispatcher,
 };
 use northhing_core::kernel_facade::kernel_facade;
-use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto};
+use northhing_kernel_api::session::{KernelSessionApi, MessageContentDto, MessageRoleDto, SessionConfigDto};
 use northhing_kernel_api::turn::{
     DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnInputDto,
 };
@@ -901,6 +901,95 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
 // event-loop closure (not captured before the spawn) so that a user who
 // switches sessions during the async rename does not get their state
 // overwritten by a stale value.
+pub(super) fn register_export_markdown_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
+    // --- export-markdown callback (C7=b) ---
+    let app_state_arc = std::sync::Arc::clone(app_state);
+    let ui_weak = ui.as_weak();
+    ui.on_export_markdown(move || {
+        let app_state = &*app_state_arc;
+        let session_id = app_state.get_current_session_id();
+        if session_id.is_empty() {
+            set_session_error(ui_weak.clone(), "没有选中的会话，无法导出 Markdown");
+            return;
+        }
+        let ui_clone = ui_weak.clone();
+        let sid = session_id.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(target: "app_state", "export-markdown: failed to build runtime: {e}");
+                    // Use the same set_session_error pattern as other failure paths in this function.
+                    set_session_error(ui_clone.clone(), format!("导出失败: {e}"));
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let facade = kernel_facade();
+                let messages = match facade.get_messages(&sid).await {
+                    Ok(msgs) => msgs,
+                    Err(e) => {
+                        set_session_error(ui_clone.clone(), format!("导出失败: {e}"));
+                        return;
+                    }
+                };
+                // Build Markdown content
+                let mut md = String::new();
+                md.push_str(&format!("# Session Export ({})\n\n", &sid));
+                for msg in &messages {
+                    let role_label = match msg.role {
+                        MessageRoleDto::User => "User",
+                        MessageRoleDto::Assistant => "Assistant",
+                        MessageRoleDto::System => "System",
+                        MessageRoleDto::Tool => "Tool",
+                    };
+                    md.push_str(&format!("## {}\n\n", role_label));
+                    let text = match &msg.content {
+                        MessageContentDto::Text(t) => t.clone(),
+                        MessageContentDto::Multimodal { text, .. } => text.clone(),
+                        MessageContentDto::Mixed { text, .. } => text.clone(),
+                        MessageContentDto::ToolResult { result, .. } => result.to_string(),
+                    };
+                    md.push_str(&text);
+                    md.push_str("\n\n");
+                }
+                // Write to file in current working directory
+                let filename = format!("export-{}.md", &sid);
+                let path = std::path::PathBuf::from(&filename);
+                match std::fs::write(&path, &md) {
+                    Ok(_) => {
+                        let abs = std::fs::canonicalize(&path)
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or(filename);
+                        tracing::info!(target: "app_state", "export-markdown: wrote {}", abs);
+                        // Show success banner on UI thread
+                        let ui_weak_ok = ui_clone.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = ui_weak_ok.upgrade() {
+                                ui.set_banner_message(SharedString::from(format!("已导出到 {}", abs)));
+                                ui.set_banner_detail(SharedString::from(String::new()));
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        set_session_error(ui_clone.clone(), format!("写入文件失败: {e}"));
+                    }
+                }
+            });
+        });
+    });
+}
+
+pub(super) fn register_open_session_settings_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    // --- open-session-settings callback (Q4=c) ---
+    let ui_weak = ui.as_weak();
+    ui.on_open_session_settings(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            ui.set_current_route(SharedString::from("settings"));
+        }
+    });
+}
+
 pub(super) fn register_rename_session_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
     let app_state_arc = std::sync::Arc::clone(app_state);
     let ui_weak = ui.as_weak();

@@ -98,6 +98,9 @@ export component DeckBar inherits Rectangle {
                 // ⚙ 设置入口（muted 色，hover fg）— FR-T4-1 从会话头卡迁移
                 Rectangle {
                     width: 28px;
+                    background: settings-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    border-radius: RedesignTheme.t.r-sm;
+                    animate background { duration: 150ms; }
 
                     Text {
                         text: "⚙";
@@ -117,11 +120,19 @@ export component DeckBar inherits Rectangle {
                 }
 
                 // 模型名（可点开 model picker）— FR-T4-1 从会话头卡迁移
-                Text {
-                    text: root.model-name;
-                    font-size: RedesignTheme.t.fs-md;
-                    color: model-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
-                    vertical-alignment: center;
+                Rectangle {
+                    background: model-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    border-radius: RedesignTheme.t.r-sm;
+                    animate background { duration: 150ms; }
+
+                    Text {
+                        text: root.model-name;
+                        font-size: RedesignTheme.t.fs-md;
+                        color: model-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
 
                     model-ta := TouchArea {
                         width: parent.width;
@@ -135,7 +146,13 @@ export component DeckBar inherits Rectangle {
                     border-radius: RedesignTheme.t.r-sm;
                     border-width: 1px;
                     border-color: transparent;
-                    opacity: 0.5;
+                    opacity: plus-ta.has-hover ? 0.8 : 0.5;
+                    animate opacity { duration: 150ms; }
+
+                    plus-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                    }
 
                     HorizontalLayout {
                         padding-left: 9px; padding-right: 9px;
@@ -155,6 +172,8 @@ export component DeckBar inherits Rectangle {
                 // 思考分段条（think-ctrl）— TODO 后端
                 Rectangle {
                     border-radius: RedesignTheme.t.r-sm;
+                    background: think-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    animate background { duration: 150ms; }
 
                     think-ta := TouchArea {
                         width: parent.width;
@@ -197,12 +216,24 @@ export component DeckBar inherits Rectangle {
                 }
 
                 // 工作目录名 — 无 workspace 时 faint 占位
-                Text {
-                    text: root.workspace-name != "" ? root.workspace-name : "未选择工作文件夹";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: root.workspace-name != "" ? RedesignTheme.t.fg : RedesignTheme.t.faint;
-                    vertical-alignment: center;
-                    max-width: 120px;
+                Rectangle {
+                    background: ws-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    border-radius: RedesignTheme.t.r-sm;
+                    animate background { duration: 150ms; }
+
+                    Text {
+                        text: root.workspace-name != "" ? root.workspace-name : "未选择工作文件夹";
+                        font-size: RedesignTheme.t.fs-md;
+                        color: root.workspace-name != "" ? RedesignTheme.t.fg : RedesignTheme.t.faint;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+
+                    ws-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                    }
                 }
 
                 // 半自治 access（.db.access 样式，占位 disabled）— TODO settings-access 后端
@@ -210,7 +241,13 @@ export component DeckBar inherits Rectangle {
                     border-radius: RedesignTheme.t.r-sm;
                     border-width: 1px;
                     border-color: transparent;
-                    opacity: 0.5;
+                    opacity: access-ta.has-hover ? 0.8 : 0.5;
+                    animate opacity { duration: 150ms; }
+
+                    access-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                    }
 
                     HorizontalLayout {
                         padding-left: 9px; padding-right: 9px;
@@ -236,13 +273,20 @@ export component DeckBar inherits Rectangle {
                 // 上下文圆环（ctx-ring 占位）— TODO tokens 数据源
                 Rectangle {
                     border-radius: RedesignTheme.t.r-sm;
-
+                    background: ctx-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
+                    animate background { duration: 150ms; }
+                
+                    ctx-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                
                     HorizontalLayout {
                         padding-left: 9px; padding-right: 9px;
                         padding-top: 5px; padding-bottom: 5px;
                         spacing: 6px;
                         alignment: center;
-
+                
                         Rectangle {
                             width: 6px; height: 6px; border-radius: 3px;
                             background: RedesignTheme.t.faint;
@@ -261,7 +305,13 @@ export component DeckBar inherits Rectangle {
                 Rectangle {
                     width: 30px; height: 30px;
                     border-radius: 9px;
-                    opacity: 0.5;
+                    opacity: mic-ta.has-hover ? 0.8 : 0.5;
+                    animate opacity { duration: 150ms; }
+
+                    mic-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                    }
 
                     Text {
                         text: "🎙";
@@ -285,7 +335,20 @@ export component DeckBar inherits Rectangle {
                     background: root.streaming
                         ? RedesignTheme.t.danger
                         : RedesignTheme.t.rep-500;
-                    opacity: (!root.streaming && root.text == "") ? 0.4 : 1.0;
+
+                    send-ta := TouchArea {
+                        enabled: root.streaming || root.text != "";
+                        clicked => {
+                            if root.streaming {
+                                root.stop();
+                            } else {
+                                root.send();
+                            }
+                        }
+                    }
+
+                    opacity: (!root.streaming && root.text == "") ? 0.4 : (send-ta.has-hover ? 1.0 : 0.85);
+                    animate opacity { duration: 150ms; }
 
                     Text {
                         text: root.streaming ? "■" : "↑";
@@ -296,23 +359,16 @@ export component DeckBar inherits Rectangle {
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
-
-                    ta := TouchArea {
-                        enabled: root.streaming || root.text != "";
-                        clicked => {
-                            if root.streaming {
-                                root.stop();
-                            } else {
-                                root.send();
-                            }
-                        }
-                    }
                 }
             }
         }
     }
 
     // focus 态：边框 rep-500 + 外发光环
+    animate border-color { duration: 200ms; easing: ease-in-out; }
+    animate drop-shadow-color { duration: 200ms; easing: ease-in-out; }
+    animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
+
     states [
         focus-glow when ti.has-focus: {
             root.border-color: RedesignTheme.t.rep-500;

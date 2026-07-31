@@ -74,9 +74,9 @@ export component ChatPaneView inherits Rectangle {
             vertical-stretch: 1;
             width: parent.width;
 
-            // FR-T4-1: 660 居中约束（外层 Rectangle + x 表达式，Slint 无 max-width）
+            // FR-T4-1: 720 居中约束（外层 Rectangle + x 表达式，Slint 无 max-width）
             Flickable {
-                width: min(parent.width - 2 * RedesignTheme.t.s6, 660px);
+                width: min(parent.width - 2 * RedesignTheme.t.s6, 720px);
                 x: (parent.width - self.width) / 2;
                 height: parent.height;
 
@@ -189,6 +189,7 @@ export component ChatPaneView inherits Rectangle {
                                 content: message.content;
                                 timestamp: message.timestamp;
                                 is-streaming: message.is-streaming;
+                                active: message.is-streaming;
                                 width: parent.width - RedesignTheme.t.s4 * 2;
                             }
 
@@ -283,6 +284,10 @@ export component ChatPaneView inherits Rectangle {
             height: 40px;
             background: RedesignTheme.t.danger.with-alpha(0.12);
             border-radius: RedesignTheme.t.r-sm;
+            property <float> fade-progress: 1.0;
+            animate fade-progress { duration: 200ms; }
+            opacity: 1.0 - fade-progress;
+            init => { fade-progress = 0; }
 
             HorizontalLayout {
                 padding: RedesignTheme.t.s2;
@@ -307,15 +312,15 @@ export component ChatPaneView inherits Rectangle {
             }
         }
 
-        // ===== Input area (DeckBar, FR-T3b) - 660 居中 =====
-        // FR-T4-1: DeckBar 包居中容器（width: min(parent.width - 2*s6, 660px)）
+        // ===== Input area (DeckBar, FR-T3b) - 720 居中 =====
+        // FR-T4-1: DeckBar 包居中容器（width: min(parent.width - 2*s6, 720px)）
         deck-area := Rectangle {
             // DeckBar 内容高度 = 52(输入) + 1(分隔) + 44(控制行) = 97px
             height: 97px;
             width: parent.width;
 
             deck := DeckBar {
-                width: min(parent.width - 2 * RedesignTheme.t.s6, 660px);
+                width: min(parent.width - 2 * RedesignTheme.t.s6, 720px);
                 x: (parent.width - self.width) / 2;
                 height: parent.height;
                 text <=> root.input-text;
@@ -349,15 +354,24 @@ export component ChatPaneView inherits Rectangle {
         width: parent.width;
         height: parent.height;
         background: RedesignTheme.t.scrim.with_alpha(0.4);
+        // 入场淡入：fade-progress 从 1->0 动画，opacity 从 0->1
+        property <float> fade-progress: 1.0;
+        animate fade-progress { duration: 200ms; easing: ease-out; }
+        opacity: 1.0 - fade-progress;
+        init => { fade-progress = 0; }
 
         popup := Rectangle {
             // FR-T4-2: popup 移到 DeckBar 上方（绑 deck-area.y；原 y:56px 是头卡下方遗留）
             x: RedesignTheme.t.s4;
-            y: deck-area.y - popup.height;
             width: parent.width - 2 * RedesignTheme.t.s4;
             height: 240px;
             background: RedesignTheme.t.surface;
             border-radius: RedesignTheme.t.r-md;
+            // 入场滑入：slide-offset 从 10px->0 动画
+            property <length> slide-offset: 10px;
+            animate slide-offset { duration: 200ms; easing: ease-out; }
+            y: deck-area.y - popup.height + slide-offset;
+            init => { slide-offset = 0px; }
 
             VerticalLayout {
                 padding: RedesignTheme.t.s2;

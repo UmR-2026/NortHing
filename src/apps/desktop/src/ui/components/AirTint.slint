@@ -37,5 +37,6 @@ export component AirTint inherits Rectangle {
         width: parent.width;
         height: parent.height * 0.3;
         background: @radial-gradient(circle at parent.width/2 parent.height, RedesignTheme.t.fog-abyss 0%, transparent 70%);
+        animate background { duration: 300ms; easing: ease-in-out; }
     }
 }

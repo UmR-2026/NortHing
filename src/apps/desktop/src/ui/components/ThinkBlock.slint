@@ -1,28 +1,79 @@
 // ThinkBlock Component - 思考块（FR-T3b）
 //
 // 左缘 abyss-400 竖条 + 半透 abyss-500 底。Token 来自 RedesignTheme.t.*。
+// 增强：hover 态背景变化 + 折叠/展开切换。
 
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component ThinkBlock inherits Rectangle {
     in property <string> content: "";
+    property <bool> collapsed: false;
 
-    background: RedesignTheme.t.abyss-500.with-alpha(0.05);
+    background: think-touch.has-hover
+        ? RedesignTheme.t.abyss-500.with-alpha(0.10)
+        : RedesignTheme.t.abyss-500.with-alpha(0.05);
+    animate background { duration: 200ms; easing: ease-in-out; }
 
-    HorizontalLayout {
-        spacing: RedesignTheme.t.s2;
+    VerticalLayout {
+        spacing: RedesignTheme.t.s1;
 
-        // 左缘 2px 竖条（HorizontalLayout 默认纵向撑满高度）
+        // 可点击头部：chevron + 标签
         Rectangle {
-            width: 2px;
-            background: RedesignTheme.t.abyss-400;
+            height: 28px;
+
+            HorizontalLayout {
+                spacing: RedesignTheme.t.s2;
+                padding-left: RedesignTheme.t.s2;
+                padding-right: RedesignTheme.t.s2;
+
+                // 左缘竖条（固定 2px 宽）
+                // 放在外面更合理，但 VerticalLayout 内不好跨行，
+                // 改为在内容区叠加。这里仅放 chevron + 文字。
+
+                Text {
+                    text: root.collapsed ? "▶" : "▼";
+                    font-size: RedesignTheme.t.fs-sm;
+                    color: RedesignTheme.t.abyss-400;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: "思考过程";
+                    font-size: RedesignTheme.t.fs-md;
+                    color: RedesignTheme.t.muted;
+                    vertical-alignment: center;
+                }
+            }
+
+            think-touch := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.collapsed = !root.collapsed; }
+            }
         }
 
-        Text {
-            text: root.content;
-            color: RedesignTheme.t.muted;
-            font-size: RedesignTheme.t.fs-md;
-            wrap: word-wrap;
+        // 内容区：折叠时隐藏，带 opacity 过渡
+        if !root.collapsed: Rectangle {
+            // 左缘 2px 竖条 + 内容文字
+            HorizontalLayout {
+                spacing: RedesignTheme.t.s2;
+
+                // 左缘 2px 竖条
+                Rectangle {
+                    width: 2px;
+                    background: RedesignTheme.t.abyss-400;
+                }
+
+                Text {
+                    text: root.content;
+                    color: RedesignTheme.t.muted;
+                    font-size: RedesignTheme.t.fs-md;
+                    wrap: word-wrap;
+                }
+            }
+
+            opacity: root.collapsed ? 0 : 1;
+            animate opacity { duration: 200ms; }
         }
     }
 }

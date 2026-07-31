@@ -14,6 +14,7 @@ import { MaterialButton } from "../components/MaterialButton.slint";
 import { MaterialCard } from "../components/MaterialCard.slint";
 import { MaterialTextField } from "../components/MaterialTextField.slint";
 import { AppStrings } from "../strings.slint";
+import { ToggleSwitch } from "../components/ToggleSwitch.slint";
 
 export component MCPSettingsPanel inherits Rectangle {
     // 透明：让 SettingsView 内容区淡雾透过卡片间隙显形（同 T4-6a 范式）。
@@ -229,19 +230,9 @@ export component MCPSettingsPanel inherits Rectangle {
                                     VerticalLayout {
                                         vertical-stretch: 1;
                                         alignment: center;
-                                        enabled-toggle := Rectangle {
-                                            width: 36px;
-                                            height: 20px;
-                                            border-radius: RedesignTheme.t.r-pill;
-                                            background: srv.enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
-                                            Rectangle {
-                                                x: srv.enabled ? 18px : 2px;
-                                                y: 2px;
-                                                width: 16px;
-                                                height: 16px;
-                                                border-radius: RedesignTheme.t.r-pill;
-                                                background: RedesignTheme.t.surface;
-                                            }
+                                        ToggleSwitch {
+                                            value: srv.enabled;
+                                            small: true;
                                         }
                                     }
                                 }
@@ -291,6 +282,7 @@ export component MCPSettingsPanel inherits Rectangle {
                                 font-size: RedesignTheme.t.fs-lg;
                                 color: RedesignTheme.t.muted;
                             }
+                            // TODO: replace with SegmentedControl
                             Rectangle {
                                 width: parent.width;
                                 height: 36px;
@@ -422,26 +414,9 @@ export component MCPSettingsPanel inherits Rectangle {
                                 font-size: RedesignTheme.t.fs-lg;
                                 vertical-alignment: center;
                             }
-                            form-enabled-toggle := Rectangle {
-                                width: 36px;
-                                height: 20px;
-                                border-radius: RedesignTheme.t.r-pill;
-                                background: root.form-enabled ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
-
-                                TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    clicked => { root.form-enabled = !root.form-enabled; }
-                                }
-
-                                Rectangle {
-                                    x: root.form-enabled ? 18px : 2px;
-                                    y: 2px;
-                                    width: 16px;
-                                    height: 16px;
-                                    border-radius: RedesignTheme.t.r-pill;
-                                    background: RedesignTheme.t.surface;
-                                }
+                            ToggleSwitch {
+                                value <=> root.form-enabled;
+                                small: true;
                             }
                         }
 

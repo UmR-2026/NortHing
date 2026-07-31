@@ -73,6 +73,10 @@ export component WelcomeView inherits Rectangle {
             width: 600px;
             height: 280px;
             card-padding: RedesignTheme.t.s5;
+            property <float> fade-progress: 1.0;
+            animate fade-progress { duration: 300ms; easing: ease-in-out; }
+            opacity: 1.0 - fade-progress;
+            init => { fade-progress = 0; }
             step1-view := VerticalLayout {
                 spacing: RedesignTheme.t.s4;
                 width: parent.width;
@@ -150,6 +154,10 @@ export component WelcomeView inherits Rectangle {
             width: 600px;
             height: 520px;
             card-padding: RedesignTheme.t.s5;
+            property <float> fade-progress: 1.0;
+            animate fade-progress { duration: 300ms; easing: ease-in-out; }
+            opacity: 1.0 - fade-progress;
+            init => { fade-progress = 0; }
             step2-view := VerticalLayout {
                 spacing: RedesignTheme.t.s2;
                 width: parent.width;
@@ -185,6 +193,7 @@ export component WelcomeView inherits Rectangle {
                         background: opt.value == root.step2-type
                             ? RedesignTheme.t.rep-500
                             : RedesignTheme.t.surface;
+                        animate background { duration: 200ms; }
                         TouchArea {
                             width: parent.width;
                             height: parent.height;
@@ -310,6 +319,10 @@ export component WelcomeView inherits Rectangle {
             width: 600px;
             height: 340px;
             card-padding: RedesignTheme.t.s5;
+            property <float> fade-progress: 1.0;
+            animate fade-progress { duration: 300ms; easing: ease-in-out; }
+            opacity: 1.0 - fade-progress;
+            init => { fade-progress = 0; }
             step3-view := VerticalLayout {
                 spacing: RedesignTheme.t.s4;
                 width: parent.width;
@@ -335,7 +348,7 @@ export component WelcomeView inherits Rectangle {
                             height: parent.height + 16px;
                             border-radius: parent.width / 2;
                             background: RedesignTheme.t.fg.with_alpha(0.15);
-                            opacity: 0.45 + 0.15 * Math.sin(animation-tick() / 3000ms * 360deg);
+                            opacity: 0.45 + 0.15 * Math.sin(animation-tick() / 6000ms * 360deg);
                         }
                     }
 
