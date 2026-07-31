@@ -1,4 +1,4 @@
-﻿//! Relay server configuration.
+//! Relay server configuration.
 
 use std::net::SocketAddr;
 
