@@ -108,7 +108,7 @@
   content: '';
   position: absolute;
   inset: -8px;
-  border-radius: 24px;
+  border-radius: 18px;
   background: radial-gradient(circle, rgba(181, 176, 168, .15), transparent 70%);
   animation: auraBreath 6s ease-in-out infinite;
   transition: background var(--grow);
@@ -129,6 +129,10 @@
 
 .avatar--birth {
   background: radial-gradient(circle at 50% 50%, #DDD9D2, #C9C4BC 60%, #B5B0A8);
+}
+
+[data-theme="dark"] .avatar--birth {
+  background: radial-gradient(circle at 50% 50%, #5A5249, #4A443B 60%, #3D372F);
 }
 
 .avatar--alive {
@@ -222,7 +226,7 @@
   height: 44px;
   padding: 0 16px;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   color: var(--fg);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -281,8 +285,8 @@
 
 .personality-chip[data-color="openness"]::before { background: #9B7FBF; }
 .personality-chip[data-color="conscientiousness"]::before { background: #4A6FA5; }
-/* 出生态下外向性 chip 用 birth 灰阶——与 avatar 出生态同源，选中后跟随 rep */
-.personality-chip[data-color="extraversion"]::before { background: var(--birth); }
+/* 外向性 chip 用 rep-500 珊瑚真色——与 avatar 选中后同源，预览即所得 */
+.personality-chip[data-color="extraversion"]::before { background: #C8714C; }
 .personality-chip[data-color="agreeableness"]::before { background: #6B9E7A; }
 .personality-chip[data-color="neuroticism"]::before { background: var(--abyss-500); }
 
@@ -307,17 +311,17 @@
 /* tooltip */
 .personality-chip .tip {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-family: 'JetBrains Mono', monospace;
   color: var(--fg);
   background: var(--elevated);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 200ms ease, transform 200ms ease, background var(--grow);
@@ -366,27 +370,17 @@
   display: flex;
   justify-content: center;
   padding-top: 8px;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity var(--transition-state), transform var(--transition-state);
-  pointer-events: none;
-}
-
-.action-area.visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
 }
 
 .generate-btn {
   width: 220px;
   height: 36px;
   border: none;
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   background: var(--rep-500);
   color: #FFFAF5;
   font-family: 'Noto Sans SC', system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   cursor: pointer;
   position: relative;
@@ -398,7 +392,6 @@
 .generate-btn:hover {
   background: var(--rep-600);
   filter: drop-shadow(0 0 12px rgba(var(--rep-500-rgb), 0.30));
-  transform: translateY(-1px);
 }
 
 .generate-btn:active {
@@ -442,11 +435,11 @@
 .generated-text {
   font-family: 'Fraunces', Georgia, serif;
   font-variation-settings: "WONK" 1, "SOFT" 60;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   line-height: 1.8;
   color: var(--fg);
   text-align: center;
-  padding: 24px 20px;
+  padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--r-md);
@@ -613,7 +606,7 @@
     <!--
       Output: identity text in Fraunces (philosophical self-declaration, not UI text).
       Slint: Rectangle { background: surface; border: 1px border-soft; border-radius: r-md; }
-      Animation: opacity 0→1 + translateY 12px→0, 800ms ease — one-time entrance.
+      Animation: opacity 0→1, 800ms ease — one-time entrance.
       The 「」 quotes frame the text as a self-statement, not a form output.
     -->
     <div class="generated-output" id="generatedOutput">
@@ -801,10 +794,8 @@
   function updateButton() {
     if (allFilled()) {
       generateBtn.disabled = false;
-      actionArea.classList.add('visible');
     } else {
       generateBtn.disabled = true;
-      actionArea.classList.remove('visible');
     }
   }
 

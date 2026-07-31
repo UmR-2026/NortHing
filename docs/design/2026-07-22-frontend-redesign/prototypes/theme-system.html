@@ -22,7 +22,7 @@
   /* 内容区 — 纵向可滚动 */
   .content {
     flex-direction: column;
-    padding: 24px 40px 32px;
+    padding: 24px 32px 32px;
     gap: 16px;
     overflow-y: auto;
   }
@@ -47,7 +47,7 @@
   .mode-seg {
     display: flex;
     background: var(--raised);
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     padding: 4px;
     gap: 4px;
   }
@@ -58,7 +58,7 @@
     font-family: inherit;
     font-size: var(--fs-md);
     padding: 4px 12px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     cursor: pointer;
     transition: .15s;
   }
@@ -94,8 +94,8 @@
     text-transform: none;
     letter-spacing: 0;
     background: var(--raised);
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 4px 8px;
+    border-radius: var(--r-sm);
   }
 
   /* ─── 色板行 ─── */
@@ -233,7 +233,7 @@
     font-size: var(--fs-lg);
     color: var(--muted);
     line-height: 1.5;
-    margin-top: 2px;
+    margin-top: 4px;
   }
   .airtint-note {
     font-size: 13px;
@@ -242,7 +242,7 @@
     background: rgba(63,131,123,.06);
     border-left: 2px solid var(--abyss-400);
     border-radius: 0 var(--r-sm) var(--r-sm) 0;
-    padding: 10px 14px;
+    padding: 12px 16px;
     margin-top: 4px;
   }
   .airtint-note b { color: var(--fg); font-weight: 500; }
@@ -255,7 +255,7 @@
     background: rgba(63,131,123,.06);
     border-left: 2px solid var(--abyss-400);
     border-radius: 0 var(--r-sm) var(--r-sm) 0;
-    padding: 9px 11px;
+    padding: 8px 12px;
     margin-bottom: 16px;
   }
   .demo-rule b { color: var(--fg); font-weight: 500; }
@@ -264,13 +264,13 @@
     letter-spacing: .1em;
     color: var(--faint);
     font-family: 'JetBrains Mono', monospace;
-    margin-bottom: 9px;
+    margin-bottom: 8px;
     text-transform: uppercase;
   }
   .demo-swatches {
     display: flex;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 4px;
     flex-wrap: wrap;
   }
   .demo-sw {
@@ -311,7 +311,7 @@
     font-size: var(--fs-md);
     color: var(--muted);
     min-height: 18px;
-    margin: 4px 0 14px;
+    margin: 4px 0 12px;
   }
   .demo-chrono {
     height: 9px;
@@ -319,7 +319,7 @@
     background: var(--birth);
     position: relative;
     overflow: visible;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     transition: background var(--grow);
   }
   .demo-chrono .nd {
@@ -340,7 +340,7 @@
     font-size: var(--fs-sm);
     color: var(--faint);
     letter-spacing: .04em;
-    margin-bottom: 13px;
+    margin-bottom: 12px;
   }
   .demo-readout {
     font-family: 'JetBrains Mono', monospace;
@@ -348,7 +348,7 @@
     color: var(--muted);
     line-height: 1.7;
     border-top: 1px solid var(--border-soft);
-    padding-top: 11px;
+    padding-top: 12px;
   }
   .demo-readout .k { color: var(--faint); }
 
@@ -470,7 +470,7 @@
     </section>
 
     <!-- 基底灰阶 -->
-    <!-- Slint: for-each token: Rectangle { 56x40; background: token; } + Text { mono; 10px; } -->
+    <!-- Slint: for-each token: Rectangle { 56x56; background: token; } + Text { mono; 10px; } -->
     <section class="card">
       <div class="card-h">基底灰阶 <span class="tag">bg / surface / elevated / raised / border / fg / muted / faint</span></div>
       <div class="swatch-row">
@@ -646,7 +646,7 @@
     </section>
 
     <!-- 整屋空气染色 -->
-    <!-- Slint: for-each tint: HBox { Rectangle { 72x36; r-sm; background: air-*; } | VBox { Text { mono; 11px; fg } | Text { 12px; muted } } } -->
+    <!-- Slint: for-each tint: HBox { Rectangle { 72x36; r-sm; background: air-*; } | VBox { Text { mono; 11.5px; fg } | Text { 13px; muted } } } -->
     <section class="card">
       <div class="card-h">整屋空气染色 <span class="tag">air-rep / halo-rep · 预计算混合色</span></div>
       <div class="airtint-note">
