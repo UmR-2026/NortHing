@@ -2,823 +2,202 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1280, initial-scale=1.0">
-<title>设置 · northing</title>
+<meta name="viewport" content="width=1280">
+<title>设置 · 模型 · northing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,100..900,0..100,0..1&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,WONK,SOFT@9..144,100..900,0..1,0..100&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/components.css">
+<link rel="stylesheet" href="shared/animations.css">
+<link rel="stylesheet" href="shared/layout.css">
 <style>
-  :root {
-    --rep-300: #E5A583;
-    --rep-400: #D68A63;
-    --rep-500: #C8714C;
-    --rep-600: #A85A38;
-    --abyss-300: #7AABA4;
-    --abyss-400: #5A9B93;
-    --abyss-500: #3F837B;
-    --bg: #F4F3F0;
-    --surface: #FBFAF8;
-    --elevated: #FFFFFF;
-    --raised: #EFEDE8;
-    --border: #E6E3DD;
-    --border-soft: #ECEAE5;
-    --fg: #38352E;
-    --muted: #7B766C;
-    --faint: #A8A398;
-    --birth: #DAD6CF;
+  /* ======================================================================
+   * settings-models.html — 模型供应商设置
+   * ----------------------------------------------------------------------
+   * 画布：1280×800（.shell 纵向：顶栏 + 内容行）
+   * 布局：顶栏(52px) + content(nav 240px | content-body flex:1)
+   * 设计语言：与 chat-collapsed.html 同源——咨询室基底 + rep-500 强调
+   *
+   * Slint 映射：
+   *   .shell         → Window root (column: topbar | content)
+   *   .topbar        → HBox (title | spacer | theme-toggle) height:52
+   *   .content       → HBox (nav | content-body) flex:1
+   *   .nav           → VBox (width:240; surface; border-right-soft)
+   *   .content-body  → ScrollView (flex:1; padding; gap:s5)
+   *   .toggle        → Rectangle(40×22; pill; animate background 350ms)
+   * ====================================================================== */
+
+  /* ─── Topbar（52px） ─── */
+  /* Slint: HBox { height:52; padding:0 100px 0 24px; border-bottom:1px border-soft } */
+  .topbar { height: 52px; border-bottom: 1px solid var(--border-soft); padding-right: 100px; }
+  .topbar-title { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 500; color: var(--fg); font-variation-settings: "WONK" 1, "SOFT" 60; }
+  .topbar-spacer { flex: 1; }
+  .topbar-btn { width: 30px; height: 30px; border-radius: var(--r-sm); border: none; background: transparent; color: var(--faint); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: background .15s, color .15s; }
+  .topbar-btn:hover { background: var(--raised); color: var(--muted); }
+
+  /* ─── Nav（240px） ─── */
+  /* Slint: VBox { width:240; surface; border-right-soft; padding:s5 s4 60; gap:s5 } */
+  .nav { width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border-soft); padding: var(--s5) var(--s4) 60px; display: flex; flex-direction: column; gap: var(--s5); overflow-y: auto; transition: background var(--grow), border-color var(--grow); }
+  .nav-group { display: flex; flex-direction: column; gap: 2px; }
+  .nav-group-label { font-size: var(--fs-sm); font-weight: 500; color: var(--faint); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 var(--s3); margin-bottom: 6px; }
+  .nav-group + .nav-group { margin-top: var(--s2); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px var(--s3) 8px 18px; border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--muted); cursor: pointer; text-decoration: none; user-select: none; border: none; background: transparent; width: 100%; text-align: left; font-family: inherit; line-height: 1.4; position: relative; transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease); }
+  .nav-item:hover { background: var(--raised); color: var(--fg); }
+  /* 活跃项：rep 暖雾底 + 呼吸点（同 chat-collapsed 状态点） */
+  .nav-item.active { background: var(--halo-rep-settings); color: var(--fg); font-weight: 500; box-shadow: none; }
+  .nav-item.active::before { content: ''; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--rep-500); filter: drop-shadow(0 0 3px var(--rep-400)); animation: breathe 6s ease-in-out infinite; transition: background var(--grow); }
+  .nav-item-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; opacity: 0.7; flex-shrink: 0; }
+  .nav-item.active .nav-item-icon { opacity: 1; }
+
+  /* ─── Content body（flex:1 scrollable） ─── */
+  /* Slint: ScrollView { flex:1; padding:s6 40px; gap:s5 } */
+  /* 暖雾底色 air-rep-settings，非纯白 */
+  .content-body { flex: 1; min-width: 0; overflow-y: auto; padding: var(--s6) 40px 60px; background: var(--air-rep-settings); display: flex; flex-direction: column; gap: var(--s5); transition: background var(--grow); }
+  .content-body::-webkit-scrollbar { width: 6px; }
+  .content-body::-webkit-scrollbar-track { background: transparent; }
+  .content-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+  .content-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  .content-inner { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--s5); }
+
+  /* ─── Cards ─── */
+  /* 暖底 surface + 暖 drop-shadow（非冷灰阴影） */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s6); filter: drop-shadow(0 2px 8px rgba(80,70,55,.08)); transition: background var(--grow), border-color var(--grow), filter var(--grow); }
+  .card-title { font-family: var(--font-display); font-size: 18px; font-weight: 500; margin: 0 0 var(--s4); color: var(--fg); font-variation-settings: "WONK" 1, "SOFT" 60; }
+  .section-eyebrow { font-size: var(--fs-md); font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+
+  /* ─── Toggle ─── */
+  /* Slint: Rectangle { width:40; height:22; pill; animate background 350ms } */
+  .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; display: inline-block; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border); border-radius: var(--r-pill); cursor: pointer; transition: background var(--toggle-duration) var(--ease); }
+  .toggle-track::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; background: var(--surface); border-radius: var(--r-pill); filter: drop-shadow(0 1px 2px rgba(80,70,55,0.10)); transition: transform var(--toggle-duration) var(--ease); }
+  .toggle input:checked + .toggle-track { background: var(--rep-500); }
+  .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+  .toggle input:focus-visible + .toggle-track { outline: 2px solid var(--rep-500); outline-offset: 2px; }
+
+  /* ─── Inputs / Selects ─── */
+  .input, .select { width: 100%; background: var(--elevated); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px 12px; font-size: var(--fs-body); color: var(--fg); font-family: inherit; transition: border-color var(--toggle-duration) var(--ease), background var(--grow); appearance: none; -webkit-appearance: none; }
+  .select { background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237B766C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  .input::placeholder { color: var(--faint); }
+  .input:focus, .select:focus { outline: none; border-color: var(--rep-500); }
+  .password-wrap { position: relative; }
+  .password-wrap .input { padding-right: 40px; }
+  .password-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 6px; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: color var(--toggle-duration) var(--ease), background var(--toggle-duration) var(--ease); }
+  .password-toggle:hover { color: var(--fg); background: var(--raised); }
+
+  /* ─── Default model card ─── */
+  .default-model-body { display: flex; gap: var(--s4); align-items: flex-end; flex-wrap: wrap; }
+  .select-wrap { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+  .select-label { font-size: var(--fs-lg); color: var(--muted); font-weight: 500; }
+  .hint { font-size: var(--fs-lg); color: var(--faint); margin: 12px 0 0; }
+
+  /* ─── Providers section ─── */
+  .providers-header { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .provider-list { display: flex; flex-direction: column; gap: var(--s4); }
+
+  /* ─── Provider card ─── */
+  .provider-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s5); filter: drop-shadow(0 2px 8px rgba(80,70,55,.08)); transition: border-color var(--toggle-duration) var(--ease), background var(--grow), filter var(--grow); }
+  .provider-card:hover { border-color: var(--muted); }
+  .provider-card__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .provider-card__title-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .provider-card__name { font-size: 16px; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { display: inline-flex; align-items: center; padding: 2px 10px; background: var(--raised); border-radius: var(--r-pill); font-size: var(--fs-md); color: var(--muted); white-space: nowrap; line-height: 1.4; border: 1px solid var(--border-soft); transition: background var(--grow), border-color var(--grow); }
+  .meta-row { display: flex; align-items: baseline; gap: var(--s2); margin-bottom: 6px; }
+  .meta-label { font-size: var(--fs-md); color: var(--muted); min-width: 60px; flex-shrink: 0; }
+  .meta-value { font-family: var(--font-mono); font-size: 13px; color: var(--fg); }
+  .meta-value--faint { color: var(--faint); }
+  .provider-card__footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .status--success { color: var(--abyss-500); }
+  .status--warning { color: var(--rep-500); }
+  .status--faint { color: var(--faint); }
+  .provider-card__actions { display: flex; align-items: center; gap: 4px; }
+
+  /* ─── Buttons ─── */
+  .btn-primary { display: inline-flex; align-items: center; gap: 6px; background: var(--rep-500); color: var(--on-rep); border: none; padding: 8px 16px; border-radius: var(--r-sm); font-size: var(--fs-body); font-weight: 500; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(80,70,55,0.18)); font-family: inherit; transition: background var(--toggle-duration) var(--ease); }
+  .btn-primary:hover { background: var(--rep-600); }
+  .btn-ghost { display: inline-flex; align-items: center; background: transparent; border: none; color: var(--muted); padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit; transition: color var(--toggle-duration) var(--ease), background var(--toggle-duration) var(--ease); }
+  .btn-ghost:hover { color: var(--fg); background: var(--raised); }
+  .btn-danger { display: inline-flex; align-items: center; background: transparent; border: none; color: var(--rep-500); padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background var(--toggle-duration) var(--ease); }
+  .btn-danger:hover { background: var(--halo-rep); }
+  .btn-secondary { display: inline-flex; align-items: center; background: var(--raised); border: 1px solid var(--border); color: var(--fg); padding: 8px 16px; border-radius: var(--r-sm); font-size: var(--fs-body); font-weight: 500; cursor: pointer; font-family: inherit; transition: background var(--toggle-duration) var(--ease), border-color var(--toggle-duration) var(--ease); }
+  .btn-secondary:hover { background: var(--border-soft); border-color: var(--border); }
+
+  /* ─── Add form ─── */
+  .add-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s5); margin-top: 4px; display: flex; flex-direction: column; gap: var(--s4); filter: drop-shadow(0 2px 8px rgba(80,70,55,.08)); transition: background var(--grow), border-color var(--grow), filter var(--grow); }
+  .add-form.hidden { display: none; }
+  .form-row { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: var(--fs-lg); font-weight: 500; color: var(--muted); }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+  /* ─── Delete confirm ─── */
+  .delete-confirm { display: flex; flex-direction: column; gap: 14px; }
+  .delete-confirm.hidden { display: none; }
+  .delete-confirm__text { font-size: var(--fs-body); color: var(--muted); line-height: 1.6; }
+  .delete-confirm__actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* ─── Icon helpers ─── */
+  .icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
+  .icon svg { width: 100%; height: 100%; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  /* ─── Dark mode ─── */
+  [data-theme="dark"] .nav-item.active { background: var(--halo-rep-settings); box-shadow: none; }
+  [data-theme="dark"] .nav-item.active::before { background: var(--rep-400); filter: drop-shadow(0 0 4px var(--rep-500)); }
+  [data-theme="dark"] .toggle-track::after { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+  [data-theme="dark"] .provider-card:hover { border-color: var(--border); }
 
-    --font-display: 'Fraunces', 'Times New Roman', serif;
-    --font-body: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-
-    --r-sm: 9px;
-    --r-md: 14px;
-    --r-lg: 18px;
-    --r-pill: 999px;
-    --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
-    --page-out: #1a1917;
-  }
-
-  [data-theme="dark"] {
-    --bg: #181612;
-    --surface: #211E19;
-    --elevated: #2A2620;
-    --raised: #322D26;
-    --border: #3A342C;
-    --border-soft: #2E2922;
-    --fg: #EDE8DF;
-    --muted: #A89F92;
-    --faint: #786F63;
-    --birth: #4A443B;
-    --page-out: #0c0b09;
-  }
-
-  * { box-sizing: border-box; }
-
-  html, body {
-    height: 100%;
-    margin: 0;
-    background: var(--page-out);
-    color: var(--fg);
-    font-family: var(--font-body);
-    font-size: 15px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    transition: background var(--grow);
-  }
-
-  /* 设置页淡雾：底色平铺 1.5% + 顶晕 2%（衰减 100%） */
-  .app {
-    display: flex;
-    height: 100%;
-    max-width: 1280px;
-    margin: 0 auto;
-    background: color-mix(in srgb, var(--rep-500) 1.5%, var(--bg));
-    position: relative;
-    transition: background var(--grow);
-  }
-
-  .app::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 2%, transparent) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 0;
-    transition: background var(--grow);
-  }
-
-  /* 内容层 z-index 只点名（不用 * 通配，避免压垮 absolute 的窗口控制/水印） */
-  .app > .sidebar, .app > .content {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* 窗口 chrome — 照抄范式 */
-  .win-ctrl {
-    position: absolute;
-    top: 16px;
-    right: 44px;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    z-index: 30;
-  }
-
-  .win-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--faint);
-    cursor: pointer;
-    transition: .15s;
-    border: none;
-    background: transparent;
-  }
-
-  .win-btn:hover {
-    background: var(--raised);
-    color: var(--fg);
-  }
-
-  .win-btn.close:hover {
-    background: rgba(220, 53, 69, .1);
-    color: #dc3545;
-  }
-
-  .watermark {
-    position: absolute;
-    bottom: 22px;
-    left: 44px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    opacity: .25;
-    z-index: 2;
-  }
-
-  .watermark .bt {
-    font-family: var(--font-display);
-    font-variation-settings: "WONK" 1, "SOFT" 60;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: .04em;
-  }
-
-  /* Sidebar */
-  .sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 32px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    transition: background var(--grow), border-color var(--grow);
-  }
-
-  .sidebar-title {
-    font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 500;
-    margin: 0;
-    padding: 0 24px;
-    color: var(--fg);
-    font-variation-settings: "WONK" 1, "SOFT" 60;
-  }
-
-  .nav-group {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .nav-group-label {
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0 24px;
-    margin-bottom: 4px;
-  }
-
-  .nav-item {
-    display: block;
-    padding: 8px 24px;
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 15px;
-    border-left: 3px solid transparent;
-    transition: color 350ms ease-out, background 350ms ease-out, border-color var(--grow);
-    cursor: pointer;
-    background: none;
-    border-top: none;
-    border-right: none;
-    border-bottom: none;
-    width: 100%;
-    text-align: left;
-  }
-
-  .nav-item:hover {
-    background: var(--raised);
-    color: var(--fg);
-  }
-
-  .nav-item.active {
-    background: var(--raised);
-    color: var(--fg);
-    border-left-color: var(--rep-500);
-    font-weight: 500;
-  }
-
-  .nav-item:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: -2px;
-  }
-
-  /* Content */
-  .content {
-    flex: 1;
-    padding: 32px 40px;
-    overflow-y: auto;
-    display: flex;
-    justify-content: center;
-  }
-
-  .content-inner {
-    width: 100%;
-    max-width: 720px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  /* Cards */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: 32px;
-    transition: background var(--grow), border-color var(--grow);
-  }
-
-  .card-title {
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 500;
-    margin: 0 0 16px;
-    color: var(--fg);
-    font-variation-settings: "WONK" 1, "SOFT" 60;
-  }
-
-  .section-title {
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin: 0;
-  }
-
-  /* Default model card */
-  .default-model-body {
-    display: flex;
-    gap: 16px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .select-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-    min-width: 180px;
-  }
-
-  .select-label {
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-
-  .hint {
-    font-size: 13px;
-    color: var(--faint);
-    margin: 12px 0 0;
-  }
-
-  /* Providers header */
-  .providers-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 4px;
-  }
-
-  /* Provider cards */
-  .provider-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .provider-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: 20px;
-    transition: box-shadow 350ms ease-out, border-color 350ms ease-out, background var(--grow);
-  }
-
-  .provider-card:hover {
-    border-color: var(--border-soft);
-    box-shadow: 0 2px 8px rgba(56, 53, 46, 0.04);
-  }
-
-  .provider-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-
-  .provider-card__title-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  .provider-card__name {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--fg);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    background: var(--raised);
-    border-radius: var(--r-pill);
-    font-size: 11.5px;
-    color: var(--muted);
-    white-space: nowrap;
-    line-height: 1.4;
-    border: 1px solid var(--border-soft);
-    transition: background var(--grow), border-color var(--grow);
-  }
-
-  .meta-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-
-  .meta-label {
-    font-size: 11.5px;
-    color: var(--muted);
-    min-width: 60px;
-    flex-shrink: 0;
-  }
-
-  .meta-value {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--fg);
-  }
-
-  .meta-value--faint {
-    color: var(--faint);
-  }
-
-  .provider-card__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border-soft);
-  }
-
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-
-  /* 验证状态：✓ abyss-500 / ⚠️ rep-500 */
-  .status--success {
-    color: var(--abyss-500);
-  }
-
-  .status--warning {
-    color: var(--rep-500);
-  }
-
-  .status--faint {
-    color: var(--faint);
-  }
-
-  .provider-card__actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  /* Toggle */
-  .toggle {
-    width: 36px;
-    height: 20px;
-    background: var(--birth);
-    border: none;
-    border-radius: var(--r-pill);
-    padding: 0;
-    cursor: pointer;
-    position: relative;
-    transition: background 350ms ease-out;
-    flex-shrink: 0;
-  }
-
-  .toggle[aria-checked="true"] {
-    background: var(--rep-500);
-  }
-
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 350ms ease-out;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-  }
-
-  .toggle[aria-checked="true"]::after {
-    transform: translateX(16px);
-  }
-
-  .toggle:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  /* Buttons */
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--rep-500);
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--r-sm);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 350ms ease-out, box-shadow 350ms ease-out, transform 350ms ease-out;
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--rep-500) 25%, transparent);
-    font-family: var(--font-body);
-  }
-
-  .btn-primary:hover {
-    background: var(--rep-400);
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--rep-500) 35%, transparent);
-  }
-
-  .btn-primary:active {
-    transform: translateY(1px);
-  }
-
-  .btn-primary:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: color 350ms ease-out, background 350ms ease-out;
-    font-family: var(--font-body);
-  }
-
-  .btn-ghost:hover {
-    color: var(--fg);
-    background: var(--raised);
-  }
-
-  .btn-ghost:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  .btn-danger {
-    display: inline-flex;
-    align-items: center;
-    background: transparent;
-    border: none;
-    color: var(--rep-500);
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 350ms ease-out;
-    font-family: var(--font-body);
-  }
-
-  .btn-danger:hover {
-    background: color-mix(in srgb, var(--rep-500) 8%, transparent);
-  }
-
-  .btn-danger:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    background: var(--raised);
-    border: 1px solid var(--border);
-    color: var(--fg);
-    padding: 8px 16px;
-    border-radius: var(--r-sm);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 350ms ease-out, border-color 350ms ease-out;
-    font-family: var(--font-body);
-  }
-
-  .btn-secondary:hover {
-    background: var(--border-soft);
-    border-color: var(--border);
-  }
-
-  .btn-secondary:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  /* Inputs */
-  .input, .select {
-    width: 100%;
-    background: var(--elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 9px 12px;
-    font-size: 14px;
-    color: var(--fg);
-    font-family: var(--font-body);
-    transition: box-shadow 350ms ease-out, border-color 350ms ease-out, background var(--grow);
-    appearance: none;
-  }
-
-  .select {
-    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237B766C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
-  }
-
-  .input:focus, .select:focus {
-    outline: none;
-    border-color: var(--rep-500);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--rep-500) 12%, transparent);
-  }
-
-  .input::placeholder {
-    color: var(--faint);
-  }
-
-  /* Password wrap */
-  .password-wrap {
-    position: relative;
-  }
-
-  .password-wrap .input {
-    padding-right: 40px;
-  }
-
-  .password-toggle {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    padding: 6px;
-    cursor: pointer;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: color 350ms ease-out, background 350ms ease-out;
-  }
-
-  .password-toggle:hover {
-    color: var(--fg);
-    background: var(--raised);
-  }
-
-  .password-toggle:focus-visible {
-    outline: 2px solid var(--rep-500);
-    outline-offset: 2px;
-  }
-
-  /* Add form */
-  .add-form {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: 24px;
-    margin-top: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    transition: background var(--grow), border-color var(--grow);
-  }
-
-  .add-form.hidden {
-    display: none;
-  }
-
-  .form-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .form-row-inline {
-    display: flex;
-    gap: 12px;
-  }
-
-  .form-row-inline .form-row {
-    flex: 1;
-  }
-
-  .form-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--muted);
-  }
-
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 4px;
-  }
-
-  /* Delete confirm */
-  .delete-confirm {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .delete-confirm.hidden {
-    display: none;
-  }
-
-  .delete-confirm__text {
-    font-size: 14px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .delete-confirm__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  /* Icon helpers */
-  .icon {
-    width: 16px;
-    height: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .icon svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Utility */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  /* 渗透补强 — 照抄范式 */
-  ::selection {
-    background: color-mix(in srgb, var(--rep-300) 40%, transparent);
-    color: var(--fg);
-  }
-
-  :focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--rep-500) 55%, transparent);
-    outline-offset: 2px;
-  }
-
-  /* 暗色皮肤 — 照抄范式变量覆盖 + 辉光降档 */
-  [data-theme="dark"] .app::before {
-    background: radial-gradient(ellipse 160% 120% at 50% 4%, color-mix(in srgb, var(--rep-500) 5%, transparent) 0%, transparent 100%);
-  }
-
-  [data-theme="dark"] .provider-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
-  }
-
-  [data-theme="dark"] .toggle::after {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-  }
-
-  /* 演示用亮/暗切换钮 — plan §2b */
-  .theme-toggle {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    z-index: 60;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--elevated);
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
-    transition: .2s;
-  }
-
-  .theme-toggle:hover {
-    color: var(--fg);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
 </style>
 </head>
 <body>
-  <div class="app">
+<div class="shell">
 
-    <div class="win-ctrl">
-      <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-      <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
-      <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
-    </div>
+  <!-- ══════ 顶栏（52px） ══════ -->
+  <!-- Slint: HBox { height:52; title | spacer | theme-toggle } -->
+  <div class="topbar">
+    <div class="topbar-title">设置</div>
+    <div class="topbar-spacer"></div>
+    <button class="topbar-btn" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+  </div>
 
-    <div class="watermark">
-      <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
-      <span class="bt">northing</span>
-    </div>
+  <!-- ══════ 窗口控制（右上角） ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
 
-    <nav class="sidebar" data-od-id="settings-sidebar">
-      <h1 class="sidebar-title" data-od-id="settings-title">设置</h1>
+  <!-- ══════ 品牌水印（左下角） ══════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══════ 内容行（nav | content-body） ══════ -->
+  <!-- Slint: HBox { flex:1; nav | content-body } -->
+  <div class="content">
+
+    <nav class="nav" data-od-id="settings-sidebar">
       <div class="nav-group">
         <div class="nav-group-label">偏好</div>
-        <a class="nav-item" data-od-id="nav-general">通用</a>
-        <a class="nav-item" data-od-id="nav-identity">自我认知</a>
+        <button class="nav-item" data-od-id="nav-general"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>通用</button>
+        <button class="nav-item" data-od-id="nav-identity"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>自我认知</button>
       </div>
       <div class="nav-group">
         <div class="nav-group-label">能力</div>
-        <a class="nav-item active" data-od-id="nav-models">模型</a>
-        <a class="nav-item" data-od-id="nav-workspace">工作区</a>
-        <a class="nav-item" data-od-id="nav-skills">技能</a>
-        <a class="nav-item" data-od-id="nav-mcp">MCP 服务器</a>
+        <button class="nav-item active" data-od-id="nav-models" aria-current="page"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg></span>模型</button>
+        <button class="nav-item" data-od-id="nav-workspace"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>工作区</button>
+        <button class="nav-item" data-od-id="nav-skills"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>技能</button>
+        <button class="nav-item" data-od-id="nav-mcp"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>MCP 服务器</button>
       </div>
       <div class="nav-group">
         <div class="nav-group-label">安全</div>
-        <a class="nav-item" data-od-id="nav-access">访问权限</a>
+        <button class="nav-item" data-od-id="nav-access"><span class="nav-item-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>访问权限</button>
       </div>
     </nav>
 
-    <main class="content" data-od-id="settings-content">
+    <main class="content-body" data-od-id="settings-content">
       <div class="content-inner">
         <!-- Default Model Card -->
         <div class="card" data-od-id="default-model-card">
@@ -847,11 +226,9 @@
         <!-- Providers Section -->
         <div class="providers-section">
           <div class="providers-header">
-            <h2 class="section-title" data-od-id="providers-title">供应商</h2>
+            <h2 class="section-eyebrow" data-od-id="providers-title">供应商</h2>
             <button class="btn-primary" id="btnAddProvider" data-od-id="btn-add-provider">
-              <span class="icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </span>
+              <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
               添加供应商
             </button>
           </div>
@@ -864,7 +241,7 @@
                   <span class="provider-card__name" data-od-id="provider-name-anthropic">我的 Anthropic</span>
                   <span class="pill" data-od-id="provider-type-anthropic">Anthropic</span>
                 </div>
-                <button class="toggle" role="switch" aria-checked="true" aria-label="启用 我的 Anthropic" data-od-id="toggle-anthropic"></button>
+                <label class="toggle" aria-label="启用 我的 Anthropic" data-od-id="toggle-anthropic"><input type="checkbox" checked><span class="toggle-track"></span></label>
               </div>
               <div class="provider-card__meta">
                 <div class="meta-row">
@@ -878,9 +255,7 @@
               </div>
               <div class="provider-card__footer" id="footerA">
                 <span class="status status--success" data-od-id="status-anthropic">
-                  <span class="icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </span>
+                  <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                   已验证
                 </span>
                 <div class="provider-card__actions">
@@ -905,7 +280,7 @@
                   <span class="provider-card__name" data-od-id="provider-name-local">本地代理</span>
                   <span class="pill" data-od-id="provider-type-local">自定义 (OpenAI 兼容)</span>
                 </div>
-                <button class="toggle" role="switch" aria-checked="true" aria-label="启用 本地代理" data-od-id="toggle-local"></button>
+                <label class="toggle" aria-label="启用 本地代理" data-od-id="toggle-local"><input type="checkbox" checked><span class="toggle-track"></span></label>
               </div>
               <div class="provider-card__meta">
                 <div class="meta-row">
@@ -940,7 +315,7 @@
                   <span class="provider-card__name" data-od-id="provider-name-openai">旧 OpenAI</span>
                   <span class="pill" data-od-id="provider-type-openai">OpenAI</span>
                 </div>
-                <button class="toggle" role="switch" aria-checked="false" aria-label="启用 旧 OpenAI" data-od-id="toggle-openai"></button>
+                <label class="toggle" aria-label="启用 旧 OpenAI" data-od-id="toggle-openai"><input type="checkbox"><span class="toggle-track"></span></label>
               </div>
               <div class="provider-card__meta">
                 <div class="meta-row">
@@ -954,9 +329,7 @@
               </div>
               <div class="provider-card__footer" id="footerC">
                 <span class="status status--warning" data-od-id="status-openai">
-                  <span class="icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  </span>
+                  <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                   验证失败
                 </span>
                 <div class="provider-card__actions">
@@ -1020,100 +393,91 @@
       </div>
     </main>
   </div>
+</div>
 
-  <button class="theme-toggle" id="themeToggle" title="切换亮/暗（演示）">◐</button>
+<script>
+  // Type selection -> base_url placeholder + model suggestions
+  const typeSelect = document.getElementById('providerType');
+  const urlInput = document.getElementById('providerUrl');
+  const modelInput = document.getElementById('providerModel');
+  const modelList = document.getElementById('modelList');
 
-  <script>
-    // Toggle switch
-    document.querySelectorAll('.toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const checked = btn.getAttribute('aria-checked') === 'true';
-        btn.setAttribute('aria-checked', String(!checked));
-      });
+  const presets = {
+    anthropic: { placeholder: 'api.anthropic.com', models: ['claude-sonnet-4-5','claude-opus-4','claude-haiku-4'] },
+    openai: { placeholder: 'api.openai.com', models: ['gpt-4o','gpt-4o-mini','o1-preview'] },
+    gemini: { placeholder: 'generativelanguage.googleapis.com', models: ['gemini-1.5-pro','gemini-1.5-flash'] },
+    'custom-openai': { placeholder: 'your-openai-compatible-endpoint.com', models: [] },
+    'custom-anthropic': { placeholder: 'your-anthropic-compatible-endpoint.com', models: [] }
+  };
+
+  function updateFormPreset() {
+    const key = typeSelect.value;
+    const preset = presets[key] || { placeholder: '', models: [] };
+    urlInput.placeholder = preset.placeholder;
+    modelList.innerHTML = '';
+    preset.models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      modelList.appendChild(opt);
     });
-
-    // Type selection -> base_url placeholder + model suggestions
-    const typeSelect = document.getElementById('providerType');
-    const urlInput = document.getElementById('providerUrl');
-    const modelInput = document.getElementById('providerModel');
-    const modelList = document.getElementById('modelList');
-
-    const presets = {
-      anthropic: { placeholder: 'api.anthropic.com', models: ['claude-sonnet-4-5','claude-opus-4','claude-haiku-4'] },
-      openai: { placeholder: 'api.openai.com', models: ['gpt-4o','gpt-4o-mini','o1-preview'] },
-      gemini: { placeholder: 'generativelanguage.googleapis.com', models: ['gemini-1.5-pro','gemini-1.5-flash'] },
-      'custom-openai': { placeholder: 'your-openai-compatible-endpoint.com', models: [] },
-      'custom-anthropic': { placeholder: 'your-anthropic-compatible-endpoint.com', models: [] }
-    };
-
-    function updateFormPreset() {
-      const key = typeSelect.value;
-      const preset = presets[key] || { placeholder: '', models: [] };
-      urlInput.placeholder = preset.placeholder;
-      modelList.innerHTML = '';
-      preset.models.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        modelList.appendChild(opt);
-      });
-      if (preset.models.length === 0) {
-        modelInput.removeAttribute('list');
-      } else {
-        modelInput.setAttribute('list', 'modelList');
-      }
+    if (preset.models.length === 0) {
+      modelInput.removeAttribute('list');
+    } else {
+      modelInput.setAttribute('list', 'modelList');
     }
+  }
 
-    typeSelect.addEventListener('change', updateFormPreset);
-    updateFormPreset();
+  typeSelect.addEventListener('change', updateFormPreset);
+  updateFormPreset();
 
-    // Password visibility
-    function togglePassword() {
-      const input = document.getElementById('providerKey');
-      const icon = document.getElementById('eyeIcon');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-      } else {
-        input.type = 'password';
-        icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-      }
+  // Password visibility
+  function togglePassword() {
+    const input = document.getElementById('providerKey');
+    const icon = document.getElementById('eyeIcon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    } else {
+      input.type = 'password';
+      icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
     }
+  }
 
-    // Add form toggle
-    function toggleAddForm() {
-      const form = document.getElementById('addProviderForm');
-      form.classList.toggle('hidden');
-      if (!form.classList.contains('hidden')) {
-        updateFormPreset();
-      }
+  // Add form toggle
+  function toggleAddForm() {
+    const form = document.getElementById('addProviderForm');
+    form.classList.toggle('hidden');
+    if (!form.classList.contains('hidden')) {
+      updateFormPreset();
     }
+  }
 
-    document.getElementById('btnAddProvider').addEventListener('click', toggleAddForm);
+  document.getElementById('btnAddProvider').addEventListener('click', toggleAddForm);
 
-    // Delete confirm inline
-    function showDeleteConfirm(cardId) {
-      const card = document.getElementById(cardId);
-      const footer = card.querySelector('.provider-card__footer');
-      const confirm = card.querySelector('.delete-confirm');
-      if (footer) footer.style.display = 'none';
-      if (confirm) confirm.classList.remove('hidden');
-    }
+  // Delete confirm inline
+  function showDeleteConfirm(cardId) {
+    const card = document.getElementById(cardId);
+    const footer = card.querySelector('.provider-card__footer');
+    const confirm = card.querySelector('.delete-confirm');
+    if (footer) footer.style.display = 'none';
+    if (confirm) confirm.classList.remove('hidden');
+  }
 
-    function hideDeleteConfirm(cardId) {
-      const card = document.getElementById(cardId);
-      const footer = card.querySelector('.provider-card__footer');
-      const confirm = card.querySelector('.delete-confirm');
-      if (footer) footer.style.display = '';
-      if (confirm) confirm.classList.add('hidden');
-    }
+  function hideDeleteConfirm(cardId) {
+    const card = document.getElementById(cardId);
+    const footer = card.querySelector('.provider-card__footer');
+    const confirm = card.querySelector('.delete-confirm');
+    if (footer) footer.style.display = '';
+    if (confirm) confirm.classList.add('hidden');
+  }
 
-    // 演示用亮/暗切换（默认跟随系统）— plan §2b
-    (function(){
-      const t = document.getElementById('themeToggle'); if (!t) return;
-      const set = m => { m === 'dark' ? document.documentElement.setAttribute('data-theme','dark') : document.documentElement.removeAttribute('data-theme'); t.textContent = m === 'dark' ? '◑' : '◐'; };
-      let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; set(cur);
-      t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
-    })();
-  </script>
+  // 演示用亮/暗切换（默认跟随系统）
+  (function(){
+    const t = document.getElementById('themeToggle'); if (!t) return;
+    const set = m => { m === 'dark' ? document.documentElement.setAttribute('data-theme','dark') : document.documentElement.removeAttribute('data-theme'); t.textContent = m === 'dark' ? '◑' : '◐'; };
+    let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; set(cur);
+    t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
+  })();
+</script>
 </body>
 </html>

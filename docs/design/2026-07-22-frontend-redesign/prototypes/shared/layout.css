@@ -1,0 +1,243 @@
+/* ============================================================================
+ * northing shared/layout.css — 通用布局骨架
+ * ----------------------------------------------------------------------------
+ * 用途：app shell / topbar / 内容区 / 两态切换基础。
+ * 来源：empty-state.html L72-139, settings-general.html L65-100,
+ *       theme-system.html L42-55
+ *
+ * 依赖：tokens.css（必须先引入）。
+ *
+ * 布局清单：
+ *   - html, body reset（1280x800, overflow hidden, page-out 背景）
+ *   - .app / .shell 容器（flex, 1280x800, r20, 空气染色）
+ *   - .app::before 顶晕（radial-gradient）
+ *   - .app::after 底冷雾
+ *   - .topbar 顶栏布局
+ *   - .content / .stream-area 内容区
+ *   - 两态切换基础（.collapsed / .expanded class）
+ * --------------------------------------------------------------------------*/
+
+
+/* ─── reset ─── */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  background: var(--page-out);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+
+/* ─── app shell（主容器） ─── */
+
+.app,
+.shell {
+  width: 1280px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 20px;
+  background: var(--air-rep);
+  /* box-shadow: 0 30px 80px -28px rgba(0,0,0,.5) */
+  filter: drop-shadow(0 15px 40px rgba(0,0,0,.35));
+  transition: background var(--grow);
+}
+
+/* 顶晕 — 大椭圆，代表色空气染色 */
+.app::before,
+.shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background var(--grow);
+}
+
+/* 底冷雾 — abyss 冷色 */
+.app::after,
+.shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* speaking 升档（输入聚焦时整屋染色加深） */
+.app.speaking {
+  background: var(--air-rep-speaking);
+}
+
+.app.speaking::before {
+  background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep-speaking) 0%, transparent 100%);
+}
+
+/* 设置页淡雾（底色 1.5% + 顶晕 2%） */
+.shell {
+  background: var(--air-rep-settings);
+}
+
+.shell::before {
+  background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep-settings) 0%, transparent 100%);
+}
+
+/* 内容层 z-index — 只点名，不用通配 */
+.app > .presence,
+.app > .main-row,
+.app > .stream,
+.app > .deck-wrap,
+.shell > .topbar,
+.shell > .content {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ─── topbar（设置页顶栏） ─── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+}
+
+.topbar-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+
+/* ─── content（设置页内容区） ─── */
+
+.content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stream-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+
+/* ─── main row（把手 + 流） ─── */
+
+.main-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+
+/* ─── 两态切换基础 ─── */
+
+/*
+ * 两态（收起/展开）不翻转全局明暗（handoff §5），共用同一套基底 token。
+ * .collapsed — 面板收起态（默认）
+ * .expanded  — 面板展开态
+ */
+
+.collapsed .panel {
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: width var(--toggle-duration) var(--ease),
+              opacity var(--toggle-duration) var(--ease);
+}
+
+.expanded .panel {
+  width: 320px;
+  opacity: 1;
+  transition: width var(--toggle-duration) var(--ease),
+              opacity var(--toggle-duration) var(--ease);
+}
+
+/* 面板基础样式 */
+.panel {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border-soft);
+  overflow-y: auto;
+}
+
+.panel-right {
+  border-right: none;
+  border-left: 1px solid var(--border-soft);
+}
+
+
+/* ─── 暗色覆写（app shell 级别） ─── */
+
+[data-theme="dark"] .app {
+  background: linear-gradient(
+    180deg,
+    var(--air-rep-speaking) 0%,
+    var(--air-rep) 50%,
+    var(--bg) 100%
+  );
+}
+
+[data-theme="dark"] .app.speaking {
+  background: linear-gradient(
+    180deg,
+    var(--halo-rep-speaking) 0%,
+    var(--air-rep-speaking) 50%,
+    var(--bg) 100%
+  );
+}
+
+[data-theme="dark"] .app::before {
+  background: radial-gradient(ellipse 150% 92% at 50% 1%, var(--halo-rep) 0%, transparent 90%);
+}
+
+[data-theme="dark"] .app.speaking::before {
+  background: radial-gradient(ellipse 150% 92% at 50% 1%, var(--halo-rep-speaking) 0%, transparent 90%);
+}
+
+[data-theme="dark"] .presence::before {
+  background: radial-gradient(
+    ellipse 44% 44% at 50% 30%,
+    var(--presence-halo-rep) 0%,
+    var(--presence-halo-rep-soft) 30%,
+    transparent 62%
+  );
+}

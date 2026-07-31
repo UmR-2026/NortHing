@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280">
+  <title>空间 — northing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/tokens.css">
+  <link rel="stylesheet" href="shared/components.css">
+  <link rel="stylesheet" href="shared/animations.css">
+  <link rel="stylesheet" href="shared/layout.css">
+  <style>
+  /* ======================================================================
+   * space-view.html — 空间视图（多会话全局视图）
+   * ----------------------------------------------------------------------
+   * 画布：1280×800（全宽，把手 8px 收起态）
+   * 布局：顶栏(h60) + main-row(把手8 + 会话卡片网格 + 把手8)
+   *
+   * Slint 映射：
+   *   .app           → Window root
+   *   .topbar        → HBox (compact-avatar | settings | search | filter | +new)
+   *   .main-row      → HBox (handle-L | space-content | handle-R)
+   *   .space-grid    → GridView (3 cols, gap 16, max-width 900, centered)
+   *   .session-card  → Rectangle (surface + border r-md + pad 16)
+   *   .handle-*      → Rectangle w=8 + TouchArea (toggle drawer + window resize)
+   * ====================================================================== */
+
+  /* ─── 顶栏 h60 ─── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    height: 60px;
+    padding: 0 var(--s5);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    gap: var(--s3);
+  }
+
+  /* ─── compact 名片（顶栏左侧）avatar 32px + 名字 14px ─── */
+  .compact-card {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    flex-shrink: 0;
+  }
+
+  .compact-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 2px 6px rgba(80,70,55,.18));
+    transition: background var(--grow);
+  }
+
+  .compact-avatar .glyph {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1;
+    font-size: 14px;
+    color: rgba(255, 250, 245, .88);
+    font-weight: 600;
+  }
+
+  .compact-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.3;
+  }
+
+  /* ─── 搜索框 ─── */
+  .search-box {
+    flex: 1;
+    max-width: 320px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    padding: 0 var(--s3);
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-sm);
+    transition: border-color .2s, background var(--grow);
+  }
+
+  .search-box:focus-within {
+    border-color: var(--rep-500);
+  }
+
+  .search-box svg {
+    flex-shrink: 0;
+    color: var(--faint);
+  }
+
+  .search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: var(--fs-lg);
+    color: var(--fg);
+    line-height: 1.4;
+  }
+
+  .search-box input::placeholder {
+    color: var(--faint);
+  }
+
+  /* ─── 筛选按钮 ─── */
+  .filter-btn {
+    height: 32px;
+    padding: 0 var(--s3);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border-soft);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: var(--fs-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+
+  .filter-btn:hover {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  /* ─── 新建按钮 36×36 rep-500 ─── */
+  .new-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--rep-500);
+    border: none;
+    color: var(--on-rep);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(80,70,55,.18));
+    transition: background .15s;
+  }
+
+  .new-btn:hover {
+    background: var(--rep-600);
+  }
+
+  /* ─── 内容区 ─── */
+  .space-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: var(--s5) var(--s4) 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── 页面标题区（咨询室入口感，非工具栏） ─── */
+  /* Slint: VBox { space-title (Fraunces) | space-subtitle (Noto Sans SC faint) } */
+  .space-header {
+    max-width: 900px;
+    width: 100%;
+    margin-bottom: var(--s5);
+  }
+  .space-title {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--fg);
+    letter-spacing: .01em;
+    line-height: 1.3;
+  }
+  .space-subtitle {
+    font-size: var(--fs-md);
+    color: var(--faint);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* ─── 卡片网格 3列 max-900 gap 16 ─── */
+  .space-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 900px;
+    width: 100%;
+  }
+
+  /* ─── 会话卡片 ─── */
+  .session-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-md);
+    padding: 16px;
+    cursor: pointer;
+    transition:
+      background 350ms var(--ease-out),
+      border-color 350ms var(--ease-out),
+      opacity 350ms var(--ease-out),
+      filter 350ms var(--ease-out),
+      transform 350ms var(--ease-out);
+    animation: card-appear 500ms var(--ease) both;
+  }
+
+  @keyframes card-appear {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .session-card:nth-child(1) { animation-delay: 0ms; }
+  .session-card:nth-child(2) { animation-delay: 60ms; }
+  .session-card:nth-child(3) { animation-delay: 120ms; }
+  .session-card:nth-child(4) { animation-delay: 180ms; }
+  .session-card:nth-child(5) { animation-delay: 240ms; }
+  .session-card:nth-child(6) { animation-delay: 300ms; }
+
+  /* hover: elevated 底（所有卡片共用基底） */
+  .session-card:hover {
+    background: var(--elevated);
+  }
+
+  /* 活跃会话：左 4px rep-500 竖线 + 暖光晕 — "在场，有温度" */
+  /* Slint: Rectangle { border-left-width: 4; border-left-color: rep-500;
+   *   background: surface + radial-gradient(halo-rep); } */
+  .session-card.active {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--rep-500);
+    padding-left: 12px;
+  }
+  /* 暖光晕：rep-500 径向渐变，从卡片左上散出 — agent 正在此处 */
+  .session-card.active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-md);
+    background: radial-gradient(ellipse 120% 90% at 20% 10%, var(--halo-rep) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background 350ms var(--ease-out);
+  }
+  /* 卡片内容浮于光晕之上 */
+  .session-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 活跃 hover：lift + drop-shadow + 光晕加深，体现 agent 正在此处 */
+  .session-card.active:hover {
+    filter: drop-shadow(0 4px 12px rgba(80,70,55,.12));
+    transform: translateY(-2px);
+  }
+  .session-card.active:hover::before {
+    background: radial-gradient(ellipse 140% 100% at 20% 10%, var(--presence-halo-rep-soft) 0%, transparent 70%);
+  }
+
+  /* ── 非活跃会话：沉降褪色 — 整张卡片安静下来，不只是少了橙条 ──
+   * 沉积是褪色：整卡 saturate 降低 + 文字额外降透明度。
+   * 安静但可读，hover 时恢复——像走近一间旧房间。*/
+  .session-card:not(.active):not(.sediment) {
+    filter: saturate(0.82);
+  }
+  .session-card:not(.active):not(.sediment) .card-name {
+    opacity: 0.72;
+  }
+  .session-card:not(.active):not(.sediment) .card-summary {
+    opacity: 0.5;
+  }
+  .session-card:not(.active):not(.sediment):hover {
+    filter: saturate(1);
+  }
+  .session-card:not(.active):not(.sediment):hover .card-name {
+    opacity: 0.9;
+  }
+  .session-card:not(.active):not(.sediment):hover .card-summary {
+    opacity: 0.7;
+  }
+
+  /* 沉积会话：更深的褪色 — agent 已离开，此处安静 */
+  .session-card.sediment {
+    filter: saturate(0.58) brightness(0.94);
+  }
+  .session-card.sediment .card-name {
+    opacity: 0.5;
+  }
+  .session-card.sediment .card-summary {
+    opacity: 0.35;
+  }
+  .session-card.sediment .card-time {
+    opacity: 0.6;
+  }
+  .session-card.sediment:hover {
+    filter: saturate(0.85) brightness(0.98);
+  }
+  .session-card.sediment:hover .card-name {
+    opacity: 0.7;
+  }
+  .session-card.sediment:hover .card-summary {
+    opacity: 0.5;
+  }
+
+  /* ─── 卡片内容 ─── */
+  .card-name {
+    font-size: var(--fs-lg);
+    font-weight: 500;
+    color: var(--fg);
+    line-height: 1.4;
+    margin-bottom: 6px;
+    transition: opacity 350ms var(--ease-out);
+  }
+
+  .card-summary {
+    font-size: var(--fs-body);
+    color: var(--muted);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 10px;
+    transition: opacity 350ms var(--ease-out);
+  }
+
+  .card-time {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--faint);
+    transition: opacity 350ms var(--ease-out);
+  }
+
+  /* ─── 新建卡片 — 一间新房间，不是一个按钮 ───
+   * 暖气底（air-rep）+ 虚线门框，hover 时暖光加深——像推开一间空房间的门。*/
+  /* Slint: Rectangle { background: air-rep; border: 1.5 dashed border-soft;
+   *   TouchArea { clicked => { create-session(); } } } */
+  .new-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s2);
+    min-height: 120px;
+    border: 1.5px dashed var(--border-soft);
+    border-radius: var(--r-md);
+    background: var(--air-rep);
+    cursor: pointer;
+    color: var(--faint);
+    transition: border-color .2s, color .2s, background .2s;
+  }
+
+  .new-card:hover {
+    border-color: var(--rep-400);
+    color: var(--rep-500);
+    background: var(--halo-rep);
+  }
+
+  .new-card-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .new-card-label {
+    font-size: var(--fs-lg);
+    font-weight: 400;
+  }
+
+  /* ─── 设置按钮（名片旁，与 chat-collapsed 同构）30×30 r9 ─── */
+  .topbar-settings {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    border: none;
+    background: transparent;
+    color: var(--faint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s, color .15s;
+  }
+  .topbar-settings:hover {
+    background: var(--raised);
+    color: var(--muted);
+  }
+
+  /* ─── 把手覆写：收起态超窄条（8px），仅作点击区 ─── */
+  /* Slint: Rectangle { width: 8; TouchArea { clicked => { drawer-open = !drawer-open; } } } */
+  .handle {
+    width: 8px;
+    gap: 0;
+  }
+
+  /* 收起态：隐藏 chevron 和 label，仅保留窄条可点击 */
+  .handle-chevron,
+  .handle-label {
+    display: none;
+  }
+
+  /* 收起态：窄条渗光更淡 — 左暖右冷 */
+  .handle-left {
+    border-image: linear-gradient(to bottom, transparent, rgba(200,113,76,.12), transparent) 1;
+    opacity: 0.5;
+  }
+  .handle-right {
+    border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.10), transparent) 1;
+  }
+
+  /* hover 时提示可展开 */
+  .handle-left:hover {
+    opacity: 0.9;
+    border-image: linear-gradient(to bottom, transparent, rgba(200,113,76,.3), transparent) 1;
+  }
+  .handle-right:hover {
+    border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.25), transparent) 1;
+  }
+
+  /* ─── 演示面板 ─── */
+  .demo-panel {
+    position: absolute;
+    right: 18px;
+    bottom: 60px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .demo-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--elevated);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
+    transition: color .2s;
+  }
+  .demo-btn:hover { color: var(--fg); }
+
+  .demo-color-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+  }
+  .demo-color-row.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .demo-sw {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .15s, border-color .15s;
+  }
+  .demo-sw:hover { transform: scale(1.15); }
+  .demo-sw.active { border-color: var(--fg); }
+
+  /* ─── 品牌水印 — 角落印记，半透明（设施的门牌，非主角） ─── */
+  /* Slint: Rectangle { opacity: 0.25; bottom: 22; left: 44; } */
+  .watermark {
+    opacity: 0.25;
+  }
+
+  /* ─── 滚动条 ─── */
+  .space-content::-webkit-scrollbar { width: 6px; }
+  .space-content::-webkit-scrollbar-track { background: transparent; }
+  .space-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .space-content::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+  </style>
+</head>
+<body>
+<div class="app collapsed">
+
+  <!-- ══════ 顶栏 h60 ══════ -->
+  <div class="topbar">
+    <!-- 左：compact 名片 avatar 32px + 名字 14px -->
+    <div class="compact-card">
+      <div class="compact-avatar"><span class="glyph">序</span></div>
+      <span class="compact-name">知序</span>
+    </div>
+
+    <!-- 设置 ⚙（名片旁，与 chat-collapsed 同构） -->
+    <button class="topbar-settings" title="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="搜索会话…">
+    </div>
+
+    <!-- 筛选 -->
+    <button class="filter-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      筛选
+    </button>
+
+    <span style="flex:1"></span>
+
+    <!-- 新建按钮 36×36 rep-500 -->
+    <button class="new-btn" title="新建会话">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <!-- ══════ main row（左把手 + 内容区 + 右把手） ══════ -->
+  <!-- Slint: HBox { handle-L | space-content | handle-R } -->
+  <div class="main-row">
+
+    <!-- 左把手 w8 — 暖渗光（点击展开/收起左抽屉） -->
+    <!-- Slint: Rectangle { width: 8; TouchArea { clicked => { left-drawer-open = !left-drawer-open; } } } -->
+    <div class="handle handle-left">
+      <span class="signal"></span>
+    </div>
+
+    <!-- ══════ 内容区：会话卡片网格 ══════ -->
+    <!-- Slint: ScrollView { space-header | space-grid } -->
+    <div class="space-content">
+      <!-- 页面标题（Fraunces 品牌字 — 咨询室入口，非工具栏） -->
+      <div class="space-header">
+        <h1 class="space-title">空间</h1>
+        <p class="space-subtitle">知序走过的地方</p>
+      </div>
+      <div class="space-grid">
+
+      <!-- 会话卡片：点击进入对应会话（切换到 chat-collapsed 视图） -->
+      <!-- Slint: session-card TouchArea { clicked => { open-session(session-id); } } -->
+      <!-- 会话 1：修复初始化顺序 — 活跃 — 现在 -->
+      <div class="session-card active">
+        <div class="card-name">修复初始化顺序</div>
+        <div class="card-summary">报错在配置加载之前……应该是初始化顺序的问题。</div>
+        <div class="card-time">现在</div>
+      </div>
+
+      <!-- 会话 2：登录模块重构 — 活跃 — 14:02 -->
+      <div class="session-card active">
+        <div class="card-name">登录模块重构</div>
+        <div class="card-summary">已经把登录那块拆成三个模块了。</div>
+        <div class="card-time">14:02</div>
+      </div>
+
+      <!-- 会话 3：API 对接方案 — 一般 — 昨天 -->
+      <div class="session-card">
+        <div class="card-name">API 对接方案</div>
+        <div class="card-summary">需要确认第三方 API 的认证方式。</div>
+        <div class="card-time">昨天</div>
+      </div>
+
+      <!-- 会话 4：文档整理 — 沉积 — 3天前 -->
+      <div class="session-card sediment">
+        <div class="card-name">文档整理</div>
+        <div class="card-summary">将分散的设计文档整合。</div>
+        <div class="card-time">3天前</div>
+      </div>
+
+      <!-- 会话 5：性能优化探索 — 沉积 — 1周前 -->
+      <div class="session-card sediment">
+        <div class="card-name">性能优化探索</div>
+        <div class="card-summary">分析首屏加载瓶颈。</div>
+        <div class="card-time">1周前</div>
+      </div>
+
+      <!-- 新建卡片 -->
+      <div class="new-card">
+        <div class="new-card-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <span class="new-card-label">新建会话</span>
+      </div>
+
+    </div>
+    </div>
+
+    <!-- 右把手 w8 — 冷渗光（点击展开/收起右抽屉） -->
+    <!-- Slint: Rectangle { width: 8; TouchArea { clicked => { right-drawer-open = !right-drawer-open; } } } -->
+    <div class="handle handle-right">
+    </div>
+
+  </div>
+
+  <!-- ══════ 品牌水印（左下角） ══════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══════ 窗口控制（右上角） ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- ══════ 演示面板（右下角） ══════ -->
+  <div class="demo-panel">
+    <div class="demo-color-row" id="colorRow">
+      <div class="demo-sw" style="background:#C8714C" data-rep="coral" title="珊瑚（默认）"></div>
+      <div class="demo-sw" style="background:#9B7FBF" data-rep="purple" title="紫"></div>
+      <div class="demo-sw" style="background:#4A6FA5" data-rep="blue" title="深蓝"></div>
+      <div class="demo-sw" style="background:#6B9E7A" data-rep="green" title="柔绿"></div>
+      <div class="demo-sw" style="background:#3F837B" data-rep="cyan" title="冷青"></div>
+    </div>
+    <button class="demo-btn" id="demoToggle" title="切换亮/暗 · 代表色">◐</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  /* ── 暗色切换 ── */
+  var toggle = document.getElementById('demoToggle');
+  var colorRow = document.getElementById('colorRow');
+  var cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  applyTheme(cur);
+
+  toggle.addEventListener('click', function () {
+    cur = cur === 'dark' ? 'light' : 'dark';
+    applyTheme(cur);
+  });
+
+  function applyTheme(m) {
+    if (m === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+    toggle.textContent = m === 'dark' ? '◑' : '◐';
+  }
+
+  /* ── 代表色模拟 ── */
+  var themes = {
+    coral:  { 300:'#E5A583', 400:'#D68A63', 500:'#C8714C', 600:'#A85A38' },
+    purple: { 300:'#C4A8D8', 400:'#AF94CB', 500:'#9B7FBF', 600:'#7E63A3' },
+    blue:   { 300:'#7A9CC4', 400:'#6288B5', 500:'#4A6FA5', 600:'#3A5A88' },
+    green:  { 300:'#8FBFA0', 400:'#7DB08D', 500:'#6B9E7A', 600:'#55825F' },
+    cyan:   { 300:'#7AABA4', 400:'#5A9B93', 500:'#3F837B', 600:'#2F6A63' }
+  };
+
+  var swatches = colorRow.querySelectorAll('.demo-sw');
+  swatches.forEach(function (sw) {
+    sw.addEventListener('click', function () {
+      var t = themes[sw.dataset.rep];
+      if (!t) return;
+      var r = document.documentElement.style;
+      r.setProperty('--rep-300', t[300]);
+      r.setProperty('--rep-400', t[400]);
+      r.setProperty('--rep-500', t[500]);
+      r.setProperty('--rep-600', t[600]);
+      swatches.forEach(function (s) { s.classList.remove('active'); });
+      sw.classList.add('active');
+    });
+  });
+
+  /* ── 演示面板显隐 ── */
+  toggle.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    colorRow.classList.toggle('show');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+/* ============================================================================
+ * northing shared/animations.css — 共用动画定义
+ * ----------------------------------------------------------------------------
+ * 用途：所有原型共享的 @keyframes 动画。
+ * 来源：theme-system.html L44-48, empty-state.html L88-100
+ *
+ * 动画清单：
+ *   - breathe      6s 呼吸（scale 0.985→1.015, opacity .65→1）
+ *   - auraBreath   6s 光晕呼吸（opacity .35→.7, scale .96→1.04）
+ *   - caret        1.2s 光标闪烁
+ *   - moodIn       3s 一次性淡入（opacity → .55）
+ *   - sweepGlow    0.6s 发送键光扫过
+ *
+ * 依赖：无（纯动画定义，不依赖 token）。
+ * --------------------------------------------------------------------------*/
+
+
+/* ─── 呼吸（状态点、会话横幅点） ─── */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+
+/* ─── 光晕呼吸（头像 aura） ─── */
+@keyframes auraBreath {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.04);
+  }
+}
+
+
+/* ─── 光标闪烁（打字指示器） ─── */
+@keyframes caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.15; }
+}
+
+
+/* ─── 一次性淡入（心情文字） ─── */
+@keyframes moodIn {
+  to { opacity: 0.55; }
+}
+
+
+/* ─── 心情脉冲（moodIn 后续循环） ─── */
+@keyframes moodPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.65; }
+}
+
+
+/* ─── 发送键光扫过 ─── */
+@keyframes sweepGlow {
+  0% {
+    background-position: -200% center;
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    background-position: 200% center;
+    opacity: 0;
+  }
+}
+
+
+/* ─── 空态淡入（空态页核心元素） ─── */
+@keyframes emptyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ─── 刚书写微光（opening-line 下划线） ─── */
+@keyframes shimmerIn {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+
+
+/* ─── reduced motion 全局兜底 ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

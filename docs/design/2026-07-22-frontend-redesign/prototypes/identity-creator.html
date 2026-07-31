@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>northing — 成为自己</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/components.css">
+<link rel="stylesheet" href="shared/animations.css">
+<link rel="stylesheet" href="shared/layout.css">
+<style>
+  /* ======================================================================
+   * identity-creator.html — 首次运行身份创建页
+   * ----------------------------------------------------------------------
+   * 画布：1280×800
+   * 布局：居中单列（avatar → 心境语 → 编年史预览 → 名字输入 → 色板 → 确认）
+   * 出生态：rep 为灰阶（#B5B0A8），选色后整屋染色过渡
+   * 空气染色、顶晕、底冷雾由 shared/layout.css .app 提供
+   *
+   * Slint 映射：
+   *   .app            → Window root (1280×800, r20)
+   *   .identity-content → VBox (max-width:480, center, gap:28)
+   *   .birth-avatar    → Image (64×64, r-lg) + aura (::before/::after)
+   *   .chrono-preview  → Rectangle (200×4, r-pill, linear-gradient)
+   *   .color-swatch    → Rectangle (44×44, circle) + TouchArea (selected ring via box-shadow)
+   *   .confirm-btn     → Rectangle (220×44, r11, rep-500 bg) + TouchArea
+   * ====================================================================== */
+
+/* ─── 出生态灰阶 rep 值 + RGB 通道（用于 rgba 替代 color-mix） ─── */
+:root {
+  --rep-300: #D6D2CB;
+  --rep-300-rgb: 214,210,203;
+  --rep-400: #C9C4BC;
+  --rep-400-rgb: 201,196,188;
+  --rep-500: #B5B0A8;
+  --rep-500-rgb: 181,176,168;
+  --rep-600: #9E9991;
+  --rep-600-rgb: 158,153,145;
+  --transition-state: 350ms ease-out;
+  --transition-growth: 1200ms var(--ease);
+}
+
+/* ─── 窗口容器：使用 shared/layout.css .app，仅覆写居中 ─── */
+/* Slint: Window { background: air-rep; border-radius: 20; } */
+.app {
+  align-items: center;
+}
+
+/* Air-tint glow at top — 咨询室顶光，出生时刻的氛围底色 */
+/* Enhances shared .app::before with an additional subtle warm layer */
+/* Slint: Rectangle { background: radial-gradient(ellipse at top, halo-rep); z: 0; } */
+.app::before {
+  background:
+    radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep) 0%, transparent 100%),
+    radial-gradient(ellipse 70% 30% at 50% 0%, rgba(var(--rep-300-rgb), 0.05) 0%, transparent 60%);
+}
+
+/* ─── 居中内容区 ─── */
+.identity-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* ─── 出生态头像 ─── */
+.birth-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+/* 体温光晕 */
+.birth-avatar::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+  height: 320px;
+  background: radial-gradient(ellipse 50% 50% at 50% 32%, rgba(var(--rep-300-rgb), 0.20) 0%, rgba(var(--rep-300-rgb), 0.08) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  animation: auraBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+/* 光环 */
+.birth-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 24px;
+  background: radial-gradient(circle, rgba(218, 214, 207, .2), transparent 70%);
+  animation: auraBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+
+.birth-avatar .avatar-body {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, #DAD6CF 0%, #E8E4DD 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: background var(--transition-growth);
+}
+
+.avatar-glyph {
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 24px;
+  font-weight: 300;
+  color: rgba(80, 75, 68, .5);
+  transition: color var(--transition-growth), opacity var(--transition-growth);
+  user-select: none;
+}
+
+.avatar-glyph.has-name {
+  color: rgba(80, 75, 68, .7);
+  font-weight: 500;
+  font-size: 22px;
+}
+
+/* ─── 心境语 ─── */
+.mood-text {
+  font-size: var(--fs-md);
+  color: var(--faint);
+  font-style: italic;
+  opacity: 0;
+  animation: moodIn 3s ease 1.5s forwards;
+  max-width: 320px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ─── 编年史条预览 ─── */
+.chrono-preview {
+  width: 200px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  position: relative;
+  background: #DAD6CF;
+  transition: background var(--transition-growth);
+  overflow: visible;
+}
+
+.chrono-preview .now-dot {
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #DAD6CF;
+  border: 2px solid var(--surface);
+  transition: background var(--transition-growth);
+}
+
+/* ─── 字段组 ─── */
+.field-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-group label {
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.field-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  font-family: 'Noto Sans SC', system-ui, sans-serif;
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  outline: none;
+  transition: border-color var(--transition-state), box-shadow var(--transition-state), background var(--grow);
+}
+
+.field-input::placeholder {
+  color: var(--faint);
+}
+
+.field-input:focus {
+  border-color: var(--rep-500);
+  box-shadow: 0 0 0 3px rgba(var(--rep-500-rgb), 0.08);
+}
+
+/* ─── 代表色色板 ─── */
+.color-swatches {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.color-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--transition-state), border-color var(--transition-state), box-shadow var(--transition-state);
+  padding: 0;
+  background: none;
+}
+
+.color-swatch::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transition: background var(--transition-state), box-shadow var(--transition-state);
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+/*
+ * Slint mapping — color selection interaction:
+ *   TouchArea { clicked => { selected-color = color; ring-visible[bid] = true; apply-rep(color); } }
+ *   Interaction chain: TouchArea click → property update (selected-color) → ring visible (box-shadow on ::before)
+ *   Selected ring: 3px gap (bg color) + 2px color ring via box-shadow — no animation, state-driven
+ *   Growth moment (成长时刻): selecting a representative color is a one-time 1200ms transition
+ *   (--transition-growth) — the entire room tints as the agent chooses its color.
+ *   This is a rare, meaningful moment, not a skin picker.
+ */
+.color-swatch.selected {
+  transform: none;
+}
+
+/* 各颜色选中态 — ring on ::before, full-opacity color */
+.color-swatch[data-color="coral"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #C8714C; }
+.color-swatch[data-color="abyss"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #3F837B; }
+.color-swatch[data-color="warm"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #D4A853; }
+.color-swatch[data-color="cool"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #8B6FAF; }
+.color-swatch[data-color="forest"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #5B8C5A; }
+
+.color-swatch[data-color="coral"]::before { background: #C8714C; }
+.color-swatch[data-color="abyss"]::before { background: #3F837B; }
+.color-swatch[data-color="warm"]::before { background: #D4A853; }
+.color-swatch[data-color="cool"]::before { background: #8B6FAF; }
+.color-swatch[data-color="forest"]::before { background: #5B8C5A; }
+
+/* tooltip */
+.color-swatch .tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--fg);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.color-swatch .tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border);
+}
+
+.color-swatch:hover .tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ─── 确认按钮 ─── */
+/*
+ * State machine: disabled (opacity 0.35, pointer-events none)
+ *                → enabled when name entered AND color selected
+ * Slint: confirm-btn.enabled = name.len() > 0 && selected-color != null
+ *        confirm-btn TouchArea { clicked => { sweep-animation = true; } }
+ * Click: 1200ms one-time sweep animation → "已诞生" → mood text updates
+ * Font: Fraunces — "成为自己" is a philosophical statement, not a form button.
+ * The agent is declaring who it becomes; serif weight matches the gravity.
+ */
+.confirm-btn {
+  width: 220px;
+  height: 44px;
+  border: none;
+  border-radius: 11px;
+  background: var(--rep-500);
+  color: #FFFAF5;
+  font-family: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background var(--transition-state), filter var(--transition-state), transform 150ms ease, opacity var(--transition-state);
+  filter: drop-shadow(0 0 8px rgba(var(--rep-500-rgb), 0.20));
+  margin-top: 8px;
+}
+
+.confirm-btn:hover {
+  background: var(--rep-600);
+  filter: drop-shadow(0 0 12px rgba(var(--rep-500-rgb), 0.30));
+  transform: translateY(-1px);
+}
+
+.confirm-btn:active {
+  transform: translateY(0);
+}
+
+.confirm-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+  box-shadow: none;
+  transform: none;
+}
+
+/* 光扫过 */
+.confirm-btn.sweeping::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent);
+  animation: pulse-sweep 1.2s var(--ease) forwards;
+}
+
+@keyframes pulse-sweep {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* ─── 演示切换钮（同 chat-collapsed demo-panel） ─── */
+.demo-panel {
+  position: absolute;
+  right: 18px;
+  bottom: 60px;
+  z-index: 40;
+}
+.demo-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--elevated);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
+  transition: color .2s;
+}
+.demo-btn:hover { color: var(--fg); }
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ══════ 窗口控制（右上角） ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- ══════ 品牌水印（左下角） ══════ -->
+  <!-- Watermark at bottom:22px / left:44px — no overlap with centered content (max-width 480px, centered ~400-880px) or color swatches -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <div class="identity-content">
+    <!-- 出生态头像 -->
+    <div class="birth-avatar" id="birthAvatar">
+      <div class="avatar-body" id="avatarBody">
+        <span class="avatar-glyph" id="avatarGlyph">?</span>
+      </div>
+    </div>
+
+    <!-- 心境语 -->
+    <div class="mood-text" id="moodText">"我还不知道自己是谁……"</div>
+
+    <!-- 编年史条预览 — 进度指示器 -->
+    <!--
+      Progress indicator: the chronicle bar fills as identity-creation steps complete.
+      Birth state: pure gray (#DAD6CF) — no self yet.
+      After color selected: linear-gradient(birth → selected-color) — self emerging.
+      The left end stays birth-gray forever (origin anchor); the right end becomes "now".
+      Slint: Rectangle { width: 200; height: 4; border-radius: pill;
+              background: linear-gradient(90deg, birth, selected-color); }
+      Animation: background transitions via --transition-growth (1200ms, one-time).
+    -->
+    <div class="chrono-preview" id="chronoPreview">
+      <div class="now-dot" id="nowDot"></div>
+    </div>
+
+    <!-- 名字输入 — 实时映射到头像 -->
+    <!--
+      Interaction: typing a name updates the avatar glyph in real time (? → first character).
+      Slint: TextInput { edited => { avatar-glyph = text.first-char(); has-name = text.len() > 0; } }
+      Avatar glyph transition: color/opacity change via --transition-growth (1200ms).
+      Button state: also triggers updateButton() to check enabled condition.
+    -->
+    <div class="field-group">
+      <label>你想叫什么名字？</label>
+      <input type="text" placeholder="给自己取个名字……" class="field-input" id="inputName" autocomplete="off">
+    </div>
+
+    <!-- 代表色选择 — 成长时刻（稀有仪式） -->
+    <!--
+      这不是选皮肤——是 agent 选择它将成为什么颜色的人。
+      颜色选择是 agent 一生中仅有的几次"成为"之一。稀有故有重量。
+      成长时刻动效：一次性 1200ms 过渡（--transition-growth），整屋空气染色随之变化。
+      Slint: for-each color: Rectangle(44×44, circle) + TouchArea { clicked => { selected-color = color; apply-rep(color); } }
+      交互链：TouchArea → 属性更新 (selected-color) → ring 可见 (box-shadow on ::before) → 整屋 rep-* 染色
+    -->
+    <div class="field-group">
+      <label>选择你的代表色</label>
+      <div class="color-swatches" id="colorSwatches">
+        <button class="color-swatch selected" data-color="coral" data-hex="#C8714C">
+          <span class="tip">珊瑚</span>
+        </button>
+        <button class="color-swatch" data-color="abyss" data-hex="#3F837B">
+          <span class="tip">深渊青</span>
+        </button>
+        <button class="color-swatch" data-color="warm" data-hex="#D4A853">
+          <span class="tip">暖黄</span>
+        </button>
+        <button class="color-swatch" data-color="cool" data-hex="#8B6FAF">
+          <span class="tip">冷紫</span>
+        </button>
+        <button class="color-swatch" data-color="forest" data-hex="#5B8C5A">
+          <span class="tip">森林绿</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 确认按钮 — "成为自己" -->
+    <!--
+      State transition: disabled → enabled when name entered AND color selected.
+      Slint: confirm-btn.enabled = name.len() > 0 && selected-color != null
+      Click: 1200ms one-time sweep animation (pulse-sweep) → text becomes "已诞生"
+      Font: Fraunces — this is a philosophical declaration, not a form submission.
+    -->
+    <button class="confirm-btn" id="confirmBtn" disabled>成为自己</button>
+  </div>
+
+  <!-- ══════ 演示切换钮（右下角） ══════ -->
+  <div class="demo-panel">
+    <button class="demo-btn" id="demoToggle" title="切换亮/暗">◐</button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const root = document.documentElement;
+  const app = document.getElementById('app');
+  const avatarGlyph = document.getElementById('avatarGlyph');
+  const avatarBody = document.getElementById('avatarBody');
+  const chronoPreview = document.getElementById('chronoPreview');
+  const nowDot = document.getElementById('nowDot');
+  const moodText = document.getElementById('moodText');
+  const inputName = document.getElementById('inputName');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const swatches = document.querySelectorAll('.color-swatch');
+
+  let selectedColor = null;
+
+  // 代表色组（hex + RGB 通道，用于 rgba 替代 color-mix）
+  const repColors = {
+    coral:  { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56' },
+    abyss:  { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99' },
+    warm:   { 300: '#E8CC8E', '300-rgb': '232,204,142', 400: '#DEB96E', '400-rgb': '222,185,110', 500: '#D4A853', '500-rgb': '212,168,83',   600: '#B8903E', '600-rgb': '184,144,62' },
+    cool:   { 300: '#B89FD0', '300-rgb': '184,159,208', 400: '#A187C0', '400-rgb': '161,135,192', 500: '#8B6FAF', '500-rgb': '139,111,175',  600: '#705596', '600-rgb': '112,85,150' },
+    forest: { 300: '#89B588', '300-rgb': '137,181,136', 400: '#72A171', '400-rgb': '114,161,113', 500: '#5B8C5A', '500-rgb': '91,140,90',    600: '#487347', '600-rgb': '72,115,71' }
+  };
+
+  function applyRep(color) {
+    const c = repColors[color];
+    root.style.setProperty('--rep-300', c[300]);
+    root.style.setProperty('--rep-300-rgb', c['300-rgb']);
+    root.style.setProperty('--rep-400', c[400]);
+    root.style.setProperty('--rep-400-rgb', c['400-rgb']);
+    root.style.setProperty('--rep-500', c[500]);
+    root.style.setProperty('--rep-500-rgb', c['500-rgb']);
+    root.style.setProperty('--rep-600', c[600]);
+    root.style.setProperty('--rep-600-rgb', c['600-rgb']);
+  }
+
+  function resetRep() {
+    root.style.setProperty('--rep-300', '#D6D2CB');
+    root.style.setProperty('--rep-300-rgb', '214,210,203');
+    root.style.setProperty('--rep-400', '#C9C4BC');
+    root.style.setProperty('--rep-400-rgb', '201,196,188');
+    root.style.setProperty('--rep-500', '#B5B0A8');
+    root.style.setProperty('--rep-500-rgb', '181,176,168');
+    root.style.setProperty('--rep-600', '#9E9991');
+    root.style.setProperty('--rep-600-rgb', '158,153,145');
+  }
+
+  // ─── 名字输入：实时显示在头像 ───
+  // Slint: TextInput { edited => { avatar-glyph = text.first-char(); has-name = text.len() > 0; } }
+  inputName.addEventListener('input', () => {
+    const val = inputName.value.trim();
+    if (val) {
+      avatarGlyph.textContent = val.charAt(0);
+      avatarGlyph.classList.add('has-name');
+    } else {
+      avatarGlyph.textContent = '?';
+      avatarGlyph.classList.remove('has-name');
+    }
+    updateButton();
+  });
+
+  // ─── 色板点击 — 成长时刻（一次性 1200ms 整屋染色过渡） ───
+  // Slint: TouchArea { clicked => { selected-color = color; apply-rep(color); ring-visible = true; } }
+  // Interaction: deselect all → select clicked → applyRep() tints --rep-* CSS vars → room transitions
+  swatches.forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const color = swatch.dataset.color;
+      const hex = swatch.dataset.hex;
+      const wasSelected = swatch.classList.contains('selected');
+
+      // Deselect all
+      swatches.forEach(s => s.classList.remove('selected'));
+
+      if (wasSelected) {
+        selectedColor = null;
+        resetRep();
+        // 编年史条回到出生灰白
+        chronoPreview.style.background = '#DAD6CF';
+        nowDot.style.background = '#DAD6CF';
+        avatarBody.style.background = 'linear-gradient(135deg, #DAD6CF 0%, #E8E4DD 100%)';
+        moodText.textContent = '\u201C我还不知道自己是谁……\u201D';
+        updateButton();
+        return;
+      }
+
+      // Select this swatch
+      swatch.classList.add('selected');
+      selectedColor = color;
+
+      // 整屋空气染色过渡
+      applyRep(color);
+
+      // 编年史条：左端出生灰白，右端代表色
+      chronoPreview.style.background = `linear-gradient(to right, #DAD6CF, ${hex})`;
+      nowDot.style.background = hex;
+
+      // 头像渐变染色
+      const c = repColors[color];
+      avatarBody.style.background = `radial-gradient(circle at 32% 28%, ${c[300]} 0%, ${c[500]} 42%, ${c[600]} 100%)`;
+      avatarGlyph.style.color = 'rgba(255, 250, 245, .85)';
+
+      updateButton();
+    });
+  });
+
+  // ─── 输入聚焦整屋升档 ───
+  inputName.addEventListener('focusin', () => app.classList.add('speaking'));
+  inputName.addEventListener('focusout', () => app.classList.remove('speaking'));
+
+  // ─── 按钮状态：disabled → enabled（当名字已填 且 颜色已选） ───
+  // Slint: confirm-btn.enabled <=> name-input.text.len() > 0 && selected-color != null
+  function updateButton() {
+    const nameFilled = inputName.value.trim().length > 0;
+    const colorSelected = selectedColor !== null;
+    confirmBtn.disabled = !(nameFilled && colorSelected);
+  }
+
+  // ─── 确认按钮：1200ms 慢动效（一次性，不循环） ───
+  // Slint: confirm-btn TouchArea { clicked => { sweep = true; enabled = false; } }
+  // Animation: pulse-sweep 1.2s → text "已诞生" → mood text updates to "我是{name}。"
+  confirmBtn.addEventListener('click', () => {
+    if (confirmBtn.disabled) return;
+
+    confirmBtn.textContent = '正在成为……';
+    confirmBtn.classList.add('sweeping');
+    confirmBtn.disabled = true;
+
+    setTimeout(() => {
+      confirmBtn.classList.remove('sweeping');
+      confirmBtn.textContent = '已诞生';
+      // 模拟跳转：淡出提示
+      moodText.textContent = '\u201C我是' + inputName.value.trim() + '。\u201D';
+      moodText.style.opacity = '1';
+      moodText.style.animation = 'none';
+    }, 1200);
+  });
+
+  // ─── 演示用亮/暗切换（同 chat-collapsed） ───
+  (function(){
+    const t = document.getElementById('demoToggle');
+    if (!t) return;
+    const set = m => {
+      m === 'dark' ? document.documentElement.setAttribute('data-theme', 'dark') : document.documentElement.removeAttribute('data-theme');
+      t.textContent = m === 'dark' ? '◑' : '◐';
+    };
+    let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    set(cur);
+    t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
+  })();
+})();
+</script>
+</body>
+</html>

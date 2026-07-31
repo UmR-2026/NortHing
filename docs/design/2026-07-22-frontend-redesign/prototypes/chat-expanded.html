@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1280">
-  <title>northing · 知序 · 空态</title>
+  <title>northing — 知序（展开态）</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -13,25 +13,28 @@
   <link rel="stylesheet" href="shared/layout.css">
   <style>
   /* ======================================================================
-   * empty-state.html — 空态（首次进入 / 无对话）
+   * chat-expanded.html — 聊天主界面展开态（窗口 1280px，抽屉滑入）
    * ----------------------------------------------------------------------
-   * 画布：收起态 860×800（与 chat-collapsed 同构，无抽屉）
-   * 布局：顶栏(~80px) + main-row(把手8 + 空态欢迎 + 把手8) + 操控台
-   * 收起态：把手退化为 8px 窄条渗光，窗口仅含对话区
-   * 空态：无会话横幅，改为居中欢迎语 + agent 头像 + 辅助文字
-   * 设置按钮在名片旁（与 chat-collapsed 同构）
+   * 这是 chat-collapsed.html 的展开状态——同一页面，抽屉打开。
+   * 画布：1280×800（窗口物理变宽后）
+   * 布局：顶栏(~80px) + main-row(左抽屉280 + 左把手28 + 流 + 右把手28 + 右抽屉280) + 操控台
+   * 展开态：把手恢复 28px + chevron 可见，左右抽屉各 280px
+   * 点击把手 → 窗口物理收窄到 860px，抽屉滑出（切换到 chat-collapsed 状态）
+   * 设置按钮在名片旁
    *
    * Slint 映射：
-   *   .app        → Window root (set_inner_size 860 collapsed)
+   *   .app        → Window root (set_inner_size(1280, 800) — expanded state)
    *   .topbar     → HBox (avatar-card | settings | spacer)
-   *   .main-row   → HBox (handle-L | stream | handle-R)
-   *   .stream     → VBox(flex:1, centered empty-state welcome)
-   *   .empty-state → VBox(align: center, gap) — 空态欢迎区
+   *   .main-row   → HBox (drawer-L w=280 | handle-L w=28 | stream | handle-R w=28 | drawer-R w=280)
+   *   .stream     → ScrollView(flex:1, max-width:660)
+   *   .sess-banner → 会话横幅（对话流顶部，可折叠/归档）
    *   .deck       → VBox (input-row | deck-bar)
-   *   .handle-*   → Rectangle w=8 + TouchArea (toggle drawer + window resize)
+   *   .handle-*   → Rectangle w=28 + TouchArea + chevron (visible in expanded state)
+   *   .drawer-L   → Rectangle w=280 (left panel: 它的内在)
+   *   .drawer-R   → Rectangle w=280 (right panel: 身外之物)
    * ====================================================================== */
 
-  /* ─── 顶栏（~80px） — 与 chat-collapsed 同构 ─── */
+  /* ─── 顶栏（~80px） ─── */
   /* Slint: HBox { height: 80; padding: 0 24px; } */
   .topbar {
     display: flex;
@@ -139,6 +142,92 @@
     color: var(--muted);
   }
 
+  /* 会话标识（顶栏右侧）— 已移除，改为对话流内会话横幅 */
+  .sess-tag {
+    display: none;
+  }
+
+  /* ─── 会话横幅（对话流顶部，左=session / 右=归档） ─── */
+  /* Slint: HBox { } — 左 session ID 可点击折叠对话，右 归档按钮 */
+  .sess-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-md);
+    color: var(--faint);
+    letter-spacing: .02em;
+    padding: 4px 0 10px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 8px;
+    user-select: none;
+  }
+  .sess-banner .sdot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--rep-500);
+    filter: drop-shadow(0 0 3px var(--rep-400));
+    animation: breathe 6s ease-in-out infinite;
+    transition: background var(--grow);
+    flex-shrink: 0;
+  }
+  /* session ID（左侧，可点击折叠对话） */
+  .sess-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    color: var(--faint);
+    transition: color .15s;
+    background: none;
+    border: none;
+    font: inherit;
+    padding: 0;
+  }
+  .sess-toggle:hover {
+    color: var(--muted);
+  }
+  /* 折叠指示 chevron */
+  .sess-chev {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    transition: transform 250ms ease-out;
+  }
+  .sess-banner.folded .sess-chev {
+    transform: rotate(-90deg);
+  }
+  /* 会话标题 */
+  .sess-title {
+    font-size: var(--fs-md);
+  }
+  /* 折叠态：隐藏下方对话轮次 */
+  .sess-banner.folded ~ .turn,
+  .sess-banner.folded ~ .tools-wrap {
+    display: none;
+  }
+  /* 右侧归档 */
+  .sess-archive {
+    margin-left: auto;
+    font-size: var(--fs-sm);
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    padding: 3px 12px;
+    background: transparent;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+    flex-shrink: 0;
+  }
+  .sess-archive:hover {
+    color: var(--abyss-500);
+    border-color: var(--abyss-500);
+    background: var(--fog-abyss);
+  }
+
   /* ─── 把手覆写：收起态超窄条（8px），仅作点击区 ─── */
   /* Slint: Rectangle { width: 8; TouchArea { clicked => { drawer-open = !drawer-open; } } } */
   .handle {
@@ -172,107 +261,133 @@
     border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.25), transparent) 1;
   }
 
-  /* ─── 收起态窗口 860px — 与 chat-collapsed 同构 ─── */
-  /* Slint: set_inner_size(860, 800) */
+  /* ─── 对话区：把手之间居中 ─── */
+  .stream {
+    margin: 0;
+  }
+
+  /* ─── 窗口变宽 + 抽屉面板 ─── */
+  /* 收起态：窗口 860px，无抽屉 */
   .app {
     width: 860px !important;
     transition: width 350ms cubic-bezier(0.25,0.1,0.25,1);
   }
 
-  /* ─── 对话区：把手之间居中 — 空态欢迎 ─── */
-  /* Slint: VBox { flex: 1; horizontal-alignment: center; } */
-  .stream {
-    margin: 0;
+  /* 展开态：窗口 1280px，抽屉滑入 */
+  .app.expanded {
+    width: 1280px !important;
+  }
+
+  /* 抽屉面板：默认隐藏 */
+  .drawer {
+    width: 0;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--s4) var(--s2);
-    position: relative;
-    min-width: 0;
-  }
-  .stream .inner {
-    max-width: 480px;
-    width: 100%;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-  }
-
-  /* ─── 空态欢迎区（代替会话横幅 + 对话轮次） ─── */
-  /* Slint: VBox { align: center; gap: 16; } */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    animation: emptyFadeIn 1.8s var(--ease) both;
-    position: relative;
-  }
-
-  /* 居中欢迎头像 64×64 r-lg — 来自 shared .avatar */
-  /* Slint: Image { width: 64; height: 64; border-radius: 18; } */
-  .empty-state .avatar-wrap {
-    margin-bottom: var(--s4);
-  }
-
-  /* 开场白：名字 · 分隔点 · 正文 */
-  /* Slint: HBox { align: baseline; gap: 6; } */
-  .opening-line {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin-bottom: 10px;
-    position: relative;
-  }
-  .opening-name {
-    font-family: var(--font-display);
-    font-variation-settings: "WONK" 1, "SOFT" 60;
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--rep-500);
-    letter-spacing: 0.01em;
-    transition: color var(--grow);
-  }
-  .opening-dot {
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: var(--border);
-    flex-shrink: 0;
-  }
-  .opening-text {
-    font-size: 15px;
-    color: var(--fg);
-    line-height: 1.7;
-    letter-spacing: 0.01em;
-  }
-
-  /* 刚写下的微光 — 一次性渐显渐隐（沉降式动效，非无限循环） */
-  .opening-shimmer {
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--rep-300) 50%, transparent 100%);
     opacity: 0;
-    animation: shimmerIn 2.5s var(--ease) 0.6s both;
-    transition: background var(--grow);
+    flex-shrink: 0;
+    transition: width 350ms cubic-bezier(0.25,0.1,0.25,1),
+                opacity 350ms cubic-bezier(0.25,0.1,0.25,1);
   }
 
-  /* 辅助提示 */
-  .opening-hint {
-    font-size: 12px;
+  /* 展开时：左抽屉 280px */
+  .app.expanded .drawer-left {
+    width: 280px;
+    opacity: 1;
+  }
+
+  /* 展开时：右抽屉 280px */
+  .app.expanded .drawer-right {
+    width: 280px;
+    opacity: 1;
+  }
+
+  /* 抽屉内容样式 — 16px 一致间距，底部留白避开水印 */
+  .drawer-inner {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px 14px 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .drawer-left .drawer-inner {
+    border-right: 1px solid var(--border-soft);
+  }
+
+  .drawer-right .drawer-inner {
+    border-left: 1px solid var(--border-soft);
+  }
+
+  /* 抽屉分区标题 — 之间用细线分隔（沉积层次感） */
+  .drawer-title {
+    font-size: var(--fs-sm);
+    font-weight: 500;
     color: var(--faint);
-    margin-top: 14px;
-    line-height: 1.5;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0 4px;
+  }
+  /* 非首个分区标题：上方加细线 + 间距，形成视觉分隔 */
+  .drawer-title:not(:first-child) {
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 4px;
+  }
+  /* 已归档分区：更安静（agent 已离开此处） */
+  .drawer-title.archived,
+  .drawer-title.archived ~ .drawer-item {
+    opacity: 0.6;
   }
 
-  /* ─── 演示面板（右下角） — 与 chat-collapsed 同构 ─── */
+  .drawer-item {
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .drawer-item-title {
+    font-size: var(--fs-md);
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  .drawer-item-desc {
+    font-size: var(--fs-sm);
+    color: var(--muted);
+  }
+
+  .drawer-item-tag {
+    font-size: var(--fs-sm);
+    color: var(--rep-500);
+  }
+
+  .drawer-item-tag.abyss {
+    color: var(--abyss-500);
+  }
+
+  /* 展开态把手恢复可见 chevron */
+  .app.expanded .handle-chevron {
+    display: flex;
+  }
+
+  .app.expanded .handle {
+    width: 28px;
+  }
+
+  .app.expanded .handle-left {
+    opacity: 0.6;
+    border-image: linear-gradient(to bottom, transparent, var(--rep-400), transparent) 1;
+  }
+
+  .app.expanded .handle-right {
+    border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.3), transparent) 1;
+  }
+
+  /* ─── 演示面板（右下角） ─── */
   .demo-panel {
     position: absolute;
     right: 18px;
@@ -328,9 +443,9 @@
   </style>
 </head>
 <body>
-<div class="app collapsed">
+<div class="app collapsed expanded">
 
-  <!-- ══════ 顶栏（h≈80px） — 与 chat-collapsed 同构 ══════ -->
+  <!-- ══════ 顶栏（h≈80px） ══════ -->
   <!-- Slint: HBox { height: 80; padding: 0 24px; } -->
   <div class="topbar">
     <!-- 左：agent 名片 -->
@@ -343,7 +458,7 @@
         <div class="card-name">知序</div>
         <div class="card-status">
           <span class="dot"></span>
-          <span>在场</span>
+          <span>生成回复中 · 12s</span>
         </div>
         <!-- 自我认知渐变条 -->
         <div class="card-self"></div>
@@ -358,45 +473,163 @@
     <div style="flex:1"></div>
   </div>
 
-  <!-- ══════ main row（左把手 + 空态欢迎 + 右把手） ══════ -->
+  <!-- ══════ main row（左抽屉 + 左把手 + 对话流 + 右把手 + 右抽屉） ══════ -->
   <div class="main-row">
 
-    <!-- 左把手 w8 — 暖渗光（点击展开/收起左抽屉） -->
-    <!-- Slint: Rectangle { width: 8; TouchArea { clicked => { left-drawer-open = !left-drawer-open; } } } -->
-    <div class="handle handle-left">
-      <span class="signal"></span>
+    <!-- 左抽屉（它的内在）— 展开态 280px -->
+    <!-- Slint: Rectangle { width: 280; animate width { duration: 350ms; } } -->
+    <div class="drawer drawer-left">
+      <div class="drawer-inner">
+        <div class="drawer-title">它的内在</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">搜索中 · 修复初始化顺序</div>
+          <div class="drawer-item-desc">subagent · 运行中</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">待命</div>
+          <div class="drawer-item-desc">subagent · 空闲</div>
+        </div>
+        <div class="drawer-title">技能候选</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">自动重试配置加载</div>
+          <div class="drawer-item-tag">候选中 · 同类失败 ×3</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">文件读取缓存</div>
+          <div class="drawer-item-tag abyss">已固化</div>
+        </div>
+        <div class="drawer-title">意识更新</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">初始化顺序影响配置加载</div>
+          <div class="drawer-item-desc">刚刚</div>
+        </div>
+        <div class="drawer-title">已归档</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">驱力与深渊的哲学对位</div>
+          <div class="drawer-item-desc">06.28 · 封存</div>
+        </div>
+      </div>
     </div>
 
-    <!-- 空态对话区：居中欢迎语（无会话横幅、无对话轮次） -->
-    <!-- Slint: VBox { horizontal-alignment: center; } -->
+    <!-- 左把手 w28（展开态）— 暖渗光 + chevron 可见（点击收起左抽屉） -->
+    <!-- Slint: Rectangle { width: 28; TouchArea { clicked => { left-drawer-open = !left-drawer-open; } } } -->
+    <div class="handle handle-left">
+      <span class="signal"></span>
+      <button class="handle-chevron" aria-label="收起它的内在">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 6 9 12 15 18"/>
+        </svg>
+      </button>
+      <span class="handle-label">它的内在</span>
+    </div>
+
+    <!-- 对话区 margin:0, max-width 660px 居中 -->
+    <!-- Slint: ScrollView { max-width: 660; } -->
     <div class="stream">
       <div class="inner">
 
-        <div class="empty-state">
-          <!-- 居中欢迎头像 64×64 -->
-          <!-- Slint: Image { width: 64; height: 64; border-radius: 18; } -->
-          <div class="avatar-wrap">
-            <div class="avatar"><span class="glyph">序</span></div>
+        <!-- 会话横幅（左=session ID 可折叠 / 右=归档） -->
+        <!-- Slint: HBox { sess-toggle | spacer | sess-archive } -->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title">2026-07-30 · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">归档</button>
+        </div>
+
+        <!-- 轮次 1：沉积轮（知序，opacity .5） -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+
+        <!-- 轮次 2：用户轮（右对齐气泡） -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="nm" style="color:var(--muted)">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+
+        <!-- 轮次 3：活跃轮（知序，rep-500 左竖线 + 4% 面） -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
           </div>
 
-          <!-- 开场白 -->
-          <div class="opening-line">
-            <span class="opening-name">知序</span>
-            <span class="opening-dot"></span>
-            <span class="opening-text">我在。你想从哪里开始？</span>
-            <div class="opening-shimmer"></div>
+          <!-- 思考块（深渊青左缘 2px + 冷底） -->
+          <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+
+          <!-- 工具 chip × 2 -->
+          <div class="tools">
+            <!-- 已完成：冷边框冷底 -->
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <!-- 运行中：暖边框暖底 -->
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
           </div>
 
-          <!-- 辅助提示 -->
-          <span class="opening-hint">直接说话即可 · @ 引用文件 · / 调用技能</span>
+          <!-- 正文 + 光标闪烁 -->
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--muted);animation:caret 1.2s infinite">▍</span></div>
         </div>
 
       </div>
     </div>
 
-    <!-- 右把手 w8 — 冷渗光（点击展开/收起右抽屉） -->
-    <!-- Slint: Rectangle { width: 8; TouchArea { clicked => { right-drawer-open = !right-drawer-open; } } } -->
+    <!-- 右把手 w28（展开态）— 冷渗光 + chevron 可见（点击收起右抽屉） -->
+    <!-- Slint: Rectangle { width: 28; TouchArea { clicked => { right-drawer-open = !right-drawer-open; } } } -->
     <div class="handle handle-right">
+      <button class="handle-chevron" aria-label="收起身外之物">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 6 15 12 9 18"/>
+        </svg>
+      </button>
+      <span class="handle-label">身外之物</span>
+    </div>
+
+    <!-- 右抽屉（身外之物）— 展开态 280px -->
+    <!-- Slint: Rectangle { width: 280; animate width { duration: 350ms; } } -->
+    <div class="drawer drawer-right">
+      <div class="drawer-inner">
+        <div class="drawer-title">此刻的任务</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">修复初始化顺序</div>
+          <div class="drawer-item-tag">进行中</div>
+        </div>
+        <div class="drawer-title">产物</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">main.rs</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">config.yaml</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+        <div class="drawer-title">浏览 · 画布</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">src/main.rs</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">src/config.rs</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">Cargo.toml</div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -408,11 +641,10 @@
       <!-- 输入区 -->
       <div class="deck-input">
         <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
-        <!-- 发送键 36×36 r11（空态 = ↑发送，未输入禁用态） -->
-        <button class="btn-send" title="发送" style="opacity:.5">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="19" x2="12" y2="5"/>
-            <polyline points="5 12 12 5 19 12"/>
+        <!-- 发送键 36×36 r11（生成中态 = ■ 停止） -->
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2.5"/>
           </svg>
         </button>
       </div>
@@ -451,13 +683,13 @@
 
         <span class="deck-bar-spacer"></span>
 
-        <!-- ctx 圆环 SVG 20×20（空态 = 0%） -->
-        <div class="ctx-ring" title="上下文 0%" style="width:20px;height:20px">
+        <!-- ctx 圆环 SVG 20×20（abyss-500 前景, 38%） -->
+        <div class="ctx-ring" title="上下文 38%" style="width:20px;height:20px">
           <svg width="20" height="20" viewBox="0 0 20 20">
             <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
-            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="47.1" transform="rotate(-90 10 10)"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
           </svg>
-          <span class="ctx-label" style="font-size:7px">0</span>
+          <span class="ctx-label" style="font-size:7px">38</span>
         </div>
       </div>
     </div>
@@ -546,6 +778,35 @@
     deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
     deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
   }
+
+  /* ── 把手点击 → 窗口物理收窄 + 抽屉滑出（切换到收起态） ── */
+  /* Slint: set_inner_size() + animate drawer width */
+  var handleL = document.querySelector('.handle-left');
+  var handleR = document.querySelector('.handle-right');
+
+  handleL.addEventListener('click', function () {
+    app.classList.toggle('expanded');
+  });
+
+  handleR.addEventListener('click', function () {
+    app.classList.toggle('expanded');
+  });
+
+  /* ── 会话横幅：左 session 点击折叠对话，右 归档独立 ── */
+  var sessBanner = document.getElementById('sessBanner');
+  var sessToggle = sessBanner.querySelector('.sess-toggle');
+  var sessArchive = sessBanner.querySelector('.sess-archive');
+
+  sessToggle.addEventListener('click', function () {
+    sessBanner.classList.toggle('folded');
+  });
+
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    // 归档后：横幅淡出，会话进入左抽屉"已归档" + 设置/档案馆
+    sessBanner.style.transition = 'opacity .4s';
+    sessBanner.style.opacity = '0.3';
+  });
 })();
 </script>
 </body>

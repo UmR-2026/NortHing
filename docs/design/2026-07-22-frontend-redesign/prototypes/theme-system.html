@@ -2,188 +2,369 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=1280">
 <title>NortHing · 代表色主题系统 v3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/components.css">
+<link rel="stylesheet" href="shared/animations.css">
+<link rel="stylesheet" href="shared/layout.css">
 <style>
-  :root{
-    --rep-300:#E5A583;--rep-400:#D68A63;--rep-500:#C8714C;--rep-600:#A85A38;
-    --abyss-300:#7AABA4;--abyss-400:#5A9B93;--abyss-500:#3F837B;
-    --bg:#F4F3F0;--surface:#FBFAF8;--elevated:#FFFFFF;--raised:#EFEDE8;
-    --border:#E6E3DD;--border-soft:#ECEAE5;
-    --fg:#38352E;--muted:#7B766C;--faint:#A8A398;
-    --birth:#DAD6CF;
-    --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;
-    --fs-sm:10px;--fs-md:11.5px;--fs-lg:13px;
-    --r-sm:9px;--r-md:14px;--r-lg:18px;--r-pill:999px;
-    --grow:1200ms cubic-bezier(0.25,0.1,0.25,1);
-    --page-out:#1a1917;
+  /* ─── 页面特有：--page-out 用于 body 背景 ─── */
+  :root { --page-out: #1a1917; }
+  [data-theme="dark"] { --page-out: #0c0b09; }
+
+  /* ─── 设置页骨架：.shell > .topbar + .content（纵向） ─── */
+  /* .shell 由 shared/layout.css 提供：1280×800, r20, 空气染色（settings 淡雾） */
+
+  /* 内容区 — 纵向可滚动 */
+  .content {
+    flex-direction: column;
+    padding: 24px 40px 32px;
+    gap: 20px;
+    overflow-y: auto;
   }
-  [data-theme="dark"]{
-    --bg:#181612;--surface:#211E19;--elevated:#2A2620;--raised:#322D26;
-    --border:#3A342C;--border-soft:#2E2922;
-    --fg:#EDE8DF;--muted:#A89F92;--faint:#786F63;
-    --birth:#4A443B;--page-out:#0c0b09;
+
+  /* 顶栏 */
+  .topbar {
+    border-bottom: 1px solid var(--border-soft);
   }
-  [data-theme="dark"] #app{background:linear-gradient(180deg, color-mix(in srgb, var(--rep-500) 6%, var(--bg)) 0%, color-mix(in srgb, var(--rep-500) 2.2%, var(--bg)) 50%, var(--bg) 100%)}
-  [data-theme="dark"] #app.speaking{background:linear-gradient(180deg, color-mix(in srgb, var(--rep-500) 8%, var(--bg)) 0%, color-mix(in srgb, var(--rep-500) 3%, var(--bg)) 50%, var(--bg) 100%)}
-  [data-theme="dark"] #app::before{background:radial-gradient(ellipse 150% 92% at 50% 1%,color-mix(in srgb,var(--rep-500) 7%,transparent) 0%,transparent 90%)}
-  [data-theme="dark"] #app.speaking::before{background:radial-gradient(ellipse 150% 92% at 50% 1%,color-mix(in srgb,var(--rep-500) 10%,transparent) 0%,transparent 90%)}
-  [data-theme="dark"] .presence::before{background:radial-gradient(ellipse 44% 44% at 50% 30%,color-mix(in srgb,var(--rep-500) 15%,transparent) 0%,color-mix(in srgb,var(--rep-500) 5%,transparent) 30%,transparent 62%)}
-  [data-theme="dark"] .think{background:rgba(63,131,123,.1)}
-  [data-theme="dark"] .avatar::after{background:radial-gradient(circle at 68% 72%, rgba(63,131,123,.3) 0%, transparent 46%)}
-  [data-theme="dark"] .user-bubble{box-shadow:0 2px 12px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3)}
-  .demo-mode{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .mode-seg{display:flex;background:var(--raised);border-radius:7px;padding:3px;gap:2px}
-  .mode-opt{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;padding:4px 12px;border-radius:5px;cursor:pointer;transition:.15s}
-  .mode-opt.active{background:var(--elevated);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--page-out);color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:24px;transition:background var(--grow)}
-  @keyframes breathe{0%,100%{opacity:.65;transform:scale(.985)}50%{opacity:1;transform:scale(1.015)}}
-  @keyframes auraBreath{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.7;transform:scale(1.04)}}
-  @keyframes caret{0%,100%{opacity:1}50%{opacity:.15}}
-  @keyframes moodIn{to{opacity:.55}}
-  @keyframes moodPulse{0%,100%{opacity:.4}50%{opacity:.65}}
+  .topbar-title {
+    font-family: var(--font-display);
+    font-variation-settings: "WONK" 1, "SOFT" 60;
+  }
+  .topbar-meta {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--faint);
+    letter-spacing: .04em;
+  }
 
-  #app{width:1280px;height:800px;background:linear-gradient(180deg, color-mix(in srgb, var(--rep-500) 3.2%, var(--bg)) 0%, color-mix(in srgb, var(--rep-500) 1.3%, var(--bg)) 50%, var(--bg) 100%);border-radius:20px;transition:background var(--grow);overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 30px 80px -28px rgba(0,0,0,.5)}
-  #app::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 150% 92% at 50% 1%,color-mix(in srgb,var(--rep-500) 5.5%,transparent) 0%,transparent 90%);pointer-events:none;z-index:0;transition:background var(--grow)}
-  #app::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 30% at 50% 100%,color-mix(in srgb,var(--abyss-500) 1.5%,transparent) 0%,transparent 60%);pointer-events:none;z-index:0}
-  #app.speaking{background:linear-gradient(180deg, color-mix(in srgb, var(--rep-500) 4.2%, var(--bg)) 0%, color-mix(in srgb, var(--rep-500) 1.8%, var(--bg)) 50%, var(--bg) 100%)}
-  #app.speaking::before{background:radial-gradient(ellipse 150% 92% at 50% 1%,color-mix(in srgb,var(--rep-500) 8%,transparent) 0%,transparent 90%)}
-  #app>.presence,#app>.stream,#app>.deck-wrap{position:relative;z-index:1}
+  /* 亮/暗切换钮（顶栏内） */
+  .mode-seg {
+    display: flex;
+    background: var(--raised);
+    border-radius: 7px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .mode-opt {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .mode-opt.active {
+    background: var(--elevated);
+    color: var(--fg);
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  }
 
-  /* ─── 在场区 ─── */
-  .presence{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 0 20px;flex-shrink:0;position:relative}
-  .presence::before{content:'';position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:520px;height:340px;background:radial-gradient(ellipse 46% 46% at 50% 30%,color-mix(in srgb,var(--rep-500) 20%,transparent) 0%,color-mix(in srgb,var(--rep-500) 7%,transparent) 30%,transparent 64%);pointer-events:none;z-index:-1;transition:background var(--grow)}
-  .avatar-wrap{position:relative;width:64px;height:64px}
-  .avatar-wrap::after{content:'';position:absolute;inset:-8px;border-radius:24px;background:radial-gradient(circle,color-mix(in srgb,var(--rep-400) 20%,transparent),transparent 70%);animation:auraBreath 6s ease-in-out infinite;transition:background var(--grow)}
-  .avatar{width:64px;height:64px;border-radius:18px;position:relative;overflow:hidden;background:radial-gradient(circle at 32% 28%,var(--rep-300) 0%,var(--rep-500) 42%,color-mix(in srgb,var(--rep-600) 72%,#241a12) 100%);box-shadow:0 4px 16px color-mix(in srgb,var(--rep-500) 28%,transparent),inset 0 1px 3px rgba(255,255,255,.25);transition:background var(--grow),box-shadow var(--grow),transform .3s ease}
-  .avatar:hover{transform:scale(1.04)}
-  .avatar::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 68% 72%,rgba(63,131,123,.4) 0%,transparent 46%)}
-  .avatar .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-variation-settings:"WONK" 1;font-size:26px;color:rgba(255,250,245,.88);font-weight:600}
-  .p-name{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:18px;font-weight:500;color:var(--fg);letter-spacing:.01em}
-  .p-state{display:flex;align-items:center;gap:7px;font-size:var(--fs-md);color:var(--muted)}
-  .p-state .dot{width:6px;height:6px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 7px var(--rep-400);animation:breathe 6s ease-in-out infinite;transition:background var(--grow),box-shadow var(--grow)}
-  .p-chrono{width:140px;height:4px;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--birth) 0%,color-mix(in srgb,var(--rep-300) 62%,var(--birth)) 55%,var(--rep-500) 88%,var(--rep-400) 100%);transition:background var(--grow)}
-  .p-mood{font-size:var(--fs-md);color:var(--faint);font-style:italic;opacity:0;animation:moodIn 3s ease 1.5s forwards,moodPulse 8s ease-in-out 4.5s infinite;max-width:320px;text-align:center;line-height:1.6}
+  /* ─── 卡片 ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 24px 28px;
+    transition: background var(--grow), border-color var(--grow);
+  }
+  .card-h {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-h .tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--faint);
+    text-transform: none;
+    letter-spacing: 0;
+    background: var(--raised);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
 
-  /* 品牌水印 — 右上角 */
-  .watermark{position:absolute;bottom:22px;left:44px;display:flex;align-items:center;gap:6px;opacity:.25;z-index:2}
-  .watermark .bt{font-family:'Fraunces',serif;font-variation-settings:"WONK" 1,"SOFT" 60;font-size:11px;color:var(--muted);letter-spacing:.04em}
+  /* ─── 色板行 ─── */
+  .swatch-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .swatch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 84px;
+  }
+  .swatch-chip {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    transition: background var(--grow), border-color var(--grow);
+  }
+  .swatch-chip.round { border-radius: 50%; }
+  .swatch-name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .swatch-hex {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--faint);
+  }
 
-  /* 窗口控制 */
-  .win-ctrl{position:absolute;top:16px;right:44px;display:flex;align-items:center;gap:2px;z-index:30}
-  .win-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:pointer;transition:.15s;border:none;background:transparent}
-  .win-btn:hover{background:var(--raised);color:var(--fg)}
-  .win-btn.close:hover{background:rgba(220,53,69,.1);color:#dc3545}
+  /* ─── 字体样本 ─── */
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--faint);
+    width: 120px;
+    flex-shrink: 0;
+  }
+  .type-sample {
+    color: var(--fg);
+    flex: 1;
+  }
+  .type-sample.display { font-family: var(--font-display); font-variation-settings: "WONK" 1, "SOFT" 60; }
+  .type-sample.body { font-family: var(--font-body); }
+  .type-sample.mono { font-family: var(--font-mono); }
 
-  /* 把手 */
-  .handle{position:absolute;top:0;bottom:0;width:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;cursor:pointer}
-  .handle.left{left:0}
-  .handle.right{right:0}
-  .handle .hi{width:26px;height:26px;border-radius:8px;color:var(--faint);transition:.15s}
-  .handle .hi:hover{background:var(--raised);color:var(--muted)}
-  .handle .vlabel{writing-mode:vertical-rl;font-size:var(--fs-sm);letter-spacing:.16em;color:var(--faint);margin-top:var(--s1)}
-  .handle .signal{position:absolute;top:20px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 6px var(--rep-400);transition:background var(--grow),box-shadow var(--grow)}
-  .handle.left{box-shadow:inset -8px 0 14px -10px color-mix(in srgb,var(--rep-400) 34%,transparent);transition:box-shadow var(--grow)}
-  .handle.right{box-shadow:inset 8px 0 14px -10px rgba(63,131,123,.3)}
+  /* ─── 间距阶梯 ─── */
+  .space-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 0;
+  }
+  .space-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--faint);
+    width: 60px;
+    flex-shrink: 0;
+  }
+  .space-bar {
+    height: 16px;
+    background: var(--rep-400);
+    border-radius: 3px;
+    transition: background var(--grow);
+  }
+  .space-px {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
 
-  /* ─── 对话流 ─── */
-  .stream{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:var(--s4) var(--s2);margin:0 34px}
-  .stream .inner{max-width:660px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:22px}
-  .sess-banner{display:flex;align-items:center;justify-content:center;gap:8px;font-size:var(--fs-md);color:var(--muted);letter-spacing:.02em;margin-bottom:4px}
-  .sess-banner .sdot{width:5px;height:5px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 6px var(--rep-400);animation:breathe 6s ease-in-out infinite;transition:background var(--grow),box-shadow var(--grow)}
-  .turn{display:flex;flex-direction:column;gap:10px;position:relative}
-  .turn.sediment{opacity:.5;transition:opacity .35s ease}
-  .turn.sediment:hover{opacity:.7}
-  .turn.active{padding:var(--s3) var(--s4);background:color-mix(in srgb,var(--rep-500) 4%,transparent);border-radius:var(--r-md);border-left:2.5px solid var(--rep-500);transition:background var(--grow),border-color var(--grow)}
-  .turn-head{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--faint)}
-  .turn-head .nm{font-size:var(--fs-lg);font-weight:500;color:var(--muted)}
-  .turn.active .turn-head .nm{color:var(--rep-600);transition:color var(--grow)}
-  .turn-head .ts{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm)}
-  .msg{font-size:15px;line-height:1.82;font-weight:400;color:var(--fg)}
-  .turn.active .msg{font-weight:450}
-  .user-bubble{align-self:flex-end;max-width:76%;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-md);padding:11px var(--s4);font-size:15px;line-height:1.78;box-shadow:0 2px 12px rgba(80,70,55,.10), 0 1px 2px rgba(80,70,55,.06)}
-  .think{font-size:var(--fs-lg);color:var(--muted);line-height:1.7;border-left:2px solid var(--abyss-400);background:rgba(63,131,123,.05);padding:var(--s2) var(--s3);border-radius:0 var(--r-sm) var(--r-sm) 0}
-  .tools{display:flex;flex-wrap:wrap;gap:var(--s2)}
-  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px var(--s3);color:var(--muted);transition:border-color .35s ease-out,background .35s ease-out}
-  .chip .ci{font-family:'JetBrains Mono',monospace;font-size:11px}
-  .chip .cd{color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm)}
-  .chip.running{border-color:color-mix(in srgb,var(--rep-500) 35%,transparent);background:color-mix(in srgb,var(--rep-500) 5%,var(--elevated))}
-  .chip.running .ci{color:var(--rep-500)}
-  .chip.done{border-color:rgba(63,131,123,.3);background:color-mix(in srgb, var(--abyss-500) 8%, var(--elevated))}
-  .chip.done .ci{color:var(--abyss-500)}
-  .turn-meta{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
-  .turn-meta .mi b{color:var(--muted);font-weight:400}
-  .turn-meta .live{color:var(--rep-500);transition:color var(--grow)}
+  /* ─── 圆角阶梯 ─── */
+  .radius-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .radius-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .radius-box {
+    width: 52px;
+    height: 52px;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    transition: background var(--grow), border-color var(--grow);
+  }
 
-  /* ─── 操控台 ─── */
-  .deck-wrap{padding:6px var(--s2) 20px;margin:0 34px}
-  .deck{max-width:660px;margin:0 auto;background:var(--elevated);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 6px 24px -10px rgba(80,70,55,.18);transition:border-color .2s,box-shadow .2s}
-  .deck:focus-within{border-color:color-mix(in srgb,var(--rep-500) 35%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--rep-500) 8%,transparent),0 6px 24px -10px rgba(80,70,55,.18)}
-  .deck::before{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--rep-500) 40%,transparent),transparent);transition:background var(--grow)}
-  .deck-input{display:flex;align-items:flex-end;gap:10px;padding:14px var(--s4) 10px}
-  .deck-input textarea{flex:1;background:transparent;border:none;outline:none;resize:none;color:var(--fg);font-family:'Noto Sans SC',sans-serif;font-size:14.5px;font-weight:400;line-height:1.6;min-height:26px;max-height:120px}
-  .deck-input textarea::placeholder{color:var(--faint)}
-  .send{width:36px;height:36px;border-radius:11px;background:var(--rep-500);border:none;color:#FFF9F5;cursor:pointer;flex-shrink:0;box-shadow:0 2px 8px color-mix(in srgb,var(--rep-500) 28%,transparent);transition:background .15s,box-shadow var(--grow)}
-  .send:hover{background:var(--rep-600)}
-  .deck-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-top:1px solid var(--border-soft)}
-  .db{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:transparent;border:1px solid transparent;padding:5px 9px;border-radius:var(--r-sm);cursor:pointer;transition:.15s}
-  .db:hover{background:var(--raised);color:var(--fg)}
-  .db .di{color:var(--faint)}
-  .db .di.rep{color:var(--rep-500);transition:color var(--grow)}
-  .db .chev{color:var(--faint);font-size:9px}
-  .db.access{color:var(--abyss-500)}
-  .db.access .di{color:var(--abyss-400)}
-  .think-ctrl{display:inline-flex;align-items:center;gap:8px;padding:5px 9px;border-radius:var(--r-sm);cursor:pointer}
-  .think-ctrl:hover{background:var(--raised)}
-  .think-ctrl .tl{font-size:12px;color:var(--muted)}
-  .think-bar{display:flex;gap:3px}
-  .think-bar .seg{width:14px;height:6px;border-radius:3px;background:var(--border)}
-  .think-bar .seg.on{background:var(--rep-400);transition:background var(--grow)}
-  .ctx-ring{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;cursor:pointer;border-radius:var(--r-sm)}
-  .ctx-ring:hover{background:var(--raised)}
-  .ctx-ring .cl{font-size:var(--fs-md);color:var(--faint);font-family:'JetBrains Mono',monospace}
-  .deck-bar .sp{margin-left:auto}
+  /* ─── 空气染色说明 ─── */
+  .airtint-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .airtint-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .airtint-swatch {
+    width: 72px;
+    height: 36px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: background var(--grow);
+  }
+  .airtint-info {
+    flex: 1;
+  }
+  .airtint-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg);
+  }
+  .airtint-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+  .airtint-note {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    background: rgba(63,131,123,.06);
+    border-left: 2px solid var(--abyss-400);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    padding: 10px 14px;
+    margin-top: 4px;
+  }
+  .airtint-note b { color: var(--fg); font-weight: 500; }
 
-  /* 渗透 */
-  .stream::-webkit-scrollbar{width:8px}
-  .stream::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--rep-400) 24%,var(--border));border-radius:var(--r-pill);transition:background var(--grow)}
-  .stream::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--rep-400) 42%,var(--border))}
-  .stream::-webkit-scrollbar-track{background:transparent}
-  .stream{scrollbar-color:color-mix(in srgb,var(--rep-400) 24%,var(--border)) transparent;scrollbar-width:thin}
-  ::selection{background:color-mix(in srgb,var(--rep-300) 40%,transparent);color:var(--fg)}
-  :focus-visible{outline:2px solid color-mix(in srgb,var(--rep-500) 55%,transparent);outline-offset:2px}
+  /* ─── 代表色演示（原 demo-panel 内容，改为内联卡片） ─── */
+  .demo-rule {
+    font-size: var(--fs-md);
+    line-height: 1.65;
+    color: var(--muted);
+    background: rgba(63,131,123,.06);
+    border-left: 2px solid var(--abyss-400);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    padding: 9px 11px;
+    margin-bottom: 16px;
+  }
+  .demo-rule b { color: var(--fg); font-weight: 500; }
+  .demo-h {
+    font-size: var(--fs-sm);
+    letter-spacing: .1em;
+    color: var(--faint);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 9px;
+    text-transform: uppercase;
+  }
+  .demo-swatches {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .demo-sw {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2.5px solid transparent;
+    cursor: pointer;
+    position: relative;
+    transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .demo-sw:hover { transform: translateY(-2px); }
+  .demo-sw.active {
+    border-color: var(--fg);
+    box-shadow: 0 0 0 2px var(--surface), 0 3px 9px rgba(80,70,55,.2);
+  }
+  .demo-sw .tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(3px);
+    white-space: nowrap;
+    background: var(--fg);
+    color: var(--surface);
+    font-size: var(--fs-sm);
+    padding: 4px 8px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: .18s;
+  }
+  .demo-sw:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .demo-cap {
+    font-size: var(--fs-md);
+    color: var(--muted);
+    min-height: 18px;
+    margin: 4px 0 14px;
+  }
+  .demo-chrono {
+    height: 9px;
+    border-radius: var(--r-pill);
+    background: var(--birth);
+    position: relative;
+    overflow: visible;
+    margin-bottom: 5px;
+    transition: background var(--grow);
+  }
+  .demo-chrono .nd {
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--rep-500);
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--rep-500) 40%, transparent);
+    transition: background var(--grow);
+  }
+  .demo-chrono-marks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--faint);
+    letter-spacing: .04em;
+    margin-bottom: 13px;
+  }
+  .demo-readout {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--fs-sm);
+    color: var(--muted);
+    line-height: 1.7;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 11px;
+  }
+  .demo-readout .k { color: var(--faint); }
 
-  /* ─── 演示抽屉 ─── */
-  .demo-fab{position:absolute;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:var(--r-pill);background:var(--elevated);border:1px solid var(--border);box-shadow:0 6px 18px -8px rgba(80,70,55,.3);cursor:pointer;font-size:var(--fs-md);color:var(--muted);transition:.2s}
-  .demo-fab:hover{color:var(--fg);box-shadow:0 8px 22px -8px rgba(80,70,55,.38)}
-  .demo-fab .pip{width:12px;height:12px;border-radius:50%;background:var(--rep-500);box-shadow:0 0 7px color-mix(in srgb,var(--rep-500) 50%,transparent);transition:background var(--grow),box-shadow var(--grow)}
-  .demo-panel{position:absolute;right:18px;bottom:64px;z-index:40;width:330px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:0 18px 50px -16px rgba(80,70,55,.42);padding:18px;opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .25s ease,transform .25s ease}
-  .demo-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
-  .demo-rule{font-size:var(--fs-md);line-height:1.65;color:var(--muted);background:rgba(63,131,123,.06);border-left:2px solid var(--abyss-400);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:9px 11px;margin-bottom:14px}
-  .demo-rule b{color:var(--fg);font-weight:500}
-  .demo-h{font-size:var(--fs-sm);letter-spacing:.1em;color:var(--faint);font-family:'JetBrains Mono',monospace;margin-bottom:9px}
-  .demo-swatches{display:flex;gap:10px;margin-bottom:6px}
-  .demo-sw{width:30px;height:30px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;position:relative;transition:transform .2s,border-color .2s,box-shadow .2s}
-  .demo-sw:hover{transform:translateY(-2px)}
-  .demo-sw.active{border-color:var(--fg);box-shadow:0 0 0 2px var(--surface),0 3px 9px rgba(80,70,55,.2)}
-  .demo-sw .tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(3px);white-space:nowrap;background:var(--fg);color:var(--surface);font-size:var(--fs-sm);padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:.18s}
-  .demo-sw:hover .tip{opacity:1;transform:translateX(-50%) translateY(0)}
-  .demo-cap{font-size:var(--fs-md);color:var(--muted);min-height:18px;margin:4px 0 14px}
-  .demo-chrono{height:9px;border-radius:var(--r-pill);background:var(--birth);position:relative;overflow:visible;margin-bottom:5px;transition:background var(--grow)}
-  .demo-chrono .nd{position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:50%;background:var(--rep-500);border:2px solid var(--surface);box-shadow:0 0 6px color-mix(in srgb,var(--rep-500) 40%,transparent);transition:background var(--grow)}
-  .demo-chrono-marks{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);letter-spacing:.04em;margin-bottom:13px}
-  .demo-readout{font-family:'JetBrains Mono',monospace;font-size:var(--fs-sm);color:var(--muted);line-height:1.7;border-top:1px solid var(--border-soft);padding-top:11px}
-  .demo-readout .k{color:var(--faint)}
+  /* ─── 滚动条 ─── */
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+  .content::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+  /* ─── 暗色覆写（页面特有） ─── */
+  [data-theme="dark"] .mode-opt.active {
+    box-shadow: 0 1px 3px rgba(0,0,0,.35), 0 1px 1px rgba(0,0,0,.25);
+  }
 </style>
 </head>
 <body>
-<div id="app">
+<div class="shell">
 
   <div class="win-ctrl">
     <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
@@ -196,95 +377,286 @@
     <span class="bt">northing</span>
   </div>
 
-  <div class="handle left">
-    <span class="signal"></span>
-    <div class="hi ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div>
-    <span class="vlabel">内在</span>
-  </div>
-  <div class="handle right">
-    <div class="hi ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-    <span class="vlabel">外物</span>
-  </div>
-
-  <!-- 在场区 -->
-  <div class="presence">
-    <div class="avatar-wrap">
-      <div class="avatar"><span class="glyph">序</span></div>
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <span class="topbar-title">主题系统</span>
+    <span class="topbar-meta">范式真值 · v3</span>
+    <div class="topbar-spacer"></div>
+    <div class="mode-seg" id="modeSeg">
+      <button class="mode-opt" data-mode="light">亮</button>
+      <button class="mode-opt" data-mode="dark">暗</button>
     </div>
-    <div class="p-name">知序</div>
-    <div class="p-state"><span class="dot"></span> 生成回复中 · 12s</div>
-    <div class="p-chrono"></div>
-    <div class="p-mood">"今天想安静地把这件事做透。"</div>
   </div>
 
-  <!-- 对话流 -->
-  <div class="stream">
-    <div class="inner">
-      <div class="sess-banner"><span class="sdot"></span> 登录模块重构</div>
-      <div class="turn sediment">
-        <div class="turn-head"><span class="nm">知序</span><span class="ts">14:02</span></div>
-        <div class="msg">已经把登录那块拆成三个模块了。</div>
-      </div>
-      <div class="turn">
-        <div class="turn-head"><span class="nm" style="color:var(--muted)">你</span><span class="ts">14:31</span></div>
-        <div class="user-bubble">启动的时候报错了，看一下。</div>
-      </div>
-      <div class="turn active">
-        <div class="turn-head"><span class="dot"></span><span class="nm">知序</span><span class="ts">现在</span></div>
-        <div class="think">报错在配置加载之前……应该是初始化顺序的问题。</div>
-        <div class="tools">
-          <span class="chip done"><span class="ci">▸ read</span> src/main.rs <span class="cd">·212行 ✓</span></span>
-          <span class="chip running"><span class="ci">▸ grep</span> "init_config" <span class="cd">·检索中</span></span>
+  <!-- 内容区 -->
+  <main class="content">
+
+    <!-- 代表色色阶 -->
+    <section class="card">
+      <div class="card-h">代表色色阶 <span class="tag">rep-300 ~ rep-600</span></div>
+      <div class="swatch-row">
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--rep-300)"></div>
+          <div class="swatch-name">rep-300</div>
+          <div class="swatch-hex" id="hex-rep-300">—</div>
         </div>
-        <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--muted);animation:caret 1.2s infinite">▍</span></div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- 操控台 -->
-  <div class="deck-wrap">
-    <div class="deck">
-      <div class="deck-input">
-        <textarea placeholder="说点什么……  @ 引用文件   / 调用技能"></textarea>
-        <button class="send ic" title="生成中 · 点击停止"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg></button>
-      </div>
-      <div class="deck-bar">
-        <button class="db ic" style="padding:5px 8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <div class="think-ctrl" title="思考深度"><span class="tl">思考</span><span class="think-bar"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></span></div>
-        <button class="db"><span class="di ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span> ~/northing</button>
-        <button class="db"><span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span></button>
-        <button class="db access" title="访问权限"><span class="di">◈</span> 自治·完全 <span class="chev">▾</span></button>
-        <button class="db" title="设置"><span class="di ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></button>
-        <span class="sp"></span>
-        <div class="ctx-ring" title="上下文 38%">
-          <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="none" stroke="#E6E3DD" stroke-width="2.5"/><circle cx="10" cy="10" r="7.5" fill="none" stroke="#3F837B" stroke-width="2.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" stroke-linecap="round" transform="rotate(-90 10 10)"/></svg>
-          <span class="cl">38%</span>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--rep-400)"></div>
+          <div class="swatch-name">rep-400</div>
+          <div class="swatch-hex" id="hex-rep-400">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--rep-500)"></div>
+          <div class="swatch-name">rep-500</div>
+          <div class="swatch-hex" id="hex-rep-500">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--rep-600)"></div>
+          <div class="swatch-name">rep-600</div>
+          <div class="swatch-hex" id="hex-rep-600">—</div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- 演示抽屉 -->
-  <div class="demo-panel" id="demoPanel">
-    <div class="demo-rule"><b>代表色由 agent 自主更换。</b>此面板仅模拟成长时刻。产品中，<b>人类除首次启动外不可改色</b>。</div>
-    <div class="demo-mode">
-      <span class="demo-h" style="margin:0">显示模式</span>
-      <div class="mode-seg" id="modeSeg">
-        <button class="mode-opt" data-mode="light">亮</button>
-        <button class="mode-opt" data-mode="dark">暗</button>
+    <!-- 基底灰阶 -->
+    <section class="card">
+      <div class="card-h">基底灰阶 <span class="tag">bg / surface / elevated / raised / border / fg / muted / faint</span></div>
+      <div class="swatch-row">
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--bg)"></div>
+          <div class="swatch-name">bg</div>
+          <div class="swatch-hex" id="hex-bg">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--surface)"></div>
+          <div class="swatch-name">surface</div>
+          <div class="swatch-hex" id="hex-surface">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--elevated)"></div>
+          <div class="swatch-name">elevated</div>
+          <div class="swatch-hex" id="hex-elevated">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--raised)"></div>
+          <div class="swatch-name">raised</div>
+          <div class="swatch-hex" id="hex-raised">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--border)"></div>
+          <div class="swatch-name">border</div>
+          <div class="swatch-hex" id="hex-border">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--fg)"></div>
+          <div class="swatch-name">fg</div>
+          <div class="swatch-hex" id="hex-fg">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--muted)"></div>
+          <div class="swatch-name">muted</div>
+          <div class="swatch-hex" id="hex-muted">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--faint)"></div>
+          <div class="swatch-name">faint</div>
+          <div class="swatch-hex" id="hex-faint">—</div>
+        </div>
       </div>
-    </div>
-    <div class="demo-h">模拟成长时刻</div>
-    <div class="demo-swatches" id="swatches"></div>
-    <div class="demo-cap" id="cap">热情 · 主动 · 善于表达</div>
-    <div class="demo-h">编年史</div>
-    <div class="demo-chrono" id="chrono"><span class="nd"></span></div>
-    <div class="demo-chrono-marks"><span>出生</span><span>现在</span></div>
-    <div class="demo-readout" id="readout"></div>
-  </div>
-  <div class="demo-fab" id="demoFab"><span class="pip"></span> 代表色演示</div>
+    </section>
 
+    <!-- 深渊青 · 异常态 -->
+    <section class="card">
+      <div class="card-h">深渊青 · 异常态 · 出生锚 <span class="tag">abyss / danger / birth</span></div>
+      <div class="swatch-row">
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--abyss-300)"></div>
+          <div class="swatch-name">abyss-300</div>
+          <div class="swatch-hex" id="hex-abyss-300">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--abyss-400)"></div>
+          <div class="swatch-name">abyss-400</div>
+          <div class="swatch-hex" id="hex-abyss-400">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--abyss-500)"></div>
+          <div class="swatch-name">abyss-500</div>
+          <div class="swatch-hex" id="hex-abyss-500">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--danger)"></div>
+          <div class="swatch-name">danger</div>
+          <div class="swatch-hex" id="hex-danger">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip round" style="background:var(--birth)"></div>
+          <div class="swatch-name">birth</div>
+          <div class="swatch-hex" id="hex-birth">—</div>
+        </div>
+        <div class="swatch-item">
+          <div class="swatch-chip" style="background:var(--on-rep);border-color:var(--rep-500)"></div>
+          <div class="swatch-name">on-rep</div>
+          <div class="swatch-hex" id="hex-on-rep">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 字体阶梯 -->
+    <section class="card">
+      <div class="card-h">字体阶梯 <span class="tag">font-display / font-body / font-mono</span></div>
+      <div class="type-row">
+        <span class="type-label">display · lg</span>
+        <span class="type-sample display" style="font-size:var(--fs-lg)">知序 Northing</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">display · name</span>
+        <span class="type-sample display" style="font-size:var(--fs-name)">知序 Northing</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">body · body</span>
+        <span class="type-sample body" style="font-size:var(--fs-body)">心理咨询室白灰——安静地把这件事做透。</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">body · md</span>
+        <span class="type-sample body" style="font-size:var(--fs-md)">生成回复中 · 12s</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">body · sm</span>
+        <span class="type-sample body" style="font-size:var(--fs-sm)">14:02</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">mono · sm</span>
+        <span class="type-sample mono" style="font-size:var(--fs-sm)">rep-500 #C8714C</span>
+      </div>
+    </section>
+
+    <!-- 间距阶梯 -->
+    <section class="card">
+      <div class="card-h">间距阶梯 <span class="tag">s1 ~ s6 · 4px 基数</span></div>
+      <div class="space-row">
+        <span class="space-label">--s1</span>
+        <div class="space-bar" style="width:var(--s1)"></div>
+        <span class="space-px">4px</span>
+      </div>
+      <div class="space-row">
+        <span class="space-label">--s2</span>
+        <div class="space-bar" style="width:var(--s2)"></div>
+        <span class="space-px">8px</span>
+      </div>
+      <div class="space-row">
+        <span class="space-label">--s3</span>
+        <div class="space-bar" style="width:var(--s3)"></div>
+        <span class="space-px">12px</span>
+      </div>
+      <div class="space-row">
+        <span class="space-label">--s4</span>
+        <div class="space-bar" style="width:var(--s4)"></div>
+        <span class="space-px">16px</span>
+      </div>
+      <div class="space-row">
+        <span class="space-label">--s5</span>
+        <div class="space-bar" style="width:var(--s5)"></div>
+        <span class="space-px">24px</span>
+      </div>
+      <div class="space-row">
+        <span class="space-label">--s6</span>
+        <div class="space-bar" style="width:var(--s6)"></div>
+        <span class="space-px">32px</span>
+      </div>
+    </section>
+
+    <!-- 圆角阶梯 -->
+    <section class="card">
+      <div class="card-h">圆角阶梯 <span class="tag">r-sm / r-md / r-lg / r-pill</span></div>
+      <div class="radius-row">
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:var(--r-sm)"></div>
+          <span class="swatch-name">r-sm<br><span class="swatch-hex">9px</span></span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:var(--r-md)"></div>
+          <span class="swatch-name">r-md<br><span class="swatch-hex">14px</span></span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:var(--r-lg)"></div>
+          <span class="swatch-name">r-lg<br><span class="swatch-hex">18px</span></span>
+        </div>
+        <div class="radius-item">
+          <div class="radius-box" style="border-radius:var(--r-pill)"></div>
+          <span class="swatch-name">r-pill<br><span class="swatch-hex">999px</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 整屋空气染色 -->
+    <section class="card">
+      <div class="card-h">整屋空气染色 <span class="tag">air-rep / halo-rep · 预计算混合色</span></div>
+      <div class="airtint-note">
+        <b>空气染色</b>是代表色以极低浓度（1.5% ~ 8%）混入基底灰阶形成的语义混合色。
+        亮暗两态共用同一套代表色 hex，但基底锚翻转，因此混合结果不同——这些值在
+        <b>tokens.css</b> 中以预计算 hex 记录，Slint 无需 color-mix。
+      </div>
+      <div class="airtint-grid" style="margin-top:16px">
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--air-rep)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--air-rep</div>
+            <div class="airtint-desc">主背景空气染色 · rep-500 3.5% on bg</div>
+          </div>
+        </div>
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--halo-rep)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--halo-rep</div>
+            <div class="airtint-desc">顶晕 · rep-500 7% on bg（椭圆径向渐变）</div>
+          </div>
+        </div>
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--air-rep-speaking)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--air-rep-speaking</div>
+            <div class="airtint-desc">输入聚焦升档 · rep-500 4.2% on bg</div>
+          </div>
+        </div>
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--air-rep-settings)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--air-rep-settings</div>
+            <div class="airtint-desc">设置页淡雾 · rep-500 1.5% on bg（当前页面基底）</div>
+          </div>
+        </div>
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--fog-abyss)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--fog-abyss</div>
+            <div class="airtint-desc">底冷雾 · abyss-500 1.5% on bg（底部径向渐变）</div>
+          </div>
+        </div>
+        <div class="airtint-row">
+          <div class="airtint-swatch" style="background:var(--turn-active)"></div>
+          <div class="airtint-info">
+            <div class="airtint-name">--turn-active</div>
+            <div class="airtint-desc">对话激活态底色 · rep-500 4% on surface</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 代表色演示（交互） -->
+    <section class="card">
+      <div class="card-h">代表色演示 · 成长时刻 <span class="tag">interactive</span></div>
+      <div class="demo-rule"><b>代表色由 agent 自主更换。</b>此面板仅模拟成长时刻。产品中，<b>人类除首次启动外不可改色</b>。</div>
+      <div class="demo-h">模拟成长时刻</div>
+      <div class="demo-swatches" id="swatches"></div>
+      <div class="demo-cap" id="cap">热情 · 主动 · 善于表达</div>
+      <div class="demo-h">编年史</div>
+      <div class="demo-chrono" id="chrono"><span class="nd"></span></div>
+      <div class="demo-chrono-marks"><span>出生</span><span>现在</span></div>
+      <div class="demo-readout" id="readout"></div>
+    </section>
+
+  </main>
 </div>
 
 <script>
@@ -302,10 +674,6 @@
   const capEl=document.getElementById('cap');
   const chronoEl=document.getElementById('chrono');
   const readoutEl=document.getElementById('readout');
-  const panel=document.getElementById('demoPanel');
-  const fab=document.getElementById('demoFab');
-  const app=document.getElementById('app');
-  const deck=document.querySelector('.deck');
   let history=['#DAD6CF','#C8714C'];
   let current=3;
 
@@ -321,6 +689,8 @@
     renderChrono();
     readoutEl.innerHTML='<span class="k">rep-500</span> '+c[500]+' <span class="k">rep-400</span> '+c[400]+'<br><span class="k">rep-300</span> '+c[300]+' <span class="k">rep-600</span> '+c[600]+'<br><span class="k">abyss/基底</span> 恒定';
     swatchesEl.querySelectorAll('.demo-sw').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+    // 更新色阶卡片的 hex 显示
+    updateHexDisplays();
   }
   function renderChrono(){
     const stops=history.map((col,idx)=>{const pct=history.length>1?(idx/(history.length-1))*100:0;return col+' '+pct.toFixed(1)+'%';}).join(', ');
@@ -333,18 +703,34 @@
     el.addEventListener('click',()=>apply(i,true));
     swatchesEl.appendChild(el);
   });
-  fab.addEventListener('click',()=>panel.classList.toggle('open'));
+
+  // 亮/暗切换
   const modeSeg=document.getElementById('modeSeg');
   function setMode(m){
     if(m==='dark')document.documentElement.setAttribute('data-theme','dark');
     else document.documentElement.removeAttribute('data-theme');
     modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+    // 延迟更新 hex，等 CSS 变量切换生效
+    requestAnimationFrame(updateHexDisplays);
   }
   modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
   setMode(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-  deck.addEventListener('focusin',()=>app.classList.add('speaking'));
-  deck.addEventListener('focusout',()=>app.classList.remove('speaking'));
+
+  // 读取并显示当前 CSS 变量的计算值
+  function updateHexDisplays(){
+    const cs=getComputedStyle(root);
+    const tokens=['rep-300','rep-400','rep-500','rep-600','bg','surface','elevated','raised','border','fg','muted','faint','abyss-300','abyss-400','abyss-500','danger','birth','on-rep'];
+    tokens.forEach(tk=>{
+      const el=document.getElementById('hex-'+tk);
+      if(el){
+        const val=cs.getPropertyValue('--'+tk).trim();
+        el.textContent=val;
+      }
+    });
+  }
+
   apply(3,false);
+  updateHexDisplays();
 })();
 </script>
 </body>

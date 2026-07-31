@@ -1,0 +1,170 @@
+/* ============================================================================
+ * northing shared/tokens.css — 全量 design token（sRGB hex）
+ * ----------------------------------------------------------------------------
+ * 用途：所有原型共享的 token 权威文件。被 components / animations / layout 引用。
+ *
+ * 来源（权威顺序）：
+ *   1. tokens-draft.css — OKLCH 定义（语义权威）
+ *   2. tokens-srgb-table.md — OKLCH→sRGB 转换表（hex 数值权威）
+ *   3. 9 个原型 :root / [data-theme="dark"] — hex 实测参照
+ *
+ * 记值：全部 sRGB hex（不用 OKLCH / color-mix），与现有原型一致。
+ * 语义混合色（air-rep / halo-rep 等）取 tokens-srgb-table.md 预计算 hex。
+ *
+ * Slint 兼容：无 color-mix / oklch；box-shadow 在 components.css 中用 drop-shadow 替代。
+ * --------------------------------------------------------------------------*/
+
+
+/* ----------------------------------------------------------------------------
+ * 结构 token（主题无关，亮暗共用）
+ * --------------------------------------------------------------------------*/
+:root {
+  /* ── 字号三档 + 正文/名字 ── */
+  --fs-sm:   10px;       /* 时间戳、chip 细节、turn-meta */
+  --fs-md:   11.5px;     /* turn-head、状态行、ctx 标签 */
+  --fs-lg:   13px;       /* 名字、chip、模块标题 */
+  --fs-body: 15px;       /* 对话正文 */
+  --fs-name: 16px;       /* agent 名 */
+
+  /* ── 字体族 ── */
+  --font-display: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* ── 间距 4 基数阶梯 ── */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  /* ── 圆角阶梯 ── */
+  --r-sm:   9px;         /* 控件、deck-bar 按钮 */
+  --r-md:   14px;        /* 左栏卡片、头像、用户气泡 */
+  --r-lg:   18px;        /* 大卡片 */
+  --r-pill: 999px;       /* chip、自我认知渐变条、呼吸点 */
+
+  /* ── 动效 ── */
+  --grow:           1200ms cubic-bezier(0.25, 0.1, 0.25, 1);  /* 主题切换过渡 */
+  --ease:           cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out:       ease-out;
+  --toggle-duration: 350ms;
+}
+
+
+/* ----------------------------------------------------------------------------
+ * 亮色模式（默认）—— 心理咨询室白灰
+ * --------------------------------------------------------------------------*/
+:root,
+[data-theme="light"] {
+  /* 基底灰阶 */
+  --bg:          #F4F3F0;   /* 主背景 */
+  --surface:     #FBFAF8;   /* 卡片底 */
+  --elevated:    #FFFFFF;   /* 浮起卡片 */
+  --raised:      #EFEDE8;   /* 控件底 */
+  --border:      #E6E3DD;   /* 边框 */
+  --border-soft: #ECEAE5;   /* 弱边框 */
+  --fg:          #38352E;   /* 正文 */
+  --muted:       #7B766C;   /* 次级 */
+  --faint:       #A8A398;   /* 弱化 */
+  --birth:       #DAD6CF;   /* 出生灰白锚（编年史条最左端） */
+  --scrim:       #38352E;   /* 遮罩暗化基底 */
+  --shadow:      #38352E;   /* 阴影投射色 */
+
+  /* 代表色色阶（原型实测珊瑚值；tokens-draft.css 出生态灰阶为理论态，原型均用珊瑚） */
+  --rep-300: #E5A583;       /* 大面积 */
+  --rep-400: #D68A63;       /* 发光/竖线 */
+  --rep-500: #C8714C;       /* 强调≡渐变右端 */
+  --rep-600: #A85A38;       /* hover/深 */
+
+  /* 深渊青 */
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  /* 异常态 */
+  --danger: #A45950;        /* 陶红 hue≈28° */
+
+  /* 前景白（rep/abyss/danger 表面上） */
+  --on-rep:    #FEF9F5;
+  --on-abyss:  #FFFFFF;
+  --on-danger: #FFFFFF;
+
+  /* 页面外背景 */
+  --page-out: #1a1917;
+
+  /* ── 语义混合色（预计算 hex，color-mix(in srgb, rep coral on bg)） ── */
+  --air-rep:             #F2F0EC;  /* rep-500 3.5% on bg */
+  --halo-rep:            #F0EDEA;  /* rep-500 7% on bg */
+  --air-rep-speaking:    #F1EFEB;  /* rep-500 4.2% on bg */
+  --halo-rep-speaking:   #EFEBE8;  /* rep-500 8% on bg */
+  --air-rep-settings:    #F3F1EE;  /* rep-500 1.5% on bg */
+  --halo-rep-settings:   #F3F1EE;  /* rep-500 2% on bg */
+  --fog-abyss:           #F1F2EF;  /* abyss-500 1.5% on bg */
+  --halo-abyss:          #EFF1EE;  /* abyss-500 3% on bg */
+  --turn-active:         #F8F6F4;  /* rep-500 4% on surface */
+  --presence-halo-rep:   #E5DDD8;  /* rep-500 20% on bg */
+  --presence-halo-rep-soft: #F0EDEA; /* rep-500 7% on bg */
+  --archive-cold-bg:     #F1F3F0;  /* abyss-500 2% on bg */
+  --archive-cold-border: #D9E3DF;  /* abyss-500 16% on bg */
+  --archive-card-bg:     #F4F7F5;  /* abyss-500 3% on surface */
+}
+
+
+/* ----------------------------------------------------------------------------
+ * 暗色模式 —— 基底锚翻转为灰黑
+ * --------------------------------------------------------------------------*/
+[data-theme="dark"] {
+  /* 基底灰阶（灰黑锚，暖灰 hue≈88°；与 9 原型实测对齐） */
+  --bg:          #181612;   /* 主背景 */
+  --surface:     #262320;   /* 卡片底 */
+  --elevated:    #2E2922;   /* 浮起卡片 */
+  --raised:      #322D26;   /* 控件底 */
+  --border-soft: #36312A;   /* 弱边框 */
+  --border:      #443E36;   /* 边框 */
+  --faint:       #786F63;   /* 弱化 */
+  --muted:       #A89F92;   /* 次级 */
+  --fg:          #EDE8DF;   /* 正文（暖 off-white） */
+  --birth:       #4A443B;   /* 出生灰黑锚 */
+  --scrim:       #000000;   /* 遮罩暗化基底 */
+  --shadow:      #000000;   /* 阴影投射色 */
+
+  /* 代表色色阶：与亮色同值（原型实测珊瑚） */
+  --rep-300: #E5A583;
+  --rep-400: #D68A63;
+  --rep-500: #C8714C;
+  --rep-600: #A85A38;
+
+  /* 深渊青：等亮度，与亮色同值 */
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  /* 异常态（暗色略提亮） */
+  --danger: #C37D73;
+
+  /* 前景白 */
+  --on-rep:    #FEF9F5;
+  --on-abyss:  #FFFFFF;
+  --on-danger: #FFFFFF;
+
+  /* 页面外背景 */
+  --page-out: #0c0b09;
+
+  /* ── 语义混合色（暗色预计算 hex，coral rep on dark base） ── */
+  --air-rep:             #1B1915;  /* rep-500 3.5% on bg */
+  --halo-rep:            #1F1C18;  /* rep-500 7% on bg */
+  --air-rep-speaking:    #201D18;  /* rep-500 4.2% on bg */
+  --halo-rep-speaking:   #231F1A;  /* rep-500 8% on bg */
+  --air-rep-settings:    #191713;  /* rep-500 1.5% on bg */
+  --halo-rep-settings:   #1B1915;  /* rep-500 2% on bg */
+  --fog-abyss:           #191916;  /* abyss-500 1.5% on bg */
+  --halo-abyss:          #1A1B17;  /* abyss-500 3% on bg */
+  --turn-active:         #2A2722;  /* rep-500 4% on surface */
+  --presence-halo-rep:   #28241F;  /* rep-500 15% on bg */
+  --presence-halo-rep-soft: #1B1915; /* rep-500 5% on bg */
+  --archive-cold-bg:     #191916;  /* abyss-500 2% on bg */
+  --archive-cold-border: #1E2421;  /* abyss-500 16% on bg */
+  --archive-card-bg:     #1E201D;  /* abyss-500 3% on surface */
+}
