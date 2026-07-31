@@ -118,11 +118,11 @@
 [data-theme="dark"] {
   /* 基底灰阶（灰黑锚，暖灰 hue≈88°；与 9 原型实测对齐） */
   --bg:          #181612;   /* 主背景 */
-  --surface:     #262320;   /* 卡片底 */
-  --elevated:    #2E2922;   /* 浮起卡片 */
+  --surface:     #332E28;   /* 卡片底 — R2 对比度提升 */
+  --elevated:    #3A342D;   /* 浮起卡片 — R2 对比度提升 */
   --raised:      #322D26;   /* 控件底 */
-  --border-soft: #36312A;   /* 弱边框 */
-  --border:      #443E36;   /* 边框 */
+  --border-soft: #413B33;   /* 弱边框 — R2 对比度提升 */
+  --border:      #4E4840;   /* 边框 — R2 对比度提升 */
   --faint:       #786F63;   /* 弱化 */
   --muted:       #A89F92;   /* 次级 */
   --fg:          #EDE8DF;   /* 正文（暖 off-white） */
@@ -161,7 +161,7 @@
   --halo-rep-settings:   #1B1915;  /* rep-500 2% on bg */
   --fog-abyss:           #191916;  /* abyss-500 1.5% on bg */
   --halo-abyss:          #1A1B17;  /* abyss-500 3% on bg */
-  --turn-active:         #2A2722;  /* rep-500 4% on surface */
+  --turn-active:         #38342E;  /* rep-500 4% on surface — R2 对比度提升 */
   --presence-halo-rep:   #28241F;  /* rep-500 15% on bg */
   --presence-halo-rep-soft: #1B1915; /* rep-500 5% on bg */
   --archive-cold-bg:     #191916;  /* abyss-500 2% on bg */

@@ -64,7 +64,7 @@
   .mode-opt.active {
     background: var(--elevated);
     color: var(--fg);
-    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,.12));
   }
 
   /* ─── 卡片 ─── */
@@ -279,12 +279,13 @@
     border: 2.5px solid transparent;
     cursor: pointer;
     position: relative;
-    transition: transform .2s, border-color .2s, box-shadow .2s;
+    transition: transform .2s, border-color .2s, filter .2s;
   }
   .demo-sw:hover { transform: translateY(-2px); }
   .demo-sw.active {
     border-color: var(--fg);
-    box-shadow: 0 0 0 2px var(--surface), 0 3px 9px rgba(80,70,55,.2);
+    outline: 2px solid var(--surface);
+    filter: drop-shadow(0 3px 9px rgba(80,70,55,.2));
   }
   .demo-sw .tip {
     position: absolute;
@@ -330,7 +331,6 @@
     border-radius: 50%;
     background: var(--rep-500);
     border: 2px solid var(--surface);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--rep-500) 40%, transparent);
     transition: background var(--grow);
   }
   .demo-chrono-marks {
@@ -359,8 +359,53 @@
 
   /* ─── 暗色覆写（页面特有） ─── */
   [data-theme="dark"] .mode-opt.active {
-    box-shadow: 0 1px 3px rgba(0,0,0,.35), 0 1px 1px rgba(0,0,0,.25);
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,.35)) drop-shadow(0 1px 1px rgba(0,0,0,.25));
   }
+
+  /* ─── 渐变强调条（warm → cool） ─── */
+  .accent-bar {
+    height: 3px;
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
+    background: linear-gradient(90deg, #C8714C 0%, #D4A853 35%, #3F837B 100%);
+  }
+
+  /* ─── 迷你会话示例 ─── */
+  .mini-conv {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .mini-msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .mini-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--rep-500);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--on-rep);
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+  .mini-avatar.user { background: var(--raised); color: var(--muted); border: 1px solid var(--border); }
+  .mini-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-sm);
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fg);
+    max-width: 340px;
+  }
+  .mini-bubble.user { background: var(--elevated); }
 </style>
 </head>
 <body>
@@ -388,10 +433,15 @@
     </div>
   </div>
 
+  <!-- 渐变强调条 — warm→cool 暖→冷渐变，标识主题系统页 -->
+  <!-- Slint: Rectangle { height: 3; background: @linear-gradient(90deg, rep-500, abyss-500); } -->
+  <div class="accent-bar"></div>
+
   <!-- 内容区 -->
   <main class="content">
 
     <!-- 代表色色阶 -->
+    <!-- Slint: for-each color: Rectangle { 56x56; r-sm; background: rep-N; } + Text { mono; 10px; } -->
     <section class="card">
       <div class="card-h">代表色色阶 <span class="tag">rep-300 ~ rep-600</span></div>
       <div class="swatch-row">
@@ -419,6 +469,7 @@
     </section>
 
     <!-- 基底灰阶 -->
+    <!-- Slint: for-each token: Rectangle { 56x40; background: token; } + Text { mono; 10px; } -->
     <section class="card">
       <div class="card-h">基底灰阶 <span class="tag">bg / surface / elevated / raised / border / fg / muted / faint</span></div>
       <div class="swatch-row">
@@ -466,6 +517,7 @@
     </section>
 
     <!-- 深渊青 · 异常态 -->
+    <!-- Slint: for-each token: Rectangle { 56x56; r-circle; background: abyss-N; } + Text { mono; 10px; } -->
     <section class="card">
       <div class="card-h">深渊青 · 异常态 · 出生锚 <span class="tag">abyss / danger / birth</span></div>
       <div class="swatch-row">
@@ -503,6 +555,7 @@
     </section>
 
     <!-- 字体阶梯 -->
+    <!-- Slint: for-each row: HBox { Text { 120px; mono; 10px; faint } | Text { font; size; fg } } -->
     <section class="card">
       <div class="card-h">字体阶梯 <span class="tag">font-display / font-body / font-mono</span></div>
       <div class="type-row">
@@ -532,6 +585,7 @@
     </section>
 
     <!-- 间距阶梯 -->
+    <!-- Slint: for-each s: HBox { Text { 60px; mono; 10px; faint } | Rectangle { width: s; height: 16; background: rep-400; } | Text { mono; 10px; muted } } -->
     <section class="card">
       <div class="card-h">间距阶梯 <span class="tag">s1 ~ s6 · 4px 基数</span></div>
       <div class="space-row">
@@ -567,6 +621,7 @@
     </section>
 
     <!-- 圆角阶梯 -->
+    <!-- Slint: for-each r: Rectangle { 52x52; border-radius: r; background: raised; border: 1px border; } + Text { mono; 10px; } -->
     <section class="card">
       <div class="card-h">圆角阶梯 <span class="tag">r-sm / r-md / r-lg / r-pill</span></div>
       <div class="radius-row">
@@ -590,12 +645,13 @@
     </section>
 
     <!-- 整屋空气染色 -->
+    <!-- Slint: for-each tint: HBox { Rectangle { 72x36; r-sm; background: air-*; } | VBox { Text { mono; 11px; fg } | Text { 12px; muted } } } -->
     <section class="card">
       <div class="card-h">整屋空气染色 <span class="tag">air-rep / halo-rep · 预计算混合色</span></div>
       <div class="airtint-note">
         <b>空气染色</b>是代表色以极低浓度（1.5% ~ 8%）混入基底灰阶形成的语义混合色。
         亮暗两态共用同一套代表色 hex，但基底锚翻转，因此混合结果不同——这些值在
-        <b>tokens.css</b> 中以预计算 hex 记录，Slint 无需 color-mix。
+        <b>tokens.css</b> 中以预计算 hex 记录，Slint 端无需再混色。
       </div>
       <div class="airtint-grid" style="margin-top:16px">
         <div class="airtint-row">
@@ -644,6 +700,7 @@
     </section>
 
     <!-- 代表色演示（交互） -->
+    <!-- Slint: Rectangle { background: surface; border: 1px border; border-radius: r-md; padding: 24; } -->
     <section class="card">
       <div class="card-h">代表色演示 · 成长时刻 <span class="tag">interactive</span></div>
       <div class="demo-rule"><b>代表色由 agent 自主更换。</b>此面板仅模拟成长时刻。产品中，<b>人类除首次启动外不可改色</b>。</div>
@@ -654,6 +711,29 @@
       <div class="demo-chrono" id="chrono"><span class="nd"></span></div>
       <div class="demo-chrono-marks"><span>出生</span><span>现在</span></div>
       <div class="demo-readout" id="readout"></div>
+    </section>
+
+    <!-- 迷你会话示例 — 对话组件映射 -->
+    <!--
+      Slint component mapping:
+        HBox { spacing: 10; } // mini-msg
+        Rectangle { 28x28; r-sm; background: rep-500; } // agent avatar
+        Rectangle { 28x28; r-sm; background: raised; border: 1px border; } // user avatar
+        Rectangle { max-width: 340; r-sm; padding: 8 12; background: surface; border: 1px border-soft; } // agent bubble
+        Rectangle { background: elevated; } // user bubble
+    -->
+    <section class="card">
+      <div class="card-h">对话组件示例 <span class="tag">mini conversation</span></div>
+      <div class="mini-conv">
+        <div class="mini-msg">
+          <div class="mini-avatar user">U</div>
+          <div class="mini-bubble user">今天想聊点什么？</div>
+        </div>
+        <div class="mini-msg">
+          <div class="mini-avatar">知</div>
+          <div class="mini-bubble">随时可以开始。我在听。</div>
+        </div>
+      </div>
     </section>
 
   </main>

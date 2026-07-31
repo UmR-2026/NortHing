@@ -30,7 +30,7 @@
    *   .generate-btn    → Rectangle (220×36, r11, rep-500 bg) + TouchArea
    * ====================================================================== */
 
-/* ─── 出生态灰阶 rep 值 + RGB 通道（用于 rgba 替代 color-mix） ─── */
+/* ─── 出生态灰阶 rep 值 + RGB 通道（供 rgba 半透明色值） ─── */
 :root {
   --rep-300: #D6D2CB;
   --rep-300-rgb: 214,210,203;
@@ -48,6 +48,9 @@
 /* Slint: Window { background: air-rep; border-radius: 20; } */
 .app {
   align-items: center;
+  background:
+    linear-gradient(90deg, rgba(var(--rep-500-rgb), 0.03) 0%, transparent 40%, rgba(63,131,123, 0.04) 100%),
+    var(--air-rep);
 }
 
 /* Air-tint glow at top — 咨询室顶光，出生时刻的氛围底色 */
@@ -159,7 +162,7 @@
   color: var(--faint);
   font-style: italic;
   opacity: 0;
-  animation: moodIn 3s ease 1.5s forwards, moodPulse 8s ease-in-out 4.5s infinite;
+  animation: moodIn 3s ease 1.5s forwards, moodPulse 8s ease-in-out 4.5s 1;
   max-width: 320px;
   text-align: center;
   line-height: 1.6;
@@ -225,7 +228,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   outline: none;
-  transition: border-color var(--transition-state), box-shadow var(--transition-state), background var(--grow);
+  transition: border-color var(--transition-state), background var(--grow);
 }
 
 .field-input::placeholder {
@@ -234,7 +237,7 @@
 
 .field-input:focus {
   border-color: var(--rep-500);
-  box-shadow: 0 0 0 3px rgba(var(--rep-500-rgb), 0.08);
+  outline: 3px solid rgba(var(--rep-500-rgb), 0.08);
 }
 
 /* ─── 性格色板 ─── */
@@ -258,7 +261,7 @@
   border: 2.5px solid transparent;
   cursor: pointer;
   position: relative;
-  transition: transform var(--transition-state), border-color var(--transition-state), box-shadow var(--transition-state);
+  transition: transform var(--transition-state), border-color var(--transition-state);
   background: none;
   padding: 0;
 }
@@ -273,7 +276,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  transition: background var(--transition-state), box-shadow var(--transition-state);
+  transition: background var(--transition-state);
 }
 
 .personality-chip[data-color="openness"]::before { background: #9B7FBF; }
@@ -285,20 +288,20 @@
 /*
  * Slint mapping — personality selection interaction:
  *   TouchArea { clicked => { selected-personality = color; ring-visible[bid] = true; apply-rep(color); } }
- *   Interaction chain: TouchArea click → property update (selected-personality) → ring visible (box-shadow on ::before)
- *   Selected ring: 3px gap (bg color) + 2px color ring via box-shadow — no animation, state-driven
+ *   Interaction chain: TouchArea click → property update (selected-personality) → ring visible (outline on ::before)
+ *   Selected ring: 3px gap (bg color) + 2px color ring via outline — no animation, state-driven
  *   Birth moment: first selection triggers avatar "birth" (gray → colored gradient, glyph ? → first letter)
  *   Subsequent selections: just shift color, no rebirth
  */
 .personality-chip.selected {
-  border-color: transparent;
+  border-color: var(--bg);
 }
 
-.personality-chip[data-color="openness"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #9B7FBF; }
-.personality-chip[data-color="conscientiousness"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #4A6FA5; }
-.personality-chip[data-color="extraversion"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #C8714C; }
-.personality-chip[data-color="agreeableness"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #6B9E7A; }
-.personality-chip[data-color="neuroticism"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #3F837B; }
+.personality-chip[data-color="openness"].selected::before { outline: 2px solid #9B7FBF; outline-offset: 3px; }
+.personality-chip[data-color="conscientiousness"].selected::before { outline: 2px solid #4A6FA5; outline-offset: 3px; }
+.personality-chip[data-color="extraversion"].selected::before { outline: 2px solid #C8714C; outline-offset: 3px; }
+.personality-chip[data-color="agreeableness"].selected::before { outline: 2px solid #6B9E7A; outline-offset: 3px; }
+.personality-chip[data-color="neuroticism"].selected::before { outline: 2px solid #3F837B; outline-offset: 3px; }
 
 /* tooltip */
 .personality-chip .tip {
@@ -820,6 +823,14 @@
     const agentName = inputName.value.trim();
     const role = inputRole.value.trim();
     const trait = personalityTraits[selectedPersonality];
+
+    // 空名防护：名字为空时短暂高亮输入框
+    if (!agentName) {
+      inputName.style.borderColor = 'var(--danger)';
+      inputName.style.outline = '2px solid rgba(239,83,80,.2)';
+      setTimeout(() => { inputName.style.borderColor = ''; inputName.style.outline = ''; }, 1500);
+      return;
+    }
 
     // Button state
     generateBtn.textContent = '身份生成中…';

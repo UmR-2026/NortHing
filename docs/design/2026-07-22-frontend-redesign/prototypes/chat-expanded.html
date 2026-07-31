@@ -336,17 +336,21 @@
   /* 已归档分区：更安静（agent 已离开此处） */
   .drawer-title.archived,
   .drawer-title.archived ~ .drawer-item {
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   .drawer-item {
-    padding: 10px 12px;
+    padding: 12px 14px;
     border-radius: var(--r-sm);
     background: var(--surface);
     border: 1px solid var(--border-soft);
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .drawer-item:hover {
+    background: var(--raised);
   }
 
   .drawer-item-title {

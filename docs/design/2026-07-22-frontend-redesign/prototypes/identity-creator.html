@@ -25,11 +25,11 @@
    *   .identity-content → VBox (max-width:480, center, gap:28)
    *   .birth-avatar    → Image (64×64, r-lg) + aura (::before/::after)
    *   .chrono-preview  → Rectangle (200×4, r-pill, linear-gradient)
-   *   .color-swatch    → Rectangle (44×44, circle) + TouchArea (selected ring via box-shadow)
+   *   .color-swatch    → Rectangle (44×44, circle) + TouchArea (selected ring via outline)
    *   .confirm-btn     → Rectangle (220×44, r11, rep-500 bg) + TouchArea
    * ====================================================================== */
 
-/* ─── 出生态灰阶 rep 值 + RGB 通道（用于 rgba 替代 color-mix） ─── */
+/* ─── 出生态灰阶 rep 值 + RGB 通道（供 rgba 半透明色值） ─── */
 :root {
   --rep-300: #D6D2CB;
   --rep-300-rgb: 214,210,203;
@@ -47,6 +47,9 @@
 /* Slint: Window { background: air-rep; border-radius: 20; } */
 .app {
   align-items: center;
+  background:
+    linear-gradient(90deg, rgba(var(--rep-500-rgb), 0.03) 0%, transparent 40%, rgba(63,131,123, 0.04) 100%),
+    var(--air-rep);
 }
 
 /* Air-tint glow at top — 咨询室顶光，出生时刻的氛围底色 */
@@ -164,7 +167,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #DAD6CF;
+  background: var(--abyss-500);
   border: 2px solid var(--surface);
   transition: background var(--transition-growth);
 }
@@ -194,7 +197,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   outline: none;
-  transition: border-color var(--transition-state), box-shadow var(--transition-state), background var(--grow);
+  transition: border-color var(--transition-state), background var(--grow);
 }
 
 .field-input::placeholder {
@@ -203,7 +206,7 @@
 
 .field-input:focus {
   border-color: var(--rep-500);
-  box-shadow: 0 0 0 3px rgba(var(--rep-500-rgb), 0.08);
+  outline: 3px solid rgba(var(--rep-500-rgb), 0.08);
 }
 
 /* ─── 代表色色板 ─── */
@@ -220,7 +223,7 @@
   border: 3px solid transparent;
   cursor: pointer;
   position: relative;
-  transition: transform var(--transition-state), border-color var(--transition-state), box-shadow var(--transition-state);
+  transition: transform var(--transition-state), border-color var(--transition-state);
   padding: 0;
   background: none;
 }
@@ -231,7 +234,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  transition: background var(--transition-state), box-shadow var(--transition-state);
+  transition: background var(--transition-state);
 }
 
 .color-swatch:hover {
@@ -241,22 +244,23 @@
 /*
  * Slint mapping — color selection interaction:
  *   TouchArea { clicked => { selected-color = color; ring-visible[bid] = true; apply-rep(color); } }
- *   Interaction chain: TouchArea click → property update (selected-color) → ring visible (box-shadow on ::before)
- *   Selected ring: 3px gap (bg color) + 2px color ring via box-shadow — no animation, state-driven
+ *   Interaction chain: TouchArea click → property update (selected-color) → ring visible (outline on ::before)
+ *   Selected ring: 3px gap (bg color) + 2px color ring via outline — no animation, state-driven
  *   Growth moment (成长时刻): selecting a representative color is a one-time 1200ms transition
  *   (--transition-growth) — the entire room tints as the agent chooses its color.
  *   This is a rare, meaningful moment, not a skin picker.
  */
 .color-swatch.selected {
   transform: none;
+  border-color: var(--bg);
 }
 
 /* 各颜色选中态 — ring on ::before, full-opacity color */
-.color-swatch[data-color="coral"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #C8714C; }
-.color-swatch[data-color="abyss"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #3F837B; }
-.color-swatch[data-color="warm"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #D4A853; }
-.color-swatch[data-color="cool"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #8B6FAF; }
-.color-swatch[data-color="forest"].selected::before { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px #5B8C5A; }
+.color-swatch[data-color="coral"].selected::before { outline: 2px solid #C8714C; outline-offset: 3px; }
+.color-swatch[data-color="abyss"].selected::before { outline: 2px solid #3F837B; outline-offset: 3px; }
+.color-swatch[data-color="warm"].selected::before { outline: 2px solid #D4A853; outline-offset: 3px; }
+.color-swatch[data-color="cool"].selected::before { outline: 2px solid #8B6FAF; outline-offset: 3px; }
+.color-swatch[data-color="forest"].selected::before { outline: 2px solid #5B8C5A; outline-offset: 3px; }
 
 .color-swatch[data-color="coral"]::before { background: #C8714C; }
 .color-swatch[data-color="abyss"]::before { background: #3F837B; }
@@ -341,7 +345,6 @@
   opacity: 0.35;
   cursor: default;
   pointer-events: none;
-  box-shadow: none;
   transform: none;
 }
 
@@ -447,7 +450,7 @@
       颜色选择是 agent 一生中仅有的几次"成为"之一。稀有故有重量。
       成长时刻动效：一次性 1200ms 过渡（--transition-growth），整屋空气染色随之变化。
       Slint: for-each color: Rectangle(44×44, circle) + TouchArea { clicked => { selected-color = color; apply-rep(color); } }
-      交互链：TouchArea → 属性更新 (selected-color) → ring 可见 (box-shadow on ::before) → 整屋 rep-* 染色
+      交互链：TouchArea → 属性更新 (selected-color) → ring 可见 (outline ring on ::before) → 整屋 rep-* 染色
     -->
     <div class="field-group">
       <label>选择你的代表色</label>
@@ -502,7 +505,7 @@
 
   let selectedColor = null;
 
-  // 代表色组（hex + RGB 通道，用于 rgba 替代 color-mix）
+  // 代表色组（hex + RGB 通道，供 rgba 半透明色值使用）
   const repColors = {
     coral:  { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56' },
     abyss:  { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99' },
@@ -565,7 +568,7 @@
         resetRep();
         // 编年史条回到出生灰白
         chronoPreview.style.background = '#DAD6CF';
-        nowDot.style.background = '#DAD6CF';
+        nowDot.style.background = 'var(--abyss-500)';
         avatarBody.style.background = 'linear-gradient(135deg, #DAD6CF 0%, #E8E4DD 100%)';
         moodText.textContent = '\u201C我还不知道自己是谁……\u201D';
         updateButton();

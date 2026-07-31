@@ -87,7 +87,6 @@
   /* 活跃项：rep 暖雾底 + 呼吸点（同 chat-collapsed 状态点），非冷灰 raised */
   .nav-item.active {
     background: var(--halo-rep-settings); color: var(--fg); font-weight: 500;
-    box-shadow: none;
   }
   .nav-item.active::before {
     content: ''; position: absolute; left: 5px; top: 50%;
@@ -346,7 +345,6 @@
   /* ─── Dark mode ─── */
   [data-theme="dark"] .nav-item.active {
     background: var(--halo-rep-settings);
-    box-shadow: none;
   }
   [data-theme="dark"] .nav-item.active::before {
     background: var(--rep-400);
@@ -475,31 +473,15 @@
           </div>
         </div>
 
-        <div class="field">
-          <label class="field-label">启动行为</label>
-          <div class="segment-group" data-od-id="segment-launch">
-            <button class="segment active" data-value="last-workspace">上次的工作区</button>
-            <button class="segment" data-value="welcome">欢迎页</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="field-label">关闭按钮</label>
-          <div class="segment-group" data-od-id="segment-close">
-            <button class="segment active" data-value="quit">退出</button>
-            <button class="segment" data-value="minimize">最小化到托盘</button>
-            <button class="segment" data-value="ask">询问</button>
-          </div>
-        </div>
-
         <div class="divider"></div>
 
         <div class="field-group">
           <div class="field-row">
             <div>
               <div class="field-label">自动更新</div>
-              <div class="field-hint">有新版本时自动下载并安装</div>
+              <div class="field-hint">知序会在空闲时自己更新。</div>
             </div>
+            <!-- Slint: TouchArea => animate background { duration: 350ms; easing: ease-in-out; } -->
             <label class="toggle" data-od-id="toggle-auto-update">
               <input type="checkbox" checked>
               <span class="toggle-track"></span>
@@ -526,6 +508,30 @@
               <input type="checkbox">
               <span class="toggle-track"></span>
             </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 窗口行为 Card（启动行为 + 关闭按钮合并） -->
+      <section class="card" data-od-id="card-window-behavior">
+        <div class="card-title">窗口行为</div>
+
+        <div class="field">
+          <label class="field-label">启动行为</label>
+          <div class="field-hint">知序下次打开时，回到上次工作的地方。</div>
+          <div class="segment-group" data-od-id="segment-launch">
+            <button class="segment active" data-value="last-workspace">上次的工作区</button>
+            <button class="segment" data-value="welcome">欢迎页</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">关闭按钮</label>
+          <div class="field-hint">点窗口右上角的 X 时，知序会先问你。</div>
+          <div class="segment-group" data-od-id="segment-close">
+            <button class="segment active" data-value="quit">退出</button>
+            <button class="segment" data-value="minimize">最小化到托盘</button>
+            <button class="segment" data-value="ask">询问</button>
           </div>
         </div>
       </section>
@@ -562,6 +568,7 @@
             清空重来
           </button>
           <div class="danger-confirm" id="dangerConfirm" data-od-id="confirm-reset">
+            <!-- Slint: Rectangle { height: open ? 80 : 0; animate height { duration: 350ms; easing: ease-in-out; } } -->
             <div class="danger-confirm-text">清空后它回到出生（灰白），无法撤销。</div>
             <div class="danger-confirm-actions">
               <button class="btn-sm btn-ghost" id="cancelReset">取消</button>

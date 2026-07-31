@@ -45,7 +45,7 @@
   .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px var(--s3) 8px 18px; border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--muted); cursor: pointer; text-decoration: none; user-select: none; border: none; background: transparent; width: 100%; text-align: left; font-family: inherit; line-height: 1.4; position: relative; transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease); }
   .nav-item:hover { background: var(--raised); color: var(--fg); }
   /* 活跃项：rep 暖雾底 + 呼吸点（同 chat-collapsed 状态点） */
-  .nav-item.active { background: var(--halo-rep-settings); color: var(--fg); font-weight: 500; box-shadow: none; }
+  .nav-item.active { background: var(--halo-rep-settings); color: var(--fg); font-weight: 500; }
   .nav-item.active::before { content: ''; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--rep-500); filter: drop-shadow(0 0 3px var(--rep-400)); animation: breathe 6s ease-in-out infinite; transition: background var(--grow); }
   .nav-item-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; opacity: 0.7; flex-shrink: 0; }
   .nav-item.active .nav-item-icon { opacity: 1; }
@@ -84,6 +84,8 @@
   .ws-meta { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--faint); line-height: 1.4; }
   .ws-current { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--rep-500); font-weight: 500; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rep-500); display: inline-block; }
+  .ws-microcopy { font-size: var(--fs-lg); color: var(--faint); margin-top: 2px; }
+  .ws-meta.abyss { color: var(--abyss-300); }
   .ws-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
   .text-btn { background: transparent; border: none; color: var(--muted); font-size: var(--fs-body); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: color var(--toggle-duration) var(--ease), background var(--toggle-duration) var(--ease); }
   .text-btn:hover { color: var(--rep-600); background: var(--raised); }
@@ -115,13 +117,14 @@
   .skill-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
   /* ─── Overrides panel ─── */
+  /* Slint: Rectangle { height: open ? 160 : 0; animate height { duration: 350ms; } } */
   .overrides { overflow: hidden; max-height: 0; opacity: 0; transition: max-height var(--toggle-duration) var(--ease), opacity var(--toggle-duration) var(--ease), margin var(--toggle-duration) var(--ease); margin-left: 32px; margin-bottom: 0; padding-left: 12px; border-left: 1px solid var(--border-soft); }
   .overrides.open { max-height: 160px; opacity: 1; margin-bottom: 6px; }
   .override-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 4px; font-size: var(--fs-body); color: var(--muted); }
   .override-row .ws-name { font-size: 14px; font-weight: 400; }
 
   /* ─── Dark mode ─── */
-  [data-theme="dark"] .nav-item.active { background: var(--halo-rep-settings); box-shadow: none; }
+  [data-theme="dark"] .nav-item.active { background: var(--halo-rep-settings); }
   [data-theme="dark"] .nav-item.active::before { background: var(--rep-400); filter: drop-shadow(0 0 4px var(--rep-500)); }
   [data-theme="dark"] .toggle-track::after { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
 
@@ -188,8 +191,9 @@
                 <span class="ws-name">northing</span>
                 <span class="ws-current"><span class="dot" aria-hidden="true"></span>当前</span>
               </div>
-              <div class="ws-meta">E:\agent-project\northing</div>
-              <div class="ws-meta">2 小时前</div>
+              <div class="ws-microcopy">知序此刻在此工作。</div>
+              <div class="ws-meta abyss">E:\agent-project\northing</div>
+              <div class="ws-meta abyss">2 小时前</div>
             </div>
             <div class="ws-actions">
               <span class="pill pill-abyss" data-od-id="identity-badge">身份</span>
@@ -221,8 +225,9 @@
         </div>
 
         <div class="add-row" data-od-id="add-workspace-row" hidden>
+          <!-- Slint: Rectangle { background: focused ? air-rep-speaking : elevated; animate background 350ms } -->
           <input class="input" id="wsPathInput" placeholder="粘贴或输入文件夹路径…" aria-label="工作区路径">
-          <button class="btn btn-secondary" id="chooseFolderBtn" data-od-id="choose-folder-btn">选择文件夹</button>
+          <button class="btn btn-primary" style="filter: drop-shadow(0 0 6px rgba(200,113,76,.15));" id="chooseFolderBtn" data-od-id="choose-folder-btn">选择文件夹</button>
           <button class="btn btn-secondary" id="cancelAddBtn" data-od-id="cancel-add-btn">取消</button>
         </div>
       </section>

@@ -45,7 +45,7 @@
   .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px var(--s3) 8px 18px; border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--muted); cursor: pointer; text-decoration: none; user-select: none; border: none; background: transparent; width: 100%; text-align: left; font-family: inherit; line-height: 1.4; position: relative; transition: background var(--toggle-duration) var(--ease), color var(--toggle-duration) var(--ease); }
   .nav-item:hover { background: var(--raised); color: var(--fg); }
   /* 活跃项：rep 暖雾底 + 呼吸点（同 chat-collapsed 状态点） */
-  .nav-item.active { background: var(--halo-rep-settings); color: var(--fg); font-weight: 500; box-shadow: none; }
+  .nav-item.active { background: var(--halo-rep-settings); color: var(--fg); font-weight: 500; }
   .nav-item.active::before { content: ''; position: absolute; left: 5px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--rep-500); filter: drop-shadow(0 0 3px var(--rep-400)); animation: breathe 6s ease-in-out infinite; transition: background var(--grow); }
   .nav-item-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; opacity: 0.7; flex-shrink: 0; }
   .nav-item.active .nav-item-icon { opacity: 1; }
@@ -81,9 +81,13 @@
 
   /* ─── Per-mode overrides ─── */
   .mode-list { display: flex; flex-direction: column; }
+  .mode-group-label { font-size: var(--fs-sm); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 0 6px; color: var(--faint); }
+  .mode-group-label.rep-accent { color: var(--rep-500); }
+  .mode-group-label.abyss-accent { color: var(--abyss-500); }
   .mode-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
   .mode-row:last-child { border-bottom: none; }
-  .mode-name { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--fg); letter-spacing: -0.01em; }
+  .mode-name { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--fg); letter-spacing: -0.01em; min-width: 110px; }
+  .mode-microcopy { font-size: 14px; color: var(--faint); margin-left: auto; padding-right: 8px; }
 
   /* ─── Denylist ─── */
   /* 深渊青底色 — cold/security feel */
@@ -109,7 +113,7 @@
   .audit-path { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); background: var(--raised); display: inline-block; padding: 5px 10px; border-radius: var(--r-sm); border: 1px solid var(--border-soft); margin-bottom: 12px; }
 
   /* ─── Dark mode ─── */
-  [data-theme="dark"] .nav-item.active { background: var(--halo-rep-settings); box-shadow: none; }
+  [data-theme="dark"] .nav-item.active { background: var(--halo-rep-settings); }
   [data-theme="dark"] .nav-item.active::before { background: var(--rep-400); filter: drop-shadow(0 0 4px var(--rep-500)); }
   [data-theme="dark"] .segment.active { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35)); }
 
@@ -186,12 +190,12 @@
           <h2 class="card-title" id="card-denylist">命令黑名单</h2>
           <p class="card-hint">这些危险命令永远被拦截，无论自治档。</p>
 
-          <button class="deny-expand" id="deny-toggle" aria-expanded="false">
+          <button class="deny-expand" id="deny-toggle" aria-expanded="true">
             <span>编辑黑名单</span>
-            <span class="chevron" aria-hidden="true">▼</span>
+            <span class="chevron" aria-hidden="true" style="transform:rotate(180deg)">▼</span>
           </button>
 
-          <div class="deny-card" aria-label="内置危险命令">
+          <div class="deny-card" aria-label="内置危险命令" style="margin-top:10px;">
             <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>rm -rf 危险目标</span></div>
             <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>dd of=\.\\physicaldrive</span></div>
             <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>mkfs 格式化</span></div>
@@ -200,7 +204,7 @@
             <div class="deny-row"><span class="deny-prefix" aria-hidden="true">•</span><span>shutdown / reboot</span></div>
           </div>
 
-          <div class="deny-add" id="deny-add">
+          <div class="deny-add is-open" id="deny-add">
             <input class="deny-input" id="deny-input" type="text" placeholder="输入命令模式..." aria-label="添加黑名单命令" />
             <button class="btn-primary" id="deny-add-btn">添加</button>
           </div>
@@ -221,21 +225,26 @@
 <script>
   (function() {
     const modes = [
-      { id: 'agentic', label: 'agentic', default: 'permissive', current: 'permissive' },
-      { id: 'plan', label: 'plan', default: 'permissive', current: 'permissive' },
-      { id: 'debug', label: 'debug', default: 'permissive', current: 'permissive' },
-      { id: 'multitask', label: 'multitask', default: 'permissive', current: 'permissive' },
-      { id: 'team', label: 'team', default: 'permissive', current: 'permissive' },
-      { id: 'cowork', label: 'cowork', default: 'permissive', current: 'permissive' },
-      { id: 'claw', label: 'claw', default: 'permissive', current: 'permissive' },
-      { id: 'admin', label: 'admin', default: 'permissive', current: 'strict' },
+      { id: 'agentic', label: 'agentic', default: 'permissive', current: 'permissive', group: 'active', desc: 'agent 自主执行命令，无需确认' },
+      { id: 'debug', label: 'debug', default: 'permissive', current: 'permissive', group: 'active', desc: '调试模式下可直接运行工具' },
+      { id: 'cowork', label: 'cowork', default: 'permissive', current: 'permissive', group: 'active', desc: '协作时自动执行共享任务' },
+      { id: 'team', label: 'team', default: 'permissive', current: 'permissive', group: 'active', desc: '团队模式下执行协作命令' },
+      { id: 'claw', label: 'claw', default: 'permissive', current: 'permissive', group: 'active', desc: 'Claw 工具自动授权执行' },
+      { id: 'plan', label: 'plan', default: 'permissive', current: 'permissive', group: 'silent', desc: '计划阶段静默拦截危险操作' },
+      { id: 'multitask', label: 'multitask', default: 'permissive', current: 'permissive', group: 'silent', desc: '多任务时静默过滤高风险命令' },
+      { id: 'admin', label: 'admin', default: 'permissive', current: 'strict', group: 'silent', desc: '管理操作需逐条确认' },
     ];
 
     const modeList = document.getElementById('mode-list');
 
     function renderModes() {
       modeList.innerHTML = '';
-      modes.forEach(m => {
+      // Active group header
+      const activeHeader = document.createElement('div');
+      activeHeader.className = 'mode-group-label rep-accent';
+      activeHeader.textContent = '主动动作';
+      modeList.appendChild(activeHeader);
+      modes.filter(m => m.group === 'active').forEach(m => {
         const row = document.createElement('div');
         row.className = 'mode-row';
         row.setAttribute('role', 'listitem');
@@ -243,6 +252,10 @@
         const name = document.createElement('span');
         name.className = 'mode-name';
         name.textContent = m.label;
+
+        const microcopy = document.createElement('span');
+        microcopy.className = 'mode-microcopy';
+        microcopy.textContent = m.desc;
 
         const seg = document.createElement('div');
         seg.className = 'segment-group';
@@ -263,6 +276,48 @@
         });
 
         row.appendChild(name);
+        row.appendChild(microcopy);
+        row.appendChild(seg);
+        modeList.appendChild(row);
+      });
+      // Silent group header
+      const silentHeader = document.createElement('div');
+      silentHeader.className = 'mode-group-label abyss-accent';
+      silentHeader.textContent = '静默拦截';
+      modeList.appendChild(silentHeader);
+      modes.filter(m => m.group === 'silent').forEach(m => {
+        const row = document.createElement('div');
+        row.className = 'mode-row';
+        row.setAttribute('role', 'listitem');
+
+        const name = document.createElement('span');
+        name.className = 'mode-name';
+        name.textContent = m.label;
+
+        const microcopy = document.createElement('span');
+        microcopy.className = 'mode-microcopy';
+        microcopy.textContent = m.desc;
+
+        const seg = document.createElement('div');
+        seg.className = 'segment-group';
+        seg.setAttribute('role', 'radiogroup');
+        seg.setAttribute('aria-label', m.label + ' 自治档');
+
+        ['permissive', 'strict'].forEach(val => {
+          const opt = document.createElement('button');
+          opt.className = 'segment segment-sm';
+          opt.setAttribute('role', 'radio');
+          opt.setAttribute('aria-checked', m.current === val ? 'true' : 'false');
+          opt.dataset.value = val;
+          opt.dataset.mode = m.id;
+          opt.textContent = val === 'permissive' ? '完全' : '确认';
+          if (m.current === val) opt.classList.add('active');
+          opt.addEventListener('click', () => { m.current = val; renderModes(); });
+          seg.appendChild(opt);
+        });
+
+        row.appendChild(name);
+        row.appendChild(microcopy);
         row.appendChild(seg);
         modeList.appendChild(row);
       });
