@@ -14,6 +14,19 @@
  * Slint 兼容：无 color-mix / oklch；box-shadow 在 components.css 中用 drop-shadow 替代。
  * --------------------------------------------------------------------------*/
 
+/* ── @property: make air-rep/halo-rep animatable for whole-room tinting ── */
+/* Slint: Rectangle { background: air-rep; animate background { duration:350ms; easing:ease-out; } } */
+@property --air-rep {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #F2F0EC;
+}
+@property --halo-rep {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #F0EDEA;
+}
+
 
 /* ----------------------------------------------------------------------------
  * 结构 token（主题无关，亮暗共用）

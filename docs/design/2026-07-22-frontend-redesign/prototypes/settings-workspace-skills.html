@@ -138,7 +138,6 @@
   <div class="topbar">
     <div class="topbar-title">设置</div>
     <div class="topbar-spacer"></div>
-    <button class="topbar-btn" id="themeToggle" title="切换亮/暗（演示）">◐</button>
   </div>
 
   <!-- ══════ 窗口控制（右上角） ══════ -->
@@ -365,20 +364,8 @@
       });
     });
 
-    /* 演示切换钮 */
-    const tt = document.getElementById('themeToggle');
-    if (tt) {
-      const setTheme = (m) => {
-        m === 'dark'
-          ? document.documentElement.setAttribute('data-theme', 'dark')
-          : document.documentElement.removeAttribute('data-theme');
-        tt.textContent = m === 'dark' ? '◑' : '◐';
-      };
-      let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      setTheme(cur);
-      tt.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; setTheme(cur); });
-    }
   })();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

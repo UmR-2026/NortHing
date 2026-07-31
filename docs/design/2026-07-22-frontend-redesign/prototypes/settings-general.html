@@ -373,7 +373,6 @@
   <div class="topbar">
     <div class="topbar-title">设置</div>
     <div class="topbar-spacer"></div>
-    <button class="topbar-btn" id="themeToggle" title="切换亮/暗（演示）">◐</button>
   </div>
 
   <!-- ══════ 窗口控制（右上角） ══════ -->
@@ -625,16 +624,7 @@
     setTimeout(() => { selectTrigger.style.borderColor = ''; }, 200);
   });
 
-  // 演示用亮/暗切换（默认跟随系统）
-  (function(){
-    const t = document.getElementById('themeToggle'); if (!t) return;
-    const set = m => {
-      m === 'dark' ? document.documentElement.setAttribute('data-theme','dark') : document.documentElement.removeAttribute('data-theme');
-      t.textContent = m === 'dark' ? '◑' : '◐';
-    };
-    let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; set(cur);
-    t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
-  })();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

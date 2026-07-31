@@ -554,29 +554,6 @@
     color: var(--fg);
   }
 
-  /* ─── 演示切换钮（同 chat-collapsed demo-btn） ─── */
-  .demo-panel {
-    position: absolute;
-    right: 18px;
-    bottom: 60px;
-    z-index: 40;
-  }
-  .demo-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--elevated);
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
-    transition: color .2s;
-  }
-  .demo-btn:hover { color: var(--fg); }
   </style>
 </head>
 <body>
@@ -849,10 +826,6 @@
     <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
   </div>
 
-  <!-- ══════ 演示切换钮（右下角） ══════ -->
-  <div class="demo-panel">
-    <button class="demo-btn" id="demoToggle" title="切换亮/暗">◐</button>
-  </div>
 
 </div>
 
@@ -872,24 +845,7 @@ function handleCardKeydown(el, event) {
   }
 }
 
-/* ── 暗色切换（同 chat-collapsed） ── */
-(function () {
-  var toggle = document.getElementById('demoToggle');
-  if (!toggle) return;
-  var cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  applyTheme(cur);
-
-  toggle.addEventListener('click', function () {
-    cur = cur === 'dark' ? 'light' : 'dark';
-    applyTheme(cur);
-  });
-
-  function applyTheme(m) {
-    if (m === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-    else document.documentElement.removeAttribute('data-theme');
-    toggle.textContent = m === 'dark' ? '◑' : '◐';
-  }
-})();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

@@ -44,7 +44,7 @@
 }
 
 /* ─── 窗口容器：使用 shared/layout.css .app，仅覆写居中 ─── */
-/* Slint: Window { background: air-rep; border-radius: 20; } */
+/* Slint: Window { background: air-rep; border-radius: 20; animate background { duration:350ms; easing:ease-out; } } */
 .app {
   align-items: center;
   background:
@@ -363,29 +363,6 @@
   100% { left: 200%; }
 }
 
-/* ─── 演示切换钮（同 chat-collapsed demo-panel） ─── */
-.demo-panel {
-  position: absolute;
-  right: 18px;
-  bottom: 60px;
-  z-index: 40;
-}
-.demo-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--elevated);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
-  transition: color .2s;
-}
-.demo-btn:hover { color: var(--fg); }
 
 </style>
 </head>
@@ -483,10 +460,6 @@
     <button class="confirm-btn" id="confirmBtn" disabled>成为自己</button>
   </div>
 
-  <!-- ══════ 演示切换钮（右下角） ══════ -->
-  <div class="demo-panel">
-    <button class="demo-btn" id="demoToggle" title="切换亮/暗">◐</button>
-  </div>
 
 </div>
 
@@ -505,13 +478,13 @@
 
   let selectedColor = null;
 
-  // 代表色组（hex + RGB 通道，供 rgba 半透明色值使用）
+  // 代表色组（hex + RGB 通道 + air-rep/halo-rep 语义混合色，供整屋空气染色过渡）
   const repColors = {
-    coral:  { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56' },
-    abyss:  { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99' },
-    warm:   { 300: '#E8CC8E', '300-rgb': '232,204,142', 400: '#DEB96E', '400-rgb': '222,185,110', 500: '#D4A853', '500-rgb': '212,168,83',   600: '#B8903E', '600-rgb': '184,144,62' },
-    cool:   { 300: '#B89FD0', '300-rgb': '184,159,208', 400: '#A187C0', '400-rgb': '161,135,192', 500: '#8B6FAF', '500-rgb': '139,111,175',  600: '#705596', '600-rgb': '112,85,150' },
-    forest: { 300: '#89B588', '300-rgb': '137,181,136', 400: '#72A171', '400-rgb': '114,161,113', 500: '#5B8C5A', '500-rgb': '91,140,90',    600: '#487347', '600-rgb': '72,115,71' }
+    coral:  { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56',  air: '#F2F0EC', halo: '#F0EDEA' },
+    abyss:  { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99',  air: '#EFF3F2', halo: '#ECF1F0' },
+    warm:   { 300: '#E8CC8E', '300-rgb': '232,204,142', 400: '#DEB96E', '400-rgb': '222,185,110', 500: '#D4A853', '500-rgb': '212,168,83',   600: '#B8903E', '600-rgb': '184,144,62',  air: '#F3F1EC', halo: '#F2EFEB' },
+    cool:   { 300: '#B89FD0', '300-rgb': '184,159,208', 400: '#A187C0', '400-rgb': '161,135,192', 500: '#8B6FAF', '500-rgb': '139,111,175',  600: '#705596', '600-rgb': '112,85,150',  air: '#F1EFF4', halo: '#EFECF2' },
+    forest: { 300: '#89B588', '300-rgb': '137,181,136', 400: '#72A171', '400-rgb': '114,161,113', 500: '#5B8C5A', '500-rgb': '91,140,90',    600: '#487347', '600-rgb': '72,115,71',   air: '#EFF3EF', halo: '#ECF1EC' }
   };
 
   function applyRep(color) {
@@ -524,6 +497,8 @@
     root.style.setProperty('--rep-500-rgb', c['500-rgb']);
     root.style.setProperty('--rep-600', c[600]);
     root.style.setProperty('--rep-600-rgb', c['600-rgb']);
+    root.style.setProperty('--air-rep', c.air);
+    root.style.setProperty('--halo-rep', c.halo);
   }
 
   function resetRep() {
@@ -535,6 +510,8 @@
     root.style.setProperty('--rep-500-rgb', '181,176,168');
     root.style.setProperty('--rep-600', '#9E9991');
     root.style.setProperty('--rep-600-rgb', '158,153,145');
+    root.style.setProperty('--air-rep', '#F2F0EC');
+    root.style.setProperty('--halo-rep', '#F0EDEA');
   }
 
   // ─── 名字输入：实时显示在头像 ───
@@ -627,19 +604,8 @@
     }, 1200);
   });
 
-  // ─── 演示用亮/暗切换（同 chat-collapsed） ───
-  (function(){
-    const t = document.getElementById('demoToggle');
-    if (!t) return;
-    const set = m => {
-      m === 'dark' ? document.documentElement.setAttribute('data-theme', 'dark') : document.documentElement.removeAttribute('data-theme');
-      t.textContent = m === 'dark' ? '◑' : '◐';
-    };
-    let cur = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    set(cur);
-    t.addEventListener('click', () => { cur = cur === 'dark' ? 'light' : 'dark'; set(cur); });
-  })();
 })();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

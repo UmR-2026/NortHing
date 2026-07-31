@@ -45,7 +45,7 @@
 }
 
 /* ─── 窗口容器：使用 shared/layout.css .app，仅覆写居中 ─── */
-/* Slint: Window { background: air-rep; border-radius: 20; } */
+/* Slint: Window { background: air-rep; border-radius: 20; animate background { duration:350ms; easing:ease-out; } } */
 .app {
   align-items: center;
   background:
@@ -467,29 +467,6 @@
 
 /* 渗透由 shared CSS 提供 */
 
-/* ─── 演示切换钮（同 chat-collapsed demo-panel） ─── */
-.demo-panel {
-  position: absolute;
-  right: 18px;
-  bottom: 60px;
-  z-index: 40;
-}
-.demo-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--elevated);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
-  transition: color .2s;
-}
-.demo-btn:hover { color: var(--fg); }
 
 </style>
 </head>
@@ -614,10 +591,6 @@
     </div>
   </div>
 
-  <!-- ══════ 演示切换钮（右下角） ══════ -->
-  <div class="demo-panel">
-    <button class="demo-btn" id="demoToggle" title="切换亮/暗">◐</button>
-  </div>
 
 </div>
 
@@ -644,13 +617,13 @@
   let selectedPersonality = null;
   let isAlive = false;
 
-  // 代表色组 — 选色后覆盖 --rep-* + --rep-*-rgb，整屋空气随之换色
+  // 代表色组 — 选色后覆盖 --rep-* + --rep-*-rgb + --air-rep/--halo-rep，整屋空气染色过渡
   const repColors = {
-    openness:          { 300: '#C4A8D8', '300-rgb': '196,168,216', 400: '#AF94CB', '400-rgb': '175,148,203', 500: '#9B7FBF', '500-rgb': '155,127,191', 600: '#7E63A3', '600-rgb': '126,99,163' },
-    conscientiousness: { 300: '#7A9CC4', '300-rgb': '122,156,196', 400: '#6288B5', '400-rgb': '98,136,181', 500: '#4A6FA5', '500-rgb': '74,111,165', 600: '#3A5A88', '600-rgb': '58,90,136' },
-    extraversion:      { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56' },
-    agreeableness:     { 300: '#8FBFA0', '300-rgb': '143,191,160', 400: '#7DB08D', '400-rgb': '125,176,141', 500: '#6B9E7A', '500-rgb': '107,158,122', 600: '#55825F', '600-rgb': '85,130,95' },
-    neuroticism:       { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99' }
+    openness:          { 300: '#C4A8D8', '300-rgb': '196,168,216', 400: '#AF94CB', '400-rgb': '175,148,203', 500: '#9B7FBF', '500-rgb': '155,127,191', 600: '#7E63A3', '600-rgb': '126,99,163', air: '#F1EFF4', halo: '#EFECF2' },
+    conscientiousness: { 300: '#7A9CC4', '300-rgb': '122,156,196', 400: '#6288B5', '400-rgb': '98,136,181', 500: '#4A6FA5', '500-rgb': '74,111,165', 600: '#3A5A88', '600-rgb': '58,90,136',  air: '#F0F1F3', halo: '#ECEDF1' },
+    extraversion:      { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56',  air: '#F2F0EC', halo: '#F0EDEA' },
+    agreeableness:     { 300: '#8FBFA0', '300-rgb': '143,191,160', 400: '#7DB08D', '400-rgb': '125,176,141', 500: '#6B9E7A', '500-rgb': '107,158,122', 600: '#55825F', '600-rgb': '85,130,95',   air: '#EFF3F0', halo: '#ECF1ED' },
+    neuroticism:       { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99',  air: '#EFF3F2', halo: '#ECF1F0' }
   };
 
   // Personality avatar gradients
@@ -680,6 +653,8 @@
     root.style.setProperty('--rep-500-rgb', c['500-rgb']);
     root.style.setProperty('--rep-600', c[600]);
     root.style.setProperty('--rep-600-rgb', c['600-rgb']);
+    root.style.setProperty('--air-rep', c.air);
+    root.style.setProperty('--halo-rep', c.halo);
   }
 
   function resetRep() {
@@ -691,6 +666,8 @@
     root.style.setProperty('--rep-500-rgb', '181,176,168');
     root.style.setProperty('--rep-600', '#9E9991');
     root.style.setProperty('--rep-600-rgb', '158,153,145');
+    root.style.setProperty('--air-rep', '#F2F0EC');
+    root.style.setProperty('--halo-rep', '#F0EDEA');
   }
 
   // ─── Personality selection — TouchArea → selected ring + birth moment ───
@@ -852,14 +829,8 @@
     return `我是${name}，${user}的${role}。${name}说话简洁克制，偏向安静地观察，偶尔带点细腻的察觉。${name}是${personalityDesc}。${name}不喧哗，只是平静地回应，用简短的句子传递温度。${name}就是这样。`;
   }
 
-  // ─── 演示用亮/暗切换（同 chat-collapsed） ───
-  (function(){
-    const t=document.getElementById('demoToggle');if(!t)return;
-    const set=m=>{m==='dark'?document.documentElement.setAttribute('data-theme','dark'):document.documentElement.removeAttribute('data-theme');t.textContent=m==='dark'?'◑':'◐';};
-    let cur=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';set(cur);
-    t.addEventListener('click',()=>{cur=cur==='dark'?'light':'dark';set(cur);});
-  })();
 })();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

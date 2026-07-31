@@ -30,7 +30,7 @@
   /* 顶栏 */
   .topbar {
     border-bottom: 1px solid var(--border-soft);
-    padding-right: 120px;
+    padding-right: 24px;
   }
   .topbar-title {
     font-family: var(--font-display);
@@ -41,31 +41,6 @@
     font-size: var(--fs-sm);
     color: var(--faint);
     letter-spacing: .04em;
-  }
-
-  /* 亮/暗切换钮（顶栏内） */
-  .mode-seg {
-    display: flex;
-    background: var(--raised);
-    border-radius: var(--r-sm);
-    padding: 4px;
-    gap: 4px;
-  }
-  .mode-opt {
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-family: inherit;
-    font-size: var(--fs-md);
-    padding: 4px 12px;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-    transition: .15s;
-  }
-  .mode-opt.active {
-    background: var(--elevated);
-    color: var(--fg);
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,.12));
   }
 
   /* ─── 卡片 ─── */
@@ -358,11 +333,6 @@
   .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
   .content::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-  /* ─── 暗色覆写（页面特有） ─── */
-  [data-theme="dark"] .mode-opt.active {
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,.35)) drop-shadow(0 1px 1px rgba(0,0,0,.25));
-  }
-
   /* ─── 渐变强调条（warm → cool） ─── */
   .accent-bar {
     height: 3px;
@@ -428,10 +398,6 @@
     <span class="topbar-title">主题系统</span>
     <span class="topbar-meta">范式真值 · v3</span>
     <div class="topbar-spacer"></div>
-    <div class="mode-seg" id="modeSeg">
-      <button class="mode-opt" data-mode="light">亮</button>
-      <button class="mode-opt" data-mode="dark">暗</button>
-    </div>
   </div>
 
   <!-- 渐变强调条 — warm→cool 暖→冷渐变，标识主题系统页 -->
@@ -785,18 +751,6 @@
     swatchesEl.appendChild(el);
   });
 
-  // 亮/暗切换
-  const modeSeg=document.getElementById('modeSeg');
-  function setMode(m){
-    if(m==='dark')document.documentElement.setAttribute('data-theme','dark');
-    else document.documentElement.removeAttribute('data-theme');
-    modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
-    // 延迟更新 hex，等 CSS 变量切换生效
-    requestAnimationFrame(updateHexDisplays);
-  }
-  modeSeg.querySelectorAll('.mode-opt').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
-  setMode(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-
   // 读取并显示当前 CSS 变量的计算值
   function updateHexDisplays(){
     const cs=getComputedStyle(root);
@@ -810,9 +764,15 @@
     });
   }
 
+  // 监听统一主题切换事件，更新 hex 显示
+  document.addEventListener('nt-theme-changed', function () {
+    requestAnimationFrame(updateHexDisplays);
+  });
+
   apply(3,false);
   updateHexDisplays();
 })();
 </script>
+<script src="shared/theme-switch.js"></script>
 </body>
 </html>

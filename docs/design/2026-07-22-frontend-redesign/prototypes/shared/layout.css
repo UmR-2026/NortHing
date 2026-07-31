@@ -62,7 +62,8 @@ body {
   background: var(--air-rep);
   /* box-shadow: 0 30px 80px -28px rgba(0,0,0,.5) */
   filter: drop-shadow(0 15px 40px rgba(0,0,0,.35));
-  transition: background var(--grow);
+  /* Slint: animate background { duration:350ms; easing:ease-out; } */
+  transition: background 350ms ease-out, filter var(--grow);
 }
 
 /* 顶晕 — 大椭圆，代表色空气染色 */
@@ -74,7 +75,8 @@ body {
   background: radial-gradient(ellipse 160% 120% at 50% 4%, var(--halo-rep) 0%, transparent 100%);
   pointer-events: none;
   z-index: 0;
-  transition: background var(--grow);
+  /* Slint: animate background { duration:350ms; easing:ease-out; } */
+  transition: background 350ms ease-out;
 }
 
 /* 底冷雾 — abyss 冷色 */
