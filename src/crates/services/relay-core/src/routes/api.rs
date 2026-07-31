@@ -504,7 +504,6 @@ mod handler_tests {
     use crate::validated::{ContentHash, ValidatedRelPath, ValidatedRoomId};
     use crate::MemoryAssetStore;
     use crate::WebAssetStore;
-    use base64::engine::general_purpose::STANDARD as B64;
     use base64::Engine;
 
     fn make_state(store: Arc<dyn WebAssetStore>) -> AppState {
