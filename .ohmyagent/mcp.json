@@ -1,0 +1,15 @@
+{
+  "servers": [
+    {
+      "name": "codegraph",
+      "transport": "stdio",
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/c",
+        "npx -y @colbymchenry/codegraph@1.5.0 serve --mcp --path E:/agent-project/northing"
+      ],
+      "env": {}
+    }
+  ]
+}
