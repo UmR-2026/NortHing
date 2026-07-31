@@ -64,8 +64,8 @@ impl WorkspaceSearchService {
         self.inner.glob(request).await.map_err(map_workspace_search_error)
     }
 
-    pub fn schedule_repo_release(self: &Arc<Self>, repo_root: impl AsRef<Path>) {
-        self.inner.schedule_repo_release(repo_root);
+    pub async fn schedule_repo_release(self: &Arc<Self>, repo_root: impl AsRef<Path>) {
+        self.inner.schedule_repo_release(repo_root).await;
     }
 
     pub async fn shutdown_all_daemons(&self) {
@@ -175,4 +175,23 @@ pub fn resolve_workspace_search_daemon_program_path() -> Option<PathBuf> {
 
 fn map_workspace_search_error(error: String) -> NortHingError {
     NortHingError::service(error)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkspaceSearchService;
+    use northhing_test_support::TestTempDir;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn schedule_repo_release_is_async_and_drives_inner_future() {
+        let tmp = TestTempDir::new("ws-search-release");
+        let service = Arc::new(WorkspaceSearchService::new());
+        // Before the fix the wrapper was a sync `pub fn` that dropped the inner
+        // future, so the spawned idle-release task never ran. Awaiting here
+        // proves the future is now driven. This also locks the async
+        // signature: reverting to `pub fn` would fail to compile because `()`
+        // cannot be awaited.
+        service.schedule_repo_release(tmp.path()).await;
+    }
 }

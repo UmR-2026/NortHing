@@ -29,6 +29,7 @@ pub use global::{
     is_lsp_manager_initialized, open_workspace, open_workspace_with_emitter,
 };
 pub use manager::LspManager;
+pub use plugin_loader::ValidatedPluginId;
 pub use project_detector::{ProjectDetector, ProjectInfo};
 pub use types::{CompletionItem, LspPlugin, PluginSource};
 pub use workspace_manager::{LspEvent, ServerState, ServerStatus, WorkspaceLspManager};

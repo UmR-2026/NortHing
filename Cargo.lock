@@ -5747,6 +5747,7 @@ dependencies = [
  "northhing-events",
  "northhing-kernel-api",
  "northhing-runtime-ports",
+ "northhing-test-support",
  "parking_lot",
  "rfd",
  "serde",

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
-use super::plugin_loader::PluginLoader;
+use super::plugin_loader::{PluginLoader, ValidatedPluginId};
 use super::process::{CrashCallback, DiagnosticsCallback, LspServerProcess, ProgressCallback, TokenCreateCallback};
 use super::registry::PluginRegistry;
 use super::types::{CompletionItem, LspPlugin};
@@ -86,12 +86,15 @@ impl LspManager {
 
         info!("Plugin installed and registered: {}", plugin_id);
 
-        Ok(plugin_id)
+        Ok(plugin_id.as_str().to_string())
     }
 
     /// Uninstalls a plugin.
     pub async fn uninstall_plugin(&self, plugin_id: &str) -> Result<()> {
         info!("Uninstalling plugin: {}", plugin_id);
+
+        let validated_id = ValidatedPluginId::try_from(plugin_id)
+            .map_err(|e| anyhow!("Invalid plugin id: {}", e))?;
 
         if let Err(e) = self.stop_server(plugin_id).await {
             warn!("Failed to stop server for {}: {}", plugin_id, e);
@@ -102,7 +105,7 @@ impl LspManager {
             registry.unregister(plugin_id)?;
         }
 
-        self.plugin_loader.uninstall_plugin(plugin_id).await?;
+        self.plugin_loader.uninstall_plugin(&validated_id).await?;
 
         info!("Plugin uninstalled: {}", plugin_id);
 
