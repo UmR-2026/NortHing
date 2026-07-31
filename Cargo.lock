@@ -6109,8 +6109,10 @@ version = "0.2.10"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.22.1",
  "dashmap",
  "northhing-relay-core",
+ "serde_json",
  "tempfile",
  "tokio",
  "tower-http",

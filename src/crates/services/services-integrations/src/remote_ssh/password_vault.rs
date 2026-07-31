@@ -7,9 +7,11 @@ use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use northhing_services_core::JsonFileStore;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::PathBuf;
 use tokio::sync::Mutex;
 
@@ -89,30 +91,54 @@ impl SSHPasswordVault {
         String::from_utf8(pt).context("utf8 decode ssh vault password")
     }
 
-    pub async fn store(&self, connection_id: &str, password: &str) -> Result<()> {
-        let _g = self.lock.lock().await;
-        let key = self.ensure_key().await?;
-        let mut file: VaultFile = if self.vault_path.exists() {
-            let s = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-            serde_json::from_str(&s).unwrap_or_default()
-        } else {
-            VaultFile::default()
-        };
-        let enc = Self::encrypt_password(&key, password)?;
-        file.entries.insert(connection_id.to_string(), enc);
-        if let Some(p) = self.vault_path.parent() {
-            tokio::fs::create_dir_all(p).await?;
+    /// Reads the vault file, treating a missing file as the empty initial
+    /// state. Fail-closed: any read or parse error propagates so callers never
+    /// overwrite a vault they cannot fully read back.
+    async fn read_vault_file(&self) -> Result<VaultFile> {
+        match tokio::fs::read_to_string(&self.vault_path).await {
+            Ok(body) => {
+                serde_json::from_str(&body).with_context(|| format!("vault corrupted: {}", self.vault_path.display()))
+            }
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(VaultFile::default()),
+            Err(error) => Err(error).with_context(|| format!("failed to read vault: {}", self.vault_path.display())),
         }
-        let body = serde_json::to_string_pretty(&file)?;
-        tokio::fs::write(&self.vault_path, body)
+    }
+
+    /// Backs up the current vault content to `<name>.bak` before an atomic
+    /// replace. Failure to back up is warn-only and never blocks the write.
+    async fn backup_vault(&self) {
+        if !self.vault_path.exists() {
+            return;
+        }
+        if let Err(error) = tokio::fs::copy(&self.vault_path, self.vault_path.with_extension("bak")).await {
+            tracing::warn!("Failed to back up vault {}: {}", self.vault_path.display(), error);
+        }
+    }
+
+    /// Atomically persists the vault via `JsonFileStore::write_atomic`
+    /// (tmp + rename with Windows share-handle retries), keeping a `.bak`
+    /// copy of the previous content, and restoring 0o600 on Unix.
+    async fn write_vault(&self, file: &VaultFile) -> Result<()> {
+        self.backup_vault().await;
+        JsonFileStore
+            .write_atomic(&self.vault_path, file)
             .await
-            .context("write ssh password vault")?;
+            .context("write ssh password vault atomically")?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let _ = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600));
         }
         Ok(())
+    }
+
+    pub async fn store(&self, connection_id: &str, password: &str) -> Result<()> {
+        let _g = self.lock.lock().await;
+        let key = self.ensure_key().await?;
+        let mut file = self.read_vault_file().await.context("refusing to overwrite vault")?;
+        let enc = Self::encrypt_password(&key, password)?;
+        file.entries.insert(connection_id.to_string(), enc);
+        self.write_vault(&file).await
     }
 
     pub async fn load(&self, connection_id: &str) -> Result<Option<String>> {
@@ -127,8 +153,7 @@ impl SSHPasswordVault {
         let mut key = [0u8; 32];
         key.copy_from_slice(&bytes);
 
-        let s = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-        let file: VaultFile = serde_json::from_str(&s).unwrap_or_default();
+        let file = self.read_vault_file().await?;
         let Some(entry) = file.entries.get(connection_id) else {
             return Ok(None);
         };
@@ -150,13 +175,12 @@ impl SSHPasswordVault {
         if !self.vault_path.exists() {
             return Ok(());
         }
-        let s = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-        let mut file: VaultFile = serde_json::from_str(&s).unwrap_or_default();
+        let mut file = self.read_vault_file().await.context("refusing to overwrite vault")?;
         file.entries.remove(connection_id);
         if file.entries.is_empty() {
             let _ = tokio::fs::remove_file(&self.vault_path).await;
         } else {
-            tokio::fs::write(&self.vault_path, serde_json::to_string_pretty(&file)?).await?;
+            self.write_vault(&file).await?;
         }
         Ok(())
     }
@@ -169,31 +193,31 @@ impl SSHPasswordVault {
         if !self.vault_path.exists() {
             return Ok(());
         }
-        let s = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-        let mut file: VaultFile = serde_json::from_str(&s).unwrap_or_default();
+        let mut file = self.read_vault_file().await.context("refusing to overwrite vault")?;
         let Some(entry) = file.entries.remove(old_connection_id) else {
             return Ok(());
         };
         file.entries.entry(new_connection_id.to_string()).or_insert(entry);
-        tokio::fs::write(&self.vault_path, serde_json::to_string_pretty(&file)?).await?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600));
-        }
-        Ok(())
+        self.write_vault(&file).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::SSHPasswordVault;
+    use northhing_test_support::TestTempDir;
+    use std::path::PathBuf;
+
+    fn test_vault() -> (TestTempDir, SSHPasswordVault, PathBuf) {
+        let dir = TestTempDir::new("ssh-vault");
+        let vault = SSHPasswordVault::new(dir.path().to_path_buf());
+        let vault_path = dir.path().join("ssh_password_vault.json");
+        (dir, vault, vault_path)
+    }
 
     #[tokio::test]
     async fn migrate_entry_moves_password_to_new_connection_id() {
-        let dir = std::env::temp_dir().join(format!("northhing-ssh-vault-test-{}", std::process::id()));
-        let _ = tokio::fs::remove_dir_all(&dir).await;
-        let vault = SSHPasswordVault::new(dir.clone());
+        let (dir, vault, _) = test_vault();
 
         vault.store("ssh-root@example.com:22", "secret").await.unwrap();
         vault
@@ -207,6 +231,119 @@ mod tests {
         );
         assert!(vault.load("ssh-root@example.com:22").await.unwrap().is_none());
 
-        let _ = tokio::fs::remove_dir_all(&dir).await;
+        drop(dir);
+    }
+
+    #[tokio::test]
+    async fn store_fails_closed_on_corrupted_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let corrupted = b"{ not valid json !!!";
+        tokio::fs::write(&vault_path, corrupted).await.unwrap();
+
+        let result = vault.store("ssh-root@example.com:22", "secret").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), corrupted);
+    }
+
+    #[tokio::test]
+    async fn remove_fails_closed_on_corrupted_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let corrupted = b"{ not valid json !!!";
+        tokio::fs::write(&vault_path, corrupted).await.unwrap();
+
+        let result = vault.remove("ssh-root@example.com").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), corrupted);
+    }
+
+    #[tokio::test]
+    async fn migrate_fails_closed_on_corrupted_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let corrupted = b"{ not valid json !!!";
+        tokio::fs::write(&vault_path, corrupted).await.unwrap();
+
+        let result = vault
+            .migrate_entry("ssh-root@example.com:22", "ssh-root@example.com")
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), corrupted);
+    }
+
+    #[tokio::test]
+    async fn store_fails_closed_on_truncated_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let truncated = br#"{"entries": {"#;
+        tokio::fs::write(&vault_path, truncated).await.unwrap();
+
+        let result = vault.store("ssh-root@example.com:22", "secret").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), truncated);
+    }
+
+    #[tokio::test]
+    async fn remove_fails_closed_on_truncated_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let truncated = br#"{"entries": {"#;
+        tokio::fs::write(&vault_path, truncated).await.unwrap();
+
+        let result = vault.remove("ssh-root@example.com").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), truncated);
+    }
+
+    #[tokio::test]
+    async fn migrate_fails_closed_on_truncated_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let truncated = br#"{"entries": {"#;
+        tokio::fs::write(&vault_path, truncated).await.unwrap();
+
+        let result = vault
+            .migrate_entry("ssh-root@example.com:22", "ssh-root@example.com")
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), truncated);
+    }
+
+    #[tokio::test]
+    async fn load_returns_error_on_corrupted_vault() {
+        let (_dir, vault, vault_path) = test_vault();
+        vault.store("ssh-root@example.com", "secret").await.unwrap();
+        tokio::fs::write(&vault_path, b"garbage").await.unwrap();
+
+        assert!(vault.load("ssh-root@example.com").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn store_is_atomic_and_keeps_bak_of_previous_content() {
+        let (_dir, vault, vault_path) = test_vault();
+
+        vault.store("a", "p1").await.unwrap();
+        let first = tokio::fs::read(&vault_path).await.unwrap();
+        assert!(!vault_path.with_extension("bak").exists());
+
+        vault.store("b", "p2").await.unwrap();
+
+        assert_eq!(vault.load("a").await.unwrap().as_deref(), Some("p1"));
+        assert_eq!(vault.load("b").await.unwrap().as_deref(), Some("p2"));
+        let bak = tokio::fs::read(vault_path.with_extension("bak")).await.unwrap();
+        assert_eq!(bak, first);
+    }
+
+    #[tokio::test]
+    async fn remove_deletes_file_when_last_entry_is_removed() {
+        let (_dir, vault, vault_path) = test_vault();
+
+        vault.store("a", "p1").await.unwrap();
+        vault.remove("a").await.unwrap();
+
+        assert!(!vault_path.exists());
+        vault.store("a", "p2").await.unwrap();
+        assert_eq!(vault.load("a").await.unwrap().as_deref(), Some("p2"));
     }
 }

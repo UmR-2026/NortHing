@@ -10,10 +10,12 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use northhing_services_core::JsonFileStore;
 use rand::RngCore;
 use rmcp::transport::auth::{AuthorizationManager, CredentialStore, OAuthState, StoredCredentials};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
@@ -150,6 +152,47 @@ impl MCPRemoteOAuthCredentialVault {
         String::from_utf8(plaintext).context("utf8 decode MCP OAuth vault entry")
     }
 
+    /// Reads the vault file, treating a missing file as the empty initial
+    /// state. Fail-closed: any read or parse error propagates so callers never
+    /// overwrite a vault they cannot fully read back.
+    async fn read_vault_file(&self) -> Result<VaultFile> {
+        match tokio::fs::read_to_string(&self.vault_path).await {
+            Ok(body) => {
+                serde_json::from_str(&body).with_context(|| format!("vault corrupted: {}", self.vault_path.display()))
+            }
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(VaultFile::default()),
+            Err(error) => Err(error).with_context(|| format!("failed to read vault: {}", self.vault_path.display())),
+        }
+    }
+
+    /// Backs up the current vault content to `<name>.bak` before an atomic
+    /// replace. Failure to back up is warn-only and never blocks the write.
+    async fn backup_vault(&self) {
+        if !self.vault_path.exists() {
+            return;
+        }
+        if let Err(error) = tokio::fs::copy(&self.vault_path, self.vault_path.with_extension("bak")).await {
+            tracing::warn!("Failed to back up vault {}: {}", self.vault_path.display(), error);
+        }
+    }
+
+    /// Atomically persists the vault via `JsonFileStore::write_atomic`
+    /// (tmp + rename with Windows share-handle retries), keeping a `.bak`
+    /// copy of the previous content, and restoring 0o600 on Unix.
+    async fn write_vault(&self, file: &VaultFile) -> Result<()> {
+        self.backup_vault().await;
+        JsonFileStore
+            .write_atomic(&self.vault_path, file)
+            .await
+            .context("write MCP OAuth vault atomically")?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600));
+        }
+        Ok(())
+    }
+
     pub async fn load(&self, server_id: &str) -> Result<Option<StoredCredentials>> {
         let _guard = self.lock.lock().await;
         if !self.key_path.exists() || !self.vault_path.exists() {
@@ -165,8 +208,7 @@ impl MCPRemoteOAuthCredentialVault {
         let mut key = [0u8; 32];
         key.copy_from_slice(&bytes);
 
-        let body = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-        let file: VaultFile = serde_json::from_str(&body).unwrap_or_default();
+        let file = self.read_vault_file().await?;
         let Some(entry) = file.entries.get(server_id) else {
             return Ok(None);
         };
@@ -190,32 +232,13 @@ impl MCPRemoteOAuthCredentialVault {
         let _guard = self.lock.lock().await;
         let key = self.ensure_key().await?;
 
-        let mut file: VaultFile = if self.vault_path.exists() {
-            let body = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-            serde_json::from_str(&body).unwrap_or_default()
-        } else {
-            VaultFile::default()
-        };
+        let mut file = self.read_vault_file().await.context("refusing to overwrite vault")?;
 
         let plaintext = serde_json::to_string(credentials)?;
         let encrypted = Self::encrypt_value(&key, &plaintext)?;
         file.entries.insert(server_id.to_string(), encrypted);
 
-        if let Some(parent) = self.vault_path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
-
-        tokio::fs::write(&self.vault_path, serde_json::to_string_pretty(&file)?)
-            .await
-            .context("write MCP OAuth vault")?;
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600));
-        }
-
-        Ok(())
+        self.write_vault(&file).await
     }
 
     pub async fn clear(&self, server_id: &str) -> Result<()> {
@@ -224,14 +247,13 @@ impl MCPRemoteOAuthCredentialVault {
             return Ok(());
         }
 
-        let body = tokio::fs::read_to_string(&self.vault_path).await.unwrap_or_default();
-        let mut file: VaultFile = serde_json::from_str(&body).unwrap_or_default();
+        let mut file = self.read_vault_file().await.context("refusing to overwrite vault")?;
         file.entries.remove(server_id);
 
         if file.entries.is_empty() {
             let _ = tokio::fs::remove_file(&self.vault_path).await;
         } else {
-            tokio::fs::write(&self.vault_path, serde_json::to_string_pretty(&file)?).await?;
+            self.write_vault(&file).await?;
         }
 
         Ok(())
@@ -387,4 +409,111 @@ pub async fn prepare_remote_oauth_authorization(
         authorization_url,
         redirect_uri,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MCPRemoteOAuthCredentialVault;
+    use northhing_test_support::TestTempDir;
+    use rmcp::transport::auth::StoredCredentials;
+    use std::path::PathBuf;
+
+    fn test_vault() -> (TestTempDir, MCPRemoteOAuthCredentialVault, PathBuf) {
+        let dir = TestTempDir::new("mcp-oauth-vault");
+        let vault = MCPRemoteOAuthCredentialVault::new(dir.path().to_path_buf());
+        let vault_path = dir.path().join("mcp_oauth_vault.json");
+        (dir, vault, vault_path)
+    }
+
+    fn credentials(server_id: &str) -> StoredCredentials {
+        StoredCredentials::new(format!("client-{server_id}"), None, Vec::new(), None)
+    }
+
+    #[tokio::test]
+    async fn store_fails_closed_on_corrupted_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let corrupted = b"{ not valid json !!!";
+        tokio::fs::write(&vault_path, corrupted).await.unwrap();
+
+        let result = vault.store("server-a", &credentials("server-a")).await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), corrupted);
+    }
+
+    #[tokio::test]
+    async fn clear_fails_closed_on_corrupted_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let corrupted = b"{ not valid json !!!";
+        tokio::fs::write(&vault_path, corrupted).await.unwrap();
+
+        let result = vault.clear("server-a").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), corrupted);
+    }
+
+    #[tokio::test]
+    async fn store_fails_closed_on_truncated_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let truncated = br#"{"entries": {"#;
+        tokio::fs::write(&vault_path, truncated).await.unwrap();
+
+        let result = vault.store("server-a", &credentials("server-a")).await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), truncated);
+    }
+
+    #[tokio::test]
+    async fn clear_fails_closed_on_truncated_vault_without_touching_file() {
+        let (_dir, vault, vault_path) = test_vault();
+        let truncated = br#"{"entries": {"#;
+        tokio::fs::write(&vault_path, truncated).await.unwrap();
+
+        let result = vault.clear("server-a").await;
+
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&vault_path).await.unwrap(), truncated);
+    }
+
+    #[tokio::test]
+    async fn load_returns_error_on_corrupted_vault() {
+        let (_dir, vault, vault_path) = test_vault();
+        vault.store("server-a", &credentials("server-a")).await.unwrap();
+        tokio::fs::write(&vault_path, b"garbage").await.unwrap();
+
+        assert!(vault.load("server-a").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn store_is_atomic_and_keeps_bak_of_previous_content() {
+        let (_dir, vault, vault_path) = test_vault();
+
+        vault.store("server-a", &credentials("server-a")).await.unwrap();
+        let first = tokio::fs::read(&vault_path).await.unwrap();
+        assert!(!vault_path.with_extension("bak").exists());
+
+        vault.store("server-b", &credentials("server-b")).await.unwrap();
+
+        let stored_a = vault.load("server-a").await.unwrap().unwrap();
+        assert_eq!(stored_a.client_id, "client-server-a");
+        let stored_b = vault.load("server-b").await.unwrap().unwrap();
+        assert_eq!(stored_b.client_id, "client-server-b");
+        let bak = tokio::fs::read(vault_path.with_extension("bak")).await.unwrap();
+        assert_eq!(bak, first);
+    }
+
+    #[tokio::test]
+    async fn clear_deletes_file_when_last_entry_is_cleared() {
+        let (_dir, vault, vault_path) = test_vault();
+
+        vault.store("server-a", &credentials("server-a")).await.unwrap();
+        vault.clear("server-a").await.unwrap();
+
+        assert!(!vault_path.exists());
+        vault.store("server-a", &credentials("server-a")).await.unwrap();
+        let stored = vault.load("server-a").await.unwrap().unwrap();
+        assert_eq!(stored.client_id, "client-server-a");
+    }
 }
