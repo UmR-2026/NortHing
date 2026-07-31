@@ -6,10 +6,12 @@
 
 pub mod relay;
 pub mod routes;
+pub mod validated;
 
-pub use relay::room::{ResponsePayload, RoomManager};
+pub use relay::room::{CreateRoomOutcome, ResponsePayload, RoomManager};
 pub use routes::api::AppState;
 pub use routes::websocket::OutboundProtocol;
+pub use validated::{ContentHash, ValidatedRelPath, ValidatedRoomId};
 
 use axum::extract::DefaultBodyLimit;
 use axum::routing::{get, post};
@@ -27,23 +29,28 @@ use dashmap::DashMap;
 /// the embedded relay uses `MemoryAssetStore` (in-memory DashMap-backed).
 pub trait WebAssetStore: Send + Sync + 'static {
     /// Check if content with this SHA-256 hash exists in the store.
-    fn has_content(&self, hash: &str) -> bool;
+    fn has_content(&self, hash: &ContentHash) -> bool;
 
     /// Store content by its SHA-256 hash. No-op if already present.
-    fn store_content(&self, hash: &str, data: Vec<u8>) -> Result<(), String>;
+    fn store_content(&self, hash: &ContentHash, data: Vec<u8>) -> Result<(), String>;
 
     /// Associate a relative file path within a room to a stored content hash.
-    fn map_to_room(&self, room_id: &str, rel_path: &str, hash: &str) -> Result<(), String>;
+    fn map_to_room(
+        &self,
+        room_id: &ValidatedRoomId,
+        rel_path: &ValidatedRelPath,
+        hash: &ContentHash,
+    ) -> Result<(), String>;
 
     /// Retrieve file content for serving. Falls back to `index.html` if the
     /// requested path doesn't exist (SPA routing).
-    fn get_file(&self, room_id: &str, path: &str) -> Option<Vec<u8>>;
+    fn get_file(&self, room_id: &ValidatedRoomId, path: &ValidatedRelPath) -> Option<Vec<u8>>;
 
     /// Check if any web files have been uploaded for this room.
-    fn has_room_files(&self, room_id: &str) -> bool;
+    fn has_room_files(&self, room_id: &ValidatedRoomId) -> bool;
 
     /// Remove all uploaded web files for a room.
-    fn cleanup_room(&self, room_id: &str);
+    fn cleanup_room(&self, room_id: &ValidatedRoomId);
 }
 
 // ── MemoryAssetStore ──────────────────────────────────────────────────
@@ -70,38 +77,44 @@ impl Default for MemoryAssetStore {
 }
 
 impl WebAssetStore for MemoryAssetStore {
-    fn has_content(&self, hash: &str) -> bool {
-        self.content_store.contains_key(hash)
+    fn has_content(&self, hash: &ContentHash) -> bool {
+        self.content_store.contains_key(hash.as_str())
     }
 
-    fn store_content(&self, hash: &str, data: Vec<u8>) -> Result<(), String> {
+    fn store_content(&self, hash: &ContentHash, data: Vec<u8>) -> Result<(), String> {
         self.content_store
             .entry(hash.to_string())
             .or_insert_with(|| Arc::new(data));
         Ok(())
     }
 
-    fn map_to_room(&self, room_id: &str, rel_path: &str, hash: &str) -> Result<(), String> {
+    fn map_to_room(
+        &self,
+        room_id: &ValidatedRoomId,
+        rel_path: &ValidatedRelPath,
+        hash: &ContentHash,
+    ) -> Result<(), String> {
         self.room_manifests
-            .entry(room_id.to_string())
+            .entry(room_id.as_str().to_string())
             .or_default()
-            .insert(rel_path.to_string(), hash.to_string());
+            .insert(rel_path.as_str().to_string(), hash.to_string());
         Ok(())
     }
 
-    fn get_file(&self, room_id: &str, path: &str) -> Option<Vec<u8>> {
-        let manifest = self.room_manifests.get(room_id)?;
-        let hash = manifest.get(path).or_else(|| manifest.get("index.html"))?;
+    fn get_file(&self, room_id: &ValidatedRoomId, path: &ValidatedRelPath) -> Option<Vec<u8>> {
+        let manifest = self.room_manifests.get(room_id.as_str())?;
+        // Also try index.html fallback (stored as string key directly)
+        let hash = manifest.get(path.as_str()).or_else(|| manifest.get("index.html"))?;
         let content = self.content_store.get(hash)?;
         Some(content.value().as_ref().clone())
     }
 
-    fn has_room_files(&self, room_id: &str) -> bool {
-        self.room_manifests.contains_key(room_id)
+    fn has_room_files(&self, room_id: &ValidatedRoomId) -> bool {
+        self.room_manifests.contains_key(room_id.as_str())
     }
 
-    fn cleanup_room(&self, room_id: &str) {
-        self.room_manifests.remove(room_id);
+    fn cleanup_room(&self, room_id: &ValidatedRoomId) {
+        self.room_manifests.remove(room_id.as_str());
     }
 }
 
@@ -127,6 +140,7 @@ pub fn build_relay_router(
         start_time,
         asset_store,
         api_key,
+        ws_idle_timeout: std::time::Duration::from_secs(90),
     };
 
     Router::new()

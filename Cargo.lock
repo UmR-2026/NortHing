@@ -5747,6 +5747,7 @@ dependencies = [
  "northhing-events",
  "northhing-kernel-api",
  "northhing-runtime-ports",
+ "northhing-test-support",
  "parking_lot",
  "rfd",
  "serde",
@@ -6096,6 +6097,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "tokio",
  "tower-http",
  "tracing",
@@ -6108,12 +6110,16 @@ version = "0.2.10"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.22.1",
  "dashmap",
  "northhing-relay-core",
+ "serde_json",
+ "tempfile",
  "tokio",
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

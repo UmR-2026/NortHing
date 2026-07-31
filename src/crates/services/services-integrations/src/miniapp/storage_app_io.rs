@@ -104,16 +104,24 @@ impl super::storage::MiniAppStorage {
         package_dir: PathBuf,
     ) -> MiniAppStorageResult<MiniAppSource> {
         let sd = source_dir;
-        let html = tokio::fs::read_to_string(sd.join(INDEX_HTML)).await.unwrap_or_default();
-        let css = tokio::fs::read_to_string(sd.join(STYLE_CSS)).await.unwrap_or_default();
-        let ui_js = tokio::fs::read_to_string(sd.join(UI_JS)).await.unwrap_or_default();
-        let worker_js = tokio::fs::read_to_string(sd.join(WORKER_JS)).await.unwrap_or_default();
+        let html_path = sd.join(INDEX_HTML);
+        let html = tokio::fs::read_to_string(&html_path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                MiniAppStorageError::not_found(format!("MiniApp source index.html not found: {}", html_path.display()))
+            } else {
+                MiniAppStorageError::io(format!("Failed to read index.html: {}", e))
+            }
+        })?;
+        let css = read_optional_source_file(&sd, STYLE_CSS).await?;
+        let ui_js = read_optional_source_file(&sd, UI_JS).await?;
+        let worker_js = read_optional_source_file(&sd, WORKER_JS).await?;
 
         let esm_dependencies = if sd.join(ESM_DEPS_JSON).exists() {
             let c = tokio::fs::read_to_string(sd.join(ESM_DEPS_JSON))
                 .await
-                .unwrap_or_default();
-            serde_json::from_str(&c).unwrap_or_default()
+                .map_err(|e| MiniAppStorageError::io(format!("Failed to read esm_dependencies.json: {}", e)))?;
+            serde_json::from_str(&c)
+                .map_err(|e| MiniAppStorageError::parse(format!("Invalid esm_dependencies.json: {}", e)))?
         } else {
             Vec::new()
         };
@@ -301,5 +309,16 @@ impl super::storage::MiniAppStorage {
             }
         })?;
         serde_json::from_str(&c).map_err(|e| MiniAppStorageError::parse(format!("Invalid version file: {}", e)))
+    }
+}
+
+/// Read an optional MiniApp source file: a missing file is a legal empty
+/// string, any other read failure is an IO error (never silently empty).
+async fn read_optional_source_file(source_dir: &std::path::Path, name: &str) -> MiniAppStorageResult<String> {
+    let path = source_dir.join(name);
+    match tokio::fs::read_to_string(&path).await {
+        Ok(content) => Ok(content),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(MiniAppStorageError::io(format!("Failed to read {}: {}", name, e))),
     }
 }

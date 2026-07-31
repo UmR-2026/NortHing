@@ -1,6 +1,5 @@
-use super::load_app_settings_quiet;
 use super::refresh_settings_lists;
-use super::save_app_settings_quiet;
+use super::update_app_settings_quiet;
 use crate::app_state::error_banners::set_banner_message;
 use crate::app_state::settings::ModelRef;
 use crate::app_state::slint_glue::AppWindow;
@@ -29,31 +28,40 @@ pub(crate) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
+                // 2026-07-31 (H-9): load → lookup → mutate → save as one
+                // transaction under the settings single-writer lock. A
+                // missing provider aborts without writing anything.
+                let mut provider_missing = false;
+                let s = match update_app_settings_quiet(|s| {
+                    let provider = match s.providers.iter().find(|p| p.id == pid && p.enabled) {
+                        Some(p) => p.clone(),
+                        None => {
+                            // H-9: keep the exact message for the banner; the
+                            // error side channel only signals the abort.
+                            provider_missing = true;
+                            return Err(anyhow::anyhow!("未找到已启用的指定 AI 服务"));
+                        }
+                    };
+                    s.default_model = Some(ModelRef {
+                        provider_id: pid,
+                        model: provider.model.clone(),
+                    });
+                    Ok(s.clone())
+                })
+                .await
+                {
                     Ok(s) => s,
                     Err(e) => {
                         // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_banner_message(ui_weak.clone(), e, "");
+                        let msg = if provider_missing {
+                            "未找到已启用的指定 AI 服务".to_string()
+                        } else {
+                            e
+                        };
+                        set_banner_message(ui_weak.clone(), msg, "");
                         return;
                     }
                 };
-                let provider = match s.providers.iter().find(|p| p.id == pid && p.enabled) {
-                    Some(p) => p.clone(),
-                    None => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_banner_message(ui_weak.clone(), "未找到已启用的指定 AI 服务", "");
-                        return;
-                    }
-                };
-                s.default_model = Some(ModelRef {
-                    provider_id: pid,
-                    model: provider.model.clone(),
-                });
-                if let Err(e) = save_app_settings_quiet(&s).await {
-                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                    set_banner_message(ui_weak.clone(), e, "");
-                    return;
-                }
                 // 2026-07-18 (D2g): push default model into core so the runtime
                 // sees the updated primary. Failure is non-fatal — the user's
                 // data is safe on disk; we surface a banner and let them retry.
@@ -90,16 +98,14 @@ pub(crate) fn register_onboarding_completed_callback(ui: &AppWindow, _app_state:
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_banner_message(ui_weak2.clone(), e, "");
-                        return;
-                    }
-                };
-                s.onboarding_completed = true;
-                if let Err(e) = save_app_settings_quiet(&s).await {
+                // 2026-07-31 (H-9): load → mutate → save as one transaction
+                // under the settings single-writer lock.
+                if let Err(e) = update_app_settings_quiet(|s| {
+                    s.onboarding_completed = true;
+                    Ok(())
+                })
+                .await
+                {
                     tracing::warn!(target: "app_state", "onboarding-completed save failed: {e}");
                     // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
                     set_banner_message(ui_weak2.clone(), e, "");

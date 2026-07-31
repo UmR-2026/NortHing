@@ -120,6 +120,33 @@ impl MCPConfigService {
         }
     }
 
+    /// Strict variant of [`load_project_configs`] for write paths.
+    ///
+    /// Read paths stay lenient (an unrecognized existing value is treated as an
+    /// empty source), but a write path must not clobber an existing
+    /// `project.mcp_servers` value it cannot interpret.
+    async fn load_project_configs_strict(&self) -> MCPRuntimeResult<Vec<MCPServerConfig>> {
+        match self.config_store.get_config_value("project.mcp_servers").await? {
+            Some(config_value) if config_value.get("mcpServers").and_then(|v| v.as_object()).is_some() => {
+                let mut configs = parse_cursor_format(&config_value);
+                for config in &mut configs {
+                    config.location = ConfigLocation::Project;
+                }
+                Ok(configs)
+            }
+            Some(config_value) => {
+                if let Some(servers) = config_value.as_array() {
+                    Ok(self.parse_config_array(servers, ConfigLocation::Project))
+                } else {
+                    Err(MCPRuntimeError::configuration(
+                        "Refusing to overwrite project MCP configs with unrecognized existing format",
+                    ))
+                }
+            }
+            None => Ok(Vec::new()),
+        }
+    }
+
     pub async fn get_server_config(&self, server_id: &str) -> MCPRuntimeResult<Option<MCPServerConfig>> {
         let all_configs = self.load_all_configs().await?;
         Ok(all_configs.into_iter().find(|c| c.id == server_id))
@@ -210,7 +237,7 @@ impl MCPConfigService {
     }
 
     async fn save_project_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
-        let mut configs = self.load_project_configs().await.unwrap_or_default();
+        let mut configs = self.load_project_configs_strict().await?;
 
         if let Some(existing) = configs.iter_mut().find(|c| c.id == config.id) {
             *existing = config.clone();

@@ -4,11 +4,12 @@
 //! Uses `DiskAssetStore` for filesystem-backed mobile-web file storage.
 
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, warn};
 
 mod config;
 
 use config::RelayConfig;
+use northhing_relay_core::validated::ValidatedRoomId;
 use northhing_relay_core::{build_relay_router, RoomManager, WebAssetStore};
 use northhing_relay_server::DiskAssetStore;
 
@@ -29,8 +30,11 @@ async fn main() -> anyhow::Result<()> {
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(60)).await;
             let stale_ids = cleanup_rm.cleanup_stale_rooms(cleanup_ttl);
-            for room_id in &stale_ids {
-                cleanup_store.cleanup_room(room_id);
+            for room_id_str in &stale_ids {
+                match ValidatedRoomId::try_from(room_id_str.as_str()) {
+                    Ok(room_id) => cleanup_store.cleanup_room(&room_id),
+                    Err(_) => warn!("Skipping cleanup for invalid room id: {room_id_str}"),
+                }
             }
         }
     });

@@ -15,3 +15,6 @@ pub(crate) use facts::{append_facts, append_facts_dedup, distill_facts_from_user
 pub(crate) use instruction_context::build_workspace_instruction_files_context;
 pub(crate) use judge_memory::{get_judge_state, set_judge_state};
 pub(crate) use memory_db::{default_memory_db_path, FactReview, MemoryDb};
+
+#[cfg(test)]
+pub(crate) use memory_db::{unique_test_memory_db_path, with_test_memory_db_path, MemoryDbPathGuard};

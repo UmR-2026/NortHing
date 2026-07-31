@@ -54,7 +54,7 @@ export const optionalDependencyFeatureOwnerRules = [
       { depName: 'northhing-runtime-ports', ownerFeatures: ['remote-connect'] },
       {
         depName: 'northhing-services-core',
-        ownerFeatures: ['git', 'mcp', 'miniapp-runtime', 'workspace-search'],
+        ownerFeatures: ['git', 'mcp', 'miniapp-runtime', 'workspace-search', 'remote-ssh-concrete'],
       },
       { depName: 'chrono', ownerFeatures: ['git', 'remote-connect', 'remote-ssh-concrete'] },
       { depName: 'dirs', ownerFeatures: ['miniapp-runtime', 'remote-ssh-concrete'] },

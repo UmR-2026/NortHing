@@ -1,11 +1,15 @@
 //! REST API routes for the relay server.
 //!
-//! Provides two HTTP endpoints for mobile clients:
+//! Provides HTTP endpoints for mobile clients:
 //! - POST /api/rooms/:room_id/pair — initiate pairing
 //! - POST /api/rooms/:room_id/command — send encrypted commands
+//! - POST /api/rooms/:room_id/upload-web / check-web-files /
+//!   upload-web-files — per-room mobile-web asset upload
 //!
-//! Both endpoints bridge the HTTP request to the desktop via WebSocket
-//! using correlation-based request-response matching.
+//! All of them bridge the HTTP request to the desktop via WebSocket
+//! (or the asset store) and are gated by the `X-API-Key` header when
+//! `state.api_key` is configured (`pair`/`command` since 2026-06-26;
+//! upload routes since the C-1 audit fix).
 //!
 //! File-serving and upload endpoints use the `WebAssetStore` trait,
 //! so the same handlers work for both disk-backed and memory-backed stores.
@@ -15,13 +19,13 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::relay::RoomManager;
 use crate::routes::websocket::OutboundProtocol;
+use crate::validated::{ContentHash, ValidatedRelPath, ValidatedRoomId};
 use crate::WebAssetStore;
 
 #[derive(Clone)]
@@ -34,6 +38,10 @@ pub struct AppState {
     /// matching key. When `None`, those endpoints are open (dev only).
     /// Set via `RELAY_API_KEY` env var in `RelayConfig::from_env`.
     pub api_key: Option<String>,
+    /// Idle timeout for WebSocket connections: a connection with no
+    /// inbound traffic for this long is closed. Production uses 90s
+    /// (`build_relay_router`); tests inject short values.
+    pub ws_idle_timeout: std::time::Duration,
 }
 
 // ── Health & Info ──────────────────────────────────────────────────────────
@@ -51,6 +59,7 @@ pub struct AppState {
 /// `StatusCode::UNAUTHORIZED`; the message is logged but not
 /// returned to the client to avoid information leakage about whether
 /// the key was missing vs wrong.
+#[derive(Clone)]
 pub struct AuthExtractor {
     pub api_key: Option<String>,
 }
@@ -244,12 +253,6 @@ fn generate_correlation_id() -> String {
 
 // ── Per-room mobile-web upload & serving ────────────────────────────────────
 
-fn hex_sha256(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    format!("{:x}", hasher.finalize())
-}
-
 #[derive(Deserialize)]
 pub struct UploadWebRequest {
     pub files: HashMap<String, String>,
@@ -259,22 +262,23 @@ pub struct UploadWebRequest {
 pub async fn upload_web(
     State(state): State<AppState>,
     Path(room_id): Path<String>,
+    auth: AuthExtractor,
     Json(body): Json<UploadWebRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     use base64::{engine::general_purpose::STANDARD as B64, Engine};
 
-    if !state.room_manager.room_exists(&room_id) {
+    auth.require(&state.api_key)?;
+    let room_id_validated = ValidatedRoomId::try_from(room_id.as_str()).map_err(|_| StatusCode::NOT_FOUND)?;
+    if !state.room_manager.room_exists(room_id_validated.as_str()) {
         return Err(StatusCode::NOT_FOUND);
     }
 
     let mut written = 0usize;
     let mut reused = 0usize;
     for (rel_path, b64_content) in &body.files {
-        if rel_path.contains("..") {
-            continue;
-        }
+        let rel_path_validated = ValidatedRelPath::try_from(rel_path.as_str()).map_err(|_| StatusCode::BAD_REQUEST)?;
         let decoded = B64.decode(b64_content).map_err(|_| StatusCode::BAD_REQUEST)?;
-        let hash = hex_sha256(&decoded);
+        let hash = ContentHash::from_data(&decoded);
 
         if !state.asset_store.has_content(&hash) {
             state
@@ -288,7 +292,7 @@ pub async fn upload_web(
 
         state
             .asset_store
-            .map_to_room(&room_id, rel_path, &hash)
+            .map_to_room(&room_id_validated, &rel_path_validated, &hash)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
@@ -327,9 +331,12 @@ pub struct CheckWebFilesResponse {
 pub async fn check_web_files(
     State(state): State<AppState>,
     Path(room_id): Path<String>,
+    auth: AuthExtractor,
     Json(body): Json<CheckWebFilesRequest>,
 ) -> Result<Json<CheckWebFilesResponse>, StatusCode> {
-    if !state.room_manager.room_exists(&room_id) {
+    auth.require(&state.api_key)?;
+    let room_id_validated = ValidatedRoomId::try_from(room_id.as_str()).map_err(|_| StatusCode::NOT_FOUND)?;
+    if !state.room_manager.room_exists(room_id_validated.as_str()) {
         return Err(StatusCode::NOT_FOUND);
     }
 
@@ -338,12 +345,39 @@ pub async fn check_web_files(
     let total_count = body.files.len();
 
     for entry in &body.files {
-        if entry.path.contains("..") {
-            continue;
-        }
-        if state.asset_store.has_content(&entry.hash) {
-            existing_count += 1;
-            let _ = state.asset_store.map_to_room(&room_id, &entry.path, &entry.hash);
+        let rel_path = match ValidatedRelPath::try_from(entry.path.as_str()) {
+            Ok(v) => v,
+            Err(_) => {
+                // Invalid path — client must re-upload; push to needed.
+                tracing::warn!(
+                    "Room {}: ignoring malformed path {}",
+                    room_id_validated.as_str(),
+                    entry.path
+                );
+                needed.push(entry.path.clone());
+                continue;
+            }
+        };
+        let hash = match ContentHash::try_from(entry.hash.as_str()) {
+            Ok(h) => h,
+            Err(_) => {
+                // Invalid hash format — push to needed (client will encounter validation error later).
+                needed.push(entry.path.clone());
+                continue;
+            }
+        };
+        if state.asset_store.has_content(&hash) {
+            if state
+                .asset_store
+                .map_to_room(&room_id_validated, &rel_path, &hash)
+                .is_ok()
+            {
+                existing_count += 1;
+            } else {
+                // map_to_room failed (e.g., can't create link): count as needed
+                // so client retries.
+                needed.push(entry.path.clone());
+            }
         } else {
             needed.push(entry.path.clone());
         }
@@ -376,25 +410,29 @@ pub struct UploadWebFilesRequest {
 pub async fn upload_web_files(
     State(state): State<AppState>,
     Path(room_id): Path<String>,
+    auth: AuthExtractor,
     Json(body): Json<UploadWebFilesRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     use base64::{engine::general_purpose::STANDARD as B64, Engine};
 
-    if !state.room_manager.room_exists(&room_id) {
+    auth.require(&state.api_key)?;
+    let room_id_validated = ValidatedRoomId::try_from(room_id.as_str()).map_err(|_| StatusCode::NOT_FOUND)?;
+    if !state.room_manager.room_exists(room_id_validated.as_str()) {
         return Err(StatusCode::NOT_FOUND);
     }
 
     let mut stored = 0usize;
     for (rel_path, entry) in &body.files {
-        if rel_path.contains("..") {
-            continue;
-        }
+        let rel_path_validated = ValidatedRelPath::try_from(rel_path.as_str()).map_err(|_| StatusCode::BAD_REQUEST)?;
+        let hash_validated = ContentHash::try_from(entry.hash.as_str()).map_err(|_| StatusCode::BAD_REQUEST)?;
         let decoded = B64.decode(&entry.content).map_err(|_| StatusCode::BAD_REQUEST)?;
-        let actual_hash = hex_sha256(&decoded);
-        if actual_hash != entry.hash {
+        let actual_hash = ContentHash::from_data(&decoded);
+        if actual_hash != hash_validated {
             tracing::warn!(
-                "Room {room_id}: hash mismatch for {rel_path} (expected={}, actual={actual_hash})",
+                "Room {room_id}: hash mismatch for {} (expected={}, actual={})",
+                rel_path,
                 entry.hash,
+                actual_hash,
             );
             return Err(StatusCode::BAD_REQUEST);
         }
@@ -409,7 +447,7 @@ pub async fn upload_web_files(
 
         state
             .asset_store
-            .map_to_room(&room_id, rel_path, &actual_hash)
+            .map_to_room(&room_id_validated, &rel_path_validated, &actual_hash)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
@@ -427,23 +465,29 @@ pub async fn serve_room_web_catchall(
     use axum::response::IntoResponse;
 
     let rest = rest.trim_start_matches('/');
-    let (room_id, file_path) = match rest.find('/') {
+    let (room_id_str, file_path_str) = match rest.find('/') {
         Some(idx) => (&rest[..idx], &rest[idx + 1..]),
         None => (rest, ""),
     };
 
-    if room_id.is_empty() {
+    if room_id_str.is_empty() {
         return Err(StatusCode::NOT_FOUND);
     }
 
-    let lookup_path = if file_path.is_empty() { "index.html" } else { file_path };
+    let room_id_validated = ValidatedRoomId::try_from(room_id_str).map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let lookup_path = if file_path_str.is_empty() {
+        ValidatedRelPath::try_from("index.html").map_err(|_| StatusCode::NOT_FOUND)?
+    } else {
+        ValidatedRelPath::try_from(file_path_str).map_err(|_| StatusCode::BAD_REQUEST)?
+    };
 
     let content = state
         .asset_store
-        .get_file(room_id, lookup_path)
+        .get_file(&room_id_validated, &lookup_path)
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let mime = mime_from_path(lookup_path);
+    let mime = mime_from_path(lookup_path.as_str());
     Ok(([(header::CONTENT_TYPE, mime)], Body::from(content)).into_response())
 }
 
@@ -463,3 +507,6 @@ fn mime_from_path(p: &str) -> &'static str {
         _ => "application/octet-stream",
     }
 }
+
+#[cfg(test)]
+mod handler_tests;

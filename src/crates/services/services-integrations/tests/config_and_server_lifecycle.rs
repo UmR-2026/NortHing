@@ -92,6 +92,124 @@ async fn mcp_config_service_keeps_load_failures_as_empty_baseline() {
 }
 
 #[tokio::test]
+async fn mcp_config_service_save_project_fails_closed_on_config_store_read_error() {
+    let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "project-server",
+            ConfigLocation::Project,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("project save must not fall back to an empty baseline on read errors");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unavailable"),
+        "expected the store read failure to propagate, got: {error}"
+    );
+    assert_eq!(
+        store.set_calls.lock().await.clone(),
+        Vec::<String>::new(),
+        "set_config_value must not be called when the read fails"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_save_project_fails_closed_on_unrecognized_existing_format() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store
+        .values
+        .lock()
+        .await
+        .insert("project.mcp_servers".to_string(), json!(42));
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "project-server",
+            ConfigLocation::Project,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("project save must refuse to overwrite an unrecognized existing value");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unrecognized existing format"),
+        "expected the unrecognized-format refusal message, got: {error}"
+    );
+    assert_eq!(
+        store.values.lock().await.get("project.mcp_servers"),
+        Some(&json!(42)),
+        "existing project config must remain untouched"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_save_project_preserves_upsert_contract() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert(
+        "project.mcp_servers".to_string(),
+        json!([
+            {
+                "id": "existing-project",
+                "name": "Existing",
+                "type": "remote",
+                "url": "https://example.com/mcp",
+                "location": "project"
+            }
+        ]),
+    );
+    let service = MCPConfigService::new(store.clone());
+
+    service
+        .save_server_config(&make_mcp_config(
+            "new-project",
+            ConfigLocation::Project,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect("adding a new project server keeps existing entries");
+
+    let saved = store.values.lock().await.get("project.mcp_servers").cloned().unwrap();
+    let ids = saved
+        .as_array()
+        .expect("project config stays a legacy array")
+        .iter()
+        .filter_map(|value| value.get("id").and_then(|id| id.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(ids, vec!["existing-project", "new-project"]);
+
+    service
+        .save_server_config(&make_mcp_config(
+            "new-project",
+            ConfigLocation::Project,
+            MCPServerType::Remote,
+            None,
+            Some("https://overwritten.example.com/mcp"),
+        ))
+        .await
+        .expect("overwriting an existing project server keeps the array shape");
+
+    let saved = store.values.lock().await.get("project.mcp_servers").cloned().unwrap();
+    let ids = saved
+        .as_array()
+        .expect("project config stays a legacy array")
+        .iter()
+        .filter_map(|value| value.get("id").and_then(|id| id.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(ids, vec!["existing-project", "new-project"]);
+    assert_eq!(saved[1]["url"], "https://overwritten.example.com/mcp");
+}
+
+#[tokio::test]
 async fn mcp_server_process_owner_preserves_unsupported_remote_transport_contract() {
     let mut config = make_mcp_config(
         "remote-sse",
@@ -326,4 +444,23 @@ fn mcp_server_type_and_status_preserve_lowercase_wire_contract() {
         serde_json::from_value::<MCPServerStatus>(serde_json::json!("reconnecting")).unwrap(),
         MCPServerStatus::Reconnecting
     );
+}
+
+#[derive(Default)]
+struct RecordingFailingGetMCPConfigStore {
+    set_calls: tokio::sync::Mutex<Vec<String>>,
+}
+
+#[async_trait::async_trait]
+impl MCPConfigStore for RecordingFailingGetMCPConfigStore {
+    async fn get_config_value(&self, key: &str) -> MCPRuntimeResult<Option<serde_json::Value>> {
+        Err(northhing_services_integrations::mcp::MCPRuntimeError::configuration(
+            format!("backend unavailable for {key}"),
+        ))
+    }
+
+    async fn set_config_value(&self, key: &str, _value: serde_json::Value) -> MCPRuntimeResult<()> {
+        self.set_calls.lock().await.push(key.to_string());
+        Ok(())
+    }
 }

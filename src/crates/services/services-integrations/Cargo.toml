@@ -122,6 +122,7 @@ remote-connect = [
 remote-ssh = ["dunce", "sha2", "tokio-util"]
 remote-ssh-concrete = [
     "remote-ssh",
+    "northhing-services-core",
     "aes-gcm",
     "anyhow",
     "async-trait",

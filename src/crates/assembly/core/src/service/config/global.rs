@@ -17,6 +17,18 @@ static GLOBAL_CONFIG_SERVICE: OnceLock<Arc<RwLock<Option<Arc<ConfigService>>>>> 
 /// Configuration update notification channel.
 static CONFIG_UPDATE_SENDER: OnceLock<tokio::sync::broadcast::Sender<ConfigUpdateEvent>> = OnceLock::new();
 
+/// Serializes the check-and-set critical section in
+/// [`GlobalConfigManager::initialize`].
+///
+/// A `tokio::sync::Mutex` (rather than `std::sync::Mutex`) is required because
+/// the critical section awaits `ConfigService::new`. It is wrapped in a
+/// `std::sync::OnceLock` because `tokio::sync::Mutex::new` is not `const`.
+/// `OnceLock::get_or_init` is itself concurrency-safe, so the mutex is created
+/// exactly once. The fast-path [`GlobalConfigManager::is_initialized`] check
+/// outside the lock keeps the already-initialized path lock-free, so
+/// steady-state callers never await.
+static INIT_MUTEX: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+
 /// Configuration update events.
 #[derive(Debug, Clone)]
 pub enum ConfigUpdateEvent {
@@ -76,20 +88,47 @@ pub struct GlobalConfigManager;
 
 impl GlobalConfigManager {
     /// Initializes the global configuration service.
+    ///
+    /// Concurrent-safe via double-checked locking: the fast-path
+    /// [`Self::is_initialized`] check avoids the mutex once initialized, while
+    /// the `INIT_MUTEX` critical section guarantees only one caller ever
+    /// performs the `OnceLock::set` calls. All fallible work
+    /// (`ConfigService::new`) runs BEFORE any `OnceLock::set`, so a failure
+    /// leaves no half-initialized state and a later retry starts clean
+    /// instead of being permanently stuck on an already-set sender with no
+    /// service (the pre-fix TOCTOU bug).
     pub async fn initialize() -> NortHingResult<()> {
+        // Fast path: avoid contending on the mutex once initialized.
         if Self::is_initialized() {
             debug!("Global config service already initialized, skipping");
             return Ok(());
         }
 
+        let _guard = INIT_MUTEX
+            .get_or_init(|| tokio::sync::Mutex::new(()))
+            .lock()
+            .await;
+
+        // Double-check inside the lock: another task may have finished
+        // initializing while we were waiting for the mutex.
+        if Self::is_initialized() {
+            debug!("Global config service already initialized, skipping");
+            return Ok(());
+        }
+
+        // Perform all fallible work BEFORE touching the OnceLocks. If
+        // `ConfigService::new` fails, nothing is set and a later retry
+        // starts from a clean slate instead of being permanently stuck
+        // on an already-set sender with no service.
+        let config_service = Arc::new(ConfigService::new().await?);
         let (sender, _) = tokio::sync::broadcast::channel(100);
+        let service_wrapper = Arc::new(RwLock::new(Some(config_service)));
+
+        // First-time set always succeeds: the double-check above
+        // guarantees both OnceLocks are still empty here.
         CONFIG_UPDATE_SENDER
             .set(sender)
             .map_err(|_| NortHingError::config("Failed to initialize config update sender".to_string()))?;
-
-        let config_service = Arc::new(ConfigService::new().await?);
-        let service_wrapper = Arc::new(RwLock::new(Some(config_service)));
-
         GLOBAL_CONFIG_SERVICE
             .set(service_wrapper)
             .map_err(|_| NortHingError::config("Failed to initialize global config service".to_string()))?;

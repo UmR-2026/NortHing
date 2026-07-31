@@ -60,5 +60,8 @@ parking_lot = { workspace = true }
 [build-dependencies]
 slint-build = { workspace = true }
 
+[dev-dependencies]
+northhing-test-support = { path = "../../crates/support/test-support" }
+
 [features]
 default = []

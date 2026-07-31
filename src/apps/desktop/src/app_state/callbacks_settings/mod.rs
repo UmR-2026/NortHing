@@ -40,11 +40,19 @@ pub(super) async fn load_app_settings_quiet() -> Result<crate::app_state::settin
     }
 }
 
-pub(super) async fn save_app_settings_quiet(s: &crate::app_state::settings::AppSettings) -> Result<(), String> {
-    match crate::app_state::settings::save_app_settings(s).await {
-        Ok(_) => Ok(()),
+/// 2026-07-31 (H-9): transactional write entry for the settings callbacks.
+/// Runs the whole load → mutate → save cycle under the settings single-writer
+/// lock (see `settings::io::update_app_settings`), so concurrent settings
+/// actions serialize instead of silently overwriting each other. On failure
+/// the error is formatted for the banner / inline error, same as the quiet
+/// load/save helpers it replaces.
+pub(super) async fn update_app_settings_quiet<T>(
+    f: impl FnOnce(&mut crate::app_state::settings::AppSettings) -> anyhow::Result<T>,
+) -> Result<T, String> {
+    match crate::app_state::settings::update_app_settings(f).await {
+        Ok(v) => Ok(v),
         Err(e) => {
-            tracing::warn!(target: "app_state", "save_app_settings failed: {e}");
+            tracing::warn!(target: "app_state", "update_app_settings failed: {e}");
             Err(format!("保存设置失败: {e}"))
         }
     }

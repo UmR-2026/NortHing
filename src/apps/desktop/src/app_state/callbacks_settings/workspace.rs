@@ -1,6 +1,5 @@
-use super::load_app_settings_quiet;
 use super::refresh_settings_lists;
-use super::save_app_settings_quiet;
+use super::update_app_settings_quiet;
 use crate::app_state::error_banners::{set_banner_message, set_inline_error};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
@@ -28,21 +27,22 @@ pub(crate) fn register_remove_workspace_callback(ui: &AppWindow, app_state: &Arc
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
+                // 2026-07-31 (H-9): load → remove → save as one transaction
+                // under the settings single-writer lock.
+                let (workspace_name, s) = match update_app_settings_quiet(|s| {
+                    let workspace_name = wpath.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                    let _ = s.remove_workspace(&wpath);
+                    Ok((workspace_name, s.clone()))
+                })
+                .await
+                {
+                    Ok(v) => v,
                     Err(e) => {
                         // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
                         set_banner_message(ui_weak.clone(), e, "");
                         return;
                     }
                 };
-                let workspace_name = wpath.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
-                let _ = s.remove_workspace(&wpath);
-                if let Err(e) = save_app_settings_quiet(&s).await {
-                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                    set_banner_message(ui_weak.clone(), e, "");
-                    return;
-                }
 
                 let snapshot = app_state.session_metadata_snapshot();
                 let session_ids: Vec<String> = snapshot.iter().map(|(id, _)| id.clone()).collect();
@@ -111,16 +111,14 @@ pub(crate) fn register_pick_folder_callback(ui: &AppWindow, _app_state: &Arc<App
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_banner_message(ui_weak2.clone(), e, "");
-                        return;
-                    }
-                };
-                s.add_workspace(folder.clone());
-                if let Err(e) = save_app_settings_quiet(&s).await {
+                // 2026-07-31 (H-9): load → add → save as one transaction
+                // under the settings single-writer lock.
+                if let Err(e) = update_app_settings_quiet(|s| {
+                    s.add_workspace(folder.clone());
+                    Ok(())
+                })
+                .await
+                {
                     tracing::warn!(target: "app_state", "pick-folder save failed: {e}");
                     // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
                     set_banner_message(ui_weak2.clone(), e, "");
@@ -167,24 +165,22 @@ pub(crate) fn register_add_workspace_callback(ui: &AppWindow, _app_state: &Arc<A
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_banner_message(ui_weak2.clone(), e, "");
-                        return;
+                // 2026-07-31 (H-9): load → add → save as one transaction
+                // under the settings single-writer lock.
+                if let Err(e) = update_app_settings_quiet(|s| {
+                    s.add_workspace(p.clone());
+                    if !display.is_empty() {
+                        if let Some(w) = s.workspaces.iter_mut().find(|w| w.path == p) {
+                            w.display_name = display;
+                        }
                     }
-                };
-                s.add_workspace(p.clone());
-                if !display.is_empty() {
-                    if let Some(w) = s.workspaces.iter_mut().find(|w| w.path == p) {
-                        w.display_name = display;
+                    if set_cur {
+                        s.set_current_workspace(Some(&p));
                     }
-                }
-                if set_cur {
-                    s.set_current_workspace(Some(&p));
-                }
-                if let Err(e) = save_app_settings_quiet(&s).await {
+                    Ok(())
+                })
+                .await
+                {
                     tracing::warn!(target: "app_state", "add-workspace save failed: {e}");
                     // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
                     set_banner_message(ui_weak2.clone(), e, "");
