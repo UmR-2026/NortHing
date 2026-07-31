@@ -617,13 +617,13 @@
   let selectedPersonality = null;
   let isAlive = false;
 
-  // 代表色组 — 选色后覆盖 --rep-* + --rep-*-rgb + --air-rep/--halo-rep，整屋空气染色过渡
+  // 代表色组 — 选色后覆盖 --rep-* + --rep-*-rgb + --air-rep/--halo-rep（6.5% / 10% on bg），整屋空气染色过渡
   const repColors = {
-    openness:          { 300: '#C4A8D8', '300-rgb': '196,168,216', 400: '#AF94CB', '400-rgb': '175,148,203', 500: '#9B7FBF', '500-rgb': '155,127,191', 600: '#7E63A3', '600-rgb': '126,99,163', air: '#F1EFF4', halo: '#EFECF2' },
-    conscientiousness: { 300: '#7A9CC4', '300-rgb': '122,156,196', 400: '#6288B5', '400-rgb': '98,136,181', 500: '#4A6FA5', '500-rgb': '74,111,165', 600: '#3A5A88', '600-rgb': '58,90,136',  air: '#F0F1F3', halo: '#ECEDF1' },
-    extraversion:      { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56',  air: '#F2F0EC', halo: '#F0EDEA' },
-    agreeableness:     { 300: '#8FBFA0', '300-rgb': '143,191,160', 400: '#7DB08D', '400-rgb': '125,176,141', 500: '#6B9E7A', '500-rgb': '107,158,122', 600: '#55825F', '600-rgb': '85,130,95',   air: '#EFF3F0', halo: '#ECF1ED' },
-    neuroticism:       { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99',  air: '#EFF3F2', halo: '#ECF1F0' }
+    openness:          { 300: '#C4A8D8', '300-rgb': '196,168,216', 400: '#AF94CB', '400-rgb': '175,148,203', 500: '#9B7FBF', '500-rgb': '155,127,191', 600: '#7E63A3', '600-rgb': '126,99,163', air: '#EEEBED', halo: '#EBE7EB' },
+    conscientiousness: { 300: '#7A9CC4', '300-rgb': '122,156,196', 400: '#6288B5', '400-rgb': '98,136,181',  500: '#4A6FA5', '500-rgb': '74,111,165',  600: '#3A5A88', '600-rgb': '58,90,136',  air: '#E9EAEB', halo: '#E3E6E9' },
+    extraversion:      { 300: '#E5A583', '300-rgb': '229,165,131', 400: '#D68A63', '400-rgb': '214,138,99',  500: '#C8714C', '500-rgb': '200,113,76',  600: '#A85A38', '600-rgb': '168,90,56',  air: '#F0EDED', halo: '#EDEBE9' },
+    agreeableness:     { 300: '#8FBFA0', '300-rgb': '143,191,160', 400: '#7DB08D', '400-rgb': '125,176,141', 500: '#6B9E7A', '500-rgb': '107,158,122', 600: '#55825F', '600-rgb': '85,130,95',   air: '#EBEDE8', halo: '#E6EBE4' },
+    neuroticism:       { 300: '#7AABA4', '300-rgb': '122,171,164', 400: '#5A9B93', '400-rgb': '90,155,147',  500: '#3F837B', '500-rgb': '63,131,123',   600: '#2F6A63', '600-rgb': '47,106,99',  air: '#E8ECE8', halo: '#E2E8E4' }
   };
 
   // Personality avatar gradients
@@ -666,8 +666,8 @@
     root.style.setProperty('--rep-500-rgb', '181,176,168');
     root.style.setProperty('--rep-600', '#9E9991');
     root.style.setProperty('--rep-600-rgb', '158,153,145');
-    root.style.setProperty('--air-rep', '#F2F0EC');
-    root.style.setProperty('--halo-rep', '#F0EDEA');
+    root.style.setProperty('--air-rep', '#F0EDED');
+    root.style.setProperty('--halo-rep', '#EDEBE9');
   }
 
   // ─── Personality selection — TouchArea → selected ring + birth moment ───

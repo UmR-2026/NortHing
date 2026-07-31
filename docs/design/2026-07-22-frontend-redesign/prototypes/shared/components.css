@@ -579,7 +579,7 @@
 
 .p-chrono {
   width: 140px;
-  height: 4px;
+  height: 6px;
   border-radius: var(--r-pill);
   background: linear-gradient(90deg, var(--birth) 0%, var(--rep-300) 55%, var(--rep-500) 88%, var(--rep-400) 100%);
   transition: background var(--grow);
@@ -676,8 +676,8 @@
 
 .watermark {
   position: absolute;
-  bottom: 22px;
-  left: 44px;
+  bottom: 16px;
+  left: 16px;
   display: flex;
   align-items: center;
   gap: 6px;

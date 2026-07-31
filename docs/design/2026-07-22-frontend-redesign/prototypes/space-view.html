@@ -448,42 +448,21 @@
     border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.60), transparent) 1;
   }
 
-  /* ─── 演示面板 ─── */
-  .demo-panel {
-    position: absolute;
-    right: 18px;
-    bottom: 60px;
-    z-index: 40;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  /* 收起态把手全高竖向 wash */
+  .handle-left {
+    background: linear-gradient(to bottom, transparent 15%, rgba(200,113,76,.08) 50%, transparent 85%);
+  }
+  .handle-right {
+    background: linear-gradient(to bottom, transparent 15%, rgba(63,131,123,.08) 50%, transparent 85%);
+  }
+  [data-theme="dark"] .handle-left {
+    background: linear-gradient(to bottom, transparent 15%, rgba(200,113,76,.12) 50%, transparent 85%);
+  }
+  [data-theme="dark"] .handle-right {
+    background: linear-gradient(to bottom, transparent 15%, rgba(63,131,123,.12) 50%, transparent 85%);
   }
 
-  .demo-color-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity .25s, transform .25s;
-    pointer-events: none;
-  }
-  .demo-color-row.show {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
 
-  .demo-sw {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform .15s, border-color .15s;
-  }
-  .demo-sw:hover { transform: scale(1.15); }
-  .demo-sw.active { border-color: var(--fg); }
 
   /* ─── 品牌水印 — 角落印记，半透明（设施的门牌，非主角） ─── */
   /* Slint: Rectangle { opacity: 0.25; bottom: 22; left: 44; } */
@@ -622,49 +601,10 @@
     <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
   </div>
 
-  <!-- ══════ 演示面板（右下角） ══════ -->
-  <div class="demo-panel">
-    <div class="demo-color-row" id="colorRow">
-      <div class="demo-sw" style="background:#C8714C" data-rep="coral" title="珊瑚（默认）"></div>
-      <div class="demo-sw" style="background:#9B7FBF" data-rep="purple" title="紫"></div>
-      <div class="demo-sw" style="background:#4A6FA5" data-rep="blue" title="深蓝"></div>
-      <div class="demo-sw" style="background:#6B9E7A" data-rep="green" title="柔绿"></div>
-      <div class="demo-sw" style="background:#3F837B" data-rep="cyan" title="冷青"></div>
-    </div>
-  </div>
+
 
 </div>
 
-<script>
-(function () {
-  var colorRow = document.getElementById('colorRow');
-
-  /* ── 代表色模拟 ── */
-  var themes = {
-    coral:  { 300:'#E5A583', 400:'#D68A63', 500:'#C8714C', 600:'#A85A38' },
-    purple: { 300:'#C4A8D8', 400:'#AF94CB', 500:'#9B7FBF', 600:'#7E63A3' },
-    blue:   { 300:'#7A9CC4', 400:'#6288B5', 500:'#4A6FA5', 600:'#3A5A88' },
-    green:  { 300:'#8FBFA0', 400:'#7DB08D', 500:'#6B9E7A', 600:'#55825F' },
-    cyan:   { 300:'#7AABA4', 400:'#5A9B93', 500:'#3F837B', 600:'#2F6A63' }
-  };
-
-  var swatches = colorRow.querySelectorAll('.demo-sw');
-  swatches.forEach(function (sw) {
-    sw.addEventListener('click', function () {
-      var t = themes[sw.dataset.rep];
-      if (!t) return;
-      var r = document.documentElement.style;
-      r.setProperty('--rep-300', t[300]);
-      r.setProperty('--rep-400', t[400]);
-      r.setProperty('--rep-500', t[500]);
-      r.setProperty('--rep-600', t[600]);
-      swatches.forEach(function (s) { s.classList.remove('active'); });
-      sw.classList.add('active');
-    });
-  });
-
-})();
-</script>
 <script src="shared/theme-switch.js"></script>
 </body>
 </html>

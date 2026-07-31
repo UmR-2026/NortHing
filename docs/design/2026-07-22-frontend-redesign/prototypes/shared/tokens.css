@@ -108,12 +108,12 @@
   --page-out: #1a1917;
 
   /* ── 语义混合色（预计算 hex，color-mix(in srgb, rep coral on bg)） ── */
-  --air-rep:             #F2F0EC;  /* rep-500 3.5% on bg */
-  --halo-rep:            #F0EDEA;  /* rep-500 7% on bg */
-  --air-rep-speaking:    #F1EFEB;  /* rep-500 4.2% on bg */
-  --halo-rep-speaking:   #EFEBE8;  /* rep-500 8% on bg */
-  --air-rep-settings:    #F3F1EE;  /* rep-500 1.5% on bg */
-  --halo-rep-settings:   #F3F1EE;  /* rep-500 2% on bg */
+  --air-rep:             #F0EDED;  /* rep-500 6.5% on bg */
+  --halo-rep:            #EDEBE9;  /* rep-500 10% on bg */
+  --air-rep-speaking:    #EEEBE8;  /* rep-500 7.5% on bg */
+  --halo-rep-speaking:   #EBE8E5;  /* rep-500 11% on bg */
+  --air-rep-settings:    #F2F0ED;  /* rep-500 3.5% on bg */
+  --halo-rep-settings:   #F1EFEC;  /* rep-500 5% on bg */
   --fog-abyss:           #F1F2EF;  /* abyss-500 1.5% on bg */
   --halo-abyss:          #EFF1EE;  /* abyss-500 3% on bg */
   --turn-active:         #F8F6F4;  /* rep-500 4% on surface */
@@ -166,12 +166,12 @@
   --page-out: #0c0b09;
 
   /* ── 语义混合色（暗色预计算 hex，coral rep on dark base） ── */
-  --air-rep:             #1B1915;  /* rep-500 3.5% on bg */
-  --halo-rep:            #1F1C18;  /* rep-500 7% on bg */
-  --air-rep-speaking:    #201D18;  /* rep-500 4.2% on bg */
-  --halo-rep-speaking:   #231F1A;  /* rep-500 8% on bg */
-  --air-rep-settings:    #191713;  /* rep-500 1.5% on bg */
-  --halo-rep-settings:   #1B1915;  /* rep-500 2% on bg */
+  --air-rep:             #1C1A16;  /* rep-500 6.5% on bg */
+  --halo-rep:            #201D19;  /* rep-500 10% on bg */
+  --air-rep-speaking:    #221F1A;  /* rep-500 7.5% on bg */
+  --halo-rep-speaking:   #26221C;  /* rep-500 11% on bg */
+  --air-rep-settings:    #1A1814;  /* rep-500 3.5% on bg */
+  --halo-rep-settings:   #1D1B17;  /* rep-500 5% on bg */
   --fog-abyss:           #191916;  /* abyss-500 1.5% on bg */
   --halo-abyss:          #1A1B17;  /* abyss-500 3% on bg */
   --turn-active:         #38342E;  /* rep-500 4% on surface — R2 对比度提升 */

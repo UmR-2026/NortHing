@@ -30,13 +30,13 @@
 | `on-rep` | `oklch(0.985 0.008 60)` | `#FEF9F5` | `oklch(0.985 0.008 60)` | `#FEF9F5` | #FFF9F5 |
 | `on-abyss` | `oklch(1 0 0)` | `#FFFFFF` | `oklch(1 0 0)` | `#FFFFFF` | — |
 | `on-danger` | `oklch(1 0 0)` | `#FFFFFF` | `oklch(1 0 0)` | `#FFFFFF` | — |
-| `air-rep` | `oklch(0.9527 0.0040 91.45)` | `#F0EFEC` | `oklch(0.2057 0.0058 88.00)` | `#181714` | — |
-| `halo-rep` | `oklch(0.9413 0.0038 91.45)` | `#ECEBE9` | `oklch(0.2214 0.0056 88.00)` | `#1C1B18` | — |
-| `air-rep-speaking` | `oklch(0.9504 0.0039 91.45)` | `#EFEEEC` | `oklch(0.2259 0.0055 88.00)` | `#1D1C19` | — |
-| `halo-rep-speaking` | `oklch(0.9380 0.0038 91.45)` | `#EBEAE8` | `oklch(0.2348 0.0054 88.00)` | `#1F1E1B` | — |
-| `air-rep-settings` | `oklch(0.9592 0.0040 91.45)` | `#F2F1EE` | `oklch(0.1967 0.0059 88.00)` | `#161512` | — |
-| `halo-rep-settings` | `oklch(0.9576 0.0040 91.45)` | `#F2F1EE` | `oklch(0.2124 0.0057 88.00)` | `#1A1916` | — |
-| `fog-abyss` | `oklch(0.9581 0.0041 106.30)` | `#F1F1EE` | `oklch(0.1956 0.0059 98.26)` | `#161512` | — |
+| `air-rep` | `oklch(0.9527 0.0040 91.45)` | `#F0EDED` | `oklch(0.2057 0.0058 88.00)` | `#1C1A16` | rep-500 6.5% on bg |
+| `halo-rep` | `oklch(0.9413 0.0038 91.45)` | `#EDEBE9` | `oklch(0.2214 0.0056 88.00)` | `#201D19` | rep-500 10% on bg |
+| `air-rep-speaking` | `oklch(0.9504 0.0039 91.45)` | `#EEEBE8` | `oklch(0.2259 0.0055 88.00)` | `#221F1A` | rep-500 7.5% on bg |
+| `halo-rep-speaking` | `oklch(0.9380 0.0038 91.45)` | `#EBE8E5` | `oklch(0.2348 0.0054 88.00)` | `#26221C` | rep-500 11% on bg |
+| `air-rep-settings` | `oklch(0.9592 0.0040 91.45)` | `#F2F0ED` | `oklch(0.1967 0.0059 88.00)` | `#1A1814` | rep-500 3.5% on bg |
+| `halo-rep-settings` | `oklch(0.9576 0.0040 91.45)` | `#F1EFEC` | `oklch(0.2124 0.0057 88.00)` | `#1D1B17` | rep-500 5% on bg |
+| `fog-abyss` | `oklch(0.9581 0.0041 106.30)` | `#F1F2EF` | `oklch(0.1956 0.0059 98.26)` | `#191916` | abyss-500 1.5% on bg |
 | `halo-abyss` | `oklch(0.9521 0.0044 120.20)` | `#EFF0EC` | `oklch(0.2012 0.0059 108.65)` | `#161713` | — |
 | `turn-active` | `oklch(0.9714 0.0028 84.56)` | `#F6F5F3` | `oklch(0.2367 0.0058 88.00)` | `#201E1B` | — |
 | `presence-halo-rep` | `oklch(0.8989 0.0033 91.45)` | `#DEDDDB` | `oklch(0.2572 0.0051 88.00)` | `#242321` | — |

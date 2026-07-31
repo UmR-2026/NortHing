@@ -233,6 +233,20 @@
     border-image: linear-gradient(to bottom, transparent, rgba(63,131,123,.60), transparent) 1;
   }
 
+  /* 收起态把手全高竖向 wash */
+  .handle-left {
+    background: linear-gradient(to bottom, transparent 15%, rgba(200,113,76,.08) 50%, transparent 85%);
+  }
+  .handle-right {
+    background: linear-gradient(to bottom, transparent 15%, rgba(63,131,123,.08) 50%, transparent 85%);
+  }
+  [data-theme="dark"] .handle-left {
+    background: linear-gradient(to bottom, transparent 15%, rgba(200,113,76,.12) 50%, transparent 85%);
+  }
+  [data-theme="dark"] .handle-right {
+    background: linear-gradient(to bottom, transparent 15%, rgba(63,131,123,.12) 50%, transparent 85%);
+  }
+
   /* ─── 档案滚动区 ─── */
   /* Slint: ScrollView { flex: 1; } */
   .archive-content {
