@@ -8,7 +8,7 @@ pub mod relay;
 pub mod routes;
 pub mod validated;
 
-pub use relay::room::{ResponsePayload, RoomManager};
+pub use relay::room::{CreateRoomOutcome, ResponsePayload, RoomManager};
 pub use routes::api::AppState;
 pub use routes::websocket::OutboundProtocol;
 pub use validated::{ContentHash, ValidatedRelPath, ValidatedRoomId};
@@ -140,6 +140,7 @@ pub fn build_relay_router(
         start_time,
         asset_store,
         api_key,
+        ws_idle_timeout: std::time::Duration::from_secs(90),
     };
 
     Router::new()
