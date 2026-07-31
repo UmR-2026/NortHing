@@ -73,7 +73,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 36px;
+  gap: 32px;
 }
 
 /* 窗口控制、水印由 shared CSS 提供 */
@@ -83,7 +83,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
   position: relative;
 }
@@ -207,7 +207,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .field-label {
@@ -224,7 +224,7 @@
   font-family: 'Noto Sans SC', system-ui, sans-serif;
   font-size: 15px;
   color: var(--fg);
-  background: var(--elevated);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   outline: none;
@@ -281,7 +281,8 @@
 
 .personality-chip[data-color="openness"]::before { background: #9B7FBF; }
 .personality-chip[data-color="conscientiousness"]::before { background: #4A6FA5; }
-.personality-chip[data-color="extraversion"]::before { background: var(--rep-500); }
+/* 出生态下外向性 chip 用 birth 灰阶——与 avatar 出生态同源，选中后跟随 rep */
+.personality-chip[data-color="extraversion"]::before { background: var(--birth); }
 .personality-chip[data-color="agreeableness"]::before { background: #6B9E7A; }
 .personality-chip[data-color="neuroticism"]::before { background: var(--abyss-500); }
 
@@ -357,8 +358,8 @@
  * State: disabled → enabled when all fields filled AND personality selected.
  * Slint: generate-btn.enabled = user.len() > 0 && name.len() > 0 && role.len() > 0 && selected-personality != null
  *        generate-btn TouchArea { clicked => { pulsing = true; generate-identity(); } }
- * Click: 2200ms pulse animation (infinite sweep) → "已生成" → identity text appears
- * Animation: pulse-sweep 1.8s loop during generation, stops on completion (one-time state transition)
+ * Click: 2200ms pulse animation (one-time sweep) → "已生成" → identity text appears
+ * Animation: pulse-sweep 1.8s forwards during generation, one-time state transition
  */
 .action-area {
   width: 100%;
@@ -419,7 +420,7 @@
   top: 0; left: -100%;
   width: 100%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent);
-  animation: pulse-sweep 1.8s var(--ease) infinite;
+  animation: pulse-sweep 1.8s var(--ease) forwards;
 }
 
 @keyframes pulse-sweep {
@@ -431,13 +432,11 @@
 .generated-output {
   width: 100%;
   opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 800ms ease, transform 800ms ease;
+  transition: opacity 800ms ease;
 }
 
 .generated-output.visible {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .generated-text {
@@ -556,7 +555,7 @@
     <div class="fields">
       <div class="field">
         <label class="field-label">用户是</label>
-        <input class="field-input" type="text" id="inputUser" placeholder="UmR" autocomplete="off">
+        <input class="field-input" type="text" id="inputUser" placeholder="你的名字" autocomplete="off">
       </div>
       <div class="field">
         <label class="field-label">你是</label>
@@ -578,7 +577,7 @@
       <div class="personality">
         <div class="field-label" style="text-align:center; font-family:'Fraunces','Noto Serif SC',Georgia,serif; font-variation-settings:'WONK' 1,'SOFT' 60;">你的性格更偏向</div>
         <div class="personality-row">
-          <button class="personality-chip selected" data-color="openness" data-keywords="好奇 · 想象 · 不拘一格" data-hue="270" data-sat="45" data-light="60">
+          <button class="personality-chip" data-color="openness" data-keywords="好奇 · 想象 · 不拘一格" data-hue="270" data-sat="45" data-light="60">
             <span class="tip">开放性</span>
           </button>
           <button class="personality-chip" data-color="conscientiousness" data-keywords="严谨 · 可靠 · 有条理" data-hue="218" data-sat="40" data-light="48">

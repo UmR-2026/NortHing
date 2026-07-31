@@ -23,13 +23,14 @@
   .content {
     flex-direction: column;
     padding: 24px 40px 32px;
-    gap: 20px;
+    gap: 16px;
     overflow-y: auto;
   }
 
   /* 顶栏 */
   .topbar {
     border-bottom: 1px solid var(--border-soft);
+    padding-right: 120px;
   }
   .topbar-title {
     font-family: var(--font-display);
@@ -46,18 +47,18 @@
   .mode-seg {
     display: flex;
     background: var(--raised);
-    border-radius: 7px;
-    padding: 3px;
-    gap: 2px;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 4px;
   }
   .mode-opt {
     border: none;
     background: transparent;
     color: var(--muted);
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--fs-md);
     padding: 4px 12px;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     transition: .15s;
   }
@@ -72,7 +73,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
-    padding: 24px 28px;
+    padding: 24px 24px;
     transition: background var(--grow), border-color var(--grow);
   }
   .card-h {
@@ -81,14 +82,14 @@
     color: var(--muted);
     letter-spacing: .06em;
     text-transform: uppercase;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     gap: 8px;
   }
   .card-h .tag {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--faint);
     text-transform: none;
     letter-spacing: 0;
@@ -100,7 +101,7 @@
   /* ─── 色板行 ─── */
   .swatch-row {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     flex-wrap: wrap;
   }
   .swatch-item {
@@ -127,7 +128,7 @@
   }
   .swatch-hex {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--faint);
   }
 
@@ -136,7 +137,7 @@
     display: flex;
     align-items: baseline;
     gap: 16px;
-    padding: 10px 0;
+    padding: 8px 0;
     border-bottom: 1px solid var(--border-soft);
   }
   .type-row:last-child { border-bottom: none; }
@@ -159,8 +160,8 @@
   .space-row {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 6px 0;
+    gap: 12px;
+    padding: 8px 0;
   }
   .space-label {
     font-family: var(--font-mono);
@@ -172,7 +173,7 @@
   .space-bar {
     height: 16px;
     background: var(--rep-400);
-    border-radius: 3px;
+    border-radius: 4px;
     transition: background var(--grow);
   }
   .space-px {
@@ -184,7 +185,7 @@
   /* ─── 圆角阶梯 ─── */
   .radius-row {
     display: flex;
-    gap: 18px;
+    gap: 16px;
     flex-wrap: wrap;
   }
   .radius-item {
@@ -205,7 +206,7 @@
   .airtint-grid {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
   .airtint-row {
     display: flex;
@@ -225,11 +226,11 @@
   }
   .airtint-name {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-md);
     color: var(--fg);
   }
   .airtint-desc {
-    font-size: 12px;
+    font-size: var(--fs-lg);
     color: var(--muted);
     line-height: 1.5;
     margin-top: 2px;
@@ -297,7 +298,7 @@
     color: var(--surface);
     font-size: var(--fs-sm);
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 8px;
     opacity: 0;
     pointer-events: none;
     transition: .18s;
@@ -336,7 +337,7 @@
   .demo-chrono-marks {
     display: flex;
     justify-content: space-between;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--faint);
     letter-spacing: .04em;
     margin-bottom: 13px;
@@ -389,7 +390,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--fs-md);
     color: var(--on-rep);
     font-family: var(--font-display);
     font-weight: 500;

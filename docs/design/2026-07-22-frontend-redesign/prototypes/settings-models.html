@@ -131,16 +131,16 @@
   .btn-test { position: relative; }
   .btn-test .test-icon { transition: opacity 200ms ease; }
   .btn-test.testing .test-icon { opacity: 0; }
-  .btn-test .test-spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--abyss-300); border-top-color: var(--abyss-500); border-radius: 50%; }
-  .btn-test.testing .test-spinner { display: block; animation: spinIn 350ms ease-out forwards; }
+  .btn-test .test-label { display: none; font-family: var(--font-mono); font-size: var(--fs-md); color: var(--abyss-500); }
+  .btn-test.testing .test-label { display: inline; animation: fadeIn 350ms ease-out forwards; }
   .btn-test.success .test-icon { opacity: 0; }
   .btn-test.success .test-check { display: block; color: var(--rep-500); }
-  .btn-test.success .test-spinner, .btn-test.success .test-icon { display: none; }
+  .btn-test.success .test-label, .btn-test.success .test-icon { display: none; }
   .btn-test.fail .test-icon { opacity: 0; }
   .btn-test.fail .test-warn { display: block; color: var(--rep-500); }
-  .btn-test.fail .test-spinner, .btn-test.fail .test-icon { display: none; }
-  .test-check, .test-warn { display: none; }
-  @keyframes spinIn { from { transform: rotate(0deg); opacity: 0; } to { transform: rotate(360deg); opacity: 1; } }
+  .btn-test.fail .test-label, .btn-test.fail .test-icon { display: none; }
+  .test-check, .test-warn, .test-label { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* ─── Provider card disabled state ─── */
   .provider-card.disabled { opacity: 0.55; }
@@ -284,7 +284,7 @@
                 <div class="provider-card__actions">
                   <button class="btn-ghost btn-test" data-od-id="action-test-anthropic">
                     <span class="test-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                    <span class="test-spinner"></span>
+                    <span class="test-label">测试中…</span>
                     <span class="test-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                     <span class="test-warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                     测试连接
