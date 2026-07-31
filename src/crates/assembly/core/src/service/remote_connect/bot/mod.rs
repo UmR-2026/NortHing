@@ -17,6 +17,8 @@ pub mod command_router_view;
 pub mod feishu;
 pub mod locale;
 pub mod menu;
+#[cfg(test)]
+mod persistence_tests;
 pub mod telegram;
 pub mod weixin;
 // R39a weixin god-split: facade + 5 siblings.
@@ -480,34 +482,220 @@ fn legacy_bot_persistence_path() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|home| home.join(".northhing").join(LEGACY_BOT_PERSISTENCE_FILENAME))
 }
 
+/// Errors surfaced by bot persistence reads and transactional updates.
+///
+/// The `Read` / `Parse` / `Io` categories let callers match on the failing
+/// phase; `Corrupted` marks a fail-closed abort where an existing file could
+/// not be fully read back and was therefore left untouched.
+#[derive(Debug, thiserror::Error)]
+pub enum BotPersistenceError {
+    #[error("Failed to read bot persistence file {path}: {source}")]
+    Read {
+        path: std::path::PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to parse bot persistence file {path}: {source}")]
+    Parse {
+        path: std::path::PathBuf,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("Failed to write bot persistence file {path}: {source}")]
+    Io {
+        path: std::path::PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to serialize bot persistence data: {source}")]
+    Serialize {
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("Bot persistence is corrupted, refusing to overwrite: {0}")]
+    Corrupted(#[source] Box<BotPersistenceError>),
+    #[error("Cannot resolve bot persistence path: home directory unavailable")]
+    NoHomeDirectory,
+}
+
+/// Process-local single-writer guard for bot persistence.
+///
+/// Every load → mutate → write cycle (`update_bot_persistence`) serializes
+/// through this mutex so concurrent saves cannot clobber each other's
+/// changes. The critical section only mutates in-memory data and writes one
+/// file — no `await`, no other IO — so `std::sync::Mutex` fits this
+/// synchronous context (a tokio mutex would needlessly carry an async
+/// runtime dependency into callers).
+static PERSISTENCE_WRITE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Fail-open read used by read-only callers: returns the default data and
+/// logs a `warn` when the file is corrupted. Corrupted files are never
+/// written back through this path, so the damage stays confined to a single
+/// read.
 pub fn load_bot_persistence() -> BotPersistenceData {
-    let Some(path) = bot_persistence_path() else {
+    let Some(main) = bot_persistence_path() else {
         return BotPersistenceData::default();
     };
-    match std::fs::read_to_string(&path) {
-        Ok(data) => serde_json::from_str(&data).unwrap_or_default(),
-        Err(_) => {
-            let Some(legacy_path) = legacy_bot_persistence_path() else {
-                return BotPersistenceData::default();
-            };
-            match std::fs::read_to_string(&legacy_path) {
-                Ok(data) => serde_json::from_str(&data).unwrap_or_default(),
-                Err(_) => BotPersistenceData::default(),
-            }
+    let Some(legacy) = legacy_bot_persistence_path() else {
+        return BotPersistenceData::default();
+    };
+    load_bot_persistence_at(&main, &legacy)
+}
+
+fn load_bot_persistence_at(main: &std::path::Path, legacy: &std::path::Path) -> BotPersistenceData {
+    match try_load_bot_persistence_at(main, legacy) {
+        Ok(data) => data,
+        Err(error) => {
+            tracing::warn!("Bot persistence corrupted or unreadable, returning default: {error}");
+            BotPersistenceData::default()
         }
     }
 }
 
-pub fn save_bot_persistence(data: &BotPersistenceData) {
-    let Some(path) = bot_persistence_path() else {
-        return;
+/// Fail-closed load for `update_bot_persistence` and callers that must not
+/// proceed on partial data.
+///
+/// Returns `Err` when the main file exists but cannot be read or parsed, and
+/// when the legacy fallback is present but corrupted. A missing main file
+/// falls back to the legacy file (existing migration semantics); a missing
+/// legacy file is the empty initial state.
+pub fn try_load_bot_persistence() -> Result<BotPersistenceData, BotPersistenceError> {
+    let Some(main) = bot_persistence_path() else {
+        return Ok(BotPersistenceData::default());
     };
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
+    let Some(legacy) = legacy_bot_persistence_path() else {
+        return Ok(BotPersistenceData::default());
+    };
+    try_load_bot_persistence_at(&main, &legacy)
+}
+
+fn try_load_bot_persistence_at(
+    main: &std::path::Path,
+    legacy: &std::path::Path,
+) -> Result<BotPersistenceData, BotPersistenceError> {
+    if let Some(data) = read_bot_persistence_file(main)? {
+        return Ok(data);
     }
-    if let Ok(json) = serde_json::to_string_pretty(data) {
-        if let Err(e) = std::fs::write(&path, json) {
-            tracing::error!("Failed to save bot persistence: {e}");
+    match read_bot_persistence_file(legacy)? {
+        Some(data) => Ok(data),
+        None => Ok(BotPersistenceData::default()),
+    }
+}
+
+fn read_bot_persistence_file(path: &std::path::Path) -> Result<Option<BotPersistenceData>, BotPersistenceError> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => serde_json::from_str(&content)
+            .map(Some)
+            .map_err(|source| BotPersistenceError::Parse {
+                path: path.to_path_buf(),
+                source,
+            }),
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(BotPersistenceError::Read {
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
+/// Transactional single-writer update of the bot persistence file.
+///
+/// Runs the whole load → `f` → atomic-write cycle under
+/// [`PERSISTENCE_WRITE_LOCK`]. Fail-closed on load: a corrupted main file
+/// aborts with [`BotPersistenceError::Corrupted`] before `f` runs, so a
+/// partial read can never be written back over valid data.
+pub fn update_bot_persistence(f: impl FnOnce(&mut BotPersistenceData)) -> Result<(), BotPersistenceError> {
+    let Some(main) = bot_persistence_path() else {
+        return Err(BotPersistenceError::NoHomeDirectory);
+    };
+    let Some(legacy) = legacy_bot_persistence_path() else {
+        return Err(BotPersistenceError::NoHomeDirectory);
+    };
+    update_bot_persistence_at(&main, &legacy, f)
+}
+
+fn update_bot_persistence_at(
+    main: &std::path::Path,
+    legacy: &std::path::Path,
+    f: impl FnOnce(&mut BotPersistenceData),
+) -> Result<(), BotPersistenceError> {
+    let _guard = match PERSISTENCE_WRITE_LOCK.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let mut data =
+        try_load_bot_persistence_at(main, legacy).map_err(|source| BotPersistenceError::Corrupted(Box::new(source)))?;
+    f(&mut data);
+    write_bot_persistence_atomic(main, &data)
+}
+
+/// Atomic file write: serialize to a `.<name>.<pid>.<nonce>.tmp` sibling in
+/// the same directory, then rename over the target (same-directory rename is
+/// atomic). The previous content is copied to `<name>.bak` first; a failed
+/// backup is warn-only and never blocks the write.
+///
+/// Mirrors the tmp+nonce+rename pattern of `services-core` `json_store.rs`
+/// (`build_temp_json_path` / `replace_file_from_temp`), adapted to this
+/// synchronous context without tokio.
+fn write_bot_persistence_atomic(path: &std::path::Path, data: &BotPersistenceData) -> Result<(), BotPersistenceError> {
+    let parent = path.parent().ok_or_else(|| BotPersistenceError::Io {
+        path: path.to_path_buf(),
+        source: std::io::Error::new(std::io::ErrorKind::InvalidInput, "target path has no parent directory"),
+    })?;
+    std::fs::create_dir_all(parent).map_err(|source| BotPersistenceError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    let json = serde_json::to_string_pretty(data).map_err(|source| BotPersistenceError::Serialize { source })?;
+
+    let file_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "data.json".to_string());
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let tmp_path = parent.join(format!(".{file_name}.{}.{nonce}.tmp", std::process::id()));
+
+    if path.exists() {
+        if let Err(error) = std::fs::copy(path, path.with_extension("bak")) {
+            tracing::warn!("Failed to back up bot persistence {}: {error}", path.display());
+        }
+    }
+
+    if let Err(source) = std::fs::write(&tmp_path, json.as_bytes()) {
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(BotPersistenceError::Io { path: tmp_path, source });
+    }
+
+    match std::fs::rename(&tmp_path, path) {
+        Ok(()) => Ok(()),
+        Err(_first_error) => {
+            // Windows: external scanners/indexers may briefly hold a
+            // non-shareable handle on the target, making rename fail with
+            // PermissionDenied. Retry once after removing the target — same
+            // fallback as json_store.rs `replace_file_from_temp`.
+            if path.exists() {
+                match std::fs::remove_file(path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => {
+                        let _ = std::fs::remove_file(&tmp_path);
+                        return Err(BotPersistenceError::Io {
+                            path: path.to_path_buf(),
+                            source: error,
+                        });
+                    }
+                }
+            }
+            match std::fs::rename(&tmp_path, path) {
+                Ok(()) => Ok(()),
+                Err(source) => {
+                    let _ = std::fs::remove_file(&tmp_path);
+                    Err(BotPersistenceError::Io { path: tmp_path, source })
+                }
+            }
         }
     }
 }

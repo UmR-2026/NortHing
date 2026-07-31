@@ -1,4 +1,4 @@
-use super::super::{load_bot_persistence, save_bot_persistence, BotConfig};
+use super::super::{load_bot_persistence, update_bot_persistence, BotConfig};
 use super::feishu_types::ParsedMessage;
 use super::FeishuBot;
 use crate::service::remote_connect::bot::command_router::{
@@ -288,17 +288,19 @@ impl FeishuBot {
     }
 
     pub(super) async fn persist_chat_state(&self, chat_id: &str, state: &BotChatState) {
-        let mut data = load_bot_persistence();
-        data.upsert(crate::service::remote_connect::bot::SavedBotConnection {
-            bot_type: "feishu".to_string(),
-            chat_id: chat_id.to_string(),
-            config: BotConfig::Feishu {
-                app_id: self.config.app_id.clone(),
-                app_secret: self.config.app_secret.clone(),
-            },
-            chat_state: state.clone(),
-            connected_at: Utc::now().timestamp(),
-        });
-        save_bot_persistence(&data);
+        if let Err(error) = update_bot_persistence(|data| {
+            data.upsert(crate::service::remote_connect::bot::SavedBotConnection {
+                bot_type: "feishu".to_string(),
+                chat_id: chat_id.to_string(),
+                config: BotConfig::Feishu {
+                    app_id: self.config.app_id.clone(),
+                    app_secret: self.config.app_secret.clone(),
+                },
+                chat_state: state.clone(),
+                connected_at: Utc::now().timestamp(),
+            });
+        }) {
+            warn!("Failed to persist Feishu chat state: {error}");
+        }
     }
 }

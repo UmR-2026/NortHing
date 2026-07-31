@@ -28,7 +28,7 @@ use super::weixin_bot::{
     PendingPairing, WeixinBot, CHANNEL_VERSION, LONG_POLL_TIMEOUT_SECS, MAX_INBOUND_IMAGES, SESSION_EXPIRED_ERRCODE,
 };
 use super::weixin_qr_login::{load_sync_buf, save_sync_buf};
-use super::{load_bot_persistence, save_bot_persistence, BotConfig, SavedBotConnection};
+use super::{load_bot_persistence, update_bot_persistence, BotConfig, SavedBotConnection};
 use crate::service::remote_connect::remote_server::ImageAttachment;
 
 impl WeixinBot {
@@ -205,19 +205,21 @@ impl WeixinBot {
     }
 
     async fn persist_chat_state(&self, peer_id: &str, state: &BotChatState) {
-        let mut data = load_bot_persistence();
-        data.upsert(SavedBotConnection {
-            bot_type: "weixin".to_string(),
-            chat_id: peer_id.to_string(),
-            config: BotConfig::Weixin {
-                ilink_token: self.config.ilink_token.clone(),
-                base_url: self.config.base_url.clone(),
-                bot_account_id: self.config.bot_account_id.clone(),
-            },
-            chat_state: state.clone(),
-            connected_at: chrono::Utc::now().timestamp(),
-        });
-        save_bot_persistence(&data);
+        if let Err(error) = update_bot_persistence(|data| {
+            data.upsert(SavedBotConnection {
+                bot_type: "weixin".to_string(),
+                chat_id: peer_id.to_string(),
+                config: BotConfig::Weixin {
+                    ilink_token: self.config.ilink_token.clone(),
+                    base_url: self.config.base_url.clone(),
+                    bot_account_id: self.config.bot_account_id.clone(),
+                },
+                chat_state: state.clone(),
+                connected_at: chrono::Utc::now().timestamp(),
+            });
+        }) {
+            warn!("Failed to persist Weixin chat state: {error}");
+        }
     }
 
     /// Pairing + message loop: long-poll getupdates.

@@ -169,9 +169,11 @@ pub(super) async fn confirm_then_run(
 }
 
 pub(super) async fn set_verbose(state: &mut BotChatState, on: bool, s: &'static BotStrings) -> HandleResult {
-    let mut data = super::load_bot_persistence();
-    data.verbose_mode = on;
-    super::save_bot_persistence(&data);
+    if let Err(error) = super::update_bot_persistence(|data| {
+        data.verbose_mode = on;
+    }) {
+        tracing::warn!("Failed to persist verbose mode: {error}");
+    }
 
     let body = if on { s.verbose_enabled } else { s.verbose_disabled };
     let mut view = settings_menu_view(on, state, s);

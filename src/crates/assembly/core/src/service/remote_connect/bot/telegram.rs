@@ -16,7 +16,7 @@ use super::command_router::{
     welcome_message, BotAction, BotChatState, BotInteractionHandler, BotInteractiveRequest, BotLanguage,
     BotMessageSender, HandleResult,
 };
-use super::{load_bot_persistence, save_bot_persistence, BotConfig, SavedBotConnection};
+use super::{load_bot_persistence, update_bot_persistence, BotConfig, SavedBotConnection};
 use crate::service::remote_connect::remote_server::ImageAttachment;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -636,16 +636,18 @@ impl TelegramBot {
     }
 
     async fn persist_chat_state(&self, chat_id: i64, state: &BotChatState) {
-        let mut data = load_bot_persistence();
-        data.upsert(SavedBotConnection {
-            bot_type: "telegram".to_string(),
-            chat_id: chat_id.to_string(),
-            config: BotConfig::Telegram {
-                bot_token: self.config.bot_token.clone(),
-            },
-            chat_state: state.clone(),
-            connected_at: chrono::Utc::now().timestamp(),
-        });
-        save_bot_persistence(&data);
+        if let Err(error) = update_bot_persistence(|data| {
+            data.upsert(SavedBotConnection {
+                bot_type: "telegram".to_string(),
+                chat_id: chat_id.to_string(),
+                config: BotConfig::Telegram {
+                    bot_token: self.config.bot_token.clone(),
+                },
+                chat_state: state.clone(),
+                connected_at: chrono::Utc::now().timestamp(),
+            });
+        }) {
+            warn!("Failed to persist Telegram chat state: {error}");
+        }
     }
 }
