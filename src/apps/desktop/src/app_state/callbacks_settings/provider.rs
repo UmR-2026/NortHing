@@ -1,6 +1,5 @@
-use super::load_app_settings_quiet;
 use super::refresh_settings_lists;
-use super::save_app_settings_quiet;
+use super::update_app_settings_quiet;
 use crate::app_state::error_banners::{set_banner_message, set_inline_error};
 use crate::app_state::settings::ProviderConfig;
 use crate::app_state::slint_glue::AppWindow;
@@ -40,27 +39,27 @@ pub(crate) fn register_delete_provider_callback(ui: &AppWindow, app_state: &Arc<
                 }
             };
             rt.block_on(async move {
-                // Step 1: mutate settings (load → remove → save).
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
+                // Step 1: mutate settings as one transaction under the
+                // single-writer lock (H-9): load → remove → save.
+                let (provider_name, s) = match update_app_settings_quiet(|s| {
+                    let provider_name = s
+                        .providers
+                        .iter()
+                        .find(|p| p.id == pid)
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| pid.clone());
+                    let _ = s.remove_provider(&pid);
+                    Ok((provider_name, s.clone()))
+                })
+                .await
+                {
+                    Ok(v) => v,
                     Err(e) => {
                         // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
                         set_banner_message(ui_weak.clone(), e, "");
                         return;
                     }
                 };
-                let provider_name = s
-                    .providers
-                    .iter()
-                    .find(|p| p.id == pid)
-                    .map(|p| p.name.clone())
-                    .unwrap_or_else(|| pid.clone());
-                let _ = s.remove_provider(&pid);
-                if let Err(e) = save_app_settings_quiet(&s).await {
-                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                    set_banner_message(ui_weak.clone(), e, "");
-                    return;
-                }
                 // 2026-07-18 (D2g): push provider state into core so the runtime
                 // sees the deletion. Failure is non-fatal — the user's data is
                 // safe on disk; we surface a banner and let them retry.
@@ -156,65 +155,78 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
 
                 // 2026-07-18 (D2e): load settings BEFORE validate so we can look up
                 // the stored API key when editing with an empty form field.
-                let mut s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
+                // 2026-07-31 (H-9): the whole load → validate → mutate → save cycle
+                // now runs as one transaction under the settings write lock; a
+                // validation failure aborts without writing anything.
+                let mut validation_error: Option<String> = None;
+                let (s, saved_id) = match update_app_settings_quiet(|s| {
+                    let effective_key = if !pid.is_empty() && pkey.trim().is_empty() {
+                        resolve_effective_api_key(
+                            s.providers.iter().find(|p| p.id == pid).map(|p| p.api_key.as_str()),
+                            &pkey,
+                        )
+                    } else {
+                        pkey.clone()
+                    };
+
+                    if let Err(msg) = validate_provider_input(&pname, &ptype, &pbase, &effective_key, &pmodel) {
+                        // H-9: keep the human message for the UI; the error side
+                        // channel only signals "transaction aborted".
+                        validation_error = Some(msg.clone());
+                        return Err(anyhow::anyhow!("{msg}"));
+                    }
+                    let provider_type = match ptype.as_str() {
+                        "anthropic" => ProviderType::Anthropic,
+                        "openai" => ProviderType::Openai,
+                        "gemini" => ProviderType::Gemini,
+                        "custom-openai" => ProviderType::CustomOpenaiCompatible,
+                        "custom-anthropic" => ProviderType::CustomAnthropicCompatible,
+                        // validate_provider_input already rejected unknown types;
+                        // this branch is unreachable in practice, but we handle
+                        // it gracefully instead of panicking (panic in a spawn
+                        // thread would abort the process).
+                        _ => return Err(anyhow::anyhow!("内部错误：未知的服务类型")),
+                    };
+                    let mut new_provider = ProviderConfig::new(pname.clone(), provider_type);
+                    if !pid.is_empty() {
+                        new_provider.id = pid.clone();
+                    }
+                    new_provider.base_url = pbase;
+                    new_provider.api_key = effective_key;
+                    new_provider.model = pmodel;
+                    new_provider.enabled = penabled;
+                    s.upsert_provider(new_provider);
+                    // 2026-06-26 (Phase 4 fix): expose the saved provider id so
+                    // the welcome flow's test-btn can request "test the last
+                    // saved one" via the "__last__" sentinel.
+                    let saved_id = if pid.is_empty() {
+                        s.providers.last().map(|p| p.id.clone()).unwrap_or_default()
+                    } else {
+                        pid.clone()
+                    };
+                    Ok((s.clone(), saved_id))
+                })
+                .await
+                {
+                    Ok(v) => v,
                     Err(e) => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_inline_error(ui_weak.clone(), e);
+                        if let Some(msg) = validation_error.take() {
+                            // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
+                            set_inline_error(ui_weak.clone(), msg.clone());
+                            // 2026-07-18 (D2e): banner is globally visible — unlike inline
+                            // error which only renders in ChatPaneView.
+                            set_banner_message(ui_weak.clone(), msg, "");
+                        } else {
+                            // 2026-07-31 (H-9): an IO failure during the transaction
+                            // (load or save) — same generic retry prompt the old
+                            // save-failure branch showed.
+                            tracing::warn!(target: "app_state", "upsert-provider save failed: {e}");
+                            // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
+                            set_inline_error(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string());
+                        }
                         return;
                     }
                 };
-
-                // 2026-07-18 (D2e): edit-flow key inheritance — if pid is non-empty
-                // (edit mode) and the incoming key is empty, inherit the stored key.
-                let effective_key = if !pid.is_empty() && pkey.trim().is_empty() {
-                    resolve_effective_api_key(
-                        s.providers.iter().find(|p| p.id == pid).map(|p| p.api_key.as_str()),
-                        &pkey,
-                    )
-                } else {
-                    pkey.clone()
-                };
-
-                if let Err(msg) = validate_provider_input(&pname, &ptype, &pbase, &effective_key, &pmodel) {
-                    // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
-                    set_inline_error(ui_weak.clone(), msg.clone());
-                    // 2026-07-18 (D2e): banner is globally visible — unlike inline
-                    // error which only renders in ChatPaneView.
-                    set_banner_message(ui_weak.clone(), msg, "");
-                    return;
-                }
-                let provider_type = match ptype.as_str() {
-                    "anthropic" => ProviderType::Anthropic,
-                    "openai" => ProviderType::Openai,
-                    "gemini" => ProviderType::Gemini,
-                    "custom-openai" => ProviderType::CustomOpenaiCompatible,
-                    "custom-anthropic" => ProviderType::CustomAnthropicCompatible,
-                    // validate_provider_input already rejected unknown types;
-                    // this branch is unreachable in practice, but we handle
-                    // it gracefully instead of panicking (panic in a spawn
-                    // thread would abort the process).
-                    _ => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        set_inline_error(ui_weak.clone(), "内部错误：未知的服务类型".to_string());
-                        return;
-                    }
-                };
-                let mut new_provider = ProviderConfig::new(pname.clone(), provider_type);
-                if !pid.is_empty() {
-                    new_provider.id = pid.clone();
-                }
-                new_provider.base_url = pbase;
-                new_provider.api_key = effective_key;
-                new_provider.model = pmodel;
-                new_provider.enabled = penabled;
-                s.upsert_provider(new_provider);
-                if let Err(e) = save_app_settings_quiet(&s).await {
-                    tracing::warn!(target: "app_state", "upsert-provider save failed: {e}");
-                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                    set_inline_error(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string());
-                    return;
-                }
                 // Push the new/updated provider into core so the runtime
                 // sees it. Failure is non-fatal — the user's data is safe
                 // on disk; we surface a banner and let them retry.
@@ -249,12 +261,8 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 set_banner_message(ui_weak.clone(), format!("已保存 AI 服务 {}", pname), "");
                 // 2026-06-26 (Phase 4 fix): expose the saved provider id so
                 // the welcome flow's test-btn can request "test the last
-                // saved one" via the "__last__" sentinel.
-                let saved_id = if pid.is_empty() {
-                    s.providers.last().map(|p| p.id.clone()).unwrap_or_default()
-                } else {
-                    pid.clone()
-                };
+                // saved one" via the "__last__" sentinel (id was resolved
+                // inside the H-9 transaction above).
                 let ui_weak_set_id = ui_weak.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = ui_weak_set_id.upgrade() {

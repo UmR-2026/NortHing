@@ -1,5 +1,5 @@
 use super::load_app_settings_quiet;
-use super::save_app_settings_quiet;
+use super::update_app_settings_quiet;
 use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
@@ -41,7 +41,7 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                 }
             };
             rt.block_on(async move {
-                let mut s = match load_app_settings_quiet().await {
+                let s = match load_app_settings_quiet().await {
                     Ok(s) => s,
                     Err(e) => {
                         let ui_weak3 = ui_weak2.clone();
@@ -108,11 +108,19 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                             }
                         };
                         // Persist verification state on the provider.
-                        if let Some(slot) = s.providers.iter_mut().find(|p| p.id == resolved_id) {
-                            slot.last_verified_at = Some(now_unix_secs());
-                            slot.last_verified_ok = Some(result.success);
-                        }
-                        let _ = save_app_settings_quiet(&s).await;
+                        // 2026-07-31 (H-9): write through the transactional
+                        // entry (load → mutate → save under the settings
+                        // single-writer lock) instead of the raw load-then-
+                        // save sequence, which raced with other settings
+                        // actions and could clobber their fields.
+                        let _ = update_app_settings_quiet(|s| {
+                            if let Some(slot) = s.providers.iter_mut().find(|p| p.id == resolved_id) {
+                                slot.last_verified_at = Some(now_unix_secs());
+                                slot.last_verified_ok = Some(result.success);
+                            }
+                            Ok(())
+                        })
+                        .await;
                         let ui_weak3 = ui_weak2.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak3.upgrade() {
