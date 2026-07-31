@@ -85,6 +85,24 @@
     document.body.appendChild(fab);
   }
 
+  // ── Deck-aware positioning ──
+  function positionFab() {
+    const deck = document.querySelector('.deck');
+    if (deck) {
+      fab.style.bottom = (deck.offsetHeight + 12) + 'px';
+    } else {
+      fab.style.bottom = '16px';
+    }
+  }
+  positionFab();
+
+  // Re-measure on theme toggle (layout may shift)
+  const origToggleTheme = toggleTheme;
+  toggleTheme = function () {
+    origToggleTheme();
+    positionFab();
+  };
+
   // ── State ──
   let visible = false;
   let lastClickTime = 0;
