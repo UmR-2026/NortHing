@@ -413,6 +413,166 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn load_source_from_dirs_missing_index_html_returns_not_found() {
+        let root = TestTempDir::new("northhing-miniapp-source-missing-index");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let error = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            error.kind(),
+            MiniAppStorageErrorKind::NotFound,
+            "missing index.html must be an explicit not-found error"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_unreadable_index_html_returns_io() {
+        let root = TestTempDir::new("northhing-miniapp-source-unreadable-index");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::create_dir(source_dir.join(INDEX_HTML)).expect("invariant: create_dir succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let error = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            error.kind(),
+            MiniAppStorageErrorKind::Io,
+            "a non-NotFound read failure of index.html must be an IO error"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_missing_optional_files_stay_empty() {
+        let root = TestTempDir::new("northhing-miniapp-source-optional-missing");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let source = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .expect("missing optional files are legal and stay empty");
+        assert_eq!(source.html, "<html></html>");
+        assert_eq!(source.css, "");
+        assert_eq!(source.ui_js, "");
+        assert_eq!(source.worker_js, "");
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_unreadable_optional_file_returns_io() {
+        let root = TestTempDir::new("northhing-miniapp-source-unreadable-css");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+        fs::create_dir(source_dir.join(STYLE_CSS)).expect("invariant: create_dir succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let error = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            error.kind(),
+            MiniAppStorageErrorKind::Io,
+            "a non-NotFound read failure of an optional file must be an IO error, not silent empty"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_corrupt_esm_deps_returns_parse() {
+        let root = TestTempDir::new("northhing-miniapp-source-corrupt-esm");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(ESM_DEPS_JSON), "not json").expect("invariant: fs::write succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let error = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            error.kind(),
+            MiniAppStorageErrorKind::Deserialization,
+            "corrupt esm_dependencies.json must be a parse error, not silent empty"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_unreadable_esm_deps_returns_io() {
+        let root = TestTempDir::new("northhing-miniapp-source-unreadable-esm");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+        fs::create_dir(source_dir.join(ESM_DEPS_JSON)).expect("invariant: create_dir succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let error = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            error.kind(),
+            MiniAppStorageErrorKind::Io,
+            "an existing-but-unreadable esm_dependencies.json must be an IO error"
+        );
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_real_empty_files_stay_empty() {
+        let root = TestTempDir::new("northhing-miniapp-source-empty-files");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(STYLE_CSS), "").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(ESM_DEPS_JSON), "[]").expect("invariant: fs::write succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let source = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .expect("real empty files stay empty without error");
+        assert_eq!(source.html, "");
+        assert_eq!(source.css, "");
+    }
+
+    #[tokio::test]
+    async fn load_source_from_dirs_loads_all_present_files() {
+        let root = TestTempDir::new("northhing-miniapp-source-full");
+        let source_dir = root.path().join("source");
+        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+        fs::write(source_dir.join(INDEX_HTML), "<html><body></body></html>").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(STYLE_CSS), "body { color: red; }").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(UI_JS), "console.log('ui');").expect("invariant: fs::write succeeds");
+        fs::write(source_dir.join(WORKER_JS), "export default {};").expect("invariant: fs::write succeeds");
+        fs::write(
+            source_dir.join(ESM_DEPS_JSON),
+            r#"[{"name": "lodash", "version": "^4.17.21"}]"#,
+        )
+        .expect("invariant: fs::write succeeds");
+        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+
+        let source = storage
+            .load_source_from_dirs(source_dir, root.path().join("app"))
+            .await
+            .expect("invariant: load_source_from_dirs succeeds");
+        assert_eq!(source.html, "<html><body></body></html>");
+        assert_eq!(source.css, "body { color: red; }");
+        assert_eq!(source.ui_js, "console.log('ui');");
+        assert_eq!(source.worker_js, "export default {};");
+        assert_eq!(source.esm_dependencies.len(), 1);
+    }
+
     fn sample_app(id: &str) -> MiniApp {
         MiniApp {
             id: id.to_string(),

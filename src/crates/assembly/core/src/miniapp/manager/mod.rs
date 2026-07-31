@@ -253,12 +253,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn sync_from_fs_fails_closed_and_skips_persist_when_source_is_corrupt() {
+        let manager = test_manager();
+        let app = create_sample_app(&manager).await;
+        manager
+            .storage
+            .save(&app)
+            .await
+            .expect("invariant: storage.save succeeds");
+        let index_path = manager
+            .path_manager()
+            .miniapp_dir(&app.id)
+            .join(SOURCE_DIR)
+            .join(INDEX_HTML);
+        tokio::fs::remove_file(&index_path)
+            .await
+            .expect("invariant: remove index.html succeeds");
+
+        let error = manager
+            .sync_from_fs(&app.id, "dark", None)
+            .await
+            .expect_err("sync_from_fs must abort when the source directory is corrupt");
+        assert!(
+            error.to_string().contains("index.html"),
+            "expected a missing index.html error, got: {error}"
+        );
+
+        let meta = manager
+            .storage
+            .load_meta(&app.id)
+            .await
+            .expect("meta.json is untouched by the aborted sync");
+        assert_eq!(meta.version, app.version, "no sync persist may run on a corrupt source dir");
+        assert!(
+            manager
+                .list_versions(&app.id)
+                .await
+                .expect("invariant: manager.list_versions succeeds")
+                .is_empty(),
+            "no version snapshot may be persisted on a corrupt source dir"
+        );
+    }
+
+    #[tokio::test]
     async fn import_from_path_preserves_fallback_files_recompile_and_runtime_state() {
         let manager = test_manager();
         let import_root =
             std::env::temp_dir().join(format!("northhing-miniapp-import-source-{}", uuid::Uuid::new_v4()));
         write_import_source(&import_root).await;
-
         let imported = manager
             .import_from_path(import_root.clone(), None)
             .await
