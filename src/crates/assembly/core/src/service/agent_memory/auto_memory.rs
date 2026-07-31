@@ -406,7 +406,9 @@ mod tests {
     use super::super::facts::{
         append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType,
     };
-    use crate::service::agent_memory::build_workspace_agent_memory_prompt;
+    use crate::service::agent_memory::{
+        build_workspace_agent_memory_prompt, unique_test_memory_db_path, with_test_memory_db_path,
+    };
 
     fn make_fact(text: &str) -> Fact {
         Fact {
@@ -426,6 +428,7 @@ mod tests {
 
     #[tokio::test]
     async fn prompt_injection_with_facts_includes_remembered_facts_section() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -455,6 +458,7 @@ mod tests {
 
     #[tokio::test]
     async fn prompt_injection_without_facts_excludes_remembered_facts_section() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -473,6 +477,7 @@ mod tests {
 
     #[tokio::test]
     async fn prompt_injection_with_select_facts_budget_limit() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -492,6 +497,7 @@ mod tests {
 
     #[tokio::test]
     async fn prompt_injection_degrades_when_facts_file_unreadable() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 

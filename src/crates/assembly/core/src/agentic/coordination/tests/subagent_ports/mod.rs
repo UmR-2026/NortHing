@@ -29,7 +29,6 @@ use crate::agentic::session::SessionContextStore;
 use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
 use crate::agentic::tools::pipeline::{ToolPipeline, ToolStateManager};
 use crate::agentic::tools::registry::ToolRegistry;
-use crate::infrastructure::ai::client_factory::AIClientFactory;
 use crate::infrastructure::app_paths::PathManager;
 use crate::service::config::global::GlobalConfigManager;
 use crate::util::errors::{NortHingError, NortHingResult};
@@ -129,8 +128,22 @@ impl Tool for MockSubagentTool {
     }
 }
 
-/// Initialize the global config service + AIClientFactory once per
-/// test process.
+/// Initialize the global config service once per test process.
+///
+/// `AIClientFactory` is intentionally NOT initialized. The subagent_ports
+/// tests exercise phase1/phase2/phase3 plumbing (session creation, cancel /
+/// timeout select loop, 4 dead-code field population), not live LLM calls.
+/// With `AIClientFactory` uninitialized, `init_turn` fails fast at
+/// `get_global_ai_client_factory` (microseconds), so the spawned
+/// execution_task completes via the `join_result` arm of the select loop and
+/// `phase2` returns `Ok` with the 4 dead-code fields populated.
+///
+/// This keeps the tests hermetic: they no longer depend on whether the host
+/// machine has a reachable LLM endpoint or a populated model config.
+/// Previously, on machines with real LLM credentials the spawned task would
+/// block on a network chat request for ~0.8s, far exceeding the 50ms cancel
+/// window in `tests_cancel`, so the `cancel` arm won instead of `join_result`
+/// and the tests failed.
 pub async fn ensure_global_config_for_tests() {
     static DONE: OnceLock<()> = OnceLock::new();
     if DONE.get().is_some() {
@@ -138,9 +151,6 @@ pub async fn ensure_global_config_for_tests() {
     }
     if let Err(e) = GlobalConfigManager::initialize().await {
         eprintln!("GlobalConfigManager::initialize failed in test setup: {}", e);
-    }
-    if let Err(e) = AIClientFactory::initialize_global().await {
-        eprintln!("AIClientFactory::initialize_global failed in test setup: {}", e);
     }
     let _ = DONE.set(());
 }
