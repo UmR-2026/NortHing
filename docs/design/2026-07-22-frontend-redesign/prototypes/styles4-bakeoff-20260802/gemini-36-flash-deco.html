@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Deco 装饰艺术)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: deco (装饰艺术 / 扇形金线是成长的辐射)
+     * ----------------------------------------------------------------------
+     * 种子：扇形金线是成长的辐射
+     * 哲学解构：
+     * 1. 设施 (Facility) = 阶梯式秩序与金线几何 (Stepped Deco Geometry & Hairline Gold Framing)
+     *    - 以严谨的 45° 阶梯切角与 1px 琥珀金线线框构筑秩序空间，沉静而不冷峭。
+     * 2. Agent 知序 = 向外辐射的成息 (Radiant Fan of Growth)
+     *    - 扇形渐层弧纹 (Fan Radiance) 从知序名片与头像处呈 6s 沉降式扩散，代表内在意识的充盈。
+     * 3. 三要素 (Three Elements)：
+     *    - 驱力 Drive = 炽金珊瑚 (Radiant Brass Coral #D87D56 / #E89069)，代表活跃思考与生成意图。
+     *    - 深渊 Abyss = 墨绿古青 (Verdigris Teal #427B75 / #589E96)，代表向深处的逻辑推演。
+     *    - 沉积 Deposit = 古石褪灰 (Aged Bronze Gray #8C8477 / #736B5F)，代表沉淀锁定的编年史。
+     * ====================================================================== */
+
+    :root {
+      /* 4px 基数标度 */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 圆角规范 (Deco 阶梯切角与微圆角) */
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 14px;
+      --r-pill: 999px;
+      --r-window: 16px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 亮色模式 (默认)：暖白石膏与香槟金线 */
+      --bg-base: #F5F3EB;
+      --bg-window: #FAF8F2;
+      --bg-surface: #FFFFFF;
+      --bg-raised: #ECE8DD;
+      --bg-hover: #E4DFC8;
+
+      --border-subtle: #E8E2D5;
+      --border-strong: #D1C7B7;
+      --border-deco: rgba(212, 168, 108, 0.45);
+      --border-deco-bright: rgba(212, 168, 108, 0.85);
+
+      --fg-main: #343029;
+      --fg-muted: #7A7264;
+      --fg-faint: #A69E8F;
+
+      /* 三要素 (Deco 质感) */
+      --rep: #D87D56;
+      --rep-bright: #E89069;
+      --rep-gold: #C9934B;
+      --rep-glow: rgba(216, 125, 86, 0.14);
+      --rep-border: rgba(216, 125, 86, 0.38);
+
+      --abyss: #427B75;
+      --abyss-dark: #315C57;
+      --abyss-glow: rgba(66, 123, 117, 0.12);
+      --abyss-border: rgba(66, 123, 117, 0.35);
+
+      --deposit: #8C8477;
+      --deposit-bg: rgba(140, 132, 119, 0.12);
+
+      --birth: #DAD6CF;
+
+      --shadow-window: 0 20px 50px rgba(45, 38, 28, 0.09);
+      --shadow-card: 0 4px 16px rgba(50, 42, 30, 0.05);
+      --halo-top: rgba(216, 125, 86, 0.07);
+    }
+
+    [data-theme="dark"] {
+      /* 暗色模式：玄暖黑曜与古铜辉光 */
+      --bg-base: #161412;
+      --bg-window: #1F1C18;
+      --bg-surface: #27231E;
+      --bg-raised: #2F2A24;
+      --bg-hover: #3D372E;
+
+      --border-subtle: #332D26;
+      --border-strong: #4B4238;
+      --border-deco: rgba(230, 187, 126, 0.35);
+      --border-deco-bright: rgba(230, 187, 126, 0.75);
+
+      --fg-main: #EBE5D9;
+      --fg-muted: #9E9585;
+      --fg-faint: #6E6657;
+
+      --rep: #E89069;
+      --rep-bright: #F5A07A;
+      --rep-gold: #DFAB61;
+      --rep-glow: rgba(232, 144, 105, 0.16);
+      --rep-border: rgba(232, 144, 105, 0.42);
+
+      --abyss: #589E96;
+      --abyss-dark: #407771;
+      --abyss-glow: rgba(88, 158, 150, 0.15);
+      --abyss-border: rgba(88, 158, 150, 0.4);
+
+      --deposit: #736B5F;
+      --deposit-bg: rgba(115, 107, 95, 0.15);
+
+      --birth: #3D3831;
+
+      --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.65);
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
+      --halo-top: rgba(232, 144, 105, 0.09);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--s5);
+      transition: background 350ms ease, color 350ms ease;
+      /* Deco 几何辐射背景纹理 */
+      background-image: 
+        radial-gradient(circle at 50% 0%, var(--halo-top) 0%, transparent 65%),
+        linear-gradient(135deg, rgba(212, 168, 108, 0.02) 25%, transparent 25%),
+        linear-gradient(225deg, rgba(212, 168, 108, 0.02) 25%, transparent 25%);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+    }
+
+    /* ─── 窗口根容器 (Window Frame) ─── */
+    .app {
+      width: 860px;
+      height: 820px;
+      background: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-window);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1), background 350ms ease, border-color 350ms ease;
+    }
+
+    /* 物理拓宽 1280px 展开态 */
+    .app.expanded {
+      width: 1280px;
+    }
+
+    /* 顶栏 Deco 扇形金线辐射光晕 */
+    .app::before {
+      content: "";
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 450px;
+      background: 
+        radial-gradient(ellipse at 50% 20%, var(--halo-top) 0%, rgba(216, 125, 86, 0.02) 50%, transparent 75%),
+        conic-gradient(from 150deg at 50% 0%, transparent 0deg, rgba(201, 147, 75, 0.04) 30deg, transparent 60deg, rgba(201, 147, 75, 0.04) 90deg, transparent 120deg);
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 350ms ease;
+    }
+
+    /* ─── 窗口 Handle + Control + Watermark ─── */
+    .drawer-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      background: linear-gradient(180deg, transparent 0%, var(--border-deco) 30%, var(--rep-border) 50%, var(--border-deco) 70%, transparent 100%);
+      cursor: pointer;
+      z-index: 20;
+      opacity: 0.7;
+      transition: width 250ms ease, opacity 250ms ease, background 250ms ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drawer-handle:hover {
+      opacity: 1;
+      width: 12px;
+      background: var(--rep);
+    }
+    .drawer-handle::after {
+      content: "‹";
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--bg-window);
+      opacity: 0;
+      transition: opacity 150ms;
+    }
+    .app.expanded .drawer-handle::after { content: "›"; }
+    .drawer-handle:hover::after { opacity: 1; }
+
+    .window-controls {
+      position: absolute;
+      top: var(--s4);
+      right: var(--s5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10;
+    }
+    .win-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid var(--border-deco);
+      background: var(--bg-raised);
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 150ms, transform 150ms;
+    }
+    .win-btn:hover { opacity: 1; transform: scale(1.1); }
+    .win-btn.close:hover { background: #C95A4C; border-color: #C95A4C; }
+    .win-btn.min:hover { background: #D9A24A; border-color: #D9A24A; }
+    .win-btn.max:hover { background: #427B75; border-color: #427B75; }
+
+    .watermark {
+      position: absolute;
+      bottom: var(--s4);
+      left: var(--s5);
+      font-family: var(--font-display);
+      font-size: 15px;
+      letter-spacing: 0.14em;
+      color: var(--fg-main);
+      opacity: 0.25;
+      user-select: none;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ─── 核心三栏布局 (Main Viewport) ─── */
+    .viewport {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    /* 抽屉 (Drawers - Left "它的内在" / Right "身外之物") */
+    .drawer {
+      width: 280px;
+      height: 100%;
+      background: var(--bg-raised);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 350ms ease;
+      position: relative;
+      z-index: 2;
+    }
+    .drawer.left-drawer {
+      transform: translateX(-100%);
+      margin-left: -280px;
+    }
+    .drawer.right-drawer {
+      border-right: none;
+      border-left: 1px solid var(--border-subtle);
+      transform: translateX(100%);
+      margin-right: -280px;
+    }
+    .app.expanded .drawer.left-drawer {
+      transform: translateX(0);
+      margin-left: 0;
+    }
+    .app.expanded .drawer.right-drawer {
+      transform: translateX(0);
+      margin-right: 0;
+    }
+
+    .drawer-header {
+      padding: var(--s4) var(--s5);
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--fg-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drawer-section {
+      padding: var(--s4) var(--s5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .drawer-section-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--fg-muted);
+    }
+    .drawer-item {
+      padding: var(--s2) var(--s3);
+      border-radius: var(--r-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      font-size: 12.5px;
+      color: var(--fg-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+    .drawer-item:hover {
+      border-color: var(--border-deco);
+      background: var(--bg-hover);
+    }
+    .drawer-item.archived {
+      opacity: 0.6;
+    }
+
+    /* 主对话区域 (Center Container ~860px) */
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* ─── 顶栏 (Topbar ~84px) ─── */
+    .topbar {
+      height: 84px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, rgba(212, 168, 108, 0.03) 0%, transparent 100%);
+    }
+
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s4);
+    }
+
+    /* Deco 阶梯扇形头像框 (Deco Stepped Avatar) */
+    .avatar-wrap {
+      width: 48px;
+      height: 48px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 扇形金线辐射层 */
+    .avatar-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border-radius: var(--r-md);
+      border: 1px solid var(--border-deco);
+      background: radial-gradient(circle, var(--rep-glow) 0%, transparent 70%);
+      animation: deco-pulse 6s ease-in-out infinite;
+      z-index: 0;
+    }
+    /* 45° 阶梯切角框 */
+    .avatar-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border: 1px solid var(--rep-border);
+      clip-path: polygon(
+        8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+      );
+      z-index: 1;
+    }
+    @keyframes deco-pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.96); }
+      50% { opacity: 0.95; transform: scale(1.04); }
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--rep);
+      box-shadow: var(--shadow-card);
+      position: relative;
+      z-index: 2;
+      clip-path: polygon(
+        6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px),
+        calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px
+      );
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .card-name {
+      font-size: 16.5px;
+      font-weight: 600;
+      color: var(--fg-main);
+      letter-spacing: -0.01em;
+    }
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--fg-muted);
+    }
+    /* 呼吸点 (6s 沉降式) */
+    .breath-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--rep);
+      box-shadow: 0 0 8px var(--rep-glow);
+      animation: breathe 6s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* 编年史条 (Chronicle Bar - Deco Stepped Gold Tally) */
+    .chronicle-container {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      margin-top: 2px;
+    }
+    .chronicle-bar {
+      width: 124px;
+      height: 6px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+    .chronicle-segment {
+      height: 100%;
+      transition: width 350ms ease;
+    }
+    .chronicle-segment.birth { width: 25%; background: var(--birth); }
+    .chronicle-segment.past { width: 45%; background: var(--deposit); }
+    .chronicle-segment.current {
+      width: 30%;
+      background: linear-gradient(90deg, var(--deposit) 0%, var(--rep-gold) 60%, var(--rep) 100%);
+      box-shadow: 0 0 6px var(--rep-glow);
+    }
+    /* 金线刻度线 */
+    .chronicle-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 14px,
+        rgba(212, 168, 108, 0.4) 14px,
+        rgba(212, 168, 108, 0.4) 15px
+      );
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 150ms, border-color 150ms, color 150ms;
+    }
+    .icon-btn:hover {
+      border-color: var(--border-deco);
+      color: var(--rep);
+      background: var(--bg-hover);
+    }
+
+    /* ─── 对话流主区域 (Chat Scroll Area) ─── */
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--s5) var(--s6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+      position: relative;
+    }
+
+    /* Session Banner (在对话流顶部，不在顶栏) */
+    .session-banner {
+      padding: var(--s3) var(--s4);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--rep-gold);
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-card);
+      transition: border-color 250ms ease, opacity 250ms ease;
+      position: relative;
+    }
+    .session-banner::before {
+      content: "";
+      position: absolute;
+      top: -1px; right: -1px; bottom: -1px; width: 8px;
+      background: repeating-linear-gradient(135deg, var(--border-deco) 0 2px, transparent 2px 6px);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      opacity: 0.6;
+    }
+
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+    .banner-chevron {
+      font-size: 11px;
+      color: var(--fg-muted);
+      cursor: pointer;
+    }
+    .banner-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg-main);
+      letter-spacing: -0.01em;
+    }
+
+    .banner-archive-btn {
+      font-size: 12px;
+      color: var(--fg-muted);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      padding: 3px 10px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: all 150ms ease;
+      font-family: var(--font-body);
+    }
+    .banner-archive-btn:hover {
+      color: var(--abyss);
+      border-color: var(--abyss-border);
+      background: var(--abyss-glow);
+    }
+
+    /* 对话轮次 (Turn) */
+    .turn {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+      position: relative;
+    }
+
+    /* 历史沉积轮 (Turn 1 - Deposited) */
+    .turn.deposited {
+      opacity: 0.72;
+    }
+
+    /* 活跃轮标记 (Turn 2 - Active Turn with Warm Stepped Line) */
+    .turn.active {
+      padding-left: var(--s4);
+      border-left: 2px solid var(--rep);
+      position: relative;
+    }
+    .turn.active::before {
+      content: "";
+      position: absolute;
+      left: -2px;
+      top: 0;
+      width: 6px;
+      height: 18px;
+      background: var(--rep-gold);
+    }
+
+    /* 用户气泡 (User Bubble - Right Aligned, STRICTLY NOT DYED REP) */
+    .user-message-wrap {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+    .user-bubble {
+      max-width: 82%;
+      padding: var(--s3) var(--s4);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      color: var(--fg-main);
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      /* Deco 45° 切角细节 */
+      clip-path: polygon(
+        0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%,
+        8px 100%, 0 calc(100% - 8px)
+      );
+    }
+
+    /* 思考块 (Think Block - Cold Cyan Abyss Border) */
+    .think-block {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--abyss);
+      border-radius: var(--r-sm);
+      padding: var(--s3) var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      font-size: 12.5px;
+      color: var(--fg-muted);
+      position: relative;
+    }
+    .think-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--abyss);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .think-content {
+      line-height: 1.55;
+    }
+    .think-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    /* 工具 Chip (Tool Chips: Initiating Warm -> Completed Cold) */
+    .tool-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      background: var(--bg-surface);
+      transition: all 200ms ease;
+    }
+    .tool-chip.initiating {
+      border: 1px dashed var(--rep-border);
+      color: var(--rep);
+    }
+    .tool-chip.completed {
+      border: 1px solid var(--abyss-border);
+      color: var(--abyss);
+      background: var(--abyss-glow);
+    }
+
+    /* Agent 回复 (Agent Message) */
+    .agent-message-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      max-width: 92%;
+    }
+    .agent-response-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      padding: var(--s4) var(--s5);
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+    /* Deco 阶梯边框纹饰 */
+    .agent-response-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 24px; right: 24px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-deco-bright), transparent);
+    }
+
+    .response-text p {
+      margin-bottom: var(--s3);
+    }
+    .response-text p:last-child { margin-bottom: 0; }
+
+    /* 代码块 (Code Block with JetBrains Mono) */
+    .code-block {
+      background: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      padding: var(--s3) var(--s4);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--fg-main);
+      overflow-x: auto;
+      margin: var(--s3) 0;
+      position: relative;
+    }
+    .code-lang {
+      position: absolute;
+      top: var(--s1);
+      right: var(--s3);
+      font-size: 10px;
+      color: var(--fg-faint);
+      text-transform: uppercase;
+    }
+
+    /* ─── 操控台 (Deck Container ~140px) ─── */
+    .deck-container {
+      padding: var(--s4) var(--s5);
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      position: relative;
+      z-index: 3;
+      flex-shrink: 0;
+    }
+
+    /* Deco Stepped Deck Box */
+    .deck-box {
+      background: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      padding: var(--s3) var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      transition: border-color 200ms ease, box-shadow 200ms ease;
+      position: relative;
+      /* 阶梯几何切角 */
+      clip-path: polygon(
+        8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px
+      );
+    }
+    .deck-box:focus-within {
+      border-color: var(--border-deco-bright);
+      box-shadow: 0 0 12px var(--rep-glow);
+    }
+
+    .deck-textarea {
+      width: 100%;
+      height: 52px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--fg-main);
+      line-height: 1.5;
+    }
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: var(--s1);
+      border-top: 1px dashed var(--border-subtle);
+    }
+
+    .deck-tools-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .attach-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 150ms;
+    }
+    .attach-btn:hover {
+      border-color: var(--border-deco);
+      color: var(--rep);
+    }
+
+    .deck-tools-right {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 上下文圆环 (Context Ring SVG - Hover for Tooltip, No Raw Numbers) */
+    .context-ring-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .context-ring-svg {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+    .context-ring-bg {
+      stroke: var(--border-subtle);
+      stroke-width: 3;
+      fill: none;
+    }
+    .context-ring-fill {
+      stroke: var(--rep);
+      stroke-width: 3;
+      stroke-dasharray: 56.5;
+      stroke-dashoffset: 37.3; /* 34% used */
+      fill: none;
+      transition: stroke-dashoffset 350ms ease;
+    }
+    .context-tooltip {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-main);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease, transform 150ms ease;
+      transform: translateY(4px);
+      box-shadow: var(--shadow-card);
+      z-index: 10;
+    }
+    .context-ring-wrap:hover .context-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 发送按钮 (Send Button) */
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-deco);
+      background: var(--bg-surface);
+      color: var(--rep);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 150ms ease;
+      box-shadow: 0 2px 6px var(--rep-glow);
+    }
+    .send-btn:hover {
+      background: var(--rep);
+      color: #FFFFFF;
+      border-color: var(--rep);
+    }
+    .send-btn.streaming {
+      background: var(--abyss);
+      color: #FFFFFF;
+      border-color: var(--abyss);
+    }
+
+    /* ─── 隐藏主题切换浮层 ─── */
+    .theme-switch-fab {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      padding: 6px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-deco);
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-muted);
+      cursor: pointer;
+      z-index: 50;
+      box-shadow: var(--shadow-card);
+      transition: all 200ms ease;
+    }
+    .theme-switch-fab:hover {
+      color: var(--rep);
+      border-color: var(--rep);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 窗口根容器 (860px Collapsed -> 1280px Expanded) -->
+  <div class="app" id="app">
+
+    <!-- 侧边物理拓宽把手 (Drawer Handle) -->
+    <div class="drawer-handle" id="drawerHandle" title="点击切换 860px 收起态 / 1280px 双抽屉展开态"></div>
+
+    <!-- 窗口控制按钮 (Frameless Controls) -->
+    <div class="window-controls">
+      <button class="win-btn min" title="最小化"></button>
+      <button class="win-btn max" id="winMaxBtn" title="展开 / 收起"></button>
+      <button class="win-btn close" title="关闭"></button>
+    </div>
+
+    <!-- 左下角品牌水印 (Watermark opacity 0.25) -->
+    <div class="watermark">northing</div>
+
+    <!-- 主视口 (Viewport) -->
+    <div class="viewport">
+
+      <!-- 左抽屉: 它的内在 (Left Drawer - Expanded view) -->
+      <aside class="drawer left-drawer">
+        <div class="drawer-header">
+          <span>它的内在</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--fg-muted);">INNER</span>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">子进程 (Subprocesses)</div>
+          <div class="drawer-item">
+            <span>coder-lc (实现派发)</span>
+            <span style="color: var(--rep); font-family: var(--font-mono); font-size: 11px;">RUNNING</span>
+          </div>
+          <div class="drawer-item">
+            <span>judge-m3 (审查判定)</span>
+            <span style="color: var(--fg-faint); font-family: var(--font-mono); font-size: 11px;">IDLE</span>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">意识更新 (Mind State)</div>
+          <div class="drawer-item">
+            <span>扇形金线结构重塑</span>
+            <span style="color: var(--abyss); font-family: var(--font-mono); font-size: 11px;">UPDATED</span>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">已归档 (Archived)</div>
+          <div class="drawer-item archived">
+            <span>五月：初始骨架构建记录</span>
+            <span style="font-family: var(--font-mono); font-size: 11px;">2026-05-12</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 中间主对话容器 (Center Main Container ~860px) -->
+      <main class="main-container">
+
+        <!-- 顶栏名片 (Top Bar Business Card) -->
+        <header class="topbar">
+          <div class="agent-card">
+            <!-- 扇形金线 Deco 头像 (6s 沉降式呼吸) -->
+            <div class="avatar-wrap">
+              <div class="avatar">知</div>
+            </div>
+            <div class="card-info">
+              <div class="card-name-row">
+                <span class="card-name">知序</span>
+                <div class="card-status">
+                  <div class="breath-dot"></div>
+                  <span>在场</span>
+                </div>
+              </div>
+              <!-- Deco 金阶编年史条 (Chronicle Bar) -->
+              <div class="chronicle-container">
+                <div class="chronicle-bar" title="编年史刻度：出生 → 历史沉积 → 活跃成息">
+                  <div class="chronicle-segment birth"></div>
+                  <div class="chronicle-segment past"></div>
+                  <div class="chronicle-segment current"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="topbar-actions">
+            <button class="icon-btn" title="设置 (Settings)">⚙</button>
+          </div>
+        </header>
+
+        <!-- 对话流滚动区 (Chat Scroll Area) -->
+        <div class="chat-scroll" id="chatScroll">
+
+          <!-- Session Banner (在对话流顶部) -->
+          <div class="session-banner" id="sessionBanner">
+            <div class="banner-left">
+              <div class="breath-dot"></div>
+              <span class="banner-chevron">▼</span>
+              <span class="banner-title">【会话】装饰艺术骨架与知序意图流向推演</span>
+            </div>
+            <button class="banner-archive-btn" id="archiveBtn">归档会话</button>
+          </div>
+
+          <!-- Turn 1: 历史沉积轮 (Deposited Turn) -->
+          <div class="turn deposited">
+            <!-- 用户气泡 (未染 rep) -->
+            <div class="user-message-wrap">
+              <div class="user-bubble">
+                知序，如何在保持设施沉静感的前提下，将装饰艺术（Deco）的扇形金线引入界面？
+              </div>
+            </div>
+
+            <!-- Agent 回复 (历史) -->
+            <div class="agent-message-wrap">
+              <div class="agent-response-card">
+                <div class="response-text">
+                  <p>装饰艺术的核心并非浮华，而是<strong>秩序的辐射</strong>与<strong>线条的步进</strong>。设施是基底石膏，扇形金线则是成长辐射出的几何轨迹。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Turn 2: 活跃轮 (Active Turn with Stepped Line) -->
+          <div class="turn active">
+
+            <!-- 用户气泡 (未染 rep) -->
+            <div class="user-message-wrap">
+              <div class="user-bubble">
+                请推演当前 860px 屏骨架的三要素映射关系，并执行方案自检。
+              </div>
+            </div>
+
+            <!-- 思考块 (Cold Cyan Abyss Left Border) -->
+            <div class="think-block">
+              <div class="think-header">
+                <span>深渊探查 (Abyss Reasoning)</span>
+                <span>3.2s</span>
+              </div>
+              <div class="think-content">
+                <div class="think-step">· 校验 860px 屏骨架与扇形金线布局...</div>
+                <div class="think-step">· 提取 45° 阶梯切角线框与金线刻度...</div>
+                <div class="think-step">· 确认三要素边界：驱力暖金 / 深渊青铜 / 沉积古灰...</div>
+              </div>
+            </div>
+
+            <!-- 工具 Chip (Warm Initiating -> Cold Completed) -->
+            <div class="tool-chips-row">
+              <div class="tool-chip completed">
+                <span>· Read: /docs/design/2026-07-22-frontend-redesign/visual-iter-compass_20260802.md [已就绪]</span>
+              </div>
+            </div>
+
+            <!-- Agent 主回复 -->
+            <div class="agent-message-wrap">
+              <div class="agent-response-card">
+                <div class="response-text">
+                  <p>在 Deco 装饰艺术的诠释下，northing 的空间哲学得到了全新的几何表达：</p>
+                  
+                  <div class="code-block">
+                    <div class="code-lang">Deco Mapping</div>
+                    <code>- 驱力 (Drive)   :: 炽金珊瑚 (#D87D56) — 活跃发散的成长辐射<br>- 深渊 (Abyss)   :: 墨绿古青 (#427B75) — 向下沉降的逻辑推演<br>- 沉积 (Deposit) :: 古石褪灰 (#8C8477) — 编年史金阶上的历史刻度</code>
+                  </div>
+
+                  <p>设施作为石膏基底保持绝对沉静，扇形金线只在知序的名片与成息间扩散，完美平衡功能性与诗意表达。</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- 操控台 (Deck Console ~140px) -->
+        <footer class="deck-container">
+          <div class="deck-box">
+            <textarea class="deck-textarea" id="deckInput" placeholder="给 知序 发送指令... Enter 发送，Shift+Enter 换行"></textarea>
+
+            <div class="deck-toolbar">
+              <div class="deck-tools-left">
+                <button class="attach-btn" title="添加附件">+</button>
+              </div>
+
+              <div class="deck-tools-right">
+                <!-- 上下文 SVG 圆环 (Hover 出 Tooltip, 无硬数字) -->
+                <div class="context-ring-wrap">
+                  <svg class="context-ring-svg" viewBox="0 0 24 24">
+                    <circle class="context-ring-bg" cx="12" cy="12" r="9"></circle>
+                    <circle class="context-ring-fill" cx="12" cy="12" r="9"></circle>
+                  </svg>
+                  <div class="context-tooltip">上下文用量: 34% (340K / 1M tokens)</div>
+                </div>
+
+                <!-- 发送按钮 -->
+                <button class="send-btn" id="sendBtn" title="发送 (Enter)">↑</button>
+              </div>
+            </div>
+          </div>
+        </footer>
+
+      </main>
+
+      <!-- 右抽屉: 身外之物 (Right Drawer - Expanded view) -->
+      <aside class="drawer right-drawer">
+        <div class="drawer-header">
+          <span>身外之物</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--fg-muted);">OUTER</span>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">共享产物 (Artifacts)</div>
+          <div class="drawer-item">
+            <span>deco-spec-draft.md</span>
+            <span style="color: var(--rep); font-family: var(--font-mono); font-size: 11px;">12 KB</span>
+          </div>
+          <div class="drawer-item">
+            <span>chronicle-gold-tally.svg</span>
+            <span style="color: var(--fg-faint); font-family: var(--font-mono); font-size: 11px;">4 KB</span>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">任务清单 (Tasks)</div>
+          <div class="drawer-item">
+            <span>[DONE] 装饰艺术金线辐射对齐</span>
+            <span style="color: var(--abyss); font-family: var(--font-mono); font-size: 11px;">100%</span>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- 隐藏主题切换浮层按钮 -->
+  <button class="theme-switch-fab" id="themeToggleBtn">主题: 亮 / 暗</button>
+
+  <script>
+    // 交互脚本 (Theme Switch, Drawer Toggle, Archive Demo)
+    const app = document.getElementById('app');
+    const drawerHandle = document.getElementById('drawerHandle');
+    const winMaxBtn = document.getElementById('winMaxBtn');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const archiveBtn = document.getElementById('archiveBtn');
+    const sessionBanner = document.getElementById('sessionBanner');
+    const sendBtn = document.getElementById('sendBtn');
+    const deckInput = document.getElementById('deckInput');
+    const chatScroll = document.getElementById('chatScroll');
+
+    // 1. 展开/收起 1280px 与 860px 切换
+    function toggleExpand() {
+      app.classList.toggle('expanded');
+    }
+    drawerHandle.addEventListener('click', toggleExpand);
+    winMaxBtn.addEventListener('click', toggleExpand);
+
+    // 2. 主题切换 (Light / Dark)
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+    });
+
+    // 双击窗口空白区域浮出主题切换按钮
+    document.body.addEventListener('dblclick', (e) => {
+      if (!e.target.closest('.deck-box') && !e.target.closest('.drawer-item')) {
+        themeToggleBtn.style.transform = 'scale(1.1)';
+        setTimeout(() => themeToggleBtn.style.transform = 'none', 200);
+      }
+    });
+
+    // 3. 归档会话按钮交互
+    archiveBtn.addEventListener('click', () => {
+      sessionBanner.style.opacity = '0.5';
+      archiveBtn.textContent = '已归档';
+      archiveBtn.style.borderColor = 'var(--abyss)';
+      archiveBtn.style.color = 'var(--abyss)';
+    });
+
+    // 4. 发送指令演示
+    sendBtn.addEventListener('click', handleSend);
+    deckInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    function handleSend() {
+      const text = deckInput.value.trim();
+      if (!text) return;
+
+      // 模拟添加新 User 消息
+      const userTurn = document.createElement('div');
+      userTurn.className = 'turn active';
+      userTurn.innerHTML = `
+        <div class="user-message-wrap">
+          <div class="user-bubble">${escapeHtml(text)}</div>
+        </div>
+        <div class="think-block">
+          <div class="think-header"><span>深渊探查</span><span>实时</span></div>
+          <div class="think-content">· 解析意图指令，执行扇形金线结构响应...</div>
+        </div>
+      `;
+      chatScroll.appendChild(userTurn);
+      deckInput.value = '';
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>

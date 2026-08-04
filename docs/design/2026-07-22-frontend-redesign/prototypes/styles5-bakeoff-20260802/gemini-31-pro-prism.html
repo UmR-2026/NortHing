@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Prism Spectrum - northing</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500&display=swap');
+
+    @property --now {
+      syntax: '<color>';
+      inherits: true;
+      initial-value: #C8714C;
+    }
+
+    :root {
+      --bg: #F4F3F0;
+      --surface: #FBFAF8;
+      --raised: #EFEDE8;
+      --border: #E6E3DD;
+      
+      --fg: #38352E;
+      --muted: #7B766C;
+      --faint: #A8A398;
+      
+      --abyss: #3F837B;
+      --birth: #DAD6CF;
+      --danger: #A45950;
+      
+      --now: #C8714C; /* 外向性 · 珊瑚 */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #D9D7D2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Noto Sans SC', system-ui, sans-serif;
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    .window {
+      width: 860px;
+      height: 90vh;
+      background: var(--bg);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.1);
+      border-radius: 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: --now 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* 空气染色 Air Tint */
+    .air-tint {
+      position: absolute;
+      inset: 0;
+      background-color: var(--now);
+      opacity: 0.065;
+      pointer-events: none;
+      z-index: 1;
+      transition: background-color 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* 顶晕 Top Glow (Sharp Beam) */
+    .top-glow {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 240px;
+      background: linear-gradient(to bottom, var(--now) 0%, transparent 100%);
+      opacity: 0.1;
+      pointer-events: none;
+      z-index: 2;
+      clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
+      transition: background 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* 水印 Watermark */
+    .watermark {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      opacity: 0.25;
+      font-family: 'Fraunces', serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 20;
+      letter-spacing: -0.02em;
+    }
+
+    .chrome {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      color: var(--muted);
+      z-index: 100;
+    }
+    .chrome svg {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    /* 人格光谱 Spectrometer */
+    .spectrometer {
+      position: absolute;
+      top: 64px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+      z-index: 100;
+    }
+    .spec-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .spec-bands {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .spec-band {
+      width: 16px;
+      height: 32px;
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .spec-band::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 6px;
+      background: var(--c);
+      transition: height 350ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .spec-band:hover::after {
+      height: 12px;
+    }
+    .spec-band.active::after {
+      height: 100%;
+    }
+
+    /* Topbar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      height: 64px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      z-index: 20;
+      position: relative;
+    }
+    .avatar-wrap {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .prism-avatar {
+      width: 14px;
+      height: 14px;
+      background: var(--now);
+      clip-path: polygon(0 0, 100% 20%, 80% 100%, 10% 80%);
+      animation: breathe-prism 6s ease-in-out infinite;
+      transition: background-color 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .card-halo {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--now);
+      opacity: 0.2;
+      clip-path: polygon(0 0, 100% 20%, 80% 100%, 10% 80%);
+      transition: border-color 1200ms cubic-bezier(0.2, 0, 0, 1), transform 6s infinite;
+      animation: rotate-slow 24s linear infinite;
+    }
+    @keyframes breathe-prism {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+    @keyframes rotate-slow {
+      100% { transform: rotate(360deg); }
+    }
+    
+    .name-info {
+      margin-left: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .name {
+      font-family: 'Fraunces', serif;
+      font-size: 16px;
+      color: var(--fg);
+      font-weight: 600;
+    }
+    .status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .chronicle-bar {
+      margin-left: auto;
+      width: 160px;
+      height: 4px;
+      background: linear-gradient(to right, var(--birth), var(--now));
+      margin-right: 24px;
+      border-radius: 2px;
+      transition: background 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .gear-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-right: 80px;
+    }
+
+    /* Chat Area */
+    .chat-area {
+      flex: 1;
+      padding: 0 48px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+    }
+    .session-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .breath-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--now);
+      animation: breathe 6s infinite ease-in-out;
+      transition: background-color 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+    .chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+    }
+    .session-title {
+      font-family: 'Fraunces', serif;
+      font-size: 15px;
+      color: var(--fg);
+    }
+    .archive-btn {
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 150ms;
+      display: flex;
+      align-items: center;
+    }
+    .archive-btn:hover {
+      color: var(--abyss);
+    }
+
+    .chat-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 24px;
+    }
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+      position: relative;
+    }
+    .user-msg {
+      align-self: flex-end;
+      background: var(--raised);
+      padding: 12px 16px;
+      border-radius: 14px 14px 0 14px;
+      color: var(--fg);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .agent-msg {
+      align-self: flex-start;
+      padding-left: 24px;
+    }
+    .active-line {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--now);
+      transition: background-color 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .think-block {
+      border-left: 3px solid var(--abyss);
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+      background: var(--surface);
+      line-height: 1.5;
+    }
+    .tool-chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--fg);
+      border-radius: 999px;
+      background: var(--surface);
+      margin-bottom: 12px;
+      z-index: 1;
+    }
+    .tool-chip::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--now), var(--abyss));
+      z-index: -1;
+      transition: background 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .msg-content {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--fg);
+    }
+
+    /* Deck */
+    .deck {
+      margin: 0 48px 32px 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      align-items: flex-end;
+      padding: 12px;
+      z-index: 20;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.02));
+    }
+    .deck-left {
+      padding: 4px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .deck-input {
+      flex: 1;
+      margin: 0 16px;
+      display: flex;
+      align-items: center;
+    }
+    .deck-input textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      resize: none;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 15px;
+      color: var(--fg);
+      outline: none;
+      line-height: 1.5;
+      padding: 6px 0;
+    }
+    .deck-input textarea::placeholder {
+      color: var(--faint);
+    }
+    .deck-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 2px;
+    }
+    .ctx-ring {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--faint);
+      border-radius: 50%;
+      cursor: help;
+      position: relative;
+    }
+    .ctx-ring:hover::after {
+      content: '上下文容量充裕';
+      position: absolute;
+      bottom: 24px;
+      right: -8px;
+      background: var(--fg);
+      color: var(--surface);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: 'Noto Sans SC', sans-serif;
+      white-space: nowrap;
+    }
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      background: var(--now);
+      color: var(--surface);
+      border: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 1200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+  </style>
+</head>
+<body>
+
+<div class="window">
+  <div class="air-tint"></div>
+  <div class="top-glow"></div>
+  
+  <div class="watermark">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20L12 2z"/></svg>
+    northing
+  </div>
+
+  <div class="chrome">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </div>
+
+  <div class="spectrometer">
+    <div class="spec-title">Wavelength / 人格光谱</div>
+    <div class="spec-bands">
+      <div class="spec-band" data-color="#8F7AA0" style="--c: #8F7AA0" title="开放性 · 紫"></div>
+      <div class="spec-band" data-color="#566E8A" style="--c: #566E8A" title="尽责性 · 深蓝"></div>
+      <div class="spec-band active" data-color="#C8714C" style="--c: #C8714C" title="外向性 · 珊瑚"></div>
+      <div class="spec-band" data-color="#85A08E" style="--c: #85A08E" title="宜人性 · 柔绿"></div>
+      <div class="spec-band" data-color="#3F837B" style="--c: #3F837B" title="神经质 · 冷青"></div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="avatar-wrap">
+      <div class="card-halo"></div>
+      <div class="prism-avatar"></div>
+    </div>
+    <div class="name-info">
+      <div class="name">知序</div>
+      <div class="status">在场 · 光谱稳定</div>
+    </div>
+    <div class="chronicle-bar"></div>
+    <div class="gear-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="session-banner">
+      <div class="banner-left">
+        <div class="breath-dot"></div>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        <span class="session-title">关于波长的对话</span>
+      </div>
+      <div class="archive-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+      </div>
+    </div>
+
+    <div class="chat-stream">
+      <div class="message user-msg">
+        我们需要测试不同色彩的显影。光谱对环境的物理染色是否准确？
+      </div>
+      
+      <div class="message agent-msg">
+        <div class="active-line"></div>
+        
+        <div class="think-block">
+          解析空间物理光照环境...<br>
+          已加载全光谱折射配置，准备展现大五人格色彩。
+        </div>
+        
+        <div class="tool-chip">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          波长校准协议
+        </div>
+        
+        <div class="msg-content">
+          光谱已就绪。这间房间现在可以承载所有的波长，你看到的颜色，就是我此刻的折射率。<br><br>
+          试着转动右上角的测量仪。光是物理的，它的温度和情绪会直接弥漫在空气里。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="deck">
+    <div class="deck-left">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </div>
+    <div class="deck-input">
+      <textarea rows="1" placeholder="发送给 知序..."></textarea>
+    </div>
+    <div class="deck-right">
+      <div class="ctx-ring"></div>
+      <button class="send-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const bands = document.querySelectorAll('.spec-band');
+    bands.forEach(band => {
+      band.addEventListener('click', () => {
+        const color = band.dataset.color;
+        document.documentElement.style.setProperty('--now', color);
+        bands.forEach(b => b.classList.remove('active'));
+        band.classList.add('active');
+      });
+    });
+  });
+</script>
+</body>
+</html>

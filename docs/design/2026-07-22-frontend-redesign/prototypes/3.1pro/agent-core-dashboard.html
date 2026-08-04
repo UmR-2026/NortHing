@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 认知仪表盘 (Cognitive Dashboard)</title>
+    <style>
+        :root {
+            /* 咨询室白灰基底 */
+            --bg-base: #F4F3F0;
+            --bg-panel: #FFFFFF;
+            
+            --drive-coral: #E06B52;
+            --abyss-cyan: #3F6F75;
+            
+            --text-dark: #1A1918;
+            --text-muted: #8E8A82;
+            
+            --border-line: #E5E3DB;
+            
+            --font-ui: "Inter", sans-serif;
+            --font-brand: "Georgia", serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-dark);
+            font-family: var(--font-ui);
+            height: 100vh; overflow: hidden;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            /* 整个房间的微量空气染色 (冷蓝底，暖橘顶) */
+            background-image: 
+                radial-gradient(ellipse at 50% 0%, rgba(224, 107, 82, 0.05), transparent 50%),
+                radial-gradient(ellipse at 50% 100%, rgba(63, 111, 117, 0.03), transparent 50%);
+        }
+
+        /* 顶部全局认知状态 */
+        .global-state {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid var(--border-line);
+        }
+        .agent-id { font-family: var(--font-brand); font-size: 14px; font-weight: bold; color: var(--text-dark); }
+        .cognition-status { 
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; 
+            color: var(--drive-coral); display: flex; align-items: center; gap: 8px;
+        }
+        .status-dot { width: 6px; height: 6px; background: var(--drive-coral); border-radius: 50%; animation: pulse 2s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* 仪表盘三栏布局 */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 1px;
+            background: var(--border-line); /* 利用间隙作为分割线 */
+        }
+
+        .panel {
+            background: rgba(244, 243, 240, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            display: flex; flex-direction: column; gap: 32px;
+            overflow-y: auto;
+        }
+        .panel-center { background: rgba(255, 255, 255, 0.6); }
+
+        .panel-title {
+            font-size: 10px; font-weight: 600; color: var(--text-muted);
+            letter-spacing: 0.15em; text-transform: uppercase;
+            border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 12px;
+            margin-bottom: 24px;
+        }
+
+        /* 左侧：感知输入 (Sensory Input) */
+        .sensory-input { font-size: 16px; line-height: 1.6; color: var(--text-muted); }
+        .input-box {
+            margin-top: auto;
+            background: var(--bg-panel); border: 1px solid var(--border-line);
+            padding: 16px; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+        }
+        .input-box textarea {
+            width: 100%; border: none; outline: none; background: transparent;
+            font-family: inherit; font-size: 14px; resize: none; min-height: 60px;
+        }
+
+        /* 中间：意识流 (Stream of Consciousness) */
+        .consciousness-stream {
+            display: flex; flex-direction: column; gap: 40px;
+        }
+        .thought-node {
+            position: relative; padding-left: 32px;
+        }
+        /* 连接线 */
+        .thought-node::before {
+            content: ''; position: absolute; left: 7px; top: 24px; bottom: -40px;
+            width: 2px; background: rgba(224, 107, 82, 0.2);
+        }
+        .thought-node:last-child::before { display: none; }
+        /* 节点圆点 */
+        .thought-node::after {
+            content: ''; position: absolute; left: 0; top: 6px;
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid var(--drive-coral); background: var(--bg-panel);
+        }
+        .thought-node.resolved::after { background: var(--drive-coral); }
+
+        .node-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        .node-content { font-size: 16px; line-height: 1.8; color: var(--text-dark); }
+        
+        .subconscious-trace {
+            font-family: var(--font-mono); font-size: 12px; color: var(--abyss-cyan);
+            background: rgba(63, 111, 117, 0.05); padding: 12px; border-radius: 4px;
+            margin-top: 12px;
+        }
+
+        /* 右侧：子智能体与效应器 (Sub-agents & Effectors) */
+        .subagent-card {
+            border: 1px solid var(--border-line); background: var(--bg-panel);
+            padding: 16px; border-radius: 8px; margin-bottom: 16px;
+        }
+        .subagent-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px;
+        }
+        .subagent-name { font-size: 12px; font-weight: 600; }
+        .badge {
+            font-size: 10px; padding: 2px 6px; border-radius: 12px;
+            background: rgba(224, 107, 82, 0.1); color: var(--drive-coral);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <header class="global-state">
+        <div class="agent-id">Northing // 核心认知引擎</div>
+        <div class="cognition-status">
+            <span class="status-dot"></span>
+            Assimilating Temporal Paradox (正在同化时序悖论)
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <!-- 栏 1：感知输入 -->
+        <section class="panel">
+            <div>
+                <h2 class="panel-title">Sensory Input (感知输入)</h2>
+                <div class="sensory-input">
+                    "启动的时候崩溃了。产生了一个 panic。"
+                </div>
+            </div>
+            
+            <div class="input-box">
+                <textarea placeholder="注入新的环境刺激..."></textarea>
+            </div>
+        </section>
+
+        <!-- 栏 2：意识流 (中枢处理) -->
+        <section class="panel panel-center">
+            <h2 class="panel-title">Stream of Consciousness (意识流)</h2>
+            
+            <div class="consciousness-stream">
+                <div class="thought-node resolved">
+                    <div class="node-meta">T-12s // PERCEPTION</div>
+                    <div class="node-content">
+                        接收到恐慌信号 (Panic)。开始潜入系统底层生命周期分析冲突源头。
+                    </div>
+                </div>
+
+                <div class="thought-node resolved">
+                    <div class="node-meta">T-08s // ANALYSIS</div>
+                    <div class="node-content">
+                        发现初始化顺序存在因果倒置。
+                        <div class="subconscious-trace">
+                            > [Trace] src/main.rs: memory::read_session() called before config::init()<br>
+                            > [Hypothesis] Dependency inversion required.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="thought-node">
+                    <div class="node-meta" style="color:var(--drive-coral);">NOW // ACTION</div>
+                    <div class="node-content">
+                        我已经将配置加载的顺序提前，时序创伤已被抚平。系统呼吸恢复正常。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 栏 3：效应器与并行子网 -->
+        <section class="panel">
+            <h2 class="panel-title">Effectors & Sub-agents (效应器网络)</h2>
+            
+            <div class="subagent-card">
+                <div class="subagent-header">
+                    <span class="subagent-name">@AST_Modifier</span>
+                    <span class="badge">ACTIVE</span>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); line-height:1.6;">
+                    Target: src/main.rs<br>
+                    Action: Swapping L42 & L43
+                </div>
+            </div>
+
+            <div class="subagent-card" style="opacity:0.5;">
+                <div class="subagent-header">
+                    <span class="subagent-name">@Code_Reviewer</span>
+                    <span style="font-size:10px; color:var(--text-muted);">IDLE</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted);">
+                    Waiting for AST modification to complete...
+                </div>
+            </div>
+            
+            <div style="margin-top:auto;">
+                <h2 class="panel-title">Memory Sediment (记忆沉积)</h2>
+                <div style="font-size:12px; color:var(--text-muted); padding-left:12px; border-left:2px solid var(--border-line);">
+                    登录模块解耦 (Level 3)<br>
+                    > 已同化，沉积至深渊。
+                </div>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>

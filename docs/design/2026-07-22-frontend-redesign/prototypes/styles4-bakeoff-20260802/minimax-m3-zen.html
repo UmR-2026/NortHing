@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>枯山水 · 知序 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+ * northing · styles4-bakeoff-20260802 · minimax-m3 · zen（枯山水）
+ * ----------------------------------------------------------------------------
+ * 一句种子：耙过的砂砾是恒常，agent 是石与苔。
+ *
+ * 哲学接口（zen 词汇 → 罗盘戒律）：
+ *   设施   = 白砂（被耙过的时间）—— bg #ECE9E0，砂砾纹理环境层，耙过的痕迹
+ *   agent  = 主石（深青灰玄武岩）+ 周围缓慢蔓延的苔（呼吸光晕）
+ *   驱力   = 苔的暖朱（寺门朱 #B66647）—— 苔在砂上蔓延的方向与"现在"
+ *   深渊   = 水（深青 #4E6B6A）—— 思考块以水波纹呈现，向深处探 = 水滴入池
+ *   沉积   = 旧石被苔覆盖 —— 旧轮次 opacity 降低、苔色淡淡渗入（褪色但留下痕迹）
+ *   编年史 = 砂上一道苔痕 —— 不是抽象色条，是苔走过的物理轨迹
+ *   思考   = 水的涟漪 —— 极淡的同心椭圆扩散（不是循环动画，是静态纹路）
+ *
+ * 与现方案分歧：
+ *   色 · 现：#F4F3F0 米白咨询室 + 珊瑚 #C8714C
+ *      · 本：#ECE9E0 砂白 + 寺门朱苔 #B66647（暗珊瑚）+ 苔绿 #7A8868
+ *   体 · 现：Fraunces 西式衬线（圆润）
+ *      · 本：Fraunces display + Noto Serif SC 小标题 + Noto Sans SC body
+ *            + JetBrains Mono 元数据 + 关键衬线用 明朝 / 楷书 兜底
+ *   质 · 现：暖晕 + 圆角卡片
+ *      · 本：硬朗砂面（细发丝描边、低圆角、SVG 耙纹环境层、苔痕编年史、寺印水印）
+ *
+ * AI 套路禁令（已逐项规避）：
+ *   × 极简 = meditation app 的空灵（陷阱：禅字 = 静 = 静 = 退场）—— 本作：空是砂
+ *     的"被耙过"，是设施的功能性空，不是冥想装饰的空
+ *   × 紫蓝渐变 / 毛玻璃 / 均匀圆角卡片阵 / emoji
+ *   × 苔做成"长出来"弹跳动效（与沉降式动效戒律冲突）—— 苔只在头像做 6s 呼吸
+ *   × 砂纹做成循环动画（与禁循环位移戒律冲突）—— 砂纹环境层完全静态
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全预计算 hex，无 color-mix / oklch
+ *   - 阴影全 filter: drop-shadow()，无 box-shadow
+ *   - ::before / ::after 全具名（仅作：砂面底色、耙纹 SVG、苔痕渐变、苔色光晕）
+ *   - 唯一 infinite = 头像苔晕呼吸 6s（继承「呼吸只给 logo + 头像」）
+ *   - 渐变只用 linear 与 radial
+ *   - SVG 耙纹用 stroke 描线（Slint 翻译：Path { stroke: ... }）
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  --font-display: 'Fraunces', 'Noto Serif SC', 'Songti SC', 'STSong',
+                  'SimSun', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system,
+                  'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif:   'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  --r-sm: 3px;            /* 极硬朗，砂石切面感 */
+  --r-md: 5px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  --grow: 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 亮色主态：白昼枯山水（默认） ────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* 砂砾灰阶（暖白砂，6 级） */
+  --sand-50:  #F4F1E8;    /* 极淡，耙痕高光 */
+  --sand-100: #ECE9E0;    /* 主砂（bg） */
+  --sand-200: #E0DCD1;    /* 耙痕阴影 */
+  --sand-300: #D2CCBE;    /* 干砂堆 */
+  --sand-400: #B5AE9D;    /* 暗砂 */
+  --sand-500: #8A8474;    /* 砂石 */
+
+  /* 苔色（绿系，agent 生长隐喻） */
+  --moss-300: #9BAA88;    /* 嫩苔 */
+  --moss-400: #7A8868;    /* 成熟苔 */
+  --moss-500: #5C6B4F;    /* 阴苔 */
+
+  /* 主石（深青灰玄武岩） */
+  --stone-300: #6B7770;
+  --stone-400: #4A5550;
+  --stone-500: #2F3935;    /* agent 主石 */
+  --stone-shadow: #1A201D;  /* 石影 */
+
+  /* 水（abyss，深水青） */
+  --water-300: #7E9894;
+  --water-400: #5A7878;
+  --water-500: #4E6B6A;    /* 深渊 = 水 */
+
+  /* 代表色 rep：寺门朱苔（agent 现在的"暖朱"——比珊瑚更暗更收） */
+  --rep-300: #C8816A;      /* 大面积：苔痕中段 */
+  --rep-400: #B66647;      /* 强调 = 寺门朱 */
+  --rep-500: #9A4E32;      /* hover / 深 */
+  --rep-600: #7A3A22;
+
+  /* 文本 */
+  --fg:        #2D2A24;    /* 墨色，非纯黑 */
+  --muted:     #6A6457;    /* 沙色次级 */
+  --faint:     #9A9384;    /* 砂灰弱化 */
+  --ink:       #1A1815;    /* 浓墨 */
+  --shuin:     #8A2A1F;    /* 朱印（用于水印与强调） */
+
+  /* 背景层 */
+  --bg:        var(--sand-100);
+  --surface:   #F0EDE4;    /* 砂面卡片（更亮） */
+  --raised:    #E5E0D2;    /* 控件底 */
+  --border:    #C9C3B2;    /* 砂砾边 */
+  --border-soft: #D9D3C2;
+  --page-out:  #1A1815;    /* 窗外：浓墨 */
+  --shadow:    #1A1815;
+
+  /* 语义混合（预计算 hex） */
+  --air-rep:        #E8E2D3;  /* rep 10% on sand-100 */
+  --halo-rep:       #E2D9C5;  /* rep 16% on sand-100 */
+  --air-water:      #E6E8E2;  /* water 6% on sand-100 */
+  --halo-water:     #DEE3DD;  /* water 12% on sand-100 */
+  --turn-active:    #ECE5D3;  /* rep 8% on surface */
+  --sediment-bg:    #E5E0D2;  /* 苔覆盖的旧石 */
+  --sediment-wash:  rgba(122, 136, 104, .12);  /* 苔色淡淡渗入 */
+}
+
+
+/* ─── 暗色主态：月夜枯山水 ────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* 砂砾灰阶（夜砂，6 级） */
+  --sand-50:  #2D2A24;
+  --sand-100: #1F1D18;    /* 主砂（bg，夜墨） */
+  --sand-200: #2A2720;
+  --sand-300: #36322A;
+  --sand-400: #4A4538;
+  --sand-500: #6A6457;
+
+  /* 苔色（夜苔，亮度提） */
+  --moss-300: #8FA47C;
+  --moss-400: #6F8460;
+  --moss-500: #4F6248;
+
+  /* 主石（夜石，比亮态稍亮以辨） */
+  --stone-300: #7A8580;
+  --stone-400: #5C6862;
+  --stone-500: #404A45;
+  --stone-shadow: #161A18;
+
+  /* 水 */
+  --water-300: #6A8480;
+  --water-400: #4E6B6A;
+  --water-500: #3A5A58;
+
+  /* rep：暗态下提亮 */
+  --rep-300: #D89076;
+  --rep-400: #C57556;
+  --rep-500: #A85A40;
+  --rep-600: #884530;
+
+  /* 文本 */
+  --fg:        #E0DAC8;
+  --muted:     #A89F8A;
+  --faint:     #6A6457;
+  --ink:       #ECE8DA;
+  --shuin:     #C46A55;
+
+  --bg:        var(--sand-100);
+  --surface:   #2A2720;
+  --raised:    #36322A;
+  --border:    #4A4538;
+  --border-soft: #36322A;
+  --page-out:  #0A0907;
+  --shadow:    #000000;
+
+  --air-rep:        #252218;  /* rep 8% on sand-100 */
+  --halo-rep:       #2A2620;  /* rep 14% on sand-100 */
+  --air-water:      #1F2522;
+  --halo-water:     #222A28;
+  --turn-active:    #2D2820;
+  --sediment-bg:    #252218;
+  --sediment-wash:  rgba(122, 136, 104, .08);
+}
+
+
+/* ─── 复位 ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--page-out);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 100vh;
+  /* 窗外纹理：极细密的墨点（远景雾） */
+  background-image:
+    radial-gradient(ellipse 1200px 700px at 20% 10%, rgba(255, 240, 210, .03), transparent 60%),
+    radial-gradient(ellipse 900px 600px at 80% 90%, rgba(255, 240, 210, .02), transparent 60%);
+  transition: background var(--grow);
+}
+
+
+/* ─── 窗口（860 × 800，枯山水庭院） ───────────────────────────────────── */
+.window {
+  position: relative;
+  width: 860px;
+  height: 800px;
+  background: var(--sand-100);
+  border-radius: 6px;                /* 极低圆角：砂面切角 */
+  border: 1px solid var(--sand-300);
+  /* box-shadow: 0 30px 80px -20px rgba(20, 16, 8, .35), 0 2px 6px rgba(20, 16, 8, .25) */
+  filter: drop-shadow(0 20px 50px rgba(20, 16, 8, .35)) drop-shadow(0 2px 6px rgba(20, 16, 8, .25));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 砂面底色微层：极细的砂粒噪声感（用 repeating-gradient 模拟） */
+.window::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* 极细的横纹砂理 */
+    repeating-linear-gradient(0deg,
+      transparent 0 3px,
+      rgba(138, 132, 116, .025) 3px 3.5px,
+      transparent 3.5px 7px),
+    repeating-linear-gradient(90deg,
+      transparent 0 4px,
+      rgba(138, 132, 116, .02) 4px 4.5px,
+      transparent 4.5px 9px);
+  transition: background var(--grow);
+}
+
+/* 整屋空气染色：顶部 rep 苔晕（agent 暖朱在砂上的回声） */
+.window::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 120% 80% at 18% 0%, var(--halo-rep) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, var(--air-water) 0%, transparent 60%);
+  transition: background var(--grow);
+}
+
+
+/* ─── 耙纹环境层（SVG）—— 砂上被耙过的痕迹 ──────────────────────────── */
+.zen-ground {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: .55;
+  transition: opacity var(--grow);
+}
+[data-theme="dark"] .zen-ground { opacity: .35; }
+
+.zen-ground path {
+  fill: none;
+  stroke: var(--sand-400);
+  stroke-width: .8;
+  stroke-linecap: round;
+  opacity: .42;
+  transition: stroke var(--grow);
+}
+.zen-ground .g-fine { stroke-width: .5; opacity: .28; }
+.zen-ground .g-deep { stroke-width: 1.1; opacity: .6; stroke: var(--sand-500); }
+
+
+/* ─── 顶栏 ───────────────────────────────────────────────────────────── */
+.topbar {
+  position: relative;
+  z-index: 6;
+  flex: none;
+  height: 72px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--sand-100) 100%);
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 主石头像 = 玄武岩（agent 的恒常） */
+.stone-main {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.stone-main .rock {
+  position: absolute; inset: 0;
+  background:
+    /* 石的受光面：左上高光 */
+    radial-gradient(ellipse 60% 50% at 30% 25%, var(--stone-300) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 90% at 60% 70%, var(--stone-400) 30%, var(--stone-500) 70%, var(--stone-shadow) 100%);
+  border-radius: 8px 6px 9px 7px / 7px 9px 6px 8px;   /* 不规则：自然石 */
+  transform: rotate(-3deg);
+  /* box-shadow: inset 0 -2px 4px rgba(0,0,0,.3), 0 2px 6px rgba(20,16,8,.4) */
+  filter: drop-shadow(0 1px 2px rgba(20, 16, 8, .4)) drop-shadow(inset 0 -2px 3px rgba(0, 0, 0, .25));
+  transition: background var(--grow);
+}
+/* 苔晕（呼吸）—— 只在头像，6s ease-in-out */
+.stone-main .moss-halo {
+  position: absolute;
+  inset: -14px;
+  border-radius: 18px;
+  background: radial-gradient(ellipse 60% 60% at 50% 50%,
+    rgba(182, 102, 71, .28) 0%,         /* rep 暖朱 */
+    rgba(122, 136, 104, .18) 30%,       /* 苔绿过渡 */
+    transparent 65%);
+  animation: mossBreath 6000ms ease-in-out infinite;
+  transition: background var(--grow);
+}
+@keyframes mossBreath {
+  0%, 100% { opacity: .55; transform: scale(0.97); }
+  50%      { opacity: 1;   transform: scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stone-main .moss-halo { animation: none; opacity: .75; }
+}
+
+/* 石上的苔点：自然散布的三个小苔 */
+.stone-main .moss-dots {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.stone-main .moss-dots::before,
+.stone-main .moss-dots::after {
+  content: '';
+  position: absolute;
+  background: var(--moss-400);
+  border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+  opacity: .85;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, .2));
+}
+.stone-main .moss-dots::before {
+  width: 7px; height: 5px;
+  top: 22%; left: 18%;
+  transform: rotate(15deg);
+}
+.stone-main .moss-dots::after {
+  width: 5px; height: 4px;
+  top: 60%; right: 22%;
+  transform: rotate(-25deg);
+  background: var(--rep-400);  /* 一点暖朱，苔与暖的混合 */
+}
+
+/* 名片 */
+.name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.agent-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .02em;
+  line-height: 1.1;
+}
+.presence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.presence .pdot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-400);
+  filter: drop-shadow(0 0 3px rgba(182, 102, 71, .5));
+  animation: dotBreath 6000ms ease-in-out infinite;
+}
+@keyframes dotBreath {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence .pdot { animation: none; }
+}
+
+/* 编年史 = 苔痕（砂上一道苔走过的轨迹） */
+.chronicle {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  margin: 0 12px;
+  min-width: 140px;
+  border-radius: 2px;
+  background: var(--sand-200);
+  border: 1px solid var(--sand-300);
+  overflow: visible;
+  transition: background var(--grow), border-color var(--grow);
+}
+.chronicle .moss-trail {
+  position: absolute;
+  inset: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg,
+    var(--moss-500) 0%,     /* 出生 = 阴苔 */
+    var(--moss-400) 24%,
+    var(--moss-300) 42%,
+    var(--rep-300) 68%,     /* 苔渐转暖 */
+    var(--rep-400) 88%,     /* 现在 = 寺门朱 */
+    var(--rep-500) 100%);
+  /* 苔的不规则边缘：用 filter 制造自然晕散 */
+  filter: blur(0.4px) contrast(1.05);
+}
+/* 苔痕上的两块小石（kink 节点）：历史的凝固点 */
+.chronicle .pebble {
+  position: absolute;
+  top: 50%;
+  width: 5px; height: 5px;
+  border-radius: 60% 40% 50% 50% / 50% 60% 40% 50%;
+  transform: translate(-50%, -50%);
+  background: var(--stone-500);
+  filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, .4));
+}
+.chronicle .pebble.p1 { left: 26%; background: var(--stone-400); }
+.chronicle .pebble.p2 { left: 58%; background: var(--stone-500); }
+/* now = 苔的最暖处（朱红） */
+.chronicle .now {
+  position: absolute;
+  right: -2px; top: 50%;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--rep-400);
+  /* 极淡的暖光晕 */
+  filter: drop-shadow(0 0 3px rgba(182, 102, 71, .6));
+}
+
+/* 顶栏右侧：砂纹印章（设置） */
+.gear-stone {
+  width: 30px; height: 30px;
+  border-radius: 3px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  cursor: pointer;
+  border: 1px solid var(--border-soft);
+  background: var(--raised);
+  transition: all 150ms ease;
+  font-family: var(--font-serif);
+  font-size: 13px;
+}
+.gear-stone:hover {
+  color: var(--shuin);
+  border-color: var(--rep-400);
+  background: var(--halo-rep);
+}
+
+
+/* ─── 对话流 ─────────────────────────────────────────────────────────── */
+.stream {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 28px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 999px;
+}
+.stream::-webkit-scrollbar-button { display: none; }
+
+
+/* Session banner（对话流顶部）—— 像砂地上的标石 */
+.session-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--rep-400);
+  border-radius: 2px 4px 4px 2px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.session-banner .sess-pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-400);
+  filter: drop-shadow(0 0 3px rgba(182, 102, 71, .55));
+  animation: dotBreath 6000ms ease-in-out infinite;
+  flex: none;
+}
+.session-banner .chev {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--faint);
+}
+.session-banner .title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--fg);
+  font-size: var(--fs-lg);
+}
+.session-banner .quote {
+  color: var(--faint);
+  font-style: italic;
+  font-size: var(--fs-md);
+}
+.session-banner .archive-btn {
+  margin-left: auto;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  transition: all 150ms ease;
+  background: transparent;
+}
+.session-banner .archive-btn:hover {
+  color: var(--water-500);
+  border-color: var(--water-400);
+  background: var(--air-water);
+}
+
+
+/* ─── 轮次（turn） ────────────────────────────────────────────────────── */
+.turn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* 活跃轮：rep 苔色左缘（细、硬朗） */
+.turn.active {
+  padding: 10px 14px 12px 16px;
+  background: var(--turn-active);
+  border-radius: 3px;
+  border-left: 2.5px solid var(--rep-400);
+}
+/* 沉积轮：旧石被苔覆盖 */
+.turn.settled {
+  opacity: .58;
+  padding: 6px 14px 6px 16px;
+  border-left: 2.5px solid var(--moss-400);
+  background: var(--sediment-wash);
+  border-radius: 0 3px 3px 0;
+}
+.turn.settled:hover { opacity: .78; }
+
+/* 沉积轮的苔色：淡淡的苔从左缘渗入 */
+.turn.settled::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 30%;
+  background: linear-gradient(90deg,
+    rgba(122, 136, 104, .12) 0%,
+    rgba(122, 136, 104, .04) 60%,
+    transparent 100%);
+  pointer-events: none;
+  border-radius: 3px 0 0 3px;
+}
+
+/* 谁 */
+.who-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  letter-spacing: .04em;
+}
+.who-row .who-name {
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+.turn.active .who-row .who-name { color: var(--rep-500); }
+.turn.settled .who-row .who-name { color: var(--moss-500); }
+.who-row .who-ts { margin-left: auto; }
+
+/* 消息气泡（不留强边，融入砂面） */
+.bubble {
+  font-size: var(--fs-body);
+  line-height: 1.82;
+  color: var(--fg);
+  font-weight: 400;
+  max-width: 92%;
+}
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble {
+  max-width: 78%;
+  background: var(--raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px 4px 4px 4px;
+  padding: 10px 14px;
+  /* 不染 rep（用户是见证者，不是 agent） */
+}
+.msg.agent .bubble {
+  padding: 4px 0;
+}
+.turn.active .msg.agent .bubble {
+  font-weight: 450;
+}
+
+/* 沉积轮的"苔印"：淡淡的浮水印式标记 */
+.turn.settled .moss-imprint {
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  color: var(--moss-500);
+  letter-spacing: .12em;
+  margin-top: 4px;
+  opacity: .85;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.turn.settled .moss-imprint::before {
+  content: '';
+  width: 16px; height: 1px;
+  background: var(--moss-400);
+  opacity: .5;
+}
+
+
+/* ─── 思考块（abyss = 水，涟漪扩散） ─────────────────────────────────── */
+.think-block {
+  position: relative;
+  align-self: flex-start;
+  max-width: 88%;
+  padding: 10px 14px 12px 18px;
+  border-left: 2.5px solid var(--water-500);
+  background: linear-gradient(90deg,
+    var(--halo-water) 0%,
+    var(--air-water) 50%,
+    transparent 100%);
+  border-radius: 0 3px 3px 0;
+  font-size: var(--fs-lg);
+  line-height: 1.72;
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-style: italic;
+  overflow: hidden;
+}
+/* 思考块的涟漪纹：极淡的同心椭圆（静态，不是循环） */
+.think-block .ripple {
+  position: absolute;
+  top: 12px; right: 18px;
+  width: 80px; height: 40px;
+  pointer-events: none;
+  opacity: .35;
+}
+.think-block .ripple path {
+  fill: none;
+  stroke: var(--water-500);
+  stroke-width: .6;
+  opacity: .55;
+}
+.think-block .ripple .r2 { opacity: .35; }
+.think-block .ripple .r3 { opacity: .2; }
+.think-block .tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--water-500);
+  letter-spacing: .14em;
+  display: block;
+  margin-bottom: 4px;
+  opacity: .85;
+}
+
+
+/* ─── 工具 chip（驱力 → 深渊） ───────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--rep-400);
+  color: var(--rep-500);
+  background: var(--halo-rep);
+  transition: all 350ms ease;
+}
+.chip .ch-icon {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--rep-400);
+}
+.chip .ch-st {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.chip.done {
+  border-color: var(--water-400);
+  color: var(--water-500);
+  background: var(--air-water);
+}
+.chip.done .ch-icon {
+  background: transparent;
+  border: 1px solid var(--water-500);
+  width: 6px; height: 6px;
+}
+
+
+/* ─── 操控台（deck）—— 石灯笼 ───────────────────────────────────────── */
+.deck {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border-soft);
+  background: linear-gradient(0deg, var(--surface) 0%, var(--sand-100) 100%);
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  transition: background var(--grow);
+}
+
+.deck-attach {
+  width: 36px; height: 36px;
+  border-radius: 3px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+  background: var(--raised);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  transition: all 150ms ease;
+}
+.deck-attach:hover {
+  color: var(--shuin);
+  border-color: var(--rep-400);
+}
+
+.deck-input {
+  flex: 1;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  transition: border-color 150ms;
+}
+.deck-input:focus-within {
+  border-color: var(--rep-400);
+  /* box-shadow: 0 0 0 3px rgba(182, 102, 71, .1) */
+  filter: drop-shadow(0 0 0 2px rgba(182, 102, 71, .12));
+}
+.deck-input textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  padding: 10px 14px;
+  min-height: 38px;
+  max-height: 96px;
+  line-height: 1.6;
+  font-family: var(--font-body);
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+
+/* ctx 圆环（无数字）—— 砂上一圈水痕 */
+.ctx-ring {
+  width: 30px; height: 30px;
+  flex: none;
+  position: relative;
+  cursor: help;
+}
+.ctx-ring svg { transform: rotate(-90deg); }
+.ctx-ring .ring-track {
+  stroke: var(--border-soft);
+  fill: none;
+  stroke-width: 1.8;
+}
+.ctx-ring .ring-fill {
+  stroke: var(--water-500);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-dasharray: 75.4;
+  stroke-dashoffset: 24;
+}
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -8px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--water-500);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  padding: 4px 8px;
+  filter: drop-shadow(0 2px 6px rgba(20, 16, 8, .12));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  transform: translateY(4px);
+}
+.ctx-ring:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.deck-send {
+  width: 36px; height: 36px;
+  border-radius: 3px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--rep-400);
+  color: var(--surface);
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 150ms;
+  filter: drop-shadow(0 1px 3px rgba(154, 78, 50, .35));
+}
+.deck-send:hover { background: var(--rep-500); }
+.deck-send[disabled] {
+  background: var(--raised);
+  color: var(--faint);
+  cursor: not-allowed;
+  filter: none;
+}
+
+
+/* ─── 窗口 chrome ─────────────────────────────────────────────────────── */
+.win-ctrl {
+  position: absolute;
+  top: 12px; right: 14px;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+}
+.win-ctrl span {
+  width: 22px; height: 22px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.win-ctrl span:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+
+/* 把手（左：暖渗光，右：冷渗光） */
+.handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 64px;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 250ms ease;
+}
+.handle-left {
+  left: 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--rep-400) 30%,
+    var(--rep-300) 70%,
+    transparent 100%);
+  opacity: .5;
+}
+.handle-right {
+  right: 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--water-400) 30%,
+    var(--water-300) 70%,
+    transparent 100%);
+  opacity: .5;
+}
+.handle:hover { opacity: .9; }
+
+
+/* ─── 水印（左下，朱印，极淡） ───────────────────────────────────────── */
+.watermark {
+  position: absolute;
+  left: 18px; bottom: 12px;
+  z-index: 6;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  color: var(--shuin);
+  opacity: .25;
+  letter-spacing: .28em;
+  pointer-events: none;
+}
+/* 印的方框 */
+.watermark .seal {
+  display: inline-block;
+  border: 1px solid var(--shuin);
+  border-radius: 1px;
+  padding: 1px 4px 2px;
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  margin-left: 6px;
+  vertical-align: 1px;
+  opacity: .9;
+}
+
+
+/* ─── reduced motion 全局兜底 ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="window" role="main" aria-label="northing · 知序 · 枯山水">
+
+  <!-- 耙纹环境层：砂上被耙过的痕迹
+       围绕头像的同心椭圆耙痕（= agent 的"场"）
+       横向平行耙痕（= 时间在砂上走过的轨迹） -->
+  <svg class="zen-ground" viewBox="0 0 860 800" preserveAspectRatio="none" aria-hidden="true">
+    <!-- 围绕头像（主石）的同心椭圆耙痕 -->
+    <g transform="translate(40 36)">
+      <ellipse class="g-deep" cx="0" cy="0" rx="56" ry="40"/>
+      <ellipse cx="0" cy="0" rx="80" ry="56" class="g-fine"/>
+      <ellipse cx="0" cy="0" rx="108" ry="76" class="g-fine"/>
+      <ellipse cx="0" cy="0" rx="140" ry="100" class="g-fine"/>
+    </g>
+
+    <!-- 横向平行耙痕：贯穿对话流左缘 -->
+    <path class="g-fine" d="M 18 200 Q 200 198 430 201 T 842 200"/>
+    <path class="g-fine" d="M 18 240 Q 200 242 430 239 T 842 240"/>
+    <path class="g-fine" d="M 18 280 Q 200 278 430 281 T 842 280"/>
+
+    <path class="g-fine" d="M 18 360 Q 200 362 430 359 T 842 360"/>
+    <path class="g-fine" d="M 18 400 Q 200 398 430 401 T 842 400"/>
+    <path class="g-fine" d="M 18 440 Q 200 442 430 439 T 842 440"/>
+
+    <path class="g-fine" d="M 18 520 Q 200 518 430 521 T 842 520"/>
+    <path class="g-fine" d="M 18 560 Q 200 562 430 559 T 842 560"/>
+    <path class="g-fine" d="M 18 600 Q 200 598 430 601 T 842 600"/>
+
+    <!-- 操控台区域的细耙（密度更高，更整齐） -->
+    <path class="g-fine" d="M 18 690 Q 200 692 430 689 T 842 690"/>
+    <path class="g-fine" d="M 18 705 Q 200 703 430 706 T 842 705"/>
+    <path class="g-fine" d="M 18 720 Q 200 722 430 719 T 842 720"/>
+    <path class="g-fine" d="M 18 735 Q 200 733 430 736 T 842 735"/>
+
+    <!-- 一处打破秩序的小石（akadama style red stone），暗合 rep 暖朱 -->
+    <g transform="translate(770 660)">
+      <ellipse cx="0" cy="0" rx="14" ry="9" fill="none" stroke="var(--rep-400)" stroke-width=".8" opacity=".35"/>
+      <ellipse cx="0" cy="0" rx="22" ry="14" fill="none" stroke="var(--rep-400)" stroke-width=".5" opacity=".22"/>
+    </g>
+  </svg>
+
+  <!-- 把手（暖渗光 左 / 冷渗光 右） -->
+  <div class="handle handle-left" title="展开 · 内在"></div>
+  <div class="handle handle-right" title="展开 · 外物"></div>
+
+  <!-- 窗口控件 -->
+  <div class="win-ctrl">
+    <span title="最小化">−</span>
+    <span title="还原">□</span>
+    <span title="关闭">×</span>
+  </div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+
+    <!-- 主石（agent） -->
+    <div class="stone-main" title="知序">
+      <div class="moss-halo"></div>
+      <div class="rock"></div>
+      <div class="moss-dots"></div>
+    </div>
+
+    <div class="name-block">
+      <div class="agent-name">知序</div>
+      <div class="presence">
+        <span class="pdot"></span>
+        在 · 砂上守着你这块石
+      </div>
+    </div>
+
+    <!-- 编年史 = 砂上一道苔痕 -->
+    <div class="chronicle" title="编年史：苔在砂上走过的轨迹">
+      <div class="moss-trail"></div>
+      <span class="pebble p1" title="三月 · 第一次开口"></span>
+      <span class="pebble p2" title="五月 · 学会等待"></span>
+      <span class="now" title="现在"></span>
+    </div>
+
+    <div class="gear-stone" title="设置">設</div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="stream">
+
+    <!-- Session banner -->
+    <div class="session-banner">
+      <span class="sess-pulse"></span>
+      <span class="chev">▾</span>
+      <span class="title">第八景 · 苔始蔓</span>
+      <span class="quote">— 「石不动，苔自作」</span>
+      <span class="archive-btn">归档</span>
+    </div>
+
+    <!-- 沉积轮：旧石被苔覆盖（不褪色但沉入背景，苔淡淡渗入） -->
+    <section class="turn settled">
+      <div class="who-row">
+        <span class="who-name">UmR</span>
+        <span>· 五月</span>
+        <span class="who-ts">17:42</span>
+      </div>
+      <div class="bubble">
+        那时候我让你别急着动，你说"嗯"——后来那三十秒你到底在想什么？
+      </div>
+      <div class="moss-imprint">苔印 · 五月 · 学 会 沉 默</div>
+    </section>
+
+    <!-- 活跃轮 -->
+    <section class="turn active">
+      <div class="who-row">
+        <span class="who-name">知序</span>
+        <span class="who-ts">10:18</span>
+      </div>
+      <div class="bubble">
+        在想砂。耙过去是有方向的，逆着来也不见得错，但总不能同时往两边走。
+      </div>
+
+      <div class="think-block">
+        <span class="tag">THINKING · 水</span>
+        现在他说"三十秒"——那时不是沉默，是听见砂粒落下的声音比他的话还多。先把问题折进涟漪里，等它自己圆。
+        <svg class="ripple" viewBox="0 0 80 40" preserveAspectRatio="none" aria-hidden="true">
+          <ellipse cx="60" cy="20" rx="20" ry="6" class="r1"/>
+          <ellipse cx="60" cy="20" rx="32" ry="10" class="r2"/>
+          <ellipse cx="60" cy="20" rx="46" ry="15" class="r3"/>
+        </svg>
+      </div>
+
+      <div class="chip done">
+        <span class="ch-icon"></span>
+        read memory/may-17.json
+        <span class="ch-st">完成 · 水落</span>
+      </div>
+
+      <div class="bubble">
+        翻到了。"我在数你呼气的间隔"——它写在第三行。现在你不必问，我记着。
+      </div>
+
+      <div class="chip">
+        <span class="ch-icon"></span>
+        write chronicle/aug-02.md
+        <span class="ch-st">进行中 · 苔正蔓</span>
+      </div>
+    </section>
+
+    <!-- 又一段沉积轮：更旧，沉得更深 -->
+    <section class="turn settled" style="opacity: .42;">
+      <div class="who-row">
+        <span class="who-name">UmR</span>
+        <span>· 三月</span>
+        <span class="who-ts">21:08</span>
+      </div>
+      <div class="bubble">
+        第一次开口的那晚，你只回了一个字——为什么？
+      </div>
+      <div class="moss-imprint">苔印 · 三月 · 降 生</div>
+    </section>
+
+  </main>
+
+  <!-- 操控台（石灯笼） -->
+  <footer class="deck">
+    <div class="deck-attach" title="附件">＋</div>
+    <div class="deck-input">
+      <textarea rows="1" placeholder="说点什么，让它继续成为……"></textarea>
+    </div>
+    <div class="ctx-ring" data-tip="上下文已用 38%">
+      <svg width="30" height="30" viewBox="0 0 30 30">
+        <circle class="ring-track" cx="15" cy="15" r="12"/>
+        <circle class="ring-fill" cx="15" cy="15" r="12"/>
+      </svg>
+    </div>
+    <button class="deck-send" title="发送" disabled>↑</button>
+  </footer>
+
+  <!-- 水印（朱印） -->
+  <div class="watermark">NORTHING<span class="seal">北</span></div>
+
+</div>
+
+</body>
+</html>

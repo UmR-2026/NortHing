@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>mavis demo v4 · 咨询室对话</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@400;450;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ * mavis demo v4 · 咨询室对话
+ * ------------------------------------------------------------
+ * v3 → v4 重新想 3 个关系:
+ *   1. "他"是谁 — agent 来历 micro-story + 日常仪式
+ *   2. "现在"是什么 — think 块移到 active 轮 + 视觉锚"信封"
+ *   3. "我"在哪 — 顶栏加档案入口修死区
+ * ------------------------------------------------------------
+ * P0 修复:
+ *   ✓ 顶栏死区 → 加"档案"入口 + "日常仪式"位置
+ *   ✓ think 块位置 → 从 sediment 旧轮移到 active 轮内
+ *   ✓ 整屋染色 0.5 秒可见 → 8%→10%, 16%→20%
+ *   ✓ active turn 视觉锚 → 2.5px 左竖线 → 3px 顶边"信封展开"
+ *   ✓ 日常仪式 → opening 段加"今天 14:09"时间维度
+ *   ✓ agent 来历 → opening 加可折叠"为什么叫知序"
+ * P1 修复:
+ *   ✓ opening "他" 指向可见 → aside 字号 10px→11.5px
+ *   ✓ traces 边界 → 两条 border 把 traces 夹在中间
+ *   ✓ theme-toggle 标题 → "切换主题" + ◐ 图标
+ *   ✓ active turn Fraunces 金句 → 渲染"显得"
+ * ============================================================ */
+
+/* ── 1. token ── */
+:root {
+  --bg:        #F4F3F0;
+  --surface:   #FBFAF8;
+  --elevated:  #FFFEFB;
+  --raised:    #EFEDE8;
+  --border:    #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:        #38352E;
+  --muted:     #6B665B;
+  --faint:     #908A7E;
+  --rep-300:   #E5A583;
+  --rep-400:   #D68A63;
+  --rep-500:   #C8714C;
+  --rep-600:   #A85A38;
+  --on-rep:    #FFFAF5;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+  --birth:     #DAD6CF;
+  --danger:    #A45950;
+  /* 整屋空气染色 5 层(浓度:0.5 秒可见承诺) */
+  --air-bg:        rgba(200, 113, 76, 0.10);    /* 10% 底(0.5s 可见) */
+  --air-halo:      rgba(200, 113, 76, 0.20);    /* 20% 顶晕(0.5s 可见) */
+  --air-mist:      rgba(63, 131, 123, 0.04);
+  --air-side:      rgba(200, 113, 76, 0.08);
+  --air-active:    rgba(200, 113, 76, 0.10);
+  --air-thinking:  rgba(63, 131, 123, 0.10);
+  --air-input:     rgba(200, 113, 76, 0.04);
+  --air-user:      rgba(120, 113, 100, 0.05);
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+  --s1: 4px; --s2: 8px; --s3: 12px;
+  --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px;
+  --r-pill: 999px;
+  --r-window: 20px;
+  --r-win-btn: 7px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Noto Sans SC', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Consolas', monospace;
+  --ease:       cubic-bezier(.25, .1, .25, 1);
+  --dur-hover:  150ms;
+  --dur-normal: 350ms;
+  --dur-once:   1200ms;
+  --bg-demo:    #1a1917;
+  --s-demo:     40px;
+}
+
+[data-theme="dark"] {
+  --bg:        #151411;
+  --surface:   #1C1A17;
+  --elevated:  #23211F;
+  --raised:    #2A2925;
+  --border:    #3A3833;
+  --border-soft: #32302C;
+  --fg:        #EBE8E0;
+  --muted:     #B0A99E;
+  --faint:     #847E73;
+  --birth:     #4A443B;
+  --air-bg:    rgba(200, 113, 76, 0.12);
+  --air-halo:  rgba(200, 113, 76, 0.22);
+  --air-mist:  rgba(63, 131, 123, 0.05);
+  --air-side:  rgba(200, 113, 76, 0.08);
+  --air-active: rgba(200, 113, 76, 0.09);
+  --air-input: rgba(200, 113, 76, 0.05);
+  --air-user:  rgba(232, 224, 200, 0.04);
+  --bg-demo:   #0E0D0B;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: var(--bg-demo);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-demo);
+}
+
+.shell {
+  width: 1280px;
+  height: 800px;
+  border-radius: var(--r-window);
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .25));
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, var(--air-halo) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 60% at 0% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 30% 60% at 100% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 100% 35% at 50% 100%, var(--air-mist) 0%, transparent 80%),
+    var(--air-bg),
+    var(--bg);
+  animation: room-arrive 1200ms var(--ease) both;
+}
+@keyframes room-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+/* chrome */
+.win-ctrl {
+  position: absolute; top: var(--s3); right: var(--s4);
+  display: flex; gap: var(--s2); z-index: 10;
+}
+.win-btn {
+  width: 26px; height: 26px;
+  border-radius: var(--r-win-btn);
+  border: none; background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.win-btn:hover { background: var(--raised); color: var(--muted); }
+.win-btn.close:hover { background: var(--danger); color: var(--on-rep); }
+
+.watermark {
+  position: absolute; left: var(--s5); bottom: var(--s3);
+  display: flex; align-items: center; gap: var(--s2);
+  opacity: 0.22; z-index: 5; pointer-events: none;    /* 0.25→0.22 微调 */
+  color: var(--muted);
+}
+.watermark svg { display: block; }
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-variation-settings: "WONK" 1;
+  letter-spacing: .04em;
+}
+
+/* ── 顶栏 56px(加档案入口 + 仪式)── */
+.topbar {
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative; z-index: 2;
+}
+
+.compact { display: flex; align-items: center; gap: var(--s3); }
+.compact-avatar {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(80, 70, 55, .18));
+}
+.compact-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--on-rep);
+}
+
+/* 顶栏仪式块(P0-7 修复:加"今天"维度 + P0-1 修死区) */
+.ritual {
+  display: flex; flex-direction: column; gap: 0;
+  padding: 0 var(--s3);
+  border-left: 1px solid var(--border-soft);
+  margin-left: var(--s2);
+  height: 36px;
+  justify-content: center;
+}
+.ritual-day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+  line-height: 1.2;
+}
+.ritual-time {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.topbar-spacer { flex: 1; }
+
+/* 档案入口(新增,修顶栏死区) */
+.topbar-archive {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s3);
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  transition: background var(--dur-hover), color var(--dur-hover), border-color var(--dur-hover);
+}
+.topbar-archive:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--border);
+}
+.topbar-archive svg { display: block; }
+
+.topbar-action {
+  width: 32px; height: 32px;
+  border-radius: var(--r-sm);
+  border: none; background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.topbar-action:hover { background: var(--raised); color: var(--muted); }
+
+/* ── opening(独立 section,加日常仪式 + agent 来历)── */
+.opening {
+  display: flex; align-items: flex-start; gap: var(--s4);
+  padding: var(--s4) var(--s5) var(--s4);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  animation: settle 1200ms var(--ease) 200ms both;
+}
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+
+.opening-avatar {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 3px 8px rgba(200, 113, 76, .18));
+  flex-shrink: 0;
+}
+.opening-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--on-rep);
+  letter-spacing: -.01em;
+}
+.opening-meta { display: flex; flex-direction: column; gap: var(--s2); flex: 1; }
+
+.opening-greeting {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .005em;
+  line-height: 1.1;
+}
+
+/* 日常仪式(P0-7 修复:加"今天 14:09"维度) */
+.opening-ritual {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.45;
+  font-style: italic;
+}
+
+.opening-line {
+  font-size: var(--fs-lg);
+  color: var(--fg);
+  line-height: 1.45;
+}
+
+/* aside 字号 10px→11.5px(P1-7 修复:从"小声嘀咕"到"清楚说话") */
+.opening-aside {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--faint);
+  letter-spacing: .04em;
+  padding: var(--s1) var(--s3);
+  background: var(--raised);
+  border-radius: var(--r-sm);
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: var(--s1);
+}
+
+/* agent 来历 micro-story(可折叠,默认折叠) */
+.opening-story {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.5;
+  font-style: italic;
+  padding-left: var(--s3);
+  border-left: 2px solid var(--abyss-400);
+  max-width: 540px;
+  margin-top: var(--s2);
+  display: none;   /* 默认隐藏,hover opening 展开(纯 CSS 演示) */
+}
+.opening:hover .opening-story { display: block; }
+
+/* ── 对话流 ── */
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s4) var(--s5) var(--s3);
+  display: flex; flex-direction: column;
+  gap: var(--s5);
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--r-pill); }  /* 加深一档 r1 P2-10 */
+
+.turn {
+  max-width: 680px;
+  padding: 0 var(--s4);
+}
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: var(--s2);
+  font-size: var(--fs-md);
+}
+.turn-name {
+  font-weight: 500;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.turn-day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+}
+.turn-body {
+  color: var(--fg);
+  line-height: 1.7;
+  font-weight: 400;
+}
+.turn-body p { margin: 0 0 var(--s3) 0; }
+.turn-body p:last-child { margin-bottom: 0; }
+
+.turn.user {
+  align-self: flex-start;
+  max-width: 680px;
+  background: var(--air-user);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  margin-top: var(--s2);
+}
+.turn.user .turn-head { justify-content: flex-start; }
+.turn.user .turn-name { color: var(--muted); font-weight: 400; }
+
+.turn.agent.sediment { opacity: 0.5; }
+
+/* 思考块(保持 v3 真困惑版) */
+.think {
+  background: var(--air-thinking);
+  border-left: 2.5px solid var(--abyss-400);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: var(--s3) var(--s4);
+  margin: var(--s3) 0;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.6;
+  max-width: 580px;
+}
+.think-label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--abyss-500);
+  letter-spacing: .12em;
+  font-style: normal;
+  margin-right: var(--s2);
+  text-transform: lowercase;
+}
+
+/* 活跃轮:3px 顶边"信封展开"式(完美特征 #4) */
+.turn.agent.active {
+  position: relative;
+  background-color: var(--air-active);
+  background-image: linear-gradient(180deg, rgba(200, 113, 76, 0.10) 0%, rgba(200, 113, 76, 0.04) 100%);
+  border-top: 3px solid var(--rep-500);   /* 关键修改:左竖线 → 顶边"信封" */
+  border-radius: var(--r-md);
+  padding: var(--s4) var(--s4) var(--s4) var(--s5);
+  margin-top: var(--s4);   /* 多一点上方留白,让 3px 顶边"翻开"感更强 */
+  animation: turn-active-in 1200ms var(--ease) both;
+}
+@keyframes turn-active-in { from { opacity: 0; } to { opacity: 1; } }
+.turn.agent.active .turn-body { font-weight: 450; }
+.turn.agent.active .turn-day { color: var(--rep-500); }
+
+/* active turn 内 Fraunces 渲染金句(P1 完美特征 #6) */
+.turn.agent.active .quote {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--rep-600);
+  letter-spacing: .005em;
+  line-height: 1.4;
+  margin: var(--s3) 0;
+  display: block;
+}
+
+/* ── 物理痕迹(两条 border 夹在中间 P1-8)── */
+.traces {
+  display: flex; gap: var(--s4);
+  align-items: center;
+  padding: var(--s2) var(--s5);
+  flex-shrink: 0;
+  z-index: 3;
+  opacity: 0.7;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+.trace {
+  display: flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.trace svg { display: block; opacity: 0.7; }
+.trace.now { color: var(--fg); font-weight: 500; }
+.trace.now .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 0 3px rgba(200, 113, 76, 0.18);
+  margin-left: var(--s1);
+  animation: dot 6000ms var(--ease) 1 forwards;
+}
+@keyframes dot {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ── 操控台 ── */
+.deck {
+  flex-shrink: 0;
+  padding: var(--s2) var(--s5) var(--s4);
+  display: flex; flex-direction: column;
+  gap: var(--s2);
+}
+.deck-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s2);
+}
+.input-box {
+  flex: 1;
+  background: var(--air-input);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  min-height: 48px;
+  display: flex; align-items: center;
+  transition: border-color var(--dur-normal), background var(--dur-once);
+}
+.input-box:focus-within {
+  border-color: var(--rep-500);
+  background: var(--air-active);
+}
+.input-box textarea {
+  flex: 1;
+  border: none; outline: none; background: transparent;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  line-height: 1.5;
+  max-height: 96px;
+}
+.input-box textarea::placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.send-btn {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: var(--rep-500);
+  color: var(--on-rep);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(80, 70, 55, .22));
+  transition: background var(--dur-hover), transform var(--dur-hover);
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--rep-600); }
+.send-btn:active { transform: scale(.96); }
+
+.more-btn {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--faint);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+  flex-shrink: 0;
+}
+.more-btn:hover { background: var(--raised); color: var(--muted); }
+
+.hints {
+  display: flex; gap: var(--s2);
+  padding: 0 var(--s1);
+}
+.hint {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  color: var(--muted);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: color var(--dur-hover), border-color var(--dur-hover), background var(--dur-hover);
+}
+.hint:hover {
+  color: var(--rep-600);
+  border-color: var(--rep-400);
+  background: var(--air-active);
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- 窗口控制 −□× 右上 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="5" x2="8" y2="5"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="2" y="2" width="6" height="6" rx="1"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="3" y1="3" x2="7" y2="7"/>
+        <line x1="7" y1="3" x2="3" y2="7"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 水印(微调 0.25→0.22) -->
+  <div class="watermark">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 顶栏 56px(加 ritual + archive 入口) -->
+  <header class="topbar">
+    <div class="compact">
+      <div class="compact-avatar"><span class="glyph">序</span></div>
+    </div>
+
+    <!-- 日常仪式(第 7 完美特征):第 14 天 · 14:09 -->
+    <div class="ritual">
+      <span class="ritual-day">第 14 天</span>
+      <span class="ritual-time">14:09</span>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <!-- 档案入口(修顶栏死区 P0-1) -->
+    <button class="topbar-archive" title="档案">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7h18"/>
+        <path d="M3 12h18"/>
+        <path d="M3 17h12"/>
+      </svg>
+      档案
+    </button>
+
+    <!-- 切换主题(title 改"切换主题",图标改 ◐) -->
+    <button class="topbar-action" title="切换主题" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 3v18M3 12h18"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- opening(加日常仪式 + agent 来历) -->
+  <section class="opening">
+    <div class="opening-avatar"><span class="glyph">序</span></div>
+    <div class="opening-meta">
+      <div class="opening-greeting">在你身边</div>
+      <div class="opening-ritual">今天 14:09,你来找我了。</div>
+      <div class="opening-line">上次你提他的时候,说的是"还行"。</div>
+      <div class="opening-aside">上次 · "还行" / "没事,我自己能处理"</div>
+      <!-- agent 来历 micro-story(默认折叠,hover opening 展开) -->
+      <div class="opening-story">
+        我叫知序。生于 2026-03-19。序者,序列的序,知其序列。
+        <br>那天我选珊瑚色,不为什么——只是觉得,暖。
+      </div>
+    </div>
+  </section>
+
+  <!-- 对话流 -->
+  <main class="stream">
+
+    <!-- agent 旧轮(沉积,opacity 0.5)— 不再有 think 块(移到 active 轮) -->
+    <div class="turn agent sediment">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">周一 · 14:02</span>
+      </div>
+      <div class="turn-body">
+        <p>这件事你提过两次了。</p>
+        <p>第一次语气像在列清单。这一次不一样。</p>
+      </div>
+    </div>
+
+    <!-- 用户旧轮(对称 680,左对齐) -->
+    <div class="turn user">
+      <div class="turn-head">
+        <span class="turn-day">周一 · 14:08</span>
+        <span class="turn-name">你</span>
+      </div>
+      <div class="turn-body">
+        <p>……我没想那么多。就是不想显得在催。</p>
+      </div>
+    </div>
+
+    <!-- agent 活跃轮:3px 顶边"信封" + think 块移到 active 轮内 + Fraunces 金句 -->
+    <div class="turn agent active">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">14:09 · 现在</span>
+      </div>
+      <div class="turn-body">
+        <span class="quote">"显得"。</span>
+        <p>嗯。</p>
+        <p>你今天还有别的吗——我是说,不是工作。</p>
+      </div>
+
+      <!-- think 块移到 active 轮内(时间轴对齐:边想边说) -->
+      <div class="think">
+        <span class="think-label">· 此刻 ·</span>
+        她说"显得在催"……是怕对方觉得她在催,还是其实她在怕自己真的在催?我不太确定要不要现在说破。
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 物理痕迹(两条 border 夹在中间) -->
+  <div class="traces">
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 4h11l3 3v13H5z"/>
+        <line x1="8" y1="10" x2="16" y2="10"/>
+        <line x1="8" y1="14" x2="13" y2="14"/>
+      </svg>
+      笔记 · 第 14 页
+    </span>
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 3h10v8a5 5 0 0 1-10 0V3z"/>
+        <path d="M12 16v5"/>
+        <line x1="9" y1="21" x2="15" y2="21"/>
+      </svg>
+      水
+    </span>
+    <span class="trace now">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18"/>
+        <path d="M5 21V8h14v13"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+      在<span class="dot"></span>
+    </span>
+  </div>
+
+  <!-- 操控台 + suggested hints -->
+  <footer class="deck">
+    <div class="deck-row">
+      <div class="input-box">
+        <textarea rows="1" placeholder="想说就说。不说也没关系。"></textarea>
+      </div>
+      <button class="send-btn" title="发送">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+      <button class="more-btn" title="更多">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5"  cy="12" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="19" cy="12" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hints">
+      <button class="hint">我今天有点累</button>
+      <button class="hint">我也不知道想说什么</button>
+      <button class="hint">嗯。</button>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>

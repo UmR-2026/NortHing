@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 实体中心 (The Monolith)</title>
+    <style>
+        :root {
+            --drive-coral: #DF6C53;
+            --abyss-cyan: #4A7C82;
+            --bg-dark: #0F0E0D;
+            --text-main: #EAE8E3;
+            --text-dim: #7A7873;
+            --font-agent: "Inter", -apple-system, sans-serif;
+            --font-brand: "Georgia", serif;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-agent);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+
+        /* 核心实体 (The Agent Core) */
+        .agent-core {
+            position: relative;
+            width: 160px; height: 160px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 60px;
+        }
+
+        /* 呼吸的光晕代表生命力 */
+        .core-halo {
+            position: absolute;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--drive-coral) 0%, transparent 70%);
+            filter: blur(20px);
+            opacity: 0.6;
+            animation: breathe 4s ease-in-out infinite alternate;
+        }
+
+        /* 核心内聚体 */
+        .core-solid {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--drive-coral);
+            box-shadow: 0 0 30px var(--drive-coral);
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(0.8); opacity: 0.4; }
+            100% { transform: scale(1.5); opacity: 0.8; }
+        }
+
+        /* 现在的想法 (只展示当下，忘却历史) */
+        .current-thought {
+            text-align: center; max-width: 800px;
+            z-index: 10;
+        }
+
+        .thought-phase {
+            font-family: var(--font-brand);
+            font-size: 12px; color: var(--drive-coral);
+            letter-spacing: 0.2em; text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .thought-text {
+            font-size: 28px; line-height: 1.5; font-weight: 300;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* 正在并行执行的动作悬浮在核心周围 */
+        .action-orbit {
+            position: absolute; top: 50%; left: 50%; width: 500px; height: 500px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .action-node {
+            position: absolute;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px; border-radius: 20px;
+            font-size: 12px; color: var(--text-dim);
+            backdrop-filter: blur(10px);
+        }
+        .node-1 { top: 20%; left: 10%; animation: float1 6s infinite alternate ease-in-out; }
+        .node-2 { bottom: 30%; right: 5%; animation: float2 8s infinite alternate ease-in-out; border-color: rgba(74, 124, 130, 0.4); color: var(--abyss-cyan);}
+
+        @keyframes float1 { to { transform: translateY(-20px); } }
+        @keyframes float2 { to { transform: translateY(20px); } }
+
+        /* 用户的输入不再是主角，而是下方的一个信号注入点 */
+        .stimulus-input {
+            position: absolute; bottom: 60px;
+            width: 400px;
+            text-align: center;
+        }
+        .stimulus-input input {
+            width: 100%; background: transparent; border: none; outline: none;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-main); font-size: 16px; padding: 12px;
+            text-align: center; transition: border-color 0.3s;
+        }
+        .stimulus-input input:focus { border-color: var(--drive-coral); }
+        
+    </style>
+</head>
+<body>
+
+    <div class="action-orbit">
+        <div class="action-node node-1">Tool: grep "init_config"</div>
+        <div class="action-node node-2">Recalling Abyss: Session Load Logic</div>
+    </div>
+
+    <div class="agent-core">
+        <div class="core-halo"></div>
+        <div class="core-solid"></div>
+    </div>
+
+    <div class="current-thought">
+        <div class="thought-phase">Northing // Restructuring Reality</div>
+        <div class="thought-text">
+            “我已将配置的加载置于会话读取之前。<br>
+            时序创伤已被抚平。”
+        </div>
+    </div>
+
+    <div class="stimulus-input">
+        <input type="text" placeholder="向知序发送环境刺激 (Stimulus)...">
+    </div>
+
+</body>
+</html>

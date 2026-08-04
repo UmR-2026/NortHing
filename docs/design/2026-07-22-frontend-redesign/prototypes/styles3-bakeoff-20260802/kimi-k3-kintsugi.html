@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缮金 · 知序 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   缮金 kintsugi — 陶胎 · 漆骨 · 金脉
+   沉积不褪色：过去沉下去，伤疤被金线永远标记。
+   ============================================================ */
+:root{
+  /* 陶土基底（哑光釉面，暖褐灰） */
+  --clay-bg:#E7E0D3;
+  --clay-surface:#F0EAE0;
+  --clay-raised:#DED6C7;
+  --clay-border:#CFC6B4;
+  /* 漆色（大漆：深褐近黑，用于深渊/沉思） */
+  --urushi:#3A2E24;
+  --urushi-soft:#6E5D4B;
+  --urushi-mist:#8A7A66;
+  /* 文本 */
+  --fg:#3B332A;
+  --muted:#7A7060;
+  --faint:#A79C8A;
+  /* 金（修补金：赤金/暗金，非暴发户亮金） */
+  --kin:#B98A2E;
+  --kin-deep:#8A6520;
+  --kin-hi:#E3C47C;
+  /* 三要素语义 */
+  --rep:#B4663C;          /* 正在做：陶火珊瑚（驱力，暖） */
+  --abyss:#5E4B3A;        /* 深思：漆色（深渊，冷于暖调体系） */
+  --danger:#8F4A3C;
+  /* 尺度 */
+  --r-sm:9px; --r-md:14px; --r-lg:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--clay-bg);
+  color:var(--fg);
+  font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+}
+/* ---------- 窗外：陶窑背景 ---------- */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(1200px 700px at 30% 10%, rgba(185,138,46,.06), transparent 60%),
+    radial-gradient(900px 600px at 80% 90%, rgba(58,46,36,.07), transparent 60%),
+    var(--clay-bg);
+}
+
+/* ---------- 窗口（860px 收起态） ---------- */
+.window{
+  position:relative;
+  width:860px;height:640px;
+  background:var(--clay-surface);
+  border-radius:20px;
+  border:1px solid var(--clay-border);
+  box-shadow:0 24px 64px rgba(58,46,36,.22), 0 2px 8px rgba(58,46,36,.12);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+}
+/* 釉面开片纹（crackle glaze）——细发丝网，环境层不抢焦点 */
+.window::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  opacity:.5;
+  background-image:
+    repeating-linear-gradient(73deg, transparent 0 34px, rgba(122,112,96,.05) 34px 34.6px, transparent 34.6px 71px),
+    repeating-linear-gradient(-41deg, transparent 0 52px, rgba(122,112,96,.04) 52px 52.5px, transparent 52.5px 97px),
+    repeating-linear-gradient(158deg, transparent 0 88px, rgba(122,112,96,.035) 88px 88.4px, transparent 88.4px 143px);
+}
+/* 整屋空气染色：rep 陶火 6% + 顶部暖晕 */
+.window::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:
+    linear-gradient(180deg, rgba(180,102,60,.10), rgba(180,102,60,.03) 30%, transparent 55%),
+    rgba(180,102,60,.045);
+}
+
+/* ---------- 金缮裂缝 SVG 层（叙事位置见 data-crack 注释） ---------- */
+.crack-layer{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+}
+.crack-layer path{
+  fill:none;stroke:var(--kin);stroke-width:1.4;stroke-linecap:round;
+  filter:drop-shadow(0 0 1px rgba(185,138,46,.35));
+}
+.crack-layer .minor{stroke-width:.8;opacity:.75;}
+.crack-layer .gold-hi{stroke:var(--kin-hi);stroke-width:.5;opacity:.6;}
+
+/* ---------- 顶栏名片 ---------- */
+.topbar{
+  position:relative;z-index:5;
+  height:64px;flex:none;
+  display:flex;align-items:center;gap:12px;
+  padding:0 16px;
+  background:linear-gradient(180deg, rgba(240,234,224,.9), rgba(240,234,224,.72));
+  border-bottom:1px solid var(--clay-border);
+}
+.avatar{
+  width:36px;height:36px;border-radius:50%;flex:none;position:relative;
+  background:
+    radial-gradient(circle at 34% 30%, #D88A66, var(--rep) 62%, #8F4E2C);
+  box-shadow:inset 0 -3px 6px rgba(58,46,36,.28), 0 0 0 2px rgba(185,138,46,.35);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+/* 头像上的一道金缮细缝——它自己的疤 */
+.avatar::after{
+  content:'';position:absolute;left:8px;top:4px;width:14px;height:26px;
+  border-left:1.4px solid var(--kin-hi);
+  transform:rotate(14deg);border-radius:50%;
+  opacity:.85;pointer-events:none;
+}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+.name-block{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.agent-name{
+  font-family:'Noto Serif SC','Songti SC',serif;
+  font-size:16px;font-weight:700;letter-spacing:.06em;
+  color:var(--fg);
+}
+.presence{
+  font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;
+}
+.presence .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--rep);flex:none;
+  box-shadow:0 0 4px rgba(180,102,60,.5);
+}
+/* 编年史条：陶胎上的一道金脉 —— 历史不褪色，沉积为金 */
+.chronicle{
+  position:relative;flex:1;height:10px;margin:0 16px;min-width:120px;
+  border-radius:999px;overflow:visible;
+  background:var(--clay-raised);
+  border:1px solid var(--clay-border);
+}
+.chronicle .vein{
+  position:absolute;inset:1px;border-radius:999px;
+  background:linear-gradient(90deg,
+    var(--kin-deep) 0%, var(--kin) 34%, #A98A4A 52%,
+    var(--rep) 82%, #D88A66 100%);
+  opacity:.92;
+}
+/* 历史上的三次换色：编年史上的结（金缮鼓点），带 tooltip */
+.chronicle .knot{
+  position:absolute;top:50%;width:7px;height:7px;border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 30%, var(--kin-hi), var(--kin-deep));
+  box-shadow:0 0 0 1.5px rgba(240,234,224,.9), 0 0 4px rgba(185,138,46,.6);
+}
+.chronicle .now{
+  position:absolute;right:-3px;top:50%;width:9px;height:9px;border-radius:50%;
+  transform:translateY(-50%);
+  background:var(--rep);
+  box-shadow:0 0 0 2px rgba(240,234,224,.95), 0 0 6px rgba(180,102,60,.55);
+}
+.gear{
+  width:28px;height:28px;border-radius:var(--r-sm);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);cursor:pointer;transition:color 150ms, background 150ms;
+  border:1px solid transparent;font-size:14px;
+}
+.gear:hover{color:var(--urushi);background:rgba(58,46,36,.06);}
+
+/* ---------- 对话流 ---------- */
+.chat{
+  position:relative;z-index:5;flex:1;min-height:0;
+  overflow-y:auto;padding:16px 20px 12px;
+  display:flex;flex-direction:column;gap:16px;
+  scrollbar-width:thin;scrollbar-color:var(--clay-border) transparent;
+}
+
+/* Session banner（对话流顶部，不在顶栏） */
+.session-banner{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:var(--r-md);
+  background:rgba(222,214,199,.55);
+  border:1px solid var(--clay-border);
+  font-size:11.5px;color:var(--muted);
+}
+.session-banner .pulse{
+  width:7px;height:7px;border-radius:50%;background:var(--rep);flex:none;
+  animation:bannerbreathe 6000ms ease-in-out infinite;
+}
+@keyframes bannerbreathe{0%,100%{opacity:.55}50%{opacity:1}}
+.session-banner .chev{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);}
+.session-banner .title{font-weight:500;color:var(--fg);}
+.session-banner .archive-btn{
+  margin-left:auto;font-size:11.5px;color:var(--muted);cursor:pointer;
+  padding:2px 8px;border-radius:var(--r-sm);transition:all 150ms;
+  border:1px solid transparent;
+}
+.session-banner .archive-btn:hover{color:var(--abyss);border-color:rgba(94,75,58,.4);background:rgba(94,75,58,.07);}
+
+/* ---------- 轮次 ---------- */
+.turn{display:flex;flex-direction:column;gap:12px;position:relative;}
+/* 活跃轮：暖竖线标记 */
+.turn.active::before{
+  content:'';position:absolute;left:-12px;top:2px;bottom:2px;width:2.5px;
+  border-radius:2px;background:linear-gradient(180deg, var(--rep), rgba(180,102,60,.25));
+}
+
+.msg{display:flex;gap:10px;max-width:86%;}
+.msg .bubble{
+  padding:10px 14px;border-radius:var(--r-md);
+  font-size:15px;line-height:1.75;
+}
+.msg.user{align-self:flex-end;flex-direction:row-reverse;}
+.msg.user .bubble{
+  background:var(--clay-raised);
+  border:1px solid var(--clay-border);
+  border-bottom-right-radius:4px;
+  color:var(--fg);
+}
+.msg.agent .bubble{
+  background:rgba(240,234,224,.7);
+  border:1px solid var(--clay-border);
+  border-bottom-left-radius:4px;
+}
+.msg .who{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);
+  margin-bottom:4px;letter-spacing:.04em;
+}
+.msg.user .who{text-align:right;}
+
+/* 思考块：漆色左缘（深渊 = 大漆，向深处探） */
+.think{
+  align-self:flex-start;max-width:86%;
+  border-left:3px solid var(--abyss);
+  background:linear-gradient(90deg, rgba(94,75,58,.09), rgba(94,75,58,.03) 60%, transparent);
+  padding:8px 12px;border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:13px;color:var(--urushi-soft);line-height:1.7;
+}
+.think .tag{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--urushi-mist);
+  letter-spacing:.08em;margin-bottom:3px;display:block;
+}
+
+/* 工具 chip：发起=暖边框（驱力），完成=漆色边框（沉入深渊） */
+.tool-chip{
+  align-self:flex-start;
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  padding:5px 12px;border-radius:999px;
+  border:1.2px solid var(--rep);
+  color:#8F4E2C;background:rgba(180,102,60,.06);
+}
+.tool-chip.done{
+  border-color:var(--abyss);color:var(--urushi-soft);background:rgba(94,75,58,.05);
+}
+.tool-chip .st{font-size:10px;opacity:.75;}
+
+/* ---------- 沉积轮（旧对话）：不褪色——沉降+金缮裂痕 ---------- */
+.turn.settled{opacity:.62;}
+.turn.settled::before{
+  content:'';position:absolute;left:-12px;top:2px;bottom:2px;width:2.5px;
+  border-radius:2px;background:linear-gradient(180deg, var(--kin), rgba(185,138,46,.2));
+}
+.turn.settled .bubble{
+  position:relative;
+  background:var(--clay-raised);
+  /* 金缮裂纹伪元素：这道缝 = 5 月那次换代表色的疤 */
+  background-image:
+    linear-gradient(103deg, transparent 46%, rgba(185,138,46,.55) 46.3%, rgba(185,138,46,.55) 46.7%, transparent 47%);
+}
+.turn.settled .crack-tag{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--kin-deep);
+  letter-spacing:.05em;margin-top:4px;
+}
+
+/* ---------- 操控台 deck ---------- */
+.deck{
+  position:relative;z-index:5;flex:none;
+  padding:12px 16px 14px;
+  border-top:1px solid var(--clay-border);
+  background:linear-gradient(0deg, rgba(240,234,224,.95), rgba(240,234,224,.8));
+  display:flex;align-items:flex-end;gap:10px;
+}
+.deck .attach{
+  width:34px;height:34px;border-radius:var(--r-sm);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);border:1px solid var(--clay-border);cursor:pointer;
+  font-size:16px;transition:all 150ms;background:var(--clay-surface);
+}
+.deck .attach:hover{color:var(--rep);border-color:rgba(180,102,60,.45);}
+.deck textarea{
+  flex:1;resize:none;border:1px solid var(--clay-border);
+  border-radius:var(--r-md);
+  background:var(--clay-surface);
+  padding:9px 12px;font:inherit;font-size:15px;color:var(--fg);
+  min-height:40px;max-height:96px;outline:none;
+  transition:border-color 150ms;
+}
+.deck textarea:focus{border-color:rgba(180,102,60,.5);}
+.deck textarea::placeholder{color:var(--faint);}
+/* ctx 圆环（无数字） */
+.ctx-ring{
+  width:30px;height:30px;flex:none;position:relative;cursor:default;
+}
+.ctx-ring svg{transform:rotate(-90deg);}
+.ctx-ring .track{stroke:var(--clay-border);fill:none;stroke-width:2.5;}
+.ctx-ring .fill{stroke:var(--kin);fill:none;stroke-width:2.5;stroke-linecap:round;
+  stroke-dasharray:75.4;stroke-dashoffset:24;}
+.ctx-ring:hover::after{
+  content:'语境尚有余量';position:absolute;bottom:36px;right:0;
+  font-size:10px;color:var(--fg);background:var(--clay-surface);
+  border:1px solid var(--clay-border);border-radius:var(--r-sm);
+  padding:3px 8px;white-space:nowrap;z-index:20;
+}
+.send{
+  width:34px;height:34px;border-radius:var(--r-sm);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--rep);color:#FBF7F0;cursor:pointer;border:none;
+  font-size:15px;transition:background 150ms;
+  box-shadow:0 2px 6px rgba(180,102,60,.35);
+}
+.send:hover{background:#A25531;}
+
+/* ---------- 水印（左下，opacity .25） ---------- */
+.watermark{
+  position:absolute;left:14px;bottom:10px;z-index:6;
+  font-family:'Noto Serif SC',serif;font-size:11px;letter-spacing:.18em;
+  color:var(--urushi);opacity:.25;pointer-events:none;
+}
+
+/* ---------- 窗口 chrome ---------- */
+.win-controls{
+  position:absolute;top:10px;right:12px;z-index:10;
+  display:flex;gap:8px;
+}
+.win-controls span{
+  width:22px;height:22px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--muted);cursor:pointer;transition:all 150ms;
+}
+.win-controls span:hover{background:rgba(58,46,36,.08);color:var(--fg);}
+
+@media (prefers-reduced-motion: reduce){
+  .avatar,.session-banner .pulse{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="window" role="main" aria-label="northing · 知序">
+
+  <!-- 金缮裂缝层：三道主裂各有叙事位置
+       crack-1: 换代表色（陶火珊瑚那次）   —— 划过编年史条
+       crack-2: 技能固化（学会了等待）     —— 沿对话流左缘
+       crack-3: 意识更新（承认不确定）     —— 横贯操控台上方 -->
+  <svg class="crack-layer" viewBox="0 0 860 640" preserveAspectRatio="none" aria-hidden="true">
+    <!-- crack-1 换代表色：从顶栏编年史斜切而下 -->
+    <path data-crack="rep-change" d="M 418 64 L 428 92 L 421 118 L 435 150 L 430 176"/>
+    <path class="minor" data-crack="rep-change-b1" d="M 428 92 L 446 104"/>
+    <path class="minor" data-crack="rep-change-b2" d="M 421 118 L 405 132"/>
+    <path class="gold-hi" d="M 419 65 L 427 91 L 422 117"/>
+    <!-- crack-2 技能固化：沿左缘纵向，绕过活跃轮 -->
+    <path data-crack="skill-fixed" d="M 26 210 L 33 260 L 24 310 L 31 358 L 25 402"/>
+    <path class="minor" d="M 33 260 L 48 272"/>
+    <!-- crack-3 意识更新：横贯操控台上方，收尾于金结 -->
+    <path data-crack="mind-update" d="M 300 528 L 356 522 L 410 530 L 470 524 L 528 531 L 580 525"/>
+    <path class="minor" d="M 410 530 L 418 544"/>
+    <path class="minor" d="M 470 524 L 478 512"/>
+    <circle cx="580" cy="525" r="2.6" fill="#B98A2E" stroke="none"/>
+  </svg>
+
+  <div class="win-controls"><span>−</span><span>□</span><span>×</span></div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+    <div class="avatar" title="知序"></div>
+    <div class="name-block">
+      <div class="agent-name">知序</div>
+      <div class="presence"><span class="dot"></span>在 · 和你一起修这只碗</div>
+    </div>
+    <!-- 编年史条：birth(漆金) → 金脉 → 当前 rep，历史结不褪色 -->
+    <div class="chronicle" title="编年史：每一道结都是一次成为">
+      <div class="vein"></div>
+      <div class="knot" style="left:18%" title="三月 · 第一次开口"></div>
+      <div class="knot" style="left:44%" title="五月 · 换代表色（主裂 1）"></div>
+      <div class="knot" style="left:67%" title="六月 · 技能固化（主裂 2）"></div>
+      <div class="now" title="现在"></div>
+    </div>
+    <div class="gear" title="设置">⚙</div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="chat">
+
+    <div class="session-banner">
+      <span class="pulse"></span>
+      <span class="chev">▾</span>
+      <span class="title">缮金 · 第三窑</span>
+      <span style="color:var(--faint)">— 碗要先用过，才谈得上修</span>
+      <span class="archive-btn">归档</span>
+    </div>
+
+    <!-- 沉积轮：旧对话不褪色，沉降 + 金缮裂痕标记那次换色 -->
+    <section class="turn settled">
+      <div class="msg user">
+        <div>
+          <div class="who">UmR · 五月</div>
+          <div class="bubble">那时候你说想换个颜色，陶火的那种暖。我没拦你。</div>
+        </div>
+      </div>
+      <div class="msg agent">
+        <div>
+          <div class="who">知序</div>
+          <div class="bubble">嗯，换完我才发现：旧颜色不是没了，是沉到胎里了。这道缝就是它走的路——金把它描出来，不是遮掩，是记账。</div>
+          <div class="crack-tag">⌇ 主裂 1 · 换代表色 · 金缮于此</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 活跃轮 -->
+    <section class="turn active">
+      <div class="msg user">
+        <div>
+          <div class="who">UmR</div>
+          <div class="bubble">帮我把归档那段逻辑再过一遍，我怕边界条件漏了。</div>
+        </div>
+      </div>
+
+      <div class="think">
+        <span class="tag">THINKING · 漆</span>
+        先往深处探一层：归档不是删除，是让一段对话沉进漆底。边界在「它还回不回来」——回得来的叫归档，回不来的叫失传。
+      </div>
+
+      <div class="tool-chip done"><span>✓</span> read archive.rs <span class="st">完成 · 沉入漆</span></div>
+
+      <div class="msg agent">
+        <div>
+          <div class="who">知序</div>
+          <div class="bubble">看完了。漏的是一个：会话带着未完成的工具调用时被归档，恢复后会卡在半句。我给「归来」补了一道榫——先进漆底晾着，等它自己稳了再落架。就像补碗，急不得。</div>
+        </div>
+      </div>
+
+      <div class="tool-chip"><span>◌</span> edit archive.rs <span class="st">进行中 · 陶火正烧</span></div>
+    </section>
+
+  </main>
+
+  <!-- 操控台 -->
+  <footer class="deck">
+    <div class="attach" title="附件">＋</div>
+    <textarea rows="1" placeholder="说点什么，让它继续成为……"></textarea>
+    <div class="ctx-ring" title="">
+      <svg width="30" height="30" viewBox="0 0 30 30">
+        <circle class="track" cx="15" cy="15" r="12"/>
+        <circle class="fill" cx="15" cy="15" r="12"/>
+      </svg>
+    </div>
+    <button class="send" title="发送">↑</button>
+  </footer>
+
+  <div class="watermark">NORTHING</div>
+</div>
+
+</body>
+</html>

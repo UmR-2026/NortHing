@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing — 知序 · 蓝图</title>
+<style>
+/* ============================================================================
+ * step-explore-blueprint.html — 风格焙烧第四轮 · 蓝图（blueprint）
+ * ----------------------------------------------------------------------------
+ * 主张：设施是一张图纸；知序是图上正在落下的那支红笔。
+ *
+ * 媒介物理（不是比喻）——工程制图/晒图的两种真实物理态：
+ *   亮 = 白图（重氮晒图 / 描图纸）：暖灰纸基 + 蓝墨线稿。罗盘基底原值 #F4F3F0 原封不动。
+ *   暗 = 青晒（cyanotype）：普鲁士蓝地 + 纸白线稿。蓝底即深渊——brief 指定的接口。
+ *   两态都是同一张图的两种出图方式，不是"日/夜模式"配色互换。
+ *
+ * 哲学接口：
+ *   驱力 = 红笔迹（redline）。审图的红笔是图纸上唯一的第二种墨；它落在哪里，
+ *          哪里正在被改。活跃轮 = 修订云线被红笔一次画出（1200ms 描绘，一次性）。
+ *   深渊 = 蓝底/剖面。向内看 = 把图剖开：思考块是 A—A 剖面，带 45° 剖面线，
+ *          剖面线之下就是青晒蓝地本身——它看的是纸的里面。
+ *   沉积 = 被取代的旧版图层。旧轮次晒退（去饱和 + 淡出）+ 作废章 + "被 Δ4 取代"，
+ *          划掉不是删除：旧线还在图上，只是不再生效。褪色，零位移。
+ *   编年史 = 修订记录条（REV / Δ 标记）：每次换代表色 = 一次修订，Δ 标记留着它
+ *          当年的颜色，最右一枚是现在的红。
+ *
+ * 图纸词汇（不是装饰）：图框（双线）+ 对中符号 + 中心线（点划线）+ 四级线宽 +
+ *   引出线/旁注 + 修订云线 + 图签栏（底条，放水印）+ 视图标题（粗细双线）+
+ *   零件标注气球（工具 chip 编号）+ 剖面符号。
+ * 反 AI 套路：无科技蓝 dashboard、无发光、无阴影（图纸上没有投影）、
+ *   网格不是仪表盘坐标纸（32px 淡蓝纸格 alpha≈.05，无主次刻度、无坐标轴、无数字刻度）。
+ *
+ * 纪律：单文件离线 / 零外链 / 字体全回落栈 / 间距 4px 基数 /
+ *   时长 150·250·350·1200·6000ms / 呼吸 6s 只给水印 logo + 头像章 /
+ *   无弹跳 · 无 spinner · 无无限循环位移。
+ *
+ * Slint 映射（要点）：
+ *   .app        → Window root（把手点击 set_inner_size 860↔1280）
+ *   .frame/.grid→ 静态 Image（图框/对中符号/纸格烘成一张 9-slice 底图；
+ *                  点划线中心线在 Slint 用 Path 或竖向 tile Image）
+ *   .rev-cloud  → Image（修订云线按尺寸预烘 3 档，或 Path + 描边动画）
+ *   .hatch      → 剖面线：Slint 无 repeating-gradient → 用 tile Image
+ *   全文件禁 box-shadow / 禁 color-mix（染色值全预计算 hex）
+ * ==========================================================================*/
+
+/* ── 结构 token（主题无关） ── */
+:root {
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 16px;
+
+  /* 字体三系：display 从 Fraunces 换为「长仿宋」——GB 工程制图的法定字体。
+   * 图纸上的汉字自古就是长仿宋，这不是审美替换，是媒介的母语。 */
+  --font-draft: 'FangSong','STFangsong','FangSong_GB2312','仿宋','Noto Serif SC',serif;
+  --font-body:  'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --font-mono:  'JetBrains Mono','Cascadia Mono','SF Mono',Consolas,'Noto Sans Mono',monospace;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  /* 圆角：图纸上的角是画出来的直角；圆角只作倒角（fillet）级别存在。
+   * 罗盘 9/14/18 在本风格下整体降一档为 3/6/9——记入报告为自觉偏离。 */
+  --r-sm: 3px; --r-md: 6px; --r-lg: 9px; --r-pill: 999px;
+
+  --t-hover: 150ms; --t-slide: 250ms; --t-norm: 350ms; --t-once: 1200ms; --t-breathe: 6000ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 亮态 = 白图（描图纸 + 蓝墨线）· 主态，罗盘基底原值
+ * ════════════════════════════════════════════════════════════════════════ */
+:root, [data-theme="light"] {
+  --bg:          #F4F3F0;   /* 罗盘原值 · 描图纸暖灰（--air-rep 即它染 6.5% 红笔后的落地值） */
+  --surface:     #FBFAF8;
+  --elevated:    #FDFCFA;
+  --raised:      #EFEDE8;
+  --fg:          #38352E;
+  --muted:       #7B766C;
+  --faint:       #A8A398;
+  --birth:       #DAD6CF;
+  --page-out:    #E7E5E0;   /* 图纸外的桌面 */
+
+  /* 四级线宽（制图标准的线型等级）——白图上线是蓝墨 */
+  --line-1: rgba(47,105,128,.60);   /* 粗：图框、图签栏外框、视图标题下粗线 */
+  --line-2: rgba(47,105,128,.40);   /* 中：构件框、操控台、chip */
+  --line-3: rgba(47,105,128,.22);   /* 细：分隔发丝线 */
+  --line-4: rgba(47,105,128,.055);  /* 极细：中心线 */
+  --grid:   rgba(47,105,128,.095); /* 纸格（无主次刻度 → 不是坐标纸） */
+
+  /* 代表色 rep = 红笔（工程审图红，氧化铁质地，不是荧光红） */
+  --rep-300: #E19685;
+  --rep-400: #CF6A52;
+  --rep-500: #BC4A38;
+  --rep-600: #98392A;
+  --on-rep:  #FDF3F0;
+
+  /* 深渊 abyss = 青晒蓝（hue≈197°，罗盘冷青向普鲁士蓝偏 12°） */
+  --abyss-300: #6FA3B4;
+  --abyss-400: #4A8299;
+  --abyss-500: #2F6980;
+  --abyss-700: #1C4A5C;
+
+  --pencil:      #6E6A63;   /* 用户 = 铅笔（石墨）：起稿的人用铅笔，审图的用红笔 */
+  --pencil-soft: #BAB6AD;
+  --danger:      #A45950;
+
+  /* 空气染色（预计算，禁 color-mix） */
+  --air-rep:           #F0E9E5;  /* rep-500 6.5% on bg */
+  --air-rep-speaking:  #EFE7E3;  /* 7.5% */
+  --halo-rep:          rgba(188,74,56,.075);
+  --halo-rep-speaking: rgba(188,74,56,.105);
+  --fog-abyss:         rgba(47,105,128,.045);
+  --turn-active:       #F8F3F0;  /* rep-500 4% on surface */
+  --think-bg:          #F1F3F2;  /* abyss-500 5% on surface */
+  --hatch:             rgba(47,105,128,.095);  /* 45° 剖面线 */
+  --stamp:             rgba(84,100,108,.34);   /* 作废章（褪色域，非 rep） */
+  --sed-ink:           #8E9599;  /* 晒退的旧线 */
+  --paper-tooth:       rgba(120,110,95,.035);  /* 纸纹 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 暗态 = 青晒（普鲁士蓝地 + 纸白线稿）· 蓝底即深渊
+ * ════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:          #0F2A38;   /* 普鲁士蓝地（青晒的暗部）——蓝底即深渊 */
+  --surface:     #193A4A;
+  --elevated:    #1E4356;
+  --raised:      #14313F;
+  --fg:          #E2ECEE;   /* 线稿的纸白 */
+  --muted:       #9FBAC4;
+  --faint:       #6D8C99;
+  --birth:       #39525F;
+  --page-out:    #081720;
+
+  --line-1: rgba(226,236,238,.62);
+  --line-2: rgba(226,236,238,.34);
+  --line-3: rgba(226,236,238,.18);
+  --line-4: rgba(226,236,238,.055);
+  --grid:   rgba(226,236,238,.065);
+
+  --rep-300: #E9AE9C;
+  --rep-400: #DE7A61;
+  --rep-500: #D65A44;   /* 青晒蓝地上的红笔要再亮一档才读得出 */
+  --rep-600: #B44430;
+  --on-rep:  #FFF4F0;
+
+  --abyss-300: #A5CBD6;
+  --abyss-400: #7FB3C2;
+  --abyss-500: #6FA8BA;
+  --abyss-700: #2F6980;
+
+  --pencil:      #A7BFC6;
+  --pencil-soft: #4F6E7C;
+  --danger:      #C77F74;
+
+  --air-rep:           #1C2D39;  /* rep-500 6.5% on bg */
+  --air-rep-speaking:  #1F2E38;  /* 7.5% */
+  --halo-rep:          rgba(214,90,68,.11);
+  --halo-rep-speaking: rgba(214,90,68,.15);
+  --fog-abyss:         rgba(127,179,194,.06);
+  --turn-active:       #213B4A;  /* rep-500 4% on surface */
+  --think-bg:          #0A2130;  /* 剖面切进蓝地更深处 */
+  --hatch:             rgba(226,236,238,.08);
+  --stamp:             rgba(180,205,212,.28);
+  --sed-ink:           #7A98A3;
+  --paper-tooth:       rgba(226,236,238,.022);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 图纸与窗口
+ * ════════════════════════════════════════════════════════════════════════ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--page-out);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body);
+  color: var(--fg);
+  transition: background var(--t-norm) var(--ease);
+}
+
+/* Slint: Window { width: 860; height: 800; border-radius: 20; } */
+.app {
+  position: relative;
+  width: 860px; height: 800px;
+  background: var(--air-rep);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: width var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.expanded { width: 1280px; }
+.app.speaking { background: var(--air-rep-speaking); }
+
+/* 顶晕：锚定左上头像章，红笔的存在感向室内晕开（戒律 4） */
+/* Slint: Rectangle { background: radial-gradient(circle 520 at 62,46, halo-rep); } */
+.app::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle 420px at 62px 46px, var(--halo-rep) 0%, transparent 100%);
+  transition: background var(--t-norm) var(--ease);
+}
+.app.speaking::before { background: radial-gradient(circle 420px at 62px 46px, var(--halo-rep-speaking) 0%, transparent 100%); }
+
+/* 底部深渊冷雾（很淡，暗态里是蓝地自己在呼吸） */
+.app::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 260px;
+  z-index: 0; pointer-events: none;
+  background: linear-gradient(to top, var(--fog-abyss), transparent);
+}
+
+/* ── 纸：纸格 + 纸纹（32px 淡格，无主次刻度、无坐标轴 → 不是坐标纸） ── */
+/* Slint: Image { source: @image-url("paper-grid.png"); image-fit: tile; } */
+.paper {
+  position: absolute; inset: 12px; z-index: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg,  var(--grid) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(52deg, var(--paper-tooth) 0 1px, transparent 1px 3px);
+}
+
+/* ── 图框：双线（外粗内细）+ 装订边 ── */
+.frame {
+  position: absolute; inset: 12px; z-index: 1; pointer-events: none;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+}
+/* 内图幅线：底边收在图签栏之上（图签栏不被线穿过，制图规范） */
+.frame-in {
+  position: absolute; inset: 30px 30px 52px; z-index: 1; pointer-events: none;
+  border: 1px solid var(--line-3);
+}
+/* 对中符号（图幅四边中点的短粗标记）—— 真实图纸的定位符号 */
+.cmark { position: absolute; z-index: 1; background: var(--line-1); pointer-events: none; }
+.cmark.t { top: 12px;    left: 50%; width: 1.5px; height: 9px; }
+.cmark.b { bottom: 12px; left: 50%; width: 1.5px; height: 9px; }
+.cmark.l { left: 12px;   top: 50%;  height: 1.5px; width: 9px; }
+.cmark.r { right: 12px;  top: 50%;  height: 1.5px; width: 9px; }
+
+/* ── 中心线（点划线，长-短-长）：房间被画出来的证据 ── */
+/* Slint: Path { commands: dash-dot } 或竖向 tile Image */
+.axis {
+  position: absolute; top: 96px; bottom: 96px; left: 50%; width: 1px;
+  z-index: 0; pointer-events: none; opacity: .85;
+  background: repeating-linear-gradient(180deg,
+    var(--line-4) 0 14px, transparent 14px 20px,
+    var(--line-4) 20px 23px, transparent 23px 29px);
+}
+
+/* ── 图幅标注（上边距带内的尺寸线，纸张尺寸，不是遥测） ── */
+.sheet-dim {
+  position: absolute; top: 17px; left: 34px; right: 34px; height: 12px;
+  z-index: 1; pointer-events: none;
+  display: flex; align-items: center; gap: var(--s2);
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); opacity: .55; letter-spacing: .08em;
+}
+.sheet-dim .rule { flex: 1; height: 1px; background: var(--line-3); }
+.sheet-dim .tick { width: 1px; height: 7px; background: var(--line-2); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 顶栏 = 图签栏上条（名片以图签格的方式存在）
+ * ════════════════════════════════════════════════════════════════════════ */
+/* Slint: HBox { height: 96; padding: 0 34px 12px; } */
+.topbar {
+  position: relative; z-index: 2;
+  display: flex; align-items: flex-end; gap: var(--s3);
+  height: 96px; padding: 0 34px var(--s3);
+  flex-shrink: 0;
+}
+.tb-cells { display: flex; align-items: stretch; }
+
+/* 头像 = 审图章（44×44，方章，红笔印） */
+/* Slint: Rectangle { width:44; height:44; border-radius:3; border:1.5px rep-500; } */
+.stamp-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.stamp {
+  width: 44px; height: 44px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--rep-500);
+  display: flex; align-items: center; justify-content: center;
+  font: 400 22px/1 var(--font-draft);
+  color: var(--rep-500);
+  letter-spacing: 0;
+  transition: border-color var(--grow), color var(--grow);
+}
+/* 章的墨晕在呼吸（6s，只有透明度，零缩放、零位移） */
+.stamp-wrap::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 6px;
+  border: 1px solid var(--rep-300);
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes breathe { 0%,100% { opacity: .16; } 50% { opacity: .46; } }
+
+.card-info {
+  display: flex; flex-direction: column; gap: 3px;
+  padding-left: var(--s3); margin-left: var(--s3);
+  border-left: 1px solid var(--line-3);
+}
+/* 名字：长仿宋 + 制图字距 */
+.card-name {
+  font: 400 var(--fs-name)/1.25 var(--font-draft);
+  letter-spacing: .14em; color: var(--fg);
+}
+.card-status {
+  display: flex; align-items: center; gap: 7px;
+  font: 400 var(--fs-md)/1.3 var(--font-mono); color: var(--muted);
+}
+/* 呼吸点 = 笔尖还搭在纸上 */
+.card-status .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rep-500);
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+  transition: background var(--grow);
+  flex-shrink: 0;
+}
+
+/* ── 编年史 = 修订记录条（Δ 标记 + 渐变尺）── */
+/* 同源色绑定：最右一枚 Δ 的颜色 ≡ 界面强调色 rep-500 */
+/* Slint: HBox { Path(triangle) ×5 } + Rectangle { linear-gradient(birth→rep-500) } */
+.rev-record { display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
+.rev-marks { display: flex; align-items: flex-end; gap: var(--s3); height: 8px; }
+.rev-mk {
+  width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-bottom: 6px solid var(--birth);
+  cursor: default;
+  transition: border-bottom-color var(--grow), opacity var(--t-hover);
+  opacity: .8;
+}
+.rev-mk:hover { opacity: 1; }
+.rev-mk.r2 { border-bottom-color: #A6A794; }
+.rev-mk.r3 { border-bottom-color: #A98A72; }
+.rev-mk.r4 { border-bottom-color: var(--rep-300); }
+.rev-mk.now {
+  border-left-width: 5px; border-right-width: 5px; border-bottom-width: 8px;
+  border-bottom-color: var(--rep-500); opacity: 1;
+}
+.rev-rule {
+  width: 132px; height: 2px;
+  background: linear-gradient(90deg,
+    var(--birth) 0%, #A6A794 26%, #A98A72 52%, var(--rep-300) 78%, var(--rep-500) 100%);
+  transition: background var(--grow);
+}
+.rev-cap {
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); letter-spacing: .16em;
+}
+
+/* 设置 ⚙（名片旁） */
+.tb-set {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: none;
+  color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  align-self: flex-end; margin-bottom: 2px;
+  transition: color var(--t-hover), border-color var(--t-hover);
+}
+.tb-set:hover { color: var(--abyss-500); border-color: var(--line-3); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * main row：抽屉 + 把手 + 对话流
+ * ════════════════════════════════════════════════════════════════════════ */
+.main-row { position: relative; z-index: 2; display: flex; flex: 1; min-height: 0; }
+
+/* 把手 8px：左暖（红笔）右冷（蓝地）渗光 */
+/* Slint: Rectangle { width: 8; TouchArea { clicked => set_inner_size } } */
+.handle {
+  width: 8px; flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-hover);
+}
+.handle-l { background: linear-gradient(to bottom, transparent 14%, rgba(188,74,56,.12) 50%, transparent 86%); }
+.handle-r { background: linear-gradient(to bottom, transparent 14%, rgba(47,105,128,.12) 50%, transparent 86%); }
+[data-theme="dark"] .handle-l { background: linear-gradient(to bottom, transparent 14%, rgba(214,90,68,.16) 50%, transparent 86%); }
+[data-theme="dark"] .handle-r { background: linear-gradient(to bottom, transparent 14%, rgba(94,152,171,.16) 50%, transparent 86%); }
+.handle-l::after, .handle-r::after {
+  content: ''; width: 1px; height: 60%;
+  transition: background var(--t-hover);
+}
+.handle-l::after { background: linear-gradient(to bottom, transparent, rgba(188,74,56,.40), transparent); }
+.handle-r::after { background: linear-gradient(to bottom, transparent, rgba(47,105,128,.38), transparent); }
+.handle-l:hover::after { background: linear-gradient(to bottom, transparent, rgba(188,74,56,.62), transparent); }
+.handle-r:hover::after { background: linear-gradient(to bottom, transparent, rgba(47,105,128,.58), transparent); }
+.handle-chev { display: none; }
+.app.expanded .handle { width: 28px; }
+.app.expanded .handle-chev {
+  display: flex; color: var(--faint); background: none; border: none;
+  cursor: pointer; padding: 0;
+}
+
+/* 对话流 660 居中 */
+/* Slint: ScrollView { max-width: 660; } */
+.stream { flex: 1; min-width: 0; overflow-y: auto; padding: var(--s2) var(--s5) var(--s4); }
+.stream .inner { max-width: 660px; margin: 0 auto; }
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 3px; }
+
+/* ── 会话横幅 = 视图标题（制图规范：标题下粗线 + 细线） ── */
+.view-title {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s1) 0 5px;
+  user-select: none;
+}
+.vt-toggle {
+  display: flex; align-items: center; gap: 7px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: 400 var(--fs-lg)/1.2 var(--font-draft);
+  letter-spacing: .1em; color: var(--muted);
+  transition: color var(--t-hover);
+}
+.vt-toggle:hover { color: var(--fg); }
+.vt-toggle .sdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--rep-500);
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+  transition: background var(--grow); flex-shrink: 0;
+}
+.vt-chev {
+  width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform var(--t-slide) var(--ease);
+}
+.view-title.folded .vt-chev { transform: rotate(-90deg); }
+.vt-scale { font: 400 var(--fs-sm)/1 var(--font-mono); color: var(--faint); letter-spacing: .12em; }
+.vt-archive {
+  margin-left: auto; flex-shrink: 0;
+  font: 400 var(--fs-sm)/1 var(--font-mono); letter-spacing: .1em;
+  color: var(--faint); background: none;
+  border: 1px solid var(--line-3); border-radius: var(--r-sm);
+  padding: 4px 10px; cursor: pointer;
+  transition: color var(--t-hover), border-color var(--t-hover), background var(--t-hover);
+}
+.vt-archive:hover { color: var(--abyss-500); border-color: var(--abyss-500); background: var(--fog-abyss); }
+/* 标题下双线（粗 + 细）：制图里视图标题就是这么收口的 */
+.vt-rules { margin-bottom: var(--s4); }
+.vt-rules .r1 { height: 1.5px; background: var(--line-1); opacity: .5; }
+.vt-rules .r2 { height: 1px; background: var(--line-3); margin-top: 2px; }
+.view-title.folded ~ .turn, .view-title.folded ~ .margin-note { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 轮次
+ * ════════════════════════════════════════════════════════════════════════ */
+.turn { position: relative; margin-bottom: var(--s5); }
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: 7px;
+  font: 400 var(--fs-md)/1 var(--font-mono);
+}
+.turn-head .nm {
+  font-family: var(--font-draft); font-size: var(--fs-lg);
+  letter-spacing: .12em; color: var(--rep-500);
+  transition: color var(--grow);
+}
+.turn-head .ts { color: var(--faint); letter-spacing: .06em; }
+.turn-head .tag {
+  color: var(--faint); letter-spacing: .1em;
+  border: 1px solid var(--line-3); border-radius: 2px;
+  padding: 1px 5px; font-size: var(--fs-sm);
+}
+.msg { font-size: var(--fs-body); line-height: 1.78; color: var(--fg); }
+
+/* ── 沉积轮 = 被取代的旧版图层（晒退 + 划掉，零位移） ── */
+.turn.sediment { opacity: .5; transition: opacity var(--t-norm) var(--ease); }
+.turn.sediment:hover { opacity: .72; }
+.turn.sediment .turn-head .nm { color: var(--sed-ink); }
+.turn.sediment .msg { color: var(--sed-ink); }
+/* 旧版号被划掉——制图上"作废"就是一条线划过去 */
+.turn.sediment .tag.struck {
+  text-decoration: line-through;
+  text-decoration-color: var(--sed-ink);
+  color: var(--sed-ink);
+}
+.sed-note {
+  margin-top: 5px;
+  font: 400 var(--fs-sm)/1.4 var(--font-mono);
+  color: var(--faint); letter-spacing: .08em;
+}
+/* 作废章：褪色域（灰蓝），绝不用红——红只属于正在做的事。落在右下角空处，不压文字 */
+.sed-stamp {
+  position: absolute; right: 4px; bottom: 0;
+  transform: rotate(-7deg);
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  letter-spacing: .22em;
+  color: var(--stamp);
+  border: 1.5px solid var(--stamp); border-radius: 2px;
+  padding: 4px 7px; pointer-events: none;
+}
+
+/* ── 用户轮 = 铅笔批注（右对齐，不染 rep；起稿的人用铅笔） ── */
+.turn.user { display: flex; flex-direction: column; align-items: flex-end; }
+.turn.user .turn-head .nm { color: var(--pencil); }
+.pencil-note {
+  max-width: 78%;
+  background: var(--surface);
+  border: 1px solid var(--pencil-soft);
+  border-radius: var(--r-md);
+  padding: 10px var(--s4);
+  font-size: var(--fs-body); line-height: 1.7;
+  color: var(--fg);
+}
+
+/* ── 活跃轮 = 正在被红笔改的区域 ── */
+.turn.active {
+  padding: var(--s4) var(--s4) var(--s4) var(--s5);
+  background: var(--turn-active);
+  border-radius: var(--r-sm);
+  transition: background var(--t-norm) var(--ease);
+}
+/* 暖竖线：红笔从上往下画下来（1200ms 一次性，沉降方向） */
+/* Slint: Rectangle { width: 2; background: rep-500; animate height { duration: 1200ms; } } */
+.turn.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--rep-500);
+  transform-origin: top center;
+  animation: rule-down var(--t-once) var(--ease) both;
+  transition: background var(--grow);
+}
+@keyframes rule-down { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* 修订云线：红笔一次性描出（stroke-dashoffset 1200ms） */
+/* Slint: Image（按尺寸预烘）或 Path + 描边进度属性 */
+.rev-cloud {
+  position: absolute; left: -6px; right: -6px; top: -6px; bottom: -6px;
+  z-index: 0; pointer-events: none; overflow: visible;
+}
+.rev-cloud path {
+  fill: none; stroke: var(--rep-500); stroke-width: 1;
+  stroke-linejoin: round; opacity: .40;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--grow);
+}
+/* Δ 标记：修订编号挂在云线右上（制图规范） */
+.rev-tag {
+  position: absolute; right: -6px; top: -20px; z-index: 1;
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  letter-spacing: .1em; color: var(--rep-500);
+  background: var(--air-rep); padding: 0 4px;
+  transition: color var(--grow), background var(--t-norm);
+}
+.turn.active > .turn-head, .turn.active > .msg,
+.turn.active > .think, .turn.active > .tools { position: relative; z-index: 1; }
+
+/* ── 思考块 = A—A 剖面（向内看 = 把图剖开，剖面线之下是蓝地） ── */
+/* Slint: Rectangle { background: think-bg; } + tile Image(hatch) + 2px 左缘 */
+.think {
+  position: relative;
+  margin: var(--s3) 0;
+  padding: 10px var(--s4) 11px;
+  background: var(--think-bg);
+  border-left: 2px solid var(--abyss-500);
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.think::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(45deg, var(--hatch) 0 1px, transparent 1px 7px);
+  border-radius: inherit;
+}
+.think-cap {
+  position: relative;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 5px;
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--abyss-500); letter-spacing: .18em;
+}
+.think-cap .sec { border-bottom: 1px solid var(--abyss-500); padding-bottom: 1px; }
+.think-txt {
+  position: relative;
+  font-size: var(--fs-lg); line-height: 1.72; color: var(--muted);
+}
+
+/* ── 工具 chip = 零件标注（气球编号 + 名称 + 状态）── */
+/* 暖框发起 → 冷框完成：驱力沉入深渊 */
+.tools { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 var(--s2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid var(--line-2); border-radius: var(--r-pill);
+  font: 400 var(--fs-md)/1 var(--font-mono);
+  color: var(--muted); background: transparent;
+  transition: border-color var(--t-hover), color var(--t-hover);
+}
+.balloon {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-sm); flex-shrink: 0;
+}
+.chip .cd { color: var(--faint); font-size: var(--fs-sm); }
+.chip-done { border-color: var(--abyss-500); color: var(--abyss-500); background: var(--fog-abyss); }
+.chip-done .cd { color: var(--abyss-400); }
+.chip-run  { border-color: var(--rep-500); color: var(--rep-500); }
+.chip-run .cd { color: var(--rep-400); }
+
+/* 笔尖光标（原地闪，零位移） */
+.caret { color: var(--rep-500); animation: caret 1.2s steps(1) infinite; }
+@keyframes caret { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+/* ── 红笔旁注 + 引出线（图纸的注释语言，不是气泡提示） ── */
+.margin-note {
+  display: flex; align-items: center; gap: 0;
+  margin: calc(var(--s1) * -1) 0 var(--s5) var(--s5);
+}
+.margin-note .leader { width: 46px; height: 1px; background: var(--rep-400); opacity: .6; }
+.margin-note .leader::before {
+  content: ''; display: block; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--rep-400); transform: translate(-1px, -1.5px);
+}
+.margin-note .txt {
+  font: 400 var(--fs-sm)/1.5 var(--font-mono);
+  color: var(--rep-500); letter-spacing: .06em; opacity: .82;
+  padding-left: 7px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 操控台 = 图纸上的空白批注格（deck）
+ * ════════════════════════════════════════════════════════════════════════ */
+.deck-wrap { position: relative; z-index: 2; padding: 0 var(--s5) 60px; flex-shrink: 0; }
+.deck {
+  max-width: 660px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.speaking .deck { border-color: var(--rep-400); }
+.deck-input { display: flex; align-items: flex-end; gap: var(--s3); padding: var(--s3) var(--s3) var(--s2) var(--s4); }
+.deck-input textarea {
+  flex: 1; border: none; outline: none; resize: none; background: transparent;
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6;
+  color: var(--fg); max-height: 120px; padding: 2px 0;
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+/* 发送键（生成中 = ■ 停止） */
+.btn-send {
+  width: 34px; height: 34px; border-radius: var(--r-sm);
+  border: none; background: var(--rep-500); color: var(--on-rep);
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t-hover);
+}
+.btn-send:hover { background: var(--rep-600); }
+
+.deck-bar {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 7px var(--s3) 7px var(--s3);
+  border-top: 1px solid var(--line-3);
+  font: 400 var(--fs-md)/1 var(--font-mono); color: var(--faint);
+}
+.deck-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: none; cursor: pointer;
+  font: inherit; color: var(--faint);
+  padding: 3px 5px; border-radius: var(--r-sm);
+  transition: color var(--t-hover), background var(--t-hover);
+}
+.deck-btn:hover { color: var(--muted); background: var(--raised); }
+.deck-label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.deck-label .di.rep { color: var(--rep-500); }
+.deck-label.cool { color: var(--abyss-500); }
+.deck-sep { width: 1px; height: 12px; background: var(--line-3); }
+/* 思考分段条 = 线宽等级样条（5 段，3 亮） */
+.think-seg { display: inline-flex; gap: 3px; }
+.seg { width: 14px; height: 6px; border-radius: 2px; background: var(--line-3); }
+.seg.on { background: var(--rep-400); }
+.spacer { flex: 1; }
+/* ctx 圆环 = 制图圆 + 中心十字（无数字，hover 出 tooltip） */
+.ctx { position: relative; width: 20px; height: 20px; cursor: default; }
+.ctx circle.bgc { fill: none; stroke: var(--line-3); stroke-width: 2; }
+.ctx circle.fgc { fill: none; stroke: var(--abyss-500); stroke-width: 2; stroke-linecap: butt; }
+.ctx line { stroke: var(--line-2); stroke-width: 1; }
+.ctx::after {
+  content: attr(data-tip); position: absolute; right: 0; bottom: 26px;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  font: 400 var(--fs-sm)/1 var(--font-mono); letter-spacing: .06em;
+  color: var(--muted); background: var(--elevated);
+  border: 1px solid var(--line-3); border-radius: 2px; padding: 4px 7px;
+  transition: opacity var(--t-hover);
+}
+.ctx:hover::after { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 图签栏底条（title block）：水印住在这里
+ * ════════════════════════════════════════════════════════════════════════ */
+.titleblock {
+  position: absolute; left: 13px; right: 13px; bottom: 13px; height: 34px;
+  z-index: 2;
+  display: flex; align-items: stretch;
+  border-top: 1px solid var(--line-1);
+}
+.tb-cell {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 var(--s4);
+  border-right: 1px solid var(--line-3);
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); letter-spacing: .14em;
+}
+.tb-cell:last-child { border-right: none; margin-left: auto; }
+/* 水印：logo + 字标，opacity .25，与任何元素不重叠（独占图签栏首格） */
+.tb-cell.mark { opacity: .25; }
+.tb-cell.mark .bt {
+  font-family: var(--font-draft); font-size: var(--fs-md);
+  letter-spacing: .3em; color: var(--fg);
+}
+.tb-cell.mark svg { animation: breathe var(--t-breathe) ease-in-out infinite; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 窗口控制 + 主题开关
+ * ════════════════════════════════════════════════════════════════════════ */
+.win-ctrl { position: absolute; top: 38px; right: 40px; z-index: 4; display: flex; gap: 2px; }
+.win-btn {
+  width: 24px; height: 24px; border: none; background: none; border-radius: var(--r-sm);
+  color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--t-hover), background var(--t-hover);
+}
+.win-btn:hover { color: var(--fg); background: var(--raised); }
+.win-btn.close:hover { color: var(--danger); }
+
+/* 隐藏式主题开关：双击非交互区浮出（350ms fade） */
+.theme-sw {
+  position: absolute; right: 34px; bottom: 156px; z-index: 5;
+  opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 10px;
+  background: var(--elevated);
+  border: 1px solid var(--line-2); border-radius: var(--r-sm);
+  font: 400 var(--fs-sm)/1 var(--font-mono); color: var(--muted);
+  letter-spacing: .1em; cursor: pointer;
+  transition: opacity var(--t-norm) var(--ease);
+}
+.theme-sw.on { opacity: 1; pointer-events: auto; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 抽屉（展开态 1280）：左 = 它的内在 / 右 = 身外之物
+ * ════════════════════════════════════════════════════════════════════════ */
+.drawer {
+  width: 0; overflow: hidden; opacity: 0; flex-shrink: 0;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-norm) var(--ease);
+}
+.app.expanded .drawer { width: 280px; opacity: 1; }
+.drawer-inner {
+  height: 100%; overflow-y: auto; padding: var(--s4) 14px;
+  display: flex; flex-direction: column; gap: var(--s4);
+}
+.drawer-l .drawer-inner { border-right: 1px solid var(--line-3); }
+.drawer-r .drawer-inner { border-left: 1px solid var(--line-3); }
+.dw-title {
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); letter-spacing: .2em;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line-3);
+}
+.dw-item {
+  padding: 9px var(--s3); border: 1px solid var(--line-3); border-radius: var(--r-sm);
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: var(--s1);
+}
+.dw-item .t { font-size: var(--fs-md); color: var(--fg); }
+.dw-item .d { font: 400 var(--fs-sm)/1.4 var(--font-mono); color: var(--muted); letter-spacing: .06em; }
+.dw-item .g { font: 400 var(--fs-sm)/1.4 var(--font-mono); color: var(--rep-500); letter-spacing: .06em; }
+.dw-item .g.cool { color: var(--abyss-500); }
+.dw-item.sed { opacity: .5; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 无障碍：reduced-motion 兜底（一次性描绘直接落定，呼吸停）
+ * ════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; }
+  .turn.active::before { transform: scaleY(1); }
+  .stamp-wrap::after { opacity: .3; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ 图纸（收起态 860×800） ══════════════ -->
+<div class="app collapsed" id="app">
+
+  <!-- 纸格 + 纸纹 -->
+  <div class="paper"></div>
+  <!-- 图框（双线）+ 对中符号 + 中心线 -->
+  <div class="frame"></div>
+  <div class="frame-in"></div>
+  <span class="cmark t"></span><span class="cmark b"></span>
+  <span class="cmark l"></span><span class="cmark r"></span>
+  <div class="axis"></div>
+
+  <!-- 图幅尺寸线（上边距带 · 纸张尺寸，不是遥测） -->
+  <div class="sheet-dim">
+    <span class="tick"></span><span class="rule"></span>
+    <span id="sheetW">860</span>
+    <span class="rule"></span><span class="tick"></span>
+  </div>
+
+  <!-- ══════════════ 顶栏 = 图签栏上条（名片） ══════════════ -->
+  <!-- Slint: HBox { height: 84; padding: 0 34px 12px; } -->
+  <div class="topbar">
+    <div class="tb-cells">
+      <!-- 头像 = 审图章（呼吸：墨晕透明度 6s） -->
+      <div class="stamp-wrap">
+        <div class="stamp">序</div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status"><span class="dot"></span><span>落笔中 · 12s</span></div>
+        <!-- 编年史 = 修订记录条：Δ 标记留着每代的颜色，最右一枚 ≡ 现在的红 -->
+        <div class="rev-record">
+          <div class="rev-marks">
+            <span class="rev-mk"    title="Δ1 · 出生 · 灰"></span>
+            <span class="rev-mk r2" title="Δ2 · 第一次换色"></span>
+            <span class="rev-mk r3" title="Δ3 · 技能固化"></span>
+            <span class="rev-mk r4" title="Δ4 · 意识更新"></span>
+            <span class="rev-mk now" title="Δ5 · 当前代表色 · 红笔"></span>
+          </div>
+          <div class="rev-rule"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置 ⚙ -->
+    <button class="tb-set" title="设置">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+
+    <div class="spacer"></div>
+    <div class="rev-cap">图 04 / 修订 Δ5</div>
+  </div>
+
+  <!-- ══════════════ main row ══════════════ -->
+  <div class="main-row">
+
+    <!-- 左抽屉：它的内在 -->
+    <div class="drawer drawer-l">
+      <div class="drawer-inner">
+        <div class="dw-title">它的内在 / INTERIOR</div>
+        <div class="dw-item"><span class="t">搜索中 · 修复初始化顺序</span><span class="d">子进程 · 运行中</span></div>
+        <div class="dw-item"><span class="t">待命</span><span class="d">子进程 · 空闲</span></div>
+        <div class="dw-title">技能候选 / SKILL</div>
+        <div class="dw-item"><span class="t">自动重试配置加载</span><span class="g">候选中 · 同类失败 ×3</span></div>
+        <div class="dw-item"><span class="t">文件读取缓存</span><span class="g cool">已固化</span></div>
+        <div class="dw-title">意识更新 / REV</div>
+        <div class="dw-item"><span class="t">初始化顺序会牵动配置加载</span><span class="d">刚刚 · Δ5</span></div>
+        <div class="dw-title">已归档 / SUPERSEDED</div>
+        <div class="dw-item sed"><span class="t">驱力与深渊的对位</span><span class="d">06.28 · 封存</span></div>
+      </div>
+    </div>
+
+    <!-- 左把手 8px（暖渗光） -->
+    <div class="handle handle-l" title="它的内在">
+      <button class="handle-chev" aria-label="展开它的内在">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="15 6 9 12 15 18"/></svg>
+      </button>
+    </div>
+
+    <!-- 对话流 -->
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 视图标题（会话横幅）：左 = 呼吸点 + chevron + 标题 / 右 = 归档 -->
+        <div class="view-title" id="vt">
+          <button class="vt-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="vt-chev"></span>
+            <span>修复初始化顺序</span>
+          </button>
+          <span class="vt-scale">07-30 · 1:1</span>
+          <button class="vt-archive" title="归档此会话">归档</button>
+        </div>
+        <div class="vt-rules"><div class="r1"></div><div class="r2"></div></div>
+
+        <!-- 轮次 1：沉积 = 被 Δ5 取代的旧版图层 -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+            <span class="tag struck">Δ3</span>
+          </div>
+          <div class="msg">登录那块我拆成三个模块了。接口先按旧签名留着，等你看过再动。</div>
+          <div class="sed-note">此版已被 Δ5 取代 · 旧线保留在图上</div>
+          <div class="sed-stamp">作废</div>
+        </div>
+
+        <!-- 轮次 2：用户 = 铅笔批注（右对齐，零 rep） -->
+        <div class="turn user">
+          <div class="turn-head">
+            <span class="nm">UmR</span>
+            <span class="ts">14:31</span>
+            <span class="tag">HB</span>
+          </div>
+          <div class="pencil-note">启动就炸了，你先看看。别急着动签名——我那份还在用。</div>
+        </div>
+
+        <!-- 轮次 3：活跃 = 正在被红笔改的区域（修订云线 + 竖线，1200ms 一次性描绘） -->
+        <div class="turn active" id="activeTurn">
+          <svg class="rev-cloud" id="cloud" preserveAspectRatio="none" aria-hidden="true"><path d=""/></svg>
+          <span class="rev-tag">Δ5</span>
+
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+            <span class="tag">红笔</span>
+          </div>
+
+          <!-- 思考块 = A—A 剖面（剖面线 + 蓝地，向内看 = 把图剖开） -->
+          <div class="think">
+            <div class="think-cap"><span class="sec">A—A 剖面</span><span>向下看</span></div>
+            <div class="think-txt">报错落在配置加载之前——不是签名的事。init 顺序被谁挪过一次，再往下我读不准，先记着，不猜。</div>
+          </div>
+
+          <!-- 工具 chip = 零件标注（气球编号）：暖框发起 → 冷框完成 -->
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="balloon">1</span><span>read</span><span>src/main.rs</span><span class="cd">212 行 ✓</span>
+            </span>
+            <span class="chip chip-run">
+              <span class="balloon">2</span><span>grep</span><span>"init_config"</span><span class="cd">检索中</span>
+            </span>
+          </div>
+
+          <div class="msg">找到了：会话读取排在配置加载前面。我把这两步对调，签名一个字都不改——这样你那份还成立。<span class="caret">▍</span></div>
+        </div>
+
+        <!-- 红笔旁注 + 引出线（图纸的注释语言） -->
+        <div class="margin-note">
+          <span class="leader"></span>
+          <span class="txt">对调后旧签名仍成立 · 已与 Δ3 核对</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右把手 8px（冷渗光） -->
+    <div class="handle handle-r" title="身外之物">
+      <button class="handle-chev" aria-label="展开身外之物">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+
+    <!-- 右抽屉：身外之物 -->
+    <div class="drawer drawer-r">
+      <div class="drawer-inner">
+        <div class="dw-title">此刻的任务 / TASK</div>
+        <div class="dw-item"><span class="t">修复初始化顺序</span><span class="g">进行中</span></div>
+        <div class="dw-title">产物 / OUTPUT</div>
+        <div class="dw-item"><span class="t">main.rs</span><span class="d">它修改 · 未审阅</span></div>
+        <div class="dw-item"><span class="t">config.yaml</span><span class="d">它修改 · 未审阅</span></div>
+        <div class="dw-title">浏览 / SHEET</div>
+        <div class="dw-item"><span class="t">src/main.rs</span></div>
+        <div class="dw-item"><span class="t">src/config.rs</span></div>
+        <div class="dw-item"><span class="t">Cargo.toml</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ 操控台 ══════════════ -->
+  <div class="deck-wrap">
+    <div class="deck" id="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="写在图上…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg">
+          <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span>
+          <span class="seg"></span><span class="seg"></span>
+        </div>
+        <span class="deck-sep"></span>
+        <button class="deck-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+        <div class="deck-label"><span class="di rep">◇</span> Claude 4.6 <span>▾</span></div>
+        <div class="deck-label cool"><span class="di">◈</span> 自治·完全 <span>▾</span></div>
+        <span class="spacer"></span>
+        <!-- ctx 圆环：制图圆 + 中心十字，无数字 -->
+        <div class="ctx" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="bgc" cx="10" cy="10" r="7.5"/>
+            <circle class="fgc" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+            <line x1="10" y1="1.5" x2="10" y2="4"/><line x1="10" y1="16" x2="10" y2="18.5"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 图签栏底条（水印在首格，独占不重叠） ══════════════ -->
+  <div class="titleblock">
+    <div class="tb-cell mark">
+      <svg width="13" height="13" viewBox="0 0 240 240"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>
+      <span class="bt">northing</span>
+    </div>
+    <div class="tb-cell">工作图 / WORKING PRINT</div>
+    <div class="tb-cell" id="printKind">白图 / WHITEPRINT</div>
+  </div>
+
+  <!-- 隐藏式主题开关（双击非交互区浮出） -->
+  <div class="theme-sw" id="themeSw" title="切换出图方式">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+    <span id="themeLabel">切到青晒</span>
+  </div>
+
+  <!-- 窗口控制 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="11" height="11" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="11" height="11" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="11" height="11" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var app   = document.getElementById('app');
+  var deck  = document.getElementById('deck');
+  var turn  = document.getElementById('activeTurn');
+  var cloud = document.getElementById('cloud');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── 修订云线：按活跃轮的实际尺寸生成均匀扇形（云线的鼓包不随宽高变形） ──
+   * Slint 对应：按 3 档尺寸预烘 SVG/PNG，或用 Path + 描边进度属性。 */
+  function cloudPath(w, h, bump) {
+    var ix = 2, iy = 2, W = w - ix * 2, H = h - iy * 2;
+    var nx = Math.max(3, Math.round(W / bump)), ny = Math.max(2, Math.round(H / bump));
+    var bx = W / nx, by = H / ny, d = 'M' + ix + ' ' + iy, i;
+    for (i = 0; i < nx; i++) d += ' q ' + (bx / 2) + ' ' + (-bx * .40) + ' ' + bx + ' 0';
+    for (i = 0; i < ny; i++) d += ' q ' + (by * .40) + ' ' + (by / 2) + ' 0 ' + by;
+    for (i = 0; i < nx; i++) d += ' q ' + (-bx / 2) + ' ' + (bx * .40) + ' ' + (-bx) + ' 0';
+    for (i = 0; i < ny; i++) d += ' q ' + (-by * .40) + ' ' + (-by / 2) + ' 0 ' + (-by);
+    return d + ' z';
+  }
+
+  function drawCloud(animate) {
+    if (!turn || !cloud) return;
+    var w = turn.offsetWidth + 12, h = turn.offsetHeight + 12;
+    var p = cloud.querySelector('path');
+    cloud.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    cloud.setAttribute('width', w); cloud.setAttribute('height', h);
+    p.setAttribute('d', cloudPath(w, h, 18));
+    /* 红笔描绘：1200ms 一次性，之后线就在那儿——不循环、不呼吸 */
+    var L = p.getTotalLength();
+    if (animate && !reduce) {
+      p.style.transition = 'none';
+      p.style.strokeDasharray = L; p.style.strokeDashoffset = L;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          p.style.transition = 'stroke-dashoffset 1200ms cubic-bezier(0.25,0.1,0.25,1)';
+          p.style.strokeDashoffset = 0;
+        });
+      });
+    } else {
+      p.style.strokeDasharray = 'none'; p.style.strokeDashoffset = 0;
+    }
+  }
+  drawCloud(true);
+  window.addEventListener('resize', function () { drawCloud(false); });
+
+  /* ── 输入聚焦 → 整屋升档（红笔的空气浓一点） ── */
+  deck.addEventListener('focusin',  function () { app.classList.add('speaking'); });
+  deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+
+  /* ── 把手点击 → 窗口物理变宽（Slint: set_inner_size） ── */
+  function toggleWide() {
+    app.classList.toggle('expanded');
+    /* 图幅尺寸线跟着实际图幅走——图纸上的尺寸不会说谎 */
+    document.getElementById('sheetW').textContent = app.classList.contains('expanded') ? '1280' : '860';
+    setTimeout(function () { drawCloud(false); }, 360);
+  }
+  document.querySelector('.handle-l').addEventListener('click', toggleWide);
+  document.querySelector('.handle-r').addEventListener('click', toggleWide);
+
+  /* ── 视图标题：折叠 / 归档 ── */
+  var vt = document.getElementById('vt');
+  vt.querySelector('.vt-toggle').addEventListener('click', function () {
+    vt.classList.toggle('folded');
+  });
+  vt.querySelector('.vt-archive').addEventListener('click', function (e) {
+    e.stopPropagation();
+    /* 归档 = 一次性沉降（1200ms 淡出到沉积透明度，零位移） */
+    vt.style.transition = 'opacity 1200ms cubic-bezier(0.25,0.1,0.25,1)';
+    vt.style.opacity = '.35';
+  });
+
+  /* ── 隐藏式主题开关：双击非交互区浮出（350ms fade），点击切出图方式 ── */
+  var sw = document.getElementById('themeSw');
+  var label = document.getElementById('themeLabel');
+  var kind = document.getElementById('printKind');
+  app.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button, textarea, .handle, .ctx, .theme-sw')) return;
+    sw.classList.add('on');
+  });
+  sw.addEventListener('click', function () {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    label.textContent = dark ? '切到青晒' : '切到白图';
+    kind.textContent  = dark ? '白图 / WHITEPRINT' : '青晒 / CYANOTYPE';
+    sw.classList.remove('on');
+  });
+
+  /* ── textarea 自适应高度 + Enter 发送（Shift+Enter 换行） ── */
+  var ta = deck.querySelector('textarea');
+  ta.addEventListener('input', function () {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.value = ''; ta.style.height = 'auto'; }
+  });
+})();
+</script>
+</body>
+</html>

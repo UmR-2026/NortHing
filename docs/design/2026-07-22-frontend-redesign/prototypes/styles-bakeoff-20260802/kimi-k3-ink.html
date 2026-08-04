@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing — 知序 · ink</title>
+<style>
+/* ============================================================================
+ * kimi-k3-ink.html — 风格焙烧第二轮 · 风格名 ink（纸上书房）
+ * ----------------------------------------------------------------------------
+ * 主张：把咨询室换成一张宣纸。设施 = 书房（中性、承载、安静）；
+ *       agent 的颜色不是涂料，是从纸纤维里渗出来的朱砂——它落款，它在场。
+ * 三域：朱砂 rep = 正在做（落款/驱力）；花青 abyss = 深思（批注/深渊）；
+ *       干墨褪色 = 旧（沉积）。头像即印章，编年史即笔迹沉积史。
+ * 纪律：单文件离线、字体全回落栈、间距 4px 基数、时长 150/350/1200/6000ms、
+ *       呼吸 6s 只给 logo + 头像、无弹跳/spinner/无限循环位移。
+ * 交互：双击非交互区切换暗色（夜墨）；点把手窗口物理变宽；横幅可折叠/归档。
+ * ==========================================================================*/
+
+/* ── 结构 token（主题无关） ── */
+:root {
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 16px;
+  --font-display: 'Songti SC','STSong','STZhongsong','SimSun','Noto Serif SC',serif;
+  --font-body:    'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --font-mono:    'JetBrains Mono','Cascadia Mono','SF Mono',Consolas,monospace;
+  --font-brand:   Georgia,'Times New Roman','Songti SC',serif;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-pill: 999px;
+  --t-hover: 150ms; --t-norm: 350ms; --t-once: 1200ms; --t-breathe: 6000ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ── 亮色：纸上书房（默认） ── */
+:root {
+  --bg:          #ECEAE4;   /* 宣纸灰白，偏冷，非奶油米 */
+  --surface:     #F4F2EC;
+  --elevated:    #FAF8F2;
+  --raised:      #E0DDD4;
+  --border:      #D5D1C6;
+  --border-soft: #E2DFD6;
+  --fg:          #23201A;   /* 松烟墨，近黑带纸温 */
+  --muted:       #6C6558;
+  --faint:       #9D9688;
+  --birth:       #D8D4CA;   /* 出生 = 未落笔的纸 */
+  --shadow:      #23201A;
+
+  --rep-300: #D68F7D;       /* 朱砂色阶（印泥 hue≈8°） */
+  --rep-400: #C06048;
+  --rep-500: #A63B2C;
+  --rep-600: #872E21;
+
+  --abyss-300: #93A9AF;     /* 花青色阶（靛青 hue≈197°） */
+  --abyss-400: #64848E;
+  --abyss-500: #41616D;
+
+  --danger: #8F463B;
+  --on-rep: #FBF3EC;
+  --on-abyss: #FFFFFF;
+  --page-out: #141311;
+
+  --air-rep:          #EDE7E2;  /* 朱砂 6.5% 于纸 */
+  --halo-rep:         #F0E4DE;  /* 朱砂 10% 名片晕染 */
+  --air-rep-speaking: #EFE5E0;  /* 聚焦升档 8% */
+  --halo-rep-speaking:#F1E1DA;
+  --fog-abyss:        #E9EAE6;  /* 花青 2% 底雾 */
+  --turn-active:      #F1ECE4;  /* 朱砂 4% 于面 */
+  --think-bg:         #EBEEEA;  /* 花青 5% 批注底 */
+  --chip-done-border: #B9C8CB;
+}
+
+/* ── 暗色：夜墨（鼓励项） ── */
+[data-theme="dark"] {
+  --bg:          #17181A;   /* 松烟墨夜 */
+  --surface:     #202226;
+  --elevated:    #26282D;
+  --raised:      #2B2D33;
+  --border:      #3B3E44;
+  --border-soft: #2F3238;
+  --fg:          #E3DFD4;
+  --muted:       #A29C8F;
+  --faint:       #6D695F;
+  --birth:       #3B3933;
+  --shadow:      #000000;
+
+  --rep-300: #DA927F;
+  --rep-400: #C86248;
+  --rep-500: #BE4A34;
+  --rep-600: #9C3A28;
+
+  --abyss-300: #8FB0B8;
+  --abyss-400: #6A93A0;
+  --abyss-500: #55808E;
+
+  --danger: #C07A6E;
+  --on-rep: #FBF3EC;
+  --on-abyss: #FFFFFF;
+  --page-out: #0B0C0D;
+
+  --air-rep:          #1D1A18;
+  --halo-rep:         #251E1A;
+  --air-rep-speaking: #211C19;
+  --halo-rep-speaking:#28201B;
+  --fog-abyss:        #181B1D;
+  --turn-active:      #292321;
+  --think-bg:         #1C2023;
+  --chip-done-border: #37464C;
+}
+
+/* ── reset / 桌面捕获框 ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 800px; overflow: hidden;
+  background: var(--page-out); color: var(--fg);
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--t-norm) var(--ease);
+}
+body { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: var(--s5); }
+
+/* ── 窗：一张纸（860×800 收起态） ── */
+.app {
+  width: 860px; height: 800px;
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+  border-radius: var(--r-lg);
+  background: var(--air-rep);
+  filter: drop-shadow(0 15px 40px rgba(0,0,0,.4));
+  transition: width var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.expanded { width: 1280px; }
+/* 名片晕染：朱砂自左上头像晕开（浮现） */
+.app::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle 520px at 46px 38px, var(--halo-rep) 0%, transparent 100%);
+  transition: background var(--t-norm) var(--ease);
+}
+/* 底雾：花青沉底（深渊在下） */
+.app::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+}
+.app.speaking { background: var(--air-rep-speaking); }
+.app.speaking::before {
+  background: radial-gradient(circle 560px at 46px 38px, var(--halo-rep-speaking) 0%, transparent 100%);
+}
+/* 纸纹颗粒：设施的质地，multiply 极淡覆于全屋 */
+.grain {
+  position: absolute; inset: 0; z-index: 40; pointer-events: none;
+  opacity: .28; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+}
+[data-theme="dark"] .grain { opacity: .14; mix-blend-mode: screen; }
+
+.app > .topbar, .app > .main-row, .app > .deck-wrap { position: relative; z-index: 1; }
+
+/* ── 顶栏（h 76px） ── */
+.topbar {
+  display: flex; align-items: center;
+  height: 76px; padding: 0 var(--s5); flex-shrink: 0;
+}
+.agent-card { display: flex; align-items: center; gap: var(--s3); }
+
+/* 头像 = 知序的印（朱文方章 + 光晕呼吸） */
+.avatar-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.avatar-wrap::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 16px;
+  background: radial-gradient(circle, var(--rep-400), transparent 70%);
+  opacity: .22; animation: auraBreath var(--t-breathe) ease-in-out infinite;
+}
+.avatar {
+  width: 44px; height: 44px; border-radius: 9px;
+  position: relative; overflow: hidden;
+  background: linear-gradient(140deg, var(--rep-400) 0%, var(--rep-500) 46%, var(--rep-600) 100%);
+  filter: drop-shadow(0 2px 5px rgba(35,32,26,.28));
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t-once) var(--ease);
+}
+/* 印面残边：章刻久了的斑驳 */
+.avatar::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 78% 18%, rgba(251,243,236,.22) 0%, transparent 34%),
+              radial-gradient(circle at 14% 86%, rgba(35,32,26,.24) 0%, transparent 40%);
+}
+.avatar .glyph {
+  position: relative; z-index: 1;
+  font-family: var(--font-display); font-size: 21px; font-weight: 700;
+  color: var(--on-rep); letter-spacing: 0;
+}
+.card-info { display: flex; flex-direction: column; gap: 3px; }
+.card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-name); font-weight: 700; color: var(--fg); line-height: 1.3;
+  letter-spacing: .04em;
+}
+.card-status {
+  display: flex; align-items: center; gap: 7px;
+  font-size: var(--fs-md); color: var(--muted); line-height: 1.3;
+}
+/* 在场点：静的。呼吸只给印（头像）与 logo。 */
+.card-status .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+}
+/* 编年史 = 笔迹沉积：未落笔的纸 → 旧墨 → 旧色 → 现在的朱砂 */
+.card-self {
+  width: 118px; height: 5px; border-radius: var(--r-pill); margin-top: 3px;
+  background: linear-gradient(90deg,
+    var(--birth) 0%,
+    #8C887E 30%,
+    #9C7A54 58%,
+    var(--rep-400) 84%,
+    var(--rep-500) 100%);
+  transition: background var(--t-once) var(--ease);
+}
+.topbar-settings {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: none; background: transparent; color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: var(--s2);
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.topbar-settings:hover { background: var(--raised); color: var(--muted); }
+
+/* ── main row ── */
+.main-row { display: flex; flex: 1; min-height: 0; }
+
+/* 把手：8px 渗光，左朱右青 */
+.handle {
+  width: 8px; flex-shrink: 0; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-hover);
+}
+.handle-left {
+  border-right: 2px solid transparent;
+  border-image: linear-gradient(to bottom, transparent, rgba(166,59,44,.5), transparent) 1;
+  background: linear-gradient(to bottom, transparent 15%, rgba(166,59,44,.07) 50%, transparent 85%);
+}
+.handle-right {
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(to bottom, transparent, rgba(65,97,109,.45), transparent) 1;
+  background: linear-gradient(to bottom, transparent 15%, rgba(65,97,109,.07) 50%, transparent 85%);
+}
+[data-theme="dark"] .handle-left {
+  border-image: linear-gradient(to bottom, transparent, rgba(190,74,52,.55), transparent) 1;
+  background: linear-gradient(to bottom, transparent 15%, rgba(190,74,52,.12) 50%, transparent 85%);
+}
+[data-theme="dark"] .handle-right {
+  border-image: linear-gradient(to bottom, transparent, rgba(85,128,142,.5), transparent) 1;
+  background: linear-gradient(to bottom, transparent 15%, rgba(85,128,142,.12) 50%, transparent 85%);
+}
+.handle-left:hover {
+  border-image: linear-gradient(to bottom, transparent, rgba(166,59,44,.75), transparent) 1;
+}
+.handle-right:hover {
+  border-image: linear-gradient(to bottom, transparent, rgba(65,97,109,.7), transparent) 1;
+}
+.handle-chevron, .handle-label { display: none; }
+.app.expanded .handle { width: 28px; gap: 10px; }
+.app.expanded .handle-chevron {
+  display: flex; width: 26px; height: 26px; border-radius: var(--r-sm);
+  background: transparent; border: none; color: var(--faint); cursor: pointer;
+  align-items: center; justify-content: center;
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.app.expanded .handle-chevron:hover { background: var(--raised); color: var(--muted); }
+.app.expanded .handle-chevron svg { width: 14px; height: 14px; }
+.app.expanded .handle-label {
+  display: block; writing-mode: vertical-rl;
+  font-size: var(--fs-sm); color: var(--faint); letter-spacing: .16em; white-space: nowrap;
+}
+
+/* ── 抽屉（展开演示） ── */
+.drawer {
+  width: 0; overflow: hidden; opacity: 0; flex-shrink: 0;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-norm) var(--ease);
+}
+.app.expanded .drawer-left, .app.expanded .drawer-right { width: 280px; opacity: 1; }
+.drawer-inner {
+  height: 100%; overflow-y: auto; padding: var(--s4) 14px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.drawer-left .drawer-inner { border-right: 1px solid var(--border-soft); }
+.drawer-right .drawer-inner { border-left: 1px solid var(--border-soft); }
+.drawer-title {
+  font-size: var(--fs-sm); font-weight: 500; color: var(--faint);
+  letter-spacing: .22em; padding: 0 var(--s1);
+}
+.drawer-item {
+  padding: 10px var(--s3); border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--border-soft);
+  display: flex; flex-direction: column; gap: var(--s1);
+}
+.drawer-item-title { font-size: var(--fs-md); color: var(--fg); font-weight: 500; }
+.drawer-item-desc { font-size: var(--fs-sm); color: var(--muted); }
+.drawer-item-tag { font-size: var(--fs-sm); color: var(--rep-500); }
+.drawer-item-tag.abyss { color: var(--abyss-500); }
+
+/* ── 对话流 ── */
+.stream {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  padding: var(--s4) var(--s2); margin: 0;
+  scrollbar-gutter: stable;
+}
+.stream .inner {
+  max-width: 640px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 22px;
+}
+
+/* 会话横幅：左折叠 / 右归档 */
+.sess-banner {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--fs-md); color: var(--faint); letter-spacing: .02em;
+  padding: var(--s1) 0 10px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: var(--s2);
+  user-select: none;
+}
+.sess-banner .sdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  flex-shrink: 0;
+}
+.sess-toggle {
+  display: flex; align-items: center; gap: 7px;
+  cursor: pointer; color: var(--faint); background: none; border: none;
+  font: inherit; padding: 0;
+  transition: color var(--t-hover);
+}
+.sess-toggle:hover { color: var(--muted); }
+.sess-chev {
+  display: inline-block; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform var(--t-norm) ease-out;
+}
+.sess-banner.folded .sess-chev { transform: rotate(-90deg); }
+.sess-banner.folded ~ .turn { display: none; }
+.sess-title { font-size: var(--fs-md); }
+.sess-archive {
+  margin-left: auto; flex-shrink: 0;
+  font-size: var(--fs-sm); color: var(--faint);
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  padding: 3px var(--s3); background: transparent; cursor: pointer;
+  transition: color var(--t-hover), border-color var(--t-hover), background var(--t-hover), opacity var(--t-norm);
+}
+.sess-archive:hover { color: var(--abyss-500); border-color: var(--abyss-500); background: var(--think-bg); }
+
+/* 轮 */
+.turn { display: flex; flex-direction: column; gap: 10px; position: relative; }
+/* 沉积 = 干掉的墨：褪色，不下落 */
+.turn.sediment { opacity: .48; transition: opacity var(--t-norm) ease; }
+.turn.sediment:hover { opacity: .68; }
+/* 活跃轮：朱砂一笔，自上而下一次性落成（沉降，1200ms 一次） */
+.turn.active {
+  padding: var(--s3) var(--s4);
+  background: var(--turn-active);
+  border-radius: var(--r-md);
+}
+.turn.active::before {
+  content: ''; position: absolute; left: 0; top: var(--s3); bottom: var(--s3);
+  width: 3px; border-radius: 2px; background: var(--rep-500);
+  filter: drop-shadow(0 0 4px rgba(166,59,44,.35));
+  transform-origin: top center;
+  animation: ruleIn var(--t-once) var(--ease) 1 both;
+}
+@keyframes ruleIn { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.turn-head {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--fs-sm); color: var(--faint);
+}
+.turn-head .nm {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg); font-weight: 700; color: var(--muted); letter-spacing: .03em;
+}
+.turn.active .turn-head .nm { color: var(--rep-600); }
+.turn-head .ts { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-sm); }
+.msg { font-size: var(--fs-body); line-height: 1.82; font-weight: 400; color: var(--fg); }
+.caret { color: var(--muted); animation: caret var(--t-once) infinite; }
+@keyframes caret { 0%,100% { opacity: 1; } 50% { opacity: .15; } }
+
+/* 用户气泡：纸面便签，右对齐，绝不染朱砂 */
+.user-bubble {
+  align-self: flex-end; max-width: 76%;
+  background: var(--elevated); border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px var(--s4);
+  font-size: var(--fs-body); line-height: 1.78;
+  filter: drop-shadow(0 2px 5px rgba(35,32,26,.09));
+}
+
+/* 思考块 = 花青批注（向深处探） */
+.think-block {
+  font-size: var(--fs-lg); color: var(--muted); line-height: 1.7;
+  border-left: 2px solid var(--abyss-400);
+  background: var(--think-bg);
+  padding: var(--s2) var(--s3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  animation: washIn var(--t-once) var(--ease) 1 both;
+}
+@keyframes washIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 工具 chip：发起朱砂 → 完成花青（行动沉淀为知识） */
+.tools { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; background: var(--elevated);
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  padding: 5px var(--s3); color: var(--muted);
+  transition: border-color var(--t-norm) ease-out, background var(--t-norm) ease-out;
+}
+.chip .ci { font-family: var(--font-mono); font-size: 11px; }
+.chip .cd { color: var(--faint); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.chip-running { border-color: var(--rep-500); background: var(--turn-active); }
+.chip-running .ci { color: var(--rep-500); }
+.chip-done { border-color: var(--chip-done-border); background: var(--elevated); }
+.chip-done .ci { color: var(--abyss-500); }
+
+/* ── 操控台 ── */
+.deck-wrap { display: flex; justify-content: center; padding: 6px var(--s2) 20px; flex-shrink: 0; }
+.deck {
+  width: 100%; max-width: 640px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  filter: drop-shadow(0 6px 12px rgba(35,32,26,.14));
+  overflow: hidden; position: relative;
+  transition: border-color var(--t-hover), filter var(--t-hover);
+}
+/*  deck 顶一线朱砂（同源 ≡ 编年史右端） */
+.deck::before {
+  content: ''; display: block; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rep-500), transparent);
+  opacity: .4;
+}
+.deck:focus-within {
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 3px rgba(166,59,44,.4)) drop-shadow(0 6px 12px rgba(35,32,26,.14));
+}
+.deck-input { display: flex; align-items: flex-end; padding: 14px var(--s4) 10px; gap: 10px; }
+.deck-input textarea {
+  flex: 1; border: none; outline: none; resize: none; background: transparent;
+  font-family: var(--font-body); font-size: 14.5px; color: var(--fg);
+  line-height: 1.6; padding: 2px 0; min-height: 26px; max-height: 120px;
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+/* 发送键 = 小印（流式 = 搁笔 ■） */
+.btn-send {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--rep-500); border: none; color: var(--on-rep); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(35,32,26,.2));
+  transition: background var(--t-hover);
+}
+.btn-send:hover { background: var(--rep-600); }
+.btn-send svg { width: 13px; height: 13px; }
+.deck-bar {
+  display: flex; align-items: center; height: 38px;
+  padding: 0 var(--s3); border-top: 1px solid var(--border-soft);
+  gap: 6px; font-size: 11px; color: var(--muted);
+}
+.deck-btn {
+  display: flex; align-items: center; justify-content: center; gap: var(--s1);
+  height: 26px; padding: 0 var(--s2); border-radius: var(--r-sm);
+  border: none; background: transparent; color: var(--muted);
+  font-family: var(--font-body); font-size: 11px; cursor: pointer;
+  transition: background var(--t-hover), color var(--t-hover);
+  white-space: nowrap;
+}
+.deck-btn:hover { background: var(--raised); color: var(--fg); }
+.deck-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.deck-btn .di { color: var(--faint); display: inline-flex; }
+.think-seg { display: flex; gap: 3px; align-items: center; }
+.seg-bar { width: 14px; height: 5px; border-radius: 2px; transition: background var(--t-norm); }
+.seg-bar.on { background: var(--rep-400); }
+.seg-bar.off { background: var(--border); }
+.deck-label {
+  display: flex; align-items: center; gap: 3px;
+  height: 26px; padding: 0 var(--s2); border-radius: var(--r-sm);
+  font-size: 11px; color: var(--muted); cursor: pointer;
+  transition: background var(--t-hover), color var(--t-hover);
+  white-space: nowrap;
+}
+.deck-label:hover { background: var(--raised); color: var(--fg); }
+.deck-label .chev { font-size: 8px; opacity: .5; }
+.deck-label .di.rep { color: var(--rep-500); }
+.deck-label.cyan { color: var(--abyss-500); }
+.deck-bar-spacer { flex: 1; }
+/* ctx 环：花青，无数字，hover 出 tooltip */
+.ctx-ring { width: 20px; height: 20px; position: relative; flex-shrink: 0; cursor: help; }
+.ctx-ring svg { width: 20px; height: 20px; }
+.ctx-ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
+.ctx-ring-fg { fill: none; stroke: var(--abyss-500); stroke-width: 2.5; stroke-linecap: round; }
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+  font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--abyss-500);
+  background: var(--elevated); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: var(--s1) var(--s2);
+  filter: drop-shadow(0 2px 6px rgba(35,32,26,.12));
+  opacity: 0; pointer-events: none; z-index: 50;
+  transition: opacity var(--t-hover) ease, transform var(--t-hover) ease;
+}
+.ctx-ring:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── 品牌水印（左下，0.25，logo 呼吸） ── */
+.watermark {
+  position: absolute; bottom: var(--s4); left: var(--s4);
+  display: flex; align-items: center; gap: 6px;
+  opacity: .25; z-index: 2;
+}
+.watermark svg { animation: breathe var(--t-breathe) ease-in-out infinite; }
+.watermark .bt {
+  font-family: var(--font-brand); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+}
+@keyframes breathe { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes auraBreath {
+  0%,100% { opacity: .16; transform: scale(.96); }
+  50%     { opacity: .3;  transform: scale(1.04); }
+}
+
+/* ── 窗口控制 ── */
+.win-ctrl {
+  position: absolute; top: var(--s4); right: 44px;
+  display: flex; align-items: center; gap: 2px; z-index: 30;
+}
+.win-btn {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--faint); cursor: pointer; border: none; background: transparent;
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.win-btn:hover { background: var(--raised); color: var(--fg); }
+.win-btn.close:hover { background: rgba(143,70,59,.12); color: var(--danger); }
+
+/* ── 渗透补强 ── */
+::selection { background: var(--rep-300); color: var(--fg); }
+:focus-visible { outline: 2px solid var(--rep-500); outline-offset: 2px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+::-webkit-scrollbar-button { display: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app collapsed" id="app">
+
+  <!-- 纸纹 -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- ══ 顶栏：名片 ══ -->
+  <div class="topbar">
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span>生成回复中 · 12s</span>
+        </div>
+        <div class="card-self"></div>
+      </div>
+    </div>
+    <button class="topbar-settings" title="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div style="flex:1"></div>
+  </div>
+
+  <!-- ══ main row ══ -->
+  <div class="main-row">
+
+    <!-- 左抽屉：它的内在 -->
+    <div class="drawer drawer-left">
+      <div class="drawer-inner">
+        <div class="drawer-title">它的内在</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">搜索中 · 修复初始化顺序</div>
+          <div class="drawer-item-desc">subagent · 运行中</div>
+        </div>
+        <div class="drawer-title">技能候选</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">自动重试配置加载</div>
+          <div class="drawer-item-tag">候选中 · 同类失败 ×3</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">文件读取缓存</div>
+          <div class="drawer-item-tag abyss">已固化</div>
+        </div>
+        <div class="drawer-title">已归档</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">驱力与深渊的哲学对位</div>
+          <div class="drawer-item-desc">06.28 · 封存</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左把手：朱砂渗光 -->
+    <div class="handle handle-left" id="handleL" title="展开它的内在">
+      <button class="handle-chevron" aria-label="展开它的内在">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+      </button>
+      <span class="handle-label">它的内在</span>
+    </div>
+
+    <!-- 对话流 -->
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 会话横幅 -->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title">2026-07-30 · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">归档</button>
+        </div>
+
+        <!-- 沉积轮：干墨 -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+
+        <!-- 用户轮 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="nm" style="color:var(--muted)">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+
+        <!-- 活跃轮：朱砂一笔 -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+          </div>
+          <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
+          </div>
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span class="caret">▍</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右把手：花青渗光 -->
+    <div class="handle handle-right" id="handleR" title="展开身外之物">
+      <button class="handle-chevron" aria-label="展开身外之物">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <span class="handle-label">身外之物</span>
+    </div>
+
+    <!-- 右抽屉：身外之物 -->
+    <div class="drawer drawer-right">
+      <div class="drawer-inner">
+        <div class="drawer-title">此刻的任务</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">修复初始化顺序</div>
+          <div class="drawer-item-tag">进行中</div>
+        </div>
+        <div class="drawer-title">产物</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">main.rs</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">config.yaml</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ 操控台 ══ -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg">
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar off"></span>
+          <span class="seg-bar off"></span>
+        </div>
+        <button class="deck-btn">
+          <span class="di"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+          ~/northing
+        </button>
+        <div class="deck-label">
+          <span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span>
+        </div>
+        <div class="deck-label cyan">
+          <span class="di">◈</span> 自治·完全 <span class="chev">▾</span>
+        </div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%">
+          <svg viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 品牌水印 ══ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#6C6558" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#6C6558" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══ 窗口控制 ══ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var app = document.getElementById('app');
+  var deck = document.querySelector('.deck');
+
+  /* 输入聚焦 → 整屋升档（350ms） */
+  deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
+  deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+
+  /* 把手 → 窗口物理变宽 + 抽屉（350ms） */
+  document.getElementById('handleL').addEventListener('click', function () { app.classList.toggle('expanded'); });
+  document.getElementById('handleR').addEventListener('click', function () { app.classList.toggle('expanded'); });
+
+  /* 会话横幅：左折叠 / 右归档（归档 = 褪色沉底） */
+  var sessBanner = document.getElementById('sessBanner');
+  var sessToggle = sessBanner.querySelector('.sess-toggle');
+  var sessArchive = sessBanner.querySelector('.sess-archive');
+  sessToggle.addEventListener('click', function () { sessBanner.classList.toggle('folded'); });
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sessBanner.style.transition = 'opacity 350ms';
+    sessBanner.style.opacity = '0.3';
+  });
+
+  /* 隐藏主题开关：双击非交互区 ↔ 夜墨（350ms 跟色） */
+  app.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button, textarea, a, .chip, .ctx-ring, .handle, .sess-banner')) return;
+    var root = document.documentElement;
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+})();
+</script>
+</body>
+</html>

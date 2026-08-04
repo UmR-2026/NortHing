@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Slate 风格)</title>
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: slate (玄岩与火种)
+     * ----------------------------------------------------------------------
+     * 哲学解构：
+     * northing 不是温软的咨询室，而是高密度、冷峻、沉稳的基岩设施（Slate Bedrock）。
+     * Agent「知序」不是柔光灯，而是岩层深处浮现的燃金火种（Ember Gold #D97706）。
+     * 设施中性沉静，Agent 驱力如火，深渊探查如冰，沉积岁月如灰。
+     * ====================================================================== */
+
+    :root {
+      /* 4px 标度系统 */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 字体栈 (离线回落栈) */
+      --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+
+      /* 亮色模式 (Slate Light) */
+      --bg-base: #E2E6EA;
+      --bg-window: #ECF0F4;
+      --bg-surface: #F8FAFC;
+      --bg-raised: #FFFFFF;
+      --bg-hover: #EEF2F6;
+      --border-subtle: #D8E0E8;
+      --border-strong: #C2CBD4;
+
+      --fg-main: #182026;
+      --fg-muted: #52606D;
+      --fg-faint: #8B99A7;
+
+      /* 语义三色域 */
+      --rep-amber: #D97706;        /* 暖 rep：Agent 驱力/活跃 (Ember Amber) */
+      --rep-amber-glow: rgba(217, 119, 6, 0.12);
+      --abyss-teal: #257A74;       /* 冷 abyss：深渊探查/思考 (Fjord Teal) */
+      --abyss-teal-bg: rgba(37, 122, 116, 0.06);
+      --birth-ash: #94A3B8;        /* 褪色 ash：旧/沉积 (Weathered Stone) */
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+
+      --t-hover: 150ms ease;
+      --t-normal: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+      --t-once: 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      --shadow-window: 0 16px 48px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    [data-theme="dark"] {
+      /* 暗色模式 (Slate Dark) */
+      --bg-base: #0B0E11;
+      --bg-window: #13181D;
+      --bg-surface: #1B2229;
+      --bg-raised: #232C35;
+      --bg-hover: #2B3642;
+      --border-subtle: #2A3440;
+      --border-strong: #3A4756;
+
+      --fg-main: #EDF2F7;
+      --fg-muted: #8E9EA6;
+      --fg-faint: #566776;
+
+      --rep-amber: #F59E0B;
+      --rep-amber-glow: rgba(245, 158, 11, 0.14);
+      --abyss-teal: #36A298;
+      --abyss-teal-bg: rgba(54, 162, 152, 0.08);
+      --birth-ash: #64748B;
+
+      --shadow-window: 0 20px 60px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 基础重置 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: var(--s5);
+      transition: background-color var(--t-normal), color var(--t-normal);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 桌面窗口 (860px 基准收起态) */
+    .window-container {
+      width: 860px;
+      height: 780px;
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: background-color var(--t-normal), border-color var(--t-normal);
+    }
+
+    /* 空气染色：顶栏名片晕染 (空气中弥漫的 Agent 体温) */
+    .window-container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 520px;
+      height: 480px;
+      background: radial-gradient(circle at 46px 40px, var(--rep-amber-glow) 0%, transparent 75%);
+      pointer-events: none;
+      z-index: 1;
+      transition: background var(--t-normal);
+    }
+
+    /* 左右 8px 把手 (把手渗光隐喻双抽屉) */
+    .handle-bar {
+      position: absolute;
+      top: 48px;
+      bottom: 0;
+      width: 8px;
+      z-index: 20;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-hover);
+    }
+    .handle-bar-left {
+      left: 0;
+      border-right: 1px solid transparent;
+    }
+    .handle-bar-left:hover {
+      background: linear-gradient(90deg, rgba(217, 119, 6, 0.18) 0%, transparent 100%);
+      border-right-color: var(--rep-amber);
+    }
+    .handle-bar-right {
+      right: 0;
+      border-left: 1px solid transparent;
+    }
+    .handle-bar-right:hover {
+      background: linear-gradient(-90deg, rgba(37, 122, 116, 0.18) 0%, transparent 100%);
+      border-left-color: var(--abyss-teal);
+    }
+
+    /* 窗口 Titlebar Chrome (Frameless) */
+    .chrome-bar {
+      height: 36px;
+      padding: 0 var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--s2);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 10;
+    }
+    .chrome-title {
+      position: absolute;
+      left: var(--s4);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--fg-faint);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .chrome-controls {
+      display: flex;
+      gap: 6px;
+    }
+    .chrome-btn {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: none;
+      background-color: var(--border-strong);
+      opacity: 0.6;
+      cursor: pointer;
+      transition: opacity var(--t-hover);
+    }
+    .chrome-btn:hover {
+      opacity: 1;
+    }
+    .chrome-btn.close:hover {
+      background-color: #E11D48;
+    }
+
+    /* 顶栏 Header (80px) */
+    .topbar {
+      height: 72px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 10;
+      background: rgba(236, 240, 244, 0.6);
+      backdrop-filter: none; /* 坚决无毛玻璃 */
+    }
+
+    /* Agent 名片 */
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 头像 (呼吸 6s) */
+    .avatar-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      border: 1.5px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      animation: avatarBreathe 6000ms infinite ease-in-out;
+    }
+    @keyframes avatarBreathe {
+      0%, 100% { border-color: var(--border-strong); box-shadow: 0 0 0 0 transparent; }
+      50% { border-color: var(--rep-amber); box-shadow: 0 0 10px var(--rep-amber-glow); }
+    }
+    .avatar-glyph {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--rep-amber);
+      font-family: var(--font-mono);
+    }
+
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .card-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+      letter-spacing: -0.01em;
+    }
+
+    /* ⚙ 设置图标键 */
+    .settings-trigger {
+      background: none;
+      border: none;
+      color: var(--fg-faint);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color var(--t-hover), background var(--t-hover);
+    }
+    .settings-trigger:hover {
+      color: var(--fg-main);
+      background-color: var(--bg-hover);
+    }
+
+    /* 在场状态 + 编年史条 */
+    .status-chronicle-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      font-size: 12px;
+      color: var(--fg-muted);
+    }
+    .presence-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--rep-amber);
+      display: inline-block;
+    }
+    .chronicle-bar {
+      width: 70px;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--birth-ash) 0%, var(--rep-amber) 100%);
+      position: relative;
+    }
+
+    /* 顶栏右侧：主题切换 */
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .theme-toggle {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background var(--t-hover), border-color var(--t-hover), color var(--t-hover);
+    }
+    .theme-toggle:hover {
+      background: var(--bg-raised);
+      border-color: var(--border-strong);
+      color: var(--fg-main);
+    }
+
+    /* 主内容区 */
+    .main-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 对话流 Scroll Container */
+    .stream-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--s4) var(--s6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+    }
+
+    /* Session Banner (在对话流顶部，不在顶栏) */
+    .session-banner {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--s2) var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--fg-muted);
+      margin-bottom: var(--s3);
+    }
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .banner-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--rep-amber);
+    }
+    .banner-title {
+      font-weight: 500;
+      color: var(--fg-main);
+    }
+    .banner-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .archive-btn {
+      background: transparent;
+      border: none;
+      color: var(--fg-faint);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      transition: color var(--t-hover), background var(--t-hover);
+    }
+    .archive-btn:hover {
+      color: var(--abyss-teal);
+      background-color: var(--abyss-teal-bg);
+    }
+
+    /* Turn 轮次容器 */
+    .turn-block {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+      position: relative;
+      padding-left: var(--s3);
+    }
+    /* 活跃轮：左侧暖竖线 */
+    .turn-block.active {
+      border-left: 3px solid var(--rep-amber);
+    }
+    /* 沉降/历史轮：不强调边框 */
+    .turn-block.history {
+      border-left: 3px solid transparent;
+      opacity: 0.85;
+    }
+
+    /* 气泡 - 用户 (右对齐，绝染 rep) */
+    .msg-user {
+      align-self: flex-end;
+      max-width: 80%;
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md) var(--radius-md) 2px var(--radius-md);
+      padding: var(--s3) var(--s4);
+      color: var(--fg-main);
+      font-size: 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .msg-header {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--fg-faint);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 气泡 - Agent (左对齐，对等排版) */
+    .msg-agent {
+      align-self: flex-start;
+      max-width: 95%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    /* 思考块 Think Block (冷青 Abyss 边界) */
+    .think-block {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--abyss-teal);
+      border-radius: var(--radius-sm);
+      padding: var(--s3) var(--s4);
+      font-size: 13px;
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+    }
+    .think-header {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--abyss-teal);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    /* 工具 Chip (Initiated: 暖边框 -> Completed: 冷边框) */
+    .tool-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+    .tool-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tool-chip.initiated {
+      border: 1px solid var(--rep-amber);
+      color: var(--rep-amber);
+    }
+    .tool-chip.completed {
+      border: 1px solid var(--abyss-teal);
+      color: var(--abyss-teal);
+    }
+
+    /* Agent 正文 */
+    .agent-body {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--fg-main);
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--s4);
+    }
+    .agent-body code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .agent-body pre {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: var(--s3);
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      margin: var(--s3) 0;
+    }
+
+    /* 底部操控台 Deck Console */
+    .deck-area {
+      padding: var(--s4) var(--s5);
+      border-top: 1px solid var(--border-subtle);
+      background-color: var(--bg-window);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      position: relative;
+      z-index: 10;
+    }
+
+    .input-box-wrap {
+      background-color: var(--bg-raised);
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--s3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      transition: border-color var(--t-hover), box-shadow var(--t-hover);
+    }
+    .input-box-wrap:focus-within {
+      border-color: var(--rep-amber);
+      box-shadow: 0 0 0 2px var(--rep-amber-glow);
+    }
+
+    .deck-textarea {
+      width: 100%;
+      height: 48px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--fg-main);
+    }
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .deck-left-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .attach-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: background var(--t-hover), color var(--t-hover);
+    }
+    .attach-btn:hover {
+      background: var(--bg-hover);
+      color: var(--fg-main);
+    }
+
+    .deck-right-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* Context 圆环 (无数字，hover 出 Tooltip) */
+    .ctx-ring-wrap {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+    }
+    .ctx-svg {
+      transform: rotate(-90deg);
+    }
+    .ctx-bg {
+      stroke: var(--border-subtle);
+    }
+    .ctx-val {
+      stroke: var(--rep-amber);
+      stroke-dasharray: 62.8;
+      stroke-dashoffset: 48; /* 占用约 23% */
+      transition: stroke-dashoffset var(--t-normal);
+    }
+
+    /* Tooltip */
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 32px;
+      right: 0;
+      background-color: var(--bg-surface);
+      color: var(--fg-main);
+      border: 1px solid var(--border-strong);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity var(--t-hover), transform var(--t-hover);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .ctx-ring-wrap:hover .ctx-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 发送键 ↑ */
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background-color: var(--rep-amber);
+      color: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity var(--t-hover), transform var(--t-hover);
+    }
+    .send-btn:hover {
+      opacity: 0.9;
+    }
+    .send-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* 左下角水印 (northing, opacity 0.25) */
+    .brand-watermark {
+      position: absolute;
+      bottom: var(--s3);
+      left: var(--s4);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--fg-faint);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 桌面窗口 Container (860px 收起态单屏) -->
+  <div class="window-container">
+    
+    <!-- 8px 左右把手 (把手 hover 渗光隐喻展开) -->
+    <div class="handle-bar handle-bar-left" title="点击展开「它的内在」抽屉"></div>
+    <div class="handle-bar handle-bar-right" title="点击展开「身外之物」抽屉"></div>
+
+    <!-- Frameless Chrome -->
+    <div class="chrome-bar">
+      <span class="chrome-title">northing // slate</span>
+      <div class="chrome-controls">
+        <button class="chrome-btn" title="最小化"></button>
+        <button class="chrome-btn" title="最大化"></button>
+        <button class="chrome-btn close" title="关闭"></button>
+      </div>
+    </div>
+
+    <!-- 顶栏 (72px) -->
+    <div class="topbar">
+      <div class="agent-card">
+        <div class="avatar-wrap">
+          <div class="avatar">
+            <span class="avatar-glyph">知</span>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div class="card-name-row">
+            <span class="card-name">知序</span>
+            <button class="settings-trigger" title="设置">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+          </div>
+          <div class="status-chronicle-row">
+            <span class="presence-dot"></span>
+            <span>在场 · 沉降中</span>
+            <div class="chronicle-bar" title="编年史：出生灰白 → 当前燃金"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="theme-toggle" id="themeToggleBtn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+          <span>MODE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 主体区 -->
+    <div class="main-body">
+      <div class="stream-container">
+        
+        <!-- Session Banner (在对话流顶部) -->
+        <div class="session-banner">
+          <div class="banner-left">
+            <span class="banner-dot"></span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <span class="banner-title">架构解构：northing 核心体系与并发调度模型</span>
+          </div>
+          <div class="banner-actions">
+            <button class="archive-btn" title="归档此会话进档案馆">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+              <span>归档</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Turn 1: 历史沉降轮 (History) -->
+        <div class="turn-block history">
+          <div class="msg-user">
+            <div class="msg-header"><span>UmR</span><span>10:14</span></div>
+            <div>我们要对 core 模块拆分做二次审查，主要评估异步 runtime 与调度器的解耦情况。</div>
+          </div>
+          <div class="msg-agent">
+            <div class="agent-body">
+              明白。我已经调取了 <code>docs/architecture/core-decomposition.md</code>。核心架构不变量要求所有核心状态变更必须具备 flag-flip 特性与完整的集成测试覆盖。
+            </div>
+          </div>
+        </div>
+
+        <!-- Turn 2: 活跃轮 (Active Turn, Marked by Warm Amber Line) -->
+        <div class="turn-block active">
+          
+          <!-- 用户气泡 (右对齐, 不染 rep) -->
+          <div class="msg-user">
+            <div class="msg-header"><span>UmR</span><span>10:16</span></div>
+            <div>重点看下引擎任务调度队列的重试策略，是不是存在锁竞争死锁风险？</div>
+          </div>
+
+          <!-- Agent 复合回复 (包含思考块 + 工具 chip + 沉静回复) -->
+          <div class="msg-agent">
+            
+            <!-- 思考块 Think Block (冷青 Abyss 边界) -->
+            <div class="think-block">
+              <div class="think-header">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+                <span>[深渊思考] 检索 dispatcher/queue.rs 与 retry_policy.rs...</span>
+              </div>
+              <div>检查 TaskQueue::dispatch 互斥锁生命周期。发现在 channel 满载且重试计数器达到上限时，Worker 线程在 await notifier 时未释放全局锁，存在潜在的锁死隐患。</div>
+            </div>
+
+            <!-- 工具 Chip 行 (发起: 暖边框 -> 完成: 冷边框) -->
+            <div class="tool-chips-row">
+              <div class="tool-chip completed">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>code_grep("MutexGuard", path="dispatcher/")</span>
+              </div>
+              <div class="tool-chip completed">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>cargo_check(package="northhing-core")</span>
+              </div>
+            </div>
+
+            <!-- Agent 正文 -->
+            <div class="agent-body">
+              在 <code>dispatcher/queue.rs:142</code> 的重试路径中，确认存在锁竞争缺陷。当队列满且 upstream 返回 transient error 时，<code>lock_guard</code> 跨越了 <code>.await</code> 异步边界。
+              <br><br>
+              建议修复方案：将锁提取改为作用域限定（RAII Scope），确保在异步等待 <code>notifier.wait()</code> 前显式 <code>drop(guard)</code>。
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 操控台 Deck Console -->
+      <div class="deck-area">
+        <div class="input-box-wrap">
+          <textarea class="deck-textarea" placeholder="与知序对话... (Enter 发送, Shift+Enter 换行)"></textarea>
+          <div class="deck-controls-row">
+            <div class="deck-left-tools">
+              <button class="attach-btn" title="添加附件/引用">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+            <div class="deck-right-tools">
+              
+              <!-- Context 圆环 (无数字, hover 出 Tooltip) -->
+              <div class="ctx-ring-wrap">
+                <svg class="ctx-svg" width="22" height="22" viewBox="0 0 24 24">
+                  <circle class="ctx-bg" cx="12" cy="12" r="10" stroke-width="2.5" fill="none"></circle>
+                  <circle class="ctx-val" cx="12" cy="12" r="10" stroke-width="2.5" fill="none"></circle>
+                </svg>
+                <div class="ctx-tooltip">上下文: 23% / 128k</div>
+              </div>
+
+              <!-- 发送按钮 ↑ -->
+              <button class="send-btn" id="sendBtn" title="发送 (Enter)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              </button>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 左下角水印 (northing, 0.25 opacity) -->
+    <div class="brand-watermark">northing</div>
+
+  </div>
+
+  <script>
+    // 简易主题切换交互 (Slate Light <-> Dark)
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const htmlEl = document.documentElement;
+
+    themeBtn.addEventListener('click', () => {
+      const currentTheme = htmlEl.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+      htmlEl.setAttribute('data-theme', nextTheme);
+    });
+  </script>
+</body>
+</html>

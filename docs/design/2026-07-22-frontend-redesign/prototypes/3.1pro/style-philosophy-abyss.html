@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 沉积与深渊 (Sediment & Abyss)</title>
+    <style>
+        :root {
+            /* 咨询室的暗态 (深邃、未知) */
+            --room-dark: #1A1918;
+            --room-surface: rgba(255,255,255,0.02);
+            
+            /* 哲学三原色 - 暗色调校 */
+            --drive-coral: #C37D73;  /* 稍微收敛的暗色态珊瑚红 */
+            --abyss-cyan: #3A5A5D;   /* 极深的冷青 */
+            --sediment: rgba(255,255,255,0.2); 
+            
+            --text-active: #F4F3F0;
+            --text-faded: #6E6B65;
+            
+            --font-brand: "Georgia", serif;
+            --font-agent: "Inter", -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--room-dark);
+            color: var(--text-active);
+            font-family: var(--font-agent);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            /* 背景为深渊：从顶部的暗灰到到底部的冰冷深蓝/青 */
+            background-image: linear-gradient(to bottom, var(--room-dark) 0%, #15181A 100%);
+        }
+
+        /* 顶部活跃区 (The Present / Drive) */
+        .present-zone {
+            padding: 60px;
+            border-bottom: 1px solid rgba(195, 125, 115, 0.1);
+            position: relative; z-index: 10;
+            background: radial-gradient(ellipse at top, rgba(195, 125, 115, 0.05), transparent 70%);
+        }
+
+        .brand { font-family: var(--font-brand); font-size: 12px; color: var(--text-faded); margin-bottom: 40px; letter-spacing: 0.1em; }
+
+        .active-thought {
+            max-width: 700px; margin: 0 auto;
+        }
+        
+        .agent-identity {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+        }
+        .chronicle-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--drive-coral);
+            box-shadow: 0 0 12px var(--drive-coral);
+        }
+        
+        .thought-content {
+            font-size: 20px; line-height: 1.6; font-weight: 300;
+        }
+
+        /* 沉淀历史区 (The Sediment) */
+        .sediment-zone {
+            flex: 1; overflow-y: hidden;
+            display: flex; flex-direction: column-reverse; /* 模拟不断向下沉积 */
+            padding: 60px; gap: 40px;
+            position: relative;
+        }
+        
+        /* 底部冷雾，模拟深渊 */
+        .sediment-zone::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 200px;
+            background: linear-gradient(to top, rgba(21, 24, 26, 1), transparent);
+            pointer-events: none;
+        }
+
+        .sediment-layer {
+            max-width: 700px; margin: 0 auto; width: 100%;
+            /* 过去的消息字体变小、颜色变冷变暗 */
+            font-size: 14px; color: var(--text-faded);
+            border-left: 2px solid var(--abyss-cyan);
+            padding-left: 24px;
+            opacity: 0.6;
+        }
+        .sediment-layer:nth-child(2) { opacity: 0.3; transform: scale(0.98); }
+        .sediment-layer:nth-child(3) { opacity: 0.1; transform: scale(0.95); }
+
+        .layer-meta { font-family: var(--font-brand); font-size: 12px; margin-bottom: 8px; }
+
+        /* 底部隐式输入 */
+        .abyss-input {
+            position: absolute; bottom: 0; width: 100%;
+            padding: 40px; text-align: center; z-index: 20;
+        }
+        .abyss-input input {
+            background: transparent; border: none; outline: none;
+            border-bottom: 1px solid var(--abyss-cyan);
+            color: var(--text-active); font-size: 16px; font-family: var(--font-agent);
+            padding: 12px; width: 400px; text-align: center;
+        }
+        .abyss-input input::placeholder { color: rgba(255,255,255,0.1); }
+
+    </style>
+</head>
+<body>
+
+    <div class="present-zone">
+        <div class="brand">northing // 潜意识探索</div>
+        <div class="active-thought">
+            <div class="agent-identity">
+                <div class="chronicle-dot"></div>
+                <span style="font-family: var(--font-brand); color: var(--drive-coral);">知序 · 正在感知</span>
+            </div>
+            <div class="thought-content">
+                时序创伤已被抚平。<br>
+                我调整了配置加载的顺序，系统已经恢复了平静的呼吸。
+            </div>
+        </div>
+    </div>
+
+    <div class="sediment-zone">
+        <!-- 越靠下的消息，是越早的沉积物 -->
+        <div class="sediment-layer">
+            <div class="layer-meta">User · Sediment</div>
+            但这会导致启动报错。
+        </div>
+        
+        <div class="sediment-layer">
+            <div class="layer-meta">知序 · Sediment</div>
+            我已经为您拆分了登录模块。
+        </div>
+    </div>
+
+    <div class="abyss-input">
+        <input type="text" placeholder="向深渊投入新的指令...">
+    </div>
+
+</body>
+</html>

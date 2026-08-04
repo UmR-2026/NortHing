@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 左右脑/中枢边界 (The Membrane)</title>
+    <style>
+        :root {
+            /* 哲学色 */
+            --drive-coral: #E06B52;
+            --abyss-cyan: #4A7C82;
+            
+            /* 人类现实 (暖白) */
+            --human-bg: #F9F8F6;
+            --human-text: #2C2A28;
+            
+            /* 机器现实 (极暗) */
+            --machine-bg: #121211;
+            --machine-text: #A8A59E;
+            
+            --font-serif: "Georgia", serif;
+            --font-sans: "Inter", sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            height: 100vh; overflow: hidden;
+            display: flex;
+            font-family: var(--font-sans);
+        }
+
+        /* 左侧：人类意图区 */
+        .human-hemisphere {
+            width: 50vw; background: var(--human-bg); color: var(--human-text);
+            padding: 60px 80px; display: flex; flex-direction: column;
+            position: relative;
+        }
+        
+        .intent-header { font-family: var(--font-serif); font-size: 13px; color: #8F8C85; letter-spacing: 0.1em; margin-bottom: 40px; text-transform: uppercase; }
+        
+        .intent-block {
+            font-size: 24px; line-height: 1.6; font-weight: 300; margin-bottom: 40px;
+        }
+        
+        .intent-input {
+            margin-top: auto; border: none; background: transparent; outline: none;
+            font-size: 18px; font-family: var(--font-serif); color: var(--human-text);
+            border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px;
+        }
+
+        /* 中央：Agent 作为双重现实的翻译中枢 (The Membrane) */
+        .membrane-spine {
+            width: 80px; background: #E8E6E1;
+            position: absolute; left: 50%; transform: translateX(-50%); height: 100vh;
+            z-index: 10; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        /* 神经脉冲动画 */
+        .synapse-flow {
+            width: 2px; flex: 1; background: rgba(0,0,0,0.05);
+            position: relative; overflow: hidden;
+        }
+        .synapse-flow::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100px;
+            background: linear-gradient(to bottom, transparent, var(--drive-coral), transparent);
+            animation: flow-down 3s infinite linear;
+        }
+        @keyframes flow-down { 0% { top: -100px; } 100% { top: 100%; } }
+
+        .agent-node {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--human-bg); border: 2px solid var(--drive-coral);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; color: var(--drive-coral);
+            margin: 20px 0; box-shadow: 0 0 20px rgba(224, 107, 82, 0.2);
+            position: relative;
+        }
+        /* 连接左右的横线 */
+        .agent-node::before { content: ''; position: absolute; right: 100%; width: 40px; height: 1px; background: var(--drive-coral); opacity: 0.5; }
+        .agent-node::after { content: ''; position: absolute; left: 100%; width: 40px; height: 1px; background: var(--drive-coral); opacity: 0.5; }
+
+        .agent-status-text {
+            writing-mode: vertical-rl; text-orientation: mixed;
+            font-size: 10px; font-family: var(--font-mono); color: var(--drive-coral);
+            letter-spacing: 0.2em; text-transform: uppercase; margin: 20px 0;
+        }
+
+        /* 右侧：机器现实区 (代码与产物) */
+        .machine-hemisphere {
+            width: 50vw; background: var(--machine-bg); color: var(--machine-text);
+            padding: 60px 80px; display: flex; flex-direction: column;
+            font-family: var(--font-mono);
+        }
+
+        .machine-header { font-size: 11px; color: #555; letter-spacing: 0.1em; margin-bottom: 40px; text-transform: uppercase; }
+
+        .code-block {
+            font-size: 13px; line-height: 1.8; color: #C5C5C5;
+            padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px;
+            border-left: 2px solid var(--abyss-cyan);
+            margin-bottom: 40px;
+        }
+        
+        .code-diff-add { background: rgba(35, 209, 139, 0.1); color: #23D18B; display: inline-block; width: 100%; }
+
+        .terminal-log {
+            margin-top: auto; font-size: 11px; color: #666;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 人类侧 -->
+    <div class="human-hemisphere">
+        <div class="intent-header">Human Intent // 意图层</div>
+        
+        <div class="intent-block">
+            “启动的时候报错了，产生了一个 panic。<br>
+            请检查初始化逻辑。”
+        </div>
+
+        <input type="text" class="intent-input" placeholder="输入新的意图...">
+    </div>
+
+    <!-- Agent 中枢侧 -->
+    <div class="membrane-spine">
+        <div class="synapse-flow"></div>
+        <div class="agent-status-text">ANALYZING AST</div>
+        <div class="agent-node">序</div>
+        <div class="agent-status-text">RESTRUCTURING</div>
+        <div class="synapse-flow" style="animation-delay: 1.5s;"></div>
+    </div>
+
+    <!-- 机器侧 -->
+    <div class="machine-hemisphere">
+        <div class="machine-header">Machine Reality // 执行层</div>
+        
+        <div class="code-block">
+            <span style="color:#569CD6;">fn</span> bootstrap_agent() -> <span style="color:#4EC9B0;">Result</span>&lt;()&gt; {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6A9955;">// Agent applied dependency inversion</span><br>
+            <div class="code-diff-add">
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#569CD6;">let</span> config = config::init()?;<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#569CD6;">let</span> session = memory::read_session(&config);
+            </div>
+            &nbsp;&nbsp;&nbsp;&nbsp;logger::info(<span style="color:#CE9178;">"Init success"</span>);<br>
+            }
+        </div>
+        
+        <div class="terminal-log">
+            > compiling northhing-core v0.3.0<br>
+            > finished release [optimized] target(s) in 3.12s
+        </div>
+    </div>
+
+</body>
+</html>

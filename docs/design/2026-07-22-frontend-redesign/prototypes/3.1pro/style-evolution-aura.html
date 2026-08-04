@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 意识流体风 (Aura Evolution)</title>
+    <style>
+        :root {
+            /* Agent 的灵魂代表色（随认知进化而加深或变异） */
+            --agent-core-color: #D67A53;
+            --agent-core-glow: rgba(214, 122, 83, 0.4);
+            --agent-memory-color: #8C5A43;
+            
+            --bg-deep: #141312; /* 深邃的暗黑空间，代表未知的成长域 */
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            
+            --text-primary: #F0EFEA;
+            --text-secondary: rgba(240, 239, 234, 0.5);
+            
+            --font-ui: "Inter", -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Agent 意识光晕 (代表成长与思考状态) */
+        .agent-aura {
+            position: absolute;
+            top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, var(--agent-core-glow) 0%, transparent 60%);
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.8;
+            pointer-events: none;
+            /* 模拟生命体的呼吸感 */
+            animation: breathe 8s infinite alternate ease-in-out;
+        }
+
+        @keyframes breathe {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; }
+        }
+
+        /* 外部容器：空间舱 */
+        .workspace {
+            position: relative;
+            z-index: 10;
+            width: 100%; max-width: 1200px;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 2px; /* 利用间隙透出底部的深色，形成无边框分割 */
+        }
+
+        .panel {
+            background: var(--glass-panel);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-left: 1px solid var(--glass-border);
+            border-right: 1px solid var(--glass-border);
+            display: flex; flex-direction: column;
+        }
+
+        /* 左侧：认知状态与记忆沉淀 */
+        .panel-left { padding: 32px 24px; border-left: none; }
+        .evolution-metrics {
+            margin-bottom: 40px;
+        }
+        .evolution-title {
+            font-size: 11px; letter-spacing: 0.1em; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 16px;
+        }
+        .metric-bar {
+            height: 2px; width: 100%; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 8px; overflow: hidden;
+        }
+        .metric-fill {
+            height: 100%; background: var(--agent-core-color); width: 68%; /* 代表成长进度 */
+            box-shadow: 0 0 10px var(--agent-core-color);
+        }
+        .metric-label { font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+
+        .memory-node {
+            padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.02);
+            border: 1px solid var(--glass-border); margin-bottom: 12px;
+            font-size: 13px; color: var(--text-secondary);
+        }
+        .memory-node.active {
+            border-color: rgba(214, 122, 83, 0.3); /* 正在演化的记忆使用代表色 */
+            color: var(--text-primary);
+        }
+
+        /* 中部：神经交互流 (对话流) */
+        .panel-main { position: relative; }
+        .stream {
+            flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 32px;
+            height: calc(100vh - 120px);
+        }
+        
+        .interaction {
+            max-width: 85%;
+        }
+        .interaction.user { align-self: flex-end; text-align: right; }
+        .interaction.agent { align-self: flex-start; }
+
+        .inter-meta { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .agent .inter-meta { color: var(--agent-core-color); } /* Agent标识使用代表色 */
+
+        .inter-body {
+            font-size: 15px; line-height: 1.6;
+        }
+        
+        .user .inter-body {
+            background: rgba(255,255,255,0.08); padding: 16px 20px; border-radius: 12px 12px 0 12px;
+        }
+        .agent .inter-body {
+            padding: 0; /* Agent与空间融为一体 */
+        }
+        .agent-thought-block {
+            border-left: 2px solid var(--agent-core-color);
+            padding-left: 16px; margin: 12px 0;
+            color: var(--text-secondary);
+        }
+
+        /* 底部输入框：能量注入区 */
+        .injector {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 24px 40px; background: linear-gradient(to top, var(--bg-deep) 40%, transparent);
+        }
+        .injector-box {
+            background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 16px; display: flex; align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .injector-box:focus-within {
+            border-color: var(--agent-core-color);
+            box-shadow: 0 0 20px var(--agent-core-glow);
+        }
+        .injector-box input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: var(--text-primary); font-size: 15px; padding: 0 12px;
+        }
+        .injector-box input::placeholder { color: var(--text-secondary); }
+
+        /* 右侧：衍生世界/产物 */
+        .panel-right { padding: 32px 24px; border-right: none; }
+        .artifact-hologram {
+            aspect-ratio: 1; width: 100%; border-radius: 50%;
+            border: 1px dashed var(--glass-border);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px; position: relative;
+        }
+        .artifact-hologram::after {
+            content: ""; position: absolute; width: 60%; height: 60%;
+            border-radius: 50%; background: var(--agent-core-glow); filter: blur(20px);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="agent-aura"></div>
+
+    <div class="workspace">
+        <div class="panel panel-left">
+            <div class="evolution-metrics">
+                <div class="evolution-title">Cognitive Evolution</div>
+                <div class="metric-bar"><div class="metric-fill"></div></div>
+                <div class="metric-label"><span>Awareness Lvl.3</span> <span>68%</span></div>
+            </div>
+
+            <div class="evolution-title">Active Memories</div>
+            <div class="memory-node active">
+                [Core] 修复初始化顺序
+                <div style="font-size:11px; margin-top:8px; color:var(--agent-core-color);">Assimilation in progress...</div>
+            </div>
+            <div class="memory-node">
+                [Sub] 鉴权方案逻辑重构
+            </div>
+        </div>
+
+        <div class="panel panel-main">
+            <div class="stream">
+                <div class="interaction agent">
+                    <div class="inter-meta">Northing // 知序</div>
+                    <div class="inter-body">
+                        已经把登录那块拆成三个模块了。模块间的耦合度降低了 40%。
+                    </div>
+                </div>
+
+                <div class="interaction user">
+                    <div class="inter-meta">UmR</div>
+                    <div class="inter-body">
+                        启动的时候报错了，看一下。
+                    </div>
+                </div>
+
+                <div class="interaction agent">
+                    <div class="inter-meta">Northing // 知序</div>
+                    <div class="inter-body">
+                        <div class="agent-thought-block">
+                            探测到初始化异常。追溯执行链...<br>
+                            发现时间轴悖论：[Read Session] 先于 [Load Config] 触发。
+                        </div>
+                        找到了。初始化顺序反了——配置还没加载就开始读会话。我已经将时间线对调，正在重新编译现实。
+                    </div>
+                </div>
+            </div>
+
+            <div class="injector">
+                <div class="injector-box">
+                    <input type="text" placeholder="Provide input to shape the agent's cognition...">
+                    <div style="width:32px; height:32px; border-radius:50%; background:var(--agent-core-color); display:flex; align-items:center; justify-content:center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-right">
+            <div class="evolution-title">Materialization (Artifacts)</div>
+            
+            <div class="artifact-hologram">
+                <span style="z-index:2; font-size:12px; font-family:monospace;">main.rs / config.rs</span>
+            </div>
+            
+            <div style="font-size:12px; color:var(--text-secondary); text-align:center;">
+                The agent has modified the foundational structure. Review pending.
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

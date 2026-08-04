@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=860">
+  <title>northing — 归档一段对话</title>
+  <style>
+  /* ============================================================================
+   * kimi-k3.html — 一个时刻：归档一段对话（驱力沉入深渊）
+   * ----------------------------------------------------------------------------
+   * 方向：chat 页里点下「归档」——会话在对话流里当场褪色，一缕 abyss 冷青
+   *       沿编年史条从右端向左端沉降，整屋由 rep 暖晕沉入 abyss 冷雾。
+   *       暖（驱力）→ 冷（深渊）：行动沉淀为知识，亲眼可见。
+   * 窗口：860×800 收起态；单文件、无外链；字体栈回落。
+   * 交互：点「归档」按钮见证一次（350ms 横幅先行褪色，180ms 后整屋沉降，
+   *       1200ms 一次性，无循环动效）；归档后可点「从深渊里翻一翻」复位重演。
+   * ========================================================================== */
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* 结构 token（罗盘 §3 / tokens.css） */
+    --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 16px;
+    --font-display: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+    --font-body:    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+    --font-mono:    'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+    --r-sm: 9px; --r-md: 14px; --r-lg: 18px; --r-pill: 999px;
+    --dur-hover: 150ms; --dur-normal: 350ms; --dur-slide: 250ms;
+    --dur-once: 1200ms; --dur-breathe: 6000ms;
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+    /* 颜色（暖灰基底 / 珊瑚 rep / 深渊 abyss — 预计算 hex，不用 color-mix） */
+    --bg: #F4F3F0; --surface: #FBFAF8; --elevated: #FFFFFF; --raised: #EFEDE8;
+    --border: #E6E3DD; --border-soft: #ECEAE5;
+    --fg: #38352E; --muted: #7B766C; --faint: #A8A398; --birth: #DAD6CF;
+    --rep-300: #E5A583; --rep-400: #D68A63; --rep-500: #C8714C; --rep-600: #A85A38;
+    --abyss-300: #7AABA4; --abyss-400: #5A9B93; --abyss-500: #3F837B;
+    --on-rep: #FEF9F5; --page-out: #1a1917;
+    /* 语义混合色（tokens.css 实测值） */
+    --air-rep: #F0EDED;           /* rep 6.5% on bg */
+    --halo-rep-strong: #EDEBE9;   /* rep 10% on bg — 名片锚定晕染 */
+    --turn-active: #F8F6F4;       /* rep 4% on surface */
+    --archive-cold-bg: #F1F3F0;   /* abyss 2% on bg */
+    --archive-cold-border: #D9E3DF;
+    --abyss-fog: rgba(63,131,123,.05);  /* 思考块冷底（components.css 同值） */
+
+    /* 房间温度（归档沉降时 1200ms 一次性过渡） */
+    --room-air: var(--air-rep);
+    --room-halo: var(--halo-rep-strong);
+    --turn-bg: var(--turn-active);
+    --edge: var(--rep-500);        /* 活跃轮竖线：暖→冷 */
+    --chip-edge: var(--rep-500);   /* 运行中 chip 边框：暖→冷 */
+    --nm-color: var(--rep-600);    /* 活跃轮名字 */
+    --dot-color: var(--rep-500);   /* 呼吸点 */
+    --dot-glow: var(--rep-400);
+    --chip-bg: var(--turn-active);
+  }
+
+  [data-theme="dark"] {
+    --bg: #181612; --surface: #332E28; --elevated: #3A342D; --raised: #322D26;
+    --border: #4E4840; --border-soft: #413B33;
+    --fg: #EDE8DF; --muted: #A89F92; --faint: #786F63; --birth: #4A443B;
+    --page-out: #0c0b09;
+    --air-rep: #1C1A16; --halo-rep-strong: #201D19; --turn-active: #38342E;
+    --archive-cold-bg: #191916; --archive-cold-border: #1E2421;
+    --abyss-fog: rgba(63,131,123,.10);
+  }
+
+  html, body {
+    width: 100%; min-height: 100vh;
+    background: var(--page-out);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: var(--fs-body); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--dur-normal) var(--ease);
+  }
+  body { display: flex; justify-content: center; align-items: center; padding: 24px; }
+
+  /* ─── app shell 860×800 r20，整屋空气染色随 --room-air 沉降 ─── */
+  .app {
+    width: 860px; height: 800px;
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+    border-radius: 20px;
+    background: var(--room-air);
+    filter: drop-shadow(0 15px 40px rgba(0,0,0,.35));
+    transition: background var(--dur-once) var(--ease);
+  }
+  /* 名片锚定晕染（罗盘 §4.1：顶晕锚左上头像 46,40） */
+  .app::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle 520px at 46px 40px, var(--room-halo) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+    transition: background var(--dur-once) var(--ease);
+  }
+  /* 底冷雾：深渊始终在床底，归档时上浮 */
+  .app::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 30% at 50% 100%, rgba(63,131,123,.10) 0%, transparent 60%);
+    opacity: .35; pointer-events: none; z-index: 0;
+    transition: opacity var(--dur-once) var(--ease);
+  }
+  .app.archived { --room-air: var(--archive-cold-bg); --room-halo: var(--archive-cold-border); }
+  .app.archived::after { opacity: 1; }
+
+  .app > .topbar, .app > .stream, .app > .deck-wrap { position: relative; z-index: 1; }
+
+  /* ─── 顶栏（~80px）名片 + ⚙ ─── */
+  .topbar {
+    display: flex; align-items: center;
+    height: 80px; padding: 0 var(--s5); flex-shrink: 0;
+  }
+  .agent-card { display: flex; align-items: center; gap: var(--s3); }
+  .avatar-wrap { position: relative; width: 44px; height: 44px; }
+  .avatar-wrap::after {
+    content: ''; position: absolute; inset: -6px; border-radius: 20px;
+    background: radial-gradient(circle, var(--rep-400), transparent 70%);
+    opacity: .2; animation: auraBreath var(--dur-breathe) ease-in-out infinite;
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: var(--r-md);
+    position: relative; overflow: hidden;
+    background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+    filter: drop-shadow(0 2px 6px rgba(80,70,55,.18));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar .glyph {
+    font-family: var(--font-display); font-size: 20px; font-weight: 600;
+    color: rgba(255,250,245,.88);
+  }
+  .card-info { display: flex; flex-direction: column; gap: 3px; }
+  .card-name { font-size: var(--fs-name); font-weight: 500; line-height: 1.3; }
+  .card-status {
+    display: flex; align-items: center; gap: 7px;
+    font-size: var(--fs-md); color: var(--muted); line-height: 1.3;
+  }
+  .card-status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--dot-color);
+    filter: drop-shadow(0 0 3px var(--dot-glow));
+    animation: breathe var(--dur-breathe) ease-in-out infinite;
+    transition: background var(--dur-once) var(--ease);
+  }
+  /* 编年史条：出生灰白 → 历史沉积色 → 现在（rep 右端） */
+  .chronicle {
+    width: 118px; height: 6px; border-radius: var(--r-pill);
+    margin-top: 4px; position: relative; overflow: hidden;
+    background: linear-gradient(90deg,
+      var(--birth) 0%, #A6A794 30%, #C09A78 62%, var(--rep-500) 88%, var(--rep-400) 100%);
+  }
+  /* 沉积层：归档时 abyss 从右端向左沉降覆盖（褪色，不是位移） */
+  .chronicle .veil {
+    position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(90deg, rgba(90,155,147,.55) 0%, rgba(63,131,123,.72) 100%);
+    transform-origin: right center;
+    transform: scaleX(0);
+    transition: transform var(--dur-once) var(--ease);
+  }
+  .app.archived .chronicle .veil { transform: scaleX(1); }
+
+  .topbar-settings {
+    width: 30px; height: 30px; border-radius: var(--r-sm);
+    border: none; background: transparent; color: var(--faint);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    margin-left: var(--s2);
+    transition: background var(--dur-hover), color var(--dur-hover);
+  }
+  .topbar-settings:hover { background: var(--raised); color: var(--muted); }
+  .topbar-spacer { flex: 1; }
+
+  /* ─── 对话流 ─── */
+  .stream { flex: 1; overflow-y: auto; padding: var(--s4) var(--s2); min-height: 0; }
+  .stream .inner {
+    max-width: 660px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+
+  /* 会话横幅（对话流顶部：左 = 呼吸点 + chevron + 标题 / 右 = 归档） */
+  .sess-banner {
+    display: flex; align-items: center; gap: 8px;
+    font-size: var(--fs-md); color: var(--faint);
+    letter-spacing: .02em;
+    padding: 4px 0 10px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 8px; user-select: none;
+    transition: opacity var(--dur-normal) var(--ease);
+  }
+  .sess-banner .sdot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    background: var(--dot-color);
+    filter: drop-shadow(0 0 3px var(--dot-glow));
+    animation: breathe var(--dur-breathe) ease-in-out infinite;
+    transition: background var(--dur-once) var(--ease);
+  }
+  .sess-chev {
+    width: 0; height: 0;
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+  }
+  .sess-archive {
+    margin-left: auto; flex-shrink: 0;
+    font-size: var(--fs-sm); font-family: inherit; color: var(--faint);
+    border: 1px solid var(--border); border-radius: var(--r-pill);
+    padding: 3px 12px; background: transparent; cursor: pointer;
+    transition: color var(--dur-hover), border-color var(--dur-hover), background var(--dur-hover);
+  }
+  .sess-archive:hover { color: var(--abyss-500); border-color: var(--abyss-500); background: rgba(63,131,123,.06); }
+  .app.archived .sess-banner { opacity: .55; }
+
+  /* 轮次 */
+  .turn { display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .turn.sediment { opacity: .5; transition: opacity var(--dur-normal) ease; }
+  .turn.sediment:hover { opacity: .7; }
+  .turn.active {
+    padding: var(--s3) var(--s4);
+    background: var(--turn-bg);
+    border-radius: var(--r-md);
+    border-left: 2.5px solid var(--edge);
+    transition: background var(--dur-once) var(--ease),
+                border-color var(--dur-once) var(--ease),
+                opacity var(--dur-once) var(--ease);
+  }
+  .app.archived .turn.active { opacity: .55; }
+  .turn-head {
+    display: flex; align-items: center; gap: var(--s2);
+    font-size: var(--fs-sm); color: var(--faint);
+  }
+  .turn-head .nm { font-size: var(--fs-lg); font-weight: 500; color: var(--muted); }
+  .turn.active .turn-head .nm { color: var(--nm-color); transition: color var(--dur-once) var(--ease); }
+  .turn-head .ts { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-sm); }
+  .msg { font-size: var(--fs-body); line-height: 1.82; font-weight: 400; }
+  .turn.active .msg { font-weight: 450; }
+
+  /* 用户气泡：右对齐，不染 rep */
+  .user-bubble {
+    align-self: flex-end; max-width: 76%;
+    background: var(--elevated); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 11px var(--s4);
+    font-size: var(--fs-body); line-height: 1.78;
+    filter: drop-shadow(0 2px 6px rgba(80,70,55,.08));
+  }
+
+  /* 思考块：深渊青左缘 + 冷底（不染 rep） */
+  .think-block {
+    font-size: var(--fs-lg); color: var(--muted); line-height: 1.7;
+    border-left: 2px solid var(--abyss-400);
+    background: var(--abyss-fog);
+    padding: var(--s2) var(--s3);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+
+  /* 工具 chip */
+  .tools { display: flex; flex-wrap: wrap; gap: var(--s2); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; background: var(--elevated);
+    border: 1px solid var(--border); border-radius: var(--r-pill);
+    padding: 5px var(--s3); color: var(--muted);
+    transition: border-color var(--dur-once) var(--ease),
+                background var(--dur-once) var(--ease);
+  }
+  .chip .ci { font-family: var(--font-mono); font-size: 11px; }
+  .chip .cd { color: var(--faint); font-family: var(--font-mono); font-size: var(--fs-sm); }
+  .chip-running { border-color: var(--chip-edge); background: var(--chip-bg); }
+  .chip-running .ci { color: var(--rep-500); }
+  .chip-done { border-color: rgba(63,131,123,.3); background: var(--elevated); }
+  .chip-done .ci { color: var(--abyss-500); }
+
+  /* ─── 归档后房间温度（同一变量驱动，一次 1200ms 沉降） ─── */
+  .app.archived {
+    --edge: var(--abyss-400);
+    --chip-edge: rgba(63,131,123,.45);
+    --chip-bg: var(--elevated);
+    --nm-color: var(--abyss-500);
+    --dot-color: var(--abyss-400);
+    --dot-glow: var(--abyss-300);
+    --turn-bg: var(--elevated);
+  }
+
+  /* 归档注记（档案馆的口吻：文字，不是数字） */
+  .archive-note {
+    align-self: center; text-align: center;
+    font-size: var(--fs-md); color: var(--muted); line-height: 1.8;
+    padding: 10px var(--s5) 4px;
+    max-height: 0; opacity: 0; overflow: hidden;
+    transition: max-height var(--dur-once) var(--ease),
+                opacity var(--dur-once) var(--ease);
+  }
+  .app.archived .archive-note { max-height: 80px; opacity: .85; }
+  .archive-note .tide { color: var(--abyss-500); font-style: italic; }
+
+  /* ─── 操控台（deck 冻结态：房间温度降下来了，发送键进入休眠） ─── */
+  .deck-wrap { display: flex; justify-content: center; padding: 6px var(--s2) 20px; flex-shrink: 0; }
+  .deck {
+    width: 100%; max-width: 660px;
+    background: var(--elevated); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; position: relative;
+    filter: drop-shadow(0 6px 12px rgba(80,70,55,.14));
+    transition: opacity var(--dur-once) var(--ease),
+                border-color var(--dur-once) var(--ease);
+  }
+  .deck::before {
+    content: ''; display: block; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rep-500), transparent);
+    opacity: .4; transition: opacity var(--dur-once) var(--ease);
+  }
+  .app.archived .deck { opacity: .6; border-color: var(--archive-cold-border); }
+  .app.archived .deck::before { opacity: .12; }
+  .deck-input { display: flex; align-items: flex-end; padding: 14px var(--s4) 10px; gap: 10px; }
+  .deck-input textarea {
+    flex: 1; border: none; outline: none; resize: none; background: transparent;
+    font-family: var(--font-body); font-size: 14.5px; color: var(--fg);
+    line-height: 1.6; padding: 2px 0; min-height: 26px;
+  }
+  .deck-input textarea::placeholder { color: var(--faint); }
+  .deck-input textarea:disabled { cursor: default; }
+  .btn-send {
+    width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+    background: var(--rep-500); border: none; color: var(--on-rep);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 2px 4px rgba(80,70,55,.18));
+    transition: background var(--dur-hover), opacity var(--dur-once) var(--ease);
+  }
+  .btn-send:hover:not(:disabled) { background: var(--rep-600); }
+  .btn-send:disabled { opacity: .5; cursor: default; }
+  .deck-bar {
+    display: flex; align-items: center; height: 38px;
+    padding: 0 var(--s3); border-top: 1px solid var(--border-soft);
+    gap: 6px; font-size: 11px; color: var(--muted);
+  }
+  .deck-btn {
+    display: flex; align-items: center; justify-content: center;
+    height: 26px; padding: 0 8px; border-radius: var(--r-sm);
+    border: none; background: transparent; color: var(--muted);
+    font-family: var(--font-body); font-size: 11px; cursor: pointer;
+    transition: background var(--dur-hover), color var(--dur-hover);
+  }
+  .deck-btn:hover:not(:disabled) { background: var(--raised); color: var(--fg); }
+  .deck-btn:disabled { opacity: .5; cursor: default; }
+  .deck-btn svg { width: 13px; height: 13px; }
+  .think-seg { display: flex; gap: 3px; align-items: center; margin-left: 2px; }
+  .seg-bar { width: 14px; height: 6px; border-radius: 3px; }
+  .seg-bar.on { background: var(--rep-400); }
+  .seg-bar.off { background: var(--border); }
+  .deck-bar-spacer { flex: 1; }
+  .ctx-ring { width: 20px; height: 20px; cursor: help; }
+  .ctx-ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
+  .ctx-ring-fg { fill: none; stroke: var(--abyss-500); stroke-width: 2.5; stroke-linecap: round; }
+
+  /* ─── 品牌水印（左下，opacity .25，呼吸 6s） ─── */
+  .watermark {
+    position: absolute; bottom: 16px; left: 16px; z-index: 2;
+    display: flex; align-items: center; gap: 6px; opacity: .25;
+  }
+  .watermark svg { animation: breathe var(--dur-breathe) ease-in-out infinite; }
+  .watermark .bt {
+    font-family: var(--font-display); font-size: 11px;
+    color: var(--muted); letter-spacing: .04em;
+  }
+
+  /* ─── 窗口控制（右上） ─── */
+  .win-ctrl {
+    position: absolute; top: 16px; right: 44px; z-index: 30;
+    display: flex; align-items: center; gap: 2px;
+  }
+  .win-btn {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--faint); cursor: pointer; border: none; background: transparent;
+    transition: background var(--dur-hover), color var(--dur-hover);
+  }
+  .win-btn:hover { background: var(--raised); color: var(--fg); }
+  .win-btn.close:hover { background: rgba(164,89,80,.12); color: #A45950; }
+
+  /* ─── 动效定义：呼吸只给主体；其余全部一次性 ─── */
+  @keyframes breathe {
+    0%, 100% { opacity: .65; transform: scale(.985); }
+    50%      { opacity: 1;   transform: scale(1.015); }
+  }
+  @keyframes auraBreath {
+    0%, 100% { opacity: .35; transform: scale(.96); }
+    50%      { opacity: .7;  transform: scale(1.04); }
+  }
+
+  ::selection { background: var(--rep-300); color: var(--fg); }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: var(--r-pill); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  ::-webkit-scrollbar-button { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+    }
+  }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ══════ 顶栏：agent 名片 ══════ -->
+  <div class="topbar">
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span id="statusText">刚刚答完 · 在</span>
+        </div>
+        <div class="chronicle"><span class="veil"></span></div>
+      </div>
+    </div>
+    <button class="topbar-settings" title="设置" aria-label="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="topbar-spacer"></div>
+  </div>
+
+  <!-- ══════ 对话流 ══════ -->
+  <div class="stream">
+    <div class="inner">
+
+      <!-- 会话横幅 -->
+      <div class="sess-banner" id="sessBanner">
+        <span class="sdot"></span>
+        <span class="sess-chev"></span>
+        <span class="sess-title">2026-08-02 · 修复初始化顺序</span>
+        <button class="sess-archive" id="archiveBtn">归档</button>
+      </div>
+
+      <!-- 沉积轮 -->
+      <div class="turn sediment">
+        <div class="turn-head">
+          <span class="nm">知序</span>
+          <span class="ts">14:02</span>
+        </div>
+        <div class="msg">已经把登录那块拆成三个模块了。</div>
+      </div>
+
+      <!-- 用户轮（右对齐，不染 rep） -->
+      <div class="turn">
+        <div class="turn-head">
+          <span class="nm" style="color:var(--muted)">UmR</span>
+          <span class="ts">14:31</span>
+        </div>
+        <div class="user-bubble">启动的时候报错了，看一下。</div>
+      </div>
+
+      <!-- 活跃轮 -->
+      <div class="turn active">
+        <div class="turn-head">
+          <span class="nm">知序</span>
+          <span class="ts">14:37</span>
+        </div>
+        <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+        <div class="tools">
+          <span class="chip chip-done">
+            <span class="ci">read</span>
+            <span>src/main.rs</span>
+            <span class="cd">· 212行 ✓</span>
+          </span>
+          <span class="chip chip-running" id="runningChip">
+            <span class="ci">grep</span>
+            <span>"init_config"</span>
+            <span class="cd" id="runningChipCd">· 检索中</span>
+          </span>
+        </div>
+        <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。</div>
+      </div>
+
+      <!-- 归档注记（文字，不是数字） -->
+      <div class="archive-note" id="archiveNote">
+        <span class="tide">这段对话沉下去了。</span><br>
+        它会在档案馆里，和六月的那几段待在一起。
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════ 操控台 ══════ -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea id="deckInput" rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" id="sendBtn" title="发送" aria-label="发送">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l7 7-1.4 1.4L13 7.8V20h-2V7.8l-4.6 4.6L5 11z"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn" id="attachBtn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg">
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar off"></span>
+          <span class="seg-bar off"></span>
+        </div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" title="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 品牌水印（左下） ══════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══════ 窗口控制（右上） ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  /* 可选暗色：?theme=dark（加分项，默认亮色） */
+  if (/[?&]theme=dark/.test(location.search)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+
+  var app = document.getElementById('app');
+  var archiveBtn = document.getElementById('archiveBtn');
+  var statusText = document.getElementById('statusText');
+  var runningChipCd = document.getElementById('runningChipCd');
+  var deckInput = document.getElementById('deckInput');
+  var sendBtn = document.getElementById('sendBtn');
+  var attachBtn = document.getElementById('attachBtn');
+
+  /* ── 归档：一次点击见证一个时刻 ──
+   * 时序（全部一次性，无循环）：
+   *   t+0     横幅先行褪色（350ms，最快的告别）
+   *   t+180   整屋沉降（1200ms）：暖晕→冷雾、rep 竖线/chip/呼吸点→abyss、
+   *           编年史条 abyss 层自右向左沉降、运行中 chip 就地完成
+   *   t+1500  状态行与注记落定，deck 进入冻结态
+   * 归档后按钮变为「从深渊里翻一翻」：演示用复位，回到室温重演。 */
+  var t1 = null, t2 = null, archived = false;
+
+  function settle() {
+    archived = true;
+    app.classList.add('archived');
+    runningChipCd.textContent = '· 已沉淀 ✓';
+    statusText.textContent = '它安静下来了 · 深渊';
+    deckInput.disabled = true;
+    deckInput.placeholder = '这段对话已经沉入深渊。';
+    sendBtn.disabled = true;
+    attachBtn.disabled = true;
+    archiveBtn.textContent = '从深渊里翻一翻';
+  }
+
+  function restore() {
+    archived = false;
+    app.classList.remove('archived');
+    runningChipCd.textContent = '· 检索中';
+    statusText.textContent = '刚刚答完 · 在';
+    deckInput.disabled = false;
+    deckInput.placeholder = '说点什么…… @ 引用文件 / 调用技能';
+    sendBtn.disabled = false;
+    attachBtn.disabled = false;
+    archiveBtn.textContent = '归档';
+  }
+
+  archiveBtn.addEventListener('click', function () {
+    clearTimeout(t1); clearTimeout(t2);
+    if (archived) {
+      /* 复位：沉降逆向，同样一次性、同样慢 */
+      restore();
+      return;
+    }
+    /* 横幅先行褪色（它在 CSS 里有 350ms opacity 过渡） */
+    document.getElementById('sessBanner').style.opacity = '0.6';
+    t1 = setTimeout(settle, 180);
+    t2 = setTimeout(function () {
+      document.getElementById('sessBanner').style.opacity = '';
+    }, 1500);
+  });
+})();
+</script>
+</body>
+</html>

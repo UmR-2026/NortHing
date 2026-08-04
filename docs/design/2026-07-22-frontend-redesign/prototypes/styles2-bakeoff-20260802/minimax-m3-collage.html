@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing · 知序 · 贴纸桌</title>
+<style>
+/* ============================================================================
+ * northing · styles2-bakeoff-20260802 · minimax-m3 · collage（贴纸桌）
+ * ----------------------------------------------------------------------------
+ * chat-collapsed 基准屏，屏固定 / 风格放到底。
+ *
+ * 主张：northing 是 agent 在上面慢慢贴东西的牛皮纸桌——每一处痕迹都是"它
+ * 正在做"或"它做过"的物证，不是装饰。
+ *
+ * 哲学接口（collage 词汇→罗盘戒律）：
+ *   设施   = 一张旧牛皮纸桌面（基底纹理、纸质、不动）
+ *   agent  = 落在纸上的邮票、印章、胶带便签（个体痕迹）
+ *   驱力   = 刚盖上的朱砂印章（鲜红、墨水微溅）
+ *   深渊   = 胶带下覆写的便签（被遮住、半透、靛青墨水）
+ *   沉积   = 卷边泛黄的旧贴纸（relic、褪色、不再"贴"）
+ *   对等   = 两人的痕迹在同一张纸上，没有谁在纸下面
+ *
+ * 与现方案最大分歧：
+ *   色   · 现：#F4F3F0 米白咨询室 + 珊瑚 #C8714C
+ *        · 本：#EDE3CD 旧牛皮纸 + 朱砂印章红 #B83A30
+ *   体   · 现：Fraunces 西式衬线
+ *        · 本：手写体（Kaiti 楷 / Patrick Hand cursive）作 display，
+ *              Noto Sans SC 作正文（手写/印刷对比 = 落款/印刷对比）
+ *   质   · 现：纸面 + 暖晕
+ *        · 本：撕边 + 胶带 + 印章 + 穿孔边 + 纸纹——五件具体物品，每一件有位置理由
+ *
+ * 反 AI 套路清单（已检查）：
+ *   × 紫蓝渐变   × 毛玻璃    × 单一霓虹
+ *   × 均匀圆角   × 完美对称  × 仪表盘数字展
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全预计算 hex，无 color-mix / oklch
+ *   - 阴影全用 filter: drop-shadow()，无 box-shadow
+ *   - ::before/::after 全具名（仅作顶晕/底冷雾/纸纹/撕边/胶带）
+ *   - 唯一 infinite 动效 = 头像呼吸点 6s（继承「呼吸只给 logo + 头像」纪律）
+ *   - 渐变只用 linear 与 radial
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  /* 字体三系 —— display 用楷体 + 离线 cursive fallback，制造手写落款感 */
+  --font-display: 'Patrick Hand', 'Bradley Hand', 'Marker Felt',
+                  'STKaiti', 'KaiTi', '楷体', 'Noto Serif SC', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system,
+                  'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  --r-sm: 4px;     /* 拼贴角小——撕纸不能大圆角 */
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-pill: 999px;
+
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 亮色模式 —— 旧牛皮纸桌 ───────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* 基底 —— 暖黄牛皮纸 */
+  --bg:          #EDE3CD;   /* 主背景：旧牛皮纸 */
+  --surface:     #F4ECD8;   /* 卡片底：稍浅米黄纸 */
+  --elevated:    #F8F1DF;   /* 浮起：更亮的便签纸 */
+  --raised:      #E0D4B8;   /* 控件底：老旧的纸槽 */
+  --border:      #C8B894;   /* 强边：撕边深色 */
+  --border-soft: #D6C9A8;   /* 弱边 */
+  --fg:          #2C2418;   /* 正文：深墨水 */
+  --muted:       #6E624D;   /* 次级 */
+  --faint:       #9A8E72;   /* 弱化 */
+  --birth:       #A89875;   /* 泛黄旧色 */
+  --scrim:       #2C2418;
+  --shadow:      #2C2418;
+
+  /* 代表色 —— 朱砂印章红（取代珊瑚 #C8714C）
+   * 论证：珊瑚是"涌现的暖"，朱砂是"盖过章的暖"——更红、更稠、更有人做事的痕迹。
+   * agent 在场 = 印章落款；驱力 = 刚盖的章。 */
+  --rep-300: #D8695A;
+  --rep-400: #C8523F;
+  --rep-500: #B83A30;   /* 强调 ≡ 印章红 */
+  --rep-600: #8E2A22;
+
+  /* 深渊 —— 靛青墨水（取代 #3F837B）
+   * 论证：深渊青偏绿、偏自然；靛青偏蓝、偏墨水——胶带下覆写便签用的墨水。 */
+  --abyss-300: #6E8B9D;
+  --abyss-400: #52748A;
+  --abyss-500: #3D5A6C;
+
+  --danger: #A45950;
+
+  --on-rep:    #F4ECD8;
+  --on-abyss:  #F4ECD8;
+  --on-danger: #F4ECD8;
+
+  --page-out:  #1d1810;
+
+  /* 语义混合色（朱砂 + 靛青 on 牛皮纸，预计算 hex） */
+  --air-rep:             #EDDFD1;  /* rep 6.5% on bg */
+  --halo-rep:            #EBD9C9;  /* rep 10% on bg */
+  --halo-rep-strong:     #EBD9C9;  /* 名片锚定晕 */
+  --air-rep-speaking:    #ECDCCB;  /* rep 7.5% on bg */
+  --halo-rep-speaking:   #E8D3C2;  /* rep 11% on bg */
+  --air-rep-settings:    #ECE0CE;  /* rep 3.5% on bg */
+  --halo-rep-settings:   #EBDDCB;  /* rep 5% on bg */
+  --fog-abyss:           #E2E1D6;  /* abyss 2% on bg */
+  --halo-abyss:          #DCDED6;  /* abyss 4% on bg */
+  --turn-active:         #F0DBC4;  /* rep 4% on surface（更暖，更贴"刚盖的章"） */
+
+  /* 拼贴专用色 */
+  --tape:        rgba(200, 184, 148, 0.42);   /* 牛皮纸胶带：暖黄半透 */
+  --tape-edge:   rgba(168, 152, 117, 0.65);
+  --ink-warm:    #4A3825;    /* 朱砂红墨水（边缘微溅用） */
+  --ink-cold:    #1E3A4D;    /* 靛青墨水 */
+  --paper-stain: rgba(168, 152, 117, 0.18);
+}
+
+
+/* ─── 暗色模式 —— 暗夜工作台（牛皮纸在灯下） ───────────────────────────── */
+[data-theme="dark"] {
+  --bg:          #1F1A12;
+  --surface:     #2B2519;
+  --elevated:    #332C1E;
+  --raised:      #2A241A;
+  --border:      #4A4132;
+  --border-soft: #3A3326;
+  --fg:          #EDE3CD;
+  --muted:       #A89875;
+  --faint:       #7A6E55;
+  --birth:       #5A5142;
+  --scrim:       #000000;
+  --shadow:      #000000;
+
+  /* 暗色下：朱砂印章红更亮（暗处朱砂偏橙） */
+  --rep-300: #E07F70;
+  --rep-400: #D66050;
+  --rep-500: #C84A3A;
+  --rep-600: #9A2E22;
+
+  /* 暗色下：靛青更亮（暗处偏青蓝） */
+  --abyss-300: #8AA8B8;
+  --abyss-400: #6E8DA0;
+  --abyss-500: #52748A;
+
+  --danger: #C37D73;
+
+  --on-rep:    #1F1A12;
+  --on-abyss:  #1F1A12;
+  --on-danger: #1F1A12;
+
+  --page-out:  #0c0905;
+
+  --air-rep:             #251F16;
+  --halo-rep:            #2B2318;
+  --halo-rep-strong:     #2B2318;
+  --air-rep-speaking:    #2A2216;
+  --halo-rep-speaking:   #2E251A;
+  --air-rep-settings:    #221D14;
+  --halo-rep-settings:   #252016;
+  --fog-abyss:           #1E1D17;
+  --halo-abyss:          #1F1F1A;
+  --turn-active:         #3A2D1E;
+
+  --tape:        rgba(74, 65, 50, 0.55);
+  --tape-edge:   rgba(168, 152, 117, 0.55);
+  --ink-warm:    #D66050;
+  --ink-cold:    #6E8DA0;
+  --paper-stain: rgba(168, 152, 117, 0.12);
+}
+
+
+/* ─── reset ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 800px;
+  overflow: hidden;
+  background: var(--page-out);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+
+/* ─── SVG defs ─── */
+/* 把所有 SVG filter / pattern 集中到一个隐藏的 svg 里供引用。 */
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+
+/* ─── app shell ─── */
+
+.app {
+  width: 860px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 6px;                /* 桌面不是窗口，纸边不必圆 */
+  background: var(--bg);
+  filter: drop-shadow(0 12px 32px rgba(0,0,0,.32));
+  transition: background 350ms ease-out, filter var(--grow);
+}
+
+/* 牛皮纸纹理（极淡，叠加层） */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.48  0 0 0 0 0.34  0 0 0 0.18 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: multiply;
+  opacity: 0.42;
+}
+
+/* 顶晕 + 底冷雾（保留罗盘 §3 整屋染色） */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 30% at 50% 0%, var(--halo-rep) 0%, transparent 100%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 350ms ease-out;
+}
+
+/* speaking 升档 */
+.app.speaking::after {
+  background:
+    radial-gradient(ellipse 90% 30% at 50% 0%, var(--halo-rep-speaking) 0%, transparent 100%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+}
+
+.app > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ─── 顶栏 ─── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative;
+}
+
+/* 名片 = 一张贴在桌上的小卡（轻微旋转 + 撕边 + 顶部胶带） */
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  background: var(--elevated);
+  padding: 8px 14px 8px 8px;
+  border-radius: 4px;
+  position: relative;
+  transform: rotate(-0.6deg);
+  filter: drop-shadow(0 2px 3px rgba(44,36,24,.18));
+  border: 1px solid var(--border-soft);
+}
+
+/* 名片顶部胶带（一段半透黄纸胶带） */
+.agent-card::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  width: 56px;
+  height: 18px;
+  background: var(--tape);
+  border-left: 1px dashed var(--tape-edge);
+  border-right: 1px dashed var(--tape-edge);
+  transform: rotate(-6deg);
+  z-index: 2;
+}
+
+/* 头像 = 盖上的印章（圆形红边 + 中央字） */
+.avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+/* 头像"印泥残影"：印章周围的极淡红扩散 */
+.avatar-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(184,58,48,.18) 0%, transparent 65%);
+  animation: stampBreath 6s ease-in-out infinite;
+  z-index: -1;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 2px solid var(--rep-600);
+  filter: drop-shadow(0 1px 2px rgba(44,36,24,.3));
+  transition: background var(--grow);
+  overflow: hidden;
+}
+
+/* 印章内圈（深红环） */
+.avatar::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  border: 1px solid rgba(244,236,216,.55);
+}
+
+.avatar .glyph {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--on-rep);
+  font-weight: 600;
+  letter-spacing: 0;
+  /* 印章微压感：阴影模拟印泥厚度 */
+  text-shadow: 0 1px 0 rgba(0,0,0,.18);
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-name {
+  font-size: var(--fs-name);
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.2;
+  font-family: var(--font-display);
+  letter-spacing: .02em;
+}
+
+.card-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.card-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: stampBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+
+/* 编年史条 = 一段有手写批注的横线（出生灰→朱砂） */
+.card-self {
+  width: 118px;
+  height: 6px;
+  border-radius: 1px;
+  background: linear-gradient(90deg,
+    var(--birth) 0%,
+    #A89875 30%,
+    #C28E78 62%,
+    var(--rep-500) 88%,
+    var(--rep-400) 100%);
+  margin-top: 4px;
+  position: relative;
+  transition: background var(--grow);
+}
+/* 编年史右端一颗朱砂点：强调"现在" */
+.card-self::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 0 1px var(--rep-300);
+}
+
+.topbar-settings {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--s2);
+  transition: background .15s, color .15s;
+}
+
+.topbar-settings:hover {
+  background: var(--raised);
+  color: var(--muted);
+}
+
+
+/* ─── main row ─── */
+
+.main-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+
+/* ─── 把手：拼贴里就是一段撕下的窄纸条 ─── */
+
+.handle {
+  width: 12px;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  background:
+    linear-gradient(to bottom, transparent 0%, var(--tape-edge) 8%, transparent 14%, transparent 86%, var(--tape-edge) 92%, transparent 100%);
+}
+
+.handle-left {
+  margin-right: 2px;
+}
+
+.handle-right {
+  margin-left: 2px;
+}
+
+
+/* ─── 对话流 ─── */
+
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s3) var(--s3) var(--s4);
+  min-width: 0;
+}
+
+.stream .inner {
+  max-width: 660px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+/* ─── 会话横幅 = 报纸头条剪报 ─── */
+
+.sess-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 2px;
+  font-size: var(--fs-md);
+  color: var(--fg);
+  position: relative;
+  transform: rotate(0.2deg);
+  filter: drop-shadow(0 1px 2px rgba(44,36,24,.08));
+}
+
+.sess-banner::before {
+  /* 剪报左边贴的胶带痕 */
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 32px;
+  width: 40px;
+  height: 12px;
+  background: var(--tape);
+  transform: rotate(-3deg);
+  z-index: 2;
+}
+
+.sess-banner .sdot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 2px var(--rep-400));
+  animation: stampBreath 6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.sess-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--fg);
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .01em;
+}
+
+.sess-chev {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform 250ms ease-out;
+}
+
+.sess-banner.folded .sess-chev {
+  transform: rotate(-90deg);
+}
+
+.sess-archive {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 10px;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: .04em;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.sess-archive:hover {
+  color: var(--abyss-500);
+  border-color: var(--abyss-500);
+  background: var(--fog-abyss);
+}
+
+
+/* ─── turn（对话轮）─── */
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+/* 沉积轮 = 旧贴纸：泛黄 + 撕边 + 不再贴紧 */
+.turn.sediment {
+  opacity: 0.62;
+  background: var(--surface);
+  padding: 10px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  transform: rotate(-0.4deg);
+  filter: drop-shadow(0 1px 2px rgba(44,36,24,.06));
+  position: relative;
+}
+
+/* 沉积轮的右上角翘起——像被翻过的旧贴纸 */
+.turn.sediment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(225deg, var(--bg) 0%, var(--bg) 48%, transparent 50%),
+              linear-gradient(225deg, var(--border-soft) 0%, var(--border-soft) 50%, transparent 52%);
+  filter: drop-shadow(-1px 1px 0 rgba(44,36,24,.1));
+}
+
+/* 活跃轮 = 刚盖的章 + 朱砂渗墨 */
+.turn.active {
+  padding: 12px 14px 12px 16px;
+  background: var(--turn-active);
+  border-radius: 3px;
+  position: relative;
+  filter: drop-shadow(0 2px 4px rgba(44,36,24,.1));
+}
+
+/* 活跃轮左侧朱砂批注线（手写体 + 倾斜） */
+.turn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: linear-gradient(to bottom,
+    var(--rep-500) 0%,
+    var(--rep-400) 40%,
+    var(--rep-300) 80%,
+    var(--rep-500) 100%);
+  border-radius: 1px;
+  transform: rotate(0.5deg);
+}
+
+.turn-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+}
+
+.turn-head .nm {
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--muted);
+  font-family: var(--font-display);
+  letter-spacing: .02em;
+}
+
+.turn.active .turn-head .nm {
+  color: var(--rep-600);
+}
+
+.turn-head .ts {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.msg {
+  font-size: var(--fs-body);
+  line-height: 1.78;
+  font-weight: 400;
+  color: var(--fg);
+}
+
+.turn.active .msg {
+  font-weight: 450;
+}
+
+
+/* ─── 用户气泡 = 便签纸：撕边右下角 + 轻微旋转 ─── */
+
+.user-bubble {
+  align-self: flex-end;
+  max-width: 76%;
+  background: var(--elevated);
+  padding: 12px 16px;
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  position: relative;
+  /* 撕边 + 折角 —— 用 mask-image + clip-path 模拟 */
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 100%,
+    88% 100%, 86% 96%, 82% 100%, 76% 98%, 72% 100%, 66% 96%, 60% 100%,
+    0% 100%
+  );
+  filter: drop-shadow(0 3px 6px rgba(44,36,24,.15));
+  transform: rotate(0.7deg);
+  /* 折角阴影 */
+  background-image:
+    linear-gradient(225deg, transparent 6%, rgba(44,36,24,.1) 6.5%, rgba(44,36,24,.04) 8%, transparent 9%),
+    linear-gradient(180deg, var(--elevated), var(--elevated));
+}
+
+.user-bubble::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.48  0 0 0 0 0.34  0 0 0 0.12 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+
+/* ─── 思考块 = 胶带下的便签（半透胶带遮左缘）─── */
+
+.think-block {
+  font-size: var(--fs-lg);
+  color: var(--ink-cold);
+  line-height: 1.7;
+  padding: 10px 14px 10px 18px;
+  background: rgba(82, 116, 138, 0.08);
+  border: 1px dashed var(--abyss-400);
+  border-radius: 2px;
+  position: relative;
+  font-family: var(--font-display);
+  letter-spacing: .01em;
+}
+
+/* 思考块左侧的胶带痕（半透黄纸胶带覆在靛青上） */
+.think-block::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: -4px;
+  bottom: -4px;
+  width: 14px;
+  background: var(--tape);
+  border-left: 1px dashed var(--tape-edge);
+  border-right: 1px dashed var(--tape-edge);
+  transform: rotate(-2deg);
+  filter: drop-shadow(0 1px 2px rgba(44,36,24,.1));
+}
+
+/* 思考块右下小印章："已想" 概念 */
+.think-block::after {
+  content: '∴';
+  position: absolute;
+  right: 8px;
+  bottom: 2px;
+  color: var(--abyss-500);
+  font-size: 14px;
+  opacity: 0.55;
+  font-family: var(--font-mono);
+}
+
+[data-theme="dark"] .think-block {
+  background: rgba(82, 116, 138, 0.14);
+}
+
+
+/* ─── 工具 chip：左=邮票（穿孔边），右=印章（红圆章）─── */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  background: var(--elevated);
+  padding: 6px 12px 6px 14px;
+  color: var(--muted);
+  position: relative;
+  filter: drop-shadow(0 1px 2px rgba(44,36,24,.1));
+  transition: background .35s ease-out;
+  font-family: var(--font-body);
+}
+
+/* 已完成 chip = 旧邮票：白边 + 撕边 */
+.chip-done {
+  background: var(--elevated);
+  /* 邮票形状：带穿孔感的矩形 */
+  clip-path: polygon(
+    0% 8%, 3% 0%, 8% 0%, 8% 5%, 12% 5%, 12% 0%, 18% 0%, 18% 5%, 24% 5%, 24% 0%,
+    30% 0%, 30% 5%, 36% 5%, 36% 0%, 42% 0%, 42% 5%, 48% 5%, 48% 0%, 54% 0%,
+    54% 5%, 60% 5%, 60% 0%, 66% 0%, 66% 5%, 72% 5%, 72% 0%, 78% 0%, 78% 5%,
+    84% 5%, 84% 0%, 90% 0%, 90% 5%, 96% 5%, 96% 0%, 100% 0%,
+    100% 92%, 96% 100%, 96% 95%, 90% 95%, 90% 100%, 84% 100%, 84% 95%,
+    78% 95%, 78% 100%, 72% 100%, 72% 95%, 66% 95%, 66% 100%, 60% 100%,
+    60% 95%, 54% 95%, 54% 100%, 48% 100%, 48% 95%, 42% 95%, 42% 100%,
+    36% 100%, 36% 95%, 30% 95%, 30% 100%, 24% 100%, 24% 95%, 18% 95%,
+    18% 100%, 12% 100%, 12% 95%, 8% 95%, 8% 100%, 3% 100%, 0% 96%
+  );
+  border: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+
+.chip-done .ci {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--abyss-500);
+}
+
+.chip-done .cd {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+/* 运行中 chip = 刚盖的圆章：红圆 + 内圈 */
+.chip-running {
+  background: var(--rep-500);
+  color: var(--on-rep);
+  border-radius: 50px;
+  padding: 6px 14px 6px 28px;
+  position: relative;
+  border: 2px solid var(--rep-600);
+}
+
+.chip-running::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--on-rep);
+  border: 2px solid var(--rep-600);
+  box-shadow: inset 0 0 0 1px var(--rep-500);
+}
+
+/* 圆章中心"●"点 */
+.chip-running::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--rep-500);
+}
+
+.chip-running .ci {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--on-rep);
+  letter-spacing: .03em;
+}
+
+.chip-running .cd {
+  color: rgba(244,236,216,.78);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+
+/* ─── 操控台 ─── */
+
+.deck-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px var(--s2) 18px;
+  flex-shrink: 0;
+}
+
+.deck {
+  width: 100%;
+  max-width: 680px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  filter: drop-shadow(0 4px 10px rgba(44,36,24,.18));
+  overflow: hidden;
+  transition: border-color .2s, filter .2s;
+  position: relative;
+}
+
+/* 操控台顶部贴一条窄胶带（拼贴：上面的纸不是桌子的一部分） */
+.deck::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-1deg);
+  width: 80px;
+  height: 16px;
+  background: var(--tape);
+  border-left: 1px dashed var(--tape-edge);
+  border-right: 1px dashed var(--tape-edge);
+  z-index: 2;
+}
+
+.deck:focus-within {
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 2px var(--rep-500)) drop-shadow(0 4px 10px rgba(44,36,24,.18));
+}
+
+.deck-input {
+  display: flex;
+  align-items: flex-end;
+  padding: 14px var(--s4) 10px;
+  gap: 10px;
+}
+
+.deck-input textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2px 0;
+  min-height: 26px;
+  max-height: 120px;
+  letter-spacing: .01em;
+}
+
+.deck-input textarea::placeholder {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.btn-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  border: 2px solid var(--rep-600);
+  color: var(--on-rep);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, transform .15s;
+  filter: drop-shadow(0 2px 3px rgba(44,36,24,.22));
+}
+
+.btn-send:hover {
+  background: var(--rep-600);
+  transform: rotate(-4deg);
+}
+
+.btn-send svg {
+  width: 14px;
+  height: 14px;
+}
+
+.deck-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 8px 14px 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.deck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.deck-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--border-soft);
+}
+
+.deck-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.think-seg {
+  display: flex;
+  gap: 3px;
+  padding: 0 6px;
+}
+
+.seg-bar {
+  border-radius: 1px;
+  transition: background .15s;
+}
+
+/* ctx 圆环 */
+.ctx-ring {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.ctx-ring svg { display: block; }
+
+.ctx-ring .ctx-ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.ctx-ring .ctx-ring-fg {
+  fill: none;
+  stroke: var(--abyss-500);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -8px;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--abyss-500);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 8px;
+  filter: drop-shadow(0 2px 4px rgba(44,36,24,.18));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 200ms ease, transform 200ms ease;
+  transform: translateY(4px);
+}
+
+.ctx-ring:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* ─── 品牌水印（左下） = 一枚手作小印 ─── */
+
+.watermark {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .32;
+  z-index: 2;
+}
+
+.watermark svg {
+  /* 印章风：圆环 + 横线 */
+  filter: drop-shadow(0 0 0.5px rgba(184,58,48,.4));
+}
+
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+
+
+/* ─── 窗口控制 ─── */
+
+.win-ctrl {
+  position: absolute;
+  top: 14px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 30;
+}
+
+.win-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+  cursor: pointer;
+  transition: .15s;
+  border: none;
+  background: transparent;
+}
+
+.win-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+
+
+/* ─── 主题切换按钮（手作圆章）─── */
+
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--faint);
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  transition: .15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--rep-500);
+  color: var(--rep-500);
+}
+
+.theme-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+
+/* ─── 动画：呼吸 / 印章微压 ─── */
+
+@keyframes stampBreath {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes caret {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+
+/* ─── 自适应滚动条 ─── */
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 1px;
+}
+::-webkit-scrollbar-button { display: none; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+
+
+/* ─── 细节 ─── */
+
+::selection {
+  background: var(--rep-300);
+  opacity: .4;
+  color: var(--fg);
+}
+
+:focus-visible {
+  outline: 2px dashed var(--rep-500);
+  outline-offset: 2px;
+}
+
+
+/* reduced-motion 兜底 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- 内嵌 SVG defs：撕边 / 纸纹 / 印章纹 -->
+<svg class="svg-defs" aria-hidden="true">
+  <defs>
+    <!-- 撕边 filter -->
+    <filter id="torn" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="3.5"/>
+    </filter>
+    <!-- 强撕边（沉积轮的卷边） -->
+    <filter id="torn-strong" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="5.5"/>
+    </filter>
+    <!-- 牛皮纸纹理 -->
+    <filter id="paper-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.55  0 0 0 0 0.48  0 0 0 0 0.34  0 0 0 0.22 0"/>
+    </filter>
+    <!-- 印章墨水扩散 -->
+    <filter id="ink-spill" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.6"/>
+    </filter>
+  </defs>
+</svg>
+
+
+<div class="app" id="app">
+
+  <!-- 窗口控制 + 主题切换 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化" aria-label="最小化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化" aria-label="最大化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭" aria-label="关闭">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <button class="theme-toggle" id="themeToggle" title="切换亮/暗主题" aria-label="切换亮/暗主题">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+
+  <!-- ════════ 顶栏 ════════ -->
+  <div class="topbar">
+    <!-- 名片 = 贴在小卡上，顶部一段胶带 -->
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span>在生成回复 · 12s</span>
+        </div>
+        <div class="card-self"></div>
+      </div>
+    </div>
+
+    <button class="topbar-settings" title="设置" aria-label="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <!-- ════════ main row ════════ -->
+  <div class="main-row">
+
+    <div class="handle handle-left"></div>
+
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 会话横幅 = 报纸头条剪报 -->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title">2026-07-30 · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">归档</button>
+        </div>
+
+        <!-- 沉积轮：旧贴纸，泛黄卷边 -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+
+        <!-- 用户轮 = 便签纸，撕边右下角 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="nm">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+
+        <!-- 活跃轮 = 刚盖的章 + 朱砂渗墨 -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+          </div>
+
+          <!-- 思考块 = 胶带下的便签（靛青墨水） -->
+          <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+
+          <!-- 工具 chip × 2：左=邮票(已完成)，右=圆章(运行中) -->
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
+          </div>
+
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--rep-500);animation:caret 1.2s infinite">▍</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="handle handle-right"></div>
+
+  </div>
+
+
+  <!-- ════════ 操控台 = 贴在底部的便签 ════════ -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+
+        <div class="think-seg">
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar off" style="width:14px;height:6px;background:var(--border)"></span>
+          <span class="seg-bar off" style="width:14px;height:6px;background:var(--border)"></span>
+        </div>
+
+        <button class="deck-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+
+        <button class="deck-btn">
+          <span style="color:var(--rep-500);font-family:var(--font-mono)">◇</span>
+          Claude 4.6
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <button class="deck-btn" style="color:var(--abyss-500)">
+          <span style="font-family:var(--font-mono)">◈</span>
+          自治·完全
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════ 品牌水印 = 一枚手作小印 ════════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240">
+      <g fill="none" stroke="#7B624D" stroke-linecap="round">
+        <circle cx="120" cy="120" r="16" stroke-width="6"/>
+        <path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/>
+        <path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/>
+      </g>
+      <line x1="30" y1="120" x2="210" y2="120" stroke="#7B624D" stroke-width="9" stroke-linecap="round"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+</div>
+
+
+<script>
+(function () {
+  'use strict';
+
+  /* 主题切换 */
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const sunSVG = themeIcon.innerHTML;
+  const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+  function updateIcon() { themeIcon.innerHTML = isDark() ? moonSVG : sunSVG; }
+  themeToggle.addEventListener('click', function () {
+    if (isDark()) {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    updateIcon();
+  });
+  updateIcon();
+
+  /* 操控台聚焦 → 整屋 rep 升档（空气染色） */
+  const deck = document.querySelector('.deck');
+  const app = document.querySelector('.app');
+  if (deck && app) {
+    deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
+    deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+  }
+
+  /* 会话横幅：折叠 / 归档 */
+  const sessBanner = document.getElementById('sessBanner');
+  const sessToggle = sessBanner.querySelector('.sess-toggle');
+  const sessArchive = sessBanner.querySelector('.sess-archive');
+
+  sessToggle.addEventListener('click', function () {
+    sessBanner.classList.toggle('folded');
+  });
+
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sessBanner.style.transition = 'opacity .4s';
+    sessBanner.style.opacity = '0.3';
+  });
+})();
+</script>
+</body>
+</html>

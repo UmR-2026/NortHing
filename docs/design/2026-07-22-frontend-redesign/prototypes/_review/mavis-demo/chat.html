@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>mavis demo · 咨询室对话 (按 P0–P2 修正)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@400;450;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ * mavis demo · 对话页 v3
+ * ------------------------------------------------------------
+ * 修正对照(见 _review/FINAL-REPORT.md):
+ *   P0-1 ✓ 操控台 7 控件 → 3 控件(输入 + 发送 + 折叠入口)
+ *   P1-1 ✓ avatar 顶栏 40px(跨页统一)
+ *   P1-2 ✓ 呼吸动效改一次性 forwards,不用 infinite
+ *   P1-3 ✓ 入场无 translateY,纯 opacity 0→1
+ *   P1-4 ✓ 顶栏 64px
+ *   P2-1 ✓ 圆角全用 token(r-sm 9 / r-md 14 / r-pill 999)
+ *   P2-2 ✓ 阴影用 drop-shadow,不用 box-shadow
+ *   P2-3 ✓ 4 基数间距全用 var(--s*)
+ *   P2-4 ✓ 无 ▍ 字符,所有图标 SVG
+ * ============================================================ */
+
+/* ── 1. 设计 token(全部以 -- 开头,组件读 var(--*))── */
+:root {
+  /* 基底暖灰 — 不用纯白/纯黑 */
+  --bg:        #F4F3F0;
+  --surface:   #FBFAF8;
+  --elevated:  #FFFFFF;
+  --raised:    #EFEDE8;
+  --border:    #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:        #38352E;
+  --muted:     #7B766C;
+  --faint:     #A8A398;
+  /* rep(代表色暖珊瑚, agent 灵魂) */
+  --rep-300:   #E5A583;
+  --rep-400:   #D68A63;
+  --rep-500:   #C8714C;
+  --rep-600:   #A85A38;
+  --on-rep:    #FFFAF5;
+  /* abyss(深渊青冷) */
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+  /* birth / danger */
+  --birth:     #DAD6CF;
+  --danger:    #A45950;
+  /* 整屋空气染色 — 预计算 hex(替代 color-mix) */
+  --air-bg:        rgba(200, 113, 76, 0.035);  /* 底 rep 3.5% */
+  --air-halo:      rgba(200, 113, 76, 0.07);   /* 顶晕 7% */
+  --air-mist:      rgba(63, 131, 123, 0.015);  /* 底冷雾 1.5% */
+  --air-active:    rgba(200, 113, 76, 0.04);   /* 活跃轮 4% */
+  --air-thinking:  rgba(63, 131, 123, 0.06);   /* 思考块 6% */
+  --air-user:      rgba(120, 113, 100, 0.04);  /* 用户气泡 4% 暖灰,不染 rep */
+  /* 字号 3 档 + 名字 / 正文 */
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+  /* 间距 4 基数 */
+  --s1: 4px; --s2: 8px; --s3: 12px;
+  --s4: 16px; --s5: 24px; --s6: 32px;
+  /* 圆角 */
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px;
+  --r-pill: 999px;
+  --r-window: 20px;
+  --r-win-btn: 7px;
+  /* 字体三系 */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Noto Sans SC', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Consolas', monospace;
+  /* 动效 */
+  --ease:        cubic-bezier(.25, .1, .25, 1);
+  --dur-hover:   150ms;
+  --dur-normal:  350ms;
+  --dur-once:    1200ms;
+}
+
+[data-theme="dark"] {
+  --bg:        #151411;
+  --surface:   #1C1A17;
+  --elevated:  #23211F;
+  --raised:    #2A2925;
+  --border:    #3A3833;
+  --border-soft: #32302C;
+  --fg:        #EBE8E0;
+  --muted:     #9C988F;
+  --faint:     #74716A;
+  --birth:     #4A443B;
+  --air-bg:    rgba(200, 113, 76, 0.025);
+  --air-halo:  rgba(200, 113, 76, 0.05);
+  --air-mist:  rgba(63, 131, 123, 0.02);
+  --air-active: rgba(200, 113, 76, 0.03);
+  --air-user:  rgba(232, 224, 200, 0.03);
+}
+
+/* ── 2. Reset + body ── */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: #1a1917;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* ── 3. 窗口 1280×800 + 整屋染色 ── */
+.shell {
+  width: 1280px;
+  height: 800px;
+  border-radius: var(--r-window);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .25));
+  /* 整屋:顶晕径向 + 底冷雾 + 底 rep 染色 + 基底 */
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, var(--air-halo) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 40% at 50% 100%, var(--air-mist) 0%, transparent 80%),
+    var(--air-bg),
+    var(--bg);
+  /* 入场:纯 opacity 0→1, 1200ms, 无位移(P1-3 修正) */
+  animation: room-arrive 1200ms var(--ease) both;
+}
+@keyframes room-arrive {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── 4. Chrome:窗口控制 + 角落水印 ── */
+.win-ctrl {
+  position: absolute;
+  top: var(--s4);
+  right: var(--s5);
+  display: flex;
+  gap: var(--s2);
+  z-index: 10;
+}
+.win-btn {
+  width: 28px; height: 28px;
+  border-radius: var(--r-win-btn);
+  border: none;
+  background: var(--raised);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.win-btn:hover { background: var(--border); color: var(--fg); }
+.win-btn.close:hover { background: var(--danger); color: var(--on-rep); }
+
+.watermark {
+  position: absolute;
+  left: var(--s5);
+  bottom: var(--s4);
+  display: flex; align-items: center; gap: var(--s2);
+  opacity: 0.25;
+  z-index: 5;
+  pointer-events: none;
+}
+.watermark svg { display: block; }
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-variation-settings: "WONK" 1;
+  color: var(--muted);
+}
+
+/* ── 5. 顶栏 64px(单一高度,跨页统一 P1-4)── */
+.topbar {
+  height: 64px;
+  display: flex; align-items: center;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative;
+  z-index: 2;
+}
+
+/* compact 名片:avatar 40px 跨页统一(P1-1) */
+.compact { display: flex; align-items: center; gap: var(--s3); }
+.compact-avatar {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(80, 70, 55, .18));
+}
+.compact-avatar .glyph {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-variation-settings: "WONK" 1;
+  color: rgba(255, 250, 245, .88);
+  font-weight: 600;
+}
+.compact-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.3;
+}
+.compact-meta {
+  display: flex; align-items: center; gap: var(--s2);
+  margin-top: 2px;
+}
+/* 呼吸点:6s 一次性 forwards,不用 infinite(P1-2 修正) */
+.sdot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 0 3px var(--air-active);
+  animation: breathe 6000ms var(--ease) 1 forwards;
+}
+@keyframes breathe {
+  0%   { transform: scale(1);    opacity: 0.65; }
+  50%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1);    opacity: 0.85; }
+}
+.compact-status {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+
+.topbar-spacer { flex: 1; }
+
+.topbar-action {
+  width: 32px; height: 32px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.topbar-action:hover { background: var(--raised); color: var(--muted); }
+
+/* ── 6. 在场区(简短开场,不做 dashboard 头部)── */
+.presence {
+  padding: var(--s2) var(--s5) var(--s4);
+  flex-shrink: 0;
+  animation: settle 1200ms var(--ease) 200ms both;
+}
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+
+.presence-line {
+  display: flex; align-items: baseline; gap: var(--s2);
+}
+.presence-name {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .01em;
+  line-height: 1.3;
+}
+.presence-heart {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.85;
+}
+/* 编年史条 (birth → rep-300 → rep-500 渐变) */
+.chrono {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--birth) 0%, var(--rep-300) 55%, var(--rep-500) 100%);
+  margin-top: var(--s3);
+  max-width: 320px;
+  position: relative;
+}
+.chrono .nd {
+  position: absolute;
+  right: -4px; top: 50%;
+  transform: translateY(-50%);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  border: 1.5px solid var(--surface);
+}
+
+/* ── 7. 对话流 ── */
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s4) var(--s5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+
+.turn {
+  max-width: 760px;
+  padding: var(--s4);
+  border-radius: var(--r-md);
+}
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: var(--s3);
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.turn-name { font-weight: 500; color: var(--fg); }
+.turn-time {
+  font-family: var(--font-mono);
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.turn-body {
+  color: var(--fg);
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+/* 用户轮 — 气泡不染 rep(哲学第 7 戒) */
+.turn.user {
+  align-self: flex-end;
+  max-width: 540px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s2);
+}
+.turn.user .turn-head { justify-content: flex-end; }
+.turn.user .turn-name { color: var(--muted); }
+
+/* agent 沉积轮 — 旧轮褪色,不染 rep(哲学第 7 + 硬约束 #3) */
+.turn.agent.sediment { opacity: 0.55; }
+
+/* 思考块 — abyss 冷左缘(哲学第 5 戒 + 硬约束 #2) */
+.think {
+  background: var(--air-thinking);
+  border-left: 2px solid var(--abyss-400);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: var(--s2) var(--s3);
+  margin: var(--s3) 0;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  font-style: italic;
+  max-width: 480px;
+  line-height: 1.55;
+}
+.think::before {
+  content: "· 思考 ·";
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--abyss-500);
+  margin-right: var(--s2);
+  font-style: normal;
+}
+
+/* 工具 chip — mono + abyss 高亮 */
+.chip-row {
+  display: flex; gap: var(--s2);
+  margin-top: var(--s3);
+  flex-wrap: wrap;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+  display: inline-flex; align-items: center; gap: var(--s1);
+}
+.chip .ck { color: var(--abyss-500); }
+
+/* 活跃轮 — rep 面 + 竖线(哲学第 7 戒精确执行) */
+.turn.agent.active {
+  background:
+    linear-gradient(180deg, var(--air-active) 0%, transparent 100%),
+    var(--air-active);
+  border-left: 2.5px solid var(--rep-500);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding-left: var(--s4);
+  animation: turn-active-in 1200ms var(--ease) both;
+}
+@keyframes turn-active-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.turn.agent.active .turn-body { font-weight: 450; }
+.turn.agent.active .turn-time { color: var(--rep-500); }
+
+/* ── 8. 操控台:3 控件(P0-1 修正,核心)── */
+.deck {
+  flex-shrink: 0;
+  padding: var(--s3) var(--s5) var(--s5);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s2);
+}
+.input-box {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  transition: border-color var(--dur-normal), background var(--dur-once);
+}
+.input-box:focus-within {
+  border-color: var(--rep-400);
+  background: var(--air-active);
+}
+.input-box textarea {
+  flex: 1;
+  border: none; outline: none; background: transparent;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  line-height: 1.5;
+  max-height: 80px;
+}
+.input-box textarea::placeholder { color: var(--faint); }
+
+.send-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--r-md);
+  background: var(--rep-500);
+  color: var(--on-rep);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(80, 70, 55, .18));
+  transition: background var(--dur-hover), transform var(--dur-hover);
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--rep-600); }
+.send-btn:active { transform: scale(.96); }
+
+/* 折叠入口:3 控件之一,把 ctx 圆环 / 思考分段 / 工作目录 / 模型 / 自治
+   全部沉到这里(点击展开 agent 状态面板,本 demo 不展开) */
+.more-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--faint);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+  flex-shrink: 0;
+}
+.more-btn:hover { background: var(--raised); color: var(--muted); }
+
+/* ── 9. 演示 ◐ 钮:亮/暗切换 (落库须 gate,本 demo 用) ── */
+.theme-toggle {
+  position: absolute;
+  right: var(--s5);
+  bottom: var(--s5);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--raised);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  transition: background var(--dur-hover);
+}
+.theme-toggle:hover { background: var(--border); color: var(--fg); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- 窗口控制 −□× 右上 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化">
+      <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <button class="win-btn" title="最大化">
+      <svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+    <button class="win-btn close" title="关闭">
+      <svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- 角落水印(左下,opacity .25,哲学第 2 戒) -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240" fill="none" stroke="#7B766C" stroke-linecap="round">
+      <circle cx="120" cy="120" r="16" stroke-width="6"/>
+      <path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/>
+      <path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/>
+      <line x1="30" y1="120" x2="210" y2="120" stroke-width="9"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 顶栏 64px(P1-4 统一) -->
+  <header class="topbar">
+    <div class="compact">
+      <div class="compact-avatar"><span class="glyph">序</span></div>
+      <div>
+        <div class="compact-name">知序</div>
+        <div class="compact-meta">
+          <span class="sdot"></span>
+          <span class="compact-status">在你身边</span>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="topbar-action" title="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- 在场区(简短开场,不做 dashboard header) -->
+  <section class="presence">
+    <div class="presence-line">
+      <span class="presence-name">知序</span>
+      <span class="presence-heart">· 在你身边</span>
+    </div>
+    <div class="chrono"><div class="nd"></div></div>
+  </section>
+
+  <!-- 对话流 -->
+  <main class="stream">
+
+    <!-- agent 旧轮(沉积,sediment 褪色, 哲学第 7 戒) -->
+    <div class="turn agent sediment">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-time">14:02</span>
+      </div>
+      <div class="turn-body">
+        嗯。你刚才说的那件事,我帮你看了一下——
+      </div>
+
+      <!-- 思考块:abyss 冷左缘(哲学第 5 戒 + 硬约束 #2) -->
+      <div class="think">
+        读了一下最近 7 天的项目日志,关键词出现频率……<br>
+        主要是 deadline 压力和团队沟通。两个都偏重。
+      </div>
+
+      <div class="turn-body">
+        这周节奏确实紧。我先按你说的把下周一会先 push 出来,
+        邮件草稿放在工作区里,你看一下措辞要不要再软一点。
+      </div>
+
+      <!-- 工具 chip:mono + abyss 高亮 -->
+      <div class="chip-row">
+        <span class="chip"><span class="ck">read</span> · 项目日志 · 312行 ✓</span>
+        <span class="chip"><span class="ck">write</span> · 邮件草稿.md</span>
+      </div>
+    </div>
+
+    <!-- 用户轮(气泡不染 rep,只用暖灰 --elevated, 哲学第 7 戒) -->
+    <div class="turn user sediment">
+      <div class="turn-head">
+        <span class="turn-time">14:08</span>
+        <span class="turn-name">你</span>
+      </div>
+      <div class="turn-body">
+        好。措辞我先看一下,晚上回来再回你。
+      </div>
+    </div>
+
+    <!-- agent 活跃轮(rep 面 + 竖线 + 时染 rep, 哲学第 7 戒) -->
+    <div class="turn agent active">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-time">14:08 · 现在</span>
+      </div>
+      <div class="turn-body">
+        好的。<br>
+        那你忙,我先不打扰。需要的时候再叫我。<br><br>
+        下午茶记得喝。
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 操控台:3 控件(P0-1 修正,核心)
+       - 输入框(textarea 自适应)
+       - 发送键(rep 填充, 状态多态由 P0-2 单独 demo)
+       - 折叠入口(把 ctx 圆环 / 思考分段 / 工作目录 / 模型 / 自治 5 个全部沉入此处) -->
+  <footer class="deck">
+    <div class="input-box">
+      <textarea rows="1" placeholder="说点什么…"></textarea>
+    </div>
+    <button class="send-btn" title="发送">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"/>
+        <polyline points="5 12 12 5 19 12"/>
+      </svg>
+    </button>
+    <button class="more-btn" title="更多(状态面板 / 工具 / 思考)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="5"  cy="12" r="1.5"/>
+        <circle cx="12" cy="12" r="1.5"/>
+        <circle cx="19" cy="12" r="1.5"/>
+      </svg>
+    </button>
+  </footer>
+
+  <!-- 演示 ◐ 钮:亮/暗切换(落库须 gate,本 demo 用) -->
+  <button class="theme-toggle" title="切换亮/暗" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9" stroke-dasharray="5 3"/>
+    </svg>
+  </button>
+
+</div>
+
+</body>
+</html>

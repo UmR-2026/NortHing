@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 神经网络/节点风 (Neural Nodes)</title>
+    <style>
+        :root {
+            /* Agent 的成长代表色，这里变成高科技/数字化的神经递质颜色 */
+            --agent-power: #E27B58; 
+            --agent-power-dim: rgba(226, 123, 88, 0.2);
+            
+            --bg-grid: #0B0C10;
+            --grid-line: rgba(255, 255, 255, 0.05);
+            
+            --node-bg: #1F2833;
+            --node-border: #45A29E;
+            
+            --text-main: #C5C6C7;
+            --text-dim: #66FCF1;
+            
+            --font-mono: "JetBrains Mono", "Courier New", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-grid);
+            /* 网格背景，隐喻成长空间是一个无限的数字矩阵 */
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            height: 100vh; overflow: hidden;
+            position: relative;
+        }
+
+        /* 神经链路 (用绝对定位的 SVG 模拟连线) */
+        .synapse {
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .synapse path {
+            fill: none;
+            stroke: var(--agent-power-dim);
+            stroke-width: 2;
+            stroke-dasharray: 5 5;
+            animation: flow 20s linear infinite;
+        }
+        @keyframes flow { to { stroke-dashoffset: -100; } }
+
+        /* 节点 */
+        .node {
+            position: absolute;
+            z-index: 10;
+            background: rgba(31, 40, 51, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 123, 88, 0.3); /* 使用代表色描边 */
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: border-color 0.3s;
+        }
+        .node:hover {
+            border-color: var(--agent-power);
+            box-shadow: 0 0 15px var(--agent-power-dim);
+        }
+
+        .node-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px; margin-bottom: 16px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--agent-power);
+        }
+
+        .node-socket {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--agent-power);
+            position: absolute;
+            box-shadow: 0 0 10px var(--agent-power);
+        }
+        .socket-left { left: -5px; top: 50%; transform: translateY(-50%); }
+        .socket-right { right: -5px; top: 50%; transform: translateY(-50%); }
+
+        /* 特定的节点样式 */
+        #node-core { top: 10%; left: 5%; width: 250px; }
+        #node-chat1 { top: 20%; left: 35%; width: 400px; }
+        #node-chat2 { top: 60%; left: 40%; width: 400px; }
+        #node-artifact { top: 30%; right: 5%; width: 250px; border-color: var(--text-dim); }
+        #node-artifact .node-header { color: var(--text-dim); }
+        #node-artifact .node-socket { background: var(--text-dim); box-shadow: 0 0 10px var(--text-dim); }
+
+        .chat-text { font-family: sans-serif; font-size: 14px; line-height: 1.6; }
+        
+        /* 底部命令行 (代表上帝视角的输入) */
+        .terminal-input {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 600px; z-index: 100;
+            background: rgba(0,0,0,0.8); border: 1px solid var(--agent-power);
+            padding: 12px 20px; border-radius: 4px;
+            display: flex; gap: 12px; align-items: center;
+        }
+        .terminal-input input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: #FFF; font-family: var(--font-mono); font-size: 14px;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <!-- 模拟神经链路连接 -->
+    <svg class="synapse" width="100%" height="100%">
+        <!-- Core to Chat1 -->
+        <path d="M 330 180 C 400 180, 350 250, 450 250" />
+        <!-- Chat1 to Chat2 -->
+        <path d="M 670 420 C 670 500, 700 500, 700 580" stroke-dasharray="10 10" />
+        <!-- Chat1 to Artifact -->
+        <path d="M 850 300 C 950 300, 950 380, 1050 380" />
+    </svg>
+
+    <!-- 核心状态节点 -->
+    <div class="node" id="node-core">
+        <div class="node-header">
+            <span>[SYS] Agent Core</span>
+            <span>v3.1.4</span>
+        </div>
+        <div style="font-size: 12px; line-height: 2;">
+            Status: <span style="color: #4CAF50">EVOLVING</span><br>
+            Cognition Depth: 128 layers<br>
+            Active Threads: 3<br>
+            <div style="margin-top: 12px; height: 4px; background: rgba(255,255,255,0.1); overflow: hidden;">
+                <div style="width: 78%; height: 100%; background: var(--agent-power);"></div>
+            </div>
+        </div>
+        <div class="node-socket socket-right"></div>
+    </div>
+
+    <!-- 交互节点 1 (Agent 输出) -->
+    <div class="node" id="node-chat1">
+        <div class="node-socket socket-left"></div>
+        <div class="node-header">
+            <span>[THREAD_01] Output_Gen</span>
+            <span>T-12s</span>
+        </div>
+        <div class="chat-text">
+            已经把登录那块拆成三个模块了。模块间的耦合度降低了 40%。
+            <div style="margin-top:12px; padding:8px; background:rgba(0,0,0,0.3); font-family:var(--font-mono); font-size:12px;">
+                > module_split(login, 3)<br>
+                > status: SUCCESS
+            </div>
+        </div>
+        <div class="node-socket socket-right"></div>
+    </div>
+
+    <!-- 交互节点 2 (Agent 反思与重构) -->
+    <div class="node" id="node-chat2">
+        <div class="node-socket socket-left"></div>
+        <div class="node-header">
+            <span>[THREAD_02] Trace_&_Fix</span>
+            <span>ACTIVE</span>
+        </div>
+        <div class="chat-text">
+            <span style="color:var(--agent-power);">[User Input]: 启动的时候报错了，看一下。</span><br><br>
+            探测到初始化异常。追溯执行链发现时间轴悖论：[Read Session] 先于 [Load Config] 触发。<br><br>
+            找到了。初始化顺序反了。我已经将时间线对调，正在重新编译现实。
+        </div>
+    </div>
+
+    <!-- 产物节点 -->
+    <div class="node" id="node-artifact">
+        <div class="node-socket socket-left"></div>
+        <div class="node-header">
+            <span>[ARTIFACT] AST_Modifier</span>
+            <span>src/main.rs</span>
+        </div>
+        <div style="font-size: 12px; line-height: 1.6;">
+            + fn load_config() { ... }<br>
+            - let session = read();<br>
+            <span style="color: var(--text-dim)">[Syncing to disk...]</span>
+        </div>
+    </div>
+
+    <!-- 底部控制台 -->
+    <div class="terminal-input">
+        <span style="color:var(--agent-power);">root@northing:~#</span>
+        <input type="text" placeholder="Inject new stimulus..." autofocus>
+    </div>
+
+</body>
+</html>

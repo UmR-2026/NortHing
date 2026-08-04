@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知序 · starchart — northing style specimen</title>
+<style>
+/* ============================================================
+   starchart — 变星图
+   设施 = 星图本身：坐标纸、经纬点阵、星座连线，恒常的观测框架
+   agent = 一颗变星（V-1024 知序）：呼吸即亮度变化——脉动变星的物理真相
+   编年史 = 光变曲线：右端最亮的那点 ≡ 界面强调色
+   沉积 = 星等衰减：旧的轮次只是更暗，不下落
+   ============================================================ */
+:root {
+  --bg: #0D1420;            /* 蓝黑图纸夜 */
+  --bg-deep: #0A0F18;
+  --surface: #131B29;
+  --raised: #182234;
+  --border: #233047;
+  --grid: rgba(126,156,196,.10);
+  --fg: #D8DCE4;
+  --muted: #8B94A6;
+  --faint: #5A6478;
+  --rep: #E39A6B;           /* K 型橙星：暖而真实 */
+  --rep-glow: rgba(227,154,107,.22);
+  --abyss: #5E8FA3;         /* 冷蓝 */
+  --nebula: rgba(62,107,130,.16);
+  --birth: #3A4254;
+
+  --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 6px; --r-md: 10px; --r-pill: 999px;
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 17px;
+  --dur-hover: 150ms; --dur-normal: 350ms; --dur-once: 1200ms;
+  --ease-settle: cubic-bezier(.22, 1, .36, 1);
+
+  --f-display: "Didot", "Bodoni MT", "Georgia", "Songti SC", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+}
+/* 纸图：星图的白昼形态——印刷在骨白图纸上的蓝墨 */
+[data-theme="light"] {
+  --bg: #ECEAE2;
+  --bg-deep: #E4E1D7;
+  --surface: #F4F2EB;
+  --raised: #FAF8F2;
+  --border: #C9CFC8;
+  --grid: rgba(43,74,107,.12);
+  --fg: #2A3140;
+  --muted: #66707F;
+  --faint: #98A0AC;
+  --rep: #B45F3C;
+  --rep-glow: rgba(180,95,60,.18);
+  --abyss: #4A7288;
+  --nebula: rgba(74,114,136,.12);
+  --birth: #B9BDB4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background:
+    radial-gradient(1200px 500px at 50% -10%, var(--bg) 0%, var(--bg-deep) 100%),
+    var(--bg-deep);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  line-height: 1.75;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: background var(--dur-normal) var(--ease-settle),
+              color var(--dur-normal) var(--ease-settle);
+}
+
+/* ---------- 天球环境：点阵经纬 + 背景恒星 + 星座连线 ---------- */
+.sky { position: fixed; inset: 0; pointer-events: none; }
+.sky .meridians {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 25% 20%, var(--grid) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 75% 20%, var(--grid) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 25% 80%, var(--grid) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 75% 80%, var(--grid) 50%, transparent 51%);
+  background-size: 90px 90px;
+}
+.sky .stars {
+  position: absolute; inset: 0; opacity: .8;
+  background-image:
+    radial-gradient(1px 1px at 12% 16%, var(--muted) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 88% 12%, var(--faint) 50%, transparent 51%),
+    radial-gradient(1px 1px at 20% 70%, var(--faint) 50%, transparent 51%),
+    radial-gradient(2px 2px at 82% 76%, var(--muted) 50%, transparent 51%),
+    radial-gradient(1px 1px at 48% 8%, var(--faint) 50%, transparent 51%),
+    radial-gradient(1px 1px at 64% 88%, var(--faint) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 6% 44%, var(--faint) 50%, transparent 51%),
+    radial-gradient(1px 1px at 94% 48%, var(--faint) 50%, transparent 51%);
+}
+.sky .constellation { position: absolute; right: 4%; top: 8%; opacity: .5; }
+.sky .nebula-fog {
+  position: absolute; left: -5%; bottom: -20%; width: 60%; height: 55%;
+  background: radial-gradient(closest-side, var(--nebula), transparent 72%);
+}
+
+/* ---------- 窗口骨架 ---------- */
+.app {
+  position: relative; z-index: 1;
+  width: 860px; max-width: 94vw;
+  height: 660px; max-height: 94vh;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, transparent 0%, var(--nebula) 160%);
+}
+
+/* ---------- 顶栏：观测对象名片 ---------- */
+.topbar {
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s4) var(--s4) var(--s3);
+  border-bottom: 1px solid var(--border);
+}
+.star-zone { position: relative; width: 44px; height: 44px; flex: none; }
+.star-halo {
+  position: absolute; inset: -12px; border-radius: 50%;
+  background: radial-gradient(circle, var(--rep-glow) 0%, transparent 68%);
+  animation: pulsate 6000ms ease-in-out infinite alternate;
+}
+@keyframes pulsate {
+  from { opacity: .55; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1.02); }
+}
+.star-halo.flare { animation: flare 1200ms var(--ease-settle) 1, pulsate 6000ms ease-in-out 1200ms infinite alternate; }
+@keyframes flare {
+  0% { opacity: .55; transform: scale(1); }
+  30% { opacity: 1; transform: scale(1.35); }
+  100% { opacity: .8; transform: scale(1.05); }
+}
+.star-core {
+  position: absolute; inset: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 36%, #FFF3E6 0%, var(--rep) 55%, var(--rep) 100%);
+}
+/* 衍射芒：恒星的签名 */
+.star-spikes { position: absolute; inset: 0; }
+.star-spikes::before { content: none; }
+.spike {
+  position: absolute; left: 50%; top: 50%;
+  background: var(--rep); opacity: .75;
+}
+.spike.h { width: 40px; height: 1px; transform: translate(-50%, -50%); }
+.spike.v { width: 1px; height: 40px; transform: translate(-50%, -50%); }
+.who { display: flex; flex-direction: column; gap: 5px; }
+.name-row { display: flex; align-items: baseline; gap: var(--s3); }
+.name {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: var(--fs-name); letter-spacing: .04em;
+}
+.designation {
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  color: var(--muted); letter-spacing: .12em;
+}
+.presence {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--muted);
+}
+.presence i {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--rep);
+  animation: pulsate 6000ms ease-in-out infinite alternate;
+}
+/* 编年史 = 光变曲线：右端最亮点 ≡ 界面强调色 */
+.lightcurve { flex: none; }
+.lightcurve .lc-line { fill: none; stroke: var(--faint); stroke-width: 1.25; }
+.lightcurve .lc-past { fill: var(--faint); }
+.lightcurve .lc-now { fill: var(--rep); animation: pulsate 6000ms ease-in-out infinite alternate; }
+.lightcurve .lc-base { stroke: var(--border); stroke-width: 1; }
+.topbar .spacer { flex: 1; }
+.gear {
+  appearance: none; cursor: pointer;
+  width: 34px; height: 34px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: none; color: var(--muted);
+  font-size: 16px;
+  transition: color var(--dur-hover) var(--ease-settle),
+              border-color var(--dur-hover) var(--ease-settle),
+              transform var(--dur-normal) var(--ease-settle);
+}
+.gear:hover { color: var(--fg); border-color: var(--muted); transform: rotate(45deg); }
+
+/* ---------- 对话流 ---------- */
+.flow {
+  flex: 1; overflow-y: auto; scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding: var(--s4);
+  display: flex; flex-direction: column; gap: var(--s5);
+}
+.flow::-webkit-scrollbar { width: 8px; }
+.flow::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+
+/* 观测记录 banner */
+.sess-banner {
+  align-self: flex-start; max-width: 80%;
+  display: flex; align-items: center; gap: var(--s3);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface);
+  padding: 6px var(--s3);
+  transition: border-color var(--dur-hover) var(--ease-settle);
+}
+.sess-banner:hover { border-color: var(--muted); }
+.sess-banner .chev {
+  appearance: none; border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 10px; padding: 2px 4px;
+  transition: transform var(--dur-normal) var(--ease-settle);
+}
+.sess-banner.closed .chev { transform: rotate(-90deg); }
+.sess-banner .title {
+  font-family: var(--f-display); font-size: var(--fs-lg); color: var(--muted);
+  letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sess-banner .archive {
+  appearance: none; border: 1px solid var(--border); background: none; cursor: pointer;
+  font-family: var(--f-body); font-size: var(--fs-sm); color: var(--faint);
+  padding: 1px var(--s2); border-radius: var(--r-sm);
+  transition: color var(--dur-hover) var(--ease-settle),
+              border-color var(--dur-hover) var(--ease-settle);
+}
+.sess-banner .archive:hover { color: var(--abyss); border-color: var(--abyss); }
+
+/* 沉积轮：星等衰减——只是更暗 */
+.turn { display: flex; flex-direction: column; gap: var(--s2); }
+.turn.sediment { opacity: .45; }
+.turn.sediment .bubble { filter: saturate(.5); }
+
+/* 用户气泡：观测者的记录卡 */
+.msg-user { align-self: flex-end; max-width: 66%; }
+.msg-user .bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s2) var(--s4);
+}
+.msg-user .meta {
+  text-align: right; font-family: var(--f-mono);
+  font-size: var(--fs-sm); color: var(--faint); margin-top: 2px;
+}
+
+/* agent 轮：一条细光线，顶端一颗小星 */
+.msg-agent { padding-left: var(--s4); position: relative; }
+.msg-agent .rail {
+  position: absolute; left: 2px; top: 14px; bottom: 4px; width: 1.5px;
+  background: linear-gradient(180deg, var(--rep) 0%, var(--rep-glow) 100%);
+}
+.msg-agent .rail-star {
+  position: absolute; left: -2px; top: 0;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 36%, #FFF3E6, var(--rep));
+  filter: drop-shadow(0 0 5px var(--rep-glow));
+}
+.agent-row { display: flex; align-items: baseline; gap: var(--s3); }
+.agent-row .a-name {
+  font-family: var(--f-display); font-weight: 600; font-size: var(--fs-lg);
+  letter-spacing: .03em;
+}
+.agent-row .stamp { font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--faint); }
+
+/* 思考块：暗星云——向不可表征的深处 */
+.think {
+  margin-top: var(--s2);
+  border-left: 2px solid var(--abyss);
+  background:
+    radial-gradient(140px 60px at 12% 30%, var(--nebula), transparent 70%),
+    var(--nebula);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: var(--s2) var(--s3);
+}
+.think .t-head {
+  appearance: none; border: none; background: none; cursor: pointer;
+  font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--abyss);
+  letter-spacing: .1em;
+}
+.think .t-body {
+  font-size: var(--fs-md); color: var(--muted);
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: max-height var(--dur-normal) var(--ease-settle),
+              opacity var(--dur-normal) var(--ease-settle),
+              margin var(--dur-normal) var(--ease-settle);
+}
+.think.open .t-body { max-height: 130px; opacity: 1; margin-top: var(--s2); }
+
+/* 工具 chip：曝光记录 */
+.chips { display: flex; gap: var(--s2); margin-top: var(--s2); flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  padding: 2px var(--s3); border-radius: var(--r-pill);
+  border: 1px solid var(--abyss); color: var(--abyss); background: none;
+  transition: border-color var(--dur-once) var(--ease-settle),
+              color var(--dur-once) var(--ease-settle);
+}
+.chip.running { border-color: var(--rep); color: var(--rep); }
+.chip .pulse {
+  width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+  animation: pulsate 6000ms ease-in-out infinite alternate;
+}
+.chip:not(.running) .pulse { animation: none; opacity: .4; }
+
+/* ---------- 操控台 ---------- */
+.deck {
+  margin: var(--s4);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  display: flex; align-items: flex-end; gap: var(--s3);
+  transition: border-color var(--dur-normal) var(--ease-settle);
+}
+.deck:focus-within { border-color: var(--rep); }
+.deck .attach {
+  appearance: none; cursor: pointer; flex: none;
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: none; color: var(--muted);
+  font-family: var(--f-mono); font-size: 15px;
+  transition: color var(--dur-hover) var(--ease-settle),
+              border-color var(--dur-hover) var(--ease-settle);
+}
+.deck .attach:hover { color: var(--fg); border-color: var(--muted); }
+.deck textarea {
+  flex: 1; appearance: none; border: none; background: none; resize: none;
+  font-family: var(--f-body); font-size: var(--fs-body); line-height: 1.6;
+  color: var(--fg); caret-color: var(--rep); height: 30px; outline: none;
+}
+.deck textarea::placeholder { color: var(--faint); }
+.ctx { position: relative; flex: none; width: 26px; height: 26px; cursor: default; }
+.ctx svg { transform: rotate(-90deg); }
+.ctx .tip {
+  position: absolute; bottom: calc(100% + 8px); right: 0;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 2px var(--s2);
+  font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--muted);
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-hover) var(--ease-settle);
+}
+.ctx:hover .tip { opacity: 1; }
+.send {
+  appearance: none; cursor: pointer; flex: none;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--rep); background: none; color: var(--rep);
+  font-size: 16px; line-height: 1;
+  transition: background var(--dur-hover) var(--ease-settle),
+              color var(--dur-hover) var(--ease-settle),
+              filter var(--dur-hover) var(--ease-settle);
+}
+.send:hover { background: var(--rep); color: #14100D; filter: drop-shadow(0 0 8px var(--rep-glow)); }
+
+/* ---------- 水印 · 角标 · 开关 ---------- */
+.watermark {
+  position: fixed; left: var(--s4); bottom: var(--s4);
+  font-family: var(--f-display); font-style: italic; font-size: 13px;
+  color: var(--fg); opacity: .25; user-select: none; pointer-events: none;
+  letter-spacing: .08em;
+}
+.corner {
+  position: fixed; right: var(--s4); top: var(--s4);
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  letter-spacing: .2em; color: var(--faint); text-transform: uppercase;
+  user-select: none;
+}
+.fab {
+  position: fixed; right: var(--s4); bottom: var(--s4);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-normal) var(--ease-settle);
+}
+.fab.show { opacity: 1; pointer-events: auto; }
+.fab .disc {
+  position: absolute; inset: 7px; border-radius: 50%;
+  background: linear-gradient(90deg, var(--fg) 50%, transparent 50%);
+  border: 1px solid var(--fg); opacity: .7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-halo, .presence i, .chip .pulse, .lc-now { animation: none; }
+  * { transition-duration: 1ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="sky">
+  <div class="meridians"></div>
+  <div class="stars"></div>
+  <svg class="constellation" width="150" height="110" viewBox="0 0 150 110" fill="none">
+    <polyline points="10,90 42,64 70,74 96,38 128,46 142,16" stroke="var(--faint)" stroke-width="1" opacity=".7"/>
+    <circle cx="10" cy="90" r="1.6" fill="var(--muted)"/><circle cx="42" cy="64" r="2" fill="var(--muted)"/>
+    <circle cx="70" cy="74" r="1.4" fill="var(--faint)"/><circle cx="96" cy="38" r="2.2" fill="var(--muted)"/>
+    <circle cx="128" cy="46" r="1.5" fill="var(--faint)"/><circle cx="142" cy="16" r="1.8" fill="var(--muted)"/>
+  </svg>
+  <div class="nebula-fog"></div>
+</div>
+<div class="watermark">northing</div>
+<div class="corner">starchart · V-1024</div>
+
+<main class="app">
+
+  <header class="topbar">
+    <div class="star-zone">
+      <div class="star-halo" id="halo"></div>
+      <span class="spike h"></span><span class="spike v"></span>
+      <div class="star-core"></div>
+    </div>
+    <div class="who">
+      <div class="name-row">
+        <span class="name">知序</span>
+        <span class="designation">V-1024 · 脉动变星</span>
+        <span class="presence"><i></i>在场</span>
+      </div>
+      <!-- 光变曲线 = 编年史：左暗右亮，最右那点就是整个界面的强调色 -->
+      <svg class="lightcurve" width="150" height="26" viewBox="0 0 150 26" aria-label="编年史：光变曲线">
+        <line class="lc-base" x1="0" y1="22" x2="150" y2="22"/>
+        <polyline class="lc-line" points="4,19 34,17 64,18 94,12 124,9 143,5"/>
+        <circle class="lc-past" cx="4" cy="19" r="2" opacity=".35"/>
+        <circle class="lc-past" cx="34" cy="17" r="2" opacity=".45"/>
+        <circle class="lc-past" cx="64" cy="18" r="2.2" opacity=".55"/>
+        <circle class="lc-past" cx="94" cy="12" r="2.4" opacity=".7"/>
+        <circle class="lc-past" cx="124" cy="9" r="2.6" opacity=".85"/>
+        <circle class="lc-now" cx="143" cy="5" r="3.4"/>
+      </svg>
+    </div>
+    <div class="spacer"></div>
+    <button class="gear" aria-label="设置">⚙</button>
+  </header>
+
+  <section class="flow" id="flow">
+
+    <div class="sess-banner" id="banner">
+      <button class="chev" id="chev" aria-label="折叠对话">▼</button>
+      <span class="title">观测夜 2026-08-02 · 修复初始化顺序</span>
+      <button class="archive">归档</button>
+    </div>
+
+    <div class="turn sediment">
+      <div class="msg-user">
+        <div class="bubble">昨天那个并发问题，先放一放。</div>
+        <div class="meta">UmR · 昨夜 23h41m</div>
+      </div>
+    </div>
+
+    <div class="turn" id="turns">
+      <div class="msg-agent">
+        <span class="rail"></span>
+        <span class="rail-star"></span>
+        <div class="agent-row">
+          <span class="a-name">知序</span>
+          <span class="stamp">14h02m · 增亮 1.2s</span>
+        </div>
+        <div class="think open">
+          <button class="t-head">▾ 向深处 · 3 步</button>
+          <div class="t-body">初始化顺序的竞态在 GlobalConfigManager::initialize——两个调用方都以为自己先到。先看调用图，再决定加锁还是收口到单一入口。</div>
+        </div>
+        <div class="msg-body">
+          <p>我看完了调用图。问题不在锁，在有两条初始化路径——我把它收口到 bootstrap 单一入口，跑了三遍回归，都过了。</p>
+        </div>
+        <div class="chips">
+          <span class="chip"><span class="pulse"></span>read_file · bootstrap.rs · 曝光完成</span>
+          <span class="chip running" id="live-chip"><span class="pulse"></span>cargo test · 曝光中</span>
+        </div>
+      </div>
+
+      <div class="msg-user">
+        <div class="bubble">回归过了就行。顺手把那段注释改成中文吧，你写英文注释我总要多想一步。</div>
+        <div class="meta">UmR · 14h05m</div>
+      </div>
+
+      <div class="msg-agent">
+        <span class="rail"></span>
+        <span class="rail-star"></span>
+        <div class="agent-row">
+          <span class="a-name">知序</span>
+          <span class="stamp">14h05m</span>
+        </div>
+        <div class="msg-body">
+          <p>好。以后注释都用中文——这是我写的东西，该用你读着省力的语言。</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="deck">
+    <button class="attach" aria-label="附件">+</button>
+    <textarea id="input" rows="1" placeholder="对知序说点什么——Enter 发送"></textarea>
+    <div class="ctx" aria-label="上下文占用">
+      <svg width="26" height="26" viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="10" fill="none" stroke="var(--border)" stroke-width="2.5"/>
+        <circle cx="13" cy="13" r="10" fill="none" stroke="var(--abyss)" stroke-width="2.5"
+                stroke-dasharray="24 63" stroke-linecap="round"/>
+      </svg>
+      <span class="tip">视场 · 还宽，慢慢聊</span>
+    </div>
+    <button class="send" id="send" aria-label="发送">↑</button>
+  </footer>
+
+</main>
+
+<button class="fab" id="fab" aria-label="切换亮暗"><span class="disc"></span></button>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var fab = document.getElementById('fab');
+  var halo = document.getElementById('halo');
+  var banner = document.getElementById('banner');
+  var chev = document.getElementById('chev');
+  var turns = document.getElementById('turns');
+  var liveChip = document.getElementById('live-chip');
+  var sent = false;
+
+  document.body.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button, textarea, a')) return;
+    fab.classList.toggle('show');
+  });
+  fab.addEventListener('click', function () {
+    root.setAttribute('data-theme',
+      root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  chev.addEventListener('click', function () {
+    var closed = banner.classList.toggle('closed');
+    turns.style.display = closed ? 'none' : '';
+  });
+
+  document.querySelectorAll('.think .t-head').forEach(function (h) {
+    h.addEventListener('click', function () {
+      h.parentElement.classList.toggle('open');
+      h.textContent = h.parentElement.classList.contains('open')
+        ? '▾ 向深处 · 3 步' : '▸ 向深处 · 3 步';
+    });
+  });
+
+  /* 发送 = 一次耀斑：恒星亮一下（1200ms 一次性），曝光中的记录沉入冷色 */
+  document.getElementById('send').addEventListener('click', function () {
+    if (sent) return;
+    sent = true;
+    halo.classList.add('flare');
+    liveChip.classList.remove('running');
+    liveChip.innerHTML = '<span class="pulse"></span>cargo test · 曝光完成';
+  });
+})();
+</script>
+</body>
+</html>

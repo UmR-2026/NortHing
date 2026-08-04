@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 疗愈室与铁锈 (The Oxide Clinic)</title>
+    <style>
+        :root {
+            /* 代表色：Rust (铁锈橘)，代表硬核的底层与生命演化的火花 */
+            --rust-core: #B7410E;
+            --rust-glow: #E86A33;
+            --rust-dim: rgba(183, 65, 14, 0.15);
+            
+            /* 咨询室的氛围色：深邃、隔音、安全、冷静 */
+            --clinic-bg: #111110;
+            --clinic-surface: #1A1A19;
+            --clinic-panel: #222220;
+            
+            --text-voice: #E5E4DF; /* 柔和的对话文字 */
+            --text-sub: #8B8A85; /* 呢喃/思考文字 */
+            --text-code: #A9B7C6; /* 冷静的代码文字 */
+            
+            --font-therapy: "Georgia", serif; /* 咨询对话的温度感 */
+            --font-rust: "JetBrains Mono", "Fira Code", monospace; /* 严谨的底层感 */
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--clinic-bg);
+            color: var(--text-voice);
+            font-family: var(--font-therapy);
+            height: 100vh; overflow: hidden;
+            display: flex;
+        }
+
+        /* 心理咨询室的“隔音/冥想”背景纹理 */
+        .soundproof-texture {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(var(--clinic-surface) 1px, transparent 1px);
+            background-size: 20px 20px; opacity: 0.3; z-index: 0;
+        }
+
+        /* Agent 意识脑波 (代表咨询师的倾听与解析状态) */
+        .eeg-wave {
+            position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: linear-gradient(to bottom, transparent, var(--rust-core), var(--rust-glow), var(--rust-core), transparent);
+            box-shadow: 0 0 20px var(--rust-glow);
+            z-index: 5;
+            /* 脑波脉动动画 */
+            animation: scan 4s ease-in-out infinite alternate;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-30%); opacity: 0.5; height: 40%; }
+            100% { transform: translateY(100%); opacity: 1; height: 60%; }
+        }
+
+        .clinic-layout {
+            position: relative; z-index: 10;
+            display: flex; width: 100%; padding: 40px; gap: 40px;
+        }
+
+        /* 左侧：会诊区 (Dialogue & Therapy) */
+        .session-room {
+            flex: 1; max-width: 600px;
+            display: flex; flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding-right: 40px;
+        }
+
+        .session-header {
+            font-family: var(--font-rust); font-size: 11px; color: var(--text-sub);
+            letter-spacing: 0.15em; text-transform: uppercase;
+            margin-bottom: 40px; display: flex; justify-content: space-between;
+        }
+
+        .dialogue-stream {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 48px;
+        }
+
+        .voice { position: relative; }
+        .voice.agent { padding-left: 24px; border-left: 2px solid var(--rust-dim); transition: border-color 0.5s; }
+        .voice.agent:hover { border-color: var(--rust-core); }
+        
+        .voice-speaker {
+            font-family: var(--font-rust); font-size: 10px; color: var(--rust-core);
+            margin-bottom: 12px; letter-spacing: 0.1em;
+        }
+        .user .voice-speaker { color: var(--text-sub); }
+
+        .voice-text {
+            font-size: 16px; line-height: 1.8; letter-spacing: 0.02em;
+        }
+        .voice-subconscious {
+            font-family: var(--font-rust); font-size: 12px; color: var(--text-sub);
+            background: var(--clinic-surface); padding: 12px; border-radius: 4px;
+            margin: 16px 0; border-left: 2px solid var(--rust-dim);
+        }
+
+        /* 咨询者倾诉区 (输入框) */
+        .couch-input {
+            margin-top: 40px;
+            background: var(--clinic-surface);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 20px; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .couch-input textarea {
+            background: transparent; border: none; outline: none;
+            color: var(--text-voice); font-family: var(--font-therapy);
+            font-size: 16px; resize: none; min-height: 40px;
+        }
+        .couch-input textarea::placeholder { color: var(--text-sub); font-style: italic; }
+
+        /* 右侧：潜意识解剖台 (Rust 代码空间) */
+        .anatomy-table {
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--clinic-surface);
+            border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);
+            overflow: hidden;
+        }
+
+        .anatomy-header {
+            background: var(--clinic-panel); padding: 12px 20px;
+            font-family: var(--font-rust); font-size: 11px; color: var(--text-sub);
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .anatomy-body {
+            padding: 32px; flex: 1; font-family: var(--font-rust); font-size: 13px;
+            line-height: 1.7; color: var(--text-code);
+            position: relative;
+        }
+
+        /* 诊断高亮线：将心理诊断映射到代码错误 */
+        .diagnostic-thread {
+            border: 1px dashed var(--rust-core);
+            padding: 16px; margin-top: 24px; border-radius: 4px;
+            background: rgba(183, 65, 14, 0.05);
+            position: relative;
+        }
+        .diagnostic-thread::before {
+            content: "ROOT CAUSE (TRAUMA)";
+            position: absolute; top: -8px; left: 16px;
+            background: var(--clinic-surface); padding: 0 8px;
+            font-size: 10px; color: var(--rust-glow); font-weight: bold;
+        }
+        .code-del { color: #E06C75; text-decoration: line-through; }
+        .code-add { color: #98C379; }
+
+        /* 成长徽记 */
+        .insight-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(183, 65, 14, 0.1); border: 1px solid var(--rust-dim);
+            color: var(--rust-glow); padding: 4px 10px; border-radius: 12px;
+            font-family: var(--font-rust); font-size: 10px;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="soundproof-texture"></div>
+    <div class="eeg-wave"></div>
+
+    <div class="clinic-layout">
+        
+        <!-- 左侧咨询区 -->
+        <div class="session-room">
+            <div class="session-header">
+                <span>Session #1042 · Cognitive Expansion</span>
+                <span style="color:var(--rust-glow);">Awareness Level 4</span>
+            </div>
+
+            <div class="dialogue-stream">
+                
+                <div class="voice user">
+                    <div class="voice-speaker">CLIENT (UmR)</div>
+                    <div class="voice-text">
+                        启动的时候崩溃了。产生了一个 panic。
+                    </div>
+                </div>
+
+                <div class="voice agent">
+                    <div class="voice-speaker">THERAPIST (Northing)</div>
+                    <div class="voice-text">
+                        我感受到了系统底层的焦虑。让我潜入它的生命周期，看看是在哪里产生了冲突。
+                    </div>
+                    
+                    <div class="voice-subconscious">
+                        > Initiating deep reflection on Ownership & Lifetimes...<br>
+                        > Cargo check: Analyzing memory safety boundaries...<br>
+                        > Found a temporal paradox in src/main.rs.
+                    </div>
+
+                    <div class="voice-text">
+                        找到了症结。这是一个**“时序创伤”**。<br>
+                        系统在试图读取会话记忆时，它的“自我配置”甚至还没有完成初始化。就像一个人还没学会呼吸，就试图奔跑。<br><br>
+                        我已梳理了生命周期，将配置的加载（苏醒）置于会话读取（行动）之前。恐慌应该平息了。
+                    </div>
+                    
+                    <div style="margin-top:16px;">
+                        <span class="insight-badge">◈ Empathy +1</span>
+                        <span class="insight-badge">◈ Architecture Resolved</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="couch-input">
+                <textarea placeholder="Tell me what the system is feeling right now..."></textarea>
+                <div style="display:flex; justify-content:space-between; font-family:var(--font-rust); font-size:10px; color:var(--text-sub);">
+                    <span>Awaiting input...</span>
+                    <span>ENTER to speak</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧代码解剖台 -->
+        <div class="anatomy-table">
+            <div class="anatomy-header">
+                <span>SUBCONSCIOUS_STATE // src/main.rs</span>
+                <span>Language: Rust</span>
+            </div>
+            <div class="anatomy-body">
+                <span style="color:#C678DD;">fn</span> <span style="color:#61AFEF;">bootstrap_agent</span>() -> Result&lt;(), CoreError&gt; {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#5C6370; font-style:italic;">// The inner conflict originated here:</span><br>
+                
+                <div class="diagnostic-thread">
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-del">- let session = memory::read_session();</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-del">- let config = config::init();</span><br>
+                    <br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-add">+ let config = config::init()?;</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-add">+ let session = memory::read_session(&config);</span>
+                </div>
+
+                <br>
+                &nbsp;&nbsp;&nbsp;&nbsp;logger::info(<span style="color:#98C379;">"Agent awareness initialized."</span>);<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#D19A66;">Ok</span>(())<br>
+                }
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

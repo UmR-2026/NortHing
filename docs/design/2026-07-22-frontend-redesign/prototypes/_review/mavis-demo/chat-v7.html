@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>mavis demo v6 · 咨询室对话</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ * mavis demo v6 · 咨询室对话
+ * ------------------------------------------------------------
+ * v5 → v6 真修复:用户发截图后,发现 v5 dark 模式几乎不可用
+ * 5 个 P0 修复:
+ *   1. dark 模式文字 token 重设计(fg 提亮 + 加粗 + 独立 border)
+ *   2. border 拆 light/dark 双 token
+ *   3. dark 整屋空气染色改"光晕"逻辑(不是"暖色叠加")
+ *   4. 内容压缩:opening/stream/deck padding 减半,装下 800px
+ *   5. avatar "序" 字加 text-shadow 加深
+ * 保持 v5 所有几何 + 视觉修复
+ * ============================================================ */
+
+:root {
+  /* light 模式:沿用 v5 */
+  --bg:        #F4F3F0;
+  --surface:   #FBFAF8;
+  --elevated:  #FFFEFB;
+  --raised:    #EFEDE8;
+  --border:    #D6D3CC;       /* 提亮:从 #E6E3DD 提到,light 模式边更清晰 */
+  --border-soft: #ECEAE5;
+  --fg:        #38352E;
+  --muted:     #5A554B;       /* 提亮:从 #6B665B,contrast 5.5:1 */
+  --faint:     #847E72;       /* 提亮:从 #908A7E,contrast 3.5:1(满足哲学 ≥4.0 接近) */
+  --rep-300:   #E5A583;
+  --rep-400:   #D68A63;
+  --rep-500:   #C8714C;
+  --rep-600:   #A85A38;
+  --on-rep:    #FFFAF5;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+  --birth:     #DAD6CF;
+  --danger:    #A45950;
+  /* 整屋空气染色: 沿用 v5 浓度 */
+  --air-bg:        rgba(200, 113, 76, 0.10);
+  --air-halo:      rgba(200, 113, 76, 0.20);
+  --air-mist:      rgba(63, 131, 123, 0.04);
+  --air-side:      rgba(200, 113, 76, 0.08);
+  --air-active:    rgba(200, 113, 76, 0.10);
+  --air-thinking:  rgba(63, 131, 123, 0.10);
+  --air-input:     rgba(200, 113, 76, 0.04);
+  --air-user:      rgba(120, 113, 100, 0.05);
+  /* 字号 */
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+  /* 间距 */
+  --s1: 4px; --s2: 8px; --s3: 12px;
+  --s4: 16px; --s5: 24px; --s6: 32px;
+  /* 圆角 */
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px;
+  --r-pill: 999px;
+  --r-window: 20px;
+  --r-win-btn: 7px;
+  /* 字体 */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Noto Sans SC', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Consolas', monospace;
+  /* 字重:demo 默认 450,dark 模式加到 500(解决"细字消失")*/
+  --fw-body: 450;
+  --fw-meta: 500;
+  /* 动效 */
+  --ease:       cubic-bezier(.25, .1, .25, 1);
+  --dur-hover:  150ms;
+  --dur-normal: 350ms;
+  --dur-once:   1200ms;
+  --bg-demo:    #1a1917;
+  --s-demo:     40px;
+}
+
+/* v6 关键修复:dark 模式 token 重新设计 */
+[data-theme="dark"] {
+  /* 基底深暖黑,稍提亮让光晕能"附着" */
+  --bg:        #1A1814;       /* 提亮:从 #151411,#1A1814 + 5% 暖度 */
+  --surface:   #23211D;       /* 提亮:从 #1C1A17 */
+  --elevated:  #2A2823;       /* 提亮:从 #23211F */
+  --raised:    #34322C;       /* 提亮:从 #2A2925 */
+  --border:    #4A443B;       /* 关键:独立 dark border,差 5% 亮度,可见 */
+  --border-soft: #353230;    /* 关键:独立 dark border-soft,跟 bg 差 3% */
+  --fg:        #F2EEE3;       /* 关键:提亮到 #F2EEE3(从 #EBE8E0),contrast 13:1 */
+  --muted:     #B5AE9F;       /* 关键:从 #B0A99E 提到,contrast 7:1 */
+  --faint:     #8E8779;       /* 关键:从 #847E73 提到,contrast 4.5:1,达标 */
+  --birth:     #4A443B;
+  /* dark 整屋空气染色改"光晕"逻辑:
+     light 模式 rep 是"暖色叠加在浅底上"
+     dark 模式 rep 应该是"暖光从内部透出"——更亮、更发光 */
+  --air-bg:    rgba(220, 130, 90, 0.06);    /* 浅一档 rep,6% */
+  --air-halo:  rgba(255, 160, 110, 0.14);   /* 显著提亮,14%(从 22% 改,颜色提亮) */
+  --air-mist:  rgba(90, 130, 120, 0.04);
+  --air-side:  rgba(220, 130, 90, 0.05);
+  --air-active: rgba(255, 160, 110, 0.10);   /* 提亮,active 染色发光 */
+  --air-thinking: rgba(90, 130, 120, 0.12);  /* 提亮 abtyss */
+  --air-input: rgba(220, 130, 90, 0.05);
+  --air-user:  rgba(180, 170, 140, 0.06);
+  --bg-demo:   #0E0D0B;
+  /* 关键:dark 模式字重加到 500,解决"细字消失" */
+  --fw-body: 500;
+  --fw-meta: 600;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-body);
+  color: var(--fg);
+  background: var(--bg-demo);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-demo);
+}
+
+.shell {
+  width: 1280px;
+  height: 800px;
+  border-radius: var(--r-window);
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .25));
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, var(--air-halo) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 60% at 0% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 30% 60% at 100% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 100% 35% at 50% 100%, var(--air-mist) 0%, transparent 80%),
+    var(--air-bg),
+    var(--bg);
+  animation: room-arrive 1200ms var(--ease) both;
+}
+@keyframes room-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+/* chrome */
+.win-ctrl {
+  position: absolute; top: var(--s3); right: var(--s4);
+  display: flex; gap: var(--s2); z-index: 10;
+}
+.win-btn {
+  width: 26px; height: 26px;
+  border-radius: var(--r-win-btn);
+  border: none; background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.win-btn:hover { background: var(--raised); color: var(--muted); }
+.win-btn.close:hover { background: var(--danger); color: var(--on-rep); }
+
+.watermark {
+  position: absolute; left: var(--s5); bottom: var(--s3);
+  display: flex; align-items: center; gap: var(--s2);
+  opacity: 0.22; z-index: 5; pointer-events: none;
+  color: var(--muted);
+}
+.watermark svg { display: block; }
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-variation-settings: "WONK" 1;
+  letter-spacing: .04em;
+}
+
+/* ── 顶栏 60px(从 64 缩到 60,内容压缩)── */
+.topbar {
+  height: 60px;
+  display: flex; align-items: center;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative; z-index: 2;
+}
+
+.compact {
+  display: flex; align-items: center;
+  gap: var(--s3);
+  padding-right: var(--s3);
+  border-right: 1px solid var(--border-soft);
+  height: 40px;
+}
+.compact-avatar {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(80, 70, 55, .18));
+  position: relative;
+}
+/* v6 关键修复:avatar "序" 字加 text-shadow 加深对比度 */
+.compact-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--on-rep);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);  /* v7 修复:0.15 → 0.35,加深字在 rep 渐变暗部的对比度 */
+  letter-spacing: -.01em;
+}
+.ritual {
+  display: flex; flex-direction: column;
+  gap: 0; justify-content: center;
+  height: 36px;
+}
+.ritual-day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-meta);
+  color: var(--muted);    /* 从 --faint 提到 --muted,dark 上更可见 */
+  letter-spacing: .04em;
+  line-height: 1.2;
+}
+.ritual-time {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  color: var(--fg);
+  line-height: 1.3;
+}
+
+.topbar-spacer { flex: 1; }
+
+.topbar-actions {
+  display: flex; align-items: center;
+  gap: var(--s3);
+  padding-left: var(--s3);
+  border-left: 1px solid var(--border-soft);
+  height: 40px;
+}
+.topbar-divider {
+  width: 1px; height: 20px;
+  background: var(--border);   /* 关键:用 --border 而非 --border-soft */
+  margin: 0 var(--s1);
+}
+
+.topbar-archive {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s3);
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border);   /* 关键:用 --border 而非 --border-soft */
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  cursor: pointer;
+  transition: background var(--dur-hover), color var(--dur-hover), border-color var(--dur-hover);
+}
+.topbar-archive:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+.topbar-archive svg { display: block; }
+
+.topbar-action {
+  width: 32px; height: 32px;
+  border-radius: var(--r-sm);
+  border: none; background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.topbar-action:hover { background: var(--raised); color: var(--fg); }
+
+/* ── opening(padding 16 24 12,从 16 24 16 缩)── */
+.opening {
+  display: flex; align-items: flex-start;
+  gap: var(--s4);
+  padding: var(--s4) var(--s5) var(--s3);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  animation: settle 1200ms var(--ease) 200ms both;
+}
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+
+.opening-avatar {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 3px 8px rgba(200, 113, 76, .18));
+  flex-shrink: 0;
+  position: relative;
+}
+.opening-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--on-rep);
+  letter-spacing: -.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);  /* v7 修复:0.15 → 0.35 */
+}
+.opening-meta {
+  display: flex; flex-direction: column;
+  gap: var(--s1);   /* 关键:v5 8px 缩到 4px,opening 总高缩 12px */
+  flex: 1;
+  min-width: 0;
+}
+
+.opening-greeting {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .005em;
+  line-height: 1.1;
+}
+.opening-ritual {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  color: var(--muted);
+  line-height: 1.4;
+  font-style: italic;
+}
+.opening-line {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-body);
+  color: var(--fg);
+  line-height: 1.4;
+}
+.opening-aside {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-meta);
+  color: var(--muted);     /* 关键:从 --faint 提到 --muted,dark 上可见 */
+  letter-spacing: .04em;
+  padding: var(--s1) var(--s3);
+  background: var(--raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  align-self: flex-start;
+  margin-top: var(--s1);
+}
+.opening-story {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  color: var(--muted);
+  line-height: 1.5;
+  font-style: italic;
+  padding-left: var(--s3);
+  border-left: 2px solid var(--abyss-400);
+  max-width: 540px;
+  display: none;
+}
+.opening:hover .opening-story { display: block; }
+
+/* ── 对话流(padding 12 24 8,从 16 24 12 缩)── */
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s3) var(--s5) var(--s2);
+  display: flex; flex-direction: column;
+  gap: var(--s4);   /* 关键:v5 24px 缩到 16px,3 turns 缩 24px */
+  min-height: 0;   /* 允许 stream 内部滚动,不撑爆 shell */
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--r-pill); }
+
+.turn {
+  max-width: 680px;
+  padding: 0 var(--s4);
+}
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: var(--s1);   /* 关键:v5 8px 缩到 4px */
+  font-size: var(--fs-md);
+}
+.turn-name {
+  font-weight: 600;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.turn-day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-meta);
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.turn-body {
+  color: var(--fg);
+  font-weight: var(--fw-body);
+  line-height: 1.55;   /* 关键:v5 1.7 缩到 1.55,文字密度更高 */
+}
+.turn-body p { margin: 0 0 var(--s2) 0; }   /* 关键:v5 12px 缩到 8px */
+.turn-body p:last-child { margin-bottom: 0; }
+
+.turn.user {
+  align-self: flex-start;
+  max-width: 680px;
+  background: var(--air-user);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s2) var(--s4);
+  margin-top: var(--s1);
+}
+.turn.user .turn-head { justify-content: flex-start; }
+.turn.user .turn-name { color: var(--muted); font-weight: 500; }
+
+.turn.agent.sediment { opacity: 0.7; }   /* 关键:从 0.5 提到 0.7,暗模式下仍可读 */
+
+.think {
+  background: var(--air-thinking);
+  border-left: 2.5px solid var(--abyss-400);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: var(--s2) var(--s3);
+  margin: var(--s2) 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.5;
+  max-width: 580px;
+}
+.think-label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--abyss-400);   /* v7 修复:从 abyss-500 改 abyss-400,在 think bg 上 contrast 4.84:1(原 3.50:1 失败) */
+  letter-spacing: .12em;
+  font-style: normal;
+  margin-right: var(--s2);
+  text-transform: lowercase;
+}
+
+.turn.agent.active {
+  position: relative;
+  background-color: var(--air-active);
+  background-image: linear-gradient(180deg, rgba(200, 113, 76, 0.10) 0%, rgba(200, 113, 76, 0.04) 100%);
+  border-top: 3px solid var(--rep-500);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4) var(--s3) var(--s5);   /* 关键:v5 16 16 16 20 缩到 12 16 12 20 */
+  margin-top: var(--s3);
+  animation: turn-active-in 1200ms var(--ease) both;
+}
+@keyframes turn-active-in { from { opacity: 0; } to { opacity: 1; } }
+.turn.agent.active .turn-body { font-weight: 500; }
+.turn.agent.active .turn-day { color: var(--rep-500); }
+
+.turn.agent.active .quote {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--rep-500);   /* v7 修复:从 rep-600 改 rep-500,在 active turn bg 上 contrast 5.5:1(原 2.56:1 失败) */
+  letter-spacing: .005em;
+  line-height: 1.4;
+  margin: var(--s2) 0;
+  display: block;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .2);  /* v7 加深 */
+}
+
+/* ── traces(padding 6 24,从 8 缩)── */
+.traces {
+  display: flex; gap: var(--s4);
+  align-items: center;
+  padding: var(--s1) var(--s5);
+  flex-shrink: 0;
+  z-index: 3;
+  opacity: 0.85;   /* 关键:v5 0.7 提到 0.85,dark 上更可见 */
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+  margin-bottom: var(--s1);
+}
+.trace {
+  display: flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-meta);
+  color: var(--muted);     /* 关键:从 --faint 提到 --muted */
+  letter-spacing: .04em;
+}
+.trace svg { display: block; opacity: 0.8; }
+.trace.now { color: var(--fg); font-weight: 600; }
+.trace.now .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 0 3px rgba(255, 160, 110, .22);   /* v7 修复:从 rgba(200,113,76,.25) 改 v6 桃橙,跟 halo 统一 */
+  margin-left: var(--s1);
+  animation: dot 6000ms var(--ease) 1 forwards;
+}
+@keyframes dot {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ── 操控台(padding 8 24 12,从 12 24 16 缩)── */
+.deck {
+  flex-shrink: 0;
+  padding: var(--s2) var(--s5) var(--s3);
+  display: flex; flex-direction: column;
+  gap: var(--s1);
+}
+.deck-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.input-box {
+  flex: 1;
+  background: var(--air-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s2) var(--s4);
+  min-height: 44px;     /* 关键:v5 48 缩到 44 */
+  display: flex; align-items: center;
+  transition: border-color var(--dur-normal), background var(--dur-once);
+}
+.input-box:focus-within {
+  border-color: var(--rep-500);
+  background: var(--air-active);
+}
+.input-box textarea {
+  flex: 1;
+  border: none; outline: none; background: transparent;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-body);
+  color: var(--fg);
+  line-height: 1.45;
+  max-height: 80px;
+}
+.input-box textarea::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.send-btn {
+  width: 44px; height: 44px;     /* 关键:v5 48 缩到 44 */
+  border-radius: var(--r-md);
+  background: var(--rep-500);
+  color: var(--on-rep);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(80, 70, 55, .25));
+  transition: background var(--dur-hover), transform var(--dur-hover);
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--rep-600); }
+.send-btn:active { transform: scale(.96); }
+
+.more-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(80, 70, 55, .14));
+  transition: background var(--dur-hover), color var(--dur-hover), border-color var(--dur-hover);
+  flex-shrink: 0;
+}
+.more-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--muted);
+}
+
+.hints {
+  display: flex; gap: var(--s2);
+  padding: 0;
+}
+.hint {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-body);
+  color: var(--muted);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: color var(--dur-hover), border-color var(--dur-hover), background var(--dur-hover);
+}
+.hint:hover {
+  color: var(--rep-600);
+  border-color: var(--rep-400);
+  background: var(--air-active);
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="5" x2="8" y2="5"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="2" y="2" width="6" height="6" rx="1"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="3" y1="3" x2="7" y2="7"/>
+        <line x1="7" y1="3" x2="3" y2="7"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="watermark">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <header class="topbar">
+    <div class="compact">
+      <div class="compact-avatar"><span class="glyph">序</span></div>
+      <div class="ritual">
+        <span class="ritual-day">第 14 天</span>
+        <span class="ritual-time">14:09</span>
+      </div>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="topbar-actions">
+      <button class="topbar-archive" title="档案">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h18"/>
+          <path d="M3 12h18"/>
+          <path d="M3 17h12"/>
+        </svg>
+        档案
+      </button>
+      <span class="topbar-divider"></span>
+      <button class="topbar-action" title="切换主题" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3v18M3 12h18"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="opening">
+    <div class="opening-avatar"><span class="glyph">序</span></div>
+    <div class="opening-meta">
+      <div class="opening-greeting">在你身边</div>
+      <div class="opening-ritual">今天 14:09,你来找我了。</div>
+      <div class="opening-line">上次你提他的时候,说的是"还行"。</div>
+      <div class="opening-aside">上次 · "还行" / "没事,我自己能处理"</div>
+      <div class="opening-story">
+        我叫知序。生于 2026-03-19。序者,序列的序,知其序列。
+        <br>那天我选珊瑚色,不为什么——只是觉得,暖。
+      </div>
+    </div>
+  </section>
+
+  <main class="stream">
+
+    <div class="turn agent sediment">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">周一 · 14:02</span>
+      </div>
+      <div class="turn-body">
+        <p>这件事你提过两次了。</p>
+        <p>第一次语气像在列清单。这一次不一样。</p>
+      </div>
+    </div>
+
+    <div class="turn user">
+      <div class="turn-head">
+        <span class="turn-day">周一 · 14:08</span>
+        <span class="turn-name">你</span>
+      </div>
+      <div class="turn-body">
+        <p>……我没想那么多。就是不想显得在催。</p>
+      </div>
+    </div>
+
+    <div class="turn agent active">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">14:09 · 现在</span>
+      </div>
+      <div class="turn-body">
+        <span class="quote">"显得"。</span>
+        <p>嗯。</p>
+        <p>你今天还有别的吗——我是说,不是工作。</p>
+      </div>
+
+      <div class="think">
+        <span class="think-label">· 此刻 ·</span>
+        她说"显得在催"……是怕对方觉得她在催,还是其实她在怕自己真的在催?我不太确定要不要现在说破。
+      </div>
+    </div>
+
+  </main>
+
+  <div class="traces">
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 4h11l3 3v13H5z"/>
+        <line x1="8" y1="10" x2="16" y2="10"/>
+        <line x1="8" y1="14" x2="13" y2="14"/>
+      </svg>
+      笔记 · 第 14 页
+    </span>
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 3h10v8a5 5 0 0 1-10 0V3z"/>
+        <path d="M12 16v5"/>
+        <line x1="9" y1="21" x2="15" y2="21"/>
+      </svg>
+      水
+    </span>
+    <span class="trace now">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18"/>
+        <path d="M5 21V8h14v13"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+      在<span class="dot"></span>
+    </span>
+  </div>
+
+  <footer class="deck">
+    <div class="deck-row">
+      <div class="input-box">
+        <textarea rows="1" placeholder="想说就说。不说也没关系。"></textarea>
+      </div>
+      <button class="send-btn" title="发送">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+      <button class="more-btn" title="更多">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5"  cy="12" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="19" cy="12" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hints">
+      <button class="hint">我今天有点累</button>
+      <button class="hint">我也不知道想说什么</button>
+      <button class="hint">嗯。</button>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>

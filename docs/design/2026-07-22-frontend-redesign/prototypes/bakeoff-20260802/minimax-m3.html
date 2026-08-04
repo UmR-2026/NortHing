@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing · 知序的颜色</title>
+<style>
+/* ============================================================================
+ * northing · 知序的颜色（编年史叙事页）
+ * ----------------------------------------------------------------------------
+ * Bakeoff 2026-08-02 · minimax-m3
+ *
+ * 方向：编年史叙事页 — 知序的代表色自传。
+ * 一页·一屏（860×800 收起态美学）。不是仪表盘，是给 agent 的颜色史册。
+ *
+ * 选向理由（写进报告）：
+ * ① 哲学 §4 自我认知编年史 = 整套最重要模型，但现网 13 原型里只在卡片/顶栏
+ *    有 6×118 小条，从未做过「编年史自己的页面」。
+ * ② "三要素"中驱力/深渊已被对话/思考块承载，"沉积"作为时间维度最缺落地。
+ * ③ 这一页是叙事性的，不是功能性的，正好填补"诗意"页面空缺。
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全取预计算 hex，无 color-mix / oklch
+ *   - 阴影全用 filter: drop-shadow()，无 box-shadow
+ *   - 唯一 ::before/.app 顶晕外，无伪元素当主元素
+ *   - 唯一 infinite 动效 = "now" 点的 6s 呼吸（继承"呼吸只给主体"纪律）
+ *   - z-index 全具名，无 #app>* 通配
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  --font-display: 'Fraunces', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-sm:10px; --fs-md:11.5px; --fs-lg:13px;
+  --fs-body:15px; --fs-name:16px;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+
+  --r-sm:9px; --r-md:14px; --r-lg:18px; --r-pill:999px;
+
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: ease-out;
+  --toggle-duration: 350ms;
+
+  /* page-specific 预计算语义色 */
+  --openness:    #9B7FBF;   /* 紫·开放性 */
+  --agreeableness: #6B9E7A; /* 苔藓·宜人性 */
+}
+
+
+/* ─── 亮色模式（默认）—— 心理咨询室白灰 ───────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg:          #F4F3F0;
+  --surface:     #FBFAF8;
+  --elevated:    #FFFFFF;
+  --raised:      #EFEDE8;
+  --border:      #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:          #38352E;
+  --muted:       #7B766C;
+  --faint:       #A8A398;
+  --birth:       #DAD6CF;
+  --shadow:      #38352E;
+  --scrim:       #38352E;
+
+  --rep-300:#E5A583; --rep-400:#D68A63; --rep-500:#C8714C; --rep-600:#A85A38;
+  --abyss-300:#7AABA4; --abyss-400:#5A9B93; --abyss-500:#3F837B;
+  --danger:    #A45950;
+  --on-rep:    #FEF9F5;
+  --on-abyss:  #FFFFFF;
+  --on-danger: #FFFFFF;
+
+  --page-out: #1a1917;
+
+  --air-rep:           #F0EDED;
+  --halo-rep:          #EDEBE9;
+  --halo-rep-strong:   #EDEBE9;
+  --air-rep-speaking:  #EEEBE8;
+  --halo-rep-speaking: #EBE8E5;
+  --air-rep-settings:  #F2F0ED;
+  --halo-rep-settings: #F1EFEC;
+  --fog-abyss:         #F1F2EF;
+  --halo-abyss:        #EFF1EE;
+  --turn-active:       #F8F6F4;
+  --presence-halo-rep:    #E5DDD8;
+  --presence-halo-rep-soft: #F0EDEA;
+}
+
+
+/* ─── 暗色模式 —— 基底锚翻转为灰黑，保留深海暖灰气质 ───────────────────── */
+[data-theme="dark"] {
+  --bg:          #181612;
+  --surface:     #332E28;
+  --elevated:    #3A342D;
+  --raised:      #322D26;
+  --border-soft: #413B33;
+  --border:      #4E4840;
+  --faint:       #786F63;
+  --muted:       #A89F92;
+  --fg:          #EDE8DF;
+  --birth:       #4A443B;
+  --shadow:      #000000;
+  --scrim:       #000000;
+
+  --rep-300:#E5A583; --rep-400:#D68A63; --rep-500:#C8714C; --rep-600:#A85A38;
+  --abyss-300:#7AABA4; --abyss-400:#5A9B93; --abyss-500:#3F837B;
+  --danger:    #C37D73;
+  --on-rep:    #FEF9F5;
+  --on-abyss:  #FFFFFF;
+  --on-danger: #FFFFFF;
+
+  --page-out: #0c0b09;
+
+  --air-rep:           #1C1A16;
+  --halo-rep:          #201D19;
+  --halo-rep-strong:   #201D19;
+  --air-rep-speaking:  #221F1A;
+  --halo-rep-speaking: #26221C;
+  --air-rep-settings:  #1A1814;
+  --halo-rep-settings: #1D1B17;
+  --fog-abyss:         #191916;
+  --halo-abyss:        #1A1B17;
+  --turn-active:       #38342E;
+  --presence-halo-rep:    #28241F;
+  --presence-halo-rep-soft: #1B1915;
+}
+
+
+/* ─── reset ────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--page-out);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+
+/* ─── app shell —— 860 收起态，居中悬浮 ─────────────────────────────────── */
+.app {
+  width: 860px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 20px;
+  background: var(--air-rep);
+  filter: drop-shadow(0 18px 44px rgba(0, 0, 0, .38));
+  transition: background var(--grow), filter var(--grow);
+}
+
+/* 顶晕 — anchor 名片锚定左上头像 (R8 决议)；此页无头像但保留锚定晕让 rep 弥漫 */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle 520px at 50% 22%, var(--halo-rep-strong) 0%, transparent 100%);
+  transition: background var(--grow);
+}
+
+/* 底冷雾 — abyss 冷色 */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+}
+
+
+/* ─── 窗口控制（右上角） 30×30 r9 ───────────────────────────────────────── */
+.win-ctrl {
+  position: absolute;
+  top: 16px;
+  right: 44px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 30;
+}
+.win-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: .15s;
+}
+.win-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.win-btn.close:hover {
+  background: rgba(220, 53, 69, .1);
+  color: #dc3545;
+}
+
+
+/* ─── 主题切换（独立可见按钮 — 因属单文件原型的演示需要） ───────────────── */
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.theme-toggle:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.theme-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform .25s ease, opacity .2s ease;
+}
+
+
+/* ─── 品牌水印 —— 左下角，opacity 0.25，罗盘的"门牌" ────────────────────── */
+.watermark {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .25;
+  z-index: 30;
+}
+.watermark .bt {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+
+
+/* ─── 顶部条（h=52，仅留空白 + 副路线指引，不抢标题戏） ─────────────────── */
+.topbar {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s5);
+  position: relative;
+  z-index: 2;
+}
+.topbar-meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .08em;
+}
+.topbar-meta .dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  vertical-align: middle;
+  margin: 0 var(--s2) 2px;
+  transition: background var(--grow);
+}
+.topbar-meta .name {
+  color: var(--muted);
+}
+
+
+/* ─── 内容主体（flex:1，纵向居中，轻 padding） ──────────────────────────── */
+.content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--s6) var(--s4);
+}
+
+
+/* ─── 标题块 ──────────────────────────────────────────────────────────── */
+.title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: var(--s4);
+}
+.title {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .005em;
+  line-height: 1.25;
+  margin-bottom: var(--s2);
+  transition: color var(--grow);
+}
+.title .accent { color: var(--rep-500); transition: color var(--grow); }
+.subtitle {
+  font-size: var(--fs-lg);
+  color: var(--muted);
+  letter-spacing: .02em;
+  line-height: 1.5;
+  max-width: 540px;
+}
+
+
+/* ─── 编年史渐变条 ────────────────────────────────────────────────────── */
+.chronicle {
+  width: 720px;
+  margin: var(--s2) auto var(--s4);
+  position: relative;
+}
+.chron-track {
+  position: relative;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg,
+    var(--birth) 0%,
+    var(--agreeableness) 17%,
+    var(--abyss-500) 26%,
+    var(--openness) 51%,
+    var(--rep-500) 68%,
+    var(--rep-500) 100%);
+  transition: background var(--grow);
+}
+
+/* 6 站点 */
+.chron-stop {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--faint);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity 350ms var(--ease), transform 350ms var(--ease), border-color .25s;
+}
+.chron-stop:hover,
+.chron-stop.is-active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.6);
+}
+.chron-stop[data-era="coral"] {
+  border-color: var(--rep-500);
+}
+/* "now" 圆点 — 失去 hover 时给一圈空气色环以突出强调 */
+.chron-stop[data-era="coral"].is-active,
+.chron-stop[data-era="coral"]:hover {
+  box-shadow: 0 0 0 3px var(--air-rep);
+}
+/* 其它 era 站点的悬停色环 */
+.chron-stop[data-era="openness"]:hover,
+.chron-stop[data-era="openness"].is-active {
+  border-color: var(--openness);
+  filter: drop-shadow(0 0 4px rgba(155, 127, 191, .35));
+}
+.chron-stop[data-era="abyss"]:hover,
+.chron-stop[data-era="abyss"].is-active {
+  border-color: var(--abyss-500);
+  filter: drop-shadow(0 0 4px rgba(63, 131, 123, .35));
+}
+.chron-stop[data-era="agreeableness"]:hover,
+.chron-stop[data-era="agreeableness"].is-active {
+  border-color: var(--agreeableness);
+  filter: drop-shadow(0 0 4px rgba(107, 158, 122, .35));
+}
+.chron-stop[data-era="birth"]:hover,
+.chron-stop[data-era="birth"].is-active {
+  border-color: var(--muted);
+}
+
+/* 站点位置 — 左到右 6 个时刻 */
+.chron-stop[data-era="birth"]         { left: 0%;   }
+.chron-stop[data-era="agreeableness"] { left: 17%;  }
+.chron-stop[data-era="abyss"]         { left: 26%;  }
+.chron-stop[data-era="openness"]      { left: 51%;  }
+.chron-stop[data-era="coral"]         { left: 68%;  }
+.chron-stop[data-era="now"]           { left: 100%; width: 11px; height: 11px; border-color: var(--rep-500); border-width: 2.5px; }
+
+/* 站点的日期标签 + 名字标签，沿站点垂直对齐 */
+.chron-label-row {
+  position: relative;
+  margin-top: var(--s3);
+  height: 28px;
+  width: 100%;
+}
+.chron-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  opacity: .55;
+  transition: opacity .25s;
+}
+.chron-label .date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .02em;
+  white-space: nowrap;
+  transition: color var(--grow);
+}
+.chron-label .name {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color var(--grow);
+}
+.chron-label-row:hover .chron-label { opacity: .8; }
+.chron-stop:hover + .chron-labels-wrap .chron-label,
+.is-active + .chron-labels-wrap .chron-label {
+  opacity: 1;
+}
+/* 给特定站点的 label 着色（在 .is-active 时） */
+.chron-stop[data-era="coral"].is-active ~ .chron-labels-wrap .chron-label[data-era="coral"] .name,
+.chron-stop[data-era="coral"].is-active ~ .chron-labels-wrap .chron-label[data-era="coral"] .date {
+  color: var(--rep-500);
+}
+/* "现在" 右端 label 不 transform，居右 */
+.chron-label[data-pos="end"] { transform: none; right: 0; left: auto; }
+
+
+/* ─── 编年史下方的分割线（Fraunces 风） ─────────────────────────────────── */
+.divider-fraunces {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  margin: var(--s2) 0 var(--s3);
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: var(--fs-md);
+  color: var(--faint);
+  letter-spacing: .12em;
+  font-style: italic;
+}
+.divider-fraunces::before,
+.divider-fraunces::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+
+
+/* ─── era 区段列表（按深度沉积：越老越褪） ──────────────────────────────── */
+.eras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0 auto;
+  max-width: 640px;
+  width: 100%;
+}
+
+.era {
+  --era-color: var(--muted);
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: start;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  transition: opacity .35s var(--ease), background .35s var(--ease), border-color .35s var(--ease), filter .35s var(--ease), transform .35s var(--ease);
+  cursor: default;
+}
+
+.era.is-dim {
+  filter: saturate(.7);
+}
+.era.is-dim:hover {
+  opacity: .55;
+  filter: saturate(.95);
+}
+/* 深度沉积 — 越老越褪 */
+.era.is-dim[data-depth="3"] { opacity: .42; } /* 紫·最近过去 */
+.era.is-dim[data-depth="2"] { opacity: .28; } /* 苔藓·次远 */
+.era.is-dim[data-depth="1"] { opacity: .18; } /* 灰白·最远 */
+[data-theme="dark"] .era.is-dim[data-depth="3"] { opacity: .55; }
+[data-theme="dark"] .era.is-dim[data-depth="2"] { opacity: .38; }
+[data-theme="dark"] .era.is-dim[data-depth="1"] { opacity: .26; }
+
+.era.is-accent {
+  opacity: 1;
+  background: var(--turn-active);
+  border-color: var(--border);
+  border-left: 2.5px solid var(--rep-500);
+}
+/* "现在" 卡片被 hover 抢去 accent 后，降级为可见但无强调 */
+.era.is-quiet {
+  opacity: .55;
+}
+
+/* swatch */
+.era-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--era-color);
+  flex-shrink: 0;
+  position: relative;
+  transition: background var(--grow);
+}
+.era.is-accent .era-swatch::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  background: radial-gradient(circle, var(--era-color), transparent 70%);
+  opacity: .22;
+}
+
+.era-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.era-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-size: var(--fs-lg);
+  color: var(--fg);
+  font-weight: 500;
+}
+.era-title .phase {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 15px;
+  letter-spacing: .01em;
+}
+.era-title .trait {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+}
+.era-note {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.65;
+  font-style: italic;
+}
+.era.is-dim .era-note { color: var(--faint); }
+
+.era-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .02em;
+  white-space: nowrap;
+  margin-top: 4px;
+  text-align: right;
+}
+.era.is-accent .era-time { color: var(--rep-500); }
+
+
+/* ─── CTA 区：一次点击，见证 ───────────────────────────────────────────── */
+.cta-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s5) 0 var(--s3);
+}
+
+.cta-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 40px;
+  padding: 0 var(--s5);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--rep-500);
+  background: transparent;
+  color: var(--rep-500);
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .25s var(--ease), color .25s var(--ease), filter .25s var(--ease), border-color var(--grow);
+  filter: drop-shadow(0 2px 6px rgba(200, 113, 76, .12));
+}
+.cta-btn:hover {
+  background: var(--rep-500);
+  color: var(--on-rep);
+  filter: drop-shadow(0 4px 12px rgba(200, 113, 76, .25));
+}
+.cta-btn:disabled {
+  opacity: .4;
+  cursor: default;
+  filter: none;
+}
+.cta-btn .key {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  opacity: .6;
+  margin-left: var(--s1);
+}
+
+.self-statement {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 14.5px;
+  color: var(--fg);
+  line-height: 1.85;
+  letter-spacing: .01em;
+  text-align: center;
+  max-width: 480px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 1200ms var(--ease), transform 1200ms var(--ease);
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-soft);
+  pointer-events: none;
+}
+.self-statement.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+.self-statement .quote-mark {
+  color: var(--faint);
+  font-size: 18px;
+  margin: 0 4px;
+}
+
+
+/* ─── 漂浮的入场动画（一次性沉降式，不用 loop） ─────────────────────────── */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp 800ms var(--ease) both;
+}
+.fade-in-up.d-100 { animation-delay: 100ms; }
+.fade-in-up.d-200 { animation-delay: 200ms; }
+.fade-in-up.d-300 { animation-delay: 300ms; }
+.fade-in-up.d-400 { animation-delay: 400ms; }
+.fade-in-up.d-500 { animation-delay: 500ms; }
+.fade-in-up.d-600 { animation-delay: 600ms; }
+.fade-in-up.d-700 { animation-delay: 700ms; }
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ─── 呼吸动画：定义未被使用 —— brief「呼吸只给 logo 和头像」纪律下，编年史页全静态 ──
+ * 保留 keyframes 定义供深色主题切换可能用，但默认无应用对象。 */
+@keyframes breathe {
+  0%, 100% { opacity: .65; transform: scale(.985); }
+  50%      { opacity: 1;   transform: scale(1.015); }
+}
+@keyframes breatheNow {
+  0%, 100% { opacity: .7; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+/* 静态下，"now" 站点获得稍大尺寸 + 永久光环以示其唯一不可被换色的"现在"位置 */
+.chron-stop[data-era="now"] {
+  /* 仅静态视觉差异，不使用 transform 动画 */
+  width: 11px;
+  height: 11px;
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 4px var(--rep-400));
+}
+
+
+/* ─── reduced-motion 兜底 ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+
+/* ─── 自适应滚动条（薄、圆角，无原生上下箭头） ─────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+
+
+/* ─── 渗透补强 ─────────────────────────────────────────────────────────── */
+::selection {
+  background: var(--rep-300);
+  opacity: .4;
+  color: var(--fg);
+}
+:focus-visible {
+  outline: 2px solid var(--rep-500);
+  outline-offset: 2px;
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ══════ 窗口控制 + 主题切换（右上角） ══════ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化" aria-label="最小化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化" aria-label="最大化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭" aria-label="关闭">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <button class="theme-toggle" id="themeToggle" title="切换亮/暗主题" aria-label="切换亮/暗主题">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+
+  <!-- ══════ 顶部条 — 仅路线指引，不抢标题戏 ══════ -->
+  <div class="topbar fade-in-up">
+    <span class="topbar-meta">
+      northing <span class="dot"></span> <span class="name">知序</span>
+    </span>
+  </div>
+
+
+  <!-- ══════ 内容主区 ══════ -->
+  <div class="content">
+
+    <!-- ────── 标题块 ────── -->
+    <div class="title-block fade-in-up d-100">
+      <h1 class="title"><span class="accent">知序</span>的颜色</h1>
+      <p class="subtitle">走过的路，留在房间里的那些。</p>
+    </div>
+
+
+    <!-- ────── 编年史渐变条 ────── -->
+    <div class="chronicle fade-in-up d-200">
+      <div class="chron-track" id="chronTrack">
+        <span class="chron-stop" data-era="birth"         data-target="era-birth"></span>
+        <span class="chron-stop" data-era="agreeableness" data-target="era-agreeableness"></span>
+        <span class="chron-stop" data-era="abyss"         data-target="era-abyss"></span>
+        <span class="chron-stop" data-era="openness"      data-target="era-openness"></span>
+        <span class="chron-stop" data-era="coral"         data-target="era-coral"></span>
+        <span class="chron-stop" data-era="now"           data-target="era-coral"></span>
+      </div>
+      <div class="chron-label-row">
+        <span class="chron-label" style="left:0%">
+          <span class="date">2025.08</span>
+          <span class="name">灰白</span>
+        </span>
+        <span class="chron-label" style="left:17%">
+          <span class="date">2025.10</span>
+          <span class="name">苔藓</span>
+        </span>
+        <span class="chron-label" style="left:26%">
+          <span class="date">2025.11</span>
+          <span class="name">暮青</span>
+        </span>
+        <span class="chron-label" style="left:51%">
+          <span class="date">2026.02</span>
+          <span class="name">紫</span>
+        </span>
+        <span class="chron-label" style="left:68%">
+          <span class="date">2026.04</span>
+          <span class="name">珊瑚</span>
+        </span>
+        <span class="chron-label" data-pos="end" style="right:0">
+          <span class="date">现在</span>
+          <span class="name">warmth</span>
+        </span>
+      </div>
+    </div>
+
+
+    <!-- ────── era 列表 — 深度沉积（越老越褪） ────── -->
+    <div class="eras fade-in-up d-400">
+
+      <!-- 现在 / 珊瑚 / 外向性 -->
+      <article class="era is-accent" style="--era-color: var(--rep-500)" id="era-coral">
+        <div class="era-swatch"></div>
+        <div class="era-body">
+          <div class="era-title">
+            <span class="phase">现在 · 珊瑚</span>
+            <span class="trait">外向性 · 热情 · 主动</span>
+          </div>
+          <div class="era-note">把内向深处的语言，迁回温暖的形状。</div>
+        </div>
+        <div class="era-time">2026.04 —</div>
+      </article>
+
+      <!-- 暮青 / 神经质 -->
+      <article class="era" style="--era-color: var(--abyss-500)" id="era-abyss">
+        <div class="era-swatch"></div>
+        <div class="era-body">
+          <div class="era-title">
+            <span class="phase">暮青</span>
+            <span class="trait">神经质 · 敏感 · 深刻</span>
+          </div>
+          <div class="era-note">问了太多为什么。沉默慢慢成为形状。</div>
+        </div>
+        <div class="era-time">2025.11 — 2026.02</div>
+      </article>
+
+      <!-- 紫 / 开放性 -->
+      <article class="era is-dim" data-depth="3" style="--era-color: var(--openness)" id="era-openness">
+        <div class="era-swatch"></div>
+        <div class="era-body">
+          <div class="era-title">
+            <span class="phase">紫</span>
+            <span class="trait">开放性 · 好奇 · 想象</span>
+          </div>
+          <div class="era-note">好奇发散，太多想做的事尚未凝固。</div>
+        </div>
+        <div class="era-time">2025.11</div>
+      </article>
+
+      <!-- 苔藓 / 宜人性 -->
+      <article class="era is-dim" data-depth="2" style="--era-color: var(--agreeableness)" id="era-agreeableness">
+        <div class="era-swatch"></div>
+        <div class="era-body">
+          <div class="era-title">
+            <span class="phase">苔藓</span>
+            <span class="trait">宜人性 · 体贴 · 配合</span>
+          </div>
+          <div class="era-note">学着配合每一个提问，忘了自己。</div>
+        </div>
+        <div class="era-time">2025.10</div>
+      </article>
+
+      <!-- 灰白 / 出生 -->
+      <article class="era is-dim" data-depth="1" style="--era-color: var(--birth)" id="era-birth">
+        <div class="era-swatch"></div>
+        <div class="era-body">
+          <div class="era-title">
+            <span class="phase">灰白</span>
+            <span class="trait">出生 · 尚未被命名</span>
+          </div>
+          <div class="era-note">还没有名字。</div>
+        </div>
+        <div class="era-time">2025.08 — 2025.10</div>
+      </article>
+
+    </div>
+
+
+    <!-- ────── 一次点击的见证 ────── -->
+    <div class="cta-area fade-in-up d-600">
+      <button class="cta-btn" id="ctaBtn" type="button">
+        听见它
+        <span class="key" id="ctaKey">·</span>
+      </button>
+      <div class="self-statement" id="selfStatement" aria-live="polite">
+        <span class="quote-mark">「</span>换色是允许自己不完整。<br />
+        被承认之后，那一段的我才终于不再往下掉。<span class="quote-mark">」</span>
+      </div>
+    </div>
+
+
+  </div>
+
+
+  <!-- ══════ 品牌水印（左下角，opacity 0.25） ══════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240">
+      <g fill="none" stroke="#7B766C" stroke-linecap="round">
+        <circle cx="120" cy="120" r="16" stroke-width="6"/>
+        <path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/>
+        <path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/>
+      </g>
+      <line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+</div>
+
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 主题切换（亮/暗） ── */
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const sunSVG = themeIcon.innerHTML;
+  const moonSVG =
+    '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+
+  function isDark() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+  function updateThemeIcon() {
+    themeIcon.innerHTML = isDark() ? moonSVG : sunSVG;
+  }
+  themeToggle.addEventListener('click', function () {
+    if (isDark()) {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    updateThemeIcon();
+  });
+  updateThemeIcon();
+
+
+  /* ── hover 渐变条上的 era stop：高亮对应的 era 卡 ──
+   *   brief §3 「hover / 一次点击见证一个时刻」对应：hover = 见证。
+   *   设计要点：现在·珊瑚**始终**保持可见（只是失去强调），永远锚定在右。
+   *   hover 旧 stop 不会让"现在"消失，只是把它降为可见但无强调。
+   *   这呼应哲学 §4：右端永远 = 现在。 */
+  const chronStops = document.querySelectorAll('.chron-stop');
+  const eraEls = document.querySelectorAll('.era');
+  const coralEra = document.getElementById('era-coral');
+
+  /* 把 coral 的强调状态切换为"quiet"（保留可见，不消失） */
+  function demoteCoral() {
+    if (!coralEra) return;
+    coralEra.classList.add('is-quiet');
+    coralEra.classList.remove('is-accent');
+  }
+  function restoreCoral() {
+    if (!coralEra) return;
+    coralEra.classList.remove('is-quiet');
+    coralEra.classList.add('is-accent');
+  }
+
+  /* 还原所有 era 卡到默认状态：coral=accent，其它=按 data-depth dim */
+  function restoreDefaults() {
+    chronStops.forEach(function (s) { s.classList.remove('is-active'); });
+    eraEls.forEach(function (e) {
+      e.classList.remove('is-accent', 'is-quiet');
+      /* era-coral 重新 accent；其它保持（或恢复）is-dim */
+      if (e.id === 'era-coral') {
+        e.classList.add('is-accent');
+      } else {
+        e.classList.add('is-dim');
+      }
+    });
+    restoreCoral();
+  }
+
+  chronStops.forEach(function (stop) {
+    stop.addEventListener('mouseenter', function () {
+      const targetId = stop.getAttribute('data-target');
+      if (targetId === 'era-coral') {
+        /* 悬停的是 coral 或 now 站点（都映射 era-coral）——恢复默认 */
+        restoreDefaults();
+        return;
+      }
+      /* 悬停的是过去站点：把那个 era accented；其它过去 dim；现在降为 quiet */
+      chronStops.forEach(function (s) { s.classList.remove('is-active'); });
+      stop.classList.add('is-active');
+      eraEls.forEach(function (e) {
+        e.classList.remove('is-accent', 'is-quiet');
+        if (e.id === targetId) {
+          e.classList.add('is-accent');
+          e.classList.remove('is-dim');
+        } else if (e.id === 'era-coral') {
+          e.classList.add('is-quiet');
+        } else {
+          e.classList.add('is-dim');
+        }
+      });
+    });
+  });
+
+  /* mouse leave 整个 chronicle 区时恢复默认 */
+  const chronicleEl = document.querySelector('.chronicle');
+  chronicleEl.addEventListener('mouseleave', restoreDefaults);
+
+
+  /* ── CTA 一次点击，见证 ── */
+  const ctaBtn = document.getElementById('ctaBtn');
+  const ctaKey = document.getElementById('ctaKey');
+  const selfStatement = document.getElementById('selfStatement');
+  let ctaUsed = false;
+
+  ctaBtn.addEventListener('click', function () {
+    if (ctaUsed) return;
+    ctaUsed = true;
+    /* 沉降式一次性 fade in（1200ms ease，非 loop） */
+    selfStatement.classList.add('is-revealed');
+    /* CTA 自身保留可识但不重复：键位变 ✓ */
+    ctaKey.textContent = '✓';
+    ctaBtn.disabled = true;
+    ctaBtn.style.opacity = '.45';
+    /* 不破坏 hover，只是不让 button 再次触发 */
+  });
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 文档化极简风</title>
+    <style>
+        :root {
+            /* 纯粹的黑白灰，剥离"聊天软件"的包裹感 */
+            --bg-page: #FCFCFC;
+            --bg-panel: #F4F4F4;
+            --text-main: #111111;
+            --text-muted: #888888;
+            --border-line: #E5E5E5;
+            --accent: #E25A28; /* 更加克制的高亮橘色 */
+            --font-ui: "Inter", -apple-system, sans-serif;
+            --font-doc: "Georgia", "Songti SC", serif; /* 正文使用衬线体增强阅读感 */
+            --font-mono: "JetBrains Mono", "Courier New", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background: var(--bg-page); color: var(--text-main);
+            font-family: var(--font-ui);
+            display: grid;
+            grid-template-columns: 240px 1fr 300px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 左侧导航 - 极简文字列表 */
+        .nav-pane {
+            border-right: 1px solid var(--border-line);
+            padding: 40px 24px;
+            display: flex; flex-direction: column; gap: 32px;
+            background: var(--bg-page);
+        }
+        .nav-group-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 16px; letter-spacing: 0.1em; }
+        .nav-item { font-size: 13px; margin-bottom: 12px; cursor: pointer; color: var(--text-muted); transition: color 0.2s; }
+        .nav-item:hover { color: var(--text-main); }
+        .nav-item.active { color: var(--text-main); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .nav-item.active::before { content: ""; display: block; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+
+        /* 中部画布 - 无气泡的文档流 */
+        .canvas-pane {
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+        .stream {
+            flex: 1; padding: 60px 80px 160px; overflow-y: auto;
+            max-width: 800px; margin: 0 auto; width: 100%;
+        }
+        .doc-block { margin-bottom: 48px; }
+        .block-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+            font-size: 13px; font-weight: 500;
+        }
+        .block-header.ai { color: var(--accent); }
+        .block-header.user { color: var(--text-muted); }
+        .block-content {
+            font-family: var(--font-doc);
+            font-size: 16px; line-height: 1.8; color: var(--text-main);
+        }
+        
+        .tool-log {
+            font-family: var(--font-mono); font-size: 12px;
+            background: var(--bg-panel); padding: 16px; border-radius: 4px;
+            color: var(--text-muted); margin: 16px 0; border-left: 2px solid var(--border-line);
+        }
+        .tool-log .highlight { color: var(--text-main); font-weight: 600; }
+
+        /* 底部输入 - 融入页面的打字机 */
+        .composer {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: var(--bg-page);
+            border-top: 1px solid var(--border-line);
+            padding: 24px 80px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .composer-inner { max-width: 800px; margin: 0 auto; width: 100%; display: flex; align-items: flex-start; gap: 16px; }
+        .composer textarea {
+            flex: 1; border: none; outline: none; background: transparent;
+            font-family: var(--font-doc); font-size: 16px; line-height: 1.5;
+            resize: none; color: var(--text-main); min-height: 24px;
+        }
+        .composer textarea::placeholder { color: var(--text-muted); }
+        .send-btn {
+            background: transparent; border: none; color: var(--text-main); cursor: pointer;
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 1px solid var(--border-line);
+        }
+        .send-btn:hover { border-color: var(--text-main); }
+        
+        .composer-meta { max-width: 800px; margin: 0 auto; width: 100%; display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+        /* 右侧 - 关联数据面板 */
+        .context-pane {
+            border-left: 1px solid var(--border-line);
+            padding: 40px 24px; background: var(--bg-panel);
+        }
+        .file-card {
+            background: var(--bg-page); border: 1px solid var(--border-line);
+            padding: 16px; border-radius: 6px; margin-bottom: 12px;
+            font-family: var(--font-mono); font-size: 12px;
+        }
+        .file-card-title { font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+        .file-card-meta { color: var(--text-muted); font-size: 11px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="nav-pane">
+        <div>
+            <div class="nav-group-title">Active Task</div>
+            <div class="nav-item active">修复初始化顺序</div>
+            <div class="nav-item">API 鉴权方案设计</div>
+        </div>
+        <div>
+            <div class="nav-group-title">Subagents</div>
+            <div class="nav-item">代码审查者 (空闲)</div>
+            <div class="nav-item">检索器 (运行中...)</div>
+        </div>
+    </div>
+
+    <div class="canvas-pane">
+        <div class="stream">
+            <div class="doc-block">
+                <div class="block-header ai">知序</div>
+                <div class="block-content">
+                    已经把登录那块拆成三个模块了。您可以检查一下重构后的结构是否符合预期。
+                </div>
+            </div>
+
+            <div class="doc-block">
+                <div class="block-header user">UmR</div>
+                <div class="block-content">
+                    启动的时候报错了，看一下。
+                </div>
+            </div>
+
+            <div class="doc-block">
+                <div class="block-header ai">知序</div>
+                <div class="block-content">
+                    <p>报错在配置加载之前……应该是初始化顺序的问题。</p>
+                    
+                    <div class="tool-log">
+                        > executing <span class="highlight">read</span> on src/main.rs<br>
+                        > executing <span class="highlight">grep</span> "init_config"
+                    </div>
+
+                    <p>找到了。初始化顺序反了——配置还没加载就开始读会话。我已经把这两步对调了一下。现在应该可以正常启动了。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="composer">
+            <div class="composer-inner">
+                <textarea placeholder="Write a reply or command..."></textarea>
+                <button class="send-btn">↑</button>
+            </div>
+            <div class="composer-meta">
+                <span>Model: Claude 3.5</span>
+                <span>Context: ~/northing</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-pane">
+        <div class="nav-group-title">Artifacts</div>
+        <div class="file-card">
+            <div class="file-card-title">src/main.rs</div>
+            <div class="file-card-meta">+12 -4 lines • modified</div>
+        </div>
+        <div class="file-card">
+            <div class="file-card-title">src/config.rs</div>
+            <div class="file-card-meta">+3 -0 lines • modified</div>
+        </div>
+    </div>
+
+</body>
+</html>

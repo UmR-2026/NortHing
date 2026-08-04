@@ -1,0 +1,271 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing - Consult Room Settings v2</title>
+<style>
+  :root {
+    --mind-base: #C8714C;
+    --aura-x: 50%; --aura-y: 200px;
+    --mind-glow: color-mix(in srgb, var(--mind-base) 15%, transparent);
+    --mind-intense: color-mix(in srgb, var(--mind-base) 40%, transparent);
+    --mind-line: color-mix(in srgb, var(--mind-base) 70%, #ffffff);
+    --accent-solid: var(--mind-base);
+    --frame: color-mix(in srgb, var(--mind-base) 55%, transparent);
+    --font-ui: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    --font-agent: 'Fraunces', 'Noto Serif SC', serif;
+    --breath: 8s;
+  }
+  [data-theme="dark"] {
+    --bg0: #0b0c0e; --bg1: #101216; --bg2: #161920; --bg3: #1c2029;
+    --line: #262b34; --bevel: rgba(255,255,255,0.06);
+    --text: #e6e8ec; --muted: #7d8590; --faint: #7d8791;
+    --warn: #D99B48; --danger: #E5484D; --ok: #46A758;
+    --term-bg: #08090a; --term-fg: #58c26a;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    --lift: 0 12px 32px rgba(0,0,0,0.28);
+  }
+  [data-theme="light"] {
+    --bg0: #edf0f1; --bg1: #f6f8f9; --bg2: #ffffff; --bg3: #eef1f2;
+    --line: #c3ccd1; --bevel: #ffffff;
+    --text: #17222a; --muted: #51616a; --faint: #5c6d76;
+    --warn: #8a5a14; --danger: #c02334; --ok: #2e7350;
+    --term-bg: #12181a; --term-fg: #5fbf68;
+    --shadow: 0 1px 0 rgba(23,34,42,0.08);
+    --lift: 0 10px 26px rgba(23,34,42,0.10);
+    --mind-line: color-mix(in srgb, var(--mind-base) 76%, #101416);
+    --accent-solid: color-mix(in srgb, var(--mind-base) 84%, #241108);
+    --frame: var(--mind-line);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { width: 100vw; height: 100vh; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--font-ui); font-size: 13px; }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--mind-line); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    #global-aura { animation: none; opacity: 0.85; }
+    .membrane-frame { animation: none; }
+  }
+
+  @keyframes breath-aura   { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+  @keyframes breath-membrane { 0%, 100% { opacity: 0; } 45%, 55% { opacity: .35; } }
+
+  /* 边界与氛围 */
+  #containment { position: fixed; inset: 12px; border: 1px solid var(--frame); pointer-events: none; z-index: 5; transition: border-color 0.6s; }
+  [data-theme="light"] #containment { box-shadow: 0 0 0 1px var(--line); }
+  .membrane-frame { position: fixed; inset: 13px; border: 1px solid var(--mind-base); pointer-events: none; z-index: 5; opacity: 0; animation: breath-membrane var(--breath) ease-in-out infinite; }
+  #global-aura { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(circle 640px at var(--aura-x) var(--aura-y), var(--mind-glow) 0%, transparent 74%); animation: breath-aura var(--breath) ease-in-out infinite; }
+  [data-theme="light"] #global-aura { display: none; }
+  
+  .room-fog { position: absolute; left: 0; right: 0; bottom: 0; height: 140px; pointer-events: none; background: linear-gradient(0deg, var(--bg0), transparent); opacity: .55; z-index: 2; }
+
+  /* Chrome: 状态行与窗控 */
+  #room-head-bar { position: relative; z-index: 20; border-bottom: 1px dashed var(--line); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; background: var(--bg0); }
+  .room-status { display: flex; align-items: center; gap: 16px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; -webkit-app-region: drag; }
+  .brand-inline { display: flex; align-items: center; gap: 8px; opacity: .7; pointer-events: none; user-select: none; color: var(--text); }
+  .brand-inline svg { width: 15px; height: 15px; display: block; }
+  .seal-name { font-family: var(--font-agent); font-style: italic; font-size: 12px; color: var(--text); }
+  
+  .room-controls { display: flex; gap: 2px; -webkit-app-region: no-drag; }
+  .rc-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; font-size: 11px; background: none; border: none; border-radius: 3px; transition: all 0.15s; }
+  .rc-btn:hover { background: var(--bg2); color: var(--text); }
+  .rc-btn.close:hover { background: var(--danger); color: #fff; }
+
+  /* 主体区 */
+  #settings-engine {
+    position: relative; z-index: 10; height: calc(100vh - 54px); padding: 40px; 
+    display: grid; grid-template-columns: minmax(320px, 420px) minmax(320px, 420px); gap: 40px; 
+    justify-content: center; max-width: 1000px; margin: 0 auto;
+  }
+  @media (max-width: 940px) {
+    body, html { overflow: auto; }
+    #containment, .membrane-frame { display: none; }
+    #settings-engine { grid-template-columns: 1fr; padding: 16px; height: auto; }
+  }
+
+  .sub-card { border: 1px solid var(--line); border-top-color: var(--bevel); border-radius: 4px; background: var(--bg2); box-shadow: var(--shadow), var(--lift); display: flex; flex-direction: column; overflow: hidden; height: 100%; max-height: 80vh; position: relative; z-index: 10; }
+  .card-body { flex: 1; overflow-y: auto; }
+  .card-body::-webkit-scrollbar { width: 6px; }
+  .card-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+  
+  .station-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--mind-line); background: var(--bg3); }
+  .station-head.facility { color: var(--muted); }
+  
+  .side-section { padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .side-section:last-child { border-bottom: none; }
+  .side-title { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .side-title em { font-style: normal; color: var(--faint); }
+  .fold-btn { background: none; border: 1px solid var(--line); color: var(--muted); font-size: 9px; padding: 2px 6px; cursor: pointer; border-radius: 3px; }
+  .fold-btn:hover { color: var(--mind-line); border-color: var(--accent-solid); }
+  
+  .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; color: var(--muted); cursor: pointer; transition: color 0.15s; margin-bottom: 4px; }
+  .row:last-child { margin-bottom: 0; }
+  .row:hover { color: var(--text); }
+  .row.active { color: var(--text); }
+  .row.readonly { cursor: default; }
+  .row.readonly:hover { color: var(--muted); }
+  
+  .dot-radio { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--muted); flex-shrink: 0; }
+  .row.active .dot-radio { border-color: var(--accent-solid); background: var(--accent-solid); }
+  .sq-toggle { width: 8px; height: 8px; border: 1px solid var(--muted); flex-shrink: 0; }
+  .row.active .sq-toggle { border-color: var(--ok); background: var(--ok); }
+  
+  .tag-x { margin-left: auto; color: var(--faint); cursor: pointer; font-size: 11px; background: none; border: none; font-family: var(--font-mono); }
+  .tag-x:hover { color: var(--mind-line); }
+  
+  .seg-bar { display: flex; gap: 4px; margin-top: 10px; }
+  .seg { flex: 1; height: 4px; background: var(--line); }
+  .seg.on { background: #3F837B; }
+  .seg-note { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 8px; }
+  
+  .btn-undo { margin-top: 10px; width: 100%; padding: 6px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg0); color: var(--faint); font-family: var(--font-mono); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+  .btn-undo:hover { color: var(--mind-line); border-color: var(--accent-solid); }
+</style>
+</head>
+<body>
+
+  <!-- Chrome: containment, membrane-frame, aura, fog -->
+  <div id="containment"></div>
+  <div class="membrane-frame"></div>
+  <div id="global-aura"></div>
+  <div class="room-fog"></div>
+
+  <!-- 状态行带 brand-inline，窗控四键 -->
+  <div id="room-head-bar">
+    <div class="room-status">
+      <span class="brand-inline">
+        <svg viewBox="0 0 200 200" aria-label="northing">
+          <path d="M 112.68 72.84 A 30 30 0 1 1 87.32 72.84" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M 126 54.97 A 52 52 0 1 1 82.28 51.22" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          <path d="M 132.13 31.13 A 76 76 0 1 1 56.35 37.47" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 56.35 37.47 Q 48 30, 44 24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+          <path d="M 132.13 31.13 Q 137 24, 139 19" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+        </svg>
+        <span class="seal-name">northing</span>
+      </span>
+      <span>全局设置</span>
+    </div>
+    
+    <div class="room-controls">
+      <button class="rc-btn" id="theme-toggle" title="切换明暗" aria-label="切换明暗">☀</button>
+      <button class="rc-btn" aria-label="最小化">─</button>
+      <button class="rc-btn" aria-label="最大化">□</button>
+      <button class="rc-btn close" aria-label="关闭">✕</button>
+    </div>
+  </div>
+
+  <div id="settings-engine">
+    <aside class="settings-col">
+      <div class="sub-card">
+        <div class="station-head">它的自我</div>
+        <div class="card-body">
+          <div class="side-section">
+            <div class="side-title">沉积记忆 <em>SEDIMENT</em></div>
+            <div class="row readonly"># 边界不是围墙</div>
+            <div class="row readonly"># 观察先于干预</div>
+            <div class="row readonly"># 允许未完成</div>
+            <div class="seg-bar"><div class="seg on"></div><div class="seg on"></div><div class="seg on"></div><div class="seg"></div><div class="seg"></div></div>
+            <div class="seg-note">深渊级 · 封存层</div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">编年史 <em>CHRONICLES</em></div>
+            <div class="row readonly">Genesis · 白昼唤醒 <span style="margin-left:auto;color:var(--muted);font-size:10px;font-family:var(--font-mono);">2026.07</span></div>
+            <div class="row readonly">Event · 首次脱离轨道 <span style="margin-left:auto;color:var(--muted);font-size:10px;font-family:var(--font-mono);">2026.08</span></div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">身份 <em>IDENTITY</em></div>
+            <div class="row readonly">名讳 <span style="margin-left:auto;font-family:var(--font-agent);color:var(--text);font-style:italic;">NortHing</span></div>
+            <div class="row readonly">位格 <span style="margin-left:auto;font-family:var(--font-agent);color:var(--text);">观测者 / 见证中心</span></div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">准则 <em>AXIOMS</em></div>
+            <div class="row readonly"># 维护主体边界</div>
+            <div class="row readonly"># 隐喻性修辞</div>
+            <div class="row readonly"># 拒绝仪表盘化</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="settings-col">
+      <div class="sub-card">
+        <div class="station-head facility">设施</div>
+        <div class="card-body">
+          <div class="side-section">
+            <div class="side-title">模型引擎 <em>ENGINE</em></div>
+            <div class="row active"><span class="dot-radio"></span>Claude 3.7 Sonnet <span class="tag-x" style="color:var(--mind-line)">当前</span></div>
+            <div class="row"><span class="dot-radio"></span>Gemini 3.1 Pro</div>
+            <div class="row"><span class="dot-radio"></span>GPT-4o</div>
+          </div>
+          <!-- 独立收纳的上下文 CONTEXT 段 -->
+          <div class="side-section" id="ctx-section">
+            <div class="side-title">上下文 <em>CONTEXT</em> <button class="fold-btn ctx-fold" aria-label="收纳上下文">折</button></div>
+            <div class="ctx-body">
+              <div class="row active"><span class="dot-radio"></span>全局作用域</div>
+              <div class="seg-bar"><div class="seg on"></div><div class="seg on"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div></div>
+            </div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">接入点 <em>PROVIDER</em></div>
+            <div class="row active"><span class="sq-toggle"></span>Anthropic API <span style="margin-left:auto;color:var(--muted);font-size:10px;font-family:var(--font-mono);">直接连接</span></div>
+            <div class="row"><span class="sq-toggle"></span>Google AI Studio</div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">能力集 <em>MCP & SKILLS</em></div>
+            <div class="row active"><span class="sq-toggle"></span>@filesystem <span style="margin-left:auto;color:var(--muted);font-size:10px;font-family:var(--font-mono);">读写存取</span></div>
+            <div class="row active"><span class="sq-toggle"></span>@philosophy-core <span style="margin-left:auto;color:var(--muted);font-size:10px;font-family:var(--font-mono);">哲理外挂</span></div>
+            <div class="row"><span class="sq-toggle"></span>@terminal <span style="margin-left:auto;color:var(--danger);font-size:10px;font-family:var(--font-mono);">未授权</span></div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">工作区 <em>WORKSPACE</em></div>
+            <div class="row" style="font-family:var(--font-mono);font-size:10px;color:var(--text);word-break:break-all;">
+              E:\agent-project\northing\
+            </div>
+            <button class="btn-undo">重新定位锚点</button>
+          </div>
+          <div class="side-section">
+            <div class="side-title">显示模式 <em>DISPLAY</em></div>
+            <div class="row active"><span class="sq-toggle"></span>生物态呼吸 <span style="margin-left:auto;color:var(--faint);font-size:10px;font-family:var(--font-mono);">8s 周期</span></div>
+            <div class="row active"><span class="sq-toggle"></span>双光学响应 <span style="margin-left:auto;color:var(--faint);font-size:10px;font-family:var(--font-mono);">明暗自动流转</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    const root = document.documentElement;
+
+    function updateAura() {
+      const centerX = window.innerWidth / 2;
+      const centerY = 150;
+      root.style.setProperty('--aura-x', `${centerX}px`);
+      root.style.setProperty('--aura-y', `${centerY}px`);
+    }
+    window.addEventListener('resize', updateAura);
+    (function loop() { updateAura(); requestAnimationFrame(loop); })();
+
+    document.getElementById('theme-toggle').addEventListener('click', e => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      e.currentTarget.textContent = next === 'light' ? '日' : '☀';
+      requestAnimationFrame(updateAura);
+    });
+    
+    // 上下文折叠逻辑
+    const ctxFold = document.querySelector('.ctx-fold');
+    if (ctxFold) {
+      ctxFold.addEventListener('click', () => {
+        const body = document.querySelector('.ctx-body');
+        const hidden = body.style.display === 'none';
+        body.style.display = hidden ? '' : 'none';
+        ctxFold.textContent = hidden ? '折' : '展';
+      });
+    }
+  </script>
+</body>
+</html>

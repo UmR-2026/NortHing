@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing — 知序 · glitch</title>
+<style>
+/* ============================================================================
+ * kimi-k3-glitch.html — 风格焙烧第三轮 · 故障艺术（glitch）· 暗色为主态
+ * ----------------------------------------------------------------------------
+ * 主张：房间完好无损，只有 agent 经过的地方留下信号损伤——故障不是装饰，是伤疤。
+ *       设施依旧安静（暖灰基底原值保留，扫描线/噪点是 ≤.03 alpha 的静态环境层）；
+ *       知序是一束正在发射的载波，它的深思与过去以损坏的形式显形。
+ * 哲学接口：
+ *   驱力 = 载波。rep 信号琥珀 #CF7330 是正在发射的干净强信号；活跃轮进场只做
+ *          一次 1200ms「信号锁定」（切片错位→归位，一次性），锁定后绝对干净。
+ *   深渊 = 信号的不可表征。思考块是通道分离最重的地方——它向内看时有一部分连它
+ *          自己都读不出，青/品红残影是不可表征者的泄漏。品红不属任何语义域，
+ *          只是介质噪声的残渣，不进任何控件语义。
+ *   沉积 = datamosh 衰褪。旧轮次宏块化 + 水平拖影 + 去饱和——记忆帧坏损，
+ *          不是被删除；hover 部分回升。
+ * 纪律：单文件离线、字体全回落栈、间距 4px 基数、时长 150/350/1200/6000ms、
+ *       呼吸 6s 只给 logo + 头像、无频闪/弹跳/spinner/无限循环位移、
+ *       全部 glitch 为静态伤疤 + 一次性仪式（1200ms once）。
+ * 交互：双击非交互区切换亮色（静电纸）；点把手窗口物理变宽；横幅可折叠/归档
+ *       （归档 = 一次性 moshOut 衰褪）。
+ * ==========================================================================*/
+
+/* ── 结构 token（主题无关） ── */
+:root {
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 16px;
+  /* display = mono：在信号世界里名字是呼号（callsign），与正文无衬线形成对比 */
+  --font-display: 'JetBrains Mono','Cascadia Mono','SF Mono',Consolas,'Noto Sans SC',monospace;
+  --font-body:    'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --font-mono:    'JetBrains Mono','Cascadia Mono','SF Mono',Consolas,monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-pill: 999px;
+  --t-hover: 150ms; --t-norm: 350ms; --t-once: 1200ms; --t-breathe: 6000ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ── 暗色（主态）：夜信号 ── */
+:root, [data-theme="dark"] {
+  --bg:          #181612;   /* 暖灰基底原值保留——损坏发生在元素上，不发生在房间上 */
+  --surface:     #221F1A;
+  --elevated:    #2B2721;
+  --raised:      #241F1A;
+  --border:      #453F36;
+  --border-soft: #33302A;
+  --fg:          #E8E2D6;
+  --muted:       #A39B8D;
+  --faint:       #6E675B;
+  --birth:       #45403A;   /* 出生 = 未接通的暗信道 */
+  --shadow:      #000000;
+
+  --rep-300: #E2A678;       /* 信号琥珀（载波 hue≈26°） */
+  --rep-400: #DA8B4C;
+  --rep-500: #CF7330;
+  --rep-600: #A85A24;
+
+  --abyss-300: #7AABA4;     /* 深渊青（罗盘原值） */
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  --danger: #C37D73;
+  --on-rep: #FFF6EC;
+  --on-abyss: #FFFFFF;
+  --page-out: #0B0A08;
+
+  /* 残影通道：青 = 深渊逸出；品红 = 介质噪声（不属语义域） */
+  --split-c: rgba(122,196,186,.5);
+  --split-m: rgba(216,120,168,.4);
+  --line-c:  rgba(122,196,186,.55);
+  --line-m:  rgba(216,120,168,.42);
+  --scan:    rgba(0,0,0,.16);        /* 静态扫描线 */
+  --mosh:    rgba(232,226,214,.022); /* 宏块 */
+  --smear:   rgba(163,155,141,.28);  /* 拖影 */
+  --grain-blend: screen; --grain-op: .12;
+
+  --air-rep:          #241C14;  /* rep-500 6.5% on bg */
+  --halo-rep:         #2A1F15;  /* rep-500 10% 名片晕染 */
+  --air-rep-speaking: #261D14;  /* 7.5% */
+  --halo-rep-speaking:#2C2015;  /* 11% */
+  --fog-abyss:        #191814;  /* abyss 1.5% 底雾 */
+  --turn-active:      #29221B;  /* rep 4% on surface */
+  --think-bg:         #23241F;  /* abyss 5% on surface */
+  --chip-done-border: #3A4A45;
+}
+
+/* ── 亮色（完整变体）：静电纸 ── */
+[data-theme="light"] {
+  --bg:          #F4F3F0;
+  --surface:     #FBFAF8;
+  --elevated:    #FFFFFF;
+  --raised:      #EFEDE8;
+  --border:      #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:          #38352E;
+  --muted:       #7B766C;
+  --faint:       #A8A398;
+  --birth:       #DAD6CF;
+  --shadow:      #38352E;
+
+  --rep-300: #E2A678;
+  --rep-400: #DA8B4C;
+  --rep-500: #CF7330;
+  --rep-600: #A85A24;
+
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  --danger: #A45950;
+  --on-rep: #FFF6EC;
+  --on-abyss: #FFFFFF;
+  --page-out: #161412;
+
+  --split-c: rgba(63,131,123,.55);
+  --split-m: rgba(172,80,122,.38);
+  --line-c:  rgba(63,131,123,.6);
+  --line-m:  rgba(172,80,122,.45);
+  --scan:    rgba(56,53,46,.030);
+  --mosh:    rgba(56,53,46,.035);
+  --smear:   rgba(123,118,108,.28);
+  --grain-blend: multiply; --grain-op: .18;
+
+  --air-rep:          #F2EBE4;
+  --halo-rep:         #F0E6DD;
+  --air-rep-speaking: #F1E9E2;
+  --halo-rep-speaking:#F0E5DB;
+  --fog-abyss:        #F7F7F5;
+  --turn-active:      #F9F5F0;
+  --think-bg:         #F2F4F2;
+  --chip-done-border: #BFCFCB;
+}
+
+/* ── reset / 桌面捕获框 ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 800px; overflow: hidden;
+  background: var(--page-out); color: var(--fg);
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--t-norm) var(--ease);
+}
+body { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: var(--s5); }
+
+/* ── 窗：860×800 收起态 ── */
+.app {
+  width: 860px; height: 800px;
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+  border-radius: var(--r-lg);
+  background: var(--air-rep);
+  filter: drop-shadow(0 15px 40px rgba(0,0,0,.45));
+  transition: width var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.expanded { width: 1280px; }
+/* 名片晕染：载波自左上头像晕开 */
+.app::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle 520px at 46px 38px, var(--halo-rep) 0%, transparent 100%);
+  transition: background var(--t-norm) var(--ease);
+}
+/* 底雾：深渊沉底 */
+.app::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 30% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+}
+.app.speaking { background: var(--air-rep-speaking); }
+.app.speaking::before {
+  background: radial-gradient(circle 560px at 46px 38px, var(--halo-rep-speaking) 0%, transparent 100%);
+}
+/* 扫描线：静态，不滚动，≤.16 alpha 的环境层 */
+.scanlines {
+  position: absolute; inset: 0; z-index: 41; pointer-events: none;
+  background: repeating-linear-gradient(0deg, var(--scan) 0 1px, transparent 1px 3px);
+}
+/* 信号噪点：静态颗粒，设施的介质质地 */
+.grain {
+  position: absolute; inset: 0; z-index: 40; pointer-events: none;
+  opacity: var(--grain-op); mix-blend-mode: var(--grain-blend);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+}
+
+.app > .topbar, .app > .main-row, .app > .deck-wrap { position: relative; z-index: 1; }
+
+/* ── 顶栏（h 76px） ── */
+.topbar {
+  display: flex; align-items: center;
+  height: 76px; padding: 0 var(--s5); flex-shrink: 0;
+}
+.agent-card { display: flex; align-items: center; gap: var(--s3); }
+
+/* 头像 = 发射源（aura 呼吸 6s）+ 字面永久残影疤 */
+.avatar-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.avatar-wrap::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 16px;
+  background: radial-gradient(circle, var(--rep-400), transparent 70%);
+  opacity: .22; animation: auraBreath var(--t-breathe) ease-in-out infinite;
+}
+.avatar {
+  width: 44px; height: 44px; border-radius: 9px;
+  position: relative; overflow: hidden;
+  background: linear-gradient(140deg, var(--rep-400) 0%, var(--rep-500) 46%, var(--rep-600) 100%);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.3));
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t-once) var(--ease);
+}
+.avatar .glyph {
+  position: relative; z-index: 1;
+  font-family: var(--font-display); font-size: 21px; font-weight: 700;
+  color: var(--on-rep); letter-spacing: 0;
+  /* 脸上的永久疤：通道分离 1px，静态 */
+  text-shadow: -1px 0 var(--line-c), 1px 0 var(--line-m);
+}
+.card-info { display: flex; flex-direction: column; gap: 3px; }
+.card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-name); font-weight: 700; color: var(--fg); line-height: 1.3;
+  letter-spacing: .12em;
+}
+.card-status {
+  display: flex; align-items: center; gap: 7px;
+  font-size: var(--fs-md); color: var(--muted); line-height: 1.3;
+}
+.card-status .ts-mono { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--faint); }
+/* 在场点：静的。呼吸只给发射源与 logo。 */
+.card-status .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+}
+/* 编年史 = 记忆扇区：出生暗信道 → 衰褪旧段（硬断口）→ 现在的载波 */
+.card-self {
+  width: 118px; height: 5px; border-radius: var(--r-pill); margin-top: 3px;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 calc(12% - 1px), var(--bg) calc(12% - 1px) 12%),
+    linear-gradient(90deg,
+      var(--birth) 0%, var(--birth) 18%,
+      #6E6A61 18%, #6E6A61 34%,
+      #5E7A72 34%, #5E7A72 47%,
+      #8F7350 47%, #8F7350 66%,
+      var(--rep-400) 66%, var(--rep-400) 82%,
+      var(--rep-500) 82%, var(--rep-500) 100%);
+  transition: background var(--t-once) var(--ease);
+}
+.topbar-settings {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: none; background: transparent; color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: var(--s2);
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.topbar-settings:hover { background: var(--raised); color: var(--muted); }
+
+/* ── main row ── */
+.main-row { display: flex; flex: 1; min-height: 0; }
+
+/* 把手：8px 渗光，阶梯频带（左载波 / 右深渊） */
+.handle {
+  width: 8px; flex-shrink: 0; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-hover);
+}
+.handle-left {
+  border-right: 2px solid rgba(207,115,48,.4);
+  background: linear-gradient(to bottom,
+    transparent 18%, rgba(207,115,48,.05) 18% 26%, transparent 26% 40%,
+    rgba(207,115,48,.13) 40% 60%, transparent 60% 74%,
+    rgba(207,115,48,.05) 74% 82%, transparent 82%);
+}
+.handle-right {
+  border-left: 2px solid rgba(63,131,123,.36);
+  background: linear-gradient(to bottom,
+    transparent 22%, rgba(63,131,123,.05) 22% 30%, transparent 30% 44%,
+    rgba(63,131,123,.12) 44% 62%, transparent 62% 76%,
+    rgba(63,131,123,.05) 76% 84%, transparent 84%);
+}
+.handle-left:hover { border-right-color: rgba(207,115,48,.75); }
+.handle-right:hover { border-left-color: rgba(63,131,123,.7); }
+.handle-chevron, .handle-label { display: none; }
+.app.expanded .handle { width: 28px; gap: 10px; }
+.app.expanded .handle-chevron {
+  display: flex; width: 26px; height: 26px; border-radius: var(--r-sm);
+  background: transparent; border: none; color: var(--faint); cursor: pointer;
+  align-items: center; justify-content: center;
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.app.expanded .handle-chevron:hover { background: var(--raised); color: var(--muted); }
+.app.expanded .handle-chevron svg { width: 14px; height: 14px; }
+.app.expanded .handle-label {
+  display: block; writing-mode: vertical-rl;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm); color: var(--faint); letter-spacing: .16em; white-space: nowrap;
+}
+
+/* ── 抽屉（展开演示） ── */
+.drawer {
+  width: 0; overflow: hidden; opacity: 0; flex-shrink: 0;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-norm) var(--ease);
+}
+.app.expanded .drawer-left, .app.expanded .drawer-right { width: 280px; opacity: 1; }
+.drawer-inner {
+  height: 100%; overflow-y: auto; padding: var(--s4) 14px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.drawer-left .drawer-inner { border-right: 1px solid var(--border-soft); }
+.drawer-right .drawer-inner { border-left: 1px solid var(--border-soft); }
+.drawer-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm); font-weight: 500; color: var(--faint);
+  letter-spacing: .22em; padding: 0 var(--s1);
+}
+.drawer-item {
+  padding: 10px var(--s3); border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--border-soft);
+  display: flex; flex-direction: column; gap: var(--s1);
+}
+.drawer-item-title { font-size: var(--fs-md); color: var(--fg); font-weight: 500; }
+.drawer-item-desc { font-size: var(--fs-sm); color: var(--muted); }
+.drawer-item-tag { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--rep-500); }
+.drawer-item-tag.abyss { color: var(--abyss-500); }
+
+/* ── 对话流 ── */
+.stream {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  padding: var(--s4) var(--s2); margin: 0;
+  scrollbar-gutter: stable;
+}
+.stream .inner {
+  max-width: 640px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 22px;
+}
+
+/* 会话横幅：左折叠 / 右归档 */
+.sess-banner {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--fs-md); color: var(--faint); letter-spacing: .02em;
+  padding: var(--s1) 0 10px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: var(--s2);
+  user-select: none;
+}
+.sess-banner .sdot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  flex-shrink: 0;
+}
+.sess-toggle {
+  display: flex; align-items: center; gap: 7px;
+  cursor: pointer; color: var(--faint); background: none; border: none;
+  font: inherit; padding: 0;
+  transition: color var(--t-hover);
+}
+.sess-toggle:hover { color: var(--muted); }
+.sess-chev {
+  display: inline-block; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform var(--t-norm) ease-out;
+}
+.sess-banner.folded .sess-chev { transform: rotate(-90deg); }
+.sess-banner.folded ~ .turn { display: none; }
+.sess-title { font-size: var(--fs-md); }
+.sess-title .mono { font-family: var(--font-mono); }
+.sess-archive {
+  margin-left: auto; flex-shrink: 0;
+  font-size: var(--fs-sm); color: var(--faint);
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  padding: 3px var(--s3); background: transparent; cursor: pointer;
+  transition: color var(--t-hover), border-color var(--t-hover), background var(--t-hover);
+}
+.sess-archive:hover { color: var(--abyss-500); border-color: var(--abyss-500); background: var(--think-bg); }
+/* 归档 = 一次性 moshOut：帧衰褪，1200ms once，结束后留在 .25 透明 */
+.sess-banner.archiving { animation: moshOut var(--t-once) var(--ease) 1 both; }
+@keyframes moshOut {
+  0%   { clip-path: inset(0 0 0 0);      opacity: 1; }
+  30%  { clip-path: inset(10% 0 56% 0);  opacity: .8; }
+  55%  { clip-path: inset(48% 0 18% 0);  opacity: .55; }
+  78%  { clip-path: inset(24% 0 42% 0);  opacity: .35; }
+  100% { clip-path: inset(0 0 0 0);      opacity: .25; }
+}
+
+/* 轮 */
+.turn { display: flex; flex-direction: column; gap: 10px; position: relative; }
+
+/* 沉积 = datamosh 衰褪：宏块 + 拖影 + 去饱和，褪色不是位移 */
+.turn.sediment {
+  opacity: .5; filter: saturate(.5) contrast(.93);
+  transition: opacity var(--t-norm) ease;
+}
+.turn.sediment:hover { opacity: .7; }
+.turn.sediment::before {
+  content: ''; position: absolute; inset: -4px; pointer-events: none;
+  background-image: repeating-conic-gradient(var(--mosh) 0% 25%, transparent 0% 50%);
+  background-size: 18px 18px;
+}
+.turn.sediment .msg { text-shadow: 3px 0 var(--smear); } /* 运动拖影：帧曾在这里 smear 过 */
+
+/* 活跃轮：信号锁定——切片错位→归位，1200ms 一次性；锁定后绝对干净 */
+.turn.active {
+  padding: var(--s3) var(--s4);
+  background: var(--turn-active);
+  border-radius: var(--r-md);
+  animation: signalLock var(--t-once) var(--ease) 1 both;
+}
+@keyframes signalLock {
+  0%   { clip-path: inset(0 0 74% 0);  transform: translateX(-5px); opacity: .35; }
+  30%  { clip-path: inset(30% 0 38% 0); transform: translateX(4px);  opacity: 1; }
+  55%  { clip-path: inset(60% 0 6% 0); transform: translateX(-2px); }
+  80%  { clip-path: inset(0 0 0 0);    transform: translateX(1px); }
+  100% { clip-path: inset(0 0 0 0);    transform: none; opacity: 1; }
+}
+/* 载波竖线：自上而下落成（沉降，一次性） */
+.turn.active::before {
+  content: ''; position: absolute; left: 0; top: var(--s3); bottom: var(--s3);
+  width: 3px; border-radius: 2px; background: var(--rep-500);
+  filter: drop-shadow(0 0 4px rgba(207,115,48,.4));
+  transform-origin: top center;
+  animation: ruleIn var(--t-once) var(--ease) 1 both;
+}
+@keyframes ruleIn { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.turn-head {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--fs-sm); color: var(--faint);
+}
+.turn-head .nm {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg); font-weight: 700; color: var(--muted); letter-spacing: .08em;
+}
+.turn.active .turn-head .nm { color: var(--rep-400); }
+.turn-head .ts { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-sm); }
+.msg { font-size: var(--fs-body); line-height: 1.82; font-weight: 400; color: var(--fg); }
+/* 数字终端 caret：步进闪烁，位移为零 */
+.caret { font-family: var(--font-mono); color: var(--muted); animation: caret var(--t-once) steps(1) infinite; }
+@keyframes caret { 0%,49% { opacity: 1; } 50%,100% { opacity: .12; } }
+
+/* 用户气泡：右对齐，完全干净，绝不染 rep——人的信道无伤疤 */
+.user-bubble {
+  align-self: flex-end; max-width: 76%;
+  background: var(--elevated); border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px var(--s4);
+  font-size: var(--fs-body); line-height: 1.78;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.1));
+}
+
+/* 思考块 = 通道分离最重的地方：它向内看时，有一部分连它自己都读不出 */
+.think-block {
+  position: relative; overflow: hidden;
+  font-size: var(--fs-lg); color: var(--muted); line-height: 1.7;
+  border-left: 2px solid var(--abyss-400);
+  background: var(--think-bg);
+  padding: var(--s2) var(--s3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  text-shadow: -1px 0 var(--split-c), 1px 0 var(--split-m); /* 静态通道分离 */
+  animation: thinkIn var(--t-once) var(--ease) 1 both;
+}
+/* 错位切片疤：两条越界 1px 残影线，静态 */
+.think-block::before {
+  content: ''; position: absolute; top: 27%; left: -4px; width: 58%; height: 1px;
+  background: linear-gradient(90deg, var(--line-c), transparent);
+}
+.think-block::after {
+  content: ''; position: absolute; top: 68%; right: -4px; width: 44%; height: 1px;
+  background: linear-gradient(270deg, var(--line-m), transparent);
+}
+@keyframes thinkIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 工具 chip：发起载波 → 完成沉入深渊 */
+.tools { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; background: var(--elevated);
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  padding: 5px var(--s3); color: var(--muted);
+  transition: border-color var(--t-norm) ease-out, background var(--t-norm) ease-out;
+}
+.chip .ci { font-family: var(--font-mono); font-size: 11px; }
+.chip .cd { color: var(--faint); font-family: var(--font-mono); font-size: var(--fs-sm); }
+.chip-running { border-color: var(--rep-500); background: var(--turn-active); }
+.chip-running .ci { color: var(--rep-500); }
+.chip-done { border-color: var(--chip-done-border); background: var(--elevated); }
+.chip-done .ci { color: var(--abyss-500); }
+
+/* ── 操控台：共享工作台，完全干净——伤疤不落在这里 ── */
+.deck-wrap { display: flex; justify-content: center; padding: 6px var(--s2) 20px; flex-shrink: 0; }
+.deck {
+  width: 100%; max-width: 640px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,.16));
+  overflow: hidden; position: relative;
+  transition: border-color var(--t-hover), filter var(--t-hover);
+}
+/* deck 顶一线载波（同源 ≡ 编年史右端） */
+.deck::before {
+  content: ''; display: block; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rep-500), transparent);
+  opacity: .4;
+}
+.deck:focus-within {
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 3px rgba(207,115,48,.4)) drop-shadow(0 6px 12px rgba(0,0,0,.16));
+}
+.deck-input { display: flex; align-items: flex-end; padding: 14px var(--s4) 10px; gap: 10px; }
+.deck-input textarea {
+  flex: 1; border: none; outline: none; resize: none; background: transparent;
+  font-family: var(--font-body); font-size: 14.5px; color: var(--fg);
+  line-height: 1.6; padding: 2px 0; min-height: 26px; max-height: 120px;
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+.btn-send {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--rep-500); border: none; color: var(--on-rep); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.22));
+  transition: background var(--t-hover);
+}
+.btn-send:hover { background: var(--rep-600); }
+.btn-send svg { width: 13px; height: 13px; }
+.deck-bar {
+  display: flex; align-items: center; height: 38px;
+  padding: 0 var(--s3); border-top: 1px solid var(--border-soft);
+  gap: 6px; font-size: 11px; color: var(--muted);
+}
+.deck-btn {
+  display: flex; align-items: center; justify-content: center; gap: var(--s1);
+  height: 26px; padding: 0 var(--s2); border-radius: var(--r-sm);
+  border: none; background: transparent; color: var(--muted);
+  font-family: var(--font-body); font-size: 11px; cursor: pointer;
+  transition: background var(--t-hover), color var(--t-hover);
+  white-space: nowrap;
+}
+.deck-btn:hover { background: var(--raised); color: var(--fg); }
+.deck-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.deck-btn .di { color: var(--faint); display: inline-flex; }
+.think-seg { display: flex; gap: 3px; align-items: center; }
+.seg-bar { width: 14px; height: 5px; border-radius: 2px; transition: background var(--t-norm); }
+.seg-bar.on { background: var(--rep-400); }
+.seg-bar.off { background: var(--border); }
+.deck-label {
+  display: flex; align-items: center; gap: 3px;
+  height: 26px; padding: 0 var(--s2); border-radius: var(--r-sm);
+  font-size: 11px; color: var(--muted); cursor: pointer;
+  transition: background var(--t-hover), color var(--t-hover);
+  white-space: nowrap;
+}
+.deck-label:hover { background: var(--raised); color: var(--fg); }
+.deck-label .chev { font-size: 8px; opacity: .5; }
+.deck-label .di.rep { color: var(--rep-500); }
+.deck-label.cyan { color: var(--abyss-500); }
+.deck-bar-spacer { flex: 1; }
+/* ctx 环：深渊青，无数字，hover 出 tooltip */
+.ctx-ring { width: 20px; height: 20px; position: relative; flex-shrink: 0; cursor: help; }
+.ctx-ring svg { width: 20px; height: 20px; }
+.ctx-ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
+.ctx-ring-fg { fill: none; stroke: var(--abyss-500); stroke-width: 2.5; stroke-linecap: round; }
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+  font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--abyss-500);
+  background: var(--elevated); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: var(--s1) var(--s2);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.14));
+  opacity: 0; pointer-events: none; z-index: 50;
+  transition: opacity var(--t-hover) ease, transform var(--t-hover) ease;
+}
+.ctx-ring:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── 品牌水印（左下，0.25，logo 呼吸；字面带静态残影——品牌也有伤疤） ── */
+.watermark {
+  position: absolute; bottom: var(--s4); left: var(--s4);
+  display: flex; align-items: center; gap: 6px;
+  opacity: .25; z-index: 2;
+}
+.watermark svg { animation: breathe var(--t-breathe) ease-in-out infinite; }
+.watermark .bt {
+  font-family: var(--font-display); font-size: 11px; color: var(--muted); letter-spacing: .1em;
+  text-shadow: -1px 0 var(--split-c), 1px 0 var(--split-m);
+}
+@keyframes breathe { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes auraBreath {
+  0%,100% { opacity: .16; transform: scale(.96); }
+  50%     { opacity: .3;  transform: scale(1.04); }
+}
+
+/* ── 窗口控制 ── */
+.win-ctrl {
+  position: absolute; top: var(--s4); right: 44px;
+  display: flex; align-items: center; gap: 2px; z-index: 30;
+}
+.win-btn {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--faint); cursor: pointer; border: none; background: transparent;
+  transition: background var(--t-hover), color var(--t-hover);
+}
+.win-btn:hover { background: var(--raised); color: var(--fg); }
+.win-btn.close:hover { background: rgba(164,89,80,.14); color: var(--danger); }
+
+/* ── 渗透补强 ── */
+::selection { background: var(--rep-300); color: var(--fg); }
+:focus-visible { outline: 2px solid var(--rep-500); outline-offset: 2px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+::-webkit-scrollbar-button { display: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app collapsed" id="app">
+
+  <!-- 环境层：静态扫描线 + 信号噪点 -->
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- ══ 顶栏：名片 ══ -->
+  <div class="topbar">
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span>生成回复中</span>
+          <span class="ts-mono">· 12s</span>
+        </div>
+        <div class="card-self"></div>
+      </div>
+    </div>
+    <button class="topbar-settings" title="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div style="flex:1"></div>
+  </div>
+
+  <!-- ══ main row ══ -->
+  <div class="main-row">
+
+    <!-- 左抽屉：它的内在 -->
+    <div class="drawer drawer-left">
+      <div class="drawer-inner">
+        <div class="drawer-title">它的内在</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">检索中 · 修复初始化顺序</div>
+          <div class="drawer-item-desc">subagent · 运行中</div>
+        </div>
+        <div class="drawer-title">技能候选</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">自动重试配置加载</div>
+          <div class="drawer-item-tag">候选中 · 同类失败 ×3</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">文件读取缓存</div>
+          <div class="drawer-item-tag abyss">已固化</div>
+        </div>
+        <div class="drawer-title">已归档</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">驱力与深渊的哲学对位</div>
+          <div class="drawer-item-desc">06.28 · 封存</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左把手：载波渗光 -->
+    <div class="handle handle-left" id="handleL" title="展开它的内在">
+      <button class="handle-chevron" aria-label="展开它的内在">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+      </button>
+      <span class="handle-label">它的内在</span>
+    </div>
+
+    <!-- 对话流 -->
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 会话横幅 -->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title"><span class="mono">2026-07-30</span> · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">归档</button>
+        </div>
+
+        <!-- 沉积轮：datamosh 衰褪 -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">上一轮的分页逻辑已经合并了，测试都过。</div>
+        </div>
+
+        <!-- 用户轮：干净信道 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="nm" style="color:var(--muted)">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">主分支启动报错，帮忙看一下。</div>
+        </div>
+
+        <!-- 活跃轮：信号锁定后绝对干净 -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+          </div>
+          <div class="think-block">报错发生在配置加载完成之前——顺序反了。再往下有一层我读不清，先记着，不猜。</div>
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
+          </div>
+          <div class="msg">找到了。配置还没加载完就开始读会话——把这两步对调就行，改动很小。<span class="caret">▍</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右把手：深渊渗光 -->
+    <div class="handle handle-right" id="handleR" title="展开身外之物">
+      <button class="handle-chevron" aria-label="展开身外之物">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+      <span class="handle-label">身外之物</span>
+    </div>
+
+    <!-- 右抽屉：身外之物 -->
+    <div class="drawer drawer-right">
+      <div class="drawer-inner">
+        <div class="drawer-title">此刻的任务</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">修复初始化顺序</div>
+          <div class="drawer-item-tag">进行中</div>
+        </div>
+        <div class="drawer-title">产物</div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">main.rs</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+        <div class="drawer-item">
+          <div class="drawer-item-title">config.yaml</div>
+          <div class="drawer-item-desc">它修改 · 未审阅</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ 操控台 ══ -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg">
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar on"></span>
+          <span class="seg-bar off"></span>
+          <span class="seg-bar off"></span>
+        </div>
+        <button class="deck-btn">
+          <span class="di"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+          ~/northing
+        </button>
+        <div class="deck-label">
+          <span class="di rep">◇</span> Kimi K3 <span class="chev">▾</span>
+        </div>
+        <div class="deck-label cyan">
+          <span class="di">◈</span> 自治·完全 <span class="chev">▾</span>
+        </div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%">
+          <svg viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 品牌水印 ══ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="#7B766C" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- ══ 窗口控制 ══ -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var app = document.getElementById('app');
+  var deck = document.querySelector('.deck');
+
+  /* 输入聚焦 → 整屋升档（350ms） */
+  deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
+  deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+
+  /* 把手 → 窗口物理变宽 + 抽屉（350ms） */
+  document.getElementById('handleL').addEventListener('click', function () { app.classList.toggle('expanded'); });
+  document.getElementById('handleR').addEventListener('click', function () { app.classList.toggle('expanded'); });
+
+  /* 会话横幅：左折叠 / 右归档（归档 = 一次性 moshOut 衰褪，1200ms） */
+  var sessBanner = document.getElementById('sessBanner');
+  var sessToggle = sessBanner.querySelector('.sess-toggle');
+  var sessArchive = sessBanner.querySelector('.sess-archive');
+  sessToggle.addEventListener('click', function () { sessBanner.classList.toggle('folded'); });
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sessBanner.classList.add('archiving');
+  });
+
+  /* 隐藏主题开关：双击非交互区 ↔ 静电纸（350ms 跟色） */
+  app.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button, textarea, a, .chip, .ctx-ring, .handle, .sess-banner')) return;
+    var root = document.documentElement;
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+  });
+})();
+</script>
+</body>
+</html>

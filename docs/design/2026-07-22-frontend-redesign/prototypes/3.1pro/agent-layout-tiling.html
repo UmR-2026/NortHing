@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 平铺视窗 (Tiling Window Manager)</title>
+    <style>
+        :root {
+            --bg-dark: #0A0A0A;
+            --border-dim: #333333;
+            --border-active: #DF6C53; /* 哲学驱力珊瑚色 */
+            
+            --text-raw: #B0B0B0;
+            --text-bright: #FFFFFF;
+            
+            --color-soul: #DF6C53;
+            --color-sys: #4A7C82;
+            
+            --font-mono: "JetBrains Mono", "Courier New", monospace;
+        }
+
+        body {
+            margin: 0; padding: 4px;
+            background-color: var(--bg-dark); color: var(--text-raw);
+            font-family: var(--font-mono); font-size: 12px;
+            height: 100vh; overflow: hidden;
+            box-sizing: border-box;
+            /* 典型的平铺窗口布局 (Tmux 风格) */
+            display: grid;
+            grid-template-columns: 35% 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 4px;
+        }
+
+        .window {
+            border: 1px solid var(--border-dim);
+            background: #0F0F0F;
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+        
+        .window.active { border-color: var(--border-active); }
+
+        .win-title {
+            background: var(--border-dim); color: var(--text-bright);
+            padding: 2px 8px; font-size: 10px; font-weight: bold;
+            display: inline-block; position: absolute; top: 0; left: 0;
+        }
+        .window.active .win-title { background: var(--border-active); }
+
+        .win-content {
+            padding: 24px 16px 16px; overflow-y: auto; flex: 1;
+            line-height: 1.6;
+        }
+
+        /* 左侧：灵魂/内部状态窗 (贯穿上下) */
+        .win-soul { grid-row: 1 / -1; }
+        
+        .log-entry { margin-bottom: 12px; }
+        .log-time { color: #666; }
+        .log-level-soul { color: var(--color-soul); }
+        .log-level-info { color: #888; }
+        
+        .memory-dump { border-left: 2px solid var(--color-soul); padding-left: 12px; margin: 8px 0; color: #999; }
+
+        /* 右上：子智能体管道 */
+        .win-workflow { grid-row: 1 / 2; }
+        .pipeline { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .pipe-node { padding: 4px 8px; border: 1px solid #444; color: #888; }
+        .pipe-node.running { border-color: var(--color-sys); color: var(--color-sys); }
+        
+        /* 右下：代码产物 */
+        .win-artifact { grid-row: 2 / -1; }
+        .code-add { color: #4CAF50; }
+        .code-rem { color: #F44336; }
+
+        /* 状态栏 */
+        .status-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--border-active); color: #000;
+            padding: 2px 8px; font-size: 10px; font-weight: bold;
+            display: flex; justify-content: space-between;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 窗口 0：灵魂与成长日志 -->
+    <div class="window win-soul">
+        <div class="win-title">[0] SOUL_DAEMON</div>
+        <div class="win-content">
+            <div class="log-entry">
+                <span class="log-time">14:30:12</span> <span class="log-level-info">[INFO]</span> Bootstrapping consciousness core...
+            </div>
+            <div class="log-entry">
+                <span class="log-time">14:30:15</span> <span class="log-level-info">[INFO]</span> Loading biases: "Code Cleanliness", "Single Responsibility".
+            </div>
+            <div class="log-entry">
+                <span class="log-time">14:31:00</span> <span class="log-level-soul">[STIMULUS]</span> Received user intent: "启动的时候报错了，产生了一个 panic。"
+            </div>
+            <div class="log-entry">
+                <span class="log-time">14:31:02</span> <span class="log-level-soul">[COGNITION]</span> Appending to L1 Memory buffer.
+                <div class="memory-dump">
+                    Analyzing temporal characteristics.<br>
+                    Hypothesis: Initialization sequence inversion.
+                </div>
+            </div>
+            <div class="log-entry">
+                <span class="log-time">14:31:05</span> <span class="log-level-info">[DISPATCH]</span> Triggering subagent 'implementer'.
+            </div>
+            <div class="log-entry">
+                <span class="log-time">14:31:20</span> <span class="log-level-soul">[GROWTH]</span> Inducing L2 Strategy: "Strict order enforcement on config::init". Experience +1.
+            </div>
+        </div>
+    </div>
+
+    <!-- 窗口 1：工作流/子智能体 stdout -->
+    <div class="window win-workflow active">
+        <div class="win-title">[1] SUBAGENT: CODER (RUNNING)</div>
+        <div class="win-content">
+            <div class="pipeline">
+                <div class="pipe-node">router</div> -> 
+                <div class="pipe-node running">implementer</div> -> 
+                <div class="pipe-node">judge-m3</div>
+            </div>
+            <div style="color:var(--color-sys);">
+                $ grep -n "init_config" src/main.rs<br>
+                src/main.rs:42: let config = config::init();<br>
+                <br>
+                $ read src/main.rs --lines 30-50<br>
+                [Reading file... Done]<br>
+                <br>
+                > Applying AST transformation...<br>
+                > Swapping Lines 41 and 42 to resolve ownership lifetime.<br>
+                > Writing to disk...
+            </div>
+        </div>
+    </div>
+
+    <!-- 窗口 2：产物区 -->
+    <div class="window win-artifact">
+        <div class="win-title">[2] ARTIFACT: SRC/MAIN.RS</div>
+        <div class="win-content">
+            <div style="color:#888;">@@ -40,6 +40,6 @@ fn bootstrap_agent() -> Result<()> {</div>
+            <div>&nbsp; fn bootstrap_agent() -> Result<()> {</div>
+            <div class="code-rem">- &nbsp;&nbsp;&nbsp;&nbsp;let session = memory::read_session();</div>
+            <div class="code-rem">- &nbsp;&nbsp;&nbsp;&nbsp;let config = config::init();</div>
+            <div class="code-add">+ &nbsp;&nbsp;&nbsp;&nbsp;let config = config::init()?;</div>
+            <div class="code-add">+ &nbsp;&nbsp;&nbsp;&nbsp;let session = memory::read_session(&config);</div>
+            <div>&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;logger::info("Agent initialized.");</div>
+            <div>&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;Ok(())</div>
+            <div>&nbsp; }</div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span>Northing OS v3.1.4</span>
+        <span>AGENT: ACTIVE | COGNITION: Lvl.4</span>
+    </div>
+
+</body>
+</html>
