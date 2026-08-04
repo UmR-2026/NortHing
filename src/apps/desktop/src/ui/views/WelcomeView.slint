@@ -1,18 +1,59 @@
-// WelcomeView — Phase 4 full 3-step onboarding flow
+// WelcomeView - T3 房间诞生仪式 (onboarding v2)
 //
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.1
+// 视觉真值：docs/design/2026-07-22-frontend-redesign/consult-room/consult-room-onboarding-v2.html
+// Brief：.superpowers/sdd/consult-room/task-03-brief.md §3（五项范围）
 //
-// - Step 1: pick first workspace folder (D1 OS dialog via rfd)
-// - Step 2: configure first AI service (Q3=c: "跳过" disabled + tooltip)
-// - Step 3: ready (D3 entry to IdentityCreatorView, or skip)
+// 五项范围：
+//   1. 初始灰寂（mind-base #7e8896 灰，avatar dashed border，data-inhabited=false）
+//   2. 大五色板（5 mind token 色，48px 圆形双层环，hover 关键词，选中整屋染色）
+//   3. 仪式流程卡片（3 步：身份凝结 / 设施接入 / 物理锚定）
+//   4. 右侧诞生存根（复用 T2 MindMod，onboarding-mode 实时联动）
+//   5. "成为自己" -> 1.2s 唤起仪式 -> current-route = "main"
+//
+// 系统继承（T1/T2 API，不重新发明）：RoomHead / DoorbellGem / MindMod / AirTint /
+// ChronicleBar / system_constants / AppStrings / RedesignTheme。
 
 import { RedesignTheme } from "../redesign_palette.slint";
-import { MaterialButton } from "../components/MaterialButton.slint";
-import { MaterialCard } from "../components/MaterialCard.slint";
-import { MaterialTextField } from "../components/MaterialTextField.slint";
-import { MoodText } from "../components/MoodText.slint";
 import { AppStrings } from "../strings.slint";
-import { IdentityCreatorView } from "IdentityCreatorView.slint";
+import { SystemConstants } from "../system_constants.slint";
+import { RoomHead } from "../components/RoomHead.slint";
+import { DoorbellGem } from "../components/DoorbellGem.slint";
+import { MindMod } from "../components/MindMod.slint";
+
+// 局部 field-input 复合组件（surface 底 + line 边 + r-md 圆角，真值 .field-input）。
+// 定义于 WelcomeView 之前，供下方实例化引用。
+component field-input inherits Rectangle {
+    in property <string> placeholder;
+    in property <color> accent-color: RedesignTheme.t.rep-500;
+    in-out property <string> value;
+    height: 30px;
+    border-width: 1px;
+    border-color: fi-ti.has-focus ? root.accent-color : RedesignTheme.t.border;
+    border-radius: 3px;
+    background: RedesignTheme.t.bg;
+    animate border-color { duration: 200ms; }
+
+    HorizontalLayout {
+        padding-left: 10px; padding-right: 10px;
+        fi-ti := TextInput {
+            horizontal-stretch: 1;
+            height: parent.height;
+            text <=> root.value;
+            font-family: "JetBrains Mono";
+            font-size: 11px;
+            color: RedesignTheme.t.fg;
+        }
+    }
+    if root.value == "" && !fi-ti.has-focus: Text {
+        x: 11px;
+        y: 8px;
+        text: root.placeholder;
+        font-family: "JetBrains Mono";
+        font-size: 11px;
+        color: RedesignTheme.t.faint;
+        opacity: 0.6;
+    }
+}
 
 export component WelcomeView inherits Rectangle {
     callback on-completed();
@@ -23,398 +64,860 @@ export component WelcomeView inherits Rectangle {
     callback test-provider-config(string, string, string, string, string, bool);
     callback open-identity-creator();
 
-    in-out property <int> current-step: 1;
+    // Phase 4 兼容：step1-path 仍由 Rust 写入（folder picker 回显）。
     in-out property <string> step1-path: "";
-    in-out property <bool> step1-advanced-skip: false;
-    in-out property <string> step2-name: "";
-    in-out property <string> step2-type: "custom-openai";
-    in-out property <string> step2-base-url: "";
-    in-out property <string> step2-api-key: "";
-    in-out property <string> step2-model: "";
-    in-out property <bool> step2-enabled: true;
     in-out property <bool> step2-test-in-flight: false;
     in-out property <string> step2-test-result: "";
     in-out property <string> step2-saved-provider-id: "";
-    in-out property <bool> identity-creator-visible: false;
 
-    // Slint 1.16 doesn't support custom out properties beyond the built-in
-    // Rectangle ones. Use the inline check `(saved-id != "" && test-result == "ok")`
-    // at every use site (next-step2 disabled, skip-step2 disabled, tooltip visible).
+    // ===== 仪式状态（视觉层 mock，不接后端）=====
+    // 大五色板：5 mind token 色。索引 0..4，-1 = 未选（灰寂）。
+    // 映射（brief §3.2 + §6 歧义 1）：
+    //   0 = drive (暖珊瑚 / 外向性)  1 = leap (紫 / 开放性)
+    //   2 = gaze (暖琥珀 / 尽责性)   3 = calm (柔绿 / 宜人性)
+    //   4 = abyss (冷青 / 神经质)
+    in-out property <int> selected-palette: -1;
+    property <[color]> palette-colors: [
+        RedesignTheme.t.mind-drive-accent,
+        RedesignTheme.t.mind-leap-accent,
+        RedesignTheme.t.mind-gaze-accent,
+        RedesignTheme.t.mind-calm-accent,
+        RedesignTheme.t.mind-abyss-accent
+    ];
+    property <[string]> palette-names: [
+        AppStrings.onb-palette-drive-name,
+        AppStrings.onb-palette-leap-name,
+        AppStrings.onb-palette-gaze-name,
+        AppStrings.onb-palette-calm-name,
+        AppStrings.onb-palette-abyss-name
+    ];
+    property <[string]> palette-descs: [
+        AppStrings.onb-palette-drive-desc,
+        AppStrings.onb-palette-leap-desc,
+        AppStrings.onb-palette-gaze-desc,
+        AppStrings.onb-palette-calm-desc,
+        AppStrings.onb-palette-abyss-desc
+    ];
 
-    background: RedesignTheme.t.bg;
+    // 当前 mind-base：灰寂态 #7e8896；选色后跟到选中 token 色（350ms 跟色）。
+    property <color> mind-base: root.selected-palette >= 0
+        ? root.palette-colors[root.selected-palette]
+        : #7e8896;
+    animate mind-base { duration: 350ms; easing: ease-in-out; }
+    property <bool> is-colored: root.selected-palette >= 0;
 
-    VerticalLayout {
+    // 身份凝结 4 字段（mock，不落盘）
+    in-out property <string> field-user-title: "";
+    in-out property <string> field-agent-title: "";
+    in-out property <string> field-relation-title: "";
+
+    // 设施接入 4 字段（mock）
+    in-out property <string> field-provider-model: "";
+    in-out property <string> field-provider-url: "";
+    in-out property <string> field-provider-key: "";
+    in-out property <int> field-provider-type: 0; // 0=OpenAI 1=Anthropic 2=Custom
+    property <[string]> provider-types: ["OpenAI", "Anthropic", "Custom"];
+
+    // 唤起仪式状态
+    in-out property <bool> ritual-in-progress: false;
+    in-out property <bool> ritual-done: false;
+    // 仪式 air-tint 升档强度 0..1（1.2s 一次性）
+    property <float> ritual-intensity: 0.0;
+    animate ritual-intensity { duration: 1200ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
+
+    // 诞生存根抽屉开合
+    in-out property <bool> right-drawer-open: false;
+    // RoomHead 折叠（灰寂态默认折叠，真值 .room-head.folded）
+    in-out property <bool> room-head-folded: true;
+
+    // step 状态（诞生存根联动）
+    property <bool> step1-done: root.is-colored;
+    property <bool> step2-done: root.field-provider-model != "" && root.field-provider-key != "";
+    property <bool> step3-done: root.step1-path != "";
+
+    // "成为自己" 可点：至少选了色（真值 completeRitual 前置 isColored）
+    property <bool> become-enabled: root.is-colored && !root.ritual-in-progress && !root.ritual-done;
+
+    background: transparent;
+
+    // ===== 整屋空气染色层（替代 main.slint AirTint，welcome 路由独立）=====
+    // 灰寂态：mind-base 15% rep 派生（gray 阶段无色相）；选色后跟选中色。
+    // 唤起仪式：ritual-intensity 升档加深。
+    Rectangle {
         width: parent.width;
         height: parent.height;
-        alignment: center;
-        padding: RedesignTheme.t.s6;
-
-        Text {
-            text: AppStrings.welcome-title;
-            font-size: 32px;
-            font-weight: 700;
-            color: RedesignTheme.t.fg;
-            horizontal-alignment: center;
-        }
-
-        Rectangle { height: RedesignTheme.t.s2; }
-
-        Text {
-            text: "第 " + root.current-step + " / 3 步";
-            font-size: RedesignTheme.t.fs-md;
-            color: RedesignTheme.t.fg;
-            opacity: 0.5;
-            horizontal-alignment: center;
-        }
-
-        Rectangle { height: RedesignTheme.t.s5; }
-
-        if root.current-step == 1: MaterialCard {
-            width: 600px;
-            height: 280px;
-            card-padding: RedesignTheme.t.s5;
-            property <float> fade-progress: 1.0;
-            animate fade-progress { duration: 300ms; easing: ease-in-out; }
-            opacity: 1.0 - fade-progress;
-            init => { fade-progress = 0; }
-            step1-view := VerticalLayout {
-                spacing: RedesignTheme.t.s4;
-                width: parent.width;
-                height: parent.height;
-
-                Text {
-                    text: AppStrings.welcome-step1-desc;
-                    font-size: RedesignTheme.t.fs-lg;
-                    color: RedesignTheme.t.fg;
-                    font-weight: 600;
-                }
-
-                Text {
-                    text: "选择工作文件夹后，NortHing 会在该目录下保存会话、技能和工具集配置。";
-                    font-size: RedesignTheme.t.fs-body;
-                    color: RedesignTheme.t.fg;
-                    opacity: 0.7;
-                    wrap: word-wrap;
-                    width: parent.width;
-                }
-
-                Rectangle {
-                    height: 56px;
-                    background: RedesignTheme.t.surface;
-                    border-radius: RedesignTheme.t.r-sm;
-
-                    HorizontalLayout {
-                        padding: RedesignTheme.t.s2;
-                        width: parent.width;
-
-                        Text {
-                            text: root.step1-path == "" ? "(未选择)" : root.step1-path;
-                            font-size: RedesignTheme.t.fs-body;
-                            color: root.step1-path == "" ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
-                            opacity: root.step1-path == "" ? 0.5 : 1.0;
-                            vertical-alignment: center;
-                            horizontal-alignment: left;
-                            wrap: word-wrap;
-                            width: parent.width;
-                        }
-                    }
-                }
-
-                HorizontalLayout {
-                    height: 40px;
-                    spacing: RedesignTheme.t.s2;
-                    width: parent.width;
-
-                    pick-button := MaterialButton {
-                        text: AppStrings.welcome-step1-button;
-                        clicked => { root.pick-folder(); }
-                    }
-
-                    Rectangle { vertical-stretch: 1; }
-
-                    skip-advanced-button := MaterialButton {
-                        text: "高级跳过";
-                        clicked => {
-                            root.step1-advanced-skip = true;
-                            root.current-step = 2;
-                        }
-                    }
-
-                    next-step1 := MaterialButton {
-                        text: AppStrings.welcome-step2-button;
-                        disabled: root.step1-path == "";
-                        clicked => { root.current-step = 2; }
-                    }
-                }
-            }
-        }
-
-        // ===== STEP 2: Provider (Q3=c) =====
-        if root.current-step == 2: MaterialCard {
-            width: 600px;
-            height: 520px;
-            card-padding: RedesignTheme.t.s5;
-            property <float> fade-progress: 1.0;
-            animate fade-progress { duration: 300ms; easing: ease-in-out; }
-            opacity: 1.0 - fade-progress;
-            init => { fade-progress = 0; }
-            step2-view := VerticalLayout {
-                spacing: RedesignTheme.t.s2;
-                width: parent.width;
-                height: parent.height;
-
-                Text {
-                    text: AppStrings.welcome-step2-desc;
-                    font-size: RedesignTheme.t.fs-lg;
-                    color: RedesignTheme.t.fg;
-                    font-weight: 600;
-                }
-
-                MaterialTextField {
-                    placeholder: AppStrings.provider-name-label;
-                    text <=> root.step2-name;
-                    width: parent.width;
-                }
-
-                // Type buttons
-                HorizontalLayout {
-                    height: 32px;
-                    spacing: RedesignTheme.t.s1;
-                    width: parent.width;
-
-                    // 2026-07-18 (D2d): type tabs reduced to the two
-                    // custom-compatible options; user fills base-url by hand.
-                    for opt in [
-                        { value: "custom-openai", label: "OpenAI 兼容" },
-                        { value: "custom-anthropic", label: "Anthropic 兼容" }
-                    ]: Rectangle {
-                        height: 32px;
-                        width: (parent.width - 1 * RedesignTheme.t.s1) / 2;
-                        background: opt.value == root.step2-type
-                            ? RedesignTheme.t.rep-500
-                            : RedesignTheme.t.surface;
-                        animate background { duration: 200ms; }
-                        TouchArea {
-                            width: parent.width;
-                            height: parent.height;
-                            clicked => {
-                                root.step2-type = opt.value;
-                                root.step2-base-url = "";
-                                root.step2-model = "";
-                            }
-                        }
-                        HorizontalLayout {
-                            padding: RedesignTheme.t.s1;
-                            width: parent.width;
-                            height: parent.height;
-
-                            Text {
-                                text: opt.label;
-                                color: opt.value == root.step2-type
-                                    ? RedesignTheme.t.on-rep
-                                    : RedesignTheme.t.fg;
-                                font-size: RedesignTheme.t.fs-md;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                                width: parent.width;
-                            }
-                        }
-                    }
-                }
-
-                MaterialTextField {
-                    placeholder: AppStrings.provider-base-url-label;
-                    text <=> root.step2-base-url;
-                    width: parent.width;
-                }
-
-                // 2026-07-18 (D2c): endpoint hint caption — content varies by type.
-                Text {
-                    text: root.step2-type == "anthropic" || root.step2-type == "custom-anthropic"
-                        ? "填根域名即可，客户端自动补 /v1/messages；URL 末尾加 # 强制原样"
-                        : "填到 /v1 为止，客户端自动补 /chat/completions";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.fg;
-                    opacity: 0.6;
-                    wrap: word-wrap;
-                    width: parent.width;
-                }
-
-                MaterialTextField {
-                    placeholder: AppStrings.provider-api-key-label;
-                    text <=> root.step2-api-key;
-                    password: true;
-                    width: parent.width;
-                }
-
-                MaterialTextField {
-                    placeholder: AppStrings.provider-model-label;
-                    text <=> root.step2-model;
-                    width: parent.width;
-                }
-
-                if root.step2-test-result != "": Text {
-                    text: root.step2-test-result == "ok"
-                        ? AppStrings.provider-test-success
-                        : AppStrings.provider-test-failed-saved + " " + root.step2-test-result;
-                    color: root.step2-test-result == "ok" ? RedesignTheme.t.rep-500 : RedesignTheme.t.danger;
-                    font-size: RedesignTheme.t.fs-md;
-                }
-
-                HorizontalLayout {
-                    height: 40px;
-                    spacing: RedesignTheme.t.s2;
-                    width: parent.width;
-
-                    test-btn := MaterialButton {
-                        text: root.step2-test-in-flight ? AppStrings.provider-test-in-flight : AppStrings.provider-test-button;
-                        disabled: root.step2-test-in-flight || root.step2-name == "" || root.step2-api-key == "";
-                        clicked => {
-                            // 2026-07-18 (D2c): use last-saved-provider-id so
-                            // repeated clicks replace instead of duplicating.
-                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
-                            root.test-provider-config(root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
-                        }
-                    }
-
-                    save-btn := MaterialButton {
-                        text: AppStrings.save;
-                        disabled: root.step2-name == "" || root.step2-test-in-flight;
-                        clicked => {
-                            // 2026-07-18 (D2c): use last-saved-provider-id.
-                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
-                        }
-                    }
-
-                    Rectangle { vertical-stretch: 1; }
-
-                    skip-step2 := MaterialButton {
-                        text: "稍后配置";
-                        disabled: root.step2-test-in-flight;
-                        clicked => { root.current-step = 3; }
-                    }
-
-                    next-step2 := MaterialButton {
-                        text: AppStrings.welcome-step2-button;
-                        disabled: root.step2-name == "" || root.step2-api-key == "" || root.step2-test-in-flight;
-                        clicked => {
-                            // 2026-07-18 (D2c): use last-saved-provider-id.
-                            root.upsert-provider(root.step2-saved-provider-id, root.step2-name, root.step2-type, root.step2-base-url, root.step2-api-key, root.step2-model, root.step2-enabled);
-                            root.current-step = 3;
-                        }
-                    }
-                }
-
-                if root.step2-api-key == "" || root.step2-name == "": Text {
-                    text: "请输入名称和 API Key 以继续";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.danger;
-                    opacity: 0.7;
-                }
-            }
-        }
-
-        // ===== STEP 3: Ready =====
-        if root.current-step == 3: MaterialCard {
-            width: 600px;
-            height: 340px;
-            card-padding: RedesignTheme.t.s5;
-            property <float> fade-progress: 1.0;
-            animate fade-progress { duration: 300ms; easing: ease-in-out; }
-            opacity: 1.0 - fade-progress;
-            init => { fade-progress = 0; }
-            step3-view := VerticalLayout {
-                spacing: RedesignTheme.t.s4;
-                width: parent.width;
-                height: parent.height;
-
-                // Presence area — 出生态头像 + 心境语
-                presence-area := VerticalLayout {
-                    spacing: RedesignTheme.t.s2;
-                    width: parent.width;
-                    alignment: center;
-
-                    avatar-wrap := Rectangle {
-                        width: 64px;
-                        height: 64px;
-                        border-radius: RedesignTheme.t.r-lg;
-                        background: RedesignTheme.t.raised;
-                        // 灰白光环 — 未选色时用 fg/raised 系 with_alpha，禁 hex；
-                        // 脉冲照 PresenceZone animation-tick 范式（moodPulse 3s 周期）
-                        aura := Rectangle {
-                            x: -8px;
-                            y: -8px;
-                            width: parent.width + 16px;
-                            height: parent.height + 16px;
-                            border-radius: parent.width / 2;
-                            background: RedesignTheme.t.fg.with_alpha(0.15);
-                            opacity: 0.45 + 0.15 * Math.sin(animation-tick() / 6000ms * 360deg);
-                        }
-                    }
-
-                    MoodText {
-                        mood: "我还不知道我是谁。";
-                        color: RedesignTheme.t.faint;
-                        horizontal-alignment: center;
-                        max-width: 320px;
-                        wrap: word-wrap;
-                    }
-                }
-
-                Text {
-                    text: AppStrings.welcome-step3-desc;
-                    font-size: RedesignTheme.t.fs-lg;
-                    color: RedesignTheme.t.fg;
-                    font-weight: 600;
-                }
-
-                Text {
-                    text: "一切就绪。你可以现在开始聊天，也可以花 1 分钟让 AI 更好地了解你。";
-                    font-size: RedesignTheme.t.fs-body;
-                    color: RedesignTheme.t.fg;
-                    opacity: 0.7;
-                    wrap: word-wrap;
-                    width: parent.width;
-                }
-
-                HorizontalLayout {
-                    height: 40px;
-                    spacing: RedesignTheme.t.s2;
-                    width: parent.width;
-
-                    identity-btn := MaterialButton {
-                        text: AppStrings.welcome-step3-identity-prompt;
-                        clicked => { root.identity-creator-visible = true; }
-                    }
-
-                    skip-step3 := MaterialButton {
-                        text: AppStrings.welcome-step3-skip;
-                        clicked => { root.on-completed(); }
-                    }
-                }
-
-                Rectangle { vertical-stretch: 1; }
-
-                start-btn := MaterialButton {
-                    text: AppStrings.welcome-step3-button;
-                    width: 200px;
-                    clicked => { root.on-completed(); }
-                }
-            }
-        }
+        background: root.mind-base.with-alpha(0.06 + 0.10 * root.ritual-intensity);
+        animate background { duration: 350ms; easing: ease-in-out; }
+    }
+    // 顶晕（global-aura，呼吸）
+    Rectangle {
+        x: 0; y: 0;
+        width: parent.width;
+        height: parent.height * 0.5;
+        background: @radial-gradient(circle, root.mind-base.with-alpha(0.15) 0%, root.mind-base.with-alpha(0) 60%);
+        opacity: RedesignTheme.dark ? SystemConstants.amp-aura : 0.0;
+        animate background { duration: 350ms; easing: ease-in-out; }
     }
 
-    // ===== Identity Creator modal (D3) =====
-    if root.identity-creator-visible: IdentityCreatorView {
-        x: 0;
-        y: 0;
-        width: parent.width;
-        height: parent.height;
-        on-saved(draft) => {
-            root.identity-creator-visible = false;
+    // ===== 主诊室框（room-wrap 居中，真值 max 780px）=====
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: 26px;
+        width: parent.width < 810px ? parent.width - 48px : 780px;
+        height: parent.height - 52px;
+        background: RedesignTheme.t.surface;
+        border-width: 1px;
+        border-color: RedesignTheme.t.border;
+        border-radius: 6px;
+        drop-shadow-color: RedesignTheme.t.shadow;
+        drop-shadow-blur: 12px;
+        clip: true;
+
+        VerticalLayout {
+            spacing: 0px;
+            width: parent.width;
+            height: parent.height;
+
+            // 状态行（room-status，brand-inline 交给 WindowChrome 水印）
+            HorizontalLayout {
+                padding-top: 8px;
+                padding-bottom: 8px;
+                padding-left: 18px;
+                padding-right: 18px;
+                spacing: 16px;
+
+                Text {
+                    text: AppStrings.onb-status-identity;
+                    font-family: "JetBrains Mono";
+                    font-size: 10px;
+                    color: RedesignTheme.t.muted;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+
+                // 状态文案（灰寂 vs 着色）
+                Text {
+                    text: root.is-colored
+                        ? (root.selected-palette >= 0 ? root.palette-names[root.selected-palette] : "") + "状态 · 房间印记已铸造"
+                        : AppStrings.onb-status-state;
+                    font-family: "JetBrains Mono";
+                    font-size: 10px;
+                    color: root.is-colored ? root.mind-base : RedesignTheme.t.muted;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+
+                // 状态点（8s 单钟呼吸）
+                Rectangle {
+                    width: 6px; height: 6px; border-radius: 3px;
+                    background: root.mind-base;
+                    opacity: 0.725 + 0.275 * Math.sin(animation-tick() / 8000ms * 360deg);
+                }
+            }
+
+            // RoomHead（灰寂态，折叠，dashed avatar）
+            RoomHead {
+                folded <=> root.room-head-folded;
+                gray-state: !root.is-colored;
+                mind-base: root.mind-base;
+                state-text: root.is-colored
+                    ? (root.selected-palette >= 0 ? root.palette-names[root.selected-palette] : "") + "色板 · 印记已注入"
+                    : AppStrings.onb-head-state-gray;
+                name-text: root.field-agent-title != "" ? root.field-agent-title : AppStrings.onb-head-name;
+                initial-text: root.field-agent-title != "" && root.field-agent-title != ""
+                    ? (root.field-agent-title)
+                    : AppStrings.onb-head-initial;
+                dark-mode: RedesignTheme.dark;
+                toggle-fold => { root.room-head-folded = !root.room-head-folded; }
+            }
+
+            // 仪式卡片流（chat-flow）
+            Flickable {
+                vertical-stretch: 1;
+                width: parent.width;
+
+                VerticalLayout {
+                    padding-top: 20px; padding-bottom: 20px;
+                    padding-left: 22px; padding-right: 22px;
+                    spacing: 18px;
+                    width: parent.width;
+
+                    // 第一章分隔
+                    ritual-divider := HorizontalLayout {
+                        spacing: 12px;
+                        alignment: center;
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                        Text {
+                            text: AppStrings.onb-chapter-1;
+                            font-family: "JetBrains Mono";
+                            font-size: 9px;
+                            letter-spacing: 1px;
+                            color: RedesignTheme.t.faint;
+                        }
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                    }
+
+                    // 仪式卡片 1：身份凝结
+                    Rectangle {
+                        background: RedesignTheme.t.elevated;
+                        border-width: 1px;
+                        border-color: RedesignTheme.t.border;
+                        border-radius: 4px;
+                        drop-shadow-color: RedesignTheme.t.shadow;
+                        drop-shadow-blur: 4px;
+
+                        VerticalLayout {
+                            padding-top: 14px; padding-bottom: 14px;
+                            padding-left: 16px; padding-right: 16px;
+                            spacing: 12px;
+                            width: parent.width;
+
+                            // card head
+                            HorizontalLayout {
+                                spacing: 6px;
+                                alignment: space-between;
+                                Rectangle {
+                                    height: 1px;
+                                    background: RedesignTheme.t.border;
+                                    y: (parent.height - 1px) / 2;
+                                    horizontal-stretch: 0;
+                                    width: 0px;
+                                }
+                                Text {
+                                    text: AppStrings.onb-card1-title;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 10px;
+                                    letter-spacing: 0.8px;
+                                    color: root.mind-base;
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text {
+                                    text: AppStrings.onb-card1-step;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                }
+                            }
+                            Rectangle { height: 1px; background: RedesignTheme.t.border; }
+
+                            Text {
+                                text: AppStrings.onb-card1-narrative;
+                                font-family: "Fraunces";
+                                font-size: 13px;
+                                color: RedesignTheme.t.muted;
+                                wrap: word-wrap;
+                                width: parent.width;
+                            }
+
+                            // 4 字段（2x2 grid 近似，用 HorizontalLayout 拼）
+                            // 用户是【】 / 你是【】
+                            HorizontalLayout {
+                                spacing: 12px;
+                                width: parent.width;
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 5px;
+                                    Text {
+                                        text: AppStrings.onb-field-user-title;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 9px;
+                                        color: RedesignTheme.t.faint;
+                                        letter-spacing: 0.6px;
+                                    }
+                                    field-input {
+                                        placeholder: AppStrings.onb-field-user-ph;
+                                        accent-color: root.mind-base;
+                                        value <=> root.field-user-title;
+                                    }
+                                }
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 5px;
+                                    Text {
+                                        text: AppStrings.onb-field-agent-title;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 9px;
+                                        color: RedesignTheme.t.faint;
+                                        letter-spacing: 0.6px;
+                                    }
+                                    field-input {
+                                        placeholder: AppStrings.onb-field-agent-ph;
+                                        accent-color: root.mind-base;
+                                        value <=> root.field-agent-title;
+                                    }
+                                }
+                            }
+
+                            // 你是用户的【】（full width）
+                            VerticalLayout {
+                                spacing: 5px;
+                                width: parent.width;
+                                Text {
+                                    text: AppStrings.onb-field-relation-title;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                    letter-spacing: 0.6px;
+                                }
+                                field-input {
+                                    placeholder: AppStrings.onb-field-relation-ph;
+                                    accent-color: root.mind-base;
+                                    value <=> root.field-relation-title;
+                                }
+                            }
+
+                            // 性格色板（大五，人类唯一改色入口）
+                            VerticalLayout {
+                                spacing: 5px;
+                                width: parent.width;
+                                Text {
+                                    text: AppStrings.onb-field-palette-title;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                    letter-spacing: 0.6px;
+                                }
+
+                                // 5 色圈横排（48px 圆形，双层环）
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: center;
+                                    width: parent.width;
+
+                                    for col[idx] in root.palette-colors: Rectangle {
+                                        width: 72px;
+                                        height: 72px;
+                                        background: RedesignTheme.t.bg;
+                                        border-width: 1px;
+                                        border-radius: 4px;
+                                        animate border-color { duration: 200ms; }
+
+                                        // TouchArea 先声明，hover 状态供下方 border-color / 关键词引用。
+                                        palette-ta := TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            clicked => {
+                                                root.selected-palette = idx;
+                                            }
+                                        }
+                                        // border-color 绑 hover（不能在 Rectangle 自身属性里引用子元素，用覆盖层近似）。
+                                        // 实际：Rectangle.border-color 在声明时无法引用 palette-ta（子元素未定义），
+                                        // 改用一个覆盖全框的 1px border Rectangle 表达 hover/选中态边框。
+                                        Rectangle {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            border-width: 1px;
+                                            border-radius: 4px;
+                                            border-color: root.selected-palette == idx
+                                                ? col
+                                                : (palette-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.border);
+                                            animate border-color { duration: 200ms; }
+                                        }
+
+                                        // 选中态背景染色 12%
+                                        Rectangle {
+                                            visible: root.selected-palette == idx;
+                                            width: parent.width;
+                                            height: parent.height;
+                                            background: col.with-alpha(0.12);
+                                            border-radius: 4px;
+                                        }
+
+                                        VerticalLayout {
+                                            padding-top: 8px; padding-bottom: 8px;
+                                            padding-left: 6px; padding-right: 6px;
+                                            spacing: 6px;
+                                            alignment: center;
+                                            width: parent.width;
+                                            height: parent.height;
+
+                                            // 色圈（48px 圆形，双层环：3px 间隔 + 2px 色环）
+                                            // Slint border-radius 不吃 %，用 24px 定值（直径 48px）。
+                                            Rectangle {
+                                                width: 48px;
+                                                height: 48px;
+                                                border-radius: 24px;
+                                                background: transparent;
+                                                // 外环（间隔层，bg 底）
+                                                Rectangle {
+                                                    x: 0; y: 0;
+                                                    width: 48px; height: 48px;
+                                                    border-radius: 24px;
+                                                    border-width: 3px;
+                                                    border-color: RedesignTheme.t.bg;
+                                                    background: transparent;
+                                                }
+                                                // 色环（2px）
+                                                Rectangle {
+                                                    x: 3px; y: 3px;
+                                                    width: 42px; height: 42px;
+                                                    border-radius: 21px;
+                                                    border-width: 2px;
+                                                    border-color: col;
+                                                    background: col.with-alpha(0.15);
+                                                }
+                                                // 选中态中心实心点
+                                                if root.selected-palette == idx: Rectangle {
+                                                    x: 14px; y: 14px;
+                                                    width: 20px; height: 20px;
+                                                    border-radius: 10px;
+                                                    background: col;
+                                                }
+                                                // 未选中且非 hover 的其他四色降透明度 .5
+                                                opacity: (root.selected-palette >= 0 && root.selected-palette != idx) ? 0.5 : 1.0;
+                                                animate opacity { duration: 200ms; }
+                                            }
+
+                                            // 关键词（hover 浮出）
+                                            Text {
+                                                text: root.palette-names[idx];
+                                                font-family: "JetBrains Mono";
+                                                font-size: 10px;
+                                                color: RedesignTheme.t.fg;
+                                                horizontal-alignment: center;
+                                                opacity: palette-ta.has-hover || root.selected-palette == idx ? 1.0 : 0.0;
+                                                animate opacity { duration: 150ms; }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 第二章分隔
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: center;
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                        Text {
+                            text: AppStrings.onb-chapter-2;
+                            font-family: "JetBrains Mono";
+                            font-size: 9px;
+                            letter-spacing: 1px;
+                            color: RedesignTheme.t.faint;
+                        }
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                    }
+
+                    // 仪式卡片 2：设施接入
+                    Rectangle {
+                        background: RedesignTheme.t.elevated;
+                        border-width: 1px;
+                        border-color: RedesignTheme.t.border;
+                        border-radius: 4px;
+                        drop-shadow-color: RedesignTheme.t.shadow;
+                        drop-shadow-blur: 4px;
+
+                        VerticalLayout {
+                            padding-top: 14px; padding-bottom: 14px;
+                            padding-left: 16px; padding-right: 16px;
+                            spacing: 12px;
+                            width: parent.width;
+
+                            HorizontalLayout {
+                                spacing: 6px;
+                                alignment: space-between;
+                                Text {
+                                    text: AppStrings.onb-card2-title;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 10px;
+                                    letter-spacing: 0.8px;
+                                    color: root.mind-base;
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text {
+                                    text: AppStrings.onb-card2-step;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                }
+                            }
+                            Rectangle { height: 1px; background: RedesignTheme.t.border; }
+
+                            Text {
+                                text: AppStrings.onb-card2-narrative;
+                                font-family: "Fraunces";
+                                font-size: 13px;
+                                color: RedesignTheme.t.muted;
+                                wrap: word-wrap;
+                                width: parent.width;
+                            }
+
+                            // provider 选择（OpenAI / Anthropic / Custom mock 列表）
+                            HorizontalLayout {
+                                spacing: 8px;
+                                width: parent.width;
+                                for pt[pidx] in root.provider-types: Rectangle {
+                                    height: 28px;
+                                    width: (parent.width - 2 * 8px) / 3;
+                                    background: root.field-provider-type == pidx
+                                        ? root.mind-base.with-alpha(0.2)
+                                        : RedesignTheme.t.bg;
+                                    border-width: 1px;
+                                    border-color: root.field-provider-type == pidx
+                                        ? root.mind-base
+                                        : RedesignTheme.t.border;
+                                    border-radius: 3px;
+                                    animate background { duration: 200ms; }
+                                    pt-ta := TouchArea {
+                                        width: parent.width;
+                                        height: parent.height;
+                                        clicked => { root.field-provider-type = pidx; }
+                                    }
+                                    Text {
+                                        text: pt;
+                                        color: root.field-provider-type == pidx ? root.mind-base : RedesignTheme.t.muted;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 10px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        width: parent.width;
+                                        height: parent.height;
+                                    }
+                                }
+                            }
+
+                            // base-url + api-key + model
+                            HorizontalLayout {
+                                spacing: 12px;
+                                width: parent.width;
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 5px;
+                                    Text {
+                                        text: AppStrings.onb-field-provider-url;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 9px;
+                                        color: RedesignTheme.t.faint;
+                                        letter-spacing: 0.6px;
+                                    }
+                                    field-input {
+                                        placeholder: AppStrings.onb-field-provider-url-ph;
+                                        accent-color: root.mind-base;
+                                        value <=> root.field-provider-url;
+                                    }
+                                }
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 5px;
+                                    Text {
+                                        text: AppStrings.onb-field-provider-model;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 9px;
+                                        color: RedesignTheme.t.faint;
+                                        letter-spacing: 0.6px;
+                                    }
+                                    field-input {
+                                        placeholder: AppStrings.onb-field-provider-model-ph;
+                                        accent-color: root.mind-base;
+                                        value <=> root.field-provider-model;
+                                    }
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: 5px;
+                                width: parent.width;
+                                Text {
+                                    text: AppStrings.onb-field-provider-key;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                    letter-spacing: 0.6px;
+                                }
+                                // api-key（password 态，空值 + 占位符，禁硬编码密钥形态）
+                                Rectangle {
+                                    width: parent.width;
+                                    height: 30px;
+                                    border-width: 1px;
+                                    border-color: pk-ti.has-focus ? root.mind-base : RedesignTheme.t.border;
+                                    border-radius: 3px;
+                                    background: RedesignTheme.t.bg;
+                                    animate border-color { duration: 200ms; }
+                                    HorizontalLayout {
+                                        padding-left: 10px; padding-right: 10px;
+                                        pk-ti := TextInput {
+                                            horizontal-stretch: 1;
+                                            height: parent.height;
+                                            text <=> root.field-provider-key;
+                                            font-family: "JetBrains Mono";
+                                            font-size: 11px;
+                                            color: RedesignTheme.t.fg;
+                                            // Slint TextInput 无 placeholder/password 属性；占位符由下方覆盖 Text 表达。
+                                        }
+                                    }
+                                    if root.field-provider-key == "" && !pk-ti.has-focus: Text {
+                                        x: 11px;
+                                        y: 8px;
+                                        text: AppStrings.onb-field-provider-key-ph;
+                                        font-family: "JetBrains Mono";
+                                        font-size: 11px;
+                                        color: RedesignTheme.t.faint;
+                                        opacity: 0.6;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 第三章分隔
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: center;
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                        Text {
+                            text: AppStrings.onb-chapter-3;
+                            font-family: "JetBrains Mono";
+                            font-size: 9px;
+                            letter-spacing: 1px;
+                            color: RedesignTheme.t.faint;
+                        }
+                        Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                    }
+
+                    // 仪式卡片 3：物理锚定
+                    Rectangle {
+                        background: RedesignTheme.t.elevated;
+                        border-width: 1px;
+                        border-color: RedesignTheme.t.border;
+                        border-radius: 4px;
+                        drop-shadow-color: RedesignTheme.t.shadow;
+                        drop-shadow-blur: 4px;
+
+                        VerticalLayout {
+                            padding-top: 14px; padding-bottom: 14px;
+                            padding-left: 16px; padding-right: 16px;
+                            spacing: 12px;
+                            width: parent.width;
+
+                            HorizontalLayout {
+                                spacing: 6px;
+                                alignment: space-between;
+                                Text {
+                                    text: AppStrings.onb-card3-title;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 10px;
+                                    letter-spacing: 0.8px;
+                                    color: root.mind-base;
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text {
+                                    text: AppStrings.onb-card3-step;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                }
+                            }
+                            Rectangle { height: 1px; background: RedesignTheme.t.border; }
+
+                            Text {
+                                text: AppStrings.onb-card3-narrative;
+                                font-family: "Fraunces";
+                                font-size: 13px;
+                                color: RedesignTheme.t.muted;
+                                wrap: word-wrap;
+                                width: parent.width;
+                            }
+
+                            VerticalLayout {
+                                spacing: 5px;
+                                width: parent.width;
+                                Text {
+                                    text: AppStrings.onb-field-workspace;
+                                    font-family: "JetBrains Mono";
+                                    font-size: 9px;
+                                    color: RedesignTheme.t.faint;
+                                    letter-spacing: 0.6px;
+                                }
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    // 路径回显（mock 文件路径浏览）
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 30px;
+                                        border-width: 1px;
+                                        border-color: RedesignTheme.t.border;
+                                        border-radius: 3px;
+                                        background: RedesignTheme.t.bg;
+                                        HorizontalLayout {
+                                            padding-left: 10px; padding-right: 10px;
+                                            Text {
+                                                text: root.step1-path == "" ? AppStrings.onb-field-workspace-ph : root.step1-path;
+                                                font-family: "JetBrains Mono";
+                                                font-size: 11px;
+                                                color: root.step1-path == "" ? RedesignTheme.t.faint : RedesignTheme.t.fg;
+                                                opacity: root.step1-path == "" ? 0.6 : 1.0;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                            }
+                                        }
+                                    }
+                                    // 浏览按钮（调 pick-folder 回调，已有 main.slint 接线）
+                                    Rectangle {
+                                        width: 80px;
+                                        height: 30px;
+                                        border-width: 1px;
+                                        border-color: browse-ta.has-hover ? root.mind-base : RedesignTheme.t.border;
+                                        border-radius: 3px;
+                                        background: RedesignTheme.t.bg;
+                                        animate border-color { duration: 150ms; }
+                                        browse-ta := TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            clicked => { root.pick-folder(); }
+                                        }
+                                        Text {
+                                            text: AppStrings.onb-workspace-browse;
+                                            font-family: "JetBrains Mono";
+                                            font-size: 10px;
+                                            color: browse-ta.has-hover ? root.mind-base : RedesignTheme.t.muted;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: parent.width;
+                                            height: parent.height;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 底部 deck（见证注 + 成为按钮）
+            Rectangle {
+                height: 56px;
+                border-width: 0px;
+                // 档三缝线 16% mind 色
+                Rectangle {
+                    y: 0;
+                    width: parent.width;
+                    height: 1px;
+                    background: root.mind-base.with-alpha(0.16);
+                }
+                background: RedesignTheme.t.surface;
+
+                HorizontalLayout {
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    spacing: 12px;
+                    alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+
+                    // 见证注（Fraunces italic）
+                    HorizontalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text {
+                            text: AppStrings.onb-witness-pledge;
+                            font-family: "Fraunces";
+                            font-italic: true;
+                            font-size: 12px;
+                            color: RedesignTheme.t.muted;
+                            vertical-alignment: center;
+                        }
+                        // 光标（blink 1s）
+                        Rectangle {
+                            width: 7px; height: 13px;
+                            background: root.mind-base;
+                            opacity: Math.mod(animation-tick() / 1000ms, 1) < 0.5 ? 1 : 0.15;
+                        }
+                    }
+
+                    // "成为自己" 按钮（Fraunces italic 13px，disabled opacity 0.5）
+                    Rectangle {
+                        width: 220px;
+                        height: 34px;
+                        border-width: 1px;
+                        border-color: root.become-enabled ? root.mind-base : RedesignTheme.t.border;
+                        border-radius: 3px;
+                        background: root.ritual-done
+                            ? RedesignTheme.t.on-rep
+                            : (root.become-enabled ? root.mind-base.with-alpha(0.4) : RedesignTheme.t.bg);
+                        opacity: root.become-enabled || root.ritual-done ? 1.0 : 0.5;
+                        animate background { duration: 150ms; }
+
+                        become-ta := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            enabled: root.become-enabled;
+                            clicked => {
+                                if (root.become-enabled) {
+                                    // 1.2s 唤起仪式：air-tint 升档 + avatar dashed->solid + mind-line 流入 + 窗控暗化。
+                                    root.ritual-in-progress = true;
+                                    root.ritual-intensity = 1.0;
+                                    // I1 修复：用 Slint Timer 延迟 1300ms 跳转 main（覆盖 ritual-intensity 1200ms 一次性 animate），
+                                    // 仪式动画完整呈现后再切路由。
+                                    root.ritual-done = true;
+                                    ritual-timer.restart();
+                                }
+                            }
+                        }
+
+                        ritual-timer := Timer {
+                            interval: 1300ms;
+                            running: false;
+                            triggered => {
+                                root.ritual-in-progress = false;
+                                root.on-completed();
+                            }
+                        }
+
+                        Text {
+                            text: root.ritual-done ? AppStrings.onb-become-done : AppStrings.onb-become-button;
+                            font-family: "Fraunces";
+                            font-italic: true;
+                            font-size: 13px;
+                            color: root.ritual-done ? RedesignTheme.t.bg : (root.become-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted);
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+                }
+            }
         }
-        on-cancel => {
-            root.identity-creator-visible = false;
+
+        // 门铃宝石（右，诞生存根触发器）--真值 trig-work。
+        DoorbellGem {
+            is-left: false;
+            is-open: root.right-drawer-open;
+            base-color: root.mind-base;
+            tooltip: AppStrings.onb-cert-title;
+            x: parent.width - self.width;
+            y: 52px - 32px;
+            toggle => { root.right-drawer-open = !root.right-drawer-open; }
+        }
+
+        // 右抽屉 诞生存根（复用 T2 MindMod，onboarding-mode）。
+        // 泊主框右侧，开合通过 x 平移 + opacity（350ms）。
+        MindMod {
+            is-open: root.right-drawer-open;
+            onboarding-mode: true;
+            cert-title: AppStrings.onb-cert-title;
+            cert-mind-base: root.mind-base;
+            cert-step1-done: root.step1-done;
+            cert-step2-done: root.step2-done;
+            cert-step3-done: root.step3-done;
+            cert-step1-status: root.step1-done ? "已凝结" : AppStrings.onb-cert-step-pending;
+            cert-step2-status: root.step2-done ? "已通畅" : AppStrings.onb-cert-step-pending;
+            cert-step3-status: root.step3-done ? "已立锚" : AppStrings.onb-cert-step-pending;
+            cert-color-status: root.is-colored
+                ? (root.selected-palette >= 0 ? root.palette-names[root.selected-palette] : "")
+                : AppStrings.onb-cert-color-pending;
+            cert-colored: root.is-colored;
+            cert-identity-name: root.field-agent-title != "" ? root.field-agent-title : AppStrings.onb-head-name;
+            // I2 修复：身份凝结 4 字段实时渲染
+            cert-user-title: root.field-user-title;
+            cert-relation-title: root.field-relation-title;
+            x: root.right-drawer-open ? parent.width - self.width : parent.width;
+            y: 48px;
+            animate x { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
         }
     }
 }
+
