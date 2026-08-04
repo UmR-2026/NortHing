@@ -31,3 +31,13 @@
 - Task C2: complete (commits 3404060..7fa7d62, review 双 PASS 0C/0I, 6 Minor) — standalone relay loopback 默认 + 自动 key 生成（~/.northhing/relay/api_key, 0600 + 原子写）+ RELAY_BIND env + 非 loopback 无 key 启动 fail-closed + CORS 收紧（移除了 relay-core lib.rs 硬编码 CorsLayer::permissive()，cors_allow_origins 字段原本未接线已补接）+ embedded relay 启动 warn + ledger P1-5 resolved / P1-7 active。61 tests。
 
 - Task C3: complete (commits 7fa7d62..f42451d, review 双 PASS, 1I/10M；fix 1 轮: I-1 环境约束显式化 + M-1/M-3/M-4 计数与措辞修正 + M-6 新增 P1-8 MCPServerConfig.env 明文 concern + M-8 并发测试 final-state 加固) — ProviderConfig.api_key 迁移 OS keyring (v4.1.6, windows-native-keyring-store)；KeyringBackend trait + Production/Mock 双实现；load 路径迁移 + sentinel + idempotent + fail-closed (ring/aws-lc-sys gcc 缺失环境约束已显式记录, CI 覆盖)。副产物：P1-7 (embedded relay key threading, C2) + P1-8 (MCPServerConfig.env plaintext, C3 fix 轮发现)。
+
+---
+
+# Backend Follow-ups Round Ledger (2026-08-05)
+
+计划：`.superpowers/sdd/plan-2026-08-04-backend-followups.md`
+分支：`fix/backend-followups-0804`（worktree `.worktrees/backend-followups-0804`，基线 41695f5）
+选派：implementer coder-qw / 任务 judge judge-qw（用户 2026-08-05 指定 qwen 线；探针通过）
+
+- Task B1: complete (commits 41695f5..808ed65, review r2 双 PASS；fix 1 轮: r1 SPEC FAIL 唯一阻塞项=计划要求的"并发写不丢条目"测试缺失，用户拍板 (a) 加锁+并发测试 → 808ed65 补 tokio Mutex 串行化 user/project 读-改-写 + 3 并发用例，judge 对照无锁 BASE 实证用例能抓 lost-update) — FU-1: 层 A CoreMCPConfigStore.get_config_value 错误分类（NotFound=空态/其它=Err 中止写）+ 层 B save_user_config/delete_server_config 未识别格式 fail-closed（镜像 load_project_configs_strict）。integrations +7 / core +2 tests。终审 triage: Minor-1 save_config 非原子写待登记独立债项；Minor-2 台账 FU-1 注记 "+4" 应为累计 "+7"。
