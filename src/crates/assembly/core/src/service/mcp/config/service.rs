@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::service::config::ConfigService;
 use crate::service::mcp::server::MCPServerConfig;
-use crate::util::errors::NortHingResult;
+use crate::util::errors::{NortHingError, NortHingResult};
 
 pub struct MCPConfigService {
     pub(super) config_service: Arc<ConfigService>,
@@ -14,16 +14,33 @@ struct CoreMCPConfigStore {
     config_service: Arc<ConfigService>,
 }
 
+/// Classifies a `ConfigService` read for the MCP config store.
+///
+/// A missing key (`NortHingError::NotFound`) is the legitimate empty state and
+/// maps to `Ok(None)` so read-modify-write callers can start from an empty
+/// baseline. Any other failure (IO, parse, serialization) must surface as an
+/// error: treating it as an empty config would let callers clobber the existing
+/// value on the subsequent write.
+fn classify_config_read(
+    key: &str,
+    result: NortHingResult<serde_json::Value>,
+) -> northhing_services_integrations::mcp::MCPRuntimeResult<Option<serde_json::Value>> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(NortHingError::NotFound(_)) => Ok(None),
+        Err(e) => Err(northhing_services_integrations::mcp::MCPRuntimeError::configuration(
+            format!("Failed to read MCP config store key '{}': {}", key, e),
+        )),
+    }
+}
+
 #[async_trait]
 impl northhing_services_integrations::mcp::config::MCPConfigStore for CoreMCPConfigStore {
     async fn get_config_value(
         &self,
         key: &str,
     ) -> northhing_services_integrations::mcp::MCPRuntimeResult<Option<serde_json::Value>> {
-        match self.config_service.config::<serde_json::Value>(Some(key)).await {
-            Ok(value) => Ok(Some(value)),
-            Err(_) => Ok(None),
-        }
+        classify_config_read(key, self.config_service.config::<serde_json::Value>(Some(key)).await)
     }
 
     async fn set_config_value(
@@ -163,5 +180,61 @@ mod tests {
             northhing_services_integrations::mcp::config::normalize_mcp_authorization_value("plain-token").as_deref(),
             Some("Bearer plain-token")
         );
+    }
+
+    #[test]
+    fn classify_config_read_maps_missing_key_to_none_and_real_failures_to_error() {
+        let present = classify_config_read("mcp_servers", Ok(serde_json::json!({ "mcpServers": {} })));
+        assert_eq!(present.unwrap(), Some(serde_json::json!({ "mcpServers": {} })));
+
+        let missing = classify_config_read(
+            "mcp_servers",
+            Err(NortHingError::NotFound(
+                "Config path 'mcp_servers' not found".to_string(),
+            )),
+        );
+        assert_eq!(missing.unwrap(), None);
+
+        let failed = classify_config_read(
+            "mcp_servers",
+            Err(NortHingError::config("Failed to read config file: disk error")),
+        );
+        let error = failed.expect_err("real read failures must not be treated as an empty config");
+        assert_eq!(
+            error.kind(),
+            northhing_services_integrations::mcp::MCPRuntimeErrorKind::Configuration
+        );
+        assert!(
+            error.message().contains("mcp_servers"),
+            "error should identify the failing key, got: {}",
+            error.message()
+        );
+    }
+
+    #[tokio::test]
+    async fn core_mcp_config_store_returns_none_for_missing_key_on_real_config_service() {
+        use northhing_services_integrations::mcp::config::MCPConfigStore;
+
+        let temp_root = std::env::temp_dir().join(format!("northhing-core-mcp-config-store-{}", uuid::Uuid::new_v4()));
+        let path_manager = Arc::new(crate::infrastructure::PathManager::with_user_root_for_tests(
+            temp_root.join("user-root"),
+        ));
+        let settings = crate::service::config::ConfigManagerSettings {
+            path_manager: Some(path_manager),
+            auto_save: true,
+            backup_count: 5,
+        };
+        let config_service = Arc::new(
+            crate::service::config::ConfigService::with_settings(settings)
+                .await
+                .expect("config service builds against an isolated temp root"),
+        );
+
+        let store = CoreMCPConfigStore { config_service };
+        let value = store
+            .get_config_value("mcp_servers")
+            .await
+            .expect("a key that was never written is the legitimate empty state");
+        assert_eq!(value, None);
     }
 }

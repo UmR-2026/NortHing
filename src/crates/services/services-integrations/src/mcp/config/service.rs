@@ -210,16 +210,18 @@ impl MCPConfigService {
     }
 
     async fn save_user_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
-        let current_value = self
-            .config_store
-            .get_config_value("mcp_servers")
-            .await?
-            .unwrap_or_else(|| serde_json::json!({ "mcpServers": {} }));
-
-        let mut mcp_servers = if let Some(obj) = current_value.get("mcpServers").and_then(|v| v.as_object()) {
-            obj.clone()
-        } else {
-            serde_json::Map::new()
+        let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
+            None => serde_json::Map::new(),
+            Some(current_value) => match current_value.get("mcpServers").and_then(|v| v.as_object()) {
+                Some(existing) => existing.clone(),
+                // A write path must not clobber an existing `mcp_servers` value it
+                // cannot interpret (mirrors `load_project_configs_strict`).
+                None => {
+                    return Err(MCPRuntimeError::configuration(
+                        "Refusing to overwrite user-level MCP configs with unrecognized existing format",
+                    ));
+                }
+            },
         };
 
         mcp_servers.insert(config.id.clone(), config_to_cursor_format(config));
@@ -253,19 +255,24 @@ impl MCPConfigService {
     }
 
     pub async fn delete_server_config(&self, server_id: &str) -> MCPRuntimeResult<()> {
-        let current_value = self
-            .config_store
-            .get_config_value("mcp_servers")
-            .await?
-            .unwrap_or_else(|| serde_json::json!({ "mcpServers": {} }));
-
-        let mut mcp_servers = if let Some(obj) = current_value.get("mcpServers").and_then(|v| v.as_object()) {
-            obj.clone()
-        } else {
-            return Err(MCPRuntimeError::not_found(format!(
-                "MCP server config not found: {}",
-                server_id
-            )));
+        let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
+            None => {
+                return Err(MCPRuntimeError::not_found(format!(
+                    "MCP server config not found: {}",
+                    server_id
+                )));
+            }
+            Some(current_value) => match current_value.get("mcpServers").and_then(|v| v.as_object()) {
+                Some(existing) => existing.clone(),
+                // An unrecognized existing value must fail closed instead of being
+                // conflated with "server not found": proceeding would clobber a
+                // value this path cannot interpret.
+                None => {
+                    return Err(MCPRuntimeError::configuration(
+                        "Refusing to overwrite user-level MCP configs with unrecognized existing format",
+                    ));
+                }
+            },
         };
 
         if mcp_servers.remove(server_id).is_none() {

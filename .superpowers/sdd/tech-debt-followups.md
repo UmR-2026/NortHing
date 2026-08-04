@@ -2,11 +2,14 @@
 
 来源：`final-review.md` §5 triage 高优先级 4 项 + Task 9 遗留 1 项。
 本文件为后续子代理任务的输入；每项独立可派单，互不依赖。
-状态：均为 **open**，未开始。
+状态：FU-1 **resolved**（`fix/backend-followups-0804` Task B1）；其余 **open**，未开始。
 
 ---
 
 ## FU-1 [security] save_user_config fail-open（与 H-7 同漏洞类）
+
+> **状态**：resolved — Task B1（`fix/backend-followups-0804`），commit `fix(security): MCP user-level config writes fail-closed on read errors (FU-1)`。
+> 修复：层 A core 适配器 `CoreMCPConfigStore::get_config_value` 读错误按 ErrorKind 分类（`NotFound`=合法空态→`Ok(None)`，其它=真实失败→`Err` 中止写）；层 B `save_user_config`/`delete_server_config` 对未识别既有格式拒写（镜像 `load_project_configs_strict`）。新增测试：integrations +4、core lib +2。写入原子性核查结论见 task-b1-report.md。
 
 - **定位**：`src/crates/services/services-integrations/` 内 `save_user_config`（用户级 MCP 配置写入路径；与 Task 6 已修的 `save_project_config` 项目级路径并列）。
 - **现象/根因**：read-modify-write 在读取阶段对 IO 错误 fail-open（沿用旧值/空值继续写），与 H-7 修复前的 `project.mcp_servers` 同漏洞类——并发或磁盘抖动时可能丢配置或写入残缺 JSON。Task 6 brief 将范围限定在项目级，用户级被显式排除。

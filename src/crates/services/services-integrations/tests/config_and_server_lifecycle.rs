@@ -151,6 +151,104 @@ async fn mcp_config_service_save_project_fails_closed_on_unrecognized_existing_f
 }
 
 #[tokio::test]
+async fn mcp_config_service_save_user_fails_closed_on_config_store_read_error() {
+    let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "user-server",
+            ConfigLocation::User,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("user save must not fall back to an empty baseline on read errors");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unavailable"),
+        "expected the store read failure to propagate, got: {error}"
+    );
+    assert_eq!(
+        store.set_calls.lock().await.clone(),
+        Vec::<String>::new(),
+        "set_config_value must not be called when the read fails"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_save_user_fails_closed_on_unrecognized_existing_format() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "user-server",
+            ConfigLocation::User,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("user save must refuse to overwrite an unrecognized existing value");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unrecognized existing format"),
+        "expected the unrecognized-format refusal message, got: {error}"
+    );
+    assert_eq!(
+        store.values.lock().await.get("mcp_servers"),
+        Some(&json!(42)),
+        "existing user config must remain untouched"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_delete_user_fails_closed_on_config_store_read_error() {
+    let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .delete_server_config("user-server")
+        .await
+        .expect_err("user delete must not fall back to an empty baseline on read errors");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unavailable"),
+        "expected the store read failure to propagate, got: {error}"
+    );
+    assert_eq!(
+        store.set_calls.lock().await.clone(),
+        Vec::<String>::new(),
+        "set_config_value must not be called when the read fails"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_delete_user_fails_closed_on_unrecognized_existing_format() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .delete_server_config("user-server")
+        .await
+        .expect_err("user delete must refuse to touch an unrecognized existing value");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unrecognized existing format"),
+        "expected the unrecognized-format refusal message, got: {error}"
+    );
+    assert_eq!(
+        store.values.lock().await.get("mcp_servers"),
+        Some(&json!(42)),
+        "existing user config must remain untouched"
+    );
+}
+
+#[tokio::test]
 async fn mcp_config_service_save_project_preserves_upsert_contract() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
     store.values.lock().await.insert(
