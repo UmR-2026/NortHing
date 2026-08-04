@@ -1,13 +1,13 @@
-// ChronicleBar - 编年史条：出生灰白 -> 代表色的横向渐变（FR-T3b 名片系）。
-// Token 全部来自 RedesignTheme.t.*（redesign_palette.slint）。
+// ChronicleBar - 编年史条：出生灰 -> 代表色的横向渐变
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component ChronicleBar inherits Rectangle {
-    // 出生灰白锚（默认 t.birth，明暗两态）；now 默认代表色 rep-500。
+    // 暴露属性供后续任务绑定
     in property <color> birth: RedesignTheme.t.birth;
     in property <color> now: RedesignTheme.t.rep-500;
 
-    height: 5px;
-    background: @linear-gradient(90deg, birth 0%, RedesignTheme.t.rep-300 50%, now 100%);
-    border-radius: RedesignTheme.t.r-pill;
+    height: 4px;
+    opacity: 0.7;
+    background: @linear-gradient(90deg, root.birth 0%, root.now 100%);
+    border-radius: 0px;
 }

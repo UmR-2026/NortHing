@@ -1,7 +1,7 @@
-// Pill Component - 通用徽章/标签（FR-T3b）
+// Pill Component - 閫氱敤寰界珷/鏍囩锛團R-T3b锛?
 //
-// pill 形，四种变体：default / abyss / faint / tool。
-// Token 来自 RedesignTheme.t.*。
+// pill 褰紝鍥涚鍙樹綋锛歞efault / abyss / faint / tool銆?
+// Token 鏉ヨ嚜 RedesignTheme.t.*銆?
 
 import { RedesignTheme } from "../redesign_palette.slint";
 
@@ -9,7 +9,7 @@ export component Pill inherits Rectangle {
     in property <string> text: "";
     in property <string> variant: "default"; // "default" | "abyss" | "faint" | "tool"
 
-    border-radius: RedesignTheme.t.r-pill;
+    border-radius: 0px;
     border-width: 1px;
 
     background: root.variant == "abyss" ? RedesignTheme.t.abyss-500.with-alpha(0.10)

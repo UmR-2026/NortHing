@@ -1,31 +1,28 @@
-// AvatarWrap - 头像容器：径向渐变头像本体 + 双层呼吸光环（FR-T3b 名片系）。
-// Token 全部来自 RedesignTheme.t.*（redesign_palette.slint）。
+// AvatarWrap - 头像容器：径向渐变头像本体 + 双层呼吸光环
+import { SystemConstants } from "../system_constants.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component AvatarWrap inherits Rectangle {
     in property <length> size: 44px;
-    in property <string> initial: "知";
+    in property <string> initial: "";
     in property <bool> breathing: true;
 
-    // 容器比头像大 30px，容下外层大光环（内圈 6px + 外圈额外 24px）。
     width: size + 30px;
     height: size + 30px;
     background: transparent;
 
-    // 呼吸缩放因子：breathing=true 时 ±1.5%（6s 周期），否则 1。
-    property <float> breath: breathing ? 1 + 0.015 * Math.sin(animation-tick() / 6000ms * 360deg) : 1;
+    // 呼吸绑 opacity
+    opacity: root.breathing ? SystemConstants.amp-avatar : 1.0;
 
-    // 光环整体透明度：breathing 时 1.0，停止时 0.3，平滑过渡。
     property <float> halo-opacity: breathing ? 1.0 : 0.3;
     animate halo-opacity { duration: 300ms; easing: ease-in-out; }
 
-    // 外层光环：比内圈光环再大 12px（半径），opacity 固定 0.3 × halo-opacity。
     outer-halo := Rectangle {
-        width: (root.size + 30px) * root.breath;
-        height: (root.size + 30px) * root.breath;
+        width: root.size + 30px;
+        height: root.size + 30px;
         x: (root.width - self.width) / 2;
         y: (root.height - self.height) / 2;
-        border-radius: RedesignTheme.t.r-lg;
+        border-radius: 0px;
         border-width: 1px;
         border-color: RedesignTheme.t.rep-400;
         background: transparent;
@@ -33,13 +30,12 @@ export component AvatarWrap inherits Rectangle {
         animate opacity { duration: 300ms; easing: ease-in-out; }
     }
 
-    // 内层呼吸光环：外圈，比头像大 6px，圆角 r-lg，rep-400 边框，透明底。
     halo := Rectangle {
-        width: (root.size + 6px) * root.breath;
-        height: (root.size + 6px) * root.breath;
+        width: root.size + 6px;
+        height: root.size + 6px;
         x: (root.width - self.width) / 2;
         y: (root.height - self.height) / 2;
-        border-radius: RedesignTheme.t.r-lg;
+        border-radius: 0px;
         border-width: 1px;
         border-color: RedesignTheme.t.rep-400;
         background: transparent;
@@ -47,13 +43,12 @@ export component AvatarWrap inherits Rectangle {
         animate opacity { duration: 300ms; easing: ease-in-out; }
     }
 
-    // 头像本体：size×size，圆角 r-md，径向渐变 rep-300->rep-500，中央首字。
     Rectangle {
         x: (parent.width - size) / 2;
         y: (parent.height - size) / 2;
         width: size;
         height: size;
-        border-radius: RedesignTheme.t.r-md;
+        border-radius: 0px;
         background: @radial-gradient(circle, RedesignTheme.t.rep-300 0%, RedesignTheme.t.rep-500 100%);
 
         Text {

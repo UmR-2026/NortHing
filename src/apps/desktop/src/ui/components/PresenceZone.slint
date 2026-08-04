@@ -11,6 +11,7 @@ import { RedesignTheme } from "../redesign_palette.slint";
 import { AvatarWrap } from "AvatarWrap.slint";
 import { ChronicleBar } from "ChronicleBar.slint";
 import { MoodText } from "MoodText.slint";
+import { SystemConstants } from "../system_constants.slint";
 
 export component PresenceZone inherits Rectangle {
     in property <bool> streaming: false;
@@ -32,10 +33,10 @@ export component PresenceZone inherits Rectangle {
         background: @radial-gradient(circle at halo.cx halo.cy,
             RedesignTheme.t.presence-halo-rep 0%,
             RedesignTheme.t.presence-halo-rep-soft 30%,
-            transparent 64%);
+            RedesignTheme.t.presence-halo-rep-soft.with-alpha(0) 64%);
         // 8s 周期微弱呼吸，与 AvatarWrap 6s 错开形成层次感
         // 暗色模式下光晕几乎不可见，提升基础不透明度 40%
-        opacity: (root.dark-mode ? 1.0 : 0.85) + 0.15 * Math.sin(animation-tick() / 8000ms * 360deg);
+        opacity: root.dark-mode ? SystemConstants.amp-aura : SystemConstants.amp-aura * 0.4;
     }
 
     // ── 居中列：gap 8px，padding 36px 0 20px ──

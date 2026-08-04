@@ -1,24 +1,80 @@
-// WindowChrome - 透明背景，左下品牌水印 + 左右把手 + 右上窗口控制按钮。
-// FR-T3 前置；toggle-left/right 回调 FR-T3b 接线。
-// FR-T3b: frameless 窗口自绘 −□× 三键，回调接 Rust window API。
-
 import { RedesignTheme } from "../redesign_palette.slint";
+import { SystemConstants } from "../system_constants.slint";
 
 export component WindowChrome inherits Rectangle {
-    // 透明背景，仅覆盖内容
     background: transparent;
 
-    // 抽屉状态（由 main.slint 传入，驱动箭头方向）
     in property<bool> inner-drawer-open: false;
     in property<bool> outer-drawer-open: false;
-
-    // FR-T4-3: signal 占位属性，供左把手信号点使用；后续可由 main.slint 注入
     in property<bool> signal: false;
 
-    // 左下品牌水印
-    watermark := Text {
-        x: 44px;
-        y: parent.height - 22px - self.height;
+    callback toggle-left();
+    callback toggle-right();
+    callback window-minimize();
+    callback window-maximize();
+    callback window-close();
+    callback toggle-theme();
+
+    // ˫߽ (Double border)
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        border-width: 1px;
+        border-color: RedesignTheme.dark ? RedesignTheme.t.mind-drive-frame : RedesignTheme.t.border;
+
+        Rectangle {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            border-width: 1px;
+            border-color: RedesignTheme.t.border;
+            visible: !RedesignTheme.dark;
+        }
+    }
+
+    // Ĥ (Membrane frame)
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-width: 1px;
+        border-color: RedesignTheme.t.mind-drive-accent;
+        opacity: SystemConstants.amp-membrane;
+    }
+
+    // ״̬/room-head ק (Status line / drag area)
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width - 150px;
+        height: 48px;
+        background: transparent;
+        
+        HorizontalLayout {
+            x: 24px;
+            y: 0;
+            height: parent.height;
+            alignment: start;
+            spacing: 8px;
+
+            Text {
+                text: "northing";
+                font-family: "Fraunces";
+                font-italic: true;
+                font-size: 12px;
+                color: RedesignTheme.t.fg;
+                vertical-alignment: center;
+                opacity: 0.7;
+            }
+        }
+    }
+
+    // ӡ (Seal watermark)
+    Text {
+        x: 24px;
+        y: parent.height - 24px - self.height;
         text: "northing";
         opacity: watermark-touch.has-hover ? 0.4 : 0.25;
         font-size: RedesignTheme.t.fs-md;
@@ -32,207 +88,116 @@ export component WindowChrome inherits Rectangle {
         }
     }
 
-    // 左把手（28px 全高，垂直居中）
-    left-handle := Rectangle {
-        x: 0;
-        y: 0;
-        width: 28px;
-        height: parent.height;
-        background: transparent;
-
-        // 渗光近似条（右缘，rep-300 → 透明）
-        Rectangle {
-            x: parent.width - 6px;
-            y: 0;
-            width: 6px;
-            height: parent.height;
-            background: @linear-gradient(90deg, transparent 0%, left-touch.has-hover ? RedesignTheme.t.rep-400 : RedesignTheme.t.rep-300 100%);
-            animate background { duration: 200ms; easing: ease-in-out; }
-        }
-
-        // 信号点
-        Rectangle {
-            x: parent.width - 5px - 6px;
-            y: 20px;
-            width: 6px;
-            height: 6px;
-            border-radius: 3px;
-            background: RedesignTheme.t.rep-500;
-            visible: root.signal;
-        }
-
-        VerticalLayout {
-            alignment: center;
-            spacing: 4px;
-
-            Text {
-                text: root.inner-drawer-open ? "‹" : "›";
-                color: left-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
-                font-size: RedesignTheme.t.fs-lg;
-                horizontal-alignment: center;
-                width: parent.width;
-                animate color { duration: 200ms; easing: ease-in-out; }
-            }
-
-            Text {
-                text: "内\n在";
-                color: RedesignTheme.t.faint;
-                font-size: RedesignTheme.t.fs-sm;
-                horizontal-alignment: center;
-                width: parent.width;
-            }
-        }
-
-        left-touch := TouchArea {
-            width: parent.width;
-            height: parent.height;
-            clicked => { root.toggle-left(); }
-        }
-    }
-
-    // 右把手（28px 全高，垂直居中）
+    // ϴڿưť (Window controls)
     Rectangle {
-        x: parent.width - 28px;
-        y: 0;
-        width: 28px;
-        height: parent.height;
-        background: transparent;
-
-        // 渗光近似条（左缘，abyss-300 → 透明）
-        Rectangle {
-            x: 0;
-            y: 0;
-            width: 6px;
-            height: parent.height;
-            background: @linear-gradient(90deg, right-touch.has-hover ? RedesignTheme.t.abyss-400 : RedesignTheme.t.abyss-300 0%, transparent 100%);
-            animate background { duration: 200ms; easing: ease-in-out; }
-        }
-
-        VerticalLayout {
-            alignment: center;
-            spacing: 4px;
-
-            Text {
-                text: root.outer-drawer-open ? "›" : "‹";
-                color: right-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
-                font-size: RedesignTheme.t.fs-lg;
-                horizontal-alignment: center;
-                width: parent.width;
-                animate color { duration: 200ms; easing: ease-in-out; }
-            }
-
-            Text {
-                text: "外\n物";
-                color: RedesignTheme.t.faint;
-                font-size: RedesignTheme.t.fs-sm;
-                horizontal-alignment: center;
-                width: parent.width;
-            }
-        }
-
-        right-touch := TouchArea {
-            width: parent.width;
-            height: parent.height;
-            clicked => { root.toggle-right(); }
-        }
-    }
-
-    // 右上窗口控制按钮：最小化 / 最大化还原 / 关闭。
-    // FR-T3b: right 缩进 s6+s3(=44px) 让出把手渗光线，顶部 s3 带垂直居中。
-    // 纯 RedesignTheme token，无硬编码 hex。
-    Rectangle {
-        x: parent.width - (RedesignTheme.t.s6 + RedesignTheme.t.s3)
-            - (3 * 28px + 2 * 2px);
-        y: 16px;
-        width: 3 * 28px + 2 * 2px;
+        x: parent.width - 140px;
+        y: 8px;
+        width: 120px;
         height: 28px;
         background: transparent;
 
-        // 最小化（−）
-        Rectangle {
-            x: 0;
-            y: 0;
-            width: 28px;
-            height: 28px;
-            border-radius: 7px;
-            background: min-touch.has-hover ? RedesignTheme.t.raised : transparent;
-            animate background { duration: 150ms; }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 2px;
+            
+            // л (Theme switch: Sun)
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 3px;
+                background: theme-touch.has-hover ? RedesignTheme.t.raised : transparent;
+                animate background { duration: 150ms; }
 
-            min-touch := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                clicked => { root.window-minimize(); }
+                theme-touch := TouchArea {
+                    clicked => { root.toggle-theme(); }
+                }
+                
+                Path {
+                    width: 14px;
+                    height: 14px;
+                    x: (parent.width - 14px) / 2;
+                    y: (parent.height - 14px) / 2;
+                    stroke: theme-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                    stroke-width: 1px;
+                    commands: "M 7 1 L 7 3 M 7 11 L 7 13 M 1 7 L 3 7 M 11 7 L 13 7 M 2.75 2.75 L 4.17 4.17 M 9.83 9.83 L 11.25 11.25 M 2.75 11.25 L 4.17 9.83 M 9.83 4.17 L 11.25 2.75";
+                }
+                Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    x: (parent.width - 6px) / 2;
+                    y: (parent.height - 6px) / 2;
+                    border-radius: 3px;
+                    border-width: 1px;
+                    border-color: theme-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                }
             }
 
-            Text {
-                text: "−";
-                color: min-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
-                font-size: RedesignTheme.t.fs-lg;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-            }
-        }
+            // С (Minimize)
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 3px;
+                background: min-touch.has-hover ? RedesignTheme.t.raised : transparent;
+                animate background { duration: 150ms; }
 
-        // 最大化 / 还原（□）
-        Rectangle {
-            x: 30px;
-            y: 0;
-            width: 28px;
-            height: 28px;
-            border-radius: 7px;
-            background: max-touch.has-hover ? RedesignTheme.t.raised : transparent;
-            animate background { duration: 150ms; }
-
-            max-touch := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                clicked => { root.window-maximize(); }
+                min-touch := TouchArea {
+                    clicked => { root.window-minimize(); }
+                }
+                
+                Rectangle {
+                    x: (parent.width - 10px) / 2;
+                    y: (parent.height - 1px) / 2;
+                    width: 10px;
+                    height: 1px;
+                    background: min-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                }
             }
 
-            Text {
-                text: "□";
-                color: max-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
-                font-size: RedesignTheme.t.fs-lg;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-            }
-        }
+            //  (Maximize)
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 3px;
+                background: max-touch.has-hover ? RedesignTheme.t.raised : transparent;
+                animate background { duration: 150ms; }
 
-        // 关闭（×）
-        Rectangle {
-            x: 60px;
-            y: 0;
-            width: 28px;
-            height: 28px;
-            border-radius: 7px;
-            background: close-touch.has-hover ? RedesignTheme.t.danger.with-alpha(0.18) : transparent;
-            animate background { duration: 150ms; }
-
-            close-touch := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                clicked => { root.window-close(); }
+                max-touch := TouchArea {
+                    clicked => { root.window-maximize(); }
+                }
+                
+                Rectangle {
+                    x: (parent.width - 10px) / 2;
+                    y: (parent.height - 10px) / 2;
+                    width: 10px;
+                    height: 10px;
+                    border-width: 1px;
+                    border-color: max-touch.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                    background: transparent;
+                }
             }
 
-            Text {
-                text: "×";
-                color: close-touch.has-hover ? RedesignTheme.t.danger : RedesignTheme.t.muted;
-                font-size: RedesignTheme.t.fs-lg;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
+            // ر (Close)
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 3px;
+                background: close-touch.has-hover ? RedesignTheme.t.danger.with-alpha(0.18) : transparent;
+                animate background { duration: 150ms; }
+
+                close-touch := TouchArea {
+                    clicked => { root.window-close(); }
+                }
+                
+                Path {
+                    width: 10px;
+                    height: 10px;
+                    x: (parent.width - 10px) / 2;
+                    y: (parent.height - 10px) / 2;
+                    stroke: close-touch.has-hover ? RedesignTheme.t.danger : RedesignTheme.t.muted;
+                    stroke-width: 1px;
+                    commands: "M 0 0 L 10 10 M 0 10 L 10 0";
+                }
             }
         }
     }
-
-    callback toggle-left();
-    callback toggle-right();
-    callback window-minimize();
-    callback window-maximize();
-    callback window-close();
 }
