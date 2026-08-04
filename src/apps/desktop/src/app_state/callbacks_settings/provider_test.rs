@@ -1,7 +1,8 @@
 use super::load_app_settings_quiet;
 use super::update_app_settings_quiet;
-use crate::app_state::settings::keyring::{resolve_api_key, PRODUCTION_KEYRING};
-use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
+use crate::app_state::settings::{
+    now_unix_secs, provider_wire_format, resolve_api_key, ProviderConfig, PRODUCTION_KEYRING,
+};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
 use slint::ComponentHandle;

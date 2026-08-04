@@ -118,7 +118,7 @@ filetime = "0.2"
 fs2 = "0.4"
 zip = { version = "4.6", default-features = false, features = ["deflate"] } # plugin load
 trash = "5.2.6"
-keyring = { version = "4.1.6", default-features = false, features = ["windows-native-keyring-store"] }
+keyring = { version = "4.1.6", default-features = false, features = ["v1"] }
 flate2 = "1.0"
 toml = "0.9"
 
