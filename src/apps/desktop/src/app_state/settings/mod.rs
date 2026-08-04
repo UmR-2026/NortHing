@@ -12,9 +12,10 @@
 //! now lives here, in user-space.
 //!
 //! ConfigManager **retains** its other responsibilities (`agent_models`,
-//! `func_agent_models`, config migrations, file IO helpers) and exposes
-//! `load_app_settings_from_disk` / `save_app_settings_to_disk` for disk IO
-//! while AppSettings owns the in-memory representation and the CRUD API.
+//! `func_agent_models`, config migrations, file IO helpers) while
+//! AppSettings owns the in-memory representation and the CRUD API; disk IO
+//! lives in this module's `io` submodule (`load_app_settings` /
+//! `update_app_settings`).
 //!
 //! ## Why a separate file
 //!

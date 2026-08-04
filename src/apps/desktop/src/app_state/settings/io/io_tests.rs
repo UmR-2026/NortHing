@@ -6,6 +6,11 @@
 // 2026-08-04 (C3, P1-2): tests now use a MockKeyring so they do not depend
 // on the real OS keyring. The `_at` variants accept a `&dyn KeyringBackend`.
 //
+// 2026-08-05 (FU-3): the public load path holds SETTINGS_WRITE_LOCK because
+// a load may persist dedup / keyring migration writes. The race regression
+// below drives the same locked composition the public load delegates to
+// (`load_app_settings_locked`) with an injected path.
+//
 // Note: this file lives under `settings/io/` because `io.rs` declares
 // `mod io_tests;` as a child module (rustc resolves it to `io/io_tests.rs`).
 
@@ -41,16 +46,17 @@ fn provider_with_fields(id: &str, name: &str, base_url: &str, api_key: &str, mod
 /// with the lock the final file must contain all 10.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_updates_preserve_all_writes() {
-    let kr = MockKeyring::new();
+    use std::sync::Arc;
+    let kr = Arc::new(MockKeyring::new());
     let dir = TestTempDir::new("settings-io-concurrent");
     let path = dir.path().join("app.json");
 
     let mut tasks = Vec::new();
     for i in 0..10 {
         let path = path.clone();
-        let kr_ref = &kr;
+        let kr = Arc::clone(&kr);
         tasks.push(tokio::spawn(async move {
-            update_app_settings_at(&path, kr_ref, |s| {
+            update_app_settings_at(&path, &*kr, |s| {
                 let id = format!("p{i}");
                 s.upsert_provider(provider_with_fields(&id, &format!("provider-{i}"), &format!("https://x{i}.com/v1"), &format!("sk-{i}"), &format!("model-{i}")));
                 Ok(())
@@ -62,7 +68,7 @@ async fn concurrent_updates_preserve_all_writes() {
         task.await.expect("concurrent update task panicked").expect("concurrent update failed");
     }
 
-    let final_settings = load_app_settings_at(&path, &kr).await.expect("final load");
+    let final_settings = load_app_settings_at(&path, &*kr).await.expect("final load");
     assert_eq!(final_settings.providers.len(), 10, "no update may be lost");
     for i in 0..10 {
         let id = format!("p{i}");
@@ -373,4 +379,101 @@ async fn keyring_migration_concurrent_loads_are_idempotent() {
         on_disk.contains(API_KEY_SENTINEL),
         "on-disk file must contain the sentinel value after concurrent loads"
     );
+}
+
+// ===== FU-3: the public load path runs under the write lock =====
+
+/// FU-3 regression: the seeded file holds a duplicate provider pair with a
+/// plaintext API key, so the load path is a writer until the first load
+/// persists the migrated result (dedup save + keyring-migration save — the
+/// full window FU-3 serializes). Before FU-3 the public load ran without
+/// [`SETTINGS_WRITE_LOCK`], so its migration save could read a pre-update
+/// snapshot and write it back after a concurrent update had saved —
+/// silently losing that update. With the lock, loads and updates serialize
+/// and every update write must survive.
+///
+/// The public `load_app_settings` / `update_app_settings` cannot run in
+/// tests (they resolve the real `~/.northhing/config/app.json`;
+/// `dirs::home_dir` is not redirectable on Windows), so the test drives the
+/// same locked compositions they delegate to — `load_app_settings_locked` /
+/// `update_app_settings_at` — with an injected path: same static lock, same
+/// inner load/save paths.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_loads_and_updates_preserve_all_writes() {
+    use std::sync::Arc;
+    let kr = Arc::new(MockKeyring::new());
+    let dir = TestTempDir::new("settings-io-fu3-race");
+    let path = dir.path().join("app.json");
+
+    // Seed: one duplicate provider pair with a plaintext API key → the
+    // first load performs both migration writes (dedup + keyring).
+    let mut seeded = AppSettings::default();
+    seeded.providers = vec![
+        provider_with_fields("id-a", "foo", "https://x.com/v1", "sk-dup-key", "gpt"),
+        provider_with_fields("id-b", "foo", "https://x.com/v1", "sk-dup-key", "gpt"),
+    ];
+    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
+        .await
+        .expect("seed write");
+
+    let mut tasks = Vec::new();
+    for i in 0..8 {
+        let load_path = path.clone();
+        let kr_load = Arc::clone(&kr);
+        tasks.push(tokio::spawn(async move {
+            load_app_settings_locked(&load_path, &*kr_load).await.expect("concurrent load");
+        }));
+        let update_path = path.clone();
+        let kr_update = Arc::clone(&kr);
+        tasks.push(tokio::spawn(async move {
+            update_app_settings_at(&update_path, &*kr_update, |s| {
+                let id = format!("p{i}");
+                s.upsert_provider(provider_with_fields(
+                    &id,
+                    &format!("provider-{i}"),
+                    &format!("https://u{i}.com/v1"),
+                    API_KEY_SENTINEL,
+                    &format!("model-{i}"),
+                ));
+                Ok(())
+            })
+            .await
+            .expect("concurrent update");
+        }));
+    }
+    // Deadlock guard: if the in-lock load composition ever double-acquires
+    // SETTINGS_WRITE_LOCK (tokio's Mutex is not reentrant), the joins below
+    // never complete — fail on timeout instead of hanging the suite.
+    let joined = tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        for task in tasks {
+            task.await.expect("concurrent task panicked");
+        }
+    })
+    .await;
+    assert!(joined.is_ok(), "load/update composition deadlocked (double SETTINGS_WRITE_LOCK acquisition?)");
+
+    // Final state: dedup kept id-a (dropped id-b), its key was migrated to
+    // the keyring, and all 8 update-written providers survived.
+    let final_settings = load_app_settings_at(&path, &*kr).await.expect("final load");
+    assert_eq!(
+        final_settings.providers.len(),
+        1 + 8,
+        "dedup keeps one seeded provider and no update may be lost"
+    );
+    assert!(
+        final_settings.providers.iter().any(|p| p.id == "id-a"),
+        "first of the duplicate group kept"
+    );
+    assert!(
+        !final_settings.providers.iter().any(|p| p.id == "id-b"),
+        "duplicate dropped by dedup"
+    );
+    for i in 0..8 {
+        let id = format!("p{i}");
+        assert!(
+            final_settings.providers.iter().any(|p| p.id == id),
+            "provider {i} must survive the concurrent load migrations"
+        );
+    }
+    kr.assert_contains("id-a", "sk-dup-key");
 }

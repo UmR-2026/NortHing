@@ -2,7 +2,7 @@
 
 来源：`final-review.md` §5 triage 高优先级 4 项 + Task 9 遗留 1 项。
 本文件为后续子代理任务的输入；每项独立可派单，互不依赖。
-状态：FU-1、FU-2 **resolved**（`fix/backend-followups-0804` Task B1/B2）；其余 **open**，未开始。
+状态：FU-1、FU-2、FU-3、FU-4 **resolved**（`fix/backend-followups-0804` Task B1/B2/B3）；FU-5 **open**，未开始。
 
 ---
 
@@ -30,6 +30,9 @@
 
 ## FU-3 [concurrency] dedup 迁移在 public load 路径解锁写
 
+> **状态**：resolved — Task B3（`fix/backend-followups-0804`），commit `fix(desktop): serialize settings load-path migrations + remove dead save wrapper (FU-3, FU-4)`。
+> 修复：公共 `load_app_settings` 全程持 `SETTINGS_WRITE_LOCK`（覆盖 load→dedup→keyring 迁移→可能写的整窗）；`load_app_settings_at` 保持无锁供锁内组合（tokio Mutex 非重入，update 事务在锁内调用它）。**偏离计划字面**（计划写于 P1-C3 前，要求"load 纯读"）：用户 2026-08-05 拍板方案 a（锁住公共 load）——keyring 迁移是 C3 有意置于 load 路径的 fail-closed 安全行为（明文 key 必须 load 时立即迁出磁盘），行为与 C3 安全姿态零变化。新增并发 load+update 无丢失回归测试（含死锁防护 timeout）；现有并发测试保持绿。
+
 - **定位**：`src/apps/desktop/` settings 加载路径（`load_app_settings` 只读入口触发 dedup 迁移写）。
 - **现象/根因**：Task 7 把写收敛进 `update_app_settings` 持锁，但 dedup 迁移仍挂在只读 `load_app_settings` 上，未持 settings 锁 → 窄窗口残余竞态（仅当存在重复 provider 时触发）。
 - **建议修复**：把 dedup 从 load 路径剥离，改为在 `update_app_settings` 内显式执行（持锁），load 路径纯读。
@@ -37,6 +40,9 @@
 - **优先级理由**：并发安全，窗口窄但真实存在。
 
 ## FU-4 [hygiene] save_app_settings dead-code warning
+
+> **状态**：resolved — Task B3（同 FU-3 commit）。
+> 修复：删除 dead wrapper `save_app_settings`（全仓 grep 确认无调用方），`save_app_settings_at` 保留为唯一实际写入者；顺带修正 `settings/mod.rs` 模块注释引用的不存在旧名（`load_app_settings_from_disk`/`save_app_settings_to_disk` → 现状 `load_app_settings`/`update_app_settings`）。`cargo check -p northhing` 的 `save_app_settings never used` warning 消失；`cargo test -p northhing --lib settings` 全绿。
 
 - **定位**：`src/apps/desktop/` settings 模块 `save_app_settings` public wrapper。
 - **现象/根因**：`cargo check -p northhing` 报 `warning: function save_app_settings is never used`——Task 7 收敛写入口后旧 wrapper 成死代码。
