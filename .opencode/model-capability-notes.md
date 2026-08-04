@@ -18,3 +18,19 @@
 - **kimi-for-coding/k3-256k (implementer)**：DONE_WITH_CONCERNS 一次交付，三组修复全过（目标 14/14, 全量 1134/1134 x2）。亮点是独立根因验证：main 基线 stash 复跑 + 临时插桩日志定位，推翻 brief 对 cancel 测试的 TOCTOU 归因（真因 = execution_task ~0.84s LLM 网络往返 > 50ms cancel 窗口），并仍按 brief 修复了 B-1 真 TOCTOU 产品 bug。双路径（产品修复 + hermetic 化）判断准确。
 - **minimax-cn-coding-plan/MiniMax-M3 (judge)**：APPROVED WITH NOTES (spec PASS / quality PASS w/ 2 Minor + 5 FYI)。对 implementer 的根因修正做了独立复核（FYI #4/#5 确认论证可信），file:line 证据充分。
 - 编排者经验：brief 归因与真实根因可能不一致——implementer 的独立验证（基线复跑 + 插桩）是关键防线；DONE_WITH_CONCERNS 携带的根因修正需要 judge 复核背书后才可采信。
+
+## 2026-08-02~03 前端视觉探索轮（consult-room 方向定稿，设计 bakeoff ×4 轮 + spike）
+
+### 设计探索子代理
+- **gemini-31-pro（首测）**：纪律全场最稳（emoji 0、阴影零滥用），设计判断稳（settings 双区、jewel 触发器）。纪律型页面首选。
+- **step-explore**：结构发明力最强（space 走廊=亮门独占光源、jewel 断口、膜结细化），会自跑 Edge headless 截图 + rect 量测自验。**两次最终消息中途截断、文件未落地** → 派发须写明"HTML 一次写完"，收工验文件存在，失败用 task_id 续会话。
+- **gemini-36-flash**：快、氛围强，但 **emoji 惯性成癖**（⚡/🌙/ 跨多轮复发，写进 agent 定义后仍犯）；一次空结果未落文件 → 交付必须机械扫描 emoji + 验文件，发现即修。
+- **minimax-m3**：craft/质感最强（枯山水/窑变/archive 地层），tradeoff 自陈诚实。氛围页首选。
+- **kimi-k3**：volcengine 线（general/kimi-k3_general）严谨可用；**ark provider 在本环境不可解析**——kimi-k3 扁平、ds-v4-flash 扁平、ark-kimi-k3_* 变体均派发失败（"Model not found: ark/kimi-k3"），一律走 volcengine。
+- **qwen3.8-max-preview**：编排者本体兼 qwen 槽（bakeoff 页、spike 均自做，质量与子代理同级）。项目级 coder-qw/judge-qw 在 `E:\agent-project\.opencode\agents\`，worktree 会话不加载。
+
+### Slint 翻译词汇（spike 实测，详 `docs/design/2026-07-22-frontend-redesign/slint-feasibility-consult-room.md`）
+- Rectangle 无 scale-x/scale-y → 呼吸改绑 opacity（animation-tick + Math.sin）；border-radius 不吃 %。
+- 双 `slint_build::compile` 共存时后者覆盖 SLINT_INCLUDE_GENERATED → 探针先于 main 编译。
+- 新 worktree 缺 gitignore 生成文件 → 先跑 `node scripts/generate-i18n-contract.mjs`。
+- mind 五色 × 双主题 25 预计算 token 已扩生成器入 palette（color-mix(in srgb) = gamma 逐通道插值，透明端 8 位 alpha）。

@@ -59,3 +59,27 @@ tags: [analysis, review, security, ux]
 - Tauri 模板 `[lib] crate-type = ["staticlib","cdylib","rlib"]` 在 GNU ld 下导出 136421 符号超 65535 ordinal 上限 → 桌面 only 砍成 ["rlib"]
 - embed-resource 3.0.11 在 rustc 1.96 MSVC 下 E0658（sysroot rustc_private 冲突）编译失败 → pin 3.0.5（tauri-winres 0.3.6 只要求 ^3）
 - PowerShell 多行 `git commit -m ""` 会炸 unknown switch → 用 `git commit -F <file>`
+
+---
+
+# 前端设计探索教训 (2026-08, consult-room 轮)
+
+## 设计流程
+
+- 哲学北极星可执行化：十诫 + "rep 只属 agent" 真能跨模型抓违规；用户也会亲自抓（色板越界被用户撤）
+- 多模型 bakeoff：同一视觉真值 + 宽松种子，多样性来自模型本身；但交付必须机械验证（emoji/infinite/文件落地），报告不可全信
+- HTML 原型 → Slint 是"矮墙"：翻译词汇表（spike 实测）比换框架论证有用；先 spike 再铺页面
+- 把手/触发器迭代教训：全高侧条=一体化、屏缘 tab=外挂、小色块=物件但断口依赖 1px 精度；最终"膜上亮起一段"最无感——affordance 应长在已有视觉语言里
+- 用户反馈循环里，截图 + 一句方位描述（"头像中心线左侧"）比长描述高效；实现时坐标用 JS 实测对齐而非手拍
+
+## subagent 补充（本轮）
+
+- step-explore 强但会截断：派发写"HTML 一次写完"，收工验文件，task_id 续
+- gemini-36-flash emoji 成癖：agent 定义写纪律也压不住，交付扫描兜底
+- ark/* provider 本环境不可解析，kimi/ds-v4-flash 扁平与 ark 变体全失败 → volcengine 线
+
+## 视觉语言偏好（用户亲定, 2026-08）
+
+- 整体近尖角语言：圆角/圆形头像突兀 → 头像/条/pill 全尖角，极小圆点除外
+- 编年史正确形态 = 平滑渐变条 + 历史色按龄褪向底色 + 尖角；分段胶囊、全饱和历史色、圆角均"突兀"
+- 主题色加强三档入口：色即 agent 本身（编年史/光晕/代词）> 房间回应存在（流式升档/聚焦细线）> 边界膜化（缝线 16%）；用户侧/设施基色/背景基色不碰
