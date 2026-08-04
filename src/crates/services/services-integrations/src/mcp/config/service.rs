@@ -23,11 +23,22 @@ pub trait MCPConfigStore: Send + Sync {
 
 pub struct MCPConfigService {
     config_store: Arc<dyn MCPConfigStore>,
+    /// Serializes the read-modify-write windows of the mutating paths
+    /// (`save_user_config`, `save_project_config`, `delete_server_config`).
+    /// Without it, two concurrent saves/deletes on the same instance can both
+    /// read the same baseline and each write back, losing the other's change.
+    /// Read paths (`load_*`) deliberately do not take this lock. Scope is a
+    /// single service instance; cross-instance / cross-process serialization is
+    /// out of scope for this guard.
+    write_lock: tokio::sync::Mutex<()>,
 }
 
 impl MCPConfigService {
     pub fn new(config_store: Arc<dyn MCPConfigStore>) -> Self {
-        Self { config_store }
+        Self {
+            config_store,
+            write_lock: tokio::sync::Mutex::new(()),
+        }
     }
 
     fn parse_config_array(&self, servers: &[serde_json::Value], location: ConfigLocation) -> Vec<MCPServerConfig> {
@@ -210,6 +221,7 @@ impl MCPConfigService {
     }
 
     async fn save_user_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
+        let _write_guard = self.write_lock.lock().await;
         let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
             None => serde_json::Map::new(),
             Some(current_value) => match current_value.get("mcpServers").and_then(|v| v.as_object()) {
@@ -239,6 +251,7 @@ impl MCPConfigService {
     }
 
     async fn save_project_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
+        let _write_guard = self.write_lock.lock().await;
         let mut configs = self.load_project_configs_strict().await?;
 
         if let Some(existing) = configs.iter_mut().find(|c| c.id == config.id) {
@@ -255,6 +268,7 @@ impl MCPConfigService {
     }
 
     pub async fn delete_server_config(&self, server_id: &str) -> MCPRuntimeResult<()> {
+        let _write_guard = self.write_lock.lock().await;
         let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
             None => {
                 return Err(MCPRuntimeError::not_found(format!(
