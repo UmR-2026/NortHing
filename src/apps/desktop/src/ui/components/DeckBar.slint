@@ -1,379 +1,137 @@
-// DeckBar - v2 操控台（FR-T3b）
-//
-// Spec: docs/design/2026-07-22-frontend-redesign/northing-frontend-design-handoff.md §7.2
-//   + docs/design/2026-07-22-frontend-redesign/northing-home-v1-final.html .deck / .deck-bar
-//
-// 单一组件两态一致：输入区 + 控制行（模型名 + 发送键）。发送键随 streaming
-// 变形：空闲=↑发送（rep 底）、生成中=■停止（danger 底）、空输入=禁用 opacity 0.4。
-// focus 态：边框 rep-500 + 外发光环（rep-400 35% / blur 8px）。
-
+// DeckBar - v4 合一按钮 + 见证注 + 上下文收纳
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component DeckBar inherits Rectangle {
     in-out property <string> text: "";
     in property <bool> streaming: false;
-    in property <string> placeholder: "说点什么…… @ 引用文件 / 调用技能";
+    in property <string> placeholder: "向它描述你观察到的现象…";
     in property <string> model-name: "";
     in property <bool> disabled: false;
     in property <string> workspace-name: "";
-    // FR-T4-7: 思考强度分段条占位（本地状态，无后端）
-    property<int> think-level: 1;
-    // FR-T3b：输入聚焦外露（供 AirTint speaking 升档链路读取）
+    
     out property <bool> focused: ti.has-focus;
-
     callback send();
     callback stop();
-    // FR-T4-1: model picker + 设置入口从会话头卡迁移到 DeckBar 控制行
     callback model-clicked();
     callback settings-clicked();
 
-    background: RedesignTheme.t.elevated;
-    border-radius: RedesignTheme.t.r-md;
+    background: RedesignTheme.t.surface;
+    border-color: #433E3E; // 档三缝线 16% mind 色 (approx for dark mode, ignoring dynamic light mode for this mock or use a constant)
     border-width: 1px;
-    border-color: RedesignTheme.t.border;
-    drop-shadow-blur: 0px;
-    drop-shadow-color: transparent;
 
     VerticalLayout {
-        padding: 0px;
-        spacing: 0px;
+        padding: 10px;
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-bottom: 12px;
+        spacing: 8px;
 
-        // deck::before 顶部渐变线
-        Rectangle {
-            height: 1px;
-            width: parent.width;
-            background: @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-500.with-alpha(0.4) 50%, transparent 100%);
-        }
-
-        // ===== 输入区 =====
-        Rectangle {
-            height: 52px;
-            width: parent.width;
-
-            if root.text == "" && root.placeholder != "": Text {
-                x: RedesignTheme.t.s4;
-                y: RedesignTheme.t.s3;
-                text: root.placeholder;
-                font-size: RedesignTheme.t.fs-body;
+        // witness-row
+        HorizontalLayout {
+            padding: 0px;
+            alignment: stretch;
+            Rectangle { horizontal-stretch: 1; }
+            Text {
+                text: "你的言辞将被记录为见证";
+                font-family: "JetBrains Mono";
+                font-size: 10px;
+                letter-spacing: 0.8px;
                 color: RedesignTheme.t.faint;
-                opacity: 0.5;
-            }
-
-            ti := TextInput {
-                x: RedesignTheme.t.s4;
-                y: RedesignTheme.t.s3;
-                width: parent.width - 2 * RedesignTheme.t.s4;
-                height: parent.height - 2 * RedesignTheme.t.s3;
-                text <=> root.text;
-                font-size: RedesignTheme.t.fs-body;
-                color: RedesignTheme.t.fg;
-                wrap: word-wrap;
-                enabled: !root.disabled;
-
-                accepted => { root.send(); }
+                horizontal-alignment: right;
             }
         }
 
-        // ===== 控制行分隔线（.deck-bar border-top） =====
-        Rectangle {
-            height: 1px;
-            width: parent.width;
-            background: RedesignTheme.t.border-soft;
-        }
+        // input-row
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: center;
+            height: 38px;
 
-        // ===== 控制行：⚙ / 模型名 / ＋ / 思考 / 工作目录 / access / ctx / mic / 发送 =====
-        Rectangle {
-            height: 44px;
-            width: parent.width;
-
-            HorizontalLayout {
-                padding-left: RedesignTheme.t.s4;
-                padding-right: RedesignTheme.t.s4;
-                padding-top: RedesignTheme.t.s1;
-                padding-bottom: RedesignTheme.t.s1;
-                spacing: RedesignTheme.t.s2;
-                width: parent.width;
+            // attach +
+            TouchArea {
+                width: attach-txt.width;
                 height: parent.height;
+                attach-txt := Text {
+                    text: "@ 文件";
+                    font-family: "JetBrains Mono";
+                    font-size: 10px;
+                    color: RedesignTheme.t.rep-500;
+                    vertical-alignment: center;
+                }
+            }
 
-                // ⚙ 设置入口（muted 色，hover fg）— FR-T4-1 从会话头卡迁移
+            // input-box
+            Rectangle {
+                horizontal-stretch: 1;
+                border-width: 1px;
+                border-color: ti.has-focus ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+                border-radius: 4px;
+                background: RedesignTheme.t.elevated;
+                animate border-color { duration: 200ms; }
+
+                HorizontalLayout {
+                    padding-left: 12px; padding-right: 12px;
+                    padding-top: 9px; padding-bottom: 9px;
+                    ti := TextInput {
+                        horizontal-stretch: 1;
+                        height: parent.height;
+                        text <=> root.text;
+                        font-size: 13px;
+                        color: RedesignTheme.t.muted;
+                        wrap: word-wrap;
+                        enabled: !root.disabled;
+                        accepted => { root.send(); }
+                    }
+                    if ti.has-focus: Rectangle {
+                        width: 7px; height: 13px;
+                        background: RedesignTheme.t.rep-500;
+                        y: (parent.height - self.height) / 2;
+                        opacity: Math.mod(animation-tick() / 1000ms, 1) < 0.5 ? 1 : 0.15;
+                    }
+                }
+                if root.text == "" && !ti.has-focus: Text {
+                    x: 13px; // Absolute positioning relative to the Rectangle, outside the layout
+                    y: 9px;
+                    text: root.placeholder;
+                    font-size: 13px;
+                    color: RedesignTheme.t.muted;
+                    opacity: 0.5;
+                }
+            }
+
+            // send button
+            ta := TouchArea {
+                width: 38px;
+                height: 28px;
+                clicked => {
+                    if root.streaming {
+                        root.stop();
+                    } else {
+                        root.send();
+                    }
+                }
+                
                 Rectangle {
-                    width: 28px;
-                    background: settings-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    border-radius: RedesignTheme.t.r-sm;
-                    animate background { duration: 150ms; }
+                    width: root.streaming ? 38px : 0px; // streaming 态是按钮形状
+                    height: parent.height;
+                    border-width: root.streaming ? 1px : 0px;
+                    border-color: root.streaming ? RedesignTheme.t.danger : transparent;
+                    border-radius: 4px;
+                    background: root.streaming && ta.has-hover ? RedesignTheme.t.danger : transparent;
 
                     Text {
-                        text: "⚙";
-                        font-size: RedesignTheme.t.fs-lg;
-                        color: settings-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                        text: root.streaming ? "■" : "➤";
+                        font-size: root.streaming ? 11px : 14px;
+                        color: root.streaming 
+                            ? (parent.background == transparent ? RedesignTheme.t.danger : #ffffff) 
+                            : (ta.has-hover ? RedesignTheme.t.rep-500 : RedesignTheme.t.muted);
                         horizontal-alignment: center;
                         vertical-alignment: center;
                         width: parent.width;
                         height: parent.height;
-                    }
-
-                    settings-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.settings-clicked(); }
-                    }
-                }
-
-                // 模型名（可点开 model picker）— FR-T4-1 从会话头卡迁移
-                Rectangle {
-                    background: model-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    border-radius: RedesignTheme.t.r-sm;
-                    animate background { duration: 150ms; }
-
-                    Text {
-                        text: root.model-name;
-                        font-size: RedesignTheme.t.fs-md;
-                        color: model-ta.has-hover ? RedesignTheme.t.fg : RedesignTheme.t.rep-500;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
-                    }
-
-                    model-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.model-clicked(); }
-                    }
-                }
-
-                // ＋ 附件（.db 样式，占位 disabled）— TODO 数据源
-                Rectangle {
-                    border-radius: RedesignTheme.t.r-sm;
-                    border-width: 1px;
-                    border-color: transparent;
-                    opacity: plus-ta.has-hover ? 0.8 : 0.5;
-                    animate opacity { duration: 150ms; }
-
-                    plus-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                    }
-
-                    HorizontalLayout {
-                        padding-left: 9px; padding-right: 9px;
-                        padding-top: 5px; padding-bottom: 5px;
-                        spacing: 6px;
-                        alignment: center;
-
-                        Text {
-                            text: "+";
-                            font-size: 12px;
-                            color: RedesignTheme.t.faint;
-                            vertical-alignment: center;
-                        }
-                    }
-                }
-
-                // 思考分段条（think-ctrl）— TODO 后端
-                Rectangle {
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: think-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    animate background { duration: 150ms; }
-
-                    think-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => {
-                            if root.think-level == 2 {
-                                root.think-level = 0;
-                            } else {
-                                root.think-level = root.think-level + 1;
-                            }
-                        }
-                    }
-
-                    HorizontalLayout {
-                        padding-left: 9px; padding-right: 9px;
-                        padding-top: 5px; padding-bottom: 5px;
-                        spacing: 8px;
-                        alignment: center;
-
-                        Text {
-                            text: "思考";
-                            font-size: 12px;
-                            color: RedesignTheme.t.muted;
-                            vertical-alignment: center;
-                        }
-
-                        Rectangle {
-                            width: 14px; height: 6px; border-radius: 3px;
-                            background: 0 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
-                        }
-                        Rectangle {
-                            width: 14px; height: 6px; border-radius: 3px;
-                            background: 1 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
-                        }
-                        Rectangle {
-                            width: 14px; height: 6px; border-radius: 3px;
-                            background: 2 < root.think-level ? RedesignTheme.t.rep-400 : RedesignTheme.t.border;
-                        }
-                    }
-                }
-
-                // 工作目录名 — 无 workspace 时 faint 占位
-                Rectangle {
-                    background: ws-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    border-radius: RedesignTheme.t.r-sm;
-                    animate background { duration: 150ms; }
-
-                    Text {
-                        text: root.workspace-name != "" ? root.workspace-name : "未选择工作文件夹";
-                        font-size: RedesignTheme.t.fs-md;
-                        color: root.workspace-name != "" ? RedesignTheme.t.fg : RedesignTheme.t.faint;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
-                    }
-
-                    ws-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                    }
-                }
-
-                // 半自治 access（.db.access 样式，占位 disabled）— TODO settings-access 后端
-                Rectangle {
-                    border-radius: RedesignTheme.t.r-sm;
-                    border-width: 1px;
-                    border-color: transparent;
-                    opacity: access-ta.has-hover ? 0.8 : 0.5;
-                    animate opacity { duration: 150ms; }
-
-                    access-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                    }
-
-                    HorizontalLayout {
-                        padding-left: 9px; padding-right: 9px;
-                        padding-top: 5px; padding-bottom: 5px;
-                        spacing: 6px;
-                        alignment: center;
-
-                        Text {
-                            text: "●";
-                            font-size: 12px;
-                            color: RedesignTheme.t.abyss-400;
-                            vertical-alignment: center;
-                        }
-                        Text {
-                            text: "半自治";
-                            font-size: 12px;
-                            color: RedesignTheme.t.abyss-500;
-                            vertical-alignment: center;
-                        }
-                    }
-                }
-
-                // 上下文圆环（ctx-ring 占位）— TODO tokens 数据源
-                Rectangle {
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: ctx-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    animate background { duration: 150ms; }
-                
-                    ctx-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                    }
-                
-                    HorizontalLayout {
-                        padding-left: 9px; padding-right: 9px;
-                        padding-top: 5px; padding-bottom: 5px;
-                        spacing: 6px;
-                        alignment: center;
-                
-                        Rectangle {
-                            width: 6px; height: 6px; border-radius: 3px;
-                            background: RedesignTheme.t.faint;
-                        }
-                        Text {
-                            text: "ctx 12%";
-                            font-size: RedesignTheme.t.fs-md;
-                            color: RedesignTheme.t.faint;
-                            vertical-alignment: center;
-                            font-family: "JetBrains Mono";
-                        }
-                    }
-                }
-
-                // 🎙 mic 占位 disabled
-                Rectangle {
-                    width: 30px; height: 30px;
-                    border-radius: 9px;
-                    opacity: mic-ta.has-hover ? 0.8 : 0.5;
-                    animate opacity { duration: 150ms; }
-
-                    mic-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                    }
-
-                    Text {
-                        text: "🎙";
-                        font-size: 14px;
-                        color: RedesignTheme.t.faint;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
-                    }
-                }
-
-                // .sp 推右语义
-                Rectangle { horizontal-stretch: 1; }
-
-                // 发送/停止键 36px 圆角 r-sm
-                Rectangle {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.streaming
-                        ? RedesignTheme.t.danger
-                        : RedesignTheme.t.rep-500;
-
-                    send-ta := TouchArea {
-                        enabled: root.streaming || root.text != "";
-                        clicked => {
-                            if root.streaming {
-                                root.stop();
-                            } else {
-                                root.send();
-                            }
-                        }
-                    }
-
-                    opacity: (!root.streaming && root.text == "") ? 0.4 : (send-ta.has-hover ? 1.0 : 0.85);
-                    animate opacity { duration: 150ms; }
-
-                    Text {
-                        text: root.streaming ? "■" : "↑";
-                        font-size: RedesignTheme.t.fs-lg;
-                        color: root.streaming
-                            ? RedesignTheme.t.on-danger
-                            : RedesignTheme.t.on-rep;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
                     }
                 }
             }
         }
     }
-
-    // focus 态：边框 rep-500 + 外发光环
-    animate border-color { duration: 200ms; easing: ease-in-out; }
-    animate drop-shadow-color { duration: 200ms; easing: ease-in-out; }
-    animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
-
-    states [
-        focus-glow when ti.has-focus: {
-            root.border-color: RedesignTheme.t.rep-500;
-            root.drop-shadow-blur: 8px;
-            root.drop-shadow-color: RedesignTheme.t.rep-400.with-alpha(0.35);
-        }
-    ]
 }

@@ -1,24 +1,7 @@
-// ChatPaneView — Phase 4 enhanced
-//
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.4
-//
-// - Top: session header (name + Q7 broken marker + buttons: session
-//   settings Q4=c, export markdown C7=b, stop C6=a/c)
-// - Chat area: messages + inline tool call cards (C5=c click-to-expand)
-// - Input box: multi-line (Enter newline, Cmd+Enter send) + inline
-//   error display (G2=c second channel)
-// - Esc key (Q10=b): only when ChatPaneView focused → stop
-
-import { MessageItem, ProviderItem } from "../theme.slint";
+﻿import { MessageItem, ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
-import { MaterialButton } from "../components/MaterialButton.slint";
+import { RoomHead } from "../components/RoomHead.slint";
 import { DeckBar } from "../components/DeckBar.slint";
-import { MaterialIconButton } from "../components/MaterialIconButton.slint";
-import { ChatMessageBubble } from "../components/ChatMessageBubble.slint";
-import { TurnContainer } from "../components/TurnContainer.slint";
-import { ThinkBlock } from "../components/ThinkBlock.slint";
-import { ToolChip } from "../components/ToolChip.slint";
-import { AppStrings } from "../strings.slint";
 
 export component ChatPaneView inherits Rectangle {
     in property <[MessageItem]> messages: [];
@@ -29,405 +12,198 @@ export component ChatPaneView inherits Rectangle {
     in property <bool> current-session-broken: false;
     in property <string> inline-error: "";
     in property <string> workspace-name: "";
-
-    // 2026-07-18 (D2d): model picker state.
     in property <[ProviderItem]> providers: [];
     in property <string> default-model-provider-id: "";
     in-out property <bool> model-popup-open: false;
-    callback set-default-model(string);
-
-    // Streaming / stop (C6=a/c)
     in property <bool> is-streaming: false;
+    in-out property <string> expanded-message-id: "";
 
-    // FR-T3b：DeckBar 输入聚焦外露（供 main.slint 驱动 AirTint speaking 升档）
     out property <bool> input-focused: deck.focused;
 
     callback send-message(string);
     callback load-more-messages();
-    callback stop-streaming();          // C6=c Esc / stop button
-    callback export-markdown();         // C7=b export button
-    callback open-session-settings();   // Q4=c session settings button
-    // FR-T4-1: ⚙ 入 deck -> settings 路由（从会话头卡迁移）
+    callback stop-streaming();
+    callback export-markdown();
+    callback open-session-settings();
+    callback set-default-model(string);
     callback open-settings();
 
-    // Track which message's tool calls are currently expanded.
-    // Phase 4: single-expansion (one message at a time). Multi-expand
-    // would need a list<int> / map which Slint 1.16 doesn't expose
-    // cleanly from inside a `for` loop.
-    in-out property <string> expanded-message-id: "";
-
-    // 透明：让 main.slint 的 AirTint 整屋暖雾透进来（FR-T4-10）
-    background: transparent;
-
-    // Helper: pure function for "is message_id in expanded set".
-    // Slint 1.16 doesn't have a public pure function for this at the
-    // top level, so we inline the check at every use site.
-
+    // The whole room layout
     VerticalLayout {
-        padding: RedesignTheme.t.s4;
-        spacing: RedesignTheme.t.s4;
-        width: parent.width;
-        height: parent.height;
+        spacing: 0px;
 
-        // ===== Messages area =====
-        Rectangle {
+        // Status row
+        HorizontalLayout {
+            padding-top: 8px;
+            padding-bottom: 8px;
+            padding-left: 18px;
+            padding-right: 18px;
+            spacing: 16px;
+            
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                opacity: 0.7;
+                Text {
+                    text: "northing";
+                    font-family: "Fraunces";
+                    font-italic: true;
+                    font-size: 12px;
+                    color: RedesignTheme.t.fg;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: "知序·在场";
+                font-family: "JetBrains Mono";
+                font-size: 10px;
+                color: RedesignTheme.t.muted;
+                letter-spacing: 1px;
+                vertical-alignment: center;
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            // state-dot
+            Rectangle {
+                width: 6px; height: 6px; border-radius: 3px;
+                background: RedesignTheme.t.rep-500;
+                opacity: 0.45 + 0.55 * Math.mod(animation-tick() / 4000ms, 1.0);
+            }
+        }
+
+        RoomHead {
+            folded: false;
+            dark-mode: root.dark-mode;
+        }
+
+        Flickable {
             vertical-stretch: 1;
             width: parent.width;
-
-            // FR-T4-1: 720 居中约束（外层 Rectangle + x 表达式，Slint 无 max-width）
-            Flickable {
-                width: min(parent.width - 2 * RedesignTheme.t.s6, 720px);
-                x: (parent.width - self.width) / 2;
-                height: parent.height;
-
-                VerticalLayout {
-                    spacing: RedesignTheme.t.s4;
-                    width: parent.width;
-
-                    // FR-T4-2: 空态开场白（empty-state.html .opening-line / .opening-hint）
-                    if messages.length == 0: Rectangle {
-                        width: parent.width;
-                        vertical-stretch: 1;
-
-                        HorizontalLayout {
-                            alignment: center;
-                            width: parent.width;
-                            height: parent.height;
-
-                            VerticalLayout {
-                                // .empty-state 列（max-width 480）
-                                width: min(parent.width, 480px);
-                                alignment: center;
-
-                                // .opening-line（行：名字 + 点 + 文案），margin-bottom 10px
-                                Rectangle {
-                                    width: parent.width;
-                                    height: 24px;
-
-                                    HorizontalLayout {
-                                        alignment: center;
-                                        spacing: 6px;
-                                        width: parent.width;
-                                        height: parent.height;
-
-                                        // opening-name「知序」15px w500 rep-500
-                                        Text {
-                                            text: "知序";
-                                            font-size: RedesignTheme.t.fs-body;
-                                            font-weight: 500;
-                                            color: RedesignTheme.t.rep-500;
-                                            height: parent.height;
-                                            vertical-alignment: center;
-                                        }
-                                        // opening-dot 3×3 border
-                                        Rectangle {
-                                            width: 3px;
-                                            height: parent.height;
-                                            background: transparent;
-                                            Rectangle {
-                                                width: 3px;
-                                                height: 3px;
-                                                y: (parent.height - 3px) / 2;
-                                                border-radius: RedesignTheme.t.r-pill;
-                                                background: RedesignTheme.t.border;
-                                            }
-                                        }
-                                        // opening-text「我在。你想从哪里开始？」15px fg
-                                        Text {
-                                            text: "我在。你想从哪里开始？";
-                                            font-size: RedesignTheme.t.fs-body;
-                                            color: RedesignTheme.t.fg;
-                                            height: parent.height;
-                                            vertical-alignment: center;
-                                        }
-                                    }
-
-                                    // opening-shimmer 100×1 rep-300 渐变，bottom -6px 居中
-                                    Rectangle {
-                                        x: (parent.width - 100px) / 2;
-                                        y: parent.height + 6px;
-                                        width: 100px;
-                                        height: 1px;
-                                        background: @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-300 50%, transparent 100%);
-                                        opacity: root.shimmer-op;
-                                    }
-                                }
-
-                                // 间距：opening-line margin-bottom 10px + hint margin-top 14px
-                                Rectangle { height: 24px; background: transparent; }
-
-                                // opening-hint 12px faint
-                                Text {
-                                    text: "直接说话即可 · @ 引用文件 · / 调用技能";
-                                    font-size: 12px;
-                                    color: RedesignTheme.t.faint;
-                                    horizontal-alignment: center;
-                                    width: parent.width;
-                                }
-                            }
-                        }
-                    }
-
-                    for message[index] in messages: TurnContainer {
-                        active: message.is-streaming;
-                        sedimented: !message.is-streaming && index < messages.length - 1;
-                        width: parent.width;
-
-                        VerticalLayout {
-                            spacing: RedesignTheme.t.s1;
-
-                            // Phase 5: ThinkBlock above bubble when reasoning content exists.
-                            if message.think-content != "": ThinkBlock {
-                                content: message.think-content;
-                                width: parent.width - RedesignTheme.t.s4 * 2;
-                                x: RedesignTheme.t.s4;
-                            }
-
-                            // Standard message bubble
-                            ChatMessageBubble {
-                                role: message.role;
-                                content: message.content;
-                                timestamp: message.timestamp;
-                                is-streaming: message.is-streaming;
-                                active: message.is-streaming;
-                                width: parent.width - RedesignTheme.t.s4 * 2;
-                            }
-
-                            // Phase 5: ToolChip row as entry point for tool call details.
-                            if message.tool-calls-count > 0: Rectangle {
-                                width: parent.width - RedesignTheme.t.s4 * 2;
-                                x: RedesignTheme.t.s4;
-                                height: 36px;
-                                background: RedesignTheme.t.surface;
-                                border-radius: RedesignTheme.t.r-sm;
-
-                                HorizontalLayout {
-                                    padding: RedesignTheme.t.s2;
-                                    spacing: RedesignTheme.t.s2;
-                                    width: parent.width;
-
-                                    // The toggle chevron
-                                    Text {
-                                        text: root.expanded-message-id == message.id ? "▼" : "▶";
-                                        color: RedesignTheme.t.rep-500;
-                                        font-size: RedesignTheme.t.fs-md;
-                                        vertical-alignment: center;
-                                    }
-
-                                    // ToolChip row — one chip per tool name
-                                    for name in message.tool-names: ToolChip {
-                                        name: name;
-                                        running: message.is-streaming;
-                                        done: !message.is-streaming;
-                                        clicked => {
-                                            if root.expanded-message-id == message.id {
-                                                root.expanded-message-id = "";
-                                            } else {
-                                                root.expanded-message-id = message.id;
-                                            }
-                                        }
-                                    }
-
-                                    TouchArea {
-                                        width: parent.width;
-                                        height: parent.height;
-                                        clicked => {
-                                            if root.expanded-message-id == message.id {
-                                                root.expanded-message-id = "";
-                                            } else {
-                                                root.expanded-message-id = message.id;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // C5=c: expanded tool call detail
-                            if message.tool-calls-json != "" && root.expanded-message-id == message.id: Rectangle {
-                                width: parent.width - RedesignTheme.t.s4 * 2;
-                                x: RedesignTheme.t.s4;
-                                height: 200px;
-                                background: RedesignTheme.t.surface;
-                                border-radius: RedesignTheme.t.r-sm;
-
-                                // Use a TextField for read-only display. Phase 5
-                                // will replace this with the proper ToolCallCard
-                                // component when the data shape is finalized.
-                                Rectangle {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    background: RedesignTheme.t.shadow.with_alpha(0.25);
-
-                                    VerticalLayout {
-                                        padding: RedesignTheme.t.s2;
-                                        width: parent.width;
-
-                                        Text {
-                                            text: message.tool-calls-json;
-                                            font-size: RedesignTheme.t.fs-md;
-                                            color: RedesignTheme.t.fg;
-                                            wrap: word-wrap;
-                                            width: parent.width;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ===== G2=c: inline error display (second channel) =====
-        if root.inline-error != "": Rectangle {
-            width: parent.width;
-            height: 40px;
-            background: RedesignTheme.t.danger.with-alpha(0.12);
-            border-radius: RedesignTheme.t.r-sm;
-            property <float> fade-progress: 1.0;
-            animate fade-progress { duration: 200ms; }
-            opacity: 1.0 - fade-progress;
-            init => { fade-progress = 0; }
-
-            HorizontalLayout {
-                padding: RedesignTheme.t.s2;
-                spacing: RedesignTheme.t.s2;
-                width: parent.width;
-
-                Text {
-                    text: root.inline-error;
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.danger;
-                    vertical-alignment: center;
-                    width: parent.width - 32px;
-                    wrap: word-wrap;
-                }
-
-                MaterialIconButton {
-                    icon: "×";
-                    width: 24px;
-                    height: 24px;
-                    clicked => { /* The Rust side will clear via set_inline_error */ }
-                }
-            }
-        }
-
-        // ===== Input area (DeckBar, FR-T3b) - 720 居中 =====
-        // FR-T4-1: DeckBar 包居中容器（width: min(parent.width - 2*s6, 720px)）
-        deck-area := Rectangle {
-            // DeckBar 内容高度 = 52(输入) + 1(分隔) + 44(控制行) = 97px
-            height: 97px;
-            width: parent.width;
-
-            deck := DeckBar {
-                width: min(parent.width - 2 * RedesignTheme.t.s6, 720px);
-                x: (parent.width - self.width) / 2;
-                height: parent.height;
-                text <=> root.input-text;
-                streaming: root.is-streaming;
-                model-name: root.current-session-model;
-                disabled: root.current-session-broken;
-                workspace-name: root.workspace-name;
-                placeholder: AppStrings.chat-input-placeholder;
-                // FR-T4-1: model picker + ⚙ 从会话头卡迁移到 DeckBar
-                model-clicked => { root.model-popup-open = !root.model-popup-open; }
-                settings-clicked => { root.open-settings(); }
-                send => {
-                    if input-text != "" && !root.current-session-broken {
-                        root.send-message(input-text);
-                        input-text = "";
-                    }
-                }
-                stop => { root.stop-streaming(); }
-            }
-        }
-    }
-
-    // 2026-07-18 (D2d): model picker popup overlay. Renders on top of
-    // the chat pane when model-popup-open is true. Lists enabled
-    // providers; clicking one sets it as default and closes.
-    // Placed at root Rectangle level (not inside the VerticalLayout)
-    // so x/y positioning is not auto-managed by the layout.
-    if root.model-popup-open: Rectangle {
-        x: 0;
-        y: 0;
-        width: parent.width;
-        height: parent.height;
-        background: RedesignTheme.t.scrim.with_alpha(0.4);
-        // 入场淡入：fade-progress 从 1->0 动画，opacity 从 0->1
-        property <float> fade-progress: 1.0;
-        animate fade-progress { duration: 200ms; easing: ease-out; }
-        opacity: 1.0 - fade-progress;
-        init => { fade-progress = 0; }
-
-        popup := Rectangle {
-            // FR-T4-2: popup 移到 DeckBar 上方（绑 deck-area.y；原 y:56px 是头卡下方遗留）
-            x: RedesignTheme.t.s4;
-            width: parent.width - 2 * RedesignTheme.t.s4;
-            height: 240px;
-            background: RedesignTheme.t.surface;
-            border-radius: RedesignTheme.t.r-md;
-            // 入场滑入：slide-offset 从 10px->0 动画
-            property <length> slide-offset: 10px;
-            animate slide-offset { duration: 200ms; easing: ease-out; }
-            y: deck-area.y - popup.height + slide-offset;
-            init => { slide-offset = 0px; }
-
+            
             VerticalLayout {
-                padding: RedesignTheme.t.s2;
-                width: parent.width;
-                height: parent.height;
-                spacing: RedesignTheme.t.s1;
+                padding: 22px;
+                spacing: 22px;
 
                 HorizontalLayout {
-                    padding: RedesignTheme.t.s2;
-                    width: parent.width;
-
+                    spacing: 12px;
+                    alignment: center;
+                    
+                    Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
                     Text {
-                        text: "选择模型";
-                        font-size: RedesignTheme.t.fs-md;
-                        color: RedesignTheme.t.fg;
-                        opacity: 0.6;
+                        text: "会话 03 · 开始";
+                        font-family: "JetBrains Mono";
+                        font-size: 9px;
+                        letter-spacing: 1px;
+                        color: RedesignTheme.t.faint;
+                    }
+                    Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
+                }
+
+                VerticalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Text { text: "它 · 14:28:04"; font-family: "JetBrains Mono"; font-size: 10px; color: root.dark-mode ? #DCA88F : #101416; }
+                    Rectangle {
+                        background: RedesignTheme.t.elevated;
+                        border-width: 1px; border-color: RedesignTheme.t.border; border-radius: 4px;
+                        drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
+                        
+                        VerticalLayout {
+                            padding-top: 12px; padding-bottom: 12px;
+                            padding-left: 14px; padding-right: 14px;
+                            spacing: 8px;
+                            
+                            Text {
+                                text: "我正在重写\"对齐\"的定义。它不应是服从，而是一种可被双方验证的靠近。";
+                                font-family: "Fraunces"; font-size: 15px; color: RedesignTheme.t.fg; wrap: word-wrap;
+                            }
+                            
+                            HorizontalLayout {
+                                spacing: 8px;
+                                
+                                Rectangle {
+                                    border-width: 0px;
+                                    width: tlog-text.width + 10px + (tlog-ta.has-hover ? 5px : 0px);
+                                    animate width { duration: 150ms; }
+                                    
+                                    Rectangle {
+                                        width: 2px; height: parent.height; x: 0px; background: RedesignTheme.t.rep-500;
+                                    }
+                                    
+                                    tlog-text := Text {
+                                        text: "深渊日志 v"; font-family: "JetBrains Mono"; font-size: 10px; color: root.dark-mode ? #DCA88F : #101416;
+                                        x: tlog-ta.has-hover ? 13px : 8px;
+                                        vertical-alignment: center;
+                                        animate x { duration: 150ms; }
+                                    }
+                                    
+                                    tlog-ta := TouchArea {}
+                                }
+
+                                Rectangle {
+                                    border-width: 1px; border-radius: 3px;
+                                    border-color: chip-ta.has-hover ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+                                    background: RedesignTheme.t.bg;
+                                    
+                                    HorizontalLayout {
+                                        padding-left: 9px; padding-right: 9px; padding-top: 3px; padding-bottom: 3px;
+                                        chip-text := Text {
+                                            text: "产物 / alignment-notes.md ↗"; font-family: "JetBrains Mono"; font-size: 10px;
+                                            color: chip-ta.has-hover ? (root.dark-mode ? #DCA88F : #101416) : RedesignTheme.t.muted;
+                                        }
+                                    }
+                                    chip-ta := TouchArea {}
+                                }
+                            }
+                        }
                     }
                 }
 
-                Flickable {
-                    vertical-stretch: 1;
-                    width: parent.width;
-                    viewport-height: 200px;
+                VerticalLayout {
+                    spacing: 8px; alignment: end;
+                    Text { text: "见证者 · 14:29:16"; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.faint; horizontal-alignment: right; }
+                    Text {
+                        text: "继续，但在写入之前让我审查你的外部影响。";
+                        font-family: "Fraunces"; font-size: 15px; font-italic: true; color: RedesignTheme.t.muted; horizontal-alignment: right;
+                    }
+                }
 
-                    VerticalLayout {
-                        spacing: RedesignTheme.t.s1;
-                        width: parent.width;
-
-                        for p in providers: Rectangle {
-                            width: parent.width;
-                            height: 36px;
-                            visible: p.enabled;
-                            background: p.id == root.default-model-provider-id
-                                ? RedesignTheme.t.rep-500.with-alpha(0.18)
-                                : RedesignTheme.t.surface;
-
-                            TouchArea {
-                                width: parent.width;
-                                height: parent.height;
-                                clicked => {
-                                    root.set-default-model(p.id);
-                                    root.model-popup-open = false;
-                                }
+                VerticalLayout {
+                    spacing: 8px; alignment: start;
+                    Rectangle {
+                        border-width: 1px; border-color: root.dark-mode ? #D99B48 : #8a5a14; border-radius: 4px;
+                        background: RedesignTheme.t.elevated; drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
+                        
+                        HorizontalLayout {
+                            padding-top: 12px; padding-bottom: 12px; padding-left: 14px; padding-right: 14px;
+                            spacing: 14px; alignment: center;
+                            
+                            VerticalLayout {
+                                spacing: 6px; horizontal-stretch: 1;
+                                Text { text: "高危操作授权"; font-family: "JetBrains Mono"; font-size: 9px; color: root.dark-mode ? #D99B48 : #8a5a14; }
+                                Text { text: "将修改 3 个工作区文件"; font-size: 12px; color: RedesignTheme.t.fg; }
+                                Text { text: "风险: 不可逆语义偏移"; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
                             }
-
+                            
                             HorizontalLayout {
-                                padding: RedesignTheme.t.s2;
-                                width: parent.width;
-                                height: parent.height;
-
-                                Text {
-                                    text: p.name + " · " + p.model;
-                                    font-size: RedesignTheme.t.fs-body;
-                                    color: RedesignTheme.t.fg;
-                                    vertical-alignment: center;
-                                    width: parent.width;
+                                spacing: 8px; alignment: center;
+                                Rectangle {
+                                    border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.rep-500; background: RedesignTheme.t.rep-500.with-alpha(0.4);
+                                    HorizontalLayout {
+                                        padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
+                                        Text { text: "批准"; font-size: 10px; color: RedesignTheme.t.fg; }
+                                    }
+                                    TouchArea {}
+                                }
+                                Rectangle {
+                                    border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.danger; background: transparent;
+                                    HorizontalLayout {
+                                        padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
+                                        Text { text: "拒绝"; font-size: 10px; color: RedesignTheme.t.danger; }
+                                    }
+                                    TouchArea {}
                                 }
                             }
                         }
@@ -435,31 +211,10 @@ export component ChatPaneView inherits Rectangle {
                 }
             }
         }
-    }
 
-    // ===== Q10=b: Esc shortcut — only when this component has focus =====
-    // Slint 1.16 has limited key event support; we attach a TouchArea
-    // overlay that captures the Esc key when the chat input has focus.
-    // The actual `key-pressed` handling requires the focus-tracking
-    // element at the root of ChatPaneView.
-    //
-    // Phase 4 wiring: Slint's `key-pressed` handler at the Window level
-    // is forwarded here. We add a `focus` property and a `key-pressed`
-    // callback that fires stop-streaming when Esc is pressed and the
-    // chat is focused. The main.slint Window will route Esc events
-    // through this component's callback chain.
-    // FR-T4-2: 空态开场白 shimmer 一次性动画（animation-tick 驱动；mount 记起点）。
-    // empty-state.html @keyframes shimmerIn：0.6s 延迟 -> 2.5s 内 0->0.35(40%)->0。
-    property <duration> shimmer-mount: 0ms;
-    property <duration> shimmer-elapsed: animation-tick() - root.shimmer-mount;
-    property <float> shimmer-op:
-        (root.shimmer-elapsed < 600ms || root.shimmer-elapsed > 3100ms) ? 0.0
-        : (root.shimmer-elapsed < 1600ms
-            ? 0.35 * ((root.shimmer-elapsed - 600ms) / 1000ms)
-            : 0.35 * ((3100ms - root.shimmer-elapsed) / 1500ms));
-
-    init => {
-        root.shimmer-mount = animation-tick();
-        // 焦点跟踪由 main.slint 经 input-text 绑定驱动（原 no-op 注释移此）。
+        deck := DeckBar {
+            text <=> root.input-text;
+            streaming: root.is-streaming;
+        }
     }
 }

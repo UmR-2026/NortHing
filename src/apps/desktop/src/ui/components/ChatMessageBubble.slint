@@ -1,7 +1,4 @@
-// Chat Message Bubble Component
-
 import { RedesignTheme } from "../redesign_palette.slint";
-import { MaterialCard } from "MaterialCard.slint";
 
 export component ChatMessageBubble inherits Rectangle {
     in property <string> role: "user";
@@ -10,72 +7,76 @@ export component ChatMessageBubble inherits Rectangle {
     in property <bool> is-streaming: false;
     in property <bool> active: false;
     
-    pure function bubble-color() -> color {
-        if role == "user" { RedesignTheme.t.elevated; }
-        else if role == "assistant" { RedesignTheme.t.surface; }
-        else if role == "system" { RedesignTheme.t.muted; }
-        else if role == "tool" { RedesignTheme.t.archive-card-bg; }
-        else { RedesignTheme.t.surface; }
-    }
-    
-    pure function text-color() -> color {
-        // 真值 theme-system.html：用户气泡文字继承 fg（亮态白底近白字曾不可读）
-        RedesignTheme.t.fg;
-    }
-    
-    // padding is layout-only in Slint; use card-padding on MaterialCard instead
-    // padding: RedesignTheme.t.s2;
-    
-    HorizontalLayout {
-        alignment: role == "user" ? end : start;
+    // .rec.entity 左对齐：.who + .body
+    if role == "assistant": VerticalLayout {
+        spacing: 8px;
+        alignment: start;
         
+        Text {
+            // .who (mono 10px faint)
+            // 档一：agent 代词着色 -> .who color mind-line 70% mixed with faint
+            // Wait, "它" gets colored. 
+            text: "它 · " + root.timestamp;
+            font-family: "JetBrains Mono";
+            font-size: 10px;
+            letter-spacing: 0.8px;
+            color: RedesignTheme.t.rep-500.with-alpha(0.7); // approximate mix
+        }
+        
+        // .body
         Rectangle {
-            width: root.width * 0.8;
-            // 用户气泡：稍小圆角 r-md；助手气泡：r-lg
-            border-radius: role == "user" ? RedesignTheme.t.r-md : RedesignTheme.t.r-lg;
-            background: root.bubble-color();
-            clip: true;
+            background: RedesignTheme.t.surface; // Wait, bg2 is elevated? Let's use elevated
+            border-width: 1px;
+            border-color: RedesignTheme.t.border;
+            border-radius: 4px;
+            drop-shadow-color: RedesignTheme.t.shadow;
+            drop-shadow-blur: 4px;
+            drop-shadow-offset-y: 1px;
             
-            // 用户消息：极淡 rep 色调叠加 + 细描边效果
+            // bevel top border
             Rectangle {
-                width: parent.width;
-                height: parent.height;
-                border-radius: parent.border-radius;
-                border-width: role == "user" ? 1px : 0px;
-                border-color: role == "user" ? RedesignTheme.t.rep-400.with-alpha(0.12) : transparent;
-                background: role == "user" ? RedesignTheme.t.rep-400.with-alpha(0.04) : transparent;
+                y: 0px; height: 1px; width: parent.width;
+                background: RedesignTheme.t.fg.with-alpha(0.06);
             }
             
-            VerticalLayout {
-                padding: RedesignTheme.t.s4;
-                spacing: RedesignTheme.t.s1;
-                
+            HorizontalLayout {
+                padding-top: 12px; padding-bottom: 12px;
+                padding-left: 14px; padding-right: 14px;
                 Text {
                     text: root.content;
-                    font-size: RedesignTheme.t.fs-body;
-                    font-weight: root.active && role == "assistant" ? 450 : 400;
-                    color: root.text-color();
+                    font-family: "Fraunces";
+                    font-size: 15px;
+                    color: RedesignTheme.t.fg; // .msg-agent
                     wrap: word-wrap;
                 }
-                
-                if is-streaming: Rectangle {
-                    height: 2px;
-                    background: RedesignTheme.t.rep-500;
-                    
-                    Rectangle {
-                        width: 20px;
-                        height: 2px;
-                        background: RedesignTheme.t.abyss-500;
-                        x: mod(animation-tick(), 1000ms) / 1000ms * (parent.width - 20px);
-                    }
-                }
-                
-                if timestamp != "": Text {
-                    text: root.timestamp;
-                    font-size: RedesignTheme.t.fs-md;
-                    color: root.text-color();
-                    opacity: 0.5;
-                }
+            }
+        }
+    }
+
+    // .rec.witness 右对齐：.body (无背景框)
+    if role == "user": VerticalLayout {
+        spacing: 8px;
+        alignment: end;
+        
+        Text {
+            text: "见证者 · " + root.timestamp;
+            font-family: "JetBrains Mono";
+            font-size: 10px;
+            letter-spacing: 0.8px;
+            color: RedesignTheme.t.faint;
+            horizontal-alignment: right;
+        }
+        
+        HorizontalLayout {
+            alignment: end;
+            Text {
+                text: root.content;
+                font-family: "Fraunces";
+                font-size: 15px;
+                font-italic: true;
+                color: RedesignTheme.t.muted;
+                wrap: word-wrap;
+                horizontal-alignment: right;
             }
         }
     }

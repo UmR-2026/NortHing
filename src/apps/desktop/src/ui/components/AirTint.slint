@@ -20,7 +20,7 @@ export component AirTint inherits Rectangle {
         property <color> halo-color: root.cold
             ? RedesignTheme.t.halo-abyss
             : (root.speaking ? RedesignTheme.t.halo-rep-speaking : RedesignTheme.t.halo-rep);
-        background: @radial-gradient(circle at parent.width/2 0px, halo-color 0%, halo-color.with-alpha(0) 60%);
+        background: @radial-gradient(circle, halo-color 0%, halo-color.with-alpha(0) 60%);
         // 绑定顶晕呼吸。按真值，亮色时不显示（opacity = 0）
         opacity: RedesignTheme.dark ? SystemConstants.amp-aura : 0.0;
         animate background { duration: 300ms; easing: ease-in-out; }
@@ -32,7 +32,7 @@ export component AirTint inherits Rectangle {
         y: parent.height * 0.7;
         width: parent.width;
         height: parent.height * 0.3;
-        background: @radial-gradient(circle at parent.width/2 parent.height, RedesignTheme.t.fog-abyss 0%, RedesignTheme.t.fog-abyss.with-alpha(0) 70%);
+        background: @radial-gradient(circle, RedesignTheme.t.fog-abyss 0%, RedesignTheme.t.fog-abyss.with-alpha(0) 70%);
         animate background { duration: 300ms; easing: ease-in-out; }
     }
 }

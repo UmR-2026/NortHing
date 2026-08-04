@@ -1,0 +1,113 @@
+import { RedesignTheme } from "../redesign_palette.slint";
+import { AvatarWrap } from "AvatarWrap.slint";
+import { ChronicleBar } from "ChronicleBar.slint";
+import { SystemConstants } from "../system_constants.slint";
+
+export component RoomHead inherits Rectangle {
+    in property <bool> folded: false;
+    in property <string> state-text: "驱力状态 · 它正在命名自己";
+    in property <bool> dark-mode: true;
+    callback toggle-fold();
+
+    // 状态行兼作窗口拖拽区（T1 已知无 Rust FFI，留 TODO 注释）
+    // TODO: add window drag
+
+    property <length> cx: root.width / 2;
+
+    background: root.folded 
+        ? @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-500.with-alpha(0.15) 50%, transparent 100%)
+        : @radial-gradient(circle, RedesignTheme.t.rep-500.with-alpha(0.15) 0%, transparent 78%);
+
+    Rectangle {
+        y: parent.height - 1px;
+        width: parent.width;
+        height: 1px;
+        background: root.dark-mode ? #433E3E : #C7C3BB; // 16% mind 色缝线预计算
+    }
+
+    // Folded layout
+    if root.folded: HorizontalLayout {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        padding-left: 18px;
+        padding-right: 18px;
+        alignment: center;
+        spacing: 12px;
+
+        AvatarWrap {
+            size: 26px;
+            initial: "序";
+            breathing: true;
+        }
+
+        Text {
+            text: "知序";
+            font-family: "Fraunces";
+            font-size: 13px;
+            font-italic: true;
+            color: RedesignTheme.t.fg;
+            vertical-alignment: center;
+        }
+    }
+
+    // Unfolded layout
+    if !root.folded: VerticalLayout {
+        padding-top: 26px;
+        padding-bottom: 16px;
+        padding-left: 18px;
+        padding-right: 18px;
+        alignment: center;
+        spacing: 8px;
+
+        HorizontalLayout {
+            alignment: center;
+            AvatarWrap {
+                size: 52px;
+                initial: "序";
+                breathing: true;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: "知序";
+                font-family: "Fraunces";
+                font-size: 17px;
+                font-italic: true;
+                color: RedesignTheme.t.fg;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            ChronicleBar {
+                width: 200px;
+                height: 4px;
+                opacity: 0.7;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                background: RedesignTheme.t.rep-500.with-alpha(0.22);
+                
+                HorizontalLayout {
+                    padding-left: 9px;
+                    padding-right: 9px;
+                    padding-top: 3px;
+                    padding-bottom: 3px;
+                    Text {
+                        text: root.state-text;
+                        font-family: "JetBrains Mono";
+                        font-size: 10px;
+                        color: root.dark-mode ? #DCA88F : #101416; // mind-line approx
+                        letter-spacing: 0.8px;
+                    }
+                }
+            }
+        }
+    }
+}
+

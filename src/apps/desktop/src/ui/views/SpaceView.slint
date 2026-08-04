@@ -47,13 +47,8 @@ export component SpaceView inherits Rectangle {
         width: parent.width;
         height: parent.height;
 
-        // 1. presence 在场区（FR-T4-2：PresenceZone）
-        PresenceZone {
-            width: parent.width;
-            vertical-stretch: 0;
-            streaming: root.is-streaming;
-            dark-mode: root.dark-mode;
-        }
+        // T2 起：PresenceZone 让位给 ChatPaneView 内的 RoomHead（避免 avatar 重复）。
+        // 留待 T3 onboarding 决定 PresenceZone 是否独立使用。
 
         // 2 + 3. stream + deck（ChatPaneView 是 stream+deck 实现）
         chat-pane := ChatPaneView {
