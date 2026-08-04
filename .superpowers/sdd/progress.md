@@ -41,3 +41,5 @@
 选派：implementer coder-qw / 任务 judge judge-qw（用户 2026-08-05 指定 qwen 线；探针通过）
 
 - Task B1: complete (commits 41695f5..808ed65, review r2 双 PASS；fix 1 轮: r1 SPEC FAIL 唯一阻塞项=计划要求的"并发写不丢条目"测试缺失，用户拍板 (a) 加锁+并发测试 → 808ed65 补 tokio Mutex 串行化 user/project 读-改-写 + 3 并发用例，judge 对照无锁 BASE 实证用例能抓 lost-update) — FU-1: 层 A CoreMCPConfigStore.get_config_value 错误分类（NotFound=空态/其它=Err 中止写）+ 层 B save_user_config/delete_server_config 未识别格式 fail-closed（镜像 load_project_configs_strict）。integrations +7 / core +2 tests。终审 triage: Minor-1 save_config 非原子写待登记独立债项；Minor-2 台账 FU-1 注记 "+4" 应为累计 "+7"。
+
+- Task B2: complete (commits 4f45f14..7a4bdca, review 一轮双 PASS 0C/0I/3M) — FU-2: uninstall_plugin 先经 registry 解析 plugin_id→全部 languages（先于 unregister）再逐个 stop_server（先于 loader 删文件）；shutdown() plugin_ids→languages 改名；manager +2 tests（方案 A 端到端：即退 dummy 进程走真实 spawn，规避 shutdown 60s 硬超时；cfg(windows)/cfg(not(windows)) 双分支）。core lib 1139/1139。观察项: uninstall_plugin 全仓暂无生产调用方。终审 triage: Minor-1 stop_server 恒 Ok 使新 warn 分支不可达（pre-existing）；Minor-2 commit body 未记改名；Minor-3 测试两 dummy 共用 id。
