@@ -327,10 +327,12 @@ async fn keyring_migration_fail_closed_does_not_write_file() {
 }
 
 /// Concurrent loads (all with plaintext keys) must all succeed and the
-/// file must end up with sentinels, not plaintext keys.
+/// file must end up with sentinels, not plaintext keys. Uses a shared
+/// `Arc<MockKeyring>` so concurrent keyring access is also tested.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn keyring_migration_concurrent_loads_are_idempotent() {
-    let kr = MockKeyring::new();
+    use std::sync::Arc;
+    let kr = Arc::new(MockKeyring::new());
     let dir = TestTempDir::new("settings-io-kr-concurrent");
     let path = dir.path().join("app.json");
 
@@ -345,10 +347,9 @@ async fn keyring_migration_concurrent_loads_are_idempotent() {
     let mut tasks = Vec::new();
     for _ in 0..5 {
         let path = path.clone();
+        let kr = Arc::clone(&kr);
         tasks.push(tokio::spawn(async move {
-            let kr = MockKeyring::new();
-            kr.seed("p1", "sk-real-key-123");
-            let loaded = load_app_settings_at(&path, &kr).await.expect("concurrent load");
+            let loaded = load_app_settings_at(&path, &*kr).await.expect("concurrent load");
             assert_eq!(loaded.providers.len(), 1);
             assert_eq!(loaded.providers[0].api_key, API_KEY_SENTINEL);
         }));
@@ -356,4 +357,20 @@ async fn keyring_migration_concurrent_loads_are_idempotent() {
     for task in tasks {
         task.await.expect("concurrent load task panicked");
     }
+
+    // Final-state assertion: file must have sentinel, keyring must have key.
+    let final_settings = load_app_settings_at(&path, &*kr).await.expect("final load");
+    assert_eq!(final_settings.providers.len(), 1);
+    assert_eq!(final_settings.providers[0].api_key, API_KEY_SENTINEL);
+    kr.assert_contains("p1", "sk-real-key-123");
+
+    let on_disk = tokio::fs::read_to_string(&path).await.expect("read main");
+    assert!(
+        !on_disk.contains("sk-real-key-123"),
+        "plaintext key must NOT remain in the on-disk file after concurrent loads"
+    );
+    assert!(
+        on_disk.contains(API_KEY_SENTINEL),
+        "on-disk file must contain the sentinel value after concurrent loads"
+    );
 }

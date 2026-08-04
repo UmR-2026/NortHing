@@ -35,7 +35,7 @@
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:104-105`. Search for `keyring` / `encrypt` in `src/` returns no matches (except unrelated relay E2E encryption).
 - **Proposed fix**: (1) Short-term: use OS keyring crate. (2) Mid-term: AES-256-GCM with machine-derived key. (3) Long-term: env var injection, no disk storage.
 - **Status**: `resolved` (2026-08-04, `fix/p1-security-0804`, C3). `ProviderConfig.api_key` migrated to OS keyring via `keyring` crate v4.1.6. See below for details.
-- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (thread-local HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). Five new keyring tests + all existing tests pass.
+- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (Mutex-guarded HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). 15 keyring unit tests (keyring.rs) + 4 IO integration tests (io_tests.rs), verified by grep `^[[:space:]]*#\[test\]` / `^[[:space:]]*#\[tokio::test\]`.
 
 ### P1-3: Delete bypasses recycle bin
 
@@ -71,6 +71,13 @@
 - **Evidence**: `src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs:28-33` (passes `None`), `:44-46` (binds `0.0.0.0:{port}`).
 - **Proposed fix**: Thread an API key through the embedded relay path, gated by the pairing protocol handshake (design task). Options: (1) Generate ephemeral key on each desktop start and include in QR code/pairing URL. (2) Use a configurable key from desktop settings. (3) Pairing-level token exchange before relay commands.
 - **Status**: active (registered 2026-08-04, P1-5 standalone mitigation complete; a startup `warn!` has been added at `embedded_relay.rs`)
+
+### P1-8: MCPServerConfig.env serialized as plaintext in app.json
+
+- **Symptom**: `MCPServerConfig.env` (`HashMap<String, String>`) stores environment variables for stdio subprocesses as plaintext in `app.json`. These env vars commonly carry credentials (e.g. `OPENAI_API_KEY=sk-xxx`, `AWS_ACCESS_KEY_ID=...`), creating the same plaintext-on-disk risk as P1-2.
+- **Evidence**: `src/apps/desktop/src/app_state/settings/types.rs:161-162` — `pub env: HashMap<String, String>` in `MCPServerConfig`. The field is serialized/deserialized without any encryption or keyring-backed indirection.
+- **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改").
+- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7)
 
 ### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
 

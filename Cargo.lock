@@ -5768,6 +5768,7 @@ dependencies = [
  "northhing-kernel-api",
  "northhing-runtime-ports",
  "northhing-test-support",
+ "once_cell",
  "parking_lot",
  "rfd",
  "serde",
