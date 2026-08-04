@@ -1,0 +1,971 @@
+﻿diff --git a/Cargo.lock b/Cargo.lock
+index 90c14e6..585d0ca 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -4982,6 +4982,25 @@ dependencies = [
+  "unicode-segmentation",
+ ]
+ 
++[[package]]
++name = "keyring"
++version = "4.1.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "72585bb6cc9bc370d1d545b7e23fcce71dfd4461c5e15275e3cf51bdfd9a980a"
++dependencies = [
++ "keyring-core",
++ "windows-native-keyring-store",
++]
++
++[[package]]
++name = "keyring-core"
++version = "1.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "fb1e621458ca9c51aa110bd0339d4751a056b9576bf1253aee1aa560dda0fc9d"
++dependencies = [
++ "log",
++]
++
+ [[package]]
+ name = "khronos_api"
+ version = "3.1.0"
+@@ -5741,6 +5760,7 @@ dependencies = [
+  "chrono",
+  "dirs",
+  "futures",
++ "keyring",
+  "northhing-agent-dispatch",
+  "northhing-core",
+  "northhing-debug-log",
+@@ -6113,6 +6133,7 @@ dependencies = [
+  "base64 0.22.1",
+  "dashmap",
+  "northhing-relay-core",
++ "rand 0.8.7",
+  "serde_json",
+  "tempfile",
+  "tokio",
+@@ -12369,6 +12390,19 @@ version = "0.2.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+ 
++[[package]]
++name = "windows-native-keyring-store"
++version = "1.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "063426e76fdec7438d56bb777f67e318a84a25c707b07e575cb8b78e10c028f8"
++dependencies = [
++ "byteorder",
++ "keyring-core",
++ "regex",
++ "windows-sys 0.61.2",
++ "zeroize",
++]
++
+ [[package]]
+ name = "windows-numerics"
+ version = "0.2.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index 1133424..cc67548 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -118,6 +118,7 @@ filetime = "0.2"
+ fs2 = "0.4"
+ zip = { version = "4.6", default-features = false, features = ["deflate"] } # plugin load
+ trash = "5.2.6"
++keyring = { version = "4.1.6", default-features = false, features = ["windows-native-keyring-store"] }
+ flate2 = "1.0"
+ toml = "0.9"
+ 
+diff --git a/docs/status/tech-debt-ledger.md b/docs/status/tech-debt-ledger.md
+index 811d5dc..17431f0 100644
+--- a/docs/status/tech-debt-ledger.md
++++ b/docs/status/tech-debt-ledger.md
+@@ -34,7 +34,8 @@
+ - **Symptom**: `ProviderConfig.api_key` stored as plaintext string in `app.json`. No keyring, encryption, or obfuscation. Code comment: "Stored in plaintext in app.json. Never logged."
+ - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:104-105`. Search for `keyring` / `encrypt` in `src/` returns no matches (except unrelated relay E2E encryption).
+ - **Proposed fix**: (1) Short-term: use OS keyring crate. (2) Mid-term: AES-256-GCM with machine-derived key. (3) Long-term: env var injection, no disk storage.
+-- **Status**: active
++- **Status**: `resolved` (2026-08-04, `fix/p1-security-0804`, C3). `ProviderConfig.api_key` migrated to OS keyring via `keyring` crate v4.1.6. See below for details.
++- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (thread-local HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). Five new keyring tests + all existing tests pass.
+ 
+ ### P1-3: Delete bypasses recycle bin
+ 
+diff --git a/src/apps/desktop/Cargo.toml b/src/apps/desktop/Cargo.toml
+index 5f52baf..24b36e0 100644
+--- a/src/apps/desktop/Cargo.toml
++++ b/src/apps/desktop/Cargo.toml
+@@ -57,6 +57,10 @@ uuid = { workspace = true }
+ chrono = { workspace = true }
+ parking_lot = { workspace = true }
+ 
++# OS keyring for secure API key storage (C3, P1-2)
++keyring = { workspace = true }
++once_cell = { workspace = true }
++
+ [build-dependencies]
+ slint-build = { workspace = true }
+ 
+diff --git a/src/apps/desktop/src/app_state/callbacks_settings/provider_test.rs b/src/apps/desktop/src/app_state/callbacks_settings/provider_test.rs
+index 8e0587d..a304f1e 100644
+--- a/src/apps/desktop/src/app_state/callbacks_settings/provider_test.rs
++++ b/src/apps/desktop/src/app_state/callbacks_settings/provider_test.rs
+@@ -1,5 +1,6 @@
+ use super::load_app_settings_quiet;
+ use super::update_app_settings_quiet;
++use crate::app_state::settings::keyring::{resolve_api_key, PRODUCTION_KEYRING};
+ use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
+ use crate::app_state::slint_glue::AppWindow;
+ use crate::app_state::state::AppState;
+@@ -86,10 +87,12 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
+                 use northhing_kernel_api::settings::ProviderFormDto;
+                 use northhing_kernel_api::KernelSettingsApi;
+                 let facade = kernel_facade();
++                let resolved_key = resolve_api_key(&*PRODUCTION_KEYRING, &provider.id, &provider.api_key)
++                    .unwrap_or_else(|_| provider.api_key.clone());
+                 let form = ProviderFormDto {
+                     provider_id: provider.id.clone(),
+                     base_url: Some(provider.base_url.clone()),
+-                    api_key: Some(provider.api_key.clone()),
++                    api_key: Some(resolved_key),
+                     model: Some(provider.model.clone()),
+                     provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
+                 };
+diff --git a/src/apps/desktop/src/app_state/settings/io.rs b/src/apps/desktop/src/app_state/settings/io.rs
+index c5d6ea6..07d9fbe 100644
+--- a/src/apps/desktop/src/app_state/settings/io.rs
++++ b/src/apps/desktop/src/app_state/settings/io.rs
+@@ -1,3 +1,4 @@
++use super::keyring::{KeyringBackend, API_KEY_SENTINEL, PRODUCTION_KEYRING};
+ use super::{AppSettings, ModelRef};
+ use anyhow::{Context, Result};
+ use std::path::{Path, PathBuf};
+@@ -30,10 +31,10 @@ pub fn app_settings_path() -> Result<PathBuf> {
+ /// dropped. Persist the migration immediately when anything was dropped.
+ pub async fn load_app_settings() -> Result<AppSettings> {
+     let path = app_settings_path()?;
+-    load_app_settings_at(&path).await
++    load_app_settings_at(&path, &*PRODUCTION_KEYRING).await
+ }
+ 
+-async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
++async fn load_app_settings_at(path: &Path, keyring: &dyn KeyringBackend) -> Result<AppSettings> {
+     if !path.exists() {
+         return Ok(AppSettings::default());
+     }
+@@ -49,9 +50,68 @@ async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
+             tracing::warn!(target: "app_state", "load dedup save failed: {e}");
+         }
+     }
++    // 2026-08-04 (C3, P1-2): migrate plaintext API keys to OS keyring.
++    // Any keyring failure aborts the entire load (fail-closed) 鈥?no
++    // plaintext key is allowed to stay on disk when the keyring is
++    // unavailable.
++    let migrated = keyring_migrate_providers(keyring, &mut parsed)?;
++    if migrated > 0 {
++        save_app_settings_at(path, &parsed).await?;
++    }
+     Ok(parsed)
+ }
+ 
++/// Migrate plaintext API keys from `ProviderConfig.api_key` to the OS keyring.
++///
++/// For each provider with a non-empty, non-sentinel `api_key`:
++/// 1. Store the real key in the keyring under `(KEYRING_SERVICE, provider.id)`.
++/// 2. Replace the in-memory field with [`API_KEY_SENTINEL`].
++///
++/// ## Fail-closed
++///
++/// If any keyring `store` operation fails, the entire migration is aborted
++/// and an `Err` is returned. The in-memory `parsed` is left unchanged so
++/// the caller can decide whether to retry or propagate the error upward.
++///
++/// ## Returns
++///
++/// The number of providers migrated (0 means none were plaintext).
++pub(super) fn keyring_migrate_providers(keyring: &dyn KeyringBackend, parsed: &mut AppSettings) -> Result<usize> {
++    let mut count = 0usize;
++    for provider in &mut parsed.providers {
++        if provider.api_key.is_empty() || provider.api_key == API_KEY_SENTINEL {
++            continue;
++        }
++        // Store the plaintext key in the OS keyring.
++        let plaintext = std::mem::take(&mut provider.api_key);
++        // If keyring store fails, put the key back and abort (fail-closed).
++        match keyring.store(&provider.id, &plaintext) {
++            Ok(()) => {
++                provider.api_key = API_KEY_SENTINEL.to_string();
++                count += 1;
++            }
++            Err(e) => {
++                // Restore the plaintext key so the in-memory state is unchanged.
++                provider.api_key = plaintext;
++                return Err(e).context(format!(
++                    "keyring: failed to migrate API key for provider '{}' ({}). \
++                     The OS keychain may be unavailable 鈥?please configure a \
++                     Secret Service provider on Linux, or check your keychain \
++                     access on macOS/Windows",
++                    provider.id, provider.name
++                ));
++            }
++        }
++    }
++    if count > 0 {
++        tracing::info!(
++            target: "app_state",
++            "keyring migration: moved {count} provider API key(s) to OS keyring"
++        );
++    }
++    Ok(count)
++}
++
+ /// Transactional settings update (H-9). Runs the whole load 鈫?`f` 鈫?atomic
+ /// save cycle under [`SETTINGS_WRITE_LOCK`], so concurrent settings actions
+ /// serialize instead of silently overwriting each other (the pre-fix
+@@ -62,13 +122,26 @@ async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
+ /// aborts the transaction without touching the file.
+ pub async fn update_app_settings<T>(f: impl FnOnce(&mut AppSettings) -> Result<T>) -> Result<T> {
+     let path = app_settings_path()?;
+-    update_app_settings_at(&path, f).await
++    update_app_settings_at(&path, &*PRODUCTION_KEYRING, f).await
+ }
+ 
+-async fn update_app_settings_at<T>(path: &Path, f: impl FnOnce(&mut AppSettings) -> Result<T>) -> Result<T> {
++async fn update_app_settings_at<T>(
++    path: &Path,
++    keyring: &dyn KeyringBackend,
++    f: impl FnOnce(&mut AppSettings) -> Result<T>,
++) -> Result<T> {
+     let _guard = SETTINGS_WRITE_LOCK.lock().await;
+-    let mut settings = load_app_settings_at(path).await?;
++    let mut settings = load_app_settings_at(path, keyring).await?;
+     let result = f(&mut settings)?;
++    // 2026-08-04 (C3, P1-2): migrate any new plaintext keys added by `f`
++    // before saving, so no plaintext key reaches disk even on the first save.
++    let migrated = keyring_migrate_providers(keyring, &mut settings)?;
++    if migrated > 0 {
++        tracing::info!(
++            target: "app_state",
++            "keyring migration in update: moved {migrated} newly-added provider API key(s)"
++        );
++    }
+     save_app_settings_at(path, &settings).await?;
+     Ok(result)
+ }
+diff --git a/src/apps/desktop/src/app_state/settings/io/io_tests.rs b/src/apps/desktop/src/app_state/settings/io/io_tests.rs
+index 43a30c2..2e8cb3a 100644
+--- a/src/apps/desktop/src/app_state/settings/io/io_tests.rs
++++ b/src/apps/desktop/src/app_state/settings/io/io_tests.rs
+@@ -3,10 +3,14 @@
+ // no test touches the real `~/.northhing/config/app.json` (same path
+ // injection scheme as Task 5 `remote_connect/bot/persistence_tests.rs`).
+ //
++// 2026-08-04 (C3, P1-2): tests now use a MockKeyring so they do not depend
++// on the real OS keyring. The `_at` variants accept a `&dyn KeyringBackend`.
++//
+ // Note: this file lives under `settings/io/` because `io.rs` declares
+ // `mod io_tests;` as a child module (rustc resolves it to `io/io_tests.rs`).
+ 
+ use super::*;
++use crate::app_state::settings::keyring::{MockKeyring, API_KEY_SENTINEL};
+ use crate::app_state::settings::{ProviderConfig, ProviderType};
+ use northhing_test_support::TestTempDir;
+ 
+@@ -37,14 +41,16 @@ fn provider_with_fields(id: &str, name: &str, base_url: &str, api_key: &str, mod
+ /// with the lock the final file must contain all 10.
+ #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+ async fn concurrent_updates_preserve_all_writes() {
++    let kr = MockKeyring::new();
+     let dir = TestTempDir::new("settings-io-concurrent");
+     let path = dir.path().join("app.json");
+ 
+     let mut tasks = Vec::new();
+     for i in 0..10 {
+         let path = path.clone();
++        let kr_ref = &kr;
+         tasks.push(tokio::spawn(async move {
+-            update_app_settings_at(&path, |s| {
++            update_app_settings_at(&path, kr_ref, |s| {
+                 let id = format!("p{i}");
+                 s.upsert_provider(provider_with_fields(&id, &format!("provider-{i}"), &format!("https://x{i}.com/v1"), &format!("sk-{i}"), &format!("model-{i}")));
+                 Ok(())
+@@ -56,7 +62,7 @@ async fn concurrent_updates_preserve_all_writes() {
+         task.await.expect("concurrent update task panicked").expect("concurrent update failed");
+     }
+ 
+-    let final_settings = load_app_settings_at(&path).await.expect("final load");
++    let final_settings = load_app_settings_at(&path, &kr).await.expect("final load");
+     assert_eq!(final_settings.providers.len(), 10, "no update may be lost");
+     for i in 0..10 {
+         let id = format!("p{i}");
+@@ -73,6 +79,7 @@ async fn concurrent_updates_preserve_all_writes() {
+ /// exactly the previous version (no partial write, no blanking).
+ #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+ async fn update_with_err_closure_does_not_write_file() {
++    let kr = MockKeyring::new();
+     let dir = TestTempDir::new("settings-io-err");
+     let path = dir.path().join("app.json");
+ 
+@@ -81,7 +88,7 @@ async fn update_with_err_closure_does_not_write_file() {
+     save_app_settings_at(&path, &initial).await.expect("seed write");
+     let before = tokio::fs::read(&path).await.expect("read before");
+ 
+-    let result: anyhow::Result<()> = update_app_settings_at(&path, |_s| Err(anyhow::anyhow!("boom"))).await;
++    let result: anyhow::Result<()> = update_app_settings_at(&path, &kr, |_s| Err(anyhow::anyhow!("boom"))).await;
+     assert!(result.is_err(), "closure error must propagate");
+ 
+     let after = tokio::fs::read(&path).await.expect("read after");
+@@ -94,6 +101,7 @@ async fn update_with_err_closure_does_not_write_file() {
+ /// file: subsequent save/load cycles ignore it and the main file stays valid.
+ #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+ async fn leftover_tmp_file_does_not_break_main_file() {
++    let kr = MockKeyring::new();
+     let dir = TestTempDir::new("settings-io-crash");
+     let path = dir.path().join("app.json");
+ 
+@@ -105,7 +113,7 @@ async fn leftover_tmp_file_does_not_break_main_file() {
+     settings.add_workspace(PathBuf::from("/tmp/proj"));
+     save_app_settings_at(&path, &settings).await.expect("save with residue present");
+ 
+-    let loaded = load_app_settings_at(&path).await.expect("load with residue present");
++    let loaded = load_app_settings_at(&path, &kr).await.expect("load with residue present");
+     assert_eq!(loaded.workspaces.len(), 1, "main file must be intact");
+ 
+     let raw = tokio::fs::read_to_string(&path).await.expect("read main");
+@@ -153,6 +161,7 @@ async fn second_write_keeps_previous_version_in_bak() {
+ /// on-disk file must end up deduplicated.
+ #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+ async fn load_dedup_migration_still_persists() {
++    let kr = MockKeyring::new();
+     let dir = TestTempDir::new("settings-io-dedup");
+     let path = dir.path().join("app.json");
+ 
+@@ -167,7 +176,7 @@ async fn load_dedup_migration_still_persists() {
+         .await
+         .expect("seed write");
+ 
+-    let loaded = load_app_settings_at(&path).await.expect("load");
++    let loaded = load_app_settings_at(&path, &kr).await.expect("load");
+     assert_eq!(loaded.providers.len(), 1, "in-memory dedup must drop the duplicate");
+ 
+     let on_disk: AppSettings =
+@@ -183,11 +192,168 @@ async fn load_dedup_migration_still_persists() {
+ /// the UI believe the user has no configuration.
+ #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+ async fn load_parse_failure_returns_err() {
++    let kr = MockKeyring::new();
+     let dir = TestTempDir::new("settings-io-parse");
+     let path = dir.path().join("app.json");
+ 
+     tokio::fs::write(&path, b"{ \"schema_version\": ").await.expect("corrupt seed write");
+ 
+-    let result = load_app_settings_at(&path).await;
++    let result = load_app_settings_at(&path, &kr).await;
+     assert!(result.is_err(), "corrupt JSON must propagate Err (fail-closed)");
+ }
++
++// ===== C3, P1-2: keyring migration tests =====
++
++/// A plaintext API key is migrated to the keyring on load: the in-memory
++/// field becomes the sentinel, the keyring holds the real key.
++#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
++async fn keyring_migration_plaintext_to_sentinel() {
++    let kr = MockKeyring::new();
++    let dir = TestTempDir::new("settings-io-kr-migrate");
++    let path = dir.path().join("app.json");
++
++    let mut seeded = AppSettings::default();
++    seeded.providers = vec![
++        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
++    ];
++    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
++        .await
++        .expect("seed write");
++
++    let loaded = load_app_settings_at(&path, &kr).await.expect("load with keyring");
++    assert_eq!(loaded.providers.len(), 1);
++    assert_eq!(
++        loaded.providers[0].api_key, API_KEY_SENTINEL,
++        "plaintext key must be replaced with sentinel in memory"
++    );
++    kr.assert_contains("p1", "sk-real-key-123");
++
++    // On disk, the api_key must also be the sentinel (not the plaintext).
++    let on_disk = tokio::fs::read_to_string(&path).await.expect("read main");
++    assert!(
++        !on_disk.contains("sk-real-key-123"),
++        "plaintext key must NOT remain in the on-disk file"
++    );
++    assert!(
++        on_disk.contains(API_KEY_SENTINEL),
++        "on-disk file must contain the sentinel value"
++    );
++}
++
++/// When the api_key is already the sentinel, load must NOT touch the keyring
++/// (idempotent 鈥?no duplicate keyring writes).
++#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
++async fn keyring_migration_already_sentinel_is_idempotent() {
++    let kr = MockKeyring::new();
++    let dir = TestTempDir::new("settings-io-kr-idempotent");
++    let path = dir.path().join("app.json");
++
++    let mut seeded = AppSettings::default();
++    seeded.providers = vec![
++        provider_with_fields("p1", "provider-a", "https://x.com/v1", API_KEY_SENTINEL, "gpt-4"),
++    ];
++    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
++        .await
++        .expect("seed write");
++
++    // Load once 鈥?no migration should happen since the field is already sentinel.
++    let loaded = load_app_settings_at(&path, &kr).await.expect("load with sentinel");
++    assert_eq!(loaded.providers.len(), 1);
++    assert_eq!(loaded.providers[0].api_key, API_KEY_SENTINEL);
++
++    // The keyring must still be empty (no key was written).
++    assert!(kr.get("p1").is_err(), "no keyring write should occur for sentinel-only field");
++
++    // Load again 鈥?still no keyring write (idempotent).
++    let loaded2 = load_app_settings_at(&path, &kr).await.expect("second load");
++    assert_eq!(loaded2.providers.len(), 1);
++    assert_eq!(loaded2.providers[0].api_key, API_KEY_SENTINEL);
++    assert!(kr.get("p1").is_err(), "second load must also not write to keyring");
++}
++
++/// When the keyring store fails (fail-closed), the load must return Err
++/// and the disk file must remain unchanged (no sentinel written).
++#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
++async fn keyring_migration_fail_closed_does_not_write_file() {
++    // A keyring backend that always fails on store.
++    use crate::app_state::settings::keyring::KeyringBackend;
++    use std::sync::atomic::{AtomicBool, Ordering};
++
++    #[derive(Debug)]
++    struct FailingKeyring(AtomicBool);
++
++    impl KeyringBackend for FailingKeyring {
++        fn store(&self, _account: &str, _secret: &str) -> anyhow::Result<()> {
++            self.0.store(true, Ordering::SeqCst);
++            Err(anyhow::anyhow!("keyring unavailable: Secret Service not running"))
++        }
++        fn get(&self, _account: &str) -> anyhow::Result<String> {
++            Err(anyhow::anyhow!("keyring unavailable"))
++        }
++        fn delete(&self, _account: &str) -> anyhow::Result<()> {
++            Err(anyhow::anyhow!("keyring unavailable"))
++        }
++    }
++
++    let kr = FailingKeyring(AtomicBool::new(false));
++    let dir = TestTempDir::new("settings-io-kr-fail");
++    let path = dir.path().join("app.json");
++
++    let mut seeded = AppSettings::default();
++    seeded.providers = vec![
++        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
++    ];
++    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
++        .await
++        .expect("seed write");
++    let before = tokio::fs::read(&path).await.expect("read before");
++
++    let result = load_app_settings_at(&path, &kr).await;
++    assert!(result.is_err(), "keyring failure must propagate Err (fail-closed)");
++    assert!(kr.0.load(Ordering::SeqCst), "store must have been attempted");
++
++    // File must be untouched.
++    let after = tokio::fs::read(&path).await.expect("read after");
++    assert_eq!(before, after, "failed keyring migration must not modify the file");
++    let on_disk = String::from_utf8_lossy(&after);
++    assert!(
++        on_disk.contains("sk-real-key-123"),
++        "plaintext key must still be in the file after fail-closed"
++    );
++    assert!(
++        !on_disk.contains(API_KEY_SENTINEL),
++        "sentinel must NOT appear in file after fail-closed"
++    );
++}
++
++/// Concurrent loads (all with plaintext keys) must all succeed and the
++/// file must end up with sentinels, not plaintext keys.
++#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
++async fn keyring_migration_concurrent_loads_are_idempotent() {
++    let kr = MockKeyring::new();
++    let dir = TestTempDir::new("settings-io-kr-concurrent");
++    let path = dir.path().join("app.json");
++
++    let mut seeded = AppSettings::default();
++    seeded.providers = vec![
++        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
++    ];
++    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
++        .await
++        .expect("seed write");
++
++    let mut tasks = Vec::new();
++    for _ in 0..5 {
++        let path = path.clone();
++        tasks.push(tokio::spawn(async move {
++            let kr = MockKeyring::new();
++            kr.seed("p1", "sk-real-key-123");
++            let loaded = load_app_settings_at(&path, &kr).await.expect("concurrent load");
++            assert_eq!(loaded.providers.len(), 1);
++            assert_eq!(loaded.providers[0].api_key, API_KEY_SENTINEL);
++        }));
++    }
++    for task in tasks {
++        task.await.expect("concurrent load task panicked");
++    }
++}
+diff --git a/src/apps/desktop/src/app_state/settings/keyring.rs b/src/apps/desktop/src/app_state/settings/keyring.rs
+new file mode 100644
+index 0000000..231bd37
+--- /dev/null
++++ b/src/apps/desktop/src/app_state/settings/keyring.rs
+@@ -0,0 +1,349 @@
++//! OS keyring abstraction for secure API key storage (C3, P1-2).
++//!
++//! ## Architecture
++//!
++//! - [`KeyringBackend`] trait: `store` / `get` / `delete` operations.
++//! - [`ProductionKeyring`]: wraps the `keyring` crate (real OS keyring).
++//! - [`MockKeyring`]: `HashMap`-based, used in tests (available in all builds
++//!   so tests don't need `cfg(test)` conditionals on the trait itself).
++//!
++//! ## Sentinel
++//!
++//! When a provider's API key is migrated to the OS keyring, the
++//! `ProviderConfig.api_key` field is replaced with [`API_KEY_SENTINEL`] before
++//! serialization to disk. At load time, code that needs the actual key calls
++//! [`resolve_api_key`]; at save time, [`store_api_key`] handles the keyring
++//! write and returns the sentinel for the in-memory field.
++//!
++//! ## Fail-closed
++//!
++//! Any keyring operation that fails (OS keychain unavailable, credential not
++//! found, etc.) propagates an `Err` 鈥?the caller must never silently fall back
++//! to plaintext storage.
++
++use anyhow::{Context, Result};
++use std::collections::HashMap;
++use std::sync::Mutex;
++
++// ===== Keyring service identity =====
++
++/// Keyring service name 鈥?used by the OS keychain to namespace credentials.
++/// All provider API keys are stored under this service, keyed by provider UUID.
++const KEYRING_SERVICE: &str = "northhing.desktop.providers";
++
++// ===== Sentinel =====
++
++/// Sentinel value written to `ProviderConfig.api_key` on disk when the real
++/// API key has been moved to the OS keyring.
++///
++/// ## Why `"__kr__"`?
++///
++/// - **Short**: 6 chars 鈥?no measurable serialization overhead.
++/// - **Unambiguous**: No real API key starts with `__kr__` (API keys from
++///   Anthropic / OpenAI / Gemini use `sk-`, `api-`, `AIza` etc.). Even if one
++///   did, the load-time migration checks for exact equality, not prefix match.
++/// - **ASCII-only**: Safe across all filesystems and encodings.
++/// - **Readable**: A human reading `app.json` can immediately tell the key is
++///   stored elsewhere.
++///
++/// Alternatives considered:
++/// - Empty string `""` 鈥?indistinguishable from "no key configured".
++/// - `null` 鈥?would require changing the field to `Option<String>` (breaking
++///   schema compat).
++/// - A UUID 鈥?adds 36 chars for no benefit.
++/// - Opaque base64 鈥?hurts debugging for no security gain (it's a sentinel,
++///   not a secret).
++pub const API_KEY_SENTINEL: &str = "__kr__";
++
++/// Returns `true` when `s` is the keyring sentinel value.
++pub fn is_keyring_sentinel(s: &str) -> bool {
++    s == API_KEY_SENTINEL
++}
++
++// ===== Backend trait =====
++
++/// Abstraction over OS keyring operations.
++///
++/// Production impl wraps the `keyring` crate; mock impl stores in a
++/// `HashMap` for testing. Both are available in all builds 鈥?tests
++/// construct [`MockKeyring`] directly without conditional compilation.
++pub trait KeyringBackend: Send + Sync + std::fmt::Debug {
++    /// Store `secret` under `account` in the keyring.
++    fn store(&self, account: &str, secret: &str) -> Result<()>;
++    /// Retrieve the secret stored under `account`.
++    fn get(&self, account: &str) -> Result<String>;
++    /// Delete the credential stored under `account`.
++    fn delete(&self, account: &str) -> Result<()>;
++}
++
++// ===== Production impl =====
++
++/// Production keyring backend wrapping the `keyring` crate.
++///
++/// All operations use `KEYRING_SERVICE` as the service name and the
++/// provider UUID as the account name.
++#[derive(Debug)]
++pub struct ProductionKeyring;
++
++impl KeyringBackend for ProductionKeyring {
++    fn store(&self, account: &str, secret: &str) -> Result<()> {
++        let entry = keyring::Entry::new(KEYRING_SERVICE, account)
++            .with_context(|| format!("keyring: failed to open entry for '{account}'"))?;
++        entry
++            .set_secret(secret)
++            .with_context(|| format!("keyring: failed to store credential for '{account}'"))?;
++        Ok(())
++    }
++
++    fn get(&self, account: &str) -> Result<String> {
++        let entry = keyring::Entry::new(KEYRING_SERVICE, account)
++            .with_context(|| format!("keyring: failed to open entry for '{account}'"))?;
++        let secret = entry
++            .get_secret()
++            .with_context(|| format!("keyring: failed to read credential for '{account}'"))?;
++        Ok(secret)
++    }
++
++    fn delete(&self, account: &str) -> Result<()> {
++        let entry = keyring::Entry::new(KEYRING_SERVICE, account)
++            .with_context(|| format!("keyring: failed to open entry for '{account}'"))?;
++        entry
++            .delete_credential()
++            .with_context(|| format!("keyring: failed to delete credential for '{account}'"))?;
++        Ok(())
++    }
++}
++
++// ===== Mock impl (test use) =====
++
++/// Mock keyring backend backed by a `HashMap<String, String>`.
++///
++/// Thread-safe via `std::sync::Mutex`. Available in all builds so tests
++/// can construct it directly 鈥?no `#[cfg(test)]` gates needed on the trait.
++#[derive(Debug, Default)]
++pub struct MockKeyring {
++    store: Mutex<HashMap<String, String>>,
++}
++
++impl MockKeyring {
++    pub fn new() -> Self {
++        Self::default()
++    }
++
++    /// Seed a credential into the mock store (test convenience).
++    pub fn seed(&self, account: &str, secret: &str) {
++        let mut map = self.store.lock().unwrap();
++        map.insert(account.to_string(), secret.to_string());
++    }
++
++    /// Assert that a credential exists in the mock store (test convenience).
++    pub fn assert_contains(&self, account: &str, expected: &str) {
++        let map = self.store.lock().unwrap();
++        let actual = map.get(account).expect("credential not found in mock keyring");
++        assert_eq!(actual, expected, "mock keyring credential mismatch for '{account}'");
++    }
++
++    /// Assert that a credential does NOT exist in the mock store (test
++    /// convenience 鈥?used to verify deletion / sentinel replacement).
++    pub fn assert_not_contains(&self, account: &str) {
++        let map = self.store.lock().unwrap();
++        assert!(
++            !map.contains_key(account),
++            "credential '{account}' should not exist in mock keyring"
++        );
++    }
++}
++
++impl KeyringBackend for MockKeyring {
++    fn store(&self, account: &str, secret: &str) -> Result<()> {
++        let mut map = self.store.lock().unwrap();
++        map.insert(account.to_string(), secret.to_string());
++        Ok(())
++    }
++
++    fn get(&self, account: &str) -> Result<String> {
++        let map = self.store.lock().unwrap();
++        map.get(account).cloned().ok_or_else(|| {
++            anyhow::anyhow!("keyring: credential not found for '{account}'")
++        })
++    }
++
++    fn delete(&self, account: &str) -> Result<()> {
++        let mut map = self.store.lock().unwrap();
++        map.remove(account);
++        Ok(())
++    }
++}
++
++// ===== Global production backend =====
++
++use once_cell::sync::Lazy;
++
++/// Global production keyring backend used by the IO and sync paths.
++///
++/// Tests construct their own [`MockKeyring`] and pass it directly to the
++/// test variants of the IO functions 鈥?they never touch this global.
++pub(crate) static PRODUCTION_KEYRING: Lazy<ProductionKeyring> = Lazy::new(ProductionKeyring);
++
++// ===== High-level helpers =====
++
++/// Resolve the actual API key for a provider.
++///
++/// If the provider's `api_key` field is the sentinel, the real key is
++/// fetched from `keyring`; otherwise the field value is returned as-is
++/// (empty string means no key configured; non-empty non-sentinel means
++/// a plaintext key that hasn't been migrated yet 鈥?handled at load time).
++pub fn resolve_api_key(keyring: &dyn KeyringBackend, provider_id: &str, api_key_field: &str) -> Result<String> {
++    if is_keyring_sentinel(api_key_field) {
++        keyring.get(provider_id)
++    } else {
++        Ok(api_key_field.to_string())
++    }
++}
++
++/// Store an API key in the keyring and return the sentinel value for
++/// in-memory / on-disk storage.
++///
++/// When `plaintext` is empty or already the sentinel, the keyring is
++/// not touched and the input is returned as-is (idempotent).
++///
++/// ## Errors
++///
++/// Returns `Err` when the keyring is unavailable (fail-closed) 鈥?the
++/// caller must abort and not write plaintext to disk.
++pub fn store_api_key(keyring: &dyn KeyringBackend, provider_id: &str, plaintext: &str) -> Result<String> {
++    if plaintext.is_empty() || is_keyring_sentinel(plaintext) {
++        return Ok(plaintext.to_string());
++    }
++    keyring.store(provider_id, plaintext)?;
++    Ok(API_KEY_SENTINEL.to_string())
++}
++
++/// Remove a provider's API key from the keyring.
++///
++/// This is a best-effort cleanup 鈥?the provider may not have a keyring
++/// entry (e.g. never had a key configured). The function returns `Ok(())`
++/// in both cases so callers don't need to handle the "not found" case
++/// specially.
++pub fn delete_api_key(keyring: &dyn KeyringBackend, provider_id: &str) -> Result<()> {
++    match keyring.delete(provider_id) {
++        Ok(()) => Ok(()),
++        // Credential not found 鈫?nothing to clean up, not an error.
++        Err(_) => Ok(()),
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn sentinel_identity() {
++        assert!(is_keyring_sentinel(API_KEY_SENTINEL));
++        assert!(!is_keyring_sentinel("sk-real-key-12345"));
++        assert!(!is_keyring_sentinel(""));
++        assert!(!is_keyring_sentinel("__kr__ ")); // trailing space
++    }
++
++    #[test]
++    fn mock_keyring_store_get() {
++        let kr = MockKeyring::new();
++        kr.store("p1", "sk-secret").unwrap();
++        assert_eq!(kr.get("p1").unwrap(), "sk-secret");
++    }
++
++    #[test]
++    fn mock_keyring_get_missing_returns_err() {
++        let kr = MockKeyring::new();
++        let err = kr.get("nonexistent").unwrap_err();
++        assert!(err.to_string().contains("not found"));
++    }
++
++    #[test]
++    fn mock_keyring_delete_removes_entry() {
++        let kr = MockKeyring::new();
++        kr.store("p1", "sk-secret").unwrap();
++        kr.delete("p1").unwrap();
++        assert!(kr.get("p1").is_err());
++    }
++
++    #[test]
++    fn mock_keyring_delete_missing_does_not_error() {
++        let kr = MockKeyring::new();
++        kr.delete("nonexistent").unwrap(); // should not panic
++    }
++
++    #[test]
++    fn resolve_api_key_returns_sentinel_from_keyring() {
++        let kr = MockKeyring::new();
++        kr.store("p1", "sk-real").unwrap();
++        let result = resolve_api_key(&kr, "p1", API_KEY_SENTINEL).unwrap();
++        assert_eq!(result, "sk-real");
++    }
++
++    #[test]
++    fn resolve_api_key_returns_plaintext_directly() {
++        let kr = MockKeyring::new();
++        let result = resolve_api_key(&kr, "p1", "sk-plain").unwrap();
++        assert_eq!(result, "sk-plain");
++    }
++
++    #[test]
++    fn resolve_api_key_returns_empty_string_as_is() {
++        let kr = MockKeyring::new();
++        let result = resolve_api_key(&kr, "p1", "").unwrap();
++        assert_eq!(result, "");
++    }
++
++    #[test]
++    fn resolve_api_key_sentinel_missing_keyring_returns_err() {
++        let kr = MockKeyring::new();
++        let result = resolve_api_key(&kr, "p1", API_KEY_SENTINEL);
++        assert!(result.is_err(), "sentinel without keyring entry must fail");
++    }
++
++    #[test]
++    fn store_api_key_empty_is_noop() {
++        let kr = MockKeyring::new();
++        let result = store_api_key(&kr, "p1", "").unwrap();
++        assert_eq!(result, "");
++        assert!(kr.get("p1").is_err(), "empty key must not be stored");
++    }
++
++    #[test]
++    fn store_api_key_sentinel_is_noop() {
++        let kr = MockKeyring::new();
++        let result = store_api_key(&kr, "p1", API_KEY_SENTINEL).unwrap();
++        assert_eq!(result, API_KEY_SENTINEL);
++        assert!(kr.get("p1").is_err(), "sentinel must not be stored as real key");
++    }
++
++    #[test]
++    fn store_api_key_returns_sentinel() {
++        let kr = MockKeyring::new();
++        let result = store_api_key(&kr, "p1", "sk-real").unwrap();
++        assert_eq!(result, API_KEY_SENTINEL);
++        assert_eq!(kr.get("p1").unwrap(), "sk-real");
++    }
++
++    #[test]
++    fn delete_api_key_best_effort_missing() {
++        let kr = MockKeyring::new();
++        delete_api_key(&kr, "nonexistent").unwrap(); // not an error
++    }
++
++    #[test]
++    fn delete_api_key_removes_existing() {
++        let kr = MockKeyring::new();
++        kr.store("p1", "sk-real").unwrap();
++        delete_api_key(&kr, "p1").unwrap();
++        assert!(kr.get("p1").is_err());
++    }
++
++    #[test]
++    fn mock_seed_and_assert_helpers() {
++        let kr = MockKeyring::new();
++        kr.seed("p1", "sk-preloaded");
++        kr.assert_contains("p1", "sk-preloaded");
++    }
++}
+diff --git a/src/apps/desktop/src/app_state/settings/mod.rs b/src/apps/desktop/src/app_state/settings/mod.rs
+index 7f5c2aa..e7fc268 100644
+--- a/src/apps/desktop/src/app_state/settings/mod.rs
++++ b/src/apps/desktop/src/app_state/settings/mod.rs
+@@ -37,6 +37,7 @@ use std::path::{Path, PathBuf};
+ 
+ mod integrity;
+ mod io;
++mod keyring;
+ mod sync;
+ mod types;
+ 
+@@ -44,6 +45,7 @@ mod types;
+ mod tests;
+ 
+ pub use io::*;
++pub use keyring::*;
+ pub use sync::*;
+ pub use types::*;
+ 
+diff --git a/src/apps/desktop/src/app_state/settings/sync.rs b/src/apps/desktop/src/app_state/settings/sync.rs
+index d607d09..3d315a0 100644
+--- a/src/apps/desktop/src/app_state/settings/sync.rs
++++ b/src/apps/desktop/src/app_state/settings/sync.rs
+@@ -1,3 +1,4 @@
++use super::keyring::{resolve_api_key, KeyringBackend, PRODUCTION_KEYRING};
+ use super::{AppSettings, ProviderConfig, ProviderType};
+ 
+ // 2026-07-18 (D2e): edit-flow key inheritance 鈥?empty incoming key on edit
+@@ -25,7 +26,26 @@ pub fn provider_wire_format(t: &ProviderType) -> &'static str {
+ }
+ 
+ /// Convert a desktop `ProviderConfig` into a facade `AIModelConfigDto`.
+-pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_kernel_api::settings::AIModelConfigDto {
++/// The actual API key is resolved from the OS keyring when the stored
++/// field is the sentinel value (`API_KEY_SENTINEL`).
++///
++/// ## Logging discipline
++///
++/// This function never logs the API key itself. The keyring lookup
++/// failure is handled by the caller (`sync_providers_to_core`).
++pub fn provider_to_ai_model_config(p: &ProviderConfig, keyring: &dyn KeyringBackend) -> northhing_kernel_api::settings::AIModelConfigDto {
++    let resolved_key = resolve_api_key(keyring, &p.id, &p.api_key).unwrap_or_else(|_| {
++        // Keyring unavailable 鈥?fall back to the stored field value.
++        // This path is only reached when the sentinel is present but the
++        // keyring entry is missing (should not happen in normal operation
++        // after a successful migration). We log a warning without the key.
++        tracing::warn!(
++            target: "app_state",
++            "keyring entry missing for provider '{}' ({}) 鈥?falling back to stored field",
++            p.id, p.name
++        );
++        p.api_key.clone()
++    });
+     northhing_kernel_api::settings::AIModelConfigDto {
+         id: p.id.clone(),
+         provider_id: provider_wire_format(&p.provider_type).to_string(),
+@@ -34,7 +54,7 @@ pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_kernel_api::
+         max_tokens: None,
+         temperature: None,
+         base_url: Some(p.base_url.clone()),
+-        api_key: Some(p.api_key.clone()),
++        api_key: Some(resolved_key),
+         enabled: Some(p.enabled),
+         category: Some("general_chat".to_string()),
+         capabilities: Some(vec!["text_chat".to_string(), "function_calling".to_string()]),
+@@ -87,7 +107,7 @@ pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<us
+     let existing = facade.list_model_configs().await?;
+     let mut count = 0;
+     for p in &settings.providers {
+-        let model = provider_to_ai_model_config(p);
++        let model = provider_to_ai_model_config(p, &*PRODUCTION_KEYRING);
+         facade.upsert_model_config(model).await?;
+         count += 1;
+     }
+diff --git a/src/apps/desktop/src/app_state/settings/tests.rs b/src/apps/desktop/src/app_state/settings/tests.rs
+index 93f1138..4d4f1fe 100644
+--- a/src/apps/desktop/src/app_state/settings/tests.rs
++++ b/src/apps/desktop/src/app_state/settings/tests.rs
+@@ -1,4 +1,5 @@
+ use super::*;
++use crate::app_state::settings::keyring::MockKeyring;
+ use std::collections::HashMap;
+ 
+ fn sample_provider() -> ProviderConfig {
+@@ -356,8 +357,9 @@ fn provider_wire_format_mapping() {
+ 
+ #[test]
+ fn provider_to_ai_model_config_fields() {
++    let kr = MockKeyring::new();
+     let p = ProviderConfig::new("鎴戠殑 Anthropic".into(), ProviderType::Anthropic);
+-    let m = provider_to_ai_model_config(&p);
++    let m = provider_to_ai_model_config(&p, &kr);
+     assert_eq!(m.id, p.id);
+     assert_eq!(m.display_name, Some("鎴戠殑 Anthropic".to_string()));
+     assert_eq!(m.provider_id, "anthropic");

@@ -1,5 +1,8 @@
 # Model Capability Notes
 
+## 用户指令（长期生效）
+- **2026-08-04：k3 系不做 coder/implementer 任务**（用户明示）。implementer 选 gemini-31-pro / glm-5.2 / minimax-m3 / step-explore 等；k3 仅可考虑用于审查/架构（如需独立视角）。
+
 ## 2026-08-01 后端安全修复分支 fix/backend-debug-0731（8 任务 + 终审）
 
 ### Implementer
@@ -34,3 +37,16 @@
 - 双 `slint_build::compile` 共存时后者覆盖 SLINT_INCLUDE_GENERATED → 探针先于 main 编译。
 - 新 worktree 缺 gitignore 生成文件 → 先跑 `node scripts/generate-i18n-contract.mjs`。
 - mind 五色 × 双主题 25 预计算 token 已扩生成器入 palette（color-mix(in srgb) = gamma 逐通道插值，透明端 8 位 alpha）。
+## 2026-08-04 P1 安全债修复轮（fix/p1-security-0804: C1 trash + C2 relay + C3 keyring）
+
+### Implementer
+- **volcengine-agent-plan/deepseek-v4-flash（general/deepseek-v4-flash_general 派发）**：C1/C2/C3 三个任务均一次成功（C3 一轮 fixer 修文档与一处 M-8 测试加固）。亮点：报告事实纪律严格执行，所有「机制存在/不存在」结论均带 file:line（继承自 C1 教训）；fail-closed / sentinel / 密钥迁移等敏感改动审慎。**深度+速度优于 kimi-k3 + 额度充足**，确立为本轮 implementer 默认档。
+- **ark/kimi-k3 flat 派发失败**（"Model not found: ark/kimi-k3"）—— 一律走 volcengine 线。flat kimi-k3 + ark-* 变体在本环境均不可解析。
+
+### Reviewer (judge)
+- **minimax-cn-coding-plan/MiniMax-M3**：C1/C2/C3 三轮审查。**C1 第一次抓出 implementer 对远程确认门的事实捏造**（spec FAIL → DONE_WITH_CONCERNS → fix 轮修正）；C2/C3 8-10 项机制核验全部 file:line 独立确认 0 捏造。C3 唯一 Important = 本环境 ring/aws-lc-sys gcc 缺失导致测试未实跑（环境约束，非代码），fix 轮已显式记录 + 援引 C2 同根因。任务级稳定档。
+
+### 编排者经验（C1 教训）
+- **报告纪律是 spec 判决的一部分**：implementer 报告里若编造/推断机制存在性结论（无 file:line 证据），即 spec FAIL，与代码正确与否无关。Brief 必须明示「所有机制性结论带 file:line，无法核实写未核实」。
+- **fix 轮派回原 task_id 续会话**：fixer 延续上下文，最小成本；若另开新会话会丢规范与 diff 状态。
+- **环境约束显式化**：当本机 gcc/PATH 等缺导致验证不可跑，report 必须明示而非默略——既避免下游「成功数字」假象，又给 CI 留明确接管路径。

@@ -1,0 +1,502 @@
+﻿diff --git a/Cargo.lock b/Cargo.lock
+index c627e3f..90c14e6 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -11052,6 +11052,7 @@ dependencies = [
+  "grep-searcher",
+  "ignore",
+  "tracing",
++ "trash",
+  "vte",
+ ]
+ 
+@@ -11172,6 +11173,24 @@ dependencies = [
+  "tracing-log",
+ ]
+ 
++[[package]]
++name = "trash"
++version = "5.2.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7602e0c7d66ec2d92a8c917219fbc7894039efa2063b9064260110828a356f46"
++dependencies = [
++ "chrono",
++ "libc",
++ "log",
++ "objc2 0.6.4",
++ "objc2-foundation 0.3.2",
++ "once_cell",
++ "percent-encoding",
++ "scopeguard",
++ "urlencoding",
++ "windows 0.56.0",
++]
++
+ [[package]]
+ name = "tray-icon"
+ version = "0.24.1"
+@@ -12012,8 +12031,8 @@ dependencies = [
+  "webview2-com-sys",
+  "windows 0.61.3",
+  "windows-core 0.61.2",
+- "windows-implement",
+- "windows-interface",
++ "windows-implement 0.60.2",
++ "windows-interface 0.59.3",
+ ]
+ 
+ [[package]]
+@@ -12181,6 +12200,16 @@ dependencies = [
+  "windows-version",
+ ]
+ 
++[[package]]
++name = "windows"
++version = "0.56.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1de69df01bdf1ead2f4ac895dc77c9351aefff65b2f3db429a343f9cbf05e132"
++dependencies = [
++ "windows-core 0.56.0",
++ "windows-targets 0.52.6",
++]
++
+ [[package]]
+ name = "windows"
+ version = "0.61.3"
+@@ -12224,14 +12253,26 @@ dependencies = [
+  "windows-core 0.62.2",
+ ]
+ 
++[[package]]
++name = "windows-core"
++version = "0.56.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4698e52ed2d08f8658ab0c39512a7c00ee5fe2688c65f8c0a4f06750d729f2a6"
++dependencies = [
++ "windows-implement 0.56.0",
++ "windows-interface 0.56.0",
++ "windows-result 0.1.2",
++ "windows-targets 0.52.6",
++]
++
+ [[package]]
+ name = "windows-core"
+ version = "0.61.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c0fdd3ddb90610c7638aa2b3a3ab2904fb9e5cdbecc643ddb3647212781c4ae3"
+ dependencies = [
+- "windows-implement",
+- "windows-interface",
++ "windows-implement 0.60.2",
++ "windows-interface 0.59.3",
+  "windows-link 0.1.3",
+  "windows-result 0.3.4",
+  "windows-strings 0.4.2",
+@@ -12243,8 +12284,8 @@ version = "0.62.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
+ dependencies = [
+- "windows-implement",
+- "windows-interface",
++ "windows-implement 0.60.2",
++ "windows-interface 0.59.3",
+  "windows-link 0.2.1",
+  "windows-result 0.4.1",
+  "windows-strings 0.5.1",
+@@ -12272,6 +12313,17 @@ dependencies = [
+  "windows-threading 0.2.1",
+ ]
+ 
++[[package]]
++name = "windows-implement"
++version = "0.56.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f6fc35f58ecd95a9b71c4f2329b911016e6bec66b3f2e6a4aad86bd2e99e2f9b"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.118",
++]
++
+ [[package]]
+ name = "windows-implement"
+ version = "0.60.2"
+@@ -12283,6 +12335,17 @@ dependencies = [
+  "syn 2.0.118",
+ ]
+ 
++[[package]]
++name = "windows-interface"
++version = "0.56.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "08990546bf4edef8f431fa6326e032865f27138718c587dc21bc0265bbcb57cc"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.118",
++]
++
+ [[package]]
+ name = "windows-interface"
+ version = "0.59.3"
+@@ -12326,6 +12389,15 @@ dependencies = [
+  "windows-link 0.2.1",
+ ]
+ 
++[[package]]
++name = "windows-result"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5e383302e8ec8515204254685643de10811af0ed97ea37210dc26fb0032647f8"
++dependencies = [
++ "windows-targets 0.52.6",
++]
++
+ [[package]]
+ name = "windows-result"
+ version = "0.3.4"
+diff --git a/Cargo.toml b/Cargo.toml
+index 3f297e8..1133424 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -117,6 +117,7 @@ dunce = "1"
+ filetime = "0.2"
+ fs2 = "0.4"
+ zip = { version = "4.6", default-features = false, features = ["deflate"] } # plugin load
++trash = "5.2.6"
+ flate2 = "1.0"
+ toml = "0.9"
+ 
+diff --git a/docs/status/tech-debt-ledger.md b/docs/status/tech-debt-ledger.md
+index dc3e187..e32248e 100644
+--- a/docs/status/tech-debt-ledger.md
++++ b/docs/status/tech-debt-ledger.md
+@@ -27,7 +27,7 @@
+ - **Symptom**: `save_app_settings` uses `tokio::fs::write` directly. No temp-file + rename pattern. Code comment acknowledges: "Phase 1: simple write 鈥?upgrade to atomic in Phase 5".
+ - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:655-667`. `src/crates/assembly/core/src/infrastructure/storage/persistence.rs:15-20` has file lock mechanism but `save_app_settings` does not use it.
+ - **Proposed fix**: Write to `app.json.tmp`, then `tokio::fs::rename` (atomic on same filesystem). Use existing `FILE_LOCKS` from persistence.rs.
+-- **Status**: active (code comment says Phase 5)
++- **Status**: `resolved` 鈥?fixed by `9be74ec` (Task 7 / H-9 desktop settings atomic钀界洏). Ledger flipped retroactively per `.superpowers/sdd/final-review.md` 搂3.2.
+ 
+ ### P1-2: API key stored in plaintext
+ 
+@@ -41,7 +41,7 @@
+ - **Symptom**: `delete_local_path` calls `fs::remove_file` / `fs::remove_dir_all` directly. Remote uses `rm -rf`. Deletions are irreversible.
+ - **Evidence**: `src/crates/execution/tool-execution/src/fs/delete_path.rs:49-64` (local), `:70-75` (remote `rm -rf`). No `trash` / `recycle` references in `src/`.
+ - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
+-- **Status**: active
++- **Status**: `resolved` 鈥?trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 8 new tests (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
+ 
+ ### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
+ 
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+index 0d6afd2..d4420fc 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+@@ -320,6 +320,7 @@ Important notes:
+             logical_path: resolved.logical_path.clone(),
+             resolved_path: Path::new(&resolved.resolved_path).to_path_buf(),
+             recursive,
++            permanent: false, // Default: send to recycle bin for safety
+         };
+         let outcome = tokio::task::spawn_blocking(move || delete_local_path(delete_request))
+             .await
+diff --git a/src/crates/execution/tool-execution/Cargo.toml b/src/crates/execution/tool-execution/Cargo.toml
+index a89c2f3..caea5b1 100644
+--- a/src/crates/execution/tool-execution/Cargo.toml
++++ b/src/crates/execution/tool-execution/Cargo.toml
+@@ -11,3 +11,4 @@ grep-searcher = { workspace = true }
+ ignore = { workspace = true }
+ tracing = { workspace = true }
+ vte = { workspace = true, features = ["ansi"] }
++trash = { workspace = true }
+diff --git a/src/crates/execution/tool-execution/src/fs/delete_path.rs b/src/crates/execution/tool-execution/src/fs/delete_path.rs
+index 5c2ebdb..8f0fb40 100644
+--- a/src/crates/execution/tool-execution/src/fs/delete_path.rs
++++ b/src/crates/execution/tool-execution/src/fs/delete_path.rs
+@@ -14,6 +14,10 @@ pub struct DeleteLocalPathRequest {
+     pub logical_path: String,
+     pub resolved_path: PathBuf,
+     pub recursive: bool,
++    /// When true, bypass the recycle bin and permanently delete via fs::remove_*.
++    /// Default (false) moves the path to the OS recycle bin via the trash crate.
++    /// This is a safety measure: most callers should keep the default (false).
++    pub permanent: bool,
+ }
+ 
+ #[derive(Debug, Clone, PartialEq, Eq)]
+@@ -21,6 +25,8 @@ pub struct DeleteLocalPathOutcome {
+     pub logical_path: String,
+     pub is_directory: bool,
+     pub recursive: bool,
++    /// True when the path was moved to the recycle bin (trash), false when permanently deleted.
++    pub recycled: bool,
+ }
+ 
+ pub fn inspect_local_delete_target(path: &Path) -> Result<LocalDeleteTarget, String> {
+@@ -55,21 +61,47 @@ pub fn delete_local_path(request: DeleteLocalPathRequest) -> Result<DeleteLocalP
+         return Err(format!("Path does not exist: {}", request.logical_path));
+     }
+ 
+-    if target.is_directory {
+-        if request.recursive {
+-            fs::remove_dir_all(&request.resolved_path)
+-                .map_err(|error| format!("Failed to delete directory: {}", error))?;
++    if request.permanent {
++        // Explicit permanent delete 鈥?use fs::remove_* as before.
++        if target.is_directory {
++            if request.recursive {
++                fs::remove_dir_all(&request.resolved_path)
++                    .map_err(|error| format!("Failed to delete directory: {}", error))?;
++            } else {
++                fs::remove_dir(&request.resolved_path)
++                    .map_err(|error| format!("Failed to delete directory: {}", error))?;
++            }
+         } else {
+-            fs::remove_dir(&request.resolved_path).map_err(|error| format!("Failed to delete directory: {}", error))?;
++            fs::remove_file(&request.resolved_path)
++                .map_err(|error| format!("Failed to delete file: {}", error))?;
+         }
+-    } else {
+-        fs::remove_file(&request.resolved_path).map_err(|error| format!("Failed to delete file: {}", error))?;
++
++        return Ok(DeleteLocalPathOutcome {
++            logical_path: request.logical_path,
++            is_directory: target.is_directory,
++            recursive: request.recursive,
++            recycled: false,
++        });
++    }
++
++    // Default: move to recycle bin via trash crate.
++    // fail-closed: trash backend failure returns Err 鈥?no silent fallback to fs::remove_*.
++    #[cfg(not(test))]
++    {
++        trash::delete(&request.resolved_path)
++            .map_err(|error| format!("Failed to move to recycle bin: {}", error))?;
++    }
++
++    #[cfg(test)]
++    {
++        testing::mock_trash_delete(&request.resolved_path)?;
+     }
+ 
+     Ok(DeleteLocalPathOutcome {
+         logical_path: request.logical_path,
+         is_directory: target.is_directory,
+         recursive: request.recursive,
++        recycled: true,
+     })
+ }
+ 
+@@ -80,3 +112,198 @@ pub fn build_remote_delete_command(resolved_path: &str, recursive: bool) -> Stri
+         format!("rm -f {}", shell_single_quote(resolved_path))
+     }
+ }
++
++/// Test-only mock backend for the trash seam.
++///
++/// Use `testing::set_trash_result(...)` to control whether trash succeeds or fails,
++/// and `testing::was_trash_called()` / `testing::last_trash_path()` to inspect calls.
++/// These helpers are compiled only during `cargo test`.
++///
++/// Uses thread-local storage so parallel test execution does not interfere.
++#[cfg(test)]
++pub mod testing {
++    use super::*;
++    use std::cell::RefCell;
++
++    thread_local! {
++        static TRASH_CALLED: RefCell<bool> = RefCell::new(false);
++        static TRASH_PATH: RefCell<Option<PathBuf>> = RefCell::new(None);
++        static TRASH_RESULT: RefCell<Result<(), String>> = RefCell::new(Ok(()));
++    }
++
++    /// Called by `delete_local_path` under `#[cfg(test)]` instead of the real trash crate.
++    pub fn mock_trash_delete(path: &Path) -> Result<(), String> {
++        TRASH_CALLED.with(|called| *called.borrow_mut() = true);
++        TRASH_PATH.with(|p| *p.borrow_mut() = Some(path.to_path_buf()));
++        TRASH_RESULT.with(|r| r.borrow().clone())
++    }
++
++    /// Set the result that `mock_trash_delete` will return.
++    /// Default is `Ok(())`.
++    pub fn set_trash_result(result: Result<(), String>) {
++        TRASH_RESULT.with(|r| *r.borrow_mut() = result);
++    }
++
++    /// Reset all mock state (call count, path, result).
++    pub fn reset() {
++        TRASH_CALLED.with(|called| *called.borrow_mut() = false);
++        TRASH_PATH.with(|p| *p.borrow_mut() = None);
++        TRASH_RESULT.with(|r| *r.borrow_mut() = Ok(()));
++    }
++
++    /// Returns true if `mock_trash_delete` was called since the last `reset()`.
++    pub fn was_trash_called() -> bool {
++        TRASH_CALLED.with(|called| *called.borrow())
++    }
++
++    /// Returns the path that was passed to the last `mock_trash_delete` call, if any.
++    pub fn last_trash_path() -> Option<PathBuf> {
++        TRASH_PATH.with(|p| p.borrow().clone())
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::fs;
++
++    fn make_temp_dir(name: &str) -> PathBuf {
++        let unique = std::time::SystemTime::now()
++            .duration_since(std::time::UNIX_EPOCH)
++            .expect("time went backwards")
++            .as_nanos();
++        let dir = std::env::temp_dir().join(format!("northhing-delpath-{name}-{unique}"));
++        fs::create_dir_all(&dir).expect("temp dir should be created");
++        dir
++    }
++
++    #[test]
++    fn default_request_sends_to_trash_seam() {
++        testing::reset();
++        testing::set_trash_result(Ok(()));
++
++        let root = make_temp_dir("trash-default");
++        let file = root.join("test.txt");
++        fs::write(&file, "content").expect("file should be written");
++
++        let outcome = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "test.txt".to_string(),
++            resolved_path: file.clone(),
++            recursive: false,
++            permanent: false,
++        })
++        .expect("trash delete should succeed");
++
++        assert!(outcome.recycled, "outcome should report recycled=true");
++        assert!(testing::was_trash_called(), "trash seam should have been called");
++        // mock trash does not actually remove the file
++        assert!(file.exists(), "mock trash does not remove the file");
++
++        let _ = fs::remove_dir_all(root);
++    }
++
++    #[test]
++    fn permanent_true_bypasses_trash() {
++        testing::reset();
++        testing::set_trash_result(Ok(()));
++
++        let root = make_temp_dir("trash-permanent");
++        let file = root.join("test.txt");
++        fs::write(&file, "content").expect("file should be written");
++
++        let outcome = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "test.txt".to_string(),
++            resolved_path: file.clone(),
++            recursive: false,
++            permanent: true,
++        })
++        .expect("permanent delete should succeed");
++
++        assert!(!outcome.recycled, "outcome should report recycled=false");
++        assert!(!testing::was_trash_called(), "trash seam should NOT have been called");
++        assert!(!file.exists(), "file should be permanently deleted");
++
++        let _ = fs::remove_dir_all(root);
++    }
++
++    #[test]
++    fn trash_failure_returns_err_fail_closed() {
++        testing::reset();
++        testing::set_trash_result(Err("trash unavailable".to_string()));
++
++        let root = make_temp_dir("trash-fail-closed");
++        let file = root.join("test.txt");
++        fs::write(&file, "content").expect("file should be written");
++
++        let err = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "test.txt".to_string(),
++            resolved_path: file.clone(),
++            recursive: false,
++            permanent: false,
++        })
++        .expect_err("trash failure should propagate as Err");
++
++        assert!(err.contains("trash"), "error should mention trash: {}", err);
++        // fail-closed: file still exists (trash didn't remove it, fs::remove was not called)
++        assert!(file.exists(), "file should still exist on trash failure");
++
++        let _ = fs::remove_dir_all(root);
++    }
++
++    #[test]
++    fn directory_via_trash_seam() {
++        testing::reset();
++        testing::set_trash_result(Ok(()));
++
++        let root = make_temp_dir("trash-dir");
++        let dir = root.join("mydir");
++        fs::create_dir_all(&dir).expect("dir should be created");
++        fs::write(dir.join("child.txt"), "child").expect("child should be written");
++
++        let outcome = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "mydir".to_string(),
++            resolved_path: dir.clone(),
++            recursive: true,
++            permanent: false,
++        })
++        .expect("directory trash delete should succeed");
++
++        assert!(outcome.recycled);
++        assert!(testing::was_trash_called());
++
++        let _ = fs::remove_dir_all(root);
++    }
++
++    #[test]
++    fn nonexistent_path_returns_err_regardless_of_permanent() {
++        testing::reset();
++        testing::set_trash_result(Ok(()));
++
++        let root = make_temp_dir("trash-nonexistent");
++        let missing = root.join("does_not_exist.txt");
++
++        // Test with permanent=false (trash path)
++        let err1 = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "does_not_exist.txt".to_string(),
++            resolved_path: missing.clone(),
++            recursive: false,
++            permanent: false,
++        })
++        .expect_err("nonexistent path should return Err");
++
++        assert!(err1.contains("does not exist"), "error should mention path: {}", err1);
++
++        // Test with permanent=true (fs path)
++        let err2 = delete_local_path(DeleteLocalPathRequest {
++            logical_path: "does_not_exist.txt".to_string(),
++            resolved_path: missing.clone(),
++            recursive: false,
++            permanent: true,
++        })
++        .expect_err("nonexistent path should return Err even for permanent");
++
++        assert!(err2.contains("does not exist"), "error should mention path: {}", err2);
++
++        let _ = fs::remove_dir_all(root);
++    }
++}
+diff --git a/src/crates/execution/tool-execution/tests/tool_io_contracts.rs b/src/crates/execution/tool-execution/tests/tool_io_contracts.rs
+index 2bd9186..a68a483 100644
+--- a/src/crates/execution/tool-execution/tests/tool_io_contracts.rs
++++ b/src/crates/execution/tool-execution/tests/tool_io_contracts.rs
+@@ -165,6 +165,7 @@ fn delete_local_path_inspection_and_execution_preserve_recursive_guard_facts() {
+         logical_path: "dir".to_string(),
+         resolved_path: dir.clone(),
+         recursive: true,
++        permanent: true, // Explicit permanent delete for this test
+     })
+     .expect("recursive delete should succeed");
+ 

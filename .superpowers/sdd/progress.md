@@ -18,3 +18,16 @@
 | Regression sweep (2026-08-01): relay 49/49, integrations 172/172, desktop 98/98, core 1128/1134 (6 failed = pre-existing on main, confirmed by baseline run on E:\agent-project\northing: subagent_ports cancel/timeout x3 + auto_memory prompt_injection x3) | no regression introduced by branch |
 | Task 9: complete (commit 6574b01, review APPROVED WITH NOTES by judge-m3) | target 14/14; full 1134/1134 x2 no flaky; cargo check -p northhing pass. B-1 (product bug): GlobalConfigManager::initialize -> INIT_MUTEX double-checked locking + fallible-work-first, removes OnceLock TOCTOU + irreversible half-init; B-2: subagent_ports ensure_global_config_for_tests no longer inits AIClientFactory (cancel true cause = execution_task ~0.84s LLM network roundtrip > 50ms cancel window, independent verification overturned brief TOCTOU attribution); A: default_memory_db_path cfg(test) thread-local seam + RAII MemoryDbPathGuard. Minor to triage: assert_secondary_fields_populated _expected_text dead-code (pre-existing), memory_db.rs 918 lines near 1000 god-file threshold. FYI: AIClientFactory::initialize_global same TOCTOU unfixed (follow-up). |
 | Regression re-sweep (post-Task-9, 2026-08-01): core 1134/1134 x2 (was 1128 + 6 fixed); relay/integrations/desktop unaffected | DECISION: merge --no-ff to main; 5 high-priority tech-debt opened as follow-ups (see tech-debt-followups.md: FU-1 save_user_config fail-open / FU-2 LSP stop_server mapping / FU-3 dedup unlocked write / FU-4 dead wrapper / FU-5 AIClientFactory TOCTOU) |
+
+---
+
+# P1 Security Round Ledger (2026-08-04)
+
+计划：`.superpowers/sdd/plan-2026-08-04-p1-security.md`
+分支：`fix/p1-security-0804`（worktree `.worktrees/p1-security-0804`，基线 ae44334）
+
+- Task C1: complete (commits ae44334..3404060, review 双 PASS；fix 1 轮：report 确认门结论捏造被打回重写) — trash crate 默认回收站 + fail-closed + permanent 开关；88 tests；副产物：P1-6 新债入库（DeleteFileTool needs_permissions=false 绕过确认门，remote rm -rf 无确认）
+
+- Task C2: complete (commits 3404060..7fa7d62, review 双 PASS 0C/0I, 6 Minor) — standalone relay loopback 默认 + 自动 key 生成（~/.northhing/relay/api_key, 0600 + 原子写）+ RELAY_BIND env + 非 loopback 无 key 启动 fail-closed + CORS 收紧（移除了 relay-core lib.rs 硬编码 CorsLayer::permissive()，cors_allow_origins 字段原本未接线已补接）+ embedded relay 启动 warn + ledger P1-5 resolved / P1-7 active。61 tests。
+
+- Task C3: complete (commits 7fa7d62..f42451d, review 双 PASS, 1I/10M；fix 1 轮: I-1 环境约束显式化 + M-1/M-3/M-4 计数与措辞修正 + M-6 新增 P1-8 MCPServerConfig.env 明文 concern + M-8 并发测试 final-state 加固) — ProviderConfig.api_key 迁移 OS keyring (v4.1.6, windows-native-keyring-store)；KeyringBackend trait + Production/Mock 双实现；load 路径迁移 + sentinel + idempotent + fail-closed (ring/aws-lc-sys gcc 缺失环境约束已显式记录, CI 覆盖)。副产物：P1-7 (embedded relay key threading, C2) + P1-8 (MCPServerConfig.env plaintext, C3 fix 轮发现)。
