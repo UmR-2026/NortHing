@@ -1,5 +1,6 @@
 use super::load_app_settings_quiet;
 use super::update_app_settings_quiet;
+use crate::app_state::settings::keyring::{resolve_api_key, PRODUCTION_KEYRING};
 use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
@@ -86,10 +87,12 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                 use northhing_kernel_api::settings::ProviderFormDto;
                 use northhing_kernel_api::KernelSettingsApi;
                 let facade = kernel_facade();
+                let resolved_key = resolve_api_key(&*PRODUCTION_KEYRING, &provider.id, &provider.api_key)
+                    .unwrap_or_else(|_| provider.api_key.clone());
                 let form = ProviderFormDto {
                     provider_id: provider.id.clone(),
                     base_url: Some(provider.base_url.clone()),
-                    api_key: Some(provider.api_key.clone()),
+                    api_key: Some(resolved_key),
                     model: Some(provider.model.clone()),
                     provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
                 };

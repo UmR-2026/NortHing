@@ -37,6 +37,7 @@ use std::path::{Path, PathBuf};
 
 mod integrity;
 mod io;
+mod keyring;
 mod sync;
 mod types;
 
@@ -44,6 +45,7 @@ mod types;
 mod tests;
 
 pub use io::*;
+pub use keyring::*;
 pub use sync::*;
 pub use types::*;
 

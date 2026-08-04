@@ -1,3 +1,4 @@
+use super::keyring::{KeyringBackend, API_KEY_SENTINEL, PRODUCTION_KEYRING};
 use super::{AppSettings, ModelRef};
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
@@ -30,10 +31,10 @@ pub fn app_settings_path() -> Result<PathBuf> {
 /// dropped. Persist the migration immediately when anything was dropped.
 pub async fn load_app_settings() -> Result<AppSettings> {
     let path = app_settings_path()?;
-    load_app_settings_at(&path).await
+    load_app_settings_at(&path, &*PRODUCTION_KEYRING).await
 }
 
-async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
+async fn load_app_settings_at(path: &Path, keyring: &dyn KeyringBackend) -> Result<AppSettings> {
     if !path.exists() {
         return Ok(AppSettings::default());
     }
@@ -49,7 +50,66 @@ async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
             tracing::warn!(target: "app_state", "load dedup save failed: {e}");
         }
     }
+    // 2026-08-04 (C3, P1-2): migrate plaintext API keys to OS keyring.
+    // Any keyring failure aborts the entire load (fail-closed) — no
+    // plaintext key is allowed to stay on disk when the keyring is
+    // unavailable.
+    let migrated = keyring_migrate_providers(keyring, &mut parsed)?;
+    if migrated > 0 {
+        save_app_settings_at(path, &parsed).await?;
+    }
     Ok(parsed)
+}
+
+/// Migrate plaintext API keys from `ProviderConfig.api_key` to the OS keyring.
+///
+/// For each provider with a non-empty, non-sentinel `api_key`:
+/// 1. Store the real key in the keyring under `(KEYRING_SERVICE, provider.id)`.
+/// 2. Replace the in-memory field with [`API_KEY_SENTINEL`].
+///
+/// ## Fail-closed
+///
+/// If any keyring `store` operation fails, the entire migration is aborted
+/// and an `Err` is returned. The in-memory `parsed` is left unchanged so
+/// the caller can decide whether to retry or propagate the error upward.
+///
+/// ## Returns
+///
+/// The number of providers migrated (0 means none were plaintext).
+pub(super) fn keyring_migrate_providers(keyring: &dyn KeyringBackend, parsed: &mut AppSettings) -> Result<usize> {
+    let mut count = 0usize;
+    for provider in &mut parsed.providers {
+        if provider.api_key.is_empty() || provider.api_key == API_KEY_SENTINEL {
+            continue;
+        }
+        // Store the plaintext key in the OS keyring.
+        let plaintext = std::mem::take(&mut provider.api_key);
+        // If keyring store fails, put the key back and abort (fail-closed).
+        match keyring.store(&provider.id, &plaintext) {
+            Ok(()) => {
+                provider.api_key = API_KEY_SENTINEL.to_string();
+                count += 1;
+            }
+            Err(e) => {
+                // Restore the plaintext key so the in-memory state is unchanged.
+                provider.api_key = plaintext;
+                return Err(e).context(format!(
+                    "keyring: failed to migrate API key for provider '{}' ({}). \
+                     The OS keychain may be unavailable — please configure a \
+                     Secret Service provider on Linux, or check your keychain \
+                     access on macOS/Windows",
+                    provider.id, provider.name
+                ));
+            }
+        }
+    }
+    if count > 0 {
+        tracing::info!(
+            target: "app_state",
+            "keyring migration: moved {count} provider API key(s) to OS keyring"
+        );
+    }
+    Ok(count)
 }
 
 /// Transactional settings update (H-9). Runs the whole load → `f` → atomic
@@ -62,13 +122,26 @@ async fn load_app_settings_at(path: &Path) -> Result<AppSettings> {
 /// aborts the transaction without touching the file.
 pub async fn update_app_settings<T>(f: impl FnOnce(&mut AppSettings) -> Result<T>) -> Result<T> {
     let path = app_settings_path()?;
-    update_app_settings_at(&path, f).await
+    update_app_settings_at(&path, &*PRODUCTION_KEYRING, f).await
 }
 
-async fn update_app_settings_at<T>(path: &Path, f: impl FnOnce(&mut AppSettings) -> Result<T>) -> Result<T> {
+async fn update_app_settings_at<T>(
+    path: &Path,
+    keyring: &dyn KeyringBackend,
+    f: impl FnOnce(&mut AppSettings) -> Result<T>,
+) -> Result<T> {
     let _guard = SETTINGS_WRITE_LOCK.lock().await;
-    let mut settings = load_app_settings_at(path).await?;
+    let mut settings = load_app_settings_at(path, keyring).await?;
     let result = f(&mut settings)?;
+    // 2026-08-04 (C3, P1-2): migrate any new plaintext keys added by `f`
+    // before saving, so no plaintext key reaches disk even on the first save.
+    let migrated = keyring_migrate_providers(keyring, &mut settings)?;
+    if migrated > 0 {
+        tracing::info!(
+            target: "app_state",
+            "keyring migration in update: moved {migrated} newly-added provider API key(s)"
+        );
+    }
     save_app_settings_at(path, &settings).await?;
     Ok(result)
 }

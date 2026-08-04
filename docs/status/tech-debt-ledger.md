@@ -27,21 +27,22 @@
 - **Symptom**: `save_app_settings` uses `tokio::fs::write` directly. No temp-file + rename pattern. Code comment acknowledges: "Phase 1: simple write — upgrade to atomic in Phase 5".
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:655-667`. `src/crates/assembly/core/src/infrastructure/storage/persistence.rs:15-20` has file lock mechanism but `save_app_settings` does not use it.
 - **Proposed fix**: Write to `app.json.tmp`, then `tokio::fs::rename` (atomic on same filesystem). Use existing `FILE_LOCKS` from persistence.rs.
-- **Status**: active (code comment says Phase 5)
+- **Status**: `resolved` — fixed by `9be74ec` (Task 7 / H-9 desktop settings atomic落盘). Ledger flipped retroactively per `.superpowers/sdd/final-review.md` §3.2.
 
 ### P1-2: API key stored in plaintext
 
 - **Symptom**: `ProviderConfig.api_key` stored as plaintext string in `app.json`. No keyring, encryption, or obfuscation. Code comment: "Stored in plaintext in app.json. Never logged."
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:104-105`. Search for `keyring` / `encrypt` in `src/` returns no matches (except unrelated relay E2E encryption).
 - **Proposed fix**: (1) Short-term: use OS keyring crate. (2) Mid-term: AES-256-GCM with machine-derived key. (3) Long-term: env var injection, no disk storage.
-- **Status**: active
+- **Status**: `resolved` (2026-08-04, `fix/p1-security-0804`, C3). `ProviderConfig.api_key` migrated to OS keyring via `keyring` crate v4.1.6. See below for details.
+- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (Mutex-guarded HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). 15 keyring unit tests (keyring.rs) + 4 IO integration tests (io_tests.rs), verified by grep `^[[:space:]]*#\[test\]` / `^[[:space:]]*#\[tokio::test\]`.
 
 ### P1-3: Delete bypasses recycle bin
 
 - **Symptom**: `delete_local_path` calls `fs::remove_file` / `fs::remove_dir_all` directly. Remote uses `rm -rf`. Deletions are irreversible.
 - **Evidence**: `src/crates/execution/tool-execution/src/fs/delete_path.rs:49-64` (local), `:70-75` (remote `rm -rf`). No `trash` / `recycle` references in `src/`.
 - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
-- **Status**: active
+- **Status**: `resolved` — trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 5 new unit tests + 1 integration test updated (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
 
 ### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
 
@@ -61,7 +62,29 @@
 - **Symptom**: Relay server defaults to `0.0.0.0:9700`, `api_key: None`, CORS `*`. `RELAY_API_KEY` env var exists but is optional.
 - **Evidence**: `src/apps/relay-server/src/config.rs:30,41-42,63-67`. `routes/api.rs:32-72` — `AuthExtractor` only enforces when `api_key` is `Some`.
 - **Proposed fix**: (1) Default bind to `127.0.0.1`. (2) Auto-generate API key on first run. (3) CORS default to `http://localhost:*`. (4) Print security warning if running unauthenticated on 0.0.0.0.
-- **Status**: active (partially mitigated — `RELAY_API_KEY` available but off by default)
+- **Status**: resolved (2026-08-04, `fix/p1-security-0804`). See details below.
+- **Resolution details**: Default bind changed to `127.0.0.1:9700` (`src/apps/relay-server/src/config.rs`). `RELAY_BIND` env var overrides the full socket addr. Auto-generates API key on first run at `~/.northhing/relay/api_key` with atomic write (tmp+rename). `RELAY_API_KEY` env always takes priority. Non-loopback bind without key → `from_env` returns error (fail-closed). CORS defaults to localhost-origin predicate (any port) instead of `*`; `RELAY_CORS_ALLOW_ORIGINS` env var overrides. CORS `cors_allow_origins` config field now wired to the axum router (was previously unused — `build_relay_router` used hardcoded `CorsLayer::permissive()` at `relay-core/src/lib.rs:168`). Embedded relay (P1-7) remains open mode per product requirement.
+
+### P1-7: Embedded relay open mode — 0.0.0.0 with no API key (LAN pairing product requirement)
+
+- **Symptom**: `start_embedded_relay` binds `0.0.0.0:{port}` and passes `None` to `build_relay_router`, leaving pair/command endpoints open. This is a product-required open surface for LAN/ngrok mobile phone pairing — the pairing protocol itself must carry an out-of-band key.
+- **Evidence**: `src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs:28-33` (passes `None`), `:44-46` (binds `0.0.0.0:{port}`).
+- **Proposed fix**: Thread an API key through the embedded relay path, gated by the pairing protocol handshake (design task). Options: (1) Generate ephemeral key on each desktop start and include in QR code/pairing URL. (2) Use a configurable key from desktop settings. (3) Pairing-level token exchange before relay commands.
+- **Status**: active (registered 2026-08-04, P1-5 standalone mitigation complete; a startup `warn!` has been added at `embedded_relay.rs`)
+
+### P1-8: MCPServerConfig.env serialized as plaintext in app.json
+
+- **Symptom**: `MCPServerConfig.env` (`HashMap<String, String>`) stores environment variables for stdio subprocesses as plaintext in `app.json`. These env vars commonly carry credentials (e.g. `OPENAI_API_KEY=sk-xxx`, `AWS_ACCESS_KEY_ID=...`), creating the same plaintext-on-disk risk as P1-2.
+- **Evidence**: `src/apps/desktop/src/app_state/settings/types.rs:161-162` — `pub env: HashMap<String, String>` in `MCPServerConfig`. The field is serialized/deserialized without any encryption or keyring-backed indirection.
+- **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改").
+- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7)
+
+### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
+
+- **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
+- **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
+- **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
+- **Status**: active (discovered by C1 review 2026-08-04)
 
 ## P2 — Experience and operations
 

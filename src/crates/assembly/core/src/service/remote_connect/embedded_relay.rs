@@ -3,10 +3,19 @@
 //! Runs inside the desktop process, reusing the same relay logic as the
 //! standalone relay-server binary. Uses `MemoryAssetStore` for in-memory
 //! mobile-web file storage (no disk I/O for uploaded assets).
+//!
+//! # Security note (P1-7, registered 2026-08-04)
+//!
+//! This relay binds on `0.0.0.0:{port}` with no API key authentication
+//! (open mode). This is a product-required open surface for LAN/ngrok
+//! mobile phone pairing — the pairing protocol itself must carry an
+//! out-of-band key (design task). Until that is implemented, a warning
+//! is logged at startup.
 
 use northhing_relay_core::{build_relay_router, MemoryAssetStore, RoomManager};
 use std::sync::Arc;
 use tracing::info;
+use tracing::warn;
 
 /// Start the embedded relay and return a shutdown handle.
 ///
@@ -31,6 +40,19 @@ pub async fn start_embedded_relay(port: u16, static_dir: Option<&str>) -> anyhow
     // embedded relay's threat model changes (e.g. ngrok public exposure),
     // thread an API key through the same path the standalone relay uses.
     let mut app = build_relay_router(room_manager, asset_store, start_time, None);
+
+    // P1-7 warn: embedded relay is open (no key) and binds 0.0.0.0.
+    warn!(
+        "Embedded relay started on 0.0.0.0:{port} with no API key (open mode) \
+         and no authentication on pair/command endpoints. This is intentional \
+         for LAN/ngrok phone pairing. See P1-7 in tech-debt-ledger.md."
+    );
+
+    // Apply permissive CORS for embedded relay (LAN/ngrok origins must be
+    // able to connect from arbitrary IPs). The CORS was moved from the
+    // shared build_relay_router to each consumer (P1-5, 2026-08-04).
+    use tower_http::cors::CorsLayer;
+    app = app.layer(CorsLayer::permissive());
 
     if let Some(dir) = static_dir {
         info!("Embedded relay: serving static files from {dir}");

@@ -320,6 +320,7 @@ Important notes:
             logical_path: resolved.logical_path.clone(),
             resolved_path: Path::new(&resolved.resolved_path).to_path_buf(),
             recursive,
+            permanent: false, // Default: send to recycle bin for safety
         };
         let outcome = tokio::task::spawn_blocking(move || delete_local_path(delete_request))
             .await

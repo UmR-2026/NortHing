@@ -1,3 +1,4 @@
+use super::keyring::{resolve_api_key, KeyringBackend, PRODUCTION_KEYRING};
 use super::{AppSettings, ProviderConfig, ProviderType};
 
 // 2026-07-18 (D2e): edit-flow key inheritance — empty incoming key on edit
@@ -25,7 +26,26 @@ pub fn provider_wire_format(t: &ProviderType) -> &'static str {
 }
 
 /// Convert a desktop `ProviderConfig` into a facade `AIModelConfigDto`.
-pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_kernel_api::settings::AIModelConfigDto {
+/// The actual API key is resolved from the OS keyring when the stored
+/// field is the sentinel value (`API_KEY_SENTINEL`).
+///
+/// ## Logging discipline
+///
+/// This function never logs the API key itself. The keyring lookup
+/// failure is handled by the caller (`sync_providers_to_core`).
+pub fn provider_to_ai_model_config(p: &ProviderConfig, keyring: &dyn KeyringBackend) -> northhing_kernel_api::settings::AIModelConfigDto {
+    let resolved_key = resolve_api_key(keyring, &p.id, &p.api_key).unwrap_or_else(|_| {
+        // Keyring unavailable — fall back to the stored field value.
+        // This path is only reached when the sentinel is present but the
+        // keyring entry is missing (should not happen in normal operation
+        // after a successful migration). We log a warning without the key.
+        tracing::warn!(
+            target: "app_state",
+            "keyring entry missing for provider '{}' ({}) — falling back to stored field",
+            p.id, p.name
+        );
+        p.api_key.clone()
+    });
     northhing_kernel_api::settings::AIModelConfigDto {
         id: p.id.clone(),
         provider_id: provider_wire_format(&p.provider_type).to_string(),
@@ -34,7 +54,7 @@ pub fn provider_to_ai_model_config(p: &ProviderConfig) -> northhing_kernel_api::
         max_tokens: None,
         temperature: None,
         base_url: Some(p.base_url.clone()),
-        api_key: Some(p.api_key.clone()),
+        api_key: Some(resolved_key),
         enabled: Some(p.enabled),
         category: Some("general_chat".to_string()),
         capabilities: Some(vec!["text_chat".to_string(), "function_calling".to_string()]),
@@ -87,7 +107,7 @@ pub async fn sync_providers_to_core(settings: &AppSettings) -> anyhow::Result<us
     let existing = facade.list_model_configs().await?;
     let mut count = 0;
     for p in &settings.providers {
-        let model = provider_to_ai_model_config(p);
+        let model = provider_to_ai_model_config(p, &*PRODUCTION_KEYRING);
         facade.upsert_model_config(model).await?;
         count += 1;
     }

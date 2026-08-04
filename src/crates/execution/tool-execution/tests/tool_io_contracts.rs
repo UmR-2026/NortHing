@@ -165,6 +165,7 @@ fn delete_local_path_inspection_and_execution_preserve_recursive_guard_facts() {
         logical_path: "dir".to_string(),
         resolved_path: dir.clone(),
         recursive: true,
+        permanent: true, // Explicit permanent delete for this test
     })
     .expect("recursive delete should succeed");
 
