@@ -96,13 +96,26 @@ impl LspManager {
         let validated_id = ValidatedPluginId::try_from(plugin_id)
             .map_err(|e| anyhow!("Invalid plugin id: {}", e))?;
 
-        if let Err(e) = self.stop_server(plugin_id).await {
-            warn!("Failed to stop server for {}: {}", plugin_id, e);
-        }
+        // Resolve the plugin's language keys before unregistering: `stop_server`
+        // expects language keys, and the registry can no longer resolve them
+        // once the plugin is removed.
+        let languages = {
+            let registry = self.registry.read().await;
+            registry
+                .get_plugin(plugin_id)
+                .map(|plugin| plugin.languages.clone())
+                .unwrap_or_default()
+        };
 
         {
             let mut registry = self.registry.write().await;
             registry.unregister(plugin_id)?;
+        }
+
+        for language in &languages {
+            if let Err(e) = self.stop_server(language).await {
+                warn!("Failed to stop server for language {}: {}", language, e);
+            }
         }
 
         self.plugin_loader.uninstall_plugin(&validated_id).await?;
@@ -252,14 +265,14 @@ impl LspManager {
     pub async fn shutdown(&self) -> Result<()> {
         info!("Shutting down all LSP servers");
 
-        let plugin_ids: Vec<String> = {
+        let languages: Vec<String> = {
             let processes = self.processes.read().await;
             processes.keys().cloned().collect()
         };
 
-        for plugin_id in plugin_ids {
-            if let Err(e) = self.stop_server(&plugin_id).await {
-                error!("Failed to stop server {}: {}", plugin_id, e);
+        for language in languages {
+            if let Err(e) = self.stop_server(&language).await {
+                error!("Failed to stop server {}: {}", language, e);
             }
         }
 
@@ -654,5 +667,122 @@ impl LspManager {
 impl Drop for LspManager {
     fn drop(&mut self) {
         debug!("Dropping LSP Manager");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::lsp::types::ServerConfig;
+    use northhing_test_support::TestTempDir;
+
+    fn test_plugin(id: &str, languages: &[&str]) -> LspPlugin {
+        LspPlugin {
+            id: id.to_string(),
+            name: "Test Plugin".to_string(),
+            version: "0.1.0".to_string(),
+            author: "tester".to_string(),
+            description: "test plugin".to_string(),
+            server: ServerConfig {
+                command: "server".to_string(),
+                args: Vec::new(),
+                env: HashMap::new(),
+                runtime: None,
+            },
+            languages: languages.iter().map(|l| l.to_string()).collect(),
+            file_extensions: Vec::new(),
+            capabilities: serde_json::from_value(serde_json::json!({})).expect("empty capabilities"),
+            settings: HashMap::new(),
+            checksum: String::new(),
+            min_northhing_version: String::new(),
+        }
+    }
+
+    /// A real, existing binary that exits right after spawn: `spawn` requires
+    /// an existing path, and a long-running dummy would hit the 60-second
+    /// request timeout inside `shutdown`.
+    fn dummy_server_command() -> (PathBuf, ServerConfig) {
+        #[cfg(windows)]
+        let (bin, args) = {
+            let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+            (
+                PathBuf::from(root).join("System32").join("cmd.exe"),
+                vec!["/c".to_string(), "exit".to_string(), "0".to_string()],
+            )
+        };
+        #[cfg(not(windows))]
+        let (bin, args) = (
+            PathBuf::from("/bin/sh"),
+            vec!["-c".to_string(), "exit 0".to_string()],
+        );
+        let config = ServerConfig {
+            command: "server".to_string(),
+            args,
+            env: HashMap::new(),
+            runtime: None,
+        };
+        (bin, config)
+    }
+
+    async fn spawn_dummy_server(id: &str) -> Arc<LspServerProcess> {
+        let (bin, config) = dummy_server_command();
+        assert!(bin.exists(), "dummy binary must exist: {:?}", bin);
+        let process = LspServerProcess::spawn(id.to_string(), bin, &config, None, None, None, None)
+            .await
+            .expect("dummy server should spawn");
+        Arc::new(process)
+    }
+
+    fn harness() -> (TestTempDir, LspManager) {
+        let tmp = TestTempDir::new("lsp-manager");
+        let plugins_dir = tmp.path().join("plugins");
+        std::fs::create_dir_all(&plugins_dir).expect("create plugins dir");
+        (tmp, LspManager::new(plugins_dir))
+    }
+
+    fn fake_installed_plugin(manager: &LspManager, plugin: &LspPlugin) {
+        let plugin_dir = manager.plugin_loader.plugins_root().join(&plugin.id);
+        std::fs::create_dir_all(&plugin_dir).expect("create plugin dir");
+        let manifest = serde_json::to_string(plugin).expect("serialize manifest");
+        std::fs::write(plugin_dir.join("manifest.json"), manifest).expect("write manifest");
+    }
+
+    #[tokio::test]
+    async fn uninstall_stops_servers_by_resolved_language_keys() {
+        let (_tmp, manager) = harness();
+        let plugin = test_plugin("multi-lang-plugin", &["lang-alpha", "lang-beta"]);
+        manager.register_plugin_internal(plugin.clone()).await.expect("register");
+        for language in &plugin.languages {
+            let process = spawn_dummy_server("multi-lang-plugin").await;
+            manager.processes.write().await.insert(language.clone(), process);
+        }
+        fake_installed_plugin(&manager, &plugin);
+
+        manager.uninstall_plugin("multi-lang-plugin").await.expect("uninstall");
+
+        let remaining: Vec<String> = manager.processes.read().await.keys().cloned().collect();
+        assert!(
+            remaining.is_empty(),
+            "no language entry may survive uninstall, remaining: {:?}",
+            remaining
+        );
+        assert!(manager.get_plugin("multi-lang-plugin").await.is_none());
+        assert!(!manager.plugin_loader.plugins_root().join("multi-lang-plugin").exists());
+    }
+
+    #[tokio::test]
+    async fn uninstall_unregistered_plugin_keeps_unregister_error_and_skips_stop() {
+        let (_tmp, manager) = harness();
+        let other = test_plugin("other-plugin", &["other-lang"]);
+        manager.register_plugin_internal(other).await.expect("register");
+        let process = spawn_dummy_server("other-plugin").await;
+        manager.processes.write().await.insert("other-lang".to_string(), process);
+
+        assert!(manager.uninstall_plugin("never-registered").await.is_err());
+
+        assert!(
+            manager.is_server_running("other-lang").await,
+            "unrelated server must not be stopped"
+        );
     }
 }

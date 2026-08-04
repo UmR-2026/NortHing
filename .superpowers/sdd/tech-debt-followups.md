@@ -2,7 +2,7 @@
 
 来源：`final-review.md` §5 triage 高优先级 4 项 + Task 9 遗留 1 项。
 本文件为后续子代理任务的输入；每项独立可派单，互不依赖。
-状态：FU-1 **resolved**（`fix/backend-followups-0804` Task B1）；其余 **open**，未开始。
+状态：FU-1、FU-2 **resolved**（`fix/backend-followups-0804` Task B1/B2）；其余 **open**，未开始。
 
 ---
 
@@ -18,6 +18,9 @@
 - **优先级理由**：安全类，与已修 H-7 同根，留之即留同类攻击/损坏面。
 
 ## FU-2 [functional] LspManager::uninstall_plugin stop_server 路径映射 bug
+
+> **状态**：resolved — Task B2（`fix/backend-followups-0804`），commit `fix(lsp): uninstall stops servers by resolved language keys (FU-2)`。
+> 修复：`uninstall_plugin` 在 `registry.unregister` 之前先经 registry 解析该插件的全部 language keys（多语言插件全覆盖），unregister 后逐个 `stop_server(language)`（在 loader 删文件之前完成 stop 尝试）；插件不在 registry 时解析为空、跳过 stop，`unregister` 错误语义不变。顺带把 `shutdown()` 中误名的 `plugin_ids` 改名 `languages`。新增 manager 测试 2 个：多语言插件卸载后 `processes` 无残留条目（真实 spawn + tempdir 端到端）；未注册插件保持 unregister 报错且不误停无关服务。
 
 - **定位**：`src/crates/assembly/core/src/service/lsp/manager.rs` `uninstall_plugin`（Task 8 仅加 ID 校验，未触此逻辑）。
 - **现象/根因**：卸载时把 `plugin_id` 传给 `stop_server`，但 `stop_server` 期望的是 **language key**，二者映射不一致 → 卸载后对应 LSP 进程实际未被停止，残留进程。pre-existing 功能 bug，非本分支引入。
