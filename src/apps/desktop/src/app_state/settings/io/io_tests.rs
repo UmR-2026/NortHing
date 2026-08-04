@@ -3,10 +3,14 @@
 // no test touches the real `~/.northhing/config/app.json` (same path
 // injection scheme as Task 5 `remote_connect/bot/persistence_tests.rs`).
 //
+// 2026-08-04 (C3, P1-2): tests now use a MockKeyring so they do not depend
+// on the real OS keyring. The `_at` variants accept a `&dyn KeyringBackend`.
+//
 // Note: this file lives under `settings/io/` because `io.rs` declares
 // `mod io_tests;` as a child module (rustc resolves it to `io/io_tests.rs`).
 
 use super::*;
+use crate::app_state::settings::keyring::{MockKeyring, API_KEY_SENTINEL};
 use crate::app_state::settings::{ProviderConfig, ProviderType};
 use northhing_test_support::TestTempDir;
 
@@ -37,14 +41,16 @@ fn provider_with_fields(id: &str, name: &str, base_url: &str, api_key: &str, mod
 /// with the lock the final file must contain all 10.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_updates_preserve_all_writes() {
+    let kr = MockKeyring::new();
     let dir = TestTempDir::new("settings-io-concurrent");
     let path = dir.path().join("app.json");
 
     let mut tasks = Vec::new();
     for i in 0..10 {
         let path = path.clone();
+        let kr_ref = &kr;
         tasks.push(tokio::spawn(async move {
-            update_app_settings_at(&path, |s| {
+            update_app_settings_at(&path, kr_ref, |s| {
                 let id = format!("p{i}");
                 s.upsert_provider(provider_with_fields(&id, &format!("provider-{i}"), &format!("https://x{i}.com/v1"), &format!("sk-{i}"), &format!("model-{i}")));
                 Ok(())
@@ -56,7 +62,7 @@ async fn concurrent_updates_preserve_all_writes() {
         task.await.expect("concurrent update task panicked").expect("concurrent update failed");
     }
 
-    let final_settings = load_app_settings_at(&path).await.expect("final load");
+    let final_settings = load_app_settings_at(&path, &kr).await.expect("final load");
     assert_eq!(final_settings.providers.len(), 10, "no update may be lost");
     for i in 0..10 {
         let id = format!("p{i}");
@@ -73,6 +79,7 @@ async fn concurrent_updates_preserve_all_writes() {
 /// exactly the previous version (no partial write, no blanking).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn update_with_err_closure_does_not_write_file() {
+    let kr = MockKeyring::new();
     let dir = TestTempDir::new("settings-io-err");
     let path = dir.path().join("app.json");
 
@@ -81,7 +88,7 @@ async fn update_with_err_closure_does_not_write_file() {
     save_app_settings_at(&path, &initial).await.expect("seed write");
     let before = tokio::fs::read(&path).await.expect("read before");
 
-    let result: anyhow::Result<()> = update_app_settings_at(&path, |_s| Err(anyhow::anyhow!("boom"))).await;
+    let result: anyhow::Result<()> = update_app_settings_at(&path, &kr, |_s| Err(anyhow::anyhow!("boom"))).await;
     assert!(result.is_err(), "closure error must propagate");
 
     let after = tokio::fs::read(&path).await.expect("read after");
@@ -94,6 +101,7 @@ async fn update_with_err_closure_does_not_write_file() {
 /// file: subsequent save/load cycles ignore it and the main file stays valid.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn leftover_tmp_file_does_not_break_main_file() {
+    let kr = MockKeyring::new();
     let dir = TestTempDir::new("settings-io-crash");
     let path = dir.path().join("app.json");
 
@@ -105,7 +113,7 @@ async fn leftover_tmp_file_does_not_break_main_file() {
     settings.add_workspace(PathBuf::from("/tmp/proj"));
     save_app_settings_at(&path, &settings).await.expect("save with residue present");
 
-    let loaded = load_app_settings_at(&path).await.expect("load with residue present");
+    let loaded = load_app_settings_at(&path, &kr).await.expect("load with residue present");
     assert_eq!(loaded.workspaces.len(), 1, "main file must be intact");
 
     let raw = tokio::fs::read_to_string(&path).await.expect("read main");
@@ -153,6 +161,7 @@ async fn second_write_keeps_previous_version_in_bak() {
 /// on-disk file must end up deduplicated.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn load_dedup_migration_still_persists() {
+    let kr = MockKeyring::new();
     let dir = TestTempDir::new("settings-io-dedup");
     let path = dir.path().join("app.json");
 
@@ -167,7 +176,7 @@ async fn load_dedup_migration_still_persists() {
         .await
         .expect("seed write");
 
-    let loaded = load_app_settings_at(&path).await.expect("load");
+    let loaded = load_app_settings_at(&path, &kr).await.expect("load");
     assert_eq!(loaded.providers.len(), 1, "in-memory dedup must drop the duplicate");
 
     let on_disk: AppSettings =
@@ -183,11 +192,168 @@ async fn load_dedup_migration_still_persists() {
 /// the UI believe the user has no configuration.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn load_parse_failure_returns_err() {
+    let kr = MockKeyring::new();
     let dir = TestTempDir::new("settings-io-parse");
     let path = dir.path().join("app.json");
 
     tokio::fs::write(&path, b"{ \"schema_version\": ").await.expect("corrupt seed write");
 
-    let result = load_app_settings_at(&path).await;
+    let result = load_app_settings_at(&path, &kr).await;
     assert!(result.is_err(), "corrupt JSON must propagate Err (fail-closed)");
+}
+
+// ===== C3, P1-2: keyring migration tests =====
+
+/// A plaintext API key is migrated to the keyring on load: the in-memory
+/// field becomes the sentinel, the keyring holds the real key.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn keyring_migration_plaintext_to_sentinel() {
+    let kr = MockKeyring::new();
+    let dir = TestTempDir::new("settings-io-kr-migrate");
+    let path = dir.path().join("app.json");
+
+    let mut seeded = AppSettings::default();
+    seeded.providers = vec![
+        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
+    ];
+    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
+        .await
+        .expect("seed write");
+
+    let loaded = load_app_settings_at(&path, &kr).await.expect("load with keyring");
+    assert_eq!(loaded.providers.len(), 1);
+    assert_eq!(
+        loaded.providers[0].api_key, API_KEY_SENTINEL,
+        "plaintext key must be replaced with sentinel in memory"
+    );
+    kr.assert_contains("p1", "sk-real-key-123");
+
+    // On disk, the api_key must also be the sentinel (not the plaintext).
+    let on_disk = tokio::fs::read_to_string(&path).await.expect("read main");
+    assert!(
+        !on_disk.contains("sk-real-key-123"),
+        "plaintext key must NOT remain in the on-disk file"
+    );
+    assert!(
+        on_disk.contains(API_KEY_SENTINEL),
+        "on-disk file must contain the sentinel value"
+    );
+}
+
+/// When the api_key is already the sentinel, load must NOT touch the keyring
+/// (idempotent — no duplicate keyring writes).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn keyring_migration_already_sentinel_is_idempotent() {
+    let kr = MockKeyring::new();
+    let dir = TestTempDir::new("settings-io-kr-idempotent");
+    let path = dir.path().join("app.json");
+
+    let mut seeded = AppSettings::default();
+    seeded.providers = vec![
+        provider_with_fields("p1", "provider-a", "https://x.com/v1", API_KEY_SENTINEL, "gpt-4"),
+    ];
+    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
+        .await
+        .expect("seed write");
+
+    // Load once — no migration should happen since the field is already sentinel.
+    let loaded = load_app_settings_at(&path, &kr).await.expect("load with sentinel");
+    assert_eq!(loaded.providers.len(), 1);
+    assert_eq!(loaded.providers[0].api_key, API_KEY_SENTINEL);
+
+    // The keyring must still be empty (no key was written).
+    assert!(kr.get("p1").is_err(), "no keyring write should occur for sentinel-only field");
+
+    // Load again — still no keyring write (idempotent).
+    let loaded2 = load_app_settings_at(&path, &kr).await.expect("second load");
+    assert_eq!(loaded2.providers.len(), 1);
+    assert_eq!(loaded2.providers[0].api_key, API_KEY_SENTINEL);
+    assert!(kr.get("p1").is_err(), "second load must also not write to keyring");
+}
+
+/// When the keyring store fails (fail-closed), the load must return Err
+/// and the disk file must remain unchanged (no sentinel written).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn keyring_migration_fail_closed_does_not_write_file() {
+    // A keyring backend that always fails on store.
+    use crate::app_state::settings::keyring::KeyringBackend;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[derive(Debug)]
+    struct FailingKeyring(AtomicBool);
+
+    impl KeyringBackend for FailingKeyring {
+        fn store(&self, _account: &str, _secret: &str) -> anyhow::Result<()> {
+            self.0.store(true, Ordering::SeqCst);
+            Err(anyhow::anyhow!("keyring unavailable: Secret Service not running"))
+        }
+        fn get(&self, _account: &str) -> anyhow::Result<String> {
+            Err(anyhow::anyhow!("keyring unavailable"))
+        }
+        fn delete(&self, _account: &str) -> anyhow::Result<()> {
+            Err(anyhow::anyhow!("keyring unavailable"))
+        }
+    }
+
+    let kr = FailingKeyring(AtomicBool::new(false));
+    let dir = TestTempDir::new("settings-io-kr-fail");
+    let path = dir.path().join("app.json");
+
+    let mut seeded = AppSettings::default();
+    seeded.providers = vec![
+        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
+    ];
+    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
+        .await
+        .expect("seed write");
+    let before = tokio::fs::read(&path).await.expect("read before");
+
+    let result = load_app_settings_at(&path, &kr).await;
+    assert!(result.is_err(), "keyring failure must propagate Err (fail-closed)");
+    assert!(kr.0.load(Ordering::SeqCst), "store must have been attempted");
+
+    // File must be untouched.
+    let after = tokio::fs::read(&path).await.expect("read after");
+    assert_eq!(before, after, "failed keyring migration must not modify the file");
+    let on_disk = String::from_utf8_lossy(&after);
+    assert!(
+        on_disk.contains("sk-real-key-123"),
+        "plaintext key must still be in the file after fail-closed"
+    );
+    assert!(
+        !on_disk.contains(API_KEY_SENTINEL),
+        "sentinel must NOT appear in file after fail-closed"
+    );
+}
+
+/// Concurrent loads (all with plaintext keys) must all succeed and the
+/// file must end up with sentinels, not plaintext keys.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn keyring_migration_concurrent_loads_are_idempotent() {
+    let kr = MockKeyring::new();
+    let dir = TestTempDir::new("settings-io-kr-concurrent");
+    let path = dir.path().join("app.json");
+
+    let mut seeded = AppSettings::default();
+    seeded.providers = vec![
+        provider_with_fields("p1", "provider-a", "https://x.com/v1", "sk-real-key-123", "gpt-4"),
+    ];
+    tokio::fs::write(&path, serde_json::to_string_pretty(&seeded).expect("seed serialize"))
+        .await
+        .expect("seed write");
+
+    let mut tasks = Vec::new();
+    for _ in 0..5 {
+        let path = path.clone();
+        tasks.push(tokio::spawn(async move {
+            let kr = MockKeyring::new();
+            kr.seed("p1", "sk-real-key-123");
+            let loaded = load_app_settings_at(&path, &kr).await.expect("concurrent load");
+            assert_eq!(loaded.providers.len(), 1);
+            assert_eq!(loaded.providers[0].api_key, API_KEY_SENTINEL);
+        }));
+    }
+    for task in tasks {
+        task.await.expect("concurrent load task panicked");
+    }
 }

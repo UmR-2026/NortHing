@@ -1,4 +1,5 @@
 use super::*;
+use crate::app_state::settings::keyring::MockKeyring;
 use std::collections::HashMap;
 
 fn sample_provider() -> ProviderConfig {
@@ -356,8 +357,9 @@ fn provider_wire_format_mapping() {
 
 #[test]
 fn provider_to_ai_model_config_fields() {
+    let kr = MockKeyring::new();
     let p = ProviderConfig::new("我的 Anthropic".into(), ProviderType::Anthropic);
-    let m = provider_to_ai_model_config(&p);
+    let m = provider_to_ai_model_config(&p, &kr);
     assert_eq!(m.id, p.id);
     assert_eq!(m.display_name, Some("我的 Anthropic".to_string()));
     assert_eq!(m.provider_id, "anthropic");

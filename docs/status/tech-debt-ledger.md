@@ -34,7 +34,8 @@
 - **Symptom**: `ProviderConfig.api_key` stored as plaintext string in `app.json`. No keyring, encryption, or obfuscation. Code comment: "Stored in plaintext in app.json. Never logged."
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:104-105`. Search for `keyring` / `encrypt` in `src/` returns no matches (except unrelated relay E2E encryption).
 - **Proposed fix**: (1) Short-term: use OS keyring crate. (2) Mid-term: AES-256-GCM with machine-derived key. (3) Long-term: env var injection, no disk storage.
-- **Status**: active
+- **Status**: `resolved` (2026-08-04, `fix/p1-security-0804`, C3). `ProviderConfig.api_key` migrated to OS keyring via `keyring` crate v4.1.6. See below for details.
+- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (thread-local HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). Five new keyring tests + all existing tests pass.
 
 ### P1-3: Delete bypasses recycle bin
 
