@@ -61,7 +61,15 @@
 - **Symptom**: Relay server defaults to `0.0.0.0:9700`, `api_key: None`, CORS `*`. `RELAY_API_KEY` env var exists but is optional.
 - **Evidence**: `src/apps/relay-server/src/config.rs:30,41-42,63-67`. `routes/api.rs:32-72` — `AuthExtractor` only enforces when `api_key` is `Some`.
 - **Proposed fix**: (1) Default bind to `127.0.0.1`. (2) Auto-generate API key on first run. (3) CORS default to `http://localhost:*`. (4) Print security warning if running unauthenticated on 0.0.0.0.
-- **Status**: active (partially mitigated — `RELAY_API_KEY` available but off by default)
+- **Status**: resolved (2026-08-04, `fix/p1-security-0804`). See details below.
+- **Resolution details**: Default bind changed to `127.0.0.1:9700` (`src/apps/relay-server/src/config.rs`). `RELAY_BIND` env var overrides the full socket addr. Auto-generates API key on first run at `~/.northhing/relay/api_key` with atomic write (tmp+rename). `RELAY_API_KEY` env always takes priority. Non-loopback bind without key → `from_env` returns error (fail-closed). CORS defaults to localhost-origin predicate (any port) instead of `*`; `RELAY_CORS_ALLOW_ORIGINS` env var overrides. CORS `cors_allow_origins` config field now wired to the axum router (was previously unused — `build_relay_router` used hardcoded `CorsLayer::permissive()` at `relay-core/src/lib.rs:168`). Embedded relay (P1-7) remains open mode per product requirement.
+
+### P1-7: Embedded relay open mode — 0.0.0.0 with no API key (LAN pairing product requirement)
+
+- **Symptom**: `start_embedded_relay` binds `0.0.0.0:{port}` and passes `None` to `build_relay_router`, leaving pair/command endpoints open. This is a product-required open surface for LAN/ngrok mobile phone pairing — the pairing protocol itself must carry an out-of-band key.
+- **Evidence**: `src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs:28-33` (passes `None`), `:44-46` (binds `0.0.0.0:{port}`).
+- **Proposed fix**: Thread an API key through the embedded relay path, gated by the pairing protocol handshake (design task). Options: (1) Generate ephemeral key on each desktop start and include in QR code/pairing URL. (2) Use a configurable key from desktop settings. (3) Pairing-level token exchange before relay commands.
+- **Status**: active (registered 2026-08-04, P1-5 standalone mitigation complete; a startup `warn!` has been added at `embedded_relay.rs`)
 
 ### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
 

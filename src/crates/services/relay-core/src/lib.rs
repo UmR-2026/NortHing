@@ -165,6 +165,8 @@ pub fn build_relay_router(
         )
         .route("/r/{*rest}", get(routes::api::serve_room_web_catchall))
         .route("/ws", get(routes::websocket::websocket_handler))
-        .layer(tower_http::cors::CorsLayer::permissive())
+        // CORS layer is applied per-consumer (standalone relay-server applies
+        // config-based CORS; embedded relay applies permissive CORS for LAN/ngrok).
+        // Hardcoded CorsLayer::permissive() was removed 2026-08-04 (P1-5).
         .with_state(state)
 }
