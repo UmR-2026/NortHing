@@ -27,7 +27,7 @@
 - **Symptom**: `save_app_settings` uses `tokio::fs::write` directly. No temp-file + rename pattern. Code comment acknowledges: "Phase 1: simple write — upgrade to atomic in Phase 5".
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:655-667`. `src/crates/assembly/core/src/infrastructure/storage/persistence.rs:15-20` has file lock mechanism but `save_app_settings` does not use it.
 - **Proposed fix**: Write to `app.json.tmp`, then `tokio::fs::rename` (atomic on same filesystem). Use existing `FILE_LOCKS` from persistence.rs.
-- **Status**: active (code comment says Phase 5)
+- **Status**: `resolved` — fixed by `9be74ec` (Task 7 / H-9 desktop settings atomic落盘). Ledger flipped retroactively per `.superpowers/sdd/final-review.md` §3.2.
 
 ### P1-2: API key stored in plaintext
 
@@ -41,7 +41,7 @@
 - **Symptom**: `delete_local_path` calls `fs::remove_file` / `fs::remove_dir_all` directly. Remote uses `rm -rf`. Deletions are irreversible.
 - **Evidence**: `src/crates/execution/tool-execution/src/fs/delete_path.rs:49-64` (local), `:70-75` (remote `rm -rf`). No `trash` / `recycle` references in `src/`.
 - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
-- **Status**: active
+- **Status**: `resolved` — trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 8 new tests (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
 
 ### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
 
