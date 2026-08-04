@@ -41,7 +41,7 @@
 - **Symptom**: `delete_local_path` calls `fs::remove_file` / `fs::remove_dir_all` directly. Remote uses `rm -rf`. Deletions are irreversible.
 - **Evidence**: `src/crates/execution/tool-execution/src/fs/delete_path.rs:49-64` (local), `:70-75` (remote `rm -rf`). No `trash` / `recycle` references in `src/`.
 - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
-- **Status**: `resolved` — trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 8 new tests (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
+- **Status**: `resolved` — trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 5 new unit tests + 1 integration test updated (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
 
 ### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
 
@@ -62,6 +62,13 @@
 - **Evidence**: `src/apps/relay-server/src/config.rs:30,41-42,63-67`. `routes/api.rs:32-72` — `AuthExtractor` only enforces when `api_key` is `Some`.
 - **Proposed fix**: (1) Default bind to `127.0.0.1`. (2) Auto-generate API key on first run. (3) CORS default to `http://localhost:*`. (4) Print security warning if running unauthenticated on 0.0.0.0.
 - **Status**: active (partially mitigated — `RELAY_API_KEY` available but off by default)
+
+### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
+
+- **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
+- **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
+- **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
+- **Status**: active (discovered by C1 review 2026-08-04)
 
 ## P2 — Experience and operations
 
