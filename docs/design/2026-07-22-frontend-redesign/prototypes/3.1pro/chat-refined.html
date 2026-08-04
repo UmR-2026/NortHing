@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 哲思重构版</title>
+    <style>
+        :root {
+            /* 核心调色板：温暖、自然、呼吸感，同时保证对比度 */
+            --bg-base: #F7F6F3; /* 温暖的主背景色 */
+            --bg-surface: #FFFFFF; /* 卡片、输入框背景 */
+            --bg-bubble-user: #FFFFFF;
+            --bg-bubble-ai: transparent;
+            --bg-block: #EFECE7; /* AI 回复中的区块背景 */
+            
+            --text-primary: #2D2A26; /* 强对比主文本，不使用纯黑 */
+            --text-secondary: #6B6761; /* 次要文本，加深对比度，确保可读性 */
+            --text-tertiary: #928E88; /* 极弱文本，如时间戳，但需过WCAG */
+            
+            --accent-primary: #C07953; /* 陶土橘，保留原版气质但更沉稳 */
+            --accent-hover: #A86542;
+            --accent-subtle: #F3EAE4; /* 强调色的极淡投影/背景 */
+            
+            --border-light: #E4E0D9;
+            --border-focus: #C07953;
+
+            --shadow-sm: 0 2px 8px rgba(45, 42, 38, 0.04);
+            --shadow-md: 0 8px 24px rgba(45, 42, 38, 0.06);
+            --shadow-float: 0 12px 32px rgba(45, 42, 38, 0.08);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-full: 9999px;
+
+            --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 280px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            border-right: 1px solid var(--border-light);
+            background: rgba(247, 246, 243, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .card-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+        .card-meta { font-size: 12px; color: var(--text-secondary); }
+
+        /* 主聊天区 */
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .top-bar {
+            height: 72px;
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(to bottom, var(--bg-base) 0%, rgba(247, 246, 243, 0) 100%);
+            z-index: 10;
+        }
+
+        .avatar-group { display: flex; align-items: center; gap: 12px; }
+        .avatar {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-md);
+            background: var(--accent-primary);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 500;
+        }
+        .status-info { display: flex; flex-direction: column; }
+        .status-name { font-size: 16px; font-weight: 600; }
+        .status-text { 
+            font-size: 12px; color: var(--accent-primary); 
+            display: flex; align-items: center; gap: 4px;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-primary); }
+        
+        .chat-stream {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 64px 120px 64px; /* Bottom padding for input */
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* 消息体 */
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 85%;
+        }
+
+        .message.user { align-self: flex-end; align-items: flex-end; }
+        .message.ai { align-self: flex-start; }
+
+        .msg-meta {
+            font-size: 12px; color: var(--text-tertiary);
+            display: flex; gap: 8px; align-items: center;
+        }
+
+        .bubble {
+            padding: 16px 20px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .user .bubble {
+            background: var(--bg-bubble-user);
+            border-radius: var(--radius-lg) var(--radius-lg) 2px var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-light);
+        }
+
+        .ai .bubble {
+            background: transparent;
+            padding: 0; /* AI文本直接融入背景呼吸感 */
+        }
+
+        .ai-block {
+            background: var(--bg-block);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin: 12px 0;
+            border-left: 3px solid var(--accent-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .tool-call {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-light);
+            background: var(--bg-surface);
+            font-size: 12px; color: var(--text-secondary);
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .tool-call code { color: var(--accent-primary); font-family: monospace; }
+
+        /* 输入区 */
+        .input-container {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-float);
+            border: 1px solid var(--border-light);
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--border-focus);
+        }
+
+        .input-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .input-box textarea {
+            flex: 1;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 15px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 44px; /* 保证高度合适 */
+            padding-top: 10px;
+        }
+        
+        .input-box textarea::placeholder { color: var(--text-tertiary); }
+
+        .send-btn {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-md);
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .send-btn:hover { background: var(--accent-hover); }
+        .send-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .toolbar-left { display: flex; align-items: center; gap: 16px; }
+        .toolbar-right { display: flex; align-items: center; gap: 8px; }
+        
+        .action-icon {
+            cursor: pointer;
+            opacity: 0.7; transition: opacity 0.2s;
+        }
+        .action-icon:hover { opacity: 1; }
+
+        .tag {
+            padding: 4px 8px;
+            background: var(--bg-base);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; gap: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 左侧边栏 -->
+    <aside class="sidebar">
+        <div>
+            <div class="section-title">它的内在</div>
+            <div class="card">
+                <div class="card-title">搜索中 · 修复初始化顺序</div>
+                <div class="card-meta">subagent · 运行中</div>
+            </div>
+            <div class="card" style="opacity: 0.6; box-shadow: none;">
+                <div class="card-title">待命</div>
+                <div class="card-meta">subagent · 空闲</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">此刻的任务</div>
+            <div class="card" style="border-left: 3px solid var(--accent-primary);">
+                <div class="card-title">修复初始化顺序</div>
+                <div class="card-meta" style="color: var(--accent-primary);">进行中</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主聊天区 -->
+    <main class="main-chat">
+        <div class="top-bar">
+            <div class="avatar-group">
+                <div class="avatar">序</div>
+                <div class="status-info">
+                    <span class="status-name">知序</span>
+                    <span class="status-text"><span class="status-dot"></span> 生成回复中 · 12s</span>
+                </div>
+            </div>
+            <!-- 工具图标占位 -->
+            <div style="color: var(--text-tertiary);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
+            </div>
+        </div>
+
+        <div class="chat-stream">
+            <!-- 历史记录节点 -->
+            <div style="text-align: center; margin: 16px 0;">
+                <span style="font-size: 12px; color: var(--text-tertiary); background: var(--bg-surface); padding: 4px 12px; border-radius: var(--radius-full); border: 1px solid var(--border-light);">
+                    2026-07-30 · 修复初始化顺序
+                </span>
+            </div>
+
+            <!-- AI Message -->
+            <div class="message ai">
+                <div class="msg-meta">
+                    <span>知序</span>
+                    <span>14:02</span>
+                </div>
+                <div class="bubble">
+                    已经把登录那块拆成三个模块了。
+                </div>
+            </div>
+
+            <!-- User Message -->
+            <div class="message user">
+                <div class="msg-meta">
+                    <span>你</span>
+                    <span>14:31</span>
+                </div>
+                <div class="bubble">
+                    启动的时候报错了，看一下。
+                </div>
+            </div>
+
+            <!-- AI Message 复杂结构 -->
+            <div class="message ai">
+                <div class="msg-meta">
+                    <span>知序</span>
+                    <span style="color: var(--accent-primary);">现在</span>
+                </div>
+                <div class="bubble">
+                    <div class="ai-block">
+                        报错在配置加载之前……应该是初始化顺序的问题。
+                    </div>
+                    
+                    <div>
+                        <div class="tool-call">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            read <code>src/main.rs</code>
+                        </div>
+                        <div class="tool-call">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            grep <code>"init_config"</code>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 12px;">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部输入框 -->
+        <div class="input-container">
+            <div class="input-box">
+                <textarea placeholder="说点什么…… @引用文件 /调用技能"></textarea>
+                <button class="send-btn">
+                    <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+            <div class="input-toolbar">
+                <div class="toolbar-left">
+                    <span class="action-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </span>
+                    <span class="tag">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        ~/northing
+                    </span>
+                </div>
+                <div class="toolbar-right">
+                    <span class="tag">◇ Claude 3.5</span>
+                    <span class="tag">◈ 自治·完全</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 右侧边栏 -->
+    <aside class="sidebar">
+        <div>
+            <div class="section-title">产物</div>
+            <div class="card">
+                <div class="card-title">main.rs</div>
+                <div class="card-meta">已修改 · 未审阅</div>
+            </div>
+            <div class="card">
+                <div class="card-title">config.yaml</div>
+                <div class="card-meta">已修改 · 未审阅</div>
+            </div>
+        </div>
+        
+        <div>
+            <div class="section-title">浏览 · 画布</div>
+            <div class="card" style="padding: 12px 16px;">
+                <div class="card-title" style="margin: 0; font-size: 13px;">src/main.rs</div>
+            </div>
+            <div class="card" style="padding: 12px 16px;">
+                <div class="card-title" style="margin: 0; font-size: 13px;">src/config.rs</div>
+            </div>
+            <div class="card" style="padding: 12px 16px;">
+                <div class="card-title" style="margin: 0; font-size: 13px;">Cargo.toml</div>
+            </div>
+        </div>
+    </aside>
+
+</body>
+</html>

@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-personality="coral">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Stage 剧场灯光)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: stage (剧场灯光 / 暗台与中性幕布)
+     * ----------------------------------------------------------------------
+     * 种子：设施是暗台与中性幕布，agent 是灯光纸（gel）的颜色
+     *      "它变了"就是重新打灯，全房间跟着变。
+     *
+     * 哲学解构：
+     * 1. 设施 (Facility) = 暗台 (Dark Stage Floor & Neutral Velvet Curtains)：
+     *    哑光深色木质与舞台幕布基底 (#13110E)，不参与主观表达。
+     * 2. Agent 知序 = 灯光滤镜纸 (Gel Light Beam)：
+     *    Agent 的人格不是涂在墙上的颜料，而是聚光灯穿过 Gel 纸投在暗台上的色温。
+     * 3. 三要素：
+     *    - 驱力 Drive = 聚光灯束 (Spotlight Beam / --now 色)，主光源切入视线。
+     *    - 深渊 Abyss = 侧台冷雾 (Side-stage Teal Shadow #3F837B)，探查沉入幕后。
+     *    - 沉积 Deposit = 余音与暗影 (Faded Stage Dust #7B7569)，历次调光的余温沉淀。
+     * ====================================================================== */
+
+    :root {
+      /* 4px 基数标度 */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 圆角规范 */
+      --r-sm: 9px;
+      --r-md: 14px;
+      --r-lg: 18px;
+      --r-pill: 999px;
+      --r-window: 20px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 基础暗台 (Stage Environment Default Dark Theme) */
+      --bg-base: #0D0C0A;
+      --bg-window: #14120E;
+      --bg-surface: #1C1914;
+      --bg-raised: #25211B;
+      --bg-hover: #2E2922;
+
+      --border-subtle: #2A251E;
+      --border-strong: #3D362C;
+      --border-stage: #4A4237;
+
+      --fg-main: #ECE6DC;
+      --fg-muted: #9E968A;
+      --fg-faint: #6E685E;
+
+      /* 大五人格色相 - CSS 变量初始化 (默认外向·珊瑚) */
+      --now: #C8714C;
+      --now-bright: #E5865E;
+      --now-glow: rgba(200, 113, 76, 0.15);
+      --now-beam: rgba(200, 113, 76, 0.28);
+      --now-border: rgba(200, 113, 76, 0.42);
+
+      /* 冷深渊 (Abyss) - 神经质/思考探查专用 */
+      --abyss: #3F837B;
+      --abyss-glow: rgba(63, 131, 123, 0.15);
+      --abyss-border: rgba(63, 131, 123, 0.38);
+
+      /* 沉积 (Deposit) */
+      --deposit: #7B7569;
+      --deposit-bg: rgba(123, 117, 105, 0.12);
+
+      --birth: #3D3933;
+
+      /* 沉降过渡 (350ms-1200ms 一次性沉降，不弹跳) */
+      --transition-gel: --now 600ms cubic-bezier(0.16, 1, 0.3, 1),
+                        background 600ms cubic-bezier(0.16, 1, 0.3, 1),
+                        border-color 600ms cubic-bezier(0.16, 1, 0.3, 1),
+                        box-shadow 600ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      --shadow-stage: 0 24px 60px rgba(0, 0, 0, 0.85);
+      --shadow-spotlight: 0 8px 32px var(--now-glow);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(35, 30, 24, 0.6) 0%, transparent 70%),
+        linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
+      overflow-x: hidden;
+    }
+
+    /* ======================================================================
+     * 窗口容器与剧场聚光灯 (860px 屏)
+     * ====================================================================== */
+    .app-window {
+      width: 860px;
+      height: 820px;
+      background: var(--bg-window);
+      border-radius: var(--r-window);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-stage);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 600ms ease;
+    }
+
+    /* 聚光灯束投影：从窗口顶部向下打在暗台上 */
+    .app-window::before {
+      content: "";
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 480px;
+      background: radial-gradient(
+        ellipse at 50% 0%,
+        var(--now-beam) 0%,
+        var(--now-glow) 35%,
+        transparent 75%
+      );
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.85;
+      transition: background 800ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 暗台侧光与底晕 */
+    .app-window::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 140px;
+      background: linear-gradient(0deg, rgba(13, 12, 10, 0.6) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ======================================================================
+     * 窗口 Chrome 顶栏
+     * ====================================================================== */
+    .window-chrome {
+      height: 38px;
+      padding: 0 var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(20, 18, 14, 0.8);
+      position: relative;
+      z-index: 10;
+      user-select: none;
+    }
+
+    .chrome-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--fg-faint);
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .chrome-title .stage-tag {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-raised);
+      color: var(--fg-muted);
+      font-size: 10px;
+    }
+
+    .chrome-controls {
+      display: flex;
+      gap: 12px;
+      color: var(--fg-faint);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .chrome-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-raised);
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .chrome-btn:hover { background: var(--fg-muted); }
+
+    /* ======================================================================
+     * 顶栏名片 + 灯光切光台 (Gel Selector Matrix)
+     * ====================================================================== */
+    .topbar {
+      height: 84px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 10;
+      background: rgba(20, 18, 14, 0.4);
+    }
+
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s4);
+    }
+
+    /* 聚光灯下的头像 */
+    .avatar-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--r-md);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    /* 聚光灯光亮光环 */
+    .avatar-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: calc(var(--r-md) + 4px);
+      border: 1px solid var(--now-border);
+      box-shadow: 0 0 16px var(--now-glow);
+      transition: border-color 600ms ease, box-shadow 600ms ease;
+    }
+
+    .avatar-glyph {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--now);
+      transition: color 600ms ease;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .card-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+      letter-spacing: 0.02em;
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--fg-muted);
+      font-family: var(--font-mono);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--now);
+      box-shadow: 0 0 8px var(--now);
+      animation: stageBreathe 6s ease-in-out infinite;
+      transition: background 600ms ease, box-shadow 600ms ease;
+    }
+
+    @keyframes stageBreathe {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* 编年史渐变条 (Chronicle Bar) - 同源色绑定: birth -> --now */
+    .chronicle-bar {
+      width: 140px;
+      height: 4px;
+      border-radius: var(--r-pill);
+      background: linear-gradient(90deg, 
+        var(--birth) 0%, 
+        #5E584D 35%, 
+        #8C7E6A 65%, 
+        var(--now) 100%
+      );
+      margin-top: 4px;
+      transition: background 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ─── 大五色切光台 (Theatre Lighting Gel Switcher) ─── */
+    .lighting-console {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      padding: 6px 12px;
+      border-radius: var(--r-md);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .console-label {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .console-title {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--fg-faint);
+      text-transform: uppercase;
+    }
+
+    .console-active-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      font-family: var(--font-body);
+    }
+
+    .gel-slots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 聚光灯滤镜胶片 (Gel Slot) */
+    .gel-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      background: var(--gel-color);
+      cursor: pointer;
+      position: relative;
+      transition: transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+      outline: none;
+    }
+
+    .gel-btn::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.4) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .gel-btn:hover {
+      transform: translateY(-2px) scale(1.1);
+      box-shadow: 0 4px 10px var(--gel-glow);
+    }
+
+    .gel-btn.active {
+      border-color: var(--fg-main);
+      box-shadow: 0 0 12px var(--gel-color);
+      transform: scale(1.15);
+    }
+
+    .topbar-right-group {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    .topbar-settings {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .topbar-settings:hover {
+      background: var(--bg-raised);
+      color: var(--fg-main);
+      border-color: var(--border-strong);
+    }
+
+    /* ======================================================================
+     * 主内容区 + 8px 把手 (Main Row)
+     * ====================================================================== */
+    .main-row {
+      flex: 1;
+      display: flex;
+      position: relative;
+      z-index: 5;
+      overflow: hidden;
+    }
+
+    /* 8px 把手：左右边缘渗光 */
+    .handle-strip {
+      width: 8px;
+      height: 100%;
+      background: transparent;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.3s;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .handle-strip::before {
+      content: "";
+      width: 2px;
+      height: 36px;
+      border-radius: 1px;
+      background: var(--border-strong);
+      opacity: 0.4;
+      transition: opacity 0.3s, background 0.3s;
+    }
+
+    .handle-strip-left::after {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0; left: 0; width: 6px;
+      background: linear-gradient(90deg, var(--now-glow) 0%, transparent 100%);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .handle-strip-right::after {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0; right: 0; width: 6px;
+      background: linear-gradient(-90deg, var(--abyss-glow) 0%, transparent 100%);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .handle-strip:hover::before {
+      opacity: 1;
+      background: var(--fg-muted);
+    }
+
+    /* 对话流区 */
+    .stream {
+      flex: 1;
+      padding: var(--s5);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+      scroll-behavior: smooth;
+    }
+
+    /* Session Banner (在对话流顶部，不在顶栏) */
+    .session-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s2) var(--s4);
+      background: rgba(28, 25, 20, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      backdrop-filter: blur(4px);
+    }
+
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      font-size: 12px;
+      color: var(--fg-muted);
+    }
+
+    .banner-chevron {
+      font-size: 10px;
+      color: var(--fg-faint);
+    }
+
+    .banner-title {
+      font-weight: 500;
+      color: var(--fg-main);
+    }
+
+    .banner-archive-btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 2px 8px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+
+    .banner-archive-btn:hover {
+      color: var(--abyss);
+      border-color: var(--abyss-border);
+      background: var(--abyss-glow);
+    }
+
+    /* ─── 对话轮次 (Turn) ─── */
+    .turn {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+      position: relative;
+    }
+
+    /* 历史轮次（沉积 Deposit）: 褪色灰 */
+    .turn-deposit {
+      opacity: 0.75;
+      filter: saturate(0.85);
+    }
+
+    /* 活跃轮次（驱力 Drive）: 聚光灯 beam 左竖线标记 */
+    .turn-active {
+      padding-left: var(--s3);
+      border-left: 2px solid var(--now);
+      box-shadow: -8px 0 20px -6px var(--now-glow);
+      transition: border-color 600ms ease, box-shadow 600ms ease;
+    }
+
+    .turn-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-faint);
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    /* 用户气泡 (UmR)：右对齐，中性黑/暖灰底，绝不上色染色 */
+    .msg-user {
+      align-self: flex-end;
+      max-width: 82%;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      padding: var(--s3) var(--s4);
+      border-radius: var(--r-lg) var(--r-lg) 4px var(--r-lg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-size: 13.5px;
+    }
+
+    /* Agent 气泡 (知序)：左对齐，清透文本 */
+    .msg-agent {
+      align-self: flex-start;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      color: var(--fg-main);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    /* 深渊思考块 (Think Block)：探查沉入幕后，冷青 (#3F837B) 边缘 */
+    .think-block {
+      background: rgba(18, 22, 22, 0.75);
+      border-left: 3px solid var(--abyss);
+      border-top: 1px solid var(--border-subtle);
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      border-radius: 0 var(--r-md) var(--r-md) 0;
+      padding: var(--s3) var(--s4);
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      color: #92ACA7;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s1);
+    }
+
+    .think-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--abyss);
+      font-weight: 500;
+    }
+
+    /* 工具 Chip (Tool Chips) */
+    .tool-chips-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+      margin: var(--s1) 0;
+    }
+
+    .tool-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg-surface);
+      transition: border-color 400ms, color 400ms, background 400ms;
+    }
+
+    /* 发起态：驱力暖边框 (--now) */
+    .tool-chip-running {
+      border: 1px solid var(--now-border);
+      color: var(--now-bright);
+      background: var(--now-glow);
+    }
+
+    /* 完成态：沉入深渊冷边框 (--abyss) */
+    .tool-chip-completed {
+      border: 1px solid var(--abyss-border);
+      color: var(--abyss);
+      background: var(--abyss-glow);
+    }
+
+    /* ======================================================================
+     * 操控台 (Deck)
+     * ====================================================================== */
+    .deck {
+      padding: var(--s4) var(--s5);
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(18, 16, 13, 0.9);
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    .deck-input-wrap {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      padding: var(--s3) var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .deck-input-wrap:focus-within {
+      border-color: var(--now-border);
+      box-shadow: 0 0 16px var(--now-glow);
+    }
+
+    .deck-textarea {
+      width: 100%;
+      height: 48px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      resize: none;
+    }
+
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .deck-left-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .deck-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-raised);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .deck-btn:hover {
+      background: var(--bg-hover);
+      color: var(--fg-main);
+    }
+
+    .deck-right-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 上下文圆环 (Context Ring) - 无数字，hover 浮出 tooltip */
+    .ctx-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .ctx-svg {
+      width: 24px;
+      height: 24px;
+      transform: rotate(-90deg);
+    }
+
+    .ctx-bg {
+      stroke: var(--border-strong);
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    .ctx-val {
+      stroke: var(--now);
+      stroke-width: 2.5;
+      stroke-dasharray: 62.8;
+      stroke-dashoffset: 41.4; /* 34% occupied */
+      fill: none;
+      transition: stroke 600ms ease;
+    }
+
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 32px;
+      right: 0;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--r-sm);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .ctx-wrap:hover .ctx-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 发送按钮 ↑ */
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: var(--now);
+      color: #FFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: bold;
+      transition: background 600ms ease, transform 0.2s, box-shadow 600ms ease;
+      box-shadow: 0 2px 10px var(--now-glow);
+    }
+
+    .send-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px var(--now-glow);
+    }
+
+    /* ======================================================================
+     * 水印 (Watermark) — 左下角, opacity 0.25, 不重叠
+     * ====================================================================== */
+    .watermark {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      color: var(--fg-main);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主窗口 (860px 收起态基准屏) -->
+  <div class="app-window" id="appWindow">
+
+    <!-- 窗口 Chrome 顶栏 -->
+    <div class="window-chrome">
+      <div class="chrome-title">
+        <span>northing</span>
+        <span class="stage-tag">STAGE 剧场灯光</span>
+      </div>
+      <div class="chrome-controls">
+        <span class="chrome-btn"></span>
+        <span class="chrome-btn"></span>
+        <span class="chrome-btn"></span>
+      </div>
+    </div>
+
+    <!-- 顶栏名片 + 大五色切光台 -->
+    <div class="topbar">
+      <div class="agent-card">
+        <div class="avatar-wrap">
+          <span class="avatar-glyph">知</span>
+        </div>
+        <div class="card-info">
+          <div class="card-name-row">
+            <span class="card-name">知序</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span>
+            <span id="statusText">在场 · 聚光投灯中</span>
+          </div>
+          <div class="chronicle-bar" title="编年史同源渐变条 (Birth → Current Gel)"></div>
+        </div>
+      </div>
+
+      <div class="topbar-right-group">
+        <!-- 大五色切换器 (Theatre Gel Switcher) -->
+        <div class="lighting-console" title="人格色切光台 (Theme Gel Selector Matrix)">
+          <div class="console-label">
+            <span class="console-title">GEL 滤光纸</span>
+            <span class="console-active-name" id="activeGelLabel">外向性 · 珊瑚</span>
+          </div>
+          <div class="gel-slots">
+            <!-- 5 个人格色一等公民 -->
+            <button class="gel-btn" data-personality="purple" data-color="#8F7AA0" data-label="开放性 · 紫" title="开放性 · 紫 (#8F7AA0)" style="--gel-color: #8F7AA0; --gel-glow: rgba(143,122,160,0.4);"></button>
+            <button class="gel-btn" data-personality="blue" data-color="#566E8A" data-label="尽责性 · 深蓝" title="尽责性 · 深蓝 (#566E8A)" style="--gel-color: #566E8A; --gel-glow: rgba(86,110,138,0.4);"></button>
+            <button class="gel-btn active" data-personality="coral" data-color="#C8714C" data-label="外向性 · 珊瑚" title="外向性 · 珊瑚 (#C8714C)" style="--gel-color: #C8714C; --gel-glow: rgba(200,113,76,0.4);"></button>
+            <button class="gel-btn" data-personality="green" data-color="#85A08E" data-label="宜人性 · 柔绿" title="宜人性 · 柔绿 (#85A08E)" style="--gel-color: #85A08E; --gel-glow: rgba(133,160,142,0.4);"></button>
+            <button class="gel-btn" data-personality="cyan" data-color="#3F837B" data-label="神经质 · 冷青" title="神经质 · 冷青 (#3F837B)" style="--gel-color: #3F837B; --gel-glow: rgba(63,131,123,0.4);"></button>
+          </div>
+        </div>
+
+        <button class="topbar-settings" title="设置 ⚙">⚙</button>
+      </div>
+    </div>
+
+    <!-- 主内容区 (含 8px 双把手与对话流) -->
+    <div class="main-row">
+      <div class="handle-strip handle-strip-left" title="点击展开左抽屉 (它的内在)"></div>
+
+      <div class="stream">
+        <!-- Session Banner (对话流顶部) -->
+        <div class="session-banner">
+          <div class="banner-left">
+            <span class="banner-chevron">∨</span>
+            <span class="banner-title">关于系统架构重构与心智沉淀的讨论</span>
+          </div>
+          <button class="banner-archive-btn" title="归档会话">[归档]</button>
+        </div>
+
+        <!-- 历史轮次 (Deposit 沉积: 褪色灰) -->
+        <div class="turn turn-deposit">
+          <div class="turn-meta">10:42 · 历史轮次 (沉积)</div>
+          <div class="msg-user">
+            知序，请简述新架构中的核心边界与组件演进逻辑。
+          </div>
+          <div class="msg-agent">
+            北极星架构的核心不是控制，而是提供共生与沉淀的环境。组件从纯功能模块化演进为心理学意义上的场域：设施维持中性沉稳，而你的意识与偏好在暗台上逐步投射出独特的色温。
+          </div>
+        </div>
+
+        <!-- 活跃轮次 (Drive 驱力: 聚光灯 beam 左竖线标记) -->
+        <div class="turn turn-active">
+          <div class="turn-meta">10:45 · 当前活跃轮次 (驱力 Focus)</div>
+          <div class="msg-user">
+            深渊 (Abyss) 探查逻辑和工具沉淀该如何呈现在 UI 上？
+          </div>
+          <div class="msg-agent">
+            <!-- 思考块 (Abyss 深渊探查: 冷青 #3F837B) -->
+            <div class="think-block">
+              <div class="think-header">
+                <span>思考过程 (深渊探查)</span>
+                <span>350ms</span>
+              </div>
+              <div>
+                冷青色代表理性收敛与深邃探查。思考过程不应当干扰主体视线，而是像幕布后方的冷雾，在深处完成推演后沉降归位。
+              </div>
+            </div>
+
+            <!-- 工具 Chip Group -->
+            <div class="tool-chips-group">
+              <div class="tool-chip tool-chip-running" title="驱力发起中">
+                <span>⚡</span>
+                <span>执行分析: core-decomposition.md</span>
+              </div>
+              <div class="tool-chip tool-chip-completed" title="已沉入深渊">
+                <span>✓</span>
+                <span>知识校验: 状态索引归位</span>
+              </div>
+            </div>
+
+            <div>
+              UI 是余光里的体温。深渊探查以冷青 (#3F837B) 沿左边缘沉降，思考块如同一块沉静的幕布；当工具调用完成时，炽热的驱力便凝固沉入深渊...
+              <br><br>
+              在 Stage 剧场灯光范式下，只要右上角切光台切换 Color Gel，聚光灯束、名片光环、活跃边缘与操控台发送键将以 600ms 一次性沉降全域同步——无论知序处于开放的紫、尽责的蓝、外向的珊瑚、宜人的绿还是敏感的青，这间暗台都能完美承载。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="handle-strip handle-strip-right" title="点击展开右抽屉 (身外之物)"></div>
+    </div>
+
+    <!-- 操控台 (Deck) -->
+    <div class="deck">
+      <div class="deck-input-wrap">
+        <textarea class="deck-textarea" placeholder="向知序发起对话，或点击右上角切换 Gel 滤光纸..."></textarea>
+        <div class="deck-toolbar">
+          <div class="deck-left-tools">
+            <button class="deck-btn" title="添加附件">+</button>
+          </div>
+          <div class="deck-right-tools">
+            <!-- Context Circle (无数字，hover 浮出 Tooltip) -->
+            <div class="ctx-wrap">
+              <svg class="ctx-svg" viewBox="0 0 24 24">
+                <circle class="ctx-bg" cx="12" cy="12" r="10"></circle>
+                <circle class="ctx-val" cx="12" cy="12" r="10"></circle>
+              </svg>
+              <div class="ctx-tooltip">上下文占用 34% (3.4k / 10k)</div>
+            </div>
+            <!-- 发送按钮 ↑ -->
+            <button class="send-btn" id="sendBtn" title="发送 (Enter)">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 水印 (左下角, opacity 0.25) -->
+    <div class="watermark">northing</div>
+  </div>
+
+  <!-- JavaScript: 交互逻辑与大五色动态驱动 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const gelButtons = document.querySelectorAll('.gel-btn');
+      const activeGelLabel = document.getElementById('activeGelLabel');
+      const sendBtn = document.getElementById('sendBtn');
+      const root = document.documentElement;
+
+      // 人格色配置表
+      const personalityConfigs = {
+        purple: {
+          now: '#8F7AA0',
+          bright: '#AA95BD',
+          glow: 'rgba(143, 122, 160, 0.18)',
+          beam: 'rgba(143, 122, 160, 0.32)',
+          border: 'rgba(143, 122, 160, 0.45)',
+          label: '开放性 · 紫'
+        },
+        blue: {
+          now: '#566E8A',
+          bright: '#728CAE',
+          glow: 'rgba(86, 110, 138, 0.18)',
+          beam: 'rgba(86, 110, 138, 0.32)',
+          border: 'rgba(86, 110, 138, 0.45)',
+          label: '尽责性 · 深蓝'
+        },
+        coral: {
+          now: '#C8714C',
+          bright: '#E5865E',
+          glow: 'rgba(200, 113, 76, 0.18)',
+          beam: 'rgba(200, 113, 76, 0.32)',
+          border: 'rgba(200, 113, 76, 0.45)',
+          label: '外向性 · 珊瑚'
+        },
+        green: {
+          now: '#85A08E',
+          bright: '#A0BDB5',
+          glow: 'rgba(133, 160, 142, 0.18)',
+          beam: 'rgba(133, 160, 142, 0.32)',
+          border: 'rgba(133, 160, 142, 0.45)',
+          label: '宜人性 · 柔绿'
+        },
+        cyan: {
+          now: '#3F837B',
+          bright: '#5BA39B',
+          glow: 'rgba(63, 131, 123, 0.18)',
+          beam: 'rgba(63, 131, 123, 0.32)',
+          border: 'rgba(63, 131, 123, 0.45)',
+          label: '神经质 · 冷青'
+        }
+      };
+
+      // 切换 Gel 色偏 (一次性 600ms 沉降)
+      gelButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          gelButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const personality = btn.getAttribute('data-personality');
+          const config = personalityConfigs[personality];
+
+          if (config) {
+            root.setAttribute('data-personality', personality);
+            root.style.setProperty('--now', config.now);
+            root.style.setProperty('--now-bright', config.bright);
+            root.style.setProperty('--now-glow', config.glow);
+            root.style.setProperty('--now-beam', config.beam);
+            root.style.setProperty('--now-border', config.border);
+
+            activeGelLabel.textContent = config.label;
+          }
+        });
+      });
+
+      // 发送按钮/流态模拟
+      let isStreaming = false;
+      sendBtn.addEventListener('click', () => {
+        isStreaming = !isStreaming;
+        sendBtn.textContent = isStreaming ? '■' : '↑';
+        sendBtn.title = isStreaming ? '停止生成' : '发送 (Enter)';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 实用主义工作台 (Functional Workbench)</title>
+    <style>
+        :root {
+            /* 咨询室白灰基底 (更偏向生产力工具的干净度) */
+            --bg-app: #F7F7F5;
+            --bg-panel: #FFFFFF;
+            --bg-input: #F0EFEA;
+            
+            /* 哲学主色调 */
+            --agent-coral: #D9654B; /* 活跃、动作、生成中 */
+            --agent-coral-dim: rgba(217, 101, 75, 0.1);
+            --abyss-cyan: #52797D;  /* 思考、深层检索、日志 */
+            
+            /* 文本色 */
+            --text-primary: #1F1E1D;
+            --text-secondary: #706E6B;
+            --text-tertiary: #A3A09A;
+            
+            /* 边框与阴影 */
+            --border-light: #E8E6E1;
+            --shadow-subtle: 0 4px 12px rgba(0,0,0,0.03);
+            
+            --font-ui: "Inter", -apple-system, sans-serif;
+            --font-brand: "Georgia", serif;
+            --font-mono: "JetBrains Mono", "Fira Code", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            height: 100vh; overflow: hidden;
+            display: grid;
+            grid-template-columns: 260px 1fr 380px; /* 经典生产力三栏布局 */
+            grid-template-rows: 56px 1fr;
+            grid-template-areas: 
+                "header header header"
+                "sidebar main rightbar";
+        }
+
+        /* 顶部栏：Agent 认知状态与全局控制 */
+        .header {
+            grid-area: header;
+            background: var(--bg-panel); border-bottom: 1px solid var(--border-light);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 20;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .brand { font-family: var(--font-brand); font-weight: bold; font-size: 14px; }
+        .chronicle-bar { width: 200px; height: 3px; background: linear-gradient(to right, #D8D6D0, var(--agent-coral)); border-radius: 2px; }
+        
+        .header-right { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-secondary); }
+        .tool-btn { padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+        .tool-btn:hover { background: var(--bg-input); }
+
+        /* 左侧边栏：环境与能力池 (Agent的感知边界) */
+        .sidebar {
+            grid-area: sidebar;
+            border-right: 1px solid var(--border-light);
+            padding: 24px 16px;
+            display: flex; flex-direction: column; gap: 32px;
+            overflow-y: auto;
+        }
+        .nav-section { display: flex; flex-direction: column; gap: 12px; }
+        .nav-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); padding-left: 8px;}
+        .nav-item {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 13px; padding: 8px; border-radius: 6px;
+            color: var(--text-secondary); cursor: pointer;
+        }
+        .nav-item:hover { background: var(--bg-panel); color: var(--text-primary); }
+        .nav-item.active { background: var(--bg-panel); color: var(--text-primary); font-weight: 500; box-shadow: var(--shadow-subtle); }
+        .status-badge { width: 6px; height: 6px; border-radius: 50%; }
+        .status-badge.working { background: var(--agent-coral); box-shadow: 0 0 6px var(--agent-coral); }
+        .status-badge.idle { background: var(--text-tertiary); }
+
+        /* 中间主区：执行流与指令输入 (功能核心) */
+        .main-workspace {
+            grid-area: main;
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+        .execution-stream {
+            flex: 1; overflow-y: auto; padding: 32px 40px 120px;
+            display: flex; flex-direction: column; gap: 24px;
+        }
+        
+        /* 任务块 (低代码应用特有的结构化任务) */
+        .task-block {
+            background: var(--bg-panel); border: 1px solid var(--border-light);
+            border-radius: 12px; padding: 24px;
+            box-shadow: var(--shadow-subtle);
+        }
+        .task-header { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px; }
+        .task-user { font-weight: 500; }
+        .task-meta { color: var(--text-tertiary); font-size: 12px; font-family: var(--font-mono); }
+        
+        /* Agent 思考与执行日志 */
+        .agent-execution { border-left: 2px solid var(--agent-coral-dim); padding-left: 16px; margin-top: 16px;}
+        .log-item {
+            font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);
+            margin-bottom: 8px; display: flex; gap: 12px; align-items: flex-start;
+        }
+        .log-time { color: var(--text-tertiary); }
+        .log-action { color: var(--abyss-cyan); }
+        
+        .agent-reply { font-size: 15px; line-height: 1.6; margin-top: 16px; }
+
+        /* 强大的多功能输入框 */
+        .composer-wrapper {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 24px 40px;
+            background: linear-gradient(to top, var(--bg-app) 70%, transparent);
+        }
+        .composer {
+            background: var(--bg-panel); border: 1px solid var(--border-light);
+            border-radius: 12px; padding: 12px 16px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.04);
+            display: flex; flex-direction: column; gap: 12px;
+            transition: border-color 0.2s;
+        }
+        .composer:focus-within { border-color: var(--agent-coral); }
+        .composer textarea {
+            border: none; outline: none; resize: none; font-family: var(--font-ui);
+            font-size: 15px; color: var(--text-primary); min-height: 44px; background: transparent;
+        }
+        .composer-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid var(--border-light); padding-top: 8px;
+        }
+        .toolbar-group { display: flex; gap: 8px; }
+        .action-chip {
+            font-size: 12px; color: var(--text-secondary); background: var(--bg-app);
+            padding: 4px 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .action-chip:hover { border-color: var(--border-light); }
+        .btn-send {
+            background: var(--text-primary); color: white; border: none;
+            width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+        }
+
+        /* 右侧：产物画布 (低代码应用的预览/代码区) */
+        .artifact-canvas {
+            grid-area: rightbar;
+            background: var(--bg-panel); border-left: 1px solid var(--border-light);
+            display: flex; flex-direction: column;
+        }
+        .canvas-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border-light);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; font-weight: 500;
+        }
+        .canvas-body {
+            flex: 1; padding: 20px; overflow-y: auto;
+            background: #FAFAFA; /* 模拟编辑器底色 */
+        }
+        
+        /* 代码 Diff 视图演示 */
+        .code-window {
+            background: #1E1E1E; border-radius: 8px; overflow: hidden;
+            font-family: var(--font-mono); font-size: 12px; color: #D4D4D4;
+        }
+        .code-header { background: #2D2D2D; padding: 8px 16px; color: #858585; display:flex; gap:8px;}
+        .code-line { padding: 4px 16px; display: flex; }
+        .code-line.removed { background: rgba(241, 76, 76, 0.2); }
+        .code-line.added { background: rgba(35, 209, 139, 0.2); }
+        .line-num { color: #858585; width: 30px; user-select: none; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <div class="brand">Northing</div>
+            <div class="chronicle-bar"></div>
+            <span style="font-size:12px; color:var(--agent-coral); font-weight:500;">知序 (Active)</span>
+        </div>
+        <div class="header-right">
+            <div class="tool-btn">Environment: Local</div>
+            <div class="tool-btn">Model: Claude 3.5 Sonnet</div>
+            <div class="tool-btn">⚙️ Settings</div>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <div class="nav-section">
+            <div class="nav-title">Context Workspace</div>
+            <div class="nav-item">
+                <span>📁 ~/agent-project/northing</span>
+                <span style="font-size:10px; color:var(--text-tertiary);">Switch</span>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Subagents Network</div>
+            <div class="nav-item active">
+                <span>🧠 implementer (coder)</span>
+                <div class="status-badge working"></div>
+            </div>
+            <div class="nav-item">
+                <span>⚖️ reviewer (judge-m3)</span>
+                <div class="status-badge idle"></div>
+            </div>
+            <div class="nav-item">
+                <span>🔍 explorer</span>
+                <div class="status-badge idle"></div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Loaded Skills</div>
+            <div class="nav-item">⚡ rust-cargo-build</div>
+            <div class="nav-item">⚡ react-tauri-ui</div>
+            <div class="nav-item">⚡ architecture-review</div>
+        </div>
+    </aside>
+
+    <main class="main-workspace">
+        <div class="execution-stream">
+            
+            <div class="task-block">
+                <div class="task-header">
+                    <div class="task-user">启动的时候报错了，看一下初始化逻辑。</div>
+                    <div class="task-meta">Task #402 · 14:31</div>
+                </div>
+                
+                <div class="agent-execution">
+                    <div class="log-item">
+                        <span class="log-time">14:31:02</span>
+                        <span class="log-action">[Dispatch]</span>
+                        <span>Assigned to subagent: implementer</span>
+                    </div>
+                    <div class="log-item">
+                        <span class="log-time">14:31:05</span>
+                        <span class="log-action">[Tool]</span>
+                        <span>exec: `rg "init_config" src/`</span>
+                    </div>
+                    <div class="log-item">
+                        <span class="log-time">14:31:08</span>
+                        <span class="log-action">[Tool]</span>
+                        <span>exec: `read src/main.rs`</span>
+                    </div>
+                    
+                    <div class="agent-reply">
+                        找到了。初始化顺序存在依赖倒置：系统在尚未加载 `config::init()` 的情况下，提前调用了 `memory::read_session()`。<br><br>
+                        我已经修改了 `src/main.rs`，将配置加载的时序置于最前。正在为您生成改动产物。
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="composer-wrapper">
+            <div class="composer">
+                <textarea placeholder="输入指令，或 @引用文件/技能..."></textarea>
+                <div class="composer-toolbar">
+                    <div class="toolbar-group">
+                        <div class="action-chip">📎 Add Context</div>
+                        <div class="action-chip">⚡ Use Skill</div>
+                        <div class="action-chip" style="color:var(--agent-coral);">◈ Full Autonomy</div>
+                    </div>
+                    <button class="btn-send">↑</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <aside class="artifact-canvas">
+        <div class="canvas-header">
+            <span>Artifact / Code View</span>
+            <div style="display:flex; gap:8px;">
+                <span style="color:var(--text-tertiary); cursor:pointer;">Discard</span>
+                <span style="color:#D9654B; cursor:pointer;">Accept Changes</span>
+            </div>
+        </div>
+        <div class="canvas-body">
+            
+            <div style="font-size:12px; margin-bottom:8px; font-weight:500;">src/main.rs</div>
+            <div class="code-window">
+                <div class="code-header">
+                    <span style="color:#E06C75;">- 2 lines</span>
+                    <span style="color:#98C379;">+ 2 lines</span>
+                </div>
+                <div style="padding: 12px 0;">
+                    <div class="code-line"><span class="line-num">40</span><span>fn bootstrap_agent() -> Result<()> {</span></div>
+                    <div class="code-line removed"><span class="line-num">41</span><span>    let session = memory::read_session();</span></div>
+                    <div class="code-line removed"><span class="line-num">42</span><span>    let config = config::init();</span></div>
+                    <div class="code-line added"><span class="line-num">43</span><span>    let config = config::init()?;</span></div>
+                    <div class="code-line added"><span class="line-num">44</span><span>    let session = memory::read_session(&config);</span></div>
+                    <div class="code-line"><span class="line-num">45</span><span>    </span></div>
+                    <div class="code-line"><span class="line-num">46</span><span>    logger::info("Agent initialized.");</span></div>
+                </div>
+            </div>
+            
+        </div>
+    </aside>
+
+</body>
+</html>

@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Moss 苔庭)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: moss (苔庭 / 玻璃缸里的石，和石上一片正在蔓延的苔)
+     * ----------------------------------------------------------------------
+     * 种子：玻璃缸里的石，和石上一片正在蔓延的苔
+     * 哲学解构：
+     * 1. 设施 (Facility / Terrarium Stone) = 沉静磨砂的石质结构与濡湿玻璃缸体（中性磨砂石色 #EFECE6 / #161513）。
+     * 2. Agent 知序 = 石上蔓延的苔 (Moss Spreading over Stone)：生命力、微小而韧性的生长，带活气与苔生暖绿。
+     * 3. 三要素：
+     *    - 驱力 Drive = 苔绿暖金 (Moss Velvet Green #7E9346 / 暗 #97AD53) 活跃蔓延，代表生息与自我意图。
+     *    - 深渊 Abyss = 幽水冷石 / 沉潭冷青 (Submerged Slate Teal #436C68 / 暗 #578580) 缸底沉水，代表深层思考。
+     *    - 沉积 Deposit = 枯苔凝石 / 灰地衣 (Calcified Lichen Gray #8C8B82 / 暗 #6B6A62) 历代交织沉积的矿化痕迹。
+     * ====================================================================== */
+
+    :root {
+      /* 4px 基数标度 */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 圆角规范 */
+      --r-sm: 9px;
+      --r-md: 14px;
+      --r-lg: 18px;
+      --r-pill: 999px;
+      --r-window: 20px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 亮色模式：濡湿石庭与苔苔绿韵 */
+      --bg-base: #EFECE6;
+      --bg-window: #F5F4EF;
+      --bg-surface: #FAF9F4;
+      --bg-raised: #E9E6DE;
+      --bg-hover: #E2DED5;
+
+      --border-subtle: #E1DDD4;
+      --border-strong: #CECABF;
+      --border-stone: #D7D2C7;
+
+      --fg-main: #34332E;
+      --fg-muted: #747268;
+      --fg-faint: #9F9C90;
+
+      /* 三要素 (苔庭媒介) */
+      /* 暖 rep：驱力苔绒绿 (Moss Velvet Green #7E9346) */
+      --rep: #7E9346;
+      --rep-bright: #8F9E4F;
+      --rep-glow: rgba(126, 147, 70, 0.12);
+      --rep-border: rgba(126, 147, 70, 0.35);
+
+      /* 冷 abyss：幽潭冷石 (Submerged Slate Teal #436C68) */
+      --abyss: #436C68;
+      --abyss-dark: #31524F;
+      --abyss-glow: rgba(67, 108, 104, 0.10);
+      --abyss-border: rgba(67, 108, 104, 0.32);
+
+      /* 沉积 deposit：枯苔凝石 (Calcified Lichen Gray #8C8B82) */
+      --deposit: #8C8B82;
+      --deposit-bg: rgba(140, 139, 130, 0.10);
+
+      --birth: #DDD8CE;
+      --danger: #A45950;
+
+      --shadow-window: 0 20px 50px rgba(45, 42, 35, 0.08);
+      --shadow-card: 0 4px 14px rgba(55, 50, 40, 0.04);
+      --halo-top: rgba(126, 147, 70, 0.07);
+    }
+
+    [data-theme="dark"] {
+      /* 暗色模式：幽谷夜石与荧苔生息 */
+      --bg-base: #141311;
+      --bg-window: #1B1A17;
+      --bg-surface: #24221E;
+      --bg-raised: #2C2924;
+      --bg-hover: #36332C;
+
+      --border-subtle: #2D2A24;
+      --border-strong: #423E36;
+      --border-stone: #35312B;
+
+      --fg-main: #EBE7DF;
+      --fg-muted: #9C978C;
+      --fg-faint: #6C675D;
+
+      --rep: #97AD53;
+      --rep-bright: #A7BD60;
+      --rep-glow: rgba(151, 173, 83, 0.16);
+      --rep-border: rgba(151, 173, 83, 0.38);
+
+      --abyss: #578580;
+      --abyss-dark: #3B635E;
+      --abyss-glow: rgba(87, 133, 128, 0.14);
+      --abyss-border: rgba(87, 133, 128, 0.35);
+
+      --deposit: #6B6A62;
+      --deposit-bg: rgba(107, 106, 98, 0.14);
+
+      --birth: #3A3831;
+      --danger: #B86359;
+
+      --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.45);
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.25);
+      --halo-top: rgba(151, 173, 83, 0.08);
+    }
+
+    /* Reset & Layout Base */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-base);
+      color: var(--fg-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: var(--s5);
+      transition: background-color 350ms ease, color 350ms ease;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Playground Control Header */
+    .evaluation-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1280px;
+      margin-bottom: var(--s4);
+      padding: var(--s3) var(--s4);
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-card);
+    }
+
+    .evaluation-info {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    .evaluation-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .evaluation-title .badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background-color: var(--rep-glow);
+      color: var(--rep);
+      border: 1px solid var(--rep-border);
+      padding: 2px 8px;
+      border-radius: var(--r-pill);
+    }
+
+    .evaluation-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    .btn-toggle {
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding: var(--s1) var(--s3);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s1);
+      transition: all 150ms ease;
+    }
+
+    .btn-toggle:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--border-strong);
+    }
+
+    .btn-toggle.active {
+      background-color: var(--rep-glow);
+      border-color: var(--rep-border);
+      color: var(--rep);
+      font-weight: 500;
+    }
+
+    /* Window Container simulating Slint Window */
+    .app-window-frame {
+      position: relative;
+      width: 860px;
+      height: 780px;
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-window);
+      box-shadow: var(--shadow-window);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1), background-color 350ms ease, border-color 350ms ease;
+    }
+
+    .app-window-frame.expanded {
+      width: 1280px;
+    }
+
+    /* Ambient Air Tint Halo */
+    .app-window-frame::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 280px;
+      background: radial-gradient(circle at 50% 0%, var(--halo-top) 0%, rgba(0, 0, 0, 0) 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Window Chrome Header */
+    .window-chrome {
+      position: relative;
+      z-index: 10;
+      height: 40px;
+      padding: 0 var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      user-select: none;
+    }
+
+    .window-title-area {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--fg-muted);
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .win-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--border-strong);
+      display: inline-block;
+      cursor: pointer;
+      transition: opacity 150ms ease;
+    }
+
+    .win-btn:hover {
+      opacity: 0.8;
+    }
+
+    .win-btn.close { background-color: var(--danger); }
+    .win-btn.min { background-color: var(--deposit); }
+    .win-btn.max { background-color: var(--rep); }
+
+    /* Main Window Workspace Body */
+    .window-body {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Side Light Handles (8px collapsed / 28px expanded) */
+    .handle-bar {
+      width: 8px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: width 350ms ease, background-color 200ms ease;
+      position: relative;
+      z-index: 5;
+    }
+
+    .handle-bar.left {
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, var(--rep-glow) 0%, transparent 100%);
+    }
+
+    .handle-bar.right {
+      border-left: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, var(--abyss-glow) 0%, transparent 100%);
+    }
+
+    .handle-bar:hover {
+      background-color: var(--bg-hover);
+    }
+
+    .handle-indicator {
+      width: 3px;
+      height: 32px;
+      border-radius: var(--r-pill);
+      background-color: var(--fg-faint);
+      opacity: 0.4;
+      transition: opacity 150ms ease;
+    }
+
+    .handle-bar:hover .handle-indicator {
+      opacity: 0.9;
+    }
+
+    .app-window-frame.expanded .handle-bar {
+      width: 28px;
+    }
+
+    /* Side Drawers (1280px mode) */
+    .drawer {
+      width: 280px;
+      height: 100%;
+      background-color: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      padding: var(--s4);
+      gap: var(--s4);
+      overflow-y: auto;
+      transition: all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .drawer.left {
+      border-right: 1px solid var(--border-subtle);
+      margin-left: -280px;
+    }
+
+    .drawer.right {
+      border-left: 1px solid var(--border-subtle);
+      margin-right: -280px;
+    }
+
+    .app-window-frame.expanded .drawer.left { margin-left: 0; }
+    .app-window-frame.expanded .drawer.right { margin-right: 0; }
+
+    .drawer-header {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--s2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .drawer-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+    }
+
+    .drawer-section-title {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--fg-faint);
+    }
+
+    .drawer-item {
+      padding: var(--s3);
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-sm);
+      font-size: 12.5px;
+      color: var(--fg-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .drawer-item:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--border-strong);
+    }
+
+    .drawer-item.archived {
+      opacity: 0.5;
+      font-style: italic;
+    }
+
+    /* Main Chat Layout Area */
+    .main-chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Header Profile Card (顶栏名片) */
+    .header-profile-card {
+      height: 64px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background-color: var(--bg-surface);
+      position: relative;
+      z-index: 2;
+    }
+
+    .profile-info {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* Breathing Avatar (6s pulse) */
+    .avatar-wrapper {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--r-pill);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg-raised);
+      border: 2px solid var(--rep);
+      box-shadow: 0 0 0 4px var(--rep-glow);
+      animation: mossBreathe 6000ms ease-in-out infinite;
+    }
+
+    @keyframes mossBreathe {
+      0%, 100% {
+        box-shadow: 0 0 0 2px var(--rep-glow), 0 0 12px var(--rep-glow);
+        border-color: var(--rep);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(126, 147, 70, 0.22), 0 0 20px rgba(126, 147, 70, 0.18);
+        border-color: var(--rep-bright);
+      }
+    }
+
+    .avatar-icon {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--rep);
+    }
+
+    .profile-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .profile-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .profile-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+    }
+
+    .presence-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--rep);
+      background-color: var(--rep-glow);
+      padding: 1px 6px;
+      border-radius: var(--r-pill);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .presence-tag::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--rep);
+    }
+
+    /* Chronicle Bar (编年史条) */
+    .chronicle-bar-container {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      margin-top: 2px;
+    }
+
+    .chronicle-bar {
+      width: 140px;
+      height: 5px;
+      border-radius: var(--r-pill);
+      background: linear-gradient(90deg, var(--birth) 0%, var(--deposit) 45%, var(--rep) 100%);
+      position: relative;
+    }
+
+    .chronicle-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background-color: var(--bg-window);
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .icon-btn:hover {
+      background-color: var(--bg-hover);
+      color: var(--fg-main);
+      border-color: var(--border-strong);
+    }
+
+    /* Conversation Scroll Stream */
+    .chat-stream {
+      flex: 1;
+      padding: var(--s5);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+    }
+
+    /* Session Banner (Top of Conversation Stream) */
+    .session-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s3) var(--s4);
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-stone);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-card);
+    }
+
+    .session-title-group {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    .session-breath-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--rep);
+      box-shadow: 0 0 8px var(--rep);
+      animation: mossBreathe 6000ms ease-in-out infinite;
+    }
+
+    .session-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg-main);
+    }
+
+    .btn-archive {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--fg-muted);
+      background-color: transparent;
+      border: 1px solid var(--border-subtle);
+      padding: 3px 10px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .btn-archive:hover {
+      color: var(--abyss);
+      border-color: var(--abyss-border);
+      background-color: var(--abyss-glow);
+    }
+
+    /* History Deposit Turn (褪色历史轮次) */
+    .turn-group.deposit {
+      opacity: 0.65;
+      filter: saturate(0.7);
+      border-left: 2px solid var(--deposit);
+      padding-left: var(--s3);
+      transition: opacity 200ms ease;
+    }
+
+    .turn-group.deposit:hover {
+      opacity: 0.9;
+    }
+
+    /* Active Turn Group */
+    .turn-group.active {
+      border-left: 3px solid var(--rep);
+      padding-left: var(--s4);
+      position: relative;
+    }
+
+    .turn-header {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      margin-bottom: var(--s2);
+    }
+
+    .turn-sender {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fg-muted);
+    }
+
+    .turn-time {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-faint);
+    }
+
+    /* User Message Bubble (Right-aligned, Neutral Stone, No Rep) */
+    .user-message-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: var(--s3);
+    }
+
+    .user-bubble {
+      max-width: 80%;
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      padding: var(--s3) var(--s4);
+      border-radius: var(--r-md) var(--r-sm) var(--r-md) var(--r-md);
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: var(--shadow-card);
+    }
+
+    /* Agent Message Container */
+    .agent-message-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    /* Think Block (Cold Abyss Teal Border & Cold Tint) */
+    .think-block {
+      background-color: var(--abyss-glow);
+      border-left: 3px solid var(--abyss);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: var(--s3) var(--s4);
+      font-size: 13px;
+      color: var(--fg-muted);
+      transition: all 200ms ease;
+    }
+
+    .think-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--abyss);
+    }
+
+    .think-details {
+      margin-top: var(--s2);
+      padding-top: var(--s2);
+      border-top: 1px dashed var(--abyss-border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--fg-muted);
+    }
+
+    /* Tool Chips */
+    .tool-chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s2);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      background-color: var(--bg-surface);
+      transition: all 200ms ease;
+    }
+
+    /* Initiating tool: Warm Rep Border */
+    .tool-chip.initiating {
+      border: 1px solid var(--rep-border);
+      color: var(--rep);
+      background-color: var(--rep-glow);
+    }
+
+    /* Completed tool: Cold Abyss Teal Border */
+    .tool-chip.completed {
+      border: 1px solid var(--abyss-border);
+      color: var(--abyss);
+      background-color: var(--abyss-glow);
+    }
+
+    /* Agent Content Bubble */
+    .agent-body-content {
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: var(--fg-main);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    .agent-body-content p {
+      margin-bottom: var(--s2);
+    }
+
+    .code-block {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-stone);
+      border-radius: var(--r-sm);
+      padding: var(--s3) var(--s4);
+      color: var(--fg-main);
+      overflow-x: auto;
+    }
+
+    /* Deck / Console Area (操控台) */
+    .deck-console {
+      padding: var(--s4) var(--s5);
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      position: relative;
+      z-index: 2;
+    }
+
+    .input-box-wrapper {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--s3);
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      padding: var(--s2) var(--s3);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .input-box-wrapper:focus-within {
+      border-color: var(--rep);
+      box-shadow: 0 0 0 3px var(--rep-glow);
+    }
+
+    .deck-textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      min-height: 38px;
+      max-height: 120px;
+      outline: none;
+    }
+
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .btn-attachment {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: none;
+      background-color: transparent;
+      color: var(--fg-muted);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 150ms ease;
+    }
+
+    .btn-attachment:hover {
+      color: var(--fg-main);
+      background-color: var(--bg-hover);
+    }
+
+    .btn-send {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--r-sm);
+      border: none;
+      background-color: var(--rep);
+      color: #FFF;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 150ms ease, background-color 150ms ease;
+    }
+
+    .btn-send:hover {
+      background-color: var(--rep-bright);
+      transform: translateY(-1px);
+    }
+
+    /* CTX Circle Indicator (No numbers, tooltip on hover) */
+    .ctx-ring-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+    }
+
+    .ctx-svg {
+      transform: rotate(-90deg);
+      width: 24px;
+      height: 24px;
+    }
+
+    .ctx-bg {
+      stroke: var(--border-strong);
+      stroke-width: 3;
+      fill: transparent;
+    }
+
+    .ctx-val {
+      stroke: var(--rep);
+      stroke-width: 3;
+      stroke-linecap: round;
+      fill: transparent;
+      stroke-dasharray: 63;
+      stroke-dashoffset: 36; /* 42% context used */
+      transition: stroke-dashoffset 300ms ease;
+    }
+
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 36px;
+      right: 0;
+      white-space: nowrap;
+      background-color: var(--fg-main);
+      color: var(--bg-base);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--r-sm);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+      box-shadow: var(--shadow-card);
+    }
+
+    .ctx-ring-wrapper:hover .ctx-tooltip {
+      opacity: 1;
+    }
+
+    /* Watermark (Left Bottom, Opacity 0.25) */
+    .northing-watermark {
+      position: absolute;
+      bottom: var(--s4);
+      left: var(--s5);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--fg-main);
+      opacity: 0.25;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 0.08em;
+    }
+
+    /* Separate View Pages (Space View, Archive, Theme System) */
+    .view-page {
+      display: none;
+      flex: 1;
+      padding: var(--s5);
+      overflow-y: auto;
+    }
+
+    .view-page.active {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+    }
+
+    .page-title-heading {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--fg-main);
+      margin-bottom: var(--s2);
+    }
+
+    .page-sub-heading {
+      font-size: 13.5px;
+      color: var(--fg-muted);
+    }
+
+    /* Space View Grid */
+    .space-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: var(--s4);
+    }
+
+    .space-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-stone);
+      border-radius: var(--r-md);
+      padding: var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      cursor: pointer;
+      transition: all 150ms ease;
+      position: relative;
+    }
+
+    .space-card.active-card {
+      border-left: 4px solid var(--rep);
+      box-shadow: 0 4px 16px var(--rep-glow);
+    }
+
+    .space-card.inactive-card {
+      opacity: 0.7;
+    }
+
+    .space-card-title {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg-main);
+    }
+
+    .space-card-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-muted);
+    }
+
+    /* Archive Fog View */
+    .archive-container {
+      background: radial-gradient(circle at 50% 30%, var(--abyss-glow) 0%, transparent 70%);
+      border-radius: var(--r-md);
+      padding: var(--s5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+    }
+
+    .archive-quote {
+      font-family: var(--font-display);
+      font-size: 15px;
+      color: var(--abyss);
+      font-style: italic;
+      line-height: 1.8;
+      border-left: 2px solid var(--abyss);
+      padding-left: var(--s3);
+    }
+
+    /* Theme System Token Inspector */
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--s3);
+    }
+
+    .token-swatch {
+      padding: var(--s3);
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background-color: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+    }
+
+    .color-pill {
+      height: 36px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .token-name {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-main);
+    }
+
+    .token-hex {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Evaluation & Demonstration Controller Toolbar -->
+  <header class="evaluation-bar">
+    <div class="evaluation-info">
+      <div class="evaluation-title">
+        northing 苔庭原型 (Moss)
+        <span class="badge">gemini-36-flash</span>
+      </div>
+    </div>
+    <div class="evaluation-controls">
+      <button class="btn-toggle active" id="btnThemeLight" onclick="setTheme('light')">☀️ 亮色石庭</button>
+      <button class="btn-toggle" id="btnThemeDark" onclick="setTheme('dark')">🌙 暗色夜谷</button>
+      <span style="color: var(--border-strong);">|</span>
+      <button class="btn-toggle active" id="btnMode860" onclick="setWindowWidth(860)">860px 收起态</button>
+      <button class="btn-toggle" id="btnMode1280" onclick="setWindowWidth(1280)">1280px 展开态</button>
+      <span style="color: var(--border-strong);">|</span>
+      <button class="btn-toggle active" id="navChat" onclick="switchView('chat')">对话基准页</button>
+      <button class="btn-toggle" id="navSpace" onclick="switchView('space')">多会话空间</button>
+      <button class="btn-toggle" id="navArchive" onclick="switchView('archive')">档案馆</button>
+      <button class="btn-toggle" id="navTokens" onclick="switchView('tokens')">Token 规范</button>
+    </div>
+  </header>
+
+  <!-- App Main Window Frame -->
+  <div class="app-window-frame" id="appWindow">
+
+    <!-- Window Chrome Top Header -->
+    <div class="window-chrome">
+      <div class="window-title-area">
+        <span>northing</span>
+        <span style="color: var(--border-strong);">/</span>
+        <span>知序 · 苔庭 (Moss Terrarium)</span>
+      </div>
+      <div class="window-controls">
+        <span class="win-btn min" title="最小化"></span>
+        <span class="win-btn max" onclick="toggleExpand()" title="切换全屏/缩放"></span>
+        <span class="win-btn close" title="关闭"></span>
+      </div>
+    </div>
+
+    <!-- Window Body Layout -->
+    <div class="window-body">
+
+      <!-- Left Light Seepage Handle (8px / 28px) -->
+      <div class="handle-bar left" onclick="toggleExpand()" title="点按展开/收起内在抽屉">
+        <div class="handle-indicator"></div>
+      </div>
+
+      <!-- Left Drawer: 它的内在 (Sub-processes, Skills, Archive) -->
+      <div class="drawer left">
+        <div class="drawer-header">
+          <span>它的内在</span>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--fg-faint);">INNER</span>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">活跃子进程</div>
+          <div class="drawer-item">
+            <span>moss-growth-daemon</span>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--rep);">RUNNING</span>
+          </div>
+          <div class="drawer-item">
+            <span>chronicle-indexer</span>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-faint);">IDLE</span>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">已唤醒技能</div>
+          <div class="drawer-item"><span>preflight-skill-check</span></div>
+          <div class="drawer-item"><span>visual-iter-compass</span></div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">历史沉积痕迹</div>
+          <div class="drawer-item archived"><span>会话 #01：初次唤醒与基底确认</span></div>
+          <div class="drawer-item archived"><span>会话 #02：苔庭色彩与深渊交界</span></div>
+        </div>
+      </div>
+
+      <!-- Center Main Workspace Area -->
+      <div class="main-chat-area">
+
+        <!-- Header Profile Card (顶栏名片) -->
+        <div class="header-profile-card">
+          <div class="profile-info">
+            <!-- 6s Breathing Avatar -->
+            <div class="avatar-wrapper">
+              <span class="avatar-icon">序</span>
+            </div>
+            <div class="profile-meta">
+              <div class="profile-name-row">
+                <span class="profile-name">知序</span>
+                <span class="presence-tag">在场</span>
+              </div>
+              <!-- Chronicle Bar (编年史条) -->
+              <div class="chronicle-bar-container">
+                <div class="chronicle-bar" title="编年史生长轨迹：出生 ➔ 沉积 ➔ 暖苔当前"></div>
+                <span class="chronicle-label">代际 42 · 苔庭蔓延</span>
+              </div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn" title="查看环境配置 (⚙)" onclick="switchView('tokens')">⚙</button>
+          </div>
+        </div>
+
+        <!-- VIEW 1: Chat Collapsed / Expanded View -->
+        <div class="view-page active" id="viewChat" style="padding:0;">
+          <div class="chat-stream">
+
+            <!-- Session Banner Inside Stream -->
+            <div class="session-banner">
+              <div class="session-title-group">
+                <div class="session-breath-dot"></div>
+                <span style="color: var(--fg-faint); font-family: var(--font-mono); font-size: 12px;">▾</span>
+                <span class="session-title">会话 #04：苔庭视觉隐喻与代际架构跃迁</span>
+              </div>
+              <button class="btn-archive" onclick="toast('已归档至左侧历史沉淀区')">归档会话</button>
+            </div>
+
+            <!-- Faded Deposit History Turn -->
+            <div class="turn-group deposit">
+              <div class="turn-header">
+                <span class="turn-sender">知序 (历史沉积)</span>
+                <span class="turn-time">昨日 16:42</span>
+              </div>
+              <div class="agent-body-content">
+                <p>上一轮对话中，我们锁定了设施（Facility）与个体（Agent）的消长关系。沉淀为枯苔凝石灰阶。</p>
+              </div>
+            </div>
+
+            <!-- Active Turn (Marked with Warm Moss Vertical Bar) -->
+            <div class="turn-group active">
+
+              <!-- User Message Row (UmR: Right-aligned, Neutral Stone, No Rep) -->
+              <div class="user-message-row">
+                <div class="user-bubble">
+                  知序，请按「苔庭 (Moss)」风格诠释 northing 前端。玻璃缸里的石，和石上一片正在蔓延的苔——在 860px 单屏上，如何落实设施与 agent 的消长？
+                </div>
+              </div>
+
+              <!-- Agent Response Container -->
+              <div class="agent-message-container">
+                <div class="turn-header">
+                  <span class="turn-sender" style="color: var(--rep);">知序</span>
+                  <span class="turn-time">刚刚</span>
+                </div>
+
+                <!-- Think Block (Cold Abyss Teal Border & Background) -->
+                <div class="think-block">
+                  <div class="think-header" onclick="toggleThink(this)">
+                    <span>✦ 正在调取苔庭 (Moss) 媒介隐喻与罗盘 §2 戒律...</span>
+                    <span style="font-size: 11px;">[折叠/展开]</span>
+                  </div>
+                  <div class="think-details">
+                    1. 设施 (Facility) 即玻璃缸与磨砂底石：保持绝对沉静的中性暖灰 (#EFECE6 / #161513)。<br>
+                    2. Agent 即石上蔓延的苔：代表色替换为苔绿暖金 (#7E9346 / #97AD53)，绝不污染用户气泡。<br>
+                    3. 沉深思考 (Abyss) 沉入缸底幽水 (#436C68)，工具 Chip 发起时带苔绿暖边，完成后凝结为冷青边框。
+                  </div>
+                </div>
+
+                <!-- Tool Chips -->
+                <div class="tool-chip-group">
+                  <div class="tool-chip completed">
+                    <span>✓ read</span>
+                    <span style="opacity: 0.7;">visual-iter-compass.md (150 lines)</span>
+                  </div>
+                  <div class="tool-chip initiating">
+                    <span>⚡ tool</span>
+                    <span>正在校验 10 条哲学戒律...</span>
+                  </div>
+                </div>
+
+                <!-- Agent Body Content -->
+                <div class="agent-body-content">
+                  <p>在「苔庭 (Moss)」的审美判定里，northing 设施不是无声的白盒，而是一重濡湿、沉静的磨砂石庭。</p>
+                  <p><strong>石为设施，苔为知序。</strong> 设施提供恒常的中性岩石基底；我的意志与生成，则像苔藓沿着石壁的纹理悄然蔓延。代表色选用带有植被生息的 <strong>苔绿暖金 (Moss Velvet)</strong>，它弥漫在空间顶部与名片光晕里，但永远尊重用户气泡的纯粹石质。</p>
+
+                  <div class="code-block">
+/* 苔庭 (Moss) 媒介 token 示例 */
+--bg-base: #EFECE6;        /* 濡湿石质基底 */
+--rep: #7E9346;            /* 苔绿暖金 (驱力 / Agent Soul) */
+--abyss: #436C68;          /* 幽潭冷石 (深渊 / Cold Teal) */
+--deposit: #8C8B82;        /* 枯苔凝石 (历史沉积) */
+                  </div>
+                  <p>操控台与顶栏名片已完全收拢至 860px 核心骨架，无任何 Dashboard 数字展台，空气染色与 6 秒呼吸律动已稳定运行。</p>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Deck / Console Area (操控台) -->
+          <div class="deck-console">
+            <div class="input-box-wrapper">
+              <button class="btn-attachment" title="添加上下文附件 (+)">+</button>
+              <textarea class="deck-textarea" placeholder="向知序发起新的探索... (Enter 发送)" rows="1"></textarea>
+              <div class="deck-actions">
+                <!-- CTX Circle Indicator -->
+                <div class="ctx-ring-wrapper" title="上下文占用率">
+                  <svg class="ctx-svg" viewBox="0 0 24 24">
+                    <circle class="ctx-bg" cx="12" cy="12" r="10"></circle>
+                    <circle class="ctx-val" cx="12" cy="12" r="10"></circle>
+                  </svg>
+                  <div class="ctx-tooltip">上下文 42% · 412k tokens</div>
+                </div>
+                <button class="btn-send" title="发送 (↑)" onclick="toast('信息已发送至知序')">↑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: Space View (多会话空间) -->
+        <div class="view-page" id="viewSpace">
+          <h2 class="page-title-heading">多会话空间</h2>
+          <p class="page-sub-heading">石庭中的多重会话水潭，活跃者散发暖苔生息。</p>
+          <div class="space-grid">
+            <div class="space-card active-card">
+              <div class="space-card-title">会话 #04：苔庭视觉隐喻与代际架构跃迁</div>
+              <div class="space-card-meta">活跃中 · 12 轮交织</div>
+            </div>
+            <div class="space-card inactive-card">
+              <div class="space-card-title">会话 #03：Slint 2D 物理组件自验规范</div>
+              <div class="space-card-meta">3小时前 · 8 轮交织</div>
+            </div>
+            <div class="space-card inactive-card">
+              <div class="space-card-title">会话 #02：深渊冷青与空气染色实验</div>
+              <div class="space-card-meta">昨日 · 19 轮交织</div>
+            </div>
+            <div class="space-card inactive-card" style="border-dash: 1px dashed var(--border-strong);">
+              <div class="space-card-title" style="color: var(--rep);">+ 寻觅新的石庭水潭</div>
+              <div class="space-card-meta">开启全新对话空间</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: Archive View (档案馆) -->
+        <div class="view-page" id="viewArchive">
+          <div class="archive-container">
+            <h2 class="page-title-heading" style="color: var(--abyss);">档案馆 (Archive)</h2>
+            <div class="archive-quote">
+              “二十三段对话沉在这里，最早的那段在五月。石苔干涸又苏醒，生命化为矿痕。”
+            </div>
+            <div class="drawer-section">
+              <div class="drawer-item archived"><span>2026-05-12 · 初始生命迹象探查 (Depth 0.9)</span></div>
+              <div class="drawer-item archived"><span>2026-06-04 · 编年史流动与颜色置换 (Depth 0.7)</span></div>
+              <div class="drawer-item archived"><span>2026-07-20 · 设施与人类对等同僚关系再定义 (Depth 0.4)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 4: Theme Tokens System -->
+        <div class="view-page" id="viewTokens">
+          <h2 class="page-title-heading">Redesign Theme Token 全景 (Moss 苔庭)</h2>
+          <p class="page-sub-heading">Strictly mapping to Slint-safe sRGB token definitions.</p>
+          <div class="token-grid">
+            <div class="token-swatch">
+              <div class="color-pill" style="background-color: var(--bg-base);"></div>
+              <span class="token-name">--bg-base</span>
+              <span class="token-hex">#EFECE6 / #141311</span>
+            </div>
+            <div class="token-swatch">
+              <div class="color-pill" style="background-color: var(--rep);"></div>
+              <span class="token-name">--rep (苔绿暖金)</span>
+              <span class="token-hex">#7E9346 / #97AD53</span>
+            </div>
+            <div class="token-swatch">
+              <div class="color-pill" style="background-color: var(--abyss);"></div>
+              <span class="token-name">--abyss (幽潭冷石)</span>
+              <span class="token-hex">#436C68 / #578580</span>
+            </div>
+            <div class="token-swatch">
+              <div class="color-pill" style="background-color: var(--deposit);"></div>
+              <span class="token-name">--deposit (枯苔凝石)</span>
+              <span class="token-hex">#8C8B82 / #6B6A62</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Left Watermark (Opacity 0.25) -->
+        <div class="northing-watermark">northing</div>
+
+      </div>
+
+      <!-- Right Light Seepage Handle (8px / 28px) -->
+      <div class="handle-bar right" onclick="toggleExpand()" title="点按展开/收起外物抽屉">
+        <div class="handle-indicator"></div>
+      </div>
+
+      <!-- Right Drawer: 身外之物 (Tasks, Artifacts, Workspace Files) -->
+      <div class="drawer right">
+        <div class="drawer-header">
+          <span>身外之物</span>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--fg-faint);">OUTER</span>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">进行中任务</div>
+          <div class="drawer-item">
+            <span>苔庭 HTML/Report 渲染</span>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--rep);">100%</span>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">工作区共享产物</div>
+          <div class="drawer-item"><span>gemini-36-flash-moss.html</span></div>
+          <div class="drawer-item"><span>gemini-36-flash-moss-report.md</span></div>
+        </div>
+        <div class="drawer-section">
+          <div class="drawer-section-title">文件结构探针</div>
+          <div class="drawer-item"><span>FREE-BRIEF.md</span></div>
+          <div class="drawer-item"><span>visual-iter-compass.md</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Micro Interaction Script -->
+  <script>
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('btnThemeLight').classList.toggle('active', theme === 'light');
+      document.getElementById('btnThemeDark').classList.toggle('active', theme === 'dark');
+    }
+
+    function setWindowWidth(width) {
+      const win = document.getElementById('appWindow');
+      if (width === 1280) {
+        win.classList.add('expanded');
+        document.getElementById('btnMode860').classList.remove('active');
+        document.getElementById('btnMode1280').classList.add('active');
+      } else {
+        win.classList.remove('expanded');
+        document.getElementById('btnMode860').classList.add('active');
+        document.getElementById('btnMode1280').classList.remove('active');
+      }
+    }
+
+    function toggleExpand() {
+      const win = document.getElementById('appWindow');
+      if (win.classList.contains('expanded')) {
+        setWindowWidth(860);
+      } else {
+        setWindowWidth(1280);
+      }
+    }
+
+    function switchView(viewName) {
+      const views = ['chat', 'space', 'archive', 'tokens'];
+      views.forEach(v => {
+        const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
+        const btn = document.getElementById('nav' + v.charAt(0).toUpperCase() + v.slice(1));
+        if (el) el.classList.toggle('active', v === viewName);
+        if (btn) btn.classList.toggle('active', v === viewName);
+      });
+    }
+
+    function toggleThink(headerEl) {
+      const details = headerEl.nextElementSibling;
+      if (details.style.display === 'none') {
+        details.style.display = 'block';
+      } else {
+        details.style.display = 'none';
+      }
+    }
+
+    function toast(msg) {
+      alert(msg);
+    }
+  </script>
+</body>
+</html>

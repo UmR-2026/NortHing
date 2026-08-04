@@ -57,7 +57,84 @@ GROUP_COMMENTS = {
     "spacing": "间距 4 基数阶梯（4×1/2/3/4/6/8）",
     "radius": "圆角阶梯",
     "other": "未分组 token（css 新增，生成器自动收录）",
+    "mind": (
+        "mind 色维度（consult-room v2 spike 2026-08-02：5 mind × 5 角色 × 双主题；"
+        "派生语义=CSS color-mix(in srgb) 即 gamma sRGB 逐通道插值，透明端出 8 位 alpha hex）"
+    ),
 }
+
+# ----------------------------------------------------------------------------
+# mind 色维度（consult-room v2，spike 2026-08-02）
+# 源：northing-consult-room.html 的 --mind-base 候选与 color-mix 派生参数。
+# 角色：glow=光晕15% / intense=40%(暗)·12%on白(亮) / line=70%on白(暗)·76%on#101416(亮)
+#       / frame=55%alpha(暗)·=line(亮) / accent=base(暗)·84%on#241108(亮)
+# ----------------------------------------------------------------------------
+MIND_BASE = (
+    ("drive", (0xC8, 0x71, 0x4C)),  # 驱力 #C8714C
+    ("abyss", (0x3F, 0x83, 0x7B)),  # 深渊 #3F837B
+    ("leap", (0x8B, 0x5F, 0xBF)),   # 跃迁 #8B5FBF
+    ("gaze", (0xD9, 0x9B, 0x48)),   # 凝视 #D99B48
+    ("calm", (0x4B, 0x8F, 0x6B)),   # 镇静 #4B8F6B
+)
+_WHITE = (255, 255, 255)
+_LIGHT_LINE_BG = (0x10, 0x14, 0x16)     # #101416
+_LIGHT_ACCENT_BG = (0x24, 0x11, 0x08)   # #241108
+MIND_ROLES = ("glow", "intense", "line", "frame", "accent")
+
+
+def _mix(c1, c2, w):
+    """gamma sRGB 逐通道插值，w 为 c1 权重（= color-mix(in srgb, c1 w%, c2)）。"""
+    return tuple(round(c1[i] * w + c2[i] * (1 - w)) for i in range(3))
+
+
+def _hex(rgb):
+    return "#%02X%02X%02X" % rgb
+
+
+def _hex8(rgb, pct):
+    return "#%02X%02X%02X%02X" % (rgb[0], rgb[1], rgb[2], round(pct * 255 / 100))
+
+
+def _muddy_flag(rgb):
+    """设计裁决辅助：标出发闷/过暗的亮色派生（供人读表走查，不阻断生成）。"""
+    spread = max(rgb) - min(rgb)
+    lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    if spread < 40:
+        return "发闷(彩度低)"
+    if lum < 90:
+        return "过暗"
+    return ""
+
+
+def mind_tokens():
+    """返回 (fields, light_by, dark_by, rows)；rows=(name, light_hex, dark_hex, note)。"""
+    fields, light_by, dark_by, rows = [], {}, {}, []
+    for mind, base in MIND_BASE:
+        dark = {
+            "glow": _hex8(base, 15),
+            "intense": _hex8(base, 40),
+            "line": _hex(_mix(base, _WHITE, 0.70)),
+            "frame": _hex8(base, 55),
+            "accent": _hex(base),
+        }
+        light = {
+            "glow": _hex8(base, 15),  # 亮色光晕禁用，值保留备查
+            "intense": _hex(_mix(base, _WHITE, 0.12)),
+            "line": _hex(_mix(base, _LIGHT_LINE_BG, 0.76)),
+            "frame": None,
+            "accent": _hex(_mix(base, _LIGHT_ACCENT_BG, 0.84)),
+        }
+        light["frame"] = light["line"]
+        for role in MIND_ROLES:
+            name = f"mind-{mind}-{role}"
+            fields.append((name, "color"))
+            light_by[name] = light[role]
+            dark_by[name] = dark[role]
+            note = ""
+            if role in ("accent", "line"):
+                note = _muddy_flag(tuple(int(light[role][i:i + 2], 16) for i in (1, 3, 5)))
+            rows.append((name, light[role], dark[role], note))
+    return fields, light_by, dark_by, rows
 
 
 def fail(msg):
@@ -260,6 +337,8 @@ def group_of(name):
         return "spacing"
     if name.startswith("r-"):
         return "radius"
+    if name.startswith("mind-"):
+        return "mind"
     return "other"
 
 
@@ -271,7 +350,7 @@ def md_escape(s):
     return s.replace("|", "\\|") if s else "—"
 
 
-def gen_md(root_tokens, light, dark_by, checks, clamped_all):
+def gen_md(root_tokens, light, dark_by, checks, clamped_all, mind_rows=()):
     out = []
     out.append("# tokens-srgb-table — OKLCH→sRGB 对照表")
     out.append("")
@@ -311,10 +390,20 @@ def gen_md(root_tokens, light, dark_by, checks, clamped_all):
         out.append("| 模式 | token | 通道 | 截断前线性值 |")
         out.append("|---|---|---|---|")
         for mode, name, ch, val in clamped_all:
-            out.append(f"| {mode} | `{name}` | {ch} | {val:.6f} |")
+            out.append(f"| {mode} | `{name}` | `{ch}` | {val:.6f} |")
     else:
         out.append("无（全部 token 落 sRGB 色域内，未发生截断）。")
     out.append("")
+    if mind_rows:
+        out.append("## mind 色维度（consult-room v2 spike，color-mix(in srgb) 预计算）")
+        out.append("")
+        out.append("| token | light hex | dark hex | 设计裁决注 |")
+        out.append("|---|---|---|---|")
+        for name, lh, dh, note in mind_rows:
+            out.append(f"| `{name}` | `{lh}` | `{dh}` | {md_escape(note)} |")
+        out.append("")
+        out.append("裁决注为生成器启发式（彩度 spread<40 标发闷、亮度<90 标过暗），最终取舍由设计走查定。")
+        out.append("")
     return "\n".join(out)
 
 
@@ -322,10 +411,12 @@ def gen_md(root_tokens, light, dark_by, checks, clamped_all):
 # 产物二：redesign_palette.slint
 # ----------------------------------------------------------------------------
 
-def gen_slint(root_tokens, light, dark_by, clamped_all):
+def gen_slint(root_tokens, light, dark_by, clamped_all, mind=None):
     color_order = [t["name"] for t in light]
     light_by = {t["name"]: t for t in light}
     struct_fields = [(n, "color") for n in color_order]
+    if mind:
+        struct_fields += mind[0]
     struct_fields += [(n, "length") for (n, _v, _c) in root_tokens]
 
     clamp_note = (
@@ -362,7 +453,7 @@ def gen_slint(root_tokens, light, dark_by, clamped_all):
     lines.append("}")
     lines.append("")
 
-    def instance_block(prop_name, banner, tokens_by_name):
+    def instance_block(prop_name, banner, tokens_by_name, mind_by=None):
         # 结构 token 亮暗同值，两套实例均携带（struct 字面量要求全字段）
         fields = []
         for name in color_order:
@@ -371,6 +462,9 @@ def gen_slint(root_tokens, light, dark_by, clamped_all):
             if prop_name == "LIGHT" and tok["comment"]:
                 tail += f" · {tok['comment']}"
             fields.append((f"{name}: {tok['hex']}", tail))
+        if mind_by is not None and mind:
+            for name, _ftype in mind[0]:
+                fields.append((f"{name}: {mind_by[name]}", ""))
         for name, value, _note in root_tokens:
             fields.append((f"{name}: {value}", ""))
         block = []
@@ -394,12 +488,14 @@ def gen_slint(root_tokens, light, dark_by, clamped_all):
         "LIGHT",
         "LIGHT —— 心理咨询室白灰（tokens-draft.css :root / [data-theme=\"light\"]）",
         light_by,
+        mind[1] if mind else None,
     ))
     lines.append("")
     lines.extend(instance_block(
         "DARK",
         "DARK —— 灰黑锚（tokens-draft.css [data-theme=\"dark\"]；[T1][T4] 亮度台阶为推导值，P1.1 走查定稿）",
         dark_by,
+        mind[2] if mind else None,
     ))
     lines.append("")
     lines.append("    // 当前生效 token 集：dark ? DARK : LIGHT")
@@ -469,13 +565,18 @@ def main():
                 "请核对转换数学或 css 数值"
             )
 
+    # mind 色维度（consult-room v2 spike；独立于 css 源，参数内联于本生成器）
+    mind = mind_tokens()
+
     # 写产物
     TABLE_PATH.write_text(
-        gen_md(root_tokens, light, dark_by, checks, clamped_all), encoding="utf-8"
+        gen_md(root_tokens, light, dark_by, checks, clamped_all, mind_rows=mind[3]),
+        encoding="utf-8",
     )
     SLINT_PATH.parent.mkdir(parents=True, exist_ok=True)
     SLINT_PATH.write_text(
-        gen_slint(root_tokens, light, dark_by, clamped_all), encoding="utf-8"
+        gen_slint(root_tokens, light, dark_by, clamped_all, mind=mind),
+        encoding="utf-8",
     )
 
     # 摘要

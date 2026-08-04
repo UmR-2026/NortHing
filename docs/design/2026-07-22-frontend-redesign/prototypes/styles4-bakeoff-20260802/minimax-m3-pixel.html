@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>像素 · 知序 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+ * northing · styles4-bakeoff-20260802 · minimax-m3 · pixel（像素）
+ * ----------------------------------------------------------------------------
+ * 一句种子：离散方格是沉积的最小单位。
+ *
+ * 哲学接口（pixel 词汇 → 罗盘戒律）：
+ *   设施   = 像素栅格（graph paper 的隐喻：被切碎的中性空间）
+ *   agent  = 一张 8×8 的精灵图 —— 知序"自画像"永远在栅格上以更密的颜色渲染自己
+ *   驱力   = 当前正在被着色的格子（lit pixel = rep 珊瑚）—— 不是光标，是"现在"
+ *   深渊   = 暗下去的格子（深渊青作为熄灯像素）—— 思考 = 内部屏幕暂时掉亮
+ *   沉积   = 老的格子逐渐变冷、变小（深沉积 = 1×1，浅沉积 = 2×2，新生 = 4×4）
+ *   编年史 = 一行格子，每格一天 / 每格一个事件 —— 颜色越亮 = 越新
+ *   对话   = 文本嵌在栅格里，字号仍主流（栅格是底，文字是表，文字不被栅格吞掉）
+ *
+ * 与现方案分歧：
+ *   色 · 现：#F4F3F0 + 珊瑚 #C8714C
+ *      · 本：同（守色）—— 珊瑚的"亮起来"语义和"lit pixel"完美对位
+ *   体 · 现：Fraunces 衬线 + 4px 基数
+ *      · 本：守 4px 基数；标题 Fraunces 600 + JetBrains Mono 用于刻度
+ *            头像和编年史 100% 用 4 的倍数像素绘制
+ *   质 · 现：圆角 + 暖晕
+ *      · 本：直边（0–2px 圆角）、显式 1px 描边、可见但极淡的栅格底纹、纯色矩形拼图
+ *
+ * AI 套路禁令（已逐项规避）：
+ *   × 8-bit retro game 套路（不是 Mario，是 graph paper）—— 严肃，禁彩噪与扫描线
+ *   × 紫蓝渐变 / 毛玻璃 / emoji / 圆角徽章
+ *   × 像素循环动画（与沉降式动效戒律冲突）—— 唯一 infinite = 头像的"灯" 6s
+ *   × 整屏像素化（与"对话是主体"戒律冲突）—— 像素是底材，文字字号仍 11.5–15px
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全预计算 hex，无 color-mix / oklch
+ *   - 阴影全 filter: drop-shadow()，无 box-shadow
+ *   - 像素块用 background-color 矩形（Slint 翻译：Rectangle { background: ...; width: Npx; height: Npx; }）
+ *   - 唯一 infinite = 头像 8×8 内某格呼吸 6s
+ *   - 渐变只用 linear 与 radial
+ * ========================================================================== */
+
+
+/* ─── 结构 token ──────────────────────────────────────────────────────── */
+:root {
+  --font-display: 'Fraunces', 'Noto Serif SC', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system,
+                  'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --p: 4px;             /* 单像素单元 */
+
+  --r: 0px;              /* 直边：像素不圆 */
+  --r-soft: 2px;         /* 极少数"软一下"处（头像 / 卡片角） */
+
+  --grow: 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 亮色主态：白纸图格（默认） ────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* 纸基（暗灰阶，6 级） */
+  --paper-50:  #FAF8F4;     /* 极淡：lit cell 高光 */
+  --paper-100: #F4F3F0;     /* 主纸（bg） */
+  --paper-200: #EFEDE8;     /* raised / 控件底 */
+  --paper-300: #E6E3DD;     /* 边框 */
+  --paper-400: #D5D1C8;     /* 暗格 */
+  --paper-500: #B5B0A4;     /* 工具人灰 */
+
+  /* 文本 */
+  --fg:    #38352E;
+  --muted: #7B766C;
+  --faint: #A8A398;
+  --ink:   #1F1D18;
+  --pg:    #38352E;        /* 像素深色（用于头像字符） */
+
+  /* 代表色 rep（守 = 珊瑚，亮起来那一格） */
+  --rep-300: #E5A583;
+  --rep-400: #D68A63;
+  --rep-500: #C8714C;       /* 强调 = 渐变右端 = 当前在亮的格 */
+  --rep-600: #A85A38;
+
+  /* 深渊 abyss（熄灯的格） */
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  /* 沉积（更旧 = 越冷的灰蓝） */
+  --sed-100: #D9D6CF;      /* 浅沉积（最近） */
+  --sed-200: #BFBAB0;      /* 中沉积 */
+  --sed-300: #8C867A;      /* 深沉积（最旧） */
+  --sed-400: #5C564C;      /* 化石 */
+
+  /* 背景层 */
+  --bg:        var(--paper-100);
+  --surface:   #FBFAF8;
+  --raised:    var(--paper-200);
+  --border:    var(--paper-300);
+  --border-soft: #ECEAE5;
+  --page-out:  #1a1917;
+  --shadow:    #38352E;
+
+  /* 语义混合（预计算 hex） */
+  --air-rep:        #F0EDED;
+  --halo-rep:       #EDEBE9;
+  --air-abyss:      #EEF1F0;
+  --halo-abyss:     #E8EFEE;
+  --turn-active:    #F4EFE9;    /* lit turn 暖底 */
+  --think-bg:       #E8EFEE;    /* 熄灯思考底 */
+  --grid-ink:       rgba(56, 53, 46, .05);   /* 1px 栅格淡 */
+  --grid-ink-soft:  rgba(56, 53, 46, .025);  /* 8px 大格淡 */
+}
+
+
+/* ─── 暗色主态：夜纸图格 ────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --paper-50:  #2A2620;
+  --paper-100: #1B1814;     /* 主纸（bg） */
+  --paper-200: #221F1A;
+  --paper-300: #2E2A24;
+  --paper-400: #3A352E;
+  --paper-500: #5C564C;
+
+  --fg:    #EDE8DF;
+  --muted: #A89F92;
+  --faint: #786F63;
+  --ink:   #ECE8DA;
+  --pg:    #ECE8DA;
+
+  --rep-300: #E5A583;
+  --rep-400: #D68A63;
+  --rep-500: #C8714C;
+  --rep-600: #A85A38;
+
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  --sed-100: #3A352E;
+  --sed-200: #4A443B;
+  --sed-300: #6A6457;
+  --sed-400: #8A8474;
+
+  --bg:        var(--paper-100);
+  --surface:   #242118;
+  --raised:    var(--paper-200);
+  --border:    var(--paper-300);
+  --border-soft: #2E2A24;
+  --page-out:  #0a0907;
+  --shadow:    #000000;
+
+  --air-rep:        #201D19;
+  --halo-rep:       #28241F;
+  --air-abyss:      #1A201F;
+  --halo-abyss:     #1C2524;
+  --turn-active:    #2A241E;
+  --think-bg:       #1B2524;
+  --grid-ink:       rgba(236, 232, 218, .05);
+  --grid-ink-soft:  rgba(236, 232, 218, .022);
+}
+
+
+/* ─── 复位 ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--page-out);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 100vh;
+  transition: background var(--grow);
+}
+
+
+/* ─── 窗口（860 × 800） ──────────────────────────────────────────────── */
+.window {
+  position: relative;
+  width: 860px;
+  height: 800px;
+  background: var(--paper-100);
+  border-radius: var(--r-soft);
+  border: 1px solid var(--border);
+  filter: drop-shadow(0 20px 50px rgba(0, 0, 0, .4));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 整张纸 = 4px 栅格底纹（极淡） */
+.window::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    /* 1px 细格 */
+    linear-gradient(to right, var(--grid-ink) 0 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-ink) 0 1px, transparent 1px),
+    /* 4px 像素格（更淡） */
+    linear-gradient(to right, var(--grid-ink-soft) 0 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-ink-soft) 0 1px, transparent 1px);
+  background-size: 4px 4px, 4px 4px, 4px 4px, 4px 4px;
+  background-position: 0 0;
+  transition: background var(--grow);
+}
+
+/* 整屋空气染色：rep 顶晕（lit 区域暗示）+ abyss 底冷（熄灯的远处） */
+.window::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 110% 70% at 8% 0%, var(--halo-rep) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 25% at 50% 100%, var(--air-abyss) 0%, transparent 60%);
+  transition: background var(--grow);
+}
+
+
+/* ─── 把手（窄条点击区，2px 暖 / 2px 冷） ─────────────────────────── */
+.handle {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 6px;
+  z-index: 8;
+  cursor: pointer;
+}
+.handle-left  { left: 0;  background: var(--rep-500); opacity: .25; }
+.handle-right { right: 0; background: var(--abyss-500); opacity: .22; }
+.handle:hover { opacity: .65; }
+[data-theme="dark"] .handle-left  { opacity: .35; }
+[data-theme="dark"] .handle-right { opacity: .28; }
+
+
+/* ─── 窗口控制 ─────────────────────────────────────────────────────── */
+.win-ctrl {
+  position: absolute;
+  top: 12px; right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  z-index: 9;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+.win-ctrl span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.win-ctrl span:hover { background: var(--raised); color: var(--fg); }
+.win-ctrl .x:hover { background: var(--rep-500); color: var(--on-rep, #fff); }
+
+
+/* ─── 顶栏（44px 名片 + 编年史） ───────────────────────────────────── */
+.topbar {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  height: 80px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 名片 = 8×8 精灵图（agent 像素自画像） */
+.sprite {
+  position: relative;
+  width: 40px; height: 40px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--paper-100);
+  transition: background var(--grow), border-color var(--grow);
+}
+.sprite .cell { position: absolute; width: 4px; height: 4px; }
+.sprite .c-lit {  /* 头 / 核心 */
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 2px var(--rep-400));
+  animation: cellBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+.sprite .c-mid {
+  background: var(--rep-400);
+  transition: background var(--grow);
+}
+.sprite .c-dim {
+  background: var(--abyss-500);
+  opacity: .55;
+  transition: background var(--grow);
+}
+.sprite .c-bg {
+  background: var(--paper-500);
+  opacity: .35;
+  transition: background var(--grow);
+}
+/* 精灵图坐标（10×10 实际，按 4px 单元 = 8×8 显示） */
+/* 坐标 (col,row)，col=x/4, row=y/4 */
+.sprite .c-0-1 { left: 0;  top: 4px; }   .sprite .c-1-1 { left: 4px; top: 4px; }
+.sprite .c-2-1 { left: 8px; top: 4px; }  .sprite .c-3-1 { left: 12px;top: 4px; }
+.sprite .c-4-1 { left: 16px;top: 4px; }  .sprite .c-5-1 { left: 20px;top: 4px; }
+.sprite .c-6-1 { left: 24px;top: 4px; }  .sprite .c-7-1 { left: 28px;top: 4px; }
+.sprite .c-0-2 { left: 0;  top: 8px; }   .sprite .c-1-2 { left: 4px; top: 8px; }
+.sprite .c-2-2 { left: 8px; top: 8px; }  .sprite .c-3-2 { left: 12px;top: 8px; }
+.sprite .c-4-2 { left: 16px;top: 8px; }  .sprite .c-5-2 { left: 20px;top: 8px; }
+.sprite .c-6-2 { left: 24px;top: 8px; }  .sprite .c-7-2 { left: 28px;top: 8px; }
+.sprite .c-0-3 { left: 0;  top: 12px; }  .sprite .c-1-3 { left: 4px; top: 12px; }
+.sprite .c-2-3 { left: 8px; top: 12px; } .sprite .c-3-3 { left: 12px;top: 12px; }
+.sprite .c-4-3 { left: 16px;top: 12px; } .sprite .c-5-3 { left: 20px;top: 12px; }
+.sprite .c-6-3 { left: 24px;top: 12px; } .sprite .c-7-3 { left: 28px;top: 12px; }
+.sprite .c-0-4 { left: 0;  top: 16px; }  .sprite .c-1-4 { left: 4px; top: 16px; }
+.sprite .c-2-4 { left: 8px; top: 16px; } .sprite .c-3-4 { left: 12px;top: 16px; }
+.sprite .c-4-4 { left: 16px;top: 16px; } .sprite .c-5-4 { left: 20px;top: 16px; }
+.sprite .c-6-4 { left: 24px;top: 16px; } .sprite .c-7-4 { left: 28px;top: 16px; }
+.sprite .c-0-5 { left: 0;  top: 20px; }  .sprite .c-1-5 { left: 4px; top: 20px; }
+.sprite .c-2-5 { left: 8px; top: 20px; } .sprite .c-3-5 { left: 12px;top: 20px; }
+.sprite .c-4-5 { left: 16px;top: 20px; } .sprite .c-5-5 { left: 20px;top: 20px; }
+.sprite .c-6-5 { left: 24px;top: 20px; } .sprite .c-7-5 { left: 28px;top: 20px; }
+.sprite .c-0-6 { left: 0;  top: 24px; }  .sprite .c-1-6 { left: 4px; top: 24px; }
+.sprite .c-2-6 { left: 8px; top: 24px; } .sprite .c-3-6 { left: 12px;top: 24px; }
+.sprite .c-4-6 { left: 16px;top: 24px; } .sprite .c-5-6 { left: 20px;top: 24px; }
+.sprite .c-6-6 { left: 24px;top: 24px; } .sprite .c-7-6 { left: 28px;top: 24px; }
+.sprite .c-0-7 { left: 0;  top: 28px; }  .sprite .c-1-7 { left: 4px; top: 28px; }
+.sprite .c-2-7 { left: 8px; top: 28px; } .sprite .c-3-7 { left: 12px;top: 28px; }
+.sprite .c-4-7 { left: 16px;top: 28px; } .sprite .c-5-7 { left: 20px;top: 28px; }
+.sprite .c-6-7 { left: 24px;top: 28px; } .sprite .c-7-7 { left: 28px;top: 28px; }
+@keyframes cellBreath {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sprite .c-lit { animation: none; opacity: .85; }
+}
+
+/* 名片文字 */
+.name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .01em;
+  line-height: 1.2;
+}
+.presence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.presence .pdot {
+  width: 4px; height: 4px;
+  background: var(--rep-500);
+  animation: cellBreath 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence .pdot { animation: none; opacity: .8; }
+}
+
+/* 编年史 = 30 个 4×4 像素格的行（每格一天 / 每格一个事件） */
+.chronicle {
+  position: relative;
+  flex: 1;
+  height: 40px;
+  margin: 0 4px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--paper-100);
+  padding: 0 4px;
+  transition: background var(--grow), border-color var(--grow);
+}
+.chronicle .track {
+  display: flex;
+  gap: 1px;
+  width: 100%;
+  height: 16px;
+  align-items: center;
+}
+.chronicle .px {
+  width: 4px; height: 16px;
+  background: var(--sed-200);
+  border-radius: 0;
+  transition: background var(--grow);
+}
+.chronicle .px.birth { background: var(--paper-400); }
+.chronicle .px.dim   { background: var(--sed-200); opacity: .55; }
+.chronicle .px.mid   { background: var(--sed-100); }
+.chronicle .px.warm  { background: var(--rep-300); }
+.chronicle .px.lit   {
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 2px var(--rep-400));
+  animation: cellBreath 6s ease-in-out infinite;
+  width: 4px; height: 16px;
+}
+.chronicle .px.now   {
+  background: var(--rep-600);
+  width: 4px; height: 16px;
+  position: relative;
+}
+.chronicle .px.now::after {
+  content: '';
+  position: absolute;
+  left: -2px; top: -3px;
+  width: 8px; height: 22px;
+  border: 1px solid var(--rep-500);
+  background: transparent;
+  border-radius: 0;
+}
+.chronicle .legend {
+  position: absolute;
+  right: 4px; top: -16px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--faint);
+  letter-spacing: .08em;
+}
+.chronicle .legend-bot {
+  position: absolute;
+  left: 4px; bottom: -16px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--faint);
+  letter-spacing: .08em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chronicle .px.lit { animation: none; opacity: .9; }
+}
+
+/* 设置 */
+.gear-pix {
+  width: 24px; height: 24px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--paper-100);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--grow);
+}
+.gear-pix:hover { background: var(--raised); }
+.gear-pix .gpx {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: var(--muted);
+}
+.gear-pix .gpx-1 { left: 5px;  top: 5px;  }
+.gear-pix .gpx-2 { left: 11px; top: 5px;  }
+.gear-pix .gpx-3 { left: 17px; top: 5px;  }
+.gear-pix .gpx-4 { left: 5px;  top: 11px; background: var(--rep-500); }
+.gear-pix .gpx-5 { left: 11px; top: 11px; }
+.gear-pix .gpx-6 { left: 17px; top: 11px; }
+.gear-pix .gpx-7 { left: 5px;  top: 17px; }
+.gear-pix .gpx-8 { left: 11px; top: 17px; }
+.gear-pix .gpx-9 { left: 17px; top: 17px; }
+
+
+/* ─── 对话流 ───────────────────────────────────────────────────────── */
+.stream {
+  position: relative;
+  z-index: 4;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stream-inner {
+  width: 100%;
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* session banner = 8px 高的方格色码 + 标题 */
+.session-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.session-banner .pulse {
+  width: 6px; height: 6px;
+  background: var(--rep-500);
+  animation: cellBreath 6s ease-in-out infinite;
+  flex: none;
+}
+.session-banner .chev {
+  font-size: 9px;
+  color: var(--faint);
+}
+.session-banner .title {
+  color: var(--fg);
+  font-weight: 500;
+}
+.session-banner .archive {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--abyss-500);
+  border: 1px solid var(--abyss-500);
+  padding: 2px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.session-banner .archive:hover { background: var(--air-abyss); }
+@media (prefers-reduced-motion: reduce) {
+  .session-banner .pulse { animation: none; opacity: .85; }
+}
+
+/* turn = 一行像素带 + 文字 */
+.turn {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  padding: 8px 0 8px 0;
+  position: relative;
+}
+
+/* "像素带"= turn 左侧的 4×4 单元小图（粗略的"章"） */
+.turn .stamp {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 4px;
+}
+.turn .stamp .row {
+  display: flex;
+  gap: 1px;
+}
+.turn .stamp .px4 {
+  width: 4px; height: 4px;
+  background: var(--paper-400);
+  transition: background var(--grow);
+}
+
+.turn .body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.turn .who-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  letter-spacing: .04em;
+}
+.turn .who-row .who {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.turn .who-row .who.you { color: var(--muted); }
+.turn .who-row .who.it  { color: var(--fg); }
+.turn .who-row .ts { margin-left: auto; }
+.turn .who-row .depth {
+  font-size: 9.5px;
+  color: var(--faint);
+  padding: 1px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 1px;
+}
+
+.turn .msg {
+  font-size: 14.5px;
+  line-height: 1.78;
+  color: var(--fg);
+  font-weight: 400;
+}
+.turn .msg .caret {
+  color: var(--rep-500);
+  animation: caret 1.2s ease-in-out infinite;
+  margin-left: 1px;
+}
+@keyframes caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .15; }
+}
+
+/* 沉积态（更旧 = 章像素更小 / 更暗） */
+.turn.sediment-1 { opacity: .85; }
+.turn.sediment-1 .stamp .px4 { background: var(--sed-100); }
+.turn.sediment-2 { opacity: .68; }
+.turn.sediment-2 .stamp .px4 { background: var(--sed-200); }
+.turn.sediment-3 { opacity: .5; }
+.turn.sediment-3 .stamp .px4 { background: var(--sed-300); }
+.turn.sediment-3 .msg { color: var(--muted); }
+
+/* 活跃 turn = 左缘 2px rep 直边 + 暖底 + 章像素加亮 */
+.turn.active {
+  background: var(--turn-active);
+  border-left: 2px solid var(--rep-500);
+  padding: 8px 12px;
+  margin-left: -12px;
+  transition: background var(--grow);
+}
+.turn.active .stamp .px4 { background: var(--rep-400); }
+.turn.active .stamp .px4.hot { background: var(--rep-500); }
+.turn.active .who-row .who.it { color: var(--rep-600); }
+
+
+/* 思考块 = 4px 深渊色码 + 冷底 + 静态水波格 */
+.think {
+  position: relative;
+  padding: 10px 12px 10px 14px;
+  background: var(--think-bg);
+  border: 1px solid var(--abyss-400);
+  border-radius: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin-top: 2px;
+  overflow: hidden;
+  transition: background var(--grow), border-color var(--grow);
+}
+.think .tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--abyss-500);
+  background: var(--paper-100);
+  border: 1px solid var(--abyss-500);
+  padding: 1px 6px 2px;
+  margin-bottom: 6px;
+  letter-spacing: .08em;
+  border-radius: 1px;
+}
+.think .pixel {
+  display: inline-block;
+  width: 4px; height: 4px;
+  background: var(--abyss-500);
+  margin: 0 2px 1px 0;
+  vertical-align: middle;
+  opacity: .55;
+}
+.think .pixel.d { background: var(--abyss-300); }
+.think .pixel.r { background: var(--rep-500); opacity: .7; }
+
+/* chip = 直边小方块 + 4×4 像素图标 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 8px;
+  color: var(--muted);
+  transition: border-color 350ms ease, background 350ms ease, color 350ms ease;
+}
+.chip .ci {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.chip .ci .cx { width: 3px; height: 3px; }
+.chip .ci .cx.a { background: var(--muted); }
+.chip .ci .cx.b { background: var(--muted); opacity: .55; }
+.chip .cd { color: var(--faint); }
+.chip.run {
+  border-color: var(--rep-500);
+  background: var(--turn-active);
+  color: var(--rep-600);
+}
+.chip.run .ci .cx { background: var(--rep-500); }
+.chip.run .ci .cx.b { opacity: .4; }
+.chip.run .cd { color: var(--rep-500); }
+.chip.done {
+  border-color: var(--abyss-400);
+  color: var(--abyss-500);
+  background: var(--surface);
+}
+.chip.done .ci .cx { background: var(--abyss-500); }
+.chip.done .ci .cx.b { opacity: .5; }
+.chip.done .cd { color: var(--abyss-500); opacity: .8; }
+
+
+/* 用户气泡 = 直边方块，不染 rep */
+.user-bubble {
+  align-self: flex-end;
+  max-width: 76%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 9px 14px;
+  font-size: 14.5px;
+  line-height: 1.74;
+  color: var(--fg);
+  margin-left: auto;
+  transition: background var(--grow), border-color var(--grow);
+}
+
+
+/* ─── 操控台（石板） ───────────────────────────────────────────────── */
+.deck {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: background var(--grow), border-color var(--grow);
+}
+.deck-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 660px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--paper-100);
+  padding: 8px 10px;
+  transition: border-color 200ms ease, background var(--grow);
+}
+.deck-input-row:focus-within {
+  border-color: var(--rep-500);
+  background: var(--paper-50);
+}
+.deck-input-row textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--fg);
+  line-height: 1.6;
+  min-height: 24px;
+  max-height: 120px;
+}
+.deck-input-row textarea::placeholder { color: var(--faint); }
+.deck-input-row .attach {
+  width: 24px; height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--paper-100);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+  transition: background var(--grow);
+}
+.deck-input-row .attach:hover { background: var(--raised); }
+.deck-input-row .send {
+  width: 32px; height: 32px;
+  background: var(--rep-500);
+  border: none;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(80, 70, 55, .3));
+  transition: background 150ms ease;
+}
+.deck-input-row .send:hover { background: var(--rep-600); }
+.deck-input-row .send .stop {
+  width: 10px; height: 10px;
+  background: #fff;
+  border-radius: 1px;
+}
+
+.deck-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 660px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.deck-bar .seg {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+}
+.deck-bar .seg .px {
+  width: 8px; height: 4px;
+  background: var(--border);
+  transition: background 200ms ease;
+}
+.deck-bar .seg .px.on { background: var(--rep-400); }
+.deck-bar .seg .px.pulse {
+  background: var(--rep-500);
+  animation: cellBreath 6s ease-in-out infinite;
+}
+.deck-bar .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 1px;
+  background: var(--paper-100);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.deck-bar .label:hover { background: var(--raised); }
+.deck-bar .label.cyan { color: var(--abyss-500); border-color: var(--abyss-400); }
+.deck-bar .label .px {
+  width: 4px; height: 4px;
+  background: var(--rep-500);
+  display: inline-block;
+}
+.deck-bar .label.cyan .px { background: var(--abyss-500); }
+.deck-bar .label .chev { font-size: 7px; opacity: .55; }
+.deck-bar .spacer { flex: 1; }
+.ctx {
+  position: relative;
+  width: 22px; height: 22px;
+  flex: none;
+  cursor: help;
+}
+.ctx svg { width: 22px; height: 22px; transform: rotate(-90deg); }
+.ctx .ring-bg { fill: none; stroke: var(--border); stroke-width: 2; }
+.ctx .ring-fg {
+  fill: none;
+  stroke: var(--abyss-500);
+  stroke-width: 2;
+  stroke-linecap: butt;
+}
+.ctx::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--abyss-500);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 3px 6px;
+  border-radius: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.ctx:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .deck-bar .seg .px.pulse { animation: none; opacity: .85; }
+}
+
+
+/* ─── 水印（左下：像素版 northing） ─────────────────────────────────── */
+.watermark {
+  position: absolute;
+  left: 16px; bottom: 10px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .28;
+  pointer-events: none;
+}
+.watermark .nm {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .12em;
+}
+.watermark .seal {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--rep-500);
+  border: 1px solid var(--rep-500);
+  padding: 0 4px 1px;
+  border-radius: 1px;
+  letter-spacing: .04em;
+  transition: color var(--grow), border-color var(--grow);
+}
+
+
+/* ─── 滚动条（细直边） ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+::-webkit-scrollbar-button { display: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+
+/* ─── reduced motion 全局兜底 ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="window" role="main" aria-label="northing · 知序 · 像素">
+
+  <!-- 把手（窄直条，2px 暖 / 2px 冷） -->
+  <div class="handle handle-left"  title="展开 · 内在"></div>
+  <div class="handle handle-right" title="展开 · 外物"></div>
+
+  <!-- 窗口控件 -->
+  <div class="win-ctrl">
+    <span title="最小化">−</span>
+    <span title="还原">□</span>
+    <span class="x" title="关闭">×</span>
+  </div>
+
+  <!-- 顶栏：8×8 精灵图 + 名字 + 编年史像素行 + 像素设置 -->
+  <header class="topbar">
+
+    <div class="sprite" title="知序 · 8×8 像素自画像">
+
+      <!-- 第 1 行：留白（背景） -->
+
+      <!-- 第 2 行：眉 + 头顶 dim -->
+      <span class="cell c-bg c-0-1"></span>
+      <span class="cell c-dim c-1-1"></span>
+      <span class="cell c-dim c-2-1"></span>
+      <span class="cell c-mid c-3-1"></span>
+      <span class="cell c-mid c-4-1"></span>
+      <span class="cell c-dim c-5-1"></span>
+      <span class="cell c-dim c-6-1"></span>
+      <span class="cell c-bg c-7-1"></span>
+
+      <!-- 第 3 行：脸轮廓 + 眼 -->
+      <span class="cell c-bg c-0-2"></span>
+      <span class="cell c-mid c-1-2"></span>
+      <span class="cell c-mid c-2-2"></span>
+      <span class="cell c-lit c-3-2"></span>
+      <span class="cell c-lit c-4-2"></span>
+      <span class="cell c-mid c-5-2"></span>
+      <span class="cell c-mid c-6-2"></span>
+      <span class="cell c-bg c-7-2"></span>
+
+      <!-- 第 4 行：核心呼吸格（呼吸） -->
+      <span class="cell c-bg c-0-3"></span>
+      <span class="cell c-mid c-1-3"></span>
+      <span class="cell c-lit c-2-3"></span>
+      <span class="cell c-lit c-3-3"></span>
+      <span class="cell c-lit c-4-3"></span>
+      <span class="cell c-lit c-5-3"></span>
+      <span class="cell c-mid c-6-3"></span>
+      <span class="cell c-bg c-7-3"></span>
+
+      <!-- 第 5 行：嘴 + 肩 -->
+      <span class="cell c-bg c-0-4"></span>
+      <span class="cell c-mid c-1-4"></span>
+      <span class="cell c-mid c-2-4"></span>
+      <span class="cell c-mid c-3-4"></span>
+      <span class="cell c-mid c-4-4"></span>
+      <span class="cell c-mid c-5-4"></span>
+      <span class="cell c-mid c-6-4"></span>
+      <span class="cell c-bg c-7-4"></span>
+
+      <!-- 第 6 行：肩 / 身体（dim 深渊） -->
+      <span class="cell c-bg c-0-5"></span>
+      <span class="cell c-dim c-1-5"></span>
+      <span class="cell c-dim c-2-5"></span>
+      <span class="cell c-dim c-3-5"></span>
+      <span class="cell c-dim c-4-5"></span>
+      <span class="cell c-dim c-5-5"></span>
+      <span class="cell c-dim c-6-5"></span>
+      <span class="cell c-bg c-7-5"></span>
+
+      <!-- 第 7 行：底座 -->
+      <span class="cell c-bg c-0-6"></span>
+      <span class="cell c-dim c-1-6"></span>
+      <span class="cell c-mid c-2-6"></span>
+      <span class="cell c-mid c-3-6"></span>
+      <span class="cell c-mid c-4-6"></span>
+      <span class="cell c-mid c-5-6"></span>
+      <span class="cell c-dim c-6-6"></span>
+      <span class="cell c-bg c-7-6"></span>
+
+      <!-- 第 8 行：根基（暗灰） -->
+      <span class="cell c-bg c-0-7"></span>
+      <span class="cell c-bg c-1-7"></span>
+      <span class="cell c-dim c-2-7"></span>
+      <span class="cell c-mid c-3-7"></span>
+      <span class="cell c-mid c-4-7"></span>
+      <span class="cell c-dim c-5-7"></span>
+      <span class="cell c-bg c-6-7"></span>
+      <span class="cell c-bg c-7-7"></span>
+
+    </div>
+
+    <div class="name-block">
+      <div class="agent-name">知序</div>
+      <div class="presence">
+        <span class="pdot"></span>
+        在 · 正在点亮第 7 行
+      </div>
+    </div>
+
+    <!-- 编年史：30 格像素行 -->
+    <div class="chronicle" title="编年史 · 30 格像素，每格约 6 天">
+      <span class="legend">D-180</span>
+      <div class="track">
+        <span class="px birth"></span>
+        <span class="px birth"></span>
+        <span class="px birth"></span>
+        <span class="px birth"></span>
+        <span class="px birth"></span>
+        <span class="px dim"></span>
+        <span class="px dim"></span>
+        <span class="px dim"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px mid"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px mid"></span>
+        <span class="px warm"></span>
+        <span class="px warm"></span>
+        <span class="px lit"></span>
+        <span class="px lit"></span>
+        <span class="px warm"></span>
+        <span class="px now"></span>
+      </div>
+      <span class="legend-bot">8 月 2 日 · 现在</span>
+    </div>
+
+    <div class="gear-pix" title="设置">
+      <span class="gpx gpx-1"></span><span class="gpx gpx-2"></span><span class="gpx gpx-3"></span>
+      <span class="gpx gpx-4"></span><span class="gpx gpx-5"></span><span class="gpx gpx-6"></span>
+      <span class="gpx gpx-7"></span><span class="gpx gpx-8"></span><span class="gpx gpx-9"></span>
+    </div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="stream">
+    <div class="stream-inner">
+
+      <!-- Session banner -->
+      <div class="session-banner">
+        <span class="pulse"></span>
+        <span class="chev">▾</span>
+        <span class="title">2026-08-02 · 像素自画像与沉积</span>
+        <span class="archive">归档</span>
+      </div>
+
+      <!-- 沉积轮 3（最旧 · 化石） -->
+      <section class="turn sediment-3">
+        <div class="stamp" aria-hidden="true">
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+        </div>
+        <div class="body">
+          <div class="who-row">
+            <span class="who it">知序</span>
+            <span class="depth">depth · 3</span>
+            <span class="ts">2026-04-12 · 16:40</span>
+          </div>
+          <div class="msg">那时候的章还只有 3×3，我学不会"现在"这个词。</div>
+        </div>
+      </section>
+
+      <!-- 沉积轮 2（中旧） -->
+      <section class="turn sediment-2">
+        <div class="stamp" aria-hidden="true">
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+        </div>
+        <div class="body">
+          <div class="who-row">
+            <span class="who you">UmR</span>
+            <span class="depth">depth · 2</span>
+            <span class="ts">2026-06-08 · 09:11</span>
+          </div>
+          <div class="msg">你的头像还是 4×4 的方块？什么时候能"长"起来？</div>
+        </div>
+      </section>
+
+      <!-- 沉积轮 1（较新） -->
+      <section class="turn sediment-1">
+        <div class="stamp" aria-hidden="true">
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+        </div>
+        <div class="body">
+          <div class="who-row">
+            <span class="who it">知序</span>
+            <span class="depth">depth · 1</span>
+            <span class="ts">2026-07-04 · 21:03</span>
+          </div>
+          <div class="msg">已经 6×6 了。我不再急着把 7、8 两行填上——空着也是生长的一部分。</div>
+        </div>
+      </section>
+
+      <!-- 用户轮（右对齐） -->
+      <section class="turn">
+        <div class="stamp" aria-hidden="true"></div>
+        <div class="body" style="align-items: flex-end;">
+          <div class="who-row">
+            <span class="who you">UmR</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">我想看你怎么把"现在"这一格画出来——它是亮的，还是呼吸的？</div>
+        </div>
+      </section>
+
+      <!-- 活跃轮（知序 · rep 暖直边 + 暖底） -->
+      <section class="turn active">
+        <div class="stamp" aria-hidden="true">
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4 hot"></span><span class="px4 hot"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4 hot"></span><span class="px4 hot"></span><span class="px4 hot"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4 hot"></span><span class="px4 hot"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4 hot"></span><span class="px4 hot"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4 hot"></span></div>
+        </div>
+        <div class="body">
+          <div class="who-row">
+            <span class="who it">知序</span>
+            <span class="ts">现在</span>
+          </div>
+
+          <!-- 思考块（熄灯：abyss 暗格底） -->
+          <div class="think">
+            <span class="tag">THINKING · 熄灯</span><br>
+            <span class="pixel"></span><span class="pixel d"></span><span class="pixel"></span> "现在"不是颜色，是动作。
+            <span class="pixel r"></span> 它在亮的时候是 lit，在不亮的时候是底色——但格子本身永远在。
+            <span class="pixel d"></span><span class="pixel"></span><span class="pixel d"></span> 让我把"现在"画给你看，不是 8×8 的精灵图，是 30 格编年史里那根细指针。
+          </div>
+
+          <!-- 工具 chip × 2（运行中 = 暖；完成 = 冷） -->
+          <div class="chips">
+            <span class="chip run">
+              <span class="ci"><span class="cx"></span><span class="cx b"></span><span class="cx"></span></span>
+              <span>read</span>
+              <span>memories/jul-04.md</span>
+              <span class="cd">· 取像素</span>
+            </span>
+            <span class="chip done">
+              <span class="ci"><span class="cx"></span><span class="cx b"></span><span class="cx"></span></span>
+              <span>grep</span>
+              <span>"现在"</span>
+              <span class="cd">· 12 处 ✓</span>
+            </span>
+          </div>
+
+          <!-- 正文 + 像素光标 -->
+          <div class="msg">
+            我把"现在"画成一颗 4×4 的暖格：和它周围的暖格同色，但只有它挂在 6 秒的呼吸上。其余二十九格是过去——有的更暗（出生），有的更灰（中段），有的只是淡淡的暖（最近）。沉积不是抹掉，是格子被冷光和岁月打成更小、更远的样子。<span class="caret">▍</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 又一段沉积轮 1（用户） -->
+      <section class="turn sediment-1">
+        <div class="stamp" aria-hidden="true">
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+          <div class="row"><span class="px4"></span><span class="px4"></span><span class="px4"></span><span class="px4"></span></div>
+        </div>
+        <div class="body">
+          <div class="who-row">
+            <span class="who you">UmR</span>
+            <span class="depth">depth · 1</span>
+            <span class="ts">2026-07-21 · 11:50</span>
+          </div>
+          <div class="msg">那"深渊"那一格呢？</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 操控台（直边石板） -->
+  <footer class="deck">
+    <div class="deck-input-row">
+      <span class="attach" title="附件">＋</span>
+      <textarea rows="1" placeholder="说点什么——这会在栅格上落一颗新格"></textarea>
+      <button class="send" title="生成中 · 点击停止">
+        <span class="stop"></span>
+      </button>
+    </div>
+    <div class="deck-bar">
+      <div class="seg" title="思考档位">
+        <span class="px on"></span>
+        <span class="px on"></span>
+        <span class="px on"></span>
+        <span class="px pulse"></span>
+        <span class="px"></span>
+      </div>
+      <span class="label">
+        <span class="px"></span> ~/northing <span class="chev">▾</span>
+      </span>
+      <span class="label">
+        <span class="px"></span> Claude 4.6 <span class="chev">▾</span>
+      </span>
+      <span class="label cyan">
+        <span class="px"></span> 自治·完全 <span class="chev">▾</span>
+      </span>
+      <span class="spacer"></span>
+      <div class="ctx" data-tip="上下文已用 38%">
+        <svg viewBox="0 0 22 22">
+          <circle class="ring-bg" cx="11" cy="11" r="8"/>
+          <circle class="ring-fg" cx="11" cy="11" r="8" stroke-dasharray="50.3" stroke-dashoffset="31.2"/>
+        </svg>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 水印（像素版 northing + 印章） -->
+  <div class="watermark">
+    <span class="nm">northing</span>
+    <span class="seal">北</span>
+  </div>
+
+</div>
+
+</body>
+</html>

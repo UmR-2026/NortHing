@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 遥测终端 (Telemetry Dashboard)</title>
+    <style>
+        :root {
+            --bg-base: #F4F3EF;
+            --panel-bg: #FFFFFF;
+            
+            --soul-coral: #D1644B;  /* 灵魂/成长色 */
+            --sys-cyan: #42747A;    /* 工作流/系统色 */
+            
+            --text-main: #1C1B1A;
+            --text-muted: #85827D;
+            --border-line: #E5E3DC;
+            
+            --font-ui: "Inter", sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-base); color: var(--text-main);
+            font-family: var(--font-ui);
+            height: 100vh; overflow: hidden;
+            display: flex; gap: 2px;
+            background-image: linear-gradient(to right, var(--border-line) 1px, transparent 1px);
+            background-size: 100px 100%;
+        }
+
+        /* 统一面板样式 */
+        .panel {
+            background: var(--panel-bg);
+            display: flex; flex-direction: column;
+        }
+        .panel-header {
+            font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            padding: 16px 24px; border-bottom: 1px solid var(--border-line);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .panel-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+        /* 左侧：灵魂与成长区 (The Soul) */
+        .soul-container { width: 320px; border-right: 1px solid var(--border-line); }
+        .soul-container .panel-header { color: var(--soul-coral); }
+        
+        .growth-meter { margin-bottom: 32px; }
+        .meter-label { font-size: 12px; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .meter-track { height: 4px; background: var(--bg-base); border-radius: 2px; overflow: hidden; }
+        .meter-fill { height: 100%; background: var(--soul-coral); width: 64%; }
+
+        .section-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.1em; }
+        
+        .memory-card {
+            border: 1px solid var(--border-line); border-radius: 6px;
+            padding: 12px; margin-bottom: 12px; font-size: 13px;
+        }
+        .memory-tag { font-family: var(--font-mono); font-size: 10px; color: var(--soul-coral); margin-bottom: 6px; }
+
+        /* 右侧：工作流与产物区 (The Workflow & Artifacts) */
+        .machine-container { flex: 1; display: flex; flex-direction: column; }
+        .machine-container .panel-header { color: var(--sys-cyan); }
+
+        /* 工作流 (上半部分) */
+        .workflow-zone { flex: 0 0 280px; border-bottom: 1px solid var(--border-line); display: flex; flex-direction: column; }
+        
+        .workflow-pipeline {
+            display: flex; gap: 16px; padding: 24px;
+            overflow-x: auto; background: var(--bg-base); flex: 1;
+        }
+        
+        .subagent-node {
+            min-width: 220px; background: var(--panel-bg);
+            border: 1px solid var(--border-line); border-radius: 8px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+        .node-head {
+            padding: 10px 12px; border-bottom: 1px solid var(--border-line);
+            font-size: 12px; font-weight: 600; display: flex; justify-content: space-between;
+        }
+        .node-head.active { border-bottom-color: var(--sys-cyan); color: var(--sys-cyan); }
+        .node-log {
+            padding: 12px; font-family: var(--font-mono); font-size: 11px;
+            color: var(--text-muted); line-height: 1.6;
+        }
+
+        /* 产物区 (下半部分) */
+        .artifact-zone { flex: 1; display: flex; flex-direction: column; background: #FAFAFA; }
+        .code-container {
+            padding: 24px; font-family: var(--font-mono); font-size: 13px;
+            color: #333; line-height: 1.6; flex: 1; overflow-y: auto;
+        }
+        .diff-block {
+            background: #FFFFFF; border: 1px solid var(--border-line);
+            border-radius: 6px; overflow: hidden;
+        }
+        .diff-row { display: flex; padding: 2px 16px; }
+        .diff-row.del { background: #FFF0F0; color: #A40E26; }
+        .diff-row.add { background: #F0FFF4; color: #1F7F3B; }
+        .ln { color: #BBB; width: 30px; user-select: none; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 左侧：灵魂与成长 -->
+    <div class="panel soul-container">
+        <div class="panel-header">
+            <span>Core // Identity & Soul</span>
+            <span>v3.1.4</span>
+        </div>
+        <div class="panel-body">
+            
+            <div class="growth-meter">
+                <div class="meter-label"><span>Cognitive Evolution (认知演化)</span> <span>Lvl.4</span></div>
+                <div class="meter-track"><div class="meter-fill"></div></div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
+                    Progress to Lvl.5: Assimilating memory structures.
+                </div>
+            </div>
+
+            <div class="section-title">Active Biases (认知偏差)</div>
+            <div class="memory-card" style="border-left: 2px solid var(--soul-coral);">
+                代码洁癖：倾向于将庞大的 God-Object 拆分为单一职责的小模块。
+            </div>
+
+            <div class="section-title">Memory Induction (记忆归纳)</div>
+            <div class="memory-card">
+                <div class="memory-tag">L2_STRATEGY / INITIALIZATION</div>
+                在 Rust 桌面应用中，`config::init()` 必须严格置于任何状态读取之前，否则极易引发时序型 Panic。
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 右侧：工作流与产物 -->
+    <div class="panel machine-container">
+        
+        <div class="workflow-zone">
+            <div class="panel-header" style="border-bottom: none; background:var(--panel-bg);">
+                <span>Workflow // Subagent Orchestration</span>
+                <span>Active</span>
+            </div>
+            
+            <div class="workflow-pipeline">
+                <div class="subagent-node">
+                    <div class="node-head">
+                        <span>[0] router</span>
+                        <span style="color:var(--text-muted);">DONE</span>
+                    </div>
+                    <div class="node-log">
+                        > parse_intent("启动报错...")<br>
+                        > route -> "implementer"<br>
+                        > task_id: 8f92a
+                    </div>
+                </div>
+
+                <div class="subagent-node" style="border-color:var(--sys-cyan); box-shadow: 0 0 0 1px var(--sys-cyan);">
+                    <div class="node-head active">
+                        <span>[1] implementer: coder</span>
+                        <span>RUNNING</span>
+                    </div>
+                    <div class="node-log" style="color:var(--text-main);">
+                        > grep "init_config"<br>
+                        > read src/main.rs<br>
+                        > AST parse success.<br>
+                        <span style="color:var(--sys-cyan);">> patching lifetimes...</span>
+                    </div>
+                </div>
+
+                <div class="subagent-node" style="opacity:0.5;">
+                    <div class="node-head">
+                        <span>[2] reviewer: judge-m3</span>
+                        <span>PENDING</span>
+                    </div>
+                    <div class="node-log">
+                        Waiting for implementer artifact...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="artifact-zone">
+            <div class="panel-header">
+                <span style="color:var(--text-main);">Artifact // Materialization</span>
+                <span>src/main.rs</span>
+            </div>
+            
+            <div class="code-container">
+                <div class="diff-block">
+                    <div class="diff-row"><span class="ln">40</span><span>fn bootstrap_agent() -> Result<()> {</span></div>
+                    <div class="diff-row del"><span class="ln">41</span><span>    let session = memory::read_session();</span></div>
+                    <div class="diff-row del"><span class="ln">42</span><span>    let config = config::init();</span></div>
+                    <div class="diff-row add"><span class="ln">43</span><span>    let config = config::init()?;</span></div>
+                    <div class="diff-row add"><span class="ln">44</span><span>    let session = memory::read_session(&config);</span></div>
+                    <div class="diff-row"><span class="ln">45</span><span>    </span></div>
+                    <div class="diff-row"><span class="ln">46</span><span>    logger::info("Agent initialized.");</span></div>
+                    <div class="diff-row"><span class="ln">47</span><span>    Ok(())</span></div>
+                    <div class="diff-row"><span class="ln">48</span><span>}</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

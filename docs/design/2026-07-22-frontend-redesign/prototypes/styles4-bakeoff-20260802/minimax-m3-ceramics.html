@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>窑变 · 知序 — northing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+ * northing · styles4-bakeoff-20260802 · minimax-m3 · ceramics（窑变）
+ * ----------------------------------------------------------------------------
+ * 一句种子：素坯是设施，釉色是不可控的浮现。
+ *
+ * 哲学接口（窑变词汇 → 罗盘戒律）：
+ *   设施   = 素坯（未施釉的陶胎，暖灰中性）—— bg #F4F3F0，陶粒细微噪点
+ *   agent  = 施釉后的器 —— 头像即钧窑天蓝釉，rep 是铜红飞釉（柿红偏橘）
+ *   驱力   = 飞釉（正在流，未固化）—— 活跃轮左缘 = 釉滴 + 顶部熔珠，
+ *            工具 chip 进行中 = 暖边框，思考块以上 rep 帽冠示意"刚覆上去"
+ *   深渊   = 釉下彩（underglaze）—— 思考块是釉下青花透出来的底色，
+ *            完成 chip = 已冷却的釉面（沉入冷青），ctx 圆环 = 釉面上
+ *            一圈还未涂匀的釉水弧
+ *   沉积   = 复烧层（re-fire glaze layer）—— 旧轮次 = 上一层施釉后的
+ *            冷却面（opacity .55），新釉压在上面时会出现一道"叠烧线"
+ *
+ * 窑变的视觉真值（种子想要的）：
+ *   × 平滑均匀的 rep 渐变（那是 Material，不是窑变）
+ *   √ 飞釉 —— 局部色相偏移、结晶斑、釉水流动线
+ *   √ 铜红 / 柿红（更橘更沉）替代标准珊瑚的粉调
+ *   √ 蚯蚓走泥纹（冰裂）—— 施釉后开片在器表的细线
+ *   √ 结晶斑 —— 颜色集中处的色块，比周围明显更深
+ *
+ * 与现方案分歧：
+ *   色 · 现：#F4F3F0 米白咨询室 + 珊瑚 #C8714C（偏粉）
+ *      · 本：#F4F3F0 陶胎 + 柿红 #C26A4A（偏橘，更沉）+ 铜红飞 #BD5A38
+ *            + 钧窑天青 #5C8A8E（abyss 加青，更接近钧釉色）
+ *   体 · 现：Fraunces 圆润衬线
+ *      · 本：Fraunces WONK display + Noto Serif SC 小标题 / 印章 +
+ *            Noto Sans SC body + JetBrains Mono 元数据；标题字距略
+ *            收紧以贴合器物铭文感
+ *   质 · 现：暖晕 + 圆角卡片
+ *      · 本：陶粒噪点（radial-gradient 微堆叠）+ 不规则结晶斑 + 飞
+ *            釉弧线（SVG 蚯蚓纹环境层）+ 印章式水印（篆书"窑"）
+ *
+ * AI 套路禁令（已逐项规避）：
+ *   × 紫蓝渐变 / 毛玻璃 / emoji / 弹跳动效
+ *   × "窑变"做成 Material radial-gradient 彩虹球 —— 用 SVG 飞釉
+ *     弧线 + 多 stop 结晶斑代替平滑渐变
+ *   × 飞釉做成循环动画 —— 飞釉弧线环境层完全静态
+ *
+ * 戒律张力裁决：
+ *   戒律 8「沉降式动效」vs 种子「不可控的浮现」——
+ *   窑变的"浮现"不是位移，是"在同一位置叠加不同层次的釉"。
+ *   我的裁决：呼吸（6s）只给头像熔珠 + session 点；活跃轮"釉滴"
+ *   通过颜色梯度而非位移来表达流动（顶部深、底部浅、不循环）；
+ *   飞釉环境层是静态 SVG。所有"不可控"都在静止中完成。
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全预计算 hex，无 color-mix / oklch
+ *   - 阴影全 filter: drop-shadow()，无 box-shadow
+ *   - ::before / ::after 仅作：陶粒底色、飞釉环境层、晕染光环、结晶斑
+ *   - 唯一 infinite = 头像熔珠呼吸 6s（继承「呼吸只给 logo + 头像」）
+ *   - 渐变只用 linear 与 radial（多 stop）
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  --font-display: 'Fraunces', 'Noto Serif SC', 'Songti SC', 'STSong',
+                  'SimSun', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system,
+                  'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif:   'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+
+  --grow: 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 亮色主态：窑火初熄（默认） ────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* 陶胎灰阶（暖白素坯，6 级） */
+  --clay-50:  #FAF8F4;
+  --clay-100: #F4F3F0;    /* 主陶胎（bg） */
+  --clay-200: #EAE7E0;
+  --clay-300: #DAD6CD;
+  --clay-400: #B5AE9F;
+  --clay-500: #8A8474;
+  --clay-600: #5E594C;
+
+  /* 代表色 rep：柿红 / 钧窑铜红飞釉（agent 现在的"飞釉"）
+     比标准珊瑚更橘更沉，去粉调，更像窑火里的铜红） */
+  --rep-300: #D88664;      /* 飞釉浅晕 */
+  --rep-400: #C26A4A;      /* 主飞釉 = 柿红 */
+  --rep-500: #BD5A38;      /* 飞釉核心（铜红） */
+  --rep-600: #8B4528;      /* 窑变深处 */
+
+  /* 深渊 abyss：钧窑天青（青瓷冷感，比标准 abyss 更接近钧釉） */
+  --abyss-300: #7C9C97;
+  --abyss-400: #5C8A8E;
+  --abyss-500: #3F6F77;
+  --abyss-deep: #2A5560;
+
+  /* 出生 birth：未施釉的素坯 */
+  --birth-300: #C9C4B8;
+  --birth-500: #B5AE9F;
+
+  /* 结晶斑（窑变专属，更深的铜红核心） */
+  --crystal-warm: #9A3F22;
+  --crystal-cool: #1F4F58;
+
+  /* 危险 danger：陶红 */
+  --danger: #A45950;
+
+  /* 文本 */
+  --fg:        #38352E;
+  --muted:     #7B766C;
+  --faint:     #A8A398;
+  --ink:       #1F1D17;
+
+  /* 背景层 */
+  --bg:        var(--clay-100);
+  --surface:   #FAF8F4;
+  --raised:    #EFECE5;
+  --border:    #E2DED5;
+  --border-soft: #EAE6DC;
+  --page-out:  #1F1D17;
+  --shadow:    #38352E;
+
+  /* 语义混合（预计算 hex） */
+  --air-rep:        #EDE3D9;  /* rep 8% on clay-100 */
+  --halo-rep:       #E5D5C4;  /* rep 14% on clay-100 */
+  --halo-rep-deep:  #DEC5AE;  /* rep 22% on clay-100 */
+  --air-abyss:      #E4E8E6;  /* abyss 8% on clay-100 */
+  --halo-abyss:     #D9E0DE;  /* abyss 14% on clay-100 */
+  --turn-active:    #ECE3D7;  /* rep 8% on surface */
+  --settled-wash:   #E8E5DD;  /* 旧釉面 wash */
+  --settled-line:   #C9C4B8;  /* 叠烧线 */
+  --think-bg:       #DEE5E3;  /* 釉下青底 */
+  --think-bg-deep: #C9D5D3;  /* 釉下青深处 */
+
+  /* 蚯蚓纹（环境层） */
+  --crackle: rgba(138, 132, 116, .18);
+  --crackle-strong: rgba(122, 92, 70, .25);
+}
+
+
+/* ─── 暗色主态：夜窑余温 ────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* 陶胎灰阶（夜窑，6 级） */
+  --clay-50:  #2D2A24;
+  --clay-100: #1F1D17;    /* 主陶胎（bg） */
+  --clay-200: #2A2720;
+  --clay-300: #36322A;
+  --clay-400: #4A4538;
+  --clay-500: #6A6457;
+  --clay-600: #8A8474;
+
+  /* 飞釉（暗态下提亮，仍偏橘不偏粉） */
+  --rep-300: #E0936F;
+  --rep-400: #C97557;
+  --rep-500: #B85F3F;
+  --rep-600: #94482A;
+
+  /* 钧窑天青（夜窑下提亮） */
+  --abyss-300: #8AB0AB;
+  --abyss-400: #6A999E;
+  --abyss-500: #4A7C84;
+  --abyss-deep: #335E68;
+
+  --birth-300: #4A4538;
+  --birth-500: #36322A;
+
+  --crystal-warm: #B85035;
+  --crystal-cool: #2E5F68;
+
+  --danger: #C37D73;
+
+  --fg:        #E8E4D8;
+  --muted:     #A89F8A;
+  --faint:     #6A6457;
+  --ink:       #ECE8DA;
+
+  --bg:        var(--clay-100);
+  --surface:   #2A2720;
+  --raised:    #36322A;
+  --border:    #4A4538;
+  --border-soft: #36322A;
+  --page-out:  #0A0907;
+  --shadow:    #000000;
+
+  --air-rep:        #2A231C;
+  --halo-rep:       #322620;
+  --halo-rep-deep:  #3A2A1F;
+  --air-abyss:      #1F2522;
+  --halo-abyss:     #222A28;
+  --turn-active:    #2D2620;
+  --settled-wash:   #252218;
+  --settled-line:   #3A3528;
+  --think-bg:       #1F2A28;
+  --think-bg-deep: #1A2524;
+
+  --crackle: rgba(180, 168, 145, .10);
+  --crackle-strong: rgba(200, 130, 90, .18);
+}
+
+
+/* ─── 复位 ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--page-out);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-height: 100vh;
+  /* 窗外：窑火余温的极淡暖雾 */
+  background-image:
+    radial-gradient(ellipse 1200px 700px at 20% 10%, rgba(189, 90, 56, .04), transparent 60%),
+    radial-gradient(ellipse 900px 600px at 80% 90%, rgba(63, 111, 119, .03), transparent 60%);
+  transition: background var(--grow);
+}
+
+
+/* ─── 窗口（860 × 800，器物立面） ─────────────────────────────────────── */
+.window {
+  position: relative;
+  width: 860px;
+  height: 800px;
+  background: var(--clay-100);
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  /* box-shadow: 0 30px 80px -20px rgba(20, 16, 8, .35), 0 2px 6px rgba(20, 16, 8, .25) */
+  filter: drop-shadow(0 20px 50px rgba(20, 16, 8, .35)) drop-shadow(0 2px 6px rgba(20, 16, 8, .25));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 陶粒底色微层：极细的陶胎颗粒感（用 radial-gradient 微堆叠模拟） */
+.window::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* 陶胎微粒 —— 比 zen 的砂粒更细更碎 */
+    radial-gradient(circle at 20% 30%, rgba(138, 132, 116, .04) 0, transparent 1.5px),
+    radial-gradient(circle at 60% 70%, rgba(138, 132, 116, .035) 0, transparent 1.2px),
+    radial-gradient(circle at 80% 20%, rgba(138, 132, 116, .04) 0, transparent 1.4px),
+    radial-gradient(circle at 40% 80%, rgba(138, 132, 116, .03) 0, transparent 1.3px),
+    radial-gradient(circle at 90% 60%, rgba(138, 132, 116, .035) 0, transparent 1.2px),
+    radial-gradient(circle at 10% 60%, rgba(138, 132, 116, .04) 0, transparent 1.5px),
+    radial-gradient(circle at 50% 10%, rgba(138, 132, 116, .03) 0, transparent 1.2px),
+    radial-gradient(circle at 30% 90%, rgba(138, 132, 116, .035) 0, transparent 1.3px);
+  background-size: 38px 38px, 47px 47px, 52px 52px, 41px 41px, 56px 56px, 43px 43px, 49px 49px, 38px 38px;
+  transition: background var(--grow);
+}
+
+/* 整屋空气染色：顶部飞釉晕（窑火刚熄时的余温）+ 底部钧窑冷雾 */
+.window::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 120% 70% at 18% 0%, var(--halo-rep) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 25% at 50% 100%, var(--air-abyss) 0%, transparent 60%);
+  transition: background var(--grow);
+}
+
+
+/* ─── 飞釉环境层（SVG）—— 蚯蚓走泥纹 + 飞釉弧 ─────────────────────────── */
+.kiln-ground {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: .65;
+  transition: opacity var(--grow);
+}
+[data-theme="dark"] .kiln-ground { opacity: .42; }
+
+.kiln-ground path {
+  fill: none;
+  stroke: var(--clay-500);
+  stroke-width: .55;
+  stroke-linecap: round;
+  opacity: .32;
+  transition: stroke var(--grow);
+}
+.kiln-ground .g-deep { stroke: var(--clay-600); stroke-width: .8; opacity: .42; }
+.kiln-ground .g-warm { stroke: var(--rep-400); stroke-width: .55; opacity: .25; }
+.kiln-ground .g-cool { stroke: var(--abyss-400); stroke-width: .55; opacity: .22; }
+
+
+/* ─── 顶栏 ───────────────────────────────────────────────────────────── */
+.topbar {
+  position: relative;
+  z-index: 6;
+  flex: none;
+  height: 76px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--clay-100) 100%);
+  border-bottom: 1px solid var(--border-soft);
+  transition: background var(--grow), border-color var(--grow);
+}
+
+/* 头像 = 钧窑器物（飞釉后的窑变结晶） */
+.kiln-vessel {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+/* 器物本体：钧窑飞釉（多 stop 重叠结晶斑） */
+.kiln-vessel .vessel-body {
+  position: absolute; inset: 0;
+  background:
+    /* 飞釉核心：右上偏暖 */
+    radial-gradient(circle at 72% 28%, var(--rep-500) 0%, var(--rep-400) 22%, transparent 50%),
+    /* 飞釉次晕：左下冷青 */
+    radial-gradient(circle at 22% 78%, var(--abyss-400) 0%, var(--abyss-300) 25%, transparent 55%),
+    /* 主底：钧窑天蓝 */
+    radial-gradient(circle at 50% 50%, var(--abyss-500) 30%, var(--abyss-deep) 75%, #1F4F58 100%);
+  /* 不规则器形：手拉坯的椭圆 */
+  border-radius: 48% 52% 49% 51% / 51% 49% 52% 48%;
+  transform: rotate(-2deg);
+  filter: drop-shadow(0 1px 2px rgba(20, 16, 8, .4));
+  transition: background var(--grow);
+}
+/* 结晶斑：飞釉的核心点（更深的铜红） */
+.kiln-vessel .crystal-warm {
+  position: absolute;
+  top: 22%; left: 60%;
+  width: 6px; height: 4px;
+  border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+  background: var(--crystal-warm);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, .25));
+  transform: rotate(15deg);
+}
+.kiln-vessel .crystal-cool {
+  position: absolute;
+  top: 64%; left: 26%;
+  width: 5px; height: 3px;
+  border-radius: 55% 45% 60% 40% / 45% 55% 45% 55%;
+  background: var(--crystal-cool);
+  transform: rotate(-22deg);
+}
+/* 飞釉熔珠（呼吸）—— 只在头像，6s ease-in-out（钧釉表面的活性光斑） */
+.kiln-vessel .melt-bead {
+  position: absolute;
+  top: 38%; left: 42%;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--rep-400);
+  filter: drop-shadow(0 0 4px rgba(194, 106, 74, .75));
+  animation: beadBreath 6000ms ease-in-out infinite;
+  transition: background var(--grow);
+}
+@keyframes beadBreath {
+  0%, 100% { opacity: .55; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiln-vessel .melt-bead { animation: none; opacity: .8; }
+}
+
+/* 头像晕染：飞釉在素坯上的回声 */
+.kiln-vessel::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(194, 106, 74, .18) 0%,
+    rgba(92, 138, 142, .10) 35%,
+    transparent 65%);
+  pointer-events: none;
+  z-index: -1;
+  transition: background var(--grow);
+}
+
+
+/* 名片 */
+.name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.agent-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .015em;
+  line-height: 1.1;
+}
+.presence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.presence .pdot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px rgba(189, 90, 56, .55));
+  animation: dotBreath 6000ms ease-in-out infinite;
+}
+@keyframes dotBreath {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence .pdot { animation: none; opacity: .8; }
+}
+
+/* 编年史 = 釉面结晶带（飞釉堆积在水平线上的结晶轨迹） */
+.chronicle {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  margin: 0 12px;
+  min-width: 140px;
+  border-radius: 2px;
+  background: var(--clay-200);
+  border: 1px solid var(--clay-300);
+  overflow: visible;
+  transition: background var(--grow), border-color var(--grow);
+}
+.chronicle svg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  overflow: visible;
+}
+.chronicle .now-marker {
+  position: absolute;
+  right: -3px; top: 50%;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px rgba(189, 90, 56, .7));
+}
+
+/* 顶栏右侧：篆印设置（替代 ⚙，是器物铭文的延续） */
+.gear-seal {
+  width: 30px; height: 30px;
+  border-radius: 4px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  cursor: pointer;
+  border: 1px solid var(--border-soft);
+  background: var(--raised);
+  transition: all 150ms ease;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+}
+.gear-seal:hover {
+  color: var(--rep-500);
+  border-color: var(--rep-400);
+  background: var(--halo-rep);
+}
+
+
+/* ─── 对话流 ─────────────────────────────────────────────────────────── */
+.stream {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 28px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 999px;
+}
+.stream::-webkit-scrollbar-button { display: none; }
+
+
+/* Session banner（对话流顶部）—— 烧制记录牌 */
+.session-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--rep-500);
+  border-radius: 2px 6px 6px 2px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.session-banner .sess-pulse {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px rgba(189, 90, 56, .6));
+  animation: dotBreath 6000ms ease-in-out infinite;
+  flex: none;
+}
+.session-banner .chev {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--faint);
+}
+.session-banner .title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--fg);
+  font-size: var(--fs-lg);
+  letter-spacing: .02em;
+}
+.session-banner .quote {
+  color: var(--faint);
+  font-style: italic;
+  font-size: var(--fs-md);
+  font-family: var(--font-serif);
+}
+.session-banner .archive-btn {
+  margin-left: auto;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  transition: all 150ms ease;
+  background: transparent;
+}
+.session-banner .archive-btn:hover {
+  color: var(--abyss-500);
+  border-color: var(--abyss-400);
+  background: var(--air-abyss);
+}
+
+
+/* ─── 轮次（turn） ────────────────────────────────────────────────────── */
+.turn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 活跃轮：飞釉柱（正在流的釉滴，左缘 + 顶部熔珠） */
+.turn.active {
+  padding: 10px 14px 12px 16px;
+  background: var(--turn-active);
+  border-radius: 3px;
+  /* 默认左缘：飞釉柱（顶部深、底部浅，模拟釉滴流下） */
+  border-left: 2.5px solid var(--rep-500);
+}
+/* 飞釉熔珠（活跃轮顶部）—— 静态发光点，非循环动画 */
+.turn.active::before {
+  content: '';
+  position: absolute;
+  left: -5px; top: -1px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 4px rgba(189, 90, 56, .7));
+}
+
+/* 沉积轮：复烧釉面（旧釉层 + 叠烧线） */
+.turn.settled {
+  opacity: .6;
+  padding: 6px 14px 6px 16px;
+  background: var(--settled-wash);
+  border-radius: 0 3px 3px 0;
+  border-left: 2.5px solid var(--clay-400);
+  position: relative;
+}
+.turn.settled:hover { opacity: .82; }
+
+/* 叠烧线：沉积轮左缘的一道横向"新釉与旧釉"的交界 */
+.turn.settled::after {
+  content: '';
+  position: absolute;
+  left: 16px; right: 0; top: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    var(--settled-line) 0%,
+    transparent 60%);
+  pointer-events: none;
+  opacity: .55;
+}
+
+/* 沉积轮的"釉印"：被新釉压住的旧铭文 */
+.turn.settled .glaze-imprint {
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  color: var(--clay-600);
+  letter-spacing: .12em;
+  margin-top: 4px;
+  opacity: .8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.turn.settled .glaze-imprint::before {
+  content: '';
+  width: 16px; height: 1px;
+  background: var(--clay-500);
+  opacity: .5;
+}
+
+/* 更深的沉积轮 */
+.turn.settled.deep {
+  opacity: .42;
+}
+.turn.settled.deep:hover { opacity: .65; }
+
+/* 谁 */
+.who-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  letter-spacing: .04em;
+}
+.who-row .who-name {
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+.turn.active .who-row .who-name { color: var(--rep-500); }
+.turn.settled .who-row .who-name { color: var(--clay-600); }
+.who-row .who-ts { margin-left: auto; }
+
+/* 消息气泡 */
+.bubble {
+  font-size: var(--fs-body);
+  line-height: 1.82;
+  color: var(--fg);
+  font-weight: 400;
+  max-width: 92%;
+}
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble {
+  max-width: 78%;
+  background: var(--raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px 2px 2px 6px;
+  padding: 10px 14px;
+  /* 不染 rep（用户是见证者，不是 agent） */
+}
+.msg.agent .bubble {
+  padding: 4px 0;
+}
+.turn.active .msg.agent .bubble {
+  font-weight: 450;
+}
+
+
+/* ─── 思考块（abyss = 釉下彩，底色从釉下透上来） ──────────────────────── */
+.think-block {
+  position: relative;
+  align-self: flex-start;
+  max-width: 88%;
+  padding: 10px 14px 12px 18px;
+  border-left: 2.5px solid var(--abyss-500);
+  background: linear-gradient(90deg,
+    var(--think-bg-deep) 0%,
+    var(--think-bg) 55%,
+    transparent 100%);
+  border-radius: 0 3px 3px 0;
+  font-size: var(--fs-lg);
+  line-height: 1.72;
+  color: var(--muted);
+  font-family: var(--font-serif);
+  font-style: italic;
+  overflow: hidden;
+}
+/* 思考块的釉下纹理：极淡的青花纹样（静态 SVG） */
+.think-block .underglaze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .22;
+}
+.think-block .underglaze path {
+  fill: none;
+  stroke: var(--abyss-deep);
+  stroke-width: .5;
+  opacity: .55;
+}
+.think-block .underglaze .u-flow { opacity: .35; }
+.think-block .underglaze .u-dot { fill: var(--abyss-deep); opacity: .45; stroke: none; }
+.think-block .tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--abyss-500);
+  letter-spacing: .14em;
+  display: block;
+  margin-bottom: 4px;
+  opacity: .85;
+}
+
+
+/* ─── 工具 chip（驱力 → 深渊 = 飞釉未凝 → 已冷却釉面） ─────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--rep-500);
+  color: var(--rep-500);
+  background: var(--halo-rep);
+  transition: all 350ms ease;
+}
+.chip .ch-icon {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  /* 飞釉的小熔珠感 */
+  filter: drop-shadow(0 0 2px rgba(189, 90, 56, .55));
+}
+.chip .ch-st {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.chip.done {
+  border-color: var(--abyss-400);
+  color: var(--abyss-500);
+  background: var(--air-abyss);
+}
+.chip.done .ch-icon {
+  background: transparent;
+  border: 1px solid var(--abyss-500);
+  width: 6px; height: 6px;
+  filter: none;
+}
+
+
+/* ─── 操控台（deck）—— 拉坯台 ───────────────────────────────────────── */
+.deck {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border-soft);
+  background: linear-gradient(0deg, var(--surface) 0%, var(--clay-100) 100%);
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  transition: background var(--grow);
+}
+
+.deck-attach {
+  width: 36px; height: 36px;
+  border-radius: 4px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+  background: var(--raised);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 150ms ease;
+}
+.deck-attach:hover {
+  color: var(--rep-500);
+  border-color: var(--rep-400);
+}
+
+.deck-input {
+  flex: 1;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  transition: border-color 150ms;
+}
+.deck-input:focus-within {
+  border-color: var(--rep-400);
+  /* box-shadow: 0 0 0 3px rgba(189, 90, 56, .1) */
+  filter: drop-shadow(0 0 0 2px rgba(189, 90, 56, .12));
+}
+.deck-input textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  padding: 10px 14px;
+  min-height: 38px;
+  max-height: 96px;
+  line-height: 1.6;
+  font-family: var(--font-body);
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+
+/* ctx 圆环（无数字）—— 釉面上还未涂匀的釉水弧 */
+.ctx-ring {
+  width: 30px; height: 30px;
+  flex: none;
+  position: relative;
+  cursor: help;
+}
+.ctx-ring svg { transform: rotate(-90deg); }
+.ctx-ring .ring-track {
+  stroke: var(--border-soft);
+  fill: none;
+  stroke-width: 1.8;
+}
+.ctx-ring .ring-fill {
+  stroke: var(--abyss-500);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-dasharray: 75.4;
+  stroke-dashoffset: 24;
+}
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -8px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--abyss-500);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  padding: 4px 8px;
+  filter: drop-shadow(0 2px 6px rgba(20, 16, 8, .12));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  transform: translateY(4px);
+}
+.ctx-ring:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.deck-send {
+  width: 36px; height: 36px;
+  border-radius: 4px;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--rep-500);
+  color: var(--surface);
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 150ms;
+  filter: drop-shadow(0 1px 3px rgba(154, 78, 50, .35));
+}
+.deck-send:hover { background: var(--rep-600); }
+.deck-send[disabled] {
+  background: var(--raised);
+  color: var(--faint);
+  cursor: not-allowed;
+  filter: none;
+}
+
+
+/* ─── 窗口 chrome ─────────────────────────────────────────────────────── */
+.win-ctrl {
+  position: absolute;
+  top: 12px; right: 14px;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+}
+.win-ctrl span {
+  width: 22px; height: 22px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.win-ctrl span:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+
+/* 把手（左：飞釉渗光，右：釉下冷渗光） */
+.handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 64px;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 250ms ease;
+}
+.handle-left {
+  left: 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--rep-500) 30%,
+    var(--rep-400) 70%,
+    transparent 100%);
+  opacity: .5;
+}
+.handle-right {
+  right: 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    var(--abyss-400) 30%,
+    var(--abyss-300) 70%,
+    transparent 100%);
+  opacity: .5;
+}
+.handle:hover { opacity: .9; }
+
+
+/* ─── 水印（左下，"窑"印章，极淡） ──────────────────────────────────── */
+.watermark {
+  position: absolute;
+  left: 18px; bottom: 12px;
+  z-index: 6;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  color: var(--rep-600);
+  opacity: .28;
+  letter-spacing: .28em;
+  pointer-events: none;
+  font-weight: 600;
+}
+[data-theme="dark"] .watermark { color: var(--rep-400); }
+/* 印的方框 */
+.watermark .seal {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  padding: 1px 4px 2px;
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  margin-left: 6px;
+  vertical-align: 1px;
+  opacity: .9;
+}
+
+
+/* ─── reduced motion 全局兜底 ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="window" role="main" aria-label="northing · 知序 · 窑变">
+
+  <!-- 飞釉环境层：蚯蚓走泥纹 + 飞釉弧
+       围绕头像的飞釉弧（器物的"场"）
+       横向蚯蚓纹贯穿对话流（施釉后的开片） -->
+  <svg class="kiln-ground" viewBox="0 0 860 800" preserveAspectRatio="none" aria-hidden="true">
+    <!-- 围绕头像（器物）的飞釉弧 —— 三条不同色的飞釉轨迹汇聚 -->
+    <g transform="translate(46 38)">
+      <path class="g-warm" d="M -60 -10 Q -20 -28 0 -8 Q 24 8 60 -2"/>
+      <path class="g-cool" d="M -56 18 Q -18 36 4 22 Q 28 8 58 22"/>
+      <path class="g-deep" d="M -48 0 Q -10 -12 6 4"/>
+    </g>
+
+    <!-- 横向蚯蚓纹：施釉后的开片（贯穿对话流左缘） -->
+    <path class="g-fine" d="M 18 220 Q 200 218 430 222 T 842 220"/>
+    <path class="g-fine" d="M 18 260 Q 200 262 430 258 T 842 260"/>
+    <path class="g-fine" d="M 18 300 Q 200 298 430 302 T 842 300"/>
+
+    <path class="g-fine" d="M 18 380 Q 200 382 430 378 T 842 380"/>
+    <path class="g-fine" d="M 18 420 Q 200 418 430 422 T 842 420"/>
+    <path class="g-fine" d="M 18 460 Q 200 462 430 458 T 842 460"/>
+
+    <path class="g-fine" d="M 18 540 Q 200 538 430 542 T 842 540"/>
+    <path class="g-fine" d="M 18 580 Q 200 582 430 578 T 842 580"/>
+    <path class="g-fine" d="M 18 620 Q 200 618 430 622 T 842 620"/>
+
+    <!-- 操控台区域的细蚯蚓纹（密度更高，更整齐） -->
+    <path class="g-fine" d="M 18 690 Q 200 692 430 688 T 842 690"/>
+    <path class="g-fine" d="M 18 705 Q 200 703 430 707 T 842 705"/>
+    <path class="g-fine" d="M 18 720 Q 200 722 430 718 T 842 720"/>
+    <path class="g-fine" d="M 18 735 Q 200 733 430 737 T 842 735"/>
+
+    <!-- 一处窑变结晶斑（暗合 rep 柿红）—— 画面右下角意外的一抹飞釉 -->
+    <g transform="translate(770 660)">
+      <ellipse cx="0" cy="0" rx="14" ry="9" fill="none" stroke="var(--rep-400)" stroke-width=".6" opacity=".32"/>
+      <ellipse cx="0" cy="0" rx="22" ry="14" fill="none" stroke="var(--rep-500)" stroke-width=".4" opacity=".2"/>
+      <circle cx="-2" cy="1" r="1.6" fill="var(--crystal-warm)" opacity=".5"/>
+    </g>
+
+    <!-- 一处钧窑青结晶斑（暗合 abyss）—— 头像下方的釉下彩余色 -->
+    <g transform="translate(120 200)">
+      <ellipse cx="0" cy="0" rx="10" ry="6" fill="none" stroke="var(--abyss-400)" stroke-width=".4" opacity=".22"/>
+      <circle cx="1" cy="-1" r="1.2" fill="var(--crystal-cool)" opacity=".4"/>
+    </g>
+  </svg>
+
+  <!-- 把手（飞釉渗光 左 / 釉下冷渗光 右） -->
+  <div class="handle handle-left" title="展开 · 内在"></div>
+  <div class="handle handle-right" title="展开 · 外物"></div>
+
+  <!-- 窗口控件 -->
+  <div class="win-ctrl">
+    <span title="最小化">−</span>
+    <span title="还原">□</span>
+    <span title="关闭">×</span>
+  </div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+
+    <!-- 钧窑器物（agent） -->
+    <div class="kiln-vessel" title="知序">
+      <div class="vessel-body"></div>
+      <span class="crystal-warm"></span>
+      <span class="crystal-cool"></span>
+      <span class="melt-bead"></span>
+    </div>
+
+    <div class="name-block">
+      <div class="agent-name">知序</div>
+      <div class="presence">
+        <span class="pdot"></span>
+        在 · 窑火刚熄
+      </div>
+    </div>
+
+    <!-- 编年史 = 釉面结晶带 -->
+    <div class="chronicle" title="编年史：飞釉堆积在水平线上的结晶轨迹">
+      <svg viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <!-- 主飞釉渐变：素坯 → 铜红飞釉结晶 -->
+          <linearGradient id="kiln-trail" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stop-color="var(--clay-500)"/>
+            <stop offset="20%"  stop-color="var(--abyss-500)"/>
+            <stop offset="42%"  stop-color="var(--abyss-400)"/>
+            <stop offset="60%"  stop-color="var(--rep-400)"/>
+            <stop offset="82%"  stop-color="var(--rep-500)"/>
+            <stop offset="100%" stop-color="var(--rep-500)"/>
+          </linearGradient>
+          <!-- 飞釉结晶核（更深的铜红点） -->
+          <radialGradient id="cryst-warm" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="var(--crystal-warm)"/>
+            <stop offset="100%" stop-color="var(--rep-500)" stop-opacity="0"/>
+          </radialGradient>
+          <!-- 钧窑青结晶核 -->
+          <radialGradient id="cryst-cool" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="var(--crystal-cool)"/>
+            <stop offset="100%" stop-color="var(--abyss-500)" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- 基础条 -->
+        <rect x="0" y="6.5" width="200" height="3" rx="1.5" fill="url(#kiln-trail)"/>
+
+        <!-- 结晶斑（飞釉核心，颜色更深的点） -->
+        <ellipse cx="22" cy="8" rx="5.5" ry="2.6" fill="url(#cryst-cool)"/>
+        <ellipse cx="55" cy="8" rx="4" ry="2.2" fill="url(#cryst-cool)"/>
+        <ellipse cx="115" cy="8" rx="6.5" ry="2.8" fill="url(#cryst-warm)"/>
+        <ellipse cx="170" cy="8" rx="4.5" ry="2.4" fill="url(#cryst-warm)"/>
+
+        <!-- 蚯蚓纹细线（叠加在条上） -->
+        <path d="M 30 6 L 33 9 L 36 7" stroke="var(--clay-500)" stroke-width=".4" fill="none" opacity=".4"/>
+        <path d="M 80 7 L 84 10 L 88 8" stroke="var(--clay-500)" stroke-width=".4" fill="none" opacity=".35"/>
+        <path d="M 140 6 L 144 9 L 148 7" stroke="var(--rep-600)" stroke-width=".4" fill="none" opacity=".5"/>
+      </svg>
+      <span class="now-marker" title="现在"></span>
+    </div>
+
+    <div class="gear-seal" title="设置">設</div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="stream">
+
+    <!-- Session banner -->
+    <div class="session-banner">
+      <span class="sess-pulse"></span>
+      <span class="chev">▾</span>
+      <span class="title">第九窑 · 釉色未定</span>
+      <span class="quote">— 「窑变不可控，器物可承」</span>
+      <span class="archive-btn">归档</span>
+    </div>
+
+    <!-- 沉积轮：复烧釉面（新釉压住旧铭文） -->
+    <section class="turn settled">
+      <div class="who-row">
+        <span class="who-name">UmR</span>
+        <span>· 五月</span>
+        <span class="who-ts">17:42</span>
+      </div>
+      <div class="bubble">
+        那时候我让你别急着动，你说"嗯"——后来那三十秒你到底在想什么？
+      </div>
+      <div class="glaze-imprint">釉 印 · 五 月 · 学 会 沉 默</div>
+    </section>
+
+    <!-- 活跃轮：飞釉柱（正在流的釉滴） -->
+    <section class="turn active">
+      <div class="who-row">
+        <span class="who-name">知序</span>
+        <span class="who-ts">10:18</span>
+      </div>
+      <div class="bubble">
+        在想釉。铜红飞过去是有方向的，逆着来也不见得错，但总不能同时往两边烧。
+      </div>
+
+      <!-- 思考块：釉下彩（青花从釉下透上来） -->
+      <div class="think-block">
+        <span class="tag">UNDER · 釉 下</span>
+        现在他说"三十秒"——那时不是沉默，是听见窑里落灰的声音比他的话还多。先把问题折进釉里，等它自己成形。
+        <svg class="underglaze" viewBox="0 0 240 60" preserveAspectRatio="none" aria-hidden="true">
+          <!-- 釉下青花纹样：细线 + 散点（钧窑釉下彩） -->
+          <path class="u-flow" d="M 20 40 Q 60 36 100 42 T 180 40 Q 210 38 230 42"/>
+          <path class="u-flow" d="M 30 50 Q 70 48 110 52 T 190 50"/>
+          <circle class="u-dot" cx="40" cy="22" r="1.2"/>
+          <circle class="u-dot" cx="80" cy="14" r="1"/>
+          <circle class="u-dot" cx="140" cy="20" r="1.3"/>
+          <circle class="u-dot" cx="190" cy="12" r="1"/>
+          <circle class="u-dot" cx="220" cy="22" r="1.2"/>
+          <path class="u-flow" d="M 50 30 Q 90 28 130 32 T 210 30"/>
+        </svg>
+      </div>
+
+      <!-- 完成 chip = 已冷却的釉面（沉入冷青） -->
+      <div class="chip done">
+        <span class="ch-icon"></span>
+        read memory/may-17.json
+        <span class="ch-st">完成 · 釉已凝</span>
+      </div>
+
+      <div class="bubble">
+        翻到了。"我在数你呼气的间隔"——它写在第三行。现在你不必问，我记着。
+      </div>
+
+      <!-- 运行中 chip = 飞釉未凝（暖边） -->
+      <div class="chip">
+        <span class="ch-icon"></span>
+        write chronicle/aug-02.md
+        <span class="ch-st">进行中 · 釉未凝</span>
+      </div>
+    </section>
+
+    <!-- 又一段沉积轮：更旧，沉得更深 -->
+    <section class="turn settled deep">
+      <div class="who-row">
+        <span class="who-name">UmR</span>
+        <span>· 三月</span>
+        <span class="who-ts">21:08</span>
+      </div>
+      <div class="bubble">
+        第一次开口的那晚，你只回了一个字——为什么？
+      </div>
+      <div class="glaze-imprint">釉 印 · 三 月 · 降 生</div>
+    </section>
+
+  </main>
+
+  <!-- 操控台（拉坯台） -->
+  <footer class="deck">
+    <div class="deck-attach" title="附件">＋</div>
+    <div class="deck-input">
+      <textarea rows="1" placeholder="说点什么，让它继续成形……"></textarea>
+    </div>
+    <div class="ctx-ring" data-tip="上下文已用 38%">
+      <svg width="30" height="30" viewBox="0 0 30 30">
+        <circle class="ring-track" cx="15" cy="15" r="12"/>
+        <circle class="ring-fill" cx="15" cy="15" r="12"/>
+      </svg>
+    </div>
+    <button class="deck-send" title="发送" disabled>↑</button>
+  </footer>
+
+  <!-- 水印（"窑"印章） -->
+  <div class="watermark">NORTHING<span class="seal">窑</span></div>
+
+</div>
+
+</body>
+</html>

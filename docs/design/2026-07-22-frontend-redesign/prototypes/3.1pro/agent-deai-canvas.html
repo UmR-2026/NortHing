@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 无极构建画布 (Canvas Paradigm)</title>
+    <style>
+        :root {
+            --bg-canvas: #F0F0EE;
+            --grid-color: #E0DFDB;
+            
+            --node-bg: #FFFFFF;
+            --node-border: #E8E7E4;
+            --node-shadow: 0 8px 24px rgba(0,0,0,0.06);
+            
+            --agent-accent: #DF6C53;
+            --system-accent: #4A7C82;
+            
+            --text-main: #22211F;
+            --text-sub: #7A7873;
+            
+            --font-ui: "Inter", sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-canvas);
+            /* 无极点状网格 */
+            background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            height: 100vh; overflow: hidden;
+            position: relative;
+        }
+
+        /* 顶部全局控制条 */
+        .toolbar {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--node-bg); padding: 8px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--node-border);
+            display: flex; gap: 8px; z-index: 100;
+        }
+        .tool-icon {
+            width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: var(--text-sub); transition: 0.2s;
+        }
+        .tool-icon:hover { background: var(--bg-canvas); color: var(--text-main); }
+        .tool-icon.active { background: rgba(223, 108, 83, 0.1); color: var(--agent-accent); }
+
+        /* SVG 连接线 */
+        .connections {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0;
+        }
+        .connections path {
+            fill: none; stroke: var(--agent-accent); stroke-width: 2;
+            stroke-dasharray: 4 4; opacity: 0.5;
+            animation: flow 20s linear infinite;
+        }
+        @keyframes flow { to { stroke-dashoffset: -100; } }
+
+        /* 画布节点 */
+        .node {
+            position: absolute; background: var(--node-bg);
+            border: 1px solid var(--node-border); border-radius: 12px;
+            box-shadow: var(--node-shadow);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+        .node-header {
+            padding: 12px 16px; border-bottom: 1px solid var(--node-border);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-sub); cursor: grab;
+        }
+        .node-body { padding: 16px; font-size: 14px; line-height: 1.6; }
+
+        /* 具体的节点排布 */
+        #node-req { top: 15%; left: 10%; width: 320px; }
+        #node-agent { top: 35%; left: 40%; width: 400px; border-color: rgba(223, 108, 83, 0.4); }
+        #node-preview { top: 15%; right: 10%; width: 400px; }
+
+        .node-header.agent { color: var(--agent-accent); }
+        
+        .agent-log {
+            font-family: var(--font-mono); font-size: 11px; color: var(--text-sub);
+            background: #F9F9F8; padding: 8px; border-radius: 4px; margin-bottom: 12px;
+        }
+
+        /* 画布右下角的极简 Agent 状态 */
+        .agent-status-float {
+            position: absolute; bottom: 32px; right: 32px;
+            background: var(--node-bg); border: 1px solid var(--node-border);
+            border-radius: 30px; padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+            box-shadow: var(--node-shadow); font-size: 13px; font-weight: 500;
+        }
+        .spinner-ring {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 2px solid rgba(223, 108, 83, 0.2);
+            border-top-color: var(--agent-accent);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="tool-icon">🖐</div>
+        <div class="tool-icon active">✨</div> <!-- 代表呼叫 Agent -->
+        <div class="tool-icon">📝</div>
+        <div class="tool-icon">🖼️</div>
+    </div>
+
+    <svg class="connections">
+        <!-- Req to Agent -->
+        <path d="M 390 280 C 450 280, 450 450, 510 450" />
+        <!-- Agent to Preview -->
+        <path d="M 910 450 C 970 450, 970 280, 1020 280" />
+    </svg>
+
+    <div class="node" id="node-req">
+        <div class="node-header">
+            <span>Req_01_Auth</span>
+            <span>📝</span>
+        </div>
+        <div class="node-body">
+            启动的时候报错了，产生了一个 panic。<br>
+            请检查初始化顺序逻辑，重点看 `src/main.rs` 中的 `read_session` 阶段。
+        </div>
+    </div>
+
+    <div class="node" id="node-agent">
+        <div class="node-header agent">
+            <span>Northing Coder [Processing]</span>
+            <span>⚡</span>
+        </div>
+        <div class="node-body">
+            <div class="agent-log">
+                [14:31] Executing grep "init_config" ...<br>
+                [14:31] Analyzing src/main.rs AST ...
+            </div>
+            发现初始化顺序倒置，<code>config::init()</code> 尚未执行。已修正 AST 并对换生命周期顺序。
+            
+            <div style="margin-top:16px; display:flex; gap:8px;">
+                <button style="padding:6px 12px; border-radius:4px; border:none; background:var(--agent-accent); color:white; font-size:12px; cursor:pointer;">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="node" id="node-preview">
+        <div class="node-header">
+            <span>src/main.rs</span>
+            <span>📄</span>
+        </div>
+        <div class="node-body" style="font-family: var(--font-mono); font-size: 12px; background: #282C34; color: #ABB2BF; margin: -16px; padding: 16px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+            <div style="color: #E06C75; text-decoration:line-through;">let session = memory::read_session();</div>
+            <div style="color: #E06C75; text-decoration:line-through;">let config = config::init();</div>
+            <br>
+            <div style="color: #98C379;">let config = config::init()?;</div>
+            <div style="color: #98C379;">let session = memory::read_session(&config);</div>
+        </div>
+    </div>
+
+    <div class="agent-status-float">
+        <div class="spinner-ring"></div>
+        Northing is writing code...
+    </div>
+
+</body>
+</html>

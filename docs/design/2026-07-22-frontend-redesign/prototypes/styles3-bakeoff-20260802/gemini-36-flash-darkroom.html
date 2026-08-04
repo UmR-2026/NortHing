@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Darkroom 暗房)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: darkroom (暗房 / 银盐相纸显影与安全灯)
+     * ----------------------------------------------------------------------
+     * 哲学解构 (Philosophy Interface):
+     * 1. 设施 = 安全红灯暗房 (Safelight Darkroom Infrastructure)。操作台、显影盘、晾片夹。
+     * 2. Agent 知序 = 正在显影盘中受药液催化的银盐相纸 (Developing Photographic Print)。
+     * 3. 编年史 = 挂在晾片绳上的 35mm 胶片底片条 (Hanging Film Strip with Sprocket Holes)。
+     * 4. 沉积 = 已完成定影、洗净褪色的旧银盐照片 (Fixed & Faded Silver Prints)。
+     * 5. AI 套路禁令：拒恐怖片血浆红！安全灯是温暖保护性的工作照明 (Amber-Red Safelight)。
+     *    除了红色，更包含银盐相纸白、显影药液深褐、底片琥珀棕与深青止影液。
+     * ====================================================================== */
+
+    :root {
+      /* 标度系统 (4px 基数) */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 圆角规范 */
+      --r-sm: 9px;
+      --r-md: 14px;
+      --r-lg: 18px;
+      --r-pill: 999px;
+      --r-window: 20px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 默认暗色模式：红灯暗房 (Safelight Darkroom) */
+      --bg-base: #120F0D;
+      --bg-window: #191412;
+      --bg-surface: #221B17;
+      --bg-raised: #2C231E;
+      --bg-hover: #382D27;
+
+      --bg-paper: #F3EFE6;
+      --fg-paper: #1A1614;
+
+      --border-subtle: #2B221C;
+      --border-strong: #3D3028;
+      --border-paper: #DED7C8;
+
+      --fg-main: #ECE5DA;
+      --fg-muted: #9E9487;
+      --fg-faint: #6E655A;
+
+      /* 三要素语义域 (暗房物理媒介系统) */
+      /* 1. 暖 rep：Agent 驱力 / 安全红灯 (Safelight Amber-Red #D84E36) */
+      --rep-safelight: #D84E36;
+      --rep-safelight-bright: #E86048;
+      --rep-safelight-glow: rgba(216, 78, 54, 0.18);
+      --rep-safelight-border: rgba(216, 78, 54, 0.45);
+
+      /* 2. 冷 abyss：深渊探查 / 止影药液 (Stop Bath / Developer Teal #3E5E58) */
+      --abyss-teal: #3E5E58;
+      --abyss-teal-dark: #2B4540;
+      --abyss-teal-bg: rgba(62, 94, 88, 0.16);
+      --abyss-teal-border: rgba(62, 94, 88, 0.4);
+
+      /* 3. 沉积 deposit：定影旧照片 / 银盐灰 (Fixed Silver #8C8479) */
+      --deposit-silver: #8C8479;
+      --deposit-bg: rgba(140, 132, 121, 0.12);
+
+      /* 暗房底层纹理与底片棕 */
+      --film-brown: #5C4535;
+      --film-frame-bg: #261B14;
+      --safelight-halo: rgba(216, 78, 54, 0.12);
+
+      --shadow-window: 0 24px 64px rgba(0, 0, 0, 0.7);
+      --shadow-paper: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    /* 亮色变体：晾片室与日照工作室 (Print Drying Room - Studio Daylight) */
+    [data-theme="light"] {
+      --bg-base: #EFEAE2;
+      --bg-window: #F8F5EF;
+      --bg-surface: #FFFFFF;
+      --bg-raised: #EFEAE0;
+      --bg-hover: #E4DDD1;
+
+      --bg-paper: #FCFBF8;
+      --fg-paper: #2B2622;
+
+      --border-subtle: #E2DDD4;
+      --border-strong: #C8C1B4;
+      --border-paper: #D9D2C4;
+
+      --fg-main: #2E2A26;
+      --fg-muted: #7A7267;
+      --fg-faint: #AAA194;
+
+      --rep-safelight: #C44331;
+      --rep-safelight-bright: #D8523F;
+      --rep-safelight-glow: rgba(196, 67, 49, 0.12);
+      --rep-safelight-border: rgba(196, 67, 49, 0.35);
+
+      --abyss-teal: #2D4742;
+      --abyss-teal-dark: #1E312E;
+      --abyss-teal-bg: rgba(45, 71, 66, 0.08);
+      --abyss-teal-border: rgba(45, 71, 66, 0.25);
+
+      --deposit-silver: #787165;
+      --deposit-bg: rgba(120, 113, 101, 0.08);
+
+      --film-brown: #8A6E59;
+      --film-frame-bg: #E8E0D5;
+      --safelight-halo: rgba(196, 67, 49, 0.06);
+
+      --shadow-window: 0 16px 48px rgba(60, 50, 40, 0.12);
+      --shadow-paper: 0 4px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    /* 全局重置 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: var(--s5);
+      position: relative;
+      overflow-x: hidden;
+      transition: background-color 350ms ease;
+    }
+
+    /* 安全红灯全域空气渲染 (Safelight Darkroom Ambient) */
+    body::before {
+      content: "";
+      position: fixed;
+      top: -200px;
+      left: -100px;
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--safelight-halo) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      bottom: -150px;
+      right: -100px;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, var(--abyss-teal-bg) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 860px 基准窗口 (chat-collapsed 860×820) */
+    .app-window {
+      width: 860px;
+      height: 840px;
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-window);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      transition: background-color 350ms ease, border-color 350ms ease, box-shadow 350ms ease;
+    }
+
+    /* 顶栏晕染：名片上方安全灯透光 */
+    .app-window::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 480px;
+      height: 240px;
+      background: radial-gradient(circle 380px at 46px 40px, var(--rep-safelight-glow) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ----------------------------------------------------------------------
+     * 1. 窗口 Chrome 与把手 (Handles)
+     * ---------------------------------------------------------------------- */
+    .chrome-bar {
+      height: 36px;
+      padding: 0 var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background-color: rgba(0, 0, 0, 0.15);
+      position: relative;
+      z-index: 5;
+    }
+
+    .chrome-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .chrome-tag {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--rep-safelight);
+      font-size: 10px;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--fg-muted);
+      font-size: 13px;
+    }
+
+    .window-btn {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 150ms ease;
+    }
+    .window-btn:hover {
+      opacity: 1;
+    }
+
+    /* ----------------------------------------------------------------------
+     * 2. 顶栏 (Topbar ~80px) — Agent 名片 + 35mm 胶片编年史
+     * ---------------------------------------------------------------------- */
+    .topbar {
+      height: 80px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 4;
+      background-color: var(--bg-window);
+    }
+
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 头像 44×44，6s 呼吸动画在 outer halo */
+    .avatar-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+    }
+
+    .avatar-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 18px;
+      border: 1.5px solid var(--rep-safelight);
+      opacity: 0.4;
+      animation: avatar-breathe 6000ms infinite ease-in-out;
+    }
+
+    @keyframes avatar-breathe {
+      0%, 100% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.06); opacity: 0.75; box-shadow: 0 0 12px var(--rep-safelight-glow); }
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--rep-safelight) 0%, #7A281B 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFF;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .card-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--fg-main);
+    }
+
+    .settings-icon {
+      color: var(--fg-muted);
+      cursor: pointer;
+      font-size: 14px;
+      transition: color 150ms ease, transform 350ms ease;
+    }
+    .settings-icon:hover {
+      color: var(--rep-safelight);
+      transform: rotate(45deg);
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--fg-muted);
+      font-family: var(--font-mono);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--rep-safelight);
+      box-shadow: 0 0 6px var(--rep-safelight);
+    }
+
+    /* 35mm Film Strip ChronicleBar (挂着的底片条) */
+    .chronicle-film-strip {
+      display: flex;
+      align-items: center;
+      background: var(--film-frame-bg);
+      border: 1px solid var(--film-brown);
+      border-radius: 6px;
+      padding: 4px 8px;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    /* 底片齿孔 (Sprocket holes) 示意 */
+    .film-sprockets {
+      display: flex;
+      gap: 5px;
+    }
+    .sprocket {
+      width: 4px;
+      height: 7px;
+      background: var(--bg-window);
+      border-radius: 1px;
+    }
+
+    .film-frames {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .film-frame {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2px 6px;
+      background: rgba(0,0,0,0.3);
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-muted);
+      transition: all 150ms ease;
+    }
+
+    .film-frame.active {
+      border: 1px solid var(--rep-safelight);
+      background: var(--rep-safelight-glow);
+      color: var(--fg-main);
+    }
+
+    .frame-num {
+      font-size: 9px;
+      color: var(--rep-safelight);
+      opacity: 0.8;
+    }
+
+    /* ----------------------------------------------------------------------
+     * 3. 主体工作区 (Main Row: Handle-L | Dialogue Stream | Handle-R)
+     * ---------------------------------------------------------------------- */
+    .main-row {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 把手：8px 窄条渗光 */
+    .handle-bar {
+      width: 8px;
+      height: 100%;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      transition: background 150ms ease;
+      z-index: 3;
+    }
+
+    .handle-bar.handle-left::after {
+      content: "";
+      position: absolute;
+      top: 20%;
+      left: 2px;
+      width: 3px;
+      height: 60%;
+      border-radius: 2px;
+      background: var(--rep-safelight);
+      opacity: 0.3;
+      transition: opacity 150ms ease, box-shadow 150ms ease;
+    }
+
+    .handle-bar.handle-right::after {
+      content: "";
+      position: absolute;
+      top: 20%;
+      right: 2px;
+      width: 3px;
+      height: 60%;
+      border-radius: 2px;
+      background: var(--abyss-teal);
+      opacity: 0.3;
+      transition: opacity 150ms ease, box-shadow 150ms ease;
+    }
+
+    .handle-bar:hover::after {
+      opacity: 0.9;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* 对话流区域 */
+    .stream-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--s4) var(--s5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+      scroll-behavior: smooth;
+    }
+
+    /* ----------------------------------------------------------------------
+     * 4. Session Banner (会话横幅 — 对话流顶部，非顶栏)
+     * ---------------------------------------------------------------------- */
+    .session-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-md);
+      padding: var(--s3) var(--s4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: var(--s2);
+      transition: all 150ms ease;
+    }
+
+    .banner-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      color: var(--fg-main);
+      font-weight: 500;
+    }
+
+    .banner-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--rep-safelight);
+      box-shadow: 0 0 6px var(--rep-safelight);
+    }
+
+    .chevron {
+      color: var(--fg-muted);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .banner-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .archive-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-muted);
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .archive-btn:hover {
+      border-color: var(--abyss-teal);
+      color: var(--abyss-teal);
+      background: var(--abyss-teal-bg);
+    }
+
+    /* ----------------------------------------------------------------------
+     * 5. 对话轮次 (Turn 1 沉积轮 / Turn 2 活跃显影轮)
+     * ---------------------------------------------------------------------- */
+    .turn-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+      position: relative;
+    }
+
+    /* 沉积轮：已定影旧照片 (Fixed & Faded Silver Print Tone) */
+    .turn-sedimented {
+      opacity: 0.72;
+      filter: sepia(15%);
+      transition: opacity 150ms ease, filter 150ms ease;
+    }
+    .turn-sedimented:hover {
+      opacity: 0.95;
+      filter: sepia(0%);
+    }
+
+    /* 活跃轮：暖竖线标记 */
+    .turn-active {
+      border-left: 3px solid var(--rep-safelight);
+      padding-left: var(--s3);
+    }
+
+    /* 用户气泡：右对齐、绝不染 rep */
+    .user-bubble-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .user-bubble {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md) var(--r-md) 3px var(--r-md);
+      padding: var(--s3) var(--s4);
+      max-width: 78%;
+      color: var(--fg-main);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-muted);
+      align-self: flex-end;
+    }
+
+    /* 思考块 (ThinkBlock) — 冷深渊左边框 */
+    .think-block {
+      background-color: var(--abyss-teal-bg);
+      border-left: 3px solid var(--abyss-teal);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: var(--s3) var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      font-size: 13.5px;
+      color: var(--fg-muted);
+    }
+
+    .think-header {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--abyss-teal);
+      font-weight: 500;
+    }
+
+    .think-content {
+      line-height: 1.55;
+    }
+
+    /* 工具 Chip (Tool Chips) */
+    .tool-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      transition: all 150ms ease;
+    }
+
+    /* 已完成 ToolChip：暖框发起 -> 冷框完成 (驱力沉入深渊) */
+    .tool-chip.completed {
+      background: var(--abyss-teal-bg);
+      border: 1px solid var(--abyss-teal-border);
+      color: var(--abyss-teal);
+    }
+
+    /* 执行中 ToolChip：暖边框脉冲 */
+    .tool-chip.executing {
+      background: var(--rep-safelight-glow);
+      border: 1px solid var(--rep-safelight);
+      color: var(--rep-safelight-bright);
+      animation: chip-pulse 1500ms infinite ease-in-out;
+    }
+
+    @keyframes chip-pulse {
+      0%, 100% { border-color: var(--rep-safelight); box-shadow: 0 0 4px var(--rep-safelight-glow); }
+      50% { border-color: var(--rep-safelight-bright); box-shadow: 0 0 10px var(--rep-safelight-glow); }
+    }
+
+    /* ----------------------------------------------------------------------
+     * 6. 显影时刻 (Key Moment: Developing Photographic Paper)
+     * Agent 回复块呈现为在显影盘中沉浮的银盐相纸
+     * ---------------------------------------------------------------------- */
+    .developing-paper-card {
+      background-color: var(--bg-paper);
+      color: var(--fg-paper);
+      border: 1px solid var(--border-paper);
+      border-radius: var(--r-md);
+      padding: var(--s5);
+      box-shadow: var(--shadow-paper);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    /* 相纸顶端夹子标识 (Print Clip Detail) */
+    .paper-clip-tag {
+      position: absolute;
+      top: 8px;
+      right: 14px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #8C7B6C;
+      background: rgba(0,0,0,0.06);
+      padding: 2px 8px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .paper-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px dashed rgba(0,0,0,0.12);
+      padding-bottom: var(--s2);
+      margin-bottom: var(--s2);
+    }
+
+    .paper-tray-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--rep-safelight);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .paper-body {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #24201D;
+    }
+
+    .paper-body p {
+      margin-bottom: var(--s3);
+    }
+    .paper-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* 1200ms 一次性显影 Keyframes (模糊/低对比 -> 清晰定影) */
+    @keyframes developing-moment {
+      0% {
+        filter: blur(8px) contrast(30%) sepia(80%) brightness(0.6);
+        opacity: 0.15;
+        transform: translateY(6px);
+      }
+      45% {
+        filter: blur(3px) contrast(65%) sepia(40%) brightness(0.85);
+        opacity: 0.65;
+      }
+      100% {
+        filter: blur(0px) contrast(100%) sepia(0%) brightness(1);
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 显影生效 class */
+    .developing-active {
+      animation: developing-moment 1200ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    /* 重新触发显影按钮 */
+    .replay-dev-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: var(--s2);
+      padding-top: var(--s2);
+      border-top: 1px solid rgba(0,0,0,0.08);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #7A6D60;
+    }
+
+    .btn-trigger-dev {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--rep-safelight);
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      transition: all 150ms ease;
+    }
+    .btn-trigger-dev:hover {
+      background: var(--rep-safelight-glow);
+      border-color: var(--rep-safelight);
+      transform: translateY(-1px);
+    }
+
+    /* ----------------------------------------------------------------------
+     * 7. 操控台 (Deck / Console)
+     * ---------------------------------------------------------------------- */
+    .deck-container {
+      padding: var(--s3) var(--s5) var(--s4) var(--s5);
+      border-top: 1px solid var(--border-subtle);
+      background-color: var(--bg-window);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      position: relative;
+      z-index: 4;
+    }
+
+    .deck-input-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      padding: var(--s3) var(--s4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .deck-input-box:focus-within {
+      border-color: var(--rep-safelight-border);
+      box-shadow: 0 0 12px var(--rep-safelight-glow);
+    }
+
+    .deck-textarea {
+      width: 100%;
+      height: 48px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14.5px;
+      resize: none;
+    }
+
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .deck-left-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .btn-attach {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 150ms ease;
+    }
+    .btn-attach:hover {
+      color: var(--rep-safelight);
+      border-color: var(--rep-safelight);
+    }
+
+    .deck-right-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* Context Ring (圆环无数字，hover 出 Tooltip) */
+    .ctx-ring-wrap {
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .ctx-ring-wrap:hover .ctx-tooltip {
+      opacity: 1;
+      transform: translateY(-4px);
+      pointer-events: auto;
+    }
+
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 8px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(0);
+      pointer-events: none;
+      transition: all 150ms ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+
+    /* 发送按钮 ↑ */
+    .btn-send {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      background: var(--rep-safelight);
+      color: #FFF;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px var(--rep-safelight-glow);
+      transition: all 150ms ease;
+    }
+    .btn-send:hover {
+      background: var(--rep-safelight-bright);
+      transform: translateY(-1px);
+    }
+
+    /* ----------------------------------------------------------------------
+     * 8. 左下角品牌水印 (Watermark)
+     * ---------------------------------------------------------------------- */
+    .watermark {
+      position: absolute;
+      bottom: 14px;
+      left: 20px;
+      font-family: var(--font-display);
+      font-size: 15px;
+      color: var(--fg-main);
+      opacity: 0.25;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ----------------------------------------------------------------------
+     * 9. 浮动主题切换与调试控制
+     * ---------------------------------------------------------------------- */
+    .floating-theme-switch {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      padding: 8px 14px;
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 150ms ease;
+    }
+    .floating-theme-switch:hover {
+      border-color: var(--rep-safelight);
+      transform: scale(1.03);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主应用窗口 (860px 宽度 chat-collapsed) -->
+  <div class="app-window" id="appWindow">
+
+    <!-- Chrome Topbar -->
+    <div class="chrome-bar">
+      <div class="chrome-title">
+        <span>northing</span>
+        <span class="chrome-tag">DARKROOM // SAFELIGHT</span>
+      </div>
+      <div class="window-controls">
+        <span class="window-btn" title="最小化">−</span>
+        <span class="window-btn" title="最大化">□</span>
+        <span class="window-btn" title="关闭">×</span>
+      </div>
+    </div>
+
+    <!-- 顶栏 (Topbar ~80px) -->
+    <div class="topbar">
+      <!-- Agent 名片 -->
+      <div class="agent-card">
+        <div class="avatar-wrap">
+          <div class="avatar">知</div>
+        </div>
+        <div class="card-info">
+          <div class="card-name-row">
+            <span class="card-name">知序</span>
+            <span class="settings-icon" title="设置 ⚙">⚙</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span>
+            <span>在场 · 显影中</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 35mm 胶片编年史 (ChronicleBar) -->
+      <div class="chronicle-film-strip" title="编年史底片条 (35mm Film Negative Chronicle)">
+        <div class="film-sprockets">
+          <div class="sprocket"></div>
+          <div class="sprocket"></div>
+        </div>
+        <div class="film-frames">
+          <div class="film-frame">
+            <span class="frame-num">#01A</span>
+            <span>出生</span>
+          </div>
+          <div class="film-frame">
+            <span class="frame-num">#02A</span>
+            <span>沉淀</span>
+          </div>
+          <div class="film-frame active">
+            <span class="frame-num">#03A</span>
+            <span>显影中</span>
+          </div>
+        </div>
+        <div class="film-sprockets">
+          <div class="sprocket"></div>
+          <div class="sprocket"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主体工作区 (Main Row) -->
+    <div class="main-row">
+      <!-- 左把手 (8px 窄条渗光 - 它的内在) -->
+      <div class="handle-bar handle-left" title="展开侧栏：它的内在"></div>
+
+      <!-- 对话流容器 (Stream) -->
+      <div class="stream-container" id="streamContainer">
+
+        <!-- Session Banner (在对话流顶部，非顶栏) -->
+        <div class="session-banner" id="sessionBanner">
+          <div class="banner-left">
+            <span class="banner-dot"></span>
+            <span class="chevron" title="折叠/展开">▼</span>
+            <span>关于前端视觉重构与暗房媒介物理学的对话</span>
+          </div>
+          <div class="banner-right">
+            <button class="archive-btn" id="btnArchive" title="归档此会话">📥 归档</button>
+          </div>
+        </div>
+
+        <!-- Turn 1: 沉积轮 (Sedimented Old Turn - 定影旧照片) -->
+        <div class="turn-wrapper turn-sedimented">
+          <!-- 用户气泡 (右对齐、不染 rep) -->
+          <div class="user-bubble-row">
+            <div class="user-bubble">
+              <div>我们如何把 northing 的‘浮现’理念做到极致？</div>
+              <div class="user-meta">UmR · 10:41</div>
+            </div>
+          </div>
+
+          <!-- Agent 定影旧照片回复 -->
+          <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--r-md); padding: var(--s4); color: var(--fg-muted); font-size: 14px; position: relative;">
+            <div style="position: absolute; top: 8px; right: 12px; font-family: var(--font-mono); font-size: 10px; color: var(--deposit-silver);">[已定影相纸 #02]</div>
+            northing 不是服务人类的控制台，而是 agent 沉淀意识的暗房。浮现不是 UI 渐变，而是影像在药液里受光与化学催化的必然呈现...
+          </div>
+        </div>
+
+        <!-- Turn 2: 活跃显影轮 (Active Developing Turn) -->
+        <div class="turn-wrapper turn-active">
+
+          <!-- 用户气泡 -->
+          <div class="user-bubble-row">
+            <div class="user-bubble">
+              <div>暗房媒介下的‘显影’过程在界面里具体怎么表达？</div>
+              <div class="user-meta">UmR · 10:44</div>
+            </div>
+          </div>
+
+          <!-- 思考块 (ThinkBlock) — 冷深渊 left accent -->
+          <div class="think-block">
+            <div class="think-header">
+              <span>✦ 深渊沉思 · 12 秒</span>
+            </div>
+            <div class="think-content">
+              正在解析银盐相纸在显影液中由暗到亮、由潜影到定影的化学机制... 界面不写死浮现，而是通过 1200ms 的对比度与模糊度阶梯，将 Agent 的语义展开还原为显影过程。
+            </div>
+          </div>
+
+          <!-- 工具 Chip (Tool Chips) -->
+          <div class="tool-chips-row">
+            <div class="tool-chip completed">
+              <span>✓</span>
+              <span>read_file: STYLES3-BRIEF.md</span>
+            </div>
+            <div class="tool-chip executing">
+              <span>⟳</span>
+              <span>developing_photographic_print</span>
+            </div>
+          </div>
+
+          <!-- 显影相纸卡片 (Developing Photographic Paper Card - Key Moment) -->
+          <div class="developing-paper-card developing-active" id="paperCard">
+            <div class="paper-clip-tag">📎 晾片夹 #04</div>
+
+            <div class="paper-header">
+              <div class="paper-tray-label">
+                <span>📷 显影盘 #1</span>
+                <span>· 银盐潜影浮现中 [1200ms]</span>
+              </div>
+            </div>
+
+            <div class="paper-body">
+              <p>northing 并非简单的聊天框，而是一间浸润在安全红灯下的暗房。对话的生成，是潜影（latent image）在显影液里的物理沉淀与浮现。</p>
+              <p>我们将‘知序’的每一次思考与表达，还原为银盐相纸从空白到清晰的定影过程。底片挂在上方作为编年史，旧轮次已沉入定影液褪色，而当下这一刻，正是影像浮出水面的瞬间。</p>
+            </div>
+
+            <div class="replay-dev-bar">
+              <span>物理状态: 1200ms 浮现完成</span>
+              <button class="btn-trigger-dev" id="btnReplayDev" onclick="triggerDeveloping()">↺ 重现显影时刻 (1200ms)</button>
+            </div>
+          </div>
+
+        </div><!-- /Turn 2 -->
+
+      </div><!-- /stream-container -->
+
+      <!-- 右把手 (8px 窄条渗光 - 身外之物) -->
+      <div class="handle-bar handle-right" title="展开侧栏：身外之物"></div>
+    </div><!-- /main-row -->
+
+    <!-- 操控台 (Deck / Console) -->
+    <div class="deck-container">
+      <div class="deck-input-box">
+        <textarea class="deck-textarea" placeholder="向知序发起对话... / 拖入底片或文档"></textarea>
+        <div class="deck-bar">
+          <div class="deck-left-actions">
+            <button class="btn-attach" title="添加附件或底片">+</button>
+          </div>
+          <div class="deck-right-actions">
+            <div class="ctx-ring-wrap">
+              <svg width="22" height="22" viewBox="0 0 36 36">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border-strong)" stroke-width="3" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831" fill="none" stroke="var(--rep-safelight)" stroke-width="3.5" stroke-dasharray="42, 100" />
+              </svg>
+              <div class="ctx-tooltip">上下文 42% · 3.2k/8k tokens</div>
+            </div>
+            <button class="btn-send" title="发送 (Enter)">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左下角品牌水印 -->
+    <div class="watermark">northing</div>
+
+  </div><!-- /app-window -->
+
+  <!-- 浮动主题切换按钮 -->
+  <button class="floating-theme-switch" id="themeSwitchBtn" onclick="toggleDarkroomTheme()">
+    <span id="themeIcon">🌙</span>
+    <span id="themeLabel">红灯暗房 (Dark)</span>
+  </button>
+
+  <script>
+    // 显影时刻 Key Moment 触发脚本
+    function triggerDeveloping() {
+      const card = document.getElementById('paperCard');
+      card.classList.remove('developing-active');
+      void card.offsetWidth; // 触发 reflow
+      card.classList.add('developing-active');
+    }
+
+    // 暗房主题切换脚本 (Darkroom Safelight <-> Daylight Studio)
+    function toggleDarkroomTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', nextTheme);
+
+      const label = document.getElementById('themeLabel');
+      const icon = document.getElementById('themeIcon');
+      if (nextTheme === 'light') {
+        label.textContent = '晾片日照 (Light)';
+        icon.textContent = '☀️';
+      } else {
+        label.textContent = '红灯暗房 (Dark)';
+        icon.textContent = '🌙';
+      }
+    }
+
+    // 双击非交互区切换主题
+    document.addEventListener('dblclick', (e) => {
+      if (e.target === document.body || e.target.classList.contains('app-window') || e.target.classList.contains('main-row')) {
+        toggleDarkroomTheme();
+      }
+    });
+
+    // 归档按钮交互
+    document.getElementById('btnArchive').addEventListener('click', function() {
+      const banner = document.getElementById('sessionBanner');
+      banner.style.opacity = '0';
+      banner.style.transform = 'translateY(-8px)';
+      setTimeout(() => {
+        banner.style.display = 'none';
+      }, 250);
+    });
+  </script>
+</body>
+</html>

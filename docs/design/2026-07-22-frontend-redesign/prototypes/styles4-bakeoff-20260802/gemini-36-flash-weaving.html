@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Weaving 织带)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: weaving (织带 / 经线骨架与纬线色彩)
+     * ----------------------------------------------------------------------
+     * 种子：经线是设施的骨架，纬线是 agent 织进去的颜色
+     * 哲学解构：
+     * 1. 设施 (Facility) = 经线 (Warp Threads)：中性沉稳的暖灰栅格与紧绷的纵向张力。
+     * 2. Agent 知序 = 纬线 (Weft Threads)：交织穿梭的色彩，随意图与成长在栅格间沉淀。
+     * 3. 三要素：
+     *    - 驱力 Drive = 炽暖织彩 (Woven Ochre #D9743D) 纵横穿针，代表活跃生成。
+     *    - 深渊 Abyss = 墨青沉线 (Woven Indigo Teal #457B74) 沉入织网底部，代表冷思考。
+     *    - 沉积 Deposit = 原麻褪灰 (Raw Linen Gray #9C9588) 扎紧的历史轮次。
+     * ====================================================================== */
+
+    :root {
+      /* 4px 基数标度 */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 圆角规范 */
+      --r-sm: 9px;
+      --r-md: 14px;
+      --r-lg: 18px;
+      --r-pill: 999px;
+      --r-window: 20px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 亮色模式 (默认)：暖麻布与自然经纬 */
+      --bg-base: #EFECE6;
+      --bg-window: #F6F4EF;
+      --bg-surface: #FCFAF6;
+      --bg-raised: #EAE6DE;
+      --bg-hover: #E2DDD3;
+
+      --border-subtle: #E2DDD5;
+      --border-strong: #CFC8BC;
+      --border-warp: #D5CFC3;
+
+      --fg-main: #36322D;
+      --fg-muted: #787267;
+      --fg-faint: #A6A094;
+
+      /* 三要素 (织物媒介) */
+      /* 暖 rep：驱力纬线 (Woven Ochre #D9743D) */
+      --rep: #D9743D;
+      --rep-bright: #E8834C;
+      --rep-glow: rgba(217, 116, 61, 0.14);
+      --rep-border: rgba(217, 116, 61, 0.38);
+
+      /* 冷 abyss：深渊探查 (Woven Teal #457B74) */
+      --abyss: #457B74;
+      --abyss-dark: #325B56;
+      --abyss-glow: rgba(69, 123, 116, 0.12);
+      --abyss-border: rgba(69, 123, 116, 0.35);
+
+      /* 沉积 deposit：历史沉淀 (Faded Linen #9C9588) */
+      --deposit: #9C9588;
+      --deposit-bg: rgba(156, 149, 136, 0.12);
+
+      --birth: #DBD6CB;
+
+      --shadow-window: 0 20px 50px rgba(50, 42, 30, 0.08);
+      --shadow-card: 0 4px 14px rgba(60, 50, 35, 0.04);
+      --halo-top: rgba(217, 116, 61, 0.075);
+    }
+
+    [data-theme="dark"] {
+      /* 暗色模式：玄沉麻丝与极光纬线 */
+      --bg-base: #141210;
+      --bg-window: #1C1916;
+      --bg-surface: #25211D;
+      --bg-raised: #2D2824;
+      --bg-hover: #38322D;
+
+      --border-subtle: #2E2924;
+      --border-strong: #443D36;
+      --border-warp: #3A342D;
+
+      --fg-main: #ECE6DD;
+      --fg-muted: #9E968B;
+      --fg-faint: #6E685E;
+
+      --rep: #E8854D;
+      --rep-bright: #F49660;
+      --rep-glow: rgba(232, 133, 77, 0.16);
+      --rep-border: rgba(232, 133, 77, 0.42);
+
+      --abyss: #5DA69D;
+      --abyss-dark: #447D76;
+      --abyss-glow: rgba(93, 166, 157, 0.15);
+      --abyss-border: rgba(93, 166, 157, 0.4);
+
+      --deposit: #857D71;
+      --deposit-bg: rgba(133, 125, 113, 0.14);
+
+      --birth: #403A33;
+
+      --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.6);
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.3);
+      --halo-top: rgba(232, 133, 77, 0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--s5);
+      transition: background 350ms ease, color 350ms ease;
+      /* 织物底纹 (经纬线) */
+      background-image: 
+        linear-gradient(90deg, rgba(140, 130, 115, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(140, 130, 115, 0.035) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+
+    /* ─── 窗口根容器 (Window Frame) ─── */
+    .app {
+      width: 860px;
+      height: 800px;
+      background: var(--bg-window);
+      border: 1px solid var(--border-warp);
+      border-radius: var(--r-window);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1), background 350ms ease, border-color 350ms ease;
+    }
+
+    /* 物理拓宽 1280px 展开态 */
+    .app.expanded {
+      width: 1280px;
+    }
+
+    /* 顶栏空气染色 (Halo) */
+    .app::before {
+      content: "";
+      position: absolute;
+      top: -100px;
+      left: -80px;
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(circle at 40% 30%, var(--halo-top) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 350ms ease;
+    }
+
+    /* ─── 窗口 Chromes (Frameless Controls + Watermark) ─── */
+    .window-controls {
+      position: absolute;
+      top: var(--s4);
+      right: var(--s5);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10;
+    }
+    .win-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      background: var(--border-strong);
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 150ms, transform 150ms;
+    }
+    .win-btn:hover { opacity: 1; transform: scale(1.1); }
+    .win-btn.close:hover { background: #D9534F; }
+    .win-btn.min:hover { background: #F0AD4E; }
+    .win-btn.max:hover { background: #5CB85C; }
+
+    .watermark {
+      position: absolute;
+      bottom: var(--s4);
+      left: var(--s5);
+      font-family: var(--font-display);
+      font-size: 15px;
+      letter-spacing: 0.12em;
+      color: var(--fg-main);
+      opacity: 0.25;
+      user-select: none;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ─── 顶栏 (Topbar ~80px) ─── */
+    .topbar {
+      height: 80px;
+      padding: 0 var(--s5);
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+      /* 顶栏织带边线装饰 */
+      background-image: linear-gradient(90deg, var(--border-subtle) 50%, transparent 50%);
+      background-size: 8px 1px;
+      background-position: bottom;
+      background-repeat: repeat-x;
+    }
+
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 织圈头像 (Avatar in braided frame) */
+    .avatar-wrap {
+      width: 46px;
+      height: 46px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: 16px;
+      border: 1px dashed var(--rep-border);
+      animation: weave-rotate 24s linear infinite;
+    }
+    @keyframes weave-rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--rep);
+      box-shadow: var(--shadow-card);
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .card-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+      letter-spacing: -0.01em;
+    }
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--fg-muted);
+    }
+    /* 呼吸点 (6s 沉降式) */
+    .breath-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--rep);
+      box-shadow: 0 0 6px var(--rep-glow);
+      animation: breathe 6s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* 织带编年史条 (Chronicle Bar - Weaving Multi-thread Pattern) */
+    .chronicle-bar {
+      width: 118px;
+      height: 6px;
+      border-radius: var(--r-pill);
+      background: linear-gradient(90deg,
+        var(--birth) 0%,
+        var(--deposit) 35%,
+        #B29A78 65%,
+        var(--rep) 100%);
+      position: relative;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    .chronicle-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.25) 2px,
+        rgba(255, 255, 255, 0.25) 4px
+      );
+    }
+
+    .topbar-settings-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--r-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--fg-faint);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: var(--s1);
+      transition: all 150ms ease;
+    }
+    .topbar-settings-btn:hover {
+      background: var(--bg-raised);
+      color: var(--fg-muted);
+      border-color: var(--border-subtle);
+    }
+
+    /* ─── 主内容区 (Main Layout Row) ─── */
+    .main-row {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── 双侧把手 (Handles 8px / 28px) ─── */
+    .handle {
+      width: 8px;
+      background: transparent;
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease;
+      user-select: none;
+      z-index: 3;
+    }
+    .handle::before {
+      content: "";
+      position: absolute;
+      top: 15%;
+      bottom: 15%;
+      width: 2px;
+      background: var(--border-warp);
+      border-radius: var(--r-pill);
+      transition: background 150ms ease, width 150ms ease;
+    }
+    .handle:hover::before {
+      background: var(--rep);
+      width: 3px;
+    }
+    .handle-left:hover { background: var(--rep-glow); }
+    .handle-right:hover { background: var(--abyss-glow); }
+
+    .handle .handle-chev {
+      font-size: 10px;
+      color: var(--fg-muted);
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+    .app.expanded .handle {
+      width: 28px;
+      background: var(--bg-raised);
+      border-right: 1px solid var(--border-subtle);
+    }
+    .app.expanded .handle-right {
+      border-right: none;
+      border-left: 1px solid var(--border-subtle);
+    }
+    .app.expanded .handle .handle-chev {
+      opacity: 1;
+    }
+
+    /* ─── 抽屉 (Drawers - 280px) ─── */
+    .drawer {
+      width: 0;
+      opacity: 0;
+      overflow: hidden;
+      background: var(--bg-raised);
+      transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 2;
+    }
+    .app.expanded .drawer {
+      width: 280px;
+      opacity: 1;
+    }
+
+    .drawer-header {
+      padding: var(--s4) var(--s5);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg-main);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drawer-content {
+      padding: var(--s4);
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s4);
+    }
+    .drawer-section-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--fg-faint);
+      margin-bottom: var(--s2);
+    }
+    .drawer-item {
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--r-sm);
+      font-size: 13px;
+      color: var(--fg-main);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: border-color 150ms ease;
+    }
+    .drawer-item:hover { border-color: var(--border-strong); }
+    .drawer-item .item-meta {
+      font-size: 11px;
+      color: var(--fg-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ─── 对话流主体 (Stream Column) ─── */
+    .stream-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .stream-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--s5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+      max-width: 720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* 会话横幅 (Session Banner - 在对话流顶部) */
+    .sess-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s2) 0 var(--s3);
+      border-bottom: 1px dashed var(--border-strong);
+      margin-bottom: var(--s2);
+    }
+    .sess-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      cursor: pointer;
+      color: var(--fg-muted);
+      font-size: 12.5px;
+      font-family: var(--font-mono);
+      transition: color 150ms ease;
+    }
+    .sess-left:hover { color: var(--fg-main); }
+    .sess-title {
+      font-family: var(--font-body);
+      font-weight: 500;
+      color: var(--fg-main);
+      margin-left: 4px;
+    }
+    .sess-archive-btn {
+      font-size: 12px;
+      color: var(--fg-muted);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      padding: 3px 10px;
+      border-radius: var(--r-pill);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .sess-archive-btn:hover {
+      background: var(--abyss-glow);
+      color: var(--abyss);
+      border-color: var(--abyss-border);
+    }
+
+    /* 对话轮次 (Turn) */
+    .turn {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      position: relative;
+    }
+
+    /* 活跃轮左缘加硬暖线 */
+    .turn.active {
+      padding-left: var(--s4);
+      border-left: 3px solid var(--rep);
+    }
+
+    /* 用户气泡 (User Bubble - 右对齐，不染 rep) */
+    .user-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .user-bubble {
+      max-width: 80%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px 16px 4px 16px;
+      padding: var(--s3) var(--s4);
+      color: var(--fg-main);
+      font-size: 14px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+    .user-bubble::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 12px;
+      height: 2px;
+      background: var(--border-warp);
+    }
+
+    /* Agent 表达流 */
+    .agent-response {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    /* 思考块 (Thought Block - 冷青深渊) */
+    .thought-block {
+      background: var(--abyss-glow);
+      border-left: 3px solid var(--abyss);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: var(--s3) var(--s4);
+      font-size: 13px;
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s1);
+    }
+    .thought-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--abyss);
+      font-weight: 500;
+    }
+
+    /* 工具 Chip (Tool Chips - 暖框发起 -> 冷框完成) */
+    .tool-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-surface);
+      transition: all 150ms ease;
+    }
+    .tool-chip.initiated {
+      border: 1px dashed var(--rep-border);
+      color: var(--rep);
+    }
+    .tool-chip.completed {
+      border: 1px solid var(--abyss-border);
+      color: var(--abyss);
+    }
+    .tool-chip .chip-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* 正文文本 */
+    .agent-text {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--fg-main);
+    }
+    .agent-text p { margin-bottom: 0.6em; }
+    .agent-text p:last-child { margin-bottom: 0; }
+
+    /* ─── 操控台 (Deck Bar Adaptable Input) ─── */
+    .deck-container {
+      padding: 0 var(--s5) var(--s5);
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      flex-shrink: 0;
+    }
+    .deck-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-lg);
+      padding: var(--s3);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      position: relative;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .deck-box:focus-within {
+      border-color: var(--rep);
+      box-shadow: 0 4px 20px var(--rep-glow);
+    }
+    .deck-box::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 20px;
+      right: 20px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-warp), transparent);
+    }
+
+    .deck-textarea {
+      width: 100%;
+      min-height: 48px;
+      max-height: 160px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-body);
+      font-size: 14.5px;
+      color: var(--fg-main);
+      line-height: 1.5;
+    }
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: var(--s1);
+      border-top: 1px dashed var(--border-subtle);
+    }
+
+    .deck-left-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-raised);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 150ms ease;
+    }
+    .icon-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--fg-main);
+    }
+
+    .deck-right-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* Context Ring (圆环无数字) */
+    .ctx-ring-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .ctx-ring {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+    .ctx-ring circle {
+      fill: none;
+      stroke-width: 2.5;
+    }
+    .ctx-ring .bg-circle { stroke: var(--border-subtle); }
+    .ctx-ring .val-circle {
+      stroke: var(--abyss);
+      stroke-dasharray: 56.5;
+      stroke-dashoffset: 42.4; /* 25% */
+      transition: stroke-dashoffset 350ms ease;
+    }
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 125%;
+      right: 50%;
+      transform: translateX(50%);
+      background: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      padding: 4px 8px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-muted);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+      box-shadow: var(--shadow-card);
+    }
+    .ctx-ring-wrap:hover .ctx-tooltip { opacity: 1; }
+
+    /* 发送按钮 ↑ */
+    .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      border: none;
+      background: var(--rep);
+      color: #FFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 600;
+      opacity: 0.5;
+      transition: opacity 150ms ease, transform 150ms ease, background 150ms ease;
+    }
+    .send-btn.active {
+      opacity: 1;
+      box-shadow: 0 2px 8px var(--rep-glow);
+    }
+    .send-btn.active:hover {
+      transform: translateY(-1px);
+      background: var(--rep-bright);
+    }
+
+    /* ─── 主题切换浮动按钮 ─── */
+    .theme-toggle-floating {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      padding: var(--s2) var(--s4);
+      border-radius: var(--r-pill);
+      color: var(--fg-main);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow-card);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 150ms ease;
+    }
+    .theme-toggle-floating:hover {
+      border-color: var(--rep);
+      color: var(--rep);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主应用窗口 Frame (860px 收起 / 1280px 展开) -->
+  <div class="app" id="appFrame">
+    
+    <!-- 窗口 Chrome 按钮 -->
+    <div class="window-controls">
+      <button class="win-btn min" title="最小化"></button>
+      <button class="win-btn max" id="maxBtn" title="切换全屏/展开"></button>
+      <button class="win-btn close" title="关闭"></button>
+    </div>
+
+    <!-- 顶栏 (Topbar ~80px) -->
+    <header class="topbar">
+      <div class="agent-card">
+        <!-- 织圈头像 -->
+        <div class="avatar-wrap">
+          <div class="avatar">序</div>
+        </div>
+        <!-- 名字与编年史 -->
+        <div class="card-info">
+          <div class="card-name-row">
+            <span class="card-name">知序</span>
+            <div class="card-status">
+              <span class="breath-dot"></span>
+              <span>在场 · 经纬梳理中</span>
+            </div>
+            <button class="topbar-settings-btn" title="设置">⚙</button>
+          </div>
+          <!-- 织带编年史条 -->
+          <div class="chronicle-bar" title="编年史：从原始胚体到炽暖代表色"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主布局 Row (Left Handle | Left Drawer | Stream | Right Drawer | Right Handle) -->
+    <div class="main-row">
+
+      <!-- 左把手 (Handle Left) -->
+      <div class="handle handle-left" id="handleLeft" title="点击展开/收起「它的内在」抽屉">
+        <span class="handle-chev">◀</span>
+      </div>
+
+      <!-- 左抽屉「它的内在」 -->
+      <aside class="drawer drawer-left" id="drawerLeft">
+        <div class="drawer-header">
+          <span>它的内在</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-faint)">INTERNAL</span>
+        </div>
+        <div class="drawer-content">
+          <div>
+            <div class="drawer-section-title">活跃子进程</div>
+            <div class="drawer-item">
+              <div style="font-weight:500">layout-engine-v4</div>
+              <div class="item-meta"><span>经纬重排矩阵</span><span style="color:var(--rep)">运行中</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="drawer-section-title">技能候选 (Skills)</div>
+            <div class="drawer-item">
+              <div style="font-weight:500">preflight-skill-check</div>
+              <div class="item-meta"><span>静态规则审计</span><span>已就绪</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="drawer-section-title">意识更新 (Chronicle)</div>
+            <div class="drawer-item">
+              <div style="font-weight:500">08-02 自由发挥轮审视</div>
+              <div class="item-meta"><span>沉积度 84%</span><span>沉淀</span></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 对话流主体 -->
+      <main class="stream-col">
+        <div class="stream-scroll" id="streamScroll">
+          
+          <!-- 会话横幅 (Session Banner) -->
+          <div class="sess-banner">
+            <div class="sess-left" title="点击折叠当前会话">
+              <span style="font-size:10px">▼</span>
+              <span>SESSION #20260802-WEAVE</span>
+              <span class="sess-title">/ 织带视觉系统迭代方案</span>
+            </div>
+            <button class="sess-archive-btn" id="archiveBtn">归档</button>
+          </div>
+
+          <!-- Turn 1 (已沉积历史轮次) -->
+          <div class="turn">
+            <div class="user-row">
+              <div class="user-bubble">
+                请确认本次 Style Bakeoff 的自由发挥轮指导思想与织带（weaving）风格的核心解构。
+              </div>
+            </div>
+            <div class="agent-response">
+              <div class="agent-text">
+                <p>在「织带 (weaving)」语境下，设施是纵向张紧的<strong>经线 (Warp)</strong>，提供中性稳定且不动摇的排版栅格；而 Agent 的意象与色彩则是横向穿梭的<strong>纬线 (Weft)</strong>。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Turn 2 (活跃当前轮 - 标记 4px 暖竖线) -->
+          <div class="turn active">
+            <div class="user-row">
+              <div class="user-bubble">
+                请展示思考过程与工具调用，并完成织带样式的 HTML 原型构筑。
+              </div>
+            </div>
+            <div class="agent-response">
+              
+              <!-- 思考块 (Abyss 深渊) -->
+              <div class="thought-block">
+                <div class="thought-header">
+                  <span>◆ 探查深渊 (THOUGHT PROCESS)</span>
+                </div>
+                <div>解构织带种子：经线为骨，纬线为色。正在为 860px 核心基准屏配置 4px 间距阶梯、沉降式 6s 呼吸头像、经纬线交织的编年史条与暖/冷边框 tool chips...</div>
+              </div>
+
+              <!-- 工具 Chips -->
+              <div class="tool-chips">
+                <div class="tool-chip initiated">
+                  <span class="chip-dot"></span>
+                  <span>read_brief("FREE-BRIEF.md")</span>
+                </div>
+                <div class="tool-chip completed">
+                  <span class="chip-dot"></span>
+                  <span>audit_compass_rules() ✓</span>
+                </div>
+              </div>
+
+              <!-- 正文 -->
+              <div class="agent-text">
+                <p>已完成织带 (Weaving) 视觉原型的全要件编译：</p>
+                <p>1. <strong>经线骨架 (Warp)</strong>：采用暖麻与栅格切线，构建稳定设施度；<br>
+                2. <strong>纬线色彩 (Weft)</strong>：暖 rep 仅在驱力点亮时染入名片线与活跃轮，思考沉入冷青深渊；<br>
+                3. <strong>双态拓宽</strong>：点击两侧经线把手即可拓宽至 1280px 展开态。</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 操控台 (Deck Bar) -->
+        <div class="deck-container">
+          <div class="deck-box">
+            <textarea class="deck-textarea" id="deckInput" placeholder="输入指令，Enter 发送..."></textarea>
+            <div class="deck-controls">
+              <div class="deck-left-tools">
+                <button class="icon-btn" title="添加附件">+</button>
+                <button class="icon-btn" title="经纬线调试">🧵</button>
+              </div>
+              <div class="deck-right-tools">
+                <!-- Context Ring (无数字，hover 提示) -->
+                <div class="ctx-ring-wrap" title="上下文容量">
+                  <svg class="ctx-ring" viewBox="0 0 24 24">
+                    <circle class="bg-circle" cx="12" cy="12" r="9"/>
+                    <circle class="val-circle" cx="12" cy="12" r="9"/>
+                  </svg>
+                  <div class="ctx-tooltip">上下文: 24.8%</div>
+                </div>
+                <!-- 发送按键 -->
+                <button class="send-btn" id="sendBtn" title="发送">↑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- 右抽屉「身外之物」 -->
+      <aside class="drawer drawer-right" id="drawerRight">
+        <div class="drawer-header">
+          <span>身外之物</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-faint)">EXTERNAL</span>
+        </div>
+        <div class="drawer-content">
+          <div>
+            <div class="drawer-section-title">共享工作台产物</div>
+            <div class="drawer-item">
+              <div style="font-weight:500">gemini-36-flash-weaving.html</div>
+              <div class="item-meta"><span>单文件 HTML</span><span>58 KB</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="drawer-section-title">关联项目文件</div>
+            <div class="drawer-item">
+              <div style="font-weight:500">visual-iter-compass_20260802.md</div>
+              <div class="item-meta"><span>视觉罗盘</span><span>只读</span></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右把手 (Handle Right) -->
+      <div class="handle handle-right" id="handleRight" title="点击展开/收起「身外之物」抽屉">
+        <span class="handle-chev">▶</span>
+      </div>
+
+    </div>
+
+    <!-- 水印 (左下角，不重叠) -->
+    <div class="watermark">northing</div>
+
+  </div>
+
+  <!-- 主题切换按钮 -->
+  <button class="theme-toggle-floating" id="themeToggle">
+    <span>◐</span>
+    <span id="themeLabel">切换暗色模式</span>
+  </button>
+
+  <!-- 交互脚本 -->
+  <script>
+    const appFrame = document.getElementById('appFrame');
+    const handleLeft = document.getElementById('handleLeft');
+    const handleRight = document.getElementById('handleRight');
+    const maxBtn = document.getElementById('maxBtn');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+    const deckInput = document.getElementById('deckInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const archiveBtn = document.getElementById('archiveBtn');
+
+    // 抽屉展开/收起 (860px <-> 1280px)
+    function toggleExpand() {
+      appFrame.classList.toggle('expanded');
+    }
+    handleLeft.addEventListener('click', toggleExpand);
+    handleRight.addEventListener('click', toggleExpand);
+    maxBtn.addEventListener('click', toggleExpand);
+
+    // 主题切换 (Light / Dark)
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      themeLabel.textContent = next === 'dark' ? '切换亮色模式' : '切换暗色模式';
+    });
+
+    // 输入框输入响应 (发送按钮亮起)
+    deckInput.addEventListener('input', () => {
+      if (deckInput.value.trim().length > 0) {
+        sendBtn.classList.add('active');
+      } else {
+        sendBtn.classList.remove('active');
+      }
+    });
+
+    // 归档按钮交互
+    archiveBtn.addEventListener('click', () => {
+      archiveBtn.textContent = '已归档';
+      archiveBtn.style.opacity = '0.5';
+      archiveBtn.style.pointerEvents = 'none';
+    });
+  </script>
+</body>
+</html>

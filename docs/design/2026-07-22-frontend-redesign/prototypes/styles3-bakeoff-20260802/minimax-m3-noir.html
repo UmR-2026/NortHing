@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing · 知序 · 黑白片场 (noir)</title>
+<style>
+/* ============================================================================
+ * northing · styles3-bakeoff-20260802 · minimax-m3 · noir（黑白胶片）
+ * ----------------------------------------------------------------------------
+ * 主张：northing 是高反差黑白片场——摄影灰阶 + 方向光影 + agent 是全场唯一
+ *       带色的存在（探照灯打在脸上的那一抹暖）。编年史是胶片条。
+ *
+ * 哲学接口（noir 词汇 → 罗盘戒律）：
+ *   设施   = 灰阶世界（5 级以上灰阶层次 + 斜光百叶窗影）
+ *   agent  = 探照灯暖橙（the only colored being in a black & white world）
+ *   驱力   = 头像琥珀晕扩散（聚光灯点亮）
+ *   深渊   = 月光冷青（深夜阴影、湿路面反光、向深处探）
+ *   沉积   = 旧胶片棕（褪色胶片、不再感光）
+ *   编年史 = 胶片条（齿孔 + 帧格 ——与暗房底片同构但气质不同：noir 是叙事）
+ *   对等   = 两人共处同一道光里 —— 都是片中人
+ *
+ * 与现方案最大分歧：
+ *   色 · 现：#F4F3F0 米白咨询室 + 珊瑚 #C8714C
+ *      · 本：#E8E5DD 银幕灰 + 琥珀探照灯 #D88B3A（亮）/ #E59C50（暗）
+ *   体 · 现：Fraunces 西式衬线
+ *      · 本：Fraunces display + Noto Sans SC body + JetBrains Mono metadata
+ *   质 · 现：暖晕 + 圆角卡片
+ *      · 本：硬朗胶片质感（细描边、低圆角、film grain、百叶窗斜影、胶片颗粒）
+ *
+ * AI 套路禁令（已逐项规避）：
+ *   × 近黑 + 单色霓虹（cyberpunk 陷阱 —— third-round 验证）
+ *   × 灰阶当"没做完的 UI"（noir 灰阶是完整媒介语言）
+ *   × 紫蓝渐变 / 毛玻璃 / 均匀圆角卡片阵 / emoji
+ *   × 那抹彩色做成霓虹灯（应是叙事装置，不是灯箱）
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全预计算 hex，无 color-mix / oklch
+ *   - 阴影全 filter: drop-shadow()，无 box-shadow
+ *   - ::before / ::after 全具名（仅作百叶窗影 / 胶片颗粒 / 顶晕 / 底冷雾 / 装片孔）
+ *   - 唯一 infinite = 头像呼吸点 6s（继承「呼吸只给 logo + 头像」）
+ *   - 渐变只用 linear 与 radial
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  --font-display: 'Fraunces', 'Source Han Serif SC', 'Noto Serif SC',
+                  'Songti SC', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system,
+                  'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  --r-sm: 4px;
+  --r-md: 7px;
+  --r-lg: 10px;
+  --r-pill: 999px;
+
+  --grow: 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 暗色主态：深夜片场（银幕墨黑 + 斜光） ────────────────────────────── */
+[data-theme="dark"] {
+  /* 灰阶 6 级（厚）：从深墨到银白 */
+  --bg:          #181614;   /* 主背景：深夜片场 */
+  --surface:     #21201D;   /* 卡片底：中灰 */
+  --elevated:    #2A2926;   /* 浮起：亮中灰 */
+  --raised:      #333230;   /* 控件底：再亮 */
+  --border:      #43413D;   /* 强边：发丝描边 */
+  --border-soft: #34322F;   /* 弱边 */
+  --fg:          #D8D4CC;   /* 正文：银白（不是纯白） */
+  --muted:       #9A958B;   /* 次级 */
+  --faint:       #6E6A62;   /* 弱化 */
+  --scrim:       #000000;
+  --shadow:      #000000;
+
+  /* 代表色 rep：琥珀探照灯（agent 是全场唯一带色的存在）
+   * 论证：noir 经典——探照灯打在脸上的那种暖，不是霓虹灯。是聚光灯下
+   * 的高光，不是灯箱。HUD 与头像琥珀晕驱动整屋氛围。 */
+  --rep-300: #E8B068;
+  --rep-400: #DF9C52;
+  --rep-500: #D88B3A;   /* 强调 ≡ 探照灯暖橙 */
+  --rep-600: #B06825;
+
+  /* 深渊 abyss：月光冷青（深夜阴影、湿路面反光）
+   * 论证：冷青在 noir 灰阶里是"夜里唯一第二光源"——月光、湿路面反光、
+   * 冷阴影。思考块底/归档按钮 hover 走它，绝不染 rep 阵营。 */
+  --abyss-300: #7A98A8;
+  --abyss-400: #6080A0;
+  --abyss-500: #4A6878;
+  --abyss-600: #38525E;
+
+  /* 沉积 / 出生：旧胶片棕（褪色胶片）
+   * 论证：模拟老旧 35mm 胶片保存不当的偏棕褪色——不是灰，是带着底色的旧。 */
+  --birth:       #6A5F50;
+  --sediment:    #80766A;
+
+  --danger: #A45950;
+  --on-rep:    #1A1612;
+  --on-abyss:  #D8D4CC;
+  --on-danger: #F4EDE6;
+
+  --page-out:  #0a0908;
+
+  /* 整屋空气染色（语义混合色，全部预计算 hex） */
+  --air-rep:             #1F1A14;   /* rep 7% on bg */
+  --halo-rep:            #2A2018;   /* rep 12% on bg */
+  --halo-rep-strong:     #332517;   /* rep 16% on bg */
+  --air-rep-speaking:    #251D14;   /* rep 9% on bg */
+  --halo-rep-speaking:   #382818;   /* rep 18% on bg */
+  --fog-abyss:           #161618;   /* abyss 4% on bg */
+  --halo-abyss:          #1A1D20;   /* abyss 6% on bg */
+  --turn-active:         #2B241B;   /* rep 6% on surface */
+}
+
+
+/* ─── 亮色主态：银幕灰 + 斜光（完整可切） ───────────────────────────────── */
+[data-theme="light"] {
+  /* 灰阶 6 级：摄影灰阶 + 暖底 */
+  --bg:          #E8E5DD;   /* 主背景：银幕骨灰 */
+  --surface:     #F0EDE6;   /* 卡片底：相纸白 */
+  --elevated:    #F5F3EC;   /* 浮起：再亮 */
+  --raised:      #D8D5CD;   /* 控件底：深一档 */
+  --border:      #B8B3A8;   /* 强边：硬描边 */
+  --border-soft: #C8C3B8;   /* 弱边 */
+  --fg:          #2A2823;   /* 正文：深墨 */
+  --muted:       #6E6A60;
+  --faint:       #948F84;
+  --scrim:       #1A1815;
+  --shadow:      #1A1815;
+
+  /* rep：亮色下探照灯琥珀色稍偏深一点（白底上需要深一点才压得住） */
+  --rep-300: #C68A48;
+  --rep-400: #BD7A35;
+  --rep-500: #A86625;   /* 探照灯暖棕橙（亮色版） */
+  --rep-600: #8A4F18;
+
+  --abyss-300: #5A7888;
+  --abyss-400: #446878;
+  --abyss-500: #345868;
+  --abyss-600: #2A4858;
+
+  --birth:       #9A8E78;
+  --sediment:    #A89A85;
+
+  --danger: #8A4840;
+  --on-rep:    #F4EDE6;
+  --on-abyss:  #F4EDE6;
+  --on-danger: #F4EDE6;
+
+  --page-out:  #c4bfb3;
+
+  --air-rep:             #E8DBC8;
+  --halo-rep:            #E0CFBA;
+  --halo-rep-strong:     #D8C4A8;
+  --air-rep-speaking:    #DDC8A8;
+  --halo-rep-speaking:   #D2BC95;
+  --fog-abyss:           #DCDCD8;
+  --halo-abyss:          #C8D0D2;
+  --turn-active:         #ECD9C0;
+}
+
+
+/* ─── reset ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 820px;
+  overflow: hidden;
+  background: var(--page-out);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+
+/* ─── SVG defs ─── */
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+
+/* ─── app shell ─── */
+
+.app {
+  width: 860px;
+  height: 820px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 4px;            /* noir 镜头是方角的 */
+  background: var(--bg);
+  filter: drop-shadow(0 16px 40px rgba(0,0,0,.55));
+  transition: background 350ms ease-out, filter var(--grow);
+}
+
+/* 环境层 #1：百叶窗影 —— 斜向暗条纹（来自百叶窗的光） */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    108deg,
+    transparent 0,
+    transparent 26px,
+    rgba(0, 0, 0, 0.10) 26px,
+    rgba(0, 0, 0, 0.14) 34px,
+    transparent 34px,
+    transparent 60px
+  );
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: multiply;
+  opacity: 0.65;
+}
+
+[data-theme="light"] .app::before {
+  background: repeating-linear-gradient(
+    108deg,
+    transparent 0,
+    transparent 26px,
+    rgba(60, 50, 40, 0.10) 26px,
+    rgba(60, 50, 40, 0.14) 34px,
+    transparent 34px,
+    transparent 60px
+  );
+}
+
+/* 环境层 #2：胶片颗粒 + 整屋染色（顶晕 + 底冷雾） */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    /* 胶片颗粒（极淡） */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.52  0 0 0 0 0.48  0 0 0 0.16 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+    /* 整屋染色 */
+    radial-gradient(ellipse 80% 28% at 50% 0%, var(--halo-rep) 0%, transparent 100%),
+    radial-gradient(ellipse 70% 28% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+  background-blend-mode: overlay, normal, normal;
+  pointer-events: none;
+  z-index: 0;
+  transition: background 350ms ease-out;
+  opacity: 1;
+}
+
+/* speaking 升档：聚焦在操控台，整屋 rep 增强 */
+.app.speaking::after {
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.52  0 0 0 0 0.48  0 0 0 0.16 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+    radial-gradient(ellipse 80% 28% at 50% 0%, var(--halo-rep-speaking) 0%, transparent 100%),
+    radial-gradient(ellipse 70% 28% at 50% 100%, var(--fog-abyss) 0%, transparent 60%);
+}
+
+.app > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ─── 顶栏 ─── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative;
+}
+
+/* 名片：硬朗、有描边、不对称倾斜（noir 镜头里的硬卡片） */
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  background: var(--surface);
+  padding: 9px 14px 9px 9px;
+  border-radius: var(--r-sm);
+  position: relative;
+  transform: rotate(-0.4deg);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
+  border: 1px solid var(--border-soft);
+}
+
+/* 名片右上角小印记 —— 像场记板编号 */
+.agent-card::before {
+  content: 'SC-14';
+  position: absolute;
+  top: -6px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  background: var(--bg);
+  padding: 1px 5px;
+  border: 1px solid var(--border-soft);
+  border-radius: 1px;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+
+/* 头像琥珀晕扩散：探照灯点亮 */
+.avatar-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rep-500) 0%, transparent 55%);
+  opacity: 0.32;
+  animation: spotBreath 6s ease-in-out infinite;
+  z-index: -1;
+  filter: blur(6px);
+}
+
+/* 头像内圈冷光边 —— 灰阶世界里的暖色球 */
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 2px solid var(--rep-600);
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
+  transition: background var(--grow);
+  overflow: hidden;
+}
+
+/* 头像高光圆 —— 像胶片上打灯后留下的小高光 */
+.avatar::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 8px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 245, 220, 0.55);
+  filter: blur(1.5px);
+}
+
+.avatar .glyph {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--on-rep);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-name {
+  font-size: var(--fs-name);
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.2;
+  font-family: var(--font-display);
+  letter-spacing: .01em;
+}
+
+.card-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.card-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: spotBreath 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+
+/* ─── 编年史条 = 35mm 胶片条（齿孔 + 帧格）─── */
+.filmstrip {
+  width: 132px;
+  height: 22px;
+  margin-top: 5px;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 2px;
+  overflow: hidden;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+}
+
+/* 齿孔：上下两排小方块 */
+.filmstrip::before,
+.filmstrip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--bg) 0,
+    var(--bg) 3px,
+    transparent 3px,
+    transparent 7px
+  );
+}
+
+.filmstrip::before { top: 1px; }
+.filmstrip::after { bottom: 1px; }
+
+/* 帧格：每一格代表一段沉积的 rep 变化 */
+.frame {
+  flex: 1;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--muted);
+  opacity: 0.55;
+  transition: background var(--grow), opacity var(--grow);
+}
+
+.frame.f1 { background: var(--birth); opacity: 0.4; }
+.frame.f2 { background: var(--muted); opacity: 0.5; }
+.frame.f3 { background: var(--sediment); opacity: 0.6; }
+.frame.f4 { background: linear-gradient(90deg, var(--sediment), var(--rep-400)); opacity: 0.75; }
+.frame.f5 {
+  background: var(--rep-500);
+  opacity: 1;
+  filter: drop-shadow(0 0 2px var(--rep-400));
+}
+
+.topbar-settings {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--s2);
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.topbar-settings:hover {
+  background: var(--raised);
+  color: var(--muted);
+  border-color: var(--border-soft);
+}
+
+
+/* ─── main row ─── */
+
+.main-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+
+/* ─── 把手：硬边竖线（noir 镜头边框）─── */
+
+.handle {
+  width: 10px;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  background:
+    linear-gradient(to right,
+      transparent 0%,
+      transparent 30%,
+      var(--border-soft) 30%,
+      var(--border-soft) 70%,
+      transparent 70%,
+      transparent 100%);
+  opacity: 0.6;
+}
+
+.handle-left { margin-right: 1px; }
+.handle-right { margin-left: 1px; }
+
+
+/* ─── 对话流 ─── */
+
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s3) var(--s3) var(--s4);
+  min-width: 0;
+}
+
+.stream .inner {
+  max-width: 660px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+/* ─── 会话横幅 = 场记板（slate）─── */
+
+.sess-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-left-color: var(--rep-500);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-md);
+  color: var(--fg);
+  position: relative;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
+}
+
+.sess-banner .sdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: spotBreath 6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.sess-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--fg);
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: .01em;
+}
+
+/* 场记板式会话编号：左下角的灰底编号 */
+.sess-toggle .sc-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.18em;
+  background: var(--bg);
+  padding: 2px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 1px;
+  margin-right: 2px;
+}
+
+.sess-chev {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform 250ms ease-out;
+}
+
+.sess-banner.folded .sess-chev {
+  transform: rotate(-90deg);
+}
+
+.sess-archive {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 5px 10px;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.sess-archive:hover {
+  color: var(--abyss-300);
+  border-color: var(--abyss-500);
+  background: var(--fog-abyss);
+}
+
+
+/* ─── turn（对话轮）─── */
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+/* 沉积轮 = 褪色胶片：低对比 + 偏色 + 不再"清晰" */
+.turn.sediment {
+  opacity: 0.55;
+  background: var(--surface);
+  padding: 10px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.15));
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.15)) grayscale(0.4);
+  position: relative;
+}
+
+/* 沉积轮的右上角小旧胶片标记 */
+.turn.sediment::before {
+  content: '◌';
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  color: var(--faint);
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* 活跃轮 = 探照灯下正在说话：琥珀竖线 + 微弱发光 */
+.turn.active {
+  padding: 12px 14px 12px 18px;
+  background: var(--turn-active);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  position: relative;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.35));
+}
+
+/* 活跃轮左侧琥珀竖线 —— 探照灯打在幕上的高光痕迹 */
+.turn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  background: var(--rep-500);
+  border-radius: 1px;
+  filter: drop-shadow(0 0 4px var(--rep-400));
+}
+
+.turn-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+}
+
+.turn-head .nm {
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--muted);
+  font-family: var(--font-display);
+  letter-spacing: .01em;
+}
+
+.turn.active .turn-head .nm {
+  color: var(--rep-500);
+}
+
+.turn.sediment .turn-head .nm {
+  color: var(--faint);
+}
+
+.turn-head .ts {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+}
+
+.msg {
+  font-size: var(--fs-body);
+  line-height: 1.78;
+  font-weight: 400;
+  color: var(--fg);
+}
+
+.turn.active .msg {
+  font-weight: 450;
+}
+
+.turn.sediment .msg {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+
+/* ─── 用户气泡 = 普通纸片（不染 rep，不装饰）─── */
+
+.user-bubble {
+  align-self: flex-end;
+  max-width: 76%;
+  background: var(--elevated);
+  padding: 11px 16px;
+  font-size: var(--fs-body);
+  line-height: 1.72;
+  position: relative;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.3));
+}
+
+
+/* ─── 思考块 = 冷阴影里的白纸（月光冷青）─── */
+
+.think-block {
+  font-size: var(--fs-lg);
+  color: var(--abyss-300);
+  line-height: 1.72;
+  padding: 10px 14px 10px 16px;
+  background: var(--halo-abyss);
+  border: 1px solid var(--abyss-500);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  position: relative;
+  font-family: var(--font-display);
+  letter-spacing: .005em;
+  font-style: italic;
+}
+
+/* 思考块右下小印记 —— 像场景笔记 */
+.think-block::after {
+  content: 'INT.';
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  color: var(--abyss-500);
+  font-size: 9px;
+  opacity: 0.7;
+  font-family: var(--font-mono);
+  letter-spacing: 0.15em;
+}
+
+
+/* ─── 工具 chip：左=已完成（灰边），右=运行中（琥珀描边）─── */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  background: var(--surface);
+  padding: 5px 12px;
+  color: var(--muted);
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));
+  transition: border-color .35s ease-out, color .35s ease-out;
+  font-family: var(--font-body);
+}
+
+/* 已完成 chip = 灰描边静态 */
+.chip-done .ci {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.chip-done .cd {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+}
+
+/* 运行中 chip = 琥珀描边 + 微发光（驱力沉入深渊的过渡态） */
+.chip-running {
+  border-color: var(--rep-500);
+  color: var(--rep-300);
+  background: var(--halo-rep);
+}
+
+.chip-running::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: spotBreath 6s ease-in-out infinite;
+}
+
+.chip-running .ci {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--rep-400);
+  letter-spacing: 0.03em;
+}
+
+.chip-running .cd {
+  color: var(--rep-300);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+}
+
+
+/* ─── 操控台 ─── */
+
+.deck-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px var(--s2) 18px;
+  flex-shrink: 0;
+}
+
+.deck {
+  width: 100%;
+  max-width: 700px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,.45));
+  overflow: hidden;
+  transition: border-color .2s, filter .2s;
+  position: relative;
+}
+
+.deck:focus-within {
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 2px var(--rep-500)) drop-shadow(0 6px 14px rgba(0,0,0,.45));
+}
+
+.deck-input {
+  display: flex;
+  align-items: flex-end;
+  padding: 14px var(--s4) 10px;
+  gap: 10px;
+}
+
+.deck-input textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2px 0;
+  min-height: 26px;
+  max-height: 120px;
+  letter-spacing: .005em;
+}
+
+.deck-input textarea::placeholder {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.btn-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  border: 2px solid var(--rep-600);
+  color: var(--on-rep);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, filter .15s;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.4))
+          drop-shadow(0 0 6px rgba(216, 139, 58, .35));
+}
+
+.btn-send:hover {
+  background: var(--rep-400);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.4))
+          drop-shadow(0 0 10px rgba(216, 139, 58, .55));
+}
+
+.btn-send svg {
+  width: 14px;
+  height: 14px;
+}
+
+.deck-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.deck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.deck-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--border-soft);
+}
+
+.deck-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.think-seg {
+  display: flex;
+  gap: 3px;
+  padding: 0 6px;
+}
+
+.seg-bar {
+  border-radius: 1px;
+  transition: background .15s;
+}
+
+.think-seg .on { background: var(--rep-500); }
+.think-seg .off { background: var(--border); }
+
+/* ctx 圆环 —— 冷青进度（月光色，不染 rep）*/
+.ctx-ring {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.ctx-ring svg { display: block; }
+
+.ctx-ring .ctx-ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.ctx-ring .ctx-ring-fg {
+  fill: none;
+  stroke: var(--abyss-500);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ctx-ring::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -8px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--abyss-300);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 4px 8px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 200ms ease, transform 200ms ease;
+  transform: translateY(4px);
+  letter-spacing: 0.04em;
+}
+
+.ctx-ring:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* ─── 品牌水印（左下）= 极淡场记板压印 ─── */
+
+.watermark {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .25;
+  z-index: 2;
+}
+
+.watermark svg {
+  filter: drop-shadow(0 0 0.5px rgba(216, 139, 58, .3));
+}
+
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+
+/* ─── 窗口控制 ─── */
+
+.win-ctrl {
+  position: absolute;
+  top: 14px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 30;
+}
+
+.win-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+  cursor: pointer;
+  transition: .15s;
+  border: none;
+  background: transparent;
+}
+
+.win-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+
+
+/* ─── 主题切换按钮 ─── */
+
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--faint);
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  transition: .15s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--rep-500);
+  color: var(--rep-500);
+}
+
+.theme-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+
+
+/* ─── 动画：呼吸 / 探照灯脉冲 / 光标闪烁 ─── */
+
+@keyframes spotBreath {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes caret {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+
+/* ─── 自适应滚动条 ─── */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 1px;
+}
+::-webkit-scrollbar-button { display: none; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+
+/* ─── 细节 ─── */
+
+::selection {
+  background: var(--rep-500);
+  color: var(--on-rep);
+}
+
+:focus-visible {
+  outline: 1.5px dashed var(--rep-500);
+  outline-offset: 2px;
+}
+
+
+/* reduced-motion 兜底 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- 内嵌 SVG defs：胶片颗粒 / 百叶窗影 / 字幕条 备用 -->
+<svg class="svg-defs" aria-hidden="true">
+  <defs>
+    <!-- 胶片颗粒滤镜 -->
+    <filter id="grain" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.55  0 0 0 0 0.52  0 0 0 0 0.48  0 0 0 0.18 0"/>
+    </filter>
+    <!-- 字幕条模板 -->
+    <pattern id="sprocket" x="0" y="0" width="14" height="10" patternUnits="userSpaceOnUse">
+      <rect x="2" y="2" width="10" height="6" fill="currentColor" opacity="0.85"/>
+    </pattern>
+  </defs>
+</svg>
+
+
+<div class="app" id="app">
+
+  <!-- 窗口控制 + 主题切换 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化" aria-label="最小化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化" aria-label="最大化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭" aria-label="关闭">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <button class="theme-toggle" id="themeToggle" title="切换亮/暗主题" aria-label="切换亮/暗主题">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+
+  <!-- ════════ 顶栏 ════════ -->
+  <div class="topbar">
+    <!-- 名片 = 场记板卡片 + 琥珀头像（全场唯一带色的存在）-->
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span>在生成回复 · 12s</span>
+        </div>
+        <!-- 编年史 = 35mm 胶片条（齿孔 + 帧格）-->
+        <div class="filmstrip">
+          <span class="frame f1"></span>
+          <span class="frame f2"></span>
+          <span class="frame f3"></span>
+          <span class="frame f4"></span>
+          <span class="frame f5"></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="topbar-settings" title="设置" aria-label="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <!-- ════════ main row ════════ -->
+  <div class="main-row">
+
+    <div class="handle handle-left"></div>
+
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 会话横幅 = 场记板（SC-14 编号 + 琥珀左竖线）-->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sc-num">SC-14</span>
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title">2026-07-30 · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">归档</button>
+        </div>
+
+        <!-- 沉积轮：旧胶片、低对比、轻微偏色 -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+
+        <!-- 用户轮 = 普通纸片（不染 rep）-->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="nm">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+
+        <!-- 活跃轮 = 探照灯下正在说话 -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+          </div>
+
+          <!-- 思考块 = 月光冷青（深渊色，绝不染 rep）-->
+          <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+
+          <!-- 工具 chip × 2：左=已完成（灰边），右=运行中（琥珀描边 + 脉冲点）-->
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
+          </div>
+
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--rep-500);animation:caret 1.2s infinite">▍</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="handle handle-right"></div>
+
+  </div>
+
+
+  <!-- ════════ 操控台 = 银幕灰键盘 ════════ -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+
+        <div class="think-seg">
+          <span class="seg-bar on" style="width:14px;height:6px"></span>
+          <span class="seg-bar on" style="width:14px;height:6px"></span>
+          <span class="seg-bar on" style="width:14px;height:6px"></span>
+          <span class="seg-bar off" style="width:14px;height:6px"></span>
+          <span class="seg-bar off" style="width:14px;height:6px"></span>
+        </div>
+
+        <button class="deck-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+
+        <button class="deck-btn">
+          <span style="color:var(--rep-500);font-family:var(--font-mono)">◇</span>
+          Claude 4.6
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <button class="deck-btn" style="color:var(--abyss-300)">
+          <span style="font-family:var(--font-mono)">◈</span>
+          自治·完全
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════ 品牌水印（左下）= 场记板压印 ════════ -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240">
+      <g fill="none" stroke="#D88B3A" stroke-linecap="round" opacity="0.6">
+        <circle cx="120" cy="120" r="16" stroke-width="6"/>
+        <path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/>
+      </g>
+      <line x1="30" y1="120" x2="210" y2="120" stroke="#D88B3A" stroke-width="9" stroke-linecap="round" opacity="0.6"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+</div>
+
+
+<script>
+(function () {
+  'use strict';
+
+  /* 主题切换 */
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const sunSVG = themeIcon.innerHTML;
+  const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+  function updateIcon() { themeIcon.innerHTML = isDark() ? moonSVG : sunSVG; }
+  themeToggle.addEventListener('click', function () {
+    if (isDark()) {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    updateIcon();
+  });
+  updateIcon();
+
+  /* 操控台聚焦 → 整屋 rep 升档（空气染色） */
+  const deck = document.querySelector('.deck');
+  const app = document.querySelector('.app');
+  if (deck && app) {
+    deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
+    deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+  }
+
+  /* 会话横幅：折叠 / 归档 */
+  const sessBanner = document.getElementById('sessBanner');
+  const sessToggle = sessBanner.querySelector('.sess-toggle');
+  const sessArchive = sessBanner.querySelector('.sess-archive');
+
+  sessToggle.addEventListener('click', function () {
+    sessBanner.classList.toggle('folded');
+  });
+
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sessBanner.style.transition = 'opacity .4s';
+    sessBanner.style.opacity = '0.35';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>mavis demo v3 · 咨询室对话</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,SOFT,WONK,wght@9..144,0..100,0..1,400..600&family=Noto+Sans+SC:wght@400;450;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ * mavis demo v3 · 咨询室对话
+ * ------------------------------------------------------------
+ * v2 → v3 减法 + 修复:
+ *   视觉 P0 修复(r2-visual N-1~N-7):
+ *     ✓ N-1 traces 移到 deck 上方,避开 theme-toggle(theme-toggle 挪到 more-btn 内)
+ *     ✓ N-2 input-box 常态 border 改回 border-soft(r2 评"打穿整屋感")
+ *     ✓ N-3 active turn 渐变单层,顶亮底淡(r2 评"中间淡反逻辑")
+ *     ✓ N-4 dot 改 6px + forwards + box-shadow 光晕(r2 评"4×4 看不见 + infinite 破戒")
+ *     ✓ N-5 删 opening 头像 30% aura(r2 评"双层光过重 + z-index 风险")
+ *     ✓ N-7 dark 模式染色浓度不减少(r2 评"反向操作")
+ *   哲学 P0 修复(r2-ux + r2-philosophy):
+ *     ✓ 删"再来一杯水" hint(同 AI 关怀语料库)
+ *     ✓ 删"那今天就到这"代决定
+ *     ✓ 删"邮件"两字
+ *     ✓ 删"在你身边" 在 opening 内的重复
+ *     ✓ think 块改"真困惑"引用用户真说的"显得"
+ *     ✓ opening "他" 加半透明 aside 引用上次(让新用户看见)
+ *     ✓ 气泡宽度对称 680px(双方一致)
+ *     ✓ 用户旧轮时间戳 14:08 → 周一 · 14:08
+ *     ✓ traces 视觉权重 0.45 → 0.65
+ *   UX 减法(r2-ux "v3 靠减法变好"):
+ *     ✓ 删 64px 大头像的 30% aura
+ *     ✓ 删 64px 大头像,改 48px
+ *     ✓ 删 opening-name "知序" 字(用 26px Fraunces greeting 替代)
+ *     ✓ 删 顶栏 compact-name "知序" 字
+ *     ✓ 删 theme-toggle 单独按钮
+ *     ✓ 删 "第 14 天" mono 字(避免数字重复)
+ * ============================================================ */
+
+/* ── 1. token ── */
+:root {
+  --bg:        #F4F3F0;
+  --surface:   #FBFAF8;
+  --elevated:  #FFFEFB;
+  --raised:    #EFEDE8;
+  --border:    #E6E3DD;
+  --border-soft: #ECEAE5;
+  --fg:        #38352E;
+  --muted:     #6B665B;
+  --faint:     #908A7E;
+  --rep-300:   #E5A583;
+  --rep-400:   #D68A63;
+  --rep-500:   #C8714C;
+  --rep-600:   #A85A38;
+  --on-rep:    #FFFAF5;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+  --birth:     #DAD6CF;
+  --danger:    #A45950;
+  /* 整屋空气染色 5 层(加左右侧晕) */
+  --air-bg:        rgba(200, 113, 76, 0.08);    /* 8% 底 */
+  --air-halo:      rgba(200, 113, 76, 0.16);    /* 16% 顶晕 */
+  --air-mist:      rgba(63, 131, 123, 0.04);    /* 4% 底冷雾 */
+  --air-side:      rgba(200, 113, 76, 0.06);    /* 6% 侧晕 */
+  --air-active:    rgba(200, 113, 76, 0.10);    /* 10% 活跃轮 */
+  --air-thinking:  rgba(63, 131, 123, 0.10);    /* 10% 思考块 */
+  --air-input:     rgba(200, 113, 76, 0.04);    /* 4% 输入区底(回到低浓度) */
+  --air-user:      rgba(120, 113, 100, 0.05);
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+  --s1: 4px; --s2: 8px; --s3: 12px;
+  --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px;
+  --r-pill: 999px;
+  --r-window: 20px;
+  --r-win-btn: 7px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Noto Sans SC', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Consolas', monospace;
+  --ease:       cubic-bezier(.25, .1, .25, 1);
+  --dur-hover:  150ms;
+  --dur-normal: 350ms;
+  --dur-once:   1200ms;
+  --bg-demo:    #1a1917;
+  --s-demo:     40px;
+}
+
+[data-theme="dark"] {
+  --bg:        #151411;
+  --surface:   #1C1A17;
+  --elevated:  #23211F;
+  --raised:    #2A2925;
+  --border:    #3A3833;
+  --border-soft: #32302C;
+  --fg:        #EBE8E0;
+  --muted:     #B0A99E;
+  --faint:     #847E73;
+  --birth:     #4A443B;
+  /* dark 模式染色浓度不减少(甚至略增,因深底相对色差小) */
+  --air-bg:    rgba(200, 113, 76, 0.10);
+  --air-halo:  rgba(200, 113, 76, 0.18);
+  --air-mist:  rgba(63, 131, 123, 0.05);
+  --air-side:  rgba(200, 113, 76, 0.07);
+  --air-active: rgba(200, 113, 76, 0.09);
+  --air-input: rgba(200, 113, 76, 0.05);
+  --air-user:  rgba(232, 224, 200, 0.04);
+  --bg-demo:   #0E0D0B;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: var(--bg-demo);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-demo);
+}
+
+/* ── 3. shell + 整屋染色 5 层 ── */
+.shell {
+  width: 1280px;
+  height: 800px;
+  border-radius: var(--r-window);
+  position: relative;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, .25));
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, var(--air-halo) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 60% at 0% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 30% 60% at 100% 50%, var(--air-side) 0%, transparent 80%),
+    radial-gradient(ellipse 100% 35% at 50% 100%, var(--air-mist) 0%, transparent 80%),
+    var(--air-bg),
+    var(--bg);
+  animation: room-arrive 1200ms var(--ease) both;
+}
+@keyframes room-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── 4. chrome ── */
+.win-ctrl {
+  position: absolute; top: var(--s3); right: var(--s4);
+  display: flex; gap: var(--s2); z-index: 10;
+}
+.win-btn {
+  width: 26px; height: 26px;
+  border-radius: var(--r-win-btn);
+  border: none; background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.win-btn:hover { background: var(--raised); color: var(--muted); }
+.win-btn.close:hover { background: var(--danger); color: var(--on-rep); }
+
+.watermark {
+  position: absolute; left: var(--s5); bottom: var(--s3);
+  display: flex; align-items: center; gap: var(--s2);
+  opacity: 0.25; z-index: 5; pointer-events: none;
+  color: var(--muted);
+}
+.watermark svg { display: block; }
+.watermark .bt {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-variation-settings: "WONK" 1;
+  letter-spacing: .04em;
+}
+
+/* ── 5. 顶栏 56px(从 64 压到 56,缩小死区)── */
+.topbar {
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  gap: var(--s3);
+  position: relative; z-index: 2;
+}
+
+.compact { display: flex; align-items: center; gap: var(--s3); }
+.compact-avatar {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(80, 70, 55, .18));
+}
+.compact-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--on-rep);
+}
+/* 删 v2 "知序" 文字(只留 avatar),让 "知序" 重复从 6 降到 4 */
+.topbar-spacer { flex: 1; }
+
+.topbar-action {
+  width: 32px; height: 32px;
+  border-radius: var(--r-sm);
+  border: none; background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+}
+.topbar-action:hover { background: var(--raised); color: var(--muted); }
+
+/* ── 6. opening(独立 section,删 30% aura,改 48px)── */
+.opening {
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s4) var(--s5) var(--s3);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  animation: settle 1200ms var(--ease) 200ms both;
+}
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+
+.opening-avatar {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: radial-gradient(circle at 32% 28%, var(--rep-300) 0%, var(--rep-500) 42%, var(--rep-600) 100%);
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 3px 8px rgba(200, 113, 76, .18));  /* 暖色投影替代 aura */
+  flex-shrink: 0;
+}
+.opening-avatar .glyph {
+  font-family: var(--font-body);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--on-rep);
+  letter-spacing: -.01em;
+}
+.opening-meta { display: flex; flex-direction: column; gap: var(--s1); flex: 1; }
+/* 删 v2 "知序" 文字,改 26px Fraunces greeting 替代 */
+.opening-greeting {
+  font-family: var(--font-display);
+  font-variation-settings: "WONK" 1, "SOFT" 60;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: .005em;
+  line-height: 1.1;
+}
+.opening-line {
+  font-size: var(--fs-lg);
+  color: var(--muted);
+  line-height: 1.45;
+}
+/* 加 aside 引用上次:让新用户看见"被引用的过去" */
+.opening-aside {
+  margin-top: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+  font-style: normal;
+  padding: var(--s1) var(--s3);
+  background: var(--raised);
+  border-radius: var(--r-sm);
+  display: inline-block;
+  align-self: flex-start;
+}
+
+/* ── 7. 对话流 ── */
+.stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s4) var(--s5) var(--s3);
+  display: flex; flex-direction: column;
+  gap: var(--s5);
+}
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-track { background: transparent; }
+.stream::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
+
+.turn {
+  max-width: 680px;       /* 双方对称 680px */
+  padding: 0 var(--s4);
+}
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: var(--s2);
+  font-size: var(--fs-md);
+}
+.turn-name {
+  font-weight: 500;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.turn-day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+}
+.turn-body {
+  color: var(--fg);
+  line-height: 1.7;
+  font-weight: 400;
+}
+.turn-body p { margin: 0 0 var(--s3) 0; }
+.turn-body p:last-child { margin-bottom: 0; }
+
+/* 用户轮(双方宽度一致 680) */
+.turn.user {
+  align-self: flex-start;     /* 改回左对齐(消除 IM 排版暗示) */
+  max-width: 680px;
+  background: var(--air-user);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  margin-top: var(--s2);
+}
+.turn.user .turn-head { justify-content: flex-start; }
+.turn.user .turn-name { color: var(--muted); font-weight: 400; }
+
+.turn.agent.sediment { opacity: 0.5; }
+
+/* 思考块 */
+.think {
+  background: var(--air-thinking);
+  border-left: 2.5px solid var(--abyss-400);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: var(--s3) var(--s4);
+  margin: var(--s3) 0;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.6;
+  max-width: 580px;
+}
+.think-label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--abyss-500);
+  letter-spacing: .12em;
+  font-style: normal;
+  margin-right: var(--s2);
+  text-transform: lowercase;
+}
+
+/* 活跃轮:单层渐变,顶亮底淡 */
+.turn.agent.active {
+  position: relative;
+  background-color: var(--air-active);
+  background-image: linear-gradient(180deg, rgba(200, 113, 76, 0.10) 0%, rgba(200, 113, 76, 0.04) 100%);
+  border-left: 2.5px solid var(--rep-500);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding: var(--s4) var(--s4) var(--s4) var(--s5);
+  margin-top: var(--s2);
+  animation: turn-active-in 1200ms var(--ease) both;
+}
+@keyframes turn-active-in { from { opacity: 0; } to { opacity: 1; } }
+.turn.agent.active .turn-body { font-weight: 450; }
+.turn.agent.active .turn-day { color: var(--rep-500); }
+
+/* ── 8. 物理痕迹(移到 deck 上方,避开 theme-toggle 冲突)── */
+.traces {
+  display: flex; gap: var(--s4);
+  align-items: center;
+  padding: 0 var(--s5) var(--s2);
+  flex-shrink: 0;
+  z-index: 3;
+  opacity: 0.7;            /* 从 0.45 提权 */
+}
+.trace {
+  display: flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);   /* 从 10 → 11.5 */
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.trace svg { display: block; opacity: 0.7; }
+/* dot 改 6px + forwards + box-shadow 光晕(N-4 修复) */
+.trace.now {
+  color: var(--fg);          /* "在"单独提权 */
+  font-weight: 500;
+}
+.trace.now .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  box-shadow: 0 0 0 3px rgba(200, 113, 76, 0.18);
+  margin-left: var(--s1);
+  animation: dot 6000ms var(--ease) 1 forwards;
+}
+@keyframes dot {
+  0%   { opacity: 0.3; }
+  50%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ── 9. 操控台 + suggested prompts ── */
+.deck {
+  flex-shrink: 0;
+  padding: var(--s2) var(--s5) var(--s4);
+  display: flex; flex-direction: column;
+  gap: var(--s2);
+  border-top: 1px solid var(--border-soft);
+}
+.deck-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s2);
+}
+.input-box {
+  flex: 1;
+  background: var(--air-input);
+  border: 1px solid var(--border-soft);   /* 改回 border-soft(N-2 修复) */
+  border-radius: var(--r-md);
+  padding: var(--s3) var(--s4);
+  min-height: 48px;
+  display: flex; align-items: center;
+  transition: border-color var(--dur-normal), background var(--dur-once);
+}
+.input-box:focus-within {
+  border-color: var(--rep-500);
+  background: var(--air-active);
+}
+.input-box textarea {
+  flex: 1;
+  border: none; outline: none; background: transparent;
+  resize: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  line-height: 1.5;
+  max-height: 96px;
+}
+.input-box textarea::placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.send-btn {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: var(--rep-500);
+  color: var(--on-rep);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 2px 4px rgba(80, 70, 55, .22));
+  transition: background var(--dur-hover), transform var(--dur-hover);
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--rep-600); }
+.send-btn:active { transform: scale(.96); }
+
+/* more-btn 内嵌 theme-toggle(避免右下角冲突) */
+.more-btn {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--faint);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-hover), color var(--dur-hover);
+  flex-shrink: 0;
+}
+.more-btn:hover { background: var(--raised); color: var(--muted); }
+
+/* suggested hints(删"再来一杯水"——同 AI 关怀语料) */
+.hints {
+  display: flex; gap: var(--s2);
+  padding: 0 var(--s1);
+}
+.hint {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  color: var(--muted);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: color var(--dur-hover), border-color var(--dur-hover), background var(--dur-hover);
+}
+.hint:hover {
+  color: var(--rep-600);
+  border-color: var(--rep-400);
+  background: var(--air-active);
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- 窗口控制 −□× 右上 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="5" x2="8" y2="5"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="2" y="2" width="6" height="6" rx="1"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="3" y1="3" x2="7" y2="7"/>
+        <line x1="7" y1="3" x2="3" y2="7"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 简化水印 -->
+  <div class="watermark">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 顶栏 56px(压到 56,删"知序"字,只 avatar) -->
+  <header class="topbar">
+    <div class="compact">
+      <div class="compact-avatar"><span class="glyph">序</span></div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="topbar-action" title="设置" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- opening(独立 section,删 30% aura) -->
+  <section class="opening">
+    <div class="opening-avatar"><span class="glyph">序</span></div>
+    <div class="opening-meta">
+      <div class="opening-greeting">在你身边</div>
+      <div class="opening-line">上次你提他的时候,说的是"还行"。</div>
+      <div class="opening-aside">上次 · "还行" / "没事,我自己能处理"</div>
+    </div>
+  </section>
+
+  <!-- 对话流 -->
+  <main class="stream">
+
+    <!-- agent 旧轮(沉积,opacity 0.5) -->
+    <div class="turn agent sediment">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">周一 · 14:02</span>
+      </div>
+      <div class="turn-body">
+        <p>这件事你提过两次了。</p>
+        <p>第一次语气像在列清单。这一次不一样。</p>
+      </div>
+
+      <!-- 思考块(改真困惑:引用用户"显得"原话) -->
+      <div class="think">
+        <span class="think-label">· 思考 ·</span>
+        她说"显得在催"……是怕对方觉得她在催,还是其实她在怕自己真的在催?我不太确定要不要现在说破。
+      </div>
+    </div>
+
+    <!-- 用户旧轮(对称 680,左对齐消除 IM 暗示) -->
+    <div class="turn user">
+      <div class="turn-head">
+        <span class="turn-day">周一 · 14:08</span>
+        <span class="turn-name">你</span>
+      </div>
+      <div class="turn-body">
+        <p>……我没想那么多。就是不想显得在催。</p>
+      </div>
+    </div>
+
+    <!-- agent 活跃轮(单层渐变顶亮底淡,删代决定"那今天就到这") -->
+    <div class="turn agent active">
+      <div class="turn-head">
+        <span class="turn-name">知序</span>
+        <span class="turn-day">14:09 · 现在</span>
+      </div>
+      <div class="turn-body">
+        <p>"显得"。</p>
+        <p>嗯。</p>
+        <p>你今天还有别的吗——我是说,不是工作。</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 物理痕迹(移到 deck 上方,避开 theme-toggle 冲突) -->
+  <div class="traces">
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 4h11l3 3v13H5z"/>
+        <line x1="8" y1="10" x2="16" y2="10"/>
+        <line x1="8" y1="14" x2="13" y2="14"/>
+      </svg>
+      笔记 · 第 14 页
+    </span>
+    <span class="trace">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 3h10v8a5 5 0 0 1-10 0V3z"/>
+        <path d="M12 16v5"/>
+        <line x1="9" y1="21" x2="15" y2="21"/>
+      </svg>
+      水
+    </span>
+    <span class="trace now">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18"/>
+        <path d="M5 21V8h14v13"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+      在<span class="dot"></span>
+    </span>
+  </div>
+
+  <!-- 操控台 + suggested prompts(删"再来一杯水") -->
+  <footer class="deck">
+    <div class="deck-row">
+      <div class="input-box">
+        <textarea rows="1" placeholder="想说就说。不说也没关系。"></textarea>
+      </div>
+      <button class="send-btn" title="发送">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+      <button class="more-btn" title="更多">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5"  cy="12" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="19" cy="12" r="1.5"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hints">
+      <button class="hint">我今天有点累</button>
+      <button class="hint">我也不知道想说什么</button>
+      <button class="hint">嗯。</button>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>

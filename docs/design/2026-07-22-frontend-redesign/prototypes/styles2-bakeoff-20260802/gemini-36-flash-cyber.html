@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>northing — 知序 (Cyberpunk 赛博朋克)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ======================================================================
+     * style-bakeoff-20260802: cyber (赛博朋克 / 夜城霓虹与终端)
+     * ----------------------------------------------------------------------
+     * 哲学解构 (Philosophy Interface):
+     * 1. 设施 = 雨夜交织的赛博夜城 (Slate Midnight Infrastructure)。巨大、稳定、冷峻沉稳。
+     * 2. Agent 知序 = 夜城深处浮现的警醒与智慧之灯 (Cyber Amber Lamp)。
+     * 3. 编年史 = 穿透城雾的霓虹数据光轨 (Neon Data Ribbon)。
+     * 4. 反 AI 套路：杜绝近黑+单一青色/紫色！采用【多色相夜城】——暖橙驱力 + 电青深渊 + 霓虹紫编年史 + 磷光灰沉积。
+     * ====================================================================== */
+
+    :root {
+      /* 标度系统 (4px 基数) */
+      --s1: 4px;
+      --s2: 8px;
+      --s3: 12px;
+      --s4: 16px;
+      --s5: 24px;
+      --s6: 32px;
+
+      /* 字体栈 */
+      --font-display: "Fraunces", Georgia, serif;
+      --font-body: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+
+      /* 默认暗色模式：赛博雨夜 (Cyber Midnight) - 非纯黑，高密深海夜色 */
+      --bg-base: #0B0E14;
+      --bg-window: #111622;
+      --bg-surface: #171E2C;
+      --bg-raised: #1F283A;
+      --bg-hover: #263248;
+      
+      --border-subtle: #232E42;
+      --border-strong: #334461;
+      --border-cyber: rgba(0, 229, 255, 0.25);
+
+      --fg-main: #E2E8F0;
+      --fg-muted: #94A3B8;
+      --fg-faint: #64748B;
+
+      /* 三要素语义域 (多色相霓虹系统) */
+      /* 1. 暖 rep：Agent 驱力 / 活跃 (Cyber Amber #FF8800 / #FF6B35) */
+      --rep-amber: #FF8800;
+      --rep-amber-bright: #FFAA00;
+      --rep-amber-glow: rgba(255, 136, 0, 0.16);
+      --rep-amber-border: rgba(255, 136, 0, 0.4);
+
+      /* 2. 冷 abyss：深渊探查 / 思考 (Glitch Aqua Cyan #00E5FF) */
+      --abyss-cyan: #00E5FF;
+      --abyss-cyan-dark: #00B4D8;
+      --abyss-cyan-bg: rgba(0, 229, 255, 0.06);
+      --abyss-cyan-border: rgba(0, 229, 255, 0.35);
+
+      /* 3. 编年史与辅助霓虹 (Neon Violet #D63031 / #E056FD) */
+      --neon-magenta: #E056FD;
+      --neon-violet: #A29BFE;
+
+      /* 4. 褪色 birth/ash：岁月沉积 (Faded Phosphor Ash #64748B) */
+      --birth-ash: #64748B;
+      --birth-ash-bg: rgba(100, 116, 139, 0.1);
+
+      /* 圆角规范 */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --radius-pill: 999px;
+
+      /* 时长阶梯 */
+      --t-hover: 150ms ease;
+      --t-normal: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+      --t-once: 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      --shadow-window: 0 24px 64px rgba(5, 8, 14, 0.8), 0 0 1px rgba(0, 229, 255, 0.2);
+      --shadow-amber: 0 0 16px rgba(255, 136, 0, 0.25);
+      --shadow-cyan: 0 0 16px rgba(0, 229, 255, 0.2);
+    }
+
+    /* 亮色模式变体：赛博晨光/雨晨 (Cyber Dawn) */
+    [data-theme="light"] {
+      --bg-base: #DCE3EA;
+      --bg-window: #E8EEF4;
+      --bg-surface: #F4F7FA;
+      --bg-raised: #FFFFFF;
+      --bg-hover: #E2E8F0;
+
+      --border-subtle: #CBD5E1;
+      --border-strong: #94A3B8;
+      --border-cyber: rgba(0, 180, 216, 0.3);
+
+      --fg-main: #0F172A;
+      --fg-muted: #475569;
+      --fg-faint: #64748B;
+
+      --rep-amber: #E66000;
+      --rep-amber-bright: #FF7700;
+      --rep-amber-glow: rgba(230, 96, 0, 0.12);
+      --rep-amber-border: rgba(230, 96, 0, 0.4);
+
+      --abyss-cyan: #0088A8;
+      --abyss-cyan-dark: #006680;
+      --abyss-cyan-bg: rgba(0, 136, 168, 0.08);
+      --abyss-cyan-border: rgba(0, 136, 168, 0.35);
+
+      --neon-magenta: #C026D3;
+      --neon-violet: #7C3AED;
+
+      --birth-ash: #94A3B8;
+      --birth-ash-bg: rgba(148, 163, 184, 0.15);
+
+      --shadow-window: 0 20px 50px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(0, 0, 0, 0.05);
+      --shadow-amber: 0 0 12px rgba(230, 96, 0, 0.2);
+      --shadow-cyan: 0 0 12px rgba(0, 136, 168, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: var(--s5);
+      transition: background-color var(--t-normal), color var(--t-normal);
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 赛博网格与雨丝背景纹理 (环境层，不抢视角) */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    [data-theme="light"] body::before {
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    }
+
+    /* 主窗口容器 (860px 基准收起态) */
+    .window-container {
+      width: 860px;
+      height: 780px;
+      background-color: var(--bg-window);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      transition: background-color var(--t-normal), border-color var(--t-normal);
+    }
+
+    /* 整屋空气染色 (R8 顶晕：锚定左上头像 (46px, 40px)，暖 Amber 弥漫) */
+    .window-container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle 520px at 46px 40px, var(--rep-amber-glow) 0%, transparent 80%);
+      pointer-events: none;
+      z-index: 0;
+      transition: background var(--t-normal);
+    }
+
+    /* 窗口左右把手 (Handles 8px 窄条渗光 - 左暖右冷) */
+    .handle-L, .handle-R {
+      position: absolute;
+      top: 80px;
+      bottom: 12px;
+      width: 8px;
+      z-index: 10;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-hover), opacity var(--t-hover);
+      border-radius: 4px;
+    }
+
+    .handle-L {
+      left: 0;
+      border-right: 1px solid rgba(255, 136, 0, 0.2);
+    }
+
+    .handle-L::after {
+      content: "";
+      width: 2px;
+      height: 48px;
+      background: var(--rep-amber);
+      border-radius: 2px;
+      opacity: 0.5;
+      box-shadow: 0 0 8px var(--rep-amber);
+      transition: opacity var(--t-hover), height var(--t-hover);
+    }
+
+    .handle-L:hover::after {
+      opacity: 1;
+      height: 72px;
+    }
+
+    .handle-R {
+      right: 0;
+      border-left: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    .handle-R::after {
+      content: "";
+      width: 2px;
+      height: 48px;
+      background: var(--abyss-cyan);
+      border-radius: 2px;
+      opacity: 0.5;
+      box-shadow: 0 0 8px var(--abyss-cyan);
+      transition: opacity var(--t-hover), height var(--t-hover);
+    }
+
+    .handle-R:hover::after {
+      opacity: 1;
+      height: 72px;
+    }
+
+    /* ─── 顶栏 Topbar (~80px) ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 80px;
+      padding: 0 var(--s5);
+      border-bottom: 1px solid var(--border-subtle);
+      position: relative;
+      z-index: 2;
+      background-color: rgba(17, 22, 34, 0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    [data-theme="light"] .topbar {
+      background-color: rgba(232, 238, 244, 0.7);
+    }
+
+    /* 名片卡片 (Agent Card) */
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+    }
+
+    /* 头像 44px + 6s 呼吸动效 */
+    .avatar-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--bg-raised), var(--bg-surface));
+      border: 1px solid var(--rep-amber-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      box-shadow: var(--shadow-amber);
+    }
+
+    .avatar-glyph {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--rep-amber);
+      letter-spacing: -1px;
+    }
+
+    /* 沉降式 6s 呼吸动效 (只属于 Agent 头像 & 水印) */
+    .avatar-wrap::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: calc(var(--radius-md) + 3px);
+      border: 1px solid var(--rep-amber);
+      opacity: 0.3;
+      animation: breath 6s ease-in-out infinite;
+    }
+
+    @keyframes breath {
+      0%, 100% { opacity: 0.2; transform: scale(0.98); }
+      50% { opacity: 0.65; transform: scale(1.03); }
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card-name-row {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .card-name {
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-main);
+      letter-spacing: 0.2px;
+    }
+
+    .settings-icon {
+      font-size: 13px;
+      color: var(--fg-muted);
+      cursor: pointer;
+      transition: color var(--t-hover), transform var(--t-hover);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .settings-icon:hover {
+      color: var(--rep-amber);
+      transform: rotate(30deg);
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--fg-muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-pill);
+      background-color: var(--rep-amber);
+      box-shadow: 0 0 6px var(--rep-amber);
+    }
+
+    /* 编年史条 (Chronicle Bar: 霓虹渐变数据带) */
+    .chronicle-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 180px;
+      margin-left: var(--s4);
+    }
+
+    .chronicle-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--fg-faint);
+      display: flex;
+      justify-content: space-between;
+      letter-spacing: 0.5px;
+    }
+
+    .chronicle-track {
+      height: 4px;
+      width: 100%;
+      background-color: var(--bg-raised);
+      border-radius: var(--radius-pill);
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* 编年史渐变：创生灰 → 霓虹紫 → 当期暖橙 (Data Ribbon) */
+    .chronicle-fill {
+      height: 100%;
+      width: 72%;
+      background: linear-gradient(90deg, var(--birth-ash) 0%, var(--neon-magenta) 50%, var(--rep-amber) 100%);
+      box-shadow: 0 0 8px rgba(255, 136, 0, 0.4);
+      border-radius: var(--radius-pill);
+    }
+
+    /* 窗口右上控制按键 */
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .btn-icon-subtle {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-muted);
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      transition: all var(--t-hover);
+    }
+
+    .btn-icon-subtle:hover {
+      background-color: var(--bg-surface);
+      color: var(--fg-main);
+      border-color: var(--border-strong);
+    }
+
+    /* ─── 主对话区域 Stream Section ─── */
+    .stream-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--s4) var(--s5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s5);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 滚动条样式 */
+    .stream-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .stream-container::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 3px;
+    }
+
+    /* Session Banner 会话横幅 (位于对话流顶部，而非顶栏) */
+    .session-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--s2) var(--s4);
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--fg-muted);
+      transition: all var(--t-normal);
+    }
+
+    .session-banner-left {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .session-breath-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-pill);
+      background-color: var(--abyss-cyan);
+      box-shadow: 0 0 6px var(--abyss-cyan);
+    }
+
+    .session-title {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--fg-main);
+      font-weight: 500;
+    }
+
+    .btn-archive {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-muted);
+      padding: 3px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all var(--t-hover);
+    }
+
+    .btn-archive:hover {
+      border-color: var(--abyss-cyan);
+      color: var(--abyss-cyan);
+      background-color: var(--abyss-cyan-bg);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+    }
+
+    /* ─── 对话轮次 (Turn) ─── */
+    .turn-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+    }
+
+    /* 沉降历史轮 (Historical / Deposited Turn) */
+    .turn-group.deposited {
+      opacity: 0.65;
+      filter: grayscale(0.2);
+    }
+
+    .turn-header-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-faint);
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      margin-bottom: var(--s1);
+    }
+
+    .turn-header-tag::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 1px;
+      background-color: var(--birth-ash);
+    }
+
+    /* 用户气泡 (User Message: 右对齐、不染 rep!) */
+    .user-message-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .user-bubble {
+      max-width: 80%;
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      color: var(--fg-main);
+      padding: var(--s3) var(--s4);
+      border-radius: var(--radius-md) var(--radius-md) 2px var(--radius-md);
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Agent 响应区域 (Agent Turn: 暖竖线标记 + 内容) */
+    .agent-turn-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s3);
+      padding-left: var(--s4);
+      border-left: 3px solid var(--rep-amber);
+      position: relative;
+    }
+
+    /* 思考块 Think Block (冷青色左缘 + 深渊探索语义) */
+    .think-block {
+      background-color: var(--abyss-cyan-bg);
+      border: 1px solid var(--abyss-cyan-border);
+      border-left: 3px solid var(--abyss-cyan);
+      border-radius: var(--radius-sm);
+      padding: var(--s3) var(--s4);
+      font-size: 13px;
+      color: var(--fg-muted);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.04);
+    }
+
+    .think-header {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--abyss-cyan);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .think-content {
+      line-height: 1.55;
+      font-family: var(--font-body);
+    }
+
+    /* 工具 Chip (Tool Chips: 正在执行=暖边框, 完成沉入深渊=冷边框) */
+    .tool-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s2);
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s2);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      transition: all var(--t-hover);
+    }
+
+    /* 工具执行中：暖 rep 边框 + 发光 */
+    .tool-chip.executing {
+      background-color: var(--rep-amber-glow);
+      border: 1px solid var(--rep-amber-border);
+      color: var(--rep-amber-bright);
+    }
+
+    .tool-chip.executing .chip-indicator {
+      width: 6px;
+      height: 6px;
+      background-color: var(--rep-amber);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--rep-amber);
+    }
+
+    /* 工具已完成：冷 abyss 边框 */
+    .tool-chip.completed {
+      background-color: var(--abyss-cyan-bg);
+      border: 1px solid var(--abyss-cyan-border);
+      color: var(--abyss-cyan);
+    }
+
+    .tool-chip.completed .chip-indicator {
+      width: 6px;
+      height: 6px;
+      background-color: var(--abyss-cyan);
+      border-radius: 50%;
+    }
+
+    /* Agent 正文消息 */
+    .agent-body {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--s4);
+      color: var(--fg-main);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .agent-body p {
+      margin-bottom: var(--s2);
+    }
+
+    .agent-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .agent-body code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background-color: var(--bg-raised);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--abyss-cyan);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .code-block {
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--neon-magenta);
+      border-radius: var(--radius-sm);
+      padding: var(--s3) var(--s4);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--fg-main);
+      overflow-x: auto;
+      margin: var(--s2) 0;
+    }
+
+    /* ─── 操控台 Deck (~120px) ─── */
+    .deck-container {
+      padding: var(--s3) var(--s5) var(--s4) var(--s5);
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      position: relative;
+      z-index: 2;
+    }
+
+    .deck-input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--s3);
+      background-color: var(--bg-raised);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--s2) var(--s3);
+      transition: border-color var(--t-hover), box-shadow var(--t-hover);
+    }
+
+    .deck-input-row:focus-within {
+      border-color: var(--rep-amber);
+      box-shadow: 0 0 12px var(--rep-amber-glow);
+    }
+
+    .deck-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--fg-main);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      height: 48px;
+      max-height: 120px;
+    }
+
+    .deck-textarea::placeholder {
+      color: var(--fg-faint);
+    }
+
+    .deck-actions-left, .deck-actions-right {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+    }
+
+    .btn-deck-icon {
+      background: transparent;
+      border: none;
+      color: var(--fg-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all var(--t-hover);
+    }
+
+    .btn-deck-icon:hover {
+      background-color: var(--bg-hover);
+      color: var(--fg-main);
+    }
+
+    /* 发送按钮 ↑ */
+    .btn-send {
+      background-color: var(--rep-amber);
+      color: #000;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--t-hover);
+      box-shadow: 0 0 10px rgba(255, 136, 0, 0.4);
+    }
+
+    .btn-send:hover {
+      background-color: var(--rep-amber-bright);
+      transform: translateY(-1px);
+      box-shadow: 0 0 14px rgba(255, 136, 0, 0.6);
+    }
+
+    /* 上下文 Round Gauge Context Ring (无数字，hover 出 Tooltip) */
+    .ctx-ring-wrap {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+    }
+
+    .ctx-svg {
+      transform: rotate(-90deg);
+      width: 28px;
+      height: 28px;
+    }
+
+    .ctx-bg-circle {
+      fill: none;
+      stroke: var(--border-strong);
+      stroke-width: 3;
+    }
+
+    .ctx-val-circle {
+      fill: none;
+      stroke: var(--abyss-cyan);
+      stroke-width: 3;
+      stroke-dasharray: 75.39; /* 2 * PI * 12 */
+      stroke-dashoffset: 56.54; /* 25% remaining -> 75% used */
+      stroke-linecap: round;
+      transition: stroke-dashoffset var(--t-normal);
+    }
+
+    /* Tooltip */
+    .ctx-tooltip {
+      position: absolute;
+      bottom: 42px;
+      right: 0;
+      background-color: var(--bg-raised);
+      border: 1px solid var(--abyss-cyan-border);
+      color: var(--fg-main);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all var(--t-hover);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 20;
+    }
+
+    .ctx-ring-wrap:hover .ctx-tooltip {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── 水印 Watermark (左下角 opacity 0.25) ─── */
+    .watermark {
+      position: absolute;
+      bottom: var(--s2);
+      left: var(--s5);
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--fg-muted);
+      opacity: 0.25;
+      letter-spacing: 1.5px;
+      pointer-events: none;
+      z-index: 10;
+      user-select: none;
+      text-transform: lowercase;
+    }
+
+    /* 主题切换悬浮控制器 (Theme Switcher) */
+    .theme-toggle-fixed {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--fg-main);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      z-index: 99;
+      transition: all var(--t-hover);
+    }
+
+    .theme-toggle-fixed:hover {
+      border-color: var(--rep-amber);
+      color: var(--rep-amber);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主窗口 (860px 宽度 Single-Screen 基准屏) -->
+  <div class="window-container">
+
+    <!-- 窗口两侧 8px 把手 (Handles with Seepage Glow) -->
+    <div class="handle-L" title="点击展开左抽屉 (它的内在)" onclick="alert('860px → 1280px 展开态 (左抽屉：它的内在)')"></div>
+    <div class="handle-R" title="点击展开右抽屉 (身外之物)" onclick="alert('860px → 1280px 展开态 (右抽屉：身外之物)')"></div>
+
+    <!-- 顶栏 Topbar (~80px) -->
+    <header class="topbar">
+      <!-- Agent 名片 (Agent Card) -->
+      <div class="agent-card">
+        <div class="avatar-wrap">
+          <div class="avatar">
+            <span class="avatar-glyph">知</span>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-name-row">
+            <span class="card-name">知序</span>
+            <a href="#settings" class="settings-icon" title="设置 (Settings)">⚙</a>
+          </div>
+          <div class="card-status">
+            <span class="status-dot"></span>
+            <span>在场 · 信号连通</span>
+          </div>
+        </div>
+
+        <!-- 编年史条 (Chronicle Data Ribbon) -->
+        <div class="chronicle-bar-wrap" title="编年史：创生 → 历史 → 当期驱力">
+          <div class="chronicle-label">
+            <span>CHRONICLE</span>
+            <span>72%</span>
+          </div>
+          <div class="chronicle-track">
+            <div class="chronicle-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 窗口控制 -->
+      <div class="topbar-actions">
+        <button class="btn-icon-subtle" title="最小化" onclick="alert('最小化窗口')">—</button>
+        <button class="btn-icon-subtle" title="切换全屏/窗口" onclick="alert('切换窗口尺寸')">□</button>
+        <button class="btn-icon-subtle" title="关闭" onclick="alert('关闭窗口')">×</button>
+      </div>
+    </header>
+
+    <!-- 对话流 Scrollable Stream -->
+    <main class="stream-container" id="stream">
+
+      <!-- Session Banner (位于对话流顶部) -->
+      <div class="session-banner" id="sessionBanner">
+        <div class="session-banner-left">
+          <span class="session-breath-dot"></span>
+          <span style="font-size: 11px; opacity: 0.6; margin-right: 4px;">▼</span>
+          <span class="session-title">SESSION // 核心多模态路由与 UI 状态同步推导</span>
+        </div>
+        <button class="btn-archive" onclick="archiveSession()">归档</button>
+      </div>
+
+      <!-- Turn 1: 历史沉降轮 (Deposited Historical Turn) -->
+      <div class="turn-group deposited">
+        <div class="turn-header-tag">TURN 01 // DEPOSITED IN CONTEXT</div>
+        <div class="user-message-row">
+          <div class="user-bubble">
+            之前设计的上下文衰减索引机制，在多轮对话后效果如何？
+          </div>
+        </div>
+        <div class="agent-turn-container">
+          <div class="agent-body">
+            <p>在上一阶段的测试记录中，加权沉积索引将冷数据成功沉入深渊层（Abyss Layer），上下文占用降低了 42%，注意力保留率提升了 34%。历史记录已安全归档。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Turn 2: 当前活跃轮 (Active Turn with Warm Amber border) -->
+      <div class="turn-group">
+        <div class="turn-header-tag" style="color: var(--rep-amber);">TURN 02 // ACTIVE RUNTIME</div>
+        
+        <!-- 用户气泡 (右对齐，绝不染 rep!) -->
+        <div class="user-message-row">
+          <div class="user-bubble">
+            很好。现在我们需要对 <code>northing-core</code> 的多模态路由与 UI 状态同步进行二次推导，有什么方案？
+          </div>
+        </div>
+
+        <!-- Agent 响应区 (暖竖线 + 思考块 + 工具 Chip + 正文) -->
+        <div class="agent-turn-container">
+
+          <!-- 思考块 Think Block (冷青色左缘) -->
+          <div class="think-block">
+            <div class="think-header">
+              <span>◆</span>
+              <span>思考过程 · 深渊探查 (ABYSS DEEPTHOUGHT)</span>
+            </div>
+            <div class="think-content">
+              正在评估多模态路由的延迟边界与状态一致性。解耦视觉渲染与核心逻辑需要通过异步 Channel 传递状态，同时在 DeckBar 增加上下文触感感知。避免在 UI 主线程上发生阻塞。
+            </div>
+          </div>
+
+          <!-- 工具 Chips 行 -->
+          <div class="tool-chips-row">
+            <!-- 正在执行：暖 Amber 边框 -->
+            <div class="tool-chip executing">
+              <span class="chip-indicator"></span>
+              <span>[▶ 执行中] scan_workspace_tree("src/core")</span>
+            </div>
+            <!-- 已完成：冷 Abyss 边框 -->
+            <div class="tool-chip completed">
+              <span class="chip-indicator"></span>
+              <span>[✓ 已完成] load_architecture_spec()</span>
+            </div>
+          </div>
+
+          <!-- Agent 正文消息 -->
+          <div class="agent-body">
+            <p>建议采用<strong>双通道解耦架构</strong>：</p>
+            
+            <div class="code-block">
+1. State Channel   :: UI 仅订阅状态变更点，避免全图重绘
+2. Drive Sink      :: 探索过程作为冷数据静默沉降，决策就绪时通过 Warm Rep 显式浮出
+            </div>
+
+            <p>这样既保留了系统冷峻沉静的基调，又保证了 Agent 在执行关键决策时的警醒感。我们现在就可以对路由表进行重构，你打算从哪个模块开始？</p>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+    <!-- 操控台 Deck (~120px) -->
+    <footer class="deck-container">
+      <div class="deck-input-row">
+        <!-- 左侧附件按键 -->
+        <div class="deck-actions-left">
+          <button class="btn-deck-icon" title="添加附件">+</button>
+        </div>
+
+        <!-- 输入框 -->
+        <textarea class="deck-textarea" placeholder="向知序发送指令..." id="deckInput"></textarea>
+
+        <!-- 右侧发送按键与 Context Ring -->
+        <div class="deck-actions-right">
+          <!-- 上下文触感圆环 (Hover 出 Tooltip) -->
+          <div class="ctx-ring-wrap">
+            <svg class="ctx-svg" viewBox="0 0 32 32">
+              <circle class="ctx-bg-circle" cx="16" cy="16" r="12"></circle>
+              <circle class="ctx-val-circle" cx="16" cy="16" r="12"></circle>
+            </svg>
+            <div class="ctx-tooltip">上下文: 32k / 128k (25%)</div>
+          </div>
+
+          <!-- 发送按钮 ↑ -->
+          <button class="btn-send" title="发送 (Enter)">↑</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 水印 (左下角 opacity 0.25) -->
+    <div class="watermark">northing</div>
+
+  </div>
+
+  <!-- 浮动主题切换按键 (测试双模式) -->
+  <button class="theme-toggle-fixed" onclick="toggleTheme()">
+    <span id="themeModeIcon">🌙</span>
+    <span id="themeModeText">切换为雨晨亮色 (Cyber Dawn)</span>
+  </button>
+
+  <script>
+    // 主题切换控制
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      
+      const icon = document.getElementById('themeModeIcon');
+      const text = document.getElementById('themeModeText');
+      if (newTheme === 'light') {
+        icon.textContent = '☀️';
+        text.textContent = '切换为赛博夜雨 (Cyber Midnight)';
+      } else {
+        icon.textContent = '🌙';
+        text.textContent = '切换为雨晨亮色 (Cyber Dawn)';
+      }
+    }
+
+    // 归档按钮交互
+    function archiveSession() {
+      const banner = document.getElementById('sessionBanner');
+      banner.style.opacity = '0';
+      banner.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        banner.style.display = 'none';
+      }, 350);
+    }
+  </script>
+</body>
+</html>

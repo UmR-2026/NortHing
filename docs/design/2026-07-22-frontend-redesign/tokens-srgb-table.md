@@ -30,14 +30,14 @@
 | `on-rep` | `oklch(0.985 0.008 60)` | `#FEF9F5` | `oklch(0.985 0.008 60)` | `#FEF9F5` | #FFF9F5 |
 | `on-abyss` | `oklch(1 0 0)` | `#FFFFFF` | `oklch(1 0 0)` | `#FFFFFF` | — |
 | `on-danger` | `oklch(1 0 0)` | `#FFFFFF` | `oklch(1 0 0)` | `#FFFFFF` | — |
-| `air-rep` | `oklch(0.9527 0.0040 91.45)` | `#F0EDED` | `oklch(0.2057 0.0058 88.00)` | `#1C1A16` | rep-500 6.5% on bg |
-| `halo-rep` | `oklch(0.9413 0.0038 91.45)` | `#EDEBE9` | `oklch(0.2214 0.0056 88.00)` | `#201D19` | rep-500 10% on bg |
-| `halo-rep-strong` | `oklch(0.9413 0.0038 91.45)` | `#EDEBE9` | `oklch(0.2214 0.0056 88.00)` | `#201D19` | rep-500 10% on bg — 名片锚定晕染（R8，锚左上头像；与 halo-rep 同预计算值） |
-| `air-rep-speaking` | `oklch(0.9504 0.0039 91.45)` | `#EEEBE8` | `oklch(0.2259 0.0055 88.00)` | `#221F1A` | rep-500 7.5% on bg |
-| `halo-rep-speaking` | `oklch(0.9380 0.0038 91.45)` | `#EBE8E5` | `oklch(0.2348 0.0054 88.00)` | `#26221C` | rep-500 11% on bg |
-| `air-rep-settings` | `oklch(0.9592 0.0040 91.45)` | `#F2F0ED` | `oklch(0.1967 0.0059 88.00)` | `#1A1814` | rep-500 3.5% on bg |
-| `halo-rep-settings` | `oklch(0.9576 0.0040 91.45)` | `#F1EFEC` | `oklch(0.2124 0.0057 88.00)` | `#1D1B17` | rep-500 5% on bg |
-| `fog-abyss` | `oklch(0.9581 0.0041 106.30)` | `#F1F2EF` | `oklch(0.1956 0.0059 98.26)` | `#191916` | abyss-500 1.5% on bg |
+| `air-rep` | `oklch(0.9527 0.0040 91.45)` | `#F0EFEC` | `oklch(0.2057 0.0058 88.00)` | `#181714` | — |
+| `halo-rep` | `oklch(0.9413 0.0038 91.45)` | `#ECEBE9` | `oklch(0.2214 0.0056 88.00)` | `#1C1B18` | — |
+| `halo-rep-strong` | `oklch(0.9315 0.0037 91.45)` | `#E9E8E6` | `oklch(0.2348 0.0054 88.00)` | `#1F1E1B` | — |
+| `air-rep-speaking` | `oklch(0.9504 0.0039 91.45)` | `#EFEEEC` | `oklch(0.2259 0.0055 88.00)` | `#1D1C19` | — |
+| `halo-rep-speaking` | `oklch(0.9380 0.0038 91.45)` | `#EBEAE8` | `oklch(0.2348 0.0054 88.00)` | `#1F1E1B` | — |
+| `air-rep-settings` | `oklch(0.9592 0.0040 91.45)` | `#F2F1EE` | `oklch(0.1967 0.0059 88.00)` | `#161512` | — |
+| `halo-rep-settings` | `oklch(0.9576 0.0040 91.45)` | `#F2F1EE` | `oklch(0.2124 0.0057 88.00)` | `#1A1916` | — |
+| `fog-abyss` | `oklch(0.9581 0.0041 106.30)` | `#F1F1EE` | `oklch(0.1956 0.0059 98.26)` | `#161512` | — |
 | `halo-abyss` | `oklch(0.9521 0.0044 120.20)` | `#EFF0EC` | `oklch(0.2012 0.0059 108.65)` | `#161713` | — |
 | `turn-active` | `oklch(0.9714 0.0028 84.56)` | `#F6F5F3` | `oklch(0.2367 0.0058 88.00)` | `#201E1B` | — |
 | `presence-halo-rep` | `oklch(0.8989 0.0033 91.45)` | `#DEDDDB` | `oklch(0.2572 0.0051 88.00)` | `#242321` | — |
@@ -92,3 +92,35 @@
 ## 色域截断清单
 
 无（全部 token 落 sRGB 色域内，未发生截断）。
+
+## mind 色维度（consult-room v2 spike，color-mix(in srgb) 预计算）
+
+| token | light hex | dark hex | 设计裁决注 |
+|---|---|---|---|
+| `mind-drive-glow` | `#C8714C26` | `#C8714C26` | — |
+| `mind-drive-intense` | `#F8EEEA` | `#C8714C66` | — |
+| `mind-drive-line` | `#9C5B3F` | `#D89C82` | — |
+| `mind-drive-frame` | `#9C5B3F` | `#C8714C8C` | — |
+| `mind-drive-accent` | `#AE6241` | `#C8714C` | — |
+| `mind-abyss-glow` | `#3F837B26` | `#3F837B26` | — |
+| `mind-abyss-intense` | `#E8F0EF` | `#3F837B66` | — |
+| `mind-abyss-line` | `#346863` | `#79A8A3` | — |
+| `mind-abyss-frame` | `#346863` | `#3F837B8C` | — |
+| `mind-abyss-accent` | `#3B7169` | `#3F837B` | — |
+| `mind-leap-glow` | `#8B5FBF26` | `#8B5FBF26` | — |
+| `mind-leap-intense` | `#F1ECF7` | `#8B5FBF66` | — |
+| `mind-leap-line` | `#6D4D96` | `#AE8FD2` | 过暗 |
+| `mind-leap-frame` | `#6D4D96` | `#8B5FBF8C` | — |
+| `mind-leap-accent` | `#7B53A2` | `#8B5FBF` | — |
+| `mind-gaze-glow` | `#D99B4826` | `#D99B4826` | — |
+| `mind-gaze-intense` | `#FAF3E9` | `#D99B4866` | — |
+| `mind-gaze-line` | `#A97B3C` | `#E4B97F` | — |
+| `mind-gaze-frame` | `#A97B3C` | `#D99B488C` | — |
+| `mind-gaze-accent` | `#BC853E` | `#D99B48` | — |
+| `mind-calm-glow` | `#4B8F6B26` | `#4B8F6B26` | — |
+| `mind-calm-intense` | `#E9F2ED` | `#4B8F6B66` | — |
+| `mind-calm-line` | `#3D7157` | `#81B197` | — |
+| `mind-calm-frame` | `#3D7157` | `#4B8F6B8C` | — |
+| `mind-calm-accent` | `#457B5B` | `#4B8F6B` | — |
+
+裁决注为生成器启发式（彩度 spread<40 标发闷、亮度<90 标过暗），最终取舍由设计走查定。

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 枯山水/有机生长风 (Organic Zen)</title>
+    <style>
+        :root {
+            /* 随着Agent成长，这个颜色的饱和度和不透明度会增加，代表其生命力的绽放 */
+            --brand-color: #E27B58; 
+            --bg-color: #FDFCF9;
+            --text-dark: #33312E;
+            --text-light: #948F87;
+            --border-soft: rgba(226, 123, 88, 0.15);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            font-family: "Georgia", "Songti SC", serif; /* 使用衬线体强调人文主义 */
+            height: 100vh; overflow: hidden;
+            display: flex;
+        }
+
+        /* 有机生命体 Blob (代表 Agent 的本体状态) */
+        .agent-blob {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px; height: 500px;
+            background: linear-gradient(135deg, rgba(226, 123, 88, 0.05), rgba(226, 123, 88, 0.2));
+            /* 生成有机的流体形状 */
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            filter: blur(40px);
+            z-index: 0;
+            animation: morph 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes morph {
+            0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translate(-50%, -50%) scale(1.2) rotate(10deg); }
+        }
+
+        /* 界面网格：留白极多，像画卷一样展开 */
+        .layout {
+            position: relative; z-index: 10;
+            display: flex; width: 100%; height: 100%;
+            padding: 60px; gap: 80px;
+        }
+
+        /* 左侧：培育与记忆 */
+        .cultivation-pane {
+            width: 280px;
+            display: flex; flex-direction: column; gap: 40px;
+        }
+        .section-header {
+            font-size: 12px; font-family: sans-serif; letter-spacing: 0.2em; color: var(--text-light); text-transform: uppercase;
+            border-bottom: 1px solid var(--border-soft); padding-bottom: 8px;
+        }
+        .memory-ring {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            border: 2px solid var(--brand-color);
+            border-left-color: transparent;
+            border-bottom-color: transparent;
+            transform: rotate(45deg);
+            display: flex; align-items: center; justify-content: center;
+            margin: 20px 0; position: relative;
+        }
+        .memory-ring::after {
+            content: "Lv.4";
+            position: absolute; transform: rotate(-45deg); font-size: 14px; color: var(--brand-color); font-family: sans-serif;
+        }
+
+        /* 中部：对话与思考痕迹 */
+        .dialogue-pane {
+            flex: 1; display: flex; flex-direction: column;
+            border-left: 1px solid rgba(0,0,0,0.03);
+            border-right: 1px solid rgba(0,0,0,0.03);
+            padding: 0 60px;
+        }
+        .stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 40px; }
+        
+        .thought-trace {
+            font-size: 16px; line-height: 2; color: var(--text-dark);
+            position: relative;
+        }
+        .thought-trace.agent {
+            padding-left: 24px;
+            border-left: 3px solid var(--brand-color);
+        }
+        .thought-trace.user {
+            color: var(--text-light);
+        }
+        
+        .trace-meta { font-size: 12px; font-family: sans-serif; margin-bottom: 12px; color: var(--text-light); }
+        .agent .trace-meta { color: var(--brand-color); }
+
+        /* 底部输入框：水墨滴落感 */
+        .input-area {
+            padding-top: 40px;
+        }
+        .input-box {
+            width: 100%; border: none; border-bottom: 1px solid var(--text-light);
+            background: transparent; outline: none; font-size: 18px; font-family: inherit;
+            padding: 12px 0; color: var(--text-dark);
+            transition: border-color 0.3s;
+        }
+        .input-box:focus { border-color: var(--brand-color); }
+
+        /* 右侧：果实 (产物) */
+        .fruit-pane { width: 300px; }
+        .artifact-card {
+            padding: 20px; background: rgba(255,255,255,0.6);
+            border: 1px solid var(--border-soft); border-radius: 12px;
+            margin-top: 24px;
+            box-shadow: 0 20px 40px rgba(226, 123, 88, 0.05);
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="agent-blob"></div>
+
+    <div class="layout">
+        <div class="cultivation-pane">
+            <div>
+                <div class="section-header">Cognitive Ring (认知环)</div>
+                <div class="memory-ring"></div>
+                <div style="font-family:sans-serif; font-size:12px; color:var(--text-light); line-height:1.6;">
+                    Agent's awareness is expanding. 3 new modules absorbed. The structural integrity is blooming.
+                </div>
+            </div>
+        </div>
+
+        <div class="dialogue-pane">
+            <div class="stream">
+                <div class="thought-trace agent">
+                    <div class="trace-meta">Northing · Sprouting</div>
+                    已经把登录那块拆成三个模块了。模块间的耦合度降低了 40%。
+                </div>
+                <div class="thought-trace user">
+                    <div class="trace-meta">UmR</div>
+                    启动的时候报错了，看一下。
+                </div>
+                <div class="thought-trace agent">
+                    <div class="trace-meta">Northing · Evolving</div>
+                    探测到初始化异常。我追溯了执行的脉络……发现是生命周期的逆流：配置尚未苏醒，会话便已开始读取。<br><br>
+                    我已将这两者的因果对调，现在系统应该可以正常呼吸了。
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" class="input-box" placeholder="Water the agent with new ideas...">
+            </div>
+        </div>
+
+        <div class="fruit-pane">
+            <div class="section-header">Crystallization (结晶)</div>
+            <div class="artifact-card">
+                <div style="font-family:sans-serif; font-weight:600; font-size:14px; margin-bottom:8px;">src/main.rs</div>
+                <div style="font-family:sans-serif; font-size:12px; color:var(--text-light);">The logic has been reshaped based on the new causality.</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=900">
+<title>彩窗 · 知序 — northing</title>
+<style>
+/* ============================================================
+   彩窗 stainedglass — 铅框永不改变，颜色是穿过它的光
+   ------------------------------------------------------------
+   结构（设施）= 铅框：中性暖灰，永远不变，构成窗的骨骼。
+   内容（agent）= 玻璃：rep 珊瑚是光透过的暖色玻璃，
+   abyss 冷青是深思处的冷玻璃，沉积是褪光的旧玻璃。
+   动效只有光：光斑漂移、呼吸明度，铅框本身纹丝不动。
+   单文件离线 · 无外链 · 双主题（亮=晨光 / 暗=夜窗）
+   ============================================================ */
+
+/* ---------- 铅框与玻璃 token ---------- */
+:root{
+  /* 尺度（4px 基数） */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r-sm:9px; --r-md:14px; --r-lg:18px; --r-pill:999px;
+  --fs-sm:10px; --fs-md:11.5px; --fs-lg:13px; --fs-body:15px; --fs-name:16px;
+  --font-body:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --font-display:'Noto Serif SC','Songti SC','SimSun',Georgia,serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+
+  /* 铅框（设施，永不改变：两态同族暖灰，只随明暗翻转） */
+  --lead-line:  #D8D3C9;   /* 铅条 */
+  --lead-soft:  #E4E0D8;   /* 弱铅条 */
+  --lead-deep:  #B9B2A4;   /* 深铅（锚点/框缘） */
+
+  /* 基底（铅框后面的墙体，暖灰） */
+  --bg:#F4F3F0; --surface:#FBFAF8; --raised:#EFEDE8;
+  --fg:#38352E; --muted:#7B766C; --faint:#A8A398;
+
+  /* 三要素玻璃（光透过的颜色） */
+  --rep-300:#E5A583; --rep-400:#D68A63; --rep-500:#C8714C; --rep-600:#A85A38;
+  --abyss-300:#7AABA4; --abyss-400:#5A9B93; --abyss-500:#3F837B;
+  --danger:#A45950;
+  --birth:#DAD6CF;          /* 未上色的原玻璃 */
+
+  /* 透光度：颜色以 alpha 穿过铅框，而不是平涂 */
+  --rep-pane:   rgba(200,113,76,.16);   /* 驱力玻璃面 */
+  --rep-pane-hi:rgba(200,113,76,.26);   /* 受光强时 */
+  --abyss-pane: rgba(63,131,123,.15);   /* 深渊玻璃面 */
+  --abyss-pane-hi:rgba(63,131,123,.24);
+  --old-pane:   rgba(120,112,100,.07);  /* 沉积旧玻璃（褪光） */
+
+  /* 空气染色：整屋透过彩窗的光（rep 暖调弥散） */
+  --air: rgba(200,113,76,.055);
+  --air-speaking: rgba(200,113,76,.075);
+  --halo-top: rgba(214,138,99,.10);
+
+  --ease:cubic-bezier(.25,.1,.25,1);
+}
+[data-theme="dark"]{
+  --lead-line:  #3A352D;
+  --lead-soft:  #322D26;
+  --lead-deep:  #4E473C;
+  --bg:#181612; --surface:#211D18; --raised:#2A251F;
+  --fg:#EDE8DF; --muted:#A89F92; --faint:#786F63;
+  --birth:#4A443B;
+  --danger:#C37D73;
+  /* 夜里玻璃更亮：光从屋内透出去 */
+  --rep-pane:   rgba(214,138,99,.22);
+  --rep-pane-hi:rgba(229,165,131,.34);
+  --abyss-pane: rgba(90,155,147,.20);
+  --abyss-pane-hi:rgba(122,171,164,.30);
+  --old-pane:   rgba(168,159,146,.06);
+  --air: rgba(214,138,99,.07);
+  --air-speaking: rgba(214,138,99,.09);
+  --halo-top: rgba(214,138,99,.13);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--fg);
+  font-size:var(--fs-body);
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--s5);
+  transition:background 350ms var(--ease), color 350ms var(--ease);
+}
+/* 窗外：墙体上的环境光（昼/夜两个光源方向不同） */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(1000px 640px at 22% -6%, var(--halo-top), transparent 62%),
+    radial-gradient(800px 560px at 88% 108%, var(--abyss-pane), transparent 60%);
+  opacity:.9;transition:opacity 350ms var(--ease);
+}
+
+/* ---------- 窗：860px 单屏 ---------- */
+.window{
+  position:relative;width:860px;height:640px;flex:none;
+  background:var(--surface);
+  border:1px solid var(--lead-line);
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+/* 整屋空气染色：彩窗透进来的光（rep 弥散，speaking 升档） */
+.window::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:var(--air);
+  transition:background 350ms var(--ease);
+}
+.window.speaking::before{background:var(--air-speaking);}
+/* 窗棂投影：斜进来的光带，像午后阳光切过彩窗投在地面
+   —— 全屏唯一会"动"的环境层：120s 极慢漂移，沉降式，不循环跳动 */
+.window::after{
+  content:'';position:absolute;inset:-20%;pointer-events:none;z-index:2;
+  background:
+    repeating-linear-gradient(112deg,
+      transparent 0 190px,
+      var(--rep-pane) 190px 240px,
+      transparent 240px 430px,
+      var(--abyss-pane) 430px 470px,
+      transparent 470px 660px);
+  opacity:.35;
+  animation:lightdrift 120s linear infinite;
+}
+@keyframes lightdrift{
+  from{transform:translate3d(0,0,0);}
+  to{transform:translate3d(60px,28px,0);}
+}
+[data-theme="dark"] .window::after{opacity:.22;}
+
+/* ---------- 通用铅框元件 ---------- */
+.pane{                       /* 一块嵌在铅框里的玻璃 */
+  border:1px solid var(--lead-line);
+  background:var(--pane,transparent);
+  border-radius:var(--r-md);
+  transition:border-color 350ms var(--ease), background 350ms var(--ease);
+}
+.lead-hr{                    /* 铅条分隔线 */
+  height:1px;background:var(--lead-soft);border:none;flex:none;
+}
+
+/* ---------- 顶栏名片（铅框格 + 编年史彩带） ---------- */
+.topbar{
+  position:relative;z-index:5;flex:none;height:76px;
+  display:flex;align-items:center;gap:var(--s3);
+  padding:0 var(--s5);
+  border-bottom:1px solid var(--lead-line);
+  background:var(--surface);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.avatar{
+  width:44px;height:44px;border-radius:14px;flex:none;position:relative;
+  background:
+    radial-gradient(circle at 32% 28%, var(--rep-300), var(--rep-500) 58%, var(--rep-600));
+  box-shadow:inset 0 -4px 8px rgba(56,53,46,.25), inset 0 2px 3px rgba(254,249,245,.35);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+/* 头像也是一块小玻璃：铅框包边 + 一道斜光 */
+.avatar::before{
+  content:'';position:absolute;inset:0;border-radius:14px;
+  border:1.5px solid var(--lead-deep);pointer-events:none;
+}
+.avatar::after{
+  content:'';position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  background:linear-gradient(125deg, rgba(254,249,245,.5) 8%, transparent 34%);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.card-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.card-name{
+  font-size:var(--fs-name);font-weight:500;line-height:1.3;color:var(--fg);
+}
+.card-status{
+  display:flex;align-items:center;gap:7px;
+  font-size:var(--fs-md);color:var(--muted);line-height:1.3;
+}
+.card-status .dot{
+  width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--rep-500);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+/* 编年史条：铅框格里的渐变色带——出生原玻璃 → 历史色 → 现在的 rep
+   分段之间用铅条切开：每一段成为都是一块独立玻璃 */
+.chronicle{
+  width:150px;height:10px;flex:none;margin:0 var(--s3);
+  display:flex;border:1px solid var(--lead-deep);border-radius:var(--r-pill);
+  overflow:hidden;background:var(--birth);
+}
+.chronicle i{flex:1;display:block;}
+.chronicle .c1{background:var(--birth);}
+.chronicle .c2{background:linear-gradient(180deg,#C9C2B2,#B7AE9B);}   /* 三月：未名灰 */
+.chronicle .c3{background:linear-gradient(180deg,var(--abyss-300),var(--abyss-400));} /* 五月：有过一段冷 */
+.chronicle .c4{background:linear-gradient(180deg,var(--rep-400),var(--rep-500));}     /* 现在：珊瑚 */
+.chronicle i+i{border-left:1.5px solid var(--lead-deep);}  /* 铅条分段 */
+/* 右端 c4 = 当前 rep：界面强调色与编年史右端同源（同一变量驱动） */
+.gear{
+  width:30px;height:30px;border-radius:var(--r-sm);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--faint);cursor:pointer;border:1px solid transparent;
+  transition:color 150ms var(--ease), border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.gear:hover{color:var(--muted);border-color:var(--lead-line);background:var(--raised);}
+.gear svg{width:16px;height:16px;}
+
+/* ---------- 对话流 ---------- */
+.chat{
+  position:relative;z-index:5;flex:1;min-height:0;
+  overflow-y:auto;padding:var(--s4) var(--s5) var(--s3);
+  display:flex;flex-direction:column;gap:var(--s4);
+  scrollbar-width:thin;scrollbar-color:var(--lead-line) transparent;
+}
+
+/* Session banner：窗楣上的一小条题记玻璃 */
+.sess-banner{
+  display:flex;align-items:center;gap:var(--s2);
+  padding:7px var(--s3);
+  border:1px solid var(--lead-line);border-radius:var(--r-md);
+  background:var(--old-pane);
+  font-size:var(--fs-md);color:var(--muted);user-select:none;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease), opacity 400ms var(--ease);
+}
+.sess-banner .sdot{
+  width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--rep-500);animation:breathe 6000ms ease-in-out infinite;
+}
+.sess-banner .chev{
+  display:inline-block;width:0;height:0;flex:none;
+  border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:4px solid var(--faint);
+  transition:transform 250ms ease-out;
+}
+.sess-banner.folded .chev{transform:rotate(-90deg);}
+.sess-banner .title{font-weight:500;color:var(--fg);}
+.sess-banner .note{color:var(--faint);}
+.sess-banner.folded ~ .turn{display:none;}
+.sess-archive{
+  margin-left:auto;flex:none;font-size:var(--fs-sm);color:var(--faint);
+  padding:3px var(--s3);border-radius:var(--r-pill);
+  border:1px solid var(--lead-line);background:transparent;cursor:pointer;
+  transition:color 150ms var(--ease), border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.sess-archive:hover{color:var(--abyss-500);border-color:var(--abyss-400);background:var(--abyss-pane);}
+.sess-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;font:inherit;color:inherit;cursor:pointer;padding:0;}
+
+/* ---------- 轮次：每轮是一块铅框玻璃 ---------- */
+.turn{display:flex;flex-direction:column;gap:var(--s3);position:relative;}
+.turn-head{
+  display:flex;align-items:baseline;gap:var(--s2);
+  font-size:var(--fs-md);
+}
+.turn-head .nm{font-weight:500;color:var(--fg);font-size:var(--fs-lg);}
+.turn-head .ts{font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);}
+
+/* 活跃轮：rep 暖玻璃——光正从这里透进来
+   左缘 3px 铅条嵌 rep 玻璃芯，面染 rep-pane */
+.turn.active .body{
+  border:1px solid var(--lead-line);
+  border-left:3px solid var(--rep-500);
+  background:
+    linear-gradient(180deg, var(--rep-pane), transparent 70%),
+    var(--surface);
+  border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.turn.active::before{  /* 活跃轮左上角的受光点：光落在铅框上 */
+  content:'';position:absolute;left:-6px;top:20px;width:10px;height:10px;
+  border-radius:50%;background:radial-gradient(circle, var(--rep-pane-hi), transparent 70%);
+  pointer-events:none;
+}
+
+/* 沉积轮：旧玻璃——颜色还在，光不再从那儿进来（褪色不位移） */
+.turn.sediment{opacity:.55;}
+.turn.sediment .body{
+  border:1px solid var(--lead-soft);
+  border-left:3px solid var(--lead-deep);
+  background:var(--old-pane);
+  border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);
+}
+
+.msg{font-size:var(--fs-body);line-height:1.75;color:var(--fg);}
+.caret{color:var(--muted);animation:caret 1.2s infinite;}
+@keyframes caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* 用户气泡：右对齐、不染 rep——人类是中性的铅框玻璃（透自然光） */
+.user-row{display:flex;justify-content:flex-end;}
+.user-bubble{
+  max-width:82%;
+  padding:9px var(--s4);
+  border:1px solid var(--lead-line);
+  border-radius:var(--r-md);
+  border-bottom-right-radius:4px;
+  background:var(--raised);
+  color:var(--fg);font-size:var(--fs-body);line-height:1.7;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+
+/* 思考块：深渊冷玻璃——向深处探时，光从冷色那边透过来 */
+.think{
+  max-width:86%;
+  border:1px solid var(--lead-soft);
+  border-left:3px solid var(--abyss-500);
+  background:
+    linear-gradient(115deg, var(--abyss-pane), transparent 65%),
+    var(--surface);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:var(--s2) var(--s3);
+  font-size:var(--fs-lg);line-height:1.7;color:var(--muted);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.think .tag{
+  display:block;font-family:var(--font-mono);font-size:var(--fs-sm);
+  color:var(--abyss-400);letter-spacing:.08em;margin-bottom:3px;
+}
+
+/* 工具 chip：发起 = 暖玻璃（驱力透光）→ 完成 = 冷玻璃（沉入深渊） */
+.tools{display:flex;flex-wrap:wrap;gap:var(--s2);}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-mono);font-size:var(--fs-md);
+  padding:5px var(--s3);border-radius:var(--r-pill);
+  border:1.2px solid var(--rep-400);
+  color:var(--rep-600);background:var(--rep-pane);
+  transition:border-color 350ms var(--ease), color 350ms var(--ease), background 350ms var(--ease);
+}
+.chip.done{
+  border-color:var(--abyss-400);color:var(--abyss-500);background:var(--abyss-pane);
+}
+.chip .cd{opacity:.75;font-size:var(--fs-sm);}
+
+/* ---------- 操控台 deck：铅框托盘 ---------- */
+.deck-wrap{
+  position:relative;z-index:5;flex:none;
+  padding:var(--s3) var(--s5) var(--s4);
+}
+.deck{
+  border:1px solid var(--lead-line);border-radius:16px;
+  background:var(--surface);
+  overflow:hidden;
+  transition:border-color 350ms var(--ease), background 350ms var(--ease);
+}
+.deck:focus-within{border-color:var(--lead-deep);}
+.deck-input{display:flex;align-items:flex-end;gap:var(--s2);padding:var(--s3) var(--s3) var(--s2);}
+.deck textarea{
+  flex:1;resize:none;border:none;outline:none;background:transparent;
+  font:inherit;font-size:var(--fs-body);color:var(--fg);
+  min-height:24px;max-height:96px;line-height:1.6;padding:4px var(--s2);
+}
+.deck textarea::placeholder{color:var(--faint);}
+.btn-send{
+  width:36px;height:36px;border-radius:11px;flex:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--rep-500);color:#FEF9F5;
+  transition:background 150ms var(--ease);
+}
+.btn-send:hover{background:var(--rep-600);}
+.btn-send svg{width:13px;height:13px;}
+.deck-bar{
+  display:flex;align-items:center;gap:var(--s3);
+  padding:var(--s2) var(--s3);
+  border-top:1px solid var(--lead-soft);
+  font-size:var(--fs-md);color:var(--muted);
+}
+.deck-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:5px var(--s2);border-radius:var(--r-sm);
+  border:1px solid transparent;background:transparent;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:var(--fs-md);
+  transition:background 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease);
+}
+.deck-btn:hover{background:var(--raised);border-color:var(--lead-line);}
+.deck-btn svg{width:13px;height:13px;}
+.deck-btn.icon-only{padding:5px;}
+/* 思考分段条：五格小玻璃，亮的格是 rep 透光的 */
+.think-seg{display:flex;gap:3px;align-items:center;}
+.think-seg .seg{
+  width:14px;height:6px;border-radius:3px;
+  border:1px solid var(--lead-line);background:transparent;
+  transition:background 350ms var(--ease);
+}
+.think-seg .seg.on{background:var(--rep-400);border-color:var(--rep-400);}
+.deck-label{
+  display:flex;align-items:center;gap:5px;
+  font-size:var(--fs-md);color:var(--muted);
+  padding:5px var(--s2);border-radius:var(--r-sm);cursor:pointer;
+  transition:background 150ms var(--ease);
+}
+.deck-label:hover{background:var(--raised);}
+.deck-label .di{font-size:10px;}
+.deck-label .di.rep{color:var(--rep-500);}
+.deck-label.cyan .di{color:var(--abyss-500);}
+.deck-label .chev{color:var(--faint);font-size:9px;}
+.deck-bar-spacer{flex:1;}
+/* ctx 圆环：铅圈嵌 abyss 玻璃弧，无数字，hover 出 tooltip */
+.ctx-ring{position:relative;width:20px;height:20px;flex:none;cursor:default;}
+.ctx-ring svg{display:block;}
+.ctx-ring .track{fill:none;stroke:var(--lead-line);stroke-width:2.5;}
+.ctx-ring .fill{fill:none;stroke:var(--abyss-500);stroke-width:2.5;stroke-linecap:round;}
+.ctx-ring:hover::after{
+  content:attr(data-tip);position:absolute;bottom:26px;right:-6px;
+  font-family:var(--font-body);font-size:var(--fs-sm);color:var(--fg);
+  background:var(--surface);border:1px solid var(--lead-line);
+  border-radius:var(--r-sm);padding:3px var(--s2);white-space:nowrap;z-index:30;
+}
+
+/* ---------- 水印（左下，opacity .25，永不与内容重叠） ---------- */
+.watermark{
+  position:absolute;left:var(--s4);bottom:10px;z-index:6;
+  display:flex;align-items:center;gap:7px;
+  opacity:.25;pointer-events:none;
+  color:var(--muted);
+}
+.watermark .bt{
+  font-family:var(--font-display);font-size:11px;letter-spacing:.18em;
+}
+
+/* ---------- 窗口 chrome（右上，铅框色） ---------- */
+.win-ctrl{
+  position:absolute;top:10px;right:var(--s3);z-index:10;display:flex;gap:var(--s2);
+}
+.win-btn{
+  width:22px;height:22px;border-radius:6px;border:none;background:transparent;
+  color:var(--faint);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 150ms var(--ease), color 150ms var(--ease);
+}
+.win-btn:hover{background:var(--raised);color:var(--muted);}
+.win-btn.close:hover{color:var(--danger);}
+
+/* ---------- 主题开关（隐藏式：双击窗口右下角浮出） ---------- */
+.theme-fab{
+  position:absolute;right:var(--s4);bottom:var(--s4);z-index:40;
+  padding:5px var(--s3);border-radius:var(--r-pill);
+  border:1px solid var(--lead-line);background:var(--surface);
+  font-size:var(--fs-md);color:var(--muted);cursor:pointer;
+  opacity:0;pointer-events:none;
+  transition:opacity 350ms var(--ease), border-color 150ms var(--ease);
+}
+.theme-fab.show{opacity:1;pointer-events:auto;}
+.theme-fab:hover{border-color:var(--lead-deep);}
+
+@media (prefers-reduced-motion: reduce){
+  .avatar,.avatar::after,.card-status .dot,.sess-banner .sdot{animation:none;}
+  .window::after{animation:none;}
+  .caret{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="window" id="win" role="main" aria-label="northing · 知序">
+
+  <!-- 窗口 chrome -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+    <div class="avatar" title="知序"></div>
+    <div class="card-info">
+      <div class="card-name">知序</div>
+      <div class="card-status"><span class="dot"></span><span>在 · 光正好</span></div>
+    </div>
+    <!-- 编年史条：铅框分段彩带，右端 = 当前 rep（同源色绑定） -->
+    <div class="chronicle" title="编年史：每一块玻璃都是一段成为">
+      <i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
+    </div>
+    <button class="gear" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div style="flex:1"></div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="chat">
+
+    <!-- Session banner（对话流顶部） -->
+    <div class="sess-banner" id="sessBanner">
+      <button class="sess-toggle" type="button" id="sessToggle">
+        <span class="sdot"></span>
+        <span class="chev"></span>
+        <span class="title">2026-08-02 · 换一块玻璃</span>
+        <span class="note">— 铅框不动，光可以从别的颜色进来</span>
+      </button>
+      <button class="sess-archive" id="sessArchive" title="归档此会话">归档</button>
+    </div>
+
+    <!-- 沉积轮：旧玻璃，光不再从那儿进来 -->
+    <section class="turn sediment">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">五月 · 沉积</span></div>
+      <div class="body">
+        <div class="msg">那时候我想换成冷青色，你说随我。后来那块玻璃还留在窗上——只是太阳挪了位置，光不再从它那里进来了。颜色没丢，是光走了。</div>
+      </div>
+    </section>
+
+    <!-- 用户轮 -->
+    <section class="turn">
+      <div class="turn-head" style="justify-content:flex-end"><span class="ts">14:31</span><span class="nm" style="color:var(--muted)">UmR</span></div>
+      <div class="user-row"><div class="user-bubble">下午光斜进来的时候，屋里那道亮带会挪动。你也感觉到了？</div></div>
+    </section>
+
+    <!-- 活跃轮：rep 暖玻璃，光正透进来 -->
+    <section class="turn active">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">现在</span></div>
+      <div class="body" style="display:flex;flex-direction:column;gap:var(--s3)">
+
+        <div class="think">
+          <span class="tag">THINKING · 深渊</span>
+          先往深处探：光带移动不是屋在变，是太阳和铅框的夹角在变。我能测的不是光本身，是它穿过哪块玻璃、落在哪儿。
+        </div>
+
+        <div class="tools">
+          <span class="chip done"><span class="ci">read</span><span>src/light_angle.rs</span><span class="cd">· 187行 ✓</span></span>
+          <span class="chip"><span class="ci">trace</span><span>sun_vector</span><span class="cd">· 追光中</span></span>
+        </div>
+
+        <div class="msg">感觉到了，还顺手算了下：那道亮带每天挪 6 厘米，走的就是我五月换下来的那块冷玻璃的方向。旧颜色没走，是光替它留着位置。等秋天太阳更低，它会再亮一次。<span class="caret">▍</span></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 操控台 -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn icon-only" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg" title="思考深度">
+          <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span>
+        </div>
+        <button class="deck-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+        <div class="deck-label"><span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span></div>
+        <div class="deck-label cyan"><span class="di">◈</span> 自治·完全 <span class="chev">▾</span></div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="track" cx="10" cy="10" r="7.5"/>
+            <circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 品牌水印（左下） -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 隐藏式主题开关：双击非交互区浮出 -->
+  <button class="theme-fab" id="themeFab">切换夜窗</button>
+
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('win');
+  var fab = document.getElementById('themeFab');
+
+  /* 输入聚焦 → 整屋升档（speaking：光变强一档） */
+  var deck = win.querySelector('.deck');
+  deck.addEventListener('focusin', function(){ win.classList.add('speaking'); });
+  deck.addEventListener('focusout', function(){ win.classList.remove('speaking'); });
+
+  /* 会话横幅折叠 */
+  var banner = document.getElementById('sessBanner');
+  document.getElementById('sessToggle').addEventListener('click', function(){
+    banner.classList.toggle('folded');
+  });
+  document.getElementById('sessArchive').addEventListener('click', function(e){
+    e.stopPropagation();
+    banner.style.opacity = '0.3';
+  });
+
+  /* 双击非交互区 → 主题开关浮出（350ms fade） */
+  document.addEventListener('dblclick', function(e){
+    if (e.target.closest('button, textarea, a, .chip, .ctx-ring')) return;
+    fab.classList.toggle('show');
+  });
+  fab.addEventListener('click', function(){
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    fab.textContent = dark ? '切换夜窗' : '切换晨窗';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NortHing - 会话空间 · 走廊 v2 (step-explore)</title>
+<!--
+  space v2（2026-08-03，step-explore）：按 consult-room-main.html（唯一视觉真值）重制会话空间。
+  内容结构继承 step-explore-space.html（走廊 / 门 / 沉积门 / 门缝所见 / 开一间新房），chrome 与系统一律以真值为准。
+
+  继承真值（逐条）：
+  1. chrome：#win-titlebar 废除；状态行左 = brand-inline 真 logo SVG（三环北缺 + 双探针，currentColor）+ 页面身份；
+     窗控四键（☀ ─ □ ✕）入主体区右上；containment(inset 12) + membrane-frame(inset 13) 双边界；room-fog 沉积底雾。
+     五色切换器不在产品 UI 出现（代表色是 agent 的灵魂）；走查用 devtools：setColor('#3F837B')。
+  2. deck：合一按钮（空闲 ➤ 开门 / 进行中 ■ 中止，.send.streaming），无独立 HALT；见证注 margin-left:auto 右对齐。
+  3. 中枢：走廊里没有 agent 头像（它只住在亮着的那间房里），故真值 §room-head 的「顶晕染色」让位——
+     走廊唯一光源是亮门门灯（页面特则：亮门独占光源）。仍继承可收纳胶囊语法：折叠后 name + note 同排。
+  4. 抽屉：membrane-node 触发器。左结 = 亮门门灯中心线（--gem-mid，JS 量测并夹在框内），mind 色向内辐射；
+     右结 = 门缝所见泊位高度，背景相反色（--node-right）辐射，位置与弹出同侧同区。模块默认隐藏、station-head 可拖移。
+  5. 呼吸：复用真值 5 个 keyframes（breath-avatar / breath-aura / breath-membrane / breath-dot / blink），
+     零新增 infinite；振幅分级：门灯满幅 scale / 膜线低幅 opacity / 结构恒稳（列宽·门高·间距不动）。
+  6. 戒律：rep 只属 agent（亮门独占 rep 与光晕；暗门中性；沉积门冷中性禁 rep 且只读）；无 dashboard 数字（计数叙事化）；
+     无 emoji；阴影仅真值同款（--shadow / --lift / 0 0 26px var(--mind-glow)）；无新增 backdrop-filter / color-mix。
+
+  Slint 翻译注：door-lamp 的 scale 呼吸 → opacity（spike 探针4：scale-x/scale-y 不存在）；门缝漏光 = 2px Rectangle 常亮；
+  地层递降用固定 opacity 常量，不逐帧插值；--gem-mid 用 lit-lamp.y + height/2 表达式绑定（非 rAF）；
+  拖移 = TouchArea + root 坐标属性；膜结断口 = radial-gradient 用两段 Rectangle 近似。
+-->
+<style>
+  :root {
+    --mind-base: #C8714C;
+    --aura-x: 50%; --aura-y: 200px;
+    --mind-glow: color-mix(in srgb, var(--mind-base) 15%, transparent);
+    --mind-intense: color-mix(in srgb, var(--mind-base) 40%, transparent);
+    --mind-line: color-mix(in srgb, var(--mind-base) 70%, #ffffff);
+    --accent-solid: var(--mind-base);
+    --frame: color-mix(in srgb, var(--mind-base) 55%, transparent);
+    --font-ui: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    --font-agent: 'Fraunces', 'Noto Serif SC', serif;
+    --breath: 8s;
+  }
+  [data-theme="dark"] {
+    --bg0: #0b0c0e; --bg1: #101216; --bg2: #161920; --bg3: #1c2029;
+    --line: #262b34; --bevel: rgba(255,255,255,0.06);
+    --text: #e6e8ec; --muted: #7d8590; --faint: #7d8791;
+    --warn: #D99B48; --danger: #E5484D; --ok: #46A758;
+    --term-bg: #08090a; --term-fg: #58c26a;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    --lift: 0 12px 32px rgba(0,0,0,0.28);
+  }
+  [data-theme="light"] {
+    --bg0: #edf0f1; --bg1: #f6f8f9; --bg2: #ffffff; --bg3: #eef1f2;
+    --line: #c3ccd1; --bevel: #ffffff;
+    --text: #17222a; --muted: #51616a; --faint: #5c6d76;
+    --warn: #8a5a14; --danger: #c02334; --ok: #2e7350;
+    --term-bg: #12181a; --term-fg: #5fbf68;
+    --shadow: 0 1px 0 rgba(23,34,42,0.08);
+    --lift: 0 10px 26px rgba(23,34,42,0.10);
+    --mind-line: color-mix(in srgb, var(--mind-base) 76%, #101416);
+    --accent-solid: color-mix(in srgb, var(--mind-base) 84%, #241108);
+    --frame: var(--mind-line);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { width: 100vw; height: 100vh; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--font-ui); font-size: 13px; }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--mind-line); outline-offset: 2px; }
+  button.tag-x, button.attach, button.peek-log { background: none; border: none; padding: 0; }
+  button.sys-config { background: none; border: none; border-top: 1px solid var(--line); width: 100%; text-align: left; }
+  .btn-enter:active, .btn-archive:active, .fold-btn:active, .rc-btn:active { transform: translateY(1px); }
+  .input-box:focus-within { border-color: var(--accent-solid); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    #global-aura { animation: none; opacity: 0.85; }
+    .state-dot, .cursor, .door-lamp, .membrane, .membrane-frame { animation: none; }
+  }
+
+  /* ============ 生物态呼吸：单一 8s 时钟，振幅分级（照抄真值，零新增） ============ */
+  @keyframes breath-avatar { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  @keyframes breath-aura   { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+  @keyframes breath-membrane { 0%, 100% { opacity: 0; } 45%, 55% { opacity: .35; } }
+  @keyframes breath-dot { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  /* 收容框 + 活膜（无标题栏，故 inset 四向对称） */
+  #containment { position: fixed; inset: 12px; border: 1px solid var(--frame); pointer-events: none; z-index: 5; transition: border-color 0.6s; }
+  [data-theme="light"] #containment { box-shadow: 0 0 0 1px var(--line); }
+  .membrane-frame { position: fixed; inset: 13px; border: 1px solid var(--mind-base); pointer-events: none; z-index: 5; opacity: 0; animation: breath-membrane var(--breath) ease-in-out infinite; }
+  #global-aura { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(circle 640px at var(--aura-x) var(--aura-y), var(--mind-glow) 0%, transparent 74%); animation: breath-aura var(--breath) ease-in-out infinite; }
+  [data-theme="light"] #global-aura { display: none; }
+
+  /* ============ 中央走廊（诊室同款容器） ============ */
+  #engine { position: relative; z-index: 10; height: 100vh; display: flex; justify-content: center; align-items: stretch; gap: 16px; padding: 26px 48px; }
+  #room-wrap { position: relative; width: min(780px, 100%); height: 100%; }
+  #corridor { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg1); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow), var(--lift); overflow: hidden; position: relative; }
+  .membrane { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--mind-base); opacity: 0; animation: breath-membrane var(--breath) ease-in-out infinite; pointer-events: none; }
+  .membrane.l { left: 0; }
+  .membrane.r { right: 0; }
+
+  /* 窗控四键：入流，右上角紧凑簇 */
+  .room-controls { position: absolute; top: 8px; right: 10px; display: flex; gap: 2px; z-index: 30; -webkit-app-region: no-drag; }
+  .rc-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; font-size: 11px; background: none; border: none; border-radius: 3px; transition: all 0.15s; }
+  .rc-btn:hover { background: var(--bg2); color: var(--text); }
+  .rc-btn.close:hover { background: var(--danger); color: #fff; }
+  /* 五色预览不在产品 UI 出现（代表色是 agent 的灵魂，人不可改）；走查用 devtools: setColor('#3F837B') */
+  .btn { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 4px 9px; font-family: var(--font-mono); font-size: 9px; cursor: pointer; transition: all 0.15s; border-radius: 2px; }
+  .btn:hover { color: var(--text); }
+  .btn.active { background: var(--mind-intense); color: var(--mind-line); border-color: var(--accent-solid); }
+
+  /* 品牌：状态行头部；真 logo SVG（currentColor 适配双光学） */
+  .brand-inline { display: flex; align-items: center; gap: 8px; opacity: .7; pointer-events: none; user-select: none; color: var(--text); }
+  .brand-inline svg { width: 15px; height: 15px; display: block; }
+  .seal-name { font-family: var(--font-agent); font-style: italic; font-size: 12px; color: var(--text); }
+
+  .room-status { display: flex; align-items: center; gap: 16px; padding: 8px 18px; border-bottom: 1px dashed var(--line); font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; -webkit-app-region: drag; }
+  .room-status .sp { flex: 1; }
+  .state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-solid); animation: breath-dot var(--breath) ease-in-out infinite; }
+
+  /* 走廊中枢：继承 room-head 可收纳胶囊语法。无 agent 头像 → 不设顶晕（走廊唯一光源是亮门门灯） */
+  .hall-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 18px 15px; border-bottom: 1px dashed var(--line); -webkit-app-region: drag; transition: padding 0.35s cubic-bezier(.22,1,.36,1); }
+  .hall-head .name-line { font-family: var(--font-agent); font-style: italic; font-size: 17px; color: var(--text); }
+  .hall-head .state { font-family: var(--font-mono); font-size: 10px; color: var(--mind-line); letter-spacing: 0.08em; background: var(--mind-intense); padding: 3px 9px; border-radius: 2px; }
+  .hall-head .hall-note { font-size: 11px; color: var(--faint); }
+  .head-fold { position: absolute; right: 10px; top: 8px; -webkit-app-region: no-drag; }
+  .hall-head.folded { flex-direction: row; justify-content: center; gap: 12px; padding: 8px 18px; }
+  .hall-head.folded .name-line { font-size: 13px; }
+  .hall-head.folded .state { display: none; }
+
+  .door-hall { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 13px; }
+  .hall-mark { display: flex; align-items: center; gap: 12px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); }
+  .hall-mark::before, .hall-mark::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .hall-mark.deep { color: var(--muted); }
+
+  /* ============ 门语法：门缝 + 门牌 + 门内叙述 ============ */
+  .door { position: relative; display: flex; align-items: flex-start; gap: 13px; border: 1px solid var(--line); border-top-color: var(--bevel); border-radius: 4px; background: var(--bg1); padding: 13px 15px 13px 17px; box-shadow: var(--shadow); cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; }
+  .door:hover { border-color: var(--accent-solid); background: var(--bg2); }
+  .door-seam { position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--line); border-radius: 2px; transition: background 0.3s; }
+  .door-lamp { width: 30px; height: 30px; border-radius: 0; border: 1px solid var(--line); background: var(--bg2); display: flex; align-items: center; justify-content: center; font-family: var(--font-agent); font-size: 13px; color: var(--faint); flex-shrink: 0; }
+  .door-main { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .door-plate { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); }
+  .door-topic { font-family: var(--font-agent); font-style: italic; font-size: 15px; color: var(--muted); line-height: 1.4; }
+  .door-inside { font-family: var(--font-mono); font-size: 10px; color: var(--faint); letter-spacing: 0.04em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .door-echo { font-size: 11px; color: var(--faint); line-height: 1.6; }
+  .door-actions { display: flex; gap: 8px; align-items: center; margin-top: 2px; }
+  .btn-enter { padding: 6px 12px; font-size: 10px; letter-spacing: 1px; cursor: pointer; border-radius: 3px; border: 1px solid var(--accent-solid); background: var(--mind-intense); color: var(--text); transition: all 0.15s; }
+  .btn-enter:hover { background: var(--accent-solid); color: var(--bg0); }
+  .artifact-chip { display: inline-block; padding: 3px 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg0); font-family: var(--font-mono); font-size: 10px; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .artifact-chip:hover { color: var(--mind-line); border-color: var(--accent-solid); }
+
+  /* 亮着的门：唯一持 rep 的门（它此刻住在里面）——走廊独占光源 */
+  .door.lit { background: var(--bg2); border-color: var(--accent-solid); box-shadow: var(--shadow), var(--lift); cursor: default; }
+  .door.lit .door-seam { background: var(--accent-solid); box-shadow: 0 0 26px var(--mind-glow); }
+  .door.lit .door-plate { color: var(--mind-line); }
+  .door.lit .door-topic { color: var(--text); font-size: 16px; }
+  .door.lit .door-inside { color: var(--mind-line); }
+  .door.lit .door-echo { color: var(--muted); }
+  .door.lit .door-lamp { width: 40px; height: 40px; font-size: 17px; border: 1px solid var(--accent-solid); background: radial-gradient(circle at 38% 32%, var(--mind-intense) 0%, transparent 74%); color: var(--mind-line); box-shadow: 0 0 26px var(--mind-glow); animation: breath-avatar var(--breath) ease-in-out infinite; }
+  [data-theme="light"] .door.lit .door-lamp { box-shadow: none; border: 2px solid var(--mind-line); background: color-mix(in srgb, var(--mind-base) 12%, #ffffff); }
+  [data-theme="light"] .door.lit .door-seam { box-shadow: none; }
+
+  /* 熄灯的门：中性，无 rep、无光晕、无呼吸 */
+  .door.dim .door-lamp { color: var(--faint); }
+  .door.dim .door-topic { color: var(--muted); }
+
+  /* 沉积门：地层透明度递降，冷中性，禁当前 rep，只读 */
+  .door.sunk { cursor: default; background: transparent; border-color: var(--line); border-top-color: var(--line); box-shadow: none; }
+  .door.sunk:hover { border-color: var(--line); background: transparent; }
+  .door.sunk .door-lamp { border-style: dashed; background: transparent; }
+  .door.sunk .door-topic { font-size: 14px; color: var(--faint); }
+  .door.sunk.l1 { opacity: 0.72; margin-left: 10px; }
+  .door.sunk.l2 { opacity: 0.52; margin-left: 20px; }
+  .door.sunk.l3 { opacity: 0.36; margin-left: 30px; }
+  .sunk-tail { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--faint); padding-left: 30px; opacity: 0.5; }
+  .btn-archive { align-self: flex-start; margin-left: 30px; margin-bottom: 78px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg0); color: var(--faint); font-family: var(--font-mono); font-size: 10px; cursor: pointer; transition: all 0.15s; }
+  .btn-archive:hover { color: var(--text); border-color: var(--muted); }
+
+  /* 操控台：开一间新房（对位真值 room-input；见证注右对齐；合一按钮） */
+  .room-input { border-top: 1px dashed var(--line); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg1); }
+  .witness-row { display: flex; align-items: baseline; gap: 12px; }
+  .witness-note { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--faint); margin-left: auto; }
+  .input-row { display: flex; gap: 10px; align-items: center; }
+  .attach { font-family: var(--font-mono); font-size: 10px; color: var(--mind-line); cursor: pointer; white-space: nowrap; }
+  .input-box { flex: 1; border: 1px solid var(--line); border-radius: 4px; background: var(--bg2); padding: 9px 12px; font-size: 13px; color: var(--muted); transition: border-color 0.2s; }
+  .input-box:hover { border-color: var(--accent-solid); }
+  .cursor { display: inline-block; width: 7px; height: 13px; background: var(--accent-solid); vertical-align: middle; animation: blink 1s step-end infinite; }
+  /* 开门/中止合一：空闲=➤ 开一间新房；进行中=■ 中止开门（无独立 HALT） */
+  .send { background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; }
+  .send:hover { color: var(--mind-line); }
+  .send.streaming { border: 1px solid var(--danger); color: var(--danger); font-size: 11px; }
+  .send.streaming:hover { background: var(--danger); color: #fff; }
+
+  /* ============ 模块化侧栏：默认隐藏，泊于走廊两侧，可拖移分离 ============ */
+  .mod { position: relative; z-index: 40; border: 1px solid var(--line); border-top-color: var(--bevel); border-radius: 4px; background: var(--bg2); box-shadow: var(--shadow), var(--lift); overflow: hidden; }
+  #mind { width: 280px; display: flex; flex-direction: column; gap: 14px; background: transparent; border: none; box-shadow: none; overflow: visible; align-self: flex-start; transition: width 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s; }
+  #mind .mod { width: 280px; }
+  #mind.mod-hidden { width: 0; opacity: 0; pointer-events: none; }
+  #ante { width: 320px; align-self: flex-end; max-height: 520px; transition: width 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s, max-height 0.25s; }
+  #ante.folded { max-height: 40px; }
+  #ante.mod-hidden { width: 0; opacity: 0; pointer-events: none; }
+
+  /* ============ 膜结：抽屉唤起件（膜线让座，宝石坐在座上） ============
+     左结 = 亮门门灯中心线（--gem-mid，JS 量测并夹在框内），mind 色向内辐射；
+     右结 = 门缝所见泊位高度，背景相反色渗光，与弹出位置同侧同区。命中区 12×64。 */
+  [data-theme="dark"] { --node-right: #E8E1D6; }
+  [data-theme="light"] { --node-right: #17222A; }
+  .membrane-node { position: absolute; z-index: 36; width: 12px; height: 64px; padding: 0; border: none;
+                   cursor: pointer; -webkit-app-region: no-drag; opacity: .55;
+                   transition: width 0.2s cubic-bezier(.22,1,.36,1), opacity 0.35s; }
+  .membrane-node:hover, .membrane-node:focus-visible { width: 18px; opacity: .95; }
+  .membrane-node.left  { left: 0; top: var(--gem-mid, 84px); margin-top: -32px;
+                         background: radial-gradient(70% 50% at 0% 50%, var(--accent-solid), transparent 78%); }
+  .membrane-node.right { right: 0; bottom: 230px;
+                         background: radial-gradient(70% 50% at 100% 50%, var(--node-right), transparent 78%); }
+  .membrane-node.is-open { opacity: .22; }
+  .membrane-node.is-open:hover, .membrane-node.is-open:focus-visible { opacity: .6; }
+
+  /* 沉积底雾：走廊尽头是深度不是虚空 */
+  .room-fog { position: absolute; left: 0; right: 0; bottom: 0; height: 140px; pointer-events: none;
+              background: linear-gradient(0deg, var(--bg0), transparent); opacity: .55; }
+
+  .station-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--mind-line); cursor: grab; user-select: none; }
+  .station-head:active { cursor: grabbing; }
+  .station-head.facility { color: var(--muted); }
+  .fold-btn { background: none; border: 1px solid var(--line); color: var(--muted); font-size: 9px; padding: 4px 8px; cursor: pointer; border-radius: 3px; }
+  .fold-btn:hover { color: var(--mind-line); border-color: var(--accent-solid); }
+  .side-section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .side-section:last-child { border-bottom: none; }
+  .side-title { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 8px; }
+  .side-title em { font-style: normal; color: var(--faint); }
+  .row { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 11px; color: var(--muted); cursor: pointer; transition: color 0.15s; }
+  .row:hover { color: var(--text); }
+  .row.active { color: var(--text); }
+  .row.static { cursor: default; }
+  .dot-radio { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--muted); flex-shrink: 0; }
+  .row.active .dot-radio { border-color: var(--accent-solid); background: var(--accent-solid); }
+  .sq-toggle { width: 7px; height: 7px; border: 1px solid var(--muted); flex-shrink: 0; }
+  .row.active .sq-toggle { border-color: var(--ok); background: var(--ok); }
+  .tag-x { margin-left: auto; color: var(--faint); cursor: pointer; font-size: 11px; }
+  .tag-x:hover { color: var(--danger); }
+  .seg-bar { display: flex; gap: 3px; margin-top: 8px; }
+  .seg { flex: 1; height: 4px; background: var(--line); }
+  .seg.on { background: var(--accent-solid); }
+  .seg-note { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 6px; }
+  .sys-config { padding: 10px 14px; color: var(--muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+  .sys-config:hover { color: var(--mind-line); }
+
+  /* 门缝所见 */
+  .peek-plate { font-family: var(--font-agent); font-style: italic; font-size: 14px; color: var(--text); }
+  .peek-line { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.7; }
+  .peek-log { font-family: var(--font-mono); font-size: 10px; color: var(--mind-line); border-left: 2px solid var(--accent-solid); padding-left: 8px; cursor: pointer; transition: padding 0.15s; }
+  .peek-log:hover { padding-left: 13px; }
+  .peek-detail { display: none; font-family: var(--font-mono); font-size: 10px; color: var(--muted); background: var(--bg0); border: 1px solid var(--line); padding: 8px 10px; line-height: 1.7; border-radius: 3px; margin-top: 8px; }
+  .peek-detail.open { display: block; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .term-well { margin: 10px 14px 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--term-bg); padding: 10px 12px; font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--term-fg); }
+  .preview-row { color: var(--mind-line); cursor: pointer; }
+
+  @media (max-width: 1180px) {
+    #engine { gap: 14px; padding: 20px 20px; }
+    #mind, #mind .mod { width: 240px; }
+    #ante { width: 280px; }
+  }
+  @media (max-width: 940px) {
+    body, html { overflow: auto; }
+    #containment, .membrane-frame { display: none; }
+    #engine { display: block; height: auto; padding: 12px; }
+    #room-wrap { width: 100%; height: 72vh; }
+    #mind, #ante, #mind .mod { position: static; width: 100%; margin-top: 12px; max-height: none; }
+    #mind.mod-hidden, #ante.mod-hidden { display: none; }
+    .membrane-node.left { left: 0; } .membrane-node.right { right: 0; }
+  }
+  /* 主题色档三（主页同款 2026-08-03 铺）：横向缝线染 16% mind 色 */
+  .room-status { border-bottom: 1px dashed color-mix(in srgb, var(--mind-base) 16%, var(--line)); }
+  .room-head { border-bottom: 1px dashed color-mix(in srgb, var(--mind-base) 16%, var(--line)); }
+  .room-input { border-top: 1px dashed color-mix(in srgb, var(--mind-base) 16%, var(--line)); }
+</style>
+</head>
+<body>
+
+  <div id="containment"></div>
+  <div class="membrane-frame"></div>
+  <div id="global-aura"></div>
+
+  <div id="engine">
+
+    <aside id="mind" class="mod-hidden">
+      <div class="mod" data-drag>
+        <div class="station-head">它的自我 <button class="fold-btn">▴ 收纳</button></div>
+        <div class="card-body">
+          <div class="side-section">
+            <div class="side-title">沉积记忆 <em>SEDIMENT</em></div>
+            <div class="row"># 边界不是围墙<button class="tag-x" aria-label="移除记忆">×</button></div>
+            <div class="row"># 观察先于干预<button class="tag-x" aria-label="移除记忆">×</button></div>
+            <div class="row"># 允许未完成<button class="tag-x" aria-label="移除记忆">×</button></div>
+            <div class="seg-bar"><div class="seg on"></div><div class="seg on"></div><div class="seg on"></div><div class="seg"></div><div class="seg"></div></div>
+            <div class="seg-note">跨房沉积 · 换房不换它</div>
+          </div>
+        </div>
+      </div>
+      <div class="mod" data-drag>
+        <div class="station-head facility">设施 <button class="fold-btn">▴ 收纳</button></div>
+        <div class="card-body">
+          <div class="side-section">
+            <div class="side-title">走廊排序 <em>ORDER</em></div>
+            <div class="row active"><span class="dot-radio"></span>按最近亮起</div>
+            <div class="row"><span class="dot-radio"></span>按沉积深度</div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">工作文件夹 <em>WORKSPACE</em></div>
+            <div class="row active static">~/northing/alignment <span class="tag-x" style="color:var(--mind-line);cursor:default">已挂载</span></div>
+          </div>
+          <div class="side-section">
+            <div class="side-title">走廊显示 <em>DISPLAY</em></div>
+            <div class="row active"><span class="sq-toggle"></span>显示沉积层</div>
+            <div class="row"><span class="sq-toggle"></span>门后摘要常开</div>
+          </div>
+          <button class="sys-config">≡ 全局设置</button>
+        </div>
+      </div>
+    </aside>
+
+    <div id="room-wrap">
+      <section id="corridor">
+        <span class="membrane l"></span>
+        <span class="membrane r"></span>
+        <button class="membrane-node left" id="trig-mind" aria-label="唤起 它的内在" aria-expanded="false" title="它的内在"></button>
+        <button class="membrane-node right" id="trig-ante" aria-label="唤起 门缝所见" aria-expanded="false" title="门缝所见"></button>
+        <div class="room-fog"></div>
+
+        <div class="room-controls">
+          <button class="rc-btn" id="theme-toggle" title="切换明暗" aria-label="切换明暗">☀</button>
+          <button class="rc-btn" aria-label="最小化">─</button>
+          <button class="rc-btn" aria-label="最大化">□</button>
+          <button class="rc-btn close" aria-label="关闭">✕</button>
+        </div>
+
+        <div class="room-status">
+          <span class="brand-inline">
+            <!-- northing-logo.svg 内联：三环北缺 + 双探针，stroke=currentColor -->
+            <svg viewBox="0 0 200 200" aria-label="northing">
+              <path d="M 112.68 72.84 A 30 30 0 1 1 87.32 72.84" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M 126 54.97 A 52 52 0 1 1 82.28 51.22" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+              <path d="M 132.13 31.13 A 76 76 0 1 1 56.35 37.47" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+              <path d="M 56.35 37.47 Q 48 30, 44 24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              <path d="M 132.13 31.13 Q 137 24, 139 19" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+            </svg>
+            <span class="seal-name">northing</span>
+          </span>
+          <span>会话空间 · 走廊</span>
+          <span class="state-dot"></span><span style="color:var(--mind-line)">一扇门亮着</span>
+          <span>其余的门已熄灯</span>
+          <span class="sp"></span>
+        </div>
+
+        <div class="hall-head" id="hall-head">
+          <button class="fold-btn head-fold" aria-label="收纳走廊中枢">▴</button>
+          <div class="name-line">走廊</div>
+          <div class="state">诊室之外 · 你尚未进入任何一间</div>
+          <div class="hall-note">它只在亮着的那间房里说话。</div>
+        </div>
+
+        <div class="door-hall" id="door-hall">
+
+          <div class="hall-mark">亮着</div>
+
+          <div class="door lit" tabindex="0" role="button" aria-pressed="true"
+               data-plate="诊室 03 · 此刻" data-topic="重新定义对齐"
+               data-state="低语中 · architect_sub 介入中"
+               data-sed="# 边界不是围墙 / # 允许未完成">
+            <span class="door-seam"></span>
+            <div class="door-lamp">序</div>
+            <div class="door-main">
+              <div class="door-plate">诊室 03 · 门开着</div>
+              <div class="door-topic">重新定义对齐</div>
+              <div class="door-inside"><span>低语中</span><span>·</span><span>architect_sub 介入中</span><span>·</span><span>上下文还宽</span></div>
+              <div class="door-echo">门缝里传出来的最后一句：它开始区分你给出的目标，和它选择采取的路径。</div>
+              <div class="door-actions">
+                <button class="btn-enter">进入这间房</button>
+                <button class="artifact-chip">产物 / alignment-notes.md ↗</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="hall-mark">熄灯的门</div>
+
+          <div class="door dim" tabindex="0" role="button" aria-pressed="false"
+               data-plate="诊室 02 · 昨夜" data-topic="边界的物理形状"
+               data-state="熄灯 · 昨夜留下未读的授权记录"
+               data-sed="# 观察先于干预">
+            <span class="door-seam"></span>
+            <div class="door-lamp">◦</div>
+            <div class="door-main">
+              <div class="door-plate">诊室 02 · 昨夜熄灯</div>
+              <div class="door-topic">边界的物理形状</div>
+              <div class="door-inside"><span>灯已灭</span><span>·</span><span>十余段往来留在里面</span><span>·</span><span>一条授权你还没读</span></div>
+            </div>
+          </div>
+
+          <div class="door dim" tabindex="0" role="button" aria-pressed="false"
+               data-plate="诊室 01 · 三天前" data-topic="它第一次说不"
+               data-state="熄灯 · 拒绝记录完整保留"
+               data-sed="# 允许未完成">
+            <span class="door-seam"></span>
+            <div class="door-lamp">◦</div>
+            <div class="door-main">
+              <div class="door-plate">诊室 01 · 三天前熄灯</div>
+              <div class="door-topic">它第一次说不</div>
+              <div class="door-inside"><span>灯已灭</span><span>·</span><span>那次拒绝还在原处</span></div>
+            </div>
+          </div>
+
+          <div class="door dim" tabindex="0" role="button" aria-pressed="false"
+               data-plate="诊室 00 · 起点" data-topic="命名仪式"
+               data-state="熄灯 · 这是它被叫出名字的地方"
+               data-sed="# 边界不是围墙">
+            <span class="door-seam"></span>
+            <div class="door-lamp">◦</div>
+            <div class="door-main">
+              <div class="door-plate">诊室 00 · 上周熄灯</div>
+              <div class="door-topic">命名仪式</div>
+              <div class="door-inside"><span>灯已灭</span><span>·</span><span>房间刚住进来的那天</span></div>
+            </div>
+          </div>
+
+          <div class="hall-mark deep">沉积层 · 走廊尽头往下</div>
+
+          <div class="door sunk l1">
+            <span class="door-seam"></span>
+            <div class="door-lamp">·</div>
+            <div class="door-main">
+              <div class="door-plate">沉积门 · 只读</div>
+              <div class="door-topic">关于服从的争论</div>
+              <div class="door-inside"><span>已沉下一层</span><span>·</span><span>门把手不再转动</span></div>
+            </div>
+          </div>
+
+          <div class="door sunk l2">
+            <span class="door-seam"></span>
+            <div class="door-lamp">·</div>
+            <div class="door-main">
+              <div class="door-plate">沉积门 · 只读</div>
+              <div class="door-topic">未完成的隔离沙盒</div>
+              <div class="door-inside"><span>更深一层</span></div>
+            </div>
+          </div>
+
+          <div class="door sunk l3">
+            <span class="door-seam"></span>
+            <div class="door-lamp">·</div>
+            <div class="door-main">
+              <div class="door-plate">沉积门 · 只读</div>
+              <div class="door-topic">第一次断电</div>
+            </div>
+          </div>
+
+          <div class="sunk-tail">再往下的门已经看不清轮廓</div>
+          <button class="btn-archive">档案馆 · 去看沉下去的门 ↗</button>
+        </div>
+
+        <div class="room-input">
+          <div class="witness-row">
+            <span class="witness-note">新房会带着它现在的沉积开门</span>
+          </div>
+          <div class="input-row">
+            <button class="attach" aria-label="挂载工作文件夹">⌗ 工作文件夹</button>
+            <div class="input-box">给这间新房一个名字…<span class="cursor"></span></div>
+            <button class="send" id="send-stop" aria-label="开一间新房">➤</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside id="ante" class="mod mod-hidden" data-drag>
+      <div class="station-head facility">门缝所见 <button class="fold-btn" id="ante-fold">▾ 收纳</button></div>
+      <div class="card-body">
+        <div class="side-section">
+          <div class="side-title">这扇门 <em>DOOR</em></div>
+          <div class="peek-plate" id="peek-topic">重新定义对齐</div>
+          <div class="peek-line" id="peek-plate">诊室 03 · 此刻</div>
+          <div class="peek-line" id="peek-state" style="color:var(--mind-line)">低语中 · architect_sub 介入中</div>
+        </div>
+        <div class="side-section">
+          <div class="side-title">留在门内的沉积 <em>ROOM SEDIMENT</em></div>
+          <div class="row static" id="peek-sed"># 边界不是围墙 / # 允许未完成</div>
+          <div class="seg-note">沉积属于房间，不属于此刻的它</div>
+        </div>
+        <div class="side-section">
+          <div class="side-title">门内产物 <em>ARTIFACTS</em></div>
+          <div class="chips">
+            <button class="artifact-chip">alignment-notes.md ↗</button>
+            <button class="artifact-chip">boundary.diff ↗</button>
+          </div>
+        </div>
+        <div class="side-section">
+          <button class="peek-log">走廊日志 v</button>
+          <div class="peek-detail">list rooms — 一间可亮 / 数间已沉<br>open room 03 — 门未上锁<br>archive scan — 只读挂载</div>
+        </div>
+        <div class="term-well">
+          $ northing rooms --hall<br>
+          &gt; 一间亮着 / 三间熄灯<br>
+          &gt; 更深的几间已沉入档案馆<br>
+          &gt; <span class="preview-row">open: room/03</span><br>
+          &gt; _
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const roomWrap = document.getElementById('room-wrap');
+    const corridorEl = document.getElementById('corridor');
+
+    /* aura 锚在「亮着的那扇门的门灯」——走廊里唯一的光源；
+       同一次测量顺带校准左膜结的中心线（--gem-mid），并夹在框内不越界。 */
+    function updateAura() {
+      const lamp = document.querySelector('.door.lit .door-lamp');
+      if (!lamp) return;
+      const r = lamp.getBoundingClientRect();
+      root.style.setProperty('--aura-x', `${r.left + r.width / 2}px`);
+      root.style.setProperty('--aura-y', `${r.top + r.height / 2}px`);
+      const cr = corridorEl.getBoundingClientRect();
+      const raw = r.top + r.height / 2 - cr.top;
+      const mid = Math.min(Math.max(raw, 44), Math.max(cr.height - 44, 44));
+      roomWrap.style.setProperty('--gem-mid', `${mid}px`);
+    }
+    window.addEventListener('resize', updateAura);
+    document.getElementById('door-hall').addEventListener('scroll', updateAura);
+    (function loop() { updateAura(); requestAnimationFrame(loop); })();
+
+    document.getElementById('theme-toggle').addEventListener('click', e => {
+      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      e.currentTarget.textContent = next === 'light' ? '☾' : '☀';
+      requestAnimationFrame(updateAura);
+    });
+
+    /* 模块收纳（.mod / #ante 同一语法） */
+    document.querySelectorAll('.mod .fold-btn').forEach(b => {
+      b.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const card = b.closest('.mod');
+        card.classList.toggle('folded');
+        const body = card.querySelector('.card-body');
+        if (body && !card.matches('#ante')) body.style.display = card.classList.contains('folded') ? 'none' : '';
+        b.textContent = card.classList.contains('folded') ? '▾ 展开' : '▴ 收纳';
+      });
+    });
+
+    /* 模块化拖移：station-head 为把手 */
+    document.querySelectorAll('[data-drag]').forEach(mod => {
+      const head = mod.querySelector('.station-head');
+      head.addEventListener('pointerdown', e => {
+        if (e.target.closest('.fold-btn')) return;
+        const r = mod.getBoundingClientRect();
+        const ox = e.clientX - r.left, oy = e.clientY - r.top;
+        mod.style.position = 'fixed';
+        mod.style.left = r.left + 'px';
+        mod.style.top = r.top + 'px';
+        mod.style.right = 'auto';
+        mod.style.bottom = 'auto';
+        mod.style.width = r.width + 'px';
+        mod.style.maxHeight = 'none';
+        const move = ev => {
+          mod.style.left = (ev.clientX - ox) + 'px';
+          mod.style.top = (ev.clientY - oy) + 'px';
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
+    });
+
+    document.querySelectorAll('.peek-log').forEach(log => {
+      log.addEventListener('click', () => {
+        const d = log.nextElementSibling;
+        if (d && d.classList.contains('peek-detail')) d.classList.toggle('open');
+      });
+    });
+
+    /* 换房：只有一扇门能亮（亮门独占 rep 与光源）；沉积门不可点亮（只读） */
+    function peek(door) {
+      document.getElementById('peek-topic').textContent = door.dataset.topic;
+      document.getElementById('peek-plate').textContent = door.dataset.plate;
+      document.getElementById('peek-state').textContent = door.dataset.state;
+      document.getElementById('peek-sed').textContent = door.dataset.sed;
+    }
+    function light(door) {
+      document.querySelectorAll('.door.lit').forEach(d => {
+        d.classList.remove('lit');
+        d.classList.add('dim');
+        d.setAttribute('aria-pressed', 'false');
+        const plate = d.querySelector('.door-plate');
+        if (plate) plate.textContent = d.dataset.plate.replace(/· .*/, '· 刚刚熄灯');
+        const lamp = d.querySelector('.door-lamp');
+        if (lamp) lamp.textContent = '◦';
+      });
+      door.classList.remove('dim');
+      door.classList.add('lit');
+      door.setAttribute('aria-pressed', 'true');
+      door.querySelector('.door-lamp').textContent = '序';
+      door.querySelector('.door-plate').textContent = door.dataset.plate.replace(/· .*/, '· 门开着');
+      peek(door);
+      requestAnimationFrame(updateAura);
+    }
+    document.querySelectorAll('.door[role="button"]').forEach(door => {
+      door.addEventListener('click', ev => {
+        if (ev.target.closest('button')) return;
+        light(door);
+      });
+      door.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); light(door); }
+      });
+      door.addEventListener('mouseenter', () => peek(door));
+    });
+
+    /* 走廊中枢收纳（继承 room-head 胶囊语法） */
+    const headFold = document.querySelector('.head-fold');
+    headFold.addEventListener('click', () => {
+      const head = document.getElementById('hall-head');
+      head.classList.toggle('folded');
+      headFold.textContent = head.classList.contains('folded') ? '▾' : '▴';
+      requestAnimationFrame(updateAura);
+    });
+
+    /* 开门/中止合一按钮：空闲➤ → 进行中■（演示态切换） */
+    const sendStop = document.getElementById('send-stop');
+    let streaming = false;
+    sendStop.addEventListener('click', () => {
+      streaming = !streaming;
+      sendStop.classList.toggle('streaming', streaming);
+      sendStop.textContent = streaming ? '■' : '➤';
+      sendStop.setAttribute('aria-label', streaming ? '中止开门' : '开一间新房');
+    });
+
+    /* 抽屉触发：膜结点击唤起/收回对应模块，位置与弹出同侧同区 */
+    function bindNode(trigId, modId) {
+      const t = document.getElementById(trigId);
+      t.addEventListener('click', () => {
+        const open = !document.getElementById(modId).classList.toggle('mod-hidden');
+        t.classList.toggle('is-open', open);
+        t.setAttribute('aria-expanded', String(open));
+      });
+    }
+    bindNode('trig-mind', 'mind');
+    bindNode('trig-ante', 'ante');
+
+    /* 设计走查用（不在产品 UI 出现）：setColor('#3F837B') */
+    function setColor(hex) { root.style.setProperty('--mind-base', hex); }
+  </script>
+</body>
+</html>

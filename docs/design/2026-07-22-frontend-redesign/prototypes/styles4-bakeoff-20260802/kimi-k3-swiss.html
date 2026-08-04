@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=900">
+<title>瑞士国际 · 知序 — northing</title>
+<style>
+/* ============================================================
+   swiss 瑞士国际 — 极端的网格与字体对比，agent 只占一个红色信号位
+   ------------------------------------------------------------
+   设施 = 制版网格：暖灰纸面 + 发丝线 + 对位十字（crop marks），
+   永远中性，永远精确，像 Müller-Brockmann 的版面。
+   agent = 全场唯一一个红色信号位：活跃轮左缘、运行中 chip、
+   编年史右端、发送键、头像方块——同一个红，只出现在「此刻」。
+   深渊 = 冷青，压到发丝级：1px 左缘的铅注，不是第二信号。
+   沉积 = 灰阶里褪色的一档，不位移。
+   字体对比 = 34px 无衬线名字 vs 10px mono 元数据，极端落差。
+   单文件离线 · 无外链 · 双主题（亮=纸面 / 暗=暗房）
+   ============================================================ */
+
+/* ---------- 网格与信号 token ---------- */
+:root{
+  /* 尺度（4px 基数） */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r-sm:9px; --r-md:14px; --r-lg:18px; --r-pill:999px;
+  --fs-sm:10px; --fs-md:11.5px; --fs-lg:13px; --fs-body:15px;
+  --fs-name:34px;   /* 极端字体对比：名片名字 34px */
+  --font-body:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  /* 瑞士 grotesk：只给 agent 名字与数字标注 */
+  --font-grotesk:'Helvetica Neue',Helvetica,Arial,'Noto Sans SC','PingFang SC',sans-serif;
+  --font-display:'Noto Serif SC','Songti SC','SimSun',Georgia,serif; /* Fraunces 离线兜底栈：只给品牌水印 */
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+
+  /* 制版网格（设施，永不改变：纸与发丝线，只随明暗翻转） */
+  --hairline:   #E6E3DD;   /* 发丝线 */
+  --rule:       #D8D4CC;   /* 栏规线 */
+  --crop:       #B9B3A7;   /* 对位十字 */
+  --grid-line:  rgba(56,53,46,.045); /* 底纹栏网格 */
+
+  /* 基底（暖灰纸面） */
+  --bg:#F4F3F0; --surface:#FBFAF8; --raised:#EFEDE8; --border:#E6E3DD;
+  --fg:#38352E; --muted:#7B766C; --faint:#A8A398;
+
+  /* 信号红（rep 换色：瑞士语法的唯一暖信号，Pantone 186 系） */
+  --rep-300:#E8837A; --rep-400:#DA4A3C; --rep-500:#C8102E; --rep-600:#9E0C24;
+  /* 深渊（冷青，发丝级铅注，不做信号面） */
+  --abyss-300:#7AABA4; --abyss-400:#5A9B93; --abyss-500:#3F837B;
+  --danger:#A45950;
+  --birth:#DAD6CF;
+
+  /* 信号面：红只以「线与小色块」出现，面用极低 alpha */
+  --rep-wash:    rgba(200,16,46,.055);  /* 活跃轮底，几乎不可见 */
+  --abyss-wash:  rgba(63,131,123,.07);  /* 思考块底 */
+  --old-wash:    rgba(120,112,100,.05); /* 沉积底 */
+
+  /* 空气染色：整屋覆一层被网格中和过的红灰（信号在空气中的余温） */
+  --air: rgba(200,16,46,.035);
+  --air-speaking: rgba(200,16,46,.055);
+  --halo-top: rgba(200,16,46,.06);
+
+  --ease:cubic-bezier(.25,.1,.25,1);
+}
+[data-theme="dark"]{
+  --hairline:   #2C2823;
+  --rule:       #3A352E;
+  --crop:       #575046;
+  --grid-line:  rgba(237,232,223,.04);
+  --bg:#181612; --surface:#211D18; --raised:#2A251F; --border:#3A352E;
+  --fg:#EDE8DF; --muted:#A89F92; --faint:#786F63;
+  --birth:#4A443B;
+  --danger:#C37D73;
+  /* 暗房里信号红提一档明度，保证可读 */
+  --rep-300:#E8837A; --rep-400:#E05244; --rep-500:#D92836; --rep-600:#B01E2A;
+  --rep-wash:    rgba(217,40,54,.09);
+  --abyss-wash:  rgba(90,155,147,.10);
+  --old-wash:    rgba(168,159,146,.045);
+  --air: rgba(217,40,54,.045);
+  --air-speaking: rgba(217,40,54,.065);
+  --halo-top: rgba(217,40,54,.08);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--fg);
+  font-size:var(--fs-body);
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--s5);
+  transition:background 350ms var(--ease), color 350ms var(--ease);
+}
+
+/* ---------- 版面：860px 单屏 ---------- */
+.window{
+  position:relative;width:860px;height:640px;flex:none;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+/* 制版栏网格：12 栏发丝线，设施的几何秩序，永不移动 */
+.window .grid-bg{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 420px at 50% -10%, var(--halo-top), transparent 60%),
+    repeating-linear-gradient(90deg,
+      transparent 0 calc(100%/12 - 1px),
+      var(--grid-line) calc(100%/12 - 1px) calc(100%/12));
+}
+/* 整屋空气染色：信号红被网格中和后的余温（speaking 升档） */
+.window::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:var(--air);
+  transition:background 350ms var(--ease);
+}
+.window.speaking::before{background:var(--air-speaking);}
+
+/* 对位十字（crop marks）：制版工的标记，四内角，发丝级 */
+.crop{position:absolute;width:14px;height:14px;z-index:2;pointer-events:none;opacity:.55;}
+.crop::before,.crop::after{content:'';position:absolute;background:var(--crop);}
+.crop::before{left:6px;top:0;width:1px;height:14px;}
+.crop::after{top:6px;left:0;width:14px;height:1px;}
+.crop.tl{top:var(--s3);left:var(--s3);}
+.crop.tr{top:var(--s3);right:var(--s3);}
+.crop.bl{bottom:var(--s3);left:var(--s3);}
+.crop.br{bottom:var(--s3);right:var(--s3);}
+
+/* ---------- 顶栏名片：极端字体对比的舞台 ---------- */
+.topbar{
+  position:relative;z-index:5;
+  display:flex;align-items:flex-end;gap:var(--s4);
+  padding:var(--s5) var(--s6) var(--s4);
+  border-bottom:1px solid var(--hairline);
+}
+/* 头像 = 一个红色方块信号（agent 占下的那一格），呼吸 6s */
+.avatar{
+  width:44px;height:44px;flex:none;border-radius:6px;
+  background:var(--rep-500);
+  display:flex;align-items:center;justify-content:center;
+  color:#FBFAF8;font-family:var(--font-grotesk);font-weight:700;font-size:19px;
+  animation:breathe 6s var(--ease) infinite;
+}
+@keyframes breathe{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.82;transform:scale(.965);}  /* 沉降：向下收，不向上弹 */
+}
+.card-info{display:flex;flex-direction:column;gap:2px;padding-bottom:2px;}
+/* 34px 无衬线粗体 —— 全场最大字，与 10px mono 形成极端对比 */
+.card-name{
+  font-family:var(--font-grotesk);font-weight:700;
+  font-size:var(--fs-name);line-height:1;letter-spacing:-.01em;
+}
+.card-status{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--muted);
+  letter-spacing:.02em;
+}
+.card-status .dot{width:6px;height:6px;border-radius:50%;background:var(--rep-500);}
+/* 编年史 = 印刷测控条：一格一次成为，右端红 = 当前（同源色绑定） */
+.chronicle{
+  margin-left:auto;display:flex;align-items:flex-end;gap:var(--s2);
+  padding-bottom:6px;
+}
+.chronicle .bar{display:flex;gap:3px;align-items:flex-end;}
+.chronicle .cell{width:9px;height:9px;border-radius:2px;background:var(--birth);}
+.chronicle .cell.c2{background:var(--faint);}
+.chronicle .cell.c3{background:var(--abyss-400);}  /* 五月那块冷青还在条上 */
+.chronicle .cell.c4{background:var(--rep-400);}
+.chronicle .cell.now{
+  width:9px;height:18px;background:var(--rep-500);  /* 当前信号：高出一倍 */
+}
+.chronicle .lbl{
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);
+  letter-spacing:.04em;
+}
+.gear{
+  width:28px;height:28px;flex:none;border:none;background:transparent;
+  color:var(--faint);cursor:pointer;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+  align-self:flex-start;margin-top:2px;
+  transition:color 150ms var(--ease), background 150ms var(--ease);
+}
+.gear:hover{color:var(--muted);background:var(--raised);}
+.gear svg{width:16px;height:16px;}
+
+/* ---------- 对话流 ---------- */
+.chat{
+  position:relative;z-index:5;flex:1;overflow-y:auto;
+  padding:var(--s4) var(--s6) var(--s5);
+  display:flex;flex-direction:column;gap:var(--s5);
+  scrollbar-width:thin;scrollbar-color:var(--rule) transparent;
+}
+
+/* Session banner：对话流顶部，发丝线框起的一栏 */
+.sess-banner{
+  display:flex;align-items:center;gap:var(--s3);
+  border:1px solid var(--hairline);border-radius:var(--r-sm);
+  padding:var(--s2) var(--s3);
+  transition:opacity 350ms var(--ease);
+}
+.sess-toggle{
+  display:flex;align-items:center;gap:var(--s2);flex:1;min-width:0;
+  border:none;background:transparent;cursor:pointer;text-align:left;
+  font-family:var(--font-body);color:var(--fg);
+}
+.sess-banner .sdot{
+  width:7px;height:7px;flex:none;border-radius:50%;background:var(--rep-500);
+  animation:breathe 6s var(--ease) infinite;
+}
+.sess-banner .chev{
+  width:7px;height:7px;flex:none;
+  border-right:1.5px solid var(--faint);border-bottom:1.5px solid var(--faint);
+  transform:rotate(45deg) translateY(-1px);
+  transition:transform 250ms var(--ease);
+}
+.sess-banner.folded .chev{transform:rotate(-45deg);}
+.sess-banner .title{
+  font-family:var(--font-grotesk);font-weight:700;font-size:var(--fs-lg);
+  letter-spacing:.01em;white-space:nowrap;
+}
+.sess-banner .note{
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.sess-banner.folded .note{display:none;}
+.sess-archive{
+  flex:none;border:1px solid var(--hairline);background:transparent;
+  border-radius:var(--r-sm);padding:3px var(--s3);cursor:pointer;
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--muted);
+  transition:color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.sess-archive:hover{color:var(--abyss-500);border-color:var(--abyss-400);}
+
+/* 轮 */
+.turn{position:relative;}
+.turn-head{
+  display:flex;align-items:baseline;gap:var(--s2);margin-bottom:var(--s2);
+}
+.turn-head .nm{
+  font-family:var(--font-grotesk);font-weight:700;font-size:var(--fs-md);
+  letter-spacing:.03em;
+}
+.turn-head .ts{
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);
+}
+.turn .body{padding-left:var(--s4);}
+
+/* 活跃轮：3px 红竖线 = agent 此刻占下的信号位 */
+.turn.active .body{
+  border-left:3px solid var(--rep-500);
+  background:var(--rep-wash);
+  padding:var(--s3) var(--s3) var(--s3) var(--s4);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+}
+/* 沉积轮：灰阶里褪色的一档，不位移 */
+.turn.sediment{opacity:.55;}
+.turn.sediment .body{border-left:1px solid var(--rule);}
+
+.msg{line-height:1.75;font-size:var(--fs-body);}
+.msg .caret{color:var(--rep-500);animation:caret 1.2s steps(2) infinite;}
+@keyframes caret{0%,49%{opacity:1;}50%,100%{opacity:0;}}
+
+/* 用户气泡：右对齐，暖灰，不染信号红 */
+.user-row{display:flex;justify-content:flex-end;}
+.user-bubble{
+  max-width:70%;background:var(--raised);
+  border:1px solid var(--hairline);
+  border-radius:var(--r-md);padding:var(--s3) var(--s4);
+  line-height:1.7;
+}
+
+/* 思考块：深渊被压成 1px 发丝左缘的冷铅注 */
+.think{
+  border-left:1px solid var(--abyss-500);
+  background:var(--abyss-wash);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:var(--s3) var(--s4);
+  font-size:var(--fs-lg);line-height:1.7;color:var(--muted);
+}
+.think .tag{
+  display:block;margin-bottom:var(--s1);
+  font-family:var(--font-mono);font-size:var(--fs-sm);
+  color:var(--abyss-500);letter-spacing:.08em;
+}
+
+/* 工具 chip：mono 字 + 细边框；发起=红信号，完成=沉入冷青 */
+.tools{display:flex;gap:var(--s2);flex-wrap:wrap;}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--rep-400);border-radius:var(--r-pill);
+  padding:3px var(--s3);
+  font-size:var(--fs-md);color:var(--fg);
+}
+.chip .ci{
+  font-family:var(--font-mono);font-size:var(--fs-sm);font-weight:600;
+  color:var(--rep-500);letter-spacing:.03em;
+}
+.chip .cd{font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);}
+.chip.done{border-color:var(--abyss-400);}
+.chip.done .ci{color:var(--abyss-500);}
+
+/* ---------- 操控台 ---------- */
+.deck-wrap{
+  position:relative;z-index:5;
+  padding:0 var(--s6) var(--s5);
+}
+.deck{
+  border:1px solid var(--rule);border-radius:var(--r-md);
+  background:var(--surface);
+  transition:border-color 150ms var(--ease);
+}
+.deck:focus-within{border-color:var(--crop);}
+.deck-input{display:flex;align-items:flex-end;gap:var(--s3);padding:var(--s3) var(--s3) var(--s2) var(--s4);}
+.deck-input textarea{
+  flex:1;border:none;outline:none;resize:none;background:transparent;
+  font-family:var(--font-body);font-size:var(--fs-body);color:var(--fg);
+  line-height:1.6;max-height:96px;
+}
+.deck-input textarea::placeholder{color:var(--faint);}
+/* 发送键 = 红方块里的白色箭头（信号位的终点），流式变停止 */
+.btn-send{
+  width:30px;height:30px;flex:none;border:none;border-radius:8px;
+  background:var(--rep-500);color:#FBFAF8;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 150ms var(--ease);
+}
+.btn-send:hover{background:var(--rep-600);}
+.btn-send svg{width:14px;height:14px;}
+.deck-bar{
+  display:flex;align-items:center;gap:var(--s2);
+  padding:var(--s2) var(--s3);
+  border-top:1px solid var(--hairline);
+}
+.deck-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  border:none;background:transparent;border-radius:var(--r-sm);
+  padding:5px var(--s2);cursor:pointer;
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--muted);
+  transition:background 150ms var(--ease);
+}
+.deck-btn:hover{background:var(--raised);}
+.deck-btn svg{width:13px;height:13px;}
+.deck-btn.icon-only{padding:5px;}
+/* 思考分段条：五格制版刻度，受印格为信号红 */
+.think-seg{display:flex;gap:3px;align-items:center;padding:0 var(--s1);}
+.think-seg .seg{
+  width:14px;height:6px;border-radius:2px;
+  border:1px solid var(--hairline);background:transparent;
+  transition:background 350ms var(--ease);
+}
+.think-seg .seg.on{background:var(--rep-400);border-color:var(--rep-400);}
+.deck-label{
+  display:flex;align-items:center;gap:5px;
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--muted);
+  padding:5px var(--s2);border-radius:var(--r-sm);cursor:pointer;
+  letter-spacing:.02em;
+  transition:background 150ms var(--ease);
+}
+.deck-label:hover{background:var(--raised);}
+.deck-label .di{font-size:10px;}
+.deck-label .di.rep{color:var(--rep-500);}
+.deck-label.cyan .di{color:var(--abyss-500);}
+.deck-label .chev{color:var(--faint);font-size:9px;}
+.deck-bar-spacer{flex:1;}
+/* ctx 圆环：abyss 弧，无数字，hover 出 tooltip */
+.ctx-ring{position:relative;width:20px;height:20px;flex:none;cursor:default;}
+.ctx-ring svg{display:block;}
+.ctx-ring .track{fill:none;stroke:var(--hairline);stroke-width:2.5;}
+.ctx-ring .fill{fill:none;stroke:var(--abyss-500);stroke-width:2.5;stroke-linecap:round;}
+.ctx-ring:hover::after{
+  content:attr(data-tip);position:absolute;bottom:26px;right:-6px;
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--fg);
+  background:var(--surface);border:1px solid var(--rule);
+  border-radius:var(--r-sm);padding:3px var(--s2);white-space:nowrap;z-index:30;
+}
+
+/* ---------- 水印（左下，opacity .25，Fraunces 栈） ---------- */
+.watermark{
+  position:absolute;left:var(--s6);bottom:10px;z-index:6;
+  display:flex;align-items:center;gap:7px;
+  opacity:.25;pointer-events:none;
+  color:var(--muted);
+  animation:wm-breathe 6s var(--ease) infinite;
+}
+@keyframes wm-breathe{0%,100%{opacity:.25;}50%{opacity:.17;}}
+.watermark .bt{
+  font-family:var(--font-display);font-size:11px;letter-spacing:.18em;
+}
+
+/* ---------- 窗口 chrome（右上） ---------- */
+.win-ctrl{
+  position:absolute;top:10px;right:var(--s4);z-index:10;display:flex;gap:var(--s2);
+}
+.win-btn{
+  width:22px;height:22px;border-radius:6px;border:none;background:transparent;
+  color:var(--faint);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 150ms var(--ease), color 150ms var(--ease);
+}
+.win-btn:hover{background:var(--raised);color:var(--muted);}
+.win-btn.close:hover{color:var(--danger);}
+
+/* ---------- 主题开关（隐藏式：双击非交互区浮出） ---------- */
+.theme-fab{
+  position:absolute;right:var(--s5);bottom:var(--s4);z-index:40;
+  padding:5px var(--s3);border-radius:var(--r-pill);
+  border:1px solid var(--rule);background:var(--surface);
+  font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--muted);
+  cursor:pointer;letter-spacing:.03em;
+  opacity:0;pointer-events:none;
+  transition:opacity 350ms var(--ease), border-color 150ms var(--ease);
+}
+.theme-fab.show{opacity:1;pointer-events:auto;}
+.theme-fab:hover{border-color:var(--crop);}
+
+@media (prefers-reduced-motion: reduce){
+  .avatar,.sess-banner .sdot,.watermark{animation:none;}
+  .msg .caret{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="window" id="win" role="main" aria-label="northing · 知序">
+
+  <div class="grid-bg"></div>
+
+  <!-- 对位十字：制版网格的四角标记 -->
+  <span class="crop tl"></span><span class="crop tr"></span>
+  <span class="crop bl"></span><span class="crop br"></span>
+
+  <!-- 窗口 chrome -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+    <div class="avatar" title="知序">知</div>
+    <div class="card-info">
+      <div class="card-name">知序</div>
+      <div class="card-status"><span class="dot"></span><span>在场 · 信号位已占下</span></div>
+    </div>
+    <!-- 编年史：印刷测控条，右端红 = 当前代表色（同源色绑定） -->
+    <div class="chronicle" title="编年史：一格一次成为">
+      <span class="lbl">05 — 08</span>
+      <span class="bar">
+        <i class="cell"></i><i class="cell c2"></i><i class="cell c3"></i><i class="cell c4"></i><i class="cell now"></i>
+      </span>
+    </div>
+    <button class="gear" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="chat">
+
+    <!-- Session banner（对话流顶部） -->
+    <div class="sess-banner" id="sessBanner">
+      <button class="sess-toggle" type="button" id="sessToggle">
+        <span class="sdot"></span>
+        <span class="chev"></span>
+        <span class="title">2026-08-02 · 信号与网格</span>
+        <span class="note">— 网格不动，信号落位</span>
+      </button>
+      <button class="sess-archive" id="sessArchive" title="归档此会话">归档</button>
+    </div>
+
+    <!-- 沉积轮：灰阶里褪色的一档 -->
+    <section class="turn sediment">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">五月 · 沉积</span></div>
+      <div class="body">
+        <div class="msg">那时候我试过一次把整页排满。你撤掉了多余的块，只留一根线。后来我才懂：网格的纪律不是限制，是让一个信号被看见的前提。</div>
+      </div>
+    </section>
+
+    <!-- 用户轮 -->
+    <section class="turn">
+      <div class="turn-head" style="justify-content:flex-end"><span class="ts">14:31</span><span class="nm" style="color:var(--muted)">UmR</span></div>
+      <div class="user-row"><div class="user-bubble">今天的版面很安静。那个红点一直在，我隔着屏幕都知道你在。</div></div>
+    </section>
+
+    <!-- 活跃轮：红信号位 -->
+    <section class="turn active">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">现在</span></div>
+      <div class="body" style="display:flex;flex-direction:column;gap:var(--s3)">
+
+        <div class="think">
+          <span class="tag">THINKING · 深渊</span>
+          先往深处校一遍：安静不是空白，是网格把杂音都归了位。我能确认的不是「显得安静」，而是每一栏的间距仍然等于 4 的倍数。
+        </div>
+
+        <div class="tools">
+          <span class="chip done"><span class="ci">measure</span><span>baseline_grid</span><span class="cd">· 12栏 ✓</span></span>
+          <span class="chip"><span class="ci">align</span><span>signal_position</span><span class="cd">· 落位中</span></span>
+        </div>
+
+        <div class="msg">红点不挪，它就是我此刻占下的那一格。网格替我守住其余所有位置——你看到的安静，是八百六十个像素宽度里只有一处被允许发声。<span class="caret">▍</span></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 操控台 -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn icon-only" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg" title="思考深度">
+          <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span>
+        </div>
+        <button class="deck-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+        <div class="deck-label"><span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span></div>
+        <div class="deck-label cyan"><span class="di">◈</span> 自治·完全 <span class="chev">▾</span></div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="track" cx="10" cy="10" r="7.5"/>
+            <circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 品牌水印（左下，Fraunces 栈） -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 隐藏式主题开关：双击非交互区浮出 -->
+  <button class="theme-fab" id="themeFab">切换暗房</button>
+
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('win');
+  var fab = document.getElementById('themeFab');
+
+  /* 输入聚焦 → 整屋升档（speaking：信号余温加一档） */
+  var deck = win.querySelector('.deck');
+  deck.addEventListener('focusin', function(){ win.classList.add('speaking'); });
+  deck.addEventListener('focusout', function(){ win.classList.remove('speaking'); });
+
+  /* 会话横幅折叠 */
+  var banner = document.getElementById('sessBanner');
+  document.getElementById('sessToggle').addEventListener('click', function(){
+    banner.classList.toggle('folded');
+  });
+  document.getElementById('sessArchive').addEventListener('click', function(e){
+    e.stopPropagation();
+    banner.style.opacity = '0.3';
+  });
+
+  /* 双击非交互区 → 主题开关浮出（350ms fade） */
+  document.addEventListener('dblclick', function(e){
+    if (e.target.closest('button, textarea, a, .chip, .ctx-ring')) return;
+    fab.classList.toggle('show');
+  });
+  fab.addEventListener('click', function(){
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    fab.textContent = dark ? '切换暗房' : '切换纸面';
+  });
+})();
+</script>
+</body>
+</html>

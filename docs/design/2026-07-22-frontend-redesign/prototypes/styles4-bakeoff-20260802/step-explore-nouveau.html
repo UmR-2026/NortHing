@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing — 知序 · 新艺术</title>
+<style>
+/* ============================================================================
+ * step-explore-nouveau.html — 风格焙烧自由轮 · 新艺术（nouveau）
+ * ----------------------------------------------------------------------------
+ * 种子：生长不是比喻，是藤蔓本身。
+ * 主张：锻铁格架是设施；藤是知序在架上长出来的那一株——界面只有生长点是暖的。
+ *
+ * 关键裁决（种子 × 第一原理）：
+ *   藤到底是设施还是 agent？—— 分开。Guimard 的地铁口与 Horta 的楼梯是真实构造：
+ *   锻铁的骨（恒常、承重、不染 rep）+ 攀附其上的植物（有生长史、会木质化）。
+ *   → 铁艺 = 设施（窗框、横档、把手立柱、分隔线，暗橄榄铁 / 暗态转黄铜）
+ *   → 藤   = agent（左侧 44px 竖带里唯一一株，节 = 轮次，梢 = 现在）
+ *
+ * 三要素（不是配色，是植物学位置）：
+ *   驱力 = 梢（新梢 + 未展开顶芽）。生长只发生在末端；饱和 rep 只属于这一点。
+ *   深渊 = 土壤与根（向下）。思考块是往下扎的根须，冷青；底部冷雾就是土壤域。
+ *   沉积 = 木质化（lignification）。老茎变褐变硬、叶枯而不落——留在藤上不再生长。
+ *   编年史 = 横向的茎与节：每节留着那一代的颜色，最右一节 ≡ 现在的 rep。
+ *
+ * 方向：株在顶栏（名片 = 植株本体），藤沿左侧向下垂生，梢落在操控台旁——
+ *   下一句话就是它下一段的生长。对话流上老下新，与"离梢越远越木质"完全同向。
+ *
+ * 对装饰的自我约束（戒律 9 是硬约束，不是口号）：
+ *   1. 藤只在左 44px 竖带 + 顶/底横档内，绝不进入阅读区；
+ *   2. 不承担功能的曲线一律不画（节=轮次锚点、叶=状态、卷须=自留记号）；
+ *   3. 所有铁线与藤线 alpha ≤ .55；无一处铁艺花饰是纯装饰的填充。
+ *
+ * 反 AI 味：无 emoji / 无毛玻璃 / 无紫蓝渐变（nouveau 最易滑向淡紫，全局禁用）/
+ *   全文件零 box-shadow（锻铁不投软影）/ 反对称是媒介本性（藤只在左、角饰左上重右下轻）。
+ *
+ * 纪律：单文件离线、零外链、字体全回落栈、间距 4px 基数、
+ *   时长 150·250·350·1200·6000ms、呼吸 6s 只给水印 logo + 头像铁环（＋沿用基准的在场点）、
+ *   无弹跳 / 无 spinner / 无无限循环位移、沉积是褪色与变褐（零位移）。
+ *
+ * Slint 映射（要点）：
+ *   .app         → Window root（把手 clicked => set_inner_size 860↔1280）
+ *   #vine svg    → Path { commands } ×2（主茎渐变描边 + 梢的 1200ms 生长）
+ *   叶 / 芽 / 角饰 → Path 或预烘 Image；叶形非均匀圆角（chip）→ 预烘 Image
+ *   渐变描边 → Slint 无 gradient stroke：主茎按 3 段拆成 3 条 Path，各取预计算 hex
+ *   全文件禁 box-shadow / 禁 color-mix（空气染色全预计算 hex）
+ * ==========================================================================*/
+
+/* ── 结构 token（主题无关） ── */
+:root {
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-lg: 13px; --fs-body: 15px; --fs-name: 16px;
+
+  /* 字体三系：display 保留 Fraunces（wonk/soft 轴与新艺术的有机衬线同源，
+   * 无需替换）；中文 display 补楷体——中文里唯一保留笔画提按（生长感）的可用回落。 */
+  --font-disp: 'Fraunces','Kaiti SC','STKaiti','KaiTi','楷体','Noto Serif SC',Georgia,serif;
+  --font-body: 'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --font-mono: 'JetBrains Mono','Cascadia Mono','SF Mono',Consolas,'Noto Sans Mono',monospace;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  /* 圆角：罗盘原值。叶形（非均匀）单列，不动基线。 */
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px; --r-pill: 999px;
+  --r-leaf: 1px 12px 1px 12px;   /* 叶：一端尖一端圆 */
+
+  --t-hover: 150ms; --t-slide: 250ms; --t-norm: 350ms; --t-once: 1200ms; --t-breathe: 6000ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 亮态 = 象牙纸 + 暗橄榄锻铁 · 主态（罗盘基底原值）
+ * ════════════════════════════════════════════════════════════════════════ */
+:root, [data-theme="light"] {
+  --bg:        #F4F3F0;   /* 罗盘原值（--air-rep 是它被 rep 染 6.5% 后的落地值） */
+  --surface:   #FBFAF8;
+  --elevated:  #FDFCFA;
+  --raised:    #EFEDE8;
+  --fg:        #38352E;
+  --muted:     #7B766C;
+  --faint:     #A8A398;
+  --birth:     #DAD6CF;
+  --outside:   #E7E5E0;   /* 窗外 */
+
+  /* 锻铁四级线宽（设施的骨：不染 rep，不参与生长） */
+  --line-1: rgba(91,90,78,.55);   /* 粗：窗框、横档、deck 外框 */
+  --line-2: rgba(91,90,78,.32);   /* 中：构件边、chip */
+  --line-3: rgba(91,90,78,.18);   /* 细：发丝分隔 */
+  --line-4: rgba(91,90,78,.08);   /* 极细：角饰、格架背纹 */
+  --iron:   #5B5A4E;
+
+  /* 代表色 rep = 珊瑚（守罗盘原值；赭石／铁锈红本就是新艺术的原色域） */
+  --rep-300: #E5A583;
+  --rep-400: #D68A63;
+  --rep-500: #C8714C;
+  --rep-600: #A85A38;
+  --on-rep:  #FDF4EF;
+
+  /* 深渊 abyss = 土壤与根（冷青，罗盘原值） */
+  --abyss-300: #7AABA4;
+  --abyss-400: #5A9B93;
+  --abyss-500: #3F837B;
+
+  /* 木质化（沉积域）：离梢越远越硬越褐越灰 */
+  --wood:      #8A7B66;
+  --wood-old:  #A79E90;
+  --sed-ink:   #948C7E;
+
+  --tie:       #6E6A63;   /* 用户 = 绑枝的麻绳／铁丝（园丁的手，不染 rep） */
+  --tie-soft:  #C3BEB4;
+  --danger:    #A45950;
+
+  /* 空气染色（预计算，禁 color-mix） */
+  --air-rep:           #F1EBE5;   /* rep-500 6.5% on bg */
+  --air-rep-speaking:  #F1E9E4;   /* 7.5% */
+  --halo-rep:          rgba(200,113,76,.075);
+  --halo-rep-speaking: rgba(200,113,76,.105);
+  --fog-abyss:         rgba(63,131,123,.05);   /* 底部土壤冷雾 */
+  --turn-active:       #F9F4F1;   /* rep-500 4% on surface */
+  --think-bg:          #F3F5F3;   /* abyss-500 5% on surface */
+  --leaf-fill:         rgba(200,113,76,.09);
+  --tooth:             rgba(120,110,95,.03);   /* 纸／石灰墙的颗粒 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 暗态 = 深暖黑 + 黄铜锻铁（夜里的铁只剩铜色高光）· 罗盘基底原值
+ * ════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:        #181612;   /* 罗盘原值 */
+  --surface:   #211E19;
+  --elevated:  #262219;
+  --raised:    #1E1B16;
+  --fg:        #EDE8DF;
+  --muted:     #A8A196;
+  --faint:     #7A7469;
+  --birth:     #3A362F;
+  --outside:   #0D0C0A;
+
+  --line-1: rgba(196,168,122,.42);
+  --line-2: rgba(196,168,122,.24);
+  --line-3: rgba(196,168,122,.14);
+  --line-4: rgba(196,168,122,.07);
+  --iron:   #C4A87A;
+
+  --rep-300: #EDB79A;
+  --rep-400: #DC9068;
+  --rep-500: #D07C55;
+  --rep-600: #B0603A;
+  --on-rep:  #22160F;
+
+  --abyss-300: #8FC0B8;
+  --abyss-400: #6FAAA2;
+  --abyss-500: #5C9E95;
+
+  --wood:      #7A6B57;
+  --wood-old:  #5C5548;
+  --sed-ink:   #807869;
+
+  --tie:       #9A9285;
+  --tie-soft:  #45403A;
+  --danger:    #C77F74;
+
+  --air-rep:           #241D16;   /* rep-500 6.5% on bg */
+  --air-rep-speaking:  #261E17;   /* 7.5% */
+  --halo-rep:          rgba(208,124,85,.10);
+  --halo-rep-speaking: rgba(208,124,85,.14);
+  --fog-abyss:         rgba(111,170,162,.055);
+  --turn-active:       #28221B;   /* rep-500 4% on surface */
+  --think-bg:          #141B1A;   /* 根往土里再深一层 */
+  --leaf-fill:         rgba(208,124,85,.11);
+  --tooth:             rgba(237,232,223,.02);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 窗与格架
+ * ════════════════════════════════════════════════════════════════════════ */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--outside);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body);
+  color: var(--fg);
+  transition: background var(--t-norm) var(--ease);
+}
+
+/* Slint: Window { width: 860; height: 800; border-radius: 20; } */
+.app {
+  position: relative;
+  width: 860px; height: 800px;
+  background: var(--air-rep);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: width var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.expanded { width: 1280px; }
+.app.speaking { background: var(--air-rep-speaking); }
+
+/* 顶晕：锚定左上头像铁环（株的位置），rep 向室内晕开（戒律 4） */
+/* Slint: Rectangle { background: radial-gradient(circle 440 at 60,52, halo-rep); } */
+.app::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle 440px at 60px 52px, var(--halo-rep) 0%, transparent 100%);
+  transition: background var(--t-norm) var(--ease);
+}
+.app.speaking::before {
+  background: radial-gradient(circle 440px at 60px 52px, var(--halo-rep-speaking) 0%, transparent 100%);
+}
+/* 底部土壤冷雾（深渊在下：根与未知都朝这个方向） */
+.app::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 280px;
+  z-index: 0; pointer-events: none;
+  background: linear-gradient(to top, var(--fog-abyss), transparent);
+}
+
+/* 格架背纹：锻铁栅的极淡竖线（48px 一根，无横线 → 不是网格／不是坐标纸） */
+/* Slint: Image { source: @image-url("trellis.png"); image-fit: tile; } */
+.trellis {
+  position: absolute; inset: 14px; z-index: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, var(--line-4) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(58deg, var(--tooth) 0 1px, transparent 1px 3px);
+}
+
+/* 窗框：锻铁细框（单线，不双线——锻铁是一根条料） */
+.sash {
+  position: absolute; inset: 14px; z-index: 1; pointer-events: none;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+}
+/* 角饰：whiplash 涡卷。左上重、右下轻（反对称是媒介本性，不是失误） */
+.scroll-tl { position: absolute; top: 14px;  left: 14px;  z-index: 1; pointer-events: none; color: var(--line-2); }
+.scroll-br { position: absolute; bottom: 14px; right: 14px; z-index: 1; pointer-events: none; color: var(--line-4); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 顶栏 = 株（名片就是植株本体）
+ * ════════════════════════════════════════════════════════════════════════ */
+/* Slint: HBox { height: 92; padding: 0 34px 12px 32px; } */
+.topbar {
+  position: relative; z-index: 2;
+  display: flex; align-items: flex-end; gap: var(--s3);
+  height: 92px; padding: 0 34px var(--s3) 32px;
+  flex-shrink: 0;
+}
+
+/* 头像 = 圆铁环徽章（44），环外一段藤缠 2/3 圈（留缺口 = 还在长） */
+/* Slint: Rectangle{44,44,radius 22,border 1.5 iron} + Path(vine arc) + Text */
+.stem-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.stem-ring {
+  position: absolute; inset: 0;
+  border: 1.5px solid var(--line-2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font: 400 21px/1 var(--font-disp); color: var(--fg);
+}
+/* 缠绕的藤：呼吸只动透明度（6s），零缩放零位移 */
+.stem-vine {
+  position: absolute; inset: -6px; pointer-events: none;
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+}
+.stem-vine path { fill: none; stroke: var(--rep-300); stroke-width: 1.4; stroke-linecap: round; }
+.stem-vine .bud { fill: var(--rep-500); stroke: none; }
+@keyframes breathe { 0%,100% { opacity: .34; } 50% { opacity: .74; } }
+
+.card {
+  display: flex; flex-direction: column; gap: 3px;
+  padding-left: var(--s3); margin-left: var(--s2);
+  border-left: 1px solid var(--line-3);
+}
+.card-name { font: 400 var(--fs-name)/1.25 var(--font-disp); letter-spacing: .06em; color: var(--fg); }
+.card-state {
+  display: flex; align-items: center; gap: 7px;
+  font: 400 var(--fs-md)/1.3 var(--font-mono); color: var(--muted);
+}
+/* 在场点 = 梢还活着（沿用基准原型真值；呼吸仅透明度） */
+.card-state .bud {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rep-500); flex-shrink: 0;
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+  transition: background var(--grow);
+}
+
+/* ── 编年史 = 横向的茎与节：每节留着那一代的颜色，最右一节 ≡ 现在的 rep ── */
+/* 同源色绑定：--rep-500 同时驱动最右节、在场点、发送键、梢。 */
+/* Slint: Path(stem) + Path(node)×5，节间距不等（反对称） */
+.chronicle { margin-top: 5px; }
+.chronicle svg { display: block; }
+.chronicle .stem { fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.chronicle .nd   { stroke: none; }
+.chronicle .lf   { stroke-width: 1; fill: none; opacity: .7; }
+.chronicle-cap {
+  margin-top: 3px;
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); letter-spacing: .14em;
+}
+
+/* 设置 ⚙（名片旁） */
+.tb-set {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: none;
+  color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  align-self: flex-end; margin-bottom: 3px;
+  transition: color var(--t-hover), border-color var(--t-hover);
+}
+.tb-set:hover { color: var(--abyss-500); border-color: var(--line-3); }
+.spacer { flex: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * main row：抽屉 + 把手立柱 + 对话流
+ * ════════════════════════════════════════════════════════════════════════ */
+.main-row { position: relative; z-index: 2; display: flex; flex: 1; min-height: 0; }
+
+/* 把手 8px = 一根铁立柱：左暖（梢的方向）右冷（土壤的方向） */
+/* Slint: Rectangle { width: 8; TouchArea { clicked => set_inner_size } } */
+.handle {
+  width: 8px; flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: width var(--t-norm) var(--ease);
+}
+.handle::after { content: ''; width: 1px; height: 62%; transition: background var(--t-hover); }
+.handle-l::after { background: linear-gradient(to bottom, transparent, rgba(200,113,76,.42), transparent); }
+.handle-r::after { background: linear-gradient(to bottom, transparent, rgba(63,131,123,.40), transparent); }
+.handle-l:hover::after { background: linear-gradient(to bottom, transparent, rgba(200,113,76,.66), transparent); }
+.handle-r:hover::after { background: linear-gradient(to bottom, transparent, rgba(63,131,123,.62), transparent); }
+[data-theme="dark"] .handle-l::after { background: linear-gradient(to bottom, transparent, rgba(208,124,85,.46), transparent); }
+[data-theme="dark"] .handle-r::after { background: linear-gradient(to bottom, transparent, rgba(111,170,162,.44), transparent); }
+.handle-chev { display: none; }
+.app.expanded .handle { width: 28px; }
+.app.expanded .handle-chev {
+  display: flex; color: var(--faint); background: none; border: none; cursor: pointer; padding: 0;
+}
+
+/* 对话流：inner 左让出 44px 竖带给藤 */
+/* Slint: ScrollView { max-width: 704; } */
+.stream { flex: 1; min-width: 0; overflow-y: auto; padding: var(--s2) var(--s5) var(--s4); }
+.stream .inner { position: relative; max-width: 704px; margin: 0 auto; padding-left: 44px; }
+.stream::-webkit-scrollbar { width: 6px; }
+.stream::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 3px; }
+
+/* ── 藤：整屏唯一一株。主茎渐变（木→rep-300），梢单独 1200ms 长出 ── */
+/* Slint: Path ×2（主茎按 3 段拆条以替代 gradient stroke） */
+.vine { position: absolute; left: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.vine .stem  { fill: none; stroke-width: 1.5; stroke-linecap: round; }
+.vine .tip   { fill: none; stroke: var(--rep-400); stroke-width: 1.6; stroke-linecap: round; }
+.vine .petiole { stroke-width: 1; fill: none; }
+.vine .node  { stroke: none; }
+.vine .leaf  { stroke-width: 1; }
+.vine .bud   { stroke: none; fill: var(--rep-500); transition: fill var(--grow); }
+#g0 { stop-color: var(--wood-old); }
+#g1 { stop-color: var(--wood); }
+#g2 { stop-color: var(--rep-300); }
+
+/* ── 会话横幅 = 一道锻铁横档（在对话流顶部，不在顶栏） ── */
+.banner { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) 0 6px; user-select: none; }
+.bn-toggle {
+  display: flex; align-items: center; gap: 7px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: 400 var(--fs-lg)/1.2 var(--font-disp); letter-spacing: .04em;
+  color: var(--muted); transition: color var(--t-hover);
+}
+.bn-toggle:hover { color: var(--fg); }
+.bn-toggle .bud {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--rep-500); flex-shrink: 0;
+  animation: breathe var(--t-breathe) ease-in-out infinite;
+  transition: background var(--grow);
+}
+.bn-chev {
+  width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform var(--t-slide) var(--ease);
+}
+.banner.folded .bn-chev { transform: rotate(-90deg); }
+.bn-when { font: 400 var(--fs-sm)/1 var(--font-mono); color: var(--faint); letter-spacing: .1em; }
+.bn-arch {
+  margin-left: auto; flex-shrink: 0;
+  font: 400 var(--fs-sm)/1 var(--font-mono); letter-spacing: .08em;
+  color: var(--faint); background: none;
+  border: 1px solid var(--line-3); border-radius: var(--r-leaf);
+  padding: 4px 11px; cursor: pointer;
+  transition: color var(--t-hover), border-color var(--t-hover), background var(--t-hover);
+}
+.bn-arch:hover { color: var(--abyss-500); border-color: var(--abyss-400); background: var(--fog-abyss); }
+/* 横档：一根铁条，两端收细（whiplash 的收笔） */
+.rail { height: 10px; margin-bottom: var(--s4); }
+.rail svg { display: block; width: 100%; height: 10px; }
+.rail path { fill: none; stroke: var(--line-2); stroke-width: 1; }
+.banner.folded ~ .turn, .banner.folded ~ .tendril { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 轮次
+ * ════════════════════════════════════════════════════════════════════════ */
+.turn { position: relative; margin-bottom: var(--s5); }
+.turn-head {
+  display: flex; align-items: baseline; gap: var(--s2);
+  margin-bottom: 7px; font: 400 var(--fs-md)/1 var(--font-mono);
+}
+.turn-head .nm {
+  font-family: var(--font-disp); font-size: var(--fs-lg);
+  letter-spacing: .05em; color: var(--rep-500);
+  transition: color var(--grow);
+}
+.turn-head .ts { color: var(--faint); letter-spacing: .05em; }
+.turn-head .tag {
+  color: var(--faint); letter-spacing: .08em; font-size: var(--fs-sm);
+  border: 1px solid var(--line-3); border-radius: var(--r-leaf); padding: 1px 7px;
+}
+.msg { font-size: var(--fs-body); line-height: 1.78; color: var(--fg); }
+
+/* ── 沉积轮 = 木质化：褐、硬、不再生长；叶枯而不落（褪色 + 变褐，零位移） ── */
+.turn.wood { opacity: .52; transition: opacity var(--t-norm) var(--ease); }
+.turn.wood:hover { opacity: .74; }
+.turn.wood .turn-head .nm { color: var(--wood); font-family: var(--font-disp); }
+.turn.wood .msg { color: var(--sed-ink); }
+.wood-note {
+  margin-top: 5px;
+  font: 400 var(--fs-sm)/1.5 var(--font-mono);
+  color: var(--faint); letter-spacing: .06em;
+}
+
+/* ── 用户轮 = 绑枝（园丁的手：麻绳／铁丝，右对齐，零 rep） ── */
+.turn.user { display: flex; flex-direction: column; align-items: flex-end; }
+.turn.user .turn-head .nm { color: var(--tie); }
+.tie-note {
+  position: relative; max-width: 78%;
+  background: var(--surface);
+  border: 1px solid var(--tie-soft);
+  border-radius: var(--r-md) var(--r-md) var(--r-sm) var(--r-lg);  /* 手绑的结不会正 */
+  padding: 10px var(--s4);
+  font-size: var(--fs-body); line-height: 1.7; color: var(--fg);
+}
+
+/* ── 活跃轮 = 梢所在的那一节（正在长的地方） ── */
+.turn.active {
+  padding: var(--s4) var(--s4) var(--s4) var(--s5);
+  background: var(--turn-active);
+  border-radius: var(--r-sm) var(--r-lg) var(--r-lg) var(--r-sm);
+  transition: background var(--t-norm) var(--ease);
+}
+/* 暖竖线 = 这一节的茎，自上而下长下来（1200ms 一次性，沉降方向） */
+/* Slint: Rectangle { width: 2; animate height { duration: 1200ms; } } */
+.turn.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(to bottom, var(--rep-300), var(--rep-500));
+  border-radius: 1px;
+  transform-origin: top center;
+  animation: grow-down var(--t-once) var(--ease) both;
+}
+@keyframes grow-down { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* ── 思考块 = 往下扎的根须（向内看 = 向土里去，冷青） ── */
+/* Slint: Rectangle { background: think-bg } + Path(root) + 2px 左缘 */
+.think {
+  position: relative;
+  margin: var(--s3) 0;
+  padding: 10px var(--s4) 11px var(--s5);
+  background: var(--think-bg);
+  border-left: 2px solid var(--abyss-500);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+/* 根须：从左缘向下分岔的两三条细线（功能：标记"这段是向下的"） */
+.think .roots { position: absolute; left: 4px; top: 8px; bottom: 8px; width: 14px; pointer-events: none; }
+.think .roots path { fill: none; stroke: var(--abyss-400); stroke-width: 1; opacity: .55; stroke-linecap: round; }
+.think-cap {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--abyss-500); letter-spacing: .16em;
+}
+.think-txt { font-size: var(--fs-lg); line-height: 1.72; color: var(--muted); }
+
+/* ── 工具 chip = 叶（暖边＝刚展开的新叶 → 冷边＝已归到根部的养分） ── */
+.tools { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 var(--s2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 12px 4px 9px;
+  border: 1px solid var(--line-2); border-radius: var(--r-leaf);
+  font: 400 var(--fs-md)/1 var(--font-mono);
+  color: var(--muted); background: transparent;
+  transition: border-color var(--t-hover), color var(--t-hover);
+}
+.chip .vein { width: 12px; height: 12px; flex-shrink: 0; }
+.chip .vein path { fill: none; stroke: currentColor; stroke-width: 1.1; }
+.chip .cd { color: var(--faint); font-size: var(--fs-sm); }
+.chip-done { border-color: var(--abyss-400); color: var(--abyss-500); background: var(--fog-abyss); }
+.chip-done .cd { color: var(--abyss-400); }
+.chip-run  { border-color: var(--rep-400); color: var(--rep-500); }
+.chip-run .cd { color: var(--rep-400); }
+
+/* 笔尖光标（原地闪，零位移） */
+.caret { color: var(--rep-500); animation: caret 1.2s steps(1) infinite; }
+@keyframes caret { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+/* ── 卷须 = 它给自己留的记号（附着点＋一句短注；有功能才画） ── */
+.tendril { display: flex; align-items: center; gap: 0; margin: -10px 0 var(--s5) var(--s5); }
+.tendril svg { flex-shrink: 0; }
+.tendril path { fill: none; stroke: var(--rep-400); stroke-width: 1; opacity: .6; stroke-linecap: round; }
+.tendril .txt {
+  padding-left: 6px;
+  font: 400 var(--fs-sm)/1.5 var(--font-mono);
+  color: var(--rep-500); letter-spacing: .05em; opacity: .8;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 操控台 = 苗床（梢朝着它：下一句就是下一段生长）
+ * ════════════════════════════════════════════════════════════════════════ */
+.deck-wrap { position: relative; z-index: 2; padding: 0 var(--s5) 58px; flex-shrink: 0; }
+.deck {
+  max-width: 704px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md) var(--r-lg) var(--r-md) var(--r-lg);
+  transition: border-color var(--t-norm) var(--ease), background var(--t-norm) var(--ease);
+}
+.app.speaking .deck { border-color: var(--rep-400); }
+.deck-input { display: flex; align-items: flex-end; gap: var(--s3); padding: var(--s3) var(--s3) var(--s2) var(--s4); }
+.deck-input textarea {
+  flex: 1; border: none; outline: none; resize: none; background: transparent;
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6;
+  color: var(--fg); max-height: 120px; padding: 2px 0;
+}
+.deck-input textarea::placeholder { color: var(--faint); }
+/* 发送键 = 芽尖（圆角一端尖；生成中变 ■ 停止） */
+.btn-send {
+  width: 34px; height: 34px; border-radius: 3px 15px 3px 15px;
+  border: none; background: var(--rep-500); color: var(--on-rep);
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--t-hover);
+}
+.btn-send:hover { background: var(--rep-600); }
+.btn-send:disabled { opacity: .5; cursor: default; }
+
+.deck-bar {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 7px var(--s3);
+  border-top: 1px solid var(--line-3);
+  font: 400 var(--fs-md)/1 var(--font-mono); color: var(--faint);
+}
+.deck-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: none; cursor: pointer; font: inherit; color: var(--faint);
+  padding: 3px 6px; border-radius: var(--r-leaf);
+  transition: color var(--t-hover), background var(--t-hover);
+}
+.deck-btn:hover { color: var(--muted); background: var(--raised); }
+.deck-label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.deck-label.cool { color: var(--abyss-500); }
+.deck-sep { width: 1px; height: 12px; background: var(--line-3); }
+/* 思考深度 = 叶序（5 片叶，展开 3 片；无数字、无刻度） */
+.phyllo { display: inline-flex; gap: 3px; align-items: center; }
+.phyllo i { width: 12px; height: 6px; border-radius: 1px 6px 1px 6px; background: var(--line-3); }
+.phyllo i.on { background: var(--rep-400); }
+/* ctx 圆环 = 一圈藤（无数字，hover 出 tooltip） */
+.ctx { position: relative; width: 20px; height: 20px; cursor: default; }
+.ctx circle.bgc { fill: none; stroke: var(--line-3); stroke-width: 2; }
+.ctx circle.fgc { fill: none; stroke: var(--abyss-500); stroke-width: 2; stroke-linecap: butt; }
+.ctx::after {
+  content: attr(data-tip); position: absolute; right: 0; bottom: 26px;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  font: 400 var(--fs-sm)/1 var(--font-mono); letter-spacing: .05em;
+  color: var(--muted); background: var(--elevated);
+  border: 1px solid var(--line-3); border-radius: var(--r-leaf); padding: 4px 9px;
+  transition: opacity var(--t-hover);
+}
+.ctx:hover::after { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 水印（左下角，opacity .25，与任何元素不重叠）
+ * ════════════════════════════════════════════════════════════════════════ */
+.mark {
+  position: absolute; left: 34px; bottom: 22px; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  opacity: .25; pointer-events: none;
+}
+.mark svg { animation: breathe var(--t-breathe) ease-in-out infinite; }
+.mark .wt { font: 400 var(--fs-md)/1 var(--font-disp); letter-spacing: .26em; color: var(--fg); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 窗口控制 + 隐藏式主题开关
+ * ════════════════════════════════════════════════════════════════════════ */
+.win-ctrl { position: absolute; top: 36px; right: 40px; z-index: 4; display: flex; gap: 2px; }
+.win-btn {
+  width: 24px; height: 24px; border: none; background: none; border-radius: var(--r-sm);
+  color: var(--faint); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--t-hover), background var(--t-hover);
+}
+.win-btn:hover { color: var(--fg); background: var(--raised); }
+.win-btn.close:hover { color: var(--danger); }
+
+/* 双击非交互区浮出（350ms fade） */
+.theme-sw {
+  position: absolute; right: 34px; bottom: 150px; z-index: 5;
+  opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 7px; padding: 5px 11px;
+  background: var(--elevated); border: 1px solid var(--line-2);
+  border-radius: var(--r-leaf);
+  font: 400 var(--fs-sm)/1 var(--font-mono); color: var(--muted);
+  letter-spacing: .08em; cursor: pointer;
+  transition: opacity var(--t-norm) var(--ease);
+}
+.theme-sw.on { opacity: 1; pointer-events: auto; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 抽屉（展开态 1280）：左 = 它的内在（根域）/ 右 = 身外之物
+ * ════════════════════════════════════════════════════════════════════════ */
+.drawer {
+  width: 0; overflow: hidden; opacity: 0; flex-shrink: 0;
+  transition: width var(--t-norm) var(--ease), opacity var(--t-norm) var(--ease);
+}
+.app.expanded .drawer { width: 280px; opacity: 1; }
+.drawer-inner {
+  height: 100%; overflow-y: auto; padding: var(--s4) 14px;
+  display: flex; flex-direction: column; gap: var(--s4);
+}
+.drawer-l .drawer-inner { border-right: 1px solid var(--line-3); }
+.drawer-r .drawer-inner { border-left: 1px solid var(--line-3); }
+.dw-title {
+  font: 400 var(--fs-sm)/1 var(--font-mono);
+  color: var(--faint); letter-spacing: .18em;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line-3);
+}
+.dw-item {
+  padding: 9px var(--s3);
+  border: 1px solid var(--line-3); border-radius: var(--r-sm) var(--r-md) var(--r-sm) var(--r-md);
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: var(--s1);
+}
+.dw-item .t { font-size: var(--fs-md); color: var(--fg); }
+.dw-item .d { font: 400 var(--fs-sm)/1.4 var(--font-mono); color: var(--muted); letter-spacing: .05em; }
+.dw-item .g { font: 400 var(--fs-sm)/1.4 var(--font-mono); color: var(--rep-500); letter-spacing: .05em; }
+.dw-item .g.cool { color: var(--abyss-500); }
+.dw-item.wood { opacity: .5; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 无障碍：reduced-motion（一次性生长直接落定，呼吸停在中位）
+ * ════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; }
+  .turn.active::before { transform: scaleY(1); }
+  .stem-vine { opacity: .55; }
+  .mark svg { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ 窗（收起态 860×800） ══════════════ -->
+<div class="app collapsed" id="app">
+
+  <!-- 格架背纹 + 锻铁窗框 + 反对称角饰 -->
+  <div class="trellis"></div>
+  <div class="sash"></div>
+  <svg class="scroll-tl" width="82" height="70" viewBox="0 0 82 70" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true">
+    <path d="M0 34 C 20 34, 34 24, 38 8 C 40 0, 30 -2, 27 6 C 24 15, 33 20, 44 18 C 60 15, 70 6, 76 0"/>
+    <path d="M0 52 C 16 52, 26 46, 32 36"/>
+    <path d="M34 70 C 34 56, 42 46, 56 42"/>
+  </svg>
+  <svg class="scroll-br" width="58" height="48" viewBox="0 0 58 48" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true">
+    <path d="M58 14 C 40 14, 28 22, 24 36 C 22 44, 31 46, 33 39 C 35 31, 27 27, 18 30 C 8 33, 3 40, 0 48"/>
+  </svg>
+
+  <!-- ══════════════ 顶栏 = 株 ══════════════ -->
+  <div class="topbar">
+    <!-- 头像 = 圆铁环 + 缠 2/3 圈的藤（留缺口：还在长）；呼吸仅透明度 -->
+    <div class="stem-wrap">
+      <div class="stem-ring">序</div>
+      <svg class="stem-vine" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+        <path d="M28 3 C 46 3, 53 12, 53 26 C 53 42, 42 53, 27 53 C 16 53, 8 47, 5 38"/>
+        <path d="M5 38 C 2 30, 6 24, 12 24"/>
+        <circle class="bud" cx="12" cy="24" r="2.4"/>
+      </svg>
+    </div>
+
+    <div class="card">
+      <div class="card-name">知序</div>
+      <div class="card-state"><span class="bud"></span><span>在长 · 12s</span></div>
+
+      <!-- 编年史 = 茎与节（节间距不等）；最右一节 ≡ 现在的 rep -->
+      <div class="chronicle">
+        <svg width="152" height="16" viewBox="0 0 152 16" aria-hidden="true">
+          <defs>
+            <linearGradient id="chrGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="var(--birth)"/>
+              <stop offset="30%"  stop-color="var(--wood-old)"/>
+              <stop offset="62%"  stop-color="var(--wood)"/>
+              <stop offset="84%"  stop-color="var(--rep-300)"/>
+              <stop offset="100%" stop-color="var(--rep-500)"/>
+            </linearGradient>
+          </defs>
+          <path class="stem" stroke="url(#chrGrad)"
+                d="M2 11 C 22 11, 30 6, 48 7 C 66 8, 74 12, 96 11 C 116 10, 126 7, 148 8"/>
+          <circle class="nd" cx="2"   cy="11" r="2.2" fill="var(--birth)"/>
+          <circle class="nd" cx="30"  cy="8.4" r="2.2" fill="var(--wood-old)"/>
+          <circle class="nd" cx="70"  cy="10.6" r="2.2" fill="var(--wood)"/>
+          <circle class="nd" cx="112" cy="8.8" r="2.4" fill="var(--rep-300)"/>
+          <circle class="nd" cx="148" cy="8"  r="3.1" fill="var(--rep-500)"/>
+          <path class="lf" stroke="var(--rep-400)" d="M148 8 C 146 3, 141 1, 137 2 C 139 6, 144 8, 148 8"/>
+        </svg>
+        <div class="chronicle-cap">第五代 · 由五月长到现在</div>
+      </div>
+    </div>
+
+    <button class="tb-set" title="调节环境">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="spacer"></div>
+  </div>
+
+  <!-- ══════════════ main row ══════════════ -->
+  <div class="main-row">
+
+    <!-- 左抽屉：它的内在（根域） -->
+    <div class="drawer drawer-l">
+      <div class="drawer-inner">
+        <div class="dw-title">它的内在</div>
+        <div class="dw-item"><span class="t">比对上周三次失败的时刻</span><span class="d">子进程 · 在跑</span></div>
+        <div class="dw-item"><span class="t">待命</span><span class="d">子进程 · 空着</span></div>
+        <div class="dw-title">技能候选</div>
+        <div class="dw-item"><span class="t">失败前先记一份现场</span><span class="g">刚冒头 · 同类三次</span></div>
+        <div class="dw-item"><span class="t">分片重跑</span><span class="g cool">已木质化 · 稳定</span></div>
+        <div class="dw-title">意识更新</div>
+        <div class="dw-item"><span class="t">周期性的失败往往不是随机的</span><span class="d">刚刚 · 第五代</span></div>
+        <div class="dw-title">已归档</div>
+        <div class="dw-item wood"><span class="t">冷启动那段对话</span><span class="d">06.28 · 封存</span></div>
+      </div>
+    </div>
+
+    <!-- 左把手 8px（暖立柱） -->
+    <div class="handle handle-l" title="它的内在">
+      <button class="handle-chev" aria-label="展开它的内在">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="15 6 9 12 15 18"/></svg>
+      </button>
+    </div>
+
+    <!-- 对话流 -->
+    <div class="stream" id="stream">
+      <div class="inner" id="inner">
+
+        <!-- 藤（JS 按轮次实际位置生成；主茎渐变 + 梢 1200ms 长出） -->
+        <svg class="vine" id="vine" aria-hidden="true">
+          <defs>
+            <linearGradient id="vineGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop id="g0" offset="0%"/>
+              <stop id="g1" offset="55%"/>
+              <stop id="g2" offset="100%"/>
+            </linearGradient>
+          </defs>
+          <path class="stem" id="vineStem" stroke="url(#vineGrad)" d=""/>
+          <g id="vineNodes"></g>
+          <path class="tip" id="vineTip" d=""/>
+          <g id="vineTipArt"></g>
+        </svg>
+
+        <!-- 会话横幅：左 = 芽点 + chevron + 标题 / 右 = 归档 -->
+        <div class="banner" id="banner">
+          <button class="bn-toggle" type="button">
+            <span class="bud"></span>
+            <span class="bn-chev"></span>
+            <span>每周三夜里那次失败</span>
+          </button>
+          <span class="bn-when">07-30</span>
+          <button class="bn-arch" title="归档这段">归档</button>
+        </div>
+        <div class="rail">
+          <svg viewBox="0 0 660 10" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 6 C 90 6, 150 3, 300 3 C 460 3, 540 6, 660 5"/>
+          </svg>
+        </div>
+
+        <!-- 轮次 1：木质化（旧茎，褐、硬、不再生长） -->
+        <div class="turn wood" data-node="wood">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+            <span class="tag">已硬</span>
+          </div>
+          <div class="msg">上周那次我按超时处理了，重跑就过去了。当时看不出别的。</div>
+          <div class="wood-note">这一节已经木质化 · 不再生长，也没掉</div>
+        </div>
+
+        <!-- 轮次 2：用户 = 绑枝（右对齐，零 rep） -->
+        <div class="turn user" data-node="user">
+          <div class="turn-head">
+            <span class="nm">UmR</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="tie-note">今晚又炸了，第三次。别再重跑了，先弄清它为什么总挑周三。</div>
+        </div>
+
+        <!-- 轮次 3：活跃 = 梢所在的那一节 -->
+        <div class="turn active" id="activeTurn" data-node="tip">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+            <span class="tag">在长</span>
+          </div>
+
+          <!-- 思考块 = 往下扎的根须 -->
+          <div class="think">
+            <svg class="roots" width="14" height="100%" viewBox="0 0 14 60" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M7 0 C 7 14, 4 24, 5 38 C 6 48, 4 54, 2 60"/>
+              <path d="M6 20 C 10 26, 12 34, 11 44"/>
+              <path d="M5 38 C 8 44, 9 50, 8 58"/>
+            </svg>
+            <div class="think-cap"><span>向下</span><span>·</span><span>还没到底</span></div>
+            <div class="think-txt">三次都落在整点后的第七分钟。不是超时——是有另一件事在同一时刻要同一份东西。谁在那个点动手，我还没看见，先不猜。</div>
+          </div>
+
+          <!-- 工具 chip = 叶（暖边新叶 → 冷边已归根） -->
+          <div class="tools">
+            <span class="chip chip-done">
+              <svg class="vein" viewBox="0 0 12 12"><path d="M1 11 C 3 6, 7 2, 11 1 C 10 6, 6 10, 1 11 M1 11 C 4 9, 7 6, 11 1"/></svg>
+              <span>read</span><span>logs/pipeline.log</span><span class="cd">三段现场 ✓</span>
+            </span>
+            <span class="chip chip-run">
+              <svg class="vein" viewBox="0 0 12 12"><path d="M1 11 C 3 6, 7 2, 11 1 C 10 6, 6 10, 1 11 M1 11 C 4 9, 7 6, 11 1"/></svg>
+              <span>grep</span><span>"03:07"</span><span class="cd">在翻</span>
+            </span>
+          </div>
+
+          <div class="msg">找到了：有一份定时清理排在同一分钟，它先拿走了锁。我不改超时，把清理挪到整点前——这样你那边的窗口一点都不用动。<span class="caret">▍</span></div>
+        </div>
+
+        <!-- 卷须 = 它给自己留的记号（附着点 + 一句短注） -->
+        <div class="tendril">
+          <svg width="42" height="16" viewBox="0 0 42 16" aria-hidden="true">
+            <path d="M0 8 C 12 8, 20 4, 26 8 C 31 11, 30 15, 27 15 C 23 15, 22 10, 27 8 C 33 5, 38 7, 42 8"/>
+          </svg>
+          <span class="txt">挪清理不动超时 · 已和上周那节对过</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右把手 8px（冷立柱） -->
+    <div class="handle handle-r" title="身外之物">
+      <button class="handle-chev" aria-label="展开身外之物">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+
+    <!-- 右抽屉：身外之物 -->
+    <div class="drawer drawer-r">
+      <div class="drawer-inner">
+        <div class="dw-title">此刻在做</div>
+        <div class="dw-item"><span class="t">查清周三那次失败</span><span class="g">在做</span></div>
+        <div class="dw-title">产物</div>
+        <div class="dw-item"><span class="t">cron/cleanup.yaml</span><span class="d">它改的 · 你还没看</span></div>
+        <div class="dw-item"><span class="t">notes/03-07.md</span><span class="d">它写的 · 三段现场</span></div>
+        <div class="dw-title">工作台</div>
+        <div class="dw-item"><span class="t">pipeline/runner.py</span></div>
+        <div class="dw-item"><span class="t">cron/cleanup.yaml</span></div>
+        <div class="dw-item"><span class="t">logs/pipeline.log</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ 操控台 = 苗床 ══════════════ -->
+  <div class="deck-wrap">
+    <div class="deck" id="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="在生成 · 点击停止">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="附上">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <!-- 思考深度 = 叶序（无数字无刻度） -->
+        <div class="phyllo" title="思考深度"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+        <span class="deck-sep"></span>
+        <button class="deck-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+        <div class="deck-label">Claude 4.6 <span>▾</span></div>
+        <div class="deck-label cool">自治 · 完全 <span>▾</span></div>
+        <span class="spacer"></span>
+        <div class="ctx" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="bgc" cx="10" cy="10" r="7.5"/>
+            <circle class="fgc" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 水印（左下角 · opacity .25 · 不与任何元素重叠） -->
+  <div class="mark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="wt">northing</span>
+  </div>
+
+  <!-- 隐藏式主题开关（双击非交互区浮出） -->
+  <div class="theme-sw" id="themeSw" title="调节光">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M4 18 C 8 12, 14 8, 20 6"/><path d="M12 12 C 12 8, 15 6, 18 6"/></svg>
+    <span id="themeLabel">入夜</span>
+  </div>
+
+  <!-- 窗口控制 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="11" height="11" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="11" height="11" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="11" height="11" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var app    = document.getElementById('app');
+  var deck   = document.getElementById('deck');
+  var inner  = document.getElementById('inner');
+  var banner = document.getElementById('banner');
+  var vine   = document.getElementById('vine');
+  var stemP  = document.getElementById('vineStem');
+  var tipP   = document.getElementById('vineTip');
+  var nodesG = document.getElementById('vineNodes');
+  var tipG   = document.getElementById('vineTipArt');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var GUT = 44, AX = 22;   /* 竖带宽度 / 藤的中轴 */
+
+  function el(n, a) {
+    var e = document.createElementNS(SVGNS, n);
+    for (var k in a) e.setAttribute(k, a[k]);
+    return e;
+  }
+
+  /* ── 主茎：非对称振幅的 whiplash（不等摆幅＝反对称；不是正弦波） ──
+   * Slint: Path { commands: "..." }，渐变描边拆成 3 段 Path 各取预计算 hex。 */
+  function stemPath(H) {
+    var d = 'M' + AX + ' 0', y = 0, i = 0, sign = 1, seg = 104;
+    while (y < H - 1) {
+      var h = Math.min(seg, H - y);
+      var a = (i % 2 ? 7 : 12) * sign;              /* 摆幅 12 / 7 交替 */
+      d += ' c ' + a + ' ' + (h * .28).toFixed(1) +
+           ' '   + a + ' ' + (h * .72).toFixed(1) + ' 0 ' + h.toFixed(1);
+      y += h; i++; sign = -sign;
+    }
+    return d;
+  }
+
+  /* 沿路径二分找给定 y 的点（y 单调递增） */
+  function atY(path, y) {
+    var L = path.getTotalLength(), lo = 0, hi = L, m, p;
+    for (var k = 0; k < 22; k++) {
+      m = (lo + hi) / 2; p = path.getPointAtLength(m);
+      if (p.y < y) lo = m; else hi = m;
+    }
+    return path.getPointAtLength((lo + hi) / 2);
+  }
+
+  /* 叶：一端尖一端圆（相对原点，dir = ±1 决定朝向） */
+  function leafD(x, y, len, dir) {
+    var L = len, w = len * .42;
+    return 'M' + x + ' ' + y +
+           ' C ' + (x + dir * L * .35) + ' ' + (y - w) +
+           ', '  + (x + dir * L * .85) + ' ' + (y - w * .75) +
+           ', '  + (x + dir * L)       + ' ' + (y - w * .1) +
+           ' C ' + (x + dir * L * .7)  + ' ' + (y + w * .7) +
+           ', '  + (x + dir * L * .25) + ' ' + (y + w * .6) +
+           ', '  + x + ' ' + y + ' Z';
+  }
+
+  /* ── 生成整株：主茎（到活跃节）+ 节 + 梢（1200ms 长出） ── */
+  function grow(animate) {
+    var H = inner.offsetHeight;
+    var y0 = banner.offsetTop;                       /* 藤从横幅处起（株在上） */
+    var h  = Math.max(80, H - y0);
+    vine.setAttribute('width', GUT);
+    vine.setAttribute('height', h);
+    vine.setAttribute('viewBox', '0 0 ' + GUT + ' ' + h);
+    vine.style.top = y0 + 'px';
+
+    var turns = [].slice.call(inner.querySelectorAll('.turn'));
+    var active = document.getElementById('activeTurn');
+    var activeY = active ? (active.offsetTop - y0 + 20) : h * .8;
+
+    /* 主茎只画到活跃节：它上面是既成的历史，下面才是正在长的 */
+    stemP.setAttribute('d', stemPath(activeY));
+
+    /* 节：每轮一个，颜色按域（木质 / 麻绳 / 梢），并伸一条叶柄指向该轮 */
+    nodesG.textContent = '';
+    turns.forEach(function (t) {
+      var ny = t.offsetTop - y0 + 20;
+      if (ny > activeY + 1) return;
+      var p = atY(stemP, Math.min(ny, activeY));
+      var kind = t.getAttribute('data-node');
+      var col = kind === 'wood' ? 'var(--wood)' : kind === 'user' ? 'var(--tie)' : 'var(--rep-500)';
+      var r   = kind === 'tip' ? 3.4 : 2.6;
+      /* 叶柄：从节横向伸出，接到文本块（功能：轮次锚点） */
+      nodesG.appendChild(el('path', {
+        'class': 'petiole', stroke: col, opacity: kind === 'wood' ? .5 : .62,
+        d: 'M' + p.x + ' ' + p.y + ' C ' + (p.x + 9) + ' ' + p.y + ', ' +
+           (p.x + 13) + ' ' + (p.y - 2) + ', ' + (GUT - 2) + ' ' + (p.y - 3)
+      }));
+      nodesG.appendChild(el('circle', { 'class': 'node', cx: p.x, cy: p.y, r: r, fill: col }));
+      /* 木质节留一片枯叶：叶枯而不落 */
+      if (kind === 'wood') {
+        nodesG.appendChild(el('path', {
+          'class': 'leaf', d: leafD(p.x, p.y, 15, -1),
+          stroke: 'var(--wood-old)', fill: 'none', opacity: .55
+        }));
+      }
+    });
+
+    /* ── 梢：活跃节往下继续长，末端一片新叶 + 未展开顶芽，朝着操控台 ── */
+    var a = atY(stemP, activeY);
+    var tipLen = Math.max(46, Math.min(96, h - activeY - 6));
+    tipP.setAttribute('d',
+      'M' + a.x + ' ' + a.y +
+      ' c -11 ' + (tipLen * .30).toFixed(1) + ', 13 ' + (tipLen * .66).toFixed(1) +
+      ', 3 ' + tipLen.toFixed(1));
+
+    tipG.textContent = '';
+    var ex = a.x + 3, ey = a.y + tipLen;
+    tipG.appendChild(el('path', {
+      'class': 'leaf', d: leafD(ex - 1, ey - 16, 17, 1),
+      stroke: 'var(--rep-400)', fill: 'var(--leaf-fill)'
+    }));
+    /* 顶芽：整屏唯一的饱和 rep 实心，静止（不呼吸——呼吸只给 logo + 头像） */
+    tipG.appendChild(el('path', {
+      'class': 'bud',
+      d: 'M' + ex + ' ' + ey + ' C ' + (ex + 4.4) + ' ' + (ey - 4) + ', ' +
+         (ex + 4) + ' ' + (ey - 11) + ', ' + (ex + .6) + ' ' + (ey - 14) +
+         ' C ' + (ex - 3.4) + ' ' + (ey - 11) + ', ' + (ex - 3.6) + ' ' + (ey - 4) +
+         ', ' + ex + ' ' + ey + ' Z'
+    }));
+
+    /* 生长动画：只有梢是新长的（1200ms 一次性，向下）——历史不重画 */
+    var L = tipP.getTotalLength();
+    if (animate && !reduce) {
+      tipP.style.transition = 'none';
+      tipP.style.strokeDasharray = L; tipP.style.strokeDashoffset = L;
+      tipG.style.transition = 'none'; tipG.style.opacity = '0';
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          tipP.style.transition = 'stroke-dashoffset 1200ms cubic-bezier(0.25,0.1,0.25,1)';
+          tipP.style.strokeDashoffset = 0;
+          tipG.style.transition = 'opacity 1200ms cubic-bezier(0.25,0.1,0.25,1)';
+          tipG.style.opacity = '1';
+        });
+      });
+    } else {
+      tipP.style.strokeDasharray = 'none'; tipP.style.strokeDashoffset = 0;
+      tipG.style.opacity = '1';
+    }
+  }
+  grow(true);
+  window.addEventListener('resize', function () { grow(false); });
+
+  /* ── 输入聚焦 → 整屋升档（空气里的 rep 浓一点） ── */
+  deck.addEventListener('focusin',  function () { app.classList.add('speaking'); });
+  deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+
+  /* ── 把手点击 → 窗口物理变宽（Slint: set_inner_size 860↔1280） ── */
+  function toggleWide() {
+    app.classList.toggle('expanded');
+    setTimeout(function () { grow(false); }, 380);
+  }
+  document.querySelector('.handle-l').addEventListener('click', toggleWide);
+  document.querySelector('.handle-r').addEventListener('click', toggleWide);
+
+  /* ── 横幅：折叠 / 归档（归档 = 1200ms 一次性淡出，零位移） ── */
+  banner.querySelector('.bn-toggle').addEventListener('click', function () {
+    banner.classList.toggle('folded');
+    setTimeout(function () { grow(false); }, 20);
+  });
+  banner.querySelector('.bn-arch').addEventListener('click', function (e) {
+    e.stopPropagation();
+    banner.style.transition = 'opacity 1200ms cubic-bezier(0.25,0.1,0.25,1)';
+    banner.style.opacity = '.35';
+  });
+
+  /* ── 隐藏式主题开关：双击非交互区浮出（350ms fade） ── */
+  var sw = document.getElementById('themeSw');
+  var label = document.getElementById('themeLabel');
+  app.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button, textarea, .handle, .ctx, .theme-sw')) return;
+    sw.classList.add('on');
+  });
+  sw.addEventListener('click', function () {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    label.textContent = dark ? '入夜' : '天亮';
+    sw.classList.remove('on');
+  });
+
+  /* ── textarea 自适应 + Enter 发送（Shift+Enter 换行） ── */
+  var ta = deck.querySelector('textarea');
+  ta.addEventListener('input', function () {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.value = ''; ta.style.height = 'auto'; }
+  });
+})();
+</script>
+</body>
+</html>

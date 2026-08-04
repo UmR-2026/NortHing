@@ -50,6 +50,7 @@ export struct RedesignTokens {
     // 语义混合色（OKLCH 混色，由生成器解析）
     air-rep: color,
     halo-rep: color,
+    halo-rep-strong: color,
     air-rep-speaking: color,
     halo-rep-speaking: color,
     air-rep-settings: color,
@@ -63,6 +64,32 @@ export struct RedesignTokens {
     archive-cold-bg: color,
     archive-cold-border: color,
     archive-card-bg: color,
+    // mind 色维度（consult-room v2 spike 2026-08-02：5 mind × 5 角色 × 双主题；派生语义=CSS color-mix(in srgb) 即 gamma sRGB 逐通道插值，透明端出 8 位 alpha hex）
+    mind-drive-glow: color,
+    mind-drive-intense: color,
+    mind-drive-line: color,
+    mind-drive-frame: color,
+    mind-drive-accent: color,
+    mind-abyss-glow: color,
+    mind-abyss-intense: color,
+    mind-abyss-line: color,
+    mind-abyss-frame: color,
+    mind-abyss-accent: color,
+    mind-leap-glow: color,
+    mind-leap-intense: color,
+    mind-leap-line: color,
+    mind-leap-frame: color,
+    mind-leap-accent: color,
+    mind-gaze-glow: color,
+    mind-gaze-intense: color,
+    mind-gaze-line: color,
+    mind-gaze-frame: color,
+    mind-gaze-accent: color,
+    mind-calm-glow: color,
+    mind-calm-intense: color,
+    mind-calm-line: color,
+    mind-calm-frame: color,
+    mind-calm-accent: color,
     // 字号三档 + 正文/名字（handoff §8：小字端严格收敛，层级靠颜色+字体承担）
     fs-sm: length,
     fs-md: length,
@@ -117,6 +144,7 @@ export global RedesignTheme {
         on-danger: #FFFFFF, // oklch(1 0 0)
         air-rep: #F0EFEC, // oklch(0.9527 0.0040 91.45)
         halo-rep: #ECEBE9, // oklch(0.9413 0.0038 91.45)
+        halo-rep-strong: #E9E8E6, // oklch(0.9315 0.0037 91.45)
         air-rep-speaking: #EFEEEC, // oklch(0.9504 0.0039 91.45)
         halo-rep-speaking: #EBEAE8, // oklch(0.9380 0.0038 91.45)
         air-rep-settings: #F2F1EE, // oklch(0.9592 0.0040 91.45)
@@ -129,6 +157,31 @@ export global RedesignTheme {
         archive-cold-bg: #F0F1EE, // oklch(0.9561 0.0042 111.13)
         archive-cold-border: #D7E1DC, // oklch(0.9000 0.0115 168.00)
         archive-card-bg: #F5F6F4, // oklch(0.9726 0.0032 125.14)
+        mind-drive-glow: #C8714C26,
+        mind-drive-intense: #F8EEEA,
+        mind-drive-line: #9C5B3F,
+        mind-drive-frame: #9C5B3F,
+        mind-drive-accent: #AE6241,
+        mind-abyss-glow: #3F837B26,
+        mind-abyss-intense: #E8F0EF,
+        mind-abyss-line: #346863,
+        mind-abyss-frame: #346863,
+        mind-abyss-accent: #3B7169,
+        mind-leap-glow: #8B5FBF26,
+        mind-leap-intense: #F1ECF7,
+        mind-leap-line: #6D4D96,
+        mind-leap-frame: #6D4D96,
+        mind-leap-accent: #7B53A2,
+        mind-gaze-glow: #D99B4826,
+        mind-gaze-intense: #FAF3E9,
+        mind-gaze-line: #A97B3C,
+        mind-gaze-frame: #A97B3C,
+        mind-gaze-accent: #BC853E,
+        mind-calm-glow: #4B8F6B26,
+        mind-calm-intense: #E9F2ED,
+        mind-calm-line: #3D7157,
+        mind-calm-frame: #3D7157,
+        mind-calm-accent: #457B5B,
         fs-sm: 10px,
         fs-md: 11.5px,
         fs-lg: 13px,
@@ -173,6 +226,7 @@ export global RedesignTheme {
         on-danger: #FFFFFF, // oklch(1 0 0)
         air-rep: #181714, // oklch(0.2057 0.0058 88.00)
         halo-rep: #1C1B18, // oklch(0.2214 0.0056 88.00)
+        halo-rep-strong: #1F1E1B, // oklch(0.2348 0.0054 88.00)
         air-rep-speaking: #1D1C19, // oklch(0.2259 0.0055 88.00)
         halo-rep-speaking: #1F1E1B, // oklch(0.2348 0.0054 88.00)
         air-rep-settings: #161512, // oklch(0.1967 0.0059 88.00)
@@ -185,6 +239,31 @@ export global RedesignTheme {
         archive-cold-bg: #161613, // oklch(0.1975 0.0059 101.75)
         archive-cold-border: #1D2320, // oklch(0.2497 0.0117 160.08)
         archive-card-bg: #1D1D1A, // oklch(0.2303 0.0059 108.65)
+        mind-drive-glow: #C8714C26,
+        mind-drive-intense: #C8714C66,
+        mind-drive-line: #D89C82,
+        mind-drive-frame: #C8714C8C,
+        mind-drive-accent: #C8714C,
+        mind-abyss-glow: #3F837B26,
+        mind-abyss-intense: #3F837B66,
+        mind-abyss-line: #79A8A3,
+        mind-abyss-frame: #3F837B8C,
+        mind-abyss-accent: #3F837B,
+        mind-leap-glow: #8B5FBF26,
+        mind-leap-intense: #8B5FBF66,
+        mind-leap-line: #AE8FD2,
+        mind-leap-frame: #8B5FBF8C,
+        mind-leap-accent: #8B5FBF,
+        mind-gaze-glow: #D99B4826,
+        mind-gaze-intense: #D99B4866,
+        mind-gaze-line: #E4B97F,
+        mind-gaze-frame: #D99B488C,
+        mind-gaze-accent: #D99B48,
+        mind-calm-glow: #4B8F6B26,
+        mind-calm-intense: #4B8F6B66,
+        mind-calm-line: #81B197,
+        mind-calm-frame: #4B8F6B8C,
+        mind-calm-accent: #4B8F6B,
         fs-sm: 10px,
         fs-md: 11.5px,
         fs-lg: 13px,

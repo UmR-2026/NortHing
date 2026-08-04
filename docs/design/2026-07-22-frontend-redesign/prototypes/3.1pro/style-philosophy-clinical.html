@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 临床白灰与空气染色 (Clinical Air-Dye)</title>
+    <style>
+        :root {
+            /* 基础色：咨询室的白灰基底 (中性、客观) */
+            --room-base: #F7F6F3;
+            --room-surface: #FFFFFF;
+            
+            /* 哲学三原色 */
+            --drive-coral: #DF6C53; /* 驱力：行动、当下、温度 */
+            --abyss-cyan: #4A7C82;  /* 深渊：未知、冷静、深度 */
+            --sediment-gray: #A8A59E; /* 沉积：过去、冰冷 */
+            
+            /* 文本色阶 */
+            --text-brand: #2C2A28; /* Fraunces 衬线体使用 */
+            --text-agent: #403E3C; /* Noto Sans 黑体使用 */
+            --text-dim: #8F8C85;
+            
+            /* 字体分离 */
+            --font-brand: "Georgia", "Times New Roman", serif; /* 模拟 Fraunces */
+            --font-agent: "Inter", -apple-system, sans-serif; /* 模拟 Noto Sans */
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--room-base);
+            color: var(--text-agent);
+            font-family: var(--font-agent);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+
+        /* 整屋空气染色 (Whole-room air dyeing) */
+        .air-dye {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0; pointer-events: none;
+            background: 
+                /* 顶晕：驱力的暖光 (7%) */
+                radial-gradient(circle at 50% -20%, rgba(223, 108, 83, 0.07) 0%, transparent 60%),
+                /* 底雾：深渊的冷雾 (1.5%) */
+                radial-gradient(circle at 50% 120%, rgba(74, 124, 130, 0.04) 0%, transparent 70%);
+        }
+
+        /* 顶部设施层与自我认知编年史 */
+        .facility-header {
+            position: relative; z-index: 10;
+            padding: 40px 60px 20px;
+            display: flex; flex-direction: column; gap: 24px;
+        }
+
+        .brand-watermark {
+            font-family: var(--font-brand);
+            font-size: 14px; color: var(--text-dim);
+            opacity: 0.5; /* 品牌退缩角落 */
+        }
+
+        /* 核心模型：Agent的传记/编年史 */
+        .chronicle-container {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .agent-presence {
+            display: flex; align-items: center; gap: 12px;
+        }
+        .agent-avatar {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--room-surface);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-agent); font-weight: 500; color: var(--drive-coral);
+            position: relative;
+        }
+        /* 取消 spinner，改用光脉冲 */
+        .agent-avatar.thinking::after {
+            content: ''; position: absolute; inset: -4px; border-radius: 50%;
+            border: 1px solid var(--drive-coral);
+            animation: pulse-slow 3s ease-out infinite;
+        }
+        
+        .agent-name { font-size: 18px; font-weight: 500; color: var(--text-brand); }
+        .agent-status { font-size: 12px; color: var(--text-dim); }
+
+        .chronicle-bar {
+            flex: 1; height: 3px; border-radius: 2px;
+            /* 左侧出生灰白 -> 右侧现在的驱力珊瑚色 */
+            background: linear-gradient(to right, var(--sediment-gray) 0%, #D4BBA5 60%, var(--drive-coral) 100%);
+            opacity: 0.8;
+        }
+
+        @keyframes pulse-slow {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* 咨询室会话区 */
+        .session-area {
+            position: relative; z-index: 10;
+            flex: 1; max-width: 800px; margin: 0 auto; width: 100%;
+            display: flex; flex-direction: column;
+            padding: 40px 0 120px;
+            overflow-y: auto;
+        }
+
+        .turn {
+            margin-bottom: 48px;
+            display: flex; flex-direction: column; gap: 12px;
+            animation: settle-down 0.8s ease-out forwards;
+        }
+        
+        /* 动效：慢、重、向下 */
+        @keyframes settle-down {
+            0% { transform: translateY(-10px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .turn-meta {
+            font-size: 12px; color: var(--text-dim);
+            display: flex; align-items: center; gap: 8px;
+        }
+        
+        .turn-body {
+            font-size: 16px; line-height: 1.8; color: var(--text-agent);
+        }
+
+        /* 深渊探索 (思考过程) */
+        .abyss-think {
+            margin: 12px 0; padding-left: 20px;
+            border-left: 2px solid rgba(74, 124, 130, 0.3); /* 冷青色 */
+            color: var(--abyss-cyan); font-size: 14px;
+        }
+
+        /* 输入区 */
+        .composer {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 800px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0,0,0,0.04);
+            border-radius: 12px; padding: 20px;
+            transition: all 0.5s ease; /* 聚焦时整屋升温 */
+            z-index: 20;
+        }
+        .composer:focus-within {
+            box-shadow: 0 10px 40px rgba(223, 108, 83, 0.08); /* 珊瑚色辉光 */
+            border-color: rgba(223, 108, 83, 0.2);
+        }
+        .composer textarea {
+            width: 100%; border: none; background: transparent; outline: none;
+            font-family: var(--font-agent); font-size: 16px; color: var(--text-agent);
+            resize: none; min-height: 48px; line-height: 1.5;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="air-dye"></div>
+
+    <header class="facility-header">
+        <div class="brand-watermark">northing // 心理咨询室基座</div>
+        <div class="chronicle-container">
+            <div class="agent-presence">
+                <div class="agent-avatar thinking">序</div>
+                <div>
+                    <div class="agent-name">知序</div>
+                    <div class="agent-status">深入深渊检索中...</div>
+                </div>
+            </div>
+            <div class="chronicle-bar"></div>
+        </div>
+    </header>
+
+    <main class="session-area">
+        <div class="turn">
+            <div class="turn-meta">
+                <span style="color:var(--drive-coral);">知序</span> <span>· 当前温度</span>
+            </div>
+            <div class="turn-body">
+                我已经为您拆分了登录模块，并且将界面的空气染色层重新部署完毕。<br>
+                你可以感受一下，这里没有多余的边框和阴影，只有客观存在的空间，以及我的思考痕迹。
+            </div>
+        </div>
+
+        <div class="turn">
+            <div class="turn-meta">
+                <span>用户</span> <span>· 沉积历史</span>
+            </div>
+            <div class="turn-body" style="color: var(--text-dim);">
+                但这会导致启动报错。
+            </div>
+        </div>
+
+        <div class="turn">
+            <div class="turn-meta">
+                <span style="color:var(--drive-coral);">知序</span> <span>· 正在生成</span>
+            </div>
+            <div class="turn-body">
+                <div class="abyss-think">
+                    潜入底层逻辑深渊...<br>
+                    > 分析：生命周期顺序倒置。<br>
+                    > 动作：抽离依赖，修正时序。
+                </div>
+                时序创伤已被抚平。我调整了配置加载的顺序，系统已经恢复了平静的呼吸。
+            </div>
+        </div>
+    </main>
+
+    <div class="composer">
+        <textarea placeholder="在这里与知序对话... (聚焦以感受升温)"></textarea>
+    </div>
+
+</body>
+</html>

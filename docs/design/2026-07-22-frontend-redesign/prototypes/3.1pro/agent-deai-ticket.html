@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 工单/提案流 (Ticket Paradigm)</title>
+    <style>
+        :root {
+            /* 极其克制的中性色板，彻底剥离 AI 的魔法感 */
+            --bg-app: #F9F9F8;
+            --bg-surface: #FFFFFF;
+            
+            --border-light: #EBEAE5;
+            
+            --text-primary: #1C1C1B;
+            --text-secondary: #6B6A66;
+            --text-tertiary: #A1A09A;
+            
+            /* 哲学色仅作为状态指示 */
+            --state-active: #DF6C53; /* 珊瑚色代表 Agent 正在进行 */
+            --state-system: #4A7C82; /* 冷青色代表系统底层操作 */
+            
+            --font-ui: "Inter", -apple-system, sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            height: 100vh; overflow: hidden;
+            display: flex;
+        }
+
+        /* 侧边导航 (纯工具向) */
+        .sidebar {
+            width: 240px; border-right: 1px solid var(--border-light);
+            background: var(--bg-surface); padding: 24px 16px;
+            display: flex; flex-direction: column; gap: 24px;
+        }
+        .sidebar-brand { font-weight: 600; font-size: 14px; padding: 0 8px; margin-bottom: 8px;}
+        .nav-group { display: flex; flex-direction: column; gap: 4px; }
+        .nav-item {
+            padding: 6px 8px; font-size: 13px; color: var(--text-secondary);
+            border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-item:hover { background: var(--bg-app); color: var(--text-primary); }
+        .nav-item.active { background: var(--bg-app); color: var(--text-primary); font-weight: 500; }
+        .badge { background: var(--border-light); font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+
+        /* 主体内容区 */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column;
+            overflow-y: auto; padding: 0 60px 100px;
+        }
+
+        /* 顶部面包屑与标题 */
+        .header {
+            padding: 40px 0 24px; border-bottom: 1px solid var(--border-light);
+            margin-bottom: 32px;
+        }
+        .breadcrumbs { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+        .task-title { font-size: 24px; font-weight: 600; margin: 0 0 16px 0; }
+        
+        .task-meta { display: flex; gap: 24px; font-size: 13px; }
+        .meta-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+        .assignee-avatar { width: 20px; height: 20px; border-radius: 50%; background: var(--border-light); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--state-active); }
+
+        /* 时间线记录 (代替聊天流) */
+        .timeline {
+            display: flex; flex-direction: column; gap: 24px;
+            position: relative; padding-left: 20px;
+        }
+        .timeline::before {
+            content: ''; position: absolute; left: 5px; top: 10px; bottom: 0;
+            width: 1px; background: var(--border-light);
+        }
+
+        .event { position: relative; }
+        .event::before {
+            content: ''; position: absolute; left: -20px; top: 8px;
+            width: 11px; height: 11px; border-radius: 50%;
+            background: var(--bg-surface); border: 2px solid var(--border-light);
+        }
+
+        .event-header { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .event-header strong { color: var(--text-primary); font-weight: 500; }
+        
+        .event-body {
+            background: var(--bg-surface); border: 1px solid var(--border-light);
+            border-radius: 8px; padding: 16px; font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        /* 机器行为日志 (去AI化，像CI/CD日志) */
+        .sys-log {
+            font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);
+            background: #F4F4F2; padding: 12px; border-radius: 6px; margin-top: 12px;
+            border-left: 2px solid var(--state-system);
+        }
+
+        /* 代码 Diff 卡片 */
+        .diff-card { margin-top: 12px; border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden; }
+        .diff-header { background: #F9F9F8; padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; border-bottom: 1px solid var(--border-light); }
+        .diff-line { font-family: var(--font-mono); font-size: 12px; padding: 4px 12px; display: flex; gap: 16px; }
+        .diff-add { background: #E6FFEC; color: #1F7F3B; }
+        .diff-rem { background: #FFEBE9; color: #A40E26; }
+        .line-num { color: var(--text-tertiary); user-select: none; width: 24px; }
+
+        /* 底部操作栏 (不是聊天框，是审阅操作) */
+        .action-bar {
+            position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-surface); border: 1px solid var(--border-light);
+            border-radius: 40px; padding: 8px 16px;
+            display: flex; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        }
+        .action-btn {
+            background: transparent; border: 1px solid var(--border-light);
+            padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500;
+            cursor: pointer; color: var(--text-primary); transition: all 0.2s;
+        }
+        .action-btn:hover { background: var(--bg-app); }
+        .btn-primary { background: var(--text-primary); color: white; border-color: var(--text-primary); }
+        .btn-primary:hover { background: #000; }
+
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">northing workspace</div>
+        
+        <div class="nav-group">
+            <div class="nav-item">Active Issues <span class="badge">3</span></div>
+            <div class="nav-item active">Proposal Reviews <span class="badge">1</span></div>
+            <div class="nav-item">Archived</div>
+        </div>
+
+        <div style="margin-top:24px; font-size:11px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; padding:0 8px;">Agents</div>
+        <div class="nav-group">
+            <div class="nav-item">Northing (Coder) <div style="width:6px;height:6px;border-radius:50%;background:var(--state-active);"></div></div>
+            <div class="nav-item">Explorer <div style="width:6px;height:6px;border-radius:50%;background:var(--border-light);"></div></div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <div class="breadcrumbs">NOR-402 / Frontend Architecture</div>
+            <h1 class="task-title">Fix initialization crash on startup (Panic in config)</h1>
+            <div class="task-meta">
+                <div class="meta-item"><div class="status-dot"></div> Awaiting Review</div>
+                <div class="meta-item">
+                    <div class="assignee-avatar" style="color:var(--state-active);">N</div>
+                    Northing
+                </div>
+                <div class="meta-item">Priority: High</div>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <div class="event">
+                <div class="event-header"><strong>UmR</strong> created this issue · 14:31</div>
+                <div class="event-body">
+                    启动的时候系统崩溃了，产生了一个 panic。请排查初始化阶段的生命周期逻辑。
+                </div>
+            </div>
+
+            <div class="event">
+                <div class="event-header"><strong>Northing</strong> started working · 14:31</div>
+                <div class="sys-log">
+                    > checked out branch 'fix-init-crash'<br>
+                    > rg "init_config" src/<br>
+                    > read src/main.rs (212 lines)
+                </div>
+            </div>
+
+            <div class="event">
+                <div class="event-header"><strong>Northing</strong> submitted a proposal · 14:32</div>
+                <div class="event-body">
+                    发现初始化顺序存在因果倒置：系统在尚未加载 <code>config::init()</code> 的情况下，提前调用了 <code>memory::read_session()</code>。<br><br>
+                    我已将配置加载的时序提前，并修复了相关依赖。
+                    
+                    <div class="diff-card">
+                        <div class="diff-header">src/main.rs</div>
+                        <div class="diff-line diff-rem"><span class="line-num">41</span><span>let session = memory::read_session();</span></div>
+                        <div class="diff-line diff-rem"><span class="line-num">42</span><span>let config = config::init();</span></div>
+                        <div class="diff-line diff-add"><span class="line-num">43</span><span>let config = config::init()?;</span></div>
+                        <div class="diff-line diff-add"><span class="line-num">44</span><span>let session = memory::read_session(&config);</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="action-bar">
+        <button class="action-btn">Request Changes</button>
+        <button class="action-btn">View in IDE</button>
+        <button class="action-btn btn-primary">Merge Proposal</button>
+    </div>
+
+</body>
+</html>

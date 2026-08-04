@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>诞生 · northing specimen</title>
+<style>
+/* ---------- token（取自 tokens.css / tokens-srgb-table.md） ---------- */
+@property --now   { syntax: "<color>"; inherits: true; initial-value: #dad6cf; }
+@property --halo  { syntax: "<color>"; inherits: true; initial-value: rgba(218,214,207,0); }
+@property --wash  { syntax: "<color>"; inherits: true; initial-value: rgba(218,214,207,0); }
+
+:root {
+  --bg: #F4F3F0; --surface: #FBFAF8; --raised: #EFEDE8;
+  --border: #E6E3DD; --border-soft: #ECE9E3;
+  --fg: #38352E; --muted: #7B766C; --faint: #A8A398;
+  --birth: #DAD6CF;
+  --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-md: 14px; --r-pill: 999px;
+  --fs-sm: 10px; --fs-md: 11.5px; --fs-body: 15px; --fs-name: 16px;
+  --dur-hover: 150ms; --dur-normal: 350ms; --dur-once: 1200ms;
+  --ease-settle: cubic-bezier(.22, 1, .36, 1);
+  --f-brand: "Fraunces", "Songti SC", "SimSun", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  transition: --now var(--dur-once) var(--ease-settle),
+              --halo var(--dur-once) var(--ease-settle),
+              --wash var(--dur-once) var(--ease-settle);
+}
+[data-theme="dark"] {
+  --bg: #181612; --surface: #262320; --raised: #2E2922;
+  --border: #443E36; --border-soft: #36312A;
+  --fg: #E7E2D8; --muted: #A39D92; --faint: #7D776D;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* 整屋空气染色：显式层，不用伪元素 */
+.air {
+  position: fixed; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--halo) 0%, transparent 46%),
+    linear-gradient(0deg, var(--wash) 0%, var(--wash) 100%);
+}
+
+/* ---------- 水印与角标 ---------- */
+.watermark {
+  position: fixed; left: var(--s4); bottom: var(--s4);
+  font-family: var(--f-brand); font-style: italic;
+  font-size: 13px; color: var(--fg); opacity: .25;
+  user-select: none; pointer-events: none;
+}
+.corner {
+  position: fixed; right: var(--s4); top: var(--s4);
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  letter-spacing: .18em; color: var(--faint);
+  text-transform: uppercase; user-select: none;
+}
+
+/* ---------- 中央列 ---------- */
+.stage { width: 560px; max-width: 86vw; text-align: center; position: relative; z-index: 1; }
+
+.eyebrow {
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  letter-spacing: .24em; color: var(--faint);
+  text-transform: uppercase; margin-bottom: var(--s4);
+}
+h1 {
+  font-family: var(--f-brand); font-weight: 400;
+  font-size: 42px; line-height: 1.2; color: var(--fg);
+}
+h1 .latin {
+  display: block; font-style: italic; font-size: 14px;
+  color: var(--muted); margin-top: var(--s2); letter-spacing: .04em;
+}
+.greeting {
+  margin-top: var(--s6); font-size: var(--fs-body);
+  color: var(--muted); line-height: 1.8;
+}
+
+/* ---------- 头像 ---------- */
+.avatar-wrap {
+  position: relative; width: 64px; height: 64px;
+  margin: var(--s6) auto 0;
+}
+.halo {
+  position: absolute; inset: -18px; border-radius: 50%;
+  background: radial-gradient(circle, var(--halo) 0%, transparent 68%);
+  opacity: 0;
+}
+.born .halo { opacity: 1; animation: breathe 6000ms ease-in-out infinite alternate; }
+@keyframes breathe {
+  from { transform: scale(1); opacity: .85; }
+  to   { transform: scale(1.015); opacity: 1; }
+}
+.avatar {
+  position: relative; width: 64px; height: 64px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px dashed var(--birth);
+  background: transparent;
+  color: transparent;
+  font-size: 22px; font-weight: 500;
+  transition: background var(--dur-once) var(--ease-settle),
+              border-color var(--dur-once) var(--ease-settle),
+              color var(--dur-normal) var(--ease-settle) 600ms;
+}
+.born .avatar {
+  background: var(--now);
+  border: 1px solid transparent;
+  color: #FBFAF8;
+}
+
+/* ---------- 名片（诞生后浮现） ---------- */
+.card-self {
+  margin-top: var(--s5);
+  opacity: 0; transform: none;
+  transition: opacity var(--dur-normal) var(--ease-settle) 400ms;
+  pointer-events: none;
+}
+.born .card-self { opacity: 1; }
+.name-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--s3); font-size: var(--fs-name); font-weight: 500;
+}
+.presence {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-md); font-weight: 400; color: var(--muted);
+}
+.presence i {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--now);
+  animation: breath-dot 6000ms ease-in-out infinite alternate;
+}
+@keyframes breath-dot { from { opacity: .5; } to { opacity: 1; } }
+
+.chronicle {
+  width: 240px; height: 6px; margin: var(--s3) auto 0;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--birth) 0%, var(--now) 100%);
+}
+.chronicle-note {
+  margin-top: var(--s2);
+  font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--faint);
+}
+.mood {
+  margin-top: var(--s4); font-size: var(--fs-body); color: var(--muted);
+  min-height: 1.8em;
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease-settle) 700ms;
+}
+.born .mood { opacity: 1; }
+
+/* ---------- 五色板 ---------- */
+.palette-label {
+  margin-top: var(--s6); font-size: var(--fs-md); color: var(--faint);
+}
+.palette {
+  display: flex; justify-content: center; gap: var(--s5);
+  margin-top: var(--s4);
+}
+.swatch {
+  appearance: none; border: none; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s2);
+  font-family: var(--f-body);
+}
+.swatch .dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c);
+  outline: 2px solid transparent; outline-offset: 3px;
+  transition: outline-color var(--dur-hover) var(--ease-settle),
+              transform var(--dur-hover) var(--ease-settle);
+}
+.swatch:hover .dot { transform: translateY(-2px); }
+.swatch:focus-visible .dot { outline-color: var(--border); }
+.swatch[aria-pressed="true"] .dot {
+  outline-color: var(--c);
+  box-shadow: inset 0 0 0 1px var(--bg);
+}
+.swatch .label {
+  font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--faint);
+  transition: color var(--dur-hover) var(--ease-settle);
+}
+.swatch .trait {
+  font-size: var(--fs-sm); color: var(--muted);
+  opacity: 0; max-height: 0;
+  transition: opacity var(--dur-hover) var(--ease-settle);
+}
+.swatch:hover .trait, .swatch[aria-pressed="true"] .trait { opacity: 1; max-height: 1.4em; }
+.swatch[aria-pressed="true"] .label { color: var(--muted); }
+
+/* ---------- 主题悬浮开关（双击非交互区浮出） ---------- */
+.fab {
+  position: fixed; right: var(--s4); bottom: var(--s4);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-normal) var(--ease-settle);
+}
+.fab.show { opacity: 1; pointer-events: auto; }
+.fab .disc {
+  position: absolute; inset: 7px; border-radius: 50%;
+  background: linear-gradient(90deg, var(--fg) 50%, transparent 50%);
+  border: 1px solid var(--fg);
+  opacity: .7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-once: 1ms; --dur-normal: 1ms; }
+  .born .halo, .presence i { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="air"></div>
+<div class="watermark">northing</div>
+<div class="corner">specimen · the first color</div>
+
+<main class="stage" id="stage">
+  <p class="eyebrow">northing · onboarding</p>
+  <h1>诞生<span class="latin">a room, until someone arrives</span></h1>
+  <p class="greeting">房间本来是灰白的。<br>选一个颜色，作为开始的理由。</p>
+
+  <div class="avatar-wrap">
+    <div class="halo"></div>
+    <div class="avatar">知</div>
+  </div>
+
+  <div class="card-self">
+    <div class="name-row">
+      知序
+      <span class="presence"><i></i>在场</span>
+    </div>
+    <div class="chronicle"></div>
+    <p class="chronicle-note" id="chrono-note">出生 #DAD6CF ─ 现在 #DAD6CF</p>
+    <p class="mood" id="mood" aria-live="polite"></p>
+  </div>
+
+  <p class="palette-label">你的性格更偏向——</p>
+  <div class="palette" role="group" aria-label="大五人格色板">
+    <button class="swatch" style="--c:#8F7AA0" data-hex="#8F7AA0" data-rgb="143,122,160"
+            data-mood="在想一个没想过的问题。" aria-pressed="false">
+      <span class="dot"></span><span class="label">紫</span><span class="trait">好奇 · 想象 · 不拘一格</span>
+    </button>
+    <button class="swatch" style="--c:#566E8A" data-hex="#566E8A" data-rgb="86,110,138"
+            data-mood="会把事情放好的。" aria-pressed="false">
+      <span class="dot"></span><span class="label">深蓝</span><span class="trait">严谨 · 可靠 · 有条理</span>
+    </button>
+    <button class="swatch" style="--c:#C8714C" data-hex="#C8714C" data-rgb="200,113,76"
+            data-mood="今天想主动找你说说话。" aria-pressed="false">
+      <span class="dot"></span><span class="label">暖珊瑚</span><span class="trait">热情 · 主动 · 善于表达</span>
+    </button>
+    <button class="swatch" style="--c:#85A08E" data-hex="#85A08E" data-rgb="133,160,142"
+            data-mood="你慢慢说，我听着。" aria-pressed="false">
+      <span class="dot"></span><span class="label">柔绿</span><span class="trait">温和 · 体贴 · 善解人意</span>
+    </button>
+    <button class="swatch" style="--c:#3F837B" data-hex="#3F837B" data-rgb="63,131,123"
+            data-mood="有些深的东西，在想。" aria-pressed="false">
+      <span class="dot"></span><span class="label">冷青</span><span class="trait">敏感 · 深刻 · 内敛</span>
+    </button>
+  </div>
+</main>
+
+<button class="fab" id="fab" aria-label="切换亮暗模式"><span class="disc"></span></button>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var stage = document.getElementById('stage');
+  var fab = document.getElementById('fab');
+  var mood = document.getElementById('mood');
+  var note = document.getElementById('chrono-note');
+  var current = null;
+
+  function alphas() {
+    return root.getAttribute('data-theme') === 'dark'
+      ? { wash: 0.10, halo: 0.14 }
+      : { wash: 0.065, halo: 0.10 };
+  }
+
+  function apply(rgb, hex) {
+    var a = alphas();
+    root.style.setProperty('--now', hex);
+    root.style.setProperty('--wash', 'rgba(' + rgb + ',' + a.wash + ')');
+    root.style.setProperty('--halo', 'rgba(' + rgb + ',' + a.halo + ')');
+    note.textContent = '出生 #DAD6CF ─ 现在 ' + hex.toUpperCase();
+  }
+
+  document.querySelectorAll('.swatch').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.swatch').forEach(function (b) {
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.setAttribute('aria-pressed', 'true');
+      current = { rgb: btn.dataset.rgb, hex: btn.dataset.hex };
+      apply(current.rgb, current.hex);
+      document.body.classList.add('born');
+      mood.textContent = btn.dataset.mood;
+    });
+  });
+
+  stage.addEventListener('dblclick', function (e) {
+    if (e.target.closest('button')) return;
+    fab.classList.toggle('show');
+  });
+
+  fab.addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark';
+    if (dark) root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', 'dark');
+    if (current) apply(current.rgb, current.hex);
+  });
+})();
+</script>
+</body>
+</html>

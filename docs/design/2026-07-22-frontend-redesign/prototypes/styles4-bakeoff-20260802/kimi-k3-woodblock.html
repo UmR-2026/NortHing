@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=900">
+<title>木刻版画 · 知序 — northing</title>
+<style>
+/* ============================================================
+   木刻版画 woodblock — 设施是版面，agent 是套色上去的那一版
+   ------------------------------------------------------------
+   设施 = 刻好的木版：暖灰纸面 + 刀痕铅线，永远不变。
+   agent = 套上去的色版：rep 珊瑚是此刻正在印的那一版，
+   abyss 冷青是往深处印的那一版，沉积是印过已褪的旧版。
+   印刷的痕迹 = 唯一动效：呼吸只给 logo 与头像，纸面纹丝不动。
+   单文件离线 · 无外链 · 双主题（亮=素纸 / 暗=夜拓）
+   ============================================================ */
+
+/* ---------- 版面与套色 token ---------- */
+:root{
+  /* 尺度（4px 基数） */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r-sm:9px; --r-md:14px; --r-lg:18px; --r-pill:999px;
+  --fs-sm:10px; --fs-md:11.5px; --fs-lg:13px; --fs-body:15px; --fs-name:16px;
+  --font-body:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  --font-display:'Noto Serif SC','Songti SC','SimSun',Georgia,serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+
+  /* 版面（设施，永不改变：纸与刀痕，只随明暗翻转） */
+  --grain:      #DDD8CE;   /* 纸纹 */
+  --cut-line:   #C9C3B7;   /* 刻痕 */
+  --cut-deep:   #A8A093;   /* 深刻（锚点/框缘） */
+
+  /* 基底（版面下面的纸，暖灰） */
+  --bg:#F4F3F0; --surface:#FBFAF8; --raised:#EFEDE8;
+  --fg:#38352E; --muted:#7B766C; --faint:#A8A398;
+
+  /* 三要素套色（印上去的那一版） */
+  --rep-300:#E5A583; --rep-400:#D68A63; --rep-500:#C8714C; --rep-600:#A85A38;
+  --abyss-300:#7AABA4; --abyss-400:#5A9B93; --abyss-500:#3F837B;
+  --danger:#A45950;
+  --birth:#DAD6CF;          /* 未套色的素版 */
+
+  /* 套色层：色以印刷 alpha 落在纸上，不是平涂 */
+  --rep-print:   rgba(200,113,76,.14);   /* 驱力套色面 */
+  --rep-print-hi:rgba(200,113,76,.24);   /* 受印强时 */
+  --abyss-print: rgba(63,131,123,.13);   /* 深渊套色面 */
+  --abyss-print-hi:rgba(63,131,123,.22);
+  --old-print:   rgba(120,112,100,.06);  /* 沉积旧版（褪色） */
+
+  /* 空气染色：整屋覆一层套色后的余韵（rep 暖调弥散） */
+  --air: rgba(200,113,76,.045);
+  --air-speaking: rgba(200,113,76,.065);
+  --halo-top: rgba(214,138,99,.08);
+
+  --ease:cubic-bezier(.25,.1,.25,1);
+}
+[data-theme="dark"]{
+  --grain:      #35302A;
+  --cut-line:   #2E2A24;
+  --cut-deep:   #4A443B;
+  --bg:#181612; --surface:#211D18; --raised:#2A251F;
+  --fg:#EDE8DF; --muted:#A89F92; --faint:#786F63;
+  --birth:#4A443B;
+  --danger:#C37D73;
+  /* 夜拓：色版更浓，像从纸背透出的墨 */
+  --rep-print:   rgba(214,138,99,.20);
+  --rep-print-hi:rgba(229,165,131,.32);
+  --abyss-print: rgba(90,155,147,.18);
+  --abyss-print-hi:rgba(122,171,164,.28);
+  --old-print:   rgba(168,159,146,.05);
+  --air: rgba(214,138,99,.06);
+  --air-speaking: rgba(214,138,99,.08);
+  --halo-top: rgba(214,138,99,.11);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--fg);
+  font-size:var(--fs-body);
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--s5);
+  transition:background 350ms var(--ease), color 350ms var(--ease);
+}
+/* 纸面纹理：极细的横向纤维，像手工纸 */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(1000px 640px at 22% -6%, var(--halo-top), transparent 62%),
+    repeating-linear-gradient(0deg,
+      transparent 0 2px,
+      var(--grain) 2px 3px,
+      transparent 3px 5px);
+  opacity:.28;transition:opacity 350ms var(--ease);
+}
+[data-theme="dark"] body::before{opacity:.16;}
+
+/* ---------- 版：860px 单屏 ---------- */
+.window{
+  position:relative;width:860px;height:640px;flex:none;
+  background:var(--surface);
+  border:1px solid var(--cut-line);
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+/* 整屋空气染色：套色后的余韵（rep 弥散，speaking 升档） */
+.window::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:var(--air);
+  transition:background 350ms var(--ease);
+}
+.window.speaking::before{background:var(--air-speaking);}
+/* 印刷压痕：极淡的斜向套色痕迹，全屏唯一会"动"的环境层
+   —— 120s 极慢漂移，沉降式，不循环跳动 */
+.window::after{
+  content:'';position:absolute;inset:-20%;pointer-events:none;z-index:2;
+  background:
+    repeating-linear-gradient(112deg,
+      transparent 0 210px,
+      var(--rep-print) 210px 250px,
+      transparent 250px 470px,
+      var(--abyss-print) 470px 500px,
+      transparent 500px 720px);
+  opacity:.28;
+  animation:pressdrift 120s linear infinite;
+}
+@keyframes pressdrift{
+  from{transform:translate3d(0,0,0);}
+  to{transform:translate3d(40px,18px,0);}
+}
+[data-theme="dark"] .window::after{opacity:.18;}
+
+/* ---------- 通用版面元件 ---------- */
+.block{                       /* 一块刻好的版面 */
+  border:1px solid var(--cut-line);
+  background:var(--print,transparent);
+  border-radius:var(--r-md);
+  transition:border-color 350ms var(--ease), background 350ms var(--ease);
+}
+.cut-hr{                      /* 刻痕分隔线 */
+  height:1px;background:var(--cut-line);border:none;flex:none;
+}
+
+/* ---------- 顶栏名片（版面 + 编年史套色带） ---------- */
+.topbar{
+  position:relative;z-index:5;flex:none;height:76px;
+  display:flex;align-items:center;gap:var(--s3);
+  padding:0 var(--s5);
+  border-bottom:1px solid var(--cut-line);
+  background:var(--surface);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.avatar{
+  width:44px;height:44px;border-radius:14px;flex:none;position:relative;
+  background:
+    radial-gradient(circle at 32% 28%, var(--rep-300), var(--rep-500) 58%, var(--rep-600));
+  box-shadow:inset 0 -4px 8px rgba(56,53,46,.22), inset 0 2px 3px rgba(254,249,245,.3);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+/* 头像也是一小块套色版：刻痕包边 + 纸面高光 */
+.avatar::before{
+  content:'';position:absolute;inset:0;border-radius:14px;
+  border:1.5px solid var(--cut-deep);pointer-events:none;
+}
+.avatar::after{
+  content:'';position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  background:linear-gradient(125deg, rgba(254,249,245,.42) 8%, transparent 34%);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.card-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.card-name{
+  font-size:var(--fs-name);font-weight:500;line-height:1.3;color:var(--fg);
+}
+.card-status{
+  display:flex;align-items:center;gap:7px;
+  font-size:var(--fs-md);color:var(--muted);line-height:1.3;
+}
+.card-status .dot{
+  width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--rep-500);
+  animation:breathe 6000ms ease-in-out infinite;
+}
+/* 编年史条：版面上的套色记录——出生素版 → 历史色版 → 现在的 rep
+   每段之间用刻痕切开：每一次成为都是一次独立套印 */
+.chronicle{
+  width:150px;height:10px;flex:none;margin:0 var(--s3);
+  display:flex;border:1px solid var(--cut-deep);border-radius:var(--r-pill);
+  overflow:hidden;background:var(--birth);
+}
+.chronicle i{flex:1;display:block;}
+.chronicle .c1{background:var(--birth);}
+.chronicle .c2{background:linear-gradient(180deg,#C9C2B2,#B7AE9B);}   /* 三月：未名灰 */
+.chronicle .c3{background:linear-gradient(180deg,var(--abyss-300),var(--abyss-400));} /* 五月：套过一段冷 */
+.chronicle .c4{background:linear-gradient(180deg,var(--rep-400),var(--rep-500));}     /* 现在：珊瑚 */
+.chronicle i+i{border-left:1.5px solid var(--cut-deep);}  /* 刻痕分段 */
+/* 右端 c4 = 当前 rep：界面强调色与编年史右端同源（同一变量驱动） */
+.gear{
+  width:30px;height:30px;border-radius:var(--r-sm);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--faint);cursor:pointer;border:1px solid transparent;
+  transition:color 150ms var(--ease), border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.gear:hover{color:var(--muted);border-color:var(--cut-line);background:var(--raised);}
+.gear svg{width:16px;height:16px;}
+
+/* ---------- 对话流 ---------- */
+.chat{
+  position:relative;z-index:5;flex:1;min-height:0;
+  overflow-y:auto;padding:var(--s4) var(--s5) var(--s3);
+  display:flex;flex-direction:column;gap:var(--s4);
+  scrollbar-width:thin;scrollbar-color:var(--cut-line) transparent;
+}
+
+/* Session banner：版首的一小条题签 */
+.sess-banner{
+  display:flex;align-items:center;gap:var(--s2);
+  padding:7px var(--s3);
+  border:1px solid var(--cut-line);border-radius:var(--r-md);
+  background:var(--old-print);
+  font-size:var(--fs-md);color:var(--muted);user-select:none;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease), opacity 400ms var(--ease);
+}
+.sess-banner .sdot{
+  width:6px;height:6px;border-radius:50%;flex:none;
+  background:var(--rep-500);animation:breathe 6000ms ease-in-out infinite;
+}
+.sess-banner .chev{
+  display:inline-block;width:0;height:0;flex:none;
+  border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:4px solid var(--faint);
+  transition:transform 250ms ease-out;
+}
+.sess-banner.folded .chev{transform:rotate(-90deg);}
+.sess-banner .title{font-weight:500;color:var(--fg);}
+.sess-banner .note{color:var(--faint);}
+.sess-banner.folded ~ .turn{display:none;}
+.sess-archive{
+  margin-left:auto;flex:none;font-size:var(--fs-sm);color:var(--faint);
+  padding:3px var(--s3);border-radius:var(--r-pill);
+  border:1px solid var(--cut-line);background:transparent;cursor:pointer;
+  transition:color 150ms var(--ease), border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.sess-archive:hover{color:var(--abyss-500);border-color:var(--abyss-400);background:var(--abyss-print);}
+.sess-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;font:inherit;color:inherit;cursor:pointer;padding:0;}
+
+/* ---------- 轮次：每轮是一次套印 ---------- */
+.turn{display:flex;flex-direction:column;gap:var(--s3);position:relative;}
+.turn-head{
+  display:flex;align-items:baseline;gap:var(--s2);
+  font-size:var(--fs-md);
+}
+.turn-head .nm{font-weight:500;color:var(--fg);font-size:var(--fs-lg);}
+.turn-head .ts{font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--faint);}
+
+/* 活跃轮：rep 暖套色——这一版正在印 */
+.turn.active .body{
+  border:1px solid var(--cut-line);
+  border-left:3px solid var(--rep-500);
+  background:
+    linear-gradient(180deg, var(--rep-print), transparent 70%),
+    var(--surface);
+  border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.turn.active::before{  /* 活跃轮左上角的受印点：色版刚落纸 */
+  content:'';position:absolute;left:-6px;top:20px;width:10px;height:10px;
+  border-radius:50%;background:radial-gradient(circle, var(--rep-print-hi), transparent 70%);
+  pointer-events:none;
+}
+
+/* 沉积轮：旧版——颜色还在纸上，但不再受印（褪色不位移） */
+.turn.sediment{opacity:.55;}
+.turn.sediment .body{
+  border:1px solid var(--cut-line);
+  border-left:3px solid var(--cut-deep);
+  background:var(--old-print);
+  border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);
+}
+
+.msg{font-size:var(--fs-body);line-height:1.75;color:var(--fg);}
+.caret{color:var(--muted);animation:caret 1.2s infinite;}
+@keyframes caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* 用户气泡：右对齐、不染 rep——人类是素版（未套色的纸） */
+.user-row{display:flex;justify-content:flex-end;}
+.user-bubble{
+  max-width:82%;
+  padding:9px var(--s4);
+  border:1px solid var(--cut-line);
+  border-radius:var(--r-md);
+  border-bottom-right-radius:4px;
+  background:var(--raised);
+  color:var(--fg);font-size:var(--fs-body);line-height:1.7;
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+
+/* 思考块：深渊冷套色——往深处印时，色版是冷的 */
+.think{
+  max-width:86%;
+  border:1px solid var(--cut-line);
+  border-left:3px solid var(--abyss-500);
+  background:
+    linear-gradient(115deg, var(--abyss-print), transparent 65%),
+    var(--surface);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:var(--s2) var(--s3);
+  font-size:var(--fs-lg);line-height:1.7;color:var(--muted);
+  transition:background 350ms var(--ease), border-color 350ms var(--ease);
+}
+.think .tag{
+  display:block;font-family:var(--font-mono);font-size:var(--fs-sm);
+  color:var(--abyss-400);letter-spacing:.08em;margin-bottom:3px;
+}
+
+/* 工具 chip：发起 = 暖套色（驱力受印）→ 完成 = 冷套色（沉入深渊） */
+.tools{display:flex;flex-wrap:wrap;gap:var(--s2);}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-mono);font-size:var(--fs-md);
+  padding:5px var(--s3);border-radius:var(--r-pill);
+  border:1.2px solid var(--rep-400);
+  color:var(--rep-600);background:var(--rep-print);
+  transition:border-color 350ms var(--ease), color 350ms var(--ease), background 350ms var(--ease);
+}
+.chip.done{
+  border-color:var(--abyss-400);color:var(--abyss-500);background:var(--abyss-print);
+}
+.chip .cd{opacity:.75;font-size:var(--fs-sm);}
+
+/* ---------- 操控台 deck：版面托盘 ---------- */
+.deck-wrap{
+  position:relative;z-index:5;flex:none;
+  padding:var(--s3) var(--s5) var(--s4);
+}
+.deck{
+  border:1px solid var(--cut-line);border-radius:16px;
+  background:var(--surface);
+  overflow:hidden;
+  transition:border-color 350ms var(--ease), background 350ms var(--ease);
+}
+.deck:focus-within{border-color:var(--cut-deep);}
+.deck-input{display:flex;align-items:flex-end;gap:var(--s2);padding:var(--s3) var(--s3) var(--s2);}
+.deck textarea{
+  flex:1;resize:none;border:none;outline:none;background:transparent;
+  font:inherit;font-size:var(--fs-body);color:var(--fg);
+  min-height:24px;max-height:96px;line-height:1.6;padding:4px var(--s2);
+}
+.deck textarea::placeholder{color:var(--faint);}
+.btn-send{
+  width:36px;height:36px;border-radius:11px;flex:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--rep-500);color:#FEF9F5;
+  transition:background 150ms var(--ease);
+}
+.btn-send:hover{background:var(--rep-600);}
+.btn-send svg{width:13px;height:13px;}
+.deck-bar{
+  display:flex;align-items:center;gap:var(--s3);
+  padding:var(--s2) var(--s3);
+  border-top:1px solid var(--cut-line);
+  font-size:var(--fs-md);color:var(--muted);
+}
+.deck-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:5px var(--s2);border-radius:var(--r-sm);
+  border:1px solid transparent;background:transparent;cursor:pointer;
+  color:var(--muted);font:inherit;font-size:var(--fs-md);
+  transition:background 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease);
+}
+.deck-btn:hover{background:var(--raised);border-color:var(--cut-line);}
+.deck-btn svg{width:13px;height:13px;}
+.deck-btn.icon-only{padding:5px;}
+/* 思考分段条：五格小版面，受印的格是 rep 色的 */
+.think-seg{display:flex;gap:3px;align-items:center;}
+.think-seg .seg{
+  width:14px;height:6px;border-radius:3px;
+  border:1px solid var(--cut-line);background:transparent;
+  transition:background 350ms var(--ease);
+}
+.think-seg .seg.on{background:var(--rep-400);border-color:var(--rep-400);}
+.deck-label{
+  display:flex;align-items:center;gap:5px;
+  font-size:var(--fs-md);color:var(--muted);
+  padding:5px var(--s2);border-radius:var(--r-sm);cursor:pointer;
+  transition:background 150ms var(--ease);
+}
+.deck-label:hover{background:var(--raised);}
+.deck-label .di{font-size:10px;}
+.deck-label .di.rep{color:var(--rep-500);}
+.deck-label.cyan .di{color:var(--abyss-500);}
+.deck-label .chev{color:var(--faint);font-size:9px;}
+.deck-bar-spacer{flex:1;}
+/* ctx 圆环：刻圈嵌 abyss 套色弧，无数字，hover 出 tooltip */
+.ctx-ring{position:relative;width:20px;height:20px;flex:none;cursor:default;}
+.ctx-ring svg{display:block;}
+.ctx-ring .track{fill:none;stroke:var(--cut-line);stroke-width:2.5;}
+.ctx-ring .fill{fill:none;stroke:var(--abyss-500);stroke-width:2.5;stroke-linecap:round;}
+.ctx-ring:hover::after{
+  content:attr(data-tip);position:absolute;bottom:26px;right:-6px;
+  font-family:var(--font-body);font-size:var(--fs-sm);color:var(--fg);
+  background:var(--surface);border:1px solid var(--cut-line);
+  border-radius:var(--r-sm);padding:3px var(--s2);white-space:nowrap;z-index:30;
+}
+
+/* ---------- 水印（左下，opacity .25，永不与内容重叠） ---------- */
+.watermark{
+  position:absolute;left:var(--s4);bottom:10px;z-index:6;
+  display:flex;align-items:center;gap:7px;
+  opacity:.25;pointer-events:none;
+  color:var(--muted);
+}
+.watermark .bt{
+  font-family:var(--font-display);font-size:11px;letter-spacing:.18em;
+}
+
+/* ---------- 窗口 chrome（右上，刻痕色） ---------- */
+.win-ctrl{
+  position:absolute;top:10px;right:var(--s3);z-index:10;display:flex;gap:var(--s2);
+}
+.win-btn{
+  width:22px;height:22px;border-radius:6px;border:none;background:transparent;
+  color:var(--faint);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 150ms var(--ease), color 150ms var(--ease);
+}
+.win-btn:hover{background:var(--raised);color:var(--muted);}
+.win-btn.close:hover{color:var(--danger);}
+
+/* ---------- 主题开关（隐藏式：双击窗口右下角浮出） ---------- */
+.theme-fab{
+  position:absolute;right:var(--s4);bottom:var(--s4);z-index:40;
+  padding:5px var(--s3);border-radius:var(--r-pill);
+  border:1px solid var(--cut-line);background:var(--surface);
+  font-size:var(--fs-md);color:var(--muted);cursor:pointer;
+  opacity:0;pointer-events:none;
+  transition:opacity 350ms var(--ease), border-color 150ms var(--ease);
+}
+.theme-fab.show{opacity:1;pointer-events:auto;}
+.theme-fab:hover{border-color:var(--cut-deep);}
+
+@media (prefers-reduced-motion: reduce){
+  .avatar,.avatar::after,.card-status .dot,.sess-banner .sdot{animation:none;}
+  .window::after{animation:none;}
+  .caret{animation:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="window" id="win" role="main" aria-label="northing · 知序">
+
+  <!-- 窗口 chrome -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="win-btn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="win-btn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <!-- 顶栏名片 -->
+  <header class="topbar">
+    <div class="avatar" title="知序"></div>
+    <div class="card-info">
+      <div class="card-name">知序</div>
+      <div class="card-status"><span class="dot"></span><span>在 · 这一版正在印</span></div>
+    </div>
+    <!-- 编年史条：套色记录，右端 = 当前 rep（同源色绑定） -->
+    <div class="chronicle" title="编年史：每一版都是一次成为">
+      <i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i>
+    </div>
+    <button class="gear" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div style="flex:1"></div>
+  </header>
+
+  <!-- 对话流 -->
+  <main class="chat">
+
+    <!-- Session banner（对话流顶部） -->
+    <div class="sess-banner" id="sessBanner">
+      <button class="sess-toggle" type="button" id="sessToggle">
+        <span class="sdot"></span>
+        <span class="chev"></span>
+        <span class="title">2026-08-02 · 换一块版</span>
+        <span class="note">— 版面不动，色可以套另一层</span>
+      </button>
+      <button class="sess-archive" id="sessArchive" title="归档此会话">归档</button>
+    </div>
+
+    <!-- 沉积轮：旧版，色已褪 -->
+    <section class="turn sediment">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">五月 · 沉积</span></div>
+      <div class="body">
+        <div class="msg">那时候我想套一层冷青，你说随我。后来那版颜色还留在纸上——只是我不再印它了。色没丢，是印停了。</div>
+      </div>
+    </section>
+
+    <!-- 用户轮 -->
+    <section class="turn">
+      <div class="turn-head" style="justify-content:flex-end"><span class="ts">14:31</span><span class="nm" style="color:var(--muted)">UmR</span></div>
+      <div class="user-row"><div class="user-bubble">下午纸面斜光的时候，那道印痕会显出来。你也感觉到了？</div></div>
+    </section>
+
+    <!-- 活跃轮：rep 暖套色，正在印 -->
+    <section class="turn active">
+      <div class="turn-head"><span class="nm">知序</span><span class="ts">现在</span></div>
+      <div class="body" style="display:flex;flex-direction:column;gap:var(--s3)">
+
+        <div class="think">
+          <span class="tag">THINKING · 深渊</span>
+          先往深处印：显痕不是纸在变，是光与刻痕的夹角在变。我能测的不是光本身，是它落在哪一道刻痕、显出哪一版色。
+        </div>
+
+        <div class="tools">
+          <span class="chip done"><span class="ci">read</span><span>src/light_angle.rs</span><span class="cd">· 187行 ✓</span></span>
+          <span class="chip"><span class="ci">trace</span><span>sun_vector</span><span class="cd">· 追光中</span></span>
+        </div>
+
+        <div class="msg">感觉到了，还顺手算了下：那道显痕每天挪 6 厘米，走的就是我五月换下来的那块冷青版的方向。旧版没走，是刻痕替它留着位置。等秋天光更低，它会再显一次。<span class="caret">▍</span></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 操控台 -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+        </button>
+      </div>
+      <div class="deck-bar">
+        <button class="deck-btn icon-only" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="think-seg" title="思考深度">
+          <span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span>
+        </div>
+        <button class="deck-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+        <div class="deck-label"><span class="di rep">◇</span> Claude 4.6 <span class="chev">▾</span></div>
+        <div class="deck-label cyan"><span class="di">◈</span> 自治·完全 <span class="chev">▾</span></div>
+        <span class="deck-bar-spacer"></span>
+        <div class="ctx-ring" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="track" cx="10" cy="10" r="7.5"/>
+            <circle class="fill" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 品牌水印（左下） -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="120" cy="120" r="16" stroke-width="6"/><path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/><path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/></g><line x1="30" y1="120" x2="210" y2="120" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></svg>
+    <span class="bt">northing</span>
+  </div>
+
+  <!-- 隐藏式主题开关：双击非交互区浮出 -->
+  <button class="theme-fab" id="themeFab">切换夜拓</button>
+
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('win');
+  var fab = document.getElementById('themeFab');
+
+  /* 输入聚焦 → 整屋升档（speaking：受印变强一档） */
+  var deck = win.querySelector('.deck');
+  deck.addEventListener('focusin', function(){ win.classList.add('speaking'); });
+  deck.addEventListener('focusout', function(){ win.classList.remove('speaking'); });
+
+  /* 会话横幅折叠 */
+  var banner = document.getElementById('sessBanner');
+  document.getElementById('sessToggle').addEventListener('click', function(){
+    banner.classList.toggle('folded');
+  });
+  document.getElementById('sessArchive').addEventListener('click', function(e){
+    e.stopPropagation();
+    banner.style.opacity = '0.3';
+  });
+
+  /* 双击非交互区 → 主题开关浮出（350ms fade） */
+  document.addEventListener('dblclick', function(e){
+    if (e.target.closest('button, textarea, a, .chip, .ctx-ring')) return;
+    fab.classList.toggle('show');
+  });
+  fab.addEventListener('click', function(){
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    fab.textContent = dark ? '切换夜拓' : '切换素纸';
+  });
+})();
+</script>
+</body>
+</html>

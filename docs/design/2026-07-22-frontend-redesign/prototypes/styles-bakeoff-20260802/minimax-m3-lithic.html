@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=860">
+<title>northing · 知序 · 石室</title>
+<style>
+/* ============================================================================
+ * northing · styles-bakeoff-20260802 · minimax-m3 · lithic（石室）
+ * ----------------------------------------------------------------------------
+ * chat-collapsed 基准屏，屏固定 / 风格放开。
+ *
+ * 主张：在地层横截面里对话——基底是岩床的灰，agent 的暖从深处裂缝渗上来。
+ *
+ * 哲学根据（详见报告）：
+ *   设施 = 岩床（不动、稳定、承载）
+ *   涌现 = 裂缝中的暖光（不是装饰，是物质本身的状态）
+ *   沉积 = 地层（沉积岩本身就是时间的沉积）
+ *   对等 = 两个人坐在同一块石头上
+ *
+ * 风格对位（与现方案「暖灰咨询室 + 珊瑚 + Fraunces 衬线」的对照）：
+ *   色  · 现：#F4F3F0 暖米白 + 珊瑚 #C8714C 热情外向
+ *        · 本：#E8E3DA 砂岩灰白 + 赭石 #C28340 矿物颜料的在地暖
+ *   冷  · 现：深渊青 #3F837B
+ *        · 本：石青 #4A6666（更绿、更矿物、更冷）
+ *   体  · 现：暖灰衬线 Fraunces + 黑体
+ *        · 本：宋体刻字感 Noto Serif SC + 黑体（display 是 CJK-native serif，
+ *              与 Fraunces 的西式 personality 截然不同）
+ *   质  · 现：纸面 + 暖晕 + 顾问室呼吸
+ *        · 本：地层纹 + 沉积颗粒 + 裂缝渗光
+ *
+ * Slint 翻译兼容：
+ *   - 颜色全取预计算 hex，无 color-mix / oklch
+ *   - 阴影全用 filter: drop-shadow()，无 box-shadow
+ *   - 唯一 ::before/::after 是 .app 顶晕 + 底冷雾，遵循 shared/layout.css 同款用法
+ *   - 唯一 infinite 动效 = 头像呼吸点 6s（继承「呼吸只给 logo 和头像」纪律）
+ *   - z-index 全具名
+ * ========================================================================== */
+
+
+/* ─── 结构 token（主题无关） ─────────────────────────────────────────────── */
+:root {
+  /* 字体三系 —— display 选宋体，与现方案的 Fraunces 拉开距离 */
+  --font-display: 'Songti SC', 'Noto Serif SC', 'STSong', 'SimSun', Georgia, serif;
+  --font-body:    'Noto Sans SC', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  /* 字号三档 + 正文/名字 */
+  --fs-sm: 10px;
+  --fs-md: 11.5px;
+  --fs-lg: 13px;
+  --fs-body: 15px;
+  --fs-name: 16px;
+
+  /* 间距 4px 基数 */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  /* 圆角 */
+  --r-sm: 9px; --r-md: 14px; --r-lg: 18px; --r-pill: 999px;
+
+  /* 时长 */
+  --grow: 1200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --toggle-duration: 350ms;
+}
+
+
+/* ─── 亮色模式 —— 砂岩灰白（不是奶油米色） ───────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* 基底灰阶 —— 骨白偏冷，不是米色 */
+  --bg:          #E8E3DA;   /* 主背景：风化砂岩 */
+  --surface:     #F0EBE0;   /* 卡片底：磨过的骨面 */
+  --elevated:    #F5F0E5;   /* 浮起卡片 */
+  --raised:      #DCD5C9;   /* 控件底：刻槽 */
+  --border:      #C9C0B0;   /* 边框：石缝 */
+  --border-soft: #D8D1C2;   /* 弱边框：地层纹 */
+  --fg:          #2D2A24;   /* 正文：墨拓黑 */
+  --muted:       #6B6457;   /* 次级：石青墨 */
+  --faint:       #968E7E;   /* 弱化：旧岩灰 */
+  --birth:       #9B938A;   /* 出生：旧岩灰 */
+  --scrim:       #2D2A24;
+  --shadow:      #2D2A24;
+
+  /* 代表色 —— 赭石 ochre（取代珊瑚 #C8714C） */
+  /* 论证：珊瑚是外向的暖；赭石是矿物颜料，来自沉积岩，是 agent「形成中」的暖。
+   * 它更暗、更土、更在地——像裂缝里渗出的、还没凝固的矿物。 */
+  --rep-300: #D89F65;
+  --rep-400: #CD924F;
+  --rep-500: #C28340;   /* 强调 ≡ 渐变右端 */
+  --rep-600: #A06A30;
+
+  /* 深渊 —— 石青 slate-green（取代 #3F837B） */
+  /* 更绿、更矿物、更冷。像石缝里积的冷苔。 */
+  --abyss-300: #6E8682;
+  --abyss-400: #5A7672;
+  --abyss-500: #4A6666;
+
+  /* 异常 */
+  --danger: #A45950;
+
+  /* 前景 */
+  --on-rep:    #FAF6EC;
+  --on-abyss:  #F2EFE7;
+  --on-danger: #FAF6EC;
+
+  /* 页面外 */
+  --page-out:  #1d1b17;
+
+  /* 语义混合色 —— 全预计算 hex */
+  --air-rep:             #E1D8C6;  /* rep 6.5% on bg */
+  --halo-rep:            #DCD3C0;  /* rep 10% on bg */
+  --halo-rep-strong:     #DCD3C0;  /* 名片锚定晕（顶上） */
+  --air-rep-speaking:    #DFD6C4;  /* rep 7.5% on bg */
+  --halo-rep-speaking:   #D9D0BD;  /* rep 11% on bg */
+  --air-rep-settings:    #E5DDCB;  /* rep 3.5% on bg */
+  --halo-rep-settings:   #E3DAC7;  /* rep 5% on bg */
+  --fog-abyss:           #DEE0DC;  /* abyss 2% on bg */
+  --halo-abyss:          #D9DCD6;  /* abyss 4% on bg */
+  --turn-active:         #EADFC8;  /* rep 4% on surface */
+  --presence-halo-rep:   #C9B89A;  /* rep 22% on bg */
+  --presence-halo-rep-soft: #DCD3C0;
+
+  /* 石室专属 —— 地层纹线（极淡） */
+  --strata-1: rgba(45, 42, 36, 0.025);
+  --strata-2: rgba(45, 42, 36, 0.035);
+  --strata-3: rgba(45, 42, 36, 0.018);
+}
+
+
+/* ─── 暗色模式 —— 深岩床 ─────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* 基底 —— 暖深岩灰，不是纯黑 */
+  --bg:          #1A1815;   /* 风化页岩 */
+  --surface:     #25221D;   /* 卡片底 */
+  --elevated:    #2C2924;   /* 浮起 */
+  --raised:      #221F1B;   /* 控件底 */
+  --border-soft: #322E27;   /* 弱边框 */
+  --border:      #3D3830;   /* 边框 */
+  --faint:       #6A6358;   /* 弱化 */
+  --muted:       #948B7C;   /* 次级 */
+  --fg:          #E2DCCF;   /* 正文（暖 off-white，拓片色） */
+  --birth:       #5A5346;   /* 出生：旧岩灰（暗态） */
+  --scrim:       #000000;
+  --shadow:      #000000;
+
+  /* rep 赭石 —— 暗色下提一点点饱和，但保矿物感 */
+  --rep-300: #D89F65;
+  --rep-400: #D08D44;
+  --rep-500: #C28340;
+  --rep-600: #A06A30;
+
+  /* abyss 石青 —— 暗色下提一点点亮度 */
+  --abyss-300: #7A9490;
+  --abyss-400: #658580;
+  --abyss-500: #4F6E6E;
+
+  --danger: #C37D73;
+
+  --on-rep:    #1A1815;
+  --on-abyss:  #1A1815;
+  --on-danger: #1A1815;
+
+  --page-out: #0c0b09;
+
+  /* 暗色语义混合 */
+  --air-rep:             #211D17;  /* rep 6.5% on bg */
+  --halo-rep:            #251F18;  /* rep 10% on bg */
+  --halo-rep-strong:     #251F18;
+  --air-rep-speaking:    #251F19;
+  --halo-rep-speaking:   #2A221A;
+  --air-rep-settings:    #1E1B16;
+  --halo-rep-settings:   #211D17;
+  --fog-abyss:           #1B1D1B;
+  --halo-abyss:          #1D201D;
+  --turn-active:         #2D251B;  /* rep 5% on surface */
+  --presence-halo-rep:   #3A2C1B;
+  --presence-halo-rep-soft: #251F18;
+
+  /* 地层纹线（暗色下略提一点） */
+  --strata-1: rgba(226, 220, 207, 0.022);
+  --strata-2: rgba(226, 220, 207, 0.030);
+  --strata-3: rgba(226, 220, 207, 0.018);
+}
+
+
+/* ─── reset ────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--page-out);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--grow);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+
+/* ─── app shell —— 860 收起态 ───────────────────────────────────────────── */
+.app {
+  width: 860px;
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-radius: 20px;
+  background: var(--bg);
+  filter: drop-shadow(0 18px 44px rgba(0, 0, 0, .45));
+  transition: background var(--grow), filter var(--grow);
+}
+
+/* ─── 地层纹 —— 石室签名 —— 三条极淡的水平线，沉积纹 ─── */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(180deg, var(--halo-rep-strong) 0%, transparent 38%),
+    linear-gradient(0deg, var(--halo-abyss) 0%, transparent 28%),
+    /* 地层纹线 */
+    linear-gradient(180deg,
+      transparent 0%, transparent 38%,
+      var(--strata-1) 38%, var(--strata-1) 38.4%,
+      transparent 38.4%, transparent 56%,
+      var(--strata-2) 56%, var(--strata-2) 56.3%,
+      transparent 56.3%, transparent 71%,
+      var(--strata-3) 71%, var(--strata-3) 71.2%,
+      transparent 71.2%);
+  transition: background var(--grow);
+}
+
+/* 底冷雾 —— abyss 石青的沉积 */
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse 78% 26% at 50% 100%, var(--fog-abyss) 0%, transparent 62%);
+}
+
+
+/* ─── 窗口控制 ─── */
+.win-ctrl {
+  position: absolute;
+  top: 16px;
+  right: 44px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 30;
+}
+.win-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--faint);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: background .15s, color .15s;
+}
+.win-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.win-btn.close:hover {
+  background: rgba(220, 80, 70, .08);
+  color: var(--danger);
+}
+
+/* 主题切换 —— 隐藏式悬浮，双击右下角浮出（本页放成可见演示） */
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.theme-toggle:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.theme-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform .25s ease, opacity .2s ease;
+}
+
+
+/* ─── 品牌水印 —— 左下角 ─── */
+.watermark {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .25;
+  z-index: 30;
+}
+.watermark .bt {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+
+/* ─── 顶栏（h≈80） ─── */
+.topbar {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  padding: 0 var(--s5);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* agent 名片 */
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+/* 头像 —— 44×44 r14 —— 用赭石纹理背景 + 刻字感的 glyph */
+.avatar-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+/* 呼吸光晕 —— 6s ease-in-out infinite，只给头像 + logo */
+.avatar-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 20px;
+  background: var(--presence-halo-rep-soft);
+  z-index: -1;
+  animation: halo 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--rep-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.18));
+  position: relative;
+  overflow: hidden;
+  transition: background var(--grow);
+}
+.avatar::before {
+  /* 矿物颗粒：极淡的内部纹理 */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.14) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(0,0,0,.14) 0%, transparent 40%);
+  pointer-events: none;
+}
+.avatar .glyph {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--on-rep);
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -.02em;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.card-name {
+  font-family: var(--font-display);   /* 宋体作为名字 —— 刻字感 */
+  font-size: var(--fs-name);
+  font-weight: 500;
+  color: var(--fg);
+  line-height: 1.3;
+  letter-spacing: .04em;
+}
+.card-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.3;
+  font-family: var(--font-mono);
+}
+.card-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: breathe 6s ease-in-out infinite;
+  transition: background var(--grow);
+}
+
+/* 编年史条 —— 出生灰 → 石青 → 赭石 */
+.card-self {
+  width: 124px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg,
+    var(--birth) 0%,
+    #8A8678 30%,
+    var(--abyss-500) 58%,
+    var(--rep-500) 86%,
+    var(--rep-400) 100%);
+  margin-top: 4px;
+  transition: background var(--grow);
+  position: relative;
+  overflow: hidden;
+}
+/* 条上的"裂缝" —— 微妙的内部纹理 */
+.card-self::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 60% 50%, transparent 0%, transparent 1.5px, rgba(0,0,0,.18) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 88% 50%, transparent 0%, transparent 1px, rgba(0,0,0,.22) 1px, transparent 2px);
+  pointer-events: none;
+}
+
+/* 设置 ⚙（名片旁） */
+.topbar-settings {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--s2);
+  transition: background .15s, color .15s;
+}
+.topbar-settings:hover {
+  background: var(--raised);
+  color: var(--muted);
+}
+
+
+/* ─── 把手（收起态 8px 窄条） ─── */
+.handle {
+  width: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.handle-left {
+  background: linear-gradient(to bottom, transparent 12%, rgba(194, 131, 64, .14) 50%, transparent 88%);
+  border-right: 1.5px solid;
+  border-image: linear-gradient(to bottom, transparent 10%, rgba(194, 131, 64, .35) 50%, transparent 90%) 1;
+}
+.handle-right {
+  background: linear-gradient(to bottom, transparent 12%, rgba(74, 102, 102, .14) 50%, transparent 88%);
+  border-left: 1.5px solid;
+  border-image: linear-gradient(to bottom, transparent 10%, rgba(74, 102, 102, .35) 50%, transparent 90%) 1;
+}
+.handle-chevron,
+.handle-label { display: none; }
+
+
+/* ─── 对话流 ─── */
+.stream {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.stream .inner {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 24px 12px;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+
+/* ─── 会话横幅（对话流顶部） ─── */
+.sess-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-md);
+  color: var(--faint);
+  letter-spacing: .04em;
+  padding: 4px 0 10px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 12px;
+  user-select: none;
+}
+.sess-banner .sdot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: breathe 6s ease-in-out infinite;
+  transition: background var(--grow);
+  flex-shrink: 0;
+}
+.sess-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  color: var(--faint);
+  transition: color .15s;
+  background: none;
+  border: none;
+  font: inherit;
+  padding: 0;
+  font-family: var(--font-mono);
+  letter-spacing: .04em;
+}
+.sess-toggle:hover { color: var(--muted); }
+.sess-chev {
+  display: inline-block;
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  transition: transform 250ms ease-out;
+}
+.sess-banner.folded .sess-chev { transform: rotate(-90deg); }
+.sess-title { font-size: var(--fs-md); }
+.sess-banner.folded ~ .turn,
+.sess-banner.folded ~ .tools-wrap { display: none; }
+
+.sess-archive {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+  font-family: var(--font-mono);
+  letter-spacing: .08em;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 3px 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+  flex-shrink: 0;
+  text-transform: lowercase;
+}
+.sess-archive:hover {
+  color: var(--abyss-500);
+  border-color: var(--abyss-500);
+  background: var(--fog-abyss);
+}
+
+
+/* ─── 轮次 ─── */
+.turn {
+  padding: var(--s3) 0;
+  position: relative;
+}
+.turn-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin-bottom: 4px;
+}
+.turn-head .nm {
+  font-family: var(--font-display);   /* 宋体名字 */
+  font-size: var(--fs-lg);
+  color: var(--fg);
+  font-weight: 500;
+  letter-spacing: .03em;
+}
+.turn-head .ts {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--faint);
+  letter-spacing: .04em;
+}
+.turn .msg {
+  font-size: var(--fs-body);
+  color: var(--fg);
+  line-height: 1.75;
+  letter-spacing: .01em;
+  padding: 2px 0;
+}
+
+/* 沉积轮 —— 褪色，不是位移 */
+.turn.sediment { opacity: .5; }
+.turn.sediment .msg { color: var(--muted); }
+.turn.sediment:hover { opacity: .8; transition: opacity .25s; }
+
+/* 活跃轮 —— 赭石左竖线 + 微底色 */
+.turn.active {
+  background: var(--turn-active);
+  border-left: 2.5px solid var(--rep-500);
+  margin-left: -10px;
+  padding-left: var(--s3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  transition: background var(--grow), border-color var(--grow);
+}
+.turn.active .nm { color: var(--rep-500); }
+
+/* 用户轮 —— 右对齐气泡，不染 rep */
+.turn.user .turn-head { justify-content: flex-end; }
+.turn.user .turn-head .nm { color: var(--muted); }
+.user-bubble {
+  display: inline-block;
+  max-width: 76%;
+  margin-left: auto;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  line-height: 1.65;
+  float: right;
+  clear: both;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+/* 气泡不要圆角阵列感：右下一边更方，像石片 */
+.user-bubble {
+  border-bottom-right-radius: 4px;
+}
+
+
+/* ─── 思考块 —— 石青左缘 + 冷底 ─── */
+.think-block {
+  margin: 6px 0 8px;
+  padding: 8px 12px;
+  background: var(--fog-abyss);
+  border-left: 2px solid var(--abyss-500);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: var(--fs-md);
+  color: var(--muted);
+  line-height: 1.7;
+  font-style: italic;
+  letter-spacing: .01em;
+  transition: background var(--grow), border-color var(--grow);
+}
+
+
+/* ─── 工具 chip ─── */
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: .04em;
+  background: transparent;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.chip .ci {
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  opacity: .75;
+}
+.chip .cd {
+  font-size: var(--fs-sm);
+  opacity: .7;
+}
+/* 进行中：赭石边框 */
+.chip-running {
+  border-color: var(--rep-500);
+  color: var(--rep-500);
+  background: var(--air-rep);
+}
+.chip-running::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-400));
+  animation: breathe 6s ease-in-out infinite;
+}
+/* 已完成：石青边框 */
+.chip-done {
+  border-color: var(--abyss-500);
+  color: var(--abyss-500);
+  background: var(--fog-abyss);
+  opacity: .85;
+}
+
+
+/* ─── 操控台 ─── */
+.deck-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px var(--s2) 20px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.deck {
+  width: 100%;
+  max-width: 660px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,.12));
+  overflow: hidden;
+  transition: border-color .2s, filter .2s, background var(--grow);
+  position: relative;
+}
+/* 操控台顶部赭石发丝线 */
+.deck::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rep-500), transparent);
+  opacity: 0.35;
+  transition: background var(--grow);
+}
+.deck:focus-within {
+  border-color: var(--rep-500);
+  filter: drop-shadow(0 0 3px var(--rep-500)) drop-shadow(0 6px 12px rgba(0,0,0,.12));
+}
+
+.deck-input {
+  display: flex;
+  align-items: flex-end;
+  padding: 14px var(--s4) 10px;
+  gap: 10px;
+}
+.deck-input textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2px 0;
+  min-height: 26px;
+  max-height: 120px;
+}
+.deck-input textarea::placeholder {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.btn-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--rep-500);
+  border: none;
+  color: var(--on-rep);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, transform .15s;
+  flex-shrink: 0;
+}
+.btn-send:hover { background: var(--rep-600); }
+
+.deck-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s3) 10px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 8px;
+}
+.deck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.deck-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+  border-color: var(--border-soft);
+}
+.deck-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.think-seg {
+  display: flex;
+  gap: 3px;
+  padding: 0 6px;
+}
+.seg-bar {
+  border-radius: 2px;
+  transition: background .15s;
+}
+
+/* ctx 圆环 */
+.ctx-ring {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+.ctx-ring svg { display: block; }
+.ctx-ring .ctx-ring-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2;
+}
+.ctx-ring .ctx-ring-fg {
+  fill: none;
+  stroke: var(--abyss-500);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+
+/* ─── 动画：呼吸 —— 6s，只给 logo/头像/dot ─── */
+@keyframes breathe {
+  0%, 100% { opacity: .65; transform: scale(.96); }
+  50%      { opacity: 1;   transform: scale(1.04); }
+}
+@keyframes halo {
+  0%, 100% { opacity: .55; transform: scale(.985); }
+  50%      { opacity: .9;  transform: scale(1.04); }
+}
+/* 光标 */
+@keyframes caret {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+
+/* ─── 自适应滚动条 ─── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-button { display: none; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-soft) transparent;
+}
+
+
+/* ─── 细节 ─── */
+::selection {
+  background: var(--rep-300);
+  opacity: .35;
+  color: var(--fg);
+}
+:focus-visible {
+  outline: 2px solid var(--rep-500);
+  outline-offset: 2px;
+}
+
+/* reduced-motion 兜底 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- 窗口控制 + 主题切换 -->
+  <div class="win-ctrl">
+    <button class="win-btn" title="最小化" aria-label="最小化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="win-btn" title="最大化" aria-label="最大化">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <rect x="2" y="2" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+    </button>
+    <button class="win-btn close" title="关闭" aria-label="关闭">
+      <svg width="12" height="12" viewBox="0 0 12 12">
+        <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <button class="theme-toggle" id="themeToggle" title="切换亮/暗主题" aria-label="切换亮/暗主题">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div class="agent-card">
+      <div class="avatar-wrap">
+        <div class="avatar"><span class="glyph">序</span></div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">知序</div>
+        <div class="card-status">
+          <span class="dot"></span>
+          <span>在生成回复 · 12s</span>
+        </div>
+        <div class="card-self"></div>
+      </div>
+    </div>
+    <button class="topbar-settings" title="设置" aria-label="设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <!-- main row：把手 + 对话流 + 把手 -->
+  <div class="main-row" style="display:flex; flex:1; min-height:0;">
+
+    <div class="handle handle-left"></div>
+
+    <div class="stream">
+      <div class="inner">
+
+        <!-- 会话横幅 -->
+        <div class="sess-banner" id="sessBanner">
+          <button class="sess-toggle" type="button">
+            <span class="sdot"></span>
+            <span class="sess-chev"></span>
+            <span class="sess-title">2026-07-30 · 修复初始化顺序</span>
+          </button>
+          <button class="sess-archive" title="归档此会话">archive</button>
+        </div>
+
+        <!-- 沉积轮（知序，opacity .5） -->
+        <div class="turn sediment">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">14:02</span>
+          </div>
+          <div class="msg">已经把登录那块拆成三个模块了。</div>
+        </div>
+
+        <!-- 用户轮 -->
+        <div class="turn user">
+          <div class="turn-head">
+            <span class="nm">你</span>
+            <span class="ts">14:31</span>
+          </div>
+          <div class="user-bubble">启动的时候报错了，看一下。</div>
+        </div>
+
+        <!-- 活跃轮（知序） -->
+        <div class="turn active">
+          <div class="turn-head">
+            <span class="nm">知序</span>
+            <span class="ts">现在</span>
+          </div>
+
+          <!-- 思考块（石青左缘 + 冷底） -->
+          <div class="think-block">报错在配置加载之前……应该是初始化顺序的问题。</div>
+
+          <!-- 工具 chip × 2 -->
+          <div class="tools">
+            <span class="chip chip-done">
+              <span class="ci">read</span>
+              <span>src/main.rs</span>
+              <span class="cd">· 212行 ✓</span>
+            </span>
+            <span class="chip chip-running">
+              <span class="ci">grep</span>
+              <span>"init_config"</span>
+              <span class="cd">· 检索中</span>
+            </span>
+          </div>
+
+          <div class="msg">找到了。初始化顺序反了——配置还没加载就开始读会话。我把这两步对调一下。<span style="color:var(--muted);animation:caret 1.2s infinite">▍</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="handle handle-right"></div>
+
+  </div>
+
+
+  <!-- 操控台 -->
+  <div class="deck-wrap">
+    <div class="deck">
+      <div class="deck-input">
+        <textarea rows="1" placeholder="说点什么…… @ 引用文件 / 调用技能" aria-label="对话输入"></textarea>
+        <button class="btn-send" title="生成中 · 点击停止">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="2.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="deck-bar">
+        <button class="deck-btn" aria-label="添加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+
+        <div class="think-seg">
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar on" style="width:14px;height:6px;background:var(--rep-500)"></span>
+          <span class="seg-bar off" style="width:14px;height:6px;background:var(--border)"></span>
+          <span class="seg-bar off" style="width:14px;height:6px;background:var(--border)"></span>
+        </div>
+
+        <button class="deck-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          ~/northing
+        </button>
+
+        <button class="deck-btn">
+          <span style="color:var(--rep-500);font-family:var(--font-mono)">◇</span>
+          Claude 4.6
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <button class="deck-btn" style="color:var(--abyss-500)">
+          <span style="font-family:var(--font-mono)">◈</span>
+          自治·完全
+          <span style="opacity:.55">▾</span>
+        </button>
+
+        <div class="ctx-ring" title="上下文 38%" data-tip="上下文已用 38%">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="ctx-ring-bg" cx="10" cy="10" r="7.5"/>
+            <circle class="ctx-ring-fg" cx="10" cy="10" r="7.5" stroke-dasharray="47.1" stroke-dashoffset="29.2" transform="rotate(-90 10 10)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 品牌水印 -->
+  <div class="watermark">
+    <svg width="14" height="14" viewBox="0 0 240 240">
+      <g fill="none" stroke="#7B766C" stroke-linecap="round">
+        <circle cx="120" cy="120" r="16" stroke-width="6"/>
+        <path d="M120 60 A60 60 0 1 1 78 78" stroke-width="8"/>
+        <path d="M120 30 A90 90 0 1 1 50 60" stroke-width="10"/>
+      </g>
+      <line x1="30" y1="120" x2="210" y2="120" stroke="#7B766C" stroke-width="9" stroke-linecap="round"/>
+    </svg>
+    <span class="bt">northing</span>
+  </div>
+
+</div>
+
+
+<script>
+(function () {
+  'use strict';
+
+  /* 主题切换 */
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const sunSVG = themeIcon.innerHTML;
+  const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+  function updateIcon() { themeIcon.innerHTML = isDark() ? moonSVG : sunSVG; }
+  themeToggle.addEventListener('click', function () {
+    if (isDark()) {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    updateIcon();
+  });
+  updateIcon();
+
+  /* 操控台聚焦 → 整屋 rep 升档（空气染色） */
+  const deck = document.querySelector('.deck');
+  const app = document.querySelector('.app');
+  if (deck && app) {
+    deck.addEventListener('focusin', function () { app.classList.add('speaking'); });
+    deck.addEventListener('focusout', function () { app.classList.remove('speaking'); });
+  }
+
+  /* 会话横幅：折叠 / 归档 */
+  const sessBanner = document.getElementById('sessBanner');
+  const sessToggle = sessBanner.querySelector('.sess-toggle');
+  const sessArchive = sessBanner.querySelector('.sess-archive');
+
+  sessToggle.addEventListener('click', function () {
+    sessBanner.classList.toggle('folded');
+  });
+
+  sessArchive.addEventListener('click', function (e) {
+    e.stopPropagation();
+    sessBanner.style.transition = 'opacity .4s';
+    sessBanner.style.opacity = '0.3';
+  });
+})();
+</script>
+</body>
+</html>

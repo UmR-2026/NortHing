@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Northing - 交互式长卷 (Living Document)</title>
+    <style>
+        :root {
+            --doc-bg: #FFFFFF;
+            --doc-text: #201E1D;
+            --doc-meta: #99958F;
+            
+            --agent-highlight: rgba(224, 107, 82, 0.1);
+            --agent-border: #E06B52;
+            
+            --border-line: #F0EFEA;
+            
+            --font-doc: "Georgia", "Songti SC", serif;
+            --font-ui: "Inter", sans-serif;
+            --font-code: "JetBrains Mono", monospace;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--doc-bg);
+            color: var(--doc-text);
+            font-family: var(--font-doc);
+            display: flex; justify-content: center;
+        }
+
+        /* 纯粹的文档流，没有侧边栏和底部输入框 */
+        .document-container {
+            width: 100%; max-width: 800px;
+            padding: 100px 40px;
+            display: flex; flex-direction: column; gap: 60px;
+        }
+
+        .doc-title {
+            font-size: 32px; font-weight: normal; margin: 0 0 16px 0;
+        }
+        .doc-meta { font-family: var(--font-ui); font-size: 13px; color: var(--doc-meta); border-bottom: 1px solid var(--border-line); padding-bottom: 40px; }
+
+        /* 文档块 */
+        .block { position: relative; }
+        
+        /* 交互式段落标记 */
+        .block::before {
+            content: '+'; position: absolute; left: -40px; top: 0;
+            font-family: var(--font-ui); font-size: 20px; color: transparent;
+            cursor: pointer; transition: color 0.2s;
+        }
+        .block:hover::before { color: var(--doc-meta); }
+
+        /* 人类编写的意图 */
+        .block-human {
+            font-size: 20px; line-height: 1.8; color: var(--doc-text);
+        }
+
+        /* Agent 生成的解析与产物 */
+        .block-agent {
+            font-family: var(--font-ui);
+            background: #FAFAFA; border-left: 3px solid var(--agent-border);
+            padding: 24px; border-radius: 0 8px 8px 0;
+        }
+        
+        .agent-header {
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--agent-border); margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .agent-header::before { content: ''; display: block; width: 6px; height: 6px; background: var(--agent-border); border-radius: 50%; }
+
+        .agent-text { font-size: 15px; line-height: 1.6; margin-bottom: 24px; color: #444; }
+
+        .agent-code {
+            font-family: var(--font-code); font-size: 13px; line-height: 1.5;
+            background: #282C34; color: #ABB2BF; padding: 16px; border-radius: 6px;
+        }
+        .diff-add { color: #98C379; }
+
+        /* 行内输入态 */
+        .block-input textarea {
+            width: 100%; border: none; outline: none; background: transparent;
+            font-family: var(--font-doc); font-size: 20px; line-height: 1.8;
+            resize: none; color: var(--doc-text);
+        }
+        .block-input textarea::placeholder { color: #D0CFCB; }
+
+    </style>
+</head>
+<body>
+
+    <div class="document-container">
+        
+        <header>
+            <h1 class="doc-title">Session: Fix Startup Panic</h1>
+            <div class="doc-meta">Collaborators: UmR, Northing Agent (Active) · Last updated 2 mins ago</div>
+        </header>
+
+        <div class="block block-human">
+            系统在启动的时候崩溃了，产生了一个 panic。<br>
+            请检查初始化阶段的生命周期逻辑。
+        </div>
+
+        <div class="block block-agent">
+            <div class="agent-header">Northing Resolution</div>
+            <div class="agent-text">
+                发现初始化顺序存在因果倒置：系统在尚未加载 <code>config::init()</code> 的情况下，提前调用了 <code>memory::read_session()</code>。<br>
+                我已将配置加载的时序提前，并修复了相关依赖。
+            </div>
+            <div class="agent-code">
+                <span style="color:#5C6370;">// src/main.rs</span><br>
+                <div class="diff-add">+ let config = config::init()?;</div>
+                <div class="diff-add">+ let session = memory::read_session(&config);</div>
+            </div>
+        </div>
+
+        <div class="block block-input">
+            <textarea placeholder="点击此处继续编写指令..." rows="2"></textarea>
+        </div>
+
+    </div>
+
+</body>
+</html>
