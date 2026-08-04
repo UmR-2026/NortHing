@@ -1,4 +1,5 @@
 ﻿import { RedesignTheme } from "../redesign_palette.slint";
+import { AppStrings } from "../strings.slint";
 
 export component MindMod inherits Rectangle {
     in property <bool> is-open: false;
@@ -7,11 +8,10 @@ export component MindMod inherits Rectangle {
 
     width: 280px;
     height: 400px;
-    
-    // Visibility and slide animation
+
+    // I8 修复：抽屉浮出动效（opacity 350ms cubic-bezier，非瞬切）。
     opacity: root.is-open ? 1.0 : 0.0;
-    // Slint animation on x is driven by parent layout or bindings. 
-    // We'll handle slide via x offset in SpaceView.
+    animate opacity { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
 
     background: RedesignTheme.t.elevated;
     border-width: 1px;
@@ -47,15 +47,15 @@ export component MindMod inherits Rectangle {
                     padding-left: 14px; padding-right: 14px;
                     alignment: space-between;
                     Text {
-                        text: "它的内在";
-                        color: RedesignTheme.t.rep-400;
+                        text: AppStrings.mind-mod-title;
+                        color: RedesignTheme.t.mind-drive-line;
                         font-family: "JetBrains Mono";
                         font-size: 10px;
                         letter-spacing: 0.8px;
                         vertical-alignment: center;
                     }
                     Text {
-                        text: "▴ 收纳";
+                        text: AppStrings.mind-mod-collapse;
                         color: RedesignTheme.t.muted;
                         font-size: 9px;
                         vertical-alignment: center;
@@ -69,10 +69,10 @@ export component MindMod inherits Rectangle {
             padding: 14px;
             spacing: 12px;
 
-            Text { text: "子进程"; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: "技能候选"; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: "意识更新"; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: "已归档"; font-size: 11px; color: RedesignTheme.t.faint; }
+            Text { text: AppStrings.mind-mod-item-subprocess; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.mind-mod-item-skill-candidate; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.mind-mod-item-awareness-update; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.mind-mod-item-archived; font-size: 11px; color: RedesignTheme.t.faint; }
         }
         
         Rectangle { vertical-stretch: 1; }

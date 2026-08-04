@@ -1,44 +1,53 @@
 ﻿import { RedesignTheme } from "../redesign_palette.slint";
 import { SystemConstants } from "../system_constants.slint";
+import { AppStrings } from "../strings.slint";
 
 export component DoorbellGem inherits Rectangle {
     in property <bool> is-left: true;
     in property <bool> is-open: false;
-    in property <color> base-color: RedesignTheme.t.rep-500;
-    in property <string> tooltip: "瀹冪殑鍐呭湪";
+    in property <color> base-color: RedesignTheme.t.mind-drive-accent;
+    in property <string> tooltip: AppStrings.mind-mod-title;
     callback toggle();
 
     width: 12px;
     height: 64px;
-    
-    // The "鏂彛" (break) to cover the border of the room box
+
+    // The "断口" (break) to cover the border of the room box
     Rectangle {
         width: 2px;
         height: 64px;
         x: root.is-left ? 0px : parent.width - 2px;
         background: RedesignTheme.t.surface;
     }
-    
+
     // The Gem itself
-    gem := Rectangle {
+    // I4 修复：菱形(闭态) <-> 正方(开态) 几何切换。
+    // Slint 1.17 Rectangle/Path 无 rotation-angle（仅 Image/Text 有，Transform 是 internal 不可访问）。
+    // 用 Path commands 切换几何：闭态=菱形(上右下左)，开态=正方(四角)。
+    // stroke-width 6->1（实心->空心）+ opacity .55->.22 同步 350ms cubic-bezier 动画。
+    gem := Path {
         width: 12px;
         height: 12px;
         x: 0px;
         y: (parent.height - self.height) / 2;
-        // rotation-angle: root.is-open ? 0deg : 45deg;
-        border-width: root.is-open ? 1px : 6px; // 6px fills it completely
-        border-color: root.base-color;
-        background: transparent;
+        // 闭态菱形：M(中心上) L(右中) L(中心下) L(左中) Z
+        // 开态正方：M(左上) L(右上) L(右下) L(左下) Z
+        commands: root.is-open
+            ? "M 0 0 L 12 0 L 12 12 L 0 12 Z"
+            : "M 6 0 L 12 6 L 6 12 L 0 6 Z";
+        stroke: root.base-color;
+        stroke-width: root.is-open ? 1px : 6px; // 6px fills it completely = 实心
+        fill: root.base-color;
         opacity: root.is-open ? 0.22 : 0.55;
-        
-        animate border-width, opacity { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
+
+        animate stroke-width, opacity { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
     }
-    
+
     ta := TouchArea {
         width: parent.width;
         height: parent.height;
         clicked => { root.toggle(); }
-        
+
         // Hover label
         if self.has-hover: Rectangle {
             x: root.is-left ? 20px : -50px;
@@ -60,7 +69,7 @@ export component DoorbellGem inherits Rectangle {
             }
         }
     }
-    
+
     // Add hover opacity change
     states [
         hover when ta.has-hover: {

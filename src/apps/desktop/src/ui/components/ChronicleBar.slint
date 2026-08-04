@@ -1,34 +1,51 @@
 import { RedesignTheme } from "../redesign_palette.slint";
 
 export component ChronicleBar inherits Rectangle {
-    // 暴露属性供后续任务绑定
+    // T1 定稿签名：birth + now（in property，对外契约色，渲染真源）。
     in property <color> birth: RedesignTheme.t.birth;
-    in property <color> now: RedesignTheme.t.rep-500;
-    
-    // Five colors for demo: Coral, Purple, DeepBlue/Teal, SoftGreen, ColdCyan
+    in property <color> now: RedesignTheme.t.mind-drive-accent;
+
+    // 5 色 mind-base 数组（与 RedesignTheme.t.mind-*-accent 同源；I9 修复：不再硬编码 hex）。
     property <[color]> palette: [
-        #C8714C, #8B5FBF, #3F837B, #46A758, #3A7B8C
+        RedesignTheme.t.mind-drive-accent,
+        RedesignTheme.t.mind-leap-accent,
+        RedesignTheme.t.mind-abyss-accent,
+        RedesignTheme.t.mind-calm-accent,
+        RedesignTheme.t.mind-gaze-accent
     ];
     property <int> color-idx: 0;
-    
-    // For the ritual animation
-    property <color> old-now: RedesignTheme.t.rep-500;
-    property <color> current-now: RedesignTheme.t.rep-500;
-    
+
+    // 仪式动画状态（内部，非对外契约）。
+    // current-now：仪式期间推进色；非仪式态 == root.now（下底 = 对外契约色）。
+    // old-now：旧色，仪式中沉积到左 0.65 段。
+    // old-ratio：旧色层宽度占比；仪式 1.0 -> 0.65 截断。
+    property <color> current-now: root.now;
+    property <color> old-now: root.now;
     property <float> old-ratio: 1.0;
-    
+
     height: 4px;
     opacity: 0.7;
     border-radius: 0px;
 
-    // The new color background
+    // C2 修复：下底渲染读 root.now（对外契约色；非 current-now）。
+    // 仪式结束后 current-now 推进到新色，下底仍是 root.now；但仪式层覆盖使新色可见。
+    // 仪式态：下底 birth->now + 仪式层 birth->current-now(新) 全宽 + 旧色层 birth->old-now 左 old-ratio。
     Rectangle {
         width: parent.width;
         height: parent.height;
+        background: @linear-gradient(90deg, root.birth 0%, root.now 100%);
+    }
+
+    // 仪式层（全宽）：birth -> current-now。非仪式态 current-now==now，等于下底。
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        x: 0px;
         background: @linear-gradient(90deg, root.birth 0%, root.current-now 100%);
     }
 
-    // The old colors slowly shrinking
+    // 旧色层（左 old-ratio 段）：birth -> old-now。沉积效果。
+    // 仪式：old-ratio 1.0 -> 0.65，旧色从全宽收到左 65%，新色从右 35% 露出。
     Rectangle {
         width: parent.width * root.old-ratio;
         height: parent.height;
@@ -36,25 +53,19 @@ export component ChronicleBar inherits Rectangle {
         background: @linear-gradient(90deg, root.birth 0%, root.old-now 100%);
     }
 
-    animate old-ratio { duration: 1200ms; easing: ease-in-out; }
+    animate old-ratio { duration: 1200ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
 
     TouchArea {
         width: parent.width;
         height: parent.height;
         double-clicked => {
+            // 仪式：旧色 = 当前 current-now，沉积到左 0.65 段；新色（下一 mind 色）从右 0.35 段进入。
             root.old-now = root.current-now;
-            root.old-ratio = 1.0; 
+            root.old-ratio = 1.0;
             root.color-idx = Math.mod(root.color-idx + 1, 5);
             root.current-now = root.palette[root.color-idx];
-            
-            root.old-ratio = 0.65; 
+            // 触发 old-ratio 1.0 -> 0.65 的 1200ms 一次性 layer-width animation。
+            root.old-ratio = 0.65;
         }
-    }
-
-    init => {
-        // Mock ritual in progress
-        root.old-now = root.palette[0];
-        root.current-now = root.palette[1];
-        root.old-ratio = 0.65;
     }
 }

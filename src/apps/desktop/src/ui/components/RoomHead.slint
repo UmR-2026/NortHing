@@ -1,11 +1,12 @@
 import { RedesignTheme } from "../redesign_palette.slint";
+import { AppStrings } from "../strings.slint";
 import { AvatarWrap } from "AvatarWrap.slint";
 import { ChronicleBar } from "ChronicleBar.slint";
 import { SystemConstants } from "../system_constants.slint";
 
 export component RoomHead inherits Rectangle {
-    in property <bool> folded: false;
-    in property <string> state-text: "驱力状态 · 它正在命名自己";
+    in-out property <bool> folded: false;
+    in property <string> state-text: AppStrings.room-head-state-text;
     in property <bool> dark-mode: true;
     callback toggle-fold();
 
@@ -14,7 +15,7 @@ export component RoomHead inherits Rectangle {
 
     property <length> cx: root.width / 2;
 
-    background: root.folded 
+    background: root.folded
         ? @linear-gradient(90deg, transparent 0%, RedesignTheme.t.rep-500.with-alpha(0.15) 50%, transparent 100%)
         : @radial-gradient(circle, RedesignTheme.t.rep-500.with-alpha(0.15) 0%, transparent 78%);
 
@@ -22,7 +23,19 @@ export component RoomHead inherits Rectangle {
         y: parent.height - 1px;
         width: parent.width;
         height: 1px;
-        background: root.dark-mode ? #433E3E : #C7C3BB; // 16% mind 色缝线预计算
+        // I6 修复：缝线 16% mind 色用 mind token（mind-drive-line）近似，非硬编码 hex。
+        background: RedesignTheme.t.mind-drive-frame;
+    }
+
+    // C4 修复：整块 TouchArea 触发 toggle-fold（click 覆 RoomHead 全宽）。
+    // 直接翻转 folded（in-out），无需外部 Rust 回调即可交互。
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => {
+            root.folded = !root.folded;
+            root.toggle-fold();
+        }
     }
 
     // Folded layout
@@ -36,12 +49,12 @@ export component RoomHead inherits Rectangle {
 
         AvatarWrap {
             size: 26px;
-            initial: "序";
+            initial: AppStrings.room-head-initial;
             breathing: true;
         }
 
         Text {
-            text: "知序";
+            text: AppStrings.room-head-name;
             font-family: "Fraunces";
             font-size: 13px;
             font-italic: true;
@@ -63,7 +76,7 @@ export component RoomHead inherits Rectangle {
             alignment: center;
             AvatarWrap {
                 size: 52px;
-                initial: "序";
+                initial: AppStrings.room-head-initial;
                 breathing: true;
             }
         }
@@ -71,7 +84,7 @@ export component RoomHead inherits Rectangle {
         HorizontalLayout {
             alignment: center;
             Text {
-                text: "知序";
+                text: AppStrings.room-head-name;
                 font-family: "Fraunces";
                 font-size: 17px;
                 font-italic: true;
@@ -92,7 +105,7 @@ export component RoomHead inherits Rectangle {
             alignment: center;
             Rectangle {
                 background: RedesignTheme.t.rep-500.with-alpha(0.22);
-                
+
                 HorizontalLayout {
                     padding-left: 9px;
                     padding-right: 9px;
@@ -102,7 +115,8 @@ export component RoomHead inherits Rectangle {
                         text: root.state-text;
                         font-family: "JetBrains Mono";
                         font-size: 10px;
-                        color: root.dark-mode ? #DCA88F : #101416; // mind-line approx
+                        // I6 修复：mind-line 用 token，非硬编码 hex。
+                        color: RedesignTheme.t.mind-drive-line;
                         letter-spacing: 0.8px;
                     }
                 }
@@ -110,4 +124,3 @@ export component RoomHead inherits Rectangle {
         }
     }
 }
-

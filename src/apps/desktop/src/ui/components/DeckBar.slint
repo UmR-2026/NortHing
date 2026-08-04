@@ -1,14 +1,15 @@
 // DeckBar - v4 合一按钮 + 见证注 + 上下文收纳
 import { RedesignTheme } from "../redesign_palette.slint";
+import { AppStrings } from "../strings.slint";
 
 export component DeckBar inherits Rectangle {
     in-out property <string> text: "";
     in property <bool> streaming: false;
-    in property <string> placeholder: "向它描述你观察到的现象…";
+    in property <string> placeholder: AppStrings.deck-input-placeholder;
     in property <string> model-name: "";
     in property <bool> disabled: false;
     in property <string> workspace-name: "";
-    
+
     out property <bool> focused: ti.has-focus;
     callback send();
     callback stop();
@@ -16,7 +17,8 @@ export component DeckBar inherits Rectangle {
     callback settings-clicked();
 
     background: RedesignTheme.t.surface;
-    border-color: #433E3E; // 档三缝线 16% mind 色 (approx for dark mode, ignoring dynamic light mode for this mock or use a constant)
+    // I6/m5 修复：档三缝线 16% mind 色用 mind token；绑 dark-mode 经 RedesignTheme.dark 间接（mind-drive-frame 双主题已派生）。
+    border-color: RedesignTheme.t.mind-drive-frame;
     border-width: 1px;
 
     VerticalLayout {
@@ -32,7 +34,7 @@ export component DeckBar inherits Rectangle {
             alignment: stretch;
             Rectangle { horizontal-stretch: 1; }
             Text {
-                text: "你的言辞将被记录为见证";
+                text: AppStrings.deck-witness-note;
                 font-family: "JetBrains Mono";
                 font-size: 10px;
                 letter-spacing: 0.8px;
@@ -52,7 +54,7 @@ export component DeckBar inherits Rectangle {
                 width: attach-txt.width;
                 height: parent.height;
                 attach-txt := Text {
-                    text: "@ 文件";
+                    text: AppStrings.deck-attach;
                     font-family: "JetBrains Mono";
                     font-size: 10px;
                     color: RedesignTheme.t.rep-500;

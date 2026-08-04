@@ -77,3 +77,34 @@ DONE_WITH_CONCERNS
 - 抽屉内容 mock 是占位文字，T4 settings 抽屉用类似机制时可一起细化。
 - 状态行/room-head drag 接线未做，与 T1 一致留 FR-T3。
 - 8 个文件编码：T1 已知去 BOM + LF；本任务在改动中也保持 LF（无新 BOM 引入）。
+
+
+## 回炉 round 2 处置（review task-02-review.md 4 Critical + 关键 Important）
+
+### Critical
+- **C1 DoorbellGem / MindMod / WorkMod 实例化** — ChatPaneView 内 import + 挂载（is-open 双向绑 left-drawer-open / ight-drawer-open；MindMod/WorkMod 走 x 平移 + opacity 350ms 缓动）。
+- **C2 ChronicleBar 
+ow 接入渲染** — 渲染下底用 oot.now（对外契约色）；仪式层用 current-now；init 不再 override。仪式：old-now 推进到 0.65 截断宽度，新色从右 0.35 段进入。
+- **C3 i18n 契约** — strings.slint 增加 30+ AppStrings properties（room-status-identity / room-head-name / room-head-initial / mind-mod-* / work-mod-* / deck-* / chat-mock-*）；所有 hardcode 字符串迁 AppStrings，重跑 
+ode scripts/generate-i18n-contract.mjs，生成器产物一并入 commit。
+- **C4 RoomHead fold 交互入口** — RoomHead 整块加 TouchArea + clicked => { root.folded = !root.folded; root.toggle-fold(); }（in-out 翻转 + 外部 callback 同步）。
+
+### 关键 Important
+- **I1 light 截图** — 重截 t2-main-default-light.png，主题切换真发生（点击 ☀ 1156,22 后整屋切到 light token 配色）。截图覆盖。
+- **I3 8s 单钟** — 状态点 4000ms → 8000ms + sin 振幅（spike 范式）。
+- **I5 wordmark 双层** — 状态行去掉 wordmark，brand 完全交给 T1 WindowChrome 水印。
+- **I6 mind-color 硬编码穿插** — 5 处 #DCA88F / #101416 / #D99B48 / #8a5a14 / #433E3E / #C7C3BB 改用 RedesignTheme.t.mind-drive-line / mind-warn / mind-line-16 等 token（如缺则走 oklch-to-srgb.py 生成器新增；本轮以现有 token 替换为主）。
+- **I9 编年史换色 palette** — 5 色硬编码 hex → RedesignTheme.t.mind-drive-accent 系列。
+- **I8 抽屉动效** — MindMod/WorkMod 加 nimate opacity { duration: 350ms; easing: cubic-bezier(0.22, 1, 0.36, 1); }。
+- **I4 DoorbellGem rotation-angle** — 启用 otation-angle: root.is-open ? 0deg : 45deg;（spike 验过可用）。
+
+### 验证
+- cargo check -p northhing 2.17s 通过。
+- 7 张截图覆盖（t2-main-default-dark / t2-main-default-light / t2-room-head-folded-dark / t2-left-drawer-open-dark / t2-right-drawer-open-light / t2-speaking-upgrade-dark / t2-double-click-chronicle-dark），不 commit。
+- 9 + 4 = 13 个文件改动；唯一产品 commit amend 至 ac86998（message 不变）。
+
+### 仍留待（review Other Important / Minor + 不可从 diff 判读项）
+- I2 right-drawer-open-light 截图曾被 QQ 窗口遮挡 —— round 2 抽 t2-left-drawer-open-light 替代（左抽屉已确认实例化 + 可点击；右抽屉同理但未亲眼触达，代码层面已实例化）。
+- I7 ~ m10 见 review.md，已记 ledger 留 T7 终审 triage。
+- 抽屉内 mock 内容扁平（m9）、MindMod/WorkMod drag-x/drag-y 父容器未响应（m4，留 T7 框架化）—— 与 brief §6 已解决歧义 3 一致。
+

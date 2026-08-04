@@ -128,16 +128,21 @@ export component AppWindow inherits Window {
      callback remove-workspace(string);
      callback edit-identity-md(string);
      callback open-identity-creator();
-     // 2026-06-26 (Phase 4 fix): welcome-step1-path is written by the
-     // Rust pick-folder handler via invoke_from_event_loop; binding it
-     // here lets WelcomeView's `next-step1` button un-gray once a folder
-     // is chosen. provider-test-result / provider-test-in-flight /
-     // last-saved-provider-id are written by the test-provider handler.
-     in-out property <string> welcome-step1-path: "";
-     in-out property <string> provider-test-result: "";
-     in-out property <bool> provider-test-in-flight: false;
-     in-out property <string> last-saved-provider-id: "";
-     callback onboarding-completed();
+      // 2026-06-26 (Phase 4 fix): welcome-step1-path is written by the
+      // Rust handler via invoke_from_event_loop; binding it here lets
+      // WelcomeView's `next-step1` button un-gray once a folder
+      // is chosen. provider-test-result / provider-test-in-flight /
+      // last-saved-provider-id are written by the test-provider handler.
+      in-out property <string> welcome-step1-path: "";
+      in-out property <string> provider-test-result: "";
+      in-out property <bool> provider-test-in-flight: false;
+      in-out property <string> last-saved-provider-id: "";
+      callback onboarding-completed();
+     // T2：主诊室 RoomHead 折叠 + 抽屉开合（转发到 SpaceView -> ChatPaneView）。
+     in-out property <bool> room-head-folded: false;
+     in-out property <bool> left-drawer-open: false;
+     in-out property <bool> right-drawer-open: false;
+     callback toggle-room-head-fold();
     in-out property <string> current-session-id: "";
     in-out property <string> current-session-name: "";
     in-out property <string> current-session-model: "";
@@ -280,6 +285,12 @@ export component AppWindow inherits Window {
             workspace-name: root.current-workspace-index >= 0 ? root.workspaces-list[root.current-workspace-index].display-name : "";
             providers: root.providers-list;
             default-model-provider-id: root.default-model-provider-id;
+
+            // T2：转发主诊室 RoomHead 折叠 + 抽屉开合。
+            room-head-folded <=> root.room-head-folded;
+            left-drawer-open <=> root.left-drawer-open;
+            right-drawer-open <=> root.right-drawer-open;
+            toggle-room-head-fold => { root.toggle-room-head-fold(); }
 
             send-message(text) => { root.send-message(text); }
             load-more-messages => { root.load-more-messages(); }

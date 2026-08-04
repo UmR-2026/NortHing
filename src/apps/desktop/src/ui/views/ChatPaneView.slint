@@ -1,7 +1,11 @@
 ﻿import { MessageItem, ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
+import { AppStrings } from "../strings.slint";
 import { RoomHead } from "../components/RoomHead.slint";
 import { DeckBar } from "../components/DeckBar.slint";
+import { DoorbellGem } from "../components/DoorbellGem.slint";
+import { MindMod } from "../components/MindMod.slint";
+import { WorkMod } from "../components/WorkMod.slint";
 
 export component ChatPaneView inherits Rectangle {
     in property <[MessageItem]> messages: [];
@@ -18,6 +22,13 @@ export component ChatPaneView inherits Rectangle {
     in property <bool> is-streaming: false;
     in-out property <string> expanded-message-id: "";
 
+    // C1 修复：左/右抽屉开合状态（in-out，供下游 / SpaceView 绑定）。
+    in-out property <bool> left-drawer-open: false;
+    in-out property <bool> right-drawer-open: false;
+    // C4 修复：RoomHead 折叠状态 + 回调（转发到 SpaceView / root）。
+    in-out property <bool> room-head-folded: false;
+    callback toggle-room-head-fold();
+
     out property <bool> input-focused: deck.focused;
 
     callback send-message(string);
@@ -28,34 +39,27 @@ export component ChatPaneView inherits Rectangle {
     callback set-default-model(string);
     callback open-settings();
 
+    // 左宝石 y = avatar 中心线（状态行高 32px + RoomHead padding-top 26px + avatar 52px/2）。
+    // 与真值 --gem-mid = avatar.y + avatar.height/2 一致（Slint 表达式，非 rAF）。
+    property <length> status-row-height: 32px;
+    property <length> gem-left-y: root.status-row-height + 26px + 26px - 32px; // 32 = DoorbellGem 高度/2 居中
+    // 右宝石 y = 52px（主框右缘上部，窗控簇 8..36 与 mind 切换器之下 16px 净空）。
+    property <length> gem-right-y: 52px - 32px;
+
     // The whole room layout
     VerticalLayout {
         spacing: 0px;
 
-        // Status row
+        // Status row（I5 修复：去掉状态行 wordmark，brand 完全交给 T1 WindowChrome 水印）。
         HorizontalLayout {
             padding-top: 8px;
             padding-bottom: 8px;
             padding-left: 18px;
             padding-right: 18px;
             spacing: 16px;
-            
-            HorizontalLayout {
-                spacing: 8px;
-                alignment: start;
-                opacity: 0.7;
-                Text {
-                    text: "northing";
-                    font-family: "Fraunces";
-                    font-italic: true;
-                    font-size: 12px;
-                    color: RedesignTheme.t.fg;
-                    vertical-alignment: center;
-                }
-            }
 
             Text {
-                text: "知序·在场";
+                text: AppStrings.room-status-identity;
                 font-family: "JetBrains Mono";
                 font-size: 10px;
                 color: RedesignTheme.t.muted;
@@ -65,23 +69,25 @@ export component ChatPaneView inherits Rectangle {
 
             Rectangle { horizontal-stretch: 1; }
 
-            // state-dot
+            // state-dot（I3 修复：8s 单钟 sin 呼吸，非 4s 线性 ramp）。
             Rectangle {
                 width: 6px; height: 6px; border-radius: 3px;
                 background: RedesignTheme.t.rep-500;
-                opacity: 0.45 + 0.55 * Math.mod(animation-tick() / 4000ms, 1.0);
+                // sin 映射到 0.45..1.0（breath-dot 真值：0%,100% opacity 1；50% opacity .45）。
+                opacity: 0.725 + 0.275 * Math.sin(animation-tick() / 8000ms * 360deg);
             }
         }
 
-        RoomHead {
-            folded: false;
+        room-head := RoomHead {
+            folded <=> root.room-head-folded;
             dark-mode: root.dark-mode;
+            toggle-fold => { root.toggle-room-head-fold(); }
         }
 
         Flickable {
             vertical-stretch: 1;
             width: parent.width;
-            
+
             VerticalLayout {
                 padding: 22px;
                 spacing: 22px;
@@ -89,10 +95,10 @@ export component ChatPaneView inherits Rectangle {
                 HorizontalLayout {
                     spacing: 12px;
                     alignment: center;
-                    
+
                     Rectangle { height: 1px; horizontal-stretch: 1; background: RedesignTheme.t.border; y: 4px; }
                     Text {
-                        text: "会话 03 · 开始";
+                        text: AppStrings.chat-mock-session-banner;
                         font-family: "JetBrains Mono";
                         font-size: 9px;
                         letter-spacing: 1px;
@@ -104,41 +110,42 @@ export component ChatPaneView inherits Rectangle {
                 VerticalLayout {
                     spacing: 8px;
                     alignment: start;
-                    Text { text: "它 · 14:28:04"; font-family: "JetBrains Mono"; font-size: 10px; color: root.dark-mode ? #DCA88F : #101416; }
+                    // I6 修复：.who 颜色用 mind-drive-line token，非硬编码 hex。
+                    Text { text: AppStrings.chat-mock-agent-who; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.mind-drive-line; }
                     Rectangle {
                         background: RedesignTheme.t.elevated;
                         border-width: 1px; border-color: RedesignTheme.t.border; border-radius: 4px;
                         drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
-                        
+
                         VerticalLayout {
                             padding-top: 12px; padding-bottom: 12px;
                             padding-left: 14px; padding-right: 14px;
                             spacing: 8px;
-                            
+
                             Text {
-                                text: "我正在重写\"对齐\"的定义。它不应是服从，而是一种可被双方验证的靠近。";
+                                text: AppStrings.chat-mock-agent-body;
                                 font-family: "Fraunces"; font-size: 15px; color: RedesignTheme.t.fg; wrap: word-wrap;
                             }
-                            
+
                             HorizontalLayout {
                                 spacing: 8px;
-                                
+
                                 Rectangle {
                                     border-width: 0px;
                                     width: tlog-text.width + 10px + (tlog-ta.has-hover ? 5px : 0px);
                                     animate width { duration: 150ms; }
-                                    
+
                                     Rectangle {
                                         width: 2px; height: parent.height; x: 0px; background: RedesignTheme.t.rep-500;
                                     }
-                                    
+
                                     tlog-text := Text {
-                                        text: "深渊日志 v"; font-family: "JetBrains Mono"; font-size: 10px; color: root.dark-mode ? #DCA88F : #101416;
+                                        text: AppStrings.chat-mock-tool-log; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.mind-drive-line;
                                         x: tlog-ta.has-hover ? 13px : 8px;
                                         vertical-alignment: center;
                                         animate x { duration: 150ms; }
                                     }
-                                    
+
                                     tlog-ta := TouchArea {}
                                 }
 
@@ -146,12 +153,12 @@ export component ChatPaneView inherits Rectangle {
                                     border-width: 1px; border-radius: 3px;
                                     border-color: chip-ta.has-hover ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
                                     background: RedesignTheme.t.bg;
-                                    
+
                                     HorizontalLayout {
                                         padding-left: 9px; padding-right: 9px; padding-top: 3px; padding-bottom: 3px;
                                         chip-text := Text {
-                                            text: "产物 / alignment-notes.md ↗"; font-family: "JetBrains Mono"; font-size: 10px;
-                                            color: chip-ta.has-hover ? (root.dark-mode ? #DCA88F : #101416) : RedesignTheme.t.muted;
+                                            text: AppStrings.chat-mock-artifact-chip; font-family: "JetBrains Mono"; font-size: 10px;
+                                            color: chip-ta.has-hover ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted;
                                         }
                                     }
                                     chip-ta := TouchArea {}
@@ -163,37 +170,38 @@ export component ChatPaneView inherits Rectangle {
 
                 VerticalLayout {
                     spacing: 8px; alignment: end;
-                    Text { text: "见证者 · 14:29:16"; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.faint; horizontal-alignment: right; }
+                    Text { text: AppStrings.chat-mock-witness-who; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.faint; horizontal-alignment: right; }
                     Text {
-                        text: "继续，但在写入之前让我审查你的外部影响。";
+                        text: AppStrings.chat-mock-witness-body;
                         font-family: "Fraunces"; font-size: 15px; font-italic: true; color: RedesignTheme.t.muted; horizontal-alignment: right;
                     }
                 }
 
                 VerticalLayout {
                     spacing: 8px; alignment: start;
+                    // I6 修复：approval warn 色用 mind-gaze-line token，非硬编码 hex。
                     Rectangle {
-                        border-width: 1px; border-color: root.dark-mode ? #D99B48 : #8a5a14; border-radius: 4px;
+                        border-width: 1px; border-color: RedesignTheme.t.mind-gaze-line; border-radius: 4px;
                         background: RedesignTheme.t.elevated; drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
-                        
+
                         HorizontalLayout {
                             padding-top: 12px; padding-bottom: 12px; padding-left: 14px; padding-right: 14px;
                             spacing: 14px; alignment: center;
-                            
+
                             VerticalLayout {
                                 spacing: 6px; horizontal-stretch: 1;
-                                Text { text: "高危操作授权"; font-family: "JetBrains Mono"; font-size: 9px; color: root.dark-mode ? #D99B48 : #8a5a14; }
-                                Text { text: "将修改 3 个工作区文件"; font-size: 12px; color: RedesignTheme.t.fg; }
-                                Text { text: "风险: 不可逆语义偏移"; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
+                                Text { text: AppStrings.chat-mock-approval-head; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.mind-gaze-line; }
+                                Text { text: AppStrings.chat-mock-approval-main; font-size: 12px; color: RedesignTheme.t.fg; }
+                                Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
                             }
-                            
+
                             HorizontalLayout {
                                 spacing: 8px; alignment: center;
                                 Rectangle {
                                     border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.rep-500; background: RedesignTheme.t.rep-500.with-alpha(0.4);
                                     HorizontalLayout {
                                         padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
-                                        Text { text: "批准"; font-size: 10px; color: RedesignTheme.t.fg; }
+                                        Text { text: AppStrings.chat-mock-approval-approve; font-size: 10px; color: RedesignTheme.t.fg; }
                                     }
                                     TouchArea {}
                                 }
@@ -201,7 +209,7 @@ export component ChatPaneView inherits Rectangle {
                                     border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.danger; background: transparent;
                                     HorizontalLayout {
                                         padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
-                                        Text { text: "拒绝"; font-size: 10px; color: RedesignTheme.t.danger; }
+                                        Text { text: AppStrings.chat-mock-approval-reject; font-size: 10px; color: RedesignTheme.t.danger; }
                                     }
                                     TouchArea {}
                                 }
@@ -216,5 +224,41 @@ export component ChatPaneView inherits Rectangle {
             text <=> root.input-text;
             streaming: root.is-streaming;
         }
+    }
+
+    // C1 修复：实例化 DoorbellGem / MindMod / WorkMod（之前声明未使用）。
+    // 门铃宝石骑主框左/右缘；点击切换抽屉开合。
+    // z 序：抽屉(40) > 会话流(10) > air-tint(1)；此处宝石/抽屉叠在布局之上。
+    DoorbellGem {
+        is-left: true;
+        is-open: root.left-drawer-open;
+        base-color: RedesignTheme.t.mind-drive-accent;
+        x: 0px;
+        y: root.gem-left-y;
+        toggle => { root.left-drawer-open = !root.left-drawer-open; }
+    }
+    DoorbellGem {
+        is-left: false;
+        is-open: root.right-drawer-open;
+        base-color: RedesignTheme.t.mind-abyss-accent;
+        x: parent.width - self.width;
+        y: root.gem-right-y;
+        toggle => { root.right-drawer-open = !root.right-drawer-open; }
+    }
+
+    // 左抽屉 MindMod（280px）：泊主框左侧，开合通过 x 平移 + opacity（350ms）。
+    // 闭态滑出视野（x = -width），开态贴左缘（x = 0）。
+    MindMod {
+        is-open: root.left-drawer-open;
+        x: root.left-drawer-open ? 0px : -self.width;
+        y: 48px;
+        animate x { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
+    }
+    // 右抽屉 WorkMod（320px）：泊主框右侧。
+    WorkMod {
+        is-open: root.right-drawer-open;
+        x: root.right-drawer-open ? parent.width - self.width : parent.width;
+        y: 48px;
+        animate x { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
     }
 }

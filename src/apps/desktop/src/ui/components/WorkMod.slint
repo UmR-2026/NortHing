@@ -1,4 +1,5 @@
 ﻿import { RedesignTheme } from "../redesign_palette.slint";
+import { AppStrings } from "../strings.slint";
 
 export component WorkMod inherits Rectangle {
     in property <bool> is-open: false;
@@ -7,8 +8,10 @@ export component WorkMod inherits Rectangle {
 
     width: 320px;
     height: 400px;
-    
+
+    // I8 修复：抽屉浮出动效（opacity 350ms cubic-bezier，非瞬切）。
     opacity: root.is-open ? 1.0 : 0.0;
+    animate opacity { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
     
     background: RedesignTheme.t.elevated;
     border-width: 1px;
@@ -44,7 +47,7 @@ export component WorkMod inherits Rectangle {
                     padding-left: 14px; padding-right: 14px;
                     alignment: space-between;
                     Text {
-                        text: "身外之物";
+                        text: AppStrings.work-mod-title;
                         color: RedesignTheme.t.muted;
                         font-family: "JetBrains Mono";
                         font-size: 10px;
@@ -52,7 +55,7 @@ export component WorkMod inherits Rectangle {
                         vertical-alignment: center;
                     }
                     Text {
-                        text: "▾ 收纳";
+                        text: AppStrings.work-mod-collapse;
                         color: RedesignTheme.t.muted;
                         font-size: 9px;
                         vertical-alignment: center;
@@ -66,9 +69,9 @@ export component WorkMod inherits Rectangle {
             padding: 14px;
             spacing: 12px;
 
-            Text { text: "任务"; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: "产物"; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: "文件浏览"; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.work-mod-item-task; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.work-mod-item-artifact; font-size: 11px; color: RedesignTheme.t.fg; }
+            Text { text: AppStrings.work-mod-item-file-browser; font-size: 11px; color: RedesignTheme.t.fg; }
         }
         
         Rectangle { vertical-stretch: 1; }
