@@ -219,47 +219,114 @@ impl AIClientFactory {
 
 static GLOBAL_AI_CLIENT_FACTORY: OnceLock<Arc<tokio::sync::RwLock<Option<Arc<AIClientFactory>>>>> = OnceLock::new();
 
+/// Serializes the check-and-set critical section in
+/// [`AIClientFactory::initialize_global`].
+///
+/// A `tokio::sync::Mutex` (rather than `std::sync::Mutex`) is required because
+/// the critical section awaits fallible work (config service acquisition,
+/// factory construction). It is wrapped in a `std::sync::OnceLock` because
+/// `tokio::sync::Mutex::new` is not `const`. `OnceLock::get_or_init` is itself
+/// concurrency-safe, so the mutex is created exactly once. The fast-path
+/// [`AIClientFactory::is_global_initialized`] check outside the lock keeps the
+/// already-initialized path lock-free, so steady-state callers never await.
+static AI_CLIENT_FACTORY_INIT_MUTEX: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+
+/// Run the double-checked-locking init skeleton used by
+/// [`AIClientFactory::initialize_global`]: take the init mutex, re-check the
+/// already-initialized predicate inside the lock, and only then run the
+/// caller's fallible initialization work. The caller must perform every
+/// `OnceLock::set` inside its closure before returning, so a failure leaves no
+/// half-initialized state and a later retry starts clean.
+async fn init_once_with<F, Fut>(
+    is_initialized: impl Fn() -> bool,
+    init_mutex: &OnceLock<tokio::sync::Mutex<()>>,
+    init_name: &'static str,
+    initialize: F,
+) -> NortHingResult<()>
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = NortHingResult<()>>,
+{
+    // Fast path: avoid contending on the mutex once initialized.
+    if is_initialized() {
+        return Ok(());
+    }
+
+    let _guard = init_mutex.get_or_init(|| tokio::sync::Mutex::new(())).lock().await;
+
+    // Double-check inside the lock: another task may have finished
+    // initializing while we were waiting for the mutex.
+    if is_initialized() {
+        debug!("{} already initialized, skipping", init_name);
+        return Ok(());
+    }
+
+    // All fallible work runs inside `initialize` before any `OnceLock::set`,
+    // so a failure leaves no half-initialized state and a later retry starts
+    // from a clean slate; the double-check above guarantees the set succeeds.
+    initialize().await
+}
+
 impl AIClientFactory {
-    /// Initialize the global AIClientFactory singleton
+    /// Initialize the global AIClientFactory singleton.
+    ///
+    /// Concurrent-safe via double-checked locking (same pattern as
+    /// `GlobalConfigManager::initialize`, see commit `6574b01`): the
+    /// fast-path [`Self::is_global_initialized`] check avoids the init mutex
+    /// once initialized, while the [`AI_CLIENT_FACTORY_INIT_MUTEX`] critical
+    /// section guarantees only one caller ever performs the
+    /// `GLOBAL_AI_CLIENT_FACTORY.set` call. All fallible work
+    /// (`get_global_config_service`, factory construction) runs BEFORE the
+    /// `OnceLock::set`, so a failure leaves no half-initialized state and a
+    /// later retry starts clean. Because the double-check happens inside the
+    /// lock, the `set` that follows it is guaranteed to succeed (the `map_err`
+    /// stays as defense-in-depth); concurrent callers can no longer observe a
+    /// spurious "Failed to initialize global AIClientFactory" error while the
+    /// singleton is already ready (the pre-fix check-then-set TOCTOU).
     pub async fn initialize_global() -> NortHingResult<()> {
-        if Self::is_global_initialized() {
-            return Ok(());
-        }
+        init_once_with(
+            || Self::is_global_initialized(),
+            &AI_CLIENT_FACTORY_INIT_MUTEX,
+            "AIClientFactory",
+            || async {
+                // P0-E (2026-06-25): instrument the init flow so a cold-start
+                // hang can be localized from logs. Each `info!` carries the
+                // elapsed duration in milliseconds so the slow phase stands
+                // out. If `get_global_config_service()` is the culprit (RwLock
+                // convoy, PathManager IO, save_config write), the gap will
+                // show up here.
+                let init_start = std::time::Instant::now();
+                info!("P0-E: AIClientFactory::initialize_global:enter");
 
-        // P0-E (2026-06-25): instrument the init flow so a cold-start hang
-        // can be localized from logs. Each `info!` carries the elapsed
-        // duration in milliseconds so the slow phase stands out. If
-        // `get_global_config_service()` is the culprit (RwLock convoy,
-        // PathManager IO, save_config write), the gap will show up here.
-        let init_start = std::time::Instant::now();
-        info!("P0-E: AIClientFactory::initialize_global:enter");
+                info!("P0-E: before get_global_config_service");
+                let config_service = get_global_config_service()
+                    .await
+                    .map_err(|e| NortHingError::service(format!("Failed to get global config service: {}", e)))?;
+                info!(
+                    "P0-E: after get_global_config_service, took {:?}ms",
+                    init_start.elapsed().as_millis()
+                );
 
-        info!("P0-E: before get_global_config_service");
-        let config_service = get_global_config_service()
-            .await
-            .map_err(|e| NortHingError::service(format!("Failed to get global config service: {}", e)))?;
-        info!(
-            "P0-E: after get_global_config_service, took {:?}ms",
-            init_start.elapsed().as_millis()
-        );
+                let factory = Arc::new(AIClientFactory::new(config_service));
+                let wrapper = Arc::new(tokio::sync::RwLock::new(Some(factory)));
 
-        let factory = Arc::new(AIClientFactory::new(config_service));
-        let wrapper = Arc::new(tokio::sync::RwLock::new(Some(factory)));
+                let set_start = std::time::Instant::now();
+                GLOBAL_AI_CLIENT_FACTORY
+                    .set(wrapper)
+                    .map_err(|_| NortHingError::service("Failed to initialize global AIClientFactory".to_string()))?;
+                info!(
+                    "P0-E: after GLOBAL_AI_CLIENT_FACTORY.set, took {:?}ms",
+                    set_start.elapsed().as_millis()
+                );
 
-        let set_start = std::time::Instant::now();
-        GLOBAL_AI_CLIENT_FACTORY
-            .set(wrapper)
-            .map_err(|_| NortHingError::service("Failed to initialize global AIClientFactory".to_string()))?;
-        info!(
-            "P0-E: after GLOBAL_AI_CLIENT_FACTORY.set, took {:?}ms",
-            set_start.elapsed().as_millis()
-        );
-
-        info!(
-            "P0-E: AIClientFactory::initialize_global:done total={:?}ms",
-            init_start.elapsed().as_millis()
-        );
-        Ok(())
+                info!(
+                    "P0-E: AIClientFactory::initialize_global:done total={:?}ms",
+                    init_start.elapsed().as_millis()
+                );
+                Ok(())
+            },
+        )
+        .await
     }
 
     /// Get the global AIClientFactory instance
@@ -351,7 +418,7 @@ pub async fn discover_cli_credentials() -> Vec<cli_credentials::DiscoveredCreden
 
 #[cfg(test)]
 mod tests {
-    use super::AIClientFactory;
+    use super::{init_once_with, AIClientFactory};
     use crate::service::config::types::{AIModelConfig, GlobalConfig};
 
     fn build_model(id: &str, name: &str, model_name: &str) -> AIModelConfig {
@@ -418,5 +485,105 @@ mod tests {
             AIClientFactory::resolve_model_selection_in_config(&config, "fast"),
             Some("model-primary".to_string())
         );
+    }
+
+    // The double-checked-lock skeleton (`init_once_with`) is extracted into
+    // its own testable helper so the concurrency tests stay hermetic: they use
+    // a test-local cell and mutex instead of the process-global
+    // `GLOBAL_AI_CLIENT_FACTORY` / `AI_CLIENT_FACTORY_INIT_MUTEX`, which are
+    // shared with the rest of the lib test binary (initializing them would let
+    // other tests' spawned tasks attempt real LLM calls on hosts with
+    // configured credentials).
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn init_once_with_concurrent_callers_run_build_exactly_once() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::{Arc, OnceLock};
+
+        let cell = Arc::new(OnceLock::new());
+        let mutex = Arc::new(OnceLock::new());
+        let build_count = Arc::new(AtomicUsize::new(0));
+
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let check_cell = Arc::clone(&cell);
+            let build_cell = Arc::clone(&cell);
+            let mutex = Arc::clone(&mutex);
+            let build_count = Arc::clone(&build_count);
+            handles.push(tokio::spawn(async move {
+                init_once_with(
+                    || check_cell.get().is_some(),
+                    &mutex,
+                    "test-cell",
+                    || async move {
+                        build_count.fetch_add(1, Ordering::SeqCst);
+                        // Mirrors `initialize_global`'s closure: the fallible
+                        // work runs, then the cell is set before returning.
+                        build_cell
+                            .set(())
+                            .map_err(|_| super::NortHingError::service("test cell set twice".to_string()))
+                    },
+                )
+                .await
+            }));
+        }
+
+        for handle in handles {
+            handle
+                .await
+                .expect("task should not panic")
+                .expect("concurrent initializers must all return Ok");
+        }
+        assert_eq!(cell.get(), Some(&()), "cell must be set exactly once");
+        assert_eq!(
+            build_count.load(Ordering::SeqCst),
+            1,
+            "build must run exactly once under concurrency"
+        );
+    }
+
+    #[tokio::test]
+    async fn init_once_with_failed_build_leaves_no_half_initialized_state() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::{Arc, OnceLock};
+
+        let cell = Arc::new(OnceLock::new());
+        let mutex = Arc::new(OnceLock::new());
+        let call_count = Arc::new(AtomicUsize::new(0));
+
+        // A failing build propagates the error and leaves the cell empty.
+        let check_cell = Arc::clone(&cell);
+        let first_count = Arc::clone(&call_count);
+        let result = init_once_with(
+            || check_cell.get().is_some(),
+            &mutex,
+            "test-cell",
+            || async move {
+                first_count.fetch_add(1, Ordering::SeqCst);
+                Err(super::NortHingError::service("simulated build failure"))
+            },
+        )
+        .await;
+        assert!(result.is_err(), "failing build must propagate the error");
+        assert_eq!(cell.get(), None, "failed build must not set the cell");
+
+        // A later retry with a working build succeeds from a clean slate.
+        let retry_check_cell = Arc::clone(&cell);
+        let retry_cell = Arc::clone(&cell);
+        let second_count = Arc::clone(&call_count);
+        let result = init_once_with(
+            || retry_check_cell.get().is_some(),
+            &mutex,
+            "test-cell",
+            || async move {
+                second_count.fetch_add(1, Ordering::SeqCst);
+                retry_cell
+                    .set(())
+                    .map_err(|_| super::NortHingError::service("test cell set twice".to_string()))
+            },
+        )
+        .await;
+        assert!(result.is_ok(), "retry after a failed build must succeed");
+        assert_eq!(cell.get(), Some(&()), "retry must set the cell");
     }
 }

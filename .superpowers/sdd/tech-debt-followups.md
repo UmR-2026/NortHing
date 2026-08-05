@@ -2,7 +2,7 @@
 
 来源：`final-review.md` §5 triage 高优先级 4 项 + Task 9 遗留 1 项。
 本文件为后续子代理任务的输入；每项独立可派单，互不依赖。
-状态：FU-1、FU-2、FU-3、FU-4 **resolved**（`fix/backend-followups-0804` Task B1/B2/B3）；FU-5 **open**，未开始。
+状态：FU-1、FU-2、FU-3、FU-4、FU-5 **resolved**（`fix/backend-followups-0804` Task B1/B2/B3/B4）；全部完成。
 
 ---
 
@@ -51,6 +51,9 @@
 - **优先级理由**：trivial，消除 CI 噪声；与 FU-3 同文件可合并派单。
 
 ## FU-5 [concurrency] AIClientFactory::initialize_global 同款 TOCTOU
+
+> **状态**：resolved — Task B4（`fix/backend-followups-0804`），commit `fix(core): serialize AIClientFactory global init with double-checked locking (FU-5)`。
+> 修复：`initialize_global` 套用 `6574b01` global.rs 的 double-checked locking——新增 `AI_CLIENT_FACTORY_INIT_MUTEX`（`std::sync::OnceLock` 包 `tokio::sync::Mutex`，选型理由见 doc），fast path 免锁 → 取锁 → 锁内 double-check → fallible work（config service 获取、factory 构造）保持原顺序且全部在 `OnceLock::set` 之前 → set（双检后必成功，`map_err` 防御保留）。并发 caller 不再出现后到者 set 失败而拿到伪 `Err("Failed to initialize global AIClientFactory")`。测试取方案 B（A 因真实网络凭据 + 进程级 OnceLock 跨测试干扰不可 hermetic，证据见 task-b4-report.md）：双检锁骨架抽为可测 helper `init_once_with`（`initialize_global` 外部行为与 P0-E 日志不变），并发测试断言 build 恰执行一次、build 失败后 cell 保持空且重试可成功（无半初始化态）。验证：`cargo check -p northhing-core --features product-full` 通过；`cargo test -p northhing-core --features product-full --lib` 1138 passed + 1 ignored（基线 1139 总）+ 新增 2 = 1141 总，0 fail。
 
 - **定位**：`src/crates/assembly/core/` `client_factory.rs:224-263`（`is_global_initialized` → `GLOBAL_AI_CLIENT_FACTORY.set` 的 check-then-set）。
 - **现象/根因**：与 Task 9 修复前的 `GlobalConfigManager::initialize` 同模式 TOCTOU；Task 9 让 subagent_ports 测试不再调用它故不触发，但桌面运行时多入口并发 initialize 仍可能踩，且失败可能留半初始化态。
