@@ -109,6 +109,50 @@ export component AppWindow inherits Window {
     // `app_state::callbacks_settings::refresh::refresh_settings_lists`).
     in-out property <bool> workspace-override-supported: false;
 
+    // T4 (2026-08-05): 9 partition visibility booleans for the
+    // settings Skills module. Order matches brief §10.1
+    // (引擎/玩法/设计/工程/office/meta/computer-use/gstack/其他).
+    // A partition's `visible` binding on the Slint side is the
+    // only gate that decides whether the partition (title +
+    // container) renders — when false, neither the title nor
+    // the rows under it take any layout space, so empty
+    // partitions don't appear at all. Pushed by Rust from
+    // `apply_skill_filter` (both the initial `refresh_settings_
+    // lists` dispatch and the `set-skill-filter` keystroke
+    // callback).
+    in-out property <bool> skill-cat-engine: false;
+    in-out property <bool> skill-cat-gameplay: false;
+    in-out property <bool> skill-cat-design: false;
+    in-out property <bool> skill-cat-engineering: false;
+    in-out property <bool> skill-cat-office: false;
+    in-out property <bool> skill-cat-meta: false;
+    in-out property <bool> skill-cat-computer-use: false;
+    in-out property <bool> skill-cat-gstack: false;
+    in-out property <bool> skill-cat-other: false;
+
+    // T4 (2026-08-05): per-partition row models. Slint 1.16 的 for 体不能是
+    // 条件元素、visible:false 行仍占布局高，故行级过滤在 Rust 侧完成
+    // （apply_skill_filter 与 set-skill-filter 同源推送），每个分区只渲染
+    // 自己类别的行模型。序同 §10.1。
+    in-out property <[SkillStateItem]> skill-rows-engine: [];
+    in-out property <[SkillStateItem]> skill-rows-gameplay: [];
+    in-out property <[SkillStateItem]> skill-rows-design: [];
+    in-out property <[SkillStateItem]> skill-rows-engineering: [];
+    in-out property <[SkillStateItem]> skill-rows-office: [];
+    in-out property <[SkillStateItem]> skill-rows-meta: [];
+    in-out property <[SkillStateItem]> skill-rows-computer-use: [];
+    in-out property <[SkillStateItem]> skill-rows-gstack: [];
+    in-out property <[SkillStateItem]> skill-rows-other: [];
+
+    // T4 (2026-08-05): settings Skills search-input filter
+    // callback. Forwards the current text from the
+    // `SettingsView` search box to Rust, which re-applies a
+    // case-insensitive substring match on `name` or
+    // `description` and re-publishes `skills-list` + the 9
+    // partition visibility booleans. The settings drawer
+    // (Inspector) model is NOT touched by this callback.
+    callback set-skill-filter(string);
+
     // 2026-06-26 (Phase 3): Settings sub-panel callbacks (wired to AppState methods).
     callback upsert-provider(string, string, string, string, string, string, bool);
     callback delete-provider(string);
@@ -240,6 +284,32 @@ export component AppWindow inherits Window {
         legacy-placeholder-count: root.legacy-placeholder-count;
         provider-test-result: root.provider-test-result;
         provider-test-in-flight: root.provider-test-in-flight;
+        // T4 (2026-08-05): forward 9 partition visibility booleans
+        // (brief §10.1) to the SettingsView. Each partition's
+        // `visible` binding is the ONLY gate that decides whether
+        // the title + rows render. Empty partitions don't appear.
+        cat-engine: root.skill-cat-engine;
+        cat-gameplay: root.skill-cat-gameplay;
+        cat-design: root.skill-cat-design;
+        cat-engineering: root.skill-cat-engineering;
+        cat-office: root.skill-cat-office;
+        cat-meta: root.skill-cat-meta;
+        cat-computer-use: root.skill-cat-computer-use;
+        cat-gstack: root.skill-cat-gstack;
+        cat-other: root.skill-cat-other;
+        rows-engine: root.skill-rows-engine;
+        rows-gameplay: root.skill-rows-gameplay;
+        rows-design: root.skill-rows-design;
+        rows-engineering: root.skill-rows-engineering;
+        rows-office: root.skill-rows-office;
+        rows-meta: root.skill-rows-meta;
+        rows-computer-use: root.skill-rows-computer-use;
+        rows-gstack: root.skill-rows-gstack;
+        rows-other: root.skill-rows-other;
+        // T4 (2026-08-05): forward the search-input filter text
+        // to Rust. The Rust side applies the substring match and
+        // re-publishes `skills-list` + the 9 cat-* booleans.
+        set-skill-filter(text) => { root.set-skill-filter(text); }
         close-settings => { root.current-route = "main"; }
 
         upsert-provider(id, name, type, base-url, api-key, model, enabled)

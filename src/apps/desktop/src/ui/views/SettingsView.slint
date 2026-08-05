@@ -1,36 +1,204 @@
-// SettingsView — Phase 3 (with all sub-panels)
+// SettingsView - T4 settings v2 — 三页浮层（接入点 / MCP / 技能）
 //
-// Spec: `docs/superpowers/specs/2026-06-26-frontend-onboarding-design.md` §3.2.
+// 形态：scrim（点击关闭）+ 居中 480px 宽 window-block 浮层（max 80vh、内 Flickable）。
+// 块皮 = 1px line 边 + bevel 顶边（亮 1px 覆盖层）+ radius 4px + bg2 + lift drop-shadow。
+// station-head「全局设置」mono 11px ls 0.08em muted + 右 × 关闭。head 下 tab 行三页：
+// 接入点 / MCP / 技能（segments 语法：raised 底 + active elevated + mind-drive-accent）。
+// 切页 = 内容替换，无动画或 ≤200ms opacity（取轻量；本页用即时替换）。
+//
+// 全屏页氛围全撤（brief §9.6 终稿）：aura / containment / membrane / room-fog 不在此做
+// （它们属主视图，T1/T2 已有）；浮层不复制 WindowChrome。「它的自我」不渲染、不留占位
+// （归 T6 space）；显示模式仅右上 ☀（WindowChrome 已有）；工作区 → T6。
+//
+// 模块内部复用（与已废弃的全屏页共用同一份数据契约）：
+//   - Skills 分区（§3.3 / §10.1）：cat-* 可见性 + 子串过滤（Rust 侧 set-skill-filter）；
+//     行只 sq-toggle + name；hover 右侧显种类。
+//   - MCP 行（§3.3）：sq-toggle + name + intro 单行截断 + 验证态副文。
+//   - providers 行（§3.2）：dot-radio ENGINE + sq-toggle PROVIDER + 测试/删除入口。
+//
+// 系统继承（T1/T2/T3 API，不重新发明）：RedesignTheme / AppStrings。
+// 公共 API（main.slint 绑定）全部保留，见下方声明；本任务视觉层用不到的回调
+// （如 upsert-mcp 表单类）保留声明即可，详情见 task-04-report.md「保留但未渲染」清单。
+//
+// 注：Slint Rectangle 仅有统一 border-width/border-color（无 per-edge），bevel 顶边
+// 用 1px Rectangle 覆盖层（y=0）表达；letter-spacing 0.08em -> 1px（Slint 不支持 em）。
+// 8s sin 呼吸沿用 T2 I3 范式：opacity: 0.725 + 0.275 * Math.sin(animation-tick()/8000ms*360deg)。
 
 import { ProviderItem, SkillStateItem, MCPItem, WorkspaceItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
 import { AppStrings } from "../strings.slint";
-import { ProviderSettingsPanel } from "ProviderSettingsPanel.slint";
-import { SkillsSettingsPanel } from "SkillsSettingsPanel.slint";
-import { MCPSettingsPanel } from "MCPSettingsPanel.slint";
-import { WorkspaceSettingsPanel } from "WorkspaceSettingsPanel.slint";
-import { GeneralSettingsPanel } from "GeneralSettingsPanel.slint";
-import { AccessSettingsPanel } from "AccessSettingsPanel.slint";
+
+// ---------------------------------------------------------------------------
+// 局部子组件（仅本视图复用）
+// ---------------------------------------------------------------------------
+
+// dot-radio：8px 圆（border-radius 4px 定值，brief §7 决策）。active 时实心 accent。
+component dot-radio inherits Rectangle {
+    in property <bool> active: false;
+    in property <color> accent: RedesignTheme.t.mind-drive-accent;
+    width: 8px; height: 8px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: root.active ? root.accent : RedesignTheme.t.muted;
+    background: root.active ? root.accent : transparent;
+}
+
+// sq-toggle：8px 方形（近尖角语言）。active 时实心 ok 绿。
+component sq-toggle inherits Rectangle {
+    in property <bool> active: false;
+    width: 8px; height: 8px;
+    border-width: 1px;
+    border-color: root.active ? #46A758 : RedesignTheme.t.muted;
+    background: root.active ? #46A758 : transparent;
+}
+
+// window-block：浮层面板皮（§3.1）。
+// 1px line 边 + bevel 顶边（亮 1px 覆盖层）+ radius 4px + bg2 + drop-shadow lift。
+// bg2 = elevated（真值 light bg2=#FFFFFF ≡ elevated LIGHT；浮层需与 scrim 后页面拉开层级）。
+// 内容由 VerticalLayout 承载（station-head + tab-row + body Flickable）。
+component window-block inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    background: RedesignTheme.t.elevated;
+    border-width: 1px;
+    border-color: RedesignTheme.t.border;
+    border-radius: 4px;
+    drop-shadow-color: RedesignTheme.t.shadow;
+    drop-shadow-blur: 12px;
+    clip: true;
+
+    VerticalLayout {
+        spacing: 0px;
+        width: parent.width;
+
+        @children
+    }
+
+    // bevel 顶边（真值 --bevel：border-top-color；Slint 无 per-edge border，
+    // 用 1px 覆盖层表达，ChatMessageBubble 同款范式 fg.with-alpha(0.06)）。
+    // 声明在 VerticalLayout 之后，确保覆盖 station-head 的 raised 底。
+    Rectangle {
+        y: 1px; height: 1px; width: parent.width;
+        background: RedesignTheme.t.fg.with-alpha(0.06);
+    }
+}
+
+// tab-segment：tab 行单元格（§3.1）。raised 底 + active elevated + mind-drive-accent 下划线。
+component tab-segment inherits Rectangle {
+    in property <string> text: "";
+    in property <bool> active: false;
+    callback clicked();
+
+    min-width: 56px;
+    height: 36px;
+    background: root.active ? RedesignTheme.t.elevated : RedesignTheme.t.raised;
+    animate background { duration: 150ms; }
+
+    TouchArea {
+        width: parent.width; height: parent.height;
+        clicked => { root.clicked(); }
+    }
+    Text {
+        text: root.text;
+        font-family: "JetBrains Mono";
+        font-size: 12px;
+        color: root.active ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+    // active 下划线（mind-drive-accent 1px，brief §7 字面量决策）
+    if root.active : Rectangle {
+        x: 0; y: parent.height - 1px;
+        width: parent.width; height: 1px;
+        background: RedesignTheme.t.mind-drive-accent;
+    }
+}
+
+// row-button：小行内按钮（测试/删除，hover 时 mind 边框）。
+component row-button inherits Rectangle {
+    in property <string> text: "";
+    callback clicked();
+
+    width: 24px; height: 18px;
+    border-width: 1px;
+    border-color: rb-ta.has-hover
+        ? RedesignTheme.t.mind-drive-accent
+        : RedesignTheme.t.border;
+    border-radius: 3px;
+    background: rb-ta.has-hover ? RedesignTheme.t.raised : transparent;
+    animate border-color { duration: 150ms; }
+    animate background { duration: 150ms; }
+
+    rb-ta := TouchArea {
+        width: parent.width; height: parent.height;
+        clicked => { root.clicked(); }
+    }
+    Text {
+        text: root.text;
+        font-family: "JetBrains Mono"; font-size: 9px;
+        color: rb-ta.has-hover ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+        animate color { duration: 150ms; }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SettingsView 主体
+// ---------------------------------------------------------------------------
 
 export component SettingsView inherits Rectangle {
-    background: RedesignTheme.t.bg;
-
-    // A2=a: left menu item the user clicked. Slint enums are not
-    // first-class in 1.16 - use a string property and match in panel.
-    in-out property <string> active-section: "providers";  // providers|workspaces|skills|mcp|general|access
-
-    // Settings menus (A1+a: sidebar entry; A1+b: cog icon)
-    callback close-settings();
-
-    // FR-T4-10b: 主题所有权收归 AppWindow——dark-mode 由 main.slint 传入，
-    // toggle-theme 只透传上送，由 root 统一翻转并驱动 RedesignTheme.dark。
+    // === 公共 API 保留清单（main.slint 绑定，重写不得破坏）===
+    in-out property <string> active-section: "providers";
     in-out property <bool> dark-mode: RedesignTheme.dark;
-    callback toggle-theme();
-    // FR-T4-6a: 「编辑身份」行回调占位 TODO（接后端 identity 编辑通路）。
-    callback edit-identity();
+    in property <[ProviderItem]> providers: [];
+    in property <[SkillStateItem]> skills: [];
+    in property <[MCPItem]> mcp-servers: [];
+    in property <[WorkspaceItem]> workspaces: [];
+    in property <bool> workspace-override-supported: false;
+    in property <int> current-workspace-index: -1;
+    in property <string> default-model-provider-id: "";
+    in property <int> legacy-placeholder-count: 0;
+    in property <string> provider-test-result: "";
+    in property <bool> provider-test-in-flight: false;
 
-    // Phase 3: pass-through callbacks for sub-panels. SettingsView
-    // doesn't process them; main.slint wires them to AppState methods.
+    // T4 (2026-08-05) §3.3 / §10.1: 9 partition visibility
+    // booleans forwarded from Rust. Each partition's `visible`
+    // binding is the ONLY gate that decides whether the title
+    // + container render. When false, the partition takes no
+    // layout space at all (no empty title bar, no 0-height
+    // placeholder). Order matches brief §10.1
+    // (引擎/玩法/设计/工程/office/meta/computer-use/gstack/其他).
+    in property <bool> cat-engine: false;
+    in property <bool> cat-gameplay: false;
+    in property <bool> cat-design: false;
+    in property <bool> cat-engineering: false;
+    in property <bool> cat-office: false;
+    in property <bool> cat-meta: false;
+    in property <bool> cat-computer-use: false;
+    in property <bool> cat-gstack: false;
+    in property <bool> cat-other: false;
+
+    // T4 (2026-08-05): per-partition row models pushed by Rust
+    // (apply_skill_filter). for 体不能条件、visible 行占高，行级过滤在 Rust 侧。
+    in property <[SkillStateItem]> rows-engine: [];
+    in property <[SkillStateItem]> rows-gameplay: [];
+    in property <[SkillStateItem]> rows-design: [];
+    in property <[SkillStateItem]> rows-engineering: [];
+    in property <[SkillStateItem]> rows-office: [];
+    in property <[SkillStateItem]> rows-meta: [];
+    in property <[SkillStateItem]> rows-computer-use: [];
+    in property <[SkillStateItem]> rows-gstack: [];
+    in property <[SkillStateItem]> rows-other: [];
+
+    // callbacks（全部保留；视觉层用不到的也保留声明以便 main.slint 绑定）
+    callback close-settings();
+    callback toggle-theme();
+    callback edit-identity();
     callback upsert-provider(string, string, string, string, string, string, bool);
     callback delete-provider(string);
     callback test-provider(string);
@@ -41,8 +209,6 @@ export component SettingsView inherits Rectangle {
     callback upsert-mcp(string, string, string, string, string, string, string, bool);
     callback delete-mcp(string);
     callback test-mcp(string);
-
-    // Phase 4: workspace callbacks.
     callback pick-folder();
     callback add-workspace(string, string, bool);
     callback switch-workspace(string);
@@ -50,373 +216,986 @@ export component SettingsView inherits Rectangle {
     callback edit-identity-md(string);
     callback open-identity-creator();
 
-    in property <[ProviderItem]> providers: [];
-    in property <[SkillStateItem]> skills: [];
-    in property <[MCPItem]> mcp-servers: [];
-    in property <[WorkspaceItem]> workspaces: [];
-    in property <int> current-workspace-index: -1;
-    in property <string> default-model-provider-id: "";
-    in property <int> legacy-placeholder-count: 0;
-    in property <string> provider-test-result: "";
-    in property <bool> provider-test-in-flight: false;
-    // 2026-07-27 (K4a R3, Bug C, fix #5): the per-workspace
-    // override column in `SkillsSettingsPanel` is only
-    // rendered when this flag is true. The flag is computed
-    // server-side (`refresh_settings_lists`) by probing
-    // `facade.load_project_skills()` — the current facade
-    // implementation is a stub that returns
-    // `KernelError::Internal("not yet wired:
-    // load_project_skills — workspace_path not available")`,
-    // so the flag is always false. When a future K4a
-    // follow-up exposes the per-workspace data source, the
-    // flag will flip true and the cycle button reappears
-    // automatically.
-    in property <bool> workspace-override-supported: false;
+    // T4 (2026-08-05) §3.3: forward the search-input text to
+    // Rust. Rust (`app_state::callbacks_settings::skill_filter`)
+    // re-applies a case-insensitive substring match on `name`
+    // or `description` and re-publishes `skills` (the same
+    // `skills-list` model on `AppWindow`) + the 9 cat-*
+    // booleans. The drawer (Inspector) model is unaffected.
+    callback set-skill-filter(string);
 
-    HorizontalLayout {
+    // === T4 浮层内部状态 ===
+    // 当前 tab：providers / mcp / skills（与全屏旧 active-section 语义不同）。
+    in-out property <string> overlay-tab: "providers";
+    // MCP 添加表单展开态
+    in-out property <bool> mcp-form-open: false;
+    // 添加表单字段（仅 UI 缓冲；提交走 upsert-mcp）
+    in-out property <string> mcp-form-name: "";
+    in-out property <string> mcp-form-transport: "stdio";
+    in-out property <string> mcp-form-command: "";
+    in-out property <string> mcp-form-args: "";
+    in-out property <string> mcp-form-url: "";
+    in-out property <string> mcp-form-env: "";
+    in-out property <bool> mcp-form-enabled: true;
+    // Skills 搜索框文本：仅作为 UI 的输入缓冲（text 变化时转给
+    // `set-skill-filter` 回调）。真正的过滤在 Rust 侧做。
+    in-out property <string> skill-filter: "";
+
+    background: transparent;
+
+    // ===== 1. scrim（AirTint 现范式：深 0.5 alpha，点击关闭）=====
+    Rectangle {
         width: parent.width;
         height: parent.height;
-        padding: 0px;
-
-        // ===== Left nav (A2=a) =====
-        Rectangle {
-            width: 240px;
-            height: parent.height;
-            background: RedesignTheme.t.surface;
-
-            VerticalLayout {
-                width: parent.width;
-                height: parent.height;
-                padding-left: RedesignTheme.t.s4;
-                padding-right: RedesignTheme.t.s4;
-                padding-top: RedesignTheme.t.s4;
-                padding-bottom: RedesignTheme.t.s4;
-
-                // Nav title — Fraunces serif, 24px
-                Text {
-                    text: AppStrings.settings-open;
-                    font-family: "Fraunces";
-                    font-size: 24px;
-                    font-weight: 500;
-                    color: RedesignTheme.t.fg;
-                    horizontal-alignment: left;
-                }
-
-                Rectangle { height: RedesignTheme.t.s5; }
-
-                // ── Group: 偏好 ──
-                Text {
-                    text: "偏好";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.muted;
-                    height: 20px;
-                    vertical-alignment: center;
-                }
-
-                // Menu items — selection pattern via `active-section`.
-                nav-providers := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "providers"
-                        ? RedesignTheme.t.raised
-                        : nav-providers-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-providers-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "providers"; }
-                    }
-                    if root.active-section == "providers": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: AppStrings.settings-providers;
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "providers" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-                nav-workspaces := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "workspaces"
-                        ? RedesignTheme.t.raised
-                        : nav-workspaces-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-workspaces-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "workspaces"; }
-                    }
-                    if root.active-section == "workspaces": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: AppStrings.settings-workspaces;
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "workspaces" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-
-                // ── Group: 能力 ──
-                Rectangle { height: RedesignTheme.t.s5; }
-                Text {
-                    text: "能力";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.muted;
-                    height: 20px;
-                    vertical-alignment: center;
-                }
-
-                nav-skills := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "skills"
-                        ? RedesignTheme.t.raised
-                        : nav-skills-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-skills-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "skills"; }
-                    }
-                    if root.active-section == "skills": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: AppStrings.settings-skills;
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "skills" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-                nav-mcp := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "mcp"
-                        ? RedesignTheme.t.raised
-                        : nav-mcp-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-mcp-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "mcp"; }
-                    }
-                    if root.active-section == "mcp": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: AppStrings.settings-mcp;
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "mcp" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-
-                // ── Group: 通用 ──
-                Rectangle { height: RedesignTheme.t.s5; }
-                Text {
-                    text: "通用";
-                    font-size: RedesignTheme.t.fs-md;
-                    color: RedesignTheme.t.muted;
-                    height: 20px;
-                    vertical-alignment: center;
-                }
-
-                nav-general := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "general"
-                        ? RedesignTheme.t.raised
-                        : nav-general-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-general-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "general"; }
-                    }
-                    if root.active-section == "general": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: AppStrings.settings-general;
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "general" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-                // FR-T4-6a: 访问权限 nav 项（照 settings-access.html 安全组）
-                nav-access := Rectangle {
-                    height: 48px;
-                    border-radius: RedesignTheme.t.r-sm;
-                    background: root.active-section == "access"
-                        ? RedesignTheme.t.raised
-                        : nav-access-ta.has-hover ? RedesignTheme.t.raised : transparent;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    nav-access-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.active-section = "access"; }
-                    }
-                    if root.active-section == "access": Rectangle {
-                        x: 0; width: 3px;
-                        y: (parent.height - 16px) / 2; height: 16px;
-                        background: RedesignTheme.t.rep-500;
-                        border-radius: 2px;
-                    }
-                    Text {
-                        text: "访问权限";
-                        font-size: RedesignTheme.t.fs-body;
-                        font-weight: root.active-section == "access" ? 500 : 400;
-                        color: RedesignTheme.t.fg;
-                        x: RedesignTheme.t.s4;
-                        vertical-alignment: center;
-                    }
-                }
-
-                // spacer pushes the close button to the bottom
-                Rectangle { vertical-stretch: 1; }
-
-                close-button := Rectangle {
-                    height: 40px;
-                    background: close-ta.has-hover ? RedesignTheme.t.border-soft : transparent;
-                    border-radius: RedesignTheme.t.r-sm;
-                    animate background { duration: 200ms; easing: ease-in-out; }
-                    close-ta := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-                        clicked => { root.close-settings(); }
-                    }
-                    Text {
-                        text: AppStrings.close;
-                        font-size: RedesignTheme.t.fs-body;
-                        color: RedesignTheme.t.fg;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                }
-            }
+        background: RedesignTheme.t.scrim.with_alpha(0.5);
+        scrim-ta := TouchArea {
+            width: parent.width; height: parent.height;
+            clicked => { root.close-settings(); }
         }
+    }
 
-        // ===== Right detail panel (placeholder; sub-panels in Phase 3) =====
-        // FR-T4-6a: 设置页淡雾--底色平铺 air-rep-settings（1.5% rep）+ 顶晕
-        // halo-rep-settings（亮 2% / 暗 5%）径向，写法仿 AirTint。设置页在
-        // archive（abyss 冷雾）/ main（rep 3.5%/7% 暖雾）之外的视觉分档。
-        Rectangle {
-            width: parent.width - 240px;
-            height: parent.height;
-            background: RedesignTheme.t.air-rep-settings;
-            animate background { duration: 300ms; easing: ease-in-out; }
+    // ===== 2. 居中浮层（480px 宽，高随内容，max 80vh；brief §3.1）=====
+    // chrome = station-head 32 + tab 行 36 + 分隔线 1 = 69px；
+    // body 上限 = 80vh - chrome，超出走 Flickable 滚动。
+    panel := Rectangle {
+        x: (parent.width - 480px) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 480px;
+        height: 69px + body-flick.height;
 
-            // 顶晕径向 — 原型规格: ellipse 160% 120% at 50% 4%, rep-500 @ 2%
+        window-block {
+            // station-head：32px 高 + 8s sin 呼吸状态点（视觉提示路由在场）
             Rectangle {
-                x: 0;
-                y: 0;
                 width: parent.width;
-                height: parent.height * 0.5;
-                background: @radial-gradient(circle at parent.width / 2 parent.height * 0.04, RedesignTheme.t.rep-500.with-alpha(0.02) 0%, transparent 60%);
-                animate background { duration: 300ms; easing: ease-in-out; }
+                height: 32px;
+                background: RedesignTheme.t.raised;
+                HorizontalLayout {
+                    width: parent.width;
+                    height: parent.height;
+                    padding-left: 16px;
+                    padding-right: 8px;
+                    spacing: 8px;
+
+                    Text {
+                        text: AppStrings.settings-v2-status;
+                        font-family: "JetBrains Mono";
+                        font-size: 11px;
+                        color: RedesignTheme.t.muted;
+                        letter-spacing: 1px;
+                        vertical-alignment: center;
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Rectangle {
+                        width: 18px; height: 18px;
+                        close-ta := TouchArea {
+                            width: parent.width; height: parent.height;
+                            clicked => { root.close-settings(); }
+                        }
+                        Text {
+                            text: "×";
+                            font-family: "JetBrains Mono"; font-size: 14px;
+                            color: close-ta.has-hover ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                            animate color { duration: 150ms; }
+                        }
+                    }
+                }
+                // station-head 底边线
+                Rectangle {
+                    x: 0; y: parent.height - 1px;
+                    width: parent.width; height: 1px;
+                    background: RedesignTheme.t.border;
+                }
             }
 
-            VerticalLayout {
+            // tab-row：3 segments（接入点 / MCP / 技能），raised 底 + active elevated
+            Rectangle {
                 width: parent.width;
-                height: parent.height;
-                padding-left: 32px;
-                padding-right: 40px;
-                padding-top: RedesignTheme.t.s5;
-                padding-bottom: RedesignTheme.t.s5;
-                animate opacity { duration: 200ms; }
+                height: 36px;
+                background: RedesignTheme.t.raised;
+            HorizontalLayout {
+                height: 36px;
+                spacing: 0px;
+                tab-providers := tab-segment {
+                    text: AppStrings.overlay-tab-providers;
+                    active: root.overlay-tab == "providers";
+                    clicked => { root.overlay-tab = "providers"; }
+                }
+                tab-mcp := tab-segment {
+                    text: AppStrings.overlay-tab-mcp;
+                    active: root.overlay-tab == "mcp";
+                    clicked => { root.overlay-tab = "mcp"; }
+                }
+                tab-skills := tab-segment {
+                    text: AppStrings.overlay-tab-skills;
+                    active: root.overlay-tab == "skills";
+                    clicked => { root.overlay-tab = "skills"; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            }
+            // tab-row 底边线
+            Rectangle {
+                width: parent.width; height: 1px;
+                background: RedesignTheme.t.border;
+            }
 
-                // Sub-panel switcher (Phase 3). WorkplacesSettingsPanel is Phase 4.
-                if root.active-section == "providers": ProviderSettingsPanel {
+            // ===== 3. Flickable body（高随内容，上限 80vh - chrome）=====
+            // 高度取 body-layout.preferred-height（布局自底向上计算，
+            // 不依赖 viewport 实际高度，避免 binding loop）。
+            body-flick := Flickable {
+                width: parent.width;
+                height: Math.min(body-layout.preferred-height, root.height * 0.8 - 69px);
+                interactive: true;
+
+                body-layout := VerticalLayout {
                     width: parent.width;
-                    height: parent.height;
-                    providers: root.providers;
-                    default-model-provider-id: root.default-model-provider-id;
-                    legacy-placeholder-count: root.legacy-placeholder-count;
-                    provider-test-result: root.provider-test-result;
-                    provider-test-in-flight: root.provider-test-in-flight;
-                    upsert-provider(n, t, b, k, m, e, en) => { root.upsert-provider(n, t, b, k, m, e, en); }
-                    delete-provider(id) => { root.delete-provider(id); }
-                    test-provider(id) => { root.test-provider(id); }
-                    set-default-model(id) => { root.set-default-model(id); }
-                    cleanup-legacy-placeholders => { root.cleanup-legacy-placeholders(); }
-                }
-                if root.active-section == "skills": SkillsSettingsPanel {
+
+                // ----- 第一页 接入点 -----
+                if root.overlay-tab == "providers" : VerticalLayout {
                     width: parent.width;
-                    height: parent.height;
-                    skills: root.skills;
-                    workspace-override-supported: root.workspace-override-supported;
-                    set-skill-global(id, en) => { root.set-skill-global(id, en); }
-                    set-skill-workspace(id, ov) => { root.set-skill-workspace(id, ov); }
-                }
-                if root.active-section == "mcp": MCPSettingsPanel {
-                    width: parent.width;
-                    height: parent.height;
-                    mcp-servers: root.mcp-servers;
-                    upsert-mcp(id, name, transport, command, args, url, env, enabled) => { root.upsert-mcp(id, name, transport, command, args, url, env, enabled); }
-                    delete-mcp(id) => { root.delete-mcp(id); }
-                    test-mcp(id) => { root.test-mcp(id); }
-                }
-                if root.active-section == "workspaces": WorkspaceSettingsPanel {
-                    width: parent.width;
-                    height: parent.height;
-                    workspaces: root.workspaces;
-                    current-workspace-index: root.current-workspace-index;
-                    pick-folder => { root.pick-folder(); }
-                    add-workspace(path, name, set-current) => { root.add-workspace(path, name, set-current); }
-                    switch-workspace(id) => { root.switch-workspace(id); }
-                    remove-workspace(id) => { root.remove-workspace(id); }
-                    edit-identity-md(id) => { root.edit-identity-md(id); }
-                    open-identity-creator => { root.open-identity-creator(); }
-                }
-                if root.active-section == "general": GeneralSettingsPanel {
-                    width: parent.width;
-                    height: parent.height;
-                    dark-mode: root.dark-mode;
-                    toggle-theme => {
-                        // 主题所有权收归 AppWindow：只透传，由 main.slint 经
-                        // root.toggle-theme() 统一翻转 dark-mode 驱动 token。
-                        root.toggle-theme();
+                    padding-top: 16px;
+                    padding-bottom: 16px;
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    spacing: 20px;
+
+                    // -- 模型引擎 ENGINE（dot-radio 列表）--
+                    // 444px = 480 浮层宽 - 2×18 页边距（定值，避免 stretch 歧义）
+                    Rectangle {
+                        width: 444px;
+                        // station-section-head
+                        height: 22px;
+                        background: transparent;
+                        Text {
+                            text: AppStrings.set-engine-title;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint;
+                            letter-spacing: 1px;
+                            width: 444px;
+                            horizontal-alignment: left;
+                            vertical-alignment: center;
+                        }
                     }
-                    edit-identity => { root.edit-identity(); }
+                    VerticalLayout {
+                        width: 444px;
+                        spacing: 4px;
+
+                        for p[i] in root.providers : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: engine-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            engine-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-default-model(p.id); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0;
+                                width: parent.width; height: parent.height;
+                                padding-right: 4px;
+                                spacing: 8px;
+                                dot-radio {
+                                    active: p.id == root.default-model-provider-id;
+                                    accent: RedesignTheme.t.mind-drive-accent;
+                                    y: (parent.height - 8px) / 2;
+                                }
+                                Text {
+                                    text: p.model != "" ? p.model : p.name;
+                                    font-size: 12px;
+                                    color: p.id == root.default-model-provider-id
+                                        ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                Rectangle { horizontal-stretch: 0; }
+                                if p.id == root.default-model-provider-id : Text {
+                                    text: AppStrings.set-engine-current-tag;
+                                    font-family: "JetBrains Mono"; font-size: 10px;
+                                    color: RedesignTheme.t.mind-drive-line;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                        if root.providers.length == 0 : Text {
+                            text: AppStrings.provider-empty;
+                            font-size: 11px; color: RedesignTheme.t.faint;
+                        }
+                    }
+
+                    // -- 接入点 PROVIDER（sq-toggle 列表 + 测试/删除）--
+                    Rectangle {
+                        width: 444px; height: 22px;
+                        Text {
+                            text: AppStrings.set-provider-title;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint;
+                            letter-spacing: 1px;
+                            width: 444px;
+                            horizontal-alignment: left;
+                            vertical-alignment: center;
+                        }
+                    }
+                    VerticalLayout {
+                        width: 444px; spacing: 4px;
+
+                        for p[i] in root.providers : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: p-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            p-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => {
+                                    root.upsert-provider(p.id, p.name, p.type,
+                                        p.base-url, "", p.model, !p.enabled);
+                                }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0;
+                                width: parent.width; height: parent.height;
+                                spacing: 8px;
+                                sq-toggle { active: p.enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: p.name;
+                                    font-size: 12px;
+                                    color: p.enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                // 副文（mono 10px muted）+ 测试/删除入口（brief §3.2）。
+                                Text {
+                                    text: AppStrings.set-provider-direct;
+                                    font-family: "JetBrains Mono"; font-size: 10px;
+                                    color: p.enabled ? RedesignTheme.t.muted : RedesignTheme.t.faint;
+                                    vertical-alignment: center;
+                                }
+                                row-button {
+                                    text: AppStrings.set-provider-test;
+                                    clicked => { root.test-provider(p.id); }
+                                }
+                                row-button {
+                                    text: AppStrings.set-provider-delete;
+                                    clicked => { root.delete-provider(p.id); }
+                                }
+                            }
+                        }
+                        if root.providers.length == 0 : Text {
+                            text: AppStrings.provider-empty;
+                            font-size: 11px; color: RedesignTheme.t.faint;
+                        }
+                    }
                 }
-                if root.active-section == "access": AccessSettingsPanel {
+
+                // ----- 第二页 MCP -----
+                if root.overlay-tab == "mcp" : VerticalLayout {
                     width: parent.width;
-                    height: parent.height;
+                    padding-top: 16px;
+                    padding-bottom: 16px;
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    spacing: 12px;
+
+                    // -- MCP 服务器列表（sq-toggle + name + intro）--
+                    for m[i] in root.mcp-servers : Rectangle {
+                        horizontal-stretch: 1; height: 22px;
+                        background: mcp-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                        animate background { duration: 150ms; }
+                        mcp-ta := TouchArea {
+                            width: parent.width; height: parent.height;
+                            clicked => {
+                                root.upsert-mcp(m.id, m.name, m.transport,
+                                    "", "", "", "", !m.enabled);
+                            }
+                        }
+                        HorizontalLayout {
+                            x: 0; y: 0;
+                            width: parent.width; height: parent.height;
+                            spacing: 8px;
+                            // verified 当前数据流恒为 ""（refresh.rs：连接态探针
+                            // N+1 RPC 被 K4a-T4 推迟），toggle 只反映 enabled。
+                            sq-toggle {
+                                active: m.enabled;
+                                y: (parent.height - 8px) / 2;
+                            }
+                            Text {
+                                text: m.name;
+                                font-size: 12px;
+                                color: m.enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                vertical-alignment: center;
+                                overflow: elide;
+                                min-width: 0;
+                                horizontal-stretch: 1;
+                            }
+                            // 简介一行（§10.2 fallback：faint mono 10px 单行截断）；
+                            // 连接态 fail 时以 danger 副文取代简介。
+                            Text {
+                                text: m.verified == "fail"
+                                    ? AppStrings.set-mcp-unauth
+                                    : m.intro;
+                                font-family: "JetBrains Mono"; font-size: 10px;
+                                color: m.verified == "fail"
+                                    ? RedesignTheme.t.danger : RedesignTheme.t.faint;
+                                vertical-alignment: center;
+                                overflow: elide;
+                                horizontal-alignment: right;
+                                max-width: 220px;
+                            }
+                        }
+                    }
+                    if root.mcp-servers.length == 0 : Text {
+                        text: AppStrings.mcp-empty;
+                        font-size: 11px; color: RedesignTheme.t.faint;
+                    }
+
+                    // -- 添加服务器按钮（toggle form）--
+                    Rectangle {
+                        width: 444px; height: 28px;
+                        border-width: 1px;
+                        border-color: add-ta.has-hover
+                            ? RedesignTheme.t.mind-drive-accent
+                            : RedesignTheme.t.border;
+                        border-radius: 3px;
+                        background: add-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                        animate border-color { duration: 150ms; }
+                        animate background { duration: 150ms; }
+                        add-ta := TouchArea {
+                            width: parent.width; height: parent.height;
+                            clicked => { root.mcp-form-open = !root.mcp-form-open; }
+                        }
+                        Text {
+                            text: root.mcp-form-open
+                                ? AppStrings.overlay-mcp-form-collapse
+                                : AppStrings.overlay-mcp-add;
+                            font-family: "JetBrains Mono"; font-size: 11px;
+                            color: add-ta.has-hover
+                                ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                            animate color { duration: 150ms; }
+                        }
+                    }
+
+                    // -- 添加表单（展开态；1px line 边、内 padding）--
+                    if root.mcp-form-open : Rectangle {
+                        width: 444px;
+                        border-width: 1px;
+                        border-color: RedesignTheme.t.border;
+                        border-radius: 3px;
+                        background: RedesignTheme.t.elevated;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 8px;
+                            width: parent.width;
+
+                            // name
+                            Text { text: AppStrings.overlay-mcp-form-name;
+                                font-family: "JetBrains Mono"; font-size: 9px;
+                                color: RedesignTheme.t.faint; letter-spacing: 1px;
+                                horizontal-alignment: left; width: 420px; }
+                            Rectangle {
+                                width: 420px; height: 24px;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+                                background: RedesignTheme.t.bg;
+                                name-input := TextInput {
+                                    text <=> root.mcp-form-name;
+                                    font-family: "JetBrains Mono"; font-size: 11px;
+                                    color: RedesignTheme.t.fg;
+                                    x: 6px; y: 0;
+                                    width: parent.width - 12px; height: parent.height;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // transport segments（stdio / sse / streamable-http）
+                            HorizontalLayout {
+                                width: 420px; height: 24px; spacing: 0px;
+                                t-stdio := tab-segment {
+                                    text: AppStrings.overlay-mcp-transport-stdio;
+                                    active: root.mcp-form-transport == "stdio";
+                                    clicked => { root.mcp-form-transport = "stdio"; }
+                                }
+                                t-sse := tab-segment {
+                                    text: AppStrings.overlay-mcp-transport-sse;
+                                    active: root.mcp-form-transport == "sse";
+                                    clicked => { root.mcp-form-transport = "sse"; }
+                                }
+                                t-sh := tab-segment {
+                                    text: AppStrings.overlay-mcp-transport-sh;
+                                    active: root.mcp-form-transport == "streamable-http";
+                                    clicked => { root.mcp-form-transport = "streamable-http"; }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                            }
+
+                            // command / args / url / env（简化版：单行 mono input）
+                            Text { text: AppStrings.overlay-mcp-form-command;
+                                font-family: "JetBrains Mono"; font-size: 9px;
+                                color: RedesignTheme.t.faint; letter-spacing: 1px;
+                                horizontal-alignment: left; width: 420px; }
+                            Rectangle {
+                                width: 420px; height: 24px;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+                                background: RedesignTheme.t.bg;
+                                cmd-input := TextInput {
+                                    text <=> root.mcp-form-command;
+                                    font-family: "JetBrains Mono"; font-size: 11px;
+                                    color: RedesignTheme.t.fg;
+                                    x: 6px; y: 0;
+                                    width: parent.width - 12px; height: parent.height;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Text { text: AppStrings.overlay-mcp-form-args;
+                                font-family: "JetBrains Mono"; font-size: 9px;
+                                color: RedesignTheme.t.faint; letter-spacing: 1px;
+                                horizontal-alignment: left; width: 420px; }
+                            Rectangle {
+                                width: 420px; height: 24px;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+                                background: RedesignTheme.t.bg;
+                                args-input := TextInput {
+                                    text <=> root.mcp-form-args;
+                                    font-family: "JetBrains Mono"; font-size: 11px;
+                                    color: RedesignTheme.t.fg;
+                                    x: 6px; y: 0;
+                                    width: parent.width - 12px; height: parent.height;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Text { text: AppStrings.overlay-mcp-form-url;
+                                font-family: "JetBrains Mono"; font-size: 9px;
+                                color: RedesignTheme.t.faint; letter-spacing: 1px;
+                                horizontal-alignment: left; width: 420px; }
+                            Rectangle {
+                                width: 420px; height: 24px;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+                                background: RedesignTheme.t.bg;
+                                url-input := TextInput {
+                                    text <=> root.mcp-form-url;
+                                    font-family: "JetBrains Mono"; font-size: 11px;
+                                    color: RedesignTheme.t.fg;
+                                    x: 6px; y: 0;
+                                    width: parent.width - 12px; height: parent.height;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Text { text: AppStrings.overlay-mcp-form-env;
+                                font-family: "JetBrains Mono"; font-size: 9px;
+                                color: RedesignTheme.t.faint; letter-spacing: 1px;
+                                horizontal-alignment: left; width: 420px; }
+                            Rectangle {
+                                width: 420px; height: 24px;
+                                border-width: 1px;
+                                border-color: RedesignTheme.t.border;
+                                background: RedesignTheme.t.bg;
+                                env-input := TextInput {
+                                    text <=> root.mcp-form-env;
+                                    font-family: "JetBrains Mono"; font-size: 11px;
+                                    color: RedesignTheme.t.fg;
+                                    x: 6px; y: 0;
+                                    width: parent.width - 12px; height: parent.height;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // enabled toggle（定值宽：stretch 在嵌套布局不可靠）
+                            HorizontalLayout {
+                                width: 420px; height: 22px; spacing: 8px;
+                                sq-toggle {
+                                    active: root.mcp-form-enabled;
+                                    y: (parent.height - 8px) / 2;
+                                }
+                                Text {
+                                    text: AppStrings.overlay-mcp-form-enabled;
+                                    font-size: 12px; color: RedesignTheme.t.fg;
+                                    vertical-alignment: center;
+                                }
+                                enabled-ta := TouchArea {
+                                    width: 340px; height: parent.height;
+                                    clicked => { root.mcp-form-enabled = !root.mcp-form-enabled; }
+                                }
+                            }
+
+                            // 提交按钮（312 + 8 + 100 = 420 定值）
+                            HorizontalLayout {
+                                width: 420px; height: 28px; spacing: 8px;
+                                Rectangle {
+                                    width: 312px; height: 28px;
+                                    border-width: 1px;
+                                    border-color: cancel-ta.has-hover
+                                        ? RedesignTheme.t.muted
+                                        : RedesignTheme.t.border;
+                                    border-radius: 3px;
+                                    background: cancel-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                                    animate border-color { duration: 150ms; }
+                                    animate background { duration: 150ms; }
+                                    cancel-ta := TouchArea {
+                                        width: parent.width; height: parent.height;
+                                        clicked => { root.mcp-form-open = false; }
+                                    }
+                                    Text {
+                                        text: AppStrings.overlay-mcp-form-cancel;
+                                        font-family: "JetBrains Mono"; font-size: 11px;
+                                        color: cancel-ta.has-hover
+                                            ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        width: parent.width; height: parent.height;
+                                        animate color { duration: 150ms; }
+                                    }
+                                }
+                                Rectangle {
+                                    width: 100px; height: 28px;
+                                    border-width: 1px;
+                                    border-color: submit-ta.has-hover
+                                        ? RedesignTheme.t.mind-drive-accent
+                                        : RedesignTheme.t.border;
+                                    border-radius: 3px;
+                                    background: submit-ta.has-hover ? RedesignTheme.t.raised : RedesignTheme.t.surface;
+                                    animate border-color { duration: 150ms; }
+                                    animate background { duration: 150ms; }
+                                    submit-ta := TouchArea {
+                                        width: parent.width; height: parent.height;
+                                        clicked => {
+                                            root.upsert-mcp("", root.mcp-form-name,
+                                                root.mcp-form-transport, root.mcp-form-command,
+                                                root.mcp-form-args, root.mcp-form-url,
+                                                root.mcp-form-env, root.mcp-form-enabled);
+                                            root.mcp-form-open = false;
+                                        }
+                                    }
+                                    Text {
+                                        text: AppStrings.overlay-mcp-form-save;
+                                        font-family: "JetBrains Mono"; font-size: 11px;
+                                        color: submit-ta.has-hover
+                                            ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.fg;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        width: parent.width; height: parent.height;
+                                        animate color { duration: 150ms; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----- 第三页 技能 -----
+                if root.overlay-tab == "skills" : VerticalLayout {
+                    width: parent.width;
+                    padding-top: 16px;
+                    padding-bottom: 16px;
+                    padding-left: 18px;
+                    padding-right: 18px;
+                    spacing: 12px;
+
+                    // 搜索框（1px line 边、mono、placeholder 走 i18n）
+                    Rectangle {
+                        width: 444px; height: 28px;
+                        border-width: 1px;
+                        border-color: search-input.has-focus
+                            ? RedesignTheme.t.mind-drive-accent
+                            : RedesignTheme.t.border;
+                        background: RedesignTheme.t.bg;
+                        animate border-color { duration: 150ms; }
+                        search-input := TextInput {
+                            text <=> root.skill-filter;
+                            edited => { root.set-skill-filter(root.skill-filter); }
+                            font-family: "JetBrains Mono";
+                            font-size: 11px;
+                            color: RedesignTheme.t.fg;
+                            x: 8px; y: 0;
+                            width: parent.width - 16px; height: parent.height;
+                            vertical-alignment: center;
+                        }
+                        if root.skill-filter == "" : Text {
+                            text: AppStrings.set-skills-search-placeholder;
+                            font-family: "JetBrains Mono"; font-size: 11px;
+                            color: RedesignTheme.t.faint;
+                            x: 8px; y: 0;
+                            width: parent.width - 16px; height: parent.height;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // 子类分区（序 = §10.1）。`visible` 绑 `cat-*`：
+                    // false 时整块（标题+行）不渲染，无空标题、无 0 高占位。
+                    // 行只 sq-toggle + name；hover 右侧显种类。
+
+                    if root.cat-engine : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-engine;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-engine : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-eng-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-eng-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-eng-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-engine;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-gameplay : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-gameplay;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-gameplay : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-gp-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-gp-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-gp-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-gameplay;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-design : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-design;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-design : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-ds-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-ds-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-ds-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-design;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-engineering : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-engineering;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-engineering : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-en-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-en-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-en-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-engineering;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-office : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-office;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-office : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-of-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-of-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-of-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-office;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-meta : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-meta;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-meta : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-me-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-me-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-me-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-meta;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-computer-use : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-computer-use;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-computer-use : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-cu-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-cu-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-cu-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-computer-use;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-gstack : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-gstack;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-gstack : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-gs-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-gs-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-gs-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-gstack;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                    if root.cat-other : VerticalLayout {
+                        width: 444px; spacing: 4px;
+                        Text { text: AppStrings.set-skills-cat-other;
+                            font-family: "JetBrains Mono"; font-size: 10px;
+                            color: RedesignTheme.t.faint; letter-spacing: 1px;
+                            horizontal-alignment: left; width: 444px; }
+                        for s[i] in root.rows-other : Rectangle {
+                            horizontal-stretch: 1; height: 22px;
+                            background: sk-ot-ta.has-hover ? RedesignTheme.t.raised : transparent;
+                            animate background { duration: 150ms; }
+                            sk-ot-ta := TouchArea {
+                                width: parent.width; height: parent.height;
+                                clicked => { root.set-skill-global(s.id, !s.effective-enabled); }
+                            }
+                            HorizontalLayout {
+                                x: 0; y: 0; width: parent.width; height: parent.height; spacing: 8px;
+                                sq-toggle { active: s.effective-enabled; y: (parent.height - 8px) / 2; }
+                                Text {
+                                    text: s.name; font-size: 12px;
+                                    color: s.effective-enabled ? RedesignTheme.t.fg : RedesignTheme.t.muted;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                    min-width: 0;
+                                    horizontal-stretch: 1;
+                                }
+                                if !s.effective-enabled : Text {
+                                    text: AppStrings.set-skills-disabled;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.danger;
+                                    vertical-alignment: center;
+                                }
+                                if sk-ot-ta.has-hover : Text {
+                                    text: AppStrings.set-skills-cat-other;
+                                    font-family: "JetBrains Mono"; font-size: 9px;
+                                    color: RedesignTheme.t.faint; vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // 空态提示仅在无过滤时显示；搜索命中为零时保持
+                    // 「零行零分区标题」（brief §5.3 p3-search 验收态）。
+                    if root.skills.length == 0 && root.skill-filter == "" : Text {
+                        text: AppStrings.skills-empty;
+                        font-size: 11px; color: RedesignTheme.t.faint;
+                    }
+                }
                 }
             }
         }
     }
 }
-
-// Spec §6.5 C-iv: empty states get a centered card. Slint 1.16 doesn't
-// support top-level `func` declarations in .slint files (only inside
-// components), so the section-title is rendered inline below using
-// a property-init block instead of a helper.

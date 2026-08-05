@@ -1,6 +1,7 @@
 use super::load_app_settings_quiet;
 use crate::app_state::error_banners::set_banner_message;
 use crate::app_state::settings::ProviderType;
+use crate::app_state::skills::skill_category;
 use crate::app_state::slint_glue::{AppWindow, MCPItem, ProviderItem, SkillStateItem, WorkspaceItem};
 use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::settings::MCPServerDto;
@@ -241,15 +242,37 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
     // no-ops).
     let workspace_override_supported = Arc::new(workspace_override_supported);
 
+    // T4 (2026-08-05): cache the FULL unfiltered skill list on
+    // `AppState` so the settings search filter (`set-skill-filter`
+    // callback) can re-publish a filtered view on every keystroke
+    // without going back to the kernel facade. The cache is
+    // refreshed here on every settings-list refresh (toggle /
+    // discovery / etc.). After the cache is updated, apply the
+    // current filter text (if any) to produce the published
+    // list + 9 partition visibility booleans. This keeps the
+    // user's search text sticky across refreshes.
+    let app_state = crate::app_state::state::AppState::global();
+    app_state.set_skills_full((*skills).clone());
+    let current_filter = app_state.skills_filter();
+    let (skills_published, cat_vis, cat_rows) = apply_skill_filter(&skills, &current_filter);
+
     // Wrap owned copies in Arc so dispatch (Fn) can be called multiple times.
     let providers_owned: Arc<Vec<ProviderItem>> = Arc::new((*providers).clone());
-    let skills_owned: Arc<Vec<SkillStateItem>> = Arc::new((*skills).clone());
+    let skills_owned: Arc<Vec<SkillStateItem>> = Arc::new(skills_published);
     let mcp_servers_owned: Arc<Vec<MCPItem>> = Arc::new((*mcp_servers).clone());
     let workspaces_owned: Arc<Vec<WorkspaceItem>> = Arc::new((*workspaces).clone());
     let current_workspace_index_owned: i32 = *current_workspace_index;
     let default_model_provider_id_owned: String = (*default_model_provider_id).clone();
     let legacy_placeholder_count_owned: i32 = *legacy_placeholder_count;
     let workspace_override_supported_owned: bool = *workspace_override_supported;
+    // T4 (2026-08-05): 9 partition visibility booleans derived
+    // from the published (filtered) skill list. The order
+    // matches brief §10.1 (引擎/玩法/设计/工程/office/meta/
+    // computer-use/gstack/其他). An empty filter produces
+    // 9 falses; partitions whose `visible` binding is false
+    // skip rendering entirely.
+    let cat_vis_owned: [bool; 9] = cat_vis;
+    let cat_rows_owned: [Vec<SkillStateItem>; 9] = cat_rows;
 
     let dispatch = || {
         let ui_weak = ui_weak.clone();
@@ -261,6 +284,8 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         let default_model_provider_id_owned = default_model_provider_id_owned.clone();
         let legacy_placeholder_count_owned = legacy_placeholder_count_owned;
         let workspace_override_supported_owned = workspace_override_supported_owned;
+        let cat_vis_owned = cat_vis_owned;
+        let cat_rows_owned = cat_rows_owned.clone();
 
         move || {
             if let Some(ui) = ui_weak.upgrade() {
@@ -272,6 +297,27 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
                 ui.set_default_model_provider_id(SharedString::from(default_model_provider_id_owned.clone()));
                 ui.set_legacy_placeholder_count(legacy_placeholder_count_owned);
                 ui.set_workspace_override_supported(workspace_override_supported_owned);
+                // T4: push the 9 partition visibility booleans.
+                // Order matches brief §10.1.
+                ui.set_skill_cat_engine(cat_vis_owned[0]);
+                ui.set_skill_cat_gameplay(cat_vis_owned[1]);
+                ui.set_skill_cat_design(cat_vis_owned[2]);
+                ui.set_skill_cat_engineering(cat_vis_owned[3]);
+                ui.set_skill_cat_office(cat_vis_owned[4]);
+                ui.set_skill_cat_meta(cat_vis_owned[5]);
+                ui.set_skill_cat_computer_use(cat_vis_owned[6]);
+                ui.set_skill_cat_gstack(cat_vis_owned[7]);
+                ui.set_skill_cat_other(cat_vis_owned[8]);
+                // T4: push the 9 per-partition row models.
+                ui.set_skill_rows_engine(ModelRc::new(VecModel::from(cat_rows_owned[0].clone())));
+                ui.set_skill_rows_gameplay(ModelRc::new(VecModel::from(cat_rows_owned[1].clone())));
+                ui.set_skill_rows_design(ModelRc::new(VecModel::from(cat_rows_owned[2].clone())));
+                ui.set_skill_rows_engineering(ModelRc::new(VecModel::from(cat_rows_owned[3].clone())));
+                ui.set_skill_rows_office(ModelRc::new(VecModel::from(cat_rows_owned[4].clone())));
+                ui.set_skill_rows_meta(ModelRc::new(VecModel::from(cat_rows_owned[5].clone())));
+                ui.set_skill_rows_computer_use(ModelRc::new(VecModel::from(cat_rows_owned[6].clone())));
+                ui.set_skill_rows_gstack(ModelRc::new(VecModel::from(cat_rows_owned[7].clone())));
+                ui.set_skill_rows_other(ModelRc::new(VecModel::from(cat_rows_owned[8].clone())));
             }
         }
     };
@@ -296,18 +342,105 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
     }
 }
 
+/// T4 (2026-08-05): apply the settings Skills search filter to
+/// the full skill list and produce (a) the published filtered
+/// list, and (b) the 9 partition visibility booleans.
+///
+/// The filter (case-insensitive substring match on `name` or
+/// `description`) is what the user typed into the `SettingsView`
+/// search input; an empty string returns the full list
+/// unchanged. Partition visibility is computed from the FILTERED
+/// list — a partition is visible iff at least one matching skill
+/// belongs to that category. Order matches brief §10.1
+/// (引擎/玩法/设计/工程/office/meta/computer-use/gstack/其他).
+///
+/// Extracted as a pure helper so the filter rule is unit-testable
+/// without booting the kernel facade. Both the initial
+/// `refresh_settings_lists` dispatch and the
+/// `set-skill-filter` keystroke callback go through this fn, so
+/// the two paths stay in lock-step.
+pub(crate) fn apply_skill_filter(
+    full: &[SkillStateItem],
+    filter: &str,
+) -> (Vec<SkillStateItem>, [bool; 9], [Vec<SkillStateItem>; 9]) {
+    let needle = filter.trim().to_lowercase();
+    let published: Vec<SkillStateItem> = if needle.is_empty() {
+        full.to_vec()
+    } else {
+        full.iter()
+            .filter(|s| {
+                s.name.to_lowercase().contains(&needle)
+                    || s.description.to_lowercase().contains(&needle)
+            })
+            .cloned()
+            .collect()
+    };
+    // Per-partition row models: Slint 1.16 cannot filter a model per
+    // partition in UI (for-body conditionals unsupported; visible:false
+    // rows still occupy layout height), so the row-level split happens
+    // here, in lock-step with the visibility booleans.
+    let mut vis = [false; 9];
+    let mut cats: [Vec<SkillStateItem>; 9] = Default::default();
+    for s in &published {
+        if let Some(idx) = category_index(s.category.as_str()) {
+            vis[idx] = true;
+            cats[idx].push(s.clone());
+        }
+    }
+    (published, vis, cats)
+}
+
+/// T4 (2026-08-05): map a category key (the string the
+/// `skill_category` pure fn returns, the same one that
+/// `build_skill_state_items` stamps onto each `SkillStateItem`)
+/// to its index in the 9-slot partition visibility array used
+/// by `apply_skill_filter` and the Slint partition `visible`
+/// bindings. Order matches brief §10.1.
+fn category_index(category: &str) -> Option<usize> {
+    match category {
+        "引擎" => Some(0),
+        "玩法" => Some(1),
+        "设计" => Some(2),
+        "工程" => Some(3),
+        "office" => Some(4),
+        "meta" => Some(5),
+        "computer-use" => Some(6),
+        "gstack" => Some(7),
+        "其他" => Some(8),
+        _ => None,
+    }
+}
+
 /// 2026-07-27 (K4a R3, Bug D): pure helper that maps the facade's
 /// `MCPServerDto` list into the Slint `MCPItem` rows. Extracted so the
-/// transport-inference rule (non-empty `command` → "stdio", else
+/// transport-inference rule (non-empty `command` -> "stdio", else
 /// "sse") is unit-testable without booting the kernel facade. The
-/// `verified` field stays empty — the Inspector's status string
+/// `verified` field stays empty - the Inspector's status string
 /// already summarizes connection health and per-server probes are
 /// deferred to a follow-up.
+///
+/// T4 §10.2: `intro` = description (if non-empty) else
+/// `"{transport} · {command or url}"`. The source `MCPServerConfigDto`
+/// has no `description` field today (adding one would require touching
+/// the contracts/kernel-api crate, which brief §4.7 forbids - "不改
+/// core"). So every row currently takes the fallback branch:
+/// `"{transport} · {command}"` for stdio, `"{transport} · {url}"` for
+/// remote transports (url is not on the DTO either, so remote rows
+/// fall back to just the transport string). When a future core change
+/// exposes a description, this fn is the single point to wire it in.
 pub(crate) fn build_mcp_items(servers: &[MCPServerDto]) -> Vec<MCPItem> {
     servers
         .iter()
         .map(|c| {
             let transport_str = if !c.config.command.is_empty() { "stdio" } else { "sse" };
+            // §10.2 intro fallback: no description source on the DTO,
+            // so use "{transport} · {command}" (stdio) or just
+            // "{transport}" (remote - command empty, url not on DTO).
+            let intro = if !c.config.command.is_empty() {
+                format!("{} · {}", transport_str, c.config.command)
+            } else {
+                transport_str.to_string()
+            };
             MCPItem {
                 id: SharedString::from(c.id.clone()),
                 name: SharedString::from(c.name.clone()),
@@ -315,6 +448,7 @@ pub(crate) fn build_mcp_items(servers: &[MCPServerDto]) -> Vec<MCPItem> {
                 enabled: c.enabled.unwrap_or(true),
                 verified: SharedString::from(""),
                 tool_count: 0,
+                intro: SharedString::from(intro),
             }
         })
         .collect()
@@ -386,6 +520,8 @@ pub(crate) async fn build_skill_state_items(
             global_enabled,
             workspace_override: SharedString::from(""),
             effective_enabled: global_enabled,
+            // T4 §10.1: derive partition category from the skill id.
+            category: SharedString::from(skill_category(&skill.id)),
         });
     }
     out
@@ -431,6 +567,8 @@ mod tests {
         // are wired (K4a-T4 deferral). The Inspector's `mcp_status`
         // string carries the connected/failed summary.
         assert_eq!(item.verified.as_str(), "");
+        // T4 §10.2: intro fallback for stdio = "{transport} · {command}".
+        assert_eq!(item.intro.as_str(), "stdio · cmd");
     }
 
     /// 2026-07-27 (K4a R3, Bug D): command-less servers (sse/http
@@ -454,6 +592,9 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].transport.as_str(), "sse");
         assert!(!items[0].enabled);
+        // T4 §10.2: intro fallback for remote = just transport (url
+        // not on DTO).
+        assert_eq!(items[0].intro.as_str(), "sse");
     }
 
     /// 2026-07-27 (K4a R3, Bug D): an empty server list produces no
@@ -569,5 +710,111 @@ mod tests {
             assert_eq!(item.effective_enabled, item.global_enabled);
             assert_eq!(item.workspace_override.as_str(), "");
         }
+    }
+
+    // -----------------------------------------------------------------
+    // T4 (2026-08-05) §3.3 / §10.1: apply_skill_filter unit tests.
+    // The settings panel's search input drives this fn on every
+    // keystroke. The fn is pure (no I/O) so the tests run
+    // synchronously without booting the kernel facade.
+    // -----------------------------------------------------------------
+
+    fn skill_state(id: &str, name: &str, desc: &str, category: &str) -> SkillStateItem {
+        SkillStateItem {
+            id: SharedString::from(id),
+            name: SharedString::from(name),
+            description: SharedString::from(desc),
+            global_enabled: true,
+            workspace_override: SharedString::from(""),
+            effective_enabled: true,
+            category: SharedString::from(category),
+        }
+    }
+
+    /// T4 §3.3: empty filter returns the full list and turns
+    /// every partition whose category is present in the list
+    /// visible. Order matches brief §10.1.
+    #[test]
+    fn apply_skill_filter_empty_returns_all_and_lights_all_partitions() {
+        let full = vec![
+            skill_state("u::e::a", "a", "alpha", "引擎"),
+            skill_state("u::g::b", "b", "beta", "玩法"),
+            skill_state("u::o::c", "c", "gamma", "office"),
+        ];
+        let (published, vis, rows) = apply_skill_filter(&full, "");
+        assert_eq!(published.len(), 3);
+        // Per-partition row models split in lock-step with vis.
+        assert_eq!(rows[0].len(), 1, "引擎 rows");
+        assert_eq!(rows[1].len(), 1, "玩法 rows");
+        assert_eq!(rows[4].len(), 1, "office rows");
+        assert!(rows[2].is_empty() && rows[8].is_empty(), "dark partitions empty");
+        // 引擎/玩法/office lit; everything else dark.
+        assert!(vis[0], "引擎 visible");
+        assert!(vis[1], "玩法 visible");
+        assert!(!vis[2], "设计 not visible (no rows)");
+        assert!(!vis[3], "工程 not visible");
+        assert!(vis[4], "office visible");
+        assert!(!vis[5], "meta not visible");
+        assert!(!vis[6], "computer-use not visible");
+        assert!(!vis[7], "gstack not visible");
+        assert!(!vis[8], "其他 not visible");
+    }
+
+    /// T4 §3.3: filter is a case-insensitive substring match on
+    /// `name` OR `description`. The match must be against the
+    /// full list (not the published list) so a row that doesn't
+    /// match the filter drops out of the published list.
+    #[test]
+    fn apply_skill_filter_substring_is_case_insensitive_and_searches_description() {
+        let full = vec![
+            skill_state("u::e::a", "platformer", "2D run-jump", "玩法"),
+            skill_state("u::e::b", "roguelike", "Turn-based", "玩法"),
+            skill_state("u::o::c", "docx", "Office documents", "office"),
+        ];
+        // "PLAT" (uppercase) matches the `platformer` row.
+        let (published, vis, _rows) = apply_skill_filter(&full, "PLAT");
+        assert_eq!(published.len(), 1);
+        assert_eq!(published[0].name.as_str(), "platformer");
+        assert!(vis[1], "玩法 still visible (one match)");
+        assert!(!vis[4], "office now hidden (no match)");
+        // "office" lower-cased appears in the description of the
+        // docx row, so description-based matching works.
+        let (published, vis, _rows) = apply_skill_filter(&full, "office");
+        assert_eq!(published.len(), 1);
+        assert_eq!(published[0].id.as_str(), "u::o::c");
+        assert!(vis[4], "office lit via description");
+        assert!(!vis[1], "玩法 hidden");
+    }
+
+    /// T4 §3.3: a filter that matches no rows returns an empty
+    /// published list and turns every partition dark (no
+    /// empty partition titles or container heights render in the
+    /// UI; see `SettingsView` `visible` bindings on the
+    /// partitions).
+    #[test]
+    fn apply_skill_filter_no_match_yields_empty_list_and_no_visible_partitions() {
+        let full = vec![
+            skill_state("u::e::a", "platformer", "2D", "玩法"),
+            skill_state("u::e::b", "roguelike", "Turn", "玩法"),
+        ];
+        let (published, vis, _rows) = apply_skill_filter(&full, "zzz-no-such-skill");
+        assert!(published.is_empty());
+        assert!(vis.iter().all(|v| !*v));
+    }
+
+    /// T4 §10.1: a row whose category doesn't match any of the 9
+    /// partition keys is dropped from the visibility map (the
+    /// row still appears in the published list, but no partition
+    /// becomes visible for it). This is the safety net for
+    /// future skills whose `skill_category` returns a new key
+    /// — the row still surfaces, just without a partition
+    /// header.
+    #[test]
+    fn apply_skill_filter_unknown_category_does_not_lit_any_partition() {
+        let full = vec![skill_state("u::z::x", "exotic", "no category", "未来")];
+        let (published, vis, rows) = apply_skill_filter(&full, "");
+        assert_eq!(published.len(), 1);
+        assert!(vis.iter().all(|v| !*v), "no partition lit for unknown category");
+        assert!(rows.iter().all(|r| r.is_empty()), "unknown category lands in no partition");
     }
 }

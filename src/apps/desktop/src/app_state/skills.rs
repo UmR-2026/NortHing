@@ -3,6 +3,114 @@
 use super::slint_glue::AppWindow;
 use super::*;
 
+/// T4 §10.1: pure desktop-side function deriving a skill's partition
+/// `category` from its `SkillInfoDto.id` (= registry `SkillInfo.key` =
+/// `{prefix}::{slot}::{dir_name}`). The DTO does not expose `group_key`
+/// or `dir_name` directly (the kernel facade folds them out in
+/// `kernel_facade/agents.rs`), so the dir_name is recovered as the
+/// segment after the last `::` separator in the id.
+///
+/// Derivation rule (brief §10.1, hit-first order):
+/// 1. Built-in skills: the dir_name is looked up in the built-in skill
+///    catalog (office/meta/computer-use/gstack) - this mirrors
+///    `builtin_skill_group_key` in
+///    `assembly/core/.../skills/catalog.rs` without depending on core.
+/// 2. User-level skills: the dir_name is prefix-matched against the
+///    gamedev skill taxonomy (引擎/玩法/设计/工程) per brief §10.1.
+/// 3. Otherwise -> "其他" (other).
+///
+/// Partition order is enforced by the UI (`SkillsModule`); this fn only
+/// returns the category key. SKILL.md frontmatter `category` override
+/// is a follow-up (brief §10.1) - not done here.
+pub(crate) fn skill_category(id: &str) -> &'static str {
+    let dir_name = id.rsplit("::").next().unwrap_or("");
+
+    // 1. Built-in skills: exact dir_name -> group_key.
+    if let Some(group) = builtin_skill_group_key(dir_name) {
+        return group;
+    }
+
+    // 2. User-level prefix inference (hit-first, brief §10.1).
+    // 引擎 (engines)
+    for prefix in [
+        "godot-",
+        "unity-",
+        "unreal-",
+        "bevy-",
+        "phaser-",
+        "threejs-",
+        "roblox-",
+        "love2d-",
+        "pygame-",
+    ] {
+        if dir_name.starts_with(prefix) {
+            return "引擎";
+        }
+    }
+    // 玩法 (gameplay)
+    for prefix in [
+        "platformer",
+        "roguelike",
+        "puzzle",
+        "card-game",
+        "tower-defense",
+        "fps-shooter",
+        "rpg",
+        "survival-crafting",
+        "visual-novel",
+    ] {
+        if dir_name == prefix || dir_name.starts_with(&format!("{prefix}-")) {
+            return "玩法";
+        }
+    }
+    // 设计 (design)
+    for prefix in [
+        "game-feel",
+        "camera-systems",
+        "audio-design",
+        "shader-programming",
+        "level-design",
+        "game-ui-ux",
+        "physics-tuning",
+        "performance-optimization",
+        "procedural-gen",
+    ] {
+        if dir_name == prefix || dir_name.starts_with(&format!("{prefix}-")) {
+            return "设计";
+        }
+    }
+    // 工程 (engineering)
+    for prefix in ["input-systems", "save-systems", "dialogue-systems"] {
+        if dir_name == prefix || dir_name.starts_with(&format!("{prefix}-")) {
+            return "工程";
+        }
+    }
+
+    // 3. Otherwise.
+    "其他"
+}
+
+/// Mirrors `builtin_skill_group_key` from the core skill catalog
+/// (`assembly/core/.../skills/catalog.rs`). Kept here as a static table
+/// so the desktop crate can derive built-in skill groups without a
+/// core dependency. If the core catalog adds a new built-in skill, this
+/// table must be updated in lockstep (brief §10.1: "用 registry
+/// SkillInfo.group_key" - the DTO drops group_key, so we reproduce the
+/// mapping here).
+fn builtin_skill_group_key(dir_name: &str) -> Option<&'static str> {
+    // office: docx/pdf/ppt-design/pptx/xlsx
+    // meta: find-skills/writing-skills/memory
+    // computer-use: agent-browser
+    // gstack: gstack-* family
+    match dir_name {
+        "docx" | "pdf" | "ppt-design" | "pptx" | "xlsx" => Some("office"),
+        "find-skills" | "writing-skills" | "memory" => Some("meta"),
+        "agent-browser" => Some("computer-use"),
+        _ if dir_name.starts_with("gstack-") => Some("gstack"),
+        _ => None,
+    }
+}
+
 /// Phase C.4: build a Slint ModelRc<SkillItem> from the live skill registry,
 /// resolving the per-mode enabled state for each skill.
 ///
@@ -85,4 +193,73 @@ pub(super) async fn refresh_skills_ui(ui_weak: slint::Weak<AppWindow>) {
             ui.set_skills(ModelRc::new(VecModel::from(items)));
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::skill_category;
+
+    /// T4 §10.1: built-in skills derive their group from the catalog
+    /// (office/meta/computer-use/gstack). The dir_name is the segment
+    /// after the last `::` in the id (the facade folds out `dir_name`
+    /// and `group_key`, so the desktop re-derives from the id).
+    #[test]
+    fn skill_category_builtins_map_to_catalog_groups() {
+        // office family
+        assert_eq!(skill_category("builtin::northhing-system::docx"), "office");
+        assert_eq!(skill_category("builtin::northhing-system::pdf"), "office");
+        assert_eq!(skill_category("builtin::northhing-system::ppt-design"), "office");
+        assert_eq!(skill_category("builtin::northhing-system::pptx"), "office");
+        assert_eq!(skill_category("builtin::northhing-system::xlsx"), "office");
+        // meta family
+        assert_eq!(skill_category("builtin::northhing-system::find-skills"), "meta");
+        assert_eq!(skill_category("builtin::northhing-system::writing-skills"), "meta");
+        assert_eq!(skill_category("builtin::northhing-system::memory"), "meta");
+        // computer-use
+        assert_eq!(skill_category("builtin::northhing-system::agent-browser"), "computer-use");
+        // gstack family
+        assert_eq!(skill_category("builtin::northhing-system::gstack-review"), "gstack");
+        assert_eq!(skill_category("builtin::northhing-system::gstack-autoplan"), "gstack");
+    }
+
+    /// T4 §10.1: user-level skills are classified by dir-name prefix
+    /// against the gamedev taxonomy. Hit-first; the first matching
+    /// prefix wins.
+    #[test]
+    fn skill_category_user_engine_prefixes() {
+        assert_eq!(skill_category("user::home.agents::godot-2d-movement"), "引擎");
+        assert_eq!(skill_category("user::home.agents::unity-csharp-scripting"), "引擎");
+        assert_eq!(skill_category("user::home.agents::bevy-ecs"), "引擎");
+        assert_eq!(skill_category("user::home.agents::roblox-luau"), "引擎");
+    }
+
+    #[test]
+    fn skill_category_user_gameplay_prefixes() {
+        assert_eq!(skill_category("user::home.agents::platformer"), "玩法");
+        assert_eq!(skill_category("user::home.agents::roguelike-dungeon"), "玩法");
+        assert_eq!(skill_category("user::home.agents::tower-defense"), "玩法");
+        assert_eq!(skill_category("user::home.agents::visual-novel"), "玩法");
+    }
+
+    #[test]
+    fn skill_category_user_design_prefixes() {
+        assert_eq!(skill_category("user::home.agents::game-feel"), "设计");
+        assert_eq!(skill_category("user::home.agents::camera-systems"), "设计");
+        assert_eq!(skill_category("user::home.agents::procedural-gen-noise"), "设计");
+    }
+
+    #[test]
+    fn skill_category_user_engineering_prefixes() {
+        assert_eq!(skill_category("user::home.agents::input-systems"), "工程");
+        assert_eq!(skill_category("user::home.agents::save-systems-cloud"), "工程");
+        assert_eq!(skill_category("user::home.agents::dialogue-systems"), "工程");
+    }
+
+    /// T4 §10.1: skills that match no prefix fall back to "其他".
+    #[test]
+    fn skill_category_unknown_falls_back_to_other() {
+        assert_eq!(skill_category("user::northhing::smoke-placeholder"), "其他");
+        assert_eq!(skill_category("user::home.agents::custom-helper"), "其他");
+        assert_eq!(skill_category("::"), "其他");
+    }
 }

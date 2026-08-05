@@ -142,6 +142,11 @@ export struct MCPItem {
     enabled: bool,
     verified: string,     // "" | "ok" | "fail"
     tool-count: int,
+    // T4 §10.2: one-line intro = description (if present) else
+    // "{transport} · {command or url}". Computed in refresh.rs when
+    // the MCPItem is assembled. Rendered as a single truncated faint
+    // mono line in the MCP module (brief §3.3).
+    intro: string,
 }
 
 // Skill with workspace override flag (E2=c). The UI shows a single
@@ -160,4 +165,9 @@ export struct SkillStateItem {
     global-enabled: bool,
     workspace-override: string,
     effective-enabled: bool,
+    // T4 §10.1: derived category for the Skills module's sub-class
+    // grouping. Pure desktop-side function in app_state/skills.rs.
+    // Partition order (brief §3.3): 引擎/玩法/设计/工程/office/meta/
+    // computer-use/gstack/其他.
+    category: string,
 }

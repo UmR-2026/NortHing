@@ -13,12 +13,14 @@ mod misc;
 mod provider;
 mod provider_test;
 mod refresh;
+mod skill_filter;
 mod workspace;
 
 pub(crate) use misc::*;
 pub(crate) use provider::*;
 pub(crate) use provider_test::*;
 pub(crate) use refresh::*;
+pub(crate) use skill_filter::*;
 pub(crate) use workspace::*;
 
 // 2026-06-26 (Phase 5 wire-up): helpers that load / save the

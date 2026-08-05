@@ -21,7 +21,8 @@ use super::callbacks_lifecycle::{
 use super::callbacks_settings::{
     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
     register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
-    register_remove_workspace_callback, register_set_default_model_callback, register_test_provider_callback,
+    register_remove_workspace_callback, register_set_default_model_callback,
+    register_set_skill_filter_callback, register_test_provider_callback,
     register_test_provider_config_callback, register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
@@ -318,6 +319,30 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // 2026-07-30: export-markdown + open-session-settings callbacks.
     register_export_markdown_callback(&ui, &app_state);
     register_open_session_settings_callback(&ui, &app_state);
+    // T4 (2026-08-05): settings Skills search filter. Runs on
+    // the UI thread; reads from the AppState-global skills
+    // cache (installed just below).
+    register_set_skill_filter_callback(&ui, &app_state);
+
+    // T4 (2026-08-05): install the process-global AppState
+    // handle so background callbacks (e.g. the skill-filter
+    // callback) can reach the skills cache. Must be installed
+    // AFTER every callback that uses it is registered
+    // (otherwise the global lookup panics).
+    app_state.install_global();
+
+    // T4 (2026-08-05): seed the settings Skills search filter.
+    // The filter text lives on `AppState`; both the
+    // `set-skill-filter` keystroke callback and
+    // `refresh_settings_lists` funnel through
+    // `apply_skill_filter`, so the search text stays sticky
+    // across list refreshes. Startup value is empty = show all.
+    // This call is also the seam for seeding a non-empty filter
+    // during build shots (the Slint search-input default must
+    // match any seeded value, or visible text diverges from the
+    // applied filter).
+    const INITIAL_SKILL_FILTER: &str = "";
+    app_state.set_skills_filter(INITIAL_SKILL_FILTER.to_string());
 
     // FR-T3b: frameless 窗口控制按钮接 Rust slint::Window API。
     // minimize -> set_minimized(true); maximize -> toggle is_maximized;

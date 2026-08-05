@@ -67,6 +67,18 @@ export component ChatPaneView inherits Rectangle {
                 vertical-alignment: center;
             }
 
+            // T4 (2026-08-05) §3.5: 主视图 room-status 上下文常显「全局作用域」文本。
+            // settings 模块内不渲染 CONTEXT 模块（已删除），统一在此展示
+            // 当前 agent 作用域；无真数据源时显示 mock（brief 允许）。
+            Text {
+                text: AppStrings.room-status-context;
+                font-family: "JetBrains Mono";
+                font-size: 10px;
+                color: RedesignTheme.t.faint;
+                letter-spacing: 1px;
+                vertical-alignment: center;
+            }
+
             Rectangle { horizontal-stretch: 1; }
 
             // state-dot（I3 修复：8s 单钟 sin 呼吸，非 4s 线性 ramp）。

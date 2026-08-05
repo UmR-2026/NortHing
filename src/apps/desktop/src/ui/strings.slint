@@ -129,6 +129,9 @@ export global AppStrings {
     // ===== Consult room - 主诊室 (T2) =====
     // 状态行（room-status）
     out property <string> room-status-identity: "知序·在场";
+    // T4 (2026-08-05) §3.5: 主视图 room-status 上下文常显「全局作用域」文本。
+    // 无真数据源时显示 mock（brief §3.5 允许）。
+    out property <string> room-status-context: "上下文 · 全局作用域";
     // RoomHead（room-head 中枢胶囊）
     out property <string> room-head-name: "知序";
     out property <string> room-head-initial: "序";
@@ -233,6 +236,54 @@ export global AppStrings {
     out property <string> onb-cert-identity-label: "实体命名";
     out property <string> onb-cert-user-label: "用户身份";
     out property <string> onb-cert-relation-label: "与用户关系";
+
+    // ===== Consult room - settings v2 (T4) =====
+    // 浮层 station-head（brief §3.1）
+    out property <string> settings-v2-status: "全局设置";
+    // 模型引擎（brief §3.2）
+    out property <string> set-engine-title: "模型引擎";
+    out property <string> set-engine-current-tag: "当前";
+    // 接入点（brief §3.2）
+    out property <string> set-provider-title: "接入点";
+    out property <string> set-provider-direct: "直接连接";
+    // MCP（brief §3.3）
+    out property <string> set-mcp-unauth: "未授权";
+    // Skills（brief §3.4）
+    out property <string> set-skills-search-placeholder: "搜索";
+    out property <string> set-skills-disabled: "禁用";
+    // Skills 子类分区标题（brief §3.3 / §10.1 分区序）
+    out property <string> set-skills-cat-engine: "引擎";
+    out property <string> set-skills-cat-gameplay: "玩法";
+    out property <string> set-skills-cat-design: "设计";
+    out property <string> set-skills-cat-engineering: "工程";
+    out property <string> set-skills-cat-office: "office";
+    out property <string> set-skills-cat-meta: "meta";
+    out property <string> set-skills-cat-computer-use: "computer-use";
+    out property <string> set-skills-cat-gstack: "gstack";
+    out property <string> set-skills-cat-other: "其他";
+
+    // ===== T4 settings v2 overlay (浮层三页) =====
+    // tab 行（brief §3.1：接入点 / MCP / 技能）
+    out property <string> overlay-tab-providers: "接入点";
+    out property <string> overlay-tab-mcp: "MCP";
+    out property <string> overlay-tab-skills: "技能";
+    // providers 行按钮（brief §3.2：测试/删除）
+    out property <string> set-provider-test: "测";
+    out property <string> set-provider-delete: "删";
+    // MCP 第二页（brief §3.3）
+    out property <string> overlay-mcp-add: "添加服务器";
+    out property <string> overlay-mcp-form-collapse: "收起表单";
+    out property <string> overlay-mcp-form-name: "NAME";
+    out property <string> overlay-mcp-form-command: "COMMAND";
+    out property <string> overlay-mcp-form-args: "ARGS";
+    out property <string> overlay-mcp-form-url: "URL";
+    out property <string> overlay-mcp-form-env: "ENV";
+    out property <string> overlay-mcp-form-enabled: "启用";
+    out property <string> overlay-mcp-transport-stdio: "stdio";
+    out property <string> overlay-mcp-transport-sse: "sse";
+    out property <string> overlay-mcp-transport-sh: "http";
+    out property <string> overlay-mcp-form-cancel: "取消";
+    out property <string> overlay-mcp-form-save: "保存";
 
     // ===== Generic =====
     out property <string> yes: "是";

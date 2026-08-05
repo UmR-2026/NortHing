@@ -56,6 +56,7 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 parking_lot = { workspace = true }
+once_cell = { workspace = true }
 
 [build-dependencies]
 slint-build = { workspace = true }

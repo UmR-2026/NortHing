@@ -8,6 +8,21 @@
 
 use parking_lot::Mutex;
 
+use crate::app_state::slint_glue::SkillStateItem;
+
+/// T4 (2026-08-05): process-global `AppState` so background
+/// callback threads (e.g. `set-skill-filter`) can reach the
+/// skills cache without re-plumbing `Arc<AppState>` through
+/// every `register_X_callback(ui, app_state)` signature. Set
+/// once in `create_ui` (the only call site that constructs
+/// `AppState`); the filter callback is registered after
+/// `create_ui`, so the lookup is non-racy in practice. The
+/// type's other accessors (e.g. `set_skills_full`,
+/// `skills_full_snapshot`, `set_skills_filter`,
+/// `skills_filter`) go through this same handle.
+static GLOBAL_APP_STATE: once_cell::sync::OnceCell<std::sync::Arc<AppState>> =
+    once_cell::sync::OnceCell::new();
+
 /// App-level state shared between Slint UI callbacks and the async core
 pub struct AppState {
     /// Tracks whether the kernel facade core has been initialized
@@ -24,6 +39,24 @@ pub struct AppState {
     // R37a: pub(super) accessor needed by callbacks_lifecycle::register_toggle_show_subagents_callback
     // and create_ui::create_ui (initial binding). Field stays private; access goes through the
     // `show_subagents_handle()` method below to keep visibility explicit.
+    /// T4 (2026-08-05): full unfiltered skill list cached for the
+    /// settings route's search filter. The settings panel's
+    /// `skills-list` property holds the filtered view; the
+    /// `set-skill-filter` callback applies a case-insensitive
+    /// substring match on `name` or `description` against
+    /// this cache and re-publishes. The cache is refreshed by
+    /// `refresh_settings_lists` (the same path that populates
+    /// `skills-list`), so toggles / list refreshes don't drop
+    /// the user's search text. The drawer (Inspector) keeps
+    /// its own model and is unaffected by the filter
+    /// (brief §3.3: "抽屉模型不动").
+    skills_full: Mutex<Vec<SkillStateItem>>,
+    /// T4 (2026-08-05): current search filter text for the
+    /// settings Skills module. The user types in
+    /// `SettingsView`'s search input; the value is forwarded
+    /// to Rust via the `set-skill-filter` callback. Empty
+    /// string = show all.
+    skills_filter: Mutex<String>,
     /// Phase I.3 (2026-06-20): the actor runtime, constructed at
     /// `create_ui` time when `USE_LIGHTWEIGHT_ACTOR = true`. The
     /// `OnceLock` stays empty when the flag is false (the default).
@@ -71,7 +104,29 @@ impl AppState {
             current_streaming_session: Mutex::new(None),
             active_turn_id: Mutex::new(None),
             session_metadata: Mutex::new(std::collections::HashMap::new()),
+            skills_full: Mutex::new(Vec::new()),
+            skills_filter: Mutex::new(String::new()),
         }
+    }
+
+    /// T4 (2026-08-05): install the process-global `AppState`
+    /// handle. Called once from `create_ui` after `Arc::new`
+    /// so background callback threads (`set-skill-filter`)
+    /// can fetch it without an `Arc` parameter. Idempotent —
+    /// the first setter wins.
+    pub fn install_global(self: &std::sync::Arc<AppState>) {
+        let _ = GLOBAL_APP_STATE.set(std::sync::Arc::clone(self));
+    }
+
+    /// T4 (2026-08-05): fetch the process-global `AppState`
+    /// handle. Panics if `install_global` was never called
+    /// (which is a programming error — every callback that
+    /// uses the global is registered after `create_ui`).
+    pub fn global() -> std::sync::Arc<AppState> {
+        GLOBAL_APP_STATE
+            .get()
+            .expect("AppState::global() called before install_global()")
+            .clone()
     }
 
     /// Phase I.3: install the actor runtime (called from
@@ -223,6 +278,39 @@ impl AppState {
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
+    }
+
+    /// T4 (2026-08-05): replace the cached full skill list (called
+    /// by `refresh_settings_lists` after rebuilding from the kernel
+    /// facade). The settings route's search filter reads this
+    /// cache, not `skills-list` (which holds the filtered view).
+    pub fn set_skills_full(&self, list: Vec<SkillStateItem>) {
+        *self.skills_full.lock() = list;
+    }
+
+    /// T4 (2026-08-05): snapshot of the full skill list for the
+    /// filter callback to operate on. Returns a clone so the caller
+    /// can iterate without holding the lock.
+    pub fn skills_full_snapshot(&self) -> Vec<SkillStateItem> {
+        self.skills_full.lock().clone()
+    }
+
+    /// T4 (2026-08-05): update the settings Skills search filter
+    /// text. The text is whatever the user typed into the
+    /// `SettingsView` search input (Slint 1.16 has no
+    /// `string.contains`, so the actual substring match runs here
+    /// instead of in Slint).
+    pub fn set_skills_filter(&self, filter: String) {
+        *self.skills_filter.lock() = filter;
+    }
+
+    /// T4 (2026-08-05): current skills filter text. Used by
+    /// `refresh_settings_lists` to apply the filter on every
+    /// refresh (so the search box text and the published list
+    /// stay in sync after the user toggles a skill or a new
+    /// skill is discovered).
+    pub fn skills_filter(&self) -> String {
+        self.skills_filter.lock().clone()
     }
 }
 
