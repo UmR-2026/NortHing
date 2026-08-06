@@ -90,7 +90,7 @@ impl KeyringBackend for ProductionKeyring {
         let entry = keyring::Entry::new(KEYRING_SERVICE, account)
             .with_context(|| format!("keyring: failed to open entry for '{account}'"))?;
         entry
-            .set_secret(secret)
+            .set_password(secret)
             .with_context(|| format!("keyring: failed to store credential for '{account}'"))?;
         Ok(())
     }
@@ -99,7 +99,7 @@ impl KeyringBackend for ProductionKeyring {
         let entry = keyring::Entry::new(KEYRING_SERVICE, account)
             .with_context(|| format!("keyring: failed to open entry for '{account}'"))?;
         let secret = entry
-            .get_secret()
+            .get_password()
             .with_context(|| format!("keyring: failed to read credential for '{account}'"))?;
         Ok(secret)
     }
@@ -183,7 +183,7 @@ use once_cell::sync::Lazy;
 ///
 /// Tests construct their own [`MockKeyring`] and pass it directly to the
 /// test variants of the IO functions — they never touch this global.
-pub(crate) static PRODUCTION_KEYRING: Lazy<ProductionKeyring> = Lazy::new(ProductionKeyring);
+pub(crate) static PRODUCTION_KEYRING: Lazy<ProductionKeyring> = Lazy::new(|| ProductionKeyring);
 
 // ===== High-level helpers =====
 

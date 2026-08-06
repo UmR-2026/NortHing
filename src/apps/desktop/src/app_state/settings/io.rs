@@ -8,8 +8,12 @@ use std::path::{Path, PathBuf};
 /// Process-wide single-writer lock for the settings file (H-9). All
 /// load → mutate → save cycles run under this lock so two concurrent
 /// settings actions can never read the same stale snapshot and clobber
-/// each other's fields. Async because the critical section awaits
-/// [`load_app_settings_at`] / [`save_app_settings_at`].
+/// each other's fields. The public [`load_app_settings`] holds it for its
+/// whole run too, because a load may trigger migration writes (dedup +
+/// keyring migration); the lock-free `*_at` variants exist so the update
+/// path can compose them inside the lock (tokio's Mutex is not reentrant —
+/// re-acquiring it would deadlock). Async because the critical section
+/// awaits [`load_app_settings_at`] / [`save_app_settings_at`].
 static SETTINGS_WRITE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Resolve `~/.northhing/config/app.json`. Uses the same path convention as
@@ -29,11 +33,31 @@ pub fn app_settings_path() -> Result<PathBuf> {
 /// (name, provider_type, base_url, api_key, model) — keep the first, drop the
 /// rest; re-point `default_model` at the kept entry when its original id was
 /// dropped. Persist the migration immediately when anything was dropped.
+///
+/// 2026-08-05 (FU-3): holds [`SETTINGS_WRITE_LOCK`] for the whole run — a
+/// load is not read-only, it may persist dedup / keyring migration writes,
+/// and those must serialize with `update_app_settings` transactions instead
+/// of racing them (the pre-fix unlocked migration save could clobber a
+/// concurrent update's write).
 pub async fn load_app_settings() -> Result<AppSettings> {
     let path = app_settings_path()?;
-    load_app_settings_at(&path, &*PRODUCTION_KEYRING).await
+    load_app_settings_locked(&path, &*PRODUCTION_KEYRING).await
 }
 
+/// [`load_app_settings_at`] under [`SETTINGS_WRITE_LOCK`] — the composition
+/// the public load uses. Kept separate from the public wrapper so tests can
+/// inject a path/keyring while still exercising the real lock.
+async fn load_app_settings_locked(path: &Path, keyring: &dyn KeyringBackend) -> Result<AppSettings> {
+    let _guard = SETTINGS_WRITE_LOCK.lock().await;
+    load_app_settings_at(path, keyring).await
+}
+
+/// Lock-free inner load. Both call sites hold [`SETTINGS_WRITE_LOCK`] around
+/// it (the public load via [`load_app_settings_locked`],
+/// [`update_app_settings_at`] inside its transaction) because a load may
+/// trigger migration writes; it must never lock itself — tokio's Mutex is
+/// not reentrant, so a second acquisition inside the update transaction
+/// would deadlock.
 async fn load_app_settings_at(path: &Path, keyring: &dyn KeyringBackend) -> Result<AppSettings> {
     if !path.exists() {
         return Ok(AppSettings::default());
@@ -194,22 +218,21 @@ pub(super) fn dedup_providers_on_load(s: &mut AppSettings) -> usize {
     dropped_count
 }
 
-/// Save settings to `~/.northhing/config/app.json`. Creates parent dirs as
-/// needed. Atomic write: serialize to a `.<name>.<pid>.<nonce>.tmp` sibling
-/// in the same directory, flush, then rename over the target (same-directory
-/// rename is atomic, so a reader never observes a truncated file). The
-/// previous content is copied to `<name>.bak` first; a failed backup is
-/// warn-only and never blocks the write.
+/// Save settings to `path`. Creates parent dirs as needed. Atomic write:
+/// serialize to a `.<name>.<pid>.<nonce>.tmp` sibling in the same directory,
+/// flush, then rename over the target (same-directory rename is atomic, so a
+/// reader never observes a truncated file). The previous content is copied to
+/// `<name>.bak` first; a failed backup is warn-only and never blocks the
+/// write.
 ///
 /// 2026-07-31 (H-9): replaced the previous plain `tokio::fs::write` to the
 /// target, which could leave a truncated JSON file on crash. Kept as the
 /// low-level API so the load-time dedup migration and other callers can
 /// still write directly.
-pub async fn save_app_settings(settings: &AppSettings) -> Result<()> {
-    let path = app_settings_path()?;
-    save_app_settings_at(&path, settings).await
-}
-
+///
+/// 2026-08-05 (FU-4): the public `save_app_settings` wrapper became dead
+/// code once H-9 funneled all writes through `update_app_settings` and was
+/// deleted; this worker remains the only settings writer.
 async fn save_app_settings_at(path: &Path, settings: &AppSettings) -> Result<()> {
     let parent = path.parent().context("app.json 路径缺少父目录")?;
     tokio::fs::create_dir_all(parent)

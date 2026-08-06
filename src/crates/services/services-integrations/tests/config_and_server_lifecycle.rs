@@ -151,6 +151,265 @@ async fn mcp_config_service_save_project_fails_closed_on_unrecognized_existing_f
 }
 
 #[tokio::test]
+async fn mcp_config_service_save_user_fails_closed_on_config_store_read_error() {
+    let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "user-server",
+            ConfigLocation::User,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("user save must not fall back to an empty baseline on read errors");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unavailable"),
+        "expected the store read failure to propagate, got: {error}"
+    );
+    assert_eq!(
+        store.set_calls.lock().await.clone(),
+        Vec::<String>::new(),
+        "set_config_value must not be called when the read fails"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_save_user_fails_closed_on_unrecognized_existing_format() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .save_server_config(&make_mcp_config(
+            "user-server",
+            ConfigLocation::User,
+            MCPServerType::Remote,
+            None,
+            Some("https://example.com/mcp"),
+        ))
+        .await
+        .expect_err("user save must refuse to overwrite an unrecognized existing value");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unrecognized existing format"),
+        "expected the unrecognized-format refusal message, got: {error}"
+    );
+    assert_eq!(
+        store.values.lock().await.get("mcp_servers"),
+        Some(&json!(42)),
+        "existing user config must remain untouched"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_delete_user_fails_closed_on_config_store_read_error() {
+    let store = Arc::new(RecordingFailingGetMCPConfigStore::default());
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .delete_server_config("user-server")
+        .await
+        .expect_err("user delete must not fall back to an empty baseline on read errors");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unavailable"),
+        "expected the store read failure to propagate, got: {error}"
+    );
+    assert_eq!(
+        store.set_calls.lock().await.clone(),
+        Vec::<String>::new(),
+        "set_config_value must not be called when the read fails"
+    );
+}
+
+#[tokio::test]
+async fn mcp_config_service_delete_user_fails_closed_on_unrecognized_existing_format() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    store.values.lock().await.insert("mcp_servers".to_string(), json!(42));
+    let service = MCPConfigService::new(store.clone());
+
+    let error = service
+        .delete_server_config("user-server")
+        .await
+        .expect_err("user delete must refuse to touch an unrecognized existing value");
+    assert_eq!(error.kind(), MCPRuntimeErrorKind::Configuration);
+    assert!(
+        error.to_string().contains("unrecognized existing format"),
+        "expected the unrecognized-format refusal message, got: {error}"
+    );
+    assert_eq!(
+        store.values.lock().await.get("mcp_servers"),
+        Some(&json!(42)),
+        "existing user config must remain untouched"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mcp_config_service_concurrent_user_saves_do_not_lose_entries() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    let service = Arc::new(MCPConfigService::new(store.clone()));
+
+    let mut handles = Vec::new();
+    for i in 0..10 {
+        let service = service.clone();
+        handles.push(tokio::spawn(async move {
+            service
+                .save_server_config(&make_mcp_config(
+                    &format!("server-{i}"),
+                    ConfigLocation::User,
+                    MCPServerType::Remote,
+                    None,
+                    Some("https://example.com/mcp"),
+                ))
+                .await
+        }));
+    }
+    for handle in handles {
+        handle
+            .await
+            .expect("save task must not panic")
+            .expect("concurrent user save must succeed");
+    }
+
+    let saved = store
+        .values
+        .lock()
+        .await
+        .get("mcp_servers")
+        .cloned()
+        .expect("user config written");
+    let servers = saved["mcpServers"]
+        .as_object()
+        .expect("user config stays cursor format");
+    assert_eq!(servers.len(), 10, "all 10 concurrent user saves must survive");
+    for i in 0..10 {
+        assert!(
+            servers.contains_key(&format!("server-{i}")),
+            "server-{i} lost by a concurrent user save"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mcp_config_service_concurrent_user_save_and_delete_stay_consistent() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    let mut initial = serde_json::Map::new();
+    for i in 0..5 {
+        initial.insert(
+            format!("del-{i}"),
+            json!({ "type": "remote", "url": "https://example.com/mcp" }),
+        );
+    }
+    store
+        .values
+        .lock()
+        .await
+        .insert("mcp_servers".to_string(), json!({ "mcpServers": initial }));
+    let service = Arc::new(MCPConfigService::new(store.clone()));
+
+    let mut handles = Vec::new();
+    for i in 0..5 {
+        let service = service.clone();
+        handles.push(tokio::spawn(async move {
+            service
+                .save_server_config(&make_mcp_config(
+                    &format!("save-{i}"),
+                    ConfigLocation::User,
+                    MCPServerType::Remote,
+                    None,
+                    Some("https://example.com/mcp"),
+                ))
+                .await
+        }));
+    }
+    for i in 0..5 {
+        let service = service.clone();
+        handles.push(tokio::spawn(async move {
+            service.delete_server_config(&format!("del-{i}")).await
+        }));
+    }
+    for handle in handles {
+        handle
+            .await
+            .expect("task must not panic")
+            .expect("concurrent save/delete must succeed");
+    }
+
+    let saved = store
+        .values
+        .lock()
+        .await
+        .get("mcp_servers")
+        .cloned()
+        .expect("user config written");
+    let servers = saved["mcpServers"]
+        .as_object()
+        .expect("user config stays cursor format");
+    assert_eq!(servers.len(), 5, "exactly the five saved servers must remain");
+    for i in 0..5 {
+        assert!(
+            servers.contains_key(&format!("save-{i}")),
+            "save-{i} lost by a concurrent write"
+        );
+        assert!(
+            !servers.contains_key(&format!("del-{i}")),
+            "del-{i} survived a concurrent delete"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mcp_config_service_concurrent_project_saves_do_not_lose_entries() {
+    let store = Arc::new(InMemoryMCPConfigStore::default());
+    let service = Arc::new(MCPConfigService::new(store.clone()));
+
+    let mut handles = Vec::new();
+    for i in 0..10 {
+        let service = service.clone();
+        handles.push(tokio::spawn(async move {
+            service
+                .save_server_config(&make_mcp_config(
+                    &format!("project-server-{i}"),
+                    ConfigLocation::Project,
+                    MCPServerType::Remote,
+                    None,
+                    Some("https://example.com/mcp"),
+                ))
+                .await
+        }));
+    }
+    for handle in handles {
+        handle
+            .await
+            .expect("save task must not panic")
+            .expect("concurrent project save must succeed");
+    }
+
+    let saved = store
+        .values
+        .lock()
+        .await
+        .get("project.mcp_servers")
+        .cloned()
+        .expect("project config written");
+    let configs = saved.as_array().expect("project config stays a legacy array");
+    assert_eq!(configs.len(), 10, "all 10 concurrent project saves must survive");
+    for i in 0..10 {
+        let expected = format!("project-server-{i}");
+        assert!(
+            configs
+                .iter()
+                .any(|value| value.get("id").and_then(|id| id.as_str()) == Some(expected.as_str())),
+            "project-server-{i} lost by a concurrent project save"
+        );
+    }
+}
+
+#[tokio::test]
 async fn mcp_config_service_save_project_preserves_upsert_contract() {
     let store = Arc::new(InMemoryMCPConfigStore::default());
     store.values.lock().await.insert(
