@@ -49,3 +49,173 @@
 - Task B4: complete (commits 6868377..50b0f44, review 一轮双 PASS 0C/0I/3M) — FU-5: initialize_global 套用 6574b01 的 double-checked locking（新 static AI_CLIENT_FACTORY_INIT_MUTEX = std::sync::OnceLock<tokio::sync::Mutex<()>>，fast path 免锁 → 取锁 → 锁内 double-check → fallible work 全部在唯一 OnceLock::set 之前），消除并发后到者拿到伪 Err("Failed to initialize global AIClientFactory") 的 TOCTOU；P0-E 五条计时日志逐字保留。测试取方案 B：双检锁骨架抽为 module-private helper `init_once_with`，两个新测试覆盖 8 并发 build 恰一次（multi_thread flavor）+ build 失败后 cell 保持空且重试成功；方案 A（并发跑 initialize_global 本体）因进程级 OnceLock 与 lib 测试二进制共享、初始化后会让 subagent_ports spawned task 在有真实凭据机器上发起真实 LLM 调用而不 hermetic（judge 独立取证确认，参照 6574b01 B-2 组决策）。core lib 1141 总（基线 1139 + 2），编排者独立实跑 focused 测试复核一致。implementer=coder-dv4f（首次实证，汇报与磁盘一致无造假）/ judge=judge-m3。终审 triage: Minor-1 report 自述行数 592 实为 589；Minor-2 并发测试 cell.get() 断言冗余（无害）；Minor-3 init_once_with 未来若 global.rs 复用可上抽 util 模块。
 
 - Wave1 分支终审: PASS | PASS (merge-base 41695f5..e6be249, judge-m3 终审视角, 0 Critical / 0 Important / 0 新增 Minor) — 独立盘点 6 把锁的拓扑与调用链，确认 B1 write_lock / B3 SETTINGS_WRITE_LOCK / B4 AI_CLIENT_FACTORY_INIT_MUTEX 与 core 侧 ConfigService::manager RwLock、GLOBAL_CONFIG_SERVICE、GlobalConfigManager::INIT_MUTEX 之间无锁序反转、无嵌套持锁 await、无死锁环（desktop settings 锁内不含 sync_providers_to_core，MCP 与 settings 路径完全隔离）；B3 偏离三处声明一致且 C3 fail-closed 语义零漂移；b0bfe43 build fix 零行为变化 + Cargo.lock +4 全为 v1 链式依赖；接受 B4 测 helper 的等价替代。副作用：MCP write_lock 轻微 lock convoy（低频写，可接受）。triage 裁定：B1-M2 + B3-M1 合并前修（→ commit 8f921cc，coder-ling 机械单，cargo check -p northhing 通过）；B1-M1（save_config 非原子写）+ B4-M3（init_once_with 上抽）+ uninstall_plugin 无生产调用方 → 登记独立债项；B2-M1/M2/M3 + B4-M1/M2 忽略（pre-existing 或 cosmetic）；keyring test-only warning + Windows UTF-16LE 编码细节 → 记台账。**待用户拍板**：P1-C3 过程性缺陷（desktop 自 C3 合入后从未编译，b0bfe43 事后修复）是否登记独立债项 / 流程改进项（如 merge to main 前 desktop cargo check 必须通过）。证据：wave1-final-review-brief.md / wave1-final-review.md / wave1-final-review.diff。
+
+---
+
+# Growth Core Ledger (2026-08-04)
+
+计划：`.superpowers/sdd/plan-2026-08-04-growth-core.md`（17 任务：G1 T1-T7 / G2 T8-T13 / G3 T14-T17）
+集成分支：`feat/growth-core-0804`（worktree `.worktrees/growth-core-0804`，基线 f2a16c7）
+新 crate：`northhing-agentic-growth`（`src/agentic`，第 6 层 Growth core，纯逻辑零 IO）
+
+## Wave 0（串行地基）
+
+- Task G1-T1: complete (commits f2a16c7..7e96126, review 双 PASS 0C/0I/1M by judge-m3) — crate 骨架 + 21 个模块空壳预声明 + 6 处登记（Cargo.toml members / crate-layout.mjs / crate-rules.mjs / AGENTS.md 层表第 6 行 / AGENTS-CN.md / docs/status/surfaces.md）+ checker.mjs 新增非 `src/crates/` 成员断言（排除前缀 src/crates/、src/apps/、tools/、northing-installer）。1 test；boundary check pass。Minor: checker.mjs:403 `northing-installer` 无尾斜杠（brief 逐字要求，无需修）。编排者独立复核 6 处登记 + 自跑 boundary exit=0 + 空壳契约 rg 零命中。
+
+## Wave A（5 单并行，各自 worktree 从 7e96126 分出，各独占单文件；模型：A1/A4 glm-5.2，A2/A3/A5 deepseek-v4-flash；judge 全部 minimax-m3）
+
+- Task A1: complete (cherry-pick 5eb5fbf ← feat/growth-a1 32192c2, review APPROVED 0C/0I/1M；fix 1 轮) — `ports.rs` 271 行 + `state.rs` 308 行。8 个端口 trait（ExternalMemoryStore / TopicStore / GrowthStateStore / SelfCognitionStore / EpisodeLog / Clock + async LlmPort / JudgePort）+ 数据类型（FactType / FactStatus / Reviewer 带 as_str/from_str_opt，FactRef / FactDraft / TopicWeight / ReviewRecord / SelfNote / EpisodeSummary / SkillCandidateRef / JudgeVerdict）+ GrowthState 持久化与 4 个 legacy key 迁移（warn-only，schema_version=1）。权限矩阵与 supersede_fact 仅限用户否定路径写入文档注释。16 tests。Fix 轮修 1 Critical：load_state 迁移分支 get_legacy_kv 的 Err 被静默忽略 → 改 warn + Default。Minor to triage: M-1 save_state 用 map_err 把 JSON 序列化错误转 GrowthError::Parse。⚠️ 过程偏离：该子代理越权自行派发子-子代理并写 ledger（编码写坏，本轮已重写）。
+- Task A2: complete (cherry-pick c9dcb58 ← feat/growth-a2 2816b47, review Round2 双 PASS 0C/0I, S-1 CLOSED；fix 1 轮) — `topics/extract.rs` 497 行。零依赖确定性话题抽取：ASCII token（保留 `- _ . + /` 为内部连接符，首尾修剪）+ CJK 连续段整段成话题（刻意不分词）+ 47 ASCII/33 CJK 停用词 + 纯数字过滤 + char 级截断（MAX_TOPIC_CHARS=24）+ 去重 + MAX_TOPICS=3 截顶。18 tests。Round1 REJECTED 的 S-1：`is_ascii_punctuation` 把连接符当分隔符，切碎 `node-18`/`src/agentic`/`C++` → 已修并补 2 测试。
+- Task A3: complete (cherry-pick 7e3e279 ← feat/growth-a3 2de4186, review 双 PASS 0C/0I, 2M) — `topics/score.rs` 410 行。双层权重打分 `score = tw * (0.6 + 0.4 * es)`，落地 D5「话题权重主导条目分数」：条目分数最多造成 1.667 倍摆动，话题权重比值无上限；TOPIC_DOMINANCE_RATIO=1/0.6；rank_candidates 全序稳定排序（total_cmp，与输入顺序无关）+ RETRIEVAL_FLOOR=0.02 过滤；sanitize_unit 处理 NaN/±INF/越界。20 tests（含主导性属性循环）。Minor to triage: tie-break 用 raw topic_weight 而非 sanitized。
+- Task A4: complete (cherry-pick 6294760 ← feat/growth-a4 414d822, review 双 PASS 0C/0I, 3M) — `topics/competition.rs` 638 行。竞争组自然失效（落地 D6/D8「不做硬作废」）：normalize（NaN/负→0，全零→均分）+ apply_boost（delta clamp 0..=0.15 → 首个匹配项 → 整组重归一化，天然「涨必有跌」）+ suppression_state（份额 <0.15 且原始权重 <0.20 两个独立入参同时严格小于才压制，恰等阈值判 Active）+ boosts_to_revive（100 次迭代硬上限，永不死循环）+ health_check。21 tests；三不变量各有测试证明：涨必有跌 / 可复活 / 文件内不存在 retire/supersede/deactivate 函数。
+- Task A5: complete (cherry-pick 1488a0d ← feat/growth-a5 07b986f, review 双 PASS 0C, 8I/3M — 8I 全为 plan-mandated，已交用户裁定) — `negation.rs` 560 行。系统内唯一硬作废入口的第一关：detect_explicit_negation（三张短语表，kind 优先级 FactIsWrong > StopRemembering > PreferenceReplaced，同 kind 取最靠前，target_hint 按 char 截 60）+ build_confirmation_prompt（`<user_message>` 包裹，候选以 `[0]` 序号暴露不泄漏 fact_id）+ parse_confirmation（容忍 ```json 围栏与散文，越界/负数/小数/字符串项/重复项丢弃，失败返回空 Vec 不 Err 不 panic）。28 tests。**用户裁定（2026-08-04）：8 条过宽短语（忘掉 / 不用记 / 搞错了 / 改用 / forget that / forget about / don't remember / not anymore）全部保留原样，依赖 LLM 二次确认兜底**——审查者的误伤例句已记录在 task-a5-review.md §4，若日后出现误删记忆投诉，从该表开始收窄。
+
+## Wave B（串行，宿主接线）
+
+- Task T2H: complete (commit a150339, review 双 PASS 0C/0I, 2M by judge-m3；模型 glm-5.2) — 宿主侧 `core/src/agentic/growth_adapter.rs`（285 行）实现 `Clock`（SystemClock）+ `GrowthStateStore`（`JudgeMomStateStore`，backed by 现有 `judge_mom` 表，不新建表不改 SQL）+ `load_growth_state`/`save_growth_state`（warn-only）。core `Cargo.toml` 加内部依赖 `northhing-agentic-growth = { path = "../../../agentic" }`（非 optional、不进 feature）；`core/src/agentic/mod.rs` 加 `pub mod growth_adapter;`。8 tests；cargo check 无新增 warning（19 个既有）；边界脚本 passed（assembly → growth 依赖方向被认可）。**零行为变更**：生产路径无调用方，`turn_persist.rs` 一行未动（接线留 T4）。已接受偏离：`pub fn` → `pub(crate) fn`（`MemoryDb` 是 `pub(crate)`，`pub fn` 会触发 `private_interfaces` warning；core `lib.rs:3` 有 crate 级 `#![allow(dead_code)]` 故无 dead_code 噪音；模块仍为 `pub mod`；后续同 crate 接线不受影响 —— 编排者与 judge 各自独立核实）。Cargo.lock 随依赖变更一并提交（第 4 个文件，合规）。
+
+- Task T4a: complete (commit 1c986a4, review 双 PASS 0C/0I, 2M by judge-m3；模型 deepseek-v4-flash) — crate 侧 `scheduler.rs`（325 行，19 新测试，crate 总数 121 —— 实现者报告写"18 新增/103 既有"有误，编排者实测 121 总数）。把宿主内联的调度判定逐字搬成纯函数：`should_distill` / `should_run_garden_sweep`（`saturating_sub >= 24h`）/ `decide_turn` / `record_distill_outcome`（turns 无条件 +1 含已暂停回合、hit_turns 仅命中 +1、20 轮 0 命中自暂停）/ `record_garden_sweep`。judge 独立确认三条现状语义全部等价、无未授权解除暂停、事件一次性靠跃迁门而非 `turns==20` 脆弱写法。唯一授权偏离：自暂停事件只在 false→true 返回一次（消除现状每轮重复 warn），已写入模块文档并被 `auto_pause_event_fires_only_once` 钉死。Minor to triage: 文档 `??` 拼写。
+
+- Task T4b: complete (commit 985bbb9, review 双 PASS 0C/0I, 1M by judge-m3；模型 glm-5.2) — **活跃对话回合路径**的行为等价重构：`turn_persist.rs` 的 3 个裸键（`distiller_paused`/`distill_turns`/`distill_hit_turns`）改由成长状态 blob 承载。`growth_adapter.rs` 新增 `begin_distill_turn`（load + should_distill）/ `finish_distill_turn`（record_distill_outcome + 跃迁时 warn + 落库），7 新测试（含跨真实读写往返、暂停期间继续计数、旧键不被改写、只有旧键的库能衔接迁移）。core growth_adapter 15 tests / auto_memory 7 / memory_db 21 / crate 121 全绿；cargo check warning 19（与基线一致）；边界脚本 passed。judge 逐条确认 brief §2 七条语义全等价（含 DB 不可用照常蒸馏、计数落库在 `candidates.is_empty()` 早退之前、warn 文本逐字一致），且未写 `GrowthState.garden`（无双真相来源）。宿主路径已无任何 3 个裸键的引用（编排者 rg 复核）。
+
+  **编排者裁定（本轮 scope 缩减，两条）**：
+  1. **园丁不动**：`dream.rs:47-62` 的 24h 门与 `dream_last_sweep_at` 键原样保留。若此刻同时写 `GrowthState.garden.last_sweep_at_ms`，会与 dream.rs 自读自写的键形成两个真相来源。园丁迁移并入其自身改造那一步（原计划 T12）。当前 `garden` 字段只被迁移读入、不被写出。
+  2. **四合一入口延后**：原计划 T4 要求把 4 处 hook 收敛为单一 `on_turn_finalized` 门面；本轮只做状态收敛（风险最低、收益最直接），门面留待后续任务（记为 T4c 待办）。
+
+- Task T6a: complete (commit 27c9738, review 双 PASS 0C, 1I/3M by judge-m3；模型 glm-5.2) — **修掉 🔴 权重只降不升**：`growth_adapter::boost_turn_topics(db, user_input, now_ms)` 用 crate 的 `extract_topics` 抽话题 → 逐个 `boost_keyword(topic, 同回合其它话题, now)`（共现写入既有 `related_keywords` 字段）→ 成对执行 `decay_all_weights`。9 新测试（growth_adapter 共 25），memory_db 21 无回归，crate 121，cargo check warning 19（无新增），边界脚本 passed。`growth_adapter.rs` 约 740 行（<800，余量已不多，下次扩张前需拆分）。
+  - 两条**已授权**行为变更：① 衰减底线 `0.1` → `1.0`（常量 `TOPIC_DECAY_FLOOR`）；② boost/decay 成对、每个完成回合一次，原 `turn_persist.rs:590` 的 decay 调用移到 `candidates.is_empty()` 早退之前（现生产路径 `decay_all_weights` 只有一个调用点，judge 已用 rg 复核无双重衰减）。
+  - **派发后修正的 brief 缺陷（实现者预检抓出，编排者裁定）**：brief 原写"每次提及 +1.0"是错的——`boost_keyword` 的 INSERT 分支是把权重**置为** 1.0，不是基线上 +1.0。配合 1.0 底线，首次提及经钳制后与基线等价。裁定采纳并强化语义：**从未提及 = 1.0；首次提及 = 1.0（设计如此，单次提及不构成热话题）；第二次起严格 > 1.0（≈1.98）逐次 +1.0，上限 5.0**。该语义已写入 `boost_turn_topics` 英文文档注释，并由 1a/1b 两条测试钉死。判据：单次提及不该被当热度，重复提及才是信号。
+  - 底线抬到 1.0 的理由（钉死在测试里）：`get_keyword_weight` 对不存在的关键词返回 1.0、`search_facts` 的 fold 初值也是 1.0，底线若低于 1.0，"提过一次又冷却"的话题会排得**比从没提过的还低**。测试证据：500 次冷却后仍为 1.0。
+  - **Important to triage（I-1，brief 之外不可修）**：含连接符的话题（如 `src/agentic`）在检索侧只是**条件性**命中——仅当 fact 文本里保留了连续连接符时，`search_facts` 的分词才能对上。简单 ASCII（`pnpm`）与 CJK 段完全命中。留终审 triage，可能需要在检索侧分词或话题归一化上补一刀。
+
+- Task R-7: complete (commits 27c9738..6365cf5, review clean — Round1 REJECTED 1C/3I → Round2 APPROVED 双 PASS，四条 finding 全 CLOSED；implementer glm-5.2，judge m3) — **安全修复：facts 蒸馏加主对话门禁**。子代理会话的 `user_input` 是编排者生成的任务 brief（可能携带外部文件内容），此前被当作"关于用户的事实"蒸馏入库并注入未来 prompt = 自伤式注入向量 + 画像污染。根因：`turn_persist.rs` 的 `append_facts_entry(_agent_type: &str)` 参数带下划线 = 判别信号被完全忽略。
+  - 范围裁定：**门禁只管 facts，不管 episode 日志**（episode 是 agent 活动留痕，子代理回合本该留痕；facts 是"理解用户"）。全程只改 1 个文件 `turn_persist.rs`，两个 commit（未 amend）。
+  - 顺带效果（期望）：T6a 的 `boost_turn_topics` 位于 `append_facts_entry` 内部，故子代理回合既不给话题升温也不推进冷却时钟。judge 两轮均确认 decay 未被拆到门禁之外。
+  - **Round 1 被打回的 Critical 是我 brief 的设计错误**（我要求"取不到会话就拒绝蒸馏"）。judge 给出证据链：`get_session` 只读内存 DashMap（`session_manager_lifecycle.rs:189-191`），而 cleanup 按 `last_activity_at` age 淘汰且不排除 `Processing`（`session_manager_auto_save_cleanup.rs:93-132`），watchdog 超时后 finalize 仍在后台跑（`sub_handle_out.rs:385-404`）→ **合法长回合/停滞回合的用户事实会被静默永久丢弃**，比原漏洞更严重。
+  - **编排者裁定（覆盖 brief）**：误拒的代价（真实用户记忆静默永久丢失）远大于误放（当前只能经 `create_hidden_subagent_session_with_workspace` 这一条**无仓内调用方**的公开构造器发生）。故：① **主信号改为 `SessionKind`**（`Subagent` + `EphemeralChild` 直接拒绝，无论 parent/creator——这同时堵掉 I2 那条 `(None, None)` 漏网）；② `parent_session_id` 与 `created_by == "session-*"` 降为兜底，三者任一命中即拒绝；③ 内存 miss 时**回落读持久化 `SessionMetadata`**；④ 只有内存与持久化都拿不到才 fail-closed，并保留 `warn!`。⑤ 判定函数外层 `Option` 表示"元数据可得性"，`None`=不可得→拒绝，修掉原先 `(None,None)` 同时代表两种语义的缺陷。
+  - 教训（写进 brief 模板）：判定"主/子会话"**不能用 `agent_type`**（人格名 `agentic`/`coder-lc`），语义正确的标记是 `SessionKind`；`created_by` 前缀匹配只配当兜底（`subagent_ports.rs:24` 接受任意外部字符串，静态上存在误伤面）。
+  - 验证：cargo check 19 warnings（基线 19 无新增）、turn_persist 12 tests、growth_adapter 25、memory_db 21、边界 exit 0。
+  - **Minor 记账（留终审 triage）**：M1 持久化回落的 IO `Err` 与 `None` 未在日志上区分（可观测性）；M2 `resolve_session_workspace_path` 在已证明内存 miss 的路径上又做一次 `get_session`，是一次多余的 DashMap 读（judge 正文明确"代价可忽略"，**不是**死循环——其收尾摘要中文措辞失准）。
+  - 🔶 **文件容量风险（须在下次改动前处理）**：`turn_persist.rs` 现 **799 行，距 800 硬上限仅剩 1 行**；`growth_adapter.rs` 731 行。二者后续任何扩张都必须先拆分。判定行数须用 `(Get-Content).Count`，**不要**用 `Measure-Object -Line`（实现者 Round 1 因此误报 708）。
+
+- Task R-2: complete (commit d1d6d92, review 双 PASS 0C/0I/5M；implementer glm-5.2，judge m3) — **修活 bug：自暂停无恢复路径**。`record_distill_outcome` 会在「20 轮 0 命中」置 `distill.paused = true`，而全仓无任何置回路径 → 记忆蒸馏一旦自暂停就**永久静默死亡**，该用户此后全部回合都不再蒸馏，无提示、无补救。性质同 R-7（静默/永久/不可恢复），影响面更大。
+  - 用户拍板：**两条恢复路径都做**。
+  - 路径 A（探针节律，自动恢复）：暂停期间每 `DISTILL_AUTO_PAUSE_TURNS`(20) 轮放行一次蒸馏作探针，成本降到 1/20 而非归零（否则永远拿不到"命中率回升"的证据，无法恢复）。探针命中 → 完全解除暂停；未命中 → 保持暂停，下个窗口仍到。锚点用新字段 `paused_at_turns`（暂停时的绝对轮次快照）+ `%N`，`saturating_sub` 兜 u64 边界。
+  - 路径 B（用户信号唤醒，立即恢复）：crate 纯函数 `detect_memory_intent` 命中高精度双语短语表 → 立即解除暂停 + 本轮放行。**按 A5 教训排除裸 `别`/`不要`**（过宽且属否定语义而非记忆意图）。误唤醒代价低（多跑一次蒸馏），漏唤醒代价是记忆继续死着，故取向偏宽松已授权。
+  - **已授权行为变更：解除暂停时重置命中率窗口**（`turns`/`hit_turns`/`paused_at_turns` 归零）。理由：不重置则刹车**再也挂不上**（暂停条件 `hit_turns == 0` 一旦被命中破坏就永久不满足），记忆侧 LLM 成本失去上限保护。副作用：同一库上 `AutoPauseEvent` 现在可发多次（原 T4a 语义是生命周期最多暂停一次），judge 确认"每次 false→true 转换发一次"的不变量在**每一次**转换上仍成立。
+  - 对称可观测性：新增 `Resumed` 信号，只在 true→false 转换时发一次（`info!`），镜像 `AutoPauseEvent`（`warn!`，false→true）。
+  - judge 三个专项均 CLOSED：① **遗留 paused blob**（无 `paused_at_turns`，`serde(default)`=0，`turns` 已任意大）能正常恢复——数值推演 `turns=20, anchor=0 → 20%20==0` 反序列化后首轮即触发探针，此后每 20 轮一次，无"永不触发"也无"每轮触发"路径；② wake+probe 双触发场景实际只发一次 resume（wake 先 reset_window，probe 分支因 `paused=false` 被跳过）；③ 解除暂停状态**一定被持久化**——wake 路径在 `begin_distill_turn` 内 Save #1，`finish_distill_turn`(`:548`) Save #2 且早于 `candidates.is_empty()` 早退(`:561`)，last-write-wins，两 save 均 warn-only 且失败时内存/DB 一致。
+  - `turn_persist.rs` **净增 0 行**（`--numstat` = `1 1`，仅把已在作用域内的 `user_input` 加进 `begin_distill_turn` 参数）——这是 799/800 硬约束下唯一可行的接线方式。
+  - 验证：crate 131 tests（+10）、growth_adapter 27（+2）、turn_persist 12、memory_db 21 均无回归、cargo check warning 19 无新增、边界 exit 0。
+  - Minor 记账（留终审 triage）：M1 `growth_adapter.rs` 拆分建议；M2 `ResumeEvent.turns` 字段信息量低；M3 生产注释含 CJK——**编排者裁定不改**：那几处是英文注释里引用被讨论的中文短语数据（`别`/`不要`/`别再`），而短语表本身必须是中文匹配数据，文档一张中文表却不写出短语是不可能的，符合 English-only 规则本意；M4 报告 §6 输出仍有截断（implementer 第三次犯，已进模型台账）；M5 遗留 blob 测试的 docstring 有误导。
+  - 📌 既有语义观察（judge 确认，`scheduler.rs:185`，**本单未修**，作 T13 输入）：`hit_turns == 0` 的写法意味着**该库生命周期内只要命中过一次，刹车就永远不会再挂上**。本单的窗口重置只在"经恢复路径"这一条通路上修复了可重挂性。
+  - 🔴 **容量红线升级**：`growth_adapter.rs` 从 731 涨到 **799**，与 `turn_persist.rs` 一样**贴死 800**。两个文件后续任何改动都必须**先拆分**。另 `memory_db.rs` 918 行是既有越限（归 T7）。
+
+- Task S-1: complete (commits d1d6d92..c3d2b31，即 38d1e8d + bcdc1f3 + c3d2b31；review APPROVED 0C/1I/3M，I-1 已修；implementer dv4f，judge m3) — **拆分两个贴顶文件，纯搬移行为等价**。动因：`growth_adapter.rs` 与 `turn_persist.rs` 双双 799/800，R-2 已被迫靠"净增 0 行"硬挤，再有任何改动就无处落地。
+  - 两文件构成不同故拆法不同（实测）：`growth_adapter.rs` = 246 生产 + **552 内联测试** → 只搬测试；`turn_persist.rs` = **730 生产** + 68 测试 → 真正的模块切分。
+  - 拆分 A：测试整块搬到 `agentic/growth_adapter/tests.rs`，原文件留一行 `#[cfg(test)] mod tests;`。**799 → 248 + 550**。模块路径 `northhing_core::agentic::growth_adapter` 未变（`src/agentic/AGENTS.md:9` 有引用）。
+  - 拆分 B：把「facts 蒸馏钩子 + 其门禁」搬到同级新文件 `dialog_turn/turn_persist_facts.rs`——`SessionSignals` / `resolve_distill_signals` / `should_distill_facts` / `append_facts_entry` / `load_last_assistant_text` + 11 条门禁测试。`append_episode_log_entry` **刻意留在原文件**，使"门禁只管 facts 不管 episode"这条既有裁定在结构上可见。**799 → 433 + 376**。
+  - 选择同级文件而非子目录的依据：`impl ConversationCoordinator` 在本仓本就横跨 `sub_handle_*.rs` / `coordinator_*.rs` / `turn_cancel.rs` 多个同级文件；另有先例 `memory_db/dream.rs` 是为「841 行警戒线」而拆。
+  - 可见性按最小够用提升为 `pub(super)`（未滥用 `pub(crate)`/`pub`）。
+  - judge 亲自做了**规范化对比**（逐符号忽略前导空白比对搬移前后）：**10 个搬移符号全部 IDENTICAL 或 WHITESPACE-ONLY，零逻辑/条件/常量/日志改动**；并确认 R-7 的 facts 门禁（fail-closed + `SessionKind` 主信号）与 R-2 的 `begin_distill_turn(db, user_input)` 调用链语义未被破坏。
+  - **I-1（已修，commit c3d2b31）**：新文件把 13 个 `use` 整块复制过来，其中 11 项未使用。⚠️ **`cargo check` 抓不到它**——crate 级 `#![allow(unused_imports)]`（`core/src/lib.rs:4`）掩盖了未使用导入。教训：此后凡搬移类任务，"warning 数未增"**不足以**证明 import 干净，必须逐符号 `rg` 核实。
+  - 编排者亲自复验（未采信报告）：`cargo check -p northhing-core --features product-full` → `generated 19 warnings`（基线，无新增）、turn_persist **12 passed**、growth_adapter **27 passed**。另实测 `error!` 在新文件确未使用、`uuid` 为全限定调用（`turn_persist_facts.rs:145`），故实现者移除 `tracing::error` 是对的，judge 关于该两项"在用"的判断略有偏差。
+  - judge 误判记录（无害）：M-1 声称 `src/agentic/AGENTS.md:9` 不存在，编排者实测**该文件与该行均存在**。
+  - 容量现状（红线已解除）：`growth_adapter.rs` 248 / `growth_adapter/tests.rs` 550 / `turn_persist.rs` 433 / `turn_persist_facts.rs` 376 —— 全部有充足余量。**`memory_db.rs` 918 行仍是既有越限，归 T7 未动。**
+
+- Task R-4: complete (commits c3d2b31..4f7ba93，即 e8bb6a2 + b6157d9 + 0afac87 + 4f7ba93；review APPROVED WITH NOTES 0C/1I/3M，I-1 与 M-1/M-2 均已修；implementer glm-5.2，judge m3) — **蒸馏器产出 keywords + 提示词补四项技术**（调研报告 §4.4/§5.4-A，计划 §12 R-4）。
+  - §3.1 keywords 加在**每个 JSON item 内**，顶层仍是数组 → 模型不返回该字段时行为与改动前完全一致。turn 级 keywords = 各 item 并集去重。**刻意不改成 `{"facts":[...],"keywords":[...]}` 外层对象**（那会让返回旧形状的模型整体解析失败、facts 全丢）。
+  - §3.2 新增 crate 纯函数 `normalize_topic_candidates`，与 `extract_topics` **共用同一个 `normalize_candidate` 核心**（从原 `process_segment` 抽出），保证 LLM keywords 与纯函数产出落在**同一键空间**——否则 `boost_keyword`/`get_keyword_weight`/`search_facts` 会面对两套互不命中的键，信号反而更差。judge 专项验证 `SAME KEY SPACE`：`pnpm` / `PNPM` / `  pnpm  ` / `src/agentic` 五路归一到同形态键。
+  - §3.3 `boost_turn_topics` 优先用 LLM keywords，**归一化后为空**则回落 `extract_topics`（M-1 修复后才是按"归一化输出"判断，原实现看的是输入——那会导致 LLM keywords 全被规则丢弃时拿着空表去升温、白丢一回合）。R-2 暂停期与 LLM 不可用时 keywords 为空 → 回落 → 行为与 R-4 前一致。
+  - §3.4 提示词补齐证据权重分级 / 认识论措辞 / 措辞保全 / 最小信号门 + 反注入声明。**按 D13 未加隐私负面清单**。
+  - §3.4.1 **调和了既有矛盾**：原 prompt 的 `self-contained, understandable without the original message` 与"保留可 grep 原话"直接对撞（调研 §5.2 指出前者正是措辞保全缺失的根因）。最终改为一条 BUT 转折的层级规则：整体脱离原文可理解，**但**关键句柄（报错串/命令/工具名/用户原话）必须原样保留。judge 确认已消解、不再互斥。
+  - §3.5 D15 可观测性：`parse_distilled_facts` 返回 `was_empty_array`，使"LLM 明确返回 []"（设计意图 no-op，`debug!`）与解析失败（`warn!`）、LLM 不可用、超时、输入过短各自可区分——否则无法判断捕获量下降是"设计生效"还是"出故障"。
+  - **I-1（Important，已修）—— 又一例静默丢失**：`keywords: Option<Vec<String>>` 用默认 serde 时，模型只要返回 `"keywords": "pnpm, node"`（字符串而非数组，是常见输出偏差），**整个数组解析失败 → 该回合全部 facts 丢失**。更糟：实现者写的测试名叫 `..._facts_intact` 而断言是 `facts.is_empty()`，把错误行为当正确的钉死了。修法：自定义 `deserialize_keywords` 先收进 `serde_json::Value` 再宽容转换，**永不返回 `Err`**；字符串/数字/对象/元素非字符串数组一律视为"无 keywords"而 facts 照常解析。补 3 条畸形输入测试。
+  - **`extract_topics` 等价性经 judge 八维度论证为 `EQUIVALENT`**（切分边界/连接符保留/大小写时机/停用词时机/去重顺序/`MAX_TOPICS` 截断位置/长度门相对顺序/输出顺序）：新加的 `trim()` 与控制字符守卫对 `extract_topics` 均为 no-op（split 段本就不带前后空白；控制字符既不属 ASCII token 也不属 CJK，旧实现同样丢弃）。A2 轮钉死的 `node-18` / `src/agentic` / `C++` 不被切碎继续成立，14 条既有测试逐条不变通过。
+  - 编排者亲自复验（未采信报告）：`generated 19 warnings`（基线）、distiller **13**、growth_adapter **30**、turn_persist **12**、memory_db **21**、crate **139**、`check-core-boundaries` exit 0、工作区干净。行数：`extract.rs` 709 / `distiller.rs` 579 / `growth_adapter.rs` 266 / `turn_persist_facts.rs` 385，全部 <800。
+  - 🔶 **需向用户交代的行为变化（judge 按影响排序）**：① 最小信号门 + ② 证据权重分级 → **记忆捕获量会下降**（设计意图，D15 日志使其可观测可回调）；③ 措辞保全 → fact 文本更贴原话、更长，间接提高 `search_facts` 全文匹配精准度；④ LLM keywords 取代切分 → 每回合升温行数不变（≤3），但**键的构成会变**，有效性取决于模型质量；⑤ 控制字符拒绝影响极小。
+  - Minor 遗留（留终审 triage）：D15 分支 14（解析成功但所有 item 字段无效）虽已补 `debug!`，judge 仍指出该路径在默认日志级别下是一小片盲区；`normalize_candidates` 的控制字符测试未覆盖 U+001F 边界（非 bug 风险）。
+
+- Task T6b: complete (commit `fd61f5e`，base `4f7ba93`；review SPEC PASS WITH FINDINGS / QUALITY PASS WITH FINDINGS，0C/0I/**1M**；implementer glm-5.2，judge m3) — **双层打分接入 `search_facts` 排序**，此前 `topics::score`(410 行) 写好却无人调用、权重全是死信号。
+  - 用户裁定 D16（详见计划 §12）：1a 保留 bm25 做乘数（三因子）/ 2a confidence→entry_score high=1.0 med=0.6 low=0.3 / 3a 归一化 `weight/5.0`。
+  - 最终公式 `memory_db.rs:577`：`score = bm25_pos * two_layer * recency_boost`，`two_layer = northhing_agentic_growth::topics::score::retrieval_score(tw_norm, entry_score)`——**算术唯一真相留在 crate，core 内零重写**。
+  - `tw_norm = (keyword_weight / 5.0).max(1.0 / 5.0)`。审查专项一结论：因 `fold(1.0, f64::max)` 起始值 + `boost_keyword` 的 `.min(5.0)` 已把 `keyword_weight` 锁在 `[1.0,5.0]`，该 clamp 在**当前数据流下是 no-op**，但属 brief §3.2 明文要求的写法（禁止裸 `0.2` 字面量）且对将来改 fold 起点具前向兼容价值。**无任何输入可使 `tw_norm=0.0`**，即 D16-3b 那条"没提过第二次的话题记忆全查不出来"的陷阱确认未落地。
+  - 未调用 `rank_candidates`（已 grep 确认 core 子树零引用），过滤仍只有 sort + `truncate(limit)`，**本次改动不丢弃任何条目**。`ScoredFact` 保留原 `keyword_weight`（原始未归一化）并新增 `topic_weight_norm`/`entry_score`/`two_layer` 三个可观测字段。
+  - confidence 枚举实测是 `FactConfidence::High/Med/Low`（**`Med` 而非 `Medium`**）；映射集中在 `entry_score_for_confidence` + 三个命名常量，T10 晋升 entry_score 时改这一处即可。
+  - §6.1 前后对照（T6 硬性验收）：同语料同 query 排两次序，fA/fB 换位，方向自洽（`tw` 比 `1.0/0.8 = 1.25 < TOPIC_DOMINANCE_RATIO 1.667`，故 entry_score 得以翻盘）；`fell: []` 无旧 top-5 掉出；fF 新旧同为 rank 6，属 `truncate` 截断非丢弃；旧公式仅存在于测试函数局部变量，未留在生产代码。
+  - 编排者亲验：crate **139**（未增 crate 代码）、core warnings **19**（基线）、memory_db **28**、auto_memory **7**、growth_adapter **30**、boundaries exit 0、工作区干净。
+  - ⚠️ **编排者自我更正**：我先前向用户与本 ledger/计划口述的"动态范围 5×→8.3×、话题权重相对 bm25 影响力变大"**是错的**（误按 entry_score 下限 0 计算，而 2a 已定为 0.3）。审查者独立算出 `two_layer ∈ [0.144, 1.0]`，且话题权重贡献的动态范围**仍为 5×、影响力未变**。计划 §12 D16 已更正。教训入台账：数值副作用声明必须独立复算，不可沿用 brief 或自己上一轮的口算。
+  - 🔶 Minor 遗留（留终审 triage，按纪律不为 Minor 单独派 fixer）：`memory_db.rs:565` 的 `5.0` 与 `boost_keyword`(`:633`) 的 cap `5.0` 是两处独立字面量，将来改上限漏改一处会导致归一化**静默失准**。修法：加 `const KEYWORD_WEIGHT_CAP: f64 = 5.0;` 两处共用。
+  - 🔶 容量：`memory_db.rs` **943 行**（顶到 +25 预算上限，既有越限归 T7）、`memory_db_tests.rs` **799 行**（贴 800 顶，与 S-1 同一陷阱，下次动它必须先拆）。
+
+- Task T3a: complete (commits `258d2ea` + `39fadea`，base `fd61f5e`；Round 1 = 0C/4I/6M，Round 2 = **SPEC PASS / QUALITY PASS WITH FINDINGS**，Important 全部 CLOSED 或经编排者裁定转 T7；implementer glm-5.2，judge m3) — **自我认知独立库（存储 + 一次性迁移，零提示词改动）**。
+  - **T3 被编排者拆成 T3a/T3b**：T3a 只做存储与数据迁移，T3b 才动注入位置与权限门控。理由：T3 原范围同时含**用户可见数据迁移**与**agent 行为改动**，捆在一起会让回滚语义不明。
+  - 新表 `self_cognition (id TEXT PK, text, trigger, created_at)` 加进 `memory_db.rs` 既有 `CREATE TABLE IF NOT EXISTS` 批（`:141` 附近）。**无 workspace 列**——DB 本身是全局的（`default_memory_db_path()` = `config_dir()/northhing/memory/memory.db`，与 `identity.md` 同根），自我认知是 agent 自己的，不能被 workspace 割裂（D4）。审查专项四确认：批处理在**每次 `open` 都执行、无版本门控**，故改动前创建的旧 DB 下次打开即获得新表，不存在"只有全新安装才有该表"的静默失败。
+  - 独立访问模块 `service/agent_memory/self_cognition.rs`(257→约 300)，该表所有 SQL 集中在此（D4 分库要求独立访问模块；也避开 943 行的 `memory_db.rs`）。测试另起 `self_cognition_tests.rs`（395→约 500），未去挤 799 行的 `memory_db_tests.rs`。
+  - 端口实现 `SelfCognitionDbStore`（`growth_adapter.rs`，266→364），照 `JudgeMomStateStore` 既有形状；`load()` 排序 `created_at ASC, id ASC`（全序），**仅追加**，无 UPDATE/DELETE。
+  - **迁移守卫经审查后改为按行身份判定（编排者否决了审查者的"marker 表 + BEGIN IMMEDIATE"方案）**：固定主键 `MIGRATION_ROW_ID = "migration:identity-md"`(`self_cognition.rs:50`) + `INSERT OR IGNORE`。一招同时闭环三件事：① 并发初始化撞主键被 IGNORE，**不可能出现两条迁移行**，无需显式事务；② 迁移行本身即标记，**不需要额外 marker 表**；③ 破掉原"表非空则跳过"的隐患——将来 T17 让 agent 自主写笔记后，若那条先落库，旧守卫会让 `identity.md` 的 onboarding 文本**永久进不来**（审查专项一③发现，属真实的用户数据丢失路径）。失败路径不留"已完成"痕迹，天然可重试。
+  - 迁移非破坏：`identity.md` 不删不改（T3b 仍要读它，且是用户可见数据）。文本除首尾空白与 **UTF-8 BOM** 外逐字保留（BOM 剥除是 Round 2 补的；不剥会把 BOM 带进提示词）。`created_at` 取文件 mtime，不可得则 now。
+  - D9 执行：**零生产调用点**（消费者在 T3b/T17），未碰 `src/agentic/src/selfcog.rs`（G3-T17 占位）。
+  - 编排者亲验：crate **139**（未增 crate 代码）、warnings **19**、self_cognition **18**、memory_db **28**、growth_adapter **30**、prompt_injection **4**、boundaries exit 0、`prompt_builder/**` 零改动、工作区干净。
+  - 🔺 **有意转 T7 的 Important（I-3，必须落地，别忘）**：实现者为让独立模块拿到连接而在 `memory_db.rs:47-68` 新增 `pub(crate) fn conn_locked()`，暴露原始 `MutexGuard<Connection>`。这**实质扩大了 D9 权限面**——改动前 `dream.rs`/`judge_memory.rs` 读不到 `self_cognition`，改动后同 crate 内拿到裸连接即可读，而 D9 要求 judge-mom "连读都不行"。编排者裁定本任务不收紧：**同一 crate 内靠可见性无法隔离 judge-mom**（`dream.rs` 与 `self_cognition.rs` 是同模块树兄弟，`pub(super)` 也挡不住），真正强制只能靠 T7 的权限矩阵。已要求在 `conn_locked` 文档注释里如实写明四点（改动前读不到／改动后读得到／D9 禁止／T7 强制），Round 2 确认 CLOSED。**T7 必须在 `forbidden-rules.mjs` 加规则：`dream.rs`/`judge_memory.rs`/review 路径禁止出现 `\bconn_locked\b`。**
+  - 🔶 Minor 留终审 triage：多个连续 BOM 或 BOM 前有空白时 `strip_prefix('\u{FEFF}')` 会残留（修法 `trim_start_matches`）；`count_self_cognition`(`:129`) 新方案下生产零调用、`pub(crate)` 偏宽（建议 `#[cfg(test)]`）；M-2/M-3/M-5/M-6 见 review 正文。
+
+- Task T3b: complete (commit `9f261cd`，base `39fadea`；review **SPEC PASS WITH FINDINGS / QUALITY PASS WITH FINDINGS**，0C/0I/2M；implementer **`general/deepseek-v4-flash-free_general`（zen 免费档首次使用）**，judge m3) — **自我认知注入改走 store + D9 密集路径负测试**。至此 **T3（记忆分库）全部完成**。
+  - 优先级链（`system_prompt.rs` 的 `build_workspace_persona_with_identity`）：① store 读成功且有 ≥1 条非空笔记 → 用 store 渲染；② 读错误或为空 → **回落 `identity.md`，逐字节等价**；③ 皆无 → 原样返回 `persona`。store 读错误 warn-only，绝不阻断提示词构建。审查专项二逐字符核对确认回落分支与 base 产出**同字节**（回落路径**不做** trim / 不剥 BOM——那只发生在 store 迁移时）。
+  - 多笔记渲染（编排者裁定，为 T17 预留上界）：最旧优先、空行分隔、同一 `# Self-cognition\n\n` 标题与结尾 `\n\n`；空白笔记跳过；预算 `SELF_COGNITION_BUDGET_CHARS = 2000`，按 `chars().count()` 计**字符**（内容是中文，按字节会误算）；溢出时**永远保留第一条（最旧＝onboarding 根身份）**，再用**最新**若干条填满、丢中间，不输出截断标记。当前库里只有 1 条笔记，故此策略今日不可达，属防御性上界。
+  - D9 负测试落在 `dream.rs`（+57 行，**全部在 `#[cfg(test)]` 内，零生产改动**）：往隔离 DB 的 `self_cognition` 写入哨兵 → 调**真实生产函数** `build_dream_messages` → 断言"哨兵缺席 **且** fact 文本在场"。第二条断言是**防空洞保险**（否则一个恒空的 payload 也能让负测试通过）。未新造生产接缝。
+  - ⚠️ **实现者自述"删掉了一条失败的断言"，编排者列为审查最高优先项**，结论是**正确的测试修正而非削弱覆盖**：被删断言所在场景 3 条笔记共 616 字符，根本触不到 2000 预算，那条"丢中间"断言必然永假。渲染路径的预算策略由 `render_block_respects_total_budget`(`system_prompt_tests.rs:425`) 独立覆盖，编排者亲自回读其断言：预算 ≤2000、`note-0-` 最旧必留、`present < 5` 丢中间、`note-4-` 最新在场，四条齐全（5 条 × 607 字符 = 3043 确实溢出）。
+  - `mod.rs` re-export：`resolve_identity_path` 进生产（`system_prompt.rs:400` 的 `load_identity_for_prompt` 消费，只返回 `PathBuf` 不返回内容），`with_test_identity_path`/`IdentityPathGuard` 为 `#[cfg(test)]` 门控。审查确认**未再新增**绕过 D9 的可读路径（T3a 的 `conn_locked` 接缝未被扩大）。
+  - 编排者亲验：warnings **19**（基线）、system_prompt **21**、self_cognition **19**、dream **7**（含新 D9 负测试）、prompt_injection **4**、crate **139**、boundaries exit 0、工作区干净、提交只含 4 文件。
+  - 🔶 Minor 留终审 triage：M-1 报告未按 brief §6.1 把三例前后块**原文粘进报告**（只列了测试名；但值被 `assert_eq!` 对 `expected_before`/`expected_after` 完全约束，且 `print_evidence` 会写到 cargo test stdout，可复核）；M-2 `select_notes_within_budget:371` 的 `if total > 0 { 2 } else { 0 }` 中 `total` 恒 > 0，是死分支（无害）。
+  - 📌 **模型画像新增**：`opencode/deepseek-v4-flash-free` 首次担任 implementer，任务偏集成（优先级链 + 预算策略 + 负测试），结果 **0C/0I/2M 一轮通过**，质量与 glm-5.2 同档。两个流程瑕疵：**忘记提交**（brief §7 明写，需追一轮）、**报告写进了 worktree 的 `.superpowers/` 而非主仓库**（已由编排者搬回并删除 worktree 副本）。下次派发要在正文点明这两条。
+  - ⚠️ **给 T7 的新约束（勿漏）**：`dream.rs` 的 `#[cfg(test)]` 里现在**合法地**引用了 `append_self_cognition`。T7 若在 `forbidden-rules.mjs` 加"dream/judge 路径禁止触碰自我认知库"的规则，**必须只作用于生产代码**或显式放行该测试模块，否则会把这条 D9 负测试本身判违规。
+
+- Task T7a: complete (commit `9a9fb8a`，base `9f261cd`；review **SPEC PASS / QUALITY PASS**，0C/0I/3M（其中 M1 经编排者反证为误报）；implementer `general/deepseek-v4-flash-free_general`，judge m3) — **权限矩阵边界规则落地**，零生产行为改动。
+  - **T7 被编排者拆成 T7a/T7b**：T7a 只做边界规则，T7b 是 `memory_db.rs` 拆分（按用户裁定不阻塞，最后做）。
+  - 三组规则（`forbidden-rules.mjs` 3019→3177）：A/B 进 `forbiddenContentRules`（精确文件语义）各 11 条 pattern，管住 `dream.rs`(`:2248`) 与 `judge_memory.rs`(`:2308`)，覆盖全部自我认知符号 + `\bconn_locked\b`（**T3a 转入的 I-3 至此闭环**）；C 进 `forbiddenContentUnderRules`（目录子树语义，`:3140`）6 条写符号 pattern 管住 `prompt_builder/**`。审查专项二核对 `checker.mjs:843/873`，确认两组各自落在语义正确的列表里（放错列表会静默匹配不到任何文件）。
+  - **`supersede` 规则经核实无法在本轮落地，已延后到 T12 并写进其验收**：`dream.rs:156` 至今在生产调 `db.supersede_fact(...)`（`:155` 的 `"supersede"` 判决分支）、`:165` 写 `action: "supersede"` 审计行、`:211/:214/:218` 提示词里也是这个动词。此刻加规则会**立刻变红**，或逼实现者越界改 T12 的行为。计划 §4 T7 节与 T12 节均已记档。
+  - 解决 T3b 遗留的"D9 负测试自己会违规"问题：把 `dream_payload_never_contains_self_cognition_sentinel` 搬进 `dream_d9_tests.rs`(68 行)，用 `#[cfg(test)] #[path] mod d9_tests;` 挂成**子模块**以保住对私有 `build_dream_messages` 的访问（模块名不能叫 `tests`——`dream.rs:290` 已有内联 `mod tests` 会撞）。**这比给 `dream.rs` 配 `allowPaths` 更好**：例外变成"此文件不在规则范围内"而非"在范围内但被豁免"，后者等于把规则掏空。搬移后 `dream.rs` 348 行，改动 hunk 只在 `:289` 之后，生产体 1-288 逐字节未动。编排者亲验哨兵字符串 `T3B_DENSE_PATH_SENTINEL_我是自我认知标记` 搬移前后**逐字节一致**，两条断言（含防空洞的"fact 文本在场"）都在。
+  - **如实记录的既有例外（不掩盖）**：`system_prompt.rs:317` 的 `let _store = init_self_cognition_store(&db);` 返回值被丢弃，唯一效果就是那次幂等的 identity 迁移**写**，与"`prompt_builder` 只读成长状态"直接冲突。编排者裁定：保留惰性迁移（幂等、自愈），改为把规则写精确 + 把例外写进 group C 的 `reason` 留痕；迁移触发点是否上移到启动引导另案再议。全组只有 1 处 `allowPaths`（`SelfCognitionDbStore` pattern 放行 `system_prompt_tests.rs` 播种夹具）。
+  - 编排者亲验（未采信报告的 28/28 自证）：boundaries exit 0；**抽验规则真会触发**——往 `judge_memory.rs` 植入 `load_self_cognition`+`conn_locked` → checker exit 1 并报出两条预期 message；往 `system_prompt.rs` 植入 `SelfCognitionDbStore`+`boost_keyword` → 同样 exit 1，**证明 `allowPaths` 不会豁免生产文件**；两次均用 `git checkout` 还原至干净。测试：dream **7**、self_cognition **19**、system_prompt **21**、memory_db **28**、auto_memory **7**、growth_adapter **30**、crate **139**、warnings **19**（基线）。提交只含 3 文件。
+  - ❌ **judge 的 M1 经编排者反证为误报**：m3 称 `\bself_cognition\b` 会在 `load_self_cognition` 内部命中而导致重复报告。实测 `node -e "/\bself_cognition\b/.test('load_self_cognition(&db)')"` → **false**（下划线属 `\w`，`self` 前无词边界）；我先前的植入探针也只报了 2 条而非 3 条。该冗余不存在，无需修。**教训入台账：m3 的正则/边界类论断必须实测，不可采信其推理。**
+  - 🔶 Minor 留终审 triage：M2 规则 message 里的 "dream/garden" 措辞领先于代码（T12 才改名，措辞与 brief 一致，属文档漂移）；M3 经核实非问题。
+  - 📌 模型画像：zen 免费档 dsv4f 第二次担任 implementer，**再次一轮通过**，且自证了 28/28 pattern 触发。本轮瑕疵：**第一次改动落错仓库**（改到主仓库 `forbidden-rules.mjs` 而非 worktree），自行发现并还原——编排者已复核主仓库该文件仍为 3019 行且未出现在 `git status` 修改列表，污染确已清除。派发时点明的"必须提交 / 报告写主仓库"两条本轮均正确执行。
+
+- Task T5c: complete (commit `2e986ce`，base `9a9fb8a`；review **SPEC PASS / QUALITY PASS**，0C/0I/1M；implementer `ling-3.0-flash-free`（文本）+ `deepseek-v4-flash-free`（修复收尾），judge m3) — **§5.4-C auto_memory 指引追加四条**，零生产逻辑改动，`auto_memory.rs` 595→675 行。
+  - 四条按计划落位（顺序经 m3 用 byte offset 严格递增验证）：C1 硬跳过清单（问时间/翻译/单行命令/纯格式）+ C2 读取预算（≤4-6 次记忆读取即进主工作）追加在 `## When to access memories` 末尾；C4 应用纪律（只在改变回答实质时用；禁"我记得/根据我的记忆"类叙述）成新节置于 `## Before recommending from memory` 之后；C3 双写分工成新节 `## Auto-captured facts vs. your memory files` 置于 `## Memory and other forms of persistence` 之前。
+  - C3 用 **D14 如实版逐字**（`# Remembered facts` 是按 query 检索的子集，agent 无从对不可见的 fact 去重，去重由系统负责）。m3 做了字节级校验：`see - the system owns that.` 的连字符是 **`0x2D` ASCII hyphen**（非 em/en dash），四段新增文本内 `{`/`}` 计数为 **0**，`{memory_dir_display}`(`:114`) 与 `{{{{...}}}}`(`:202-207`) 的 byte offset 在 BASE/HEAD 完全一致 → 未被 `format!` 转义破坏。
+  - ⚠️ **brief 缺陷（我的责任，教训入台账）**：D14 文本本身含 `` `# Remembered facts` `` 字样，而既有两条测试断言是 `!prompt.contains("# Remembered facts")`（`prompt_injection_without_facts_*` 与 `*_degrades_when_facts_file_unreadable`）→ 加了 C3 后这两条**必然失败**。brief 却写着"purely additive、不得改动现有断言"，把实现者逼进死角。**教训：给 prompt 追加文本前，必须先 grep 现有测试里针对该文本的否定断言（`!contains`）。**
+  - 编排者裁定的正确修法：断言收紧为**生产注入的精确形态** `!prompt.contains("\n\n# Remembered facts\n\n")`（对应 `:304` 的 `format!("\n\n# Remembered facts\n\n{}", items)`）。C3 散文里是反引号包裹的行内代码形态，命中不了该形态；而真 section 一旦出现必然命中 → 断言恢复了它名字声称的语义。注释与断言消息全部还原原文，最终提交只有 **2 行删除**（就是那两条断言行）。
+  - ❌ **ling 的错误处置（已否决）**：它诊断出冲突是对的，但改成了 `!prompt.contains("- I prefer pnpm")`——而这两个测试从未写入该 fact，断言**永真即空洞**，看着有覆盖实则零覆盖，比删掉更糟。fixer 已按上述裁定改正，并逐条做了非空洞证明（临时反转断言 → 测试失败 → 还原）。
+  - 新测试 `prompt_includes_all_four_memory_guidance_additions`：四条独特短语断言（每条锁一段指引）+ 四条 `find()` 顺序断言（少任一节 `.expect()` 直接 panic，错序则比较失败）。
+  - 编排者亲验：auto_memory **8**、prompt_injection **4**、system_prompt 21、dream 7、self_cognition 19、warnings **19**（基线）、boundaries exit 0、提交仅 1 文件 82/2、工作区干净、主仓库无污染、无临时证明脚手架残留。
+  - 🔶 Minor 留终审 triage：报告未按 brief §6.1 粘贴**渲染后**的提示词区块（m3 已独立完成逐字节校验补上了该证据；且本轮新增文本零花括号，§6.1 想防的转义破坏结构上不可能发生）。
+  - 📌 **ling-3.0-flash-free 首次摸底（重要）**：文本转录准确（四段逐字、位置全对）、测试写得像样（8 条断言含顺序）、甚至**自己诊断出了 brief 的真冲突**——但三个硬伤：① **输出严重退化**（约 3 万行空行撑爆工具输出，无法读取，也因此不可续会话）；② **未提交**；③ **未写报告**；④ 遇冲突时选了掩盖式修法。结论：可接小单转录，但**必须由编排者或 dsv4f 收尾**，且修复不要用它续会话。
+
+## Codex 对照修订轮（2026-08-05）
+
+- 用户拿 Codex 记忆架构做对照评审，产出 7 条 brief 修订 + 1 条新裁定 D12，**已全部固化进计划 §12**（`plan-2026-08-04-growth-core.md`）。零代码改动，全部指向未启动任务。
+- 确认无需改动的既有设计：D5 提及驱动（目的是"理解用户"，用户复述即 ground truth；Codex 的 citation 服务于程序性知识，机制不必抄）、D6/D8、D9/D10/D11 权限矩阵 + `<user_message>` 注入防御、workspace `memory/` 渐进披露。
+- 映射：R-1→T12 园丁产出版本化用户画像摘要（补上"整合产物层"缺失，人类只读）；R-2→T4 园丁改由 `on_session_end` 独立触发 + T13 paused 改为频率=0 可调参数（消除无恢复锁存）；R-3→T15 技能签名加"重复成功流程"；R-4→distiller 产出 `keywords` + 保全原话（建议提前，直接救活 keyword 因子并覆盖 T6a 的 I-1）；R-5→T10 dedup gate 前置于 DB insert；R-6→T13 加配额余量门控；R-7→T4 蒸馏输入收敛为主对话轮次（安全）。
+- **新增实测事实（写进 brief 防止实现者走错路）**：
+  - `turn_persist.rs:432` `append_facts_entry(_agent_type: &str)` 参数带下划线前缀 = 当前被完全忽略，故子代理 brief 确实照样进蒸馏（R-7 属实）。
+  - 判定主/子**不能用 `agent_type`**（它是人格名 `agentic`/`coder-lc`）；可靠信号是 `SessionMetadata.parent_session_id`（`agentic/core/session.rs:103`）或 `created_by == "session-<parent>"`（`so_dispatch.rs:45`、`subagent_ports.rs:24`）。
+  - `on_session_end` 在计划 §130 行的 `GrowthCore` 签名里已声明，至今零调用方 → R-2 有现成挂点。
+- **D12 裁定（用户倾向 b，编排者拍板并给出无新增项的实现路径）**：重复证据晋升条目 `evidence_strength`，永不触碰话题权重 `tw`。关键发现：A3 已落地的 `score = tw * (0.6 + 0.4 * es)` 恰好预留 0.4 动态范围，选项 b 不需要任何新公式项，且 D5 话题主导由公式结构天然保证（`TOPIC_DOMINANCE_RATIO = 1/0.6`）。T10 须带双向测试（同话题内多次证实优先；跨话题热度仍压过证据强度）。
+
+## Wave A 集成验证（编排者亲跑，2026-08-04）
+
+- 线性 cherry-pick 至 `feat/growth-core-0804`：7e96126 → 5eb5fbf → c9dcb58 → 7e3e279 → 6294760 → 1488a0d，无冲突（各单独占单文件的隔离策略生效）
+- `cargo test -p northhing-agentic-growth`：**102 passed / 0 failed**
+- `node scripts/check-core-boundaries.mjs`：passed（exit 0）
+- 文件行数上限（<800）全部满足：competition 638 / negation 560 / extract 497 / score 410 / state 308 / ports 271
+- emoji 扫描：`src/agentic/src` 零命中
+- 待办：G1 T3（记忆分库 D4/D9/D10，会改系统提示"关于我"块——用户当时正在看提示词，故刻意延后）、T4c（四合一 `on_turn_finalized` 门面）、T5（distiller/dream 纯逻辑迁入）、T6b（双层打分 `topics::score` 接入检索排序，prompt 可见）、T7（边界规则结构化 + memory_db 拆分）、园丁迁移（含 `dream_last_sweep_at` → `GrowthState.garden`，原计划 T12）；`src/agentic` 中 12 个空壳文件仍为占位（route / merge / promote / selfcog / health / cleanup / executor / parse / prompt / verdict 等）
+- 环境事实：main 工作区 `src/agentic/session` 是一个空的未跟踪残留目录（`git ls-tree` 无记录），不影响新 crate 落位
+- 已修复缺陷：`boost_keyword` 生产零调用方 → T6a 已接线；关键词权重现在会随提及上升（区间 [1.0, 5.0]），`search_facts` 的 keyword_weight 信号真正生效（judge 专项确认写入路径与检索路径已对齐）
+
+## 下次续点（2026-08-06 晚，用户休息）
+
+## 下次续点（2026-08-06 晚，用户休息）
+- T7a 已完成收口（见上条 ledger 行）。下一任务：§5.4-C — auto_memory 提示词追加四条（读取决策边界 / 读取预算 <=4-6 步 / 双写分工 C3 用 D14 如实版 / 应用纪律一句）。现场已侦察：auto_memory.rs 595 行，prompt 在 build_workspace_agent_memory_prompt 的 raw string（:112 起），# Remembered facts 在 :284，build_query_aware_facts_reminder :291；调研报告 §5.4-C 原文在 docs/design/2026-08-05-memory-architecture-research/codex-anthropic-memory-research.md:214-218；D14 如实版措辞在计划 :401-406。派发：implementer zen 免费档 dsv4f，judge m3；完成后按惯例回填 ledger + 台账。
