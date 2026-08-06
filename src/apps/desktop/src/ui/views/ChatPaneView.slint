@@ -1,5 +1,6 @@
 ﻿import { MessageItem, ProviderItem } from "../theme.slint";
 import { RedesignTheme } from "../redesign_palette.slint";
+import { SystemConstants } from "../system_constants.slint";
 import { AppStrings } from "../strings.slint";
 import { RoomHead } from "../components/RoomHead.slint";
 import { DeckBar } from "../components/DeckBar.slint";
@@ -39,12 +40,7 @@ export component ChatPaneView inherits Rectangle {
     callback set-default-model(string);
     callback open-settings();
 
-    // 左宝石 y = avatar 中心线（状态行高 32px + RoomHead padding-top 26px + avatar 52px/2）。
-    // 与真值 --gem-mid = avatar.y + avatar.height/2 一致（Slint 表达式，非 rAF）。
-    property <length> status-row-height: 32px;
-    property <length> gem-left-y: root.status-row-height + 26px + 26px - 32px; // 32 = DoorbellGem 高度/2 居中
-    // 右宝石 y = 52px（主框右缘上部，窗控簇 8..36 与 mind 切换器之下 16px 净空）。
-    property <length> gem-right-y: 52px - 32px;
+    property <length> gem-mid-y: root.height / 2 - 32px;
 
     // The whole room layout
     VerticalLayout {
@@ -129,14 +125,25 @@ export component ChatPaneView inherits Rectangle {
                         border-width: 1px; border-color: RedesignTheme.t.border; border-radius: 4px;
                         drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
 
+                        // T2b: agent 卡 mind 色边（真值 L157 border-top-color: var(--bevel) 斜面顶边）。
+                        // Slint Rectangle 无 per-side border-color；用 1px 顶边覆盖层译出
+                        // 「温度语义」= agent 在场的一侧染 mind 色。
+                        Rectangle {
+                            x: 1px; y: 0px;
+                            width: parent.width - 2px;
+                            height: 1px;
+                            background: RedesignTheme.t.mind-drive-frame;
+                        }
+
                         VerticalLayout {
                             padding-top: 12px; padding-bottom: 12px;
                             padding-left: 14px; padding-right: 14px;
                             spacing: 8px;
 
+                            // 真值 L160: .msg-agent font-family Fraunces; font-size 16px; line-height 1.7
                             Text {
                                 text: AppStrings.chat-mock-agent-body;
-                                font-family: "Fraunces"; font-size: 15px; color: RedesignTheme.t.fg; wrap: word-wrap;
+                                font-family: "Fraunces"; font-size: 16px; color: RedesignTheme.t.fg; wrap: word-wrap;
                             }
 
                             HorizontalLayout {
@@ -180,50 +187,74 @@ export component ChatPaneView inherits Rectangle {
                     }
                 }
 
-                VerticalLayout {
-                    spacing: 8px; alignment: end;
-                    Text { text: AppStrings.chat-mock-witness-who; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.faint; horizontal-alignment: right; }
-                    Text {
-                        text: AppStrings.chat-mock-witness-body;
-                        font-family: "Fraunces"; font-size: 15px; font-italic: true; color: RedesignTheme.t.muted; horizontal-alignment: right;
+                // witness 记录：真值 L158-159
+                //   .rec.witness { align-self: flex-end; text-align: left; }
+                //   .rec.witness .body { font-family: font-agent; font-size: 15px; color: muted; }
+                // 块整体右靠（align-self flex-end），块内文本左对齐（text-align left）；无 italic。
+                // .who 为 mono 10px faint（真值 L155），承担 mono 时间戳排印。
+                HorizontalLayout {
+                    alignment: end;
+                    VerticalLayout {
+                        spacing: 8px;
+                        Text {
+                            text: AppStrings.chat-mock-witness-who;
+                            font-family: "JetBrains Mono"; font-size: 10px; letter-spacing: 0.8px;
+                            color: RedesignTheme.t.faint;
+                        }
+                        Text {
+                            text: AppStrings.chat-mock-witness-body;
+                            font-family: "Fraunces"; font-size: 15px; color: RedesignTheme.t.muted; wrap: word-wrap;
+                        }
                     }
                 }
 
                 VerticalLayout {
                     spacing: 8px; alignment: start;
-                    // I6 修复：approval warn 色用 mind-gaze-line token，非硬编码 hex。
-                    Rectangle {
-                        border-width: 1px; border-color: RedesignTheme.t.mind-gaze-line; border-radius: 4px;
-                        background: RedesignTheme.t.elevated; drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
-
-                        HorizontalLayout {
-                            padding-top: 12px; padding-bottom: 12px; padding-left: 14px; padding-right: 14px;
-                            spacing: 14px; alignment: center;
-
-                            VerticalLayout {
-                                spacing: 6px; horizontal-stretch: 1;
-                                Text { text: AppStrings.chat-mock-approval-head; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.mind-gaze-line; }
-                                Text { text: AppStrings.chat-mock-approval-main; font-size: 12px; color: RedesignTheme.t.fg; }
-                                Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
-                            }
+                    // approval 卡：宽度节奏按真值收敛（brief §3.4：非全宽粗边，居中收敛宽）。
+                    // 真值 L169 border 1px solid var(--warn) = #D99B48 = mind-gaze-accent。
+                    HorizontalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 560px;
+                            border-width: 1px; border-color: RedesignTheme.t.mind-gaze-accent; border-radius: 4px;
+                            background: RedesignTheme.t.elevated; drop-shadow-color: RedesignTheme.t.shadow; drop-shadow-blur: 4px;
 
                             HorizontalLayout {
-                                spacing: 8px; alignment: center;
-                                Rectangle {
-                                    border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.rep-500; background: RedesignTheme.t.rep-500.with-alpha(0.4);
-                                    HorizontalLayout {
-                                        padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
-                                        Text { text: AppStrings.chat-mock-approval-approve; font-size: 10px; color: RedesignTheme.t.fg; }
-                                    }
-                                    TouchArea {}
+                                padding-top: 12px; padding-bottom: 12px; padding-left: 14px; padding-right: 14px;
+                                spacing: 14px; alignment: center;
+
+                                VerticalLayout {
+                                    spacing: 6px; horizontal-stretch: 1;
+                                    // 真值 L171: .approval-head color var(--warn); mono 9px; ls .08em
+                                    Text { text: AppStrings.chat-mock-approval-head; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.mind-gaze-accent; letter-spacing: 0.8px; }
+                                    Text { text: AppStrings.chat-mock-approval-main; font-size: 12px; color: RedesignTheme.t.fg; }
+                                    Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
                                 }
-                                Rectangle {
-                                    border-width: 1px; border-radius: 3px; border-color: RedesignTheme.t.danger; background: transparent;
-                                    HorizontalLayout {
-                                        padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
-                                        Text { text: AppStrings.chat-mock-approval-reject; font-size: 10px; color: RedesignTheme.t.danger; }
+
+                                HorizontalLayout {
+                                    spacing: 8px; alignment: center;
+                                    Rectangle {
+                                        border-width: 1px; border-radius: 3px;
+                                        border-color: RedesignTheme.t.mind-drive-accent;
+                                        background: approve-ta.has-hover ? RedesignTheme.t.mind-drive-accent : RedesignTheme.t.mind-drive-intense;
+                                        animate background { duration: 150ms; }
+                                        HorizontalLayout {
+                                            padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
+                                            Text { text: AppStrings.chat-mock-approval-approve; font-size: 10px; color: approve-ta.has-hover ? RedesignTheme.t.bg : RedesignTheme.t.fg; }
+                                        }
+                                        approve-ta := TouchArea {}
                                     }
-                                    TouchArea {}
+                                    Rectangle {
+                                        border-width: 1px; border-radius: 3px;
+                                        border-color: RedesignTheme.t.danger;
+                                        background: reject-ta.has-hover ? RedesignTheme.t.danger : transparent;
+                                        animate background { duration: 150ms; }
+                                        HorizontalLayout {
+                                            padding-left: 12px; padding-right: 12px; padding-top: 6px; padding-bottom: 6px;
+                                            Text { text: AppStrings.chat-mock-approval-reject; font-size: 10px; color: reject-ta.has-hover ? #ffffff : RedesignTheme.t.danger; }
+                                        }
+                                        reject-ta := TouchArea {}
+                                    }
                                 }
                             }
                         }
@@ -246,7 +277,7 @@ export component ChatPaneView inherits Rectangle {
         is-open: root.left-drawer-open;
         base-color: RedesignTheme.t.mind-drive-accent;
         x: 0px;
-        y: root.gem-left-y;
+        y: root.gem-mid-y;
         toggle => { root.left-drawer-open = !root.left-drawer-open; }
     }
     DoorbellGem {
@@ -254,7 +285,7 @@ export component ChatPaneView inherits Rectangle {
         is-open: root.right-drawer-open;
         base-color: RedesignTheme.t.mind-abyss-accent;
         x: parent.width - self.width;
-        y: root.gem-right-y;
+        y: root.gem-mid-y;
         toggle => { root.right-drawer-open = !root.right-drawer-open; }
     }
 

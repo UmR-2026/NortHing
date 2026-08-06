@@ -15,10 +15,14 @@ export component WindowChrome inherits Rectangle {
     callback window-close();
     callback toggle-theme();
 
-    // ˫߽ (Double border)
+    // 收容框 containment (Double border)
+    // 真值 L78: position fixed; inset 12px; border 1px solid var(--frame)
+    // 亮色态额外 box-shadow 0 0 0 1px var(--line) -> Slint 译为内嵌第二道 line 边
     Rectangle {
-        width: parent.width;
-        height: parent.height;
+        x: 12px;
+        y: 12px;
+        width: parent.width - 24px;
+        height: parent.height - 24px;
         border-width: 1px;
         border-color: RedesignTheme.dark ? RedesignTheme.t.mind-drive-frame : RedesignTheme.t.border;
 
@@ -33,12 +37,13 @@ export component WindowChrome inherits Rectangle {
         }
     }
 
-    // Ĥ (Membrane frame)
+    // 活膜 membrane-frame (Membrane frame)
+    // 真值 L80: inset 13px; border 1px solid var(--mind-base); opacity 0 -> .35 呼吸
     Rectangle {
-        x: 1px;
-        y: 1px;
-        width: parent.width - 2px;
-        height: parent.height - 2px;
+        x: 13px;
+        y: 13px;
+        width: parent.width - 26px;
+        height: parent.height - 26px;
         border-width: 1px;
         border-color: RedesignTheme.t.mind-drive-accent;
         opacity: SystemConstants.amp-membrane;

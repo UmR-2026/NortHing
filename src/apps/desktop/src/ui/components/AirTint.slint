@@ -11,28 +11,34 @@ export component AirTint inherits Rectangle {
         : (root.speaking ? RedesignTheme.t.air-rep-speaking : RedesignTheme.t.air-rep);
     animate background { duration: 300ms; easing: ease-in-out; }
 
-    // 顶晕
+    // 顶晕 (global-aura)
+    // 真值 L81: radial-gradient(circle 640px at 50% 200px, mind-glow 0%, transparent 74%)
+    // + breath-aura 8s opacity 1 -> .65；亮色态 display:none (L82)
+    // T2b: 尺寸按真值 640px 直径落地（原 480px 高度撑不出可感层次）；
+    // 中心 y=200px 靠容器 y 偏移实现（Slint 径向渐变圆心固定 50% 50%）。
     Rectangle {
-        x: 0;
-        y: 0;
-        width: parent.width;
-        height: parent.height * 0.5;
+        x: (parent.width - 1280px) / 2;
+        y: 200px - 640px / 2;   // 圆心落在 y=200px（真值 --aura-y）
+        width: 1280px;          // 2× 640px 半径 = 直径撑满渐变
+        height: 1280px;
         property <color> halo-color: root.cold
             ? RedesignTheme.t.halo-abyss
-            : (root.speaking ? RedesignTheme.t.halo-rep-speaking : RedesignTheme.t.halo-rep);
-        background: @radial-gradient(circle, halo-color 0%, halo-color.with-alpha(0) 60%);
-        // 绑定顶晕呼吸。按真值，亮色时不显示（opacity = 0）
+            : (root.speaking ? RedesignTheme.t.mind-drive-intense : RedesignTheme.t.mind-drive-glow);
+        background: @radial-gradient(circle, halo-color 0%, halo-color.with-alpha(0) 74%);
+        // 绑定顶晕呼吸 (8s 单钟 opacity 0.65..1.0)。按真值，亮色态隐藏 (opacity = 0)
         opacity: RedesignTheme.dark ? SystemConstants.amp-aura : 0.0;
         animate background { duration: 300ms; easing: ease-in-out; }
     }
 
-    // 底雾
+    // 底雾 (room-fog)
+    // 真值 L228-229: height 140px, linear-gradient(0deg, bg0, transparent), opacity .55
     Rectangle {
         x: 0;
-        y: parent.height * 0.7;
+        y: parent.height - 140px;
         width: parent.width;
-        height: parent.height * 0.3;
-        background: @radial-gradient(circle, RedesignTheme.t.fog-abyss 0%, RedesignTheme.t.fog-abyss.with-alpha(0) 70%);
-        animate background { duration: 300ms; easing: ease-in-out; }
+        height: 140px;
+        background: @linear-gradient(0deg, RedesignTheme.t.bg 0%, transparent 100%);
+        opacity: 0.55;
+        animate opacity { duration: 300ms; easing: ease-in-out; }
     }
 }

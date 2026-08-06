@@ -53,23 +53,30 @@ export component DeckBar inherits Rectangle {
             TouchArea {
                 width: attach-txt.width;
                 height: parent.height;
+                // 真值 L190: .attach { font-mono; 10px; color: var(--mind-line); }
                 attach-txt := Text {
                     text: AppStrings.deck-attach;
                     font-family: "JetBrains Mono";
                     font-size: 10px;
-                    color: RedesignTheme.t.rep-500;
+                    color: RedesignTheme.t.mind-drive-line;
                     vertical-alignment: center;
                 }
             }
 
-            // input-box
+            // input-box（真值 L191-192: focus/hover border-color var(--accent-solid) = mind-base）
             Rectangle {
                 horizontal-stretch: 1;
                 border-width: 1px;
-                border-color: ti.has-focus ? RedesignTheme.t.rep-500 : RedesignTheme.t.border;
+                border-color: (ti.has-focus || box-ta.has-hover) ? RedesignTheme.t.mind-drive-accent : RedesignTheme.t.border;
                 border-radius: 4px;
                 background: RedesignTheme.t.elevated;
                 animate border-color { duration: 200ms; }
+
+                box-ta := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => { ti.focus(); }
+                }
 
                 HorizontalLayout {
                     padding-left: 12px; padding-right: 12px;
@@ -86,7 +93,7 @@ export component DeckBar inherits Rectangle {
                     }
                     if ti.has-focus: Rectangle {
                         width: 7px; height: 13px;
-                        background: RedesignTheme.t.rep-500;
+                        background: RedesignTheme.t.mind-drive-accent;
                         y: (parent.height - self.height) / 2;
                         opacity: Math.mod(animation-tick() / 1000ms, 1) < 0.5 ? 1 : 0.15;
                     }
@@ -101,36 +108,38 @@ export component DeckBar inherits Rectangle {
                 }
             }
 
-            // send button
-            ta := TouchArea {
-                width: 38px;
+            // send button (合一胶囊：空闲 ➤ / 流式 ■ 停止)
+            send-btn := Rectangle {
+                width: 32px;
                 height: 28px;
-                clicked => {
-                    if root.streaming {
-                        root.stop();
-                    } else {
-                        root.send();
-                    }
-                }
-                
-                Rectangle {
-                    width: root.streaming ? 38px : 0px; // streaming 态是按钮形状
-                    height: parent.height;
-                    border-width: root.streaming ? 1px : 0px;
-                    border-color: root.streaming ? RedesignTheme.t.danger : transparent;
-                    border-radius: 4px;
-                    background: root.streaming && ta.has-hover ? RedesignTheme.t.danger : transparent;
+                border-radius: 4px;
+                border-width: root.streaming ? 1px : 0px;
+                border-color: root.streaming ? RedesignTheme.t.danger : transparent;
+                background: root.streaming && send-ta.has-hover ? RedesignTheme.t.danger : transparent;
+                animate background, border-color { duration: 150ms; }
 
-                    Text {
-                        text: root.streaming ? "■" : "➤";
-                        font-size: root.streaming ? 11px : 14px;
-                        color: root.streaming 
-                            ? (parent.background == transparent ? RedesignTheme.t.danger : #ffffff) 
-                            : (ta.has-hover ? RedesignTheme.t.rep-500 : RedesignTheme.t.muted);
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
+                send-txt := Text {
+                    text: root.streaming ? "■" : "➤";
+                    font-family: "JetBrains Mono";
+                    font-size: root.streaming ? 11px : 14px;
+                    color: root.streaming
+                        ? (send-ta.has-hover ? #ffffff : RedesignTheme.t.danger)
+                        : (send-ta.has-hover ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted);
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                send-ta := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        if root.streaming {
+                            root.stop();
+                        } else {
+                            root.send();
+                        }
                     }
                 }
             }
