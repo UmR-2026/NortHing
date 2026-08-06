@@ -6,11 +6,25 @@
 
 ## 1. 一句话结论
 
-**Wave1（B1-B4）全部完成并通过分支终审（SPEC PASS / QUALITY PASS，0 Critical / 0 Important）**；triage 已裁定并执行（2 项合并前修补已提交，4 项登记 tech-debt-ledger P2-15..P2-18）；用户决定**先不并 main**（main 工作区被 growth-core 线另一 session 占用 + 已过宵禁）。分支状态干净，随时可合。
+**Wave1（B1-B4）全部完成、通过分支终审（SPEC PASS / QUALITY PASS，0 Critical / 0 Important），并已合入 main**；triage 已裁定并执行（2 项合并前修补已提交，4 项登记 tech-debt-ledger P2-15..P2-18，AGENTS.md 家规 6 生效）；合并后回归扫全绿。**下一步是 Wave 2（计划 §3 的 B5/B6/B7）**。
+
+## 1b. 合并与回归（2026-08-06 傍晚）
+
+- 合并由 growth 线并行 session 执行：main `33a802c`（`Merge branch 'fix/backend-followups-0804'`，43 files / +2732 / -103）+ `ba0c4e7`（补回被合并覆盖的 `progress.md` Growth Core Ledger 段）。`6267fb1` 已是 main 祖先。
+- 编排者合并后回归扫（在 main 工作区实跑，`$env:PATH = "C:\msys64\mingw64\bin;" + $env:PATH`）：
+
+| 目标 | 命令 | 结果 |
+|---|---|---|
+| northhing-core | `cargo test -p northhing-core --features product-full --lib` | **1140 passed + 1 ignored**（= 1141 总，与基线一致） |
+| services-integrations | `cargo test -p northhing-services-integrations --features product-full` | **215 passed / 0 failed**（≥ 基线 212；多出 3 来自 main 工作区 growth 线未提交改动，非本轮引入） |
+| northhing（desktop） | `cargo test -p northhing --lib` | **118 passed / 0 failed** |
+
+- `cargo check --workspace` 仍被上游 embed-resource 3.0.11 阻断（非代码，交 CI）。
+- 注意：回归扫是在**带 growth 线未提交改动**的 main 工作区跑的（当时 96 个 dirty 文件），故计数含其影响；无 failure。
 
 ## 2. 分支与 commit 表
 
-分支 `fix/backend-followups-0804`，worktree `northing/.worktrees/backend-followups-0804`，merge-base main `41695f5`，HEAD **`6267fb1`**，工作区**干净**（无未跟踪/未提交）。
+分支 `fix/backend-followups-0804`（worktree `northing/.worktrees/backend-followups-0804`）HEAD **`6267fb1`**，**已并入 main**（`33a802c`）。worktree 可保留供追溯，也可在确认无用后清理。
 
 | commit | 内容 | 审查状态 |
 |---|---|---|
@@ -27,23 +41,26 @@
 | `8fa0ed6` | 终审证据链 + ledger 终审行 | docs |
 | `6267fb1` | tech-debt-ledger P2-15..P2-18 + AGENTS.md 家规 6 | docs |
 
-## 3. 接手第一步（恢复点）
+## 3. 接手第一步（恢复点 = 开 Wave 2）
 
-Wave1 已无待办任务，只剩**合并动作**：
+Wave1 已闭环（合并 + 回归扫完成），**无遗留待办**。下一步：
 
-1. `git -C northing/.worktrees/backend-followups-0804 log --oneline -3` 复核 HEAD=`6267fb1`。
-2. **确认 main 工作区是否仍被 growth-core 线占用**（`git -C northing status --short`）。若仍有其未提交产物 → 先问用户，**不要**在其上做 merge。
-3. 可合时：`git -C northing merge --no-ff fix/backend-followups-0804`，再跑 §5 三条回归命令。
-4. 合并后：`tech-debt-followups.md` 已全 resolved，无需再动；写收官 handoff。
-5. 之后是 **Wave 2**（计划 §3 的 B5 relay 批 / B6 services+assembly 批 / B7 desktop+lsp 批）与 **Wave 3**（§4 决策项，需用户拍板）。
+1. `git -C northing log --oneline -3` 复核 main 含 `33a802c`；`git -C northing status --short` 看 growth 线未提交产物规模（当前约 96 文件，**不碰**）。
+2. 读计划 §3 的 **Wave 2** 三批任务（互不依赖，可串行派）：
+   - **B5 relay 批**：relay-core + relay-server 的 T1 Q-3/Q-4/M-4、T2 M-2/M-3、T3 M-1 + FR-3（`api_key=None` 全路由 e2e）。验证 `cargo test -p northhing-relay-core -p northhing-relay-server`
+   - **B6 services/assembly 批**：T4 M-2/M-4、T5 M-1、FR-2（`storage_app_io.rs:119-127` ErrorKind::NotFound 统一）、FR-1（bot persistence 显式 flush，可选）。验证 `cargo test -p northhing-services-integrations --features product-full` + `cargo test -p northhing-core --features product-full --lib remote_connect`
+   - **B7 desktop/lsp 批**：T7 M-2、T8 M-1/M-5/M-7（+ M-4 视 implementer 判定）。验证 `cargo test -p northhing --lib settings` + `cargo test -p northhing-core --features product-full --lib lsp`
+3. **派单前必做**：逐项复核锚点行号是否漂移（Wave1 + growth 线都动过代码），并对目标 crate 跑一次 focused 基线（家规 6 的教训：不要沿用未实测的数字）。
+4. 开独立 worktree（勿在 main 工作区实现，growth 线正在用）；沿用 brief → implementer → judge 双判决 → 证据链入库的循环。
+5. Wave 3（计划 §4）是决策项，需用户拍板后才落设计任务，不自动派单。
 
 ## 4. 用户决策记录（本次会话）
 
 1. **P1-C3 过程性缺陷**（2026-08-06）：选"登记债项 + 加流程关卡" → `docs/status/tech-debt-ledger.md` **P2-15**（含根因：报告验证段不完整 + handoff 沿用未实测基线）+ `AGENTS.md` 家规 **6**（merge to main 前 `cargo check -p northhing` 必须通过；handoff 不得沿用自己未实测的验证基线）。CI 层面的强制仍是 open。
-2. **合并时机**（2026-08-06）：选"先不合并，写 handoff 收工"——理由：已过 03:00 宵禁 + main 工作区被并行 session 占用。
+2. **合并时机**（2026-08-06）：先答"推迟合并"（宵禁 + main 被并行 session 占用）；当日傍晚复盘时 growth 线 session 已自行把分支合入 main（`33a802c`），编排者随即补做回归扫（§1b）—— **并行 session 会动 main，恢复时务必先用 git 校准，不要相信上一份 handoff 的"未合并"结论**。
 3. **模型选派**（2026-08-06）：用户指定 **deepseek v4 flash 优先**，**轻量机械式任务用 ling**；ark / volcengine(glm) 线无额度不可用，**qwen 额度紧勿用**，judge 用 **m3**。
 
-## 5. 验证基线（本轮实测，取代前序 handoff §7）
+## 5. 验证基线（本轮实测，取代前序 handoff §7；合并后已在 main 复验，见 §1b）
 
 | Crate | 命令 | 基线 |
 |---|---|---|
