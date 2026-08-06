@@ -185,6 +185,35 @@
 - **Proposed fix**: Normalize before dedup (or similarity-based dedup); implement confidence/scope derivation paths or remove the unused enum variants.
 - **Status**: active (low priority)
 
+### P2-15: P1-C3 merged to main while the desktop crate did not compile (process defect)
+
+- **Symptom**: After P1-C3 (keyring-backed API key storage) landed on main, `cargo check -p northhing` failed at the baseline: keyring 4.1.6 raises `compile_error!("At least one of the features 'v1' or 'cli' must be enabled")`, so the desktop crate had never compiled since that merge. The C3 report itself (task-c3-report.md lines 66-71) admitted the desktop verification was not run, and the 2026-08-04 handoff carried a stale "desktop 98/98" figure from before C3.
+- **Evidence**: Discovered 2026-08-05 while dispatching Task B3 of the backend follow-ups round; fixed by commit `b0bfe43` (keyring `v1` feature + 3 API/`Lazy` compile fixes + one test import path, zero behavior change, judge-verified line by line). New desktop baseline: `cargo test -p northhing --lib` = 118/118.
+- **Root cause (process)**: a security-sensitive change was accepted on a report whose verification section was incomplete, and the round handoff reused an older desktop test figure instead of a fresh measurement.
+- **Proposed fix**: gate it structurally — `cargo check -p northhing` must pass before any branch merges to main (recorded as housekeeping rule 6 in `AGENTS.md` / `AGENTS-CN.md`, 2026-08-06), and a round handoff must not carry forward a verification baseline it did not measure itself.
+- **Status**: code defect resolved (`b0bfe43`); process gate recorded 2026-08-06 (house rule 6). CI enforcement of the desktop check is still open.
+
+### P2-16: `ConfigManager::save_config` writes the whole config file non-atomically
+
+- **Symptom**: `save_config` writes the global config with a plain whole-file write, so an interrupted write can leave a truncated / partial `app.json`.
+- **Evidence**: Task B1 review Minor-1 (backend follow-ups round, 2026-08-05); Wave1 final review §5 triage ruled it a separate debt item (out of FU-1 scope).
+- **Proposed fix**: route the write through the `json_store::write_atomic` pattern (temp file + rename), matching the settings/vault write paths.
+- **Status**: active
+
+### P2-17: `init_once_with` double-checked-lock skeleton is duplicated between core config and AI factory
+
+- **Symptom**: `client_factory.rs` now owns a private `init_once_with` helper implementing the double-checked-locking init skeleton, while `service/config/global.rs` `GlobalConfigManager::initialize` still hand-rolls the same pattern with its own `INIT_MUTEX`.
+- **Evidence**: Task B4 review Minor-3 + Wave1 final review §5 (2026-08-06), commit `50b0f44`.
+- **Proposed fix**: if a third caller appears, lift the helper into a shared sync utility module and migrate both call sites; not worth it at two call sites.
+- **Status**: active (low priority)
+
+### P2-18: `LspManager::uninstall_plugin` has no production caller
+
+- **Symptom**: the uninstall path (fixed in FU-2 so it stops servers by resolved language keys) is currently unreachable from production code — only tests call it.
+- **Evidence**: Task B2 review observation + Wave1 final review §5 (2026-08-06), commit `7a4bdca`.
+- **Proposed fix**: either wire plugin uninstall into the product surface or record it explicitly as an API kept for a planned surface; also note `stop_server` always returns `Ok`, which makes the new warn branch unreachable.
+- **Status**: active (low priority)
+
 ## Change Protocol
 
 - **New entry**: Add with next available ID, include evidence (file:line), proposed fix, and status.
