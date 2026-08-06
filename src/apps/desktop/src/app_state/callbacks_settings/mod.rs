@@ -26,7 +26,7 @@ pub(crate) use workspace::*;
 // callbacks (delete-provider, remove-workspace) call these from a
 // `tokio` runtime; failures route to the banner via
 // `set_banner_message` rather than crashing the UI. These wrap
-// `load_app_settings` / `save_app_settings` in `settings.rs` (which
+// `load_app_settings` / `update_app_settings` in `settings/io.rs` (which
 // return `anyhow::Result`). The `_quiet` suffix means "swallow the
 // Result, only log on failure" — the caller decides what to do.
 
