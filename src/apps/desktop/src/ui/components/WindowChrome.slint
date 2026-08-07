@@ -49,7 +49,7 @@ export component WindowChrome inherits Rectangle {
         opacity: SystemConstants.amp-membrane;
     }
 
-    // ״̬/room-head ק (Status line / drag area)
+    // 状态/room-head 拖拽区 (Status line / drag area)
     Rectangle {
         x: 0;
         y: 0;
@@ -63,20 +63,10 @@ export component WindowChrome inherits Rectangle {
             height: parent.height;
             alignment: start;
             spacing: 8px;
-
-            Text {
-                text: "northing";
-                font-family: "Fraunces";
-                font-italic: true;
-                font-size: 12px;
-                color: RedesignTheme.t.fg;
-                vertical-alignment: center;
-                opacity: 0.7;
-            }
         }
     }
 
-    // ӡ (Seal watermark)
+    // 盖印 (Seal watermark)
     Text {
         x: 24px;
         y: parent.height - 24px - self.height;
@@ -93,7 +83,7 @@ export component WindowChrome inherits Rectangle {
         }
     }
 
-    // ϴڿưť (Window controls)
+    // 窗口控制按钮 (Window controls)
     Rectangle {
         x: parent.width - 140px;
         y: 8px;
@@ -105,7 +95,7 @@ export component WindowChrome inherits Rectangle {
             alignment: end;
             spacing: 2px;
             
-            // л (Theme switch: Sun)
+            // 切换主题 (Theme switch: Sun)
             Rectangle {
                 width: 28px;
                 height: 28px;
@@ -137,7 +127,7 @@ export component WindowChrome inherits Rectangle {
                 }
             }
 
-            // С (Minimize)
+            // 最小化 (Minimize)
             Rectangle {
                 width: 28px;
                 height: 28px;
@@ -158,7 +148,7 @@ export component WindowChrome inherits Rectangle {
                 }
             }
 
-            //  (Maximize)
+            // 最大化 (Maximize)
             Rectangle {
                 width: 28px;
                 height: 28px;
@@ -181,7 +171,7 @@ export component WindowChrome inherits Rectangle {
                 }
             }
 
-            // ر (Close)
+            // 关闭 (Close)
             Rectangle {
                 width: 28px;
                 height: 28px;

@@ -27,18 +27,18 @@ export component AppWindow inherits Window {
     min-width: 800px;
     min-height: 600px;
     background: RedesignTheme.t.bg;
-    // FR-T3b: frameless 绐楀彛銆俿lint 1.16 鏃?no-titlebar 灞炴€э紙1.16/1.17
-    // 鍧囦粎鏈?no-frame锛夛紝鐢?no-frame: true 绉婚櫎鏍囬鏍?+ 绯荤粺杈规锛?
-    // 鑷粯绐楀彛鎺у埗鎸夐挳瑙?WindowChrome.slint銆傝嚜瀹氫箟杈圭紭 resize 鍑烘湰鍗?
-    // 鑼冨洿锛坰lint winit 鍚庣 resize-border-width 鍙悗缁惎鐢級銆?
+    // FR-T3b: frameless 窗口。slint 1.16 无 no-titlebar 属性（1.16/1.17
+    // 均仅有 no-frame），用 no-frame: true 移除标题栏 + 系统边框。
+    // 自绘窗口控制按钮在 WindowChrome.slint。自定义边缘 resize 出本期
+    // 范围（slint winit 后端 resize-border-width 可后续启用）。
     no-frame: true;
 
-    // FR-T3: 绌烘皵鏌撹壊搴曞眰鑳屾櫙锛坺 搴忔渶搴曪級
+    // FR-T3: 空气染色底层背景（z 序最底）
     AirTint {
         width: root.width;
         height: root.height;
         speaking: root.speaking;
-        // FR-T4-4: archive 璺敱鍒?abyss 鍐烽浘锛堟。妗堥绂?rep 鏆栭浘锛?
+        // FR-T4-4: archive 路由用 abyss 冷雾（档案馆，rep 暖雾）
         cold: root.current-route == "archive";
     }
 
@@ -50,7 +50,7 @@ export component AppWindow inherits Window {
     // 2026-06-26 (review follow-up): both the open and close hooks
     // are now pure Slint 鈥?no FFI round-trip to Rust. The sidebar
     // entry forwards to `open-settings =>` and the SettingsView's
-    // 脳 button forwards to `close-settings =>`; both set
+    // × button forwards to close-settings =>; both set
     // `current-route` directly. Removes the `ui.on_open_settings`
     // Rust handler that was added in `97890b2` to fix the original
     // wiring bug.
@@ -63,7 +63,7 @@ export component AppWindow inherits Window {
         if root.current-route == "settings" {
             root.refresh-settings();
         }
-        // FR-T3b锛氱寮€ main 璺敱鏃跺浣?speaking锛坵elcome/settings 涓嶆煋鑹诧級
+        // FR-T3b：离开 main 路由时复位 speaking（welcome/settings 不染色）
         if root.current-route != "main" {
             root.speaking = false;
         }
@@ -72,7 +72,7 @@ export component AppWindow inherits Window {
     in-out property <string> app-title: "northhing v0.1.0";
     in-out property <string> mcp-status: "MCP: Initializing...";
     in-out property <string> model-status: "Model: Not configured";
-    in-out property <bool> dark-mode: true;
+    in-out property <bool> dark-mode: false;
     // Phase C.2: when true, the sidebar renders sessions nested by
     // `parent-id` / `depth`. Bound from `app_state.rs` to the
     // `SESSION_TREE_VIEW` const in `main.rs`.
@@ -81,8 +81,8 @@ export component AppWindow inherits Window {
     in-out property <bool> left-panel-open: false;
     // FR-T3b: right inspector panel open state; wired to WindowChrome toggle-right.
     in-out property <bool> right-panel-open: false;
-    // FR-T3b: 鏁村眿 speaking 鍗囨。锛圖eckBar 鑱氱劍 -> AirTint 鏌撹壊鍔犳繁锛夈€?
-    // ChatPaneView 鍦?main 璺敱鍐呴┍鍔紱鍒囧埌 welcome/settings 鏃跺浣?false銆?
+    // FR-T3b: 整屋 speaking 升档（DeckBar 聚焦 -> AirTint 染色加深）。
+    // ChatPaneView 在 main 路由内驱动；切到 welcome/settings 时复位 false。
     in-out property <bool> speaking: false;
     // Phase G.3: user-facing toggle for whether subagent (depth >= 1)
     // sessions are visible in the sidebar. Default true. Bound from
@@ -182,7 +182,7 @@ export component AppWindow inherits Window {
       in-out property <bool> provider-test-in-flight: false;
       in-out property <string> last-saved-provider-id: "";
       callback onboarding-completed();
-     // T2：主诊室 RoomHead 折叠 + 抽屉开合（转发到 SpaceView -> ChatPaneView）。
+     // T2：主诊室 RoomHead 折叠 + 抽屉开合（转发至 SpaceView -> ChatPaneView）
      in-out property <bool> room-head-folded: false;
      in-out property <bool> left-drawer-open: false;
      in-out property <bool> right-drawer-open: false;
@@ -198,7 +198,7 @@ export component AppWindow inherits Window {
     // failures went to stderr via `eprintln!` and the user saw nothing.
     // The Rust side sets these via `ui.set_session_error` / `ui.set_input_error`;
     // the SidebarView renders a banner when either is non-empty. The Rust
-    // helper auto-clears after 5s; users can also click the banner 脳 to clear.
+    // helper auto-clears after 5s; users can also click the banner × to clear.
     in-out property <string> session-error: "";
     in-out property <string> input-error: "";
     // 2026-06-26 (Phase 5): Q8=c dual error channels.
@@ -208,8 +208,8 @@ export component AppWindow inherits Window {
     // - `chat-inline-error`: second channel, rendered by ChatPaneView
     //   above the input. Manual close only. Pushed to by either:
     //     a) the Rust side via set_inline_error (validation failure)
-    //     b) the user clicking "璇︽儏" on the banner (the parent
-    //        component copies `banner-message` 鈫?`chat-inline-error`)
+    //     b) the user clicking "详情" on the banner (the parent
+    //        component copies anner-message -> chat-inline-error)
     in-out property <string> banner-message: "";
     in-out property <string> banner-detail: "";
 
@@ -228,14 +228,14 @@ export component AppWindow inherits Window {
     // Phase 5: banner callbacks
     callback dismiss-banner();
     callback clear-inline-error();
-    // P0-C: callbacks fired when the user clicks the banner 脳 button.
+    // P0-C: callbacks fired when the user clicks the banner × button.
     callback clear-session-error();
     callback clear-input-error();
 
     // Internal refresh callbacks (used by app_state to push updates)
     callback refresh-sessions();
     callback refresh-messages();
-    // FR-T3b: frameless 绐楀彛鑷粯鎺у埗鎸夐挳鍥炶皟锛屾帴 Rust slint::Window API銆?
+    // FR-T3b: frameless 窗口自绘控制按钮回调，接 Rust slint::Window API。
     callback window-minimize();
     callback window-maximize();
     callback window-close();
@@ -338,7 +338,7 @@ export component AppWindow inherits Window {
         width: root.width;
         height: root.height;
 
-        // FR-T4-1: 鍗曟爮楠ㄦ灦 SpaceView
+        // FR-T4-1: 单栏骨架 SpaceView
         space := SpaceView {
             x: 0px;
             y: 0;
@@ -368,9 +368,9 @@ export component AppWindow inherits Window {
             export-markdown => { root.export-markdown(); }
             open-session-settings => { root.open-session-settings(); }
             set-default-model(id) => { root.set-default-model(id); }
-            // FR-T4-1: 鈿?鍏?deck -> settings 璺敱
+            // FR-T4-1: 右上 deck -> settings 路由
             open-settings => { root.current-route = "settings"; }
-            // FR-T3b锛欴eckBar 鑱氱劍 -> 鏁村眿 speaking 鍗囨。
+            // FR-T3b：DeckBar 聚焦 -> 整屋 speaking 升档
             changed input-focused => { root.speaking = space.input-focused; }
         }
 
@@ -388,7 +388,7 @@ export component AppWindow inherits Window {
             detail: root.banner-detail;
             dismissed => { root.dismiss-banner(); }
             detail-clicked => {
-                // Q8=c "璇︽儏" expand: copy the same error to the
+                // Q8=c "详情" expand: copy the same error to the
                 // inline channel. The Rust side reads chat-inline-error
                 // and renders it inside ChatPaneView above the input.
                 root.chat-inline-error = root.banner-message;
@@ -397,7 +397,7 @@ export component AppWindow inherits Window {
         }
     }
 
-    // FR-T4-4: archive 璺敱 -- 妗ｆ鍐?ArchiveView锛堢収 archive.html MVP锛?
+    // FR-T4-4: archive 路由 -- 档案册 ArchiveView（照 archive.html MVP）
     if root.current-route == "archive": ArchiveView {
         width: root.width;
         height: root.height;
@@ -410,18 +410,18 @@ export component AppWindow inherits Window {
         export-markdown => { root.export-markdown(); }
     }
 
-    // FR-T4-3: 宸︽娊灞夈€屽唴鍦ㄣ€嶅３锛岃法璺敱瑕嗙洊锛寊 搴忓湪 SpaceView 涔嬩笂銆乄indowChrome 涔嬩笅
+    // FR-T4-3: 左抽屉「内在」壳，跨路由覆盖，z 序在 SpaceView 之上、WindowChrome 之下
     InnerDrawer {
         width: root.width;
         height: root.height;
         open: root.left-panel-open;
         close => { root.left-panel-open = false; }
         export-markdown => { root.export-markdown(); root.left-panel-open = false; }
-        // FR-T4-4: 妗ｆ鍐屽叆鍙?-> archive 璺敱 + 鍏虫娊灞?
+        // FR-T4-4: 档案册入口 -> archive 路由 + 关抽屉
         open-archive => { root.current-route = "archive"; root.left-panel-open = false; }
     }
 
-    // FR-T4-5: 鍙虫娊灞夈€屽鐗┿€嶅３锛岃法璺敱瑕嗙洊锛寊 搴忎笌 InnerDrawer 鍚岀骇
+    // FR-T4-5: 右抽屉「外物」壳，跨路由覆盖，z 序与 InnerDrawer 同级
     OuterDrawer {
         width: root.width;
         height: root.height;
@@ -435,17 +435,17 @@ export component AppWindow inherits Window {
         open-session-settings => { root.open-session-settings(); }
     }
 
-    // FR-T3/FR-T3b: 绐楀彛瑁呴グ灞傗€旇法璺敱瑕嗙洊锛圓ppWindow 鐩存帴瀛愯妭鐐癸紝
-    // 鍦ㄥ洓涓?if route 鍧椾箣鍚庯紝welcome/settings/main/archive 鍏ㄨ矾鐢卞彲瑙侊級銆?
+    // FR-T3/FR-T3b: 窗口装饰层—跨路由覆盖（AppWindow 直接子节点，
+    // 在四个 if route 块之后，welcome/settings/main/archive 全路由可见）。
         WindowChrome {
         width: root.width;
         height: root.height;
         inner-drawer-open: root.left-panel-open;
         outer-drawer-open: root.right-panel-open;
         toggle-left => { root.left-panel-open = !root.left-panel-open; }
-        // FR-T3b锛氬彸鏍忥紙InspectorView锛夊紑鍏筹紝瀵圭О浜庡乏鏍?
+        // FR-T3b：右栏（InspectorView）开关，对称于左栏
         toggle-right => { root.right-panel-open = !root.right-panel-open; }
-        // FR-T3b锛歠rameless 绐楀彛鎺у埗鎸夐挳杞彂鍒?root 鍥炶皟锛圧ust 渚ф帴绾匡級
+        // FR-T3b：frameless 窗口控制按钮转发至 root 回调（Rust 侧接线）
         window-minimize => { root.window-minimize(); }
         window-maximize => { root.window-maximize(); }
         window-close => { root.window-close(); }
