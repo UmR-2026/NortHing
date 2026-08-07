@@ -1,0 +1,8 @@
+// Windows resource script: embeds the application manifest.
+//
+// See northhing.exe.manifest for why this is required (ComCtl32 v6 /
+// TaskDialogIndirect, 0xC0000139 at load time).
+#define RT_MANIFEST 24
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "northhing.exe.manifest"
