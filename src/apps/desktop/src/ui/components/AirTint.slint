@@ -13,32 +13,21 @@ export component AirTint inherits Rectangle {
 
     // 顶晕 (global-aura)
     // 真值 L81: radial-gradient(circle 640px at 50% 200px, mind-glow 0%, transparent 74%)
-    // + breath-aura 8s opacity 1 -> .65；亮色态 display:none (L82)
-    // T2b: 尺寸按真值 640px 直径落地（原 480px 高度撑不出可感层次）；
-    // 中心 y=200px 靠容器 y 偏移实现（Slint 径向渐变圆心固定 50% 50%）。
+    // + breath-aura 8s opacity 1 -> .65；亮色态不再 display:none (v5)
+    // 尺寸按真值落地，亮态缩为 560px，暗态 640px。
     Rectangle {
-        x: (parent.width - 1280px) / 2;
-        y: 200px - 640px / 2;   // 圆心落在 y=200px（真值 --aura-y）
-        width: 1280px;          // 2× 640px 半径 = 直径撑满渐变
-        height: 1280px;
-        property <color> halo-color: root.cold
-            ? RedesignTheme.t.halo-abyss
-            : (root.speaking ? RedesignTheme.t.mind-drive-intense : RedesignTheme.t.mind-drive-glow);
+        x: RedesignTheme.dark ? (parent.width - 1280px) / 2 : (parent.width - 1120px) / 2;
+        y: RedesignTheme.dark ? 200px - 640px : 200px - 560px;
+        width: RedesignTheme.dark ? 1280px : 1120px;
+        height: RedesignTheme.dark ? 1280px : 1120px;
+        
+        property <color> halo-color: RedesignTheme.dark 
+            ? (root.cold ? RedesignTheme.t.halo-abyss : (root.speaking ? RedesignTheme.t.mind-drive-intense : RedesignTheme.t.mind-drive-glow))
+            : (root.cold ? RedesignTheme.t.mind-abyss-accent.with-alpha(0.08) : (root.speaking ? RedesignTheme.t.mind-drive-accent.with-alpha(0.12) : RedesignTheme.t.mind-drive-accent.with-alpha(0.08)));
+            
         background: @radial-gradient(circle, halo-color 0%, halo-color.with-alpha(0) 74%);
-        // 绑定顶晕呼吸 (8s 单钟 opacity 0.65..1.0)。按真值，亮色态隐藏 (opacity = 0)
-        opacity: RedesignTheme.dark ? SystemConstants.amp-aura : 0.0;
+        // 绑定顶晕呼吸 (8s 单钟 opacity 0.65..1.0)。亮暗统一呼吸，不再清零。
+        opacity: SystemConstants.amp-aura;
         animate background { duration: 300ms; easing: ease-in-out; }
-    }
-
-    // 底雾 (room-fog)
-    // 真值 L228-229: height 140px, linear-gradient(0deg, bg0, transparent), opacity .55
-    Rectangle {
-        x: 0;
-        y: parent.height - 140px;
-        width: parent.width;
-        height: 140px;
-        background: @linear-gradient(0deg, RedesignTheme.t.bg 0%, transparent 100%);
-        opacity: 0.55;
-        animate opacity { duration: 300ms; easing: ease-in-out; }
     }
 }

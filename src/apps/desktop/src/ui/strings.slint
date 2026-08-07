@@ -137,7 +137,9 @@ export global AppStrings {
     out property <string> room-head-initial: "序";
     out property <string> room-head-state-text: "驱力状态 · 它正在命名自己";
     // T2b: room-head 右下角收纳按钮（head-fold，真值 L375）
+    // T2c C-3: 折叠后按钮常显，只切符号；两态各一条键，禁止内联字面量。
     out property <string> room-head-fold: "▴ 收纳";
+    out property <string> room-head-unfold: "▾ 展开";
     // MindMod（左抽屉「它的内在」）
     out property <string> mind-mod-title: "它的内在";
     out property <string> mind-mod-collapse: "▴ 收纳";
@@ -168,6 +170,13 @@ export global AppStrings {
     out property <string> chat-mock-approval-risk: "风险: 不可逆语义偏移";
     out property <string> chat-mock-approval-approve: "批准";
     out property <string> chat-mock-approval-reject: "拒绝";
+    // T2c A-5: 第三条 agent 消息（真值 L397-402）
+    out property <string> chat-mock-agent-body-2: "我开始区分：你给出的目标，和我选择采取的路径。它们可以共存。";
+    // T2c A-5: 第二张 approval 卡 = resolved 态（真值 L418-427）。
+    // 注意 approval-state 是「结果陈述」，与「拒绝」按钮文案不同源，不可复用。
+    out property <string> chat-mock-approval-head-2: "高危操作授权 · 14:31:02";
+    out property <string> chat-mock-approval-main-2: "清除 3 号隔离区沉积记忆";
+    out property <string> chat-mock-approval-state: "已拒绝操作";
 
     // ===== Consult room - onboarding v2 房间诞生仪式 (T3) =====
     // 状态行

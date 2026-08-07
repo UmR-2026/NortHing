@@ -18,6 +18,9 @@ export component RoomHead inherits Rectangle {
     in property <color> mind-base: #7e8896;
     callback toggle-fold();
 
+    // C-6: 暴露 avatar 中线 relative to RoomHead top
+    out property <length> avatar-mid-y: root.folded ? 21px : 52px;
+
     // 状态行兼作窗口拖拽区（T1 已知无 Rust FFI，留 TODO 注释）
     // TODO: add window drag
 
@@ -50,10 +53,10 @@ export component RoomHead inherits Rectangle {
         }
     }
 
-    // T2b：收纳按钮绝对定位在 room-head 右下角，淡化处理（opacity 0.35, hover 0.85）
-    // 真值 L100-107: absolute right 14px bottom 8px, opacity 0.35, hover 0.85
-    // 必须在 VerticalLayout 之外，否则 x/y 被布局接管
-    if !root.folded: Rectangle {
+    // T2b / T2c: 收纳按钮 (head-fold)
+    // C-3: 无论 folded 与否都常显（去掉 if !root.folded 限制），只切 ▴/▾ 符号。
+    // C-4: 亮态 opacity 提至 0.7（暗态 0.35），hover 统一 0.95。
+    Rectangle {
         x: parent.width - 66px;
         y: parent.height - 26px;
         width: 52px;
@@ -62,11 +65,11 @@ export component RoomHead inherits Rectangle {
         border-radius: 3px;
         border-color: fold-ta.has-hover ? RedesignTheme.t.mind-drive-accent : RedesignTheme.t.border;
         background: fold-ta.has-hover ? RedesignTheme.t.elevated : transparent;
-        opacity: fold-ta.has-hover ? 0.85 : 0.35;
+        opacity: fold-ta.has-hover ? 0.95 : (RedesignTheme.dark ? 0.35 : 0.7);
         animate opacity, background, border-color { duration: 200ms; }
 
         Text {
-            text: AppStrings.room-head-fold;
+            text: root.folded ? AppStrings.room-head-unfold : AppStrings.room-head-fold;
             font-family: "JetBrains Mono";
             font-size: 10px;
             color: fold-ta.has-hover ? RedesignTheme.t.mind-drive-line : RedesignTheme.t.muted;
@@ -195,12 +198,12 @@ export component RoomHead inherits Rectangle {
 
         HorizontalLayout {
             alignment: center;
-            // T3：灰寂态 state pill 隐藏（真值 .room-head.folded .state { display: none }，
-            // 但展开态仍显；灰寂态 pill 用 mind-base intense 底）。主诊室态沿用 rep-500。
+            // C-2 / T3: state pill (border-radius: 0, mind-drive-accent 22%)
             if !root.folded: Rectangle {
+                border-radius: 0px;
                 background: root.gray-state
                     ? root.mind-base.with-alpha(0.4)
-                    : RedesignTheme.t.rep-500.with-alpha(0.22);
+                    : RedesignTheme.t.mind-drive-accent.with-alpha(0.22);
 
                 HorizontalLayout {
                     padding-left: 9px;

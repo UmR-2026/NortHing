@@ -47,44 +47,57 @@ export component SpaceView inherits Rectangle {
     // 透明：让 main.slint 的 AirTint 整屋暖雾/speaking 升档透进来（FR-T4-10）
     background: transparent;
 
-    VerticalLayout {
-        padding: 0px;
-        spacing: 0px;
-        width: parent.width;
-        height: parent.height;
+    HorizontalLayout {
+        padding-top: 26px;
+        padding-bottom: 26px;
+        padding-left: 48px;
+        padding-right: 48px;
+        alignment: center;
+        
+        room-wrap := Rectangle {
+            width: min(780px, parent.width - 96px);
+            
+            room := Rectangle {
+                width: parent.width;
+                height: parent.height;
+                background: RedesignTheme.t.bg;
+                border-color: RedesignTheme.t.border;
+                border-width: 1px;
+                border-radius: 6px;
+                clip: true;
+                drop-shadow-color: RedesignTheme.dark ? rgba(0, 0, 0, 0.28) : rgba(23, 34, 42, 0.10);
+                drop-shadow-offset-y: 12px;
+                drop-shadow-blur: 32px;
 
-        // T2 起：PresenceZone 让位给 ChatPaneView 内的 RoomHead（避免 avatar 重复）。
-        // 留待 T3 onboarding 决定 PresenceZone 是否独立使用。
+                chat-pane := ChatPaneView {
+                    width: parent.width;
+                    messages: root.messages;
+                    input-text <=> root.input-text;
+                    dark-mode: root.dark-mode;
+                    current-session-name: root.current-session-name;
+                    current-session-model: root.current-session-model;
+                    current-session-broken: root.current-session-broken;
+                    inline-error: root.inline-error;
+                    workspace-name: root.workspace-name;
+                    providers: root.providers;
+                    default-model-provider-id: root.default-model-provider-id;
+                    model-popup-open <=> root.model-popup-open;
+                    is-streaming: root.is-streaming;
+                    expanded-message-id <=> root.expanded-message-id;
+                    left-drawer-open <=> root.left-drawer-open;
+                    right-drawer-open <=> root.right-drawer-open;
+                    room-head-folded <=> root.room-head-folded;
 
-        // 2 + 3. stream + deck（ChatPaneView 是 stream+deck 实现）
-        chat-pane := ChatPaneView {
-            vertical-stretch: 1;
-            width: parent.width;
-            messages: root.messages;
-            input-text <=> root.input-text;
-            dark-mode: root.dark-mode;
-            current-session-name: root.current-session-name;
-            current-session-model: root.current-session-model;
-            current-session-broken: root.current-session-broken;
-            inline-error: root.inline-error;
-            workspace-name: root.workspace-name;
-            providers: root.providers;
-            default-model-provider-id: root.default-model-provider-id;
-            model-popup-open <=> root.model-popup-open;
-            is-streaming: root.is-streaming;
-            expanded-message-id <=> root.expanded-message-id;
-            left-drawer-open <=> root.left-drawer-open;
-            right-drawer-open <=> root.right-drawer-open;
-            room-head-folded <=> root.room-head-folded;
-
-            send-message(text) => { root.send-message(text); }
-            load-more-messages => { root.load-more-messages(); }
-            stop-streaming => { root.stop-streaming(); }
-            export-markdown => { root.export-markdown(); }
-            open-session-settings => { root.open-session-settings(); }
-            set-default-model(id) => { root.set-default-model(id); }
-            open-settings => { root.open-settings(); }
-            toggle-room-head-fold => { root.toggle-room-head-fold(); }
+                    send-message(text) => { root.send-message(text); }
+                    load-more-messages => { root.load-more-messages(); }
+                    stop-streaming => { root.stop-streaming(); }
+                    export-markdown => { root.export-markdown(); }
+                    open-session-settings => { root.open-session-settings(); }
+                    set-default-model(id) => { root.set-default-model(id); }
+                    open-settings => { root.open-settings(); }
+                    toggle-room-head-fold => { root.toggle-room-head-fold(); }
+                }
+            }
         }
     }
 }

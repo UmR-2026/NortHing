@@ -30,7 +30,7 @@ export component PresenceZone inherits Rectangle {
         // at 50% 30% -> halo 自身宽高表达式（POC「禁 %」规则；固定盒，resize 不偏）
         property <length> cx: halo.width / 2;
         property <length> cy: halo.height * 0.3;
-        background: @radial-gradient(circle at halo.cx halo.cy,
+        background: @radial-gradient(circle,
             RedesignTheme.t.presence-halo-rep 0%,
             RedesignTheme.t.presence-halo-rep-soft 30%,
             RedesignTheme.t.presence-halo-rep-soft.with-alpha(0) 64%);
