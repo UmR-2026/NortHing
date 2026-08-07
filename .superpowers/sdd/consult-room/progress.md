@@ -11,8 +11,8 @@
 | T2 主诊室页: complete (双判决 PASS，4 Critical + 关键 Important 全部回炉修复 + 复审 PASS) | 主路由 SpaceView 移除 PresenceZone（让位给 ChatPaneView 内 RoomHead）；新增 RoomHead / DoorbellGem / MindMod / WorkMod 4 组件并实例化；ChronicleBar 双击换色绑定（`now` 接入渲染）；DeckBar 合一按钮；theme 3 档（缝线 16% mind / speaking 整屋升档 / agent 代词着色）；mock 会话流（agent / tool / chip / witness / approval）；状态点 8s sin 振幅；30+ 字符串迁 AppStrings；RoomHead TouchArea fold 入口；状态行去 wordmark（brand 全交给 T1 水印）| ac86998（被 amend 至 1eace31，round 2 修复内容入）|
 | T3 onboarding v2: complete（PASS with reservations；I1 Timer 延迟跳转 / I2 user+relation title 已修；Minor 留 T7） | qwen 系未参与；implementer 模型见 task-03-report | a40c765 |  |
 | T4 settings v2: complete（双判决 PASS 0C/0I，3 Minor 留 T7 triage） | implementer=general(qwen3.8-max-preview，视觉读图 10 张)；judge=minimax-m3；三页浮层(接入点/MCP/技能)+上下文主页面常显+无全屏页；搜索 Rust 子串过滤=批准偏离（§9.7） | 1c83616 |  |
-| T2c lane A (房间外壳): complete (P0 验收过; 6 files +296/−220) | implementer=qwen; 已 commit; judge PASS 纸面——**复审否决**：上一轮 6/6 PASS 三项错（仅看暗态/纸面结论/单域焦点）。P0 自验重做（p0-verify*.png 6 张）修掉膜结 clip/重复消息/RoomHead 拉伸三处; room-wrap 居中+边+圆角+抬升阴影 全部成立 | 229abd2 |
-| T2c lane B (deck/chrome/编码): 待派（brief task-02c-brief.md §3.2 已写） | 必读 P4 纪律（绝对路径/亮暗双态/坐标引用/独立进程截图/implementer≠judge 换家） |  |  |
+| T2c lane B (deck/chrome/编码): complete (代码正确, 截图有重名复制) | implementer=gemini-31-pro; 4 files (-5 净) 改完 commit; B-1 stretch fix + B-2 Path send/stop + B-3 字标去重 (保水印) + B-4 mojibake 注释清理; `cargo check` exit=0 (2m14s)。**verify 警示**: 6 张截图中 chrome-dark / deck-dark / pill-dark 三张 SHA256 相同（重命名复制），pill 不在主路由渲染（仅用于死代码 ProviderSettingsPanel.slint）；streaming-dark 视觉差异未明显。code 0 回归 (Pill diff 仅注释) | a1fc9d9 |
+| T2c lane C (RoomHead 补件): 待派 | brief task-02c-brief.md §3.3 已写 |  |  |
 | T2c lane C (RoomHead 补件): 待派（同上） |  |  |  |
 | 0xC0000139 启动崩溃修复 | complete（manifest 嵌入 ComCtl32 v6）| northhing.exe.manifest + northhing.rc + build.rs | 9e3405d |
 | T5 archive v2 | 待派 |  |  |
