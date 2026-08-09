@@ -85,6 +85,15 @@ For the full script list, see [`package.json`](package.json).
 
 ### Housekeeping rules (2026-07-22, apply to every commit)
 
+0. **Lazy Senior Dev Rule (YAGNI)**: Before writing code, climb this ladder:
+   1. Does it need to be built? (YAGNI)
+   2. Already in this codebase? Reuse it.
+   3. Stdlib does it? Use it.
+   4. Native platform feature? Use it.
+   5. Installed dependency? Use it.
+   6. Can this be one line? Make it one line.
+   7. Only then: write the minimum code that works.
+   (Never compromise security, error handling, or trust boundaries for brevity).
 1. **顺手清配额**: a commit may include small in-scope debt fixes found nearby (outdated docs, missing tests, file growth past 800 lines) — no separate cleanup task needed; keep them traceable in the commit message.
 2. **Doc sync as hard rule**: changing crate structure (add/remove crate, move paths) requires updating `docs/status/surfaces.md` in the same commit; resolving a tech-debt item requires flipping its ledger status in the same commit. No "doc later".
 3. **God-file defense**: production `.rs` files over 800 lines raise review pressure; over 1000 lines must be split or carry a `// allow-god-file` justification comment at the top of the file. New modules start below the line.
