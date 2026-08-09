@@ -18,8 +18,10 @@ export component RoomHead inherits Rectangle {
     in property <color> mind-base: #7e8896;
     callback toggle-fold();
 
+    height: root.folded ? 72px : 198px;
+
     // C-6: 暴露 avatar 中线 relative to RoomHead top
-    out property <length> avatar-mid-y: root.folded ? 21px : 52px;
+    out property <length> avatar-mid-y: root.folded ? 36px : 67px;
 
     // 状态行兼作窗口拖拽区（T1 已知无 Rust FFI，留 TODO 注释）
     // TODO: add window drag
@@ -186,8 +188,9 @@ export component RoomHead inherits Rectangle {
         }
 
         HorizontalLayout {
+            height: 4px;
             alignment: center;
-            // T3：灰寂态编年史条用 mind-base 灰（birth->mind-base）；主诊室态沿用默认。
+            // T3：灰寂态编年史条用 mind-base 灰（birth->mind-base）；主诊室态沿用默认
             ChronicleBar {
                 width: 200px;
                 height: 4px;
