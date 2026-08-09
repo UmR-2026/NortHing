@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -252,7 +252,7 @@
     document.getElementById('theme-toggle').addEventListener('click', e => {
       const next = root.dataset.theme === 'light' ? 'dark' : 'light';
       root.dataset.theme = next;
-      e.currentTarget.textContent = next === 'light' ? '日' : '☀';
+      e.currentTarget.textContent = next === 'light' ? '☾' : '☀';
       requestAnimationFrame(updateAura);
     });
     

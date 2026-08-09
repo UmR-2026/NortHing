@@ -149,7 +149,7 @@
   .rec .who { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--faint); }
   .rec.entity { align-self: flex-start; }
   .rec.entity .body { background: var(--bg2); border: 1px solid var(--line); border-top-color: var(--bevel); border-radius: 4px; padding: 12px 14px; box-shadow: var(--shadow); }
-  .rec.witness { align-self: flex-end; text-align: left; }
+  .rec.witness { align-self: flex-end; text-align: left; border-right: 2px solid var(--line); padding-right: 10px; }
   .rec.witness .body { font-family: var(--font-agent); font-size: 15px; color: var(--muted); }
   .msg-agent { font-family: var(--font-agent); font-size: 16px; line-height: 1.7; }
   .tool-log { font-family: var(--font-mono); font-size: 10px; color: var(--mind-line); border-left: 2px solid var(--accent-solid); padding-left: 8px; cursor: pointer; transition: padding 0.15s; }
@@ -353,6 +353,7 @@
         </span>
         <span>architect_sub 介入中</span>
         <span class="sp"></span>
+        <span class="state-dot"></span>
       </div>
 
       <div class="room-head" id="room-head">

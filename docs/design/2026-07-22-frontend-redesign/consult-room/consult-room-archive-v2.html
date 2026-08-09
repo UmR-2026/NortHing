@@ -96,6 +96,7 @@
   /* 状态行（房间化） */
   .room-status { display: flex; align-items: center; gap: 16px; padding: 8px 18px; border-bottom: 1px dashed var(--line); font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; -webkit-app-region: drag; }
   .room-status .sp { flex: 1; }
+  .state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-solid); animation: breath-dot var(--breath) ease-in-out infinite; }
 
   /* 中枢：顶晕局部染色 + 状态 pill，可收纳为胶囊（v4 纪律） */
   .room-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 26px 18px 16px; border-bottom: 1px dashed var(--line); -webkit-app-region: drag;
@@ -215,11 +216,6 @@
   .witness-mark .sigil { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--muted); }
   .witness-mark.absent .sigil { border-style: dashed; }
 
-  /* 品牌印章：左下水印（v4 chrome） */
-  .brand-seal { position: fixed; left: 22px; bottom: 20px; z-index: 500; display: flex; align-items: center; gap: 7px; opacity: .25; pointer-events: none; user-select: none; }
-  .brand-seal .seal-mark { width: 9px; height: 9px; border: 1.5px solid var(--accent-solid); border-radius: 2px; position: relative; }
-  .brand-seal .seal-mark::after { content: ''; position: absolute; top: 2px; left: 2px; width: 3px; height: 3px; background: var(--accent-solid); border-radius: 50%; }
-  .brand-seal .seal-name { font-family: var(--font-agent); font-style: italic; font-size: 12px; color: var(--text); }
 
   @media (max-width: 1180px) {
     #mind { left: 12px; width: 240px; }
@@ -314,13 +310,14 @@
           <span>档案馆 · 深渊的领域</span>
           <span class="sp"></span>
           <span>只读 · 不可改写</span>
+          <span class="state-dot"></span>
         </div>
 
         <div class="room-head" id="room-head">
           <button class="fold-btn head-fold" aria-label="收纳中枢">▴</button>
           <div class="depth-marker" id="avatar-core">渊</div>
           <div class="name-line">深渊的领域</div>
-          <div class="state">沉 积 · 沉 · 沉</div>
+          <div class="state">沉积 · 只读 · 缓</div>
         </div>
 
         <div class="strata-flow" id="strata-flow">
@@ -534,10 +531,6 @@
 
   </div>
 
-  <div class="brand-seal">
-    <span class="seal-mark"></span>
-    <span class="seal-name">northing</span>
-  </div>
 
   <script>
     const root = document.documentElement;
