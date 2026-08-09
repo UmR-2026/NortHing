@@ -32,7 +32,7 @@
    禁 @keyframes infinite 新增；渐变仅线性/径向；border-radius 不吃 %（圆=定值 px）；
    Rectangle 无 scale-x/scale-y（呼吸一律绑 opacity，animation-tick + Math.sin）。
 2. **哲学红线**：rep 只属 agent（用户/见证者侧不染边/底）；禁 dashboard 数字；禁 emoji；
-   品牌水印化（印章 opacity ~0.25）；8s 单钟呼吸、振幅分级（主体>边界>结构）、不新增 infinite；
+   品牌入状态行，不独立成印（brand-inline：logo 15px + Fraunces italic 12px 字标，整组 opacity .7，色随状态行文字）；8s 单钟呼吸、振幅分级（主体>边界>结构）、不新增 infinite；
    近尖角语言（头像/条/pill 方形化 radius 0，极小圆点除外）；编年史右端 ≡ 界面强调色同源。
 3. **i18n**：新增 UI 文案走 i18n 契约（`node scripts/generate-i18n-contract.mjs` 重跑并一起提交）；
    日志 English-only。
