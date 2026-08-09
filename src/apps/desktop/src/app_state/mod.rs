@@ -39,6 +39,7 @@ pub(super) mod state;
 // W4: long-lived runtime handle for turn dispatch (spawns onto the
 // worker runtime instead of a throwaway per-callback runtime).
 pub(super) mod turn_runtime;
+pub(super) mod block_registry;
 
 // Wildcard re-exports so `crate::app_state::{AppState, create_ui, ...}`
 // and `crate::app_state::set_session_error` keep working from callers

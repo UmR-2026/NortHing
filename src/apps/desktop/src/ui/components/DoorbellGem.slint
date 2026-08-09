@@ -2,8 +2,6 @@
 import { SystemConstants } from "../system_constants.slint";
 import { AppStrings } from "../strings.slint";
 
-// T2b: 膜结唤起件（membrane-node）— 墙缝漏光样式替换门铃宝石
-// 真值 L216-226: 椭圆辐射双向渐隐径向渐变，闭态 opacity .55 / 开态 .22，hover width 12→18 + opacity .95
 export component DoorbellGem inherits Rectangle {
     in property <bool> is-left: true;
     in property <bool> is-open: false;
@@ -15,17 +13,13 @@ export component DoorbellGem inherits Rectangle {
     height: 64px;
     background: transparent;
 
-    // 墙缝漏光主体（椭圆辐射径向渐变）
-    // 真值 L222: radial-gradient(70% 50% at 0%|100% 50%, color, transparent 78%)
-    // Slint @radial-gradient 圆心固定 50% 50%，用线性渐变 + 水平偏移近似单向椭圆辐射
     glow := Rectangle {
-        width: 24px;  // 扩宽渐变区让中心外移
+        width: 24px;
         height: parent.height;
-        x: root.is-left ? -12px : 0px;  // 左结：中心在左边缘外；右结：中心在右边缘外
+        x: root.is-left ? -12px : 0px;
         background: root.is-left
             ? @linear-gradient(90deg, root.base-color 0%, transparent 78%)
             : @linear-gradient(270deg, root.base-color 0%, transparent 78%);
-        // 真值 L217/L219/L225-226: 闭态 .55 / 开态 .22；hover 闭态 .95 / 开态 .6
         opacity: root.is-open
             ? (ta.has-hover ? 0.6 : 0.22)
             : (ta.has-hover ? 0.95 : 0.55);
@@ -38,7 +32,18 @@ export component DoorbellGem inherits Rectangle {
         clicked => { root.toggle(); }
     }
 
-    // hover 变宽 12px -> 18px（真值 L219）
+    // R6 Tooltip
+    Text {
+        text: root.tooltip;
+        font-family: "JetBrains Mono";
+        font-size: 10px;
+        color: root.base-color;
+        opacity: ta.has-hover ? 0.55 : 0.0;
+        x: root.is-left ? 24px : -self.width - 12px;
+        y: parent.height / 2 - self.height / 2;
+        animate opacity { duration: ta.has-hover ? 200ms : 8000ms; easing: ease-out; }
+    }
+
     states [
         hover when ta.has-hover: {
             width: 18px;

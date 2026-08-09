@@ -23,7 +23,7 @@ northhing-debug-log = { path = "../../crates/services/debug-log" }
 async-trait = { workspace = true }
 
 # Slint UI framework
-slint = { workspace = true, features = ["backend-winit"] }
+slint = { workspace = true, features = ["backend-winit", "raw-window-handle-06"] }
 
 # Async runtime
 tokio = { workspace = true }
@@ -66,3 +66,8 @@ northhing-test-support = { path = "../../crates/support/test-support" }
 
 [features]
 default = []
+[dependencies.raw-window-handle]
+version = "0.6"
+[dependencies.windows]
+workspace = true
+features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"]

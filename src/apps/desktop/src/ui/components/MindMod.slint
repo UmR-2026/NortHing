@@ -3,6 +3,7 @@ import { AppStrings } from "../strings.slint";
 
 export component MindMod inherits Rectangle {
     in property <bool> is-open: false;
+    in property <color> base-color: RedesignTheme.t.mind-drive-line;
     in-out property <length> drag-x: 0px;
     in-out property <length> drag-y: 0px;
 
@@ -68,7 +69,7 @@ export component MindMod inherits Rectangle {
                     alignment: space-between;
                     Text {
                         text: root.onboarding-mode ? root.cert-title : AppStrings.mind-mod-title;
-                        color: root.onboarding-mode ? RedesignTheme.t.muted : RedesignTheme.t.mind-drive-line;
+                        color: root.onboarding-mode ? RedesignTheme.t.muted : root.base-color;
                         font-family: "JetBrains Mono";
                         font-size: 10px;
                         letter-spacing: 0.8px;
@@ -311,11 +312,17 @@ export component MindMod inherits Rectangle {
             padding-top: 14px; padding-bottom: 14px;
             padding-left: 14px; padding-right: 14px;
             spacing: 12px;
+            Text {
+                text: AppStrings.mind-mod-empty;
+                font-size: 9px;
+                color: RedesignTheme.t.muted;
+                font-family: "JetBrains Mono";
+            }
 
-            Text { text: AppStrings.mind-mod-item-subprocess; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: AppStrings.mind-mod-item-skill-candidate; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: AppStrings.mind-mod-item-awareness-update; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: AppStrings.mind-mod-item-archived; font-size: 11px; color: RedesignTheme.t.faint; }
+            
+            
+            
+            
         }
         
         Rectangle { vertical-stretch: 1; }

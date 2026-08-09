@@ -31,7 +31,7 @@ use super::inspector::build_mcp_status_string;
 use super::inspector_model_status::build_model_status_string;
 use super::sessions::refresh_sessions_ui;
 use super::skills::refresh_skills_ui;
-use super::slint_glue::{AppWindow, MessageItem, SessionItem, SkillItem};
+use super::slint_glue::{AppWindow, InnerWindow, OuterWindow, MessageItem, SessionItem, SkillItem};
 use super::state::AppState;
 use anyhow::Result;
 use northhing_core::kernel_facade::kernel_facade;
@@ -73,9 +73,17 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
         }
     });
 
-    let ui = AppWindow::new()?;
 
-    // Set initial values
+    let ui = AppWindow::new()?;
+    let inner_win = InnerWindow::new()?;
+    let outer_win = OuterWindow::new()?;
+    
+    inner_win.show()?;
+    outer_win.show()?;
+    
+    super::block_registry::init_block_registry(ui.as_weak(), inner_win.as_weak(), outer_win.as_weak());
+    
+    // Wire toggle signals
     ui.set_app_title(SharedString::from("northhing v0.1.0"));
     // Phase G.2 (replaces Phase C.5 placeholder): the Inspector's MCP
     // status reads from the live `McpCatalogReader` once at init. The

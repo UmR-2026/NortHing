@@ -3,6 +3,7 @@ import { AppStrings } from "../strings.slint";
 
 export component WorkMod inherits Rectangle {
     in property <bool> is-open: false;
+    in property <color> base-color: RedesignTheme.t.mind-abyss-accent;
     in-out property <length> drag-x: 0px;
     in-out property <length> drag-y: 0px;
 
@@ -68,10 +69,16 @@ export component WorkMod inherits Rectangle {
         VerticalLayout {
             padding: 14px;
             spacing: 12px;
+            Text {
+                text: AppStrings.work-mod-empty;
+                font-size: 9px;
+                color: RedesignTheme.t.muted;
+                font-family: "JetBrains Mono";
+            }
 
-            Text { text: AppStrings.work-mod-item-task; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: AppStrings.work-mod-item-artifact; font-size: 11px; color: RedesignTheme.t.fg; }
-            Text { text: AppStrings.work-mod-item-file-browser; font-size: 11px; color: RedesignTheme.t.fg; }
+            
+            
+            
         }
         
         Rectangle { vertical-stretch: 1; }

@@ -5,8 +5,6 @@ import { AppStrings } from "../strings.slint";
 import { RoomHead } from "../components/RoomHead.slint";
 import { DeckBar } from "../components/DeckBar.slint";
 import { DoorbellGem } from "../components/DoorbellGem.slint";
-import { MindMod } from "../components/MindMod.slint";
-import { WorkMod } from "../components/WorkMod.slint";
 
 export component ChatPaneView inherits Rectangle {
     in property <[MessageItem]> messages: [];
@@ -415,21 +413,8 @@ export component ChatPaneView inherits Rectangle {
         base-color: RedesignTheme.t.mind-abyss-accent;
         x: parent.width - self.width;
         // 右结 y 按真值 L244 var(--node-bottom, 230px)，Slint 侧译为绑 WorkMod 泊位中线；WorkMod 闭态宽 0 无法实测时退回 230px 常量
-        y: work-mod.width > 0 ? work-mod.y + work-mod.height / 2 - self.height / 2 : parent.height - 230px - self.height;
+        y: root.gem-mid-y;
         toggle => { root.right-drawer-open = !root.right-drawer-open; }
     }
 
-    MindMod {
-        is-open: root.left-drawer-open;
-        x: root.left-drawer-open ? 0px : -self.width;
-        y: 48px;
-        animate x { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
-    }
-    
-    work-mod := WorkMod {
-        is-open: root.right-drawer-open;
-        x: root.right-drawer-open ? parent.width - self.width : parent.width;
-        y: 48px;
-        animate x { duration: 350ms; easing: cubic-bezier(0.22, 1.0, 0.36, 1.0); }
-    }
 }
