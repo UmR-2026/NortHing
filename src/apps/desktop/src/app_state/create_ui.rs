@@ -81,7 +81,7 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     inner_win.show()?;
     outer_win.show()?;
     
-    super::block_registry::init_block_registry(ui.as_weak(), inner_win.as_weak(), outer_win.as_weak());
+    super::block_registry::init_block_registry(ui.as_weak(), inner_win, outer_win);
     
     // Wire toggle signals
     ui.set_app_title(SharedString::from("northhing v0.1.0"));

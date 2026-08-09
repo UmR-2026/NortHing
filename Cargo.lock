@@ -5750,6 +5750,7 @@ dependencies = [
  "northhing-test-support",
  "once_cell",
  "parking_lot",
+ "raw-window-handle",
  "rfd",
  "serde",
  "serde_json",
@@ -5760,6 +5761,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "windows 0.61.3",
 ]
 
 [[package]]
@@ -9663,6 +9665,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "pin-weak",
+ "raw-window-handle",
  "slint-macros",
  "unicode-segmentation",
  "vtable",

@@ -8,6 +8,7 @@ export component DoorbellGem inherits Rectangle {
     in property <color> base-color: RedesignTheme.t.mind-drive-accent;
     in property <string> tooltip: AppStrings.mind-mod-title;
     callback toggle();
+    out property <bool> has-hover: ta.has-hover;
 
     width: 12px;
     height: 64px;
@@ -30,18 +31,6 @@ export component DoorbellGem inherits Rectangle {
         width: parent.width;
         height: parent.height;
         clicked => { root.toggle(); }
-    }
-
-    // R6 Tooltip
-    Text {
-        text: root.tooltip;
-        font-family: "JetBrains Mono";
-        font-size: 10px;
-        color: root.base-color;
-        opacity: ta.has-hover ? 0.55 : 0.0;
-        x: root.is-left ? 24px : -self.width - 12px;
-        y: parent.height / 2 - self.height / 2;
-        animate opacity { duration: ta.has-hover ? 200ms : 8000ms; easing: ease-out; }
     }
 
     states [

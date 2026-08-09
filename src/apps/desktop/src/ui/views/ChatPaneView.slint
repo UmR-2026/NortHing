@@ -399,7 +399,35 @@ export component ChatPaneView inherits Rectangle {
         }
     }
 
-    DoorbellGem {
+
+    // Left vertical tag
+    Text {
+        text: AppStrings.mind-mod-title;
+        color: RedesignTheme.t.mind-drive-accent;
+        font-family: "JetBrains Mono";
+        font-size: 10px;
+        opacity: root.left-drawer-open ? 0.0 : (left_gem.has-hover ? 0.95 : 0.55);
+        x: 12px;
+        y: root.gem-mid-y + 80px;
+        width: 12px;
+        wrap: word-wrap;
+        animate opacity { duration: 8000ms; easing: ease-out; }
+    }
+
+    // Right vertical tag
+    Text {
+        text: AppStrings.work-mod-title;
+        color: RedesignTheme.t.mind-abyss-accent;
+        font-family: "JetBrains Mono";
+        font-size: 10px;
+        opacity: root.right-drawer-open ? 0.0 : (right_gem.has-hover ? 0.95 : 0.55);
+        x: parent.width - 24px;
+        y: root.gem-mid-y + 80px;
+        width: 12px;
+        wrap: word-wrap;
+        animate opacity { duration: 8000ms; easing: ease-out; }
+    }
+    left_gem := DoorbellGem {
         is-left: true;
         is-open: root.left-drawer-open;
         base-color: RedesignTheme.t.mind-drive-accent;
@@ -407,7 +435,7 @@ export component ChatPaneView inherits Rectangle {
         y: root.gem-mid-y;
         toggle => { root.left-drawer-open = !root.left-drawer-open; }
     }
-    DoorbellGem {
+    right_gem := DoorbellGem {
         is-left: false;
         is-open: root.right-drawer-open;
         base-color: RedesignTheme.t.mind-abyss-accent;

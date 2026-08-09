@@ -15,6 +15,7 @@ export component MindMod inherits Rectangle {
     in property <bool> cert-step1-done: false;
     in property <bool> cert-step2-done: false;
     in property <bool> cert-step3-done: false;
+    in property <bool> has-items: false;
     in property <string> cert-step1-status: AppStrings.onb-cert-step-pending;
     in property <string> cert-step2-status: AppStrings.onb-cert-step-pending;
     in property <string> cert-step3-status: AppStrings.onb-cert-step-pending;
@@ -312,9 +313,16 @@ export component MindMod inherits Rectangle {
             padding-top: 14px; padding-bottom: 14px;
             padding-left: 14px; padding-right: 14px;
             spacing: 12px;
-            Text {
+            if root.has-items : VerticalLayout {
+                spacing: 12px;
+                Text { text: AppStrings.mind-mod-item-subprocess; font-size: 11px; color: RedesignTheme.t.fg; }
+                Text { text: AppStrings.mind-mod-item-skill-candidate; font-size: 11px; color: RedesignTheme.t.fg; }
+                Text { text: AppStrings.mind-mod-item-awareness-update; font-size: 11px; color: RedesignTheme.t.fg; }
+                Text { text: AppStrings.mind-mod-item-archived; font-size: 11px; color: RedesignTheme.t.faint; }
+            }
+            if !root.has-items : Text {
                 text: AppStrings.mind-mod-empty;
-                font-size: 9px;
+                font-size: 10px;
                 color: RedesignTheme.t.muted;
                 font-family: "JetBrains Mono";
             }
