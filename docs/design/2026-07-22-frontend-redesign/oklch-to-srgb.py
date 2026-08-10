@@ -114,7 +114,7 @@ def mind_tokens():
             "glow": _hex8(base, 15),
             "intense": _hex8(base, 40),
             "line": _hex(_mix(base, _WHITE, 0.70)),
-            "frame": _hex8(base, 55),
+            "frame": _hex8(base, 70),
             "accent": _hex(base),
         }
         light = {

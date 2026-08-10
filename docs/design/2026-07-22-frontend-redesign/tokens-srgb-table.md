@@ -100,27 +100,27 @@
 | `mind-drive-glow` | `#C8714C26` | `#C8714C26` | — |
 | `mind-drive-intense` | `#F8EEEA` | `#C8714C66` | — |
 | `mind-drive-line` | `#9C5B3F` | `#D89C82` | — |
-| `mind-drive-frame` | `#9C5B3F` | `#C8714C8C` | — |
+| `mind-drive-frame` | `#9C5B3F` | `#C8714CB2` | — |
 | `mind-drive-accent` | `#AE6241` | `#C8714C` | — |
 | `mind-abyss-glow` | `#3F837B26` | `#3F837B26` | — |
 | `mind-abyss-intense` | `#E8F0EF` | `#3F837B66` | — |
 | `mind-abyss-line` | `#346863` | `#79A8A3` | — |
-| `mind-abyss-frame` | `#346863` | `#3F837B8C` | — |
+| `mind-abyss-frame` | `#346863` | `#3F837BB2` | — |
 | `mind-abyss-accent` | `#3B7169` | `#3F837B` | — |
 | `mind-leap-glow` | `#8B5FBF26` | `#8B5FBF26` | — |
 | `mind-leap-intense` | `#F1ECF7` | `#8B5FBF66` | — |
 | `mind-leap-line` | `#6D4D96` | `#AE8FD2` | 过暗 |
-| `mind-leap-frame` | `#6D4D96` | `#8B5FBF8C` | — |
+| `mind-leap-frame` | `#6D4D96` | `#8B5FBFB2` | — |
 | `mind-leap-accent` | `#7B53A2` | `#8B5FBF` | — |
 | `mind-gaze-glow` | `#D99B4826` | `#D99B4826` | — |
 | `mind-gaze-intense` | `#FAF3E9` | `#D99B4866` | — |
 | `mind-gaze-line` | `#A97B3C` | `#E4B97F` | — |
-| `mind-gaze-frame` | `#A97B3C` | `#D99B488C` | — |
+| `mind-gaze-frame` | `#A97B3C` | `#D99B48B2` | — |
 | `mind-gaze-accent` | `#BC853E` | `#D99B48` | — |
 | `mind-calm-glow` | `#4B8F6B26` | `#4B8F6B26` | — |
 | `mind-calm-intense` | `#E9F2ED` | `#4B8F6B66` | — |
 | `mind-calm-line` | `#3D7157` | `#81B197` | — |
-| `mind-calm-frame` | `#3D7157` | `#4B8F6B8C` | — |
+| `mind-calm-frame` | `#3D7157` | `#4B8F6BB2` | — |
 | `mind-calm-accent` | `#457B5B` | `#4B8F6B` | — |
 
 裁决注为生成器启发式（彩度 spread<40 标发闷、亮度<90 标过暗），最终取舍由设计走查定。

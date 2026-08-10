@@ -193,7 +193,7 @@ export component ChatPaneView inherits Rectangle {
                         Text {
                             text: AppStrings.chat-mock-session-banner;
                             font-family: "JetBrains Mono";
-                            font-size: 9px;
+                            font-size: 10px;
                             letter-spacing: 1px;
                             color: RedesignTheme.t.faint;
                         }
@@ -273,6 +273,7 @@ export component ChatPaneView inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: end;
+                        spacing: 10px;
                         VerticalLayout {
                             spacing: 8px;
                             Text {
@@ -285,6 +286,8 @@ export component ChatPaneView inherits Rectangle {
                                 font-family: "Fraunces"; font-size: 15px; color: RedesignTheme.t.muted; wrap: word-wrap;
                             }
                         }
+                        // V1：witness 右缘 2px 中性线（裁决：不染 rep）
+                        Rectangle { width: 2px; background: RedesignTheme.t.border; }
                     }
                     
                     // A-5: 第三条 agent 消息
@@ -318,9 +321,9 @@ export component ChatPaneView inherits Rectangle {
 
                                     VerticalLayout {
                                         spacing: 6px; horizontal-stretch: 1;
-                                        Text { text: AppStrings.chat-mock-approval-head; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.mind-gaze-accent; letter-spacing: 0.8px; }
+                                        Text { text: AppStrings.chat-mock-approval-head; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.mind-gaze-accent; letter-spacing: 0.8px; }
                                         Text { text: AppStrings.chat-mock-approval-main; font-size: 12px; color: RedesignTheme.t.fg; }
-                                        Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
+                                        Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.muted; }
                                     }
 
                                     HorizontalLayout {
@@ -366,9 +369,9 @@ export component ChatPaneView inherits Rectangle {
                                     VerticalLayout {
                                         spacing: 6px; horizontal-stretch: 1;
                                         // 真值 L421-423：resolved 卡自带带时戳的 head 与不同的 cmd，非复用 pending 卡文案。
-                                        Text { text: AppStrings.chat-mock-approval-head-2; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.mind-gaze-accent; letter-spacing: 0.8px; }
+                                        Text { text: AppStrings.chat-mock-approval-head-2; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.mind-gaze-accent; letter-spacing: 0.8px; }
                                         Text { text: AppStrings.chat-mock-approval-main-2; font-size: 12px; color: RedesignTheme.t.fg; }
-                                        Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 9px; color: RedesignTheme.t.muted; }
+                                        Text { text: AppStrings.chat-mock-approval-risk; font-family: "JetBrains Mono"; font-size: 10px; color: RedesignTheme.t.muted; }
                                     }
                                     // 真值 L425 .approval-state：结果陈述，与「拒绝」按钮文案不同源。
                                     Text {
@@ -406,12 +409,11 @@ export component ChatPaneView inherits Rectangle {
         color: RedesignTheme.t.mind-drive-accent;
         font-family: "JetBrains Mono";
         font-size: 10px;
-        opacity: root.left-drawer-open ? 0.0 : (left_gem.has-hover ? 0.95 : 0.55);
+        opacity: root.left-drawer-open ? 0.0 : (left_gem.has-hover ? 0.95 : 0.55 + 0.1 * Math.sin(animation-tick() / 8000ms * 360deg));
         x: 12px;
         y: root.gem-mid-y + 80px;
         width: 12px;
         wrap: word-wrap;
-        animate opacity { duration: 8000ms; easing: ease-out; }
     }
 
     // Right vertical tag
@@ -420,12 +422,11 @@ export component ChatPaneView inherits Rectangle {
         color: RedesignTheme.t.mind-abyss-accent;
         font-family: "JetBrains Mono";
         font-size: 10px;
-        opacity: root.right-drawer-open ? 0.0 : (right_gem.has-hover ? 0.95 : 0.55);
+        opacity: root.right-drawer-open ? 0.0 : (right_gem.has-hover ? 0.95 : 0.55 + 0.1 * Math.sin(animation-tick() / 8000ms * 360deg));
         x: parent.width - 24px;
         y: root.gem-mid-y + 80px;
         width: 12px;
         wrap: word-wrap;
-        animate opacity { duration: 8000ms; easing: ease-out; }
     }
     left_gem := DoorbellGem {
         is-left: true;

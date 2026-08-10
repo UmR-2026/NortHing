@@ -53,31 +53,36 @@ export component ChatMessageBubble inherits Rectangle {
         }
     }
 
-    // .rec.witness 右对齐：.body (无背景框)
-    if role == "user": VerticalLayout {
-        spacing: 8px;
+    // .rec.witness 右对齐：.body (无背景框) + 右缘 2px 中性线
+    if role == "user": HorizontalLayout {
         alignment: end;
-        
-        Text {
-            text: "见证者 · " + root.timestamp;
-            font-family: "JetBrains Mono";
-            font-size: 10px;
-            letter-spacing: 0.8px;
-            color: RedesignTheme.t.faint;
-            horizontal-alignment: right;
-        }
-        
-        HorizontalLayout {
+        spacing: 10px;
+        VerticalLayout {
+            spacing: 8px;
             alignment: end;
+            
             Text {
-                text: root.content;
-                font-family: "Fraunces";
-                font-size: 15px;
-                font-italic: true;
-                color: RedesignTheme.t.muted;
-                wrap: word-wrap;
+                text: "见证者 · " + root.timestamp;
+                font-family: "JetBrains Mono";
+                font-size: 10px;
+                letter-spacing: 0.8px;
+                color: RedesignTheme.t.faint;
                 horizontal-alignment: right;
             }
+            
+            HorizontalLayout {
+                alignment: end;
+                Text {
+                    text: root.content;
+                    font-family: "Fraunces";
+                    font-size: 15px;
+                    font-italic: true;
+                    color: RedesignTheme.t.muted;
+                    wrap: word-wrap;
+                    horizontal-alignment: right;
+                }
+            }
         }
+        Rectangle { width: 2px; background: RedesignTheme.t.border; }
     }
 }
