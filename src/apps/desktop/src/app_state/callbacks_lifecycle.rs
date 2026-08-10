@@ -535,7 +535,9 @@ pub(super) fn register_toggle_theme_callback(ui: &AppWindow, _app_state: &Arc<Ap
     ui.on_toggle_theme(move || {
         if let Some(ui) = ui_weak6.upgrade() {
             let current = ui.get_dark_mode();
-            ui.set_dark_mode(!current);
+            let new_dark = !current;
+            ui.set_dark_mode(new_dark);
+            super::block_registry::set_blocks_dark_mode(new_dark);
         }
     });
 }

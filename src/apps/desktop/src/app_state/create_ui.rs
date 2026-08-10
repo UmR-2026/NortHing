@@ -93,6 +93,7 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     ui.set_mcp_status(SharedString::from("MCP: not configured"));
     ui.set_model_status(SharedString::from("Model: Not configured"));
     ui.set_dark_mode(true);
+    super::block_registry::set_blocks_dark_mode(true);
     ui.set_current_session_id(SharedString::from(""));
     // Phase C.2: bind the sidebar tree-view flag from `flags.rs`.
     // `SESSION_TREE_VIEW = true` renders nested sessions; `false` keeps

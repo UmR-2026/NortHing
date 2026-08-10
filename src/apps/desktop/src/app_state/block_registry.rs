@@ -35,6 +35,15 @@ thread_local! {
     static REGISTRY: std::cell::RefCell<Option<Arc<BlockRegistry>>> = std::cell::RefCell::new(None);
 }
 
+pub fn set_blocks_dark_mode(dark: bool) {
+    REGISTRY.with(|r| {
+        if let Some(registry) = &*r.borrow() {
+            registry.inner_win.set_dark_mode(dark);
+            registry.outer_win.set_dark_mode(dark);
+        }
+    });
+}
+
 pub fn init_block_registry(
     main_weak: slint::Weak<AppWindow>,
     inner_win: InnerWindow,

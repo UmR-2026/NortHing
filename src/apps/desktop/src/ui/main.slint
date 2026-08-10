@@ -458,6 +458,8 @@ import { WorkMod } from "components/WorkMod.slint";
 
 
 export component InnerWindow inherits Window {
+    in property <bool> dark-mode: true;
+    changed dark-mode => { RedesignTheme.dark = dark-mode; }
     callback request-close();
     no-frame: true;
     width: 280px;
@@ -484,6 +486,8 @@ export component InnerWindow inherits Window {
 }
 
 export component OuterWindow inherits Window {
+    in property <bool> dark-mode: true;
+    changed dark-mode => { RedesignTheme.dark = dark-mode; }
     callback request-close();
     no-frame: true;
     width: 320px;
