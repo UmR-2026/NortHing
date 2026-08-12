@@ -31,6 +31,8 @@
 
 ### Reviewer
 - R3 reviewer 未派（implementer BLOCKED 无 diff 可审；flags commit 9144013 留待 R3' 合并审查）。
+- **08-12 晚通道总故障**：google（zweiqaq token refresh failed）/ volcengine-agent-plan（model not found）/ ark（model not found）/ stepfun-anthropic（step-explore 空返回 ×2，含续会话）全灭；仅 minimax-m3 存活。审计修复审查由编排者脚本化字节级亲审（独立性受限，披露在案）。教训：通道健康度派发前必测；编排者亲审仅限「diff 小且可脚本化核验」场景。
+- **minimax-m3（coder 续会话 fixer）**：审计修复 I-1（开/检 mojibake 条目 Set.has 死信号）一轮修好，2 行 commit 干净，无破坏性 git 操作。续会话 fixer 模式（原 task_id）在 M3 上有效。
 
 ### 编排者经验
 - mimo 不在本 opencode 实例子代理清单（08-12 实测），coder 候选序实际为 MiniMax-M3 → gemini-36-flash。
