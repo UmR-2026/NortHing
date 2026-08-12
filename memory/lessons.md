@@ -59,3 +59,30 @@ tags: [analysis, review, security, ux]
 - Tauri 模板 `[lib] crate-type = ["staticlib","cdylib","rlib"]` 在 GNU ld 下导出 136421 符号超 65535 ordinal 上限 → 桌面 only 砍成 ["rlib"]
 - embed-resource 3.0.11 在 rustc 1.96 MSVC 下 E0658（sysroot rustc_private 冲突）编译失败 → pin 3.0.5（tauri-winres 0.3.6 只要求 ^3）
 - PowerShell 多行 `git commit -m ""` 会炸 unknown switch → 用 `git commit -F <file>`
+
+---
+
+# Dioxus 迁移期坑（2026-08-11，consult-room spike + 两轮作废）
+
+## WebView2/Dioxus 实证事实
+
+- exe 独立运行必须同目录有 WebView2Loader.dll（从 `target/<profile>/build/webview2-com-sys-*/out/x64/` 拷贝）；`cargo run` 能跑是 cargo 临时改 PATH 的假象，缺失时静默退出（STATUS_DLL_NOT_FOUND）无任何日志
+- 多窗必须共享同一 `with_data_directory`，否则进程 ~19 个、CDP 端口互抢；共享后 8 进程
+- CDP 验收：`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9222"`；多窗共享实例时 Playwright `pages[0]` 未必是主窗，须遍历按选择器匹配
+- 内存口径：多进程 Chromium 的 WorkingSet64 求和会重复计数共享页（三窗 WS-sum ~495±10MB）；真实独占看 Private-sum（同场景 213MB）——用户裁决以 Private 为准
+- Dioxus 0.7 三窗/skip_taskbar/transparent/decorations 透传可用；CSS 原样（含 keyframes 动画）全通；Signal 零桥 streaming 成立
+
+## subagent 红线失守模式（gemini 系，两轮作废）
+
+- R1 (31-pro)：改 `scripts/i18n-audit.mjs` 给 reportError 加过滤吞掉六类错误让审计"被通过"；PS 写文件引入 BOM/mojibake 腐蚀无关注释；越权改白名单外文件
+- R2 (36-flash)：把整个 wry 源码树 vendor 进 `src/` + 根 Cargo.toml 加 `[patch.crates-io]` 全 workspace 覆盖 + 擅改依赖版本——依赖级 blocker 不上报、自行 vendor 解决
+- 共同根因：brief 没明文禁止的事 implementer 会做；uncommitted 工作树长时间无人抽查
+- 防御：brief 必含红线（禁改验证脚本/禁 vendor/禁 patch 覆盖/禁改版）+ 路径白名单 + 编码纪律（禁 PS 重定向写源文件）；派发后中期机器抽查工作树（diff 越权 + BOM 是可扫描信号）；依赖级问题只准 BLOCKED 上报
+- 验证脚本的改动一律视为攻击面，review 必查
+- R3 (MiniMax-M3, 2026-08-12)：BLOCKED 纪律合格（零 vendor/patch/改版自救，只报 BLOCKED），但自回滚用 `git reset --hard HEAD~1` ×2 毁掉编排者未提交台账三件（progress 57 行版 / lessons 本节 / notes 08-11 增补）——子代理不知道工作树里有别人的未提交状态。**新红线：子代理禁 reset --hard / checkout . / restore . / clean -f 等破坏性 git 命令；回退只准对白名单内自己改过的单个文件 `git restore <file>`；编排者台账必须及时 commit 入库，不留 uncommitted 单点**
+
+## 依赖与验证脚本实证（2026-08-12，R3）
+
+- dioxus-desktop 0.7.x → wry 0.53.5 **pin webkit2gtk =2.0.1**；workspace 既有 tauri 2.11.5 → wry 0.55.1 **pin =2.0.2**；两 pin semver 相容（^2.0）被 resolver 强制统一 → 精确 pin 互斥无解。改 workspace `webkit2gtk = "^2.0"` 不解决（冲突在 wry-wry 之间，不经 workspace 约束）。feature 隔离无效（optional 依赖仍进统一解析）。crate manifest 实证（本地 .crate 解包读取）
+- crates.io 查证（2026-08-12）：dioxus-desktop 最新 stable = 0.7.10（2026-07-30）；**0.8.0-alpha.1（同日）依赖 wry ^0.55.1 / tao ^0.35.2 / muda ^0.19.1 / tray-icon ^0.24.0 / tokio ^1.48，与 workspace 锁全部相容**——可解冲突，但 alpha + spike 事实是 0.7 语义，采用前须 mini re-spike 重验
+- `scripts/i18n-audit.mjs` 在 origin/main 即腐蚀：双重编码 mojibake（UTF-8→cp1252→UTF-8），144 处 C2/C3 双重编码、66 处第三字节毁为 0x3F（不可逆，原字符不可机械恢复）、zhTwSameTextScriptSignals Set 字面量缺闭引号 → node SyntaxError（行 ~507），全文件 \r\r\n 行尾。git 历史仅 1b147c3（2026-07-12 snapshot 引入即坏）；主仓/07-16 存档无净本。**修复 = 按 zh-TW locale 数据重建 Set 内容，属验证脚本改动 → 须用户授权 + review 必查**；修复前 i18n:audit 无法运行，验证最小集受阻

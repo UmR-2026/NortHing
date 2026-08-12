@@ -3,6 +3,7 @@
 计划：`.superpowers/sdd/plan.md`
 分支：`feat/consult-room-slint`（worktree `E:\agent-project\northing\.worktrees\consult-room-build`）
 基线：8e43dc4 (main, 2026-08-04)；终裁：五页套全部按现状通过（FINAL-RULING.md）
+**最新接续点：`handoff-20260811b.md`（Dioxus spike go；room 迁移 R1/R2 两轮污染作废已 revert；R3 待派——明天先测 mimo/MiniMax-M3，brief 已两级加固。HEAD=c4c806a，工作树干净）**
 
 | Task | 状态 | Commits | 备注 |
 |---|---|---|---|
@@ -12,12 +13,35 @@
 | T3 onboarding v2: complete（PASS with reservations；I1 Timer 延迟跳转 / I2 user+relation title 已修；Minor 留 T7） | qwen 系未参与；implementer 模型见 task-03-report | a40c765 |  |
 | T4 settings v2: complete（双判决 PASS 0C/0I，3 Minor 留 T7 triage） | implementer=general(qwen3.8-max-preview，视觉读图 10 张)；judge=minimax-m3；三页浮层(接入点/MCP/技能)+上下文主页面常显+无全屏页；搜索 Rust 子串过滤=批准偏离（§9.7） | 1c83616 |  |
 | T2c lane B (deck/chrome/编码): complete (代码正确, 截图有重名复制) | implementer=gemini-31-pro; 4 files (-5 净) 改完 commit; B-1 stretch fix + B-2 Path send/stop + B-3 字标去重 (保水印) + B-4 mojibake 注释清理; `cargo check` exit=0 (2m14s)。**verify 警示**: 6 张截图中 chrome-dark / deck-dark / pill-dark 三张 SHA256 相同（重命名复制），pill 不在主路由渲染（仅用于死代码 ProviderSettingsPanel.slint）；streaming-dark 视觉差异未明显。code 0 回归 (Pill diff 仅注释) | a1fc9d9 |
-| T2c lane C (RoomHead 补件): 待派 | brief task-02c-brief.md §3.3 已写 |  |  |
-| T2c lane C (RoomHead 补件): 待派（同上） |  |  |  |
+| T2c lane C (RoomHead 补件): complete（随 P0 收口 commit） | height 锁 72/198 + avatar-mid-y 36/67 + chronicle bar 4px；report-C 已补写 | 753d777 |  |
+| Task P0 阶段 0 收口: complete (commits eee21ca..8566ef3, review clean 0C/0I/0M) | implementer=gemini-36-flash；reviewer=gemini-36-flash(reviewer)；5 步全 PASS：Lane C 收口 753d777 / 19 草稿删除 8f2f2ae（4 页 v2 真值已保留）/ 6 死面板 8566ef3（cargo check exit 0）/ 真值 5 页字节级 UTF-8 核验 / merge-tree vs origin/main **0 冲突**（0808 的 io.rs 预警已被时间消解，reviewer 独立复核成立）/ 罗盘在位（0808 §4.2 假警报关闭） | 753d777 + 8f2f2ae + 8566ef3 |  |
+| Spike 多窗口验证: complete（S1 PASS / S2 PASS带证据缺陷 / S3 PASS / **S4 FAIL 降级** → **A1 可行**） | spike/multiwindow-0809 分支存档（f521e40+6eabce9+feee4e2，不合入）；implementer=gemini-31-pro（初版证据缺陷把关打回后修复合格）；reviewer=gemini-36-flash（视觉亲读 7 张截图）；**产品化要点：浮窗不透明底 + room 窗内 scrim（S4 降级路径）；HWND 走 winit raw-window-handle（禁 FindWindowW）；禁 mem::forget/process::exit(0)** | spike 分支（8566ef3 切出） |  |
 | 0xC0000139 启动崩溃修复 | complete（manifest 嵌入 ComCtl32 v6）| northhing.exe.manifest + northhing.rc + build.rs | 9e3405d |
+| T1-fix brand 回改（C4 裁定）: complete (commit b978d28, review PASS，1 Important 修复闭环) | implementer=gemini-36-flash；reviewer=gemini-31-pro（视觉）；WindowChrome 印章撤除 + ChatPaneView 状态行 brand-inline 归位（三环 logo 5 Path + Fraunces italic 12px，opacity .7）+ plan §3 戒律改「品牌入状态行，不独立成印」+ WelcomeView 注释更正；修复轮：嵌套 HorizontalLayout 默认 horizontal-stretch=1 形成隐形空泡推远状态项 → 加 horizontal-stretch:0 闭环（复审亲读确认） | b978d28 |  |
+| 真值 HTML 小编辑批: complete (commit 5c86e3e, review PASS clean 0C/0I/0M) | implementer=gemini-36-flash；reviewer=gemini-31-pro；C3 state-dot 三页补回（archive 补 CSS+实例，main/onboarding 补实例启用死 CSS）/ C4 archive 删 brand-seal 实例+CSS / V1 main witness 右缘 2px 中性线 / F7 archive pill「沉积 · 只读 · 缓」/ settings 日→☾；Edge 渲染抽查双页布局完好 | 5c86e3e |  |
 | T5 archive v2 | 待派 |  |  |
 | T6 space v2 | 待派 |  |  |
 | T7 终审 | 待派 |  |  |
+| T-IO-b + roomfix 合并视觉验收 | **CONDITIONAL PASS**（编排者逐张亲读 16/16 + SHA256 查重独立重跑，证据真实）：三窗并泊/竖签显隐/拖动跟随/最小化联动/任务栏无污染/主窗亮 token/welcome A4 无溢出 全 ✅。3 疑虑处置：C1 settings 不可达 = 与 F4 同根，偏离成立，补证挂 F4；**C2 亮色下 inner/outer 不随主题 = Important 真缺陷**（RedesignTheme global 每 Window 实例独立，无同步通道），派 fixer + 亮矩阵补证后关闭；C3 任务栏 0 图标 = 编排者双轮对照实证为 Windows 配置行为（副屏窗口无主任务栏按钮），非缺陷。执行者=k3-vision（报告 task-tiob-accept-report.md）；编排者裁定书 task-tiob-accept-verdict.md | —（纯证据采集，无 commit） |  |
+| T-IO 三窗制落地（inner/outer 独立 OS 窗） | **代码侧关闭**：`935292f` + fix1 `91211f6` + fix2 `27fdac5`（✕ 归位）+ 竖签呼吸表达式化随 `548c53f` 夹带入库（roomfix 误并，编排者核验正确后披露）；R3 复审 PASS（I4/I5 核销，gemini-36-flash reviewer）。剩 **T-IO-b 视觉验收**（与 roomfix 补证合并派发，brief `task-tiob-accept-brief.md`）。教训：gemini-31-pro 空返回 ×2、DONE 虚报 ×2 | 935292f + 91211f6 + 27fdac5 + 548c53f(部分) |  |
+| roomfix 核对修复批（V1/A4/A1a/A1b） | **代码已入库待视觉补证**：commit `548c53f`（witness 右缘中性线 / 标注 9→10px 全量 / membrane 静息 0.08 / dark frame 55%→70% 生成器重跑）；reviewer=gemini-31-pro 一审 FAIL——**gemini-36-flash 证据失实第 4 起**（4 张截图实为同一暗色 main，文件大小几乎相同），代码本身无 finding；补证并入 T-IO-b 验收。另：`create_ui.rs` 工作树碎屑（误缩进）已 git restore 清除 | 548c53f |  |
+| T1 Dioxus 路线 spike | **complete（双判决 PASS + 用户裁决 go）** | implementer=gemini-31-pro（首轮环境归因失实打回→真因 WebView2Loader.dll 未随 exe；两轮修复合格）；reviewer=gemini-36-flash（一审 FAIL 3I 中证据失实→重审 PASS 0C/0I/0M）。全通：三窗+属性透传 / 六 CSS 探针含 keyframes 动画 / Signal 零桥 / CDP+Playwright / 转写 16 行 RSX≈5min。内存 WS 490-505 / Private 213 → 用户裁决 Private 口径通过。坑：多窗共享 with_data_directory（进程 19→8）；exe 须携 WebView2Loader.dll；CDP pages[0] 未必主窗 | spike 仓外 temp（git 8757012+修复轮） |  |
+| room 迁移 R1/R2 | **作废（已 revert）** | R1=gemini-31-pro：停摆+削弱 i18n 审计门+BOM 腐蚀+越权；R2=gemini-36-flash：vendor wry 源码进 src/+patch.crates-io 覆盖+擅改依赖版。防御已入 brief §5 红线+白名单，坑已入 memory/lessons.md。R3 待派（先测 mimo/M3） | —（无 commit） |  |
+| room 迁移 R3（minimax-m3，2026-08-12） | **BLOCKED（纪律合格，两 blocker 待用户裁定）** | mimo 不在本实例子代理清单；M3 探针 DONE 合格后承接。Blocker-1 依赖级：dioxus-desktop 0.7.10→wry 0.53.5 pin webkit2gtk =2.0.1 vs workspace tauri 2.11.5→wry 0.55.1 pin =2.0.2，semver 相容强制统一而精确 pin 互斥 → 无解（crate manifest 实证；M3 提议 workspace ^2.0→=2.0.2 不解决问题，冲突在 wry-wry 之间）。编排者查 crates.io：**dioxus 0.8.0-alpha.1（2026-07-30）依赖 wry ^0.55.1 / tao ^0.35.2，与 workspace 锁一致可解**（alpha 风险 → 建议先 mini re-spike 闸）；备选=拆独立 exe 保 0.7.10。Blocker-2：scripts/i18n-audit.mjs 在 origin/main 即腐蚀（双重编码 mojibake、66 处第三字节毁为 0x3F、Set 字面量缺闭引号 → node SyntaxError），git 历史/主仓/07-16 存档均无净本，验证最小集受阻。M3 纪律：零自救（禁 vendor/patch/改版遵守到位）、唯一 commit 仅白名单 flags.rs、untracked 保留 ui_dioxus/ 8 件 + truth CSS 抽取 20397B；报告 task-migrate-room-report.md。**事故**：M3 自回滚用 `git reset --hard HEAD~1` ×2，毁编排者未提交台账三件（本文件 57 行版/lessons Dioxus 节/notes 08-11 增补）——已凭编排者上下文读全量重建（notes 为据证重建），台账自此 commit 入库；子代理禁破坏性 git 命令已入 lessons | 9144013（flags DIOXUS_SHELL=false+回归测试） |
+
+## 架构裁定登记（2026-08-09/10，详见 truth-rulings-20260809.md）
+
+- **三窗制（深夜追加，最新）**：主页面 = room + inner（它的自我）+ outer（身外之物）**三个平级
+  OS 窗口，默认并泊可见**；宝石/竖签切换显隐（竖签仅在隐藏态出现于 room 框缘）。
+  HTML 的 mod-hidden/position:fixed 是单窗媒介近似，非设计意图。已回写 block-contract
+  §0/§1/规则13/§3.1/§3.2/§5-TBD6、rulings §G.0（A2/F1/F2 随之微调）、html-truth-review 头部警告。
+- ⚠️ **spike S2 验证的是单侧重栏跟随**（spike 跑于三窗裁定前/并行）；双侧栏并泊是同一机制的
+  小扩展，在 inner/outer 实现任务 brief 中补验（不另开 spike）。
+- 分块契约 `block-contract.md` v0.2（规则 1-13 + 逐块）；spike 结论见 `phase-1-decisions.md`
+  （S1/S2/S3 PASS，S4 FAIL→降级不透明浮窗+主窗 scrim）；**决策 A1 待用户最终确认**。
+- 真值审查 `html-truth-review-20260809.md`（含编码假警报勘误：本机 PS 中文管道不可信，
+  判定须字节级）；渲染走查 `truth-visual-critique-20260809.md`；brief 模板 B-1..B-8 生效于
+  后续所有任务。
 
 ## T2 备注
 - 主路由 avatar 重复问题已由编排者修（SpaceView 移除 PresenceZone）。
@@ -31,3 +55,4 @@
 - I-4 部分（SpaceView 内部 layout 仍可能微调）留 T2 处理完整 room 居中/双抽屉布局重构。
 - Minor m-1（亮色 line token 缺失）可由 T2 追加 palette token 顺手收尾。
 - Minor m-2（WindowChrome.signal in property 残留）可在 T2 顺手清理。
+- **T-IO-b 验收遗留（2026-08-11）**：① C2 修复中（主题同步 inner/outer）；② settings 补证挂 F4（deck 设施条任务）；③ Minor：inner shown 态 ExStyle 0x00040118（APPWINDOW 残留、TOOLWINDOW 被 winit 覆写），当前任务栏配置下无影响，换机/改配置后 inner 可能上任务栏 → T7 triage；④ 环境事实（构建走 GNU 1.95 cargo 直跑 / MainWindowHandle 漂移 / app.json BOM 坑 / welcome 触发三条件 / 副屏任务栏行为）见 verdict §4，后续 brief 必须采用。
