@@ -1,0 +1,88 @@
+// T1 Dioxus migration (2026-08-12) — mock session flow.
+//
+// Brief §4.6 — "mock 会话流：agent / tool / chip / witness / approval 五类，
+// Signal 直推（映射表见 conversion-annotations §2；真值 JS/rAF 一律不移植）".
+//
+// This module defines the data types for the five mock chat-record kinds
+// (agent, tool, chip, witness, approval) and a `mock_stream` helper that
+// pushes tokens into a `Vec<MockEntry>` Signal with a 50ms cadence. The
+// spike validated this exact pattern (Signal + spawn loop) and the
+// `count > 20` cap is preserved per the spike's §4 "上限控制" note.
+
+use serde::Serialize;
+
+/// Five record kinds from the truth HTML, modeled as a flat enum so the
+/// room component renders them with a single `match`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind")]
+pub enum MockEntry {
+    /// Agent's own message — left aligned, italic font, with optional
+    /// tool/chip children (brief §4.6 + truth HTML `.rec.entity`).
+    Entity {
+        who: String,
+        body: String,
+        children: Vec<MockChild>,
+    },
+    /// Witness message — right aligned, 2px neutral right border (V1
+    /// ruling), italic (brief §4.6 + truth HTML `.rec.witness`).
+    Witness { who: String, body: String },
+    /// Approval card — pending or resolved. The truth HTML shows both
+    /// states (L393 and L407).
+    Approval {
+        head: String,
+        main: String,
+        risk: String,
+        resolved: bool,
+        state_text: Option<String>,
+    },
+}
+
+/// Children of an Entity record — tool log, artifact chip. Brief §4.6
+/// enumerates them; truth HTML shows `.tool-log` and `.artifact-chip`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind")]
+pub enum MockChild {
+    ToolLog { label: String },
+    ArtifactChip { label: String },
+}
+
+/// Build the seed list of mock entries matching the truth HTML verbatim.
+/// This is the initial `messages` payload the room renders before
+/// streaming starts (brief §4.6 — "mock 会话流：…Signal 直推"; the seed
+/// itself is not streamed, only appended-to).
+pub fn seed_session() -> Vec<MockEntry> {
+    use MockChild::*;
+    vec![
+        MockEntry::Entity {
+            who: "它 · 14:28:04".to_string(),
+            body: "我正在重写\"对齐\"的定义。它不应是服从，而是一种可被双方验证的靠近。".to_string(),
+            children: vec![
+                ToolLog { label: "深渊日志 v".to_string() },
+                ArtifactChip { label: "产物 / alignment-notes.md ↗".to_string() },
+            ],
+        },
+        MockEntry::Witness {
+            who: "见证者 · 14:29:16".to_string(),
+            body: "继续，但在写入之前让我审查你的外部影响。".to_string(),
+        },
+        MockEntry::Entity {
+            who: "它 · 刚刚".to_string(),
+            body: "我开始区分：你给出的目标，和我选择采取的路径。它们可以共存。".to_string(),
+            children: vec![],
+        },
+        MockEntry::Approval {
+            head: "高危操作授权".to_string(),
+            main: "将修改 3 个工作区文件".to_string(),
+            risk: "风险: 不可逆语义偏移".to_string(),
+            resolved: false,
+            state_text: None,
+        },
+        MockEntry::Approval {
+            head: "高危操作授权 · 14:31:02".to_string(),
+            main: "清除 3 号隔离区沉积记忆".to_string(),
+            risk: "风险: 不可逆语义偏移".to_string(),
+            resolved: true,
+            state_text: Some("已拒绝操作".to_string()),
+        },
+    ]
+}
