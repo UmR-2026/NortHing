@@ -8,7 +8,7 @@
 //!
 //! ## Phase C.2
 //!
-//! `SESSION_TREE_VIEW` — when `true`, the sidebar renders subagent
+//! `SESSION_TREE_VIEW` - when `true`, the sidebar renders subagent
 //! sessions nested under their parent. When `false`, the sidebar
 //! renders a flat list (legacy A6 behavior). The default is `true` per
 //! `main.rs::SESSION_TREE_VIEW`; the value is duplicated here so the
@@ -24,11 +24,27 @@ pub const SESSION_TREE_VIEW: bool = true;
 /// Default mode id used by the desktop shell's skill panel.
 pub const DEFAULT_MODE_ID: &str = "agentic"; // 2026-07-18: registry has no "code" mode; agentic is the default single-agent mode
 
+/// T1 Dioxus migration (2026-08-12): runtime gate for the parallel Dioxus
+/// consult-room shell.
+///
+/// When `true` **and** the `ui-dioxus` cargo feature is enabled, `main.rs`
+/// launches the three-window Dioxus consult-room shell (room + inner +
+/// outer). When `false` (the deliberate default) the existing Slint shell
+/// is launched byte-identically - no behavior change.
+///
+/// Per `.agents/reference/actor/06-const-flag-usage.md` rules:
+///   * Default to `false` while the new shell is being rolled out.
+///   * Roll back with a one-line flip + commit.
+///   * Lock the default down with a regression test so any silent flip is
+///     paired with a corresponding test update.
+#[allow(dead_code)]
+pub const DIOXUS_SHELL: bool = false;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// `SESSION_TREE_VIEW = true` is the deliberate Phase C.2 default —
+    /// `SESSION_TREE_VIEW = true` is the deliberate Phase C.2 default -
     /// flipping it to `false` is a one-line UI regression test, not a
     /// silent behavior change. Lock it down here so any flip is paired
     /// with a corresponding test update.
@@ -37,11 +53,21 @@ mod tests {
         assert!(SESSION_TREE_VIEW);
     }
 
-    /// `DEFAULT_MODE_ID = "agentic"` — the registry only has "agentic" /
+    /// `DEFAULT_MODE_ID = "agentic"` - the registry only has "agentic" /
     /// "Claw" / "Team" modes, no "code". Edit here when multi-mode shell
     /// is introduced.
     #[test]
     fn default_mode_id_is_agentic() {
         assert_eq!(DEFAULT_MODE_ID, "agentic");
+    }
+
+    /// `DIOXUS_SHELL = false` is the deliberate T1 Dioxus default -
+    /// flipping it to `true` is a one-line UI behavior flip, not a
+    /// silent change. Lock the default down so the parallel Slint shell
+    /// keeps owning the production launch path while the Dioxus shell is
+    /// rolled out.
+    #[test]
+    fn dioxus_shell_default_false() {
+        assert!(!DIOXUS_SHELL, "DIOXUS_SHELL default flipped - pair with task review");
     }
 }
