@@ -2,10 +2,19 @@
 //!
 //! Slint + Material GUI application - the primary human-facing entry point.
 //! Pure single-process architecture: UI calls into northhing-core directly.
+//!
+//! R3' migration (2026-08-13): when `flags::DIOXUS_SHELL` is `true` and the
+//! `ui-dioxus` cargo feature is enabled, this binary launches the parallel
+//! Dioxus consult-room shell (room + inner + outer three-window layout)
+//! instead of the Slint shell. Default behavior (DIOXUS_SHELL = false)
+//! keeps the Slint launch path byte-identically unchanged.
 
 mod app_state;
 mod flags;
 mod mcp_adapter;
+
+#[cfg(feature = "ui-dioxus")]
+mod ui_dioxus;
 
 use anyhow::Result;
 use northhing_kernel_api::KernelBootstrapApi;
@@ -85,6 +94,30 @@ fn run_slint_app() -> Result<()> {
     Ok(())
 }
 
+// ======================== Dioxus UI Entry ========================
+//
+// R3' migration (2026-08-13): when `flags::DIOXUS_SHELL` is `true` AND the
+// `ui-dioxus` cargo feature is enabled, this branch launches the parallel
+// Dioxus consult-room shell (room + inner + outer three-window layout)
+// instead of the Slint shell.
+//
+// Default behavior (DIOXUS_SHELL = false): the Slint shell keeps owning
+// the launch path byte-identically. The two shells coexist via
+// #[cfg(feature = "ui-dioxus")] isolation.
+#[cfg(feature = "ui-dioxus")]
+fn run_dioxus_app() -> Result<()> {
+    if !flags::DIOXUS_SHELL {
+        // Should be unreachable: `run_dioxus_app` is only called when
+        // `DIOXUS_SHELL` is true at the call site below. Defensive log
+        // line keeps the call site explicit if invariants drift.
+        eprintln!(
+            "run_dioxus_app called with DIOXUS_SHELL = false; falling back to Slint shell"
+        );
+        return run_slint_app();
+    }
+    ui_dioxus::launch()
+}
+
 // ======================== Main ========================
 
 fn main() {
@@ -142,7 +175,19 @@ fn main() {
     // 2026-07-18 (D2i): run Slint UI on the main thread. Previously this
     // ran inside the worker's runtime.block_on, which meant
     // slint::invoke_from_event_loop closures never executed.
-    let slint_result = main_rt.block_on(async { run_slint_app() });
+    //
+    // R3' migration (2026-08-13): when `DIOXUS_SHELL` is true, branch into
+    // the parallel Dioxus consult-room shell. The Slint launch path
+    // remains the default (DIOXUS_SHELL = false).
+    #[cfg(feature = "ui-dioxus")]
+    let shell_result = if flags::DIOXUS_SHELL {
+        main_rt.block_on(async { run_dioxus_app() })
+    } else {
+        main_rt.block_on(async { run_slint_app() })
+    };
+    #[cfg(not(feature = "ui-dioxus"))]
+    let shell_result = main_rt.block_on(async { run_slint_app() });
+    let slint_result = shell_result;
 
     // Signal worker to shutdown and wait for it to finish
     let _ = shutdown_tx.send(());
