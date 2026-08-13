@@ -34,17 +34,26 @@ pub type GeometryRxArc = Arc<watch::Receiver<Geometry>>;
 /// toggle must propagate to every window (C2 regression point - the
 /// Slint `RedesignTheme` global was per-instance, which broke
 /// light/dark sync across inner/outer). The Dioxus shell solves this
-/// by routing the toggle through a shared `Arc<Mutex<bool>>` so
-/// flipping in any window updates all three.
+/// by routing the toggle through a shared `tokio::sync::watch<bool>`
+/// channel: the room window writes the new value synchronously and
+/// every window that subscribed re-renders.
+///
+/// R3' r3p4 delta (2026-08-13) - Bug B root fix: the previous
+/// `Arc<Mutex<bool>>` + `spawn_watcher` polling loop (50ms sleep) is
+/// gone. Polling futures are what keep the main thread busy-spinning
+/// (~97% CPU) under dioxus 0.8-alpha.1 (see fix brief §1); the watch
+/// channel replaces both the storage and the notification mechanism:
+/// `set_dark` / `toggle` are synchronous writes, subscribers react via
+/// `changed().await` (event-driven, zero polling).
 #[derive(Debug, Clone)]
 pub struct GlobalTheme {
-    inner: Arc<tokio::sync::Mutex<bool>>,
+    tx: watch::Sender<bool>,
 }
 
 impl Default for GlobalTheme {
     fn default() -> Self {
         Self {
-            inner: Arc::new(tokio::sync::Mutex::new(true)), // default dark
+            tx: watch::channel(true).0, // default dark
         }
     }
 }
@@ -54,40 +63,30 @@ impl GlobalTheme {
         Self::default()
     }
 
-    pub async fn is_dark(&self) -> bool {
-        *self.inner.lock().await
+    /// Current theme, synchronously (the watch channel always holds the
+    /// latest value).
+    pub fn is_dark(&self) -> bool {
+        *self.tx.borrow()
     }
 
-    pub async fn set_dark(&self, dark: bool) {
-        *self.inner.lock().await = dark;
+    /// Set the theme and notify every subscriber. `Err` when the channel
+    /// was closed (all receivers dropped) - callers treat it as a no-op,
+    /// matching the geometry channel's `let _ =` convention.
+    pub fn set_dark(&self, dark: bool) {
+        let _ = self.tx.send(dark);
     }
 
-    pub async fn toggle(&self) -> bool {
-        let mut g = self.inner.lock().await;
-        *g = !*g;
-        *g
+    /// Flip the theme and return the new value.
+    pub fn toggle(&self) -> bool {
+        let next = !self.is_dark();
+        self.set_dark(next);
+        next
     }
 
-    /// Spawn a background task that pushes every theme change into the
-    /// Dioxus Signal used by the window-local UI. Each window registers
-    /// one of these so all three render the same theme.
-    pub fn spawn_watcher<F>(&self, mut apply: F)
-    where
-        F: FnMut(bool) + Send + 'static,
-    {
-        let inner = self.inner.clone();
-        tokio::spawn(async move {
-            let mut last = *inner.lock().await;
-            apply(last);
-            loop {
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                let now = *inner.lock().await;
-                if now != last {
-                    last = now;
-                    apply(last);
-                }
-            }
-        });
+    /// Subscribe to theme changes. The receiver starts at the current
+    /// value; `changed()` wakes on every later `set_dark` / `toggle`.
+    pub fn subscribe(&self) -> watch::Receiver<bool> {
+        self.tx.subscribe()
     }
 }
 

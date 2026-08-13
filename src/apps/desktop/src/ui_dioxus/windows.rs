@@ -21,6 +21,15 @@
 // identically and a future change to theme propagation doesn't
 // silently regress them. See `app.rs` file header for the full
 // root-cause analysis.
+//
+// R3' r3p4 delta (2026-08-13) - Bug B root fix, event-driven theme:
+//   The inner/outer windows now receive the shared theme watch channel
+//   (`theme_rx`) through their props (same passing convention as the
+//   geometry receiver) and fold it into the existing dock `use_future`
+//   with `tokio::select!`: the `rx.changed()` (geometry) arm keeps its
+//   original docking logic, the `theme_rx.changed()` arm updates the
+//   local `theme_dark` Signal. No new futures, no polling - the
+//   geometry future was already one of the proven-quiet shapes.
 
 use dioxus::desktop::tao::dpi::{PhysicalPosition, Position};
 use dioxus::desktop::window;
@@ -38,10 +47,13 @@ use super::state::{Geometry, GeometryRxArc};
 /// `rx` is the geometry watch channel (Arc-wrapped Receiver). `offset_x`
 /// is the inner window's left-dock offset relative to the room's x;
 /// the follow task uses this to position the window each time the
-/// room moves.
+/// room moves. `theme_rx` is the shared theme watch channel; the
+/// initial value seeds the window's `data-theme` and every later
+/// change re-renders it.
 #[derive(Props, Clone)]
 pub struct InnerAppProps {
     pub rx: GeometryRxArc,
+    pub theme_rx: watch::Receiver<bool>,
     pub offset_x: i32,
 }
 
@@ -50,20 +62,37 @@ pub struct InnerAppProps {
 #[derive(Props, Clone)]
 pub struct OuterAppProps {
     pub rx: GeometryRxArc,
+    pub theme_rx: watch::Receiver<bool>,
     pub offset_x: i32,
 }
 
 /// Helper to build `InnerAppProps` from the main window. Kept as a free
 /// function so `app.rs` can call it without exposing the Props type's
 /// fields.
-pub fn inner_app_root_props(rx: GeometryRxArc, offset_x: i32) -> InnerAppProps {
-    InnerAppProps { rx, offset_x }
+pub fn inner_app_root_props(
+    rx: GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+    offset_x: i32,
+) -> InnerAppProps {
+    InnerAppProps {
+        rx,
+        theme_rx,
+        offset_x,
+    }
 }
 
 /// Helper to build `OuterAppProps` from the main window. Symmetric to
 /// `inner_app_root_props`.
-pub fn outer_app_root_props(rx: GeometryRxArc, offset_x: i32) -> OuterAppProps {
-    OuterAppProps { rx, offset_x }
+pub fn outer_app_root_props(
+    rx: GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+    offset_x: i32,
+) -> OuterAppProps {
+    OuterAppProps {
+        rx,
+        theme_rx,
+        offset_x,
+    }
 }
 
 /// Manual `PartialEq` impl: dioxus 0.8 still requires `Props` to be
@@ -96,33 +125,62 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
     let offset_x = props.offset_x;
     let rx_arc = props.rx.clone();
-    let mut theme_dark = use_signal(|| true);
+    let theme_rx = props.theme_rx.clone();
+    // R3' r3p4: the initial theme comes from the shared channel instead
+    // of a hardcoded `true`, so the window opens with the room's actual
+    // theme even if it was toggled before this window spawned.
+    let theme_dark = use_signal(|| *theme_rx.borrow());
 
     // Follow task: subscribe to the room's geometry channel and dock the
     // inner window to the room's left edge whenever the room moves.
     // `use_future` returns a `Task`; the closure runs once on mount and
     // continues until the future completes.
+    //
+    // R3' r3p4: the same future also follows the shared theme channel.
+    // `tokio::select!` merges both waits - geometry keeps its original
+    // semantics (Err => break), theme updates the local Signal. If the
+    // theme channel ever closes, that branch is disabled (`theme_closed`
+    // makes its future permanently pending) so the docking loop keeps
+    // running instead of busy-polling a dead receiver.
     use_future(move || {
         let rx_arc = rx_arc.clone();
+        let mut theme_rx = theme_rx.clone();
+        let mut theme_dark = theme_dark.clone();
         let off = offset_x;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
+            let mut theme_closed = false;
             loop {
-                if rx.changed().await.is_err() {
-                    break;
+                tokio::select! {
+                    res = rx.changed() => {
+                        if res.is_err() {
+                            break;
+                        }
+                        let g = *rx.borrow();
+                        let w = window();
+                        // DOCK_GAP_PX (16) + INNER_WINDOW_WIDTH (280) is the
+                        // constant offset; the inner sits that far to the left
+                        // of the room. `saturating_sub` keeps it at zero if the
+                        // room is dragged off the left edge.
+                        let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
+                            g.x.saturating_sub(280 + 16),
+                            g.y,
+                        )));
+                        let _ = w.request_redraw();
+                        let _ = off;
+                    }
+                    res = async {
+                        if theme_closed {
+                            std::future::pending::<()>().await;
+                        }
+                        theme_rx.changed().await
+                    } => {
+                        match res {
+                            Ok(()) => theme_dark.set(*theme_rx.borrow()),
+                            Err(_) => theme_closed = true,
+                        }
+                    }
                 }
-                let g = *rx.borrow();
-                let w = window();
-                // DOCK_GAP_PX (16) + INNER_WINDOW_WIDTH (280) is the
-                // constant offset; the inner sits that far to the left
-                // of the room. `saturating_sub` keeps it at zero if the
-                // room is dragged off the left edge.
-                let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                    g.x.saturating_sub(280 + 16),
-                    g.y,
-                )));
-                let _ = w.request_redraw();
-                let _ = off;
             }
         }
     });
@@ -240,25 +298,45 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
 pub fn outer_app_root(props: OuterAppProps) -> Element {
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
     let rx_arc = props.rx.clone();
-    let mut theme_dark = use_signal(|| true);
+    let theme_rx = props.theme_rx.clone();
+    // R3' r3p4: initial theme from the shared channel (see inner_app_root).
+    let theme_dark = use_signal(|| *theme_rx.borrow());
 
     use_future(move || {
         let rx_arc = rx_arc.clone();
+        let mut theme_rx = theme_rx.clone();
+        let mut theme_dark = theme_dark.clone();
         let off = props.offset_x;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
+            let mut theme_closed = false;
             loop {
-                if rx.changed().await.is_err() {
-                    break;
+                tokio::select! {
+                    res = rx.changed() => {
+                        if res.is_err() {
+                            break;
+                        }
+                        let g = *rx.borrow();
+                        let w = window();
+                        let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
+                            g.x + g.width as i32 + 16,
+                            g.y,
+                        )));
+                        let _ = w.request_redraw();
+                        let _ = off;
+                    }
+                    res = async {
+                        if theme_closed {
+                            std::future::pending::<()>().await;
+                        }
+                        theme_rx.changed().await
+                    } => {
+                        match res {
+                            Ok(()) => theme_dark.set(*theme_rx.borrow()),
+                            Err(_) => theme_closed = true,
+                        }
+                    }
                 }
-                let g = *rx.borrow();
-                let w = window();
-                let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                    g.x + g.width as i32 + 16,
-                    g.y,
-                )));
-                let _ = w.request_redraw();
-                let _ = off;
             }
         }
     });

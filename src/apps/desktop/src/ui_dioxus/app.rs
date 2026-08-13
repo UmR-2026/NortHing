@@ -59,6 +59,19 @@
 //   inner / outer windows in `windows.rs` get only fix #1 because their
 //   theme Signals are never updated (they follow the room's theme via
 //   context) and they don't poll geometry.
+//
+// R3' r3p4 delta (2026-08-13) - Bug B root fix, event-driven theme:
+//   The theme `use_future` (the room window's second sleeping future)
+//   is deleted. Fix brief §1 proved by controlled experiment that any
+//   second sleeping use_future in the room window makes the main
+//   thread busy-spin at ~97% CPU with all three windows reported
+//   hung (IsHungAppWindow); the poison was the polling itself, not
+//   setters or content. The theme now flows purely through events:
+//   the chrome toggle writes the room's local Signal synchronously
+//   and broadcasts the new value over the `GlobalTheme` watch channel
+//   (state.rs); inner/outer subscribe via their props and update their
+//   own Signals in the existing dock `use_future` via `tokio::select!`
+//   (windows.rs). The geometry future (proven quiet) is untouched.
 
 use dioxus::core::VirtualDom;
 use dioxus::desktop::tao::dpi::{PhysicalPosition, PhysicalSize, Position};
@@ -66,6 +79,7 @@ use dioxus::desktop::{tao::window::WindowBuilder, Config};
 use dioxus::desktop::window;
 use dioxus::prelude::*;
 use std::rc::Rc;
+use tokio::sync::watch;
 
 use super::css;
 use super::entry::{
@@ -102,41 +116,19 @@ pub fn room_app_root() -> Element {
     // read happens once for the lifetime of this window.
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
 
-    // Theme signal: written by the global shared `theme`, read by the
-    // chrome buttons to render the right `data-theme` attribute on the
-    // <html> element. Polled via `use_future` so the polling closure
-    // can capture the local `Signal` (which is `!Send`); the `Signal`
-    // is updated via `set()` from inside the async task.
+    // Theme signal: written by the chrome toggle synchronously, read by
+    // the chrome buttons to render the right `data-theme` attribute on
+    // the <html> element.
     //
-    // R3' r3p3 fix #2 (Bug B root cause) - change-guarded set.
-    // Dioxus 0.8-alpha.1 re-renders the component on every `set`,
-    // even when the value is unchanged. We cache the last observed
-    // theme in the future's stack frame (it persists across loop
-    // iterations, just like a static) and only `set()` when the
-    // polled value actually differs. The first iteration always sets
-    // (last starts as `true`, which matches the Signal's initial
-    // value) - so the Signal gets a redundant `true->true` on first
-    // tick; we accept that one extra render at startup in exchange
-    // for the steady-state cadence dropping to "only on user toggle".
+    // R3' r3p4 delta (2026-08-13) - Bug B root fix: the polling
+    // `use_future` (100ms sleep + `theme.is_dark().await`) is deleted
+    // entirely - a second sleeping use_future is what made the main
+    // thread spin at ~97% CPU under dioxus 0.8-alpha.1 (fix brief §1).
+    // The room now updates its local Signal synchronously in the click
+    // handler and broadcasts the new value to inner/outer via the
+    // `GlobalTheme` watch channel (which they subscribe to through
+    // their props - see windows.rs).
     let mut theme_dark = use_signal(|| true);
-    {
-        let theme = theme.clone();
-        use_future(move || {
-            let theme = theme.clone();
-            let mut theme_dark = theme_dark.clone();
-            let mut last: bool = true;
-            async move {
-                loop {
-                    let current = theme.is_dark().await;
-                    if current != last {
-                        last = current;
-                        theme_dark.set(current);
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                }
-            }
-        });
-    }
 
     // Visibility state for inner / outer windows (brief §3.2 /
     // block-contract §3.1: jewel clicks toggle this, the dock task
@@ -219,12 +211,24 @@ pub fn room_app_root() -> Element {
     // `dioxus::desktop::window()` context is only valid after the
     // main window's launch has started, which is exactly when
     // use_effect fires (this is the spike's pattern from main.rs).
+    //
+    // R3' r3p4 delta: the room's `GlobalTheme` handle is cloned in and
+    // `subscribe()` produces the theme receiver handed to the
+    // inner/outer props - both windows render the room's initial theme
+    // at mount and follow every toggle from then on (event-driven, no
+    // polling involved).
     {
         let geometry_rx_arc = geometry_rx_arc.clone();
+        let theme = theme.clone();
         let data_directory = shared_webview_data_directory_for_inner();
         use_effect(move || {
-            spawn_inner_window(geometry_rx_arc.clone(), data_directory.clone());
-            spawn_outer_window(geometry_rx_arc.clone(), data_directory.clone());
+            let theme_rx = theme.subscribe();
+            spawn_inner_window(
+                geometry_rx_arc.clone(),
+                theme_rx.clone(),
+                data_directory.clone(),
+            );
+            spawn_outer_window(geometry_rx_arc.clone(), theme_rx, data_directory.clone());
         });
     }
 
@@ -299,10 +303,15 @@ pub fn room_app_root() -> Element {
                                 "aria-label": "切换明暗",
                                 title: "切换明暗",
                                 onclick: move |_| {
-                                    let theme = theme.clone();
-                                    spawn(async move {
-                                        theme.toggle().await;
-                                    });
+                                    // R3' r3p4: synchronous write - no
+                                    // spawn, no await. The room's own
+                                    // Signal flips instantly; the watch
+                                    // channel broadcast reaches
+                                    // inner/outer subscribers and they
+                                    // re-render on their side.
+                                    let next = !theme_dark();
+                                    theme_dark.set(next);
+                                    theme.set_dark(next);
                                 },
                                 if theme_dark() { "☀" } else { "☾" }
                             }
@@ -464,7 +473,14 @@ pub fn room_app_root() -> Element {
 }
 
 /// Spawn the inner-window VirtualDom + its own OS window.
-fn spawn_inner_window(geometry_rx: GeometryRxArc, data_directory: std::path::PathBuf) {
+///
+/// `theme_rx` is the shared theme watch channel; the inner window reads
+/// its initial value at mount and follows every change (see windows.rs).
+fn spawn_inner_window(
+    geometry_rx: GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+    data_directory: std::path::PathBuf,
+) {
     let mut inner_builder = WindowBuilder::new()
         .with_title("northhing - inner (dioxus)")
         .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(INNER_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT))
@@ -485,13 +501,17 @@ fn spawn_inner_window(geometry_rx: GeometryRxArc, data_directory: std::path::Pat
         .with_data_directory(data_directory);
 
     let offset_x = ROOM_WINDOW_INITIAL_X as i32 - INNER_WINDOW_WIDTH as i32 - DOCK_GAP_PX;
-    let props = inner_app_root_props(geometry_rx, offset_x);
+    let props = inner_app_root_props(geometry_rx, theme_rx, offset_x);
     let dom = VirtualDom::new_with_props(inner_app_root, props);
     let _ = window().new_window(dom, cfg);
 }
 
 /// Symmetric to `spawn_inner_window`.
-fn spawn_outer_window(geometry_rx: GeometryRxArc, data_directory: std::path::PathBuf) {
+fn spawn_outer_window(
+    geometry_rx: GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+    data_directory: std::path::PathBuf,
+) {
     let mut outer_builder = WindowBuilder::new()
         .with_title("northhing - outer (dioxus)")
         .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(OUTER_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT))
@@ -512,7 +532,7 @@ fn spawn_outer_window(geometry_rx: GeometryRxArc, data_directory: std::path::Pat
         .with_data_directory(data_directory);
 
     let offset_x = ROOM_WINDOW_INITIAL_X as i32 + ROOM_WINDOW_WIDTH as i32 + DOCK_GAP_PX;
-    let props = outer_app_root_props(geometry_rx, offset_x);
+    let props = outer_app_root_props(geometry_rx, theme_rx, offset_x);
     let dom = VirtualDom::new_with_props(outer_app_root, props);
     let _ = window().new_window(dom, cfg);
 }
