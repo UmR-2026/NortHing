@@ -42,6 +42,30 @@ use super::css;
 use super::i18n::{keys, LocalePack};
 use super::state::{Geometry, GeometryRxArc};
 
+/// Windows-only helpers for the geometry follow threads (r3p4 root-fix):
+/// the geometry watch channel is consumed on a plain std::thread that
+/// moves the OS window with Win32 SetWindowPos - off the dioxus task
+/// system entirely (see `inner_app_root` for the full rationale).
+#[cfg(target_os = "windows")]
+mod win {
+    use std::ffi::c_void;
+
+    /// Move a top-level window. SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+    /// are passed by callers via `u_flags`. The HWND travels across the
+    /// thread boundary as a `usize` (plain integer, trivially Send).
+    unsafe extern "system" {
+        pub fn SetWindowPos(
+            h_wnd: *mut c_void,
+            h_wnd_insert_after: *mut c_void,
+            x: i32,
+            y: i32,
+            cx: i32,
+            cy: i32,
+            u_flags: u32,
+        ) -> i32;
+    }
+}
+
 /// Props for the inner (它的自我) window.
 ///
 /// `rx` is the geometry watch channel (Arc-wrapped Receiver). `offset_x`
@@ -131,56 +155,111 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
     // theme even if it was toggled before this window spawned.
     let theme_dark = use_signal(|| *theme_rx.borrow());
 
-    // Follow task: subscribe to the room's geometry channel and dock the
-    // inner window to the room's left edge whenever the room moves.
-    // `use_future` returns a `Task`; the closure runs once on mount and
-    // continues until the future completes.
+    // R3' r3p4 root-fix (2026-08-14): geometry follow moved OFF the
+    // dioxus task system on Windows.
     //
-    // R3' r3p4: the same future also follows the shared theme channel.
-    // `tokio::select!` merges both waits - geometry keeps its original
-    // semantics (Err => break), theme updates the local Signal. If the
-    // theme channel ever closes, that branch is disabled (`theme_closed`
-    // makes its future permanently pending) so the docking loop keeps
-    // running instead of busy-polling a dead receiver.
+    // Drag experiments (recorded in `task-migrate-room-report-r3p4.md`)
+    // proved that waking a dioxus use_future at drag frequency (60+
+    // wakes/s via the geometry watch channel) makes dioxus 0.8.0-alpha.1
+    // busy-spin at ~97% single-core and hang all three windows; the
+    // `UserWindowEvent::Poll` round-trips pile up faster than poll_vdom
+    // drains them. The fix removes geometry from the task system
+    // entirely: a plain std::thread waits on the watch channel and moves
+    // the OS window with Win32 SetWindowPos directly - no dioxus task,
+    // no waker, no event-loop round trip. The HWND is captured once at
+    // mount. The thread exits when the channel closes (app teardown).
+    //
+    // The theme channel stays in use_future: it is woken only by user
+    // toggle (low frequency), which the experiments showed is safe.
+    #[cfg(target_os = "windows")]
+    {
+        use dioxus::desktop::tao::platform::windows::WindowExtWindows;
+
+        let rx = rx_arc.clone();
+        // HWND as usize: a plain integer so it is trivially Send across
+        // the thread boundary (raw pointers are !Send).
+        let hwnd_usize = window().hwnd() as usize;
+        let off = offset_x;
+        use_hook(move || {
+            std::thread::Builder::new()
+                .name("inner-geometry-follow".into())
+                .spawn(move || {
+                    let hwnd_ptr = hwnd_usize as *mut std::ffi::c_void;
+                    let mut rx: watch::Receiver<Geometry> = (*rx).clone();
+                    let mut last = *rx.borrow();
+                    loop {
+                        // OS-level blocking sleep (not tokio): the thread
+                        // is truly parked between checks, so this costs
+                        // ~0% CPU - unlike the dioxus-task sleep loops
+                        // that the drag experiments proved busy-spin.
+                        std::thread::sleep(std::time::Duration::from_millis(16));
+                        let cur = *rx.borrow_and_update();
+                        // Geometry has no PartialEq (r3p3: state.rs stays
+                        // whitelist-clean); compare field-by-field.
+                        if cur.x == last.x
+                            && cur.y == last.y
+                            && cur.width == last.width
+                            && cur.height == last.height
+                        {
+                            continue;
+                        }
+                        last = cur;
+                        // SWP_NOSIZE(0x0001) | SWP_NOZORDER(0x0004) |
+                        // SWP_NOACTIVATE(0x0010): move only, keep size and
+                        // z-order, do not steal focus. Same dock offset as
+                        // the original tao set_outer_position path.
+                        unsafe {
+                            let _ = win::SetWindowPos(
+                                hwnd_ptr,
+                                std::ptr::null_mut(),
+                                cur.x.saturating_sub(280 + 16),
+                                cur.y,
+                                0,
+                                0,
+                                0x0001 | 0x0004 | 0x0010,
+                            );
+                        }
+                        let _ = off;
+                    }
+                })
+                .expect("spawn inner geometry follow thread");
+        });
+    }
+
+    // Non-Windows fallback: keep the original dioxus-task follow (the
+    // busy-spin bug is Windows-specific to the WebView2 stack).
+    #[cfg(not(target_os = "windows"))]
     use_future(move || {
         let rx_arc = rx_arc.clone();
-        let mut theme_rx = theme_rx.clone();
-        let mut theme_dark = theme_dark.clone();
         let off = offset_x;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
-            let mut theme_closed = false;
             loop {
-                tokio::select! {
-                    res = rx.changed() => {
-                        if res.is_err() {
-                            break;
-                        }
-                        let g = *rx.borrow();
-                        let w = window();
-                        // DOCK_GAP_PX (16) + INNER_WINDOW_WIDTH (280) is the
-                        // constant offset; the inner sits that far to the left
-                        // of the room. `saturating_sub` keeps it at zero if the
-                        // room is dragged off the left edge.
-                        let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                            g.x.saturating_sub(280 + 16),
-                            g.y,
-                        )));
-                        let _ = w.request_redraw();
-                        let _ = off;
-                    }
-                    res = async {
-                        if theme_closed {
-                            std::future::pending::<()>().await;
-                        }
-                        theme_rx.changed().await
-                    } => {
-                        match res {
-                            Ok(()) => theme_dark.set(*theme_rx.borrow()),
-                            Err(_) => theme_closed = true,
-                        }
-                    }
+                if rx.changed().await.is_err() {
+                    break;
                 }
+                let g = *rx.borrow();
+                let w = window();
+                let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
+                    g.x.saturating_sub(280 + 16),
+                    g.y,
+                )));
+                let _ = w.request_redraw();
+                let _ = off;
+            }
+        }
+    });
+
+    // Theme follower (low-frequency; safe on the dioxus task system).
+    use_future(move || {
+        let mut theme_rx = theme_rx.clone();
+        let mut theme_dark = theme_dark.clone();
+        async move {
+            loop {
+                if theme_rx.changed().await.is_err() {
+                    break;
+                }
+                theme_dark.set(*theme_rx.borrow());
             }
         }
     });
@@ -302,41 +381,85 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
     // R3' r3p4: initial theme from the shared channel (see inner_app_root).
     let theme_dark = use_signal(|| *theme_rx.borrow());
 
+    // R3' r3p4 root-fix: same as inner_app_root - geometry follow runs
+    // on a plain std::thread with Win32 SetWindowPos (see inner for the
+    // full rationale; the outer docks to the room's right edge).
+    #[cfg(target_os = "windows")]
+    {
+        use dioxus::desktop::tao::platform::windows::WindowExtWindows;
+
+        let rx = rx_arc.clone();
+        let hwnd_usize = window().hwnd() as usize;
+        let off = props.offset_x;
+        use_hook(move || {
+            std::thread::Builder::new()
+                .name("outer-geometry-follow".into())
+                .spawn(move || {
+                    let hwnd_ptr = hwnd_usize as *mut std::ffi::c_void;
+                    let mut rx: watch::Receiver<Geometry> = (*rx).clone();
+                    let mut last = *rx.borrow();
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_millis(16));
+                        let cur = *rx.borrow_and_update();
+                        if cur.x == last.x
+                            && cur.y == last.y
+                            && cur.width == last.width
+                            && cur.height == last.height
+                        {
+                            continue;
+                        }
+                        last = cur;
+                        unsafe {
+                            let _ = win::SetWindowPos(
+                                hwnd_ptr,
+                                std::ptr::null_mut(),
+                                cur.x + cur.width as i32 + 16,
+                                cur.y,
+                                0,
+                                0,
+                                0x0001 | 0x0004 | 0x0010,
+                            );
+                        }
+                        let _ = off;
+                    }
+                })
+                .expect("spawn outer geometry follow thread");
+        });
+    }
+
+    // Non-Windows fallback: keep the original dioxus-task follow.
+    #[cfg(not(target_os = "windows"))]
     use_future(move || {
         let rx_arc = rx_arc.clone();
-        let mut theme_rx = theme_rx.clone();
-        let mut theme_dark = theme_dark.clone();
         let off = props.offset_x;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
-            let mut theme_closed = false;
             loop {
-                tokio::select! {
-                    res = rx.changed() => {
-                        if res.is_err() {
-                            break;
-                        }
-                        let g = *rx.borrow();
-                        let w = window();
-                        let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                            g.x + g.width as i32 + 16,
-                            g.y,
-                        )));
-                        let _ = w.request_redraw();
-                        let _ = off;
-                    }
-                    res = async {
-                        if theme_closed {
-                            std::future::pending::<()>().await;
-                        }
-                        theme_rx.changed().await
-                    } => {
-                        match res {
-                            Ok(()) => theme_dark.set(*theme_rx.borrow()),
-                            Err(_) => theme_closed = true,
-                        }
-                    }
+                if rx.changed().await.is_err() {
+                    break;
                 }
+                let g = *rx.borrow();
+                let w = window();
+                let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
+                    g.x + g.width as i32 + 16,
+                    g.y,
+                )));
+                let _ = w.request_redraw();
+                let _ = off;
+            }
+        }
+    });
+
+    // Theme follower (low-frequency; safe on the dioxus task system).
+    use_future(move || {
+        let mut theme_rx = theme_rx.clone();
+        let mut theme_dark = theme_dark.clone();
+        async move {
+            loop {
+                if theme_rx.changed().await.is_err() {
+                    break;
+                }
+                theme_dark.set(*theme_rx.borrow());
             }
         }
     });

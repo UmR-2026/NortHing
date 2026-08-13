@@ -65,6 +65,13 @@ impl GlobalTheme {
 
     /// Current theme, synchronously (the watch channel always holds the
     /// latest value).
+    ///
+    /// `#[allow(dead_code)]`: kept as part of the documented synchronous
+    /// API surface (fix brief §2.1). The room window currently reads the
+    /// theme from its own local Signal and writes via `set_dark`, so
+    /// there is no live call site; the method stays for symmetry with
+    /// the other accessors and future callers.
+    #[allow(dead_code)]
     pub fn is_dark(&self) -> bool {
         *self.tx.borrow()
     }
@@ -77,6 +84,10 @@ impl GlobalTheme {
     }
 
     /// Flip the theme and return the new value.
+    ///
+    /// `#[allow(dead_code)]`: same rationale as `is_dark` - documented
+    /// synchronous API surface, no live call site in the current shell.
+    #[allow(dead_code)]
     pub fn toggle(&self) -> bool {
         let next = !self.is_dark();
         self.set_dark(next);

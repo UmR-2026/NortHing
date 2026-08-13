@@ -60,18 +60,24 @@
 //   theme Signals are never updated (they follow the room's theme via
 //   context) and they don't poll geometry.
 //
-// R3' r3p4 delta (2026-08-13) - Bug B root fix, event-driven theme:
+// R3' r3p4 delta (2026-08-14) - Bug B root fix, event-driven theme +
+// geometry (zero sleeping use_future in the room window):
 //   The theme `use_future` (the room window's second sleeping future)
-//   is deleted. Fix brief §1 proved by controlled experiment that any
-//   second sleeping use_future in the room window makes the main
-//   thread busy-spin at ~97% CPU with all three windows reported
-//   hung (IsHungAppWindow); the poison was the polling itself, not
-//   setters or content. The theme now flows purely through events:
-//   the chrome toggle writes the room's local Signal synchronously
-//   and broadcasts the new value over the `GlobalTheme` watch channel
-//   (state.rs); inner/outer subscribe via their props and update their
-//   own Signals in the existing dock `use_future` via `tokio::select!`
-//   (windows.rs). The geometry future (proven quiet) is untouched.
+//   is deleted, and so is the geometry polling future. Controlled CPU
+//   experiments (fix brief §1 + experiments A/B/C recorded in
+//   `task-migrate-room-report-r3p4.md`) proved that ANY sleeping
+//   use_future in the room window - even a bare `loop{sleep(100ms)}`
+//   with no setters - makes a background thread busy-spin at ~97%
+//   single-core CPU on dioxus 0.8.0-alpha.1; and that waking a
+//   use_future at drag frequency (geometry updates) hangs all three
+//   windows. The poison is the polling/wakeup shape itself, not the
+//   content. The theme now flows purely through events: the chrome
+//   toggle writes the room's local Signal synchronously and broadcasts
+//   over the `GlobalTheme` watch channel (state.rs); inner/outer
+//   subscribe via their props. Geometry is published from a tao
+//   event-loop handler (entry.rs) and consumed by plain std::threads
+//   (windows.rs) - the whole shell has zero use_future with tokio
+//   sleeps and zero event-loop wakeup storms.
 
 use dioxus::core::VirtualDom;
 use dioxus::desktop::tao::dpi::{PhysicalPosition, PhysicalSize, Position};
@@ -106,6 +112,10 @@ pub fn room_app_root() -> Element {
     let geometry_tx = use_context::<GeometryTx>();
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
+    // r3p4 root-fix: shared slot written by entry.rs's tao event handler
+    // to identify the room window; `room_app_root` fills it on mount so
+    // only the room's Moved/Resized events publish geometry.
+    let room_window_id = use_context::<std::sync::Arc<std::sync::Mutex<Option<dioxus::desktop::tao::window::WindowId>>>>();
 
     // R3' r3p3 fix #1 (Bug B root cause) - mount-once LocalePack.
     // The room window re-renders on every Signal `set`; loading the
@@ -144,68 +154,27 @@ pub fn room_app_root() -> Element {
     // (called below in a use_effect).
     let _entries = use_signal(|| seed_session());
 
-    // Position publisher - every 100ms (brief §4.2 / spike §2) push
-    // the room's current geometry into the watch channel. Inner/outer
-    // dock tasks consume from the other end.
+    // Position publisher - r3p4 root-fix (2026-08-14): REMOVED entirely.
     //
-    // R3' r3p3 fix #3 (Bug B root cause) - change-guarded send.
-    // The original implementation called `geom_tx.send(...)` on every
-    // 100ms tick regardless of whether the geometry actually changed,
-    // which woke up inner / outer follow tasks and forced them to
-    // re-run `set_outer_position` every tick. We cache the last sent
-    // Geometry in the future's stack frame and only `send` when it
-    // actually differs. `watch::send` returns Err when there are no
-    // receivers; we keep the existing `let _ =` handling.
+    // The original 100ms `use_future` polling loop (with r3p3's
+    // change-guarded send) is gone. Controlled CPU experiments (fix
+    // brief §1 root cause + experiments A/B/C recorded in
+    // `task-migrate-room-report-r3p4.md`) proved that ANY sleeping
+    // use_future in the room window makes one background thread
+    // busy-spin at ~97% single-core CPU on dioxus 0.8.0-alpha.1 - even
+    // a bare `loop { sleep(100ms).await }` with no window()/send calls.
+    // The polling shape itself is the poison.
     //
-    // The brief's whitelist restricts this change to app.rs /
-    // windows.rs; `state.rs` (where `Geometry` lives) is read-only and
-    // does not derive `PartialEq`, so we compare field-by-field.
-    {
-        let geom_tx = geometry_tx.clone();
-        use_future(move || {
-            let geom_tx = geom_tx.clone();
-            // Cached last-sent geometry. `None` means "first tick",
-            // forcing one send after the first poll so inner / outer
-            // get their initial dock position. After that, only
-            // genuine geometry changes wake the follow tasks.
-            let mut last_x: i32 = i32::MIN;
-            let mut last_y: i32 = i32::MIN;
-            let mut last_w: u32 = u32::MAX;
-            let mut last_h: u32 = u32::MAX;
-            let mut primed: bool = false;
-            async move {
-                loop {
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                    let w = window();
-                    if let Ok(pos) = w.outer_position() {
-                        let size = w.outer_size();
-                        let new_geom = Geometry {
-                            x: pos.x,
-                            y: pos.y,
-                            width: size.width,
-                            height: size.height,
-                        };
-                        let changed = !primed
-                            || new_geom.x != last_x
-                            || new_geom.y != last_y
-                            || new_geom.width != last_w
-                            || new_geom.height != last_h;
-                        if changed {
-                            primed = true;
-                            last_x = new_geom.x;
-                            last_y = new_geom.y;
-                            last_w = new_geom.width;
-                            last_h = new_geom.height;
-                            // Err when the receiver was dropped (e.g.
-                            // inner/outer closed); existing handling
-                            // is `let _ =`, preserved here.
-                            let _ = geom_tx.send(new_geom);
-                        }
-                    }
-                }
-            }
-        });
-    }
+    // Geometry is now published event-driven from `entry.rs`: a tao
+    // event-loop handler listens for the room window's Moved/Resized
+    // OS events and sends the composed Geometry into the same watch
+    // channel (this future's former contract). Inner/outer follow runs
+    // on plain std::threads in `windows.rs` - kept off the dioxus task
+    // system because drag experiments proved that waking a use_future
+    // at drag frequency hangs all three windows.
+    //
+    // The mount-once initial publish happens in the spawn use_effect
+    // below (room window id registration + one synchronous send).
 
     // Spawn the inner / outer VirtualDoms once on mount. The
     // `dioxus::desktop::window()` context is only valid after the
@@ -218,10 +187,26 @@ pub fn room_app_root() -> Element {
     // at mount and follow every toggle from then on (event-driven, no
     // polling involved).
     {
+        let geometry_tx = geometry_tx.clone();
         let geometry_rx_arc = geometry_rx_arc.clone();
+        let room_window_id = room_window_id.clone();
         let theme = theme.clone();
         let data_directory = shared_webview_data_directory_for_inner();
         use_effect(move || {
+            // r3p4 root-fix: register the room's OS window id so the tao
+            // event handler in entry.rs can filter Moved/Resized events,
+            // then publish the initial geometry once (the event handler
+            // takes over from here - zero polling).
+            *room_window_id.lock().unwrap() = Some(window().id());
+            if let Ok(pos) = window().outer_position() {
+                let size = window().outer_size();
+                let _ = geometry_tx.send(Geometry {
+                    x: pos.x,
+                    y: pos.y,
+                    width: size.width,
+                    height: size.height,
+                });
+            }
             let theme_rx = theme.subscribe();
             spawn_inner_window(
                 geometry_rx_arc.clone(),

@@ -23,9 +23,11 @@
 //   * `WindowBuilderExtWindows` API stable (skip_taskbar extension method).
 
 use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
-use dioxus::desktop::{tao::window::WindowBuilder, Config};
+use dioxus::desktop::tao::event::{Event, WindowEvent};
+use dioxus::desktop::tao::window::{WindowBuilder, WindowId};
+use dioxus::desktop::{tao::event_loop::EventLoopWindowTarget, Config};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::flags::DIOXUS_SHELL;
 
@@ -110,6 +112,14 @@ pub fn launch() -> anyhow::Result<()> {
     let (geometry_tx, geometry_rx) = tokio::sync::watch::channel(initial_geometry);
     let geometry_rx_arc: GeometryRxArc = Arc::new(geometry_rx);
 
+    // r3p4 root-fix: shared state for the tao event handler (see the
+    // `with_custom_event_handler` comment below). `room_window_id` is
+    // written by `room_app_root` on mount; `latest_geometry` mirrors the
+    // channel value so Moved (position-only) and Resized (size-only)
+    // events can compose a full Geometry.
+    let room_window_id: Arc<Mutex<Option<WindowId>>> = Arc::new(Mutex::new(None));
+    let latest_geometry: Arc<Mutex<Geometry>> = Arc::new(Mutex::new(initial_geometry));
+
     // Main window: the room itself. The launch path returns once the
     // Dioxus event loop is running; `LaunchBuilder::launch` is divergent
     // on desktop (`!`).
@@ -128,7 +138,54 @@ pub fn launch() -> anyhow::Result<()> {
 
     let config = Config::default()
         .with_window(room_window)
-        .with_data_directory(data_directory);
+        .with_data_directory(data_directory)
+        // r3p4 root-fix (2026-08-14): event-driven geometry publishing.
+        //
+        // The previous design polled the room window's position from a
+        // 100ms `use_future`. Controlled CPU measurements (experiments
+        // A/B/C in `task-migrate-room-report-r3p4.md`) proved that ANY
+        // sleeping use_future in the room window - including a bare
+        // `loop { sleep(100ms).await }` with no window()/send calls -
+        // makes one background thread busy-spin at ~97% single-core
+        // CPU on dioxus 0.8.0-alpha.1. The polling shape itself is the
+        // poison, so geometry publishing must not use a future at all.
+        //
+        // Instead we hook the tao event loop directly: the room window's
+        // Moved/Resized OS events become the publish trigger. Zero
+        // polling, zero use_future. `room_window_id` is registered by
+        // `room_app_root` on mount (it cannot be known at Config build
+        // time - the OS window does not exist yet), so early window
+        // events are skipped and the channel's initial_geometry covers
+        // the startup window.
+        .with_custom_event_handler({
+            let room_window_id = room_window_id.clone();
+            let latest_geometry = latest_geometry.clone();
+            let geometry_tx = geometry_tx.clone();
+            // Event-driven geometry publish: the room window's
+            // Moved/Resized OS events become the publish trigger (see
+            // the comment above this builder chain).
+            move |event, _event_loop_target: &EventLoopWindowTarget<_>| {
+                let Event::WindowEvent { window_id, event, .. } = event else {
+                    return;
+                };
+                if *room_window_id.lock().unwrap() != Some(*window_id) {
+                    return;
+                }
+                let mut geom = latest_geometry.lock().unwrap();
+                match event {
+                    WindowEvent::Moved(pos) => {
+                        geom.x = pos.x;
+                        geom.y = pos.y;
+                    }
+                    WindowEvent::Resized(size) => {
+                        geom.width = size.width;
+                        geom.height = size.height;
+                    }
+                    _ => return,
+                }
+                let _ = geometry_tx.send(*geom);
+            }
+        });
 
     // Context injection (0.8 LaunchBuilder API). `LaunchBuilder::with_context`
     // adds a typed value to the root's context - `use_context::<T>()` in
@@ -136,6 +193,9 @@ pub fn launch() -> anyhow::Result<()> {
     // (it's already Clone), the Receiver is wrapped in Arc so the
     // inner/outer VirtualDoms can clone the Arc without re-subscribing
     // to the channel.
+    //
+    // `room_window_id` is the shared slot the tao event handler reads to
+    // filter for the room window; `room_app_root` writes it on mount.
     //
     // R3' panic fix (2026-08-13): `GlobalTheme` must be provided here too -
     // `room_app_root` reads it via `use_context::<GlobalTheme>()`, and in
@@ -146,6 +206,7 @@ pub fn launch() -> anyhow::Result<()> {
         .with_context(geometry_tx)
         .with_context(geometry_rx_arc)
         .with_context(GlobalTheme::new())
+        .with_context(room_window_id)
         .with_cfg(config)
         .launch(room_app_root);
 
