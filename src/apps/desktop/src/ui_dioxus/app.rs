@@ -33,12 +33,39 @@
 //   * `html` / `doctype` elements are not exported in 0.8 alpha's
 //     dioxus-html; we mount the body directly (WebView2 wraps with the
 //     html/head envelope automatically).
+//
+// R3' r3p3 delta (2026-08-13) - Bug B root cause fix:
+//   The original implementation called `LocalePack::load(...)` at the
+//   top of the room window's body and ran two 100ms `use_future`
+//   tasks (theme + geometry) that called `.set(...)` on Signals every
+//   tick. Dioxus 0.8-alpha.1 re-renders the component on every Signal
+//   `set`, regardless of whether the value actually changed. The room
+//   component body therefore re-ran every ~108ms, re-loading the locale
+//   pack from disk each time (15 reloads in 1.4s - observed in
+//   `build-shots-tmp/runtime-launch.txt`, r3p report §2). Three fixes:
+//
+//     1. Mount-once `LocalePack` via `use_hook(|| Rc::new(...))`. The
+//        closure runs only on the first render, so disk reads happen
+//        exactly once per window regardless of how often the component
+//        re-renders.
+//     2. Theme `use_future` only calls `theme_dark.set(...)` when the
+//        polled value actually changed (last-value cache lives in the
+//        future's stack frame).
+//     3. Geometry `use_future` only calls `geom_tx.send(...)` when the
+//        polled Geometry actually changed (last-value cache lives in
+//        the future's stack frame; `watch::send` returns Err if there
+//        are no receivers, which we keep handling with `let _ =`).
+//
+//   inner / outer windows in `windows.rs` get only fix #1 because their
+//   theme Signals are never updated (they follow the room's theme via
+//   context) and they don't poll geometry.
 
 use dioxus::core::VirtualDom;
 use dioxus::desktop::tao::dpi::{PhysicalPosition, PhysicalSize, Position};
 use dioxus::desktop::{tao::window::WindowBuilder, Config};
 use dioxus::desktop::window;
 use dioxus::prelude::*;
+use std::rc::Rc;
 
 use super::css;
 use super::entry::{
@@ -66,24 +93,45 @@ pub fn room_app_root() -> Element {
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
 
-    let locale = LocalePack::load(super::i18n::DEFAULT_LOCALE);
+    // R3' r3p3 fix #1 (Bug B root cause) - mount-once LocalePack.
+    // The room window re-renders on every Signal `set`; loading the
+    // pack from disk + parsing 147 keys on each re-render caused the
+    // ~108ms reload cadence observed in r3p report §2. `use_hook`'s
+    // closure runs exactly once on the first render and the resulting
+    // `Rc` is returned by reference on subsequent renders, so the disk
+    // read happens once for the lifetime of this window.
+    let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
 
     // Theme signal: written by the global shared `theme`, read by the
     // chrome buttons to render the right `data-theme` attribute on the
     // <html> element. Polled via `use_future` so the polling closure
     // can capture the local `Signal` (which is `!Send`); the `Signal`
     // is updated via `set()` from inside the async task.
+    //
+    // R3' r3p3 fix #2 (Bug B root cause) - change-guarded set.
+    // Dioxus 0.8-alpha.1 re-renders the component on every `set`,
+    // even when the value is unchanged. We cache the last observed
+    // theme in the future's stack frame (it persists across loop
+    // iterations, just like a static) and only `set()` when the
+    // polled value actually differs. The first iteration always sets
+    // (last starts as `true`, which matches the Signal's initial
+    // value) - so the Signal gets a redundant `true->true` on first
+    // tick; we accept that one extra render at startup in exchange
+    // for the steady-state cadence dropping to "only on user toggle".
     let mut theme_dark = use_signal(|| true);
     {
         let theme = theme.clone();
-        let mut theme_dark = theme_dark.clone();
         use_future(move || {
             let theme = theme.clone();
             let mut theme_dark = theme_dark.clone();
+            let mut last: bool = true;
             async move {
                 loop {
                     let current = theme.is_dark().await;
-                    theme_dark.set(current);
+                    if current != last {
+                        last = current;
+                        theme_dark.set(current);
+                    }
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
@@ -107,22 +155,60 @@ pub fn room_app_root() -> Element {
     // Position publisher - every 100ms (brief §4.2 / spike §2) push
     // the room's current geometry into the watch channel. Inner/outer
     // dock tasks consume from the other end.
+    //
+    // R3' r3p3 fix #3 (Bug B root cause) - change-guarded send.
+    // The original implementation called `geom_tx.send(...)` on every
+    // 100ms tick regardless of whether the geometry actually changed,
+    // which woke up inner / outer follow tasks and forced them to
+    // re-run `set_outer_position` every tick. We cache the last sent
+    // Geometry in the future's stack frame and only `send` when it
+    // actually differs. `watch::send` returns Err when there are no
+    // receivers; we keep the existing `let _ =` handling.
+    //
+    // The brief's whitelist restricts this change to app.rs /
+    // windows.rs; `state.rs` (where `Geometry` lives) is read-only and
+    // does not derive `PartialEq`, so we compare field-by-field.
     {
         let geom_tx = geometry_tx.clone();
         use_future(move || {
             let geom_tx = geom_tx.clone();
+            // Cached last-sent geometry. `None` means "first tick",
+            // forcing one send after the first poll so inner / outer
+            // get their initial dock position. After that, only
+            // genuine geometry changes wake the follow tasks.
+            let mut last_x: i32 = i32::MIN;
+            let mut last_y: i32 = i32::MIN;
+            let mut last_w: u32 = u32::MAX;
+            let mut last_h: u32 = u32::MAX;
+            let mut primed: bool = false;
             async move {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                     let w = window();
                     if let Ok(pos) = w.outer_position() {
                         let size = w.outer_size();
-                        let _ = geom_tx.send(Geometry {
+                        let new_geom = Geometry {
                             x: pos.x,
                             y: pos.y,
                             width: size.width,
                             height: size.height,
-                        });
+                        };
+                        let changed = !primed
+                            || new_geom.x != last_x
+                            || new_geom.y != last_y
+                            || new_geom.width != last_w
+                            || new_geom.height != last_h;
+                        if changed {
+                            primed = true;
+                            last_x = new_geom.x;
+                            last_y = new_geom.y;
+                            last_w = new_geom.width;
+                            last_h = new_geom.height;
+                            // Err when the receiver was dropped (e.g.
+                            // inner/outer closed); existing handling
+                            // is `let _ =`, preserved here.
+                            let _ = geom_tx.send(new_geom);
+                        }
                     }
                 }
             }

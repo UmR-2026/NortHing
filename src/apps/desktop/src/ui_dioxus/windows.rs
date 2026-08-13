@@ -11,10 +11,21 @@
 // in Arc because dioxus 0.8 root components take props by value and
 // props must be Clone for `VirtualDom::new_with_props`; Arc provides
 // the Clone impl automatically.
+//
+// R3' r3p3 delta (2026-08-13) - Bug B root cause fix, mount-once
+// LocalePack. The original `inner_app_root` / `outer_app_root` called
+// `LocalePack::load(...)` at the top of the body on every render. In
+// practice these windows don't re-render often (their `theme_dark`
+// Signal is never updated) so the cost was low, but we still apply
+// the same fix as the room window so all three windows behave
+// identically and a future change to theme propagation doesn't
+// silently regress them. See `app.rs` file header for the full
+// root-cause analysis.
 
 use dioxus::desktop::tao::dpi::{PhysicalPosition, Position};
 use dioxus::desktop::window;
 use dioxus::prelude::*;
+use std::rc::Rc;
 use std::sync::Arc;
 use tokio::sync::watch;
 
@@ -82,7 +93,7 @@ impl PartialEq for OuterAppProps {
 /// Dioxus 0.8 entry point: `fn(InnerAppProps) -> Element` (called by
 /// `VirtualDom::new_with_props(...)` from `room_app_root`'s use_effect).
 pub fn inner_app_root(props: InnerAppProps) -> Element {
-    let locale = LocalePack::load(super::i18n::DEFAULT_LOCALE);
+    let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
     let offset_x = props.offset_x;
     let rx_arc = props.rx.clone();
     let mut theme_dark = use_signal(|| true);
@@ -227,7 +238,7 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
 /// (LL432..L457) — a single station with 子体路由 / 目标拆解 /
 /// 文件差异审查 / 终端井 sections.
 pub fn outer_app_root(props: OuterAppProps) -> Element {
-    let locale = LocalePack::load(super::i18n::DEFAULT_LOCALE);
+    let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
     let rx_arc = props.rx.clone();
     let mut theme_dark = use_signal(|| true);
 
