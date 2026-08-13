@@ -34,13 +34,32 @@ impl LocalePack {
     /// shared locales directory. Keys already exist for the consult-room
     /// shell (`dioxus-room-*`); this function parses just those keys
     /// out of the file so we don't depend on a full fluent parser.
+    ///
+    /// R3' resilience: corrupt locale files (GBK mojibake, \r\r\n line
+    /// endings) produce empty key maps rather than panicking. A warning
+    /// is emitted so the corruption is visible in logs without blocking
+    /// the Dioxus shell from launching.
     pub fn load(locale: &str) -> Self {
         let mut pack = LocalePack {
             by_key: HashMap::new(),
             locale: locale.to_string(),
         };
-        if let Ok(text) = std::fs::read_to_string(locale_path(locale)) {
-            parse_flat_keys(&text, &mut pack.by_key);
+        match std::fs::read_to_string(locale_path(locale)) {
+            Ok(text) => {
+                parse_flat_keys(&text, &mut pack.by_key);
+                let path = locale_path(locale);
+                tracing::info!(
+                    "ui_dioxus/i18n: loaded locale {locale} from {} ({} keys)",
+                    path.display(),
+                    pack.by_key.len()
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "ui_dioxus/i18n: failed to read locale file for {locale}: {e}; \
+                     falling back to empty key map (strings will show key names)"
+                );
+            }
         }
         pack
     }
@@ -65,12 +84,23 @@ impl LocalePack {
 }
 
 /// Locate the locale file inside the workspace's assembly core.
+///
+/// `CARGO_MANIFEST_DIR` is the desktop crate root (`<repo>/src/apps/desktop`).
+/// The shared locale directory lives at `<repo>/src/crates/assembly/core/locales/`
+/// (same prefix `src/`) - two `..` segments up from the manifest dir land on
+/// `<repo>/src/`, then we descend into `crates/assembly/core/locales/`.
+///
+/// R3' Bug A fix (2026-08-13): earlier this function used *three* `..`
+/// segments, which resolved to `<repo>/crates/assembly/core/locales/` -
+/// a directory that does not exist (the actual path is under `src/`).
+/// The bug silently turned every `LocalePack::load` into an `Err`, the
+/// fallback swallowed it, and the consult-room shell rendered its
+/// fluent strings as raw key names. Dropping the extra `..` resolves
+/// the path to the real locale directory.
 fn locale_path(locale: &str) -> std::path::PathBuf {
-    // CARGO_MANIFEST_DIR is the desktop crate root.
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     manifest
-        .join("..") // apps/
-        .join("..") // crates/
+        .join("..") // src/apps/
         .join("..") // src/
         .join("crates")
         .join("assembly")

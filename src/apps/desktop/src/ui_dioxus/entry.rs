@@ -30,7 +30,7 @@ use std::sync::Arc;
 use crate::flags::DIOXUS_SHELL;
 
 use super::app::room_app_root;
-use super::state::{Geometry, GeometryRxArc};
+use super::state::{Geometry, GeometryRxArc, GlobalTheme};
 
 /// Width of the room main window. Matches the truth HTML `#room` max-width
 /// (`min(780px, 100%)`) plus the chrome (`padding: 26px 48px`), so the
@@ -136,9 +136,16 @@ pub fn launch() -> anyhow::Result<()> {
     // (it's already Clone), the Receiver is wrapped in Arc so the
     // inner/outer VirtualDoms can clone the Arc without re-subscribing
     // to the channel.
+    //
+    // R3' panic fix (2026-08-13): `GlobalTheme` must be provided here too -
+    // `room_app_root` reads it via `use_context::<GlobalTheme>()`, and in
+    // dioxus 0.8-alpha.1 `use_context` panics ("Could not find context ...")
+    // when the type is missing. The boxed-`Any` panic surfaced as
+    // "Encountered panic: Any { .. }" in the room window.
     dioxus::LaunchBuilder::desktop()
         .with_context(geometry_tx)
         .with_context(geometry_rx_arc)
+        .with_context(GlobalTheme::new())
         .with_cfg(config)
         .launch(room_app_root);
 
