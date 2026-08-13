@@ -65,7 +65,7 @@
 
 ### Task B5 — relay 批（relay-core + relay-server）
 
-T1 Q-3（`validated.rs:177-182` 冗余 drive-letter guard + 误导注释，删或修）；T1 Q-4（`:162-171` 双 split 扫描合并）；T1 M-4（测试 `preserves_existing_dest_on_validation_failure` 名实不符，补齐用例或改名）；T2 M-2（handle_socket panic 不释放连接槽 → RAII guard 或 catch_unwind）；T2 M-3（handle_text_message return 风格统一）；T3 M-1（`is_genuine_traversal` 测试助手与 handler 逻辑漂移 → 加 handler 行号注释或 property 测试）；FR-3（补 1 个 `api_key=None` 全路由 e2e，闭合 §6 Gap 2）。
+T1 Q-3（`validated.rs:177-182` 冗余 drive-letter guard + 误导注释，删或修）；T1 Q-4（`:162-171` 双 split 扫描合并）；T1 M-4（测试 `preserves_existing_dest_on_validation_failure` 名实不符，补齐用例或改名）；T2 M-2（handle_socket panic 不释放连接槽 → **RAII guard**：局部 `ConnectionSlotGuard`，`try_acquire_connection` 返回 guard、`Drop` 释放，panic 也释放；不用 catch_unwind。**融入插件化方案 P0"可逆回收"思想的首个真实用例，写局部 guard、不抽通用 crate**）；T2 M-3（handle_text_message return 风格统一）；T3 M-1（`is_genuine_traversal` 测试助手与 handler 逻辑漂移 → 加 handler 行号注释或 property 测试）；FR-3（补 1 个 `api_key=None` 全路由 e2e，闭合 §6 Gap 2）。
 验证：`cargo test -p northhing-relay-core -p northhing-relay-server`
 
 ### Task B6 — services/assembly 批
@@ -75,7 +75,7 @@ T4 M-2（vault chmod 失败加 `tracing::warn!`）；T4 M-4（`clear_deletes_fil
 
 ### Task B7 — desktop/lsp 批
 
-T7 M-2（upsert_provider 未知类型分支恢复具体错误文案，三行修复走 validation_error 通道）；T8 M-1（Windows symlink 测试静默 skip → eprintln 或 `#[cfg(unix)]`+`#[ignore]`）；T8 M-5（invalid plugin id 日志不暴露原始目录名，改只输出校验错误）；T8 M-7（schedule_repo_release 测试 seam `schedule_repo_release_for_test`，观察 daemon 实际释放）。
+T7 M-2（upsert_provider 未知类型分支恢复具体错误文案，三行修复走 validation_error 通道）；T8 M-1（Windows symlink 测试静默 skip → eprintln 或 `#[cfg(unix)]`+`#[ignore]`）；T8 M-5（invalid plugin id 日志不暴露原始目录名，改只输出校验错误）；T8 M-7（schedule_repo_release 测试 seam `schedule_repo_release_for_test`，观察 daemon 实际释放）；**T8-NEW（LSP uninstall 事务化，2026-08-14 融入插件化方案 P1）**：`uninstall_plugin` 三步（unregister → stop_server → 删文件）收进 guard 化 helper，中途失败逆序回滚，根治 FU-2 同类半卸载态；`PluginRegistry.register` 顺带返回幂等 guard。
 验证：`cargo test -p northhing --lib settings` + `cargo test -p northhing-core --features product-full --lib lsp`
 
 ## 4. Wave 3 — 决策/设计项（不自动派单，需用户拍板）
