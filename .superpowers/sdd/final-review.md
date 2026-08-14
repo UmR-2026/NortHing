@@ -178,15 +178,15 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | First-write no .bak (design correct) | A | No previous version to back up on first write. Design correct. |
-| M-2 | set_permissions failure silently swallowed | D | Pre-existing; brief requires keeping. Consider `tracing::warn!` on chmod failure for ops visibility. |
+| M-2 | set_permissions failure silently swallowed | D | **resolved (Wave 2 B6)**: `tracing::warn!` added on chmod failure for ops visibility (SSH + MCP OAuth vaults). |
 | M-3 | Report Cargo.lock attribution misread | A | Documentation error in report, not in code. Already clarified in review. |
-| M-4 | vault filter naming causes 2 tests missed by filter | D | `clear_deletes_file...` and `store_is_atomic...` lack "vault" substring. CI should use `--lib` or rename tests. |
+| M-4 | vault filter naming causes 2 tests missed by filter | D | **resolved (Wave 2 B6)**: renamed tests to `vault_*` so the `vault` filter catches all four (SSH + MCP OAuth vaults). |
 
 ### Task 5
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | Poison lock recovery no warn log | D | `poisoned.into_inner()` silently recovers. Add `warn!("Bot persistence write lock poisoned, recovering")`. Current `f` can't panic, so risk is low. |
+| M-1 | Poison lock recovery no warn log | D | **resolved (Wave 2 B6)**: added `warn!("Bot persistence write lock poisoned, recovering")`. |
 | M-2 | Concurrent test limited on single-core | A | Test validates correctness (serialization equivalence). Perf validation belongs in CI. |
 | M-3 | NoHomeDirectory no recovery guidance | A | Pre-existing behavior. Not introduced by this branch. |
 | M-4 | tmp write failure leaves orphan .bak | A | .bak retains old content (correct). Main file unchanged (correct). Best-effort cleanup is sufficient. |
@@ -204,20 +204,20 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | save_app_settings public wrapper dead code warning | D | `cargo check -p northhing` emits `warning: function save_app_settings is never used`. Recommend deleting the wrapper (option A, consistent with H-5/H-6 deleting old save APIs). Trivial. |
-| M-2 | upsert_provider unknown-type branch UI text regression | D | Unreachable branch (validate_provider_input guards it), but error text regressed from specific to generic. Three-line fix to restore original text via validation_error channel. |
+| M-2 | upsert_provider unknown-type branch UI text regression | D | **resolved (Wave 2 B7)**: restored the specific message (`不支持的服务类型: {ptype}`) via the validation_error channel. |
 | M-3 | dedup migration save path unlocked in public load path | D | Residual race: `load_app_settings()` (read-only) triggers dedup write without lock. Window is narrow (dedup only fires on duplicate providers). Recommend extracting dedup from load path into `update_app_settings` explicitly. |
 
 ### Task 8
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | Windows symlink test silently skips | D | `return;` on symlink_dir failure swallows the skip. Change to `eprintln!` or `#[cfg(unix)]` + `#[ignore]` on Windows. Test fidelity. |
+| M-1 | Windows symlink test silently skips | D | **resolved (Wave 2 B7)**: `eprintln!` reports the skip instead of silently returning. |
 | M-2 | get_plugin_dir API adaptation list minor doc omission | A | Documentation only. No code impact. |
 | M-3 | get_server_path consistency suggestion | A | Pure readability. Current design is valid. |
 | M-4 | plugin_dir.exists() TOCTOU (concurrent dual install) | D | Pre-existing. Two concurrent installs of same ID both pass exists(), both stage, one rename wins. Consider `create_dir(plugin_dir, exclusive)` to make install atomic. Track for follow-up. |
-| M-5 | Logging exposes raw string not validated repr | D | `warn!("Skipping plugin with invalid id {:?}: {}", plugin_id, e)` exposes raw dir name. Change to `warn!("Skipping plugin with invalid id: {}", e)` to avoid logging suspicious input. |
+| M-5 | Logging exposes raw string not validated repr | D | **resolved (Wave 2 B7)**: log now prints only the validation error, not the raw dir name. |
 | M-6 | cargo fmt observation | A | No action needed. |
-| M-7 | schedule_repo_release test evidence strength | D | Test only asserts `await` compiles, doesn't observe daemon release. Need inner test seam (`schedule_repo_release_for_test`). Track for follow-up. |
+| M-7 | schedule_repo_release test evidence strength | D | **resolved (Wave 2 B7)**: added `schedule_repo_release_for_test` seam in services-integrations that observes the idle-session release directly. |
 | M-8 | LspManager::uninstall_plugin calls stop_server(language=plugin_id?) -- pre-existing path unmapping bug | D | **Pre-existing functional bug**: uninstall passes plugin_id to stop_server which expects language key. LSP process not actually stopped on uninstall. Not introduced by this branch (M-9 only adds validation). Recommend follow-up task. |
 
 ### Summary counts
@@ -339,9 +339,9 @@ None.
 
 ### Minor (branch-level observations, not per-task)
 
-**FR-1 (Minor, consistency)**: The three atomic write implementations diverge in two features: explicit flush (only settings has it) and PermissionDenied fallback (only json_store has it). Consider backporting the explicit flush pattern from settings to bot persistence for consistency. Not blocking.
+**FR-1 (Minor, consistency)**: The three atomic write implementations diverge in two features: explicit flush (only settings has it) and PermissionDenied fallback (only json_store has it). Consider backporting the explicit flush pattern from settings to bot persistence for consistency. Not blocking. → **resolved (Wave 2 B6)**: bot persistence now writes via `File::create` + `write_all` + `flush` + drop-before-rename, matching the settings pattern.
 
-**FR-2 (Minor, consistency)**: `esm_deps.json` in `load_source_from_dirs` uses `.exists()` pre-check while `read_optional_source_file` uses `ErrorKind::NotFound` match. Pattern inconsistency, not a security issue (fail direction is safe). Consider unifying in a follow-up.
+**FR-2 (Minor, consistency)**: `esm_deps.json` in `load_source_from_dirs` uses `.exists()` pre-check while `read_optional_source_file` uses `ErrorKind::NotFound` match. Pattern inconsistency, not a security issue (fail direction is safe). Consider unifying in a follow-up. → **resolved (Wave 2 B6)**: `load_source_from_dirs` now matches on `ErrorKind::NotFound`, unifying with `read_optional_source_file`.
 
 **FR-3 (Minor, verification)**: No e2e test covers the embedded relay path (`api_key=None`). Unit tests cover the auth logic. Acceptable for merge; track for CI enhancement.
 

@@ -67,7 +67,10 @@ impl LspManager {
     /// Registers a plugin (internal).
     async fn register_plugin_internal(&self, plugin: LspPlugin) -> Result<()> {
         let mut registry = self.registry.write().await;
-        registry.register(plugin)?;
+        // The guard is intentionally dropped: registration is owned by the
+        // registry for the plugin's lifetime, and removal happens through
+        // `uninstall_plugin` rather than guard scoping.
+        let _guard = registry.register(plugin)?;
         Ok(())
     }
 
@@ -81,7 +84,7 @@ impl LspManager {
 
         {
             let mut registry = self.registry.write().await;
-            registry.register(plugin)?;
+            let _guard = registry.register(plugin)?;
         }
 
         info!("Plugin installed and registered: {}", plugin_id);
@@ -90,39 +93,66 @@ impl LspManager {
     }
 
     /// Uninstalls a plugin.
+    ///
+    /// The three steps — unregister, stop servers, delete files — run as a
+    /// transaction: if any step after unregistering fails, the registration is
+    /// rolled back so no half-uninstall state survives. A deleted registry
+    /// entry with files still on disk would otherwise be re-discovered and
+    /// re-registered on the next `initialize`, silently resurrecting the
+    /// plugin.
     pub async fn uninstall_plugin(&self, plugin_id: &str) -> Result<()> {
         info!("Uninstalling plugin: {}", plugin_id);
 
         let validated_id = ValidatedPluginId::try_from(plugin_id)
             .map_err(|e| anyhow!("Invalid plugin id: {}", e))?;
 
-        // Resolve the plugin's language keys before unregistering: `stop_server`
+        // Capture the plugin (and its language keys) before unregistering so a
+        // later failure can roll the registration back exactly. `stop_server`
         // expects language keys, and the registry can no longer resolve them
         // once the plugin is removed.
-        let languages = {
+        let plugin = {
             let registry = self.registry.read().await;
-            registry
-                .get_plugin(plugin_id)
-                .map(|plugin| plugin.languages.clone())
-                .unwrap_or_default()
+            registry.get_plugin(plugin_id).cloned()
+        };
+        let Some(plugin) = plugin else {
+            return Err(anyhow!("Plugin not found: {}", plugin_id));
         };
 
+        // Step 1: unregister (reversible — see rollback below).
         {
             let mut registry = self.registry.write().await;
             registry.unregister(plugin_id)?;
         }
 
-        for language in &languages {
+        // Step 2: stop servers. On failure, re-register (rollback step 1).
+        for language in &plugin.languages {
             if let Err(e) = self.stop_server(language).await {
                 warn!("Failed to stop server for language {}: {}", language, e);
+                self.rollback_registration(&plugin).await;
+                return Err(anyhow!("Failed to stop server for language {}: {}", language, e));
             }
         }
 
-        self.plugin_loader.uninstall_plugin(&validated_id).await?;
+        // Step 3: delete files. On failure, re-register (rollback step 1).
+        if let Err(e) = self.plugin_loader.uninstall_plugin(&validated_id).await {
+            warn!("Failed to delete plugin files: {}", e);
+            self.rollback_registration(&plugin).await;
+            return Err(e);
+        }
 
         info!("Plugin uninstalled: {}", plugin_id);
 
         Ok(())
+    }
+
+    /// Re-registers a plugin after a failed uninstall step, restoring the
+    /// state that existed before unregistering. Best-effort: a failure here is
+    /// logged, but the original error is still returned to the caller.
+    async fn rollback_registration(&self, plugin: &LspPlugin) {
+        let mut registry = self.registry.write().await;
+        if let Err(e) = registry.register(plugin.clone()) {
+            error!("Failed to roll back unregistration of {}: {}", plugin.id, e);
+        }
     }
 
     /// Starts an LSP server.
@@ -783,6 +813,24 @@ mod tests {
         assert!(
             manager.is_server_running("other-lang").await,
             "unrelated server must not be stopped"
+        );
+    }
+
+    #[tokio::test]
+    async fn uninstall_file_delete_failure_rolls_back_registration() {
+        let (_tmp, manager) = harness();
+        let plugin = test_plugin("ghost-plugin", &["ghost-lang"]);
+        manager.register_plugin_internal(plugin.clone()).await.expect("register");
+
+        // No files on disk (no `fake_installed_plugin`): step 3 (delete files)
+        // fails, so the uninstall transaction must roll back the unregistration
+        // instead of leaving a half-uninstall state.
+        let result = manager.uninstall_plugin("ghost-plugin").await;
+        assert!(result.is_err(), "uninstall must fail when files cannot be deleted");
+
+        assert!(
+            manager.get_plugin("ghost-plugin").await.is_some(),
+            "registration must be rolled back when file deletion fails"
         );
     }
 }

@@ -52,6 +52,24 @@
 
 ---
 
+# Wave 2 Ledger (2026-08-14, 双 session 并行)
+
+计划：`.superpowers/sdd/plan-2026-08-04-backend-followups.md` §3（B5 relay / B6 services / B7 desktop-lsp）。
+分块：Session A = B5（worktree `wave2-relay`，分支 `fix/wave2-relay`）；Session B = B6→B7（worktree `wave2-services`，分支 `fix/wave2-services`）。共同禁区：growth 线产物 / `northing/memory/`+`.graph/` / `frontend-redesign-*`。
+
+## Session B（B6 + B7，编排者本体直做，未派子代理——用户 2026-08-14 指令"你自己做就行"）
+
+- Task B6+B7: complete (commit `5c69651`, 编排者本体实现 + 自验) — 11 文件 +250/-50。
+  - **B6 services/assembly**：T4 M-2（SSH + MCP OAuth vault 的 `set_permissions(0o600)` 失败加 `tracing::warn!`）；T4 M-4（4 个 vault 测试名补 `vault` 前缀，`vault` filter 全捕获）；T5 M-1（bot persistence poison lock 恢复加 `warn!`）；FR-2（`load_source_from_dirs` 的 esm_deps.json 从 `.exists()` 预检改 `ErrorKind::NotFound` match，与 `read_optional_source_file` 统一）；FR-1（bot persistence 原子写补显式 flush：`File::create` + `write_all` + `flush` + drop-before-rename，对齐 settings 模式）。
+  - **B7 desktop/lsp**：T7 M-2（upsert_provider 未知类型分支恢复具体文案 `不支持的服务类型: {ptype}`，走 validation_error 通道）；T8 M-1（Windows symlink 测试静默 `return` 改 `eprintln!` 报告 skip）；T8 M-5（invalid plugin id 日志只输出校验错误，不再 `{:?}` 暴露原始目录名）；T8 M-7（services-integrations 加 `#[cfg(test)] schedule_repo_release_for_test` seam + `RepoSession::new_for_test` 构造器，测试观察 idle session 实际释放）；**T8-NEW**（LSP `uninstall_plugin` 三步事务化：先 clone plugin → unregister → 逐 language stop_server → 删文件；步骤 2/3 失败则 `rollback_registration` 逆序回滚 re-register，根治 FU-2 同类半卸载态——删文件失败后 registry 恢复、plugin 不被下次 initialize 复活；`PluginRegistry.register` 返回 `PluginRegistrationGuard`（幂等 undo：`unregister_if_present` 不报错），新增 `remove_plugin_mappings` 抽取）。新增测试：`uninstall_file_delete_failure_rolls_back_registration` + `schedule_repo_release_for_test_releases_idle_session`。
+  - **T8 M-4 范围裁定（退回 Wave 3）**：plugin_dir 并发安装 TOCTOU（`create_dir` exclusive）涉安装语义，B7 任务清单未列，编排者判定语义风险退回计划 §4 决策清单，不随 B7。
+  - 台账翻转：`final-review.md` §5/§8 的 T4 M-2/M-4、T5 M-1、T7 M-2、T8 M-1/M-5/M-7、FR-1、FR-2 九项标记 resolved（同 commit，家规 2）。
+  - **验证（编排者实跑，GNU toolchain）**：`cargo test -p northhing-services-integrations --features product-full` **216/216**；`cargo test -p northhing-core --features product-full --lib remote_connect` **62/62**；`cargo test -p northhing-core --features product-full --lib lsp` **15/15**（含新 uninstall 回滚测试）；`cargo test -p northhing --lib` **118/118**（含 settings 79）；家规 6 `cargo check -p northhing` 通过。
+  - **环境陷阱（本机，已固化到验证命令）**：① gcc 16.1.0 + binutils 2.46.1 在 `TEMP=C:\WINDOWS\TEMP` 下触发 `ld.exe: cannot find @C:\WINDOWS\TEMP\ccXXX: Invalid argument`（response file 读取失败，build script 链接必崩）——改 `TEMP=C:\Users\UmR\AppData\Local\Temp` 即愈（该目录可写可删、不在 git 内、大小写与 canonicalize 一致，同时避免 file_transfer 的路径大小写断言失败与 git `branch --show-current` 误判父仓库）；② 新 worktree 缺 `generated_locale_contract.rs`（handoff §7 已知）→ `node scripts/generate-i18n-contract.mjs` 生成，但该脚本会改写 `relay-server/static/homepage/i18n.shared.json`（Session A 禁区），已 `git checkout --` 还原；③ `git branch --show-current` 在 worktree 内临时目录会返回父仓库分支名，故测试临时目录必须落在 git 仓库外。
+
+---
+
+
 # Growth Core Ledger (2026-08-04)
 
 计划：`.superpowers/sdd/plan-2026-08-04-growth-core.md`（17 任务：G1 T1-T7 / G2 T8-T13 / G3 T14-T17）

@@ -116,14 +116,17 @@ impl super::storage::MiniAppStorage {
         let ui_js = read_optional_source_file(&sd, UI_JS).await?;
         let worker_js = read_optional_source_file(&sd, WORKER_JS).await?;
 
-        let esm_dependencies = if sd.join(ESM_DEPS_JSON).exists() {
-            let c = tokio::fs::read_to_string(sd.join(ESM_DEPS_JSON))
-                .await
-                .map_err(|e| MiniAppStorageError::io(format!("Failed to read esm_dependencies.json: {}", e)))?;
-            serde_json::from_str(&c)
-                .map_err(|e| MiniAppStorageError::parse(format!("Invalid esm_dependencies.json: {}", e)))?
-        } else {
-            Vec::new()
+        // Match on `ErrorKind::NotFound` (not an `.exists()` pre-check) so a
+        // file deleted between check and read is treated as the legal empty
+        // state, mirroring `read_optional_source_file`.
+        let esm_dependencies_path = sd.join(ESM_DEPS_JSON);
+        let esm_dependencies = match tokio::fs::read_to_string(&esm_dependencies_path).await {
+            Ok(c) => serde_json::from_str(&c)
+                .map_err(|e| MiniAppStorageError::parse(format!("Invalid esm_dependencies.json: {}", e)))?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+            Err(e) => {
+                return Err(MiniAppStorageError::io(format!("Failed to read esm_dependencies.json: {}", e)));
+            }
         };
 
         let npm_dependencies = self
