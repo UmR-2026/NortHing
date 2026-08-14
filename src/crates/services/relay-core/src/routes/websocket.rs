@@ -18,7 +18,9 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
-use crate::relay::room::{ConnId, CreateRoomOutcome, OutboundMessage, ResponsePayload, RoomManager};
+use crate::relay::room::{
+    ConnId, ConnectionSlotGuard, CreateRoomOutcome, OutboundMessage, ResponsePayload, RoomManager,
+};
 use crate::routes::api::{AppState, AuthExtractor};
 
 /// Per-message/frame/write-buffer cap. Audit H-2: the previous 64 MiB bound
@@ -100,24 +102,24 @@ pub async fn websocket_handler(ws: WebSocketUpgrade, State(state): State<AppStat
         return StatusCode::UNAUTHORIZED.into_response();
     }
 
-    // H-2: global connection cap. Admit atomically; the slot is released
-    // on teardown (`handle_socket`) or on upgrade failure.
-    if !state.room_manager.try_acquire_connection() {
-        warn!("Rejected WebSocket upgrade: connection limit reached");
-        return StatusCode::SERVICE_UNAVAILABLE.into_response();
-    }
-    let manager = state.room_manager.clone();
+    // H-2: global connection cap. Admit atomically via RAII guard.
+    // The slot is released automatically when `ConnectionSlotGuard` is dropped,
+    // whether on upgrade failure or at the end of `handle_socket` (including panic).
+    let slot_guard = match state.room_manager.try_acquire_connection() {
+        Some(guard) => guard,
+        None => {
+            warn!("Rejected WebSocket upgrade: connection limit reached");
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
+    };
 
     ws.max_message_size(MAX_WS_FRAME_SIZE)
         .max_frame_size(MAX_WS_FRAME_SIZE)
         .max_write_buffer_size(MAX_WS_FRAME_SIZE)
-        .on_failed_upgrade(move |_| {
-            manager.release_connection();
-        })
-        .on_upgrade(move |socket| handle_socket(socket, state))
+        .on_upgrade(move |socket| handle_socket(socket, state, slot_guard))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState) {
+async fn handle_socket(socket: WebSocket, state: AppState, _slot_guard: ConnectionSlotGuard) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (out_tx, mut out_rx) = mpsc::channel::<OutboundMessage>(OUTBOUND_QUEUE_CAPACITY);
 
@@ -165,7 +167,6 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     }
 
     state.room_manager.on_disconnect(conn_id);
-    state.room_manager.release_connection();
     drop(out_tx);
     // The write task may be stuck flushing frames to a stalled peer; abort
     // it so the connection slot is released promptly instead of awaiting a

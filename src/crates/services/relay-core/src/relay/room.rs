@@ -14,6 +14,7 @@
 
 use chrono::Utc;
 use dashmap::DashMap;
+use std::fmt;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{info, warn};
@@ -106,6 +107,29 @@ pub enum CreateRoomOutcome {
     Conflict,
 }
 
+/// An RAII guard representing an admitted WebSocket connection slot.
+///
+/// Automatically calls [`RoomManager::release_connection`] when dropped,
+/// ensuring connection slots are promptly and reliably reclaimed even on
+/// task panic, early abort, or upgrade failure.
+pub struct ConnectionSlotGuard {
+    room_manager: Arc<RoomManager>,
+}
+
+impl fmt::Debug for ConnectionSlotGuard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ConnectionSlotGuard")
+            .field("active_connections", &self.room_manager.active_connection_count())
+            .finish()
+    }
+}
+
+impl Drop for ConnectionSlotGuard {
+    fn drop(&mut self) {
+        self.room_manager.release_connection();
+    }
+}
+
 pub struct RoomManager {
     rooms: DashMap<String, RelayRoom>,
     conn_to_room: DashMap<ConnId, String>,
@@ -131,18 +155,20 @@ impl RoomManager {
     }
 
     /// Try to admit a new WebSocket connection, enforcing [`MAX_CONNECTIONS`].
-    /// The caller must pair a success with exactly one
-    /// [`RoomManager::release_connection`] on teardown.
-    pub fn try_acquire_connection(&self) -> bool {
+    /// On success, returns an RAII [`ConnectionSlotGuard`] which automatically
+    /// decrements the active connection count on [`Drop`].
+    pub fn try_acquire_connection(self: &Arc<Self>) -> Option<ConnectionSlotGuard> {
         let previous = self
             .active_connections
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         if previous >= MAX_CONNECTIONS {
             self.active_connections
                 .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-            false
+            None
         } else {
-            true
+            Some(ConnectionSlotGuard {
+                room_manager: Arc::clone(self),
+            })
         }
     }
 
@@ -607,19 +633,20 @@ mod tests {
 
     // ── Connection limit (H-2) ─────────────────────────────────────────
 
-    /// The admit/release counter tracks exactly the admitted connections.
+    /// The admit/release counter tracks exactly the admitted connections
+    /// and drops automatically reclaim connection slots.
     #[test]
     fn connection_slot_counter_increments_and_decrements() {
         let manager = RoomManager::new();
         assert_eq!(manager.active_connection_count(), 0);
 
-        assert!(manager.try_acquire_connection());
-        assert!(manager.try_acquire_connection());
+        let g1 = manager.try_acquire_connection().expect("first slot");
+        let g2 = manager.try_acquire_connection().expect("second slot");
         assert_eq!(manager.active_connection_count(), 2);
 
-        manager.release_connection();
+        drop(g1);
         assert_eq!(manager.active_connection_count(), 1);
-        manager.release_connection();
+        drop(g2);
         assert_eq!(manager.active_connection_count(), 0);
     }
 
@@ -628,14 +655,32 @@ mod tests {
     #[test]
     fn connection_limit_rejects_admits_at_capacity() {
         let manager = RoomManager::new();
+        let mut guards = Vec::with_capacity(MAX_CONNECTIONS);
         for _ in 0..MAX_CONNECTIONS {
-            assert!(manager.try_acquire_connection());
+            guards.push(manager.try_acquire_connection().expect("should admit"));
         }
-        assert!(!manager.try_acquire_connection(), "over-capacity admit must fail");
+        assert!(manager.try_acquire_connection().is_none(), "over-capacity admit must fail");
         assert_eq!(manager.active_connection_count(), MAX_CONNECTIONS);
 
-        manager.release_connection();
-        assert!(manager.try_acquire_connection());
+        drop(guards.pop());
+        let _g = manager.try_acquire_connection().expect("slot freed");
         assert_eq!(manager.active_connection_count(), MAX_CONNECTIONS);
+    }
+
+    /// Panic in a thread holding a ConnectionSlotGuard releases the slot.
+    #[test]
+    fn connection_slot_guard_releases_on_panic() {
+        let manager = RoomManager::new();
+        assert_eq!(manager.active_connection_count(), 0);
+
+        let mgr_clone = manager.clone();
+        let handle = std::thread::spawn(move || {
+            let _guard = mgr_clone.try_acquire_connection().expect("acquire slot");
+            assert_eq!(mgr_clone.active_connection_count(), 1);
+            panic!("intentional panic for RAII drop test");
+        });
+
+        assert!(handle.join().is_err(), "thread panicked as expected");
+        assert_eq!(manager.active_connection_count(), 0, "slot must be released after panic");
     }
 }

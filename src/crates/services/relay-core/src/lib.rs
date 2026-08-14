@@ -8,7 +8,7 @@ pub mod relay;
 pub mod routes;
 pub mod validated;
 
-pub use relay::room::{CreateRoomOutcome, ResponsePayload, RoomManager};
+pub use relay::room::{ConnectionSlotGuard, CreateRoomOutcome, ResponsePayload, RoomManager};
 pub use routes::api::AppState;
 pub use routes::websocket::OutboundProtocol;
 pub use validated::{ContentHash, ValidatedRelPath, ValidatedRoomId};
