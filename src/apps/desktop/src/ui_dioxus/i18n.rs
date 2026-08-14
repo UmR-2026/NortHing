@@ -171,14 +171,23 @@ pub mod keys {
     pub const APPROVAL_STATE: &str = "dioxus-room-approval-state";
 
     // ===== Deck / input =====
+    // R6 (2026-08-14 用户判决): DECK_ATTACH/DECK_WITNESS_NOTE 用法已
+    // 从 app.rs 移除（挂载→图标钮、见证说明删除）；key 保留为词表
+    // 资产，locale 词条不动，i18n:audit 基线不受影响。
+    #[allow(dead_code)]
     pub const DECK_ATTACH: &str = "dioxus-room-deck-attach";
     pub const DECK_PLACEHOLDER: &str = "dioxus-room-deck-placeholder";
+    #[allow(dead_code)]
     pub const DECK_WITNESS_NOTE: &str = "dioxus-room-deck-witness-note";
     pub const DECK_SEND: &str = "dioxus-room-deck-send";
     pub const DECK_SEND_STREAMING: &str = "dioxus-room-deck-send-streaming";
 
     // ===== Vertical label (room-handle vlabel) =====
+    // R6.2: 竖签元素已从 app.rs 移除（用户判决「字变得多余」）；
+    // key 保留为词表资产。
+    #[allow(dead_code)]
     pub const VLABEL_INNER: &str = "dioxus-room-vlabel-inner";
+    #[allow(dead_code)]
     pub const VLABEL_OUTER: &str = "dioxus-room-vlabel-outer";
 
     // ===== Inner / outer station heads =====

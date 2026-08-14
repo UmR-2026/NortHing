@@ -310,7 +310,7 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
             // alpha there's no `html` / `doctype` element exported so
             // we mount the body directly. We inject the truth CSS via
             // a `<style>` block so the visual layout matches the HTML.
-            style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            style { dangerous_inner_html: "{css::truth_css()}" }
             // R3' A+B+C (C): 转写层覆盖样式收口（宽度/横溢），TRUTH_CSS
             // 逐字节锁死，覆盖规则只能走这个第二 style 块。
             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
@@ -532,7 +532,7 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
         body {
             "data-theme": "{class}",
             "data-window": "outer",
-            style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            style { dangerous_inner_html: "{css::truth_css()}" }
             // R3' A+B+C (C): 转写层覆盖样式收口（宽度/横溢），TRUTH_CSS
             // 逐字节锁死，覆盖规则只能走这个第二 style 块。
             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }

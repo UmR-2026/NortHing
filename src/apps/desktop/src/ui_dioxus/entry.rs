@@ -167,15 +167,32 @@ pub fn launch() -> anyhow::Result<()> {
             ROOM_WINDOW_INITIAL_X,
             ROOM_WINDOW_INITIAL_Y,
         ))
-        // Brief §3.2 / §4.1 - main window stays on the taskbar (only
-        // inner/outer are skip_taskbar), decorations kept on so the
-        // window-chrome is rendered by the OS. The Slint shell also keeps
-        // decorations; matching the behavior avoids visible regressions.
-        .with_decorations(true);
+        // R4 W1 (2026-08-14): frameless per user ruling (handoff-20260814
+        // §4, D = 方案一) — the old "Slint shell keeps decorations" matching
+        // rationale is revoked. OS chrome is replaced by the self-drawn
+        // room-controls (app.rs ─□✕ wired to real window ops). tao 0.16.2
+        // gives 8-way border resize for free once MARKER_DECORATIONS is
+        // gone (platform_impl WM_NCHITTEST → hit_test); the native drop
+        // shadow is kept via `with_undecorated_shadow` so the floating
+        // window still reads as a window.
+        .with_decorations(false);
+
+    #[cfg(target_os = "windows")]
+    let room_window = {
+        use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
+        room_window.with_undecorated_shadow(true)
+    };
 
     let config = Config::default()
         .with_window(room_window)
         .with_data_directory(data_directory)
+        // R4 W1: kill the dioxus default menu bar (Window/Edit/Help).
+        // Root cause: `MenuBuilderState::Unset` resolves to
+        // `Some(default_menu_bar())` (config.rs) — dioxus-desktop ships a
+        // muda menu on the main window unless told otherwise. inner/outer
+        // never showed it because frameless windows get it swapped out;
+        // explicit None pins the intent regardless of that swap path.
+        .with_menu(None)
         // r3p4 root-fix (2026-08-14): event-driven geometry publishing.
         //
         // The previous design polled the room window's position from a

@@ -257,7 +257,7 @@ pub fn room_app_root() -> Element {
             // we mount the body directly. We inject the truth CSS via
             // a `<style>` block as the body's first child so the
             // visual layout matches the HTML.
-            style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            style { dangerous_inner_html: "{css::truth_css()}" }
             // R3' A+B+C: 转写层覆盖样式（scrim 压暗层等）——TRUTH_CSS
             // 逐字节锁死，覆盖规则只能走这个第二 style 块。
             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
@@ -271,12 +271,12 @@ pub fn room_app_root() -> Element {
             div { class: "membrane-frame" }
             div { id: "global-aura" }
 
-            // R3' A+B+C (D): scrim 压暗层——inner/outer 任一可见时自绘
-            // （block-contract §2 规则 4 降级形态，22% 压暗，随 data-theme
-            // 变色）。pointer-events:none 由 OVERLAY_CSS 保证，宝石可穿透。
-            if visibility().inner_visible || visibility().outer_visible {
-                div { id: "room-scrim" }
-            }
+            // R8 (2026-08-14 用户判决): scrim 退役。真值里它是侧栏
+            // 浮于 room 之上时的压暗层（block-contract §2 规则 4 降级
+            // 形态）；三窗独立后 room 不再被遮挡，scrim 常开只会让
+            // 主框永久变暗 22%，与两侧栏色温拉开（用户实测判决
+            // 「主框与两个模块的颜色差别非常大」）。元素移除，
+            // #room-scrim CSS 规则同步退役（css.rs R8 注记）。
 
             // Room - the central column. The inner / outer windows
             // are no longer siblings in the DOM tree; they're
@@ -290,42 +290,17 @@ pub fn room_app_root() -> Element {
                         // visibility toggles.
                         span { class: "membrane l" }
                         span { class: "membrane r" }
-                        // Vertical label - appears only when the
-                        // corresponding window is hidden
-                        // (block-contract §3.1 "竖签仅隐藏态出现";
-                        // three-window docked default = no vertical
-                        // label).
-                        if !visibility().inner_visible {
-                            div {
-                                class: "vlabel inner",
-                                style: "writing-mode: vertical-rl; letter-spacing: .35em; font-family: var(--font-mono); font-size: 10px; opacity: .55;",
-                                "{locale.t(keys::VLABEL_INNER)}"
-                            }
-                        }
-                        if !visibility().outer_visible {
-                            div {
-                                class: "vlabel outer",
-                                style: "writing-mode: vertical-rl; letter-spacing: .35em; font-family: var(--font-mono); font-size: 10px; opacity: .55;",
-                                "{locale.t(keys::VLABEL_OUTER)}"
-                            }
-                        }
+                        // R6.2 (2026-08-14 用户判决): 竖签「它的内在」
+                        // 「身外之物」移除——隐藏态只留宝石光斑，不再
+                        // 落文字（vlabel 元素删除，i18n key 保留未用）。
                         div { class: "room-fog" }
 
-                        // Window controls (truth HTML LL334..L340) -
-                        // brief §3.1 F8: main window gets the full
-                        // four-button set. F5: head-fold button now
-                        // toggles the local `folded` signal (capsule
-                        // state + ▴/▾ glyph, truth HTML L536..L539).
+                        // Window controls (truth HTML LL334..L340).
+                        // R7.1 (用户判决): ▴ 收纳钮从此排移除——它控制
+                        // 头块而非窗口，混在窗控里语义错位且小点形态
+                        // 视觉太不明显；新形态见 room-head 内的骑缝
+                        // 边缘条（.head-seam-fold）。
                         div { class: "room-controls",
-                            button {
-                                class: "rc-btn head-fold",
-                                "aria-label": "收纳中枢",
-                                title: "收纳/展开中枢",
-                                onclick: move |_| {
-                                    head_folded.set(!head_folded());
-                                },
-                                if head_folded() { "▾" } else { "▴" }
-                            }
                             button {
                                 class: "rc-btn",
                                 id: "theme-toggle",
@@ -342,14 +317,72 @@ pub fn room_app_root() -> Element {
                                     theme_dark.set(next);
                                     theme.set_dark(next);
                                 },
-                                if theme_dark() { "☀" } else { "☾" }
+                                // R6.3: ☀/☾ 字形在字体回退链里落进
+                                // dingbat（实测渲染成齿轮/雪花），换
+                                // 内联 SVG；语义不变（暗态示日=点击
+                                // 转亮，亮态示月=点击转暗）。
+                                if theme_dark() {
+                                    svg {
+                                        view_box: "0 0 16 16",
+                                        width: "13", height: "13",
+                                        fill: "none", stroke: "currentColor",
+                                        stroke_width: "1.3", stroke_linecap: "round",
+                                        circle { cx: "8", cy: "8", r: "3" }
+                                        line { x1: "8", y1: "1.4", x2: "8", y2: "3.2" }
+                                        line { x1: "8", y1: "12.8", x2: "8", y2: "14.6" }
+                                        line { x1: "1.4", y1: "8", x2: "3.2", y2: "8" }
+                                        line { x1: "12.8", y1: "8", x2: "14.6", y2: "8" }
+                                        line { x1: "3.3", y1: "3.3", x2: "4.6", y2: "4.6" }
+                                        line { x1: "11.4", y1: "11.4", x2: "12.7", y2: "12.7" }
+                                        line { x1: "12.7", y1: "3.3", x2: "11.4", y2: "4.6" }
+                                        line { x1: "4.6", y1: "11.4", x2: "3.3", y2: "12.7" }
+                                    }
+                                } else {
+                                    svg {
+                                        view_box: "0 0 16 16",
+                                        width: "13", height: "13",
+                                        fill: "none", stroke: "currentColor",
+                                        stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
+                                        path { d: "M 13.2 9.4 A 5.6 5.6 0 1 1 6.6 2.8 A 4.5 4.5 0 0 0 13.2 9.4 Z" }
+                                    }
+                                }
                             }
-                            button { class: "rc-btn", "aria-label": "最小化", "─" }
-                            button { class: "rc-btn", "aria-label": "最大化", "□" }
+                            // R4 W1: frameless 真窗控（用户裁定 D=方案一，
+                            // handoff-20260814 §4）。DesktopContext Deref 到
+                            // tao Window：set_minimized 直接可用。
+                            button {
+                                class: "rc-btn",
+                                "aria-label": "最小化",
+                                title: "最小化",
+                                onclick: move |_| {
+                                    window().set_minimized(true);
+                                },
+                                "─"
+                            }
+                            button {
+                                class: "rc-btn",
+                                "aria-label": "最大化",
+                                title: "最大化",
+                                onclick: move |_| {
+                                    window().toggle_maximized();
+                                },
+                                "□"
+                            }
                             button {
                                 class: "rc-btn close",
                                 "aria-label": "关闭",
                                 title: "关闭",
+                                onclick: move |_| {
+                                    // R4 W1: 关闭 room = 退出整个 dioxus
+                                    // shell。dioxus 0.8a1 只在所有窗口关闭后
+                                    // 才退出（exit_on_last_window_close），
+                                    // 单关 room 会留下 inner/outer 孤儿窗；
+                                    // DesktopContext 无枚举/全局退出 API，
+                                    // process::exit 与 dioxus 自身路径
+                                    // (app.rs L601) 同形态。无持久化写入，
+                                    // follow 线程随进程消亡（r3p4 已披露）。
+                                    quit_shell();
+                                },
                                 "✕"
                             }
                         }
@@ -360,6 +393,11 @@ pub fn room_app_root() -> Element {
                         // and the state-dot. C4 ruling: brand lives
                         // here, NOT in a left-bottom seal.
                         div { class: "room-status",
+                            // R4 W1: frameless 拖动区（真值 L89
+                            // `-webkit-app-region: drag` 的转写）。
+                            onmousedown: move |_| {
+                                window().drag();
+                            },
                             span { class: "brand-inline",
                                 svg {
                                     view_box: "0 0 200 200",
@@ -404,7 +442,9 @@ pub fn room_app_root() -> Element {
                             }
                             span { "architect_sub 介入中" }
                             span { class: "sp" }
-                            span { class: "state-dot" }
+                            // R9 (用户判决): 呼吸点（state-dot）移除——
+                            // 视觉太突兀；8s 呼吸时钟移植到头像渐变
+                            // （css.rs R9.2 breath-avatar-fill/glow/ring）。
                         }
 
                         // Room-head - avatar (Fraunces italic 22px
@@ -416,17 +456,50 @@ pub fn room_app_root() -> Element {
                         div {
                             class: if head_folded() { "room-head folded" } else { "room-head" },
                             id: "room-head",
+                            // R4 W1: frameless 拖动区（真值 L93 的
+                            // `-webkit-app-region: drag` 在 wry 不生效，
+                            // dioxus 0.8a1 DesktopContext::drag 是支持路径，
+                            // 文档要求在 onmousedown 里调）。
+                            onmousedown: move |_| {
+                                window().drag();
+                            },
                             div { class: "agent-avatar", id: "avatar-core",
+                                // 真值 L114 no-drag：头像不发起窗口拖动。
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
                                 "{locale.t(keys::ROOM_HEAD_INITIAL)}"
                             }
                             div { class: "name-line", "{locale.t(keys::ROOM_HEAD_NAME)}" }
                             div {
                                 class: "chronicle-bar",
                                 id: "chronicle-bar",
-                                title: "它换代表色时：新色自右端进入，旧色慢慢沉向左（双击演示）"
+                                title: "它换代表色时：新色自右端进入，旧色慢慢沉向左（双击演示）",
+                                // 真值 L100 no-drag。
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
                             }
                             div { class: "state",
                                 "{locale.t(keys::ROOM_HEAD_STATE)}"
+                            }
+                            // R7.1 (用户判决): 骑缝边缘条收纳钮。
+                            // 骑 room-head 下缘虚线（被控对象的边界）；
+                            // 折叠态 room-head 收起为胶囊行但 border-bottom
+                            // 保留（真值 L110）→ 钮随缝上移仍在原位可
+                            // 展开。onmousedown stop_propagation 防触发
+                            // room-head 的窗口拖动。
+                            button {
+                                class: "head-seam-fold",
+                                "aria-label": if head_folded() { "展开中枢" } else { "收纳中枢" },
+                                title: if head_folded() { "展开中枢" } else { "收纳中枢" },
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
+                                onclick: move |_| {
+                                    head_folded.set(!head_folded());
+                                },
+                                span { class: if head_folded() { "seam-bar folded" } else { "seam-bar" } }
                             }
                         }
 
@@ -439,23 +512,25 @@ pub fn room_app_root() -> Element {
                             {render_entries(_entries.read().iter(), &locale)}
                         }
 
-                        // Room input - deck with witness note,
-                        // attach button, placeholder, send/stop.
-                        // Send/stop toggles its class (truth HTML
-                        // L597..L603, conversion-annotations §2
-                        // row 5).
+                        // Room input - R6.5: witness-row（见证说明）
+                        // 移除（用户判决）；R6.4: 挂载文字钮 → 圆环
+                        // 十字图标钮。send/stop 切换不变（truth HTML
+                        // L597..L603）。
                         div { class: "room-input",
-                            div { class: "witness-row",
-                                span {
-                                    class: "witness-note",
-                                    "{locale.t(keys::DECK_WITNESS_NOTE)}"
-                                }
-                            }
                             div { class: "input-row",
                                 button {
                                     class: "attach",
                                     "aria-label": "挂载文件",
-                                    "{locale.t(keys::DECK_ATTACH)}"
+                                    title: "挂载文件",
+                                    svg {
+                                        view_box: "0 0 18 18",
+                                        width: "16", height: "16",
+                                        fill: "none", stroke: "currentColor",
+                                        stroke_width: "1.2", stroke_linecap: "round",
+                                        circle { cx: "9", cy: "9", r: "7.2" }
+                                        line { x1: "9", y1: "5.8", x2: "9", y2: "12.2" }
+                                        line { x1: "5.8", y1: "9", x2: "12.2", y2: "9" }
+                                    }
                                 }
                                 div {
                                     class: "input-box",
@@ -579,6 +654,13 @@ fn spawn_outer_window(
     let props = outer_app_root_props(geometry_rx, theme_rx, visibility_rx, offset_x);
     let dom = VirtualDom::new_with_props(outer_app_root, props);
     let _ = window().new_window(dom, cfg);
+}
+
+/// R4 W1: exit the whole dioxus shell (room ✕). Free function with a
+/// `()` return so the onclick handler does not depend on never-type
+/// fallback (deny-by-default in this crate's lint set).
+fn quit_shell() {
+    std::process::exit(0);
 }
 
 /// Render the mock chat-flow entries. Five kinds (entity, witness,
