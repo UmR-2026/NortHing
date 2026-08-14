@@ -222,6 +222,12 @@ fn percent_decode_once(s: &str) -> String {
 /// contains `..`/`.` components, an absolute component, or a drive letter.
 /// Variants that decode to plain literal characters (e.g. `%252e%252e` ->
 /// `%2e%2e`) are NOT traversal attempts at this layer.
+///
+/// NOTE (T3 M-1): This helper logic deliberately mirrors the path splitting
+/// and component extraction logic in `northhing_relay_core::routes::api::serve_room_web_catchall`
+/// (`src/crates/services/relay-core/src/routes/api.rs:467-471`). If the catchall
+/// handler's path normalization or segment handling is updated, this test helper
+/// must be updated in sync to prevent test-handler logic drift.
 fn is_genuine_traversal(path: &str) -> bool {
     fn is_drive(seg: &str) -> bool {
         seg.len() == 2 && seg.ends_with(':') && seg.as_bytes()[0].is_ascii_alphabetic()
@@ -403,6 +409,44 @@ async fn ws_upgrade_requires_api_key_on_full_router() {
         status.starts_with("HTTP/1.1 101"),
         "matching key must upgrade, got: {status}"
     );
+}
+
+/// Embedded/open relay (api_key = None): all routes (WebSocket upgrade,
+/// upload, check-files, static asset serving) are open without requiring
+/// any `x-api-key` auth header. Closes final-review §6 Gap 2 (FR-3).
+#[tokio::test]
+async fn open_relay_when_api_key_none_accepts_all_routes_without_auth() {
+    let env = setup(None).await;
+    let room = ROOM_ID;
+
+    // 1. WebSocket upgrade on full router without API key succeeds (101 Switching Protocols).
+    let (status, _stream) = ws_handshake(env.addr, "").await;
+    assert!(
+        status.starts_with("HTTP/1.1 101"),
+        "open relay must allow WebSocket upgrade without API key, got: {status}"
+    );
+
+    // 2. Upload without API key succeeds (200 OK).
+    let resp = upload(&env, room, &[("index.html", INDEX_HTML)], None).await;
+    assert_eq!(resp.status, 200, "open relay must accept upload without API key");
+    let json: serde_json::Value = serde_json::from_slice(&resp.body).expect("upload JSON body");
+    assert_eq!(json["status"], "ok");
+    assert_eq!(json["files_written"], 1);
+
+    // 3. Serve static file roundtrip succeeds (200 OK).
+    let resp = raw_http(env.addr, &get_head(&format!("/r/{room}/index.html")), "").await;
+    assert_eq!(resp.status, 200);
+    assert_eq!(String::from_utf8_lossy(&resp.body), INDEX_HTML);
+
+    // 4. check-web-files endpoint without API key succeeds (200 OK).
+    let body = check_body(&[("index.html", INDEX_HTML)]);
+    let head = post_head(&format!("/api/rooms/{room}/check-web-files"), body.len(), None);
+    let resp = raw_http(env.addr, &head, &body).await;
+    assert_eq!(resp.status, 200, "open relay must accept check-web-files without API key");
+    let json: serde_json::Value = serde_json::from_slice(&resp.body).expect("check JSON body");
+    assert_eq!(json["existing_count"], 1);
+    assert_eq!(json["total_count"], 1);
+    assert_eq!(json["needed"], serde_json::json!([]));
 }
 
 /// Raw HTTP/1.1 WebSocket handshake; returns the status line.

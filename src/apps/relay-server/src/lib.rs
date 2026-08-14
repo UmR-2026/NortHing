@@ -274,10 +274,7 @@ mod disk_tests {
     }
 
     #[test]
-    fn map_to_room_preserves_existing_dest_on_validation_failure() {
-        // If validation fails before filesystem ops, existing files must not be touched.
-        // All paths passed through ValidatedRelPath are safe, so this test constructs
-        // an impossible scenario by checking that validated types block dangerous input.
+    fn map_to_room_overwrites_existing_dest_with_new_content() {
         let base = make_temp_base();
         let store = DiskAssetStore::new(&base);
 
@@ -299,6 +296,29 @@ mod disk_tests {
 
         let updated = store.get_file(&room, &rel).unwrap();
         assert_eq!(updated, b"newdata");
+
+        store.cleanup_room(&room);
+        fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn map_to_room_preserves_existing_dest_on_validation_failure() {
+        let base = make_temp_base();
+        let store = DiskAssetStore::new(&base);
+
+        let room = ValidatedRoomId::try_from("safe-room").unwrap();
+        let rel = ValidatedRelPath::try_from("index.html").unwrap();
+        let hash = sample_hash();
+
+        store.store_content(&hash, b"original_data".to_vec()).unwrap();
+        store.map_to_room(&room, &rel, &hash).unwrap();
+        assert_eq!(store.get_file(&room, &rel).unwrap(), b"original_data");
+
+        // Validation rejection before filesystem operations: invalid inputs fail early
+        // without reaching map_to_room, preserving existing destination file.
+        assert!(ValidatedRelPath::try_from("../escape.txt").is_err());
+        assert!(ValidatedRoomId::try_from("../bad-room").is_err());
+        assert_eq!(store.get_file(&room, &rel).unwrap(), b"original_data");
 
         store.cleanup_room(&room);
         fs::remove_dir_all(&base).ok();
