@@ -145,9 +145,9 @@ Already covered in section 3.3. Pattern is unified.
 |---|---|---|---|
 | Q-1 | Linux Path semantics test (withdrawn) | A | Withdrawn by reviewer; M-1 fix resolved the concern |
 | Q-2 | api.rs:507 unused import B64 | A | Fixed in commit e3d0e53 |
-| Q-3 | validated.rs:177-182 redundant is_drive_letter guard + inaccurate comment | D | Dead code + misleading comment; upfront split scan already covers all drive-letter forms. Delete L177-182 or fix comment. Trivial cleanup. |
-| Q-4 | validated.rs:162-171 double split scan can be merged | D | Two `normalized.split('/')` loops (drive-letter + CurDir) can merge into one. Cosmetic, no functional difference. |
-| M-4 | Test name `preserves_existing_dest_on_validation_failure` doesn't truly cover validation failure | D | Test name overpromises; rename or add the missing case. Cosmetic. |
+| Q-3 | validated.rs:177-182 redundant is_drive_letter guard + inaccurate comment | resolved | Task B5 (`6b6419b`): removed redundant guard from Normal component, unified scan |
+| Q-4 | validated.rs:162-171 double split scan can be merged | resolved | Task B5 (`6b6419b`): merged into single-pass split loop |
+| M-4 | Test name `preserves_existing_dest_on_validation_failure` doesn't truly cover validation failure | resolved | Task B5 (`6b6419b`): renamed to `map_to_room_overwrites_existing_dest_with_new_content` and added genuine validation rejection test |
 | M-5 | map_to_room TOCTOU window (theoretical) | A | Theoretical micro-window between canonicalize and remove_file. Containment check is defense-in-depth, not sole barrier (ValidatedRelPath is primary). Accepted trade-off. |
 
 ### Task 2
@@ -155,8 +155,8 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | on_disconnect micro-window between conn_to_room.remove and rooms.get_mut | A | Alternative order (set tombstone first) introduces worse race (new conn marked tombstone by old disconnect). Current order is the better choice. Desktop retry recovers. |
-| M-2 | handle_socket task panic won't release connection slot | D | No remote trigger path (requires internal bug). RAII guard or catch_unwind would harden. Track for follow-up. |
-| M-3 | handle_text_message return style mixed | D | Three return styles in match arms. Cosmetic. |
+| M-2 | handle_socket task panic won't release connection slot | resolved | Task B5 (`6b6419b`): local `ConnectionSlotGuard` RAII guard auto-releases on drop/panic/upgrade-fail |
+| M-3 | handle_text_message return style mixed | resolved | Task B5 (`6b6419b`): unified expression/return convention across all match arms |
 | M-4 | AuthExtractor::Clone expands public API | A | Clone is a common derive; no security surface expansion. |
 | (deferred) | Capability token system | D | Brief explicitly deferred. Current atomic three-state is the scoped fix. Track as separate security enhancement. |
 
@@ -164,7 +164,7 @@ Already covered in section 3.3. Pattern is unified.
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | is_genuine_traversal mirrors handler logic (drift risk) | D | Test helper duplicates handler split logic. Add comment pointing to handler line, or add property-based test. |
+| M-1 | is_genuine_traversal mirrors handler logic (drift risk) | resolved | Task B5 (`6b6419b`): added anchor comment pointing to `serve_room_web_catchall` line in relay-core |
 | M-2 | 9 variants fixed, no fuzz | A | Disk recursive scan provides generalized backstop. Manual variants cover known attack vectors. |
 | M-3 | attribution() only eprintln, not assertion | A | Attribution is diagnostic info; hard-asserting would overfit axum version behavior. |
 | M-4 | dechunk boundary conditions untested | A | All test endpoints use Content-Length, not chunked. No real exposure. |
@@ -265,13 +265,7 @@ Already covered in section 3.3. Pattern is unified.
 - **Recommendation**: ensure CI runs `cargo check --workspace` (or the equivalent that works around the embed-resource issue) before merge.
 
 **Gap 2: Embedded relay (api_key=None) not e2e tested.**
-- Task 3 e2e tests all use a **configured** api_key. No e2e test exercises the full router with `api_key=None` (the desktop embedded relay scenario).
-- Unit tests cover the auth logic for `api_key=None`:
-  - `auth_require_gates_only_when_key_configured` (auth logic)
-  - `websocket_upgrade_open_when_api_key_unset` (WS handler)
-  - `upload_routes_accept_valid_api_key_and_stay_open_when_unset` (upload handler)
-- **Risk**: low. The `api_key=None` path is simpler (no auth check), and the auth logic is trivial (`None == open`). The e2e tests validate the full router with auth configured; the `None` path is a subset.
-- **Recommendation**: acceptable as-is. If desired, add a single e2e test with `api_key=None` to close the gap.
+- Resolved in Task B5 (`6b6419b`): Added `open_relay_when_api_key_none_accepts_all_routes_without_auth` in `e2e_web_assets.rs` covering WebSocket upgrade, file upload, check-files, and asset serving on the full router without API key. Gap closed.
 
 **Gap 3: No combined relay stress test.**
 - The three-state logic, connection limit (512), bounded queue (256), and idle timeout (90s) are each unit-tested individually. No test exercises all four simultaneously under load.
