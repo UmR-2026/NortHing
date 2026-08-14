@@ -39,8 +39,9 @@ use std::sync::Arc;
 use tokio::sync::watch;
 
 use super::css;
+use super::entry::{DOCK_GAP_PX, INNER_WINDOW_WIDTH, OUTER_WINDOW_WIDTH};
 use super::i18n::{keys, LocalePack};
-use super::state::{Geometry, GeometryRxArc};
+use super::state::{Geometry, GeometryRxArc, VisibilityState};
 
 /// Windows-only helpers for the geometry follow threads (r3p4 root-fix):
 /// the geometry watch channel is consumed on a plain std::thread that
@@ -73,11 +74,14 @@ mod win {
 /// the follow task uses this to position the window each time the
 /// room moves. `theme_rx` is the shared theme watch channel; the
 /// initial value seeds the window's `data-theme` and every later
-/// change re-renders it.
+/// change re-renders it. `visibility_rx` is the shared visibility
+/// watch channel; `window().set_visible(...)` follows every jewel
+/// toggle from the room.
 #[derive(Props, Clone)]
 pub struct InnerAppProps {
     pub rx: GeometryRxArc,
     pub theme_rx: watch::Receiver<bool>,
+    pub visibility_rx: watch::Receiver<VisibilityState>,
     pub offset_x: i32,
 }
 
@@ -87,6 +91,7 @@ pub struct InnerAppProps {
 pub struct OuterAppProps {
     pub rx: GeometryRxArc,
     pub theme_rx: watch::Receiver<bool>,
+    pub visibility_rx: watch::Receiver<VisibilityState>,
     pub offset_x: i32,
 }
 
@@ -96,11 +101,13 @@ pub struct OuterAppProps {
 pub fn inner_app_root_props(
     rx: GeometryRxArc,
     theme_rx: watch::Receiver<bool>,
+    visibility_rx: watch::Receiver<VisibilityState>,
     offset_x: i32,
 ) -> InnerAppProps {
     InnerAppProps {
         rx,
         theme_rx,
+        visibility_rx,
         offset_x,
     }
 }
@@ -110,11 +117,13 @@ pub fn inner_app_root_props(
 pub fn outer_app_root_props(
     rx: GeometryRxArc,
     theme_rx: watch::Receiver<bool>,
+    visibility_rx: watch::Receiver<VisibilityState>,
     offset_x: i32,
 ) -> OuterAppProps {
     OuterAppProps {
         rx,
         theme_rx,
+        visibility_rx,
         offset_x,
     }
 }
@@ -150,6 +159,7 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
     let offset_x = props.offset_x;
     let rx_arc = props.rx.clone();
     let theme_rx = props.theme_rx.clone();
+    let visibility_rx = props.visibility_rx.clone();
     // R3' r3p4: the initial theme comes from the shared channel instead
     // of a hardcoded `true`, so the window opens with the room's actual
     // theme even if it was toggled before this window spawned.
@@ -171,6 +181,13 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
     //
     // The theme channel stays in use_future: it is woken only by user
     // toggle (low frequency), which the experiments showed is safe.
+    //
+    // R3' A+B+C fix (Bug A): the geometry channel is physical px but
+    // the dock offsets (INNER_WINDOW_WIDTH + DOCK_GAP_PX) are logical
+    // (the window is created with LogicalSize). The scale factor is
+    // captured at mount and the offsets are converted before
+    // SetWindowPos — at 125% DPI the old code subtracted 296 physical
+    // where 350+20=370 was required, overlapping the room by ~74px.
     #[cfg(target_os = "windows")]
     {
         use dioxus::desktop::tao::platform::windows::WindowExtWindows;
@@ -179,7 +196,7 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
         // HWND as usize: a plain integer so it is trivially Send across
         // the thread boundary (raw pointers are !Send).
         let hwnd_usize = window().hwnd() as usize;
-        let off = offset_x;
+        let off = ((INNER_WINDOW_WIDTH + DOCK_GAP_PX as f64) * window().scale_factor()) as i32;
         use_hook(move || {
             std::thread::Builder::new()
                 .name("inner-geometry-follow".into())
@@ -207,19 +224,20 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
                         // SWP_NOSIZE(0x0001) | SWP_NOZORDER(0x0004) |
                         // SWP_NOACTIVATE(0x0010): move only, keep size and
                         // z-order, do not steal focus. Same dock offset as
-                        // the original tao set_outer_position path.
+                        // the original tao set_outer_position path, now
+                        // converted to physical px.
                         unsafe {
                             let _ = win::SetWindowPos(
                                 hwnd_ptr,
                                 std::ptr::null_mut(),
-                                cur.x.saturating_sub(280 + 16),
+                                cur.x.saturating_sub(off),
                                 cur.y,
                                 0,
                                 0,
                                 0x0001 | 0x0004 | 0x0010,
                             );
                         }
-                        let _ = off;
+                        let _ = offset_x;
                     }
                 })
                 .expect("spawn inner geometry follow thread");
@@ -230,8 +248,9 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
     // busy-spin bug is Windows-specific to the WebView2 stack).
     #[cfg(not(target_os = "windows"))]
     use_future(move || {
+        let _ = offset_x; // offset_x is only consumed by the Win32 path; keep the API live
         let rx_arc = rx_arc.clone();
-        let off = offset_x;
+        let off = ((INNER_WINDOW_WIDTH + DOCK_GAP_PX as f64) * window().scale_factor()) as i32;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
             loop {
@@ -241,11 +260,10 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
                 let g = *rx.borrow();
                 let w = window();
                 let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                    g.x.saturating_sub(280 + 16),
+                    g.x.saturating_sub(off),
                     g.y,
                 )));
                 let _ = w.request_redraw();
-                let _ = off;
             }
         }
     });
@@ -264,6 +282,25 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
         }
     });
 
+    // R3' A+B+C (D): visibility follower — same event-driven watch
+    // pattern as the theme follower (no sleep anywhere; woken only by
+    // the room's jewel clicks, which are user-paced). Initial sync on
+    // mount covers the case where the window spawned after a toggle.
+    use_future(move || {
+        let mut visibility_rx = visibility_rx.clone();
+        async move {
+            let state = *visibility_rx.borrow();
+            window().set_visible(state.inner_visible);
+            loop {
+                if visibility_rx.changed().await.is_err() {
+                    break;
+                }
+                let state = *visibility_rx.borrow();
+                window().set_visible(state.inner_visible);
+            }
+        }
+    });
+
     let class = if theme_dark() { "dark" } else { "light" };
     rsx! {
         body {
@@ -274,6 +311,11 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
             // we mount the body directly. We inject the truth CSS via
             // a `<style>` block so the visual layout matches the HTML.
             style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            // R3' A+B+C (C): 转写层覆盖样式收口（宽度/横溢），TRUTH_CSS
+            // 逐字节锁死，覆盖规则只能走这个第二 style 块。
+            style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
+            meta { charset: "UTF-8" }
+            meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
             aside {
                 id: "mind",
                 class: "mod",
@@ -376,21 +418,26 @@ pub fn inner_app_root(props: InnerAppProps) -> Element {
 /// 文件差异审查 / 终端井 sections.
 pub fn outer_app_root(props: OuterAppProps) -> Element {
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
+    let offset_x = props.offset_x;
     let rx_arc = props.rx.clone();
     let theme_rx = props.theme_rx.clone();
+    let visibility_rx = props.visibility_rx.clone();
     // R3' r3p4: initial theme from the shared channel (see inner_app_root).
     let theme_dark = use_signal(|| *theme_rx.borrow());
 
     // R3' r3p4 root-fix: same as inner_app_root - geometry follow runs
     // on a plain std::thread with Win32 SetWindowPos (see inner for the
     // full rationale; the outer docks to the room's right edge).
+    // R3' A+B+C fix (Bug A): DOCK_GAP_PX is logical; convert with the
+    // mount-time scale factor so the dock gap is physical px at the
+    // room's right edge (16 logical -> 20 physical at 125% DPI).
     #[cfg(target_os = "windows")]
     {
         use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 
         let rx = rx_arc.clone();
         let hwnd_usize = window().hwnd() as usize;
-        let off = props.offset_x;
+        let off = (DOCK_GAP_PX as f64 * window().scale_factor()) as i32;
         use_hook(move || {
             std::thread::Builder::new()
                 .name("outer-geometry-follow".into())
@@ -413,14 +460,14 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
                             let _ = win::SetWindowPos(
                                 hwnd_ptr,
                                 std::ptr::null_mut(),
-                                cur.x + cur.width as i32 + 16,
+                                cur.x + cur.width as i32 + off,
                                 cur.y,
                                 0,
                                 0,
                                 0x0001 | 0x0004 | 0x0010,
                             );
                         }
-                        let _ = off;
+                        let _ = offset_x;
                     }
                 })
                 .expect("spawn outer geometry follow thread");
@@ -430,8 +477,9 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
     // Non-Windows fallback: keep the original dioxus-task follow.
     #[cfg(not(target_os = "windows"))]
     use_future(move || {
+        let _ = offset_x; // offset_x is only consumed by the Win32 path; keep the API live
         let rx_arc = rx_arc.clone();
-        let off = props.offset_x;
+        let off = (DOCK_GAP_PX as f64 * window().scale_factor()) as i32;
         async move {
             let mut rx: watch::Receiver<Geometry> = (*rx_arc).clone();
             loop {
@@ -441,11 +489,10 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
                 let g = *rx.borrow();
                 let w = window();
                 let _ = w.set_outer_position(Position::Physical(PhysicalPosition::new(
-                    g.x + g.width as i32 + 16,
+                    g.x + g.width as i32 + off,
                     g.y,
                 )));
                 let _ = w.request_redraw();
-                let _ = off;
             }
         }
     });
@@ -464,12 +511,33 @@ pub fn outer_app_root(props: OuterAppProps) -> Element {
         }
     });
 
+    // R3' A+B+C (D): visibility follower (event-driven watch, no sleep).
+    use_future(move || {
+        let mut visibility_rx = visibility_rx.clone();
+        async move {
+            let state = *visibility_rx.borrow();
+            window().set_visible(state.outer_visible);
+            loop {
+                if visibility_rx.changed().await.is_err() {
+                    break;
+                }
+                let state = *visibility_rx.borrow();
+                window().set_visible(state.outer_visible);
+            }
+        }
+    });
+
     let class = if theme_dark() { "dark" } else { "light" };
     rsx! {
         body {
             "data-theme": "{class}",
             "data-window": "outer",
             style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            // R3' A+B+C (C): 转写层覆盖样式收口（宽度/横溢），TRUTH_CSS
+            // 逐字节锁死，覆盖规则只能走这个第二 style 块。
+            style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
+            meta { charset: "UTF-8" }
+            meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
             aside {
                 id: "work",
                 class: "mod",

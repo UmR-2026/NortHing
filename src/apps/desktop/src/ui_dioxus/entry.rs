@@ -32,7 +32,7 @@ use std::sync::{Arc, Mutex};
 use crate::flags::DIOXUS_SHELL;
 
 use super::app::room_app_root;
-use super::state::{Geometry, GeometryRxArc, GlobalTheme};
+use super::state::{Geometry, GeometryRxArc, GlobalTheme, GlobalVisibility};
 
 /// Width of the room main window. Matches the truth HTML `#room` max-width
 /// (`min(780px, 100%)`) plus the chrome (`padding: 26px 48px`), so the
@@ -46,11 +46,17 @@ pub const ROOM_WINDOW_WIDTH: f64 = 880.0;
 /// target from the truth HTML's `padding: 26px 48px` + `room` height.
 pub const ROOM_WINDOW_HEIGHT: f64 = 820.0;
 
-/// Initial offset (in physical pixels) from the screen origin so the room
+/// Initial offset (in logical pixels) from the screen origin so the room
 /// window opens a few inches from the top-left; keeps the three windows
 /// visible side-by-side on a 1920x1080 monitor with the inner/outer
 /// windows docked to the room's left/right edges.
-pub const ROOM_WINDOW_INITIAL_X: f32 = 220.0;
+///
+/// R3' A+B+C fix (2026-08-14): must satisfy `x >= INNER_WINDOW_WIDTH +
+/// DOCK_GAP_PX` (280 + 16 = 296 logical) so the inner window's initial
+/// dock position (`x - 280 - 16`) never lands off-screen — the previous
+/// 220.0 put the inner window at x = -76 (left edge clipped). Right-edge
+/// budget on a 1920 logical workspace: 296 + 880 + 16 + 320 = 1512 ✓.
+pub const ROOM_WINDOW_INITIAL_X: f32 = 296.0;
 pub const ROOM_WINDOW_INITIAL_Y: f32 = 120.0;
 
 /// Brief §3.2 - inner/outer window widths (280px / 320px) and the
@@ -60,6 +66,31 @@ pub const ROOM_WINDOW_INITIAL_Y: f32 = 120.0;
 pub const INNER_WINDOW_WIDTH: f64 = 280.0;
 pub const OUTER_WINDOW_WIDTH: f64 = 320.0;
 pub const DOCK_GAP_PX: i32 = 16;
+
+/// Startup DPI scale for converting the logical launch constants into
+/// the physical geometry channel (Bug A: the channel is physical — tao
+/// `Moved(PhysicalPosition)` / `Resized(PhysicalSize)` events, see
+/// `state.rs::Geometry` doc — but the constants are logical because the
+/// windows are created with `LogicalSize`/`LogicalPosition`).
+///
+/// Windows: `GetDpiForSystem()` returns the system DPI (primary
+/// display), which is where the room opens by default; scale = dpi/96
+/// (96 = 100% DPI baseline). Non-Windows: 1.0 — the placeholder is
+/// immediately superseded by the real geometry `room_app_root` publishes
+/// on mount (entry.rs event handler + app.rs use_effect), so this is a
+/// startup-only fallback either way.
+#[cfg(target_os = "windows")]
+fn startup_scale_factor() -> f64 {
+    unsafe extern "system" {
+        fn GetDpiForSystem() -> u32;
+    }
+    unsafe { GetDpiForSystem() as f64 / 96.0 }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn startup_scale_factor() -> f64 {
+    1.0
+}
 
 /// Launch the Dioxus consult-room shell: three OS windows (room + inner +
 /// outer) running concurrently. The room is the main window that owns
@@ -93,11 +124,17 @@ pub fn launch() -> anyhow::Result<()> {
     // Initial geometry for the room - picked once at startup. The room's
     // own positioning task overrides this from frame 1 onward (it reads
     // the actual window position which may differ if Windows snapped it).
+    //
+    // R3' A+B+C fix (2026-08-14): the channel is physical px, so the
+    // logical launch constants are converted with the startup scale
+    // factor (previous code stored the logical values verbatim, which
+    // made the first-frame geometry ~25% off at 125% DPI).
+    let scale = startup_scale_factor();
     let initial_geometry = Geometry {
-        x: ROOM_WINDOW_INITIAL_X as i32,
-        y: ROOM_WINDOW_INITIAL_Y as i32,
-        width: ROOM_WINDOW_WIDTH as u32,
-        height: ROOM_WINDOW_HEIGHT as u32,
+        x: (ROOM_WINDOW_INITIAL_X as f64 * scale) as i32,
+        y: (ROOM_WINDOW_INITIAL_Y as f64 * scale) as i32,
+        width: (ROOM_WINDOW_WIDTH * scale) as u32,
+        height: (ROOM_WINDOW_HEIGHT * scale) as u32,
     };
 
     // tokio::sync::watch<Geometry>: producer (room positioning task)
@@ -168,7 +205,19 @@ pub fn launch() -> anyhow::Result<()> {
                 let Event::WindowEvent { window_id, event, .. } = event else {
                     return;
                 };
-                if *room_window_id.lock().unwrap() != Some(*window_id) {
+                // Pre-mount acceptance (r3p5 A+B+C): before `room_app_root`
+                // registers the room's window id (first use_effect), the
+                // only window that can raise events IS the room — inner/
+                // outer are spawned after the registration inside that same
+                // use_effect. Accepting those early events replaces the
+                // startup placeholder with the real physical geometry at
+                // the very first Moved/Resized (window creation), instead
+                // of carrying the logical-cast placeholder until mount.
+                let is_room = {
+                    let registered = room_window_id.lock().unwrap();
+                    registered.is_none() || *registered == Some(*window_id)
+                };
+                if !is_room {
                     return;
                 }
                 let mut geom = latest_geometry.lock().unwrap();
@@ -206,6 +255,7 @@ pub fn launch() -> anyhow::Result<()> {
         .with_context(geometry_tx)
         .with_context(geometry_rx_arc)
         .with_context(GlobalTheme::new())
+        .with_context(GlobalVisibility::new())
         .with_context(room_window_id)
         .with_cfg(config)
         .launch(room_app_root);

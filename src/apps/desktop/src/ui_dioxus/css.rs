@@ -25,6 +25,40 @@
 /// guards against silent divergence.
 pub const TRUTH_CSS: &str = include_str!("../../../../../docs/design/2026-07-22-frontend-redesign/consult-room/consult-room-main.css");
 
+/// R3' A+B+C 转写层覆盖样式（2026-08-14）。`TRUTH_CSS` 逐字节锁死
+/// （`assert_truth_css_byte_count` 守卫必过，禁改真值 CSS 文件），任何
+/// 转写层收口/覆盖规则只能落在此块，注入点：`windows.rs` inner/outer body
+/// 与 `app.rs` room body——`TRUTH_CSS` 之后的第二个 `<style>` 块。
+///
+/// 选择器约定：
+///   * `body[data-window="inner"]` / `body[data-window="outer"]` —— 只作用于
+///     两个浮窗（room 主窗 body 无 `data-window` 属性，规则天然不落 room）；
+///   * `#room-scrim` + `body[data-theme="..."]` —— 只作用于 room 主窗的
+///     压暗层（scrim 是 S4 降级契约要求的转写层自绘，真值 CSS/HTML 无此规则，
+///     见 block-contract §2 规则 4）。
+pub const OVERLAY_CSS: &str = r#"
+  /* C. 浮窗横溢收口：WebView2 无 viewport meta 时 layout viewport 回落 980px，
+     真值 @media(max-width:940px) 的 width:100% 会把 #mind/#work 撑宽 ——
+     这里把宽度固定为窗口逻辑宽（CSS px = logical px，WebView2 DPI 感知）并
+     消除水平滚动。html 侧用 :has 兜底（Chromium 105+，WebView2 常青运行时
+     支持；旧版运行时规则被忽略时内容已收口，无滚动条，无害）。 */
+  html:has(body[data-window="inner"]), html:has(body[data-window="outer"]) { overflow: hidden; }
+  body[data-window="inner"], body[data-window="outer"] { overflow-x: hidden; overflow-y: auto; background: var(--bg0); }
+  body[data-window="inner"] #mind { width: 280px; max-width: 280px; margin: 0; }
+  body[data-window="inner"] #mind .mod { width: 280px; max-width: 280px; }
+  body[data-window="outer"] #work { width: 320px; max-width: 320px; margin: 0; max-height: none; }
+  /* 终端井：禁止自动断行（`--boundary` 一类长词被断行即出现 `dary>` 残迹），
+     横向溢出裁剪兜底；292px 内容宽容纳 10px mono 全文绰绰有余。 */
+  body[data-window="outer"] #work .term-well { white-space: pre; overflow-x: hidden; }
+
+  /* D. room 主窗 scrim：inner/outer 任一可见时压暗（block-contract §2 规则 4
+     降级形态，alpha 0.22 = handoff §5.3「22% 压暗」；scrim token：dark
+     #000000 / light #38352E）。主题切换随 body 的 data-theme 正确变色。
+     pointer-events:none 保证宝石等控件事件穿透。 */
+  #room-scrim { position: fixed; inset: 0; z-index: 39; background: rgba(0, 0, 0, 0.22); pointer-events: none; }
+  body[data-theme="light"] #room-scrim { background: rgba(56, 53, 46, 0.22); }
+"#;
+
 /// Build a `dioxus::desktop::wry::WebViewBuilder` attribute that injects
 /// the truth CSS as a `<style>` element inside the document head.
 ///

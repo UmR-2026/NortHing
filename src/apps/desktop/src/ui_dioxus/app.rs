@@ -95,7 +95,9 @@ use super::entry::{
 };
 use super::i18n::{keys, LocalePack};
 use super::session_mock::{seed_session, MockEntry};
-use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, VisibilityState};
+use super::state::{
+    Geometry, GeometryRxArc, GeometryTx, GlobalTheme, GlobalVisibility, VisibilityState,
+};
 use super::windows::{inner_app_root, inner_app_root_props, outer_app_root, outer_app_root_props};
 
 /// RSX root for the room main window.
@@ -112,6 +114,11 @@ pub fn room_app_root() -> Element {
     let geometry_tx = use_context::<GeometryTx>();
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
+    // R3' A+B+C fix: shared visibility channel (same watch pattern as
+    // `GlobalTheme`). The jewel click handlers write synchronously here;
+    // inner/outer subscribe through their props and call
+    // `window().set_visible(bool)` (windows.rs).
+    let visibility_chan = use_context::<GlobalVisibility>();
     // r3p4 root-fix: shared slot written by entry.rs's tao event handler
     // to identify the room window; `room_app_root` fills it on mount so
     // only the room's Moved/Resized events publish geometry.
@@ -191,6 +198,7 @@ pub fn room_app_root() -> Element {
         let geometry_rx_arc = geometry_rx_arc.clone();
         let room_window_id = room_window_id.clone();
         let theme = theme.clone();
+        let visibility_chan = visibility_chan.clone();
         let data_directory = shared_webview_data_directory_for_inner();
         use_effect(move || {
             // r3p4 root-fix: register the room's OS window id so the tao
@@ -208,16 +216,31 @@ pub fn room_app_root() -> Element {
                 });
             }
             let theme_rx = theme.subscribe();
+            // R3' A+B+C: one receiver per spawned window (watch Receiver
+            // is Clone; each clone consumes the full event stream, so both
+            // windows react to every jewel toggle).
+            let visibility_rx = visibility_chan.subscribe();
             spawn_inner_window(
                 geometry_rx_arc.clone(),
                 theme_rx.clone(),
+                visibility_rx.clone(),
                 data_directory.clone(),
             );
-            spawn_outer_window(geometry_rx_arc.clone(), theme_rx, data_directory.clone());
+            spawn_outer_window(
+                geometry_rx_arc.clone(),
+                theme_rx,
+                visibility_rx,
+                data_directory.clone(),
+            );
         });
     }
 
     let theme_class = if theme_dark() { "dark" } else { "light" };
+
+    // R3' A+B+C (D): per-handler clones of the visibility channel —
+    // each jewel onclick is a `move` closure and must own its handle.
+    let visibility_chan_inner = visibility_chan.clone();
+    let visibility_chan_outer = visibility_chan.clone();
 
     rsx! {
         body {
@@ -229,6 +252,9 @@ pub fn room_app_root() -> Element {
             // a `<style>` block as the body's first child so the
             // visual layout matches the HTML.
             style { dangerous_inner_html: "{css::TRUTH_CSS}" }
+            // R3' A+B+C: 转写层覆盖样式（scrim 压暗层等）——TRUTH_CSS
+            // 逐字节锁死，覆盖规则只能走这个第二 style 块。
+            style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
             meta { charset: "UTF-8" }
             meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
             title { "{locale.t(keys::WINDOW_TITLE_ROOM)}" }
@@ -238,6 +264,13 @@ pub fn room_app_root() -> Element {
             div { id: "containment" }
             div { class: "membrane-frame" }
             div { id: "global-aura" }
+
+            // R3' A+B+C (D): scrim 压暗层——inner/outer 任一可见时自绘
+            // （block-contract §2 规则 4 降级形态，22% 压暗，随 data-theme
+            // 变色）。pointer-events:none 由 OVERLAY_CSS 保证，宝石可穿透。
+            if visibility().inner_visible || visibility().outer_visible {
+                div { id: "room-scrim" }
+            }
 
             // Room - the central column. The inner / outer windows
             // are no longer siblings in the DOM tree; they're
@@ -429,25 +462,31 @@ pub fn room_app_root() -> Element {
 
                         // Membrane nodes (jewels) - drive inner /
                         // outer visibility (brief §3.1,
-                        // conversion-annotations §2 row 3).
+                        // conversion-annotations §2 row 3). R3' A+B+C:
+                        // toggle writes the local Signal (vlabel +
+                        // scrim re-render) and broadcasts over the
+                        // GlobalVisibility watch channel so the OS
+                        // window itself hides/shows (windows.rs).
                         button {
                             class: "membrane-node left",
                             id: "trig-mind",
                             "aria-label": "唤起 它的内在",
-                            "aria-expanded": "true",
+                            "aria-expanded": if visibility().inner_visible { "true" } else { "false" },
                             title: "它的内在",
                             onclick: move |_| {
                                 visibility.write().toggle_inner();
+                                visibility_chan_inner.set_inner(visibility().inner_visible);
                             }
                         }
                         button {
                             class: "membrane-node right",
                             id: "trig-work",
                             "aria-label": "唤起 身外之物",
-                            "aria-expanded": "true",
+                            "aria-expanded": if visibility().outer_visible { "true" } else { "false" },
                             title: "身外之物",
                             onclick: move |_| {
                                 visibility.write().toggle_outer();
+                                visibility_chan_outer.set_outer(visibility().outer_visible);
                             }
                         }
                     }
@@ -461,9 +500,12 @@ pub fn room_app_root() -> Element {
 ///
 /// `theme_rx` is the shared theme watch channel; the inner window reads
 /// its initial value at mount and follows every change (see windows.rs).
+/// `visibility_rx` is the shared visibility watch channel; the inner
+/// window calls `window().set_visible(...)` on every jewel toggle.
 fn spawn_inner_window(
     geometry_rx: GeometryRxArc,
     theme_rx: watch::Receiver<bool>,
+    visibility_rx: watch::Receiver<VisibilityState>,
     data_directory: std::path::PathBuf,
 ) {
     let mut inner_builder = WindowBuilder::new()
@@ -486,7 +528,7 @@ fn spawn_inner_window(
         .with_data_directory(data_directory);
 
     let offset_x = ROOM_WINDOW_INITIAL_X as i32 - INNER_WINDOW_WIDTH as i32 - DOCK_GAP_PX;
-    let props = inner_app_root_props(geometry_rx, theme_rx, offset_x);
+    let props = inner_app_root_props(geometry_rx, theme_rx, visibility_rx, offset_x);
     let dom = VirtualDom::new_with_props(inner_app_root, props);
     let _ = window().new_window(dom, cfg);
 }
@@ -495,6 +537,7 @@ fn spawn_inner_window(
 fn spawn_outer_window(
     geometry_rx: GeometryRxArc,
     theme_rx: watch::Receiver<bool>,
+    visibility_rx: watch::Receiver<VisibilityState>,
     data_directory: std::path::PathBuf,
 ) {
     let mut outer_builder = WindowBuilder::new()
@@ -517,7 +560,7 @@ fn spawn_outer_window(
         .with_data_directory(data_directory);
 
     let offset_x = ROOM_WINDOW_INITIAL_X as i32 + ROOM_WINDOW_WIDTH as i32 + DOCK_GAP_PX;
-    let props = outer_app_root_props(geometry_rx, theme_rx, offset_x);
+    let props = outer_app_root_props(geometry_rx, theme_rx, visibility_rx, offset_x);
     let dom = VirtualDom::new_with_props(outer_app_root, props);
     let _ = window().new_window(dom, cfg);
 }
