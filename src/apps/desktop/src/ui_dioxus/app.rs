@@ -152,6 +152,12 @@ pub fn room_app_root() -> Element {
     // reads it).
     let mut visibility = use_signal(VisibilityState::new);
 
+    // F5 (fix2 brief): room-head fold state - purely local to the room
+    // (no watch channel; the truth HTML toggles the `folded` class via
+    // JS on the same button, L536..L539). Drives the `.room-head.folded`
+    // capsule styling in TRUTH_CSS (L110..L113) + the ▴/▾ glyph.
+    let mut head_folded = use_signal(|| false);
+
     // Streaming state - drives the send/stop toggle (truth HTML L425
     // `sendStop.classList.toggle('streaming')`).
     let mut streaming = use_signal(|| false);
@@ -307,13 +313,18 @@ pub fn room_app_root() -> Element {
 
                         // Window controls (truth HTML LL334..L340) -
                         // brief §3.1 F8: main window gets the full
-                        // four-button set.
+                        // four-button set. F5: head-fold button now
+                        // toggles the local `folded` signal (capsule
+                        // state + ▴/▾ glyph, truth HTML L536..L539).
                         div { class: "room-controls",
                             button {
                                 class: "rc-btn head-fold",
                                 "aria-label": "收纳中枢",
                                 title: "收纳/展开中枢",
-                                "▴"
+                                onclick: move |_| {
+                                    head_folded.set(!head_folded());
+                                },
+                                if head_folded() { "▾" } else { "▴" }
                             }
                             button {
                                 class: "rc-btn",
@@ -400,8 +411,11 @@ pub fn room_app_root() -> Element {
                         // mono-glyph "序"), name, chronicle bar (4px
                         // tall, gradient drift), state pill (mind color
                         // 22% backdrop, square corners per C2
-                        // ruling).
-                        div { class: "room-head", id: "room-head",
+                        // ruling). F5: `folded` class switches the
+                        // TRUTH_CSS capsule state (.room-head.folded).
+                        div {
+                            class: if head_folded() { "room-head folded" } else { "room-head" },
+                            id: "room-head",
                             div { class: "agent-avatar", id: "avatar-core",
                                 "{locale.t(keys::ROOM_HEAD_INITIAL)}"
                             }
@@ -467,8 +481,10 @@ pub fn room_app_root() -> Element {
                         // scrim re-render) and broadcasts over the
                         // GlobalVisibility watch channel so the OS
                         // window itself hides/shows (windows.rs).
+                        // F4: `is-open` class follows the real
+                        // visibility (truth CSS L193: opacity .22).
                         button {
-                            class: "membrane-node left",
+                            class: if visibility().inner_visible { "membrane-node left is-open" } else { "membrane-node left" },
                             id: "trig-mind",
                             "aria-label": "唤起 它的内在",
                             "aria-expanded": if visibility().inner_visible { "true" } else { "false" },
@@ -479,7 +495,7 @@ pub fn room_app_root() -> Element {
                             }
                         }
                         button {
-                            class: "membrane-node right",
+                            class: if visibility().outer_visible { "membrane-node right is-open" } else { "membrane-node right" },
                             id: "trig-work",
                             "aria-label": "唤起 身外之物",
                             "aria-expanded": if visibility().outer_visible { "true" } else { "false" },
