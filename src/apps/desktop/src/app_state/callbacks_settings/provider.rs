@@ -184,8 +184,14 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                         // validate_provider_input already rejected unknown types;
                         // this branch is unreachable in practice, but we handle
                         // it gracefully instead of panicking (panic in a spawn
-                        // thread would abort the process).
-                        _ => return Err(anyhow::anyhow!("内部错误：未知的服务类型")),
+                        // thread would abort the process). Keep the specific
+                        // message (matching validate_provider_input) and surface
+                        // it through the same validation_error channel.
+                        _ => {
+                            let msg = format!("不支持的服务类型: {ptype}");
+                            validation_error = Some(msg.clone());
+                            return Err(anyhow::anyhow!("{msg}"));
+                        }
                     };
                     let mut new_provider = ProviderConfig::new(pname.clone(), provider_type);
                     if !pid.is_empty() {

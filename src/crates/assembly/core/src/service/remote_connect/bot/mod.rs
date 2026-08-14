@@ -621,7 +621,10 @@ fn update_bot_persistence_at(
 ) -> Result<(), BotPersistenceError> {
     let _guard = match PERSISTENCE_WRITE_LOCK.lock() {
         Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
+        Err(poisoned) => {
+            tracing::warn!("Bot persistence write lock poisoned, recovering");
+            poisoned.into_inner()
+        }
     };
     let mut data =
         try_load_bot_persistence_at(main, legacy).map_err(|source| BotPersistenceError::Corrupted(Box::new(source)))?;
@@ -664,9 +667,26 @@ fn write_bot_persistence_atomic(path: &std::path::Path, data: &BotPersistenceDat
         }
     }
 
-    if let Err(source) = std::fs::write(&tmp_path, json.as_bytes()) {
-        let _ = std::fs::remove_file(&tmp_path);
-        return Err(BotPersistenceError::Io { path: tmp_path, source });
+    // Write + flush the tmp file before rename so the published file is never
+    // a partial write. The handle drops at the end of this block, releasing
+    // the file before the rename below (Windows may otherwise fail the rename).
+    {
+        use std::io::Write;
+        let mut file = match std::fs::File::create(&tmp_path) {
+            Ok(file) => file,
+            Err(source) => {
+                let _ = std::fs::remove_file(&tmp_path);
+                return Err(BotPersistenceError::Io { path: tmp_path, source });
+            }
+        };
+        if let Err(source) = file.write_all(json.as_bytes()) {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(BotPersistenceError::Io { path: tmp_path, source });
+        }
+        if let Err(source) = file.flush() {
+            let _ = std::fs::remove_file(&tmp_path);
+            return Err(BotPersistenceError::Io { path: tmp_path, source });
+        }
     }
 
     match std::fs::rename(&tmp_path, path) {

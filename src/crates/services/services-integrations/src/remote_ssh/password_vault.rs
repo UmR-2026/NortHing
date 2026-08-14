@@ -60,7 +60,9 @@ impl SSHPasswordVault {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&self.key_path, std::fs::Permissions::from_mode(0o600));
+            if let Err(error) = std::fs::set_permissions(&self.key_path, std::fs::Permissions::from_mode(0o600)) {
+                tracing::warn!("Failed to set 0600 permissions on {}: {}", self.key_path.display(), error);
+            }
         }
         Ok(key)
     }
@@ -127,7 +129,9 @@ impl SSHPasswordVault {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600));
+            if let Err(error) = std::fs::set_permissions(&self.vault_path, std::fs::Permissions::from_mode(0o600)) {
+                tracing::warn!("Failed to set 0600 permissions on {}: {}", self.vault_path.display(), error);
+            }
         }
         Ok(())
     }
@@ -320,7 +324,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn store_is_atomic_and_keeps_bak_of_previous_content() {
+    async fn vault_store_is_atomic_and_keeps_bak_of_previous_content() {
         let (_dir, vault, vault_path) = test_vault();
 
         vault.store("a", "p1").await.unwrap();
@@ -336,7 +340,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn remove_deletes_file_when_last_entry_is_removed() {
+    async fn vault_remove_deletes_file_when_last_entry_is_removed() {
         let (_dir, vault, vault_path) = test_vault();
 
         vault.store("a", "p1").await.unwrap();

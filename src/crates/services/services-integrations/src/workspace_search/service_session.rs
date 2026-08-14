@@ -31,6 +31,18 @@ impl WorkspaceSearchService {
         });
     }
 
+    /// Test-only synchronous variant of [`schedule_repo_release`]: runs the
+    /// idle-release inline (no spawn, no grace delay) so a test can observe the
+    /// daemon release directly. Production callers must use
+    /// [`schedule_repo_release`].
+    #[cfg(test)]
+    pub(crate) async fn schedule_repo_release_for_test(self: &Arc<Self>, repo_root: impl AsRef<Path>) {
+        let Ok(repo_root) = normalize_repo_root(repo_root.as_ref()) else {
+            return;
+        };
+        self.release_repo_if_idle(repo_root).await;
+    }
+
     pub async fn shutdown_all_daemons(&self) {
         let released_sessions = self.sessions.write().await.drain().count();
         self.open_guards.lock().await.clear();
@@ -236,4 +248,40 @@ pub(super) fn normalize_repo_root(repo_root: &Path) -> WorkspaceSearchResult<Pat
 
 pub(super) fn default_storage_root(repo_root: &Path) -> PathBuf {
     repo_root.join(".northhing").join("search").join("flashgrep-index")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_repo_root;
+    use super::super::flashgrep::RepoSession;
+    use super::super::service::{SessionEntry, WorkspaceSearchService};
+    use northhing_test_support::TestTempDir;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn schedule_repo_release_for_test_releases_idle_session() {
+        let tmp = TestTempDir::new("ws-search-release-seam");
+        let repo_root = tmp.path().join("repo");
+        std::fs::create_dir_all(&repo_root).expect("create repo root");
+
+        let service = Arc::new(WorkspaceSearchService::new());
+        let key = normalize_repo_root(&repo_root).expect("normalize repo root");
+
+        // Insert an idle session entry directly: the release path is what we
+        // observe, and opening a real session would require a daemon binary.
+        let entry = SessionEntry {
+            session: Arc::new(RepoSession::new_for_test()),
+            activity_epoch: Arc::new(AtomicU64::new(1)),
+        };
+        service.sessions.write().await.insert(key, entry);
+        assert_eq!(service.sessions.read().await.len(), 1);
+
+        service.schedule_repo_release_for_test(&repo_root).await;
+
+        assert!(
+            service.sessions.read().await.is_empty(),
+            "idle session must be released by the test seam"
+        );
+    }
 }

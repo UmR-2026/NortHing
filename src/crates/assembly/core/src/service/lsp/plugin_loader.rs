@@ -176,7 +176,7 @@ impl PluginLoader {
                     let validated_id = match ValidatedPluginId::try_from(plugin_id) {
                         Ok(v) => v,
                         Err(e) => {
-                            warn!("Skipping plugin with invalid id {:?}: {}", plugin_id, e);
+                            warn!("Skipping plugin with invalid id: {}", e);
                             continue;
                         }
                     };
@@ -721,7 +721,13 @@ mod tests {
         #[cfg(windows)]
         {
             if std::os::windows::fs::symlink_dir(&outside, &link).is_err() {
-                // Symlink creation needs privileges on Windows; skip silently.
+                // Symlink creation needs developer mode or admin privileges on
+                // Windows; report the skip so the untested containment path is
+                // visible instead of silently passing.
+                eprintln!(
+                    "skipping uninstall_refuses_target_outside_plugins_dir_via_symlink: \
+                     symlink_dir failed (requires developer mode or admin privileges)"
+                );
                 return;
             }
         }

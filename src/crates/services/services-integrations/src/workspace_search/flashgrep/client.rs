@@ -368,6 +368,21 @@ impl RepoSession {
     }
 }
 
+#[cfg(test)]
+impl RepoSession {
+    /// Test-only constructor: a session handle that never talks to a real
+    /// daemon. Its client is already shutting down, so `close` fails fast
+    /// instead of spawning a daemon or blocking on the start timeout.
+    pub(crate) fn new_for_test() -> Self {
+        let client = ManagedClient::new();
+        client.shutting_down.store(true, Ordering::Relaxed);
+        Self {
+            repo_id: "test-repo".to_string(),
+            client,
+        }
+    }
+}
+
 #[async_trait]
 impl FlashgrepRepoSession for RepoSession {
     async fn status(&self) -> Result<RepoStatus> {
