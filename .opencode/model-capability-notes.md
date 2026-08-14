@@ -40,3 +40,16 @@
 - 台账（progress/lessons/notes）必须 commit 入库：uncommitted 台账 = 单点故障（R3 事故实证）。
 - 子代理 brief 红线须含禁破坏性 git 命令清单（reset --hard / checkout . / restore . / clean -f）。
 - check_quota 报 zweiqaq@gmail.com token refresh failed（08-12）——google 通道健康度存疑，派 gemini 系前先验。
+
+## 2026-08-14 回填（R3' 攻坚实测）
+
+- **dsv4f（general/deepseek-v4-flash-free）**：coder/fixer 可用、快、纪律合格。实证：
+  敢用受控实验矩阵推翻 brief 错误假设（"几何 use_future 已证静"）并锁定两重框架
+  根因（tokio-sleep use_future busy-spin / 拖动→Poll 风暴），偏离三项全披露
+  （白名单外 entry.rs、16ms 线程、无优雅停止）。task 工具派发显示 cancelled 时
+  实际在用户侧执行，结果由用户贴回——派发后等用户回执，勿连发。
+- **minimax-m3**：稳定备用通道（r3p2/r3p3 均 DONE，报告质量在线）。
+- **vision**：MiniMax vision MCP 已启用（08-13 装好，08-14 生效）；编排者 read 直读
+  PNG 亦可用。
+- **编排者 GUI 量测法**（无调试器替代）：IsHungAppWindow 逐窗 + TotalProcessorTime
+  3s 增量 + env-gate 源码二分（48s build/轮）。本机无 cdb/procdump/windbg。

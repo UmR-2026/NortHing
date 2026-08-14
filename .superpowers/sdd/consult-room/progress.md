@@ -3,7 +3,7 @@
 计划：`.superpowers/sdd/plan.md`
 分支：`feat/consult-room-slint`（worktree `E:\agent-project\northing\.worktrees\consult-room-build`）
 基线：8e43dc4 (main, 2026-08-04)；终裁：五页套全部按现状通过（FINAL-RULING.md）
-**最新接续点：`handoff-20260813.md`——R3' 进行中断于 room 窗 runtime panic（HEAD=727f899，flags 本地 flip 未提交）；审计修复 complete / re-spike GO 已入账。模型序 M3 → opencode-go v4f（OpenChamber 目录坑见 handoff §2.9）**
+**最新接续点：`handoff-20260814b.md`——R4-R9 视觉收口完成（用户裁定「主窗口满意」，HEAD=5bcc285，R4-R9 改动未 commit 候裁定，flags.rs 已 restore=false）；R3' 功能层清零 + F1-F5 验收批已入库**
 
 | Task | 状态 | Commits | 备注 |
 |---|---|---|---|
@@ -60,3 +60,18 @@
 - Minor m-1（亮色 line token 缺失）可由 T2 追加 palette token 顺手收尾。
 - Minor m-2（WindowChrome.signal in property 残留）可在 T2 顺手清理。
 - **T-IO-b 验收遗留（2026-08-11）**：① C2 修复中（主题同步 inner/outer）；② settings 补证挂 F4（deck 设施条任务）；③ Minor：inner shown 态 ExStyle 0x00040118（APPWINDOW 残留、TOOLWINDOW 被 winit 覆写），当前任务栏配置下无影响，换机/改配置后 inner 可能上任务栏 → T7 triage；④ 环境事实（构建走 GNU 1.95 cargo 直跑 / MainWindowHandle 漂移 / app.json BOM 坑 / welcome 触发三条件 / 副屏任务栏行为）见 verdict §4，后续 brief 必须采用。
+
+## R4-R7 视觉收口轮（2026-08-14，编排者亲自执行，派发通道 cancelled 用户指示）
+- **状态：完成，未 commit**（用户视觉迭代仍在进行；改动文件：ui_dioxus/{app,css,entry,i18n}.rs + flags.rs DIOXUS_SHELL=true 脏状态待复核结束后 restore）。报告：task-r4-visual-report.md。
+- R4：frameless（decorations=false + undecorated_shadow + with_menu(None) 去 dioxus 默认菜单）+ ─□✕ 真窗控 + 房间拖动；W2-W5 按 brief。
+- **最大根因：真值 css UTF-8 BOM** → `:root` 永不匹配 → 全部 :root 变量失效（宝石/渐变/边框隐形）。css::truth_css() strip BOM，守卫测试不受影响。
+- R5 去嵌套（用户判决）：room 铺满、containment/membrane-frame 移除、outer 四独立卡。
+- R6：竖签/见证说明元素级移除、挂载→⊕ 图标钮、主题钮→内联 SVG 日月、宝石反对角线轴对称（--gem-mid=85px 逻辑；**截图物理 px ≠ CSS 逻辑 px，K≈1.44，描边实测标定**）。
+- R7（先商后做）：收纳钮 → 骑 room-head 下缘 56×3 边缘条（折叠态常亮橙、随缝上移可展开）；宝石 → 实心细柱+box-shadow 光晕；**完全贴边根因 = UA body margin 8px（真值无 reset），body{margin:0} 三窗铺满**。
+- 功能实测：宝石切换✅ □最大化✅ ─最小化✅ ✕整进程退出✅ 主题三窗同步✅ CPU 0%✅。
+- 门禁：build exit 0（warnings 基线 lib19/bin40 不增）、cargo test -p northhing ui_dioxus 过、i18n:audit 154 持平。
+- 工具坑：脚本点击在窗缘 8px 内被 tao hit_test 缩放边吃掉；窗内控件脚本验证有效。
+- 下一轮候选（已报用户）：右宝石 dark 态提亮 / 见证者消息右缘孤线 / ➤ 发送钮 / 模块「隐蔽·拉开」交互入口（真值 data-drag 设计未定）。
+- R8（同日追加）：scrim 常暗 = 色差根因 → 退役（偏离 block-contract §2 降级形态，用户判决）；宝石/缝条存在感标定（柱 4px、is-open .72、缝条 68x4 --muted）；主题同步实测两次翻转三窗跟随，用户 image-4 瞬态非 bug。仍未 commit。
+- R9（同日追加）：窗控压虚线根因 = .room-status 无带高 → padding:10px 18px（带高 34 逻辑）+ .room-controls top:3px 带内居中；state-dot 呼吸点删除，8s 呼吸钟移植头像渐变（breath-avatar-fill ::before / dark glow / light ring，no-preference 门控，保留真值缩放呼吸同钟）。r9a/r9b 两帧间隔 4s 头像区 102 采样点差异实证动画运行。门禁全守。仍未 commit，待用户视觉裁定。
+- **用户裁定（08-14 夜）：「主窗口满意」→ R4-R9 视觉收口完成**。flags.rs 已 restore 回 false（工作树清洁）。接续文档 handoff-20260814b.md 已写。**已入库：源码 commit `a202028`（5 文件 +431/-79）；台账/报告/handoff 由本笔 docs commit 收（hash 见 git log）**。
