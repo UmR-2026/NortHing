@@ -7,7 +7,7 @@
     },
     {
       "id": "mobile-web-source",
-      "maxCjkLines": 0
+      "maxCjkLines": 2
     },
     {
       "id": "installer-source",
