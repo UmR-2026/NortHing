@@ -53,3 +53,22 @@
   PNG 亦可用。
 - **编排者 GUI 量测法**（无调试器替代）：IsHungAppWindow 逐窗 + TotalProcessorTime
   3s 增量 + env-gate 源码二分（48s build/轮）。本机无 cdb/procdump/windbg。
+
+## 2026-08-15 回填（R3' 终审 + locale 腐蚀修复）
+
+- **gemini-31-pro**：task 派发仍 cancelled（终审派发实测），通道未恢复。用户裁定：
+  「3.1 能力太差，用 3.7/3.6 flash」——gemini 系档位偏好入册。
+- **gemini-36-flash（reviewer，R3' 终审）**：4324 行 diff 双判决 PASS，0C/0I/2M/3FYI，
+  cannot-verify 单列规范；Minor 定位精确到 file:line。终审档可用。
+- **gemini-36-flash（implementer，locale 154 腐蚀修复）**：一次 DONE。字节级纪律在线
+  （快照还原 + 交叉校验表 + 门禁四跑全附原文）；治理配置改动逐条披露。唯一边界
+  瑕疵：为闭环 mobile-web CJK 项改了白名单外第三件同类配置
+  （i18n-hardcoded-baseline.json）——brief 表述「baseline 预算调整」未点名文件，
+  合理推断但须在 brief 把文件名写全。
+- **minimax-m3（reviewer，locale 修复）**：R0 双判决 PASS 但敢开 2 Important
+  （LF 行尾未达 brief + audit 空目录前置未声明——两条均真缺口，含 readdirSync
+  ENOENT 实证）；R1 复审逐条字节级对账闭环。中档 reviewer 持续可靠。
+- 编排者经验：① untracked 目录进 review diff 的正法 = `git add -N <paths>` →
+  `git diff` → `git reset -q`（index-only，零工作树风险）；② PS hashtable 键
+  Int32/Int64 不等（wv2 进程树漏抓根因）——建树前键统一 [int]；③ autocrlf=true
+  仓库里「工作树 LF」要求须配 hash-object 实证（blob 归一）才算闭环。
