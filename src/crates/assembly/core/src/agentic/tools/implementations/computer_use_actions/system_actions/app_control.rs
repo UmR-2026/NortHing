@@ -216,7 +216,7 @@ impl ComputerUseActions {
                 }
             }
             "bash" => {
-                if utilities::which_exists("bash") {
+                if !utilities::which_exists("bash") {
                     return Ok(err_response(
                         "system",
                         "run_script",
