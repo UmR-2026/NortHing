@@ -134,6 +134,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 ## 3. 统一执行时间线（合并全部线索，近 → 远）
 
 > 与 full-review §6 Wave 0-5 对齐；本文将其重编号为 T0-T6 并补齐各线映射。工作量：XS<半天 / S=1-2天 / M=3-5天 / L=1-2周+。**同一时段内按表序执行。**
+> **0.3 拆分（E-07，2026-08-17）**：0.3a = T0 + T2-1 + T2-2 + T1；0.3b = T2-9 + T2-10 + PCS-1/2。
 
 ### T0 紧急（当日）
 
@@ -163,7 +164,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | # | 内容 | 来源线 | 量 |
 |---|---|---|---|
 | T2-1 | **CI 补齐**：check 去 exclude、test 扩面、`cargo tree -p northhing-kernel-api` 守卫 job（北极星 §4 既有要求）、desktop check 强制门（P2-15 流程结转） | K+review | S |
-| T2-2 | 死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / **judge_gate 适配层**（assembly/core 1,690L；**协议层 1,473L 保留**转 TH-5 词汇，2026-08-17 G15 修正）≈6.5k 行）**+ remote 栈整删（TH-4：remote_connect 11.5k + mobile-web 4.7k + embedded relay 入口先摘后删；P1-4/P1-7/D-2 随之关闭）** **+ MiniApp 子系统整删（2026-08-17 拍板：内置四件套 + 宿主 host_routing/bridge/manager/契约 ≈6k 行；permission_policy 默认拒绝语义先提炼进 PCS 设计再删码；连带关闭 T1-1、T3-5）+ plan-compliance-checker(894L) + harness(571L，或并入 test-support)**，合计 ≈30k 行 | review+论题 | M |
+| T2-2 | 死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / **judge_gate 适配层**（assembly/core 1,690L；**协议层 1,473L 保留**转 TH-5 词汇，2026-08-17 G15 修正）≈6.5k 行）**+ remote 栈整删（TH-4：remote_connect 11.5k + mobile-web 4.7k + embedded relay 入口先摘后删；P1-4/P1-7/D-2 随之关闭）** **+ MiniApp 子系统整删（2026-08-17 拍板：内置四件套 + 宿主 host_routing/bridge/manager/契约 ≈6k 行；permission_policy 默认拒绝语义先提炼进 PCS 设计再删码；连带关闭 T1-1、T3-5）**+ relay-server + relay-core 整删（PEND-1 拍板 2026-08-17：≈4-5k 行；surfaces.md 同 commit 同步）** + plan-compliance-checker(894L) + harness(571L，或并入 test-support)**，合计 ≈35k 行 | review+论题 | M |
 | T2-9 | **功能冗余合并批次**（2026-08-17 冗余扫描）：第一批 S 级——deep_research 去重（255L×2，diff 仅 10 行注释→re-export）、ndjson_log 统一（4 个追加+轮转实现 ~1,320L）、now_unix_ms 统一（3 同名函数+25 内联）、原子写收口 json_store（顺修 P2-16 save_config 裸写；删 PersistenceService FILE_LOCKS）、初始化收口（server bootstrap 手抄 + CLI 样板×4 → init_agentic_system）；第二批 M 级——app.json↔GlobalConfig 镜像拆除（写穿 kernel API）、**事件管道收敛 A7**（BackendEvent 死管道并入 EventQueue 或删除）、**desktop NullDispatcher 空转路径移除**（agent-dispatch B2，回退直连直至 dispatcher 真接线）；延期 L 级——ExecCommand↔Bash 合并（Bash/PTY 为正）、双 ToolRegistry 迁移收尾、MCP core 包装层（3,641L）收口 | 冗余扫描 | 第一批 S / 第二批 M / 延期 L |
 | T2-10 | **连续性自检测试**：自动化"杀 core → 恢复 → diff 会话/记忆/身份"（T5"agent 不死"验收的轻量前置版，0.3 即可写，依赖 fake AI backend 提供确定性） | 论题 §3 度量 | S |
 
@@ -196,8 +197,8 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T3-4 | Gemini 视觉接通（放开 gating） | review | S |
 | ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17） | — |
 | T3-6 | 体验洞后端部分：P2-5 失败 turn 落史、P2-6 事件丢弃策略、P2-4 CleanupService 调度 | 债 | M |
-| T3-7 | **M 线落地**：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（P2-12 升 CI 硬门禁）+ TH-6 半被动约束配置 + P2-14 去重修复 | M 线（论题） | M |
-| T3-8 | **TH-5 身份演化机制**（G15-b 自评审模式：触发限轮内/维护周期，评审执行器新写参考 SubagentJudgeRunner，**复用保留的 judge_gate 协议层**，证据禁取 episodes（P2-12），consume-once 凭证继承 P2-11 教训；insights 删除不复活） | M 线（论题） | L |
+| T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 | M 线（论题） | M |
+| T3-8 | **TH-5 身份演化机制**（**owner = growth session**，E-08；G15-b 自评审模式：触发限轮内/维护周期，评审执行器新写参考 SubagentJudgeRunner，**复用保留的 judge_gate 协议层**，证据禁取 episodes（P2-12），consume-once 凭证继承 P2-11 教训；insights 删除不复活） | M 线（论题） | L |
 
 ### T4 解耦收口（= K 线 K4b + K3 + 瘦身，版本锚 0.4.x）
 
