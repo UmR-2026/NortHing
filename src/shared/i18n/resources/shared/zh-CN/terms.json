@@ -1,7 +1,7 @@
 {
   "product": {
-    "name": "northhing",
-    "remote": "northhing Remote"
+    "name": "NortHing",
+    "remote": "NortHing Remote"
   },
   "features": {
     "remoteControl": "远程控制",
@@ -34,7 +34,7 @@
   "connectionMethods": {
     "lan": "局域网",
     "ngrok": "Ngrok",
-    "northhingServer": "northhing Server",
+    "northhingServer": "NortHing Server",
     "customServer": "自定义服务器",
     "botFeishu": "飞书机器人",
     "botTelegram": "Telegram Bot",

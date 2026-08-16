@@ -41,7 +41,7 @@ export function LanguageSelect({ onSelect }: LanguageSelectProps) {
           textAlign: 'center', maxWidth: 280, padding: '0 24px',
           animation: 'heroContentFadeIn 0.8s ease-out 0.3s both',
         }}>
-          <img src={logoUrl} alt="northhing" style={{
+          <img src={logoUrl} alt="NortHing" style={{
             display: 'block', margin: '0 auto 16px',
             width: 56, height: 56, borderRadius: 14,
             filter: 'drop-shadow(0 0 40px rgba(100, 180, 255, 0.15))',
@@ -51,7 +51,7 @@ export function LanguageSelect({ onSelect }: LanguageSelectProps) {
             color: 'var(--color-text-primary)', letterSpacing: '-0.03em',
             lineHeight: 0.95, margin: '0 0 16px 0',
             textShadow: '0 0 60px rgba(100, 180, 255, 0.3)',
-          }}>northhing</h1>
+          }}>NortHing</h1>
         </div>
 
         <div style={{

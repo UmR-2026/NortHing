@@ -60,7 +60,7 @@ export function ThemeSetup({ options, setOptions, onLaunch, onClose }: ThemeSetu
       }
       onClose();
     } catch (err: unknown) {
-      setFinishError(typeof err === 'string' ? err : (err as Error)?.message || 'Failed to launch northhing');
+      setFinishError(typeof err === 'string' ? err : (err as Error)?.message || 'Failed to launch NortHing');
     } finally {
       setIsFinishing(false);
     }

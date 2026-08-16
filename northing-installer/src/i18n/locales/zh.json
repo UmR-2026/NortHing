@@ -7,7 +7,7 @@
       "notAbsolute": "安装路径必须是绝对路径（例如本地驱动器上的某个文件夹）。",
       "filesystemRoot": "不能安装到磁盘根目录，请选择磁盘下的某个文件夹。",
       "pathNotDirectory": "所选路径已存在但不是文件夹。",
-      "directoryMustBeEmptyOrNorthhing": "安装目录必须为空，或已包含 northhing 安装。",
+      "directoryMustBeEmptyOrNorthhing": "安装目录必须为空，或已包含 NortHing 安装。",
       "inspectDirectoryFailed": "无法读取安装目录，请检查权限后重试。",
       "directoryNotWritable": "安装目录不可写入。请更换路径，或以管理员身份运行安装器（见下方说明）。",
       "parentNotWritable": "上级目录不可写入。系统目录（如 Program Files）通常需要管理员权限（见下方说明）。",
@@ -28,11 +28,11 @@
     "optionsLabel": "安装选项",
     "desktopShortcut": "创建桌面快捷方式",
     "startMenu": "添加到开始菜单",
-    "launchAfterInstall": "安装后启动 northhing",
+    "launchAfterInstall": "安装后启动 NortHing",
     "back": "返回",
     "install": "安装",
     "installing": "准备中…",
-    "existingInstallTitle": "检测到本机已安装 northhing",
+    "existingInstallTitle": "检测到本机已安装 NortHing",
     "existingInstallVersion": "已安装版本：{{version}}",
     "existingInstallLocation": "安装位置：{{path}}",
     "existingInstallBinaryMissing": "该路径下未找到主程序文件，可先运行卸载程序或重新安装。",
@@ -55,8 +55,8 @@
     "baseUrlPlaceholder": "示例：https://open.bigmodel.cn/api/paas/v4/chat/completions",
     "providers": {
       "opennorthhing": {
-        "name": "Opennorthhing",
-        "description": "Opennorthhing 大模型平台"
+        "name": "Open NortHing",
+        "description": "Open NortHing 大模型平台"
       },
       "gemini": {
         "name": "Google Gemini",
@@ -182,8 +182,8 @@
     "finish": "完成"
   },
   "uninstall": {
-    "title": "卸载 northhing",
-    "subtitle": "将移除 northhing 及其集成项（快捷方式、右键菜单、PATH）。",
+    "title": "卸载 NortHing",
+    "subtitle": "将移除 NortHing 及其集成项（快捷方式、右键菜单、PATH）。",
     "installPath": "安装目录",
     "pathUnknown": "未检测到安装目录",
     "confirm": "开始卸载",

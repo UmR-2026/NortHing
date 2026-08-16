@@ -1,4 +1,4 @@
-# northhing
+# NortHing
 
 A general-purpose agent application with a Slint-based desktop interface. The IDE/CLI/coding capabilities are tools for the agent — not a human-facing IDE.
 

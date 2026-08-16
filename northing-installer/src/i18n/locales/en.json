@@ -7,7 +7,7 @@
       "notAbsolute": "The installation path must be an absolute path (for example a folder on a local drive).",
       "filesystemRoot": "Cannot install to a drive root. Choose a folder inside the drive.",
       "pathNotDirectory": "The selected path exists but is not a folder.",
-      "directoryMustBeEmptyOrNorthhing": "The installation folder must be empty, or already contain a northhing installation.",
+      "directoryMustBeEmptyOrNorthhing": "The installation folder must be empty, or already contain a NortHing installation.",
       "inspectDirectoryFailed": "Could not read the installation folder. Check permissions and try again.",
       "directoryNotWritable": "The installation folder is not writable. Choose another location or run the installer as administrator (see below).",
       "parentNotWritable": "The parent folder is not writable. System folders such as Program Files often require administrator rights (see below).",
@@ -28,11 +28,11 @@
     "optionsLabel": "Options",
     "desktopShortcut": "Create desktop shortcut",
     "startMenu": "Add to Start Menu",
-    "launchAfterInstall": "Launch northhing after setup",
+    "launchAfterInstall": "Launch NortHing after setup",
     "back": "Back",
     "install": "Install",
     "installing": "Preparing…",
-    "existingInstallTitle": "Existing northhing installation detected",
+    "existingInstallTitle": "Existing NortHing installation detected",
     "existingInstallVersion": "Installed version: {{version}}",
     "existingInstallLocation": "Install location: {{path}}",
     "existingInstallBinaryMissing": "The main application file was not found at that location. You can run the uninstaller first or reinstall.",
@@ -55,8 +55,8 @@
     "baseUrlPlaceholder": "e.g., https://open.bigmodel.cn/api/paas/v4/chat/completions",
     "providers": {
       "opennorthhing": {
-        "name": "Opennorthhing",
-        "description": "Opennorthhing Model Platform"
+        "name": "Open NortHing",
+        "description": "Open NortHing Model Platform"
       },
       "gemini": {
         "name": "Google Gemini",
@@ -182,8 +182,8 @@
     "finish": "Finish"
   },
   "uninstall": {
-    "title": "Uninstall northhing",
-    "subtitle": "This removes northhing and related integrations (shortcuts, context menu, PATH).",
+    "title": "Uninstall NortHing",
+    "subtitle": "This removes NortHing and related integrations (shortcuts, context menu, PATH).",
     "installPath": "Install path",
     "pathUnknown": "Install path not detected",
     "confirm": "Start uninstall",
