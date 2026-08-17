@@ -187,6 +187,24 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T2-7 | `code-rot-scan.sh` 建实或删引用；debug-log 轮转 | review | XS |
 | T2-8 | 命名 canonical 统一（随 D-4 拍板） | review | S |
 
+#### PCS-3 权限框架语义（提炼自 MiniApp `permission_policy`，2026-08-17，T2-2 删码前固化）
+
+> 源实现随 T2-2 删除，本节自足—— PCS-3 实现时以本节为准，不回溯旧码。证据锚点（删前）：`contracts/product-domains/src/miniapp/types.rs:42-80`、`.../miniapp/permission_policy.rs:34-97`、`services-integrations/src/miniapp/host_dispatch.rs:106-135`。
+
+**声明模型**：清单（manifest）声明能力项，每项 `Option<T>`：`fs`（read/write 路径作用域列表）/ `shell`（命令允许表）/ `net`（域名允许表）/ `node` / `ai` / `agent` / `notifications`。
+
+**默认拒绝三段式**（核心语义，PCS 权限框架必须保留）：
+
+1. **未声明 = 结构缺席**：能力项为 `None` 时，解析出的 policy 里该命名空间**整个 key 不出现**——不是"有 key 但为空"，是沙箱/宿主侧根本拿不到这个能力的任何授权。
+2. **声明但未授予 = 显式空集**：能力项存在但允许表为 `None` 时，policy 写**显式空数组**（`allow: []`）——"声明了，零授权"。`ShellPermissions` 文档注释明示：`Empty = all forbidden`。
+3. **通配必须显式**：`net.allow` 的 `"*"` = 全部域名，是清单里的显式字面量，不是缺省行为。
+
+**路径作用域变量**：`{appdata}` / `{workspace}` / `{home}` 静态解析为绝对路径；`{user-selected}` 静态解析为**空**——只有运行时用户显式授权的路径（如目录选择器 `grant_path`）才进入 policy，且**同时进 read+write**。这对应 P-16 的授权点设计：安装时批准 manifest 声明，运行时按需追加用户选定路径。
+
+**policy 与执行点分离**：解析器（`resolve_policy`）产出纯数据 JSON policy，作为 Worker 启动参数传入；宿主侧 `dispatch_host` 用**同一 policy 形状**按命名空间（fs/shell/os/net）分发，拒绝是显式 `deny(...)` 错误，不是隐式落空。
+
+**PCS-3 设计约束（从上述语义推导）**：① 插件清单声明能力，未声明即拒绝，判定在**解析期**完成，不在每次调用时；② 声明未授予即拒绝（显式空集）；③ 批准的授权 = 数据（policy），与执行边界（沙箱/宿主分发）解耦，执行边界只消费 policy 不理解清单；④ 运行时追加授权走"用户显式选择"通道，最小粒度是具体路径/命令/域名，不支持隐式放大；⑤ 任何通配必须在清单里显式可见。
+
 ### T3 功能补全（后端部分，按产品优先级）
 
 | # | 内容 | 来源线 | 量 |
