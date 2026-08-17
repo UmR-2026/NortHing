@@ -17,7 +17,6 @@ export const noCoreDependencyCrates = [
   'product-domains',
   'terminal',
   'tool-runtime',
-  'webdriver',
 ];
 
 export const lightweightBoundaryRules = [

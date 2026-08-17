@@ -43,7 +43,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `terminal` | `src/crates/services/terminal` | Terminal service |
 | `debug-log` | `src/crates/services/debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` constants); shared by desktop and core, re-exported from core (K4a-T5) |
 | `ai-adapters` | `src/crates/adapters/ai-adapters` | AI provider adapters |
-| `webdriver` | `src/crates/adapters/webdriver` | WebDriver adapter |
 | `kernel-api` | `src/crates/contracts/kernel-api` | Kernel facade contracts — product surfaces reach core only through this facade (K1) |
 | `acp` | `src/crates/interfaces/acp` | ACP interface |
 | `product-capabilities` | `src/crates/assembly/product-capabilities` | Product capability assembly |
@@ -53,9 +52,8 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
 | `assembly-core` | `src/crates/assembly/core` | Core assembly |
 | `relay-core` | `src/crates/services/relay-core` | Relay logic (shared by relay-server) |
-| `cli-internal` | `src/crates/cli-internal` | CLI internal utilities |
+| `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
 | `test-support` | `src/crates/test-support` | Test utilities |
-| `plan-compliance-checker` | `tools/plan-compliance-checker` | Plan compliance tooling |
 
 ## Change Protocol
 

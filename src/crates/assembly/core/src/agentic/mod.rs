@@ -51,9 +51,6 @@ pub mod workspace;
 
 mod util;
 
-// Insights module
-pub mod insights;
-
 // Episode log module (growth experience storage)
 pub mod episodes;
 

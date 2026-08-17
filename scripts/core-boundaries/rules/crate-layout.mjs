@@ -25,7 +25,6 @@ export const crateLayoutRules = [
 
   { crateName: 'acp', layer: 'interfaces', path: 'src/crates/interfaces/acp' },
   { crateName: 'ai-adapters', layer: 'adapters', path: 'src/crates/adapters/ai-adapters' },
-  { crateName: 'webdriver', layer: 'adapters', path: 'src/crates/adapters/webdriver' },
 
   { crateName: 'core', layer: 'assembly', path: 'src/crates/assembly/core' },
 

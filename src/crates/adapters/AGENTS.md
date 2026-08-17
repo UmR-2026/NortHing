@@ -12,7 +12,6 @@ services.
 | Crate | Responsibility | Local doc |
 |---|---|---|
 | `ai-adapters` | AI provider request/response adapters and stream protocol glue | [AGENTS.md](ai-adapters/AGENTS.md) |
-| `webdriver` | Embedded WebDriver protocol and browser automation adapter | [AGENTS.md](webdriver/AGENTS.md) |
 
 ## Placement Rules
 

@@ -5938,19 +5938,10 @@ name = "northhing-cli-internal"
 version = "0.2.10"
 dependencies = [
  "anyhow",
- "chrono",
  "clap",
- "dirs",
- "northhing-core",
- "northhing-events",
  "rand 0.8.7",
- "sha2",
- "thiserror 2.0.18",
  "tokio",
- "toml 0.9.12+spec-1.1.0",
- "tracing",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
@@ -6280,34 +6271,6 @@ dependencies = [
 [[package]]
 name = "northhing-tool-packs"
 version = "0.2.10"
-
-[[package]]
-name = "northhing-webdriver"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "block2 0.6.2",
- "glib",
- "gtk",
- "image",
- "objc2 0.6.4",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "objc2-web-kit",
- "serde",
- "serde_json",
- "tauri",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
- "webkit2gtk",
- "webview2-com",
- "windows 0.61.3",
- "windows-core 0.61.2",
-]
 
 [[package]]
 name = "notify"
@@ -6773,7 +6736,6 @@ checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
 dependencies = [
  "bitflags 2.13.0",
  "block2 0.6.2",
- "libc",
  "objc2 0.6.4",
  "objc2-core-foundation",
 ]
@@ -6785,16 +6747,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "180788110936d59bab6bd83b6060ffdfffb3b922ba1396b312ae795e1de9d81d"
 dependencies = [
  "bitflags 2.13.0",
- "objc2 0.6.4",
- "objc2-core-foundation",
-]
-
-[[package]]
-name = "objc2-javascript-core"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a1e6550c4caed348956ce3370c9ffeca70bb1dbed4fa96112e7c6170e074586"
-dependencies = [
  "objc2 0.6.4",
  "objc2-core-foundation",
 ]
@@ -6858,17 +6810,6 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
  "objc2-metal 0.3.2",
-]
-
-[[package]]
-name = "objc2-security"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "709fe137109bd1e8b5a99390f77a7d8b2961dafc1a1c5db8f2e60329ad6d895a"
-dependencies = [
- "bitflags 2.13.0",
- "objc2 0.6.4",
- "objc2-core-foundation",
 ]
 
 [[package]]
@@ -6969,8 +6910,6 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
- "objc2-javascript-core",
- "objc2-security",
 ]
 
 [[package]]
@@ -7613,18 +7552,6 @@ name = "plain"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
-
-[[package]]
-name = "plan-compliance-checker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "pulldown-cmark 0.11.3",
- "serde",
- "serde_json",
- "tokio",
-]
 
 [[package]]
 name = "plist"

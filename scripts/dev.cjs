@@ -27,12 +27,7 @@ const DEV_SERVER_HOSTS = ['localhost', '127.0.0.1', '::1'];
 const DESKTOP_PREVIEW_REBUILD_INPUTS = [
   path.join(ROOT_DIR, 'Cargo.toml'),
   path.join(ROOT_DIR, 'src', 'apps', 'desktop'),
-  path.join(ROOT_DIR, 'src', 'crates', 'core'),
-  path.join(ROOT_DIR, 'src', 'crates', 'transport'),
-  path.join(ROOT_DIR, 'src', 'crates', 'api-layer'),
-  path.join(ROOT_DIR, 'src', 'crates', 'events'),
-  path.join(ROOT_DIR, 'src', 'crates', 'ai-adapters'),
-  path.join(ROOT_DIR, 'src', 'crates', 'webdriver'),
+  path.join(ROOT_DIR, 'src', 'crates'),
 ];
 const DESKTOP_PREVIEW_REBUILD_IGNORED_DIRS = new Set([
   '.northhing',
@@ -101,13 +96,13 @@ function decodeOutput(output) {
   if (process.platform !== 'win32') return buffer.toString('utf-8');
 
   const utf8 = buffer.toString('utf-8');
-  if (!utf8.includes('ï¿?)) return utf8;
+  if (!utf8.includes('ï¿½?)) return utf8;
 
   try {
     const { TextDecoder } = require('util');
     const decoder = new TextDecoder('gbk');
     const gbk = decoder.decode(buffer);
-    if (gbk && !gbk.includes('ï¿?)) return gbk;
+    if (gbk && !gbk.includes('ï¿½?)) return gbk;
     return gbk || utf8;
   } catch (error) {
     return utf8;
