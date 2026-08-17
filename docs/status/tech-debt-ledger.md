@@ -191,7 +191,7 @@
 - **Evidence**: Discovered 2026-08-05 while dispatching Task B3 of the backend follow-ups round; fixed by commit `b0bfe43` (keyring `v1` feature + 3 API/`Lazy` compile fixes + one test import path, zero behavior change, judge-verified line by line). New desktop baseline: `cargo test -p northhing --lib` = 118/118.
 - **Root cause (process)**: a security-sensitive change was accepted on a report whose verification section was incomplete, and the round handoff reused an older desktop test figure instead of a fresh measurement.
 - **Proposed fix**: gate it structurally — `cargo check -p northhing` must pass before any branch merges to main (recorded as housekeeping rule 6 in `AGENTS.md` / `AGENTS-CN.md`, 2026-08-06), and a round handoff must not carry forward a verification baseline it did not measure itself.
-- **Status**: code defect resolved (`b0bfe43`); process gate recorded 2026-08-06 (house rule 6). CI enforcement of the desktop check is still open.
+- **Status**: resolved (2026-08-17, T2-1: `cargo check --workspace` in CI includes `northhing` and `northhing-cli`; code defect resolved in `b0bfe43`; process gate recorded in housekeeping rule 6).
 
 ### P2-16: `ConfigManager::save_config` writes the whole config file non-atomically
 

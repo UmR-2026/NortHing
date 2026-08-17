@@ -95,10 +95,11 @@ jobs:
         # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
 
       - name: Check compilation
-        run: cargo check --workspace --exclude northhing-cli --exclude northhing
+        run: cargo check --workspace
 
-      - name: Run core Rust tests
-        run: cargo test --locked -p northhing-core
+      - name: Run workspace Rust tests
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked --workspace
 
   # ── kernel-api dependency guard ─────────────────────────────────────
   kernel-api-clean:
