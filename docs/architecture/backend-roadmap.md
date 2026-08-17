@@ -176,7 +176,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 |---|---|---|
 | PCS-1 | P0 可逆注册原语（DisposableList/guard）+ 三注册表 guard 化（ToolRegistry / AgentRegistry / MCP 注册路径）——插件可拔的地基 | S |
 | PCS-2 | skills 出 crate → 数据目录 + fs watch 热加载（**第一个 DataPlugin**；顺解 T3-1 skills 面板数据源与 builtin 依赖） | S-M |
-| PCS-3 | 统一插件清单/注册表/健康状态 + **权限框架**（提炼 MiniApp `permission_policy` 默认拒绝语义，在 T2-2 删码之前完成提炼）+ 设置页统一插件面板（MCP/skills/providers/LSP 一处可见，消费 kernel-api `list_tools` 等） | M |
+| PCS-3 | 统一插件清单/注册表/健康状态 + **权限框架**（提炼 MiniApp `permission_policy` 默认拒绝语义，在 T2-2 删码之前完成提炼；**批准者 = 用户安装时批准**，P-16）+ 设置页统一插件面板（MCP/skills/providers/LSP 一处可见，消费 kernel-api `list_tools` 等） | M |
 | PCS-4 | P2 配置驱动重组（配置 diff → 事务应用 → 失败回滚），MCP 启停接入——"改配置即生效、无需重启" | M |
 | PCS-5 | core-agent 自省：插件/技能/工具/模型注册表注入 agent 自我描述（B1b 模型运行时信息的扩展——"同事知道自己有什么"） | S |
 | PCS-6 | 协议插件：ACP 客户端作为插件形态接入（随 T4-5 协议冻结）；2.0 C 选项的生态入口 | 随 T4/T5 |
@@ -197,7 +197,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T3-4 | Gemini 视觉接通（放开 gating） | review | S |
 | ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17） | — |
 | T3-6 | 体验洞后端部分：P2-5 失败 turn 落史、P2-6 事件丢弃策略、P2-4 CleanupService 调度 | 债 | M |
-| T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 | M 线（论题） | M |
+| T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 + **本地度量埋点**（P-10 边界：不离机；记忆纠正频率/审计覆盖率/工具成功率） | M 线（论题） | M |
 | T3-8 | **TH-5 身份演化机制**（**owner = growth session**，E-08；G15-b 自评审模式：触发限轮内/维护周期，评审执行器新写参考 SubagentJudgeRunner，**复用保留的 judge_gate 协议层**，证据禁取 episodes（P2-12），consume-once 凭证继承 P2-11 教训；insights 删除不复活） | M 线（论题） | L |
 
 ### T4 解耦收口（= K 线 K4b + K3 + 瘦身，版本锚 0.4.x）
