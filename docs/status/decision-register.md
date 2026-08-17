@@ -68,6 +68,7 @@
 | E-06 | 08-16 | CI 修复执行姿态 = 与 T0 同批最先做（roadmap 中仍列 T2-1，执行时提前） | 缺省生效 |
 | E-07 | 08-17 | **0.3 拆 0.3a/0.3b**：0.3a = T0 + T2-1 CI + T2-2 删除 + T1 五项（"安全+睁眼"）；0.3b = T2-9 合并 + PCS-1/2 + T2-10（"纯化+插件地基"） | 生效 |
 | E-08 | 08-17 | **M 线（T3-7/T3-8）归属 growth session**；CI 门禁接口约定：growth 出演化审计策略与判定逻辑，编排线负责 CI 硬门禁接线（T2-1/T3-7 交汇） | 生效 |
+| E-09 | 08-18 | **T2-2 删留冲突裁决（plan-mandated finding 上交）**：T2-2a 侦察实测 tool-provider-groups（`materialization.rs:9` + product-capabilities `lib.rs:15-16` 消费 + boundary self-test 硬编码其 manifest）与 harness（product-capabilities 非测试代码构建 DeepReview/DeepResearch/MiniApp 的 HarnessRegistry；core 非 optional 硬依赖 + facade re-export）均为活接线，与 full-review R-18/SW2-2「零调用/直接删」冲突——用户拍板**仍删，以计划为准**；执行方式 = 先拆装配面再删 crate（T2-2a' 单）；surfaces.md:25「SDLC Harness」误标随该单修正 | 生效 |
 
 ## 4. 已接受风险登记（R 系列，均用户知情拍板）
 
