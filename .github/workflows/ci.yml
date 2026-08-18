@@ -41,14 +41,6 @@ jobs:
         shell: pwsh
         run: ./scripts/ci/setup-openssl-windows.ps1
 
-      - name: Create mobile-web dist directory (placeholder)
-        shell: bash
-        run: |
-          # v0.1.0: web-ui build disabled; create empty dist to avoid
-          # downstream path errors if any compile-time embeds reference it.
-          mkdir -p src/mobile-web/dist
-          echo '{"version":"v0.1.0-placeholder"}' > src/mobile-web/dist/.gitkeep
-
       - name: Install Linux system dependencies (Tauri)
         if: runner.os == 'Linux'
         shell: bash

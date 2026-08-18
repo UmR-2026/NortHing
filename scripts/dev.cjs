@@ -19,7 +19,6 @@ const {
   printComplete,
   printBlank,
 } = require('./console-style.cjs');
-const { buildMobileWeb } = require('./mobile-web-build.cjs');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DEV_SERVER_PORT = 1422;
@@ -615,7 +614,7 @@ async function main() {
   printHeader(`northhing ${modeLabel} Development`);
   printBlank();
 
-  const totalSteps = desktopMode ? 5 : 3;
+  const totalSteps = desktopMode ? 4 : 3;
   let currentStep = 1;
 
   // Step 1: Copy resources
@@ -654,19 +653,7 @@ async function main() {
   
   const prepTime = ((Date.now() - startTime) / 1000).toFixed(1);
   
-  // Step 3: Build mobile-web (desktop only)
   if (desktopMode) {
-    printStep(currentStep++, totalSteps, 'Build mobile-web');
-    const mobileWebResult = buildMobileWeb({
-      install: true,
-      logInfo: printInfo,
-      logSuccess: printSuccess,
-      logError: printError,
-    });
-    if (!mobileWebResult.ok) {
-      process.exit(1);
-    }
-
     printStep(currentStep++, totalSteps, 'Build workspace search daemon');
     const flashgrepResult = ensureFlashgrepBinary();
     if (!flashgrepResult.ok) {

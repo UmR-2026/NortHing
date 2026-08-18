@@ -20,7 +20,7 @@ crate dependencies inside each layer to the smallest set needed.
 
 | # | Layer | Path | Owns | Modules / entries | Layer doc |
 |---|---|---|---|---|---|
-| 1 | Interfaces and entrypoints | `src/apps/*`, `src/mobile-web` *(frozen)*, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | Interfaces and entrypoints | `src/apps/*`, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | Adapters | `src/crates/adapters` | AI protocol adapters and external-provider translation | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
@@ -57,7 +57,6 @@ pnpm run cli:dev                   # CLI runtime
 pnpm run fmt:rs                     # format only changed / staged Rust files
 pnpm run lint:web                  # [missing: src/web-ui]
 pnpm run type-check:web            # [missing: src/web-ui]
-pnpm --dir src/mobile-web run type-check   # [frozen: mobile-web]
 pnpm run i18n:contract:test          # i18n contract / resources only [frozen: i18n engineering]
 pnpm run i18n:audit                  # i18n contract / resources only [frozen: i18n engineering]
 pnpm run check:repo-hygiene
@@ -71,7 +70,6 @@ cargo test --workspace                  # broad suite; CI-backed
 # Build (only for build-impacting changes or CI reproduction)
 cargo build -p northhing                 # build-impacting changes / CI reproduction
 # [missing: src/web-ui — build:web not available]
-# [frozen: build:mobile-web — mobile-web is frozen-experimental]
 
 # Fast builds (manual build/debug flows)
 pnpm run desktop:build:fast           # debug build, no bundling
@@ -113,7 +111,7 @@ For the full script list, see [`package.json`](package.json).
   `src/shared/i18n/resources/shared/<locale>/terms.json`; workflow copy stays
   in the owning product surface.
 - Do not import Web UI locale resources into smaller product surfaces such as
-  `src/mobile-web` or `northing-installer`. See `docs/architecture/i18n.md`.
+  `northing-installer`. See `docs/architecture/i18n.md`.
 - Static self-contained pages may use generated page-scoped shared-term files;
   they must not import Web UI locale catalogs.
 - Web UI loads only bootstrap namespaces eagerly; use `useI18n(namespace)` for
@@ -178,7 +176,7 @@ Change these only with a flag flip + integration test, and update this section i
 - **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too; MiniApp string-mode commands containing shell metacharacters are rejected.
 - **Project runtime slug always carries a path hash** (CJK paths must not collide, see `c7e7218`).
 - **Installer toolchain**: `northing-installer` `[lib] crate-type = ["rlib"]` only (cdylib/staticlib blow past the GNU ld export-ordinal limit); `embed-resource` pinned to 3.0.5 (3.0.11 fails on rustc 1.96 MSVC). Desktop builds use MSVC; repo dir override is GNU and `cargo +toolchain` is unavailable — use `rustup run <tc> cargo`.
-- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; mobile-web / server / MiniApp UI / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
+- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; server / MiniApp UI / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
 
 ## Architecture
 
@@ -224,7 +222,6 @@ change directly affects build, packaging, or CI cannot protect the path.
 | Locale resource-only changes | *[frozen: i18n engineering — run if unfrozen]* |
 | Locale contract or shared terms | *[frozen: i18n engineering — run if unfrozen]* |
 | Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | *[missing: src/web-ui — not available in v0.1.0]* |
-| Mobile web UI, state, pairing, disconnect, or reconnect behavior | *[frozen: mobile-web — `pnpm --dir src/mobile-web run type-check`; run if unfrozen]* |
 | Shared Rust logic in `core`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
 | Desktop integration, Slint UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
