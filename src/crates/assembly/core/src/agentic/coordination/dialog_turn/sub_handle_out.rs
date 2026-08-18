@@ -23,7 +23,6 @@ use super::sub_handle_types::TurnContext;
 use crate::agentic::core::{ProcessingPhase, SessionState};
 use crate::agentic::events::{AgenticEvent, EventPriority};
 use crate::agentic::execution::ExecutionContext;
-use crate::agentic::remote_file_delivery::needs_computer_links_for_source;
 use crate::agentic::session::SessionManager;
 use crate::agentic::tools::{
     is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
@@ -149,12 +148,6 @@ impl ConversationCoordinator {
             .unwrap_or(false)
         {
             context_vars.insert("acp_transport".to_string(), "true".to_string());
-        }
-        if needs_computer_links_for_source(submission_policy.trigger_source) {
-            context_vars.insert(
-                crate::agentic::remote_file_delivery::TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY.to_string(),
-                "true".to_string(),
-            );
         }
         let session_workspace_path = session_workspace.as_ref().map(|workspace| workspace.root_path_string());
         let session_storage_path = session_workspace

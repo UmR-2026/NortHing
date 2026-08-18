@@ -1,5 +1,4 @@
 use crate::agentic::deep_review::tool_context;
-use crate::agentic::remote_file_delivery::TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY;
 use crate::agentic::tools::pipeline::{ToolExecutionContext, ToolTask};
 use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::agentic::workspace::WorkspaceServices;
@@ -209,14 +208,6 @@ fn build_tool_context_custom_data(context: &ToolExecutionContext) -> HashMap<Str
     if let Some(acp_transport) = context.context_vars.get("acp_transport") {
         if let Ok(flag) = acp_transport.parse::<bool>() {
             map.insert("acp_transport".to_string(), serde_json::json!(flag));
-        }
-    }
-    if let Some(remote_file_delivery) = context.context_vars.get(TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY) {
-        if let Ok(flag) = remote_file_delivery.parse::<bool>() {
-            map.insert(
-                TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY.to_string(),
-                serde_json::json!(flag),
-            );
         }
     }
 

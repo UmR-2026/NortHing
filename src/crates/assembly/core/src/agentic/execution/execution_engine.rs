@@ -16,7 +16,6 @@ use crate::agentic::execution::types::FinishReason;
 use crate::agentic::image_analysis::{
     build_multimodal_message_with_images, process_image_contexts_for_provider, ImageContextData, ImageLimits,
 };
-use crate::agentic::remote_file_delivery::TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY;
 use crate::agentic::round_preempt::RoundInjectionKind;
 use crate::agentic::session::{CompressionMode, ContextCompressor, SessionManager};
 use crate::agentic::skill_agent_snapshot::build_skill_agent_tool_listing_sections_from_snapshot;

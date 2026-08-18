@@ -2,9 +2,6 @@
 //!
 //! Used to create and store plan files during the planning phase
 
-use crate::agentic::remote_file_delivery::{
-    computer_link as build_computer_link, user_file_link, TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY,
-};
 use crate::agentic::tools::framework::{Tool, ToolExposure, ToolResult, ToolUseContext};
 use crate::util::errors::{NortHingError, NortHingResult};
 use async_trait::async_trait;
@@ -214,14 +211,8 @@ Additional guidelines:
             vec![]
         };
 
-        let use_computer_link = context
-            .custom_data
-            .get(TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY)
-            .and_then(|value| value.as_bool())
-            .unwrap_or(false);
         let plan_path = std::path::Path::new(&plan_file_path_str);
-        let computer_link = build_computer_link(plan_path, context.workspace_root());
-        let user_link = user_file_link(plan_path, context.workspace_root(), use_computer_link);
+        let user_link = workspace_relative_user_link(plan_path, context.workspace_root());
 
         let plan_reference = context.build_runtime_artifact_reference(&format!("plans/{}", plan_file_name))?;
 
@@ -237,8 +228,7 @@ Your next reply MUST show the clickable link and then end the conversation turn.
         let result = json!({
             "success": true,
             "plan_file_path": plan_reference,
-            "computer_link": computer_link.clone(),
-            "user_link": user_link.clone(),
+            "user_link": user_link,
             "plan_file_name": plan_file_name,
             "name": name,
             "overview": overview,
@@ -251,6 +241,13 @@ Your next reply MUST show the clickable link and then end the conversation turn.
             image_attachments: None,
         }])
     }
+}
+
+fn workspace_relative_user_link(path: &std::path::Path, workspace_root: Option<&std::path::Path>) -> String {
+    workspace_root
+        .and_then(|root| path.strip_prefix(root).ok())
+        .map(|rel| rel.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_else(|| path.to_string_lossy().replace('\\', "/"))
 }
 
 /// Generate plan file content

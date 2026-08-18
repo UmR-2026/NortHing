@@ -18,9 +18,8 @@ use super::super::scheduler::{
 
 use super::sub_handle_types::TurnContext;
 
-use crate::agentic::core::{InternalReminderKind, Message};
+use crate::agentic::core::Message;
 use crate::agentic::goal_mode::should_skip_goal_for_turn;
-use crate::agentic::remote_file_delivery::{needs_computer_links_for_source, remote_file_delivery_reminder};
 use crate::util::errors::NortHingResult;
 use std::collections::HashMap;
 use tracing::info;
@@ -32,7 +31,6 @@ impl ConversationCoordinator {
         let user_input = ctx.user_input.clone();
         let original_user_input = ctx.original_user_input.clone();
         let image_contexts = ctx.image_contexts.clone();
-        let submission_policy = ctx.submission_policy.clone();
         let additional_prepended_messages = ctx.additional_prepended_messages.clone();
         let mut extra_user_message_metadata = ctx.extra_user_message_metadata.clone();
         let session = ctx.session.clone().expect("prepare_turn must set ctx.session first");
@@ -116,12 +114,6 @@ impl ConversationCoordinator {
             .await?;
         let effective_user_input = wrapped_user_input_payload.content.clone();
         let mut prepended_messages = additional_prepended_messages;
-        if needs_computer_links_for_source(submission_policy.trigger_source) {
-            prepended_messages.push(Message::internal_reminder(
-                InternalReminderKind::RemoteFileDelivery,
-                remote_file_delivery_reminder(),
-            ));
-        }
         prepended_messages.extend(wrapped_user_input_payload.prepended_messages.clone());
         if original_user_input != effective_user_input {
             let mut metadata = Self::ensure_user_message_metadata_object(user_message_metadata.take());
