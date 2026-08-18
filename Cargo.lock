@@ -6084,46 +6084,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "northhing-relay-core"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "chrono",
- "dashmap",
- "futures-util",
- "rand 0.8.7",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
- "tower-http",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "northhing-relay-server"
-version = "0.2.10"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "dashmap",
- "northhing-relay-core",
- "rand 0.8.7",
- "serde_json",
- "tempfile",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "northhing-runtime-ports"
 version = "0.2.10"
 dependencies = [

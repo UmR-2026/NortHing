@@ -30,8 +30,6 @@ const mobileWebMessagesPath = path.join(mobileWebSourceDir, 'i18n', 'messages.ts
 const installerSourceDir = path.join(root, 'northhing-Installer', 'src');
 const installerLocalesDir = path.join(installerSourceDir, 'i18n', 'locales');
 const coreLocalesDir = path.join(root, 'src', 'crates', 'assembly', 'core', 'locales');
-const relayHomepageDir = path.join(root, 'src', 'apps', 'relay-server', 'static', 'homepage');
-const relayHomepageI18nPath = path.join(relayHomepageDir, 'i18n.json');
 const supportedLocales = fs
   .readdirSync(webLocalesDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
@@ -936,111 +934,6 @@ function auditCoreFluentParity() {
   }
 }
 
-function readRelayHomepageMessages() {
-  let resource;
-  try {
-    resource = readJsonFile(relayHomepageI18nPath);
-  } catch (error) {
-    reportError(`Failed to parse ${toPosixPath(path.relative(root, relayHomepageI18nPath))}: ${error.message}`);
-    return { localeIds: [], entriesByLocale: new Map() };
-  }
-
-  const entriesByLocale = new Map();
-  for (const [locale, messages] of Object.entries(resource)) {
-    entriesByLocale.set(locale, new Map(flattenRelayHomepageEntries(messages, locale)));
-  }
-
-  return {
-    localeIds: Object.keys(resource).sort(),
-    entriesByLocale,
-  };
-}
-
-function flattenRelayHomepageEntries(value, locale, prefix = '') {
-  if (isPlainObject(value) && Object.hasOwn(value, '$shared')) {
-    const keys = Object.keys(value);
-    if (keys.length !== 1) {
-      reportError(`relay static homepage ${locale} key "${prefix}" mixes $shared with local fields`);
-    }
-    const sharedKey = value.$shared;
-    if (!isNonEmptyString(sharedKey)) {
-      reportError(`relay static homepage ${locale} key "${prefix}" has an invalid $shared reference`);
-      return prefix ? [[prefix, '']] : [];
-    }
-    if (!readSharedTermMap(locale).has(sharedKey)) {
-      reportError(`relay static homepage ${locale} key "${prefix}" references missing shared term "${sharedKey}"`);
-    }
-    return prefix ? [[prefix, `shared:${sharedKey}`]] : [];
-  }
-
-  if (typeof value === 'string') {
-    return prefix ? [[prefix, value]] : [];
-  }
-  if (Array.isArray(value)) {
-    const text = value.filter((item) => typeof item === 'string').join('\n');
-    return prefix ? [[prefix, text]] : [];
-  }
-  if (value == null || typeof value !== 'object') {
-    return prefix ? [[prefix, '']] : [];
-  }
-
-  return Object.entries(value)
-    .flatMap(([key, child]) => flattenRelayHomepageEntries(child, locale, prefix ? `${prefix}.${key}` : key))
-    .sort(([left], [right]) => left.localeCompare(right));
-}
-
-function collectRelayHomepageDataKeys() {
-  const htmlPath = path.join(relayHomepageDir, 'index.html');
-  const html = fs.readFileSync(htmlPath, 'utf8');
-  return sortedUnique(Array.from(html.matchAll(/\bdata-i18n="([^"]+)"/g), (match) => match[1]));
-}
-
-function auditRelayStaticHomepageResources() {
-  const expectedLocaleIds = (localeContract.locales ?? []).map((locale) => locale.id).sort();
-  const { localeIds, entriesByLocale } = readRelayHomepageMessages();
-  const baselineLocaleId = expectedLocaleIds.includes('en-US') ? 'en-US' : expectedLocaleIds[0];
-  const baselineEntries = entriesByLocale.get(baselineLocaleId) ?? new Map();
-  const baselineKeys = Array.from(baselineEntries.keys()).sort();
-  const dataKeys = collectRelayHomepageDataKeys();
-
-  for (const locale of diffSets(expectedLocaleIds, localeIds)) {
-    reportError(`relay static homepage i18n.json is missing locale "${locale}"`);
-  }
-  for (const locale of diffSets(localeIds, expectedLocaleIds)) {
-    reportError(`relay static homepage i18n.json has non-canonical locale "${locale}"`);
-  }
-  for (const key of diffSets(dataKeys, baselineKeys)) {
-    reportError(`relay static homepage index.html references missing i18n key "${key}"`);
-  }
-  for (const key of diffSets(baselineKeys, dataKeys)) {
-    reportError(`relay static homepage i18n.json has unused baseline key "${key}"`);
-  }
-
-  const baselinePlaceholders = new Map(
-    Array.from(baselineEntries.entries()).map(([key, value]) => [
-      key,
-      extractI18nextPlaceholders(value),
-    ]),
-  );
-
-  for (const locale of expectedLocaleIds.filter((item) => item !== baselineLocaleId)) {
-    const entries = entriesByLocale.get(locale);
-    if (!entries) continue;
-    const keys = Array.from(entries.keys()).sort();
-    for (const key of diffSets(baselineKeys, keys)) {
-      reportError(`relay static homepage ${locale} messages are missing key "${key}"`);
-    }
-    for (const key of diffSets(keys, baselineKeys)) {
-      reportError(`relay static homepage ${locale} messages have extra key "${key}"`);
-    }
-    for (const [key, expected] of baselinePlaceholders.entries()) {
-      if (!entries.has(key)) continue;
-      const actual = extractI18nextPlaceholders(entries.get(key));
-      reportPlaceholderParity('relay static homepage', locale, key, expected, actual);
-    }
-  }
-}
-
 function maybeNamespaceResourceKey(namespace, key) {
   return namespace ? `${namespace}:${key}` : key;
 }
@@ -1116,19 +1009,6 @@ function collectI18nResourceEntries(namespaces) {
         key,
         value,
         file: `src/crates/assembly/core/locales/${locale}.ftl`,
-      });
-    }
-  }
-
-  const relayMessages = readRelayHomepageMessages();
-  for (const [locale, relayEntries] of relayMessages.entriesByLocale.entries()) {
-    for (const [key, value] of relayEntries.entries()) {
-      pushResourceEntry(entries, {
-        surface: 'relay-static-homepage',
-        locale,
-        key,
-        value,
-        file: 'src/apps/relay-server/static/homepage/i18n.json',
       });
     }
   }
@@ -1591,21 +1471,6 @@ function collectL10nQualityCandidates(resourceGroups, allowedIdenticalMatches) {
 }
 
 function collectConfirmedUnusedKeys() {
-  const expectedLocaleIds = (localeContract.locales ?? []).map((locale) => locale.id).sort();
-  const baselineLocaleId = expectedLocaleIds.includes('en-US') ? 'en-US' : expectedLocaleIds[0];
-  const { entriesByLocale } = readRelayHomepageMessages();
-  const baselineEntries = entriesByLocale.get(baselineLocaleId) ?? new Map();
-  const dataKeys = collectRelayHomepageDataKeys();
-
-  for (const key of diffSets(Array.from(baselineEntries.keys()).sort(), dataKeys)) {
-    governanceReport.confirmedUnusedKeys.push({
-      surface: 'relay-static-homepage',
-      key,
-      resourceKey: key,
-      file: 'src/apps/relay-server/static/homepage/i18n.json',
-      reason: 'not-referenced-by-static-data-i18n-attribute',
-    });
-  }
 }
 
 function auditGovernanceCategoryBudget(category, budget) {
@@ -2282,11 +2147,6 @@ function auditHardcodedSourceBudgets() {
       root: installerSourceDir,
       predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipInstallerSourceScan(file),
     },
-    {
-      id: 'relay-static-homepage',
-      root: relayHomepageDir,
-      predicate: (file) => file.endsWith('.html') || file.endsWith('.js') || file.endsWith('.css'),
-    },
   ];
 
   for (const spec of specs) {
@@ -2323,7 +2183,6 @@ if (auditTypeScript) {
 auditInstallerKeyParity();
 auditInstallerPlaceholderParity();
 auditCoreFluentParity();
-auditRelayStaticHomepageResources();
 auditSourceText();
 auditLocaleFormatUsageBudget();
 auditHardcodedSourceBudgets();

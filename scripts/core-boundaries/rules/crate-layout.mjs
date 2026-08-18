@@ -26,7 +26,6 @@ export const crateLayoutRules = [
 
   { crateName: 'core', layer: 'assembly', path: 'src/crates/assembly/core' },
 
-  { crateName: 'relay-core', layer: 'services', path: 'src/crates/services/relay-core' },
   { crateName: 'agent-dispatch', layer: 'execution', path: 'src/crates/execution/agent-dispatch' },
   { crateName: 'test-support', layer: 'support', path: 'src/crates/support/test-support' },
   { crateName: 'cli-internal', layer: 'support', path: 'src/crates/support/cli-internal' },

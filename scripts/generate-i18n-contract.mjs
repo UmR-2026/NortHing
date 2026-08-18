@@ -27,13 +27,7 @@ const outputs = [
     path: path.join(root, 'northhing-Installer', 'src-tauri', 'src', 'installer', 'generated_locale_contract.rs'),
     generate: generateInstallerRustLocaleContract,
   },
-  {
-    path: path.join(root, 'src', 'apps', 'relay-server', 'static', 'homepage', 'i18n.shared.json'),
-    generate: generateRelayHomepageSharedTerms,
-  },
 ];
-
-const RELAY_HOMEPAGE_SHARED_TERM_KEYS = ['features.remoteControl'];
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -585,24 +579,6 @@ mod tests {
     }
 }
 `;
-}
-
-function generateRelayHomepageSharedTerms(contract, sharedTermsByLocale) {
-  const localeMap = getLocaleMap(contract);
-  const locales = (contract.surfaceOrders['relay-static-homepage'] ?? contract.locales.map((locale) => locale.id))
-    .map((localeId) => localeMap.get(localeId));
-  const sharedTerms = {};
-
-  for (const locale of locales) {
-    sharedTerms[locale.id] = {};
-    for (const key of RELAY_HOMEPAGE_SHARED_TERM_KEYS) {
-      const value = getNestedSharedTerm(sharedTermsByLocale[locale.id], key);
-      assert(typeof value === 'string', `relay static homepage shared term ${locale.id}:${key} must exist`);
-      setNestedSharedTerm(sharedTerms[locale.id], key, value);
-    }
-  }
-
-  return `${JSON.stringify(sharedTerms, null, 2)}\n`;
 }
 
 function main() {

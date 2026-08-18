@@ -12,10 +12,6 @@
     {
       "id": "installer-source",
       "maxCjkLines": 0
-    },
-    {
-      "id": "relay-static-homepage",
-      "maxCjkLines": 0
     }
   ]
 }

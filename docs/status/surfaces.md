@@ -19,7 +19,6 @@ These compile and may have partial functionality, but are **not** shipped, not t
 |---------|-------------|--------|-------|
 | **CLI** | `src/apps/cli` (`northhing-cli`) | 🧊 Frozen | Compiles; no release artifact. `doctor` command has false positives. See tech-debt-ledger P2. |
 | **Server** | `src/apps/server` | 🧊 Frozen | HTTP API surface; no auth layer. Not deployed. |
-| **Relay Server** | `src/apps/relay-server` (`relay-core`) | 🧊 Frozen | Binds `0.0.0.0` by default with no authentication. Do not expose. See tech-debt-ledger P1. |
 | **Mobile Web** | `src/mobile-web/` | 🧊 Frozen | PWA shell; re-pairing flow unguided, i18n has mojibake. |
 | **MiniApp UI** | `src/crates/contracts/product-domains/src/miniapp/` | 🧊 Frozen | Built-in mini-apps (PPT live, etc.) are experimental. String-mode shell commands rejected by `guard_command_execution`. |
 | **Tauri Desktop (candidate)** | `src/apps/desktop-tauri` | 🧊 Frozen | Tauri 2 + React candidate for the next baseline; flips at F4. src-tauri is its own cargo workspace (excluded from main). |
@@ -49,7 +48,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `events` | `src/crates/contracts/events` | Event contracts |
 | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
 | `assembly-core` | `src/crates/assembly/core` | Core assembly |
-| `relay-core` | `src/crates/services/relay-core` | Relay logic (shared by relay-server) |
 | `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
 | `test-support` | `src/crates/test-support` | Test utilities |
 

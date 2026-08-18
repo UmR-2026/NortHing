@@ -3,8 +3,6 @@ members = [
     "src/apps/cli",
     "src/apps/desktop",
     "src/apps/server",
-    "src/apps/relay-server",
-    "src/crates/services/relay-core",
     "src/crates/interfaces/acp",
     "src/crates/assembly/core",
     "src/crates/adapters/ai-adapters",
@@ -151,7 +149,7 @@ urlencoding = "2.1"
 
 # Native file dialogs (cross-platform; used by desktop Slint shell)
 # Note: workspace has tauri-plugin-dialog declared above for the
-# installer/relay-server crates, but desktop uses pure Slint + winit
+# installer crate, but desktop uses pure Slint + winit
 # (not Tauri), so desktop needs rfd for native dialogs.
 rfd = "0.14"
 

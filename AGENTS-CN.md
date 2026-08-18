@@ -19,7 +19,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 
 | # | 层 | 路径 | 职责 | 模块 / 入口 | 层文档 |
 |---|---|---|---|---|---|
-| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`src/mobile-web`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、relay、Web UI、mobile web、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`src/mobile-web`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、mobile web、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语、MiniApp 运行时 IO 以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
@@ -139,7 +139,7 @@ await api.invoke('your_command', { request: { ... } });
 - **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入；MiniApp string 模式命令含 shell 元字符一律拒绝。
 - **项目运行时 slug 恒带路径哈希**（CJK 路径不得冲突，见 `c7e7218`）。
 - **安装器工具链**：`northing-installer` `[lib] crate-type = ["rlib"]`（cdylib/staticlib 会突破 GNU ld 导出 ordinal 上限）；`embed-resource` pin 3.0.5（3.0.11 在 rustc 1.96 MSVC 下编译失败）。桌面构建用 MSVC；仓库目录 override 是 GNU 且 `cargo +toolchain` 不可用——用 `rustup run <tc> cargo`。
-- **v0.1.0 面基线**：发货面仅 Slint 桌面 + `northing-installer`；mobile-web / server / relay / MiniApp UI / SDLC harness 为冻结-实验面。能力 crates（tools/MCP/search/terminal/git/ssh）是 agent 工具箱，保持激活。见 `docs/tech-debt-cleanup-guide.md` §0。
+- **v0.1.0 面基线**：发货面仅 Slint 桌面 + `northing-installer`；mobile-web / server / MiniApp UI / SDLC harness 为冻结-实验面。能力 crates（tools/MCP/search/terminal/git/ssh）是 agent 工具箱，保持激活。见 `docs/tech-debt-cleanup-guide.md` §0。
 
 ## 架构
 
