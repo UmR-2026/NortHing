@@ -17,10 +17,6 @@ slices that are outside pure product logic but still platform-neutral.
   here; product tool registry assembly, manifest filtering, `GetToolSpec`
   execution, and concrete tool behavior remain outside this crate unless a
   reviewed owner move proves behavior equivalence.
-- Remote-connect platform-neutral primitives belong here: device identity,
-  pairing/encryption, QR payload generation, relay client protocol, dialog/cancel
-  orchestration ports, image-context adapter contracts, remote workspace helpers,
-  and command/response assembly.
 - Remote workspace facts, session metadata, file projection DTOs, and
   workspace/projection host traits belong in `northhing-runtime-ports`.
 - Workspace-root source selection, persistence/workspace service reads,

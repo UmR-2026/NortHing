@@ -12,7 +12,7 @@ OS/network capabilities.
 | Crate | Responsibility | Local doc |
 |---|---|---|
 | `services-core` | Reusable local service primitives, filesystem helpers, session storage layout/indexing/deletion, metadata store CRUD/index rebuild, metadata construction/counter/index/field mutation/lineage rules, and JSON file IO without product assembly decisions | [AGENTS.md](services-core/AGENTS.md) |
-| `services-integrations` | Concrete MCP, git, remote, file-watch, MiniApp runtime, product-domain port implementations, and platform-neutral Remote Connect primitives | [AGENTS.md](services-integrations/AGENTS.md) |
+| `services-integrations` | Concrete MCP, git, remote, file-watch, MiniApp runtime, and product-domain port implementations | [AGENTS.md](services-integrations/AGENTS.md) |
 | `terminal` | PTY, shell integration, and terminal session infrastructure | [AGENTS.md](terminal/AGENTS.md) |
 | `debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` component constants and the disk-append pipeline); shared by product surfaces and re-exported from `assembly/core` | (none) |
 

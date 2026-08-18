@@ -419,7 +419,6 @@ export const dependencyProfileRules = [
       'sse-stream',
       'thiserror',
       'tokio-util',
-      'tokio-tungstenite',
       'uuid',
     ],
   },
