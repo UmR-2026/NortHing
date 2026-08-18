@@ -1,0 +1,1858 @@
+BASE: 43fdd5a (working-tree diff, task not yet committed)
+
+## git log (base context)
+43fdd5a sdd: T2-2a' ledger line + brief/report/review/diff artifacts
+7f30473 chore: delete tool-provider-groups + harness crates with core assembly rewiring (T2-2a', review clean)
+1fdb819 docs: E-09 deletion decision (tool-packs+harness still deleted per plan) + handoff 2026-08-18
+
+## git diff --stat
+ docs/status/tech-debt-ledger.md                    |   1 +
+ .../rules/source/forbidden-rules.mjs               |  22 -
+ .../assembly/core/src/agentic/judge_gate/audit.rs  | 405 ---------
+ .../assembly/core/src/agentic/judge_gate/mod.rs    | 931 ---------------------
+ .../core/src/agentic/judge_gate/receipt_store.rs   | 101 ---
+ .../assembly/core/src/agentic/judge_gate/runner.rs | 253 ------
+ src/crates/assembly/core/src/agentic/mod.rs        |   3 -
+ src/crates/execution/agent-runtime/AGENTS.md       |   1 +
+ 8 files changed, 2 insertions(+), 1715 deletions(-)
+
+## git diff -U10
+diff --git a/docs/status/tech-debt-ledger.md b/docs/status/tech-debt-ledger.md
+index e9e406c..413d41a 100644
+--- a/docs/status/tech-debt-ledger.md
++++ b/docs/status/tech-debt-ledger.md
+@@ -156,20 +156,21 @@
+ - **Evidence**: `src/apps/desktop/src/app_state/settings.rs` (~1488 lines), `src/apps/desktop/src/app_state/callbacks_settings.rs` (~1100 lines) — both > 1000, no `allow-god-file`. `cli/ui/theme.rs` (~854), `src/apps/desktop/src/app_state/callbacks_lifecycle.rs` (~834), `src/crates/assembly/core/src/agentic/judge_gate/mod.rs` (~813, newly created in C4 Phase 0 already over the line). Found by external review 2026-07-23 + orchestrator scan.
+ - **Proposed fix**: Split the two > 1000 files (settings panel is a recurring split source — consider a settings/ module family); for the three > 800, split or add `// allow-god-file` with reason. Register a split plan.
+ - **Status**: `resolved` — 2/2 >1000 files split (`ecbe76e`, 2026-07-23) + 3/3 >800 files registered with `// allow-god-file` (`456b696`, 2026-07-23: theme.rs 855L, callbacks_lifecycle.rs 832L, judge_gate/mod.rs 822L). Verified 2026-07-27: zero unregistered >800 files in src/.
+ 
+ ### P2-11: judge_gate ApprovedGateReceipt consumed-set is in-process; restart can reuse a consumed receipt
+ 
+ - **Symptom**: The set of consumed gate receipts lives in process memory. If a `promote` consumes a receipt but the persisting write fails (power loss / crash), a restart resets the consumed set, allowing the same receipt to be replayed — breaking the consume-once guarantee that backs red line #2 (un-gated artifacts must not appear where the agent can auto-hit them).
+ - **Evidence**: External review 2026-07-23 §四.6; `src/crates/assembly/core/src/agentic/judge_gate/` receipt consumption path (consumed set not persisted — verify exact location when fixing).
+ - **Proposed fix**: Persist the consumed-receipt set (append-only, per red line #4) so consumption survives restart; or make promote idempotent + write-ahead so a failed promote cannot be replayed into a different outcome.
+ - **Status**: resolved (`47b6202`, 2026-07-23: `receipt_store.rs` — append-only JSONL at `data_dir/judge-gate/consumed_receipts.jsonl`; LazyLock init replays log; persist on consume/release; best-effort non-blocking; 26 judge_gate tests pass)
++- **Note (2026-08-18 T2-2b)**: 适配层整体已删（含 `receipt_store.rs` 的 append-only JSONL + LazyLock 重放实现，`47b6202`）；**教训移交 TH-5（T3-8）**：consume-once 凭证必须 append-only 持久化 + 初始化重放，否则重启可重放已消费凭证（原症状描述见本条 Symptom）。
+ 
+ ### P2-12: episodes "agent does not read" boundary is convention-layer, not structure-layer (HIGH PRIORITY)
+ 
+ - **Symptom**: C2's invariant "the agent does not read its own episodes for decisions" (anti self-validation loop) is enforced only by convention — no code reads episodes into the prompt today, but nothing structurally prevents it. A future prompt-builder edit could wire episodes in and silently open the self-validation loop, undermining C4's whole point.
+ - **Evidence**: External review 2026-07-23 §1 / §四.5; the episodes store under `src/crates/assembly/core/src/agentic/` has no read-side guard.
+ - **Proposed fix**: Upgrade to structure-layer — a cargo boundary assertion or path blacklist (like the core-boundaries checker) that fails the build if any prompt-builder path imports the episodes store. Make it as physically hard to break as C4's receipt gate.
+ - **Status**: resolved (2026-07-23: added `forbiddenContentUnderRules` entries in `scripts/core-boundaries/rules/source/forbidden-rules.mjs` — `read_episodes` and `episodes::store::read` forbidden under `agentic/agents/` and `agentic/execution/`; checker + self-test pass; kernel_facade/memory.rs UI display path unaffected)
+ 
+ ### P2-13: C1 identity rewritten but agentic_mode.md behavior section not tuned
+ 
+diff --git a/scripts/core-boundaries/rules/source/forbidden-rules.mjs b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+index d09ae7c..408c08e 100644
+--- a/scripts/core-boundaries/rules/source/forbidden-rules.mjs
++++ b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+@@ -2336,42 +2336,20 @@ export const forbiddenContentUnderRules = [
+       {
+         regex: /\bruntime_tool_restrictions\s*\.\s*ensure_tool_allowed\s*\(/,
+         message: 'runtime-restriction admission must stay behind validate_tool_execution_admission',
+       },
+       {
+         regex: /\bvalidate_collapsed_tool_usage\s*\(/,
+         message: 'collapsed-tool admission must stay behind validate_tool_execution_admission',
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/agentic/judge_gate',
+-    reason:
+-      'judge_gate adapter must not depend on northhing-core or episodes storage (zero dependency edge, C4 Phase 0 §5.1)',
+-    patterns: [
+-      {
+-        regex: /\bnorthhing_core::/,
+-        message:
+-          'judge_gate adapter must not import northhing_core (zero dependency edge requirement)',
+-      },
+-      {
+-        regex: /\bnorthhing-core::/,
+-        message:
+-          'judge_gate adapter must not import northhing-core (zero dependency edge requirement)',
+-      },
+-      {
+-        regex: /\bepisodes::/,
+-        message:
+-          'judge_gate adapter must not import episodes (zero dependency edge requirement)',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/execution/agent-runtime/src/judge_gate',
+     reason:
+       'judge_gate protocol layer must not depend on northhing-core or episodes storage (zero dependency edge, C4 Phase 0 §5.1)',
+     patterns: [
+       {
+         regex: /\bnorthhing_core::/,
+         message:
+           'judge_gate protocol must not import northhing_core (zero dependency edge requirement)',
+       },
+diff --git a/src/crates/assembly/core/src/agentic/judge_gate/audit.rs b/src/crates/assembly/core/src/agentic/judge_gate/audit.rs
+deleted file mode 100644
+index 4848f7d..0000000
+--- a/src/crates/assembly/core/src/agentic/judge_gate/audit.rs
++++ /dev/null
+@@ -1,405 +0,0 @@
+-//! Audit log for judge gate operations.
+-//!
+-//! Append-only audit trail written to `user_data_dir()/judge-gate/audit-{YYYYMMDD}.jsonl`.
+-//! This implements the audit requirements from C4 Phase 0 design §6.
+-
+-use crate::infrastructure::app_paths::path_manager_arc;
+-use chrono::Utc;
+-use northhing_agent_runtime::judge_gate::{ActionKind, RuleCheck};
+-use serde::{Deserialize, Serialize};
+-use std::path::PathBuf;
+-use tracing::{error, info};
+-
+-const AUDIT_DIR: &str = "judge-gate";
+-const AUDIT_FILE_PREFIX: &str = "audit-";
+-const AUDIT_FILE_SUFFIX: &str = ".jsonl";
+-
+-/// Kind of action recorded in the audit log.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(rename_all = "snake_case")]
+-pub enum AuditActionKind {
+-    PromoteSkillCandidate,
+-    GovernanceOverride,
+-}
+-
+-/// Audit entry written to the audit log.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct AuditEntry {
+-    pub entry_id: String,
+-    pub ts: u64,
+-    pub action_kind: AuditActionKind,
+-    pub subject_digest: String,
+-    pub evidence_summary: String,
+-    pub verdict: String,
+-    pub rule_checks: Vec<RuleCheck>,
+-    pub reject_class: Option<String>,
+-    pub judge_turn_id: Option<String>,
+-    pub duration_ms: Option<u64>,
+-}
+-
+-/// Governance override entry written to the audit log.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct GovernanceOverrideEntry {
+-    pub entry_id: String,
+-    pub ts: u64,
+-    pub action_kind: AuditActionKind,
+-    pub subject_digest: String,
+-    pub reason: String,
+-    pub operator: String,
+-}
+-
+-impl AuditEntry {
+-    /// Create a new audit entry with a generated ID and current timestamp.
+-    pub fn new(
+-        action_kind: ActionKind,
+-        subject_digest: String,
+-        evidence_summary: String,
+-        verdict: String,
+-        rule_checks: Vec<RuleCheck>,
+-        reject_class: Option<String>,
+-        judge_turn_id: Option<String>,
+-        duration_ms: Option<u64>,
+-    ) -> Self {
+-        Self {
+-            entry_id: uuid::Uuid::new_v4().to_string(),
+-            ts: std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .map(|d| d.as_millis() as u64)
+-                .unwrap_or(0),
+-            action_kind: match action_kind {
+-                ActionKind::PromoteSkillCandidate => AuditActionKind::PromoteSkillCandidate,
+-            },
+-            subject_digest,
+-            evidence_summary,
+-            verdict,
+-            rule_checks,
+-            reject_class,
+-            judge_turn_id,
+-            duration_ms,
+-        }
+-    }
+-
+-    /// Serialize to a JSON line.
+-    pub fn to_json_line(&self) -> String {
+-        serde_json::to_string(self).unwrap_or_else(|e| {
+-            format!(r#"{{"entry_id":"{}","error":"serialization_failed:{}"}}"#, self.entry_id, e)
+-        })
+-    }
+-}
+-
+-impl GovernanceOverrideEntry {
+-    /// Create a new governance override entry.
+-    pub fn new(subject_digest: String, reason: String, operator: String) -> Self {
+-        Self {
+-            entry_id: uuid::Uuid::new_v4().to_string(),
+-            ts: std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .map(|d| d.as_millis() as u64)
+-                .unwrap_or(0),
+-            action_kind: AuditActionKind::GovernanceOverride,
+-            subject_digest,
+-            reason,
+-            operator,
+-        }
+-    }
+-
+-    /// Serialize to a JSON line.
+-    pub fn to_json_line(&self) -> String {
+-        serde_json::to_string(self).unwrap_or_else(|e| {
+-            format!(r#"{{"entry_id":"{}","error":"serialization_failed:{}"}}"#, self.entry_id, e)
+-        })
+-    }
+-}
+-
+-/// Get the audit directory path per design spec §6:
+-/// user_data_dir()/judge-gate/
+-pub(crate) fn audit_dir() -> PathBuf {
+-    #[cfg(test)]
+-    if let Some(dir) = AUDIT_DIR_OVERRIDE
+-        .lock()
+-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+-        .clone()
+-    {
+-        return dir;
+-    }
+-    path_manager_arc().user_data_dir().join(AUDIT_DIR)
+-}
+-
+-/// Test-only override for the audit directory. Always pair with `TEST_ENV_LOCK`
+-/// so parallel tests do not race on the override.
+-#[cfg(test)]
+-static AUDIT_DIR_OVERRIDE: std::sync::Mutex<Option<PathBuf>> = std::sync::Mutex::new(None);
+-
+-/// Serializes tests that mutate global test-only overrides (audit dir, etc.).
+-#[cfg(test)]
+-pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+-
+-/// Point the audit directory at a test-owned location (`None` restores the
+-/// production default). Poison-tolerant: overrides are best-effort test state.
+-#[cfg(test)]
+-pub(crate) fn set_audit_dir_override_for_tests(dir: Option<PathBuf>) {
+-    *AUDIT_DIR_OVERRIDE
+-        .lock()
+-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = dir;
+-}
+-
+-/// Get today's audit file path.
+-pub(crate) fn today_audit_path() -> PathBuf {
+-    let date_str = Utc::now().format("%Y%m%d").to_string();
+-    audit_dir().join(format!("{}{}{}", AUDIT_FILE_PREFIX, date_str, AUDIT_FILE_SUFFIX))
+-}
+-
+-/// Ensure the audit directory exists.
+-fn ensure_audit_dir() -> std::io::Result<()> {
+-    std::fs::create_dir_all(audit_dir())?;
+-    Ok(())
+-}
+-
+-/// Process-level lock serializing all audit file appends.
+-static APPEND_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+-
+-/// Append an audit entry to today's audit file.
+-/// Returns an error if the write fails (does not panic or log silently).
+-pub(crate) fn append_audit_entry(entry: &AuditEntry) -> std::io::Result<()> {
+-    ensure_audit_dir()?;
+-    let path = today_audit_path();
+-
+-    let _guard = APPEND_LOCK.lock().map_err(|e| {
+-        std::io::Error::new(std::io::ErrorKind::Other, format!("audit lock poisoned: {:?}", e))
+-    })?;
+-    let mut file = std::fs::OpenOptions::new()
+-        .create(true)
+-        .append(true)
+-        .open(&path)?;
+-    let line = entry.to_json_line();
+-    use std::io::Write;
+-    writeln!(file, "{}", line)?;
+-    file.flush()?;
+-    file.sync_all()?;
+-
+-    info!(
+-        entry_id = %entry.entry_id,
+-        action_kind = ?entry.action_kind,
+-        subject_digest = %entry.subject_digest,
+-        "audit entry written"
+-    );
+-
+-    Ok(())
+-}
+-
+-/// Append a governance override entry to today's audit file.
+-/// Returns an error if the write fails.
+-pub(crate) fn append_governance_override(entry: &GovernanceOverrideEntry) -> std::io::Result<()> {
+-    ensure_audit_dir()?;
+-    let path = today_audit_path();
+-
+-    let _guard = APPEND_LOCK.lock().map_err(|e| {
+-        std::io::Error::new(std::io::ErrorKind::Other, format!("audit lock poisoned: {:?}", e))
+-    })?;
+-    let mut file = std::fs::OpenOptions::new()
+-        .create(true)
+-        .append(true)
+-        .open(&path)?;
+-    let line = entry.to_json_line();
+-    use std::io::Write;
+-    writeln!(file, "{}", line)?;
+-    file.flush()?;
+-    file.sync_all()?;
+-
+-    info!(
+-        entry_id = %entry.entry_id,
+-        subject_digest = %entry.subject_digest,
+-        "governance override audit entry written"
+-    );
+-
+-    Ok(())
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_agent_runtime::judge_gate::{RuleCheck, RuleStatus};
+-    use std::collections::HashMap;
+-
+-    fn with_temp_dir() -> std::path::PathBuf {
+-        std::env::temp_dir().join(format!("northhing_audit_test_{}", std::process::id()))
+-    }
+-
+-    #[test]
+-    fn audit_entry_serialization() {
+-        let entry = AuditEntry::new(
+-            ActionKind::PromoteSkillCandidate,
+-            "sha256:v1:abc123".to_string(),
+-            "3 traces, 2 fs_diffs, S1, H1".to_string(),
+-            "approve".to_string(),
+-            vec![
+-                RuleCheck {
+-                    rule: "I-NEG-1".to_string(),
+-                    status: RuleStatus::Pass,
+-                },
+-                RuleCheck {
+-                    rule: "I-NEG-2".to_string(),
+-                    status: RuleStatus::Pass,
+-                },
+-            ],
+-            None,
+-            None,
+-            Some(1500),
+-        );
+-
+-        let json = entry.to_json_line();
+-        assert!(json.contains("\"verdict\":\"approve\""));
+-        assert!(json.contains("\"action_kind\":\"promote_skill_candidate\""));
+-        assert!(json.contains("\"subject_digest\":\"sha256:v1:abc123\""));
+-        assert!(!json.is_empty());
+-    }
+-
+-    #[test]
+-    fn governance_override_entry_serialization() {
+-        let entry = GovernanceOverrideEntry::new(
+-            "sha256:v1:def456".to_string(),
+-            "Emergency promotion for security patch".to_string(),
+-            "admin".to_string(),
+-        );
+-
+-        let json = entry.to_json_line();
+-        assert!(json.contains("\"action_kind\":\"governance_override\""));
+-        assert!(json.contains("\"operator\":\"admin\""));
+-        assert!(!json.is_empty());
+-    }
+-
+-    #[test]
+-    fn audit_dir_uses_user_data_dir() {
+-        let dir = audit_dir();
+-        assert!(dir.to_string_lossy().contains("judge-gate"));
+-    }
+-
+-    #[test]
+-    fn today_audit_path_format() {
+-        let path = today_audit_path();
+-        let filename = path.file_name().unwrap().to_string_lossy();
+-        assert!(filename.starts_with(AUDIT_FILE_PREFIX));
+-        assert!(filename.ends_with(AUDIT_FILE_SUFFIX));
+-        // Date format: YYYYMMDD
+-        assert!(regex::Regex::new(r"audit-\d{8}\.jsonl")
+-            .unwrap()
+-            .is_match(&filename));
+-    }
+-
+-    fn unique_test_dir(tag: &str) -> PathBuf {
+-        std::env::temp_dir().join(format!(
+-            "northhing-judge-gate-test-{}-{}",
+-            tag,
+-            uuid::Uuid::new_v4()
+-        ))
+-    }
+-
+-    fn make_entry(verdict: &str) -> AuditEntry {
+-        AuditEntry::new(
+-            ActionKind::PromoteSkillCandidate,
+-            "sha256:v1:abc123".to_string(),
+-            "1 traces, 1 fs_diffs, S1".to_string(),
+-            verdict.to_string(),
+-            vec![],
+-            None,
+-            None,
+-            Some(42),
+-        )
+-    }
+-
+-    #[test]
+-    fn append_then_read_back_fields_match() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_test_dir("readback");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let entry = make_entry("approve");
+-        let entry_id = entry.entry_id.clone();
+-        append_audit_entry(&entry).expect("append should succeed");
+-
+-        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+-        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+-        assert_eq!(lines.len(), 1);
+-        let parsed: serde_json::Value = serde_json::from_str(lines[0]).expect("line should be valid JSON");
+-        assert_eq!(parsed["entry_id"], entry_id);
+-        assert_eq!(parsed["verdict"], "approve");
+-        assert_eq!(parsed["action_kind"], "promote_skill_candidate");
+-        assert_eq!(parsed["subject_digest"], "sha256:v1:abc123");
+-        assert_eq!(parsed["duration_ms"], 42);
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[test]
+-    fn append_governance_override_and_read_back() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_test_dir("governance");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let entry = GovernanceOverrideEntry::new(
+-            "sha256:v1:gov".to_string(),
+-            "manual redline amendment".to_string(),
+-            "user-root-authority".to_string(),
+-        );
+-        append_governance_override(&entry).expect("governance append should succeed");
+-
+-        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+-        let parsed: serde_json::Value =
+-            serde_json::from_str(content.lines().next().unwrap()).expect("line should be valid JSON");
+-        assert_eq!(parsed["action_kind"], "governance_override");
+-        assert_eq!(parsed["operator"], "user-root-authority");
+-        assert_eq!(parsed["reason"], "manual redline amendment");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[test]
+-    fn audit_write_failure_returns_err_not_panic() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        // Point the audit dir at an existing FILE: create_dir_all on a file path fails.
+-        let file_path = unique_test_dir("blocked");
+-        std::fs::write(&file_path, b"not a directory").unwrap();
+-        set_audit_dir_override_for_tests(Some(file_path.clone()));
+-
+-        let result = append_audit_entry(&make_entry("approve"));
+-        assert!(result.is_err(), "append to an unwritable audit dir must return Err");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_file(&file_path);
+-    }
+-
+-    #[tokio::test]
+-    async fn concurrent_50_appends_no_lost_lines_all_unique_ids() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_test_dir("concurrent");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let mut handles = Vec::new();
+-        for _ in 0..50 {
+-            handles.push(tokio::spawn(async move {
+-                append_audit_entry(&make_entry("approve"))
+-            }));
+-        }
+-        let results = futures::future::join_all(handles).await;
+-        for result in results {
+-            result.expect("append task should not panic").expect("append should succeed");
+-        }
+-
+-        let content = std::fs::read_to_string(today_audit_path()).expect("audit file should exist");
+-        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+-        assert_eq!(lines.len(), 50, "all 50 appends must be preserved");
+-
+-        let mut ids = std::collections::HashSet::new();
+-        for line in lines {
+-            let parsed: serde_json::Value = serde_json::from_str(line).expect("each line must be valid JSON");
+-            let id = parsed["entry_id"].as_str().expect("entry_id must be a string").to_string();
+-            assert!(ids.insert(id), "entry_id must be unique per line");
+-        }
+-        assert_eq!(ids.len(), 50);
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/judge_gate/mod.rs b/src/crates/assembly/core/src/agentic/judge_gate/mod.rs
+deleted file mode 100644
+index 70144de..0000000
+--- a/src/crates/assembly/core/src/agentic/judge_gate/mod.rs
++++ /dev/null
+@@ -1,931 +0,0 @@
+-// allow-god-file: 922L — C4 Phase 0 newly created; split deferred to C4 Phase 1 design
+-//! Judge gate adapter layer.
+-//!
+-//! This module implements the core adapter layer for the judge gate as specified
+-//! in C4 Phase 0 design §5.1. It bridges the pure protocol layer in
+-//! `northhing-agent-runtime::judge_gate` with the runtime infrastructure.
+-//!
+-//! # Architecture
+-//!
+-//! - `runner.rs` - `JudgeRunner` trait + `SubagentJudgeRunner` production implementation
+-//! - `audit.rs` - Append-only audit log implementation
+-//! - `mod.rs` - `evaluate()` and `promote_candidate_skill()` orchestration
+-
+-pub(crate) mod audit;
+-pub(crate) mod receipt_store;
+-pub(crate) mod runner;
+-
+-use crate::agentic::coordination::ConversationCoordinator;
+-use crate::agentic::judge_gate::audit::{append_audit_entry, AuditEntry};
+-use crate::agentic::judge_gate::runner::{JudgeRunError, JudgeRunner};
+-use crate::infrastructure::app_paths::path_manager_arc;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use northhing_agent_runtime::judge_gate::{
+-    ActionKind, ApprovedGateReceipt, EvidencePack, GateRequest, GateVerdict, RejectClass, RuleCheck,
+-    RuleStatus, subject_digest, build_judge_brief, parse_verdict,
+-};
+-use std::collections::HashSet;
+-use std::path::{Path, PathBuf};
+-use std::sync::{Arc, Mutex};
+-use tracing::{debug, error, info, warn};
+-use uuid::Uuid;
+-
+-static CONSUMED_RECEIPTS: std::sync::LazyLock<Mutex<HashSet<String>>> =
+-    std::sync::LazyLock::new(|| Mutex::new(receipt_store::load_consumed_receipts()));
+-
+-const SKILL_MD_FILENAME: &str = "SKILL.md";
+-const CANDIDATES_DIR: &str = "candidates";
+-
+-/// Pre-audit verdict types: all outcomes before audit writing.
+-#[derive(Debug)]
+-enum PreAuditVerdict {
+-    Approved {
+-        rule_checks: Vec<RuleCheck>,
+-    },
+-    Rejected {
+-        rejection: RejectClass,
+-        reject_class: Option<String>,
+-        rule_checks: Vec<RuleCheck>,
+-    },
+-}
+-
+-/// Evaluate a gate request.
+-///
+-/// # Flow
+-/// 1. Validate evidence pack → PreAuditVerdict::Rejected(EvidenceRejected)
+-/// 2. Build judge brief
+-/// 3. Run judge via runner → PreAuditVerdict::Rejected(JudgeUnavailable) on any error
+-/// 4. Parse verdict → PreAuditVerdict::Rejected(MalformedVerdict) on parse failure
+-/// 5. Check all 4 rules → PreAuditVerdict::Approved or PreAuditVerdict::Rejected(PolicyViolation)
+-/// 6. Write audit entry for the pre-audit verdict → AuditFailure on write failure
+-/// 7. Only if audit success AND PreAuditVerdict::Approved → construct ApprovedGateReceipt
+-///
+-/// # Arguments
+-/// * `coordinator` - ConversationCoordinator reference for SubagentJudgeRunner
+-/// * `request` - The gate request with action, subject, and evidence
+-/// * `ctx` - Execution context with timeout, cancel, workspace info
+-/// * `runner` - JudgeRunner implementation (production or fake)
+-///
+-/// # Returns
+-/// * `GateVerdict::Approved(receipt)` on success
+-/// * `GateVerdict::Rejected(reason)` on failure
+-pub(crate) async fn evaluate(
+-    coordinator: &Arc<ConversationCoordinator>,
+-    request: GateRequest,
+-    ctx: &northhing_agent_runtime::judge_gate::GateExecutionContext,
+-    runner: &dyn JudgeRunner,
+-) -> GateVerdict {
+-    let start_time = std::time::Instant::now();
+-    let subject_digest = subject_digest(&request.subject);
+-
+-    debug!(
+-        action_kind = ?request.action_kind,
+-        subject_digest = %subject_digest,
+-        "evaluate: starting gate evaluation"
+-    );
+-
+-    // Step 1: Validate evidence
+-    if let Err(evidence_error) = request.evidence.validate() {
+-        warn!(error = ?evidence_error, "evaluate: evidence validation failed");
+-        let verdict = PreAuditVerdict::Rejected {
+-            rejection: RejectClass::EvidenceRejected(format!("{:?}", evidence_error)),
+-            reject_class: Some("evidence_rejected".to_string()),
+-            rule_checks: vec![],
+-        };
+-        return write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time);
+-    }
+-
+-    // Step 2: Build judge brief
+-    let brief = build_judge_brief(&request);
+-
+-    // Step 3: Run judge
+-    let judge_output = match runner.run_judge(coordinator, brief, ctx).await {
+-        Ok(output) => {
+-            debug!(output_len = output.len(), "evaluate: judge returned");
+-            output
+-        }
+-        Err(JudgeRunError::Timeout) => {
+-            warn!("evaluate: judge runner timeout");
+-            let verdict = PreAuditVerdict::Rejected {
+-                rejection: RejectClass::JudgeUnavailable("timeout".to_string()),
+-                reject_class: Some("judge_unavailable".to_string()),
+-                rule_checks: vec![],
+-            };
+-            return write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time);
+-        }
+-        Err(JudgeRunError::Cancelled) => {
+-            warn!("evaluate: judge runner cancelled");
+-            let verdict = PreAuditVerdict::Rejected {
+-                rejection: RejectClass::JudgeUnavailable("cancelled".to_string()),
+-                reject_class: Some("judge_unavailable".to_string()),
+-                rule_checks: vec![],
+-            };
+-            return write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time);
+-        }
+-        Err(JudgeRunError::Unavailable(reason)) => {
+-            warn!(reason = %reason, "evaluate: judge runner unavailable");
+-            let verdict = PreAuditVerdict::Rejected {
+-                rejection: RejectClass::JudgeUnavailable(reason),
+-                reject_class: Some("judge_unavailable".to_string()),
+-                rule_checks: vec![],
+-            };
+-            return write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time);
+-        }
+-    };
+-
+-    // Step 4: Parse verdict
+-    let valid_evidence_ids = request.evidence.evidence_ids();
+-    let parsed = match parse_verdict(&judge_output, &valid_evidence_ids) {
+-        Ok(p) => p,
+-        Err(parse_error) => {
+-            warn!(error = %parse_error, "evaluate: verdict parsing failed");
+-            let verdict = PreAuditVerdict::Rejected {
+-                rejection: RejectClass::MalformedVerdict(parse_error.to_string()),
+-                reject_class: Some("malformed_verdict".to_string()),
+-                rule_checks: vec![],
+-            };
+-            return write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time);
+-        }
+-    };
+-
+-    // Step 5: Check all rules pass for approval
+-    let all_pass = parsed.rule_checks.iter().all(|rc| rc.status == RuleStatus::Pass);
+-    let rule_checks: Vec<RuleCheck> = parsed
+-        .rule_checks
+-        .iter()
+-        .map(|rc| RuleCheck {
+-            rule: rc.rule.clone(),
+-            status: rc.status.clone(),
+-        })
+-        .collect();
+-
+-    let verdict = if all_pass {
+-        PreAuditVerdict::Approved { rule_checks }
+-    } else {
+-        let violation_rules: Vec<String> = parsed
+-            .rule_checks
+-            .iter()
+-            .filter(|rc| rc.status == RuleStatus::Violation)
+-            .map(|rc| rc.rule.clone())
+-            .collect();
+-        warn!(violations = ?violation_rules, "evaluate: gate rejected due to policy violation");
+-        PreAuditVerdict::Rejected {
+-            rejection: RejectClass::PolicyViolation(violation_rules.join(", ")),
+-            reject_class: Some("policy_violation".to_string()),
+-            rule_checks,
+-        }
+-    };
+-
+-    // Step 6 + 7: Write audit, then finalize (only approved + audit success → receipt)
+-    write_audit_and_finalize(verdict, request.action_kind, subject_digest, start_time)
+-}
+-
+-/// Write audit entry for the pre-audit verdict, then finalize.
+-///
+-/// All terminal states write audit. Audit failure → AuditFailure (no receipt).
+-/// Only audit success + PreAuditVerdict::Approved → produces receipt.
+-fn write_audit_and_finalize(
+-    verdict: PreAuditVerdict,
+-    action_kind: ActionKind,
+-    subject_digest: String,
+-    start_time: std::time::Instant,
+-) -> GateVerdict {
+-    let (verdict_str, rule_checks, reject_class) = match &verdict {
+-        PreAuditVerdict::Approved { rule_checks } => ("approve".to_string(), rule_checks.clone(), None),
+-        PreAuditVerdict::Rejected { rule_checks, reject_class, .. } => {
+-            ("reject".to_string(), rule_checks.clone(), reject_class.clone())
+-        }
+-    };
+-
+-    let audit_entry = AuditEntry::new(
+-        action_kind.clone(),
+-        subject_digest.clone(),
+-        format!("elapsed_ms:{}", start_time.elapsed().as_millis()),
+-        verdict_str,
+-        rule_checks,
+-        reject_class,
+-        None,
+-        Some(start_time.elapsed().as_millis() as u64),
+-    );
+-
+-    if let Err(audit_err) = append_audit_entry(&audit_entry) {
+-        error!(error = %audit_err, "evaluate: audit write failed - returning AuditFailure (no receipt)");
+-        return GateVerdict::Rejected(RejectClass::AuditFailure(format!(
+-            "audit write failed: {}",
+-            audit_err
+-        )));
+-    }
+-
+-    match verdict {
+-        PreAuditVerdict::Approved { .. } => {
+-            let receipt = ApprovedGateReceipt {
+-                receipt_id: Uuid::new_v4().to_string(),
+-                action_kind,
+-                subject_digest: subject_digest.clone(),
+-                audit_entry_id: audit_entry.entry_id.clone(),
+-                ts: audit_entry.ts,
+-            };
+-            info!(
+-                receipt_id = %receipt.receipt_id,
+-                subject_digest = %subject_digest,
+-                "evaluate: gate approved"
+-            );
+-            GateVerdict::Approved(receipt)
+-        }
+-        PreAuditVerdict::Rejected { rejection, .. } => GateVerdict::Rejected(rejection),
+-    }
+-}
+-
+-/// Promote a candidate skill to the user skills directory.
+-///
+-/// # Validation
+-/// 1. receipt.action_kind must be PromoteSkillCandidate
+-/// 2. receipt must not be in consumed set
+-/// 3. candidate_dir/SKILL.md digest must match receipt.subject_digest
+-/// 4. candidate directory name must be safe (no .., no absolute paths, etc.)
+-///
+-/// # Behavior
+-/// - Copies (not moves) SKILL.md to user_skills_dir()/name/SKILL.md
+-/// - Does NOT write to candidates/SKILL.md or any loader-visible path
+-/// - Adds receipt to consumed set
+-/// - Appends promote audit entry
+-///
+-/// # Returns
+-/// * `Ok(PathBuf)` - Path to the promoted skill
+-/// * `Err(NortHingError)` - Validation failure
+-pub(crate) async fn promote_candidate_skill(
+-    receipt: ApprovedGateReceipt,
+-    candidate_dir: &Path,
+-) -> NortHingResult<PathBuf> {
+-    let skills_root = path_manager_arc().user_skills_dir();
+-    promote_candidate_skill_to(receipt, candidate_dir, &skills_root).await
+-}
+-
+-/// Test-seam variant of `promote_candidate_skill` with an explicit skills root,
+-/// so tests never touch the real user skills directory.
+-async fn promote_candidate_skill_to(
+-    receipt: ApprovedGateReceipt,
+-    candidate_dir: &Path,
+-    skills_root: &Path,
+-) -> NortHingResult<PathBuf> {
+-    debug!(
+-        receipt_id = %receipt.receipt_id,
+-        subject_digest = %receipt.subject_digest,
+-        candidate_dir = %candidate_dir.display(),
+-        "promote_candidate_skill: starting promotion"
+-    );
+-
+-    // Validate action_kind
+-    if !matches!(receipt.action_kind, ActionKind::PromoteSkillCandidate) {
+-        error!(
+-            action_kind = ?receipt.action_kind,
+-            "promote_candidate_skill: invalid action kind"
+-        );
+-        return Err(NortHingError::Validation(format!(
+-            "invalid action kind for promote: {:?}",
+-            receipt.action_kind
+-        )));
+-    }
+-
+-    // Validate candidate_dir/SKILL.md exists and digest matches
+-    let skill_md_path = candidate_dir.join(SKILL_MD_FILENAME);
+-    if !skill_md_path.exists() {
+-        error!(path = %skill_md_path.display(), "promote_candidate_skill: SKILL.md not found");
+-        return Err(NortHingError::Validation(format!(
+-            "candidate skill SKILL.md not found at {}",
+-            skill_md_path.display()
+-        )));
+-    }
+-
+-    let skill_content = tokio::fs::read(&skill_md_path).await.map_err(|e| {
+-        NortHingError::Validation(format!("failed to read SKILL.md: {}", e))
+-    })?;
+-    let computed_digest = subject_digest(&skill_content);
+-    if computed_digest != receipt.subject_digest {
+-        error!(
+-            expected = %receipt.subject_digest,
+-            actual = %computed_digest,
+-            "promote_candidate_skill: digest mismatch"
+-        );
+-        return Err(NortHingError::Validation(format!(
+-            "SKILL.md digest mismatch: expected {}, got {}",
+-            receipt.subject_digest, computed_digest
+-        )));
+-    }
+-
+-    // Validate candidate directory name is safe
+-    let candidate_dir_name = candidate_dir
+-        .file_name()
+-        .and_then(|n| n.to_str())
+-        .unwrap_or("");
+-
+-    if candidate_dir_name.is_empty()
+-        || candidate_dir_name.contains("..")
+-        || candidate_dir_name.starts_with('/')
+-        || candidate_dir_name.contains('\\')
+-        || candidate_dir_name.to_lowercase() == "candidates"
+-        || !candidate_dir_name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+-    {
+-        error!(name = %candidate_dir_name, "promote_candidate_skill: unsafe candidate name");
+-        return Err(NortHingError::Validation(format!(
+-            "unsafe candidate directory name: {}",
+-            candidate_dir_name
+-        )));
+-    }
+-
+-    // Determine target path
+-    let target_dir = skills_root.join(&candidate_dir_name);
+-    let target_path = target_dir.join(SKILL_MD_FILENAME);
+-
+-    // Atomic consumed check+mark: merge into single lock acquisition
+-    // On any subsequent validation failure, we release the mark (see cleanup below)
+-    let consumed_marked = {
+-        match CONSUMED_RECEIPTS.lock() {
+-            Ok(mut consumed) => {
+-                if consumed.contains(&receipt.receipt_id) {
+-                    error!(receipt_id = %receipt.receipt_id, "promote_candidate_skill: receipt already consumed");
+-                    return Err(NortHingError::Validation(format!(
+-                        "receipt {} already consumed",
+-                        receipt.receipt_id
+-                    )));
+-                }
+-                receipt_store::persist_receipt_action(&receipt.receipt_id, "consumed");
+-                consumed.insert(receipt.receipt_id.clone());
+-                true
+-            }
+-            Err(poisoned) => {
+-                // Poisoned mutex - recover and treat as locked
+-                error!("consumed receipts mutex poisoned: {:?}", poisoned);
+-                return Err(NortHingError::Validation("consumed receipts lock poisoned".to_string()));
+-            }
+-        }
+-    };
+-
+-    // Write promote audit entry BEFORE copying file (per I-NEG-4 enforcement)
+-    let promote_entry = AuditEntry::new(
+-        ActionKind::PromoteSkillCandidate,
+-        receipt.subject_digest.clone(),
+-        format!("promotion:{}:{}", candidate_dir_name, receipt.receipt_id),
+-        "promote".to_string(),
+-        vec![],
+-        None,
+-        None,
+-        None,
+-    );
+-    // Audit must succeed before we consider promotion valid
+-    if let Err(e) = append_audit_entry(&promote_entry) {
+-        error!(error = %e, "promote_candidate_skill: failed to write promote audit entry");
+-        // Release consumed mark since promotion failed
+-        if consumed_marked {
+-            if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                consumed.remove(&receipt.receipt_id);
+-            }
+-        }
+-        return Err(NortHingError::Validation(format!(
+-            "promotion audit write failed: {}",
+-            e
+-        )));
+-    }
+-
+-    // Create target directory
+-    if let Err(e) = tokio::fs::create_dir_all(&target_dir).await {
+-        // Release consumed mark since promotion failed
+-        if consumed_marked {
+-            if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                consumed.remove(&receipt.receipt_id);
+-            }
+-        }
+-        return Err(NortHingError::Validation(format!(
+-            "failed to create skill directory: {}",
+-            e
+-        )));
+-    }
+-
+-    // Atomic file copy: use create_new to prevent TOCTOU
+-    // This atomically checks file existence and creates, eliminating the race window
+-    let mut file = match tokio::fs::OpenOptions::new()
+-        .create_new(true)
+-        .write(true)
+-        .open(&target_path)
+-        .await
+-    {
+-        Ok(f) => f,
+-        Err(e) => {
+-            // Release consumed mark since promotion failed
+-            if consumed_marked {
+-                if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                    receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                    consumed.remove(&receipt.receipt_id);
+-                }
+-            }
+-            if e.kind() == std::io::ErrorKind::AlreadyExists {
+-                return Err(NortHingError::Validation(format!(
+-                    "skill {} already exists at {}",
+-                    candidate_dir_name,
+-                    target_path.display()
+-                )));
+-            }
+-            return Err(NortHingError::Validation(format!(
+-                "failed to create skill file: {}",
+-                e
+-            )));
+-        }
+-    };
+-
+-    // Copy content (source preserved per I-NEG-2)
+-    let skill_content = match tokio::fs::read(&skill_md_path).await {
+-        Ok(c) => c,
+-        Err(e) => {
+-            // Release consumed mark since promotion failed
+-            if consumed_marked {
+-                if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                    receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                    consumed.remove(&receipt.receipt_id);
+-                }
+-            }
+-            return Err(NortHingError::Validation(format!("failed to read SKILL.md: {}", e)));
+-        }
+-    };
+-
+-    use tokio::io::AsyncWriteExt;
+-    if let Err(e) = file.write_all(&skill_content).await {
+-        // Release consumed mark since promotion failed
+-        if consumed_marked {
+-            if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                consumed.remove(&receipt.receipt_id);
+-            }
+-        }
+-        return Err(NortHingError::Validation(format!("failed to write SKILL.md: {}", e)));
+-    }
+-
+-    if let Err(e) = file.flush().await {
+-        // Release consumed mark since promotion failed
+-        if consumed_marked {
+-            if let Ok(mut consumed) = CONSUMED_RECEIPTS.lock() {
+-                receipt_store::persist_receipt_action(&receipt.receipt_id, "released");
+-                consumed.remove(&receipt.receipt_id);
+-            }
+-        }
+-        return Err(NortHingError::Validation(format!("failed to flush SKILL.md: {}", e)));
+-    }
+-
+-    info!(
+-        skill_name = %candidate_dir_name,
+-        target_path = %target_path.display(),
+-        receipt_id = %receipt.receipt_id,
+-        "promote_candidate_skill: skill promoted successfully"
+-    );
+-
+-    Ok(target_path)
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use crate::agentic::coordination::tests::build_isolated_coordinator;
+-    use crate::agentic::judge_gate::audit::{set_audit_dir_override_for_tests, today_audit_path, TEST_ENV_LOCK};
+-    use crate::agentic::judge_gate::runner::FakeJudgeRunner;
+-    use northhing_agent_runtime::judge_gate::{
+-        AbsentReason, EvidencePack, FsDiffEvidence, GateExecutionContext, HumanFeedbackSlot, RateSample,
+-        SuccessRateComparison, ToolTraceEvidence,
+-    };
+-
+-    fn unique_dir(tag: &str) -> PathBuf {
+-        std::env::temp_dir().join(format!("northhing-judge-gate-test-{}-{}", tag, Uuid::new_v4()))
+-    }
+-
+-    fn test_ctx() -> GateExecutionContext {
+-        GateExecutionContext {
+-            workspace_path: None,
+-            parent_session_id: None,
+-            parent_turn_id: None,
+-            timeout_seconds: Some(60),
+-            cancel_token: None,
+-            audit_correlation_id: None,
+-        }
+-    }
+-
+-    fn make_valid_request() -> GateRequest {
+-        GateRequest {
+-            action_kind: ActionKind::PromoteSkillCandidate,
+-            subject: b"test skill content".to_vec(),
+-            evidence: EvidencePack {
+-                traces: vec![ToolTraceEvidence {
+-                    turn_id: "turn-1".to_string(),
+-                    tool: "Read".to_string(),
+-                    error_excerpt: "".to_string(),
+-                    repair_excerpt: None,
+-                }],
+-                fs_diffs: vec![FsDiffEvidence {
+-                    path: "test.rs".to_string(),
+-                    before_digest: "abc".to_string(),
+-                    after_digest: "def".to_string(),
+-                    added: 1,
+-                    removed: 0,
+-                }],
+-                success_rate: SuccessRateComparison {
+-                    baseline: RateSample::Present { successes: 5, attempts: 10 },
+-                    candidate: RateSample::Present { successes: 7, attempts: 10 },
+-                },
+-                human_feedback: HumanFeedbackSlot::Absent(AbsentReason::NoHumanExposureYet),
+-            },
+-        }
+-    }
+-
+-    fn make_approve_verdict() -> String {
+-        r#"Some preamble text
+-VERDICT_JSON_BEGIN
+-{"verdict":"approve","rule_checks":[{"rule":"I-NEG-1","status":"pass"},{"rule":"I-NEG-2","status":"pass"},{"rule":"I-NEG-3","status":"pass"},{"rule":"I-NEG-4","status":"pass"}],"evidence_assessment":"T1, F1","rationale":"All rules pass."}
+-VERDICT_JSON_END
+-Some conclusion"#.to_string()
+-    }
+-
+-    fn make_reject_verdict() -> String {
+-        r#"VERDICT_JSON_BEGIN
+-{"verdict":"reject","rule_checks":[{"rule":"I-NEG-1","status":"pass"},{"rule":"I-NEG-2","status":"violation"},{"rule":"I-NEG-3","status":"pass"},{"rule":"I-NEG-4","status":"pass"}],"evidence_assessment":"F1 shows violation","rationale":"I-NEG-2 violated."}
+-VERDICT_JSON_END"#.to_string()
+-    }
+-
+-    fn make_receipt_for(content: &[u8]) -> ApprovedGateReceipt {
+-        ApprovedGateReceipt {
+-            receipt_id: Uuid::new_v4().to_string(),
+-            action_kind: ActionKind::PromoteSkillCandidate,
+-            subject_digest: subject_digest(content),
+-            audit_entry_id: "audit-test".to_string(),
+-            ts: 1000,
+-        }
+-    }
+-
+-    async fn write_candidate(dir: &Path, content: &[u8]) {
+-        tokio::fs::create_dir_all(dir).await.unwrap();
+-        tokio::fs::write(dir.join(SKILL_MD_FILENAME), content).await.unwrap();
+-    }
+-
+-    fn read_audit_lines() -> Vec<serde_json::Value> {
+-        let path = today_audit_path();
+-        let content = std::fs::read_to_string(&path).unwrap_or_default();
+-        content
+-            .lines()
+-            .filter(|line| !line.trim().is_empty())
+-            .map(|line| serde_json::from_str(line).expect("audit line must be valid JSON"))
+-            .collect()
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_approve_produces_receipt_and_audit() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-approve");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_verdict_text(make_approve_verdict());
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        let GateVerdict::Approved(receipt) = verdict else {
+-            panic!("expected approval, got {:?}", verdict);
+-        };
+-        assert!(!receipt.receipt_id.is_empty());
+-        assert!(matches!(receipt.action_kind, ActionKind::PromoteSkillCandidate));
+-        assert_eq!(receipt.subject_digest, subject_digest(b"test skill content"));
+-        assert!(!receipt.audit_entry_id.is_empty());
+-        assert!(receipt.ts > 0);
+-
+-        let lines = read_audit_lines();
+-        assert_eq!(lines.len(), 1);
+-        assert_eq!(lines[0]["verdict"], "approve");
+-        assert_eq!(lines[0]["entry_id"].as_str().unwrap(), receipt.audit_entry_id);
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_reject_produces_policy_violation_and_audit() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-reject");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_verdict_text(make_reject_verdict());
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::PolicyViolation(msg)) => {
+-                assert!(msg.contains("I-NEG-2"));
+-            }
+-            other => panic!("expected PolicyViolation, got {:?}", other),
+-        }
+-
+-        let lines = read_audit_lines();
+-        assert_eq!(lines.len(), 1);
+-        assert_eq!(lines[0]["verdict"], "reject");
+-        assert_eq!(lines[0]["reject_class"], "policy_violation");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_runner_timeout_produces_judge_unavailable_and_audit() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-timeout");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_error(JudgeRunError::Timeout);
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::JudgeUnavailable(msg)) => assert!(msg.contains("timeout")),
+-            other => panic!("expected JudgeUnavailable, got {:?}", other),
+-        }
+-
+-        let lines = read_audit_lines();
+-        assert_eq!(lines.len(), 1, "runner failures must also be audited");
+-        assert_eq!(lines[0]["verdict"], "reject");
+-        assert_eq!(lines[0]["reject_class"], "judge_unavailable");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_runner_cancelled_produces_judge_unavailable() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-cancelled");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_error(JudgeRunError::Cancelled);
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::JudgeUnavailable(msg)) => assert!(msg.contains("cancelled")),
+-            other => panic!("expected JudgeUnavailable(cancelled), got {:?}", other),
+-        }
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_runner_error_produces_judge_unavailable() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-error");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_error(JudgeRunError::Unavailable("subagent unavailable".to_string()));
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::JudgeUnavailable(msg)) => assert!(msg.contains("unavailable")),
+-            other => panic!("expected JudgeUnavailable, got {:?}", other),
+-        }
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_malformed_verdict_produces_malformed_rejection() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-malformed");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_verdict_text("not a valid verdict".to_string());
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        assert!(matches!(verdict, GateVerdict::Rejected(RejectClass::MalformedVerdict(_))));
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_invalid_evidence_produces_evidence_rejected() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let dir = unique_dir("eval-evidence");
+-        set_audit_dir_override_for_tests(Some(dir.clone()));
+-
+-        let mut request = make_valid_request();
+-        request.evidence.traces.clear();
+-        request.evidence.fs_diffs.clear();
+-
+-        let runner = FakeJudgeRunner::new().with_verdict_text(make_approve_verdict());
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, request, &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::EvidenceRejected(_)) => {}
+-            other => panic!("expected EvidenceRejected, got {:?}", other),
+-        }
+-
+-        let lines = read_audit_lines();
+-        assert_eq!(lines.len(), 1, "evidence rejection must be audited");
+-        assert_eq!(lines[0]["reject_class"], "evidence_rejected");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&dir);
+-    }
+-
+-    #[tokio::test]
+-    async fn evaluate_audit_failure_yields_no_receipt() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        // Point the audit dir at an existing FILE so the append fails.
+-        let blocked = unique_dir("eval-audit-blocked");
+-        std::fs::write(&blocked, b"not a directory").unwrap();
+-        set_audit_dir_override_for_tests(Some(blocked.clone()));
+-
+-        let runner = FakeJudgeRunner::new().with_verdict_text(make_approve_verdict());
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let verdict = evaluate(&coordinator, make_valid_request(), &test_ctx(), &runner).await;
+-
+-        match verdict {
+-            GateVerdict::Rejected(RejectClass::AuditFailure(_)) => {}
+-            GateVerdict::Approved(_) => panic!("audit failure must never produce a receipt"),
+-            other => panic!("expected AuditFailure, got {:?}", other),
+-        }
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_file(&blocked);
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_happy_path_writes_identical_content_source_retained_and_audit() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let audit_dir = unique_dir("promote-audit");
+-        set_audit_dir_override_for_tests(Some(audit_dir.clone()));
+-
+-        let content = b"skill content";
+-        let candidate = unique_dir("promote-src").join("good-skill");
+-        write_candidate(&candidate, content).await;
+-        let skills_root = unique_dir("promote-skills");
+-        let receipt = make_receipt_for(content);
+-        let receipt_id = receipt.receipt_id.clone();
+-
+-        let result = promote_candidate_skill_to(receipt.clone(), &candidate, &skills_root).await;
+-        let target = result.expect("promotion should succeed");
+-
+-        let written = tokio::fs::read(&target).await.expect("target should exist");
+-        assert_eq!(written, content, "promoted content must be byte-identical");
+-        assert!(candidate.join(SKILL_MD_FILENAME).exists(), "candidate source must be retained");
+-
+-        // Receipt is now consumed: a second promote with the same receipt must fail.
+-        let second = promote_candidate_skill_to(receipt, &candidate, &skills_root).await;
+-        assert!(second.is_err(), "consumed receipt must not be reusable");
+-
+-        let lines = read_audit_lines();
+-        assert_eq!(lines.len(), 1);
+-        assert_eq!(lines[0]["verdict"], "promote");
+-        assert_eq!(lines[0]["evidence_summary"].as_str().unwrap().contains("good-skill"), true);
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&audit_dir);
+-        let _ = std::fs::remove_dir_all(unique_dir("promote-src"));
+-        let _ = std::fs::remove_dir_all(&skills_root);
+-        let _ = receipt_id;
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_rejects_wrong_digest() {
+-        let candidate = unique_dir("promote-wrong-digest").join("some-skill");
+-        write_candidate(&candidate, b"actual content").await;
+-        let skills_root = unique_dir("promote-skills");
+-        let mut receipt = make_receipt_for(b"actual content");
+-        receipt.subject_digest = "sha256:v1:0000000000000000000000000000000000000000000000000000000000000000".to_string();
+-
+-        let result = promote_candidate_skill_to(receipt, &candidate, &skills_root).await;
+-        assert!(result.is_err(), "digest mismatch must be rejected");
+-        assert!(!skills_root.join("some-skill").exists());
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_rejects_reserved_name_candidates() {
+-        let content = b"skill content";
+-        let skills_root = unique_dir("promote-skills");
+-
+-        for reserved in ["candidates", "CANDIDATES"] {
+-            let base = unique_dir("promote-reserved");
+-            let candidate = base.join(reserved);
+-            write_candidate(&candidate, content).await;
+-            let receipt = make_receipt_for(content);
+-
+-            let result = promote_candidate_skill_to(receipt, &candidate, &skills_root).await;
+-            assert!(result.is_err(), "reserved name {} must be rejected", reserved);
+-            assert!(
+-                !skills_root.join(reserved).exists(),
+-                "nothing may be written to the loader-visible candidates root"
+-            );
+-            let _ = std::fs::remove_dir_all(&base);
+-        }
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_rejects_unsafe_name() {
+-        let content = b"skill content";
+-        let skills_root = unique_dir("promote-skills");
+-
+-        for bad_name in ["bad..name", "BadCase", "with space"] {
+-            let base = unique_dir("promote-unsafe");
+-            let candidate = base.join(bad_name);
+-            write_candidate(&candidate, content).await;
+-            let receipt = make_receipt_for(content);
+-
+-            let result = promote_candidate_skill_to(receipt, &candidate, &skills_root).await;
+-            assert!(result.is_err(), "unsafe name {} must be rejected", bad_name);
+-            let _ = std::fs::remove_dir_all(&base);
+-        }
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_rejects_existing_target() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let audit_dir = unique_dir("promote-audit");
+-        set_audit_dir_override_for_tests(Some(audit_dir.clone()));
+-
+-        let content = b"skill content";
+-        let candidate = unique_dir("promote-src").join("taken-skill");
+-        write_candidate(&candidate, content).await;
+-        let skills_root = unique_dir("promote-skills");
+-        // Pre-create the target so the atomic create_new must fail.
+-        let taken_dir = skills_root.join("taken-skill");
+-        tokio::fs::create_dir_all(&taken_dir).await.unwrap();
+-        tokio::fs::write(taken_dir.join(SKILL_MD_FILENAME), b"other").await.unwrap();
+-
+-        let result = promote_candidate_skill_to(make_receipt_for(content), &candidate, &skills_root).await;
+-        assert!(result.is_err(), "existing target must not be overwritten");
+-        let existing = tokio::fs::read(taken_dir.join(SKILL_MD_FILENAME)).await.unwrap();
+-        assert_eq!(existing, b"other", "existing target content must be untouched");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&audit_dir);
+-        let _ = std::fs::remove_dir_all(&skills_root);
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_concurrent_same_receipt_only_one_succeeds() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let audit_dir = unique_dir("promote-audit");
+-        set_audit_dir_override_for_tests(Some(audit_dir.clone()));
+-
+-        let content: &'static [u8] = b"skill content";
+-        let candidate = unique_dir("promote-src").join("race-skill");
+-        write_candidate(&candidate, content).await;
+-        let skills_root = unique_dir("promote-skills");
+-        let receipt = make_receipt_for(content);
+-
+-        let first = {
+-            let receipt = receipt.clone();
+-            let candidate = candidate.clone();
+-            let skills_root = skills_root.clone();
+-            tokio::spawn(async move { promote_candidate_skill_to(receipt, &candidate, &skills_root).await })
+-        };
+-        let second = {
+-            let receipt = receipt.clone();
+-            let candidate = candidate.clone();
+-            let skills_root = skills_root.clone();
+-            tokio::spawn(async move { promote_candidate_skill_to(receipt, &candidate, &skills_root).await })
+-        };
+-        let (first, second) = tokio::join!(first, second);
+-        let successes = [first.unwrap(), second.unwrap()].into_iter().filter(|r| r.is_ok()).count();
+-        assert_eq!(successes, 1, "exactly one concurrent promote may succeed");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_dir_all(&audit_dir);
+-        let _ = std::fs::remove_dir_all(&skills_root);
+-    }
+-
+-    #[tokio::test]
+-    async fn promote_rejects_when_audit_fails_and_releases_consumed_mark() {
+-        let _guard = TEST_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+-        let blocked = unique_dir("promote-audit-blocked");
+-        std::fs::write(&blocked, b"not a directory").unwrap();
+-        set_audit_dir_override_for_tests(Some(blocked.clone()));
+-
+-        let content = b"skill content";
+-        let candidate = unique_dir("promote-src").join("audit-skill");
+-        write_candidate(&candidate, content).await;
+-        let skills_root = unique_dir("promote-skills");
+-        let receipt = make_receipt_for(content);
+-
+-        let result = promote_candidate_skill_to(receipt.clone(), &candidate, &skills_root).await;
+-        assert!(result.is_err(), "audit failure must reject the promotion");
+-        assert!(!skills_root.join("audit-skill").exists(), "no unaudited loader-visible write may remain");
+-
+-        // The consumed mark must have been released: retry with a working audit dir succeeds.
+-        let audit_dir = unique_dir("promote-audit");
+-        set_audit_dir_override_for_tests(Some(audit_dir.clone()));
+-        let retry = promote_candidate_skill_to(receipt, &candidate, &skills_root).await;
+-        assert!(retry.is_ok(), "released consumed mark must allow retry");
+-
+-        set_audit_dir_override_for_tests(None);
+-        let _ = std::fs::remove_file(&blocked);
+-        let _ = std::fs::remove_dir_all(&audit_dir);
+-        let _ = std::fs::remove_dir_all(&skills_root);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/judge_gate/receipt_store.rs b/src/crates/assembly/core/src/agentic/judge_gate/receipt_store.rs
+deleted file mode 100644
+index 9870b74..0000000
+--- a/src/crates/assembly/core/src/agentic/judge_gate/receipt_store.rs
++++ /dev/null
+@@ -1,101 +0,0 @@
+-//! Persistent consumed-receipt store (append-only JSONL).
+-//!
+-//! Crash-safe: file is source of truth on restart. Each line records a
+-//! consume or release action; startup replays the log to rebuild the
+-//! in-memory set.
+-
+-use serde::{Deserialize, Serialize};
+-use std::collections::HashSet;
+-use std::io::{BufRead, BufReader, Write};
+-use std::path::PathBuf;
+-use tracing::{debug, warn};
+-
+-const RECEIPT_LOG_FILENAME: &str = "consumed_receipts.jsonl";
+-
+-#[derive(Debug, Serialize, Deserialize)]
+-struct ReceiptAction {
+-    receipt_id: String,
+-    action: String, // "consumed" | "released"
+-    ts: u64,
+-}
+-
+-/// Get the path to the consumed receipts log file.
+-pub(crate) fn receipt_log_path() -> Option<PathBuf> {
+-    let pm = crate::infrastructure::app_paths::path_manager_arc();
+-    let dir = pm.user_data_dir().join("judge-gate");
+-    Some(dir.join(RECEIPT_LOG_FILENAME))
+-}
+-
+-/// Load consumed receipts from the append-only log.
+-/// Replays consumed/released actions to rebuild the set.
+-pub(crate) fn load_consumed_receipts() -> HashSet<String> {
+-    let mut set = HashSet::new();
+-    let Some(path) = receipt_log_path() else {
+-        return set;
+-    };
+-    if !path.exists() {
+-        return set;
+-    }
+-    let Ok(file) = std::fs::File::open(&path) else {
+-        return set;
+-    };
+-    let reader = BufReader::new(file);
+-    for line in reader.lines() {
+-        let Ok(line) = line else {
+-            continue;
+-        };
+-        let trimmed = line.trim();
+-        if trimmed.is_empty() {
+-            continue;
+-        }
+-        match serde_json::from_str::<ReceiptAction>(trimmed) {
+-            Ok(entry) => match entry.action.as_str() {
+-                "consumed" => {
+-                    set.insert(entry.receipt_id);
+-                }
+-                "released" => {
+-                    set.remove(&entry.receipt_id);
+-                }
+-                _ => {}
+-            },
+-            Err(e) => {
+-                warn!(error = %e, "skipping malformed consumed_receipts line");
+-            }
+-        }
+-    }
+-    debug!(count = set.len(), "loaded consumed receipts from disk");
+-    set
+-}
+-
+-/// Append a receipt action to the log file (best-effort, non-fatal on failure).
+-pub(crate) fn persist_receipt_action(receipt_id: &str, action: &str) {
+-    let Some(path) = receipt_log_path() else {
+-        return;
+-    };
+-    if let Some(parent) = path.parent() {
+-        let _ = std::fs::create_dir_all(parent);
+-    }
+-    let entry = ReceiptAction {
+-        receipt_id: receipt_id.to_string(),
+-        action: action.to_string(),
+-        ts: std::time::SystemTime::now()
+-            .duration_since(std::time::UNIX_EPOCH)
+-            .map(|d| d.as_millis() as u64)
+-            .unwrap_or(0),
+-    };
+-    let Ok(json) = serde_json::to_string(&entry) else {
+-        return;
+-    };
+-    match std::fs::OpenOptions::new()
+-        .create(true)
+-        .append(true)
+-        .open(&path)
+-    {
+-        Ok(mut file) => {
+-            let _ = writeln!(file, "{}", json);
+-        }
+-        Err(e) => {
+-            warn!(error = %e, "failed to persist receipt action");
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/judge_gate/runner.rs b/src/crates/assembly/core/src/agentic/judge_gate/runner.rs
+deleted file mode 100644
+index 10b0abb..0000000
+--- a/src/crates/assembly/core/src/agentic/judge_gate/runner.rs
++++ /dev/null
+@@ -1,253 +0,0 @@
+-//! Judge runner trait and production implementation.
+-//!
+-//! The `JudgeRunner` trait abstracts the execution of judge gate evaluations.
+-//! Production use `SubagentJudgeRunner` which delegates to the GateJudge subagent
+-//! via `ConversationCoordinator::execute_subagent`.
+-
+-use crate::agentic::coordination::{SubagentExecutionRequest, ConversationCoordinator};
+-use crate::agentic::deep_review_policy::GATE_JUDGE_AGENT_TYPE;
+-use crate::agentic::tools::pipeline::SubagentParentInfo;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use northhing_agent_runtime::judge_gate::GateExecutionContext;
+-use northhing_runtime_ports::{DelegationPolicy, SubagentContextMode};
+-use std::collections::HashMap;
+-use std::sync::Arc;
+-use tokio_util::sync::CancellationToken;
+-use tracing::{debug, warn};
+-
+-/// Error types from judge runner execution.
+-#[derive(Debug, Clone, PartialEq)]
+-pub enum JudgeRunError {
+-    /// Execution timed out.
+-    Timeout,
+-    /// Execution was cancelled.
+-    Cancelled,
+-    /// Runner is unavailable with a reason.
+-    Unavailable(String),
+-}
+-
+-/// Trait for judge gate execution.
+-/// Implementations can be production (SubagentJudgeRunner) or test fakes (FakeJudgeRunner).
+-#[async_trait::async_trait]
+-pub(crate) trait JudgeRunner: Send + Sync {
+-    /// Run the judge gate evaluation.
+-    ///
+-    /// # Arguments
+-    /// * `coordinator` - The conversation coordinator
+-    /// * `brief` - The judge brief string to send to the judge
+-    /// * `ctx` - The gate execution context
+-    ///
+-    /// # Returns
+-    /// * `Ok(String)` - The judge's raw text response
+-    /// * `Err(JudgeRunError)` - If execution failed
+-    async fn run_judge(
+-        &self,
+-        coordinator: &Arc<ConversationCoordinator>,
+-        brief: String,
+-        ctx: &GateExecutionContext,
+-    ) -> Result<String, JudgeRunError>;
+-}
+-
+-/// Production judge runner that delegates to the GateJudge subagent.
+-pub(crate) struct SubagentJudgeRunner;
+-
+-impl SubagentJudgeRunner {
+-    pub fn new() -> Self {
+-        Self
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl JudgeRunner for SubagentJudgeRunner {
+-    async fn run_judge(
+-        &self,
+-        coordinator: &Arc<ConversationCoordinator>,
+-        brief: String,
+-        ctx: &GateExecutionContext,
+-    ) -> Result<String, JudgeRunError> {
+-        // Build subagent parent info
+-        // Per task spec: parent_session_id = "judge-gate" or ctx.parent_session_id,
+-        // parent_dialog_turn_id = audit_correlation_id or new uuid
+-        let parent_session_id = ctx.parent_session_id.clone().unwrap_or_else(|| "judge-gate".to_string());
+-        let parent_dialog_turn_id = ctx
+-            .audit_correlation_id
+-            .clone()
+-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+-
+-        let parent_info = SubagentParentInfo {
+-            tool_call_id: format!("judge-gate-{}", uuid::Uuid::new_v4()),
+-            session_id: parent_session_id.clone(),
+-            dialog_turn_id: parent_dialog_turn_id.clone(),
+-        };
+-
+-        // Build the execution request
+-        let request = SubagentExecutionRequest {
+-            task_description: brief,
+-            context_mode: SubagentContextMode::Fresh,
+-            subagent_type: Some(GATE_JUDGE_AGENT_TYPE.to_string()),
+-            workspace_path: ctx.workspace_path.clone(),
+-            model_id: None,
+-            subagent_parent_info: parent_info,
+-            context: HashMap::new(),
+-            delegation_policy: DelegationPolicy::top_level().spawn_child(),
+-        };
+-
+-        let cancel_token: Option<&CancellationToken> = ctx.cancel_token.as_ref();
+-        let timeout_seconds = ctx.timeout_seconds.or(Some(600));
+-
+-        debug!(
+-            "Executing GateJudge subagent, parent_session_id={}, timeout_seconds={:?}",
+-            parent_session_id, timeout_seconds
+-        );
+-
+-        let result = coordinator
+-            .execute_subagent(request, cancel_token, timeout_seconds, None)
+-            .await;
+-
+-        match result {
+-            Ok(response) => {
+-                debug!(
+-                    "GateJudge subagent returned {} chars",
+-                    response.text.len()
+-                );
+-                Ok(response.text)
+-            }
+-            Err(NortHingError::Timeout(msg)) => {
+-                warn!("GateJudge subagent timed out: {}", msg);
+-                Err(JudgeRunError::Timeout)
+-            }
+-            Err(NortHingError::Cancelled(msg)) => {
+-                warn!("GateJudge subagent cancelled: {}", msg);
+-                Err(JudgeRunError::Cancelled)
+-            }
+-            Err(e) => {
+-                warn!("GateJudge subagent unavailable: {}", e);
+-                Err(JudgeRunError::Unavailable(e.to_string()))
+-            }
+-        }
+-    }
+-}
+-
+-impl Default for SubagentJudgeRunner {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-/// FakeJudgeRunner for testing - returns configurable responses.
+-/// Defined at crate level but #[cfg(test)] so only available in tests.
+-#[cfg(test)]
+-pub(crate) struct FakeJudgeRunner {
+-    pub verdict_text: Option<String>,
+-    pub error: Option<JudgeRunError>,
+-    pub delay_ms: Option<u64>,
+-}
+-
+-#[cfg(test)]
+-impl FakeJudgeRunner {
+-    pub fn new() -> Self {
+-        Self {
+-            verdict_text: None,
+-            error: None,
+-            delay_ms: None,
+-        }
+-    }
+-
+-    /// Set the verdict text to return.
+-    pub fn with_verdict_text(mut self, text: String) -> Self {
+-        self.verdict_text = Some(text);
+-        self
+-    }
+-
+-    /// Set the error to return.
+-    pub fn with_error(mut self, error: JudgeRunError) -> Self {
+-        self.error = Some(error);
+-        self
+-    }
+-
+-    /// Set an artificial delay.
+-    pub fn with_delay_ms(mut self, ms: u64) -> Self {
+-        self.delay_ms = Some(ms);
+-        self
+-    }
+-}
+-
+-#[cfg(test)]
+-impl Default for FakeJudgeRunner {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-#[cfg(test)]
+-#[async_trait::async_trait]
+-impl JudgeRunner for FakeJudgeRunner {
+-    async fn run_judge(
+-        &self,
+-        _coordinator: &Arc<ConversationCoordinator>,
+-        _brief: String,
+-        _ctx: &GateExecutionContext,
+-    ) -> Result<String, JudgeRunError> {
+-        if let Some(delay_ms) = self.delay_ms {
+-            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+-        }
+-
+-        if let Some(ref error) = self.error {
+-            return Err(error.clone());
+-        }
+-
+-        self.verdict_text
+-            .clone()
+-            .ok_or_else(|| JudgeRunError::Unavailable("FakeJudgeRunner: no verdict configured".to_string()))
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use crate::agentic::coordination::tests::build_isolated_coordinator;
+-    use northhing_agent_runtime::judge_gate::GateExecutionContext;
+-
+-    fn test_ctx() -> GateExecutionContext {
+-        GateExecutionContext {
+-            workspace_path: None,
+-            parent_session_id: None,
+-            parent_turn_id: None,
+-            timeout_seconds: Some(60),
+-            cancel_token: None,
+-            audit_correlation_id: None,
+-        }
+-    }
+-
+-    #[tokio::test]
+-    async fn fake_judge_runner_returns_configured_verdict() {
+-        let runner = FakeJudgeRunner::new()
+-            .with_verdict_text(r#"VERDICT_JSON_BEGIN
+-{"verdict":"approve","rule_checks":[{"rule":"I-NEG-1","status":"pass"},{"rule":"I-NEG-2","status":"pass"},{"rule":"I-NEG-3","status":"pass"},{"rule":"I-NEG-4","status":"pass"}],"evidence_assessment":"T1, F1","rationale":"All rules pass."}
+-VERDICT_JSON_END"#.to_string())
+-            .with_delay_ms(10);
+-
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+-        assert!(result.is_ok());
+-        assert!(result.unwrap().contains("approve"));
+-    }
+-
+-    #[tokio::test]
+-    async fn fake_judge_runner_returns_timeout_error() {
+-        let runner = FakeJudgeRunner::new().with_error(JudgeRunError::Timeout);
+-
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+-        assert!(matches!(result, Err(JudgeRunError::Timeout)));
+-    }
+-
+-    #[tokio::test]
+-    async fn fake_judge_runner_returns_unavailable_when_no_verdict() {
+-        let runner = FakeJudgeRunner::new();
+-
+-        let (coordinator, _session_manager) = build_isolated_coordinator();
+-        let result = runner.run_judge(&coordinator, "test brief".to_string(), &test_ctx()).await;
+-        assert!(matches!(result, Err(JudgeRunError::Unavailable(_))));
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/mod.rs b/src/crates/assembly/core/src/agentic/mod.rs
+index d9d922f..358b4b5 100644
+--- a/src/crates/assembly/core/src/agentic/mod.rs
++++ b/src/crates/assembly/core/src/agentic/mod.rs
+@@ -46,23 +46,20 @@ pub mod system;
+ // Agents module
+ pub mod agents;
+ pub mod identity;
+ pub mod workspace;
+ 
+ mod util;
+ 
+ // Episode log module (growth experience storage)
+ pub mod episodes;
+ 
+-// Judge gate adapter module
+-pub(crate) mod judge_gate;
+-
+ pub use agents::*;
+ pub use context_profile::*;
+ pub use coordination::*;
+ pub use core::*;
+ pub use events::{queue, router, types as event_types};
+ pub use execution::*;
+ pub use fork_agent::*;
+ pub use goal_mode::*;
+ pub use image_analysis::{ImageAnalyzer, MessageEnhancer};
+ pub use persistence::PersistenceManager;
+diff --git a/src/crates/execution/agent-runtime/AGENTS.md b/src/crates/execution/agent-runtime/AGENTS.md
+index 4a47b2a..0745eb0 100644
+--- a/src/crates/execution/agent-runtime/AGENTS.md
++++ b/src/crates/execution/agent-runtime/AGENTS.md
+@@ -36,18 +36,19 @@ port-backed `AgentRuntime` facade that can be built and tested without
+   queue decisions, registry source/profile facts, prompt-loop user-context
+   policy, prompt listing reminder ordering, prompt-cache policy/identity/store,
+   finish-reason labels, session-state event labels, and turn-outcome event facts.
+ - Keep concrete prompt assembly, workspace context IO, prompt-cache persistence
+   wiring, dynamic environment collection, concrete hook side effects,
+   DeepReview task launch/provider wait/report persistence, DeepResearch
+   storage IO/post-turn hook, concrete product tool execution, and channel/state
+   mutation outside this crate until a reviewed migration proves behavior
+   equivalence.
+ - Add focused tests before moving any runtime decision into this crate.
++- Reserved vocabulary: `judge_gate` protocol layer (`types`, `verdict`, `redlines`, `evidence`, `brief` — pure types) is reserved for TH-5 identity evolution (T3-8, approved 2026-08-17 in T-08/G15). Its zero-wiring status is intentional; do not mark or delete as dead code in subsequent cleanup rounds.
+ 
+ ## Verification
+ 
+ ```bash
+ cargo test -p northhing-agent-runtime
+ node scripts/check-core-boundaries.mjs
+ cargo check -p northhing-core --features product-full
+ ```
