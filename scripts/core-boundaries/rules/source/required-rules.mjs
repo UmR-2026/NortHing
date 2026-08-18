@@ -47,7 +47,7 @@ export const requiredContentRules = [
       },
       {
         regex:
-          /\bfake_provider_registers_required_and_remote_services_through_registry\b/,
+          /\bfake_provider_registers_required_services_through_registry\b/,
         message: 'missing provider registry assembly regression',
       },
       {
@@ -63,10 +63,6 @@ export const requiredContentRules = [
       {
         regex: /\bbuilder_rejects_port_registered_under_the_wrong_capability\b/,
         message: 'missing capability mismatch regression',
-      },
-      {
-        regex: /\bregistered_remote_ports_expose_owner_contract_methods\b/,
-        message: 'missing remote port owner contract regression',
       },
     ],
   },
@@ -3018,37 +3014,6 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/contracts/runtime-ports/src/remote.rs',
-    reason:
-      'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
-    patterns: [
-      {
-        regex: /\bpub struct RemoteWorkspaceFacts\b/,
-        message: 'missing remote workspace facts contract',
-      },
-      {
-        regex: /\bpub trait RemoteWorkspaceRuntimeHost\b/,
-        message: 'missing remote workspace runtime host contract',
-      },
-      {
-        regex: /\bpub trait RemoteWorkspacePort\b/,
-        message: 'missing remote workspace service port contract',
-      },
-      {
-        regex: /\bpub trait RemoteWorkspaceFileRuntimeHost\b/,
-        message: 'missing remote workspace file runtime host contract',
-      },
-      {
-        regex: /\bpub trait RemoteProjectionPort\b/,
-        message: 'missing remote projection service port contract',
-      },
-      {
-        regex: /\bpub trait RemoteInitialSyncRuntimeHost\b/,
-        message: 'missing remote initial sync runtime host contract',
-      },
-    ],
-  },
-  {
     path: 'src/crates/contracts/runtime-ports/src/session_workspace.rs',
     reason:
       'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
@@ -3084,14 +3049,6 @@ export const requiredContentRules = [
     reason:
       'runtime-ports must keep remote and subagent runtime boundary contracts DTO/trait-only',
     patterns: [
-      {
-        regex: /\bremote_workspace_contracts_preserve_workspace_and_session_facts\b/,
-        message: 'missing remote workspace contract regression',
-      },
-      {
-        regex: /\bremote_projection_contract_preserves_file_chunk_identity\b/,
-        message: 'missing remote projection contract regression',
-      },
       {
         regex: /\bworkspace_services_contract_is_runtime_port_owned\b/,
         message: 'missing workspace service ownership regression',

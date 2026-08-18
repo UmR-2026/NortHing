@@ -31,9 +31,9 @@ fn permission_and_capability_contracts_keep_source_identity() {
         request_id: "cap-1".to_string(),
         kind: CapabilityRequestKind::PermissionDecision,
         source: ApprovalSource {
-            surface: SurfaceKind::Remote,
-            thread_id: Some("thread-remote".to_string()),
-            turn_id: Some("turn-remote".to_string()),
+            surface: SurfaceKind::Server,
+            thread_id: Some("thread-server".to_string()),
+            turn_id: Some("turn-server".to_string()),
             subagent_thread_id: Some("child-1".to_string()),
         },
         artifact: None,
@@ -42,8 +42,8 @@ fn permission_and_capability_contracts_keep_source_identity() {
             command_prefix: Some("git status".to_string()),
             path_pattern: Some("src/**".to_string()),
             agent_role: Some("reviewer".to_string()),
-            surface: Some(SurfaceKind::Remote),
-            thread_id: Some("thread-remote".to_string()),
+            surface: Some(SurfaceKind::Server),
+            thread_id: Some("thread-server".to_string()),
         }),
         decision: Some(PermissionDecision::ApproveSession),
         metadata: BTreeMap::new(),
@@ -52,7 +52,7 @@ fn permission_and_capability_contracts_keep_source_identity() {
     let json = serde_json::to_value(&request).expect("serialize request");
 
     assert_eq!(json["kind"], "permission_decision");
-    assert_eq!(json["source"]["surface"], "remote");
+    assert_eq!(json["source"]["surface"], "server");
     assert_eq!(json["source"]["subagentThreadId"], "child-1");
     assert_eq!(json["permission"]["commandPrefix"], "git status");
     assert_eq!(json["decision"], "approve_session");
@@ -61,7 +61,7 @@ fn permission_and_capability_contracts_keep_source_identity() {
 #[test]
 fn thread_environment_contract_does_not_require_surface_specific_fields() {
     let env = ThreadEnvironment {
-        kind: ThreadEnvironmentKind::RemoteConnect,
+        kind: ThreadEnvironmentKind::RemoteSsh,
         workspace_path: None,
         remote_connection_id: Some("paired-phone".to_string()),
         label: None,
@@ -70,7 +70,7 @@ fn thread_environment_contract_does_not_require_surface_specific_fields() {
 
     let json = serde_json::to_value(&env).expect("serialize environment");
 
-    assert_eq!(json["kind"], "remote_connect");
+    assert_eq!(json["kind"], "remote_ssh");
     assert_eq!(json["remoteConnectionId"], "paired-phone");
     assert!(json.get("workspacePath").is_none());
     assert!(json.get("label").is_none());

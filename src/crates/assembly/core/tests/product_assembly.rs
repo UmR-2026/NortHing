@@ -27,8 +27,6 @@ fn core_runtime_services_provider_registers_existing_adapters_and_capability_mar
     assert!(services.has_capability(RuntimeServiceCapability::Network));
     assert!(services.has_capability(RuntimeServiceCapability::Git));
     assert!(services.has_capability(RuntimeServiceCapability::McpCatalog));
-    assert!(services.has_capability(RuntimeServiceCapability::RemoteWorkspace));
-    assert!(services.has_capability(RuntimeServiceCapability::RemoteProjection));
 }
 
 #[test]

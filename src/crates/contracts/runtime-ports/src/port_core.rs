@@ -55,10 +55,6 @@ pub enum RuntimeServiceCapability {
     Network,
     Git,
     McpCatalog,
-    RemoteConnection,
-    RemoteWorkspace,
-    RemoteProjection,
-    RemoteCapabilities,
 }
 
 impl RuntimeServiceCapability {
@@ -74,10 +70,6 @@ impl RuntimeServiceCapability {
             Self::Network => "network",
             Self::Git => "git",
             Self::McpCatalog => "mcp_catalog",
-            Self::RemoteConnection => "remote_connection",
-            Self::RemoteWorkspace => "remote_workspace",
-            Self::RemoteProjection => "remote_projection",
-            Self::RemoteCapabilities => "remote_capabilities",
         }
     }
 }

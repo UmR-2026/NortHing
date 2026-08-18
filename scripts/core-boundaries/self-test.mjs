@@ -843,17 +843,6 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/contracts/runtime-ports/src/remote.rs',
-      contracts: [
-        'RemoteWorkspaceFacts',
-        'RemoteWorkspaceRuntimeHost',
-        'RemoteWorkspacePort',
-        'RemoteWorkspaceFileRuntimeHost',
-        'RemoteProjectionPort',
-        'RemoteInitialSyncRuntimeHost',
-      ],
-    },
-    {
       path: 'src/crates/contracts/runtime-ports/src/session_workspace.rs',
       contracts: [
         'WorkspaceFileSystem',
@@ -867,8 +856,6 @@ export function runManifestParserSelfTest({
     {
       path: 'src/crates/contracts/runtime-ports/src/runtime_facade_tests.rs',
       contracts: [
-        'remote_workspace_contracts_preserve_workspace_and_session_facts',
-        'remote_projection_contract_preserves_file_chunk_identity',
         'workspace_services_contract_is_runtime_port_owned',
       ],
     },
@@ -917,11 +904,10 @@ export function runManifestParserSelfTest({
       path: 'src/crates/execution/runtime-services/tests/runtime_services_contracts.rs',
       contracts: [
         'builder_requires_mandatory_runtime_services',
-        'fake_provider_registers_required_and_remote_services_through_registry',
+        'fake_provider_registers_required_services_through_registry',
         'missing_optional_capability_returns_typed_unsupported_error',
         'capability_availability_reports_optional_service_status_without_side_effects',
         'builder_rejects_port_registered_under_the_wrong_capability',
-        'registered_remote_ports_expose_owner_contract_methods',
       ],
     },
     {

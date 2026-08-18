@@ -5,15 +5,14 @@
 //! This crate intentionally contains only DTOs and traits. It must not depend
 //! on concrete managers, platform adapters, `northhing-core`, or app crates.
 //!
-//! R26 god-split: facade with 4 sibling sub-domain files (port_core,
-//! session_workspace, remote, agent).
+//! R26 god-split: facade with 3 sibling sub-domain files (port_core,
+//! session_workspace, agent).
 
 pub mod agent;
 pub mod deep_research;
 pub mod lightweight_task;
 pub mod mcp;
 pub mod port_core;
-pub mod remote;
 pub mod session_workspace;
 
 pub use agent::*;
@@ -28,7 +27,6 @@ pub use mcp::{
     format_mcp_status, format_mcp_status_err, McpCatalogError, McpCatalogReader, McpServerDto, McpServerStatusDto,
 };
 pub use port_core::*;
-pub use remote::*;
 pub use session_workspace::*;
 
 #[cfg(test)]
