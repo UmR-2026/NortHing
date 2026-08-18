@@ -22,7 +22,6 @@ These compile and may have partial functionality, but are **not** shipped, not t
 | **Relay Server** | `src/apps/relay-server` (`relay-core`) | 🧊 Frozen | Binds `0.0.0.0` by default with no authentication. Do not expose. See tech-debt-ledger P1. |
 | **Mobile Web** | `src/mobile-web/` | 🧊 Frozen | PWA shell; re-pairing flow unguided, i18n has mojibake. |
 | **MiniApp UI** | `src/crates/contracts/product-domains/src/miniapp/` | 🧊 Frozen | Built-in mini-apps (PPT live, etc.) are experimental. String-mode shell commands rejected by `guard_command_execution`. |
-| **SDLC Harness** | `src/crates/execution/harness/` | 🧊 Frozen | Test/eval harness; not user-facing. |
 | **Tauri Desktop (candidate)** | `src/apps/desktop-tauri` | 🧊 Frozen | Tauri 2 + React candidate for the next baseline; flips at F4. src-tauri is its own cargo workspace (excluded from main). |
 
 ## Active Capability Crates (Agent Toolbox)
@@ -33,7 +32,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 |-------|------|------|
 | `tool-contracts` | `src/crates/execution/tool-contracts` | Tool trait definitions |
 | `tool-execution` | `src/crates/execution/tool-execution` | Tool execution engine |
-| `tool-provider-groups` | `src/crates/execution/tool-provider-groups` | Tool registration/grouping |
 | `agent-dispatch` | `src/crates/execution/agent-dispatch` | Agent dispatch (lightweight actor mode) |
 | `agent-runtime` | `src/crates/execution/agent-runtime` | Agent runtime loop |
 | `agent-stream` | `src/crates/execution/agent-stream` | Streaming response handling |

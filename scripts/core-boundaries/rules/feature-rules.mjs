@@ -12,7 +12,6 @@ export const optionalDependencyFeatureOwnerRules = [
       { depName: 'northhing-ai-adapters', ownerFeatures: ['ai-adapter-runtime'] },
       { depName: 'northhing-product-capabilities', ownerFeatures: ['product-capabilities'] },
       { depName: 'northhing-product-domains', ownerFeatures: ['product-domains'] },
-      { depName: 'northhing-tool-packs', ownerFeatures: ['tool-packs'] },
       { depName: 'chrono-tz', ownerFeatures: ['product-full'] },
       { depName: 'cron', ownerFeatures: ['product-full'] },
       { depName: 'dashmap', ownerFeatures: ['product-full'] },
@@ -135,26 +134,11 @@ export const coreProductFullFeatureAssemblyRule = {
     'product-capabilities',
     'product-domains',
     'service-integrations',
-    'tool-packs',
   ],
   reason: 'northhing-core product-full must explicitly assemble current owner feature groups',
 };
 
 export const ownerCrateFeatureAssemblyRules = [
-  {
-    manifestPath: 'src/crates/execution/tool-provider-groups/Cargo.toml',
-    reason: 'tool-packs must keep product feature groups explicit and default-light',
-    requiredProductFullFeatures: [
-      'basic',
-      'git',
-      'mcp',
-      'browser-web',
-      'computer-use',
-      'image-analysis',
-      'miniapp',
-      'agent-control',
-    ],
-  },
   {
     manifestPath: 'src/crates/services/services-integrations/Cargo.toml',
     reason: 'services-integrations must keep integration feature groups explicit and default-light',

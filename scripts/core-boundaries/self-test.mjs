@@ -130,7 +130,6 @@ export function runManifestParserSelfTest({
     'product-capabilities',
     'product-domains',
     'service-integrations',
-    'tool-packs',
   ]) {
     if (!coreProductFullFeatureAssemblyRule.requiredFeatureRefs.includes(featureName)) {
       throw new Error(`core product-full assembly rule must require ${featureName}`);
@@ -158,7 +157,6 @@ export function runManifestParserSelfTest({
     ownerCrateFeatureAssemblyRules.map((rule) => rule.manifestPath),
   );
   for (const manifestPath of [
-    'src/crates/execution/tool-provider-groups/Cargo.toml',
     'src/crates/services/services-integrations/Cargo.toml',
     'src/crates/contracts/product-domains/Cargo.toml',
   ]) {
@@ -708,27 +706,6 @@ export function runManifestParserSelfTest({
   for (const contract of agentToolsRuntimeForbiddenContracts) {
     if (!agentToolsManifestRuleText.includes(contract)) {
       throw new Error(`agent-tools manifest boundary rule must forbid: ${contract}`);
-    }
-  }
-  const toolPacksManifestRule = forbiddenContentUnderRules.find(
-    (rule) => rule.path === 'src/crates/execution/tool-provider-groups/src',
-  );
-  if (!toolPacksManifestRule) {
-    throw new Error('missing tool-packs manifest-owner boundary rule');
-  }
-  const toolPacksManifestRuleText = toolPacksManifestRule.patterns
-    .map((pattern) => pattern.regex.source)
-    .join('\n');
-  const toolPacksManifestContracts = [
-    'GetToolSpecTool',
-    'GET_TOOL_SPEC_TOOL_NAME',
-    'manifest_resolver',
-    'unlocked_collapsed_tools',
-    'ToolExposure',
-  ];
-  for (const contract of toolPacksManifestContracts) {
-    if (!toolPacksManifestRuleText.includes(contract)) {
-      throw new Error(`tool-packs manifest boundary rule must forbid: ${contract}`);
     }
   }
   const serviceAgentRuntimeRuleText = forbiddenRuleTextForPath(
@@ -1969,19 +1946,6 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/execution/tool-provider-groups/src/lib.rs',
-      contracts: [
-        'ToolPackFeatureGroup',
-        'ToolProviderGroupPlan',
-        'all_feature_groups',
-        'enabled_feature_groups',
-        'product_tool_provider_group_plan',
-        'ToolProviderGroupPlanSelectionError',
-        'try_product_tool_provider_group_plan_for_ids',
-        'product_provider_group_plan_selector_rejects_unknown_provider_ids',
-      ],
-    },
-    {
       path: 'src/crates/assembly/core/src/agentic/tools/tool_adapter.rs',
       contracts: [
         'ToolRegistryItem',
@@ -2314,7 +2278,6 @@ export function runManifestParserSelfTest({
       contracts: [
         'northhing-product-capabilities = \\{ path = "\\.\\.\\/product-capabilities", default-features = false, optional = true \\}',
         'northhing-ai-adapters = \\{ path = "\\.\\.\\/\\.\\.\\/adapters\\/ai-adapters", optional = true \\}',
-        'northhing-tool-packs = \\{ path = "\\.\\.\\/\\.\\.\\/execution\\/tool-provider-groups", default-features = false, optional = true \\}',
         'northhing-services-integrations = \\{ path = "\\.\\.\\/\\.\\.\\/services\\/services-integrations", default-features = false, features = \\["remote-ssh"\\] \\}',
         'northhing-product-domains = \\{ path = "\\.\\.\\/\\.\\.\\/contracts\\/product-domains", default-features = false, optional = true \\}',
         'dep:northhing-ai-adapters',
@@ -2322,8 +2285,6 @@ export function runManifestParserSelfTest({
         'northhing-services-integrations\\/function-agents',
         'northhing-services-integrations\\/miniapp-runtime',
         'dep:northhing-product-capabilities',
-        'dep:northhing-tool-packs',
-        'northhing-tool-packs\\/product-full',
         'northhing-services-integrations\\/product-full',
         'dep:northhing-product-domains',
         'northhing-product-domains\\/product-full',

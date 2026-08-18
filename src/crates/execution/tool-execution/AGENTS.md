@@ -17,9 +17,7 @@ surface.
 - Preserve existing filesystem/search behavior when moving helpers here. Do not
   change path containment, encoding, cancellation, or result presentation
   semantics as a side effect of refactoring.
-- Provider-neutral contracts belong in `tool-contracts` (`northhing-agent-tools`);
-  product provider grouping belongs in `tool-provider-groups`
-  (`northhing-tool-packs`).
+- Provider-neutral contracts belong in `tool-contracts` (`northhing-agent-tools`).
 
 ## Verification
 

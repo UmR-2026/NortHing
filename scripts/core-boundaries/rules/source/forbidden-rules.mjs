@@ -37,21 +37,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/agentic/harness.rs',
-    patterns: [
-      {
-        regex: /\bproduct_assembly_plan_for_profile\b/,
-        message:
-          'core agentic harness facade must not rebuild product assembly plans; use northhing-product-capabilities harness registry entrypoints',
-      },
-      {
-        regex: /\bfn product_harness_registry_for_profile\b/,
-        message:
-          'core agentic harness facade must not own profile-scoped harness registry construction',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/agentic/persistence/session_branch.rs',
     patterns: [
       {
@@ -548,36 +533,6 @@ export const forbiddenContentRules = [
         regex: /\bcreate_command\("git"\)/,
         message:
           'core function-agent runtime services must not spawn Git concrete commands; use northhing-services-integrations::function_agents',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/product-capabilities/src/lib.rs',
-    patterns: [
-      {
-        regex: /\bpub struct HarnessProviderDescriptor\b/,
-        message:
-          'product-capabilities must not redefine provider-neutral harness descriptors; use northhing-harness',
-      },
-      {
-        regex: /\bfn build_harness_registry_from_descriptors\b/,
-        message:
-          'product-capabilities must not own descriptor registry construction; use northhing-harness',
-      },
-      {
-        regex: /\bpub enum ProductCapabilityBuildError\b/,
-        message:
-          'product-capabilities must not redefine tool provider group selection errors; use northhing-tool-packs',
-      },
-      {
-        regex: /\bproduct_tool_provider_group_plan\(\)\b/,
-        message:
-          'product-capabilities must not scan product tool provider plans locally; use northhing-tool-packs selector',
-      },
-      {
-        regex: /\bdefault_product_tool_provider_group_plan\b/,
-        message:
-          'product-capabilities must expose product assembly, not a separate default tool-provider plan shortcut',
       },
     ],
   },
@@ -2355,33 +2310,6 @@ export const forbiddenContentUnderRules = [
       {
         regex: /\bToolUseContext\b/,
         message: 'ToolUseContext stays in core until a portable context port is reviewed',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/execution/tool-provider-groups/src',
-    reason:
-      'tool-packs may own provider group plans, but not product tool manifest/exposure or GetToolSpec runtime',
-    patterns: [
-      {
-        regex: /\bGetToolSpecTool\b/,
-        message: 'GetToolSpec implementation stays in core product tool runtime',
-      },
-      {
-        regex: /\bGET_TOOL_SPEC_TOOL_NAME\b/,
-        message: 'GetToolSpec manifest insertion stays in core product tool runtime',
-      },
-      {
-        regex: /\bmanifest_resolver\b/,
-        message: 'tool manifest resolution stays in core product tool runtime',
-      },
-      {
-        regex: /\bunlocked_collapsed_tools\b/,
-        message: 'collapsed-tool unlock state stays in core ToolUseContext/runtime',
-      },
-      {
-        regex: /\bToolExposure\b/,
-        message: 'expanded/collapsed exposure policy stays in core until provider migration',
       },
     ],
   },

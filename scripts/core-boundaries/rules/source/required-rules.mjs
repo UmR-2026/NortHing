@@ -536,37 +536,10 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/harness/src/lib.rs',
-    reason:
-      'harness must own provider-neutral harness descriptors and descriptor registry wiring without concrete execution',
-    patterns: [
-      {
-        regex: /\bpub struct HarnessProviderDescriptor\b/,
-        message: 'missing provider-neutral harness provider descriptor',
-      },
-      {
-        regex: /\bpub fn build_descriptor_harness_registry\b/,
-        message: 'missing descriptor harness registry builder',
-      },
-      {
-        regex: /\bDescriptorHarnessProvider::legacy_facade\b/,
-        message: 'missing legacy-facade descriptor adapter',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/product-capabilities/src/lib.rs',
     reason:
-      'product-capabilities must select harness descriptors from the harness owner instead of owning descriptor construction',
+      'product-capabilities must own product capability assembly without concrete execution',
     patterns: [
-      {
-        regex: /\bHarnessProviderDescriptor\b/,
-        message: 'missing harness descriptor selection in product capability packs',
-      },
-      {
-        regex: /\bbuild_descriptor_harness_registry\b/,
-        message: 'missing harness-owned descriptor registry assembly delegation',
-      },
       {
         regex: /\bProductCapabilityAssembly\b/,
         message: 'missing product capability assembly owner',
@@ -2449,11 +2422,6 @@ export const requiredContentRules = [
     patterns: [
       {
         regex:
-          /northhing-tool-packs = \{ path = "\.\.\/\.\.\/execution\/tool-provider-groups", default-features = false, optional = true \}/,
-        message: 'northhing-tool-packs dependency must stay optional and not force product-full outside the core feature graph',
-      },
-      {
-        regex:
           /northhing-services-integrations = \{ path = "\.\.\/\.\.\/services\/services-integrations", default-features = false, features = \["remote-ssh"\] \}/,
         message:
           'northhing-services-integrations dependency may keep remote workspace identity but must not force workspace-search or product-full outside the core feature graph',
@@ -2494,14 +2462,6 @@ export const requiredContentRules = [
           /northhing-product-capabilities = \{ path = "\.\.\/product-capabilities", default-features = false, optional = true \}/,
         message:
           'northhing-product-capabilities dependency must stay optional and not force product-full outside the core feature graph',
-      },
-      {
-        regex: /"dep:northhing-tool-packs"/,
-        message: 'core tool-packs feature must explicitly enable the optional dependency',
-      },
-      {
-        regex: /"northhing-tool-packs\/product-full"/,
-        message: 'core product-full must explicitly enable tool pack product features',
       },
       {
         regex: /"northhing-services-integrations\/product-full"/,
@@ -5213,8 +5173,8 @@ export const requiredContentRules = [
         message: 'missing product registry assembly adapter delegation',
       },
       {
-        regex: /\bproduct_assembly_plan_for_profile\b/,
-        message: 'missing product assembly plan provider group plan delegation',
+        regex: /\bPRODUCT_TOOL_GROUPS\b/,
+        message: 'missing product tool groups inline constant',
       },
       {
         regex: /\bproduct_tool_runtime_owner_preserves_registry_contract\b/,
@@ -5483,45 +5443,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub struct GetToolSpecRuntime\b/,
         message: 'missing provider-backed GetToolSpec runtime facade',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/execution/tool-provider-groups/src/lib.rs',
-    reason:
-      'tool-packs must keep its feature-group scaffold explicit without owning concrete tools yet',
-    patterns: [
-      {
-        regex: /\bpub enum ToolPackFeatureGroup\b/,
-        message: 'missing tool-pack feature group scaffold',
-      },
-      {
-        regex: /\bpub fn all_feature_groups\b/,
-        message: 'missing tool-pack full feature group metadata helper',
-      },
-      {
-        regex: /\bpub fn enabled_feature_groups\b/,
-        message: 'missing tool-pack compile-time feature metadata helper',
-      },
-      {
-        regex: /\bpub struct ToolProviderGroupPlan\b/,
-        message: 'missing tool-pack provider group plan contract',
-      },
-      {
-        regex: /\bpub fn product_tool_provider_group_plan\b/,
-        message: 'missing product tool provider group plan',
-      },
-      {
-        regex: /\bpub enum ToolProviderGroupPlanSelectionError\b/,
-        message: 'missing tool provider group plan selection error',
-      },
-      {
-        regex: /\bpub fn try_product_tool_provider_group_plan_for_ids\b/,
-        message: 'missing product tool provider group plan selector',
-      },
-      {
-        regex: /\bproduct_provider_group_plan_selector_rejects_unknown_provider_ids\b/,
-        message: 'missing provider group selector unknown-id regression',
       },
     ],
   },

@@ -49,12 +49,10 @@ SessionManager -> Session -> DialogTurn -> ModelRound
 - `docs/architecture/agent-runtime-services-design.md`
 - `src/crates/execution/agent-runtime/AGENTS.md`
 - `src/crates/execution/tool-contracts/AGENTS.md`
-- `src/crates/execution/harness/AGENTS.md`
 - `src/crates/contracts/product-domains/AGENTS.md`
 - `src/crates/contracts/runtime-ports/` 以及 `src/crates/execution/runtime-services/` 的源码文档
 - `src/crates/services/services-core/AGENTS.md`
 - `src/crates/services/services-integrations/AGENTS.md`
-- `src/crates/execution/tool-provider-groups/AGENTS.md`
 
 一些子树已存在更精细的本地指南：
 

@@ -87,17 +87,11 @@ northhing-agent-runtime = { path = "../../execution/agent-runtime" }
 # Agent dispatch (SkillActor / LongRunningSkill runtime) — K.2.3
 northhing-agent-dispatch = { path = "../../execution/agent-dispatch" }
 
-# Harness workflow contracts
-northhing-harness = { path = "../../execution/harness" }
-
 # Product capability pack contracts
 northhing-product-capabilities = { path = "../product-capabilities", default-features = false, optional = true }
 
 # Agent tool contracts
 northhing-agent-tools = { path = "../../execution/tool-contracts" }
-
-# Tool pack provider plan
-northhing-tool-packs = { path = "../../execution/tool-provider-groups", default-features = false, optional = true }
 
 # Core service owner crate
 northhing-services-core = { path = "../../services/services-core" }
@@ -200,7 +194,6 @@ product-full = [
     "product-domains",
     "runtime-services",
     "service-integrations",
-    "tool-packs",
 ]
 ai-adapter-runtime = ["dep:northhing-ai-adapters", "dep:reqwest"]
 product-capabilities = ["dep:northhing-product-capabilities"]
@@ -229,7 +222,6 @@ service-integrations = [
     "dep:tower-http",
     "northhing-services-integrations/product-full",
 ]
-tool-packs = ["dep:northhing-tool-packs", "northhing-tool-packs/product-full"]
 tauri-support = ["tauri"]  # Optional tauri support
 ssh-remote = [
     "northhing-services-integrations/remote-ssh-concrete",

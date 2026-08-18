@@ -5985,7 +5985,6 @@ dependencies = [
  "northhing-core-types",
  "northhing-debug-log",
  "northhing-events",
- "northhing-harness",
  "northhing-kernel-api",
  "northhing-product-capabilities",
  "northhing-product-domains",
@@ -5995,7 +5994,6 @@ dependencies = [
  "northhing-services-core",
  "northhing-services-integrations",
  "northhing-test-support",
- "northhing-tool-packs",
  "notify",
  "rand 0.8.7",
  "readability-js",
@@ -6066,15 +6064,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "northhing-harness"
-version = "0.2.10"
-dependencies = [
- "async-trait",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
 name = "northhing-kernel-api"
 version = "0.1.0"
 dependencies = [
@@ -6091,9 +6080,7 @@ dependencies = [
 name = "northhing-product-capabilities"
 version = "0.2.10"
 dependencies = [
- "northhing-harness",
  "northhing-runtime-ports",
- "northhing-tool-packs",
 ]
 
 [[package]]
@@ -6267,10 +6254,6 @@ dependencies = [
  "serde_json",
  "uuid",
 ]
-
-[[package]]
-name = "northhing-tool-packs"
-version = "0.2.10"
 
 [[package]]
 name = "notify"

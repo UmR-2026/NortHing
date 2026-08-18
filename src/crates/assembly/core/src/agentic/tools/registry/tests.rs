@@ -231,11 +231,9 @@ mod tests {
 
     #[test]
     fn product_capability_provider_plan_covers_registry_manifest_in_order() {
-        let assembly = northhing_product_capabilities::default_product_capability_assembly();
-        let provider_tools = assembly
-            .tool_provider_group_plan()
+        let provider_tools = crate::agentic::tools::product_runtime::PRODUCT_TOOL_GROUPS
             .iter()
-            .flat_map(|group| group.tool_names())
+            .flat_map(|(_, tools)| tools.iter().copied())
             .map(|tool_name| tool_name.to_string())
             .collect::<Vec<_>>();
 
@@ -248,11 +246,9 @@ mod tests {
 
     #[test]
     fn product_capability_provider_plan_keeps_owner_group_order() {
-        let assembly = northhing_product_capabilities::default_product_capability_assembly();
-        let provider_ids = assembly
-            .tool_provider_group_plan()
+        let provider_ids = crate::agentic::tools::product_runtime::PRODUCT_TOOL_GROUPS
             .iter()
-            .map(|group| group.provider_id())
+            .map(|(id, _)| *id)
             .collect::<Vec<_>>();
 
         assert_eq!(

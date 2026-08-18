@@ -6,8 +6,65 @@ use crate::agentic::tools::registry::ProductToolDecoratorRef;
 use northhing_agent_tools::{
     StaticToolProviderFactory, StaticToolProviderPlan, ToolRegistry as AgentToolRegistry, ToolRuntimeAssembly,
 };
-use northhing_tool_packs::ToolProviderGroupPlan;
 use std::sync::Arc;
+
+pub(in crate::agentic::tools) const PRODUCT_TOOL_GROUPS: &[(&str, &[&str])] = &[
+    (
+        "core.basic",
+        &[
+            "LS",
+            "Read",
+            "Glob",
+            "Grep",
+            "Write",
+            "Edit",
+            "Delete",
+            "ExecCommand",
+            "WriteStdin",
+            "ExecControl",
+            "GetTime",
+        ],
+    ),
+    (
+        "core.agent",
+        &[
+            "Task",
+            "Skill",
+            "AskUserQuestion",
+            "TodoWrite",
+            "get_goal",
+            "create_goal",
+            "update_goal",
+            "CreatePlan",
+            "submit_code_review",
+            "GetToolSpec",
+            "GetFileDiff",
+            "Log",
+        ],
+    ),
+    (
+        "core.session",
+        &["SessionControl", "SessionMessage", "SessionHistory", "Cron"],
+    ),
+    (
+        "core.integration",
+        &[
+            "WebSearch",
+            "WebFetch",
+            "ListMCPResources",
+            "ReadMCPResource",
+            "ListMCPPrompts",
+            "GetMCPPrompt",
+            "GenerativeUI",
+            "Git",
+            "ReviewPlatform",
+            "InitMiniApp",
+            "ControlHub",
+            "ComputerUse",
+            "Playbook",
+        ],
+    ),
+];
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(in crate::agentic::tools) struct ProductConcreteToolFactory;
@@ -61,26 +118,31 @@ impl StaticToolProviderFactory<dyn Tool> for ProductConcreteToolFactory {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ProductToolProviderPlanAdapter(ToolProviderGroupPlan);
+struct ProductToolProviderPlanAdapter {
+    provider_id: &'static str,
+    tool_names: &'static [&'static str],
+}
 
 impl StaticToolProviderPlan for ProductToolProviderPlanAdapter {
     fn provider_id(&self) -> &'static str {
-        self.0.provider_id()
+        self.provider_id
     }
 
     fn tool_names(&self) -> &'static [&'static str] {
-        self.0.tool_names()
+        self.tool_names
     }
 }
 
 pub(in crate::agentic::tools) fn create_product_tool_registry_from_plan(
-    plan: &[ToolProviderGroupPlan],
     tool_decorator: ProductToolDecoratorRef,
 ) -> AgentToolRegistry<dyn Tool> {
-    let adapters = plan
+    let adapters = PRODUCT_TOOL_GROUPS
         .iter()
         .copied()
-        .map(ProductToolProviderPlanAdapter)
+        .map(|(provider_id, tool_names)| ProductToolProviderPlanAdapter {
+            provider_id,
+            tool_names,
+        })
         .collect::<Vec<_>>();
 
     ToolRuntimeAssembly::with_tool_decorator(tool_decorator)
