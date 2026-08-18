@@ -8,7 +8,6 @@
   ],
   "surfaceDefaults": {
     "web-ui": "zh-CN",
-    "mobile-web": "en-US",
     "installer": "en-US",
     "core": "zh-CN"
   },
@@ -17,11 +16,6 @@
       "zh-CN",
       "en-US",
       "zh-TW"
-    ],
-    "mobile-web": [
-      "zh-CN",
-      "zh-TW",
-      "en-US"
     ],
     "installer": [
       "en-US",
@@ -38,10 +32,6 @@
     "web-ui": {
       "resourceRoot": "src/web-ui/src/locales",
       "loading": "eager-namespaces"
-    },
-    "mobile-web": {
-      "resourceRoot": "src/mobile-web/src/i18n",
-      "loading": "surface-minimal"
     },
     "installer": {
       "resourceRoot": "northhing-Installer/src/i18n/locales",

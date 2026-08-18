@@ -24,10 +24,8 @@ const namespaceRegistryPath = path.join(
   'presets',
   'namespaceRegistry.ts',
 );
-const webSourceDir = path.join(root, 'src', 'web-ui', 'src');
-const mobileWebSourceDir = path.join(root, 'src', 'mobile-web', 'src');
-const mobileWebMessagesPath = path.join(mobileWebSourceDir, 'i18n', 'messages.ts');
-const installerSourceDir = path.join(root, 'northhing-Installer', 'src');
+const webSourceDir = path.join(root, 'src', 'web-ui', 'src');
+const installerSourceDir = path.join(root, 'northhing-Installer', 'src');
 const installerLocalesDir = path.join(installerSourceDir, 'i18n', 'locales');
 const coreLocalesDir = path.join(root, 'src', 'crates', 'assembly', 'core', 'locales');
 const supportedLocales = fs
@@ -221,17 +219,12 @@ function isPlainObject(value) {
   return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function extractI18nextPlaceholders(value) {
-  const matches = String(value).matchAll(/\{\{\s*-?\s*([A-Za-z_][\w]*)\s*\}\}/g);
-  return sortedUnique(Array.from(matches, (match) => match[1]));
-}
-
-function extractMobilePlaceholders(value) {
-  const matches = String(value).matchAll(/\{\s*([A-Za-z_][\w]*)\s*\}/g);
-  return sortedUnique(Array.from(matches, (match) => match[1]));
-}
-
-function extractFluentPlaceholders(value) {
+function extractI18nextPlaceholders(value) {
+  const matches = String(value).matchAll(/\{\{\s*-?\s*([A-Za-z_][\w]*)\s*\}\}/g);
+  return sortedUnique(Array.from(matches, (match) => match[1]));
+}
+
+function extractFluentPlaceholders(value) {
   const matches = String(value).matchAll(/\$\s*([A-Za-z_][\w-]*)/g);
   return sortedUnique(Array.from(matches, (match) => match[1]));
 }
@@ -494,113 +487,15 @@ function propertyNameToString(ts, name) {
   return null;
 }
 
-function unwrapTsExpression(ts, expression) {
-  let current = expression;
-  while (current && (ts.isAsExpression(current) || ts.isSatisfiesExpression(current))) {
-    current = current.expression;
-  }
-  return current;
-}
-
-function flattenTsObjectKeys(ts, objectLiteral, prefix = '') {
-  const keys = [];
-  for (const property of objectLiteral.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-
-    const key = propertyNameToString(ts, property.name);
-    if (!key) continue;
-    if (!prefix && key === 'shared') continue;
-
-    const nextPrefix = prefix ? `${prefix}.${key}` : key;
-    const initializer = unwrapTsExpression(ts, property.initializer);
-
-    if (ts.isObjectLiteralExpression(initializer)) {
-      keys.push(...flattenTsObjectKeys(ts, initializer, nextPrefix));
-    } else {
-      keys.push(nextPrefix);
-    }
-  }
-  return keys.sort();
-}
-
-function flattenTsObjectEntries(ts, objectLiteral, prefix = '') {
-  const entries = [];
-  for (const property of objectLiteral.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-
-    const key = propertyNameToString(ts, property.name);
-    if (!key) continue;
-    if (!prefix && key === 'shared') continue;
-
-    const nextPrefix = prefix ? `${prefix}.${key}` : key;
-    const initializer = unwrapTsExpression(ts, property.initializer);
-
-    if (ts.isObjectLiteralExpression(initializer)) {
-      entries.push(...flattenTsObjectEntries(ts, initializer, nextPrefix));
-    } else if (
-      ts.isStringLiteral(initializer) ||
-      ts.isNoSubstitutionTemplateLiteral(initializer)
-    ) {
-      entries.push([nextPrefix, initializer.text]);
-    } else {
-      entries.push([nextPrefix, '']);
-    }
-  }
-  return entries.sort(([left], [right]) => left.localeCompare(right));
-}
-
-function readMobileMessagesByLocale() {
-  const ts = auditTypeScript;
-  if (!ts) {
-    return new Map();
-  }
-
-  const source = fs.readFileSync(mobileWebMessagesPath, 'utf8');
-  const sourceFile = ts.createSourceFile(mobileWebMessagesPath, source, ts.ScriptTarget.Latest, true);
-  const output = new Map();
-
-  function visit(node) {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === 'messages'
-    ) {
-      const initializer = unwrapTsExpression(ts, node.initializer);
-      if (!initializer || !ts.isObjectLiteralExpression(initializer)) {
-        reportError('mobile-web messages export is not an object literal');
-        return;
-      }
-
-      for (const property of initializer.properties) {
-        if (!ts.isPropertyAssignment(property)) continue;
-
-        const locale = propertyNameToString(ts, property.name);
-        if (!locale) continue;
-
-        const value = unwrapTsExpression(ts, property.initializer);
-        if (!ts.isObjectLiteralExpression(value)) {
-          reportError(`mobile-web messages.${locale} is not an object literal`);
-          continue;
-        }
-
-        output.set(locale, new Map(flattenTsObjectEntries(ts, value)));
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return output;
-}
-
-function readMobileMessageKeysByLocale() {
-  return new Map(
-    Array.from(readMobileMessagesByLocale().entries())
-      .map(([locale, entries]) => [locale, Array.from(entries.keys()).sort()]),
-  );
-}
-
-function diffSets(left, right) {
+function unwrapTsExpression(ts, expression) {
+  let current = expression;
+  while (current && (ts.isAsExpression(current) || ts.isSatisfiesExpression(current))) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function diffSets(left, right) {
   const rightSet = new Set(right);
   return left.filter((item) => !rightSet.has(item));
 }
@@ -664,18 +559,14 @@ function auditSurfaceResourceRoots() {
         if (!installerLocale || !fs.existsSync(path.join(resourceRoot, `${installerLocale}.json`))) {
           reportError(`${surface} is missing ${localeId} resource JSON`);
         }
-      } else if (surface === 'core') {
-        if (!fs.existsSync(path.join(resourceRoot, `${localeId}.ftl`))) {
-          reportError(`${surface} is missing ${localeId} Fluent resource`);
-        }
-      } else if (surface === 'mobile-web') {
-        if (!fs.existsSync(path.join(resourceRoot, 'messages.ts'))) {
-          reportError(`${surface} is missing messages.ts`);
-        }
-      }
-    }
-  }
-}
+      } else if (surface === 'core') {
+        if (!fs.existsSync(path.join(resourceRoot, `${localeId}.ftl`))) {
+          reportError(`${surface} is missing ${localeId} Fluent resource`);
+        }
+      }
+    }
+  }
+}
 
 function auditGeneratedContract() {
   try {
@@ -723,32 +614,13 @@ function auditSharedTermsCoverage() {
     for (const key of diffSets(baselineKeys, keys)) {
       reportError(`${localeId} shared terms.json is missing key "${key}"`);
     }
-    for (const key of diffSets(keys, baselineKeys)) {
-      reportError(`${localeId} shared terms.json has extra key "${key}"`);
-    }
-  }
-}
-
-function auditMobileWebBoundary() {
-  const sourceFiles = listFiles(
-    mobileWebSourceDir,
-    (file) => file.endsWith('.ts') || file.endsWith('.tsx'),
-  );
-  const forbiddenPatterns = [
-    /src[/\\]web-ui[/\\]src[/\\]locales/,
-    /src[/\\]web-ui[/\\]src[/\\]infrastructure[/\\]i18n/,
-    /\.\.[/\\]\.\.[/\\]web-ui[/\\]/,
-  ];
-
-  for (const file of sourceFiles) {
-    const text = fs.readFileSync(file, 'utf8');
-    if (forbiddenPatterns.some((pattern) => pattern.test(text))) {
-      reportError(`${toPosixPath(path.relative(root, file))} imports or references web-ui i18n resources`);
-    }
-  }
-}
-
-function auditKeyParity(namespaces) {
+    for (const key of diffSets(keys, baselineKeys)) {
+      reportError(`${localeId} shared terms.json has extra key "${key}"`);
+    }
+  }
+}
+
+function auditKeyParity(namespaces) {
   for (const namespace of namespaces) {
     const baselineKeys = readJsonKeys(baselineLocale, namespace);
     for (const locale of supportedLocales.filter((item) => item !== baselineLocale)) {
@@ -780,61 +652,14 @@ function auditWebI18nextPlaceholderParity(namespaces) {
       const localeEntries = readJsonEntries(locale, namespace);
       for (const [key, expected] of baselinePlaceholders.entries()) {
         if (!localeEntries.has(key)) continue;
-        const actual = extractI18nextPlaceholders(localeEntries.get(key));
-        reportPlaceholderParity(`web-ui ${namespace}`, locale, key, expected, actual);
-      }
-    }
-  }
-}
-
-function auditMobileWebMessageParity() {
-  const messagesByLocale = readMobileMessageKeysByLocale();
-  const baselineKeys = messagesByLocale.get('en-US');
-  if (!baselineKeys) {
-    reportError('mobile-web messages are missing the en-US baseline locale');
-    return;
-  }
-
-  for (const [locale, keys] of messagesByLocale.entries()) {
-    if (locale === 'en-US') continue;
-
-    const missing = diffSets(baselineKeys, keys);
-    const extra = diffSets(keys, baselineKeys);
-    if (missing.length > 0) {
-      reportError(`mobile-web ${locale} messages are missing ${missing.length} key(s): ${missing.slice(0, 8).join(', ')}`);
-    }
-    if (extra.length > 0) {
-      reportError(`mobile-web ${locale} messages have ${extra.length} extra key(s): ${extra.slice(0, 8).join(', ')}`);
-    }
-  }
-}
-
-function auditMobileWebPlaceholderParity() {
-  const messagesByLocale = readMobileMessagesByLocale();
-  const baselineEntries = messagesByLocale.get('en-US');
-  if (!baselineEntries) {
-    reportError('mobile-web messages are missing the en-US baseline locale');
-    return;
-  }
-
-  const baselinePlaceholders = new Map(
-    Array.from(baselineEntries.entries()).map(([key, value]) => [
-      key,
-      extractMobilePlaceholders(value),
-    ]),
-  );
-
-  for (const [locale, entries] of messagesByLocale.entries()) {
-    if (locale === 'en-US') continue;
-    for (const [key, expected] of baselinePlaceholders.entries()) {
-      if (!entries.has(key)) continue;
-      const actual = extractMobilePlaceholders(entries.get(key));
-      reportPlaceholderParity('mobile-web', locale, key, expected, actual);
-    }
-  }
-}
-
-function auditInstallerKeyParity() {
+        const actual = extractI18nextPlaceholders(localeEntries.get(key));
+        reportPlaceholderParity(`web-ui ${namespace}`, locale, key, expected, actual);
+      }
+    }
+  }
+}
+
+function auditInstallerKeyParity() {
   const baselineKeys = readInstallerJsonKeys('en');
   for (const uiLocale of ['zh', 'zh-TW']) {
     const keys = readInstallerJsonKeys(uiLocale);
@@ -967,27 +792,13 @@ function collectI18nResourceEntries(namespaces) {
           namespace: namespace === 'shared' ? 'shared' : namespace,
           key,
           value,
-          file,
-        });
-      }
-    }
-  }
-
-  if (auditTypeScript) {
-    for (const [locale, messageEntries] of readMobileMessagesByLocale().entries()) {
-      for (const [key, value] of messageEntries.entries()) {
-        pushResourceEntry(entries, {
-          surface: 'mobile-web',
-          locale,
-          key,
-          value,
-          file: 'src/mobile-web/src/i18n/messages.ts',
-        });
-      }
-    }
-  }
-
-  for (const localeId of localeContract.surfaceOrders?.installer ?? []) {
+          file,
+        });
+      }
+    }
+  }
+
+  for (const localeId of localeContract.surfaceOrders?.installer ?? []) {
     const uiLocale = localeById.get(localeId)?.installer?.uiCode;
     if (!uiLocale) continue;
     for (const [key, value] of readInstallerJsonEntries(uiLocale).entries()) {
@@ -1578,23 +1389,11 @@ function shouldSkipSourceScan(file) {
     normalized.endsWith('.test.tsx') ||
     normalized.endsWith('.spec.ts') ||
     normalized.endsWith('.spec.tsx') ||
-    normalized.includes('/component-library/components/registry.tsx')
-  );
-}
-
-function shouldSkipMobileWebSourceScan(file) {
-  const normalized = toPosixPath(path.relative(root, file));
-  return (
-    normalized.endsWith('/i18n/messages.ts') ||
-    normalized.endsWith('/i18n/generatedLocaleContract.ts') ||
-    normalized.endsWith('.test.ts') ||
-    normalized.endsWith('.test.tsx') ||
-    normalized.endsWith('.spec.ts') ||
-    normalized.endsWith('.spec.tsx')
-  );
-}
-
-function shouldSkipInstallerSourceScan(file) {
+    normalized.includes('/component-library/components/registry.tsx')
+  );
+}
+
+function shouldSkipInstallerSourceScan(file) {
   const normalized = toPosixPath(path.relative(root, file));
   return (
     normalized.includes('/i18n/locales/') ||
@@ -1991,14 +1790,13 @@ function countCjkSourceLines(scanRoot, predicate) {
   return findings;
 }
 
-function shouldSkipLocaleFormatSourceScan(file) {
-  const normalized = toPosixPath(path.relative(root, file));
-  return (
-    // Surface i18n owners are the only approved locations for direct Intl usage;
-    // product code must call their exported formatting helpers instead.
-    normalized === 'src/web-ui/src/infrastructure/i18n/core/I18nService.ts' ||
-    normalized === 'src/mobile-web/src/i18n/I18nProvider.tsx' ||
-    normalized.endsWith('/generatedLocaleContract.ts') ||
+function shouldSkipLocaleFormatSourceScan(file) {
+  const normalized = toPosixPath(path.relative(root, file));
+  return (
+    // Surface i18n owners are the only approved locations for direct Intl usage;
+    // product code must call their exported formatting helpers instead.
+    normalized === 'src/web-ui/src/infrastructure/i18n/core/I18nService.ts' ||
+    normalized.endsWith('/generatedLocaleContract.ts') ||
     normalized.endsWith('.test.ts') ||
     normalized.endsWith('.test.tsx') ||
     normalized.endsWith('.spec.ts') ||
@@ -2006,42 +1804,33 @@ function shouldSkipLocaleFormatSourceScan(file) {
   );
 }
 
-function createLocaleFormatScanSpecs() {
-  return [
-    {
-      surface: 'web-ui',
-      root: webSourceDir,
-      predicate: (file) => (
-        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
-        !shouldSkipSourceScan(file) &&
-        !shouldSkipLocaleFormatSourceScan(file)
-      ),
-    },
-    {
-      surface: 'mobile-web',
-      root: mobileWebSourceDir,
-      predicate: (file) => (
-        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
-        !shouldSkipMobileWebSourceScan(file) &&
-        !shouldSkipLocaleFormatSourceScan(file)
-      ),
-    },
-    {
-      surface: 'installer',
-      root: installerSourceDir,
-      predicate: (file) => (
-        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
-        !shouldSkipInstallerSourceScan(file) &&
-        !shouldSkipLocaleFormatSourceScan(file)
-      ),
-    },
-    {
-      surface: 'core-miniapp',
-      root: path.join(root, 'src', 'crates', 'contracts', 'product-domains', 'src', 'miniapp', 'builtin', 'assets'),
-      predicate: (file) => file.endsWith('.js'),
-    },
-  ];
-}
+function createLocaleFormatScanSpecs() {
+  return [
+    {
+      surface: 'web-ui',
+      root: webSourceDir,
+      predicate: (file) => (
+        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
+        !shouldSkipSourceScan(file) &&
+        !shouldSkipLocaleFormatSourceScan(file)
+      ),
+    },
+    {
+      surface: 'installer',
+      root: installerSourceDir,
+      predicate: (file) => (
+        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
+        !shouldSkipInstallerSourceScan(file) &&
+        !shouldSkipLocaleFormatSourceScan(file)
+      ),
+    },
+    {
+      surface: 'core-miniapp',
+      root: path.join(root, 'src', 'crates', 'contracts', 'product-domains', 'src', 'miniapp', 'builtin', 'assets'),
+      predicate: (file) => file.endsWith('.js'),
+    },
+  ];
+}
 
 function collectLocaleFormatSurfaceIds() {
   return sortedUnique(createLocaleFormatScanSpecs().map((spec) => spec.surface));
@@ -2131,23 +1920,18 @@ function auditHardcodedSourceBudgets() {
   const budgetById = new Map((baseline.budgets ?? []).map((budget) => [budget.id, budget.maxCjkLines]));
   // Baselines are a no-new-hardcoded-copy gate. Lower them as strings move to
   // owned locale resources; do not raise them for new user-facing text.
-  const specs = [
-    {
-      id: 'web-ui-source',
-      root: webSourceDir,
-      predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipSourceScan(file),
-    },
-    {
-      id: 'mobile-web-source',
-      root: mobileWebSourceDir,
-      predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipMobileWebSourceScan(file),
-    },
-    {
-      id: 'installer-source',
-      root: installerSourceDir,
-      predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipInstallerSourceScan(file),
-    },
-  ];
+  const specs = [
+    {
+      id: 'web-ui-source',
+      root: webSourceDir,
+      predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipSourceScan(file),
+    },
+    {
+      id: 'installer-source',
+      root: installerSourceDir,
+      predicate: (file) => (file.endsWith('.ts') || file.endsWith('.tsx')) && !shouldSkipInstallerSourceScan(file),
+    },
+  ];
 
   for (const spec of specs) {
     const maxCjkLines = budgetById.get(spec.id);
@@ -2165,21 +1949,18 @@ function auditHardcodedSourceBudgets() {
   }
 }
 
-auditGeneratedContract();
-auditSharedTermsCoverage();
-auditSurfaceResourceRoots();
-auditMobileWebBoundary();
-
-const namespaces = auditNamespaceCoverage();
-auditKeyParity(namespaces);
-auditWebI18nextPlaceholderParity(namespaces);
-auditTypeScript = loadTypeScriptForAudit();
-if (auditTypeScript) {
-  auditWebUiStaticTranslationKeys(namespaces);
-  auditWebUiLiteralFallbackBudget();
-  auditMobileWebMessageParity();
-  auditMobileWebPlaceholderParity();
-}
+auditGeneratedContract();
+auditSharedTermsCoverage();
+auditSurfaceResourceRoots();
+
+const namespaces = auditNamespaceCoverage();
+auditKeyParity(namespaces);
+auditWebI18nextPlaceholderParity(namespaces);
+auditTypeScript = loadTypeScriptForAudit();
+if (auditTypeScript) {
+  auditWebUiStaticTranslationKeys(namespaces);
+  auditWebUiLiteralFallbackBudget();
+}
 auditInstallerKeyParity();
 auditInstallerPlaceholderParity();
 auditCoreFluentParity();

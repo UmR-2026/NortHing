@@ -10,7 +10,6 @@
       "bySurface": {
         "core": 15,
         "installer": 0,
-        "mobile-web": 0,
         "web-ui": 170
       },
       "bySharedKey": {
@@ -45,7 +44,6 @@
       "bySurface": {
         "core": 0,
         "installer": 0,
-        "mobile-web": 0,
         "web-ui": 0
       }
     }
