@@ -1,0 +1,14819 @@
+BASE: bdc3f9c (working-tree diff, task not yet committed)
+
+## git log (base context)
+bdc3f9c sdd: T2-2b ledger line + brief/report/review/diff artifacts
+7e2f7b7 chore: delete judge_gate adapter layer, keep protocol layer as TH-5 vocabulary (T2-2b, review clean)
+43fdd5a sdd: T2-2a' ledger line + brief/report/review/diff artifacts
+
+## git diff --stat
+ Cargo.lock                                         |   1 -
+ .../rules/source/forbidden-rules.mjs               | 359 ----------
+ .../rules/source/required-rules.mjs                | 366 +---------
+ scripts/core-boundaries/self-test.mjs              | 149 ----
+ .../desktop/src/app_state/settings/io/io_tests.rs  |   3 +-
+ src/crates/assembly/core/AGENTS-CN.md              |   2 +-
+ src/crates/assembly/core/AGENTS.md                 |   2 +-
+ src/crates/assembly/core/Cargo.toml                |   4 -
+ .../core/src/product_runtime/runtime_services.rs   |  25 +-
+ src/crates/assembly/core/src/service/mod.rs        |   2 -
+ .../service/remote_connect/bot/command_router.rs   | 300 --------
+ .../remote_connect/bot/command_router_dispatch.rs  | 668 -----------------
+ .../bot/command_router_forwarded_turn.rs           | 191 -----
+ .../remote_connect/bot/command_router_questions.rs | 167 -----
+ .../remote_connect/bot/command_router_resume.rs    | 139 ----
+ .../remote_connect/bot/command_router_session.rs   | 292 --------
+ .../remote_connect/bot/command_router_state.rs     | 151 ----
+ .../remote_connect/bot/command_router_tests.rs     | 314 --------
+ .../remote_connect/bot/command_router_util.rs      | 105 ---
+ .../remote_connect/bot/command_router_view.rs      | 282 --------
+ .../remote_connect/bot/feishu/feishu_actions.rs    | 265 -------
+ .../remote_connect/bot/feishu/feishu_commands.rs   | 306 --------
+ .../remote_connect/bot/feishu/feishu_messages.rs   | 321 ---------
+ .../remote_connect/bot/feishu/feishu_types.rs      | 257 -------
+ .../remote_connect/bot/feishu/feishu_webhook.rs    | 409 -----------
+ .../src/service/remote_connect/bot/feishu/mod.rs   |  96 ---
+ .../core/src/service/remote_connect/bot/locale.rs  | 600 ----------------
+ .../service/remote_connect/bot/media_download.rs   | 136 ----
+ .../service/remote_connect/bot/media_send_text.rs  | 114 ---
+ .../src/service/remote_connect/bot/media_types.rs  |  33 -
+ .../src/service/remote_connect/bot/media_typing.rs | 148 ----
+ .../src/service/remote_connect/bot/media_upload.rs | 250 -------
+ .../service/remote_connect/bot/media_validate.rs   | 146 ----
+ .../core/src/service/remote_connect/bot/menu.rs    | 208 ------
+ .../core/src/service/remote_connect/bot/mod.rs     | 794 ---------------------
+ .../remote_connect/bot/persistence_tests.rs        | 191 -----
+ .../src/service/remote_connect/bot/telegram.rs     | 653 -----------------
+ .../core/src/service/remote_connect/bot/weixin.rs  |  46 --
+ .../src/service/remote_connect/bot/weixin_bot.rs   | 248 -------
+ .../remote_connect/bot/weixin_bot_inbound.rs       | 567 ---------------
+ .../service/remote_connect/bot/weixin_bot_media.rs |  31 -
+ .../remote_connect/bot/weixin_crypto/helpers.rs    |  83 ---
+ .../remote_connect/bot/weixin_crypto/init.rs       | 106 ---
+ .../remote_connect/bot/weixin_crypto/mod.rs        |  18 -
+ .../remote_connect/bot/weixin_crypto/types.rs      |  27 -
+ .../service/remote_connect/bot/weixin_qr_login.rs  | 448 ------------
+ .../core/src/service/remote_connect/command.rs     | 130 ----
+ .../core/src/service/remote_connect/connect.rs     | 155 ----
+ .../remote_connect/connect/bot_connection.rs       | 332 ---------
+ .../remote_connect/connect/mobile_identity.rs      |  61 --
+ .../remote_connect/connect/relay_connection.rs     | 262 -------
+ .../src/service/remote_connect/embedded_relay.rs   | 131 ----
+ .../core/src/service/remote_connect/lan.rs         |  34 -
+ .../core/src/service/remote_connect/mod.rs         | 108 ---
+ .../core/src/service/remote_connect/ngrok.rs       | 275 -------
+ .../src/service/remote_connect/remote_server.rs    | 561 ---------------
+ .../core/src/service/remote_connect/session.rs     |  45 --
+ .../core/src/service/remote_connect/sync.rs        | 315 --------
+ .../assembly/core/src/service_agent_runtime/mod.rs | 288 +-------
+ .../core/src/service_agent_runtime/sar_dispatch.rs | 192 +----
+ .../core/src/service_agent_runtime/sar_handler.rs  | 323 ---------
+ .../src/service_agent_runtime/sar_lifecycle.rs     | 121 ----
+ .../core/src/service_agent_runtime/sar_state.rs    | 119 ---
+ .../core/src/service_agent_runtime/sar_types.rs    | 396 ----------
+ 64 files changed, 14 insertions(+), 13857 deletions(-)
+
+## git diff -U10
+diff --git a/Cargo.lock b/Cargo.lock
+index ef9602b..599ca02 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5981,21 +5981,20 @@ dependencies = [
+  "northhing-agent-runtime",
+  "northhing-agent-stream",
+  "northhing-agent-tools",
+  "northhing-ai-adapters",
+  "northhing-core-types",
+  "northhing-debug-log",
+  "northhing-events",
+  "northhing-kernel-api",
+  "northhing-product-capabilities",
+  "northhing-product-domains",
+- "northhing-relay-core",
+  "northhing-runtime-ports",
+  "northhing-runtime-services",
+  "northhing-services-core",
+  "northhing-services-integrations",
+  "northhing-test-support",
+  "notify",
+  "rand 0.8.7",
+  "readability-js",
+  "regex",
+  "reqwest",
+diff --git a/scripts/core-boundaries/rules/source/forbidden-rules.mjs b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+index 408c08e..2ec033d 100644
+--- a/scripts/core-boundaries/rules/source/forbidden-rules.mjs
++++ b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+@@ -1796,379 +1796,20 @@ export const forbiddenContentRules = [
+       {
+         regex: /\bfn path_buf_to_stable_local_root_string\b/,
+         message: 'core remote SSH workspace runtime must not own local root string normalization; use the integrations path helper',
+       },
+       {
+         regex: /join\("_unresolved"\)/,
+         message: 'core remote SSH workspace runtime must not own unresolved session path layout; use the integrations path helper',
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/mod.rs',
+-    patterns: [
+-      {
+-        regex: /\bpub\s+mod\s+device\s*;/,
+-        message:
+-          'core remote-connect root must not own device module implementation; use the services-integrations owner',
+-      },
+-      {
+-        regex: /\bpub\s+mod\s+encryption\s*;/,
+-        message:
+-          'core remote-connect root must not own encryption module implementation; use the services-integrations owner',
+-      },
+-      {
+-        regex: /\bpub\s+mod\s+pairing\s*;/,
+-        message:
+-          'core remote-connect root must not own pairing module implementation; use the services-integrations owner',
+-      },
+-      {
+-        regex: /\bpub\s+mod\s+qr_generator\s*;/,
+-        message:
+-          'core remote-connect root must not own QR module implementation; use the services-integrations owner',
+-      },
+-      {
+-        regex: /\bpub\s+mod\s+relay_client\s*;/,
+-        message:
+-          'core remote-connect root must not own relay client module implementation; use the services-integrations owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
+-    patterns: [
+-      {
+-        regex: /\bpub\(crate\) struct CoreRemoteDialogRuntimeHost\b/,
+-        message:
+-          'remote_server must not own concrete remote dialog runtime host; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bpub\(crate\) struct CoreRemoteCancelRuntimeHost\b/,
+-        message:
+-          'remote_server must not own concrete remote cancel runtime host; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bpub\(crate\) struct CoreRemoteWorkspaceFileRuntimeHost\b/,
+-        message:
+-          'remote_server must not own concrete remote workspace file runtime host; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bstruct CoreRemoteSessionTrackerHost\b/,
+-        message:
+-          'remote_server must not own concrete remote tracker host; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\basync fn resolve_session_model_id\b/,
+-        message:
+-          'remote_server must not own remote session model resolution; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\basync fn load_remote_model_catalog\b/,
+-        message:
+-          'remote_server must not own remote model catalog loading; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bget_global_config_service\b/,
+-        message:
+-          'remote_server must not own remote model config access; route it through service_agent_runtime',
+-      },
+-      {
+-        regex: /\bfn compress_data_url_for_mobile\b/,
+-        message:
+-          'remote_server must not own remote chat thumbnail compression; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bfn turns_to_chat_messages\b/,
+-        message:
+-          'remote_server must not own persisted turn to remote chat conversion; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\basync fn load_chat_messages_from_conversation_persistence\b/,
+-        message:
+-          'remote_server must not own remote chat history persistence loading; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bfn strip_user_input_tags\b/,
+-        message:
+-          'remote_server must not own remote user input display cleanup; keep it in service_agent_runtime',
+-      },
+-      {
+-        regex: /\bpub struct ImageAttachment\b/,
+-        message: 'core remote-connect server must not redefine image attachment wire DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct ChatImageAttachment\b/,
+-        message: 'core remote-connect server must not redefine chat image wire DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct ChatMessage\b/,
+-        message: 'core remote-connect server must not redefine chat message wire DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct ChatMessageItem\b/,
+-        message: 'core remote-connect server must not redefine chat message item DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct RemoteToolStatus\b/,
+-        message: 'core remote-connect server must not redefine remote tool status DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct ActiveTurnSnapshot\b/,
+-        message: 'core remote-connect server must not redefine active turn snapshot DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct SessionInfo\b/,
+-        message: 'core remote-connect server must not redefine session info DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct RemoteDefaultModelsConfig\b/,
+-        message: 'core remote-connect server must not redefine remote model default DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct RemoteModelConfig\b/,
+-        message: 'core remote-connect server must not redefine remote model DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct RemoteModelCatalog\b/,
+-        message: 'core remote-connect server must not redefine remote model catalog DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub struct RemoteModelCatalogPollDelta\b/,
+-        message: 'core remote-connect server must not redefine remote model catalog poll delta; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub enum RemoteCommand\b/,
+-        message: 'core remote-connect server must not redefine remote command wire DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bpub enum RemoteResponse\b/,
+-        message: 'core remote-connect server must not redefine remote response wire DTOs; use the integrations contract',
+-      },
+-      {
+-        regex: /\bstruct TrackerState\b/,
+-        message: 'core remote-connect server must not own tracker state; use the integrations tracker',
+-      },
+-      {
+-        regex: /\bpub enum TrackerEvent\b/,
+-        message: 'core remote-connect server must not redefine tracker events; use the integrations tracker',
+-      },
+-      {
+-        regex: /\bpub struct RemoteSessionStateTracker\b/,
+-        message: 'core remote-connect server must not own tracker state; use the integrations tracker',
+-      },
+-      {
+-        regex: /\bDashMap\b/,
+-        message: 'core remote-connect server must not own tracker storage; use the integrations registry',
+-      },
+-      {
+-        regex: /\bfn make_slim_params\b/,
+-        message: 'core remote-connect server must not own remote tool preview slimming; use the integrations helper',
+-      },
+-      {
+-        regex: /\bmatch mobile_type\b/,
+-        message: 'core remote-connect server must not own remote agent type alias mapping; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn resolve_remote_cancel_decision\b/,
+-        message: 'core remote-connect server must not own cancel decision policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\benum RemoteCancelDecision\b/,
+-        message: 'core remote-connect server must not own cancel decision types; use the integrations contract',
+-      },
+-      {
+-        regex: /\bstruct RemoteCancelTaskRequest\b/,
+-        message: 'core remote-connect server must not own cancel task request contracts; use the integrations contract',
+-      },
+-      {
+-        regex: /\btrait RemoteCancelRuntimeHost\b/,
+-        message: 'core remote-connect server must not own cancel runtime host contracts; use the integrations contract',
+-      },
+-      {
+-        regex: /\bfn cancel_remote_task\b/,
+-        message: 'core remote-connect server must not own cancel orchestration; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_restore_target\b/,
+-        message: 'core remote-connect server must not own restore-target policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn resolve_remote_execution_image_contexts\b/,
+-        message: 'core remote-connect server must not own image-context preference policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\btrait RemoteImageContextAdapter\b/,
+-        message: 'core remote-connect server must not own image-context adapter contracts; use the integrations contract',
+-      },
+-      {
+-        regex: /\bconst MAX_SIZE\b/,
+-        message: 'core remote-connect server must not own remote file max-read policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\bconst MAX_CHUNK\b/,
+-        message: 'core remote-connect server must not own remote file chunk policy; use the integrations helper',
+-      },
+-      {
+-        regex: /unwrap_or\("file"\)/,
+-        message: 'core remote-connect server must not own remote file display-name fallback; use the integrations helper',
+-      },
+-      {
+-        regex: /\bresolve_workspace_path\b/,
+-        message: 'core remote-connect server must not own workspace file path resolution; use the integrations helper',
+-      },
+-      {
+-        regex: /\bdetect_mime_type\b/,
+-        message: 'core remote-connect server must not own workspace file MIME detection; use the integrations helper',
+-      },
+-      {
+-        regex: /\bread_workspace_file\b/,
+-        message: 'core remote-connect server must not own workspace file read helpers; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn read_remote_workspace_file\b/,
+-        message: 'core remote-connect server must not redefine remote workspace full-file readers; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn read_remote_workspace_file_chunk\b/,
+-        message: 'core remote-connect server must not redefine remote workspace chunk readers; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn read_remote_workspace_file_info\b/,
+-        message: 'core remote-connect server must not redefine remote workspace file-info readers; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_file_content_response\b/,
+-        message: 'core remote-connect server must not own remote file content response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_file_chunk_response\b/,
+-        message: 'core remote-connect server must not own remote file chunk response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_file_info_response\b/,
+-        message: 'core remote-connect server must not own remote file-info response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn handle_remote_workspace_file_command\b/,
+-        message: 'core remote-connect server must not own remote file command orchestration; use the integrations helper',
+-      },
+-      {
+-        regex: /general_purpose::STANDARD\.encode/,
+-        message: 'core remote-connect server must not own remote response base64 wrapping; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_dialog_submit_response\b/,
+-        message: 'core remote-connect server must not own remote dialog response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_task_cancel_response\b/,
+-        message: 'core remote-connect server must not own remote cancel response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_interaction_accepted_response\b/,
+-        message: 'core remote-connect server must not own remote interaction response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_answer_question_response\b/,
+-        message: 'core remote-connect server must not own remote answer response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_workspace_info_response\b/,
+-        message: 'core remote-connect server must not own workspace-info response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_recent_workspaces_response\b/,
+-        message: 'core remote-connect server must not own recent-workspaces response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_assistant_list_response\b/,
+-        message: 'core remote-connect server must not own assistant-list response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_workspace_updated_response\b/,
+-        message: 'core remote-connect server must not own workspace-updated response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_assistant_updated_response\b/,
+-        message: 'core remote-connect server must not own assistant-updated response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_info\b/,
+-        message: 'core remote-connect server must not own session response facts assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_list_response\b/,
+-        message: 'core remote-connect server must not own session-list response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_initial_sync_response\b/,
+-        message: 'core remote-connect server must not own initial-sync response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_created_response\b/,
+-        message: 'core remote-connect server must not own session-created response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_model_updated_response\b/,
+-        message: 'core remote-connect server must not own session-model response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_messages_response\b/,
+-        message: 'core remote-connect server must not own remote messages response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_session_deleted_response\b/,
+-        message: 'core remote-connect server must not own session-deleted response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn should_send_remote_model_catalog\b/,
+-        message: 'core remote-connect server must not own poll model-catalog policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_model_catalog_poll_delta\b/,
+-        message: 'core remote-connect server must not own poll model-catalog delta policy; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_no_change_poll_response\b/,
+-        message: 'core remote-connect server must not own no-change poll response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_snapshot_poll_response\b/,
+-        message: 'core remote-connect server must not own streaming poll response assembly; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn remote_persisted_poll_response\b/,
+-        message: 'core remote-connect server must not own persisted poll response assembly; use the integrations helper',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/bot/mod.rs',
+-    patterns: [
+-      {
+-        regex: /\bfn strip_workspace_path_prefix\b/,
+-        message: 'core remote-connect bot facade must not own workspace path prefix stripping; use the integrations helper',
+-      },
+-      {
+-        regex: /\bfn is_absolute_workspace_path\b/,
+-        message: 'core remote-connect bot facade must not own workspace path absolute detection; use the integrations helper',
+-      },
+-      {
+-        regex: /\bmatch ext\.as_str\(\)/,
+-        message: 'core remote-connect bot facade must not own workspace file MIME mapping; use the integrations helper',
+-      },
+-      {
+-        regex: /\btokio::fs::read\(&abs_path\)/,
+-        message: 'core remote-connect bot facade must not own workspace file reads; use the integrations helper',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_control_tool.rs',
+     patterns: [
+       {
+         regex: /\bcreate_session_with_workspace_and_creator\b/,
+         message:
+           'SessionControl must not bypass the service/agent runtime owner when creating sessions',
+       },
+     ],
+   },
+diff --git a/scripts/core-boundaries/rules/source/required-rules.mjs b/scripts/core-boundaries/rules/source/required-rules.mjs
+index 1e098dc..cb5ff45 100644
+--- a/scripts/core-boundaries/rules/source/required-rules.mjs
++++ b/scripts/core-boundaries/rules/source/required-rules.mjs
+@@ -2543,24 +2543,20 @@ export const requiredContentRules = [
+       'service integration and agent-runtime surfaces must not compile in no-default core builds',
+     patterns: [
+       {
+         regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub mod git\b/s,
+         message: 'git service facade must stay behind service-integrations',
+       },
+       {
+         regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub mod mcp\b/s,
+         message: 'MCP service facade must stay behind service-integrations',
+       },
+-      {
+-        regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub mod remote_connect\b/s,
+-        message: 'remote-connect service facade must stay behind service-integrations',
+-      },
+       {
+         regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub mod review_platform\b/s,
+         message: 'review platform facade must stay behind service-integrations',
+       },
+       {
+         regex: /#\[cfg\(feature = "product-full"\)\]\s*pub mod search\b/s,
+         message: 'workspace search facade must stay behind product-full',
+       },
+       {
+         regex: /#\[cfg\(feature = "product-full"\)\]\s*pub use search::/s,
+@@ -3813,54 +3809,26 @@ export const requiredContentRules = [
+     patterns: [
+       {
+         regex: /pub use northhing_runtime_ports::RelatedPath;/,
+         message: 'missing related path compatibility re-export',
+       },
+     ],
+   },
+   {
+     path: 'src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs',
+     reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
++      'core service/agent runtime owner must centralize concrete agent runtime port bindings without moving runtime behavior',
+     patterns: [
+       {
+         regex: /\bpub(\(crate\))? struct CoreServiceAgentRuntime\b/,
+         message: 'missing core service/agent runtime owner type',
+       },
+-      {
+-        regex: /\bfn remote_dialog_host\b/,
+-        message: 'missing remote dialog host owner factory',
+-      },
+-      {
+-        regex: /\bfn remote_cancel_host\b/,
+-        message: 'missing remote cancel host owner factory',
+-      },
+-      {
+-        regex: /\bfn remote_image_context\b/,
+-        message: 'missing remote image context owner adapter',
+-      },
+-      {
+-        regex: /\bfn load_remote_model_catalog\b/,
+-        message: 'missing remote model catalog owner adapter',
+-      },
+-      {
+-        regex: /\bbuild_remote_model_catalog\b/,
+-        message: 'missing remote model catalog assembly delegation',
+-      },
+-      {
+-        regex: /\bfn update_remote_session_model\b/,
+-        message: 'missing remote session model update owner adapter',
+-      },
+-      {
+-        regex: /\bfn load_remote_chat_messages\b/,
+-        message: 'missing remote chat history persistence owner adapter',
+-      },
+       {
+         regex: /\bfn agent_runtime\b/,
+         message: 'missing agent runtime owner binding',
+       },
+       {
+         regex: /\bfn agent_runtime_with_dialog_turns\b/,
+         message: 'missing agent runtime dialog lifecycle owner binding',
+       },
+       {
+         regex: /\bfn agent_runtime_with_lifecycle_delivery\b/,
+@@ -3879,194 +3847,30 @@ export const requiredContentRules = [
+         message: 'missing lifecycle delivery builder registration',
+       },
+       {
+         regex: /\bwith_session_management_port\b/,
+         message: 'missing agent session management runtime binding',
+       },
+       {
+         regex: /\bAgentRuntimeBuilder\b/,
+         message: 'missing agent runtime builder binding',
+       },
+-      {
+-        regex: /\bfn remote_control_state_port\b/,
+-        message: 'missing remote control state port owner binding',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_types.rs',
+-    reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+-    patterns: [
+-      {
+-        regex: /\bRemoteModelCatalogFacts\b/,
+-        message: 'missing remote model catalog fact projection',
+-      },
+-      {
+-        regex: /\bRemoteModelCapabilityFact\b/,
+-        message: 'missing remote model capability fact projection',
+-      },
+-      {
+-        regex: /\bRemoteReasoningModeFact\b/,
+-        message: 'missing remote reasoning mode fact projection',
+-      },
+-      {
+-        regex: /\bfn normalize_remote_session_model_id\b/,
+-        message: 'missing remote session model id normalization regression hook',
+-      },
+-      {
+-        regex: /\bnormalize_remote_session_model_id_contract\b/,
+-        message: 'missing remote session model id owner delegation',
+-      },
+-      {
+-        regex: /\bfn normalize_remote_model_selection\b/,
+-        message: 'missing remote model selection normalization regression hook',
+-      },
+-      {
+-        regex: /\bnormalize_remote_model_selection_contract\b/,
+-        message: 'missing remote model selection owner delegation',
+-      },
+-      {
+-        regex: /\bfn remote_chat_messages_from_turns\b/,
+-        message: 'missing remote chat history conversion owner adapter',
+-      },
+-      {
+-        regex: /\bRemoteDialogSchedulerOutcomeFact\b/,
+-        message: 'missing remote dialog scheduler outcome fact projection',
+-      },
+-      {
+-        regex: /\bremote_dialog_submit_outcome_from_scheduler\b/,
+-        message: 'missing remote dialog submit outcome assembly delegation',
+-      },
+-      {
+-        regex: /\bRemoteChatHistoryTurn\b/,
+-        message: 'missing remote chat history owner DTO projection',
+-      },
+-      {
+-        regex: /\bbuild_remote_chat_messages\b/,
+-        message: 'missing remote chat history assembly delegation',
+-      },
+-      {
+-        regex: /\bfn strip_remote_user_input_tags\b/,
+-        message: 'missing remote user input display cleanup owner adapter',
+-      },
+-      {
+-        regex: /\bfn compress_remote_chat_data_url_for_mobile\b/,
+-        message: 'missing remote chat thumbnail compression owner adapter',
+-      },
+-      {
+-        regex: /\bagent_input_attachment_from_image_context\b/,
+-        message: 'missing remote image to lifecycle attachment adapter',
+-      },
+-      {
+-        regex: /\bRemoteImageContextAdapter\b/,
+-        message: 'missing remote image context adapter implementation',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs',
+-    reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+-    patterns: [
+-      {
+-        regex: /\bAgentDialogTurnRequest\b/,
+-        message: 'missing dialog lifecycle request binding',
+-      },
+-      {
+-        regex: /\bsubmit_dialog_turn\b/,
+-        message: 'missing dialog lifecycle submit delegation',
+-      },
+-      {
+-        regex: /\bCoreRemoteSessionTrackerHost\b/,
+-        message: 'missing core remote session tracker host binding',
+-      },
+-      {
+-        regex: /\bimpl RemoteDialogRuntimeHost for CoreRemoteDialogRuntimeHost\b/,
+-        message: 'missing remote dialog host adapter implementation in runtime owner',
+-      },
+-      {
+-        regex: /\bimpl RemoteWorkspaceFileRuntimeHost for CoreRemoteWorkspaceFileRuntimeHost\b/,
+-        message: 'missing remote workspace file host adapter implementation in runtime owner',
+-      },
+-      {
+-        regex: /\bimpl RemoteSessionTrackerHost for CoreRemoteSessionTrackerHost\b/,
+-        message: 'missing remote tracker host adapter implementation in runtime owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_state.rs',
+-    reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+-    patterns: [
+-      {
+-        regex: /\bCoreRemoteCancelRuntimeHost\b/,
+-        message: 'missing core remote cancel host binding',
+-      },
+-      {
+-        regex: /pub(\(crate\))? struct CoreRemoteCancelRuntimeHost\s*\{[\s\S]*?\bruntime:\s*(?:northhing_agent_runtime::runtime::)?AgentRuntime\b/,
+-        message: 'missing remote cancel host runtime field',
+-      },
+-      {
+-        regex: /\bimpl\s+(?:northhing_services_integrations::remote_connect::)?RemoteCancelRuntimeHost\s+for\s+CoreRemoteCancelRuntimeHost\b/,
+-        message: 'missing remote cancel host adapter implementation in runtime owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_lifecycle.rs',
+-    reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+-    patterns: [
+-      {
+-        regex: /\bCoreRemoteSessionRuntimeHost\b/,
+-        message: 'missing core remote session runtime host binding',
+-      },
+-      {
+-        regex: /pub(\(crate\))? struct CoreRemoteSessionRuntimeHost\s*\{[\s\S]*?\bruntime:\s*(?:northhing_agent_runtime::runtime::)?AgentRuntime\b/,
+-        message: 'missing remote session host runtime field',
+-      },
+     ],
+   },
+   {
+     path: 'src/crates/assembly/core/src/service_agent_runtime/mod.rs',
+     reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
++      'core service/agent runtime owner must centralize concrete agent runtime port bindings without moving runtime behavior',
+     patterns: [
+-      {
+-        regex: /\bCoreRemoteDialogRuntimeHost\b/,
+-        message: 'missing core remote dialog host binding',
+-      },
+       {
+         regex: /\bCoreServiceAgentRuntime::agent_runtime_with_scheduler_ports\b/,
+-        message: 'missing remote cancel scheduler-backed runtime binding',
+-      },
+-      {
+-        regex: /\bCoreRemoteWorkspaceFileRuntimeHost\b/,
+-        message: 'missing core remote workspace file host binding',
+-      },
+-      {
+-        regex: /\bCoreRemoteWorkspaceRuntimeHost\b/,
+-        message: 'missing core remote workspace runtime host binding',
+-      },
+-      {
+-        regex: /\bCoreRemotePollRuntimeHost\b/,
+-        message: 'missing core remote poll runtime host binding',
+-      },
+-      {
+-        regex: /\bCoreRemoteInteractionRuntimeHost\b/,
+-        message: 'missing core remote interaction runtime host binding',
+-      },
+-      {
+-        regex: /\bImageContextData\b/,
+-        message: 'missing core image context binding',
++        message: 'missing scheduler-backed runtime binding',
+       },
+       {
+         regex: /\bAgentSubmissionPort\b/,
+         message: 'missing agent submission port binding',
+       },
+       {
+         regex: /\bAgentDialogTurnPort\b/,
+         message: 'missing agent dialog turn port binding',
+       },
+       {
+@@ -4082,57 +3886,26 @@ export const requiredContentRules = [
+         message: 'missing remote control state port contract guard',
+       },
+       {
+         regex: /\bSessionTranscriptReader\b/,
+         message: 'missing session transcript reader contract guard',
+       },
+       {
+         regex: /\bcore_service_agent_runtime_owner_keeps_coordinator_port_contracts\b/,
+         message: 'missing coordinator runtime port contract regression',
+       },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_normalizes_remote_session_model_ids\b/,
+-        message: 'missing remote session model id normalization regression',
+-      },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_normalizes_remote_model_selection_aliases\b/,
+-        message: 'missing remote model selection alias regression',
+-      },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_preserves_remote_chat_history_shape\b/,
+-        message: 'missing remote chat history conversion regression',
+-      },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_skips_in_progress_remote_assistant_history\b/,
+-        message: 'missing in-progress remote assistant history regression',
+-      },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_maps_image_context_to_lifecycle_attachment\b/,
+-        message: 'missing remote image lifecycle attachment regression',
+-      },
+       {
+         regex: /\bcore_service_agent_runtime_owner_keeps_scheduler_lifecycle_port_contracts\b/,
+         message: 'missing scheduler lifecycle port contract regression',
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs',
+-    reason:
+-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+-    patterns: [
+-      {
+-        regex: /\bRemoteExecutionDispatcher\b/,
+-        message: 'missing remote execution dispatcher binding',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_control_tool.rs',
+     reason:
+       'SessionControl must route session create, list, delete, workspace resolution, and cancellation through the service/agent runtime owner while preserving existing behavior',
+     patterns: [
+       {
+         regex: /\bCoreServiceAgentRuntime::agent_runtime\b/,
+         message: 'missing service/agent runtime owner routing',
+       },
+       {
+@@ -4882,153 +4655,20 @@ export const requiredContentRules = [
+       {
+         regex: /\bremote_connect_command_owner_routes_send_message_and_prefers_explicit_images\b/,
+         message: 'missing remote command routing image/source regression',
+       },
+       {
+         regex: /\bremote_connect_command_owner_preserves_cancel_and_group_routing\b/,
+         message: 'missing remote command routing group/cancel regression',
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/mod.rs',
+-    reason:
+-      'core remote-connect root keeps compatibility re-exports while services-integrations owns device, pairing, encryption, QR, and relay primitives',
+-    patterns: [
+-      {
+-        regex: /\bpub mod device\s*\{[\s\S]*northhing_services_integrations::remote_connect::device::\*/m,
+-        message: 'missing device compatibility re-export module',
+-      },
+-      {
+-        regex: /\bpub mod encryption\s*\{[\s\S]*northhing_services_integrations::remote_connect::encryption::\*/m,
+-        message: 'missing encryption compatibility re-export module',
+-      },
+-      {
+-        regex: /\bpub mod pairing\s*\{[\s\S]*northhing_services_integrations::remote_connect::pairing::\*/m,
+-        message: 'missing pairing compatibility re-export module',
+-      },
+-      {
+-        regex: /\bpub mod qr_generator\s*\{[\s\S]*northhing_services_integrations::remote_connect::qr_generator::\*/m,
+-        message: 'missing QR compatibility re-export module',
+-      },
+-      {
+-        regex: /\bpub mod relay_client\s*\{[\s\S]*northhing_services_integrations::remote_connect::relay_client::\*/m,
+-        message: 'missing relay client compatibility re-export module',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
+-    reason:
+-      'core remote-connect server must remain a product runtime adapter around integrations-owned contracts',
+-    patterns: [
+-      {
+-        regex: /\bCoreServiceAgentRuntime\b/,
+-        message: 'missing core service/agent runtime owner routing',
+-      },
+-      {
+-        regex: /\bsubmit_remote_dialog\b/,
+-        message: 'missing remote dialog owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bcancel_remote_task\b/,
+-        message: 'missing remote cancel owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_workspace_file_command\b/,
+-        message: 'missing remote file command owner delegation',
+-      },
+-      {
+-        regex: /\bRemoteCommandRuntimeHost\b/,
+-        message: 'missing remote command runtime host adapter',
+-      },
+-      {
+-        regex: /\bhandle_remote_command\b/,
+-        message: 'missing remote command routing owner delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_interaction_command\b/,
+-        message: 'missing remote interaction command owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bgenerate_remote_initial_sync\b/,
+-        message: 'missing remote initial-sync owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_workspace_command\b/,
+-        message: 'missing remote workspace command owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_session_command\b/,
+-        message: 'missing remote session command owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_poll_command\b/,
+-        message: 'missing remote poll command owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bhandle_remote_interaction_command\b/,
+-        message: 'missing remote interaction command owner orchestration delegation',
+-      },
+-      {
+-        regex: /\bremote_image_context\b/,
+-        message: 'missing image context adapter contract delegation',
+-      },
+-      {
+-        regex: /\bcore_service_agent_runtime_owner_maps_remote_image_context\b/,
+-        message: 'missing core service/agent image-context owner regression',
+-      },
+-      {
+-        regex: /\bremote_execution_prefers_unified_image_contexts_over_legacy_images\b/,
+-        message: 'missing unified image context preference regression',
+-      },
+-      {
+-        regex: /\bremote_execution_falls_back_to_legacy_images_as_image_contexts\b/,
+-        message: 'missing legacy image context fallback regression',
+-      },
+-      {
+-        regex: /\bremote_cancel_decision_preserves_current_turn_boundaries\b/,
+-        message: 'missing remote cancel boundary regression',
+-      },
+-      {
+-        regex: /\bremote_restore_target_only_restores_cold_sessions_with_workspace_binding\b/,
+-        message: 'missing remote restore target regression',
+-      },
+-      {
+-        regex: /\bremote_command_snapshot_covers_execution_poll_and_cancel_surfaces\b/,
+-        message: 'missing remote command snapshot regression',
+-      },
+-      {
+-        regex: /\bremote_response_snapshot_preserves_active_turn_and_result_shapes\b/,
+-        message: 'missing remote response snapshot regression',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
+-    reason:
+-      'remote-connect bot must route concrete agent runtime port bindings through the core service/agent runtime owner',
+-    patterns: [
+-      {
+-        regex: /\bCoreServiceAgentRuntime\b/,
+-        message: 'missing core service/agent runtime owner routing',
+-      },
+-      {
+-        regex: /\bagent_runtime\b/,
+-        message: 'missing agent runtime owner binding',
+-      },
+-      {
+-        regex: /\bbuild_remote_session_create_request\b/,
+-        message: 'missing integrations-owned remote session create request builder',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/agentic/coordination/scheduler/scheduler_turn/turn_submit.rs',
+     reason:
+       'core scheduler keeps remote queue policy semantics until agent-runtime migration is reviewed',
+     patterns: [
+       {
+         regex: /\bimpl AgentDialogTurnPort for DialogScheduler\b/,
+         message: 'missing dialog lifecycle port implementation',
+       },
+       {
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index b8c0b38..abddab0 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -1629,79 +1629,36 @@ export function runManifestParserSelfTest({
+       contracts: ['northhing_runtime_ports', 'CompressionContract', 'CompressionContractItem'],
+     },
+     {
+       path: 'src/crates/assembly/core/src/service/workspace/manager_accessors.rs',
+       contracts: ['northhing_runtime_ports', 'RelatedPath'],
+     },
+     {
+       path: 'src/crates/assembly/core/src/service_agent_runtime.rs',
+       contracts: [
+         'CoreServiceAgentRuntime',
+-        'remote_dialog_host',
+-        'remote_cancel_host',
+-        'remote_image_context',
+-        'load_remote_model_catalog',
+-        'RemoteModelCatalogFacts',
+-        'RemoteModelCapabilityFact',
+-        'RemoteReasoningModeFact',
+-        'build_remote_model_catalog',
+-        'update_remote_session_model',
+-        'normalize_remote_session_model_id',
+-        'normalize_remote_session_model_id_contract',
+-        'normalize_remote_model_selection',
+-        'normalize_remote_model_selection_contract',
+-        'remote_chat_messages_from_turns',
+-        'RemoteDialogSchedulerOutcomeFact',
+-        'remote_dialog_submit_outcome_from_scheduler',
+-        'RemoteChatHistoryTurn',
+-        'build_remote_chat_messages',
+-        'strip_remote_user_input_tags',
+-        'compress_remote_chat_data_url_for_mobile',
+-        'load_remote_chat_messages',
+         'agent_runtime',
+         'agent_runtime_with_dialog_turns',
+         'agent_runtime_with_lifecycle_delivery',
+         'agent_runtime_with_scheduler_ports',
+         'global_agent_runtime_with_lifecycle_delivery',
+         'with_lifecycle_delivery_port',
+-        'agent_input_attachment_from_image_context',
+-        'AgentDialogTurnRequest',
+-        'submit_dialog_turn',
+         'AgentRuntimeBuilder',
+-        'remote_control_state_port',
+-        'CoreRemoteDialogRuntimeHost',
+-        'CoreRemoteCancelRuntimeHost',
+-        'CoreRemoteCancelRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
+         'CoreServiceAgentRuntime::agent_runtime_with_scheduler_ports',
+-        'CoreRemoteWorkspaceFileRuntimeHost',
+-        'CoreRemoteWorkspaceRuntimeHost',
+-        'CoreRemoteSessionRuntimeHost',
+-        'CoreRemoteSessionRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
+-        'CoreRemotePollRuntimeHost',
+-        'CoreRemoteInteractionRuntimeHost',
+-        'CoreRemoteSessionTrackerHost',
+-        'RemoteExecutionDispatcher',
+-        'ImageContextData',
+-        'RemoteImageContextAdapter',
+         'AgentSubmissionPort',
+         'AgentDialogTurnPort',
+         'AgentTurnCancellationPort',
+         'AgentSessionManagementPort',
+         'with_session_management_port',
+         'RemoteControlStatePort',
+         'SessionTranscriptReader',
+         'core_service_agent_runtime_owner_keeps_coordinator_port_contracts',
+-        'core_service_agent_runtime_owner_normalizes_remote_session_model_ids',
+-        'core_service_agent_runtime_owner_normalizes_remote_model_selection_aliases',
+-        'core_service_agent_runtime_owner_preserves_remote_chat_history_shape',
+-        'core_service_agent_runtime_owner_skips_in_progress_remote_assistant_history',
+-        'core_service_agent_runtime_owner_maps_image_context_to_lifecycle_attachment',
+         'core_service_agent_runtime_owner_keeps_scheduler_lifecycle_port_contracts',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/agentic/tools/implementations/session_control_tool.rs',
+       contracts: [
+         'CoreServiceAgentRuntime::agent_runtime',
+         'CoreServiceAgentRuntime::agent_runtime_with_scheduler_ports',
+         'AgentSessionCreateRequest',
+         'AgentSessionListRequest',
+@@ -1809,38 +1766,20 @@ export function runManifestParserSelfTest({
+         'remote_dialog_submit_outcome_from_scheduler',
+         'RemoteCommand',
+         'RemoteResponse',
+         'should_send_remote_model_catalog',
+         'remote_model_catalog_poll_delta',
+         'remote_no_change_poll_response',
+         'remote_snapshot_poll_response',
+         'remote_persisted_poll_response',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
+-      contracts: [
+-        'CoreServiceAgentRuntime',
+-        'remote_image_context',
+-        'handle_remote_workspace_command',
+-        'handle_remote_session_command',
+-        'generate_remote_initial_sync',
+-        'handle_remote_poll_command',
+-        'handle_remote_interaction_command',
+-        'core_service_agent_runtime_owner_maps_remote_image_context',
+-        'remote_execution_prefers_unified_image_contexts_over_legacy_images',
+-        'remote_cancel_decision_preserves_current_turn_boundaries',
+-        'remote_restore_target_only_restores_cold_sessions_with_workspace_binding',
+-        'remote_command_snapshot_covers_execution_poll_and_cancel_surfaces',
+-        'remote_response_snapshot_preserves_active_turn_and_result_shapes',
+-      ],
+-    },
+     {
+       path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
+       contracts: [
+         'remote_queue_policy_preserves_confirmation_boundary',
+         'AgentDialogTurnPort',
+         'AgentLifecycleDeliveryPort',
+         'AgentTurnCancellationPort',
+         'AgentBackgroundResultRequest',
+         'AgentThreadGoalDeliveryRequest',
+         'AgentThreadGoalDeliveryKind::ObjectiveUpdated',
+@@ -2320,21 +2259,20 @@ export function runManifestParserSelfTest({
+         'GeminiResponse',
+         'GeminiUsage',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/service/mod.rs',
+       contracts: [
+         'feature = "service-integrations"',
+         'pub mod git',
+         'pub mod mcp',
+-        'pub mod remote_connect',
+         'pub mod review_platform',
+         'feature = "product-full"',
+         'pub mod search',
+         'pub mod snapshot',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/service/config/mod.rs',
+       contracts: ['feature = "product-full"', 'mode_config_canonicalizer'],
+     },
+@@ -2531,28 +2469,20 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/assembly/core/src/function_agents/port_adapters.rs',
+       contracts: [
+         'CoreFunctionAgentGitAdapter',
+         'FunctionAgentGitPort',
+         'FunctionAgentGitService::git_commit_snapshot',
+         'CoreFunctionAgentAiAdapter',
+         'FunctionAgentAiPort',
+         'git_adapter_commit_snapshot_keeps_staged_diff_and_unstaged_count_separate',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
+-      contracts: [
+-        'CoreServiceAgentRuntime',
+-        'agent_runtime',
+-        'build_remote_session_create_request',
+-      ],
+-    },
+     {
+       path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
+       contracts: [
+         'CoreProductDomainRuntime',
+         'miniapp_runtime_facade',
+         'function_agent_git_adapter',
+         'function_agent_ai_adapter',
+         'function_agent_runtime_facade',
+         'CoreFunctionAgentGitAdapter',
+         'CoreFunctionAgentAiAdapter',
+@@ -3213,99 +3143,20 @@ export function runManifestParserSelfTest({
+ 
+   const servicesIntegrationsProfile = dependencyProfileRules.find(
+     (rule) => rule.crateName === 'services-integrations',
+   );
+   for (const dep of ['dunce', 'futures', 'reqwest', 'sse-stream']) {
+     if (!servicesIntegrationsProfile?.forbiddenNonOptionalDeps.includes(dep)) {
+       throw new Error(`services-integrations default profile must forbid non-optional ${dep}`);
+     }
+   }
+ 
+-  const remoteConnectRule = forbiddenContentRules.find(
+-    (rule) => rule.path === 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
+-  );
+-  if (!remoteConnectRule) {
+-    throw new Error('missing remote-connect remote_server boundary rule');
+-  }
+-  const remoteConnectContracts = [
+-    'ImageAttachment',
+-    'ChatImageAttachment',
+-    'ChatMessage',
+-    'ChatMessageItem',
+-    'RemoteToolStatus',
+-    'ActiveTurnSnapshot',
+-    'SessionInfo',
+-    'RemoteDefaultModelsConfig',
+-    'RemoteModelConfig',
+-    'RemoteModelCatalog',
+-    'RemoteModelCatalogPollDelta',
+-    'RemoteCommand',
+-    'RemoteResponse',
+-    'TrackerState',
+-    'TrackerEvent',
+-    'RemoteSessionStateTracker',
+-    'DashMap',
+-    'make_slim_params',
+-    'match mobile_type',
+-    'RemoteCancelDecision',
+-    'resolve_remote_cancel_decision',
+-    'RemoteCancelTaskRequest',
+-    'RemoteCancelRuntimeHost',
+-    'cancel_remote_task',
+-    'remote_session_restore_target',
+-    'resolve_remote_execution_image_contexts',
+-    'RemoteImageContextAdapter',
+-    'MAX_SIZE',
+-    'MAX_CHUNK',
+-    'unwrap_or\\("file"\\)',
+-    'resolve_workspace_path',
+-    'detect_mime_type',
+-    'read_workspace_file',
+-    'read_remote_workspace_file',
+-    'read_remote_workspace_file_chunk',
+-    'read_remote_workspace_file_info',
+-    'remote_file_content_response',
+-    'remote_file_chunk_response',
+-    'remote_file_info_response',
+-    'handle_remote_workspace_file_command',
+-    'general_purpose::STANDARD\\.encode',
+-    'remote_dialog_submit_response',
+-    'remote_task_cancel_response',
+-    'remote_interaction_accepted_response',
+-    'remote_answer_question_response',
+-    'remote_workspace_info_response',
+-    'remote_recent_workspaces_response',
+-    'remote_assistant_list_response',
+-    'remote_workspace_updated_response',
+-    'remote_assistant_updated_response',
+-    'remote_session_info',
+-    'remote_session_list_response',
+-    'remote_initial_sync_response',
+-    'remote_session_created_response',
+-    'remote_session_model_updated_response',
+-    'remote_messages_response',
+-    'remote_session_deleted_response',
+-    'should_send_remote_model_catalog',
+-    'remote_model_catalog_poll_delta',
+-    'remote_no_change_poll_response',
+-    'remote_snapshot_poll_response',
+-    'remote_persisted_poll_response',
+-  ];
+-  const remoteConnectRuleText = remoteConnectRule.patterns
+-    .map((pattern) => pattern.regex.source)
+-    .join('\n');
+-  for (const contract of remoteConnectContracts) {
+-    if (!remoteConnectRuleText.includes(contract)) {
+-      throw new Error(`remote-connect boundary rule must forbid contract: ${contract}`);
+-    }
+-  }
+-
+   const facadePaths = new Set(facadeOnlyFiles.map((facade) => facade.path));
+   for (const path of [
+     'src/crates/assembly/core/src/service/mcp/protocol/transport.rs',
+     'src/crates/assembly/core/src/service/mcp/protocol/transport_remote.rs',
+     'src/crates/assembly/core/src/service/mcp/server/connection.rs',
+   ]) {
+     if (!facadePaths.has(path)) {
+       throw new Error(`missing MCP runtime facade-only rule for ${path}`);
+     }
+   }
+diff --git a/src/apps/desktop/src/app_state/settings/io/io_tests.rs b/src/apps/desktop/src/app_state/settings/io/io_tests.rs
+index 7acaaa6..04cdc7c 100644
+--- a/src/apps/desktop/src/app_state/settings/io/io_tests.rs
++++ b/src/apps/desktop/src/app_state/settings/io/io_tests.rs
+@@ -1,14 +1,13 @@
+ // 2026-07-31 (H-9): disk IO regression tests for the settings single-writer
+ // transaction + atomic write. Tests use the private `*_at(path)` variants so
+-// no test touches the real `~/.northhing/config/app.json` (same path
+-// injection scheme as Task 5 `remote_connect/bot/persistence_tests.rs`).
++// no test touches the real `~/.northhing/config/app.json` (path injection scheme).
+ //
+ // 2026-08-04 (C3, P1-2): tests now use a MockKeyring so they do not depend
+ // on the real OS keyring. The `_at` variants accept a `&dyn KeyringBackend`.
+ //
+ // 2026-08-05 (FU-3): the public load path holds SETTINGS_WRITE_LOCK because
+ // a load may persist dedup / keyring migration writes. The race regression
+ // below drives the same locked composition the public load delegates to
+ // (`load_app_settings_locked`) with an injected path.
+ //
+ // Note: this file lives under `settings/io/` because `io.rs` declares
+diff --git a/src/crates/assembly/core/AGENTS-CN.md b/src/crates/assembly/core/AGENTS-CN.md
+index f749456..065bd98 100644
+--- a/src/crates/assembly/core/AGENTS-CN.md
++++ b/src/crates/assembly/core/AGENTS-CN.md
+@@ -6,21 +6,21 @@
+ 
+ 本文件适用于 `src/crates/assembly/core`。仓库级规则请参考顶层 `AGENTS.md`，并在存在更近的子指南时使用它。
+ 
+ ## 角色
+ 
+ `northhing-core` 是共享的产品运行时外观。它仍拥有兼容性路径与 `product-full` 装配边界，但新的分解工作应当优先选择 `docs/architecture/core-decomposition.md` 与 `docs/architecture/agent-runtime-services-design.md` 中描述的所有者 crate。
+ 
+ 主要区域：
+ 
+ - `src/agentic/`：agents、prompts、tools、sessions、execution、persistence
+-- `src/service/`：config、filesystem、terminal、git、LSP、MCP、remote connect、AI memory
++- `src/service/`：config、filesystem、terminal、git、LSP、MCP、AI memory
+ - `src/infrastructure/`：AI 客户端、应用路径、事件系统、存储、调试日志服务端
+ - `src/product_runtime/`：product-full 兼容性适配器与运行时服务提供者连接
+ 
+ Agent 运行时心智模型：
+ 
+ ```text
+ SessionManager -> Session -> DialogTurn -> ModelRound
+ ```
+ 
+ ## 边界规则
+diff --git a/src/crates/assembly/core/AGENTS.md b/src/crates/assembly/core/AGENTS.md
+index b82d692..8c706c8 100644
+--- a/src/crates/assembly/core/AGENTS.md
++++ b/src/crates/assembly/core/AGENTS.md
+@@ -10,21 +10,21 @@ repository-wide rules and the nearest narrower guide when one exists.
+ ## Role
+ 
+ `northhing-core` is the shared product runtime facade. It still owns compatibility
+ paths and the `product-full` assembly boundary, but new decomposition work should
+ prefer the owner crates described in `docs/architecture/core-decomposition.md`
+ and `docs/architecture/agent-runtime-services-design.md`.
+ 
+ Main areas:
+ 
+ - `src/agentic/`: agents, prompts, tools, sessions, execution, persistence
+-- `src/service/`: config, filesystem, terminal, git, LSP, MCP, remote connect, AI memory
++- `src/service/`: config, filesystem, terminal, git, LSP, MCP, AI memory
+ - `src/infrastructure/`: AI clients, app paths, event system, storage, debug log server
+ - `src/product_runtime/`: product-full compatibility adapters and runtime service provider wiring
+ 
+ Agent runtime mental model:
+ 
+ ```text
+ SessionManager -> Session -> DialogTurn -> ModelRound
+ ```
+ 
+ ## Boundary Rules
+diff --git a/src/crates/assembly/core/Cargo.toml b/src/crates/assembly/core/Cargo.toml
+index 9ee4aca..d8a8442 100644
+--- a/src/crates/assembly/core/Cargo.toml
++++ b/src/crates/assembly/core/Cargo.toml
+@@ -130,23 +130,20 @@ rand = { workspace = true, optional = true }
+ local-ip-address = { workspace = true, optional = true }
+ 
+ # QR code generation
+ 
+ # WebSocket client
+ tokio-tungstenite = { workspace = true, optional = true }
+ 
+ # SSH - Remote SSH support (optional feature)
+ russh = { workspace = true, optional = true }
+ 
+-# Relay server shared library (embedded relay reuses standalone relay logic)
+-northhing-relay-core = { path = "../../services/relay-core", optional = true }
+-
+ # Event layer dependency (lowest layer)
+ northhing-core-types = { path = "../../contracts/core-types" }
+ northhing-events = { path = "../../contracts/events" }
+ northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+ northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
+ 
+ # Tauri dependency (optional, enabled only when needed)
+ tauri = { workspace = true, optional = true }
+ 
+ # Non-Windows: vendored OpenSSL for libgit2 (no system install).
+@@ -202,21 +199,20 @@ product-domains = [
+     "dep:northhing-product-domains",
+     "northhing-services-integrations/function-agents",
+     "northhing-services-integrations/miniapp-runtime",
+     "northhing-product-domains/product-full",
+ ]
+ runtime-services = ["dep:northhing-runtime-services"]
+ service-integrations = [
+     "dep:aes",
+     "dep:aes-gcm",
+     "dep:axum",
+-    "dep:northhing-relay-core",
+     "dep:git2",
+     "dep:image",
+     "dep:local-ip-address",
+     "dep:md5",
+     "dep:rand",
+     "dep:reqwest",
+     "dep:rmcp",
+     "dep:sse-stream",
+     "dep:tokio-tungstenite",
+     "dep:tower-http",
+diff --git a/src/crates/assembly/core/src/product_runtime/runtime_services.rs b/src/crates/assembly/core/src/product_runtime/runtime_services.rs
+index 8314438..114fa6c 100644
+--- a/src/crates/assembly/core/src/product_runtime/runtime_services.rs
++++ b/src/crates/assembly/core/src/product_runtime/runtime_services.rs
+@@ -1,68 +1,49 @@
+ //! Core product-full runtime service adapters.
+ //!
+ //! This file registers existing core concrete adapters into typed runtime
+ //! service builders. It does not create new runtime behavior.
+ 
+ use std::sync::Arc;
+ 
+ use northhing_runtime_ports::{
+-    GitPort, McpCatalogPort, NetworkPort, RemoteProjectionPort, RemoteWorkspacePort, RuntimeServiceCapability,
+-    RuntimeServicePort, SessionStorePort, TerminalPort,
++    GitPort, McpCatalogPort, NetworkPort, RuntimeServiceCapability, RuntimeServicePort, SessionStorePort, TerminalPort,
+ };
+ use northhing_runtime_services::{RuntimeServicesBuilder, RuntimeServicesProvider};
+ 
+ use crate::agentic::session::CoreSessionStorePort;
+ 
+-#[cfg(feature = "service-integrations")]
+-use crate::service_agent_runtime::{CoreRemoteWorkspaceFileRuntimeHost, CoreRemoteWorkspaceRuntimeHost};
+-
+ #[derive(Debug, Clone, Copy, Default)]
+ pub struct CoreRuntimeServicesProvider;
+ 
+ impl CoreRuntimeServicesProvider {
+     pub const fn new() -> Self {
+         Self
+     }
+ }
+ 
+ impl RuntimeServicesProvider for CoreRuntimeServicesProvider {
+     fn register(&self, builder: RuntimeServicesBuilder) -> RuntimeServicesBuilder {
+         let session_store: Arc<dyn SessionStorePort> = Arc::new(CoreSessionStorePort);
+         let terminal: Arc<dyn TerminalPort> =
+             Arc::new(CoreRuntimeServiceMarkerPort::new(RuntimeServiceCapability::Terminal));
+         let network: Arc<dyn NetworkPort> =
+             Arc::new(CoreRuntimeServiceMarkerPort::new(RuntimeServiceCapability::Network));
+         let git: Arc<dyn GitPort> = Arc::new(CoreRuntimeServiceMarkerPort::new(RuntimeServiceCapability::Git));
+         let mcp_catalog: Arc<dyn McpCatalogPort> =
+             Arc::new(CoreRuntimeServiceMarkerPort::new(RuntimeServiceCapability::McpCatalog));
+-        let builder = builder
++        builder
+             .with_session_store(session_store)
+             .with_optional_terminal(Some(terminal))
+             .with_optional_network(Some(network))
+             .with_optional_git(Some(git))
+-            .with_optional_mcp_catalog(Some(mcp_catalog));
+-
+-        #[cfg(feature = "service-integrations")]
+-        {
+-            let remote_workspace: Arc<dyn RemoteWorkspacePort> = Arc::new(CoreRemoteWorkspaceRuntimeHost::new());
+-            let remote_projection: Arc<dyn RemoteProjectionPort> = Arc::new(CoreRemoteWorkspaceFileRuntimeHost::new());
+-
+-            builder
+-                .with_optional_remote_workspace(Some(remote_workspace))
+-                .with_optional_remote_projection(Some(remote_projection))
+-        }
+-
+-        #[cfg(not(feature = "service-integrations"))]
+-        {
+-            builder
+-        }
++            .with_optional_mcp_catalog(Some(mcp_catalog))
+     }
+ }
+ 
+ #[derive(Debug)]
+ struct CoreRuntimeServiceMarkerPort {
+     capability: RuntimeServiceCapability,
+ }
+ 
+ impl CoreRuntimeServiceMarkerPort {
+     const fn new(capability: RuntimeServiceCapability) -> Self {
+diff --git a/src/crates/assembly/core/src/service/mod.rs b/src/crates/assembly/core/src/service/mod.rs
+index 405d7f8..15fa523 100644
+--- a/src/crates/assembly/core/src/service/mod.rs
++++ b/src/crates/assembly/core/src/service/mod.rs
+@@ -13,22 +13,20 @@ pub(crate) mod bootstrap; // Workspace persona bootstrap helpers
+ pub mod config; // Config management
+ #[cfg(feature = "product-full")]
+ pub mod cron; // Scheduled jobs
+ pub mod filesystem; // FileSystem management
+ #[cfg(feature = "service-integrations")]
+ pub mod git; // Git service
+ pub mod i18n; // I18n service
+ pub mod lsp; // LSP (Language Server Protocol) system
+ #[cfg(all(feature = "service-integrations", feature = "product-full"))]
+ pub mod mcp; // MCP (Model Context Protocol) system
+-#[cfg(all(feature = "service-integrations", feature = "product-full"))]
+-pub mod remote_connect; // Remote Connect (phone → desktop)
+ pub mod remote_ssh; // Remote SSH (desktop → server)
+ #[cfg(feature = "service-integrations")]
+ pub mod review_platform; // Pull request review platform adapters
+ pub mod runtime; // Managed runtime and capability management
+ #[cfg(feature = "product-full")]
+ pub mod search; // Workspace search via managed flashgrep daemon
+ pub mod session; // Session persistence
+ #[cfg(feature = "product-full")]
+ pub mod session_usage; // Session runtime usage reports
+ #[cfg(feature = "product-full")]
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router.rs
+deleted file mode 100644
+index 2f6a20a..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router.rs
++++ /dev/null
+@@ -1,300 +0,0 @@
+-//! Shared command router for IM-bot connections (Round 14 facade).
+-//!
+-//! Public API surface (stable, re-exported by `bot/mod.rs`):
+-//!   - Types: BotChatState, BotCommand, BotAction, BotActionStyle, BotInteractiveRequest,
+-//!     BotInteractionHandler, BotMessageSender, BotQuestion, BotQuestionOption, BotDisplayMode,
+-//!     BotLanguage, HandleResult, ForwardRequest, ForwardedTurnResult, PendingAction.
+-//!   - Functions: parse_command, handle_command, welcome_message, complete_im_bot_pairing,
+-//!     execute_forwarded_turn, apply_interactive_request, current_bot_language.
+-//!
+-//! Sub-domain split (Round 14, Round 15 trim):
+-//!   - command_router_state: BotChatState + PendingAction + TTL consts
+-//!   - command_router_view: 11 view builders (welcome/menu/settings/select/question)
+-//!   - command_router_dispatch: 18 dispatchers + sub-routines (god method splits)
+-//!   - command_router_resume: `start_resume` god method (R15 extraction)
+-//!   - command_router_session: session lifecycle (bootstrap/create/load/resume)
+-//!   - command_router_util: 6 small helpers
+-//!   - command_router_tests: 4 test mods
+-//!
+-//! Note: sibling files are declared as `pub mod` in `bot/mod.rs` (R13b pattern:
+-//! siblings at the same directory level, declared in the parent mod.rs).
+-
+-use serde::{Deserialize, Serialize};
+-use serde_json::Value;
+-use std::future::Future;
+-use std::pin::Pin;
+-use std::sync::Arc;
+-
+-// ==== re-exports from sub-siblings ====
+-pub use super::command_router_forwarded_turn::execute_forwarded_turn;
+-pub use super::command_router_state::{now_secs, BotChatState, BotDisplayMode, PendingAction};
+-pub use super::locale::{current_bot_language, BotLanguage};
+-
+-// ==== re-exports used internally (cross-sibling calls) ====
+-use super::command_router_dispatch::{
+-    confirm_then_run, dispatch, guarded_new, handle_cancel_task, handle_chat, handle_number, new_session_for_mode,
+-    pending_invalid, route_pending, select_assistant, select_session, select_workspace, set_verbose, start_switch,
+-    switch_mode, truncate_at_char_boundary, truncate_label,
+-};
+-use super::command_router_questions::{handle_question_reply, submit_question_answers};
+-use super::command_router_resume::start_resume;
+-use super::command_router_session::{
+-    bootstrap_im_chat_after_pairing, count_workspace_sessions, create_session, load_last_dialog_pair_from_turns,
+-    resolve_session_agent_type,
+-};
+-use super::command_router_util::{
+-    normalize_im_command_text, refresh_assistant_name_if_missing, result_from_menu, result_from_menu_with_forward,
+-    short_path_name, strip_numeric_reply_suffix,
+-};
+-use super::command_router_view::{
+-    assistant_selection_view, build_question_view, confirm_mode_switch_view, main_menu_view, menu_or_welcome,
+-    need_session_view, question_option_line, ready_to_chat_body, session_selection_view, settings_menu_view,
+-    welcome_view, workspace_selection_view,
+-};
+-
+-use super::locale::strings_for;
+-use super::menu::{MenuItem, MenuItemStyle, MenuView};
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BotQuestionOption {
+-    pub label: String,
+-    #[serde(default)]
+-    pub description: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BotQuestion {
+-    #[serde(default)]
+-    pub question: String,
+-    #[serde(default)]
+-    pub header: String,
+-    #[serde(default)]
+-    pub options: Vec<BotQuestionOption>,
+-    #[serde(rename = "multiSelect", default)]
+-    pub multi_select: bool,
+-}
+-
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub enum BotActionStyle {
+-    Primary,
+-    Default,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub struct BotAction {
+-    pub label: String,
+-    pub command: String,
+-    pub style: BotActionStyle,
+-}
+-
+-impl BotAction {
+-    pub fn primary(label: impl Into<String>, command: impl Into<String>) -> Self {
+-        Self {
+-            label: label.into(),
+-            command: command.into(),
+-            style: BotActionStyle::Primary,
+-        }
+-    }
+-    pub fn secondary(label: impl Into<String>, command: impl Into<String>) -> Self {
+-        Self {
+-            label: label.into(),
+-            command: command.into(),
+-            style: BotActionStyle::Default,
+-        }
+-    }
+-}
+-
+-impl From<MenuItem> for BotAction {
+-    fn from(item: MenuItem) -> Self {
+-        let style = match item.style {
+-            MenuItemStyle::Primary => BotActionStyle::Primary,
+-            // Danger and Default both map to non-primary on platforms that
+-            // don't have a native danger style.
+-            _ => BotActionStyle::Default,
+-        };
+-        BotAction {
+-            label: item.label,
+-            command: item.command,
+-            style,
+-        }
+-    }
+-}
+-
+-pub struct HandleResult {
+-    pub reply: String,
+-    pub actions: Vec<BotAction>,
+-    pub forward_to_session: Option<ForwardRequest>,
+-    /// Same content as [`MenuView`] —adapters that want to render a richer
+-    /// view (Telegram inline keyboard, Feishu card, WeChat numbered text)
+-    /// can read this directly instead of `actions`.
+-    pub menu: MenuView,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub struct BotInteractiveRequest {
+-    pub reply: String,
+-    pub actions: Vec<BotAction>,
+-    pub menu: MenuView,
+-    pub pending_action: PendingAction,
+-}
+-
+-pub type BotInteractionHandler =
+-    Arc<dyn Fn(BotInteractiveRequest) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
+-
+-pub type BotMessageSender = Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
+-
+-pub struct ForwardRequest {
+-    pub session_id: String,
+-    pub content: String,
+-    pub agent_type: String,
+-    pub turn_id: String,
+-    pub image_contexts: Vec<crate::agentic::image_analysis::ImageContextData>,
+-}
+-
+-pub struct ForwardedTurnResult {
+-    pub display_text: String,
+-    pub full_text: String,
+-}
+-
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub enum BotCommand {
+-    /// Show welcome (unpaired) or main menu (paired).  Triggered by
+-    /// `/start`, `/menu`, `/m`, `菜单`, or `0` at the top level.
+-    Menu,
+-    /// Show settings sub-menu.
+-    Settings,
+-    /// Show help text.
+-    Help,
+-    /// Switch display mode.
+-    SwitchMode(BotDisplayMode),
+-    /// Toggle verbose execution-detail mode (persisted globally).
+-    SetVerbose(bool),
+-    /// Generic "switch" entry —picks workspace or assistant by mode.
+-    SwitchContext,
+-    /// Generic "new session" entry —picks the right session type by mode.
+-    NewSession,
+-    /// Specific session creators (kept as hidden aliases).
+-    NewCodeSession,
+-    NewCoworkSession,
+-    NewClawSession,
+-    /// Resume an existing session (workspace or assistant by mode).
+-    ResumeSession,
+-    /// Cancel currently running task.
+-    CancelTask(Option<String>),
+-    /// Pairing code submitted before pairing.
+-    PairingCode(String),
+-    /// Numeric reply to a menu / pending action.
+-    NumberSelection(usize),
+-    /// Free-form chat message forwarded to the AI session.
+-    ChatMessage(String),
+-}
+-
+-pub fn parse_command(text: &str) -> BotCommand {
+-    let normalized = normalize_im_command_text(text);
+-    let trimmed = normalized.trim();
+-    if let Some(rest) = trimmed.strip_prefix("/cancel_task") {
+-        let arg = rest.trim();
+-        return if arg.is_empty() {
+-            BotCommand::CancelTask(None)
+-        } else {
+-            BotCommand::CancelTask(Some(arg.to_string()))
+-        };
+-    }
+-    if let Some(rest) = trimmed.strip_prefix("/cancel") {
+-        let arg = rest.trim();
+-        return if arg.is_empty() {
+-            BotCommand::CancelTask(None)
+-        } else {
+-            BotCommand::CancelTask(Some(arg.to_string()))
+-        };
+-    }
+-    let lower = trimmed.to_ascii_lowercase();
+-    match lower.as_str() {
+-        // Top-level navigation / settings.
+-        "/start" | "/menu" | "/m" | "菜单" => return BotCommand::Menu,
+-        "/settings" | "/s" | "设置" => return BotCommand::Settings,
+-        "/help" | "/?" | "/h" | "帮助" | "？" => return BotCommand::Help,
+-
+-        // Mode switches (visible).
+-        "/expert" | "/pro" | "专业模式" => {
+-            return BotCommand::SwitchMode(BotDisplayMode::Pro);
+-        }
+-        "/assistant" | "助理模式" => {
+-            return BotCommand::SwitchMode(BotDisplayMode::Assistant);
+-        }
+-
+-        // Verbose toggles.
+-        "/verbose" | "详细" => return BotCommand::SetVerbose(true),
+-        "/concise" | "简洁" => return BotCommand::SetVerbose(false),
+-
+-        // Generic switch (picks workspace or assistant by mode).
+-        "/switch" | "切换" => return BotCommand::SwitchContext,
+-        // Hidden aliases.
+-        "/switch_workspace" | "切换工作区" => return BotCommand::SwitchContext,
+-        "/switch_assistant" | "切换助理" => return BotCommand::SwitchContext,
+-
+-        // Generic "new" picks the right session type by mode.
+-        "/new" | "/n" | "新建" | "新建会话" | "新会话" => return BotCommand::NewSession,
+-        // Hidden aliases / power users.
+-        "/new_code_session" | "新建编码会话" => return BotCommand::NewCodeSession,
+-        "/new_cowork_session" | "新建协作会话" => {
+-            return BotCommand::NewCoworkSession;
+-        }
+-        "/new_claw_session" | "新建助理会话" => return BotCommand::NewClawSession,
+-
+-        // Resume.
+-        "/resume" | "/r" | "/resume_session" | "恢复" | "恢复会话" => {
+-            return BotCommand::ResumeSession;
+-        }
+-        _ => {}
+-    }
+-
+-    if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-        return BotCommand::PairingCode(trimmed.to_string());
+-    }
+-
+-    let num_token = strip_numeric_reply_suffix(trimmed);
+-    if let Ok(n) = num_token.parse::<usize>() {
+-        if n <= 99 {
+-            // `0` is intentionally returned as `NumberSelection(0)` so context
+-            // such as "next page" inside SelectSession can override the
+-            // default "0 = back to menu" interpretation.  See `handle_number`.
+-            return BotCommand::NumberSelection(n);
+-        }
+-    }
+-    BotCommand::ChatMessage(trimmed.to_string())
+-}
+-
+-pub fn welcome_message(language: BotLanguage) -> &'static str {
+-    strings_for(language).welcome
+-}
+-
+-pub fn apply_interactive_request(state: &mut BotChatState, req: &BotInteractiveRequest) {
+-    state.set_pending(req.pending_action.clone());
+-    state.last_menu_commands = req.menu.items.iter().map(|i| i.command.clone()).collect();
+-}
+-
+-pub async fn handle_command(
+-    state: &mut BotChatState,
+-    cmd: BotCommand,
+-    images: Vec<super::super::remote_server::ImageAttachment>,
+-) -> HandleResult {
+-    let image_contexts: Vec<crate::agentic::image_analysis::ImageContextData> =
+-        super::super::remote_server::images_to_contexts(if images.is_empty() { None } else { Some(&images) });
+-    dispatch(state, cmd, image_contexts).await
+-}
+-
+-pub async fn complete_im_bot_pairing(state: &mut BotChatState) -> HandleResult {
+-    state.paired = true;
+-    let language = current_bot_language().await;
+-    let s = strings_for(language);
+-    let note = bootstrap_im_chat_after_pairing(state).await;
+-
+-    let mut view = main_menu_view(state, s);
+-    let combined_body = match view.body.take() {
+-        Some(b) => format!("{}\n\n{}\n\n{}", s.paired_success, note, b),
+-        None => format!("{}\n\n{}", s.paired_success, note),
+-    };
+-    view = view.with_body(combined_body);
+-    result_from_menu(state, view)
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_dispatch.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_dispatch.rs
+deleted file mode 100644
+index c4ea7c2..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_dispatch.rs
++++ /dev/null
+@@ -1,668 +0,0 @@
+-//! Bot command dispatchers (Round 14 split, Round 15 trim).
+-//!
+-//! Owns 17 dispatchers and sub-routines:
+-//! - `dispatch` (god method — splits into 3 phase helpers)
+-//! - `switch_mode`, `confirm_then_run`, `set_verbose`
+-//! - `start_switch`, `select_workspace`, `select_assistant`
+-//! - `truncate_label`
+-//! - `select_session`
+-//! - `new_session_for_mode`, `guarded_new`
+-//! - `handle_cancel_task`, `handle_number`
+-//! - `route_pending` (god method), `pending_invalid`
+-//! - `handle_chat`
+-//! - `truncate_at_char_boundary`
+-//!
+-//! `handle_question_reply` and `submit_question_answers` live in
+-//! `command_router_questions` (Round 14 split for 800-line cap).
+-//! `start_resume` lives in `command_router_resume` (Round 15 split —
+-//! closed the R14 D-deviation by extracting its ~126 lines).
+-
+-use super::command_router_state::{BotChatState, BotDisplayMode, PendingAction, PENDING_INVALID_LIMIT};
+-
+-use super::command_router_view::{
+-    assistant_selection_view, build_question_view, confirm_mode_switch_view, main_menu_view, menu_or_welcome,
+-    need_session_view, session_selection_view, settings_menu_view, welcome_view, workspace_selection_view,
+-};
+-
+-use super::command_router_questions::handle_question_reply;
+-use super::command_router_resume::start_resume;
+-use super::command_router_util::{
+-    parse_question_numbers, refresh_assistant_name_if_missing, result_from_menu, result_from_menu_with_forward,
+-    short_path_name,
+-};
+-
+-use super::command_router_session::{
+-    bootstrap_im_chat_after_pairing, count_workspace_sessions, create_session, load_last_dialog_pair_from_turns,
+-    resolve_session_agent_type,
+-};
+-
+-use super::command_router::{parse_command, BotCommand, BotQuestion, ForwardRequest, HandleResult};
+-
+-use super::locale::{current_bot_language, fmt_count, strings_for, BotStrings};
+-
+-use super::menu::{MenuItem, MenuView};
+-
+-use crate::agentic::image_analysis::ImageContextData;
+-
+-use serde_json::Value;
+-
+-use tracing::{error, info};
+-
+-pub(super) async fn dispatch(
+-    state: &mut BotChatState,
+-    cmd: BotCommand,
+-    image_contexts: Vec<crate::agentic::image_analysis::ImageContextData>,
+-) -> HandleResult {
+-    let language = current_bot_language().await;
+-    let s = strings_for(language);
+-
+-    // Auto-expire pending actions before any branch.
+-    if state.pending_expired() {
+-        state.clear_pending();
+-        let mut view = main_menu_view(state, s);
+-        view = view.with_body(s.pending_expired);
+-        return result_from_menu(state, view);
+-    }
+-
+-    // Universal escape hatches: /menu and /start always return the main menu
+-    // and clear any pending action.
+-    if matches!(cmd, BotCommand::Menu) {
+-        state.clear_pending();
+-        return menu_or_welcome(state, s);
+-    }
+-
+-    // Pairing-code submitted after pairing already completed 鈫?just nudge.
+-    if let BotCommand::PairingCode(_) = &cmd {
+-        if state.paired {
+-            let view = MenuView::plain(s.main_title_assistant)
+-                .with_body(s.paired_success)
+-                .with_items(main_menu_view(state, s).items);
+-            return result_from_menu(state, view);
+-        }
+-        // Not paired path is handled by the platform wait_for_pairing loop.
+-    }
+-
+-    if !state.paired {
+-        return result_from_menu(state, welcome_view(s));
+-    }
+-
+-    // Lazily resolve `current_assistant_name` for chat states that were
+-    // persisted before this field existed. Without this, already-paired
+-    // users would keep seeing the workspace folder name (e.g. "workspace")
+-    // until they manually re-switch assistants.
+-    refresh_assistant_name_if_missing(state).await;
+-
+-    // Handle /cancel as task cancellation when an active session exists.
+-    if let BotCommand::CancelTask(turn_id) = &cmd {
+-        return handle_cancel_task(state, turn_id.as_deref(), s).await;
+-    }
+-
+-    // Numeric replies: when there is a pending action, route to it.  When
+-    // there isn't, treat the number as an index into `last_menu_commands`.
+-    if let BotCommand::NumberSelection(n) = cmd {
+-        return handle_number(state, n, s).await;
+-    }
+-
+-    match cmd {
+-        BotCommand::Help => result_from_menu(
+-            state,
+-            MenuView::plain(s.welcome_title)
+-                .with_body(s.help_body)
+-                .with_items(vec![MenuItem::default(s.item_back, "/menu")]),
+-        ),
+-        BotCommand::Settings => {
+-            let verbose = super::load_bot_persistence().verbose_mode;
+-            result_from_menu(state, settings_menu_view(verbose, state, s))
+-        }
+-        BotCommand::SwitchMode(target) => switch_mode(state, target, s).await,
+-        BotCommand::SetVerbose(on) => set_verbose(state, on, s).await,
+-        BotCommand::SwitchContext => start_switch(state, s).await,
+-        BotCommand::NewSession => new_session_for_mode(state, s).await,
+-        BotCommand::NewCodeSession => guarded_new(state, "agentic", s).await,
+-        BotCommand::NewCoworkSession => guarded_new(state, "Cowork", s).await,
+-        BotCommand::NewClawSession => guarded_new(state, "Claw", s).await,
+-        BotCommand::ResumeSession => start_resume(state, 0, s).await,
+-        BotCommand::ChatMessage(msg) => handle_chat(state, &msg, image_contexts, s).await,
+-        BotCommand::Menu | BotCommand::CancelTask(_) | BotCommand::NumberSelection(_) | BotCommand::PairingCode(_) => {
+-            menu_or_welcome(state, s)
+-        } // already handled
+-    }
+-}
+-
+-pub(super) async fn switch_mode(
+-    state: &mut BotChatState,
+-    target: BotDisplayMode,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    if state.display_mode == target {
+-        let body = if target == BotDisplayMode::Pro {
+-            s.mode_already_expert
+-        } else {
+-            s.mode_already_assistant
+-        };
+-        let mut view = main_menu_view(state, s);
+-        view = view.with_body(body);
+-        return result_from_menu(state, view);
+-    }
+-    state.display_mode = target;
+-    let body = if target == BotDisplayMode::Pro {
+-        s.mode_switched_to_expert
+-    } else {
+-        s.mode_switched_to_assistant
+-    };
+-    let mut view = main_menu_view(state, s);
+-    view = view.with_body(body);
+-    result_from_menu(state, view)
+-}
+-
+-pub(super) async fn confirm_then_run(
+-    state: &mut BotChatState,
+-    target: BotDisplayMode,
+-    target_cmd: String,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    state.set_pending(PendingAction::ConfirmModeSwitch {
+-        target_mode: target,
+-        target_cmd,
+-    });
+-    result_from_menu(state, confirm_mode_switch_view(target, s))
+-}
+-
+-pub(super) async fn set_verbose(state: &mut BotChatState, on: bool, s: &'static BotStrings) -> HandleResult {
+-    if let Err(error) = super::update_bot_persistence(|data| {
+-        data.verbose_mode = on;
+-    }) {
+-        tracing::warn!("Failed to persist verbose mode: {error}");
+-    }
+-
+-    let body = if on { s.verbose_enabled } else { s.verbose_disabled };
+-    let mut view = settings_menu_view(on, state, s);
+-    view = view.with_body(body);
+-    result_from_menu(state, view)
+-}
+-
+-pub(super) async fn start_switch(state: &mut BotChatState, s: &'static BotStrings) -> HandleResult {
+-    use crate::service::workspace::global_workspace_service;
+-
+-    let ws_service = match global_workspace_service() {
+-        Some(s) => s,
+-        None => {
+-            return result_from_menu(
+-                state,
+-                MenuView::plain(s.workspace_service_unavailable)
+-                    .with_items(vec![MenuItem::default(s.item_back, "/menu")]),
+-            );
+-        }
+-    };
+-
+-    if state.display_mode == BotDisplayMode::Pro {
+-        let workspaces = ws_service.recent_workspaces().await;
+-        if workspaces.is_empty() {
+-            return result_from_menu(
+-                state,
+-                MenuView::plain(s.switch_no_workspaces).with_items(vec![MenuItem::default(s.item_back, "/menu")]),
+-            );
+-        }
+-        let options: Vec<(String, String)> = workspaces
+-            .iter()
+-            .map(|ws| (ws.root_path.to_string_lossy().to_string(), ws.name.clone()))
+-            .collect();
+-        let view = workspace_selection_view(state, &options, s);
+-        state.set_pending(PendingAction::SelectWorkspace { options });
+-        result_from_menu(state, view)
+-    } else {
+-        let assistants = ws_service.get_assistant_workspaces().await;
+-        if assistants.is_empty() {
+-            return result_from_menu(
+-                state,
+-                MenuView::plain(s.switch_no_assistants).with_items(vec![MenuItem::default(s.item_back, "/menu")]),
+-            );
+-        }
+-        let options: Vec<(String, String)> = assistants
+-            .iter()
+-            .map(|ws| (ws.root_path.to_string_lossy().to_string(), ws.name.clone()))
+-            .collect();
+-        let view = assistant_selection_view(state, &options, s);
+-        state.set_pending(PendingAction::SelectAssistant { options });
+-        result_from_menu(state, view)
+-    }
+-}
+-
+-pub(super) async fn select_workspace(
+-    state: &mut BotChatState,
+-    path: &str,
+-    name: &str,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    use crate::service::workspace::global_workspace_service;
+-
+-    let ws_service = match global_workspace_service() {
+-        Some(svc) => svc,
+-        None => {
+-            return result_from_menu(state, MenuView::plain(s.workspace_service_unavailable));
+-        }
+-    };
+-    let path_buf = std::path::PathBuf::from(path);
+-    match ws_service.open_workspace(path_buf).await {
+-        Ok(info) => {
+-            if let Err(e) =
+-                crate::service::snapshot::initialize_snapshot_manager_for_workspace(info.root_path.clone(), None).await
+-            {
+-                error!("Failed to init snapshot after bot workspace switch: {e}");
+-            }
+-            state.current_workspace = Some(path.to_string());
+-            state.current_session_id = None;
+-            info!("Bot switched workspace to: {path}");
+-
+-            let session_count = count_workspace_sessions(path).await;
+-            let body = format!(
+-                "{}: {} 路 {}",
+-                s.current_workspace_label,
+-                name,
+-                fmt_count(s.workspace_session_count_fmt, session_count),
+-            );
+-            let mut view = main_menu_view(state, s);
+-            view = view.with_body(body);
+-            result_from_menu(state, view)
+-        }
+-        Err(e) => result_from_menu(state, MenuView::plain(format!("{}{e}", s.workspace_open_failed_prefix))),
+-    }
+-}
+-
+-pub(super) async fn select_assistant(
+-    state: &mut BotChatState,
+-    path: &str,
+-    name: &str,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    use crate::service::workspace::global_workspace_service;
+-
+-    let ws_service = match global_workspace_service() {
+-        Some(svc) => svc,
+-        None => {
+-            return result_from_menu(state, MenuView::plain(s.workspace_service_unavailable));
+-        }
+-    };
+-    let path_buf = std::path::PathBuf::from(path);
+-    match ws_service.open_workspace(path_buf).await {
+-        Ok(info) => {
+-            if let Err(e) =
+-                crate::service::snapshot::initialize_snapshot_manager_for_workspace(info.root_path.clone(), None).await
+-            {
+-                error!("Failed to init snapshot after bot assistant switch: {e}");
+-            }
+-            state.current_assistant = Some(path.to_string());
+-            state.current_assistant_name = Some(name.to_string());
+-            state.current_session_id = None;
+-            info!("Bot switched assistant to: {path}");
+-
+-            let session_count = count_workspace_sessions(path).await;
+-            let body = format!(
+-                "{}: {} 路 {}",
+-                s.current_assistant_label,
+-                name,
+-                fmt_count(s.workspace_session_count_fmt, session_count),
+-            );
+-            let mut view = main_menu_view(state, s);
+-            view = view.with_body(body);
+-            result_from_menu(state, view)
+-        }
+-        Err(e) => result_from_menu(state, MenuView::plain(format!("{}{e}", s.workspace_open_failed_prefix))),
+-    }
+-}
+-
+-pub(super) fn truncate_label(label: &str, max_chars: usize) -> String {
+-    let trimmed = label.trim();
+-    if trimmed.chars().count() <= max_chars {
+-        trimmed.to_string()
+-    } else {
+-        let truncated: String = trimmed.chars().take(max_chars.saturating_sub(1)).collect();
+-        format!("{truncated}…")
+-    }
+-}
+-
+-pub(super) async fn select_session(
+-    state: &mut BotChatState,
+-    session_id: &str,
+-    session_name: &str,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    state.current_session_id = Some(session_id.to_string());
+-    info!("Bot resumed session: {session_id}");
+-
+-    let last_pair = load_last_dialog_pair_from_turns(state.current_workspace.as_deref(), session_id).await;
+-    let mut body = format!("{}{}\n", s.resume_resumed_prefix, session_name);
+-    if let Some((user_text, ai_text)) = last_pair {
+-        body.push('\n');
+-        body.push_str(s.resume_last_dialog_header);
+-        body.push('\n');
+-        body.push_str(&format!("{}: {}\n\n", s.resume_you_label, user_text));
+-        body.push_str(&format!("AI: {}\n\n", ai_text));
+-        body.push_str(s.resume_continue_hint);
+-    } else {
+-        body.push('\n');
+-        body.push_str(s.resume_first_message_hint);
+-    }
+-
+-    // Resumed session leaves the user ready to chat …"show no menu so the
+-    // chat surface stays uncluttered.
+-    let view = MenuView::plain("").with_body(body);
+-    result_from_menu(state, view)
+-}
+-
+-pub(super) async fn new_session_for_mode(state: &mut BotChatState, s: &'static BotStrings) -> HandleResult {
+-    let agent_type = if state.display_mode == BotDisplayMode::Pro {
+-        "agentic"
+-    } else {
+-        "Claw"
+-    };
+-    guarded_new(state, agent_type, s).await
+-}
+-
+-pub(super) async fn guarded_new(state: &mut BotChatState, agent_type: &str, s: &'static BotStrings) -> HandleResult {
+-    let needs_pro = matches!(agent_type, "agentic" | "Cowork");
+-    let needs_assistant = matches!(agent_type, "Claw");
+-
+-    if needs_pro && state.display_mode != BotDisplayMode::Pro {
+-        let target_cmd = match agent_type {
+-            "agentic" => "/new_code_session",
+-            "Cowork" => "/new_cowork_session",
+-            _ => "/new_code_session",
+-        };
+-        return confirm_then_run(state, BotDisplayMode::Pro, target_cmd.to_string(), s).await;
+-    }
+-    if needs_assistant && state.display_mode != BotDisplayMode::Assistant {
+-        return confirm_then_run(state, BotDisplayMode::Assistant, "/new_claw_session".to_string(), s).await;
+-    }
+-    if needs_pro && state.current_workspace.is_none() {
+-        return result_from_menu(
+-            state,
+-            MenuView::plain(s.no_workspace).with_items(vec![
+-                MenuItem::primary(s.item_switch_workspace, "/switch"),
+-                MenuItem::default(s.item_back, "/menu"),
+-            ]),
+-        );
+-    }
+-    create_session(state, agent_type).await
+-}
+-
+-pub(super) async fn handle_cancel_task(
+-    state: &mut BotChatState,
+-    requested_turn_id: Option<&str>,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    use crate::service::remote_connect::remote_server::get_or_init_global_dispatcher;
+-
+-    let session_id = match state.current_session_id.clone() {
+-        Some(id) => id,
+-        None => {
+-            return result_from_menu(state, MenuView::plain(s.task_no_active));
+-        }
+-    };
+-    let dispatcher = get_or_init_global_dispatcher();
+-    match dispatcher.cancel_task(&session_id, requested_turn_id).await {
+-        Ok(_) => {
+-            state.clear_pending();
+-            result_from_menu(state, MenuView::plain(s.task_cancel_requested))
+-        }
+-        Err(e) => result_from_menu(state, MenuView::plain(format!("{}{e}", s.task_cancel_failed_prefix))),
+-    }
+-}
+-
+-pub(super) async fn handle_number(state: &mut BotChatState, n: usize, s: &'static BotStrings) -> HandleResult {
+-    if let Some(pending) = state.pending_action.clone() {
+-        return route_pending(state, pending, &n.to_string(), s).await;
+-    }
+-    // No pending action: 0 always returns to main menu.
+-    if n == 0 {
+-        return menu_or_welcome(state, s);
+-    }
+-    if n >= 1 && n <= state.last_menu_commands.len() {
+-        let cmd_str = state.last_menu_commands[n - 1].clone();
+-        let next_cmd = parse_command(&cmd_str);
+-        return Box::pin(dispatch(state, next_cmd, vec![])).await;
+-    }
+-    handle_chat(state, &n.to_string(), vec![], s).await
+-}
+-
+-pub(super) async fn route_pending(
+-    state: &mut BotChatState,
+-    pending: PendingAction,
+-    raw_input: &str,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    match pending {
+-        PendingAction::SelectWorkspace { options } => {
+-            let parsed: Option<usize> = raw_input.parse().ok();
+-            match parsed {
+-                Some(0) => {
+-                    state.clear_pending();
+-                    menu_or_welcome(state, s)
+-                }
+-                Some(n) if n >= 1 && n <= options.len() => {
+-                    state.clear_pending();
+-                    let (path, name) = options[n - 1].clone();
+-                    select_workspace(state, &path, &name, s).await
+-                }
+-                _ => {
+-                    state.set_pending(PendingAction::SelectWorkspace { options });
+-                    Box::pin(pending_invalid(state, s)).await
+-                }
+-            }
+-        }
+-        PendingAction::SelectAssistant { options } => {
+-            let parsed: Option<usize> = raw_input.parse().ok();
+-            match parsed {
+-                Some(0) => {
+-                    state.clear_pending();
+-                    menu_or_welcome(state, s)
+-                }
+-                Some(n) if n >= 1 && n <= options.len() => {
+-                    state.clear_pending();
+-                    let (path, name) = options[n - 1].clone();
+-                    select_assistant(state, &path, &name, s).await
+-                }
+-                _ => {
+-                    state.set_pending(PendingAction::SelectAssistant { options });
+-                    Box::pin(pending_invalid(state, s)).await
+-                }
+-            }
+-        }
+-        PendingAction::SelectSession {
+-            options,
+-            page,
+-            has_more,
+-        } => {
+-            let parsed: Option<usize> = raw_input.parse().ok();
+-            match parsed {
+-                Some(0) if has_more => {
+-                    state.clear_pending();
+-                    start_resume(state, page + 1, s).await
+-                }
+-                Some(0) => {
+-                    state.clear_pending();
+-                    menu_or_welcome(state, s)
+-                }
+-                Some(n) if n >= 1 && n <= options.len() => {
+-                    state.clear_pending();
+-                    let (id, name) = options[n - 1].clone();
+-                    select_session(state, &id, &name, s).await
+-                }
+-                _ => {
+-                    state.set_pending(PendingAction::SelectSession {
+-                        options,
+-                        page,
+-                        has_more,
+-                    });
+-                    Box::pin(pending_invalid(state, s)).await
+-                }
+-            }
+-        }
+-        PendingAction::AskUserQuestion {
+-            tool_id,
+-            questions,
+-            current_index,
+-            answers,
+-            awaiting_custom_text,
+-            pending_answer,
+-        } => {
+-            handle_question_reply(
+-                state,
+-                tool_id,
+-                questions,
+-                current_index,
+-                answers,
+-                awaiting_custom_text,
+-                pending_answer,
+-                raw_input,
+-                s,
+-            )
+-            .await
+-        }
+-        PendingAction::ConfirmModeSwitch {
+-            target_mode,
+-            target_cmd,
+-        } => {
+-            let parsed: Option<usize> = raw_input.parse().ok();
+-            match parsed {
+-                Some(1) => {
+-                    state.clear_pending();
+-                    state.display_mode = target_mode;
+-                    let next_cmd = parse_command(&target_cmd);
+-                    Box::pin(dispatch(state, next_cmd, vec![])).await
+-                }
+-                Some(0) => {
+-                    state.clear_pending();
+-                    menu_or_welcome(state, s)
+-                }
+-                _ => {
+-                    state.set_pending(PendingAction::ConfirmModeSwitch {
+-                        target_mode,
+-                        target_cmd,
+-                    });
+-                    Box::pin(pending_invalid(state, s)).await
+-                }
+-            }
+-        }
+-    }
+-}
+-
+-pub(super) async fn pending_invalid(state: &mut BotChatState, s: &'static BotStrings) -> HandleResult {
+-    state.pending_invalid_count = state.pending_invalid_count.saturating_add(1);
+-    if state.pending_invalid_count >= PENDING_INVALID_LIMIT {
+-        state.clear_pending();
+-        let mut view = main_menu_view(state, s);
+-        view = view.with_body(s.pending_invalid_after_retries);
+-        return result_from_menu(state, view);
+-    }
+-    // Re-render the pending prompt with an invalid-input notice so the user
+-    // sees the option list again instead of just an opaque error.
+-    let pending = match state.pending_action.clone() {
+-        Some(p) => p,
+-        None => {
+-            return result_from_menu(state, main_menu_view(state, s));
+-        }
+-    };
+-    let mut view = match &pending {
+-        PendingAction::SelectWorkspace { options } => workspace_selection_view(state, options, s),
+-        PendingAction::SelectAssistant { options } => assistant_selection_view(state, options, s),
+-        PendingAction::SelectSession {
+-            options,
+-            page,
+-            has_more,
+-        } => session_selection_view(state, options, *page, *has_more, s),
+-        PendingAction::AskUserQuestion {
+-            questions,
+-            current_index,
+-            awaiting_custom_text,
+-            ..
+-        } => build_question_view(s, questions, *current_index, *awaiting_custom_text),
+-        PendingAction::ConfirmModeSwitch { target_mode, .. } => confirm_mode_switch_view(*target_mode, s),
+-    };
+-    let original_body = view.body.take().unwrap_or_default();
+-    let new_body = if original_body.is_empty() {
+-        s.pending_invalid_input.to_string()
+-    } else {
+-        format!("{}\n\n{}", s.pending_invalid_input, original_body)
+-    };
+-    view = view.with_body(new_body);
+-    result_from_menu(state, view)
+-}
+-
+-pub(super) async fn handle_chat(
+-    state: &mut BotChatState,
+-    message: &str,
+-    image_contexts: Vec<crate::agentic::image_analysis::ImageContextData>,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    // If there is a pending action, route the message to it (text answer for
+-    // questions, "ignore" for menu-style pendings).
+-    if let Some(pending) = state.pending_action.clone() {
+-        return route_pending(state, pending, message, s).await;
+-    }
+-
+-    if state.display_mode == BotDisplayMode::Pro && state.current_workspace.is_none() {
+-        return result_from_menu(
+-            state,
+-            MenuView::plain(s.no_workspace).with_items(vec![
+-                MenuItem::primary(s.item_switch_workspace, "/switch"),
+-                MenuItem::default(s.item_back, "/menu"),
+-            ]),
+-        );
+-    }
+-    if state.current_session_id.is_none() {
+-        return result_from_menu(state, need_session_view(state, s));
+-    }
+-    // Pre-existing safe unwrap (1f19784): the is_none() check above guarantees
+-    // Some — the unwrap() here is intentional, not a missing invariant. Kept
+-    // as-is per the "no NEW iron rule violations" rule; this comment exists
+-    // so future readers don't mis-classify it as new debt.
+-    let session_id = state.current_session_id.clone().unwrap();
+-    let turn_id = format!("turn_{}", uuid::Uuid::new_v4());
+-
+-    // Pick the agent type from the actual session …"NOT a hardcoded
+-    // "agentic" …"otherwise every chat message goes through the Code
+-    // (`agentic`) agent regardless of what kind of session was created.
+-    // Concretely: the IM pairing bootstrap creates a `Claw` session for
+-    // assistant mode, but the old hardcoded value caused all subsequent
+-    // messages to be re-routed to the Code agent and the assistant flow
+-    // was effectively bypassed.  We mirror the agent type the session was
+-    // actually created with, falling back to "agentic" only if the session
+-    // is missing in memory (e.g. needs lazy restore …"`send_message` will
+-    // also normalize via `resolve_agent_type`).
+-    let agent_type = resolve_session_agent_type(&session_id)
+-        .await
+-        .unwrap_or_else(|| "agentic".to_string());
+-
+-    // Intentionally do NOT send a "Processing..." / "Queued" interstitial
+-    // message with a Cancel-task menu. The session manager queues new user
+-    // messages automatically: the user can simply send another message and
+-    // it will be processed once the current atomic step finishes. Showing
+-    // a cancel button adds noise (especially on WeChat where every reply
+-    // costs a context_token slot) without giving the user anything they
+-    // actually need. The empty `MenuView::default()` here is silently
+-    // dropped by every adapter's `send_handle_result` (see the
+-    // empty-text guards in weixin.rs / feishu.rs / telegram.rs).
+-    let view = MenuView::default();
+-
+-    let forward = ForwardRequest {
+-        session_id,
+-        content: message.to_string(),
+-        agent_type,
+-        turn_id,
+-        image_contexts,
+-    };
+-
+-    result_from_menu_with_forward(state, view, Some(forward))
+-}
+-
+-pub(super) fn truncate_at_char_boundary(s: &str, max_len: usize) -> String {
+-    if s.len() <= max_len {
+-        return s.to_string();
+-    }
+-    let mut end = max_len;
+-    while !s.is_char_boundary(end) {
+-        end -= 1;
+-    }
+-    format!("{}...", &s[..end])
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_forwarded_turn.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_forwarded_turn.rs
+deleted file mode 100644
+index 7230734..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_forwarded_turn.rs
++++ /dev/null
+@@ -1,191 +0,0 @@
+-//! Bot forwarded-turn execution (Round 14).
+-//!
+-//! Owns:
+-//! - `execute_forwarded_turn` (god method ~190 lines — splits into phase helpers if needed)
+-//! - `truncate_at_char_boundary` helper
+-//!
+-//! Split from `command_router.rs` in Round 14 to keep facade under 800 lines.
+-//! `execute_forwarded_turn` is the long-running async handler that runs
+-//! a forwarded user message against the session manager and streams the
+-//! final response back to the IM adapter.
+-
+-use super::command_router::{
+-    BotAction, BotInteractiveRequest, BotQuestion, ForwardRequest, ForwardedTurnResult, PendingAction,
+-};
+-use super::command_router_view::build_question_view;
+-use super::locale::{current_bot_language, strings_for};
+-
+-pub async fn execute_forwarded_turn(
+-    forward: ForwardRequest,
+-    interaction_handler: Option<super::command_router::BotInteractionHandler>,
+-    message_sender: Option<super::command_router::BotMessageSender>,
+-    verbose_mode: bool,
+-) -> ForwardedTurnResult {
+-    use crate::service::remote_connect::remote_server::{get_or_init_global_dispatcher, TrackerEvent};
+-    use northhing_services_integrations::remote_connect::RemoteConnectSubmissionSource;
+-
+-    let language = current_bot_language().await;
+-    let s = strings_for(language);
+-
+-    let dispatcher = get_or_init_global_dispatcher();
+-    let tracker = dispatcher.ensure_tracker(&forward.session_id);
+-    let mut event_rx = tracker.subscribe();
+-
+-    let target_turn_id = forward.turn_id.clone();
+-
+-    if let Err(e) = dispatcher
+-        .send_message(
+-            &forward.session_id,
+-            forward.content,
+-            Some(&forward.agent_type),
+-            forward.image_contexts,
+-            RemoteConnectSubmissionSource::Bot,
+-            Some(forward.turn_id.clone()),
+-        )
+-        .await
+-    {
+-        let msg = format!("{}{e}", s.send_failed_prefix);
+-        return ForwardedTurnResult {
+-            display_text: msg.clone(),
+-            full_text: msg,
+-        };
+-    }
+-
+-    let result = tokio::time::timeout(std::time::Duration::from_secs(3600), async {
+-        let mut response = String::new();
+-        let mut thinking_buf = String::new();
+-
+-        let streams_our_turn = || {
+-            tracker
+-                .snapshot_active_turn()
+-                .map(|st| st.turn_id == target_turn_id)
+-                .unwrap_or(false)
+-        };
+-
+-        loop {
+-            match event_rx.recv().await {
+-                Ok(event) => match event {
+-                    TrackerEvent::ThinkingChunk(chunk) => {
+-                        if !streams_our_turn() {
+-                            continue;
+-                        }
+-                        thinking_buf.push_str(&chunk);
+-                    }
+-                    TrackerEvent::ThinkingEnd => {
+-                        if !streams_our_turn() {
+-                            continue;
+-                        }
+-                        if verbose_mode && !thinking_buf.trim().is_empty() {
+-                            if let Some(sender) = message_sender.as_ref() {
+-                                let content = truncate_at_char_boundary(&thinking_buf, 500);
+-                                let msg = format!("[{}] {}", s.thinking_label, content);
+-                                sender(msg).await;
+-                            }
+-                        }
+-                        thinking_buf.clear();
+-                    }
+-                    TrackerEvent::TextChunk(t) => {
+-                        if !streams_our_turn() {
+-                            continue;
+-                        }
+-                        response.push_str(&t);
+-                    }
+-                    TrackerEvent::ToolStarted {
+-                        tool_id,
+-                        tool_name,
+-                        params,
+-                    } => {
+-                        if !streams_our_turn() {
+-                            continue;
+-                        }
+-                        if tool_name == "AskUserQuestion" {
+-                            if let Some(questions_value) = params.and_then(|p| p.get("questions").cloned()) {
+-                                if let Ok(questions) = serde_json::from_value::<Vec<BotQuestion>>(questions_value) {
+-                                    let view = build_question_view(s, &questions, 0, false);
+-                                    let actions: Vec<BotAction> =
+-                                        view.items.iter().cloned().map(BotAction::from).collect();
+-                                    let request = BotInteractiveRequest {
+-                                        reply: view.render_text_block(),
+-                                        actions,
+-                                        menu: view,
+-                                        pending_action: PendingAction::AskUserQuestion {
+-                                            tool_id,
+-                                            questions,
+-                                            current_index: 0,
+-                                            answers: Vec::new(),
+-                                            awaiting_custom_text: false,
+-                                            pending_answer: None,
+-                                        },
+-                                    };
+-                                    if let Some(handler) = interaction_handler.as_ref() {
+-                                        handler(request).await;
+-                                    }
+-                                }
+-                            }
+-                        }
+-                    }
+-                    TrackerEvent::ToolCompleted { .. } => {}
+-                    TrackerEvent::TurnCompleted { turn_id } => {
+-                        if turn_id == target_turn_id {
+-                            break;
+-                        }
+-                    }
+-                    TrackerEvent::TurnFailed { turn_id, error } => {
+-                        if turn_id == target_turn_id {
+-                            let msg = format!("{}{}", s.error_prefix, error);
+-                            return ForwardedTurnResult {
+-                                display_text: msg.clone(),
+-                                full_text: msg,
+-                            };
+-                        }
+-                    }
+-                    TrackerEvent::TurnCancelled { turn_id } => {
+-                        if turn_id == target_turn_id {
+-                            return ForwardedTurnResult {
+-                                display_text: s.task_cancelled.to_string(),
+-                                full_text: s.task_cancelled.to_string(),
+-                            };
+-                        }
+-                    }
+-                },
+-                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+-                    tracing::warn!("Bot event receiver lagged by {n} events");
+-                }
+-                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+-                    break;
+-                }
+-            }
+-        }
+-
+-        let full_text = tracker.accumulated_text();
+-        let full_text = if full_text.is_empty() { response } else { full_text };
+-
+-        let display_text = full_text.clone();
+-
+-        ForwardedTurnResult {
+-            display_text: if display_text.is_empty() {
+-                s.no_response.to_string()
+-            } else {
+-                display_text
+-            },
+-            full_text,
+-        }
+-    })
+-    .await;
+-
+-    result.unwrap_or_else(|_| ForwardedTurnResult {
+-        display_text: s.timeout_one_hour.to_string(),
+-        full_text: String::new(),
+-    })
+-}
+-
+-fn truncate_at_char_boundary(s: &str, max_len: usize) -> String {
+-    if s.len() <= max_len {
+-        return s.to_string();
+-    }
+-    let mut end = max_len;
+-    while !s.is_char_boundary(end) {
+-        end -= 1;
+-    }
+-    format!("{}...", &s[..end])
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_questions.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_questions.rs
+deleted file mode 100644
+index 5ac061b..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_questions.rs
++++ /dev/null
+@@ -1,167 +0,0 @@
+-//! Bot command question reply handling (Round 14 split).
+-//!
+-//! Owns:
+-//! - `handle_question_reply` — multi-question answer flow with custom-text fallback
+-//! - `submit_question_answers` — submit to the user_input_manager
+-//!
+-//! Lifted from `command_router_dispatch` to keep the dispatcher file under the
+-//! 800-line cap (Round 14 D-deviation mitigation).
+-
+-use serde_json::Value;
+-
+-use super::command_router::{BotQuestion, HandleResult};
+-use super::command_router_dispatch::pending_invalid;
+-use super::command_router_state::{BotChatState, PendingAction};
+-use super::command_router_util::{parse_question_numbers, result_from_menu};
+-use super::command_router_view::build_question_view;
+-use super::locale::BotStrings;
+-use super::menu::MenuView;
+-
+-pub(super) async fn handle_question_reply(
+-    state: &mut BotChatState,
+-    tool_id: String,
+-    questions: Vec<BotQuestion>,
+-    current_index: usize,
+-    mut answers: Vec<Value>,
+-    awaiting_custom_text: bool,
+-    pending_answer: Option<Value>,
+-    message: &str,
+-    s: &'static BotStrings,
+-) -> HandleResult {
+-    let Some(question) = questions.get(current_index).cloned() else {
+-        return result_from_menu(state, MenuView::plain(s.question_invalid_state));
+-    };
+-
+-    if awaiting_custom_text {
+-        let custom_text = message.trim();
+-        if custom_text.is_empty() {
+-            state.set_pending(PendingAction::AskUserQuestion {
+-                tool_id,
+-                questions,
+-                current_index,
+-                answers,
+-                awaiting_custom_text: true,
+-                pending_answer,
+-            });
+-            return result_from_menu(state, MenuView::plain(s.question_custom_required));
+-        }
+-        let final_value = match pending_answer {
+-            Some(Value::Array(existing)) => {
+-                let mut values: Vec<Value> = existing.into_iter().filter(|v| v.as_str() != Some("Other")).collect();
+-                values.push(Value::String(custom_text.to_string()));
+-                Value::Array(values)
+-            }
+-            _ => Value::String(custom_text.to_string()),
+-        };
+-        answers.push(final_value);
+-    } else {
+-        let selections = match parse_question_numbers(message) {
+-            Some(values) => values,
+-            None => {
+-                state.set_pending(PendingAction::AskUserQuestion {
+-                    tool_id,
+-                    questions,
+-                    current_index,
+-                    answers,
+-                    awaiting_custom_text: false,
+-                    pending_answer: None,
+-                });
+-                return Box::pin(pending_invalid(state, s)).await;
+-            }
+-        };
+-        if !question.multi_select && selections.len() != 1 {
+-            state.set_pending(PendingAction::AskUserQuestion {
+-                tool_id,
+-                questions,
+-                current_index,
+-                answers,
+-                awaiting_custom_text: false,
+-                pending_answer: None,
+-            });
+-            return Box::pin(pending_invalid(state, s)).await;
+-        }
+-        let other_index = question.options.len() + 1;
+-        let mut labels = Vec::new();
+-        let mut includes_other = false;
+-        for selection in selections {
+-            if selection == other_index {
+-                includes_other = true;
+-                labels.push(Value::String(s.item_other.to_string()));
+-            } else if selection >= 1 && selection <= question.options.len() {
+-                labels.push(Value::String(question.options[selection - 1].label.clone()));
+-            } else {
+-                state.set_pending(PendingAction::AskUserQuestion {
+-                    tool_id,
+-                    questions,
+-                    current_index,
+-                    answers,
+-                    awaiting_custom_text: false,
+-                    pending_answer: None,
+-                });
+-                let _ = other_index;
+-                return Box::pin(pending_invalid(state, s)).await;
+-            }
+-        }
+-        let pending_answer_next = if question.multi_select {
+-            Some(Value::Array(labels.clone()))
+-        } else {
+-            labels.into_iter().next()
+-        };
+-        if includes_other {
+-            state.set_pending(PendingAction::AskUserQuestion {
+-                tool_id,
+-                questions,
+-                current_index,
+-                answers,
+-                awaiting_custom_text: true,
+-                pending_answer: pending_answer_next,
+-            });
+-            return result_from_menu(state, MenuView::plain(s.question_custom_for_other_prefix));
+-        }
+-        answers.push(if question.multi_select {
+-            pending_answer_next.unwrap_or_else(|| Value::Array(Vec::new()))
+-        } else {
+-            pending_answer_next.unwrap_or_else(|| Value::String(String::new()))
+-        });
+-    }
+-
+-    if current_index + 1 < questions.len() {
+-        let view = build_question_view(s, &questions, current_index + 1, false);
+-        state.set_pending(PendingAction::AskUserQuestion {
+-            tool_id,
+-            questions,
+-            current_index: current_index + 1,
+-            answers,
+-            awaiting_custom_text: false,
+-            pending_answer: None,
+-        });
+-        return result_from_menu(state, view);
+-    }
+-
+-    state.clear_pending();
+-    submit_question_answers(&tool_id, &answers, s).await
+-}
+-
+-pub(super) async fn submit_question_answers(tool_id: &str, answers: &[Value], s: &'static BotStrings) -> HandleResult {
+-    use crate::agentic::tools::user_input_manager::user_input_manager;
+-
+-    let mut payload = serde_json::Map::new();
+-    for (idx, value) in answers.iter().enumerate() {
+-        payload.insert(idx.to_string(), value.clone());
+-    }
+-    let manager = user_input_manager();
+-    match manager.send_answer(tool_id, Value::Object(payload)) {
+-        Ok(_) => HandleResult {
+-            reply: s.answers_submitted.to_string(),
+-            actions: vec![],
+-            forward_to_session: None,
+-            menu: MenuView::plain(s.answers_submitted),
+-        },
+-        Err(e) => HandleResult {
+-            reply: format!("{}{e}", s.answers_submit_failed_prefix),
+-            actions: vec![],
+-            forward_to_session: None,
+-            menu: MenuView::plain(format!("{}{e}", s.answers_submit_failed_prefix)),
+-        },
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_resume.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_resume.rs
+deleted file mode 100644
+index 9b12d28..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_resume.rs
++++ /dev/null
+@@ -1,139 +0,0 @@
+-//! Bot session-resume dispatcher (Round 15 split).
+-//!
+-//! Owns:
+-//! - `start_resume` (god method, ~126 lines) — paginates the persisted
+-//!   session list and sets up `PendingAction::SelectSession` for either
+-//!   a page advance (`page + 1`) or a per-session pick.
+-//!
+-//! Split from `command_router_dispatch.rs` in Round 15 to keep the
+-//! dispatch file under the 800-line cap. R14 left dispatch at 842 lines
+-//! (4% over the 800-line cap), so `start_resume` was extracted to this
+-//! sibling. Only callers are `dispatch` (ResumeSession arm) and
+-//! `route_pending` (SelectSession handler, when the user picks `0` for
+-//! the next page).
+-//!
+-//! `truncate_label` stays defined in `command_router_dispatch` and is
+-//! shared via a `pub(super)` cross-sibling import here — the same pattern
+-//! `command_router_util` and `command_router_view` already use for it.
+-
+-use super::command_router::HandleResult;
+-use super::command_router_dispatch::truncate_label;
+-use super::command_router_state::{BotChatState, BotDisplayMode, PendingAction};
+-use super::command_router_util::result_from_menu;
+-use super::command_router_view::need_session_view;
+-use super::locale::{fmt_count, BotStrings};
+-use super::menu::{MenuItem, MenuView};
+-
+-pub(super) async fn start_resume(state: &mut BotChatState, page: usize, s: &'static BotStrings) -> HandleResult {
+-    use crate::agentic::persistence::PersistenceManager;
+-    use crate::infrastructure::PathManager;
+-
+-    let ws_path = if state.display_mode == BotDisplayMode::Pro {
+-        match &state.current_workspace {
+-            Some(p) => std::path::PathBuf::from(p),
+-            None => {
+-                return result_from_menu(
+-                    state,
+-                    MenuView::plain(s.no_workspace).with_items(vec![
+-                        MenuItem::primary(s.item_switch_workspace, "/switch"),
+-                        MenuItem::default(s.item_back, "/menu"),
+-                    ]),
+-                );
+-            }
+-        }
+-    } else {
+-        match &state.current_assistant {
+-            Some(p) => std::path::PathBuf::from(p),
+-            None => {
+-                return result_from_menu(
+-                    state,
+-                    MenuView::plain(s.no_assistant).with_items(vec![
+-                        MenuItem::primary(s.item_switch_assistant, "/switch"),
+-                        MenuItem::default(s.item_back, "/menu"),
+-                    ]),
+-                );
+-            }
+-        }
+-    };
+-
+-    let page_size = 10usize;
+-    let offset = page * page_size;
+-
+-    let pm = match PathManager::new() {
+-        Ok(pm) => std::sync::Arc::new(pm),
+-        Err(e) => {
+-            return result_from_menu(state, MenuView::plain(format!("{}{e}", s.session_create_failed_prefix)));
+-        }
+-    };
+-    let store = match PersistenceManager::new(pm) {
+-        Ok(store) => store,
+-        Err(e) => {
+-            return result_from_menu(state, MenuView::plain(format!("{}{e}", s.session_create_failed_prefix)));
+-        }
+-    };
+-    let all_meta = match store.list_session_metadata(&ws_path).await {
+-        Ok(m) => m,
+-        Err(e) => {
+-            return result_from_menu(state, MenuView::plain(format!("{}{e}", s.session_create_failed_prefix)));
+-        }
+-    };
+-
+-    if all_meta.is_empty() {
+-        return result_from_menu(state, need_session_view(state, s));
+-    }
+-
+-    let total = all_meta.len();
+-    let has_more = offset + page_size < total;
+-    let sessions: Vec<_> = all_meta.into_iter().skip(offset).take(page_size).collect();
+-
+-    let mut body = String::new();
+-    let mut items = Vec::new();
+-    let mut options = Vec::new();
+-    for (i, sess) in sessions.iter().enumerate() {
+-        let is_current = state.current_session_id.as_deref() == Some(&sess.session_id);
+-        let marker = if is_current { s.current_marker } else { "" };
+-        let ts = chrono::DateTime::from_timestamp(sess.last_active_at as i64 / 1000, 0)
+-            .map(|dt| dt.format("%m-%d %H:%M").to_string())
+-            .unwrap_or_default();
+-        let msg_hint = match sess.turn_count {
+-            0 => s.resume_msg_count_zero.to_string(),
+-            1 => s.resume_msg_count_one.to_string(),
+-            n => fmt_count(s.resume_msg_count_many_fmt, n),
+-        };
+-        body.push_str(&format!(
+-            "{}. [{}] {}{}\n   {} 路 {}\n",
+-            i + 1,
+-            sess.agent_type,
+-            sess.session_name,
+-            marker,
+-            ts,
+-            msg_hint,
+-        ));
+-        items.push(MenuItem::default(
+-            truncate_label(&format!("[{}] {}", sess.agent_type, sess.session_name), 26),
+-            (i + 1).to_string(),
+-        ));
+-        options.push((sess.session_id.clone(), sess.session_name.clone()));
+-    }
+-    if has_more {
+-        items.push(MenuItem::default(s.item_next_page, "0"));
+-    }
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-
+-    state.set_pending(PendingAction::SelectSession {
+-        options,
+-        page,
+-        has_more,
+-    });
+-
+-    let footer = if has_more {
+-        s.footer_reply_session_or_next
+-    } else {
+-        s.footer_reply_session
+-    };
+-    let view = MenuView::plain(format!("{} 路 #{}", s.resume_page_label, page + 1))
+-        .with_body(body.trim_end().to_string())
+-        .with_items(items)
+-        .with_footer(footer);
+-    result_from_menu(state, view)
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs
+deleted file mode 100644
+index 07002bc..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs
++++ /dev/null
+@@ -1,292 +0,0 @@
+-//! Bot session lifecycle (Round 14 split).
+-//!
+-//! Owns:
+-//! - `bootstrap_im_chat_after_pairing` (initial assistant workspace + session)
+-//! - `count_workspace_sessions` (PersistenceManager lookup)
+-//! - `load_last_dialog_pair_from_turns` (resume preview)
+-//! - `strip_user_message_tags` (delegates to core::strip_prompt_markup)
+-//! - `truncate_text` (char-count truncation)
+-//! - `create_session` (god method — splits into 3 phase helpers)
+-//! - `resolve_session_agent_type` (chat message agent type lookup)
+-
+-use super::command_router_state::{BotChatState, BotDisplayMode};
+-
+-use super::command_router_util::{result_from_menu, short_path_name};
+-
+-use super::command_router::HandleResult;
+-
+-use super::locale::{current_bot_language, strings_for};
+-
+-use super::menu::{MenuItem, MenuView};
+-
+-use tracing::error;
+-
+-pub async fn bootstrap_im_chat_after_pairing(state: &mut BotChatState) -> String {
+-    use crate::service::workspace::global_workspace_service;
+-
+-    state.display_mode = BotDisplayMode::Assistant;
+-    let language = current_bot_language().await;
+-    let s = strings_for(language);
+-
+-    let ws_service = match global_workspace_service() {
+-        Some(s) => s,
+-        None => return s.bootstrap_workspace_unavailable.to_string(),
+-    };
+-
+-    let mut assistants = ws_service.get_assistant_workspaces().await;
+-    if assistants.is_empty() {
+-        match ws_service.create_assistant_workspace(None).await {
+-            Ok(w) => assistants.push(w),
+-            Err(e) => return format!("{}{e}", s.assistant_create_failed_prefix),
+-        }
+-    }
+-
+-    let picked = assistants
+-        .iter()
+-        .find(|w| w.assistant_id.is_none())
+-        .cloned()
+-        .or_else(|| assistants.first().cloned());
+-
+-    let Some(ws_info) = picked else {
+-        return s.bootstrap_workspace_unavailable.to_string();
+-    };
+-
+-    let path_buf = ws_info.root_path.clone();
+-    if let Err(e) = ws_service.open_workspace(path_buf.clone()).await {
+-        return format!("{}{e}", s.workspace_open_failed_prefix);
+-    }
+-    if let Err(e) = crate::service::snapshot::initialize_snapshot_manager_for_workspace(path_buf, None).await {
+-        error!("IM bot bootstrap: snapshot init after pairing: {e}");
+-    }
+-
+-    state.current_assistant = Some(ws_info.root_path.to_string_lossy().to_string());
+-    state.current_assistant_name = Some(ws_info.name.clone());
+-    state.current_session_id = None;
+-
+-    let create_res = create_session(state, "Claw").await;
+-    if state.current_session_id.is_none() {
+-        let detail = create_res.reply.lines().next().unwrap_or("").to_string();
+-        return format!("{}{detail}", s.bootstrap_session_failed_prefix);
+-    }
+-
+-    s.bootstrap_ready.to_string()
+-}
+-
+-pub(super) async fn count_workspace_sessions(workspace_path: &str) -> usize {
+-    use crate::agentic::persistence::PersistenceManager;
+-    use crate::infrastructure::PathManager;
+-
+-    let wp = std::path::PathBuf::from(workspace_path);
+-    let pm = match PathManager::new() {
+-        Ok(pm) => std::sync::Arc::new(pm),
+-        Err(_) => return 0,
+-    };
+-    let store = match PersistenceManager::new(pm) {
+-        Ok(store) => store,
+-        Err(_) => return 0,
+-    };
+-    store.list_session_metadata(&wp).await.map(|v| v.len()).unwrap_or(0)
+-}
+-
+-pub(super) async fn load_last_dialog_pair_from_turns(
+-    workspace_path: Option<&str>,
+-    session_id: &str,
+-) -> Option<(String, String)> {
+-    use crate::agentic::persistence::PersistenceManager;
+-    use crate::infrastructure::PathManager;
+-
+-    const MAX_USER_LEN: usize = 200;
+-    const MAX_AI_LEN: usize = 400;
+-
+-    let wp = std::path::PathBuf::from(workspace_path?);
+-    let pm = std::sync::Arc::new(PathManager::new().ok()?);
+-    let store = PersistenceManager::new(pm).ok()?;
+-    let turns = store.load_session_turns(&wp, session_id).await.ok()?;
+-    let turn = turns.last()?;
+-
+-    let user_text = strip_user_message_tags(&turn.user_message.content);
+-    if user_text.is_empty() {
+-        return None;
+-    }
+-
+-    let mut ai_text = String::new();
+-    for round in &turn.model_rounds {
+-        for t in &round.text_items {
+-            if t.is_subagent_item.unwrap_or(false) {
+-                continue;
+-            }
+-            if !t.content.is_empty() {
+-                if !ai_text.is_empty() {
+-                    ai_text.push('\n');
+-                }
+-                ai_text.push_str(&t.content);
+-            }
+-        }
+-    }
+-    if ai_text.is_empty() {
+-        return None;
+-    }
+-    Some((
+-        truncate_text(&user_text, MAX_USER_LEN),
+-        truncate_text(&ai_text, MAX_AI_LEN),
+-    ))
+-}
+-
+-pub(super) fn strip_user_message_tags(raw: &str) -> String {
+-    crate::agentic::core::strip_prompt_markup(raw)
+-}
+-
+-pub(super) fn truncate_text(text: &str, max_chars: usize) -> String {
+-    let trimmed = text.trim();
+-    if trimmed.chars().count() <= max_chars {
+-        trimmed.to_string()
+-    } else {
+-        let truncated: String = trimmed.chars().take(max_chars).collect();
+-        format!("{truncated}…")
+-    }
+-}
+-
+-pub(super) async fn create_session(state: &mut BotChatState, agent_type: &str) -> HandleResult {
+-    use crate::agentic::coordination::global_coordinator;
+-    use crate::service::workspace::global_workspace_service;
+-    use crate::service_agent_runtime::CoreServiceAgentRuntime;
+-    use northhing_services_integrations::remote_connect::{
+-        build_remote_session_create_request, RemoteConnectSubmissionSource,
+-    };
+-
+-    let language = current_bot_language().await;
+-    let s = strings_for(language);
+-    let is_claw = agent_type == "Claw";
+-
+-    let coordinator = match global_coordinator() {
+-        Some(c) => c,
+-        None => {
+-            return result_from_menu(state, MenuView::plain(s.session_system_unavailable));
+-        }
+-    };
+-
+-    let ws_path = if is_claw {
+-        if let Some(p) = state.current_assistant.clone() {
+-            Some(p)
+-        } else {
+-            let ws_service = match global_workspace_service() {
+-                Some(s) => s,
+-                None => {
+-                    return result_from_menu(state, MenuView::plain(s.workspace_service_unavailable));
+-                }
+-            };
+-            let workspaces = ws_service.get_assistant_workspaces().await;
+-            let resolved: Option<(String, String)> =
+-                if let Some(default_ws) = workspaces.into_iter().find(|w| w.assistant_id.is_none()) {
+-                    Some((
+-                        default_ws.root_path.to_string_lossy().to_string(),
+-                        default_ws.name.clone(),
+-                    ))
+-                } else {
+-                    match ws_service.create_assistant_workspace(None).await {
+-                        Ok(ws_info) => Some((ws_info.root_path.to_string_lossy().to_string(), ws_info.name.clone())),
+-                        Err(e) => {
+-                            return result_from_menu(
+-                                state,
+-                                MenuView::plain(format!("{}{e}", s.assistant_create_failed_prefix)),
+-                            );
+-                        }
+-                    }
+-                };
+-            if let Some((ref path, ref name)) = resolved {
+-                state.current_assistant = Some(path.clone());
+-                state.current_assistant_name = Some(name.clone());
+-            }
+-            resolved.map(|(p, _)| p)
+-        }
+-    } else {
+-        state.current_workspace.clone()
+-    };
+-
+-    let session_name = match agent_type {
+-        "Cowork" => {
+-            if language.is_chinese() {
+-                "远程协作会话"
+-            } else {
+-                "Remote Cowork Session"
+-            }
+-        }
+-        "Claw" => {
+-            if language.is_chinese() {
+-                "远程助理会话"
+-            } else {
+-                "Remote Claw Session"
+-            }
+-        }
+-        _ => {
+-            if language.is_chinese() {
+-                "远程编码会话"
+-            } else {
+-                "Remote Code Session"
+-            }
+-        }
+-    };
+-
+-    let Some(workspace_path) = ws_path else {
+-        let view = if is_claw {
+-            MenuView::plain(s.no_assistant).with_items(vec![
+-                MenuItem::primary(s.item_switch_assistant, "/switch"),
+-                MenuItem::default(s.item_back, "/menu"),
+-            ])
+-        } else {
+-            MenuView::plain(s.no_workspace).with_items(vec![
+-                MenuItem::primary(s.item_switch_workspace, "/switch"),
+-                MenuItem::default(s.item_back, "/menu"),
+-            ])
+-        };
+-        return result_from_menu(state, view);
+-    };
+-
+-    let request = build_remote_session_create_request(
+-        session_name,
+-        agent_type,
+-        Some(workspace_path.clone()),
+-        RemoteConnectSubmissionSource::Bot,
+-    );
+-    let runtime = match CoreServiceAgentRuntime::agent_runtime(coordinator.clone()) {
+-        Ok(runtime) => runtime,
+-        Err(error) => {
+-            return result_from_menu(
+-                state,
+-                MenuView::plain(format!("{}{}", s.session_create_failed_prefix, error)),
+-            );
+-        }
+-    };
+-    match runtime.create_session(request).await {
+-        Ok(session) => {
+-            state.current_session_id = Some(session.session_id.clone());
+-            let body = format!(
+-                "{}{}\n{}{}\n\n{}",
+-                s.session_created_prefix,
+-                session_name,
+-                s.session_workspace_label,
+-                short_path_name(&workspace_path),
+-                s.session_start_hint,
+-            );
+-            let view = MenuView::plain("").with_body(body);
+-            result_from_menu(state, view)
+-        }
+-        Err(e) => result_from_menu(
+-            state,
+-            MenuView::plain(format!(
+-                "{}{}",
+-                s.session_create_failed_prefix,
+-                CoreServiceAgentRuntime::runtime_error_message(e)
+-            )),
+-        ),
+-    }
+-}
+-
+-pub(super) async fn resolve_session_agent_type(session_id: &str) -> Option<String> {
+-    use crate::agentic::coordination::global_coordinator;
+-    use crate::service_agent_runtime::CoreServiceAgentRuntime;
+-
+-    let coordinator = global_coordinator()?;
+-    let runtime = CoreServiceAgentRuntime::agent_runtime(coordinator).ok()?;
+-    runtime.resolve_session_agent_type(session_id).await.ok().flatten()
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_state.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_state.rs
+deleted file mode 100644
+index 092c3ac..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_state.rs
++++ /dev/null
+@@ -1,151 +0,0 @@
+-//! Bot chat state (Round 14 split).
+-//!
+-//! Owns:
+-//! - `PENDING_TTL_SECS` / `PENDING_INVALID_LIMIT` consts
+-//! - `BotDisplayMode` enum
+-//! - `BotChatState` struct + impl
+-//! - `PendingAction` enum
+-//! - `now_secs` helper
+-//!
+-//! See command_router.rs (facade) for public API surface.
+-
+-use serde::{Deserialize, Serialize};
+-use serde_json::Value;
+-
+-use super::command_router::BotQuestion;
+-
+-pub(super) const PENDING_TTL_SECS: i64 = 5 * 60;
+-/// How many invalid replies are tolerated before pending state is auto-cleared.
+-pub(super) const PENDING_INVALID_LIMIT: u8 = 3;
+-
+-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+-pub enum BotDisplayMode {
+-    /// Expert mode: can create Code / Cowork sessions on real workspaces.
+-    #[serde(rename = "pro")]
+-    Pro,
+-    /// Default assistant mode: Claw sessions on the assistant workspace.
+-    #[serde(rename = "assistant")]
+-    #[default]
+-    Assistant,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BotChatState {
+-    pub chat_id: String,
+-    pub paired: bool,
+-    pub current_workspace: Option<String>,
+-    pub current_assistant: Option<String>,
+-    /// Human-readable name of the active assistant (e.g. "默认助理" / "Bob").
+-    /// Populated alongside `current_assistant` from `WorkspaceInfo.name` so
+-    /// the assistant-mode menu body can show a meaningful label instead of
+-    /// the workspace directory name (which is often a generic
+-    /// "workspace" / "workspace-<uuid>" folder).
+-    #[serde(default, skip_serializing_if = "Option::is_none")]
+-    pub current_assistant_name: Option<String>,
+-    pub current_session_id: Option<String>,
+-    #[serde(default)]
+-    pub display_mode: BotDisplayMode,
+-
+-    /// Active interactive prompt awaiting a user reply.
+-    /// Not persisted — cleared on bot restart.
+-    #[serde(skip)]
+-    pub pending_action: Option<PendingAction>,
+-    /// Unix timestamp (seconds) when the current `pending_action` becomes
+-    /// invalid.  Refreshed whenever a new pending action is set.
+-    #[serde(skip)]
+-    pub pending_expires_at: i64,
+-    /// How many invalid replies the user has sent against the current
+-    /// pending action.  Resets on every successful transition.
+-    #[serde(skip)]
+-    pub pending_invalid_count: u8,
+-
+-    /// Commands corresponding to the items in the most recent menu, used so
+-    /// numeric replies (`1` ~ `last_menu_commands.len()`) work without
+-    /// platform-native buttons.  Not persisted.
+-    #[serde(skip, default)]
+-    pub last_menu_commands: Vec<String>,
+-}
+-
+-impl BotChatState {
+-    pub fn new(chat_id: String) -> Self {
+-        Self {
+-            chat_id,
+-            paired: false,
+-            current_workspace: None,
+-            current_assistant: None,
+-            current_assistant_name: None,
+-            current_session_id: None,
+-            display_mode: BotDisplayMode::Assistant,
+-            pending_action: None,
+-            pending_expires_at: 0,
+-            pending_invalid_count: 0,
+-            last_menu_commands: Vec::new(),
+-        }
+-    }
+-
+-    /// Returns the workspace root path that should be used to resolve relative
+-    /// file references emitted by the agent (e.g. markdown links in replies).
+-    ///
+-    /// In Pro mode this is the explicitly switched workspace
+-    /// (`current_workspace`); in Assistant mode the agent runs against the
+-    /// per-user assistant workspace held in `current_assistant`. IM platform
+-    /// adapters MUST consult both — looking only at `current_workspace` causes
+-    /// auto-push to silently drop relative-path attachments produced by
+-    /// assistant sessions (the most common case for end users).
+-    pub fn active_workspace_path(&self) -> Option<String> {
+-        self.current_workspace
+-            .clone()
+-            .or_else(|| self.current_assistant.clone())
+-    }
+-
+-    pub(super) fn set_pending(&mut self, action: PendingAction) {
+-        self.pending_action = Some(action);
+-        self.pending_expires_at = now_secs() + PENDING_TTL_SECS;
+-        self.pending_invalid_count = 0;
+-    }
+-
+-    pub(super) fn clear_pending(&mut self) {
+-        self.pending_action = None;
+-        self.pending_expires_at = 0;
+-        self.pending_invalid_count = 0;
+-    }
+-
+-    pub(super) fn pending_expired(&self) -> bool {
+-        self.pending_action.is_some() && now_secs() > self.pending_expires_at
+-    }
+-}
+-
+-pub fn now_secs() -> i64 {
+-    std::time::SystemTime::now()
+-        .duration_since(std::time::UNIX_EPOCH)
+-        .map(|d| d.as_secs() as i64)
+-        .unwrap_or(0)
+-}
+-
+-#[derive(Debug, Clone)]
+-pub enum PendingAction {
+-    SelectWorkspace {
+-        options: Vec<(String, String)>,
+-    },
+-    SelectAssistant {
+-        options: Vec<(String, String)>,
+-    },
+-    SelectSession {
+-        options: Vec<(String, String)>,
+-        page: usize,
+-        has_more: bool,
+-    },
+-    AskUserQuestion {
+-        tool_id: String,
+-        questions: Vec<BotQuestion>,
+-        current_index: usize,
+-        answers: Vec<Value>,
+-        awaiting_custom_text: bool,
+-        pending_answer: Option<Value>,
+-    },
+-    /// Confirm switching to the other display mode and then run `target_cmd`.
+-    ConfirmModeSwitch {
+-        target_mode: BotDisplayMode,
+-        target_cmd: String,
+-    },
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_tests.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_tests.rs
+deleted file mode 100644
+index ecaf64f..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_tests.rs
++++ /dev/null
+@@ -1,314 +0,0 @@
+-//! Bot command router tests (Round 14 split).
+-//!
+-//! 4 test mods:
+-//! - `parse_command_tests` (12 tests)
+-//! - `state_tests` (3 tests)
+-//! - `menu_tests` (6 tests)
+-//! - `handle_chat_tests` (1 test)
+-
+-use super::*;
+-
+-use super::command_router::{parse_command, BotCommand};
+-
+-use super::command_router_state::{now_secs, BotChatState, BotDisplayMode, PendingAction};
+-
+-use super::command_router_dispatch::handle_chat;
+-
+-use super::command_router_view::main_menu_view;
+-
+-use super::locale::{strings_for, BotLanguage};
+-
+-use super::menu::MenuView;
+-
+-mod parse_command_tests {
+-    use super::*;
+-
+-    #[test]
+-    fn numeric_menu_with_trailing_dot() {
+-        assert!(matches!(parse_command("1."), BotCommand::NumberSelection(1)));
+-        assert!(matches!(parse_command("2。"), BotCommand::NumberSelection(2)));
+-    }
+-
+-    #[test]
+-    fn fullwidth_digit_one() {
+-        assert!(matches!(parse_command("１"), BotCommand::NumberSelection(1)));
+-    }
+-
+-    #[test]
+-    fn zero_parsed_as_number_selection() {
+-        // `0` stays as a numeric selection so it can mean "next page" or
+-        // "back" depending on which pending action is active.  The
+-        // top-level "no pending" 鈫?main-menu fallback is implemented in
+-        // `handle_number`.
+-        assert!(matches!(parse_command("0"), BotCommand::NumberSelection(0)));
+-    }
+-
+-    #[test]
+-    fn menu_aliases() {
+-        assert!(matches!(parse_command("/menu"), BotCommand::Menu));
+-        assert!(matches!(parse_command("/m"), BotCommand::Menu));
+-        assert!(matches!(parse_command("菜单"), BotCommand::Menu));
+-        assert!(matches!(parse_command("/start"), BotCommand::Menu));
+-    }
+-
+-    #[test]
+-    fn settings_aliases() {
+-        assert!(matches!(parse_command("/settings"), BotCommand::Settings));
+-        assert!(matches!(parse_command("设置"), BotCommand::Settings));
+-    }
+-
+-    #[test]
+-    fn verbose_concise_real_commands() {
+-        assert!(matches!(parse_command("/verbose"), BotCommand::SetVerbose(true)));
+-        assert!(matches!(parse_command("/concise"), BotCommand::SetVerbose(false)));
+-    }
+-
+-    #[test]
+-    fn switch_aliases() {
+-        assert!(matches!(parse_command("/switch"), BotCommand::SwitchContext));
+-        assert!(matches!(parse_command("/switch_workspace"), BotCommand::SwitchContext));
+-        assert!(matches!(parse_command("/switch_assistant"), BotCommand::SwitchContext));
+-        assert!(matches!(parse_command("切换"), BotCommand::SwitchContext));
+-    }
+-
+-    #[test]
+-    fn new_session_aliases() {
+-        assert!(matches!(parse_command("/new"), BotCommand::NewSession));
+-        assert!(matches!(parse_command("/new_code_session"), BotCommand::NewCodeSession));
+-        assert!(matches!(
+-            parse_command("/new_cowork_session"),
+-            BotCommand::NewCoworkSession
+-        ));
+-        assert!(matches!(parse_command("/new_claw_session"), BotCommand::NewClawSession));
+-    }
+-
+-    #[test]
+-    fn resume_aliases() {
+-        assert!(matches!(parse_command("/resume"), BotCommand::ResumeSession));
+-        assert!(matches!(parse_command("/r"), BotCommand::ResumeSession));
+-        assert!(matches!(parse_command("/resume_session"), BotCommand::ResumeSession));
+-    }
+-
+-    #[test]
+-    fn cancel_aliases() {
+-        assert!(matches!(parse_command("/cancel"), BotCommand::CancelTask(None)));
+-        match parse_command("/cancel_task turn_abc") {
+-            BotCommand::CancelTask(Some(id)) => assert_eq!(id, "turn_abc"),
+-            _ => panic!("expected cancel task with id"),
+-        }
+-    }
+-
+-    #[test]
+-    fn pairing_code_detected() {
+-        match parse_command("123456") {
+-            BotCommand::PairingCode(c) => assert_eq!(c, "123456"),
+-            _ => panic!("expected pairing code"),
+-        }
+-    }
+-
+-    #[test]
+-    fn chat_message_fallback() {
+-        assert!(matches!(parse_command("hello world"), BotCommand::ChatMessage(_)));
+-    }
+-}
+-
+-#[cfg(test)]
+-mod state_tests {
+-    use super::*;
+-
+-    #[test]
+-    fn pending_expires_after_ttl() {
+-        let mut state = BotChatState::new("c".into());
+-        state.set_pending(PendingAction::SelectWorkspace { options: vec![] });
+-        assert!(state.pending_action.is_some());
+-        assert!(!state.pending_expired());
+-        state.pending_expires_at = now_secs() - 1;
+-        assert!(state.pending_expired());
+-    }
+-
+-    #[test]
+-    fn active_workspace_path_prefers_pro_workspace_then_assistant() {
+-        let mut state = BotChatState::new("c".into());
+-        assert_eq!(state.active_workspace_path(), None);
+-
+-        state.current_assistant = Some("/tmp/assistant-ws".to_string());
+-        assert_eq!(
+-            state.active_workspace_path().as_deref(),
+-            Some("/tmp/assistant-ws"),
+-            "assistant path is the fallback when no Pro workspace is set"
+-        );
+-
+-        state.current_workspace = Some("/tmp/pro-ws".to_string());
+-        assert_eq!(
+-            state.active_workspace_path().as_deref(),
+-            Some("/tmp/pro-ws"),
+-            "Pro workspace wins over the assistant path when both are set"
+-        );
+-    }
+-
+-    #[test]
+-    fn clear_pending_resets_counters() {
+-        let mut state = BotChatState::new("c".into());
+-        state.set_pending(PendingAction::SelectWorkspace { options: vec![] });
+-        state.pending_invalid_count = 2;
+-        state.clear_pending();
+-        assert!(state.pending_action.is_none());
+-        assert_eq!(state.pending_invalid_count, 0);
+-        assert_eq!(state.pending_expires_at, 0);
+-    }
+-}
+-
+-#[cfg(test)]
+-mod menu_tests {
+-    use super::*;
+-
+-    #[test]
+-    fn main_menu_assistant_has_four_items() {
+-        let state = BotChatState::new("c".into());
+-        let view = main_menu_view(&state, strings_for(BotLanguage::ZhCN));
+-        assert_eq!(view.items.len(), 4);
+-        assert!(view.items.iter().any(|i| i.command == "/new"));
+-        assert!(view.items.iter().any(|i| i.command == "/resume"));
+-        assert!(view.items.iter().any(|i| i.command == "/switch"));
+-        assert!(view.items.iter().any(|i| i.command == "/settings"));
+-    }
+-
+-    #[test]
+-    fn main_menu_expert_has_five_items() {
+-        let mut state = BotChatState::new("c".into());
+-        state.display_mode = BotDisplayMode::Pro;
+-        let view = main_menu_view(&state, strings_for(BotLanguage::ZhCN));
+-        assert_eq!(view.items.len(), 5);
+-        assert!(view.items.iter().any(|i| i.command == "/new_code_session"));
+-    }
+-
+-    /// Main menu must NOT surface the random session UUID tail. The user
+-    /// only cares about the workspace / assistant name; the session ID is
+-    /// noise (see /resume for proper session management).
+-    #[test]
+-    fn main_menu_body_omits_session_id() {
+-        let mut state = BotChatState::new("c".into());
+-        state.current_assistant = Some("/tmp/my-assistant".to_string());
+-        state.current_assistant_name = Some("我的助理".to_string());
+-        state.current_session_id = Some("abcdef12-3456-7890-abcd-ef1234567890".to_string());
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let view = main_menu_view(&state, s);
+-        let body = view.body.as_deref().unwrap_or("");
+-        assert!(
+-            !body.contains("567890") && !body.contains("ef1234567890"),
+-            "session UUID tail leaked into body: {body}"
+-        );
+-        assert!(body.contains("我的助理"), "assistant name missing: {body}");
+-    }
+-
+-    /// Assistant mode must show the assistant's display name rather than
+-    /// the workspace directory's `file_name`. The directory is usually a
+-    /// generic "workspace" / "workspace-<uuid>" folder which is meaningless
+-    /// to the user.
+-    #[test]
+-    fn assistant_mode_body_uses_display_name_not_dir_name() {
+-        let mut state = BotChatState::new("c".into());
+-        state.current_assistant = Some("/tmp/northhing_assistants/workspace-abc123".to_string());
+-        state.current_assistant_name = Some("默认助理".to_string());
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let view = main_menu_view(&state, s);
+-        let body = view.body.as_deref().unwrap_or("");
+-        assert!(
+-            body.contains("默认助理"),
+-            "expected assistant display name in body, got: {body}"
+-        );
+-        assert!(
+-            !body.contains("workspace-abc123"),
+-            "workspace directory name leaked into body: {body}"
+-        );
+-    }
+-
+-    /// Expert mode keeps showing the workspace directory name (it IS the
+-    /// project name, which is what the user expects to see).
+-    #[test]
+-    fn expert_mode_body_still_uses_workspace_dir_name() {
+-        let mut state = BotChatState::new("c".into());
+-        state.display_mode = BotDisplayMode::Pro;
+-        state.current_workspace = Some("/tmp/projects/MyApp".to_string());
+-        // `current_assistant_name` should not affect Pro mode at all.
+-        state.current_assistant_name = Some("ignored".to_string());
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let view = main_menu_view(&state, s);
+-        let body = view.body.as_deref().unwrap_or("");
+-        assert!(body.contains("MyApp"), "workspace name missing: {body}");
+-        assert!(!body.contains("ignored"), "assistant name leaked into Pro mode: {body}");
+-    }
+-
+-    /// When the cached assistant display name is missing (e.g. legacy
+-    /// persisted state), fall back to the path's last segment instead of
+-    /// rendering an empty label or panicking.
+-    #[test]
+-    fn assistant_mode_body_falls_back_to_path_when_name_missing() {
+-        let mut state = BotChatState::new("c".into());
+-        state.current_assistant = Some("/tmp/my-assistant-folder".to_string());
+-        state.current_assistant_name = None;
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let view = main_menu_view(&state, s);
+-        let body = view.body.as_deref().unwrap_or("");
+-        assert!(
+-            body.contains("my-assistant-folder"),
+-            "expected fallback to path tail, got: {body}"
+-        );
+-    }
+-
+-    #[test]
+-    fn main_menu_body_omits_session_label_text() {
+-        let mut state = BotChatState::new("c".into());
+-        state.current_assistant = Some("/tmp/my-assistant".to_string());
+-        state.current_session_id = Some("session-xyz".to_string());
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let view = main_menu_view(&state, s);
+-        let body = view.body.as_deref().unwrap_or("");
+-        assert!(
+-            !body.contains(s.current_session_label),
+-            "current_session_label leaked into body: {body}"
+-        );
+-    }
+-}
+-
+-#[cfg(test)]
+-mod handle_chat_tests {
+-    use super::*;
+-
+-    /// `handle_chat` must NOT push a "Processing…[Cancel Task]" interstitial
+-    /// to the user. The session manager queues new messages automatically;
+-    /// showing a cancel button just adds noise (and on WeChat costs a
+-    /// context_token slot per send).
+-    #[tokio::test]
+-    async fn chat_message_forwards_silently_without_processing_menu() {
+-        let mut state = BotChatState::new("peer".into());
+-        state.paired = true;
+-        state.current_assistant = Some("/tmp/a".into());
+-        state.current_session_id = Some("s1".into());
+-        let s = strings_for(BotLanguage::ZhCN);
+-        let result = handle_chat(&mut state, "hello northhing", vec![], s).await;
+-
+-        assert!(
+-            result.forward_to_session.is_some(),
+-            "chat message must still be forwarded to the session"
+-        );
+-        assert!(
+-            result.menu.title.is_empty()
+-                && result.menu.items.is_empty()
+-                && result.menu.body.is_none()
+-                && result.menu.footer_hint.is_none(),
+-            "handle_chat must return an empty MenuView so adapters skip the send: {:?}",
+-            result.menu
+-        );
+-        assert!(
+-            !result.reply.contains(s.processing) && !result.reply.contains(s.queued),
+-            "processing/queued text must not be sent: {}",
+-            result.reply
+-        );
+-        assert!(
+-            !result.reply.contains(s.item_cancel_task),
+-            "cancel-task button must not be sent: {}",
+-            result.reply
+-        );
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_util.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_util.rs
+deleted file mode 100644
+index df4dfdf..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_util.rs
++++ /dev/null
+@@ -1,105 +0,0 @@
+-//! Bot command router small helpers (Round 14 split).
+-//!
+-//! Owns:
+-//! - `normalize_im_command_text` (full-width digit normalization)
+-//! - `strip_numeric_reply_suffix` (numeric reply suffix stripper)
+-//! - `result_from_menu` / `result_from_menu_with_forward` (MenuView -> HandleResult)
+-//! - `refresh_assistant_name_if_missing` (one-shot workspace service lookup)
+-//! - `short_path_name` (path basename)
+-
+-use super::command_router_dispatch::truncate_label;
+-
+-use super::command_router_state::BotChatState;
+-
+-use super::command_router::BotAction;
+-
+-use super::menu::{MenuItem, MenuView};
+-
+-use super::HandleResult;
+-
+-use super::ForwardRequest;
+-
+-pub(super) fn normalize_im_command_text(text: &str) -> String {
+-    text.trim()
+-        .chars()
+-        .map(|c| match c {
+-            '\u{FF10}'..='\u{FF19}' => char::from_u32(c as u32 - 0xFF10 + u32::from(b'0')).unwrap_or(c),
+-            c => c,
+-        })
+-        .collect()
+-}
+-
+-pub(super) fn strip_numeric_reply_suffix(s: &str) -> &str {
+-    s.trim_end_matches(|c: char| {
+-        matches!(
+-            c,
+-            '.' | '。' | '、' | ',' | '，' | ':' | '：' | ';' | '；' | ')' | '）' | ']' | '】'
+-        )
+-    })
+-    .trim()
+-}
+-
+-pub(super) fn result_from_menu(state: &mut BotChatState, view: MenuView) -> HandleResult {
+-    let actions: Vec<BotAction> = view.items.iter().cloned().map(BotAction::from).collect();
+-    state.last_menu_commands = view.numeric_commands();
+-    HandleResult {
+-        reply: view.render_text_block(),
+-        actions,
+-        forward_to_session: None,
+-        menu: view,
+-    }
+-}
+-
+-pub(super) fn result_from_menu_with_forward(
+-    state: &mut BotChatState,
+-    view: MenuView,
+-    forward: Option<ForwardRequest>,
+-) -> HandleResult {
+-    let mut r = result_from_menu(state, view);
+-    r.forward_to_session = forward;
+-    r
+-}
+-
+-pub(super) async fn refresh_assistant_name_if_missing(state: &mut BotChatState) {
+-    use crate::service::workspace::global_workspace_service;
+-    if state.current_assistant_name.is_some() {
+-        return;
+-    }
+-    let Some(path) = state.current_assistant.clone() else {
+-        return;
+-    };
+-    let Some(svc) = global_workspace_service() else {
+-        return;
+-    };
+-    let workspaces = svc.get_assistant_workspaces().await;
+-    if let Some(ws) = workspaces.into_iter().find(|w| w.root_path.to_string_lossy() == path) {
+-        state.current_assistant_name = Some(ws.name);
+-    }
+-}
+-
+-pub(super) fn short_path_name(path: &str) -> String {
+-    std::path::Path::new(path)
+-        .file_name()
+-        .and_then(|n| n.to_str())
+-        .map(|s| s.to_string())
+-        .unwrap_or_else(|| path.to_string())
+-}
+-
+-/// Parse a comma-separated list of numeric question indices (e.g. "1,3,2" → [1,3,2]).
+-/// Returns None if the input is empty or contains any non-numeric token.
+-pub(super) fn parse_question_numbers(input: &str) -> Option<Vec<usize>> {
+-    let mut result = Vec::new();
+-    for part in input.split(',') {
+-        let trimmed = part.trim();
+-        if trimmed.is_empty() {
+-            continue;
+-        }
+-        let value = trimmed.parse::<usize>().ok()?;
+-        result.push(value);
+-    }
+-    if result.is_empty() {
+-        None
+-    } else {
+-        Some(result)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_view.rs b/src/crates/assembly/core/src/service/remote_connect/bot/command_router_view.rs
+deleted file mode 100644
+index 8b6922c..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/command_router_view.rs
++++ /dev/null
+@@ -1,282 +0,0 @@
+-//! Bot menu view builders (Round 14 split).
+-//!
+-//! Owns all `MenuView` builders:
+-//! - `welcome_view`, `ready_to_chat_body`, `main_menu_view`, `settings_menu_view`
+-//! - `need_session_view`, `confirm_mode_switch_view`
+-//! - `workspace_selection_view`, `assistant_selection_view`, `session_selection_view`
+-//! - `build_question_view`, `question_option_line`
+-//! - `menu_or_welcome` (paired-state router)
+-
+-use super::command_router_dispatch::truncate_label;
+-
+-use super::command_router_state::{BotChatState, BotDisplayMode};
+-
+-use super::command_router_util::{result_from_menu, short_path_name};
+-
+-use super::command_router::{BotQuestion, BotQuestionOption, HandleResult};
+-
+-use super::locale::BotStrings;
+-
+-use super::menu::{MenuItem, MenuView};
+-
+-pub(super) fn welcome_view(s: &'static BotStrings) -> MenuView {
+-    MenuView::plain(s.welcome_title)
+-        .with_body(s.welcome)
+-        .with_footer(s.welcome_body)
+-}
+-
+-pub(super) fn ready_to_chat_body(state: &BotChatState, s: &'static BotStrings) -> Option<String> {
+-    // Always show the workspace / assistant name (a human-meaningful
+-    // identifier) regardless of whether a session is active. We deliberately
+-    // do NOT surface `current_session_id` — the random UUID tail (e.g.
+-    // "5cff6a1") is opaque to the user and adds nothing useful. If the
+-    // user wants to manage sessions they can use /resume which renders
+-    // proper session names.
+-    if state.display_mode == BotDisplayMode::Pro {
+-        match &state.current_workspace {
+-            Some(p) => Some(format!("{}: {}", s.current_workspace_label, short_path_name(p))),
+-            None => Some(s.no_workspace.to_string()),
+-        }
+-    } else {
+-        // Assistant mode: prefer the cached assistant display name (set by
+-        // pairing / switch / resume flows from `WorkspaceInfo.name`). The
+-        // workspace path's directory name is meaningless here — the actual
+-        // assistant folder is usually `workspace` or `workspace-<uuid>`,
+-        // both of which look like noise to the user.
+-        match &state.current_assistant {
+-            Some(p) => {
+-                let label = state
+-                    .current_assistant_name
+-                    .as_deref()
+-                    .filter(|n| !n.trim().is_empty())
+-                    .map(|n| n.to_string())
+-                    .unwrap_or_else(|| short_path_name(p));
+-                Some(format!("{}: {}", s.current_assistant_label, label))
+-            }
+-            None => Some(s.no_assistant.to_string()),
+-        }
+-    }
+-}
+-
+-pub(super) fn main_menu_view(state: &BotChatState, s: &'static BotStrings) -> MenuView {
+-    let title = if state.display_mode == BotDisplayMode::Pro {
+-        s.main_title_expert
+-    } else {
+-        s.main_title_assistant
+-    };
+-    let body = ready_to_chat_body(state, s);
+-    let mut items: Vec<MenuItem> = Vec::new();
+-    if state.display_mode == BotDisplayMode::Pro {
+-        items.push(MenuItem::primary(s.item_new_code_session, "/new_code_session"));
+-        items.push(MenuItem::default(s.item_new_cowork_session, "/new_cowork_session"));
+-        items.push(MenuItem::default(s.item_resume_session, "/resume"));
+-        items.push(MenuItem::default(s.item_switch_workspace, "/switch"));
+-    } else {
+-        items.push(MenuItem::primary(s.item_new_session, "/new"));
+-        items.push(MenuItem::default(s.item_resume_session, "/resume"));
+-        items.push(MenuItem::default(s.item_switch_assistant, "/switch"));
+-    }
+-    items.push(MenuItem::default(s.item_settings, "/settings"));
+-    let mut view = MenuView::plain(title).with_items(items);
+-    if let Some(b) = body {
+-        view = view.with_body(b);
+-    }
+-    view
+-}
+-
+-pub(super) fn settings_menu_view(verbose: bool, state: &BotChatState, s: &'static BotStrings) -> MenuView {
+-    let mut items: Vec<MenuItem> = Vec::new();
+-    if state.display_mode == BotDisplayMode::Pro {
+-        items.push(MenuItem::default(s.item_switch_to_assistant, "/assistant"));
+-    } else {
+-        items.push(MenuItem::default(s.item_switch_to_expert, "/expert"));
+-    }
+-    if verbose {
+-        items.push(MenuItem::default(s.item_verbose_off, "/concise"));
+-    } else {
+-        items.push(MenuItem::default(s.item_verbose_on, "/verbose"));
+-    }
+-    items.push(MenuItem::default(s.item_help, "/help"));
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-    let body = format!(
+-        "{} · {}: {}",
+-        if state.display_mode == BotDisplayMode::Pro {
+-            s.mode_expert
+-        } else {
+-            s.mode_assistant
+-        },
+-        s.verbose_label,
+-        if verbose {
+-            s.verbose_status_on
+-        } else {
+-            s.verbose_status_off
+-        },
+-    );
+-    MenuView::plain(s.settings_title).with_body(body).with_items(items)
+-}
+-
+-pub(super) fn need_session_view(state: &BotChatState, s: &'static BotStrings) -> MenuView {
+-    let mut items = Vec::new();
+-    if state.display_mode == BotDisplayMode::Pro {
+-        items.push(MenuItem::primary(s.item_new_code_session, "/new_code_session"));
+-        items.push(MenuItem::default(s.item_new_cowork_session, "/new_cowork_session"));
+-    } else {
+-        items.push(MenuItem::primary(s.item_new_session, "/new"));
+-    }
+-    items.push(MenuItem::default(s.item_resume_session, "/resume"));
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-    MenuView::plain(s.need_session_title).with_items(items)
+-}
+-
+-pub(super) fn confirm_mode_switch_view(target_mode: BotDisplayMode, s: &'static BotStrings) -> MenuView {
+-    let target_label = if target_mode == BotDisplayMode::Pro {
+-        s.mode_expert
+-    } else {
+-        s.mode_assistant
+-    };
+-    let body = format!("{} → {}", s.mode_confirm_switch_prefix, target_label);
+-    MenuView::plain(s.settings_title).with_body(body).with_items(vec![
+-        MenuItem::primary(s.item_confirm_switch, "1"),
+-        MenuItem::default(s.item_back, "/menu"),
+-    ])
+-}
+-
+-pub(super) fn menu_or_welcome(state: &mut BotChatState, s: &'static BotStrings) -> HandleResult {
+-    if state.paired {
+-        result_from_menu(state, main_menu_view(state, s))
+-    } else {
+-        result_from_menu(state, welcome_view(s))
+-    }
+-}
+-
+-pub(super) fn workspace_selection_view(
+-    state: &BotChatState,
+-    options: &[(String, String)],
+-    s: &'static BotStrings,
+-) -> MenuView {
+-    let mut items = Vec::new();
+-    let mut body = String::new();
+-    for (i, (path, name)) in options.iter().enumerate() {
+-        let is_current = state.current_workspace.as_deref() == Some(path.as_str());
+-        let marker = if is_current { s.current_marker } else { "" };
+-        body.push_str(&format!("{}. {}{}\n", i + 1, name, marker));
+-        items.push(MenuItem::default(truncate_label(name, 24), (i + 1).to_string()));
+-    }
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-    MenuView::plain(s.switch_pick_workspace)
+-        .with_body(body.trim_end().to_string())
+-        .with_items(items)
+-        .with_footer(s.footer_reply_workspace)
+-        .without_plain_text_items()
+-}
+-
+-pub(super) fn assistant_selection_view(
+-    state: &BotChatState,
+-    options: &[(String, String)],
+-    s: &'static BotStrings,
+-) -> MenuView {
+-    let mut items = Vec::new();
+-    let mut body = String::new();
+-    for (i, (path, name)) in options.iter().enumerate() {
+-        let is_current = state.current_assistant.as_deref() == Some(path.as_str());
+-        let marker = if is_current { s.current_marker } else { "" };
+-        body.push_str(&format!("{}. {}{}\n", i + 1, name, marker));
+-        items.push(MenuItem::default(truncate_label(name, 24), (i + 1).to_string()));
+-    }
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-    MenuView::plain(s.switch_pick_assistant)
+-        .with_body(body.trim_end().to_string())
+-        .with_items(items)
+-        .with_footer(s.footer_reply_assistant)
+-        .without_plain_text_items()
+-}
+-
+-pub(super) fn session_selection_view(
+-    state: &BotChatState,
+-    options: &[(String, String)],
+-    page: usize,
+-    has_more: bool,
+-    s: &'static BotStrings,
+-) -> MenuView {
+-    let mut items = Vec::new();
+-    let mut body = String::new();
+-    for (i, (id, name)) in options.iter().enumerate() {
+-        let is_current = state.current_session_id.as_deref() == Some(id.as_str());
+-        let marker = if is_current { s.current_marker } else { "" };
+-        body.push_str(&format!("{}. {}{}\n", i + 1, name, marker));
+-        items.push(MenuItem::default(truncate_label(name, 26), (i + 1).to_string()));
+-    }
+-    if has_more {
+-        items.push(MenuItem::default(s.item_next_page, "0"));
+-    }
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-    let footer = if has_more {
+-        s.footer_reply_session_or_next
+-    } else {
+-        s.footer_reply_session
+-    };
+-    MenuView::plain(format!("{} · #{}", s.resume_page_label, page + 1))
+-        .with_body(body.trim_end().to_string())
+-        .with_items(items)
+-        .with_footer(footer)
+-        .without_plain_text_items()
+-}
+-
+-pub(super) fn question_option_line(index: usize, option: &BotQuestionOption) -> String {
+-    if option.description.is_empty() {
+-        format!("{}. {}", index + 1, option.label)
+-    } else {
+-        format!("{}. {} - {}", index + 1, option.label, option.description)
+-    }
+-}
+-
+-pub(super) fn build_question_view(
+-    s: &'static BotStrings,
+-    questions: &[BotQuestion],
+-    current_index: usize,
+-    awaiting_custom_text: bool,
+-) -> MenuView {
+-    let question = &questions[current_index];
+-    let title = format!("{} {}/{}", s.question_title, current_index + 1, questions.len());
+-
+-    let mut body = String::new();
+-    if !question.header.is_empty() {
+-        body.push_str(&question.header);
+-        body.push('\n');
+-    }
+-    body.push_str(&question.question);
+-    body.push_str("\n\n");
+-    for (idx, option) in question.options.iter().enumerate() {
+-        body.push_str(&question_option_line(idx, option));
+-        body.push('\n');
+-    }
+-    body.push_str(&format!("{}. {}\n", question.options.len() + 1, s.item_other,));
+-
+-    let footer = if awaiting_custom_text {
+-        s.footer_question_custom
+-    } else if question.multi_select {
+-        s.footer_question_multi
+-    } else {
+-        s.footer_question_single
+-    };
+-
+-    let mut items: Vec<MenuItem> = Vec::new();
+-    if !awaiting_custom_text && !question.multi_select {
+-        for (idx, option) in question.options.iter().enumerate() {
+-            items.push(MenuItem::default(
+-                truncate_label(&option.label, 24),
+-                (idx + 1).to_string(),
+-            ));
+-        }
+-        items.push(MenuItem::default(
+-            s.item_other,
+-            (question.options.len() + 1).to_string(),
+-        ));
+-    }
+-    items.push(MenuItem::default(s.item_back, "/menu"));
+-
+-    MenuView::plain(title)
+-        .with_body(body.trim_end().to_string())
+-        .with_items(items)
+-        .with_footer(footer)
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_actions.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_actions.rs
+deleted file mode 100644
+index e78f98f..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_actions.rs
++++ /dev/null
+@@ -1,265 +0,0 @@
+-use super::super::{
+-    auto_push_failed_message, auto_push_skip_too_large_message, collect_auto_push_files, read_workspace_file,
+-};
+-use super::feishu_types::{FeishuToken, MAX_FEISHU_FILE_BYTES};
+-use super::FeishuBot;
+-use crate::agentic::image_analysis::optimize_image_with_size_limit;
+-use crate::service::remote_connect::bot::command_router::current_bot_language;
+-use crate::service::remote_connect::remote_server::ImageAttachment;
+-use crate::util::truncate_at_char_boundary;
+-
+-use anyhow::{anyhow, Result};
+-use base64::{engine::general_purpose::STANDARD as B64, Engine};
+-use reqwest::multipart::{Form, Part};
+-use tracing::{debug, info, warn};
+-
+-// =====================================================================
+-// Token management
+-// =====================================================================
+-
+-impl FeishuBot {
+-    pub(super) async fn get_access_token(&self) -> Result<String> {
+-        {
+-            let guard = self.token.read().await;
+-            if let Some(t) = guard.as_ref() {
+-                if t.expires_at > chrono::Utc::now().timestamp() + 60 {
+-                    return Ok(t.access_token.clone());
+-                }
+-            }
+-        }
+-
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal")
+-            .json(&serde_json::json!({
+-                "app_id": self.config.app_id,
+-                "app_secret": self.config.app_secret,
+-            }))
+-            .send()
+-            .await
+-            .map_err(|e| anyhow!("feishu token request: {e}"))?;
+-
+-        let token_resp_text = resp.text().await.unwrap_or_default();
+-        let body: serde_json::Value = serde_json::from_str(&token_resp_text).map_err(|e| {
+-            anyhow!(
+-                "feishu token response parse error: {e}, body: {}",
+-                truncate_at_char_boundary(&token_resp_text, 200)
+-            )
+-        })?;
+-        let access_token = body["tenant_access_token"]
+-            .as_str()
+-            .ok_or_else(|| anyhow!("missing tenant_access_token in response"))?
+-            .to_string();
+-        let expire = body["expire"].as_i64().unwrap_or(7200);
+-
+-        *self.token.write().await = Some(FeishuToken {
+-            access_token: access_token.clone(),
+-            expires_at: chrono::Utc::now().timestamp() + expire,
+-        });
+-
+-        info!("Feishu access token refreshed");
+-        Ok(access_token)
+-    }
+-}
+-
+-// =====================================================================
+-// Image download
+-// =====================================================================
+-
+-impl FeishuBot {
+-    /// Download a user-sent image from a Feishu message using the message resources API.
+-    /// The returned data-URL is compressed to at most 1 MB.
+-    pub(super) async fn download_image_as_data_url(&self, message_id: &str, file_key: &str) -> Result<String> {
+-        let token = match self.get_access_token().await {
+-            Ok(t) => t,
+-            Err(e) => {
+-                return Err(e);
+-            }
+-        };
+-        let client = reqwest::Client::new();
+-        let url = format!(
+-            "https://open.feishu.cn/open-apis/im/v1/messages/{}/resources/{}?type=image",
+-            message_id, file_key
+-        );
+-        let resp = client
+-            .get(&url)
+-            .bearer_auth(&token)
+-            .send()
+-            .await
+-            .map_err(|e| anyhow!("feishu download image: {e}"))?;
+-
+-        let status = resp.status();
+-        if !status.is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("feishu image download failed: HTTP {status} — {body}"));
+-        }
+-
+-        let content_type = resp
+-            .headers()
+-            .get("content-type")
+-            .and_then(|v| v.to_str().ok())
+-            .unwrap_or("image/png")
+-            .to_string();
+-        let raw_bytes = resp.bytes().await?;
+-
+-        const MAX_BYTES: usize = 1024 * 1024;
+-        if raw_bytes.len() <= MAX_BYTES {
+-            let b64 = B64.encode(&raw_bytes);
+-            return Ok(format!("data:{};base64,{}", content_type, b64));
+-        }
+-
+-        tracing::info!(
+-            "Feishu image exceeds {}KB ({}KB), compressing",
+-            MAX_BYTES / 1024,
+-            raw_bytes.len() / 1024
+-        );
+-        match optimize_image_with_size_limit(raw_bytes.to_vec(), "openai", Some(&content_type), Some(MAX_BYTES)) {
+-            Ok(processed) => {
+-                let b64 = B64.encode(&processed.data);
+-                Ok(format!("data:{};base64,{}", processed.mime_type, b64))
+-            }
+-            Err(e) => {
+-                tracing::warn!("Feishu image compression failed, using original: {e}");
+-                let b64 = B64.encode(&raw_bytes);
+-                Ok(format!("data:{};base64,{}", content_type, b64))
+-            }
+-        }
+-    }
+-
+-    /// Download multiple images and convert to ImageAttachment list.
+-    pub(super) async fn download_images(&self, message_id: &str, image_keys: &[String]) -> Vec<ImageAttachment> {
+-        let mut attachments = Vec::new();
+-        for (i, key) in image_keys.iter().enumerate() {
+-            match self.download_image_as_data_url(message_id, key).await {
+-                Ok(data_url) => {
+-                    attachments.push(ImageAttachment {
+-                        name: format!("image_{}.png", i + 1),
+-                        data_url,
+-                    });
+-                }
+-                Err(e) => {
+-                    warn!("Failed to download Feishu image {key}: {e}");
+-                }
+-            }
+-        }
+-        attachments
+-    }
+-}
+-
+-// =====================================================================
+-// File upload and send
+-// =====================================================================
+-
+-impl FeishuBot {
+-    /// Upload a local file to Feishu and return its `file_key`.
+-    /// Caller is expected to pre-check size against `MAX_FEISHU_FILE_BYTES`.
+-    pub(super) async fn upload_file_to_feishu(&self, file_path: &str) -> Result<String> {
+-        let token = self.get_access_token().await?;
+-
+-        let content = read_workspace_file(file_path, MAX_FEISHU_FILE_BYTES, None).await?;
+-
+-        // Feishu uses its own file_type enum rather than MIME types.
+-        let ext = std::path::Path::new(&content.name)
+-            .extension()
+-            .and_then(|e| e.to_str())
+-            .unwrap_or("")
+-            .to_lowercase();
+-        let file_type = match ext.as_str() {
+-            "pdf" => "pdf",
+-            "doc" | "docx" => "doc",
+-            "xls" | "xlsx" => "xls",
+-            "ppt" | "pptx" => "ppt",
+-            "mp4" => "mp4",
+-            _ => "stream",
+-        };
+-
+-        let part = Part::bytes(content.bytes)
+-            .file_name(content.name.clone())
+-            .mime_str("application/octet-stream")?;
+-
+-        let form = Form::new()
+-            .text("file_type", file_type.to_string())
+-            .text("file_name", content.name)
+-            .part("file", part);
+-
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post("https://open.feishu.cn/open-apis/im/v1/files")
+-            .bearer_auth(&token)
+-            .multipart(form)
+-            .send()
+-            .await?;
+-
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("Feishu file upload failed: {body}"));
+-        }
+-
+-        let body: serde_json::Value = resp.json().await?;
+-        body.pointer("/data/file_key")
+-            .and_then(|v| v.as_str())
+-            .map(|s| s.to_string())
+-            .ok_or_else(|| anyhow!("Feishu upload response missing file_key"))
+-    }
+-
+-    /// Upload a local file and send it to a Feishu chat as a file message.
+-    pub(super) async fn send_file_to_feishu_chat(&self, chat_id: &str, file_path: &str) -> Result<()> {
+-        let file_key = self.upload_file_to_feishu(file_path).await?;
+-        let token = self.get_access_token().await?;
+-
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post("https://open.feishu.cn/open-apis/im/v1/messages")
+-            .query(&[("receive_id_type", "chat_id")])
+-            .bearer_auth(&token)
+-            .json(&serde_json::json!({
+-                "receive_id": chat_id,
+-                "msg_type": "file",
+-                "content": serde_json::to_string(&serde_json::json!({"file_key": file_key}))?,
+-            }))
+-            .send()
+-            .await?;
+-
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("Feishu file message failed: {body}"));
+-        }
+-        debug!("Feishu file sent to {chat_id}: {file_path}");
+-        Ok(())
+-    }
+-
+-    /// Scan `text` for downloadable file references and push every matching
+-    /// file directly to the Feishu chat as a `file` message.  Files exceeding
+-    /// `MAX_FEISHU_FILE_BYTES` are skipped with a brief notice; per-file
+-    /// failures are reported as plain-text replies.
+-    pub(super) async fn notify_files_ready(&self, chat_id: &str, text: &str) {
+-        let language = current_bot_language().await;
+-        let workspace_root = {
+-            let states = self.chat_states.read().await;
+-            states.get(chat_id).and_then(|s| s.active_workspace_path())
+-        };
+-        let files = collect_auto_push_files(text, workspace_root.as_deref().map(std::path::Path::new));
+-        if files.is_empty() {
+-            return;
+-        }
+-
+-        // Skip the "正在为你发送 N 个文件……" intro: the file card itself is
+-        // visible in the chat; only error / size-skip notices below need to
+-        // surface to the user.
+-        for file in files {
+-            if file.size > MAX_FEISHU_FILE_BYTES {
+-                let notice = auto_push_skip_too_large_message(language, &file.name, file.size, MAX_FEISHU_FILE_BYTES);
+-                let _ = self.send_message(chat_id, &notice).await;
+-                continue;
+-            }
+-            match self.send_file_to_feishu_chat(chat_id, &file.abs_path).await {
+-                Ok(()) => info!("Feishu auto-pushed file to chat {chat_id}: {}", file.abs_path),
+-                Err(e) => {
+-                    warn!("Feishu auto-push failed for {} in chat {chat_id}: {e}", file.name);
+-                    let notice = auto_push_failed_message(language, &file.name, &e.to_string());
+-                    let _ = self.send_message(chat_id, &notice).await;
+-                }
+-            }
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_commands.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_commands.rs
+deleted file mode 100644
+index 2624e46..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_commands.rs
++++ /dev/null
+@@ -1,306 +0,0 @@
+-use super::super::{load_bot_persistence, update_bot_persistence, BotConfig};
+-use super::feishu_types::ParsedMessage;
+-use super::FeishuBot;
+-use crate::service::remote_connect::bot::command_router::{
+-    complete_im_bot_pairing, current_bot_language, execute_forwarded_turn, handle_command, parse_command,
+-    welcome_message, BotChatState, BotInteractionHandler, BotInteractiveRequest, BotMessageSender, HandleResult,
+-};
+-
+-use chrono::Utc;
+-use serde_json::Value;
+-use tracing::warn;
+-
+-// =====================================================================
+-// Event parsing
+-// =====================================================================
+-
+-impl FeishuBot {
+-    /// Parse a Feishu message event into text + image keys.
+-    /// Supports `text`, `post` (rich text with images), and `image` message types.
+-    pub(super) fn parse_message_event_full(event: &Value) -> Option<ParsedMessage> {
+-        let event_type = event.pointer("/header/event_type").and_then(|v| v.as_str())?;
+-        if event_type != "im.message.receive_v1" {
+-            return None;
+-        }
+-
+-        let chat_id = event
+-            .pointer("/event/message/chat_id")
+-            .and_then(|v| v.as_str())?
+-            .to_string();
+-        let message_id = event
+-            .pointer("/event/message/message_id")
+-            .and_then(|v| v.as_str())
+-            .unwrap_or("")
+-            .to_string();
+-        let msg_type = event.pointer("/event/message/message_type").and_then(|v| v.as_str())?;
+-        let content_str = event.pointer("/event/message/content").and_then(|v| v.as_str())?;
+-        let content: Value = serde_json::from_str(content_str).ok()?;
+-
+-        match msg_type {
+-            "text" => {
+-                let text = content["text"].as_str()?.trim().to_string();
+-                if text.is_empty() {
+-                    return None;
+-                }
+-                Some(ParsedMessage {
+-                    chat_id,
+-                    message_id,
+-                    text,
+-                    image_keys: vec![],
+-                })
+-            }
+-            "post" => {
+-                let (text, image_keys) = Self::extract_from_post(&content);
+-                if text.is_empty() && image_keys.is_empty() {
+-                    return None;
+-                }
+-                Some(ParsedMessage {
+-                    chat_id,
+-                    message_id,
+-                    text,
+-                    image_keys,
+-                })
+-            }
+-            "image" => {
+-                let image_key = content["image_key"].as_str()?.to_string();
+-                Some(ParsedMessage {
+-                    chat_id,
+-                    message_id,
+-                    text: String::new(),
+-                    image_keys: vec![image_key],
+-                })
+-            }
+-            _ => None,
+-        }
+-    }
+-
+-    /// Backward-compatible wrapper: returns (chat_id, text) only for text/post with text content.
+-    #[cfg(test)]
+-    pub(super) fn parse_message_event(event: &Value) -> Option<(String, String)> {
+-        let parsed = Self::parse_message_event_full(event)?;
+-        if parsed.text.is_empty() {
+-            return None;
+-        }
+-        Some((parsed.chat_id, parsed.text))
+-    }
+-
+-    /// Extract text and image keys from a Feishu `post` (rich-text) message.
+-    pub(super) fn extract_from_post(content: &Value) -> (String, Vec<String>) {
+-        let root = if content["content"].is_array() {
+-            content
+-        } else {
+-            content
+-                .get("zh_cn")
+-                .or_else(|| content.get("en_us"))
+-                .or_else(|| content.as_object().and_then(|obj| obj.values().next()))
+-                .unwrap_or(content)
+-        };
+-
+-        let paragraphs = match root["content"].as_array() {
+-            Some(p) => p,
+-            None => return (String::new(), vec![]),
+-        };
+-
+-        let mut text_parts: Vec<String> = Vec::new();
+-        let mut image_keys: Vec<String> = Vec::new();
+-
+-        for para in paragraphs {
+-            if let Some(elements) = para.as_array() {
+-                for elem in elements {
+-                    match elem["tag"].as_str().unwrap_or("") {
+-                        "text" | "a" => {
+-                            if let Some(t) = elem["text"].as_str() {
+-                                let trimmed = t.trim();
+-                                if !trimmed.is_empty() {
+-                                    text_parts.push(trimmed.to_string());
+-                                }
+-                            }
+-                        }
+-                        "img" => {
+-                            if let Some(key) = elem["image_key"].as_str() {
+-                                if !key.is_empty() {
+-                                    image_keys.push(key.to_string());
+-                                }
+-                            }
+-                        }
+-                        _ => {}
+-                    }
+-                }
+-            }
+-        }
+-
+-        let title = root["title"].as_str().unwrap_or("").trim();
+-        if !title.is_empty() {
+-            text_parts.insert(0, title.to_string());
+-        }
+-
+-        (text_parts.join(" "), image_keys)
+-    }
+-
+-    /// Extract (chat_id, command) from a Feishu card action callback.
+-    pub(super) fn parse_card_action_event(event: &Value) -> Option<(String, String)> {
+-        let event_type = event.pointer("/header/event_type").and_then(|v| v.as_str())?;
+-        if event_type != "card.action.trigger" {
+-            return None;
+-        }
+-
+-        let chat_id = event
+-            .pointer("/event/action/value/chat_id")
+-            .and_then(|v| v.as_str())
+-            .or_else(|| event.pointer("/event/context/open_chat_id").and_then(|v| v.as_str()))?
+-            .to_string();
+-        let command = event
+-            .pointer("/event/action/value/command")
+-            .and_then(|v| v.as_str())?
+-            .trim()
+-            .to_string();
+-
+-        Some((chat_id, command))
+-    }
+-
+-    /// Extract chat_id from any im.message.receive_v1 event (regardless of msg_type).
+-    pub(super) fn extract_message_chat_id(event: &Value) -> Option<String> {
+-        let event_type = event.pointer("/header/event_type").and_then(|v| v.as_str())?;
+-        if event_type != "im.message.receive_v1" {
+-            return None;
+-        }
+-        event
+-            .pointer("/event/message/chat_id")
+-            .and_then(|v| v.as_str())
+-            .map(String::from)
+-    }
+-
+-    #[cfg(test)]
+-    pub(super) fn parse_ws_event(event: &Value) -> Option<(String, String)> {
+-        Self::parse_message_event(event).or_else(|| Self::parse_card_action_event(event))
+-    }
+-}
+-
+-// =====================================================================
+-// Message dispatch and state persistence
+-// =====================================================================
+-
+-impl FeishuBot {
+-    /// Handle an incoming message after parsing.
+-    pub(super) async fn handle_incoming_message(
+-        &self,
+-        chat_id: &str,
+-        text: &str,
+-        images: Vec<crate::service::remote_connect::remote_server::ImageAttachment>,
+-    ) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(chat_id.to_string()).or_insert_with(|| {
+-            let mut s = BotChatState::new(chat_id.to_string());
+-            s.paired = true;
+-            s
+-        });
+-        let language = current_bot_language().await;
+-
+-        if !state.paired {
+-            let trimmed = text.trim();
+-            if trimmed == "/start" {
+-                self.send_message(chat_id, welcome_message(language)).await.ok();
+-                return;
+-            }
+-            if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-                if self.verify_pairing_code(trimmed).await {
+-                    let result = complete_im_bot_pairing(state).await;
+-                    self.send_handle_result(chat_id, &result).await.ok();
+-                    self.persist_chat_state(chat_id, state).await;
+-                    return;
+-                } else {
+-                    self.send_message(chat_id, Self::invalid_pairing_code_message(language))
+-                        .await
+-                        .ok();
+-                    return;
+-                }
+-            }
+-            self.send_message(chat_id, Self::enter_pairing_code_message(language))
+-                .await
+-                .ok();
+-            return;
+-        }
+-
+-        let cmd = parse_command(text);
+-        let result = handle_command(state, cmd, images).await;
+-
+-        self.persist_chat_state(chat_id, state).await;
+-        drop(states);
+-
+-        self.send_handle_result(chat_id, &result).await.ok();
+-
+-        if let Some(forward) = result.forward_to_session {
+-            let bot = self.clone();
+-            let cid = chat_id.to_string();
+-            tokio::spawn(async move {
+-                let interaction_bot = bot.clone();
+-                let interaction_chat_id = cid.clone();
+-                let handler: BotInteractionHandler = std::sync::Arc::new(move |interaction: BotInteractiveRequest| {
+-                    let interaction_bot = interaction_bot.clone();
+-                    let interaction_chat_id = interaction_chat_id.clone();
+-                    Box::pin(async move {
+-                        interaction_bot
+-                            .deliver_interaction(&interaction_chat_id, interaction)
+-                            .await;
+-                    })
+-                });
+-                let msg_bot = bot.clone();
+-                let msg_cid = cid.clone();
+-                let sender: BotMessageSender = std::sync::Arc::new(move |text: String| {
+-                    let msg_bot = msg_bot.clone();
+-                    let msg_cid = msg_cid.clone();
+-                    Box::pin(async move {
+-                        if let Err(err) = msg_bot.send_message(&msg_cid, &text).await {
+-                            warn!("Failed to send Feishu intermediate message to {msg_cid}: {err}");
+-                        }
+-                    })
+-                });
+-                let verbose_mode = load_bot_persistence().verbose_mode;
+-                let result = execute_forwarded_turn(forward, Some(handler), Some(sender), verbose_mode).await;
+-                if !result.display_text.is_empty() {
+-                    if let Err(err) = bot.send_message(&cid, &result.display_text).await {
+-                        warn!("Failed to send Feishu final message to {cid}: {err}");
+-                    }
+-                }
+-                bot.notify_files_ready(&cid, &result.full_text).await;
+-            });
+-        }
+-    }
+-
+-    pub(super) async fn deliver_interaction(&self, chat_id: &str, interaction: BotInteractiveRequest) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(chat_id.to_string()).or_insert_with(|| {
+-            let mut s = BotChatState::new(chat_id.to_string());
+-            s.paired = true;
+-            s
+-        });
+-        crate::service::remote_connect::bot::command_router::apply_interactive_request(state, &interaction);
+-        self.persist_chat_state(chat_id, state).await;
+-        drop(states);
+-
+-        let result = HandleResult {
+-            reply: interaction.reply,
+-            actions: interaction.actions,
+-            forward_to_session: None,
+-            menu: interaction.menu,
+-        };
+-        self.send_handle_result(chat_id, &result).await.ok();
+-    }
+-
+-    pub(super) async fn persist_chat_state(&self, chat_id: &str, state: &BotChatState) {
+-        if let Err(error) = update_bot_persistence(|data| {
+-            data.upsert(crate::service::remote_connect::bot::SavedBotConnection {
+-                bot_type: "feishu".to_string(),
+-                chat_id: chat_id.to_string(),
+-                config: BotConfig::Feishu {
+-                    app_id: self.config.app_id.clone(),
+-                    app_secret: self.config.app_secret.clone(),
+-                },
+-                chat_state: state.clone(),
+-                connected_at: Utc::now().timestamp(),
+-            });
+-        }) {
+-            warn!("Failed to persist Feishu chat state: {error}");
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_messages.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_messages.rs
+deleted file mode 100644
+index deecf9a..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_messages.rs
++++ /dev/null
+@@ -1,321 +0,0 @@
+-use super::FeishuBot;
+-use crate::service::remote_connect::bot::command_router::{
+-    current_bot_language, BotAction, BotActionStyle, BotLanguage, HandleResult,
+-};
+-
+-use anyhow::{anyhow, Result};
+-use serde_json::json;
+-use tracing::{debug, warn};
+-
+-// =====================================================================
+-// Language helpers
+-// =====================================================================
+-
+-impl FeishuBot {
+-    pub(super) fn invalid_pairing_code_message(language: BotLanguage) -> &'static str {
+-        if language.is_chinese() {
+-            "配对码无效或已过期，请重试。"
+-        } else {
+-            "Invalid or expired pairing code. Please try again."
+-        }
+-    }
+-
+-    pub(super) fn enter_pairing_code_message(language: BotLanguage) -> &'static str {
+-        if language.is_chinese() {
+-            "请输入 northhing Desktop 中显示的 6 位配对码。"
+-        } else {
+-            "Please enter the 6-digit pairing code from northhing Desktop."
+-        }
+-    }
+-
+-    pub(super) fn unsupported_message_type_message(language: BotLanguage) -> &'static str {
+-        if language.is_chinese() {
+-            "暂不支持这种消息类型，请发送文本或图片。"
+-        } else {
+-            "This message type is not supported. Please send text or images."
+-        }
+-    }
+-}
+-
+-// =====================================================================
+-// Card / text formatting and send
+-// =====================================================================
+-
+-impl FeishuBot {
+-    pub(super) fn build_markdown_card(content: &str) -> serde_json::Value {
+-        json!({
+-            "schema": "2.0",
+-            "config": {
+-                "wide_screen_mode": true,
+-            },
+-            "body": {
+-                "elements": [
+-                    {
+-                        "tag": "markdown",
+-                        "content": content,
+-                        "text_align": "left",
+-                        "text_size": "normal",
+-                        "margin": "0px 0px 0px 0px",
+-                        "element_id": "northhing_remote_reply_markdown",
+-                    }
+-                ],
+-            },
+-        })
+-    }
+-
+-    pub async fn send_message(&self, chat_id: &str, content: &str) -> Result<()> {
+-        let token = self.get_access_token().await?;
+-        let card = Self::build_markdown_card(content);
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post("https://open.feishu.cn/open-apis/im/v1/messages")
+-            .query(&[("receive_id_type", "chat_id")])
+-            .bearer_auth(&token)
+-            .json(&serde_json::json!({
+-                "receive_id": chat_id,
+-                "msg_type": "interactive",
+-                "content": serde_json::to_string(&card)?,
+-            }))
+-            .send()
+-            .await?;
+-
+-        let status = resp.status();
+-        let body = resp.text().await.unwrap_or_default();
+-        if !status.is_success() {
+-            return Err(anyhow!("feishu send_message HTTP {status}: {body}"));
+-        }
+-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&body) {
+-            if let Some(code) = parsed.get("code").and_then(|c| c.as_i64()) {
+-                if code != 0 {
+-                    let msg = parsed.get("msg").and_then(|m| m.as_str()).unwrap_or("unknown");
+-                    warn!("Feishu send_message API error: code={code}, msg={msg}");
+-                    return Err(anyhow!("feishu send_message API error: code={code}, msg={msg}"));
+-                }
+-            }
+-        }
+-        debug!("Feishu message sent to {chat_id}");
+-        Ok(())
+-    }
+-
+-    pub async fn send_action_card(
+-        &self,
+-        chat_id: &str,
+-        language: BotLanguage,
+-        content: &str,
+-        actions: &[BotAction],
+-    ) -> Result<()> {
+-        let token = self.get_access_token().await?;
+-        let client = reqwest::Client::new();
+-        let card = Self::build_action_card(chat_id, language, content, actions);
+-        let resp = client
+-            .post("https://open.feishu.cn/open-apis/im/v1/messages")
+-            .query(&[("receive_id_type", "chat_id")])
+-            .bearer_auth(&token)
+-            .json(&serde_json::json!({
+-                "receive_id": chat_id,
+-                "msg_type": "interactive",
+-                "content": serde_json::to_string(&card)?,
+-            }))
+-            .send()
+-            .await?;
+-
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("feishu send_action_card failed: {body}"));
+-        }
+-        debug!("Feishu action card sent to {chat_id}");
+-        Ok(())
+-    }
+-
+-    pub(super) async fn send_handle_result(&self, chat_id: &str, result: &HandleResult) -> Result<()> {
+-        let language = current_bot_language().await;
+-        let text = if result.menu.items.is_empty() && result.menu.title.is_empty() {
+-            result.reply.clone()
+-        } else {
+-            result.menu.render_text_block()
+-        };
+-        // Empty replies (e.g. the silent "forward only" result returned by
+-        // `handle_chat`) must not be sent — they would surface as a blank
+-        // message in the user's Feishu chat.
+-        if text.trim().is_empty() {
+-            return Ok(());
+-        }
+-        if result.actions.is_empty() {
+-            self.send_message(chat_id, &text).await
+-        } else {
+-            self.send_action_card(chat_id, language, &text, &result.actions).await
+-        }
+-    }
+-
+-    pub(super) fn build_action_card(
+-        chat_id: &str,
+-        language: BotLanguage,
+-        content: &str,
+-        actions: &[BotAction],
+-    ) -> serde_json::Value {
+-        let body = Self::card_body_text(language, content);
+-        let mut elements = vec![json!({
+-            "tag": "markdown",
+-            "content": body,
+-        })];
+-
+-        for chunk in actions.chunks(2) {
+-            let buttons: Vec<_> = chunk
+-                .iter()
+-                .map(|action| {
+-                    let button_type = match action.style {
+-                        BotActionStyle::Primary => "primary",
+-                        BotActionStyle::Default => "default",
+-                    };
+-                    json!({
+-                        "tag": "button",
+-                        "text": {
+-                            "tag": "plain_text",
+-                            "content": action.label,
+-                        },
+-                        "type": button_type,
+-                        "value": {
+-                            "chat_id": chat_id,
+-                            "command": action.command,
+-                        }
+-                    })
+-                })
+-                .collect();
+-            elements.push(json!({
+-                "tag": "action",
+-                "actions": buttons,
+-            }));
+-        }
+-
+-        json!({
+-            "config": {
+-                "wide_screen_mode": true,
+-            },
+-            "header": {
+-                "title": {
+-                    "tag": "plain_text",
+-                    "content": "northhing Remote Connect",
+-                }
+-            },
+-            "elements": elements,
+-        })
+-    }
+-
+-    pub(super) fn card_body_text(language: BotLanguage, content: &str) -> String {
+-        let mut removed_command_lines = false;
+-        let mut lines = Vec::new();
+-
+-        for line in content.lines() {
+-            let trimmed = line.trim_start();
+-            if trimmed.starts_with('/') && trimmed.contains(" - ") {
+-                removed_command_lines = true;
+-                continue;
+-            }
+-            if trimmed.contains("/cancel_task ") {
+-                lines.push(if language.is_chinese() {
+-                    "如需停止本次请求，请使用下方的\"取消任务\"按钮。".to_string()
+-                } else {
+-                    "If needed, use the Cancel Task button below to stop this request.".to_string()
+-                });
+-                continue;
+-            }
+-            lines.push(Self::replace_command_tokens(language, line));
+-        }
+-
+-        let mut body = lines.join("\n").trim().to_string();
+-        if removed_command_lines {
+-            if !body.is_empty() {
+-                body.push_str("\n\n");
+-            }
+-            body.push_str(if language.is_chinese() {
+-                "请选择下方操作。"
+-            } else {
+-                "Choose an action below."
+-            });
+-        }
+-
+-        if body.is_empty() {
+-            if language.is_chinese() {
+-                "请选择下方操作。".to_string()
+-            } else {
+-                "Choose an action below.".to_string()
+-            }
+-        } else {
+-            body
+-        }
+-    }
+-
+-    pub(super) fn replace_command_tokens(language: BotLanguage, line: &str) -> String {
+-        let replacements = [
+-            (
+-                "/switch_workspace",
+-                if language.is_chinese() {
+-                    "切换工作区"
+-                } else {
+-                    "Switch Workspace"
+-                },
+-            ),
+-            (
+-                "/pro",
+-                if language.is_chinese() {
+-                    "专业模式"
+-                } else {
+-                    "Expert Mode"
+-                },
+-            ),
+-            (
+-                "/assistant",
+-                if language.is_chinese() {
+-                    "助理模式"
+-                } else {
+-                    "Assistant Mode"
+-                },
+-            ),
+-            (
+-                "/resume_session",
+-                if language.is_chinese() {
+-                    "恢复会话"
+-                } else {
+-                    "Resume Session"
+-                },
+-            ),
+-            (
+-                "/new_code_session",
+-                if language.is_chinese() {
+-                    "新建编码会话"
+-                } else {
+-                    "New Code Session"
+-                },
+-            ),
+-            (
+-                "/new_cowork_session",
+-                if language.is_chinese() {
+-                    "新建协作会话"
+-                } else {
+-                    "New Cowork Session"
+-                },
+-            ),
+-            (
+-                "/new_claw_session",
+-                if language.is_chinese() {
+-                    "新建助理会话"
+-                } else {
+-                    "New Claw Session"
+-                },
+-            ),
+-            (
+-                "/cancel_task",
+-                if language.is_chinese() {
+-                    "取消任务"
+-                } else {
+-                    "Cancel Task"
+-                },
+-            ),
+-            ("/help", if language.is_chinese() { "帮助" } else { "Help" }),
+-        ];
+-
+-        replacements
+-            .iter()
+-            .fold(line.to_string(), |acc, (from, to)| acc.replace(from, to))
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_types.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_types.rs
+deleted file mode 100644
+index ef14640..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_types.rs
++++ /dev/null
+@@ -1,257 +0,0 @@
+-use serde::{Deserialize, Serialize};
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-use tokio_tungstenite::tungstenite::Message as WsMessage;
+-
+-// =====================================================================
+-// Type aliases
+-// =====================================================================
+-
+-type FeishuWsStream = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+-pub type FeishuWsWrite = futures::stream::SplitSink<FeishuWsStream, WsMessage>;
+-pub type SharedFeishuWsWrite = Arc<RwLock<FeishuWsWrite>>;
+-
+-// =====================================================================
+-// Constants
+-// =====================================================================
+-
+-/// Feishu IM file-upload hard limit (30 MB).
+-pub const MAX_FEISHU_FILE_BYTES: u64 = 30 * 1024 * 1024;
+-
+-// =====================================================================
+-// Minimal protobuf codec for Feishu WebSocket binary protocol
+-// =====================================================================
+-
+-pub mod pb {
+-    //! Protobuf codec matching Feishu SDK's pbbp2.proto.
+-    //! Field numbers from pbbp2.pb.go (proto2 with required fields):
+-    //!   1: SeqID (uint64)
+-    //!   2: LogID (uint64)
+-    //!   3: Service (int32)
+-    //!   4: Method (int32)       — 0 = control, 1 = data
+-    //!   5: Headers (repeated Header)
+-    //!   6: PayloadEncoding (string)
+-    //!   7: PayloadType (string)
+-    //!   8: Payload (bytes)
+-    //!   9: LogIDNew (string)
+-
+-    #[derive(Debug, Default, Clone)]
+-    pub struct Frame {
+-        pub seq_id: u64,
+-        pub log_id: u64,
+-        pub service: i32,
+-        pub method: i32,
+-        pub headers: Vec<(String, String)>,
+-        pub payload_encoding: String,
+-        pub payload_type: String,
+-        pub payload: Vec<u8>,
+-        pub log_id_new: String,
+-    }
+-
+-    pub const FRAME_TYPE_CONTROL: i32 = 0;
+-    pub const FRAME_TYPE_DATA: i32 = 1;
+-
+-    fn decode_varint(data: &[u8], pos: &mut usize) -> Option<u64> {
+-        let mut result: u64 = 0;
+-        let mut shift = 0u32;
+-        loop {
+-            if *pos >= data.len() {
+-                return None;
+-            }
+-            let byte = data[*pos];
+-            *pos += 1;
+-            result |= ((byte & 0x7F) as u64) << shift;
+-            if byte & 0x80 == 0 {
+-                return Some(result);
+-            }
+-            shift += 7;
+-            if shift >= 64 {
+-                return None;
+-            }
+-        }
+-    }
+-
+-    fn encode_varint(mut val: u64) -> Vec<u8> {
+-        let mut buf = Vec::with_capacity(10);
+-        loop {
+-            let mut byte = (val & 0x7F) as u8;
+-            val >>= 7;
+-            if val != 0 {
+-                byte |= 0x80;
+-            }
+-            buf.push(byte);
+-            if val == 0 {
+-                break;
+-            }
+-        }
+-        buf
+-    }
+-
+-    fn read_len<'a>(data: &'a [u8], pos: &mut usize) -> Option<&'a [u8]> {
+-        let len = decode_varint(data, pos)? as usize;
+-        if *pos + len > data.len() {
+-            return None;
+-        }
+-        let slice = &data[*pos..*pos + len];
+-        *pos += len;
+-        Some(slice)
+-    }
+-
+-    fn decode_header(data: &[u8]) -> Option<(String, String)> {
+-        let mut pos = 0;
+-        let (mut key, mut val) = (String::new(), String::new());
+-        while pos < data.len() {
+-            let tag = decode_varint(data, &mut pos)? as u32;
+-            match (tag >> 3, tag & 7) {
+-                (1, 2) => key = String::from_utf8_lossy(read_len(data, &mut pos)?).into(),
+-                (2, 2) => val = String::from_utf8_lossy(read_len(data, &mut pos)?).into(),
+-                (_, 0) => {
+-                    decode_varint(data, &mut pos)?;
+-                }
+-                (_, 2) => {
+-                    read_len(data, &mut pos)?;
+-                }
+-                _ => return None,
+-            }
+-        }
+-        Some((key, val))
+-    }
+-
+-    pub fn decode_frame(data: &[u8]) -> Option<Frame> {
+-        let mut pos = 0;
+-        let mut f = Frame::default();
+-        while pos < data.len() {
+-            let tag = decode_varint(data, &mut pos)? as u32;
+-            match (tag >> 3, tag & 7) {
+-                (1, 0) => f.seq_id = decode_varint(data, &mut pos)?,
+-                (2, 0) => f.log_id = decode_varint(data, &mut pos)?,
+-                (3, 0) => f.service = decode_varint(data, &mut pos)? as i32,
+-                (4, 0) => f.method = decode_varint(data, &mut pos)? as i32,
+-                (5, 2) => {
+-                    if let Some(h) = decode_header(read_len(data, &mut pos)?) {
+-                        f.headers.push(h);
+-                    }
+-                }
+-                (6, 2) => f.payload_encoding = String::from_utf8_lossy(read_len(data, &mut pos)?).into(),
+-                (7, 2) => f.payload_type = String::from_utf8_lossy(read_len(data, &mut pos)?).into(),
+-                (8, 2) => f.payload = read_len(data, &mut pos)?.to_vec(),
+-                (9, 2) => f.log_id_new = String::from_utf8_lossy(read_len(data, &mut pos)?).into(),
+-                (_, 0) => {
+-                    decode_varint(data, &mut pos)?;
+-                }
+-                (_, 2) => {
+-                    read_len(data, &mut pos)?;
+-                }
+-                (_, 5) => {
+-                    pos += 4;
+-                } // fixed32
+-                (_, 1) => {
+-                    pos += 8;
+-                } // fixed64
+-                _ => return None,
+-            }
+-        }
+-        Some(f)
+-    }
+-
+-    fn write_varint(buf: &mut Vec<u8>, field: u32, val: u64) {
+-        buf.extend(encode_varint((field << 3) as u64));
+-        buf.extend(encode_varint(val));
+-    }
+-
+-    fn write_bytes(buf: &mut Vec<u8>, field: u32, data: &[u8]) {
+-        buf.extend(encode_varint(((field << 3) | 2) as u64));
+-        buf.extend(encode_varint(data.len() as u64));
+-        buf.extend(data);
+-    }
+-
+-    fn encode_header(key: &str, value: &str) -> Vec<u8> {
+-        let mut buf = Vec::new();
+-        write_bytes(&mut buf, 1, key.as_bytes());
+-        write_bytes(&mut buf, 2, value.as_bytes());
+-        buf
+-    }
+-
+-    pub fn encode_frame(frame: &Frame) -> Vec<u8> {
+-        let mut buf = Vec::new();
+-        write_varint(&mut buf, 1, frame.seq_id);
+-        write_varint(&mut buf, 2, frame.log_id);
+-        write_varint(&mut buf, 3, frame.service as u64);
+-        write_varint(&mut buf, 4, frame.method as u64);
+-        for (k, v) in &frame.headers {
+-            let hdr = encode_header(k, v);
+-            write_bytes(&mut buf, 5, &hdr);
+-        }
+-        if !frame.payload_encoding.is_empty() {
+-            write_bytes(&mut buf, 6, frame.payload_encoding.as_bytes());
+-        }
+-        if !frame.payload_type.is_empty() {
+-            write_bytes(&mut buf, 7, frame.payload_type.as_bytes());
+-        }
+-        if !frame.payload.is_empty() {
+-            write_bytes(&mut buf, 8, &frame.payload);
+-        }
+-        if !frame.log_id_new.is_empty() {
+-            write_bytes(&mut buf, 9, frame.log_id_new.as_bytes());
+-        }
+-        buf
+-    }
+-
+-    impl Frame {
+-        pub fn get_header(&self, key: &str) -> Option<&str> {
+-            self.headers.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
+-        }
+-
+-        pub fn new_ping(service_id: i32) -> Self {
+-            Frame {
+-                method: FRAME_TYPE_CONTROL,
+-                service: service_id,
+-                headers: vec![("type".into(), "ping".into())],
+-                ..Default::default()
+-            }
+-        }
+-
+-        pub fn new_response(original: &Frame, status_code: u16) -> Self {
+-            let mut headers = original.headers.clone();
+-            headers.push(("biz_rt".into(), "0".into()));
+-            Frame {
+-                seq_id: original.seq_id,
+-                log_id: original.log_id,
+-                service: original.service,
+-                method: original.method,
+-                headers,
+-                payload: serde_json::to_vec(&serde_json::json!({"code": status_code})).unwrap_or_default(),
+-                log_id_new: original.log_id_new.clone(),
+-                ..Default::default()
+-            }
+-        }
+-    }
+-}
+-
+-// =====================================================================
+-// Configuration and state types
+-// =====================================================================
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct FeishuConfig {
+-    pub app_id: String,
+-    pub app_secret: String,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub(crate) struct FeishuToken {
+-    pub(crate) access_token: String,
+-    pub(crate) expires_at: i64,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub(crate) struct PendingPairing {
+-    pub(crate) created_at: i64,
+-}
+-
+-pub(crate) struct ParsedMessage {
+-    pub(crate) chat_id: String,
+-    pub(crate) message_id: String,
+-    pub(crate) text: String,
+-    pub(crate) image_keys: Vec<String>,
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_webhook.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_webhook.rs
+deleted file mode 100644
+index 2a2ade4..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/feishu_webhook.rs
++++ /dev/null
+@@ -1,409 +0,0 @@
+-use super::feishu_types::{pb, PendingPairing};
+-use super::FeishuBot;
+-use crate::service::remote_connect::bot::command_router::{
+-    complete_im_bot_pairing, current_bot_language, welcome_message, BotChatState, HandleResult,
+-};
+-use crate::service::remote_connect::bot::feishu::feishu_types::SharedFeishuWsWrite;
+-use crate::util::truncate_at_char_boundary;
+-
+-use anyhow::{anyhow, Result};
+-use futures::{SinkExt, StreamExt};
+-use std::sync::Arc;
+-use tokio::sync::{watch::Receiver, RwLock};
+-use tokio::time::Duration;
+-use tokio_tungstenite::tungstenite::Message as WsMessage;
+-use tracing::{debug, error, info, warn};
+-
+-// =====================================================================
+-// WebSocket endpoint and pairing
+-// =====================================================================
+-
+-impl FeishuBot {
+-    /// Obtain a WebSocket URL from Feishu for long-connection event delivery.
+-    /// Uses direct AppID/AppSecret auth per Feishu SDK protocol (no bearer token).
+-    pub(super) async fn get_ws_endpoint(&self) -> Result<(String, serde_json::Value)> {
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post("https://open.feishu.cn/callback/ws/endpoint")
+-            .json(&serde_json::json!({
+-                "AppID": self.config.app_id,
+-                "AppSecret": self.config.app_secret,
+-            }))
+-            .send()
+-            .await
+-            .map_err(|e| anyhow!("feishu ws endpoint request: {e}"))?;
+-
+-        let ws_resp_text = resp.text().await.unwrap_or_default();
+-        let body: serde_json::Value = serde_json::from_str(&ws_resp_text).map_err(|e| {
+-            anyhow!(
+-                "feishu ws endpoint parse error: {e}, body: {}",
+-                truncate_at_char_boundary(&ws_resp_text, 300)
+-            )
+-        })?;
+-        let code = body["code"].as_i64().unwrap_or(-1);
+-        if code != 0 {
+-            let msg = body["msg"].as_str().unwrap_or("unknown error");
+-            return Err(anyhow!("feishu ws endpoint error {code}: {msg}"));
+-        }
+-
+-        let url = body
+-            .pointer("/data/URL")
+-            .and_then(|v| v.as_str())
+-            .ok_or_else(|| anyhow!("missing WebSocket URL in feishu response"))?
+-            .to_string();
+-        let client_config = body.pointer("/data/ClientConfig").cloned().unwrap_or_default();
+-
+-        Ok((url, client_config))
+-    }
+-
+-    /// Start polling for pairing codes.  Returns the chat_id on success.
+-    pub async fn wait_for_pairing(&self, stop_rx: &mut Receiver<bool>) -> Result<String> {
+-        info!("Feishu bot waiting for pairing code via WebSocket...");
+-
+-        if *stop_rx.borrow() {
+-            return Err(anyhow!("bot stop requested"));
+-        }
+-
+-        let (ws_url, config) = self.get_ws_endpoint().await?;
+-
+-        let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url)
+-            .await
+-            .map_err(|e| anyhow!("feishu ws connect: {e}"))?;
+-
+-        let (write, mut read) = ws_stream.split();
+-        let write: SharedFeishuWsWrite = Arc::new(RwLock::new(write));
+-        info!("Feishu WebSocket connected (binary proto), waiting for pairing...");
+-
+-        let service_id = Self::extract_service_id_from_url(&ws_url);
+-
+-        let ping_interval = config.get("PingInterval").and_then(|v| v.as_u64()).unwrap_or(120);
+-
+-        let mut ping_timer = tokio::time::interval(Duration::from_secs(ping_interval));
+-
+-        loop {
+-            tokio::select! {
+-                _ = stop_rx.changed() => {
+-                    info!("Feishu wait_for_pairing stopped by signal");
+-                    return Err(anyhow!("bot stop requested"));
+-                }
+-                msg = read.next() => {
+-                    match msg {
+-                        Some(Ok(WsMessage::Binary(data))) => {
+-                            let frame = match pb::decode_frame(&data) {
+-                                Some(f) => f,
+-                                None => continue,
+-                            };
+-                            match frame.method {
+-                                pb::FRAME_TYPE_DATA => {
+-                                    if let Some(chat_id) = self.handle_data_frame_for_pairing(&frame, &write).await {
+-                                        return Ok(chat_id);
+-                                    }
+-                                }
+-                                pb::FRAME_TYPE_CONTROL => {
+-                                    debug!("Feishu WS control frame: type={}", frame.get_header("type").unwrap_or("?"));
+-                                }
+-                                _ => {}
+-                            }
+-                        }
+-                        Some(Ok(WsMessage::Ping(data))) => {
+-                            let _ = write.write().await.send(WsMessage::Pong(data)).await;
+-                        }
+-                        Some(Err(e)) => {
+-                            error!("Feishu WebSocket error during pairing: {e}");
+-                            return Err(anyhow!("feishu ws error: {e}"));
+-                        }
+-                        None => {
+-                            return Err(anyhow!("feishu ws connection closed during pairing"));
+-                        }
+-                        _ => {}
+-                    }
+-                }
+-                _ = ping_timer.tick() => {
+-                    let ping = pb::Frame::new_ping(service_id);
+-                    let _ = write
+-                        .write()
+-                        .await
+-                        .send(WsMessage::Binary(pb::encode_frame(&ping).into()))
+-                        .await;
+-                }
+-            }
+-        }
+-    }
+-
+-    fn extract_service_id_from_url(url: &str) -> i32 {
+-        url.split('?')
+-            .nth(1)
+-            .and_then(|qs| {
+-                qs.split('&').find_map(|pair| {
+-                    let mut kv = pair.splitn(2, '=');
+-                    match (kv.next(), kv.next()) {
+-                        (Some("service_id"), Some(v)) => v.parse::<i32>().ok(),
+-                        _ => None,
+-                    }
+-                })
+-            })
+-            .unwrap_or(0)
+-    }
+-
+-    /// Main message loop that runs after pairing is complete.
+-    /// Connects to Feishu WebSocket (binary protobuf protocol) and routes
+-    /// incoming messages through the command router.
+-    pub async fn run_message_loop(self: Arc<Self>, stop_rx: Receiver<bool>) {
+-        info!("Feishu bot message loop started");
+-        let mut stop = stop_rx;
+-
+-        loop {
+-            if *stop.borrow() {
+-                info!("Feishu bot message loop stopped by signal");
+-                break;
+-            }
+-
+-            let ws_result = self.get_ws_endpoint().await;
+-            let (ws_url, config) = match ws_result {
+-                Ok(v) => v,
+-                Err(e) => {
+-                    error!("Failed to get Feishu WS endpoint: {e}");
+-                    tokio::time::sleep(Duration::from_secs(10)).await;
+-                    continue;
+-                }
+-            };
+-
+-            let ping_interval = config.get("PingInterval").and_then(|v| v.as_u64()).unwrap_or(120);
+-
+-            let service_id = Self::extract_service_id_from_url(&ws_url);
+-
+-            let ws_conn = tokio_tungstenite::connect_async(&ws_url).await;
+-            let (ws_stream, _) = match ws_conn {
+-                Ok(v) => v,
+-                Err(e) => {
+-                    error!("Feishu WS connect failed: {e}");
+-                    tokio::time::sleep(Duration::from_secs(10)).await;
+-                    continue;
+-                }
+-            };
+-            info!("Feishu WebSocket connected for message loop (binary proto)");
+-
+-            let (write, mut read) = ws_stream.split();
+-            let write: SharedFeishuWsWrite = Arc::new(RwLock::new(write));
+-
+-            let mut ping_timer = tokio::time::interval(Duration::from_secs(ping_interval));
+-
+-            loop {
+-                tokio::select! {
+-                    _ = stop.changed() => {
+-                        info!("Feishu bot message loop stopped by signal");
+-                        return;
+-                    }
+-                    msg = read.next() => {
+-                        match msg {
+-                            Some(Ok(WsMessage::Binary(data))) => {
+-                                let frame = match pb::decode_frame(&data) {
+-                                    Some(f) => f,
+-                                    None => continue,
+-                                };
+-
+-                                match frame.method {
+-                                    pb::FRAME_TYPE_DATA => {
+-                                        let msg_type = frame.get_header("type").unwrap_or("");
+-                                        if msg_type == "event" {
+-                                            if let Ok(event) = serde_json::from_slice::<serde_json::Value>(&frame.payload) {
+-                                                // Send ack
+-                                                let resp = pb::Frame::new_response(&frame, 200);
+-                                                let _ = write
+-                                                    .write()
+-                                                    .await
+-                                                    .send(WsMessage::Binary(pb::encode_frame(&resp).into()))
+-                                                    .await;
+-
+-                                                if let Some(parsed) = Self::parse_message_event_full(&event) {
+-                                                    let bot = self.clone();
+-                                                    tokio::spawn(async move {
+-                                                        const MAX_IMAGES: usize = 5;
+-                                                        let language = current_bot_language().await;
+-                                                        let truncated = parsed.image_keys.len() > MAX_IMAGES;
+-                                                        let keys_to_use = if truncated {
+-                                                            &parsed.image_keys[..MAX_IMAGES]
+-                                                        } else {
+-                                                            &parsed.image_keys
+-                                                        };
+-                                                        let images = if keys_to_use.is_empty() {
+-                                                            vec![]
+-                                                        } else {
+-                                                            bot.download_images(&parsed.message_id, keys_to_use).await
+-                                                        };
+-                                                        if truncated {
+-                                                            let msg = format!(
+-                                                                "{} {} {}",
+-                                                                if language.is_chinese() {
+-                                                                    "仅会处理前"
+-                                                                } else {
+-                                                                    "Only the first"
+-                                                                },
+-                                                                MAX_IMAGES,
+-                                                                if language.is_chinese() {
+-                                                                    format!(
+-                                                                        "张图片，其余 {} 张已丢弃。",
+-                                                                        parsed.image_keys.len() - MAX_IMAGES
+-                                                                    )
+-                                                                } else {
+-                                                                    format!(
+-                                                                        "images will be processed; the remaining {} were discarded.",
+-                                                                        parsed.image_keys.len() - MAX_IMAGES
+-                                                                    )
+-                                                                },
+-                                                            );
+-                                                            let _ = bot.send_message(&parsed.chat_id, &msg).await;
+-                                                        }
+-                                                        let text = if parsed.text.is_empty() && !images.is_empty() {
+-                                                            if language.is_chinese() {
+-                                                                "[用户发送了一张图片]".to_string()
+-                                                            } else {
+-                                                                "[User sent an image]".to_string()
+-                                                            }
+-                                                        } else {
+-                                                            parsed.text
+-                                                        };
+-                                                        bot.handle_incoming_message(
+-                                                            &parsed.chat_id,
+-                                                            &text,
+-                                                            images,
+-                                                        )
+-                                                        .await;
+-                                                    });
+-                                                } else if let Some((chat_id, cmd)) = Self::parse_card_action_event(&event) {
+-                                                    let bot = self.clone();
+-                                                    tokio::spawn(async move {
+-                                                        bot.handle_incoming_message(
+-                                                            &chat_id,
+-                                                            &cmd,
+-                                                            vec![],
+-                                                        )
+-                                                        .await;
+-                                                    });
+-                                                } else if let Some(chat_id) = Self::extract_message_chat_id(&event) {
+-                                                    let bot = self.clone();
+-                                                    tokio::spawn(async move {
+-                                                        let language = current_bot_language().await;
+-                                                        bot.send_message(
+-                                                            &chat_id,
+-                                                            Self::unsupported_message_type_message(language),
+-                                                        ).await.ok();
+-                                                    });
+-                                                }
+-                                            }
+-                                        }
+-                                    }
+-                                    pb::FRAME_TYPE_CONTROL => {
+-                                        debug!("Feishu WS control: type={}", frame.get_header("type").unwrap_or("?"));
+-                                    }
+-                                    _ => {}
+-                                }
+-                            }
+-                            Some(Ok(WsMessage::Ping(data))) => {
+-                                let _ = write.write().await.send(WsMessage::Pong(data)).await;
+-                            }
+-                            Some(Err(e)) => {
+-                                error!("Feishu WS error: {e}");
+-                                break;
+-                            }
+-                            None => {
+-                                warn!("Feishu WS closed, reconnecting...");
+-                                break;
+-                            }
+-                            _ => {}
+-                        }
+-                    }
+-                    _ = ping_timer.tick() => {
+-                        let ping = pb::Frame::new_ping(service_id);
+-                        let _ = write
+-                            .write()
+-                            .await
+-                            .send(WsMessage::Binary(pb::encode_frame(&ping).into()))
+-                            .await;
+-                    }
+-                }
+-            }
+-
+-            let reconnect_interval = config.get("ReconnectInterval").and_then(|v| v.as_u64()).unwrap_or(3);
+-            tokio::time::sleep(Duration::from_secs(reconnect_interval)).await;
+-        }
+-    }
+-
+-    /// Handle a single incoming protobuf data frame.
+-    /// Returns Some(chat_id) if pairing succeeded, None to continue waiting.
+-    pub(super) async fn handle_data_frame_for_pairing(
+-        &self,
+-        frame: &pb::Frame,
+-        write: &SharedFeishuWsWrite,
+-    ) -> Option<String> {
+-        let msg_type = frame.get_header("type").unwrap_or("");
+-        if msg_type != "event" {
+-            return None;
+-        }
+-
+-        let event: serde_json::Value = serde_json::from_slice(&frame.payload).ok()?;
+-
+-        // Send ack response for this frame
+-        let resp_frame = pb::Frame::new_response(frame, 200);
+-        let _ = write
+-            .write()
+-            .await
+-            .send(WsMessage::Binary(pb::encode_frame(&resp_frame).into()))
+-            .await;
+-
+-        if let Some(parsed) = Self::parse_message_event_full(&event) {
+-            let language = current_bot_language().await;
+-            let chat_id = parsed.chat_id;
+-            let msg_text = parsed.text;
+-            let trimmed = msg_text.trim();
+-
+-            if trimmed == "/start" {
+-                self.send_message(&chat_id, welcome_message(language)).await.ok();
+-            } else if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-                if self.verify_pairing_code(trimmed).await {
+-                    info!("Feishu pairing successful, chat_id={chat_id}");
+-                    let mut state = BotChatState::new(chat_id.clone());
+-                    let result = complete_im_bot_pairing(&mut state).await;
+-                    self.send_handle_result(&chat_id, &result).await.ok();
+-                    self.chat_states.write().await.insert(chat_id.clone(), state.clone());
+-                    self.persist_chat_state(&chat_id, &state).await;
+-
+-                    return Some(chat_id);
+-                } else {
+-                    self.send_message(&chat_id, Self::invalid_pairing_code_message(language))
+-                        .await
+-                        .ok();
+-                }
+-            } else {
+-                self.send_message(&chat_id, Self::enter_pairing_code_message(language))
+-                    .await
+-                    .ok();
+-            }
+-        } else if let Some(chat_id) = Self::extract_message_chat_id(&event) {
+-            let language = current_bot_language().await;
+-            self.send_message(&chat_id, Self::enter_pairing_code_message(language))
+-                .await
+-                .ok();
+-        }
+-        None
+-    }
+-
+-    pub async fn register_pairing(&self, pairing_code: &str) -> Result<()> {
+-        self.pending_pairings.write().await.insert(
+-            pairing_code.to_string(),
+-            PendingPairing {
+-                created_at: chrono::Utc::now().timestamp(),
+-            },
+-        );
+-        Ok(())
+-    }
+-
+-    pub async fn verify_pairing_code(&self, code: &str) -> bool {
+-        let mut pairings = self.pending_pairings.write().await;
+-        if let Some(p) = pairings.remove(code) {
+-            let age = chrono::Utc::now().timestamp() - p.created_at;
+-            return age < 300;
+-        }
+-        false
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/mod.rs b/src/crates/assembly/core/src/service/remote_connect/bot/feishu/mod.rs
+deleted file mode 100644
+index ae1a298..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/feishu/mod.rs
++++ /dev/null
+@@ -1,96 +0,0 @@
+-//! Feishu (Lark) bot integration for Remote Connect.
+-//!
+-//! Users create their own Feishu bot on the Feishu Open Platform and provide
+-//! App ID + App Secret.  The desktop receives messages via Feishu's WebSocket
+-//! long connection and routes them through the shared command router.
+-
+-mod feishu_actions;
+-mod feishu_commands;
+-mod feishu_messages;
+-mod feishu_types;
+-mod feishu_webhook;
+-
+-pub use feishu_actions::*;
+-pub use feishu_commands::*;
+-pub use feishu_messages::*;
+-pub use feishu_types::*;
+-pub use feishu_webhook::*;
+-
+-use super::command_router::BotChatState;
+-
+-#[derive(Debug, Clone)]
+-pub struct FeishuBot {
+-    pub(super) config: FeishuConfig,
+-    pub(super) token: std::sync::Arc<tokio::sync::RwLock<Option<FeishuToken>>>,
+-    pub(super) pending_pairings: std::sync::Arc<tokio::sync::RwLock<std::collections::HashMap<String, PendingPairing>>>,
+-    pub(super) chat_states: std::sync::Arc<tokio::sync::RwLock<std::collections::HashMap<String, BotChatState>>>,
+-}
+-
+-impl FeishuBot {
+-    pub fn new(config: FeishuConfig) -> Self {
+-        Self {
+-            config,
+-            token: std::sync::Arc::new(tokio::sync::RwLock::new(None)),
+-            pending_pairings: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+-            chat_states: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+-        }
+-    }
+-
+-    pub async fn restore_chat_state(&self, chat_id: &str, state: BotChatState) {
+-        self.chat_states.write().await.insert(chat_id.to_string(), state);
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use crate::service::remote_connect::bot::command_router::BotLanguage;
+-
+-    #[test]
+-    fn parse_text_message_event() {
+-        let event = serde_json::json!({
+-            "header": { "event_type": "im.message.receive_v1" },
+-            "event": {
+-                "message": {
+-                    "message_type": "text",
+-                    "chat_id": "oc_test_chat",
+-                    "content": "{\"text\":\"/help\"}"
+-                }
+-            }
+-        });
+-
+-        let parsed = FeishuBot::parse_ws_event(&event);
+-        assert_eq!(parsed, Some(("oc_test_chat".to_string(), "/help".to_string())));
+-    }
+-
+-    #[test]
+-    fn parse_card_action_event_uses_embedded_chat_id() {
+-        let event = serde_json::json!({
+-            "header": { "event_type": "card.action.trigger" },
+-            "event": {
+-                "context": {
+-                    "open_chat_id": "oc_fallback"
+-                },
+-                "action": {
+-                    "value": {
+-                        "chat_id": "oc_actual",
+-                        "command": "/switch_workspace"
+-                    }
+-                }
+-            }
+-        });
+-
+-        let parsed = FeishuBot::parse_ws_event(&event);
+-        assert_eq!(parsed, Some(("oc_actual".to_string(), "/switch_workspace".to_string())));
+-    }
+-
+-    #[test]
+-    fn card_body_removes_slash_command_list() {
+-        let body = FeishuBot::card_body_text(
+-            BotLanguage::EnUS,
+-            "Available commands:\n/switch_workspace - List and switch workspaces\n/help - Show this help message",
+-        );
+-
+-        assert_eq!(body, "Available commands:\n\nChoose an action below.");
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/locale.rs b/src/crates/assembly/core/src/service/remote_connect/bot/locale.rs
+deleted file mode 100644
+index 4718b70..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/locale.rs
++++ /dev/null
+@@ -1,600 +0,0 @@
+-//! Centralised IM-bot strings for the simplified bot UX.
+-//!
+-//! All user-facing IM bot strings live here so command routing, menu
+-//! rendering, and platform adapters can share a single source of truth.
+-//! New languages add one more `static BotStrings` and one match arm in
+-//! [`strings_for`].
+-
+-use serde::{Deserialize, Serialize};
+-
+-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+-pub enum BotLanguage {
+-    #[serde(rename = "zh-CN")]
+-    ZhCN,
+-    #[serde(rename = "zh-TW")]
+-    ZhTW,
+-    #[serde(rename = "en-US")]
+-    EnUS,
+-}
+-
+-impl BotLanguage {
+-    pub fn is_chinese(self) -> bool {
+-        matches!(self, Self::ZhCN | Self::ZhTW)
+-    }
+-}
+-
+-pub async fn current_bot_language() -> BotLanguage {
+-    match crate::service::config::get_app_language().await {
+-        crate::service::LocaleId::ZhCN => BotLanguage::ZhCN,
+-        crate::service::LocaleId::ZhTW => BotLanguage::ZhTW,
+-        crate::service::LocaleId::EnUS => BotLanguage::EnUS,
+-    }
+-}
+-
+-/// Centralised string table consumed by command router, menu builder, and
+-/// platform adapters.  Add new strings here, then translate in both
+-/// [`STRINGS_ZH`], [`STRINGS_ZH_TW`], and [`STRINGS_EN`].
+-pub struct BotStrings {
+-    // ── Onboarding ───────────────────────────────────────────────
+-    pub welcome: &'static str,
+-    pub paired_success: &'static str,
+-    pub need_pairing: &'static str,
+-    pub invalid_pairing_code: &'static str,
+-    pub bootstrap_workspace_unavailable: &'static str,
+-    pub bootstrap_session_failed_prefix: &'static str,
+-    pub bootstrap_ready: &'static str,
+-
+-    // ── Mode / context labels ────────────────────────────────────
+-    pub mode_assistant: &'static str,
+-    pub mode_expert: &'static str,
+-    pub current_session_label: &'static str,
+-    pub current_workspace_label: &'static str,
+-    pub current_assistant_label: &'static str,
+-    pub no_session: &'static str,
+-    pub no_workspace: &'static str,
+-    pub no_assistant: &'static str,
+-
+-    // ── Main menu (one-line title) ───────────────────────────────
+-    pub main_title_assistant: &'static str,
+-    pub main_title_expert: &'static str,
+-    pub settings_title: &'static str,
+-    pub welcome_title: &'static str,
+-    pub need_session_title: &'static str,
+-
+-    // ── Menu item labels (≤ 14 chars target) ─────────────────────
+-    pub item_new_session: &'static str,
+-    pub item_new_code_session: &'static str,
+-    pub item_new_cowork_session: &'static str,
+-    pub item_resume_session: &'static str,
+-    pub item_switch_assistant: &'static str,
+-    pub item_switch_workspace: &'static str,
+-    pub item_settings: &'static str,
+-    pub item_back: &'static str,
+-    pub item_help: &'static str,
+-    pub item_switch_to_expert: &'static str,
+-    pub item_switch_to_assistant: &'static str,
+-    pub item_verbose_on: &'static str,
+-    pub item_verbose_off: &'static str,
+-    pub item_cancel_task: &'static str,
+-    pub item_confirm_switch: &'static str,
+-    pub item_next_page: &'static str,
+-    pub item_other: &'static str,
+-
+-    // ── Auxiliary labels ─────────────────────────────────────────
+-    pub question_title: &'static str,
+-    pub verbose_label: &'static str,
+-    pub workspace_session_count_fmt: &'static str,
+-
+-    // ── Footer hints ─────────────────────────────────────────────
+-    pub footer_reply_or_menu: &'static str,
+-    pub footer_reply_workspace: &'static str,
+-    pub footer_reply_assistant: &'static str,
+-    pub footer_reply_session_or_next: &'static str,
+-    pub footer_reply_session: &'static str,
+-    pub footer_question_single: &'static str,
+-    pub footer_question_multi: &'static str,
+-    pub footer_question_custom: &'static str,
+-    pub footer_processing_cancel_hint: &'static str,
+-
+-    // ── Body / inline texts ──────────────────────────────────────
+-    pub welcome_body: &'static str,
+-    pub paired_body_intro: &'static str,
+-    pub help_body: &'static str,
+-
+-    pub switch_pick_workspace: &'static str,
+-    pub switch_pick_assistant: &'static str,
+-    pub switch_no_workspaces: &'static str,
+-    pub switch_no_assistants: &'static str,
+-    pub current_marker: &'static str,
+-
+-    pub resume_no_sessions: &'static str,
+-    pub resume_page_label: &'static str,
+-    pub resume_msg_count_zero: &'static str,
+-    pub resume_msg_count_one: &'static str,
+-    pub resume_msg_count_many_fmt: &'static str,
+-    pub resume_resumed_prefix: &'static str,
+-    pub resume_last_dialog_header: &'static str,
+-    pub resume_you_label: &'static str,
+-    pub resume_continue_hint: &'static str,
+-    pub resume_first_message_hint: &'static str,
+-
+-    pub processing: &'static str,
+-    pub queued: &'static str,
+-    pub no_response: &'static str,
+-    pub task_cancelled: &'static str,
+-    pub task_cancel_requested: &'static str,
+-    pub task_cancel_failed_prefix: &'static str,
+-    pub task_no_active: &'static str,
+-    pub timeout_one_hour: &'static str,
+-    pub error_prefix: &'static str,
+-    pub send_failed_prefix: &'static str,
+-
+-    pub mode_switched_to_expert: &'static str,
+-    pub mode_switched_to_assistant: &'static str,
+-    pub mode_already_expert: &'static str,
+-    pub mode_already_assistant: &'static str,
+-    pub mode_confirm_switch_prefix: &'static str,
+-
+-    pub verbose_enabled: &'static str,
+-    pub verbose_disabled: &'static str,
+-    pub verbose_status_on: &'static str,
+-    pub verbose_status_off: &'static str,
+-
+-    pub session_created_prefix: &'static str,
+-    pub session_workspace_label: &'static str,
+-    pub session_start_hint: &'static str,
+-    pub session_create_failed_prefix: &'static str,
+-    pub session_system_unavailable: &'static str,
+-    pub workspace_service_unavailable: &'static str,
+-    pub workspace_open_failed_prefix: &'static str,
+-    pub assistant_create_failed_prefix: &'static str,
+-
+-    pub pending_expired: &'static str,
+-    pub pending_invalid_input: &'static str,
+-    pub pending_invalid_after_retries: &'static str,
+-    pub pending_back_hint: &'static str,
+-
+-    pub answers_submitted: &'static str,
+-    pub answers_submit_failed_prefix: &'static str,
+-    pub question_invalid_state: &'static str,
+-    pub question_custom_required: &'static str,
+-    pub question_custom_for_other_prefix: &'static str,
+-
+-    pub thinking_label: &'static str,
+-
+-    pub auto_push_intro_one: &'static str,
+-    pub auto_push_intro_many_fmt: &'static str,
+-    pub auto_push_skip_too_large_fmt: &'static str,
+-    pub auto_push_failed_fmt: &'static str,
+-}
+-
+-const STRINGS_ZH: BotStrings = BotStrings {
+-    welcome: "\
+-欢迎使用 northhing。
+-
+-请在 northhing 桌面端打开 Remote Connect 面板，复制 6 位配对码并发送到这里完成连接。",
+-    paired_success: "配对成功，northhing 已连接。",
+-    need_pairing: "尚未连接 northhing 桌面端。请先发送 6 位配对码。",
+-    invalid_pairing_code: "配对码无效或已过期，请到桌面端重新生成后再发送。",
+-    bootstrap_workspace_unavailable: "工作区服务暂时不可用，请稍后再试。",
+-    bootstrap_session_failed_prefix: "已进入助理模式，但创建会话失败：",
+-    bootstrap_ready: "已为你新建助理会话，直接发送消息即可开始。",
+-
+-    mode_assistant: "助理模式",
+-    mode_expert: "专业模式",
+-    current_session_label: "当前会话",
+-    current_workspace_label: "当前工作区",
+-    current_assistant_label: "当前助理",
+-    no_session: "尚未选择会话",
+-    no_workspace: "尚未选择工作区",
+-    no_assistant: "尚未选择助理",
+-
+-    main_title_assistant: "northhing · 助理模式",
+-    main_title_expert: "northhing · 专业模式",
+-    settings_title: "设置",
+-    welcome_title: "northhing",
+-    need_session_title: "请先选择或新建会话",
+-
+-    item_new_session: "新建会话",
+-    item_new_code_session: "新建编码会话",
+-    item_new_cowork_session: "新建协作会话",
+-    item_resume_session: "恢复会话",
+-    item_switch_assistant: "切换助理",
+-    item_switch_workspace: "切换工作区",
+-    item_settings: "设置",
+-    item_back: "返回",
+-    item_help: "帮助",
+-    item_switch_to_expert: "切换到专业模式",
+-    item_switch_to_assistant: "切换到助理模式",
+-    item_verbose_on: "开启执行细节",
+-    item_verbose_off: "关闭执行细节",
+-    item_cancel_task: "取消任务",
+-    item_confirm_switch: "切换并继续",
+-    item_next_page: "下一页",
+-    item_other: "其他",
+-
+-    question_title: "问题",
+-    verbose_label: "执行细节",
+-    workspace_session_count_fmt: "{n} 个会话",
+-
+-    footer_reply_or_menu: "回复编号，或发送 /menu 返回主菜单",
+-    footer_reply_workspace: "回复工作区编号，或发送 0 返回",
+-    footer_reply_assistant: "回复助理编号，或发送 0 返回",
+-    footer_reply_session_or_next: "回复会话编号；发送 0 查看下一页或返回",
+-    footer_reply_session: "回复会话编号，或发送 0 返回",
+-    footer_question_single: "回复单个选项编号；发送 /menu 退出",
+-    footer_question_multi: "回复一个或多个选项编号（如 1,3）；发送 /menu 退出",
+-    footer_question_custom: "请输入你的自定义答案；发送 /menu 退出",
+-    footer_processing_cancel_hint: "如需中止，回复 /cancel 或点击「取消任务」",
+-
+-    welcome_body: "当前未配对。",
+-    paired_body_intro: "可以直接发送消息开始对话。",
+-    help_body: "\
+-常用命令：
+-/menu  返回主菜单
+-/new   新建会话
+-/resume  恢复历史会话
+-/switch  切换助理或工作区
+-/cancel  取消当前任务
+-/expert  /assistant  切换模式
+-/verbose /concise  开关执行细节
+-/help  显示本帮助",
+-
+-    switch_pick_workspace: "请选择要切换的工作区：",
+-    switch_pick_assistant: "请选择要切换的助理：",
+-    switch_no_workspaces: "尚未发现工作区，请先在 northhing 桌面端打开一个项目。",
+-    switch_no_assistants: "尚未发现助理，请先在 northhing 桌面端创建一个助理。",
+-    current_marker: " · 当前",
+-
+-    resume_no_sessions: "当前还没有会话，可以发送 /new 直接新建。",
+-    resume_page_label: "会话历史",
+-    resume_msg_count_zero: "无消息",
+-    resume_msg_count_one: "1 条消息",
+-    resume_msg_count_many_fmt: "{n} 条消息",
+-    resume_resumed_prefix: "已恢复会话：",
+-    resume_last_dialog_header: "— 最近一次对话 —",
+-    resume_you_label: "你",
+-    resume_continue_hint: "可以继续对话。",
+-    resume_first_message_hint: "发送一条消息即可开始。",
+-
+-    processing: "正在处理你的消息……",
+-    queued: "消息已加入队列，等当前步骤结束会自动接续。",
+-    no_response: "（无回复）",
+-    task_cancelled: "任务已取消。",
+-    task_cancel_requested: "已请求取消当前任务。",
+-    task_cancel_failed_prefix: "取消任务失败：",
+-    task_no_active: "当前没有正在运行的任务。",
+-    timeout_one_hour: "等待响应超时（1 小时）。",
+-    error_prefix: "错误：",
+-    send_failed_prefix: "发送失败：",
+-
+-    mode_switched_to_expert: "已切换到专业模式，可创建编码 / 协作会话。",
+-    mode_switched_to_assistant: "已切换到助理模式，适合日常持续对话。",
+-    mode_already_expert: "当前已在专业模式。",
+-    mode_already_assistant: "当前已在助理模式。",
+-    mode_confirm_switch_prefix: "该操作需要切换到另一种模式，确认继续吗？",
+-
+-    verbose_enabled: "已开启「执行细节」，下一次任务会显示思考与工具过程。",
+-    verbose_disabled: "已关闭「执行细节」，仅显示最终结果。",
+-    verbose_status_on: "开",
+-    verbose_status_off: "关",
+-
+-    session_created_prefix: "已创建新会话：",
+-    session_workspace_label: "工作区：",
+-    session_start_hint: "可以发送消息开始对话。",
+-    session_create_failed_prefix: "创建会话失败：",
+-    session_system_unavailable: "northhing 会话系统尚未就绪，请稍后再试。",
+-    workspace_service_unavailable: "工作区服务暂时不可用。",
+-    workspace_open_failed_prefix: "打开工作区失败：",
+-    assistant_create_failed_prefix: "创建助理工作区失败：",
+-
+-    pending_expired: "上一步已超时，已为你返回主菜单。",
+-    pending_invalid_input: "输入无效，请按提示回复或发送 /menu 返回主菜单。",
+-    pending_invalid_after_retries: "多次输入无效，已为你返回主菜单。",
+-    pending_back_hint: "发送 0 或 /menu 返回主菜单。",
+-
+-    answers_submitted: "答案已提交，等待助手继续……",
+-    answers_submit_failed_prefix: "提交答案失败：",
+-    question_invalid_state: "问题状态无效，请重新发起对话。",
+-    question_custom_required: "自定义答案不能为空，请重新输入。",
+-    question_custom_for_other_prefix: "请为「其他」输入你的自定义答案：",
+-
+-    thinking_label: "思考中",
+-
+-    auto_push_intro_one: "正在为你发送 1 个文件……",
+-    auto_push_intro_many_fmt: "正在为你发送 {n} 个文件……",
+-    auto_push_skip_too_large_fmt: "已跳过「{name}」：{size} 超过 {limit} 上限，请改用桌面端获取。",
+-    auto_push_failed_fmt: "发送「{name}」失败：{err}",
+-};
+-
+-const STRINGS_ZH_TW: BotStrings = BotStrings {
+-    welcome: "\
+-歡迎使用 northhing。
+-
+-請在 northhing 桌面端打開 Remote Connect 面板，複製 6 位配對碼併發送到這裡完成連接。",
+-    paired_success: "配對成功，northhing 已連接。",
+-    need_pairing: "尚未連接 northhing 桌面端。請先發送 6 位配對碼。",
+-    invalid_pairing_code: "配對碼無效或已過期，請到桌面端重新生成後再發送。",
+-    bootstrap_workspace_unavailable: "工作區服務暫時不可用，請稍後再試。",
+-    bootstrap_session_failed_prefix: "已進入助理模式，但創建會話失敗：",
+-    bootstrap_ready: "已為你新建助理會話，直接發送消息即可開始。",
+-
+-    mode_assistant: "助理模式",
+-    mode_expert: "專業模式",
+-    current_session_label: "當前會話",
+-    current_workspace_label: "當前工作區",
+-    current_assistant_label: "當前助理",
+-    no_session: "尚未選擇會話",
+-    no_workspace: "尚未選擇工作區",
+-    no_assistant: "尚未選擇助理",
+-
+-    main_title_assistant: "northhing · 助理模式",
+-    main_title_expert: "northhing · 專業模式",
+-    settings_title: "設置",
+-    welcome_title: "northhing",
+-    need_session_title: "請先選擇或新建會話",
+-
+-    item_new_session: "新建會話",
+-    item_new_code_session: "新建編碼會話",
+-    item_new_cowork_session: "新建協作會話",
+-    item_resume_session: "恢復會話",
+-    item_switch_assistant: "切換助理",
+-    item_switch_workspace: "切換工作區",
+-    item_settings: "設置",
+-    item_back: "返回",
+-    item_help: "幫助",
+-    item_switch_to_expert: "切換到專業模式",
+-    item_switch_to_assistant: "切換到助理模式",
+-    item_verbose_on: "開啟執行細節",
+-    item_verbose_off: "關閉執行細節",
+-    item_cancel_task: "取消任務",
+-    item_confirm_switch: "切換並繼續",
+-    item_next_page: "下一頁",
+-    item_other: "其他",
+-
+-    question_title: "問題",
+-    verbose_label: "執行細節",
+-    workspace_session_count_fmt: "{n} 個會話",
+-
+-    footer_reply_or_menu: "回覆編號，或發送 /menu 返回主菜單",
+-    footer_reply_workspace: "回覆工作區編號，或發送 0 返回",
+-    footer_reply_assistant: "回覆助理編號，或發送 0 返回",
+-    footer_reply_session_or_next: "回覆會話編號；發送 0 查看下一頁或返回",
+-    footer_reply_session: "回覆會話編號，或發送 0 返回",
+-    footer_question_single: "回覆單個選項編號；發送 /menu 退出",
+-    footer_question_multi: "回覆一個或多個選項編號（如 1,3）；發送 /menu 退出",
+-    footer_question_custom: "請輸入你的自定義答案；發送 /menu 退出",
+-    footer_processing_cancel_hint: "如需中止，回覆 /cancel 或點擊「取消任務」",
+-
+-    welcome_body: "當前未配對。",
+-    paired_body_intro: "可以直接發送消息開始對話。",
+-    help_body: "\
+-常用命令：
+-/menu  返回主菜單
+-/new   新建會話
+-/resume  恢復歷史會話
+-/switch  切換助理或工作區
+-/cancel  取消當前任務
+-/expert  /assistant  切換模式
+-/verbose /concise  開關執行細節
+-/help  顯示本幫助",
+-
+-    switch_pick_workspace: "請選擇要切換的工作區：",
+-    switch_pick_assistant: "請選擇要切換的助理：",
+-    switch_no_workspaces: "尚未發現工作區，請先在 northhing 桌面端打開一個項目。",
+-    switch_no_assistants: "尚未發現助理，請先在 northhing 桌面端創建一個助理。",
+-    current_marker: " · 當前",
+-
+-    resume_no_sessions: "當前還沒有會話，可以發送 /new 直接新建。",
+-    resume_page_label: "會話歷史",
+-    resume_msg_count_zero: "無消息",
+-    resume_msg_count_one: "1 條消息",
+-    resume_msg_count_many_fmt: "{n} 條消息",
+-    resume_resumed_prefix: "已恢復會話：",
+-    resume_last_dialog_header: "— 最近一次對話 —",
+-    resume_you_label: "你",
+-    resume_continue_hint: "可以繼續對話。",
+-    resume_first_message_hint: "發送一條消息即可開始。",
+-
+-    processing: "正在處理你的消息……",
+-    queued: "消息已加入隊列，等當前步驟結束會自動接續。",
+-    no_response: "（無回覆）",
+-    task_cancelled: "任務已取消。",
+-    task_cancel_requested: "已請求取消當前任務。",
+-    task_cancel_failed_prefix: "取消任務失敗：",
+-    task_no_active: "當前沒有正在運行的任務。",
+-    timeout_one_hour: "等待響應超時（1 小時）。",
+-    error_prefix: "錯誤：",
+-    send_failed_prefix: "發送失敗：",
+-
+-    mode_switched_to_expert: "已切換到專業模式，可創建編碼 / 協作會話。",
+-    mode_switched_to_assistant: "已切換到助理模式，適合日常持續對話。",
+-    mode_already_expert: "當前已在專業模式。",
+-    mode_already_assistant: "當前已在助理模式。",
+-    mode_confirm_switch_prefix: "該操作需要切換到另一種模式，確認繼續嗎？",
+-
+-    verbose_enabled: "已開啟「執行細節」，下一次任務會顯示思考與工具過程。",
+-    verbose_disabled: "已關閉「執行細節」，僅顯示最終結果。",
+-    verbose_status_on: "開",
+-    verbose_status_off: "關",
+-
+-    session_created_prefix: "已創建新會話：",
+-    session_workspace_label: "工作區：",
+-    session_start_hint: "可以發送消息開始對話。",
+-    session_create_failed_prefix: "創建會話失敗：",
+-    session_system_unavailable: "northhing 會話系統尚未就緒，請稍後再試。",
+-    workspace_service_unavailable: "工作區服務暫時不可用。",
+-    workspace_open_failed_prefix: "打開工作區失敗：",
+-    assistant_create_failed_prefix: "創建助理工作區失敗：",
+-
+-    pending_expired: "上一步已超時，已為你返回主菜單。",
+-    pending_invalid_input: "輸入無效，請按提示回覆或發送 /menu 返回主菜單。",
+-    pending_invalid_after_retries: "多次輸入無效，已為你返回主菜單。",
+-    pending_back_hint: "發送 0 或 /menu 返回主菜單。",
+-
+-    answers_submitted: "答案已提交，等待助手繼續……",
+-    answers_submit_failed_prefix: "提交答案失敗：",
+-    question_invalid_state: "問題狀態無效，請重新發起對話。",
+-    question_custom_required: "自定義答案不能為空，請重新輸入。",
+-    question_custom_for_other_prefix: "請為「其他」輸入你的自定義答案：",
+-
+-    thinking_label: "思考中",
+-
+-    auto_push_intro_one: "正在為你發送 1 個文件……",
+-    auto_push_intro_many_fmt: "正在為你發送 {n} 個文件……",
+-    auto_push_skip_too_large_fmt: "已跳過「{name}」：{size} 超過 {limit} 上限，請改用桌面端獲取。",
+-    auto_push_failed_fmt: "發送「{name}」失敗：{err}",
+-};
+-
+-const STRINGS_EN: BotStrings = BotStrings {
+-    welcome: "\
+-Welcome to northhing.
+-
+-Open Remote Connect in northhing Desktop and send the 6-digit pairing code here to connect.",
+-    paired_success: "Pairing successful. northhing is now connected.",
+-    need_pairing: "Not connected yet. Please send the 6-digit pairing code first.",
+-    invalid_pairing_code: "Invalid or expired pairing code. Generate a new one in northhing Desktop and try again.",
+-    bootstrap_workspace_unavailable: "Workspace service is unavailable. Please try again shortly.",
+-    bootstrap_session_failed_prefix: "Assistant mode is on but session creation failed: ",
+-    bootstrap_ready: "A new assistant session is ready. Send a message to start.",
+-
+-    mode_assistant: "Assistant Mode",
+-    mode_expert: "Expert Mode",
+-    current_session_label: "Current session",
+-    current_workspace_label: "Current workspace",
+-    current_assistant_label: "Current assistant",
+-    no_session: "No session selected",
+-    no_workspace: "No workspace selected",
+-    no_assistant: "No assistant selected",
+-
+-    main_title_assistant: "northhing · Assistant",
+-    main_title_expert: "northhing · Expert",
+-    settings_title: "Settings",
+-    welcome_title: "northhing",
+-    need_session_title: "Pick or create a session first",
+-
+-    item_new_session: "New Session",
+-    item_new_code_session: "New Code Session",
+-    item_new_cowork_session: "New Cowork Session",
+-    item_resume_session: "Resume Session",
+-    item_switch_assistant: "Switch Assistant",
+-    item_switch_workspace: "Switch Workspace",
+-    item_settings: "Settings",
+-    item_back: "Back",
+-    item_help: "Help",
+-    item_switch_to_expert: "Switch to Expert Mode",
+-    item_switch_to_assistant: "Switch to Assistant Mode",
+-    item_verbose_on: "Show Execution Details",
+-    item_verbose_off: "Hide Execution Details",
+-    item_cancel_task: "Cancel Task",
+-    item_confirm_switch: "Switch & Continue",
+-    item_next_page: "Next Page",
+-    item_other: "Other",
+-
+-    question_title: "Question",
+-    verbose_label: "Execution details",
+-    workspace_session_count_fmt: "{n} sessions",
+-
+-    footer_reply_or_menu: "Reply with a number, or send /menu to return.",
+-    footer_reply_workspace: "Reply with a workspace number, or 0 to go back.",
+-    footer_reply_assistant: "Reply with an assistant number, or 0 to go back.",
+-    footer_reply_session_or_next: "Reply with a session number; send 0 for next page or to go back.",
+-    footer_reply_session: "Reply with a session number, or 0 to go back.",
+-    footer_question_single: "Reply with one option number; send /menu to exit.",
+-    footer_question_multi: "Reply with one or more option numbers (e.g. 1,3); send /menu to exit.",
+-    footer_question_custom: "Type your custom answer; send /menu to exit.",
+-    footer_processing_cancel_hint: "To stop, reply /cancel or tap Cancel Task.",
+-
+-    welcome_body: "Not paired yet.",
+-    paired_body_intro: "Send a message to start the conversation.",
+-    help_body: "\
+-Common commands:
+-/menu  Return to the main menu
+-/new   Create a new session
+-/resume  Resume an existing session
+-/switch  Switch assistant or workspace
+-/cancel  Cancel the current task
+-/expert  /assistant  Switch modes
+-/verbose /concise  Toggle execution details
+-/help  Show this help",
+-
+-    switch_pick_workspace: "Pick a workspace to switch to:",
+-    switch_pick_assistant: "Pick an assistant to switch to:",
+-    switch_no_workspaces: "No workspaces found. Open a project in northhing Desktop first.",
+-    switch_no_assistants: "No assistants found. Create one in northhing Desktop first.",
+-    current_marker: " · current",
+-
+-    resume_no_sessions: "No sessions yet. Send /new to create one.",
+-    resume_page_label: "Sessions",
+-    resume_msg_count_zero: "no messages",
+-    resume_msg_count_one: "1 message",
+-    resume_msg_count_many_fmt: "{n} messages",
+-    resume_resumed_prefix: "Resumed session: ",
+-    resume_last_dialog_header: "— Last conversation —",
+-    resume_you_label: "You",
+-    resume_continue_hint: "You can continue the conversation.",
+-    resume_first_message_hint: "Send a message to start.",
+-
+-    processing: "Processing your message…",
+-    queued: "Message queued. It will run when the current step finishes.",
+-    no_response: "(no response)",
+-    task_cancelled: "Task cancelled.",
+-    task_cancel_requested: "Cancellation requested.",
+-    task_cancel_failed_prefix: "Failed to cancel: ",
+-    task_no_active: "No active task to cancel.",
+-    timeout_one_hour: "Response timed out after 1 hour.",
+-    error_prefix: "Error: ",
+-    send_failed_prefix: "Send failed: ",
+-
+-    mode_switched_to_expert: "Switched to Expert mode. You can create code or cowork sessions.",
+-    mode_switched_to_assistant: "Switched to Assistant mode. Best for ongoing conversations.",
+-    mode_already_expert: "Already in Expert mode.",
+-    mode_already_assistant: "Already in Assistant mode.",
+-    mode_confirm_switch_prefix: "This action needs the other mode. Switch and continue?",
+-
+-    verbose_enabled: "Execution details enabled. The next task will show thinking and tool steps.",
+-    verbose_disabled: "Execution details disabled. Only final results will be shown.",
+-    verbose_status_on: "on",
+-    verbose_status_off: "off",
+-
+-    session_created_prefix: "New session created: ",
+-    session_workspace_label: "Workspace: ",
+-    session_start_hint: "Send a message to start the conversation.",
+-    session_create_failed_prefix: "Failed to create session: ",
+-    session_system_unavailable: "northhing session system is not ready yet.",
+-    workspace_service_unavailable: "Workspace service unavailable.",
+-    workspace_open_failed_prefix: "Failed to open workspace: ",
+-    assistant_create_failed_prefix: "Failed to create assistant workspace: ",
+-
+-    pending_expired: "Previous step expired. Returned to the main menu.",
+-    pending_invalid_input: "Invalid input. Follow the prompt above, or send /menu to return.",
+-    pending_invalid_after_retries: "Too many invalid replies. Returned to the main menu.",
+-    pending_back_hint: "Send 0 or /menu to return to the main menu.",
+-
+-    answers_submitted: "Answers submitted. Waiting for the assistant to continue…",
+-    answers_submit_failed_prefix: "Failed to submit answers: ",
+-    question_invalid_state: "Question state is invalid; please restart the conversation.",
+-    question_custom_required: "Custom answer cannot be empty. Please type it again.",
+-    question_custom_for_other_prefix: "Type your custom answer for `Other`: ",
+-
+-    thinking_label: "Thinking",
+-
+-    auto_push_intro_one: "Sending 1 file for you…",
+-    auto_push_intro_many_fmt: "Sending {n} files for you…",
+-    auto_push_skip_too_large_fmt:
+-        "Skipping \"{name}\": {size} exceeds the {limit} limit. Please grab it from northhing Desktop instead.",
+-    auto_push_failed_fmt: "Failed to send \"{name}\": {err}",
+-};
+-
+-pub fn strings_for(language: BotLanguage) -> &'static BotStrings {
+-    match language {
+-        BotLanguage::ZhCN => &STRINGS_ZH,
+-        BotLanguage::ZhTW => &STRINGS_ZH_TW,
+-        BotLanguage::EnUS => &STRINGS_EN,
+-    }
+-}
+-
+-/// Substitute `{n}` placeholder in formatted strings.
+-pub fn fmt_count(template: &str, n: usize) -> String {
+-    template.replace("{n}", &n.to_string())
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_download.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_download.rs
+deleted file mode 100644
+index 59d2842..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_download.rs
++++ /dev/null
+@@ -1,136 +0,0 @@
+-//! Weixin bot — inbound CDN download + image decryption.
+-//!
+-//! Pulls bytes from the WeChat CDN for inbound images, decrypts them with
+-//! AES-128-ECB-PKCS7, and packages them as Feishu-style `ImageAttachment`
+-//! data URLs so the rest of the pipeline (image analyzer, dialog turn,
+-//! workspace bridge) can consume them without any Weixin-specific glue.
+-//!
+-//! Implementation is split across sibling files; see `weixin_bot_media.rs`
+-//! for the facade / module index.
+-use anyhow::{anyhow, Result};
+-use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+-use serde_json::Value;
+-use std::time::Duration;
+-use tracing::warn;
+-
+-use super::weixin_bot::{WeixinBot, MAX_INBOUND_IMAGES};
+-use super::weixin_crypto::{
+-    build_cdn_download_url, decrypt_aes_128_ecb_pkcs7, parse_weixin_cdn_aes_key, sniff_image_mime, DEFAULT_CDN_BASE_URL,
+-};
+-use crate::service::remote_connect::remote_server::ImageAttachment;
+-
+-impl WeixinBot {
+-    pub(super) fn cdn_base_url(&self) -> &'static str {
+-        DEFAULT_CDN_BASE_URL
+-    }
+-
+-    /// Download CDN bytes.  Prefers `full_url` (when the server pre-builds the
+-    /// complete URL, matching `@tencent-weixin/openclaw-weixin@2.x`'s
+-    /// `CDNMedia.full_url`); otherwise falls back to building the URL from
+-    /// `encrypted_query_param`.
+-    async fn fetch_weixin_cdn_bytes(&self, encrypted_query_param: &str, full_url: Option<&str>) -> Result<Vec<u8>> {
+-        let url = match full_url.map(str::trim).filter(|s: &&str| !s.is_empty()) {
+-            Some(u) => u.to_string(),
+-            None => build_cdn_download_url(self.cdn_base_url(), encrypted_query_param),
+-        };
+-        let client = reqwest::Client::builder().timeout(Duration::from_secs(120)).build()?;
+-        let resp = client.get(&url).send().await?;
+-        let status = resp.status();
+-        if !status.is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("weixin CDN GET {status}: {body}"));
+-        }
+-        Ok(resp.bytes().await?.to_vec())
+-    }
+-
+-    /// Decrypt one inbound `image_item` (CDN download + AES-128-ECB), matching OpenClaw `downloadMediaFromItem`.
+-    async fn inbound_image_bytes_from_item(&self, item: &Value) -> Result<Vec<u8>> {
+-        let img = &item["image_item"];
+-        let param = img["media"]["encrypt_query_param"]
+-            .as_str()
+-            .filter(|s| !s.is_empty())
+-            .ok_or_else(|| anyhow!("image: missing encrypt_query_param"))?;
+-        let full_url = img["media"]["full_url"].as_str();
+-
+-        let key: Option<[u8; 16]> = if let Some(hex_s) = img["aeskey"].as_str().filter(|s| !s.is_empty()) {
+-            let bytes = hex::decode(hex_s.trim()).map_err(|e| anyhow!("image aeskey hex: {e}"))?;
+-            if bytes.len() != 16 {
+-                return Err(anyhow!("image aeskey must decode to 16 bytes"));
+-            }
+-            let mut k = [0u8; 16];
+-            k.copy_from_slice(&bytes);
+-            Some(k)
+-        } else if let Some(b64) = img["media"]["aes_key"].as_str().filter(|s| !s.is_empty()) {
+-            Some(parse_weixin_cdn_aes_key(b64)?)
+-        } else {
+-            None
+-        };
+-
+-        let enc = self.fetch_weixin_cdn_bytes(param, full_url).await?;
+-        match key {
+-            Some(k) => decrypt_aes_128_ecb_pkcs7(&enc, &k),
+-            None => Ok(enc),
+-        }
+-    }
+-
+-    /// Collect up to [`MAX_INBOUND_IMAGES`] images from `item_list` as Feishu-style `ImageAttachment` data URLs.
+-    pub(super) async fn inbound_image_attachments_from_message(&self, msg: &Value) -> (Vec<ImageAttachment>, usize) {
+-        const MAX_BYTES: usize = 1024 * 1024;
+-        let Some(items) = msg["item_list"].as_array() else {
+-            return (vec![], 0);
+-        };
+-        let total_with_param = items
+-            .iter()
+-            .filter(|i| {
+-                i["type"].as_i64() == Some(2)
+-                    && i["image_item"]["media"]["encrypt_query_param"]
+-                        .as_str()
+-                        .is_some_and(|s| !s.is_empty())
+-            })
+-            .count();
+-        let skipped = total_with_param.saturating_sub(MAX_INBOUND_IMAGES);
+-
+-        let mut attachments = Vec::new();
+-        for item in items {
+-            if attachments.len() >= MAX_INBOUND_IMAGES {
+-                break;
+-            }
+-            if item["type"].as_i64() != Some(2) {
+-                continue;
+-            }
+-            match self.inbound_image_bytes_from_item(item).await {
+-                Ok(raw) => {
+-                    let mime = sniff_image_mime(&raw);
+-                    let data_url = if raw.len() <= MAX_BYTES {
+-                        let b64 = B64.encode(&raw);
+-                        format!("data:{mime};base64,{b64}")
+-                    } else {
+-                        let raw_fallback = raw.clone();
+-                        match crate::agentic::image_analysis::optimize_image_with_size_limit(
+-                            raw,
+-                            "openai",
+-                            Some(mime),
+-                            Some(MAX_BYTES),
+-                        ) {
+-                            Ok(processed) => {
+-                                let b64 = B64.encode(&processed.data);
+-                                format!("data:{};base64,{}", processed.mime_type, b64)
+-                            }
+-                            Err(e) => {
+-                                warn!("Weixin image compression failed: {e}");
+-                                let b64 = B64.encode(&raw_fallback);
+-                                format!("data:{mime};base64,{b64}")
+-                            }
+-                        }
+-                    };
+-                    attachments.push(ImageAttachment {
+-                        name: format!("weixin_image_{}.jpg", attachments.len() + 1),
+-                        data_url,
+-                    });
+-                }
+-                Err(e) => warn!("Weixin inbound image download failed: {e}"),
+-            }
+-        }
+-        (attachments, skipped)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_send_text.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_send_text.rs
+deleted file mode 100644
+index 61a8864..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_send_text.rs
++++ /dev/null
+@@ -1,114 +0,0 @@
+-//! Weixin bot — outbound text pipeline + `getupdates` long-poll.
+-//!
+-//! Owns:
+-//!   * `send_message_raw` / `send_text` / `try_send_text` — outbound text
+-//!     message pipeline, including the stale-`context_token` invalidation
+-//!     heuristic ([`super::media_validate::is_context_token_error`]).
+-//!   * `get_updates_once` — single `ilink/bot/getupdates` call, which is
+-//!     consumed by `weixin_bot_inbound.rs` for both pairing and the
+-//!     post-pairing message loop.  Lives here (rather than in inbound)
+-//!     because the iLink poll body shape and session-expired handling
+-//!     mirror the outbound send pipeline.
+-//!
+-//! Implementation is split across sibling files; see `weixin_bot_media.rs`
+-//! for the facade / module index.
+-use anyhow::{anyhow, Result};
+-use serde_json::{json, Value};
+-use std::time::Duration;
+-use tracing::warn;
+-
+-use super::weixin_bot::{WeixinBot, API_TIMEOUT_SECS, CHANNEL_VERSION, SESSION_EXPIRED_ERRCODE};
+-
+-impl WeixinBot {
+-    pub(super) async fn get_updates_once(&self, buf: &str, timeout: Duration) -> Result<Value> {
+-        if self.is_session_paused().await {
+-            tokio::time::sleep(Duration::from_secs(2)).await;
+-            return Ok(json!({
+-                "ret": 0,
+-                "msgs": [],
+-                "get_updates_buf": buf
+-            }));
+-        }
+-
+-        let body = json!({
+-            "get_updates_buf": buf,
+-            "base_info": { "channel_version": CHANNEL_VERSION }
+-        });
+-        let raw = self.post_ilink("ilink/bot/getupdates", body, timeout).await?;
+-        let v: Value = serde_json::from_str(&raw)?;
+-        let ret = v["ret"].as_i64().unwrap_or(0);
+-        let errcode = v["errcode"].as_i64().unwrap_or(0);
+-        if errcode == SESSION_EXPIRED_ERRCODE || ret == SESSION_EXPIRED_ERRCODE {
+-            self.pause_session().await;
+-        }
+-        Ok(v)
+-    }
+-
+-    async fn send_message_raw(&self, to_user_id: &str, context_token: &str, text: &str) -> Result<()> {
+-        let client_id = format!("northhing-wx-{}", uuid::Uuid::new_v4());
+-        let item_list = if text.is_empty() {
+-            None
+-        } else {
+-            Some(vec![json!({
+-                "type": 1,
+-                "text_item": { "text": text }
+-            })])
+-        };
+-        let msg = json!({
+-            "from_user_id": "",
+-            "to_user_id": to_user_id,
+-            "client_id": client_id,
+-            "message_type": 2,
+-            "message_state": 2,
+-            "item_list": item_list,
+-            "context_token": context_token,
+-        });
+-        let body = json!({
+-            "msg": msg,
+-            "base_info": { "channel_version": CHANNEL_VERSION }
+-        });
+-        self.post_ilink("ilink/bot/sendmessage", body, Duration::from_secs(API_TIMEOUT_SECS))
+-            .await?;
+-        Ok(())
+-    }
+-
+-    /// Send text to peer; uses last known `context_token` for that peer.
+-    ///
+-    /// If the WeChat iLink API rejects the message (typically because the
+-    /// `context_token` has expired or exceeded its usage budget), we drop
+-    /// the cached token so subsequent sends fail fast with a clear error
+-    /// instead of silently retrying a known-bad token. The token will be
+-    /// refreshed automatically the next time the user sends an inbound
+-    /// message (see `run_message_loop` / `wait_for_pairing`).
+-    pub async fn send_text(&self, peer_id: &str, text: &str) -> Result<()> {
+-        let token = {
+-            let m = self.context_tokens.read().await;
+-            m.get(peer_id).cloned().ok_or_else(|| {
+-                anyhow!("context_token unavailable for peer {peer_id} (waiting for next inbound message)")
+-            })?
+-        };
+-        for chunk in super::media_validate::chunk_text_for_weixin(text) {
+-            if let Err(e) = self.send_message_raw(peer_id, &token, &chunk).await {
+-                if Self::is_context_token_error(&e) {
+-                    let mut m = self.context_tokens.write().await;
+-                    if m.get(peer_id).map(|t| t == &token).unwrap_or(false) {
+-                        m.remove(peer_id);
+-                        warn!("weixin: dropped stale context_token for peer {peer_id} after send error: {e}");
+-                    }
+-                }
+-                return Err(e);
+-            }
+-        }
+-        Ok(())
+-    }
+-
+-    /// Best-effort send that logs a warning on failure instead of silently
+-    /// swallowing the error. Use this for non-critical replies (welcome,
+-    /// pairing-error hints, etc.) where we don't want to abort the caller
+-    /// but we DO want a log record if the send actually failed.
+-    pub(super) async fn try_send_text(&self, peer_id: &str, text: &str, ctx: &str) {
+-        if let Err(e) = self.send_text(peer_id, text).await {
+-            warn!("weixin: {ctx} send to peer {peer_id} failed: {e}");
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_types.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_types.rs
+deleted file mode 100644
+index c47fee2..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_types.rs
++++ /dev/null
+@@ -1,33 +0,0 @@
+-//! Weixin bot — media pipeline DTOs.
+-//!
+-//! Small data carriers returned by the CDN upload pipeline
+-//! ([`UploadedMediaInfo`]) and the `ilink/bot/getuploadurl` call
+-//! ([`UploadUrlResult`]).  These are `pub(super)` so the other `bot` module
+-//! siblings can reference them via `super::media_types::Type`.
+-//!
+-//! See `weixin_bot_media.rs` for the facade / module index.
+-
+-/// Successful upload record produced by
+-/// [`super::media_upload::upload_bytes_to_weixin_cdn`].  Carries everything a
+-/// downstream caller needs to embed the media in an outbound message item:
+-/// the encrypted query param returned by the CDN `x-encrypted-param` header
+-/// (used by WeChat to download the bytes later), the AES key in hex form
+-/// (the value embedded in the message item is a base64-of-ASCII-hex quirk —
+-/// see [`super::media_validate::media_aes_key_b64`]), and both the plaintext
+-/// and ciphertext sizes for the `*_size` fields the iLink API expects.
+-#[derive(Debug)]
+-pub(super) struct UploadedMediaInfo {
+-    pub(super) download_encrypted_query_param: String,
+-    pub(super) aeskey_hex: String,
+-    pub(super) file_size_plain: u64,
+-    pub(super) file_size_cipher: usize,
+-}
+-
+-/// Result of `ilink/bot/getuploadurl`: the server may return either a
+-/// pre-built complete CDN URL (`upload_full_url`, preferred) or just the
+-/// `upload_param` to be combined with `cdn_base_url` and `filekey`.
+-#[derive(Debug, Clone)]
+-pub(super) struct UploadUrlResult {
+-    pub(super) upload_full_url: Option<String>,
+-    pub(super) upload_param: Option<String>,
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_typing.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_typing.rs
+deleted file mode 100644
+index 2ea0a11..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_typing.rs
++++ /dev/null
+@@ -1,148 +0,0 @@
+-//! Weixin bot — typing indicator (ilink/bot/getconfig + ilink/bot/sendtyping).
+-//!
+-//! Per `@tencent-weixin/openclaw-weixin` (`src/api/api.ts`), driving the
+-//! "对方正在输入" hint above the WeChat chat input requires two calls:
+-//!   1. `POST ilink/bot/getconfig`   → returns a base64 `typing_ticket`
+-//!      bound to the `(bot, ilink_user_id, context_token)` triple.
+-//!   2. `POST ilink/bot/sendtyping`  → with `status=1` to start typing and
+-//!      `status=2` to cancel (also auto-times out server-side after a few
+-//!      seconds, hence the 5-second refresh cadence used below).
+-//!
+-//! [`fetch_typing_ticket`] always invokes `ilink/bot/getconfig` (does NOT
+-//! consult the cache) so the caller can recover from a stale ticket by
+-//! clearing it and calling here again.
+-//!
+-//! Implementation is split across sibling files; see `weixin_bot_media.rs`
+-//! for the facade / module index.
+-use anyhow::{anyhow, Result};
+-use serde_json::{json, Value};
+-use std::sync::atomic::{AtomicBool, Ordering};
+-use std::sync::Arc;
+-use std::time::Duration;
+-use tracing::debug;
+-
+-use super::weixin_bot::{TypingHandle, WeixinBot, API_TIMEOUT_SECS, CHANNEL_VERSION};
+-
+-impl WeixinBot {
+-    /// Fetch a fresh typing_ticket for `peer_id`. Always invokes
+-    /// `ilink/bot/getconfig` (does NOT consult the cache) so the caller can
+-    /// recover from a stale ticket by clearing it and calling here again.
+-    async fn fetch_typing_ticket(&self, peer_id: &str) -> Result<String> {
+-        let context_token = {
+-            let m = self.context_tokens.read().await;
+-            m.get(peer_id).cloned()
+-        };
+-        let mut body = json!({
+-            "ilink_user_id": peer_id,
+-            "base_info": { "channel_version": CHANNEL_VERSION }
+-        });
+-        if let Some(ct) = context_token {
+-            body["context_token"] = json!(ct);
+-        }
+-        let raw = self
+-            .post_ilink("ilink/bot/getconfig", body, Duration::from_secs(API_TIMEOUT_SECS))
+-            .await?;
+-        let v: Value = serde_json::from_str(&raw)?;
+-        let ticket = v["typing_ticket"]
+-            .as_str()
+-            .filter(|s| !s.is_empty())
+-            .map(|s| s.to_string())
+-            .ok_or_else(|| anyhow!("ilink/bot/getconfig returned empty typing_ticket"))?;
+-        let mut m = self.typing_tickets.write().await;
+-        m.insert(peer_id.to_string(), ticket.clone());
+-        Ok(ticket)
+-    }
+-
+-    /// Send one typing event (`status`: 1 = start, 2 = cancel). Lazily fetches
+-    /// a typing_ticket on the first call per peer and refreshes once on
+-    /// ticket-related errors before giving up.
+-    pub(super) async fn send_typing(&self, peer_id: &str, status: i64) -> Result<()> {
+-        let cached = {
+-            let m = self.typing_tickets.read().await;
+-            m.get(peer_id).cloned()
+-        };
+-        let ticket = match cached {
+-            Some(t) => t,
+-            None => self.fetch_typing_ticket(peer_id).await?,
+-        };
+-
+-        let send_with = |t: String| async move {
+-            let body = json!({
+-                "ilink_user_id": peer_id,
+-                "typing_ticket": t,
+-                "status": status,
+-                "base_info": { "channel_version": CHANNEL_VERSION }
+-            });
+-            self.post_ilink("ilink/bot/sendtyping", body, Duration::from_secs(API_TIMEOUT_SECS))
+-                .await
+-        };
+-
+-        match send_with(ticket.clone()).await {
+-            Ok(_) => Ok(()),
+-            Err(e) => {
+-                // Drop the stale ticket and retry once with a fresh one. We
+-                // can't reliably distinguish ticket errors from transient
+-                // failures, so we always try to recover at most once.
+-                {
+-                    let mut m = self.typing_tickets.write().await;
+-                    if m.get(peer_id).map(|t| t == &ticket).unwrap_or(false) {
+-                        m.remove(peer_id);
+-                    }
+-                }
+-                debug!("weixin: typing ticket retry for peer {peer_id} (prev err: {e})");
+-                let fresh = self.fetch_typing_ticket(peer_id).await?;
+-                send_with(fresh).await?;
+-                Ok(())
+-            }
+-        }
+-    }
+-
+-    /// Spawn a background task that emits `sendtyping(status=1)` immediately
+-    /// and refreshes it every 5 seconds. The returned [`TypingHandle`] cancels
+-    /// the loop and emits `sendtyping(status=2)` when stopped or dropped, so
+-    /// the "正在输入" hint disappears on the user's side as soon as the bot
+-    /// finishes responding.
+-    pub(super) fn start_typing(self: &Arc<Self>, peer_id: String) -> TypingHandle {
+-        let cancel = Arc::new(AtomicBool::new(false));
+-        let cancel_task = cancel.clone();
+-        let bot = self.clone();
+-        let peer_for_task = peer_id.clone();
+-        let handle = tokio::spawn(async move {
+-            // Refresh interval matches OpenClaw's 6s default cadence; we use
+-            // 5s to leave a small safety margin against server-side timeout.
+-            // Each "wait" between refreshes is broken into 100ms ticks so a
+-            // stop signal from the main task is observed within ≤100ms even
+-            // mid-wait, which keeps the indicator from lingering after the
+-            // bot has actually finished responding.
+-            const TICK: Duration = Duration::from_millis(100);
+-            const TICKS_PER_REFRESH: u32 = 50; // 50 * 100ms = 5s
+-            const TICKS_AFTER_FAILURE: u32 = 100; // 100 * 100ms = 10s
+-
+-            loop {
+-                if cancel_task.load(Ordering::Acquire) {
+-                    return;
+-                }
+-                let next_wait = match bot.send_typing(&peer_for_task, 1).await {
+-                    Ok(()) => TICKS_PER_REFRESH,
+-                    Err(e) => {
+-                        debug!("weixin: send typing(start) failed for peer {peer_for_task}: {e}");
+-                        TICKS_AFTER_FAILURE
+-                    }
+-                };
+-                for _ in 0..next_wait {
+-                    if cancel_task.load(Ordering::Acquire) {
+-                        return;
+-                    }
+-                    tokio::time::sleep(TICK).await;
+-                }
+-            }
+-        });
+-        TypingHandle {
+-            cancel,
+-            handle: Some(handle),
+-            bot: self.clone(),
+-            peer_id,
+-            stopped: false,
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_upload.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_upload.rs
+deleted file mode 100644
+index e4a4ae5..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_upload.rs
++++ /dev/null
+@@ -1,250 +0,0 @@
+-//! Weixin bot — outbound CDN upload + workspace file send.
+-//!
+-//! Encrypts plaintext with a fresh AES-128 key, asks the iLink API for a
+-//! CDN upload URL, POSTs the ciphertext, and packages the result as a
+-//! media item that can be sent via [`super::super::weixin_bot_inbound`]'
+-//! outbound paths.  Also bundles a workspace file (`send_workspace_file_to_peer`)
+-//! — read from disk, MIME-sniffed, encrypted, uploaded, and emitted as
+-//! image/video/file item depending on the resolved type.
+-//!
+-//! Implementation is split across sibling files; see `weixin_bot_media.rs`
+-//! for the facade / module index.
+-use anyhow::{anyhow, Result};
+-use rand::RngCore;
+-use serde_json::{json, Value};
+-use std::time::Duration;
+-use tracing::{debug, info};
+-
+-use super::media_types::{UploadUrlResult, UploadedMediaInfo};
+-use super::weixin_bot::{WeixinBot, API_TIMEOUT_SECS, CHANNEL_VERSION};
+-use super::weixin_crypto::{
+-    aes_ecb_ciphertext_len, build_cdn_upload_url, encrypt_aes_128_ecb_pkcs7, md5_hex_lower, MAX_WEIXIN_FILE_BYTES,
+-};
+-
+-impl WeixinBot {
+-    /// `ilink/bot/getuploadurl` — returns either `upload_full_url` (preferred,
+-    /// when the server pre-builds the complete CDN URL) and/or
+-    /// `upload_param` (legacy, requires client-side URL composition).
+-    /// Mirrors `getUploadUrl` in `@tencent-weixin/openclaw-weixin@2.x`.
+-    #[allow(clippy::too_many_arguments)]
+-    async fn ilink_get_upload_url(
+-        &self,
+-        to_user_id: &str,
+-        filekey: &str,
+-        media_type: i64,
+-        rawsize: u64,
+-        rawfilemd5: &str,
+-        filesize: usize,
+-        aeskey_hex: &str,
+-    ) -> Result<UploadUrlResult> {
+-        let body = json!({
+-            "filekey": filekey,
+-            "media_type": media_type,
+-            "to_user_id": to_user_id,
+-            "rawsize": rawsize,
+-            "rawfilemd5": rawfilemd5,
+-            "filesize": filesize,
+-            "no_need_thumb": true,
+-            "aeskey": aeskey_hex,
+-            "base_info": { "channel_version": CHANNEL_VERSION }
+-        });
+-        let raw = self
+-            .post_ilink("ilink/bot/getuploadurl", body, Duration::from_secs(API_TIMEOUT_SECS))
+-            .await?;
+-        let v: Value = serde_json::from_str(&raw)?;
+-        let pick =
+-            |k: &str| -> Option<String> { v[k].as_str().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) };
+-        let upload_full_url = pick("upload_full_url");
+-        let upload_param = pick("upload_param");
+-        if upload_full_url.is_none() && upload_param.is_none() {
+-            return Err(anyhow!("getuploadurl: missing both upload_full_url and upload_param"));
+-        }
+-        Ok(UploadUrlResult {
+-            upload_full_url,
+-            upload_param,
+-        })
+-    }
+-
+-    async fn post_weixin_cdn_upload(&self, cdn_url: &str, ciphertext: &[u8]) -> Result<String> {
+-        let client = reqwest::Client::builder().timeout(Duration::from_secs(120)).build()?;
+-        let mut last_err: Option<anyhow::Error> = None;
+-        for attempt in 1..=super::weixin_crypto::CDN_UPLOAD_MAX_RETRIES {
+-            let resp = client
+-                .post(cdn_url)
+-                .header("Content-Type", "application/octet-stream")
+-                .body(ciphertext.to_vec())
+-                .send()
+-                .await;
+-            let resp = match resp {
+-                Ok(r) => r,
+-                Err(e) => {
+-                    last_err = Some(anyhow!("CDN upload attempt {attempt}: {e}"));
+-                    if attempt < super::weixin_crypto::CDN_UPLOAD_MAX_RETRIES {
+-                        tokio::time::sleep(Duration::from_secs(1)).await;
+-                    }
+-                    continue;
+-                }
+-            };
+-            let status = resp.status();
+-            if status.is_client_error() {
+-                let body = resp.text().await.unwrap_or_default();
+-                return Err(anyhow!("CDN client error {status}: {body}"));
+-            }
+-            if !status.is_success() {
+-                let body = resp.text().await.unwrap_or_default();
+-                last_err = Some(anyhow!("CDN server error {status}: {body}"));
+-                if attempt < super::weixin_crypto::CDN_UPLOAD_MAX_RETRIES {
+-                    tokio::time::sleep(Duration::from_secs(1)).await;
+-                }
+-                continue;
+-            }
+-            let download_param = resp
+-                .headers()
+-                .get("x-encrypted-param")
+-                .and_then(|h| h.to_str().ok())
+-                .map(|s| s.to_string())
+-                .filter(|s| !s.is_empty());
+-            return download_param.ok_or_else(|| anyhow!("CDN response missing x-encrypted-param header"));
+-        }
+-        Err(last_err.unwrap_or_else(|| anyhow!("CDN upload failed")))
+-    }
+-
+-    /// Read plaintext → encrypt → getuploadurl → POST to CDN (same pipeline as OpenClaw weixin plugin).
+-    async fn upload_bytes_to_weixin_cdn(
+-        &self,
+-        to_user_id: &str,
+-        plaintext: &[u8],
+-        media_type: i64,
+-    ) -> Result<UploadedMediaInfo> {
+-        let rawsize = plaintext.len() as u64;
+-        let rawfilemd5 = md5_hex_lower(plaintext);
+-        let mut aeskey = [0u8; 16];
+-        rand::thread_rng().fill_bytes(&mut aeskey);
+-        let aeskey_hex = hex::encode(aeskey);
+-        let filesize_cipher = aes_ecb_ciphertext_len(plaintext.len());
+-        let ciphertext = encrypt_aes_128_ecb_pkcs7(plaintext, &aeskey);
+-
+-        let mut filekey_raw = [0u8; 16];
+-        rand::thread_rng().fill_bytes(&mut filekey_raw);
+-        let filekey = hex::encode(filekey_raw);
+-
+-        let url_resp = self
+-            .ilink_get_upload_url(
+-                to_user_id,
+-                &filekey,
+-                media_type,
+-                rawsize,
+-                &rawfilemd5,
+-                filesize_cipher,
+-                &aeskey_hex,
+-            )
+-            .await?;
+-
+-        let cdn_url = if let Some(full) = url_resp.upload_full_url.as_deref() {
+-            full.to_string()
+-        } else if let Some(param) = url_resp.upload_param.as_deref() {
+-            build_cdn_upload_url(self.cdn_base_url(), param, &filekey)
+-        } else {
+-            return Err(anyhow!("getuploadurl: missing both upload_full_url and upload_param"));
+-        };
+-        debug!(
+-            "weixin CDN upload: media_type={media_type} rawsize={rawsize} cipher_len={}",
+-            ciphertext.len()
+-        );
+-        let download_encrypted_query_param = self.post_weixin_cdn_upload(&cdn_url, &ciphertext).await?;
+-
+-        Ok(UploadedMediaInfo {
+-            download_encrypted_query_param,
+-            aeskey_hex,
+-            file_size_plain: rawsize,
+-            file_size_cipher: ciphertext.len(),
+-        })
+-    }
+-
+-    async fn send_message_with_items(&self, to_user_id: &str, context_token: &str, items: Vec<Value>) -> Result<()> {
+-        let client_id = format!("northhing-wx-{}", uuid::Uuid::new_v4());
+-        let msg = json!({
+-            "from_user_id": "",
+-            "to_user_id": to_user_id,
+-            "client_id": client_id,
+-            "message_type": 2,
+-            "message_state": 2,
+-            "item_list": items,
+-            "context_token": context_token,
+-        });
+-        let body = json!({
+-            "msg": msg,
+-            "base_info": { "channel_version": CHANNEL_VERSION }
+-        });
+-        self.post_ilink("ilink/bot/sendmessage", body, Duration::from_secs(API_TIMEOUT_SECS))
+-            .await?;
+-        Ok(())
+-    }
+-
+-    /// Upload a workspace file and send as image / video / file attachment (like Feishu `send_file_to_feishu_chat`).
+-    pub(super) async fn send_workspace_file_to_peer(
+-        &self,
+-        peer_id: &str,
+-        raw_path: &str,
+-        workspace_root: Option<&std::path::Path>,
+-    ) -> Result<()> {
+-        let content = super::read_workspace_file(raw_path, MAX_WEIXIN_FILE_BYTES, workspace_root).await?;
+-        let mime = super::detect_mime_type(std::path::Path::new(&content.name));
+-
+-        let token = {
+-            let m = self.context_tokens.read().await;
+-            m.get(peer_id)
+-                .cloned()
+-                .ok_or_else(|| anyhow!("missing context_token for peer {peer_id}"))?
+-        };
+-
+-        let item: Value = if mime.starts_with("image/") {
+-            let up = self.upload_bytes_to_weixin_cdn(peer_id, &content.bytes, 1).await?;
+-            let aes_b64 = Self::media_aes_key_b64(&up.aeskey_hex)?;
+-            json!({
+-                "type": 2,
+-                "image_item": {
+-                    "media": {
+-                        "encrypt_query_param": up.download_encrypted_query_param,
+-                        "aes_key": aes_b64,
+-                        "encrypt_type": 1
+-                    },
+-                    "mid_size": up.file_size_cipher
+-                }
+-            })
+-        } else if mime.starts_with("video/") {
+-            let up = self.upload_bytes_to_weixin_cdn(peer_id, &content.bytes, 2).await?;
+-            let aes_b64 = Self::media_aes_key_b64(&up.aeskey_hex)?;
+-            json!({
+-                "type": 5,
+-                "video_item": {
+-                    "media": {
+-                        "encrypt_query_param": up.download_encrypted_query_param,
+-                        "aes_key": aes_b64,
+-                        "encrypt_type": 1
+-                    },
+-                    "video_size": up.file_size_cipher
+-                }
+-            })
+-        } else {
+-            let up = self.upload_bytes_to_weixin_cdn(peer_id, &content.bytes, 3).await?;
+-            let aes_b64 = Self::media_aes_key_b64(&up.aeskey_hex)?;
+-            json!({
+-                "type": 4,
+-                "file_item": {
+-                    "media": {
+-                        "encrypt_query_param": up.download_encrypted_query_param,
+-                        "aes_key": aes_b64,
+-                        "encrypt_type": 1
+-                    },
+-                    "file_name": content.name,
+-                    "len": format!("{}", up.file_size_plain)
+-                }
+-            })
+-        };
+-
+-        self.send_message_with_items(peer_id, &token, vec![item]).await?;
+-        info!("Weixin file sent to peer={peer_id} name={}", content.name);
+-        Ok(())
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/media_validate.rs b/src/crates/assembly/core/src/service/remote_connect/bot/media_validate.rs
+deleted file mode 100644
+index eadf403..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/media_validate.rs
++++ /dev/null
+@@ -1,146 +0,0 @@
+-//! Weixin bot — outbound encoding helpers + small validators.
+-//!
+-//! Pure / near-pure helpers that the other `bot` siblings lean on but that
+-//! don't deserve their own file:
+-//!   * [`media_aes_key_b64`] — base64-of-ASCII-hex quirk used by every
+-//!     outbound media item (matches `@tencent-weixin/openclaw-weixin@2.x`).
+-//!   * [`is_context_token_error`] — heuristic used by `send_text` to decide
+-//!     whether to drop a stale `context_token` after a failed send.
+-//!   * [`chunk_text_for_weixin`] — outbound text splitter at the
+-//!     `MAX_TEXT_CHUNK` boundary (UTF-8 safe).
+-//!
+-//! Implementation is split across sibling files; see `weixin_bot_media.rs`
+-//! for the facade / module index.
+-use anyhow::{anyhow, Result};
+-use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+-
+-use super::weixin_bot::{WeixinBot, MAX_TEXT_CHUNK};
+-
+-impl WeixinBot {
+-    /// `aes_key` in JSON for outbound media items.
+-    ///
+-    /// Quirk match with the official `@tencent-weixin/openclaw-weixin@2.x`
+-    /// reference plugin: it does `Buffer.from(aeskey.toString("hex")).toString("base64")`,
+-    /// which treats the 32-char hex *string* as UTF-8 bytes and base64-encodes
+-    /// **those ASCII bytes** — NOT the raw 16 binary bytes.  The downstream
+-    /// WeChat client decodes the value, sees 32 ASCII hex chars, and hex-
+-    /// decodes back to the original 16-byte AES key.  We were previously
+-    /// shipping `base64(raw 16 bytes)` (the "obvious" interpretation), which
+-    /// the WeChat client cannot decrypt — the file appeared in the chat but
+-    /// every download attempt failed with "下载失败".  Stay bug-compatible
+-    /// with the reference so the client can decrypt the CDN payload.
+-    pub(super) fn media_aes_key_b64(aeskey_hex: &str) -> Result<String> {
+-        let trimmed = aeskey_hex.trim();
+-        if trimmed.len() != 32 || !trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+-            return Err(anyhow!("aeskey must be 32 ascii hex chars"));
+-        }
+-        Ok(B64.encode(trimmed.as_bytes()))
+-    }
+-
+-    /// Heuristic: treat any send error mentioning an iLink application error
+-    /// (or a ret/errcode payload) as a context_token-expiration signal.
+-    /// We invalidate aggressively because the only thing we can do with a
+-    /// bad token is stop using it.
+-    pub(super) fn is_context_token_error(err: &anyhow::Error) -> bool {
+-        let s = err.to_string();
+-        s.contains("application error") || s.contains("context_token") || s.contains("errcode=")
+-    }
+-}
+-
+-/// Split an outbound reply into chunks no larger than [`MAX_TEXT_CHUNK`]
+-/// bytes while staying on UTF-8 character boundaries (WeChat rejects any
+-/// payload that ends mid-codepoint).  The cap mirrors the iLink API limit
+-/// and is intentionally character-agnostic — it counts bytes, not graphemes.
+-pub(super) fn chunk_text_for_weixin(text: &str) -> Vec<String> {
+-    if text.len() <= MAX_TEXT_CHUNK {
+-        return vec![text.to_string()];
+-    }
+-    let mut out = Vec::new();
+-    let mut rest = text;
+-    while !rest.is_empty() {
+-        if rest.len() <= MAX_TEXT_CHUNK {
+-            out.push(rest.to_string());
+-            break;
+-        }
+-        let mut cut = MAX_TEXT_CHUNK;
+-        while cut > 0 && !rest.is_char_boundary(cut) {
+-            cut -= 1;
+-        }
+-        if cut == 0 {
+-            cut = rest.chars().next().map(|c| c.len_utf8()).unwrap_or(1);
+-        }
+-        out.push(rest[..cut].to_string());
+-        rest = &rest[cut..];
+-    }
+-    out
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use anyhow::anyhow;
+-    use base64::engine::general_purpose::STANDARD as B64;
+-    #[allow(unused_imports)]
+-    use base64::Engine as _;
+-
+-    /// Sanity-check the heuristic used by `send_text` to decide whether a
+-    /// failed `send_message_raw` indicates the cached `context_token` has
+-    /// gone bad. Application errors and explicit `errcode=` strings must
+-    /// trigger token invalidation; pure transport errors (network/HTTP)
+-    /// must NOT, so we don't drop a perfectly good token after a transient
+-    /// blip.
+-    #[test]
+-    fn context_token_error_heuristic() {
+-        let app_err =
+-            anyhow!("ilink ilink/bot/sendmessage application error ret=0 errcode=12345 errmsg=context_token expired");
+-        assert!(WeixinBot::is_context_token_error(&app_err));
+-
+-        let app_err_short = anyhow!("upstream returned errcode=42 unauthorized");
+-        assert!(WeixinBot::is_context_token_error(&app_err_short));
+-
+-        let net_err = anyhow!("error sending request: connection refused");
+-        assert!(!WeixinBot::is_context_token_error(&net_err));
+-
+-        let http_err = anyhow!("ilink ilink/bot/sendmessage HTTP 500 Internal Server Error");
+-        assert!(!WeixinBot::is_context_token_error(&http_err));
+-    }
+-
+-    /// Outbound `aes_key` MUST be base64 of the 32-char hex *string* (its
+-    /// ASCII bytes), NOT base64 of the 16 raw key bytes.  This matches the
+-    /// official `@tencent-weixin/openclaw-weixin@2.x` reference plugin and
+-    /// is what the WeChat client expects when it pulls the file from CDN —
+-    /// otherwise every download fails with "下载失败" even though the bot
+-    /// successfully delivers the message itself.
+-    #[test]
+-    fn media_aes_key_b64_matches_openclaw_hex_ascii_format() {
+-        let raw = [
+-            0x01u8, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+-        ];
+-        let aeskey_hex = hex::encode(raw);
+-        let produced = WeixinBot::media_aes_key_b64(&aeskey_hex).unwrap();
+-        let expected = B64.encode(aeskey_hex.as_bytes());
+-        assert_eq!(
+-            produced, expected,
+-            "media_aes_key_b64 must base64-encode the hex string ASCII bytes (OpenClaw quirk)"
+-        );
+-        let decoded = B64.decode(&produced).unwrap();
+-        assert_eq!(
+-            decoded.len(),
+-            32,
+-            "decoded value must be 32 ASCII chars, not 16 raw bytes"
+-        );
+-        assert!(
+-            std::str::from_utf8(&decoded)
+-                .map(|s| s.chars().all(|c| c.is_ascii_hexdigit()))
+-                .unwrap_or(false),
+-            "decoded payload must be the original hex string"
+-        );
+-    }
+-
+-    #[test]
+-    fn media_aes_key_b64_rejects_non_hex_input() {
+-        assert!(WeixinBot::media_aes_key_b64("not_hex_at_all").is_err());
+-        assert!(WeixinBot::media_aes_key_b64("zz".repeat(16).as_str()).is_err());
+-        assert!(WeixinBot::media_aes_key_b64("ab").is_err());
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/menu.rs b/src/crates/assembly/core/src/service/remote_connect/bot/menu.rs
+deleted file mode 100644
+index f4a3267..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/menu.rs
++++ /dev/null
+@@ -1,208 +0,0 @@
+-//! Unified menu model shared by all IM bot adapters.
+-//!
+-//! The command router builds a [`MenuView`] for every reply.  Each platform
+-//! adapter renders the view to its native primitive: Telegram inline
+-//! keyboards, Feishu interactive cards, or WeChat numbered text lines.
+-//!
+-//! There is intentionally no per-platform menu state in this module — menu
+-//! semantics live in `command_router::dispatch_im_bot_command_inner`.
+-
+-use serde::{Deserialize, Serialize};
+-
+-use super::locale::{strings_for, BotLanguage, BotStrings};
+-
+-/// Visual style of a menu item.  Adapters map this to their own primitive
+-/// (e.g. Telegram has no styling, Feishu uses a `type` field).
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+-pub enum MenuItemStyle {
+-    Primary,
+-    Default,
+-    Danger,
+-}
+-
+-/// One row in a [`MenuView`].
+-#[derive(Debug, Clone)]
+-pub struct MenuItem {
+-    /// Short, button-friendly label shown to the user.  Should be ≤ 14 chars.
+-    pub label: String,
+-    /// Real command string the bot will execute when the item is selected.
+-    /// For platforms with native buttons this becomes `callback_data`; for
+-    /// WeChat it is mapped via [`MenuView::numeric_commands`] for `1` ~ `n`
+-    /// numeric replies.
+-    pub command: String,
+-    pub style: MenuItemStyle,
+-}
+-
+-impl MenuItem {
+-    pub fn primary(label: impl Into<String>, command: impl Into<String>) -> Self {
+-        Self {
+-            label: label.into(),
+-            command: command.into(),
+-            style: MenuItemStyle::Primary,
+-        }
+-    }
+-    pub fn default(label: impl Into<String>, command: impl Into<String>) -> Self {
+-        Self {
+-            label: label.into(),
+-            command: command.into(),
+-            style: MenuItemStyle::Default,
+-        }
+-    }
+-    pub fn danger(label: impl Into<String>, command: impl Into<String>) -> Self {
+-        Self {
+-            label: label.into(),
+-            command: command.into(),
+-            style: MenuItemStyle::Danger,
+-        }
+-    }
+-}
+-
+-/// Unified, platform-agnostic menu/reply view.
+-///
+-/// Always provide a short `title` and at most 5 items.  The body field is
+-/// optional and used for context like "Current session: …" or last dialog
+-/// playback.
+-#[derive(Debug, Clone, Default)]
+-pub struct MenuView {
+-    /// One-line context header (≤ 30 chars target).
+-    pub title: String,
+-    /// Optional secondary body text.
+-    pub body: Option<String>,
+-    pub items: Vec<MenuItem>,
+-    /// Optional footer hint shown below items (telegram/feishu silently
+-    /// drop this; weixin shows it as the last text line).
+-    pub footer_hint: Option<String>,
+-    /// Whether text-only renderers should append `items` as numbered lines.
+-    /// Some selection prompts include richer numbered lines in `body` while
+-    /// still keeping `items` for native buttons; appending both duplicates the
+-    /// option list on plain-text platforms.
+-    pub render_items_in_plain_text: bool,
+-}
+-
+-impl MenuView {
+-    pub fn plain(title: impl Into<String>) -> Self {
+-        Self {
+-            title: title.into(),
+-            body: None,
+-            items: Vec::new(),
+-            footer_hint: None,
+-            render_items_in_plain_text: true,
+-        }
+-    }
+-
+-    pub fn with_body(mut self, body: impl Into<String>) -> Self {
+-        self.body = Some(body.into());
+-        self
+-    }
+-
+-    pub fn with_items(mut self, items: Vec<MenuItem>) -> Self {
+-        self.items = items;
+-        self
+-    }
+-
+-    pub fn with_footer(mut self, hint: impl Into<String>) -> Self {
+-        self.footer_hint = Some(hint.into());
+-        self
+-    }
+-
+-    pub fn without_plain_text_items(mut self) -> Self {
+-        self.render_items_in_plain_text = false;
+-        self
+-    }
+-
+-    pub fn push_item(&mut self, item: MenuItem) {
+-        self.items.push(item);
+-    }
+-
+-    /// Commands corresponding to numeric replies `1..=items.len()`.
+-    pub fn numeric_commands(&self) -> Vec<String> {
+-        self.items.iter().map(|i| i.command.clone()).collect()
+-    }
+-
+-    /// Render the menu as plain text suitable for IM platforms without
+-    /// native buttons (e.g. WeChat iLink).
+-    pub fn render_plain_text(&self, language: BotLanguage) -> String {
+-        let s = strings_for(language);
+-        let mut out = String::new();
+-        if !self.title.is_empty() {
+-            out.push_str(&self.title);
+-        }
+-        if let Some(body) = &self.body {
+-            if !body.is_empty() {
+-                if !out.is_empty() {
+-                    out.push_str("\n\n");
+-                }
+-                out.push_str(body);
+-            }
+-        }
+-        if self.render_items_in_plain_text && !self.items.is_empty() {
+-            if !out.is_empty() {
+-                out.push_str("\n\n");
+-            }
+-            for (i, item) in self.items.iter().enumerate() {
+-                if i > 0 {
+-                    out.push('\n');
+-                }
+-                out.push_str(&format!("{} {}", i + 1, item.label));
+-            }
+-        }
+-        let hint = self.footer_hint.clone().filter(|h| !h.is_empty()).unwrap_or_else(|| {
+-            if self.items.is_empty() {
+-                String::new()
+-            } else {
+-                s.footer_reply_or_menu.to_string()
+-            }
+-        });
+-        if !hint.is_empty() {
+-            if !out.is_empty() {
+-                out.push_str("\n\n");
+-            }
+-            out.push_str(&hint);
+-        }
+-        out
+-    }
+-
+-    /// Render the title and optional body as a single text block, used by
+-    /// adapters with native buttons (Telegram / Feishu) where the items are
+-    /// shown separately as buttons.
+-    pub fn render_text_block(&self) -> String {
+-        let mut out = String::new();
+-        if !self.title.is_empty() {
+-            out.push_str(&self.title);
+-        }
+-        if let Some(body) = &self.body {
+-            if !body.is_empty() {
+-                if !out.is_empty() {
+-                    out.push_str("\n\n");
+-                }
+-                out.push_str(body);
+-            }
+-        }
+-        if let Some(hint) = &self.footer_hint {
+-            if !hint.is_empty() {
+-                if !out.is_empty() {
+-                    out.push_str("\n\n");
+-                }
+-                out.push_str(hint);
+-            }
+-        }
+-        if out.is_empty() {
+-            // Telegram refuses empty messages; fall back to a single space.
+-            " ".to_string()
+-        } else {
+-            out
+-        }
+-    }
+-}
+-
+-/// Common menu builder helpers used by command router and platforms.
+-pub mod build {
+-    use super::*;
+-
+-    /// Append the standard `back to main menu` item if not already present.
+-    pub fn with_back(view: &mut MenuView, s: &BotStrings) {
+-        if !view.items.iter().any(|i| i.command == "/menu") {
+-            view.push_item(MenuItem::default(s.item_back, "/menu"));
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/mod.rs b/src/crates/assembly/core/src/service/remote_connect/bot/mod.rs
+deleted file mode 100644
+index b2fa217..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/mod.rs
++++ /dev/null
+@@ -1,794 +0,0 @@
+-//! Bot integration for Remote Connect.
+-//! Supports Feishu, Telegram, and Weixin (iLink) bots as relay channels.
+-//! Shared command logic lives in `command_router`; platform-specific
+-//! I/O is handled by `telegram`, `feishu`, and `weixin`.
+-
+-pub mod command_router;
+-pub mod command_router_dispatch;
+-pub mod command_router_forwarded_turn;
+-pub mod command_router_questions;
+-pub mod command_router_resume;
+-pub mod command_router_session;
+-pub mod command_router_state;
+-#[cfg(test)]
+-mod command_router_tests;
+-pub mod command_router_util;
+-pub mod command_router_view;
+-pub mod feishu;
+-pub mod locale;
+-pub mod menu;
+-#[cfg(test)]
+-mod persistence_tests;
+-pub mod telegram;
+-pub mod weixin;
+-// R39a weixin god-split: facade + 5 siblings.
+-pub mod weixin_bot;
+-pub mod weixin_bot_inbound;
+-pub mod weixin_bot_media;
+-pub mod weixin_crypto;
+-pub mod weixin_qr_login;
+-// R47d weixin_bot_media god-split: facade + 6 sub-domain siblings
+-// (types / validate / download / upload / send_text / typing).
+-pub mod media_download;
+-pub mod media_send_text;
+-pub mod media_types;
+-pub mod media_typing;
+-pub mod media_upload;
+-pub mod media_validate;
+-
+-use serde::{Deserialize, Serialize};
+-
+-pub use command_router::{BotChatState, ForwardRequest, ForwardedTurnResult, HandleResult};
+-pub use locale::BotLanguage;
+-pub use menu::{MenuItem, MenuItemStyle, MenuView};
+-
+-/// Configuration for a bot-based connection.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "bot_type", rename_all = "snake_case")]
+-pub enum BotConfig {
+-    Feishu {
+-        app_id: String,
+-        app_secret: String,
+-    },
+-    Telegram {
+-        bot_token: String,
+-    },
+-    Weixin {
+-        ilink_token: String,
+-        base_url: String,
+-        bot_account_id: String,
+-    },
+-}
+-
+-/// Pairing state for bot-based connections.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BotPairingInfo {
+-    pub pairing_code: String,
+-    pub bot_type: String,
+-    pub bot_link: String,
+-    pub expires_at: i64,
+-}
+-
+-/// Persisted bot connection — saved to disk so reconnect survives restarts.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct SavedBotConnection {
+-    pub bot_type: String,
+-    pub chat_id: String,
+-    pub config: BotConfig,
+-    pub chat_state: BotChatState,
+-    pub connected_at: i64,
+-}
+-
+-/// Persisted remote-connect form values shown in the desktop dialog.
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct RemoteConnectFormState {
+-    pub custom_server_url: String,
+-    pub telegram_bot_token: String,
+-    pub feishu_app_id: String,
+-    pub feishu_app_secret: String,
+-    /// Weixin iLink credentials after QR login (optional until user links WeChat).
+-    #[serde(default, skip_serializing_if = "String::is_empty")]
+-    pub weixin_ilink_token: String,
+-    #[serde(default, skip_serializing_if = "String::is_empty")]
+-    pub weixin_base_url: String,
+-    #[serde(default, skip_serializing_if = "String::is_empty")]
+-    pub weixin_bot_account_id: String,
+-}
+-
+-/// All persisted bot connections (one per bot type at most).
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct BotPersistenceData {
+-    #[serde(default)]
+-    pub connections: Vec<SavedBotConnection>,
+-    #[serde(default)]
+-    pub form_state: RemoteConnectFormState,
+-    /// Global verbose mode setting for all bot connections.
+-    /// When true, the agent's intermediate thinking summaries (one short
+-    /// `[Thinking]` blocks are forwarded to the user, one line per `ThinkingEnd` event.
+-    /// Tool-call notifications are intentionally NOT sent even in verbose
+-    /// These messages are too noisy for IM channels (especially WeChat where
+-    /// each line costs a `context_token` slot) without giving the user
+-    /// information they could act on.
+-    /// Defaults to `false` (concise mode).
+-    #[serde(default)]
+-    pub verbose_mode: bool,
+-}
+-
+-impl BotPersistenceData {
+-    pub fn upsert(&mut self, conn: SavedBotConnection) {
+-        self.connections.retain(|c| c.bot_type != conn.bot_type);
+-        self.connections.push(conn);
+-    }
+-
+-    pub fn remove(&mut self, bot_type: &str) {
+-        self.connections.retain(|c| c.bot_type != bot_type);
+-    }
+-
+-    pub fn get(&self, bot_type: &str) -> Option<&SavedBotConnection> {
+-        self.connections.iter().find(|c| c.bot_type == bot_type)
+-    }
+-}
+-
+-// ===== Shared workspace-file utilities =====
+-
+-/// File content read from the local workspace, ready to be sent over any channel.
+-pub struct WorkspaceFileContent {
+-    pub name: String,
+-    pub bytes: Vec<u8>,
+-    pub mime_type: &'static str,
+-    pub size: u64,
+-}
+-
+-/// Resolve a raw path (with or without `computer://` / `file://` prefix) to an
+-/// absolute `PathBuf`.
+-///
+-/// Absolute paths are passed through directly. Relative paths are resolved
+-/// against `workspace_root` when provided, and paths escaping that root are
+-/// rejected.
+-pub fn resolve_workspace_path(raw: &str, workspace_root: Option<&std::path::Path>) -> Option<std::path::PathBuf> {
+-    northhing_services_integrations::remote_connect::resolve_remote_workspace_path(raw, workspace_root)
+-}
+-
+-/// Return the best-effort MIME type for a file based on its extension.
+-pub fn detect_mime_type(path: &std::path::Path) -> &'static str {
+-    northhing_services_integrations::remote_connect::detect_remote_mime_type(path)
+-}
+-
+-/// Read a workspace file, resolving `computer://` prefixes.
+-///
+-/// `max_size` is the caller-specific byte limit (e.g. 50 MB for Telegram,
+-/// 30 MB for Feishu, 10 MB for mobile relay).
+-///
+-/// Returns an error when the file is missing, is a directory, or exceeds
+-/// `max_size`.
+-pub async fn read_workspace_file(
+-    raw_path: &str,
+-    max_size: u64,
+-    workspace_root: Option<&std::path::Path>,
+-) -> anyhow::Result<WorkspaceFileContent> {
+-    let content =
+-        northhing_services_integrations::remote_connect::read_remote_workspace_file(raw_path, max_size, workspace_root)
+-            .await
+-            .map_err(anyhow::Error::msg)?;
+-
+-    Ok(WorkspaceFileContent {
+-        name: content.name,
+-        bytes: content.bytes,
+-        mime_type: content.mime_type,
+-        size: content.size,
+-    })
+-}
+-
+-/// Get file metadata (name and size in bytes) without reading the full content.
+-/// Returns `None` if the path cannot be resolved, does not exist, or is not a
+-/// regular file.
+-pub fn get_file_metadata(raw_path: &str, workspace_root: Option<&std::path::Path>) -> Option<(String, u64)> {
+-    let abs = resolve_workspace_path(raw_path, workspace_root)?;
+-    if !abs.is_file() {
+-        return None;
+-    }
+-    let name = abs.file_name().and_then(|n| n.to_str()).unwrap_or("file").to_string();
+-    let size = std::fs::metadata(&abs).ok()?.len();
+-    Some((name, size))
+-}
+-
+-/// Format a byte count as a human-readable string (e.g. "1.4 MB", "320 KB").
+-pub fn format_file_size(bytes: u64) -> String {
+-    if bytes >= 1024 * 1024 {
+-        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+-    } else if bytes >= 1024 {
+-        format!("{} KB", bytes / 1024)
+-    } else {
+-        format!("{bytes} B")
+-    }
+-}
+-
+-// ===== Downloadable file link extraction =====
+-
+-/// Extensions that are source-code / config files — excluded from download
+-/// when referenced via absolute paths (matches mobile-web `CODE_FILE_EXTENSIONS`).
+-const CODE_FILE_EXTENSIONS: &[&str] = &[
+-    "js",
+-    "jsx",
+-    "ts",
+-    "tsx",
+-    "mjs",
+-    "cjs",
+-    "mts",
+-    "cts",
+-    "py",
+-    "pyw",
+-    "pyi",
+-    "rs",
+-    "go",
+-    "java",
+-    "kt",
+-    "kts",
+-    "scala",
+-    "groovy",
+-    "c",
+-    "cpp",
+-    "cc",
+-    "cxx",
+-    "h",
+-    "hpp",
+-    "hxx",
+-    "hh",
+-    "cs",
+-    "rb",
+-    "php",
+-    "swift",
+-    "vue",
+-    "svelte",
+-    "css",
+-    "scss",
+-    "less",
+-    "sass",
+-    "json",
+-    "jsonc",
+-    "yaml",
+-    "yml",
+-    "toml",
+-    "xml",
+-    "md",
+-    "mdx",
+-    "rst",
+-    "txt",
+-    "sh",
+-    "bash",
+-    "zsh",
+-    "fish",
+-    "ps1",
+-    "bat",
+-    "cmd",
+-    "sql",
+-    "graphql",
+-    "gql",
+-    "proto",
+-    "lock",
+-    "env",
+-    "ini",
+-    "cfg",
+-    "conf",
+-    "cj",
+-    "ets",
+-    "editorconfig",
+-    "gitignore",
+-    "log",
+-];
+-
+-/// Extensions that should be treated as downloadable when referenced via
+-/// relative markdown links (matches mobile-web `DOWNLOADABLE_EXTENSIONS`).
+-const DOWNLOADABLE_EXTENSIONS: &[&str] = &[
+-    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp", "rtf", "pages", "numbers", "key", "png",
+-    "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif", "zip", "tar", "gz", "bz2", "7z", "rar", "dmg",
+-    "iso", "xz", "mp3", "wav", "ogg", "flac", "aac", "m4a", "wma", "mp4", "avi", "mkv", "mov", "webm", "wmv", "flv",
+-    "csv", "tsv", "sqlite", "db", "parquet", "epub", "mobi", "apk", "ipa", "exe", "msi", "deb", "rpm", "ttf", "otf",
+-    "woff", "woff2",
+-];
+-
+-/// Check whether a bare file path (no protocol prefix) should be treated as
+-/// a downloadable file based on its extension.
+-///
+-/// Absolute local file paths exclude source/config files. Relative links
+-/// are allowed when they point to known downloadable file types.
+-fn is_downloadable_by_extension(file_path: &str) -> bool {
+-    let ext = std::path::Path::new(file_path)
+-        .extension()
+-        .and_then(|e| e.to_str())
+-        .unwrap_or("")
+-        .to_lowercase();
+-    if ext.is_empty() {
+-        return false;
+-    }
+-    let is_absolute =
+-        file_path.starts_with('/') || (file_path.len() >= 3 && file_path.as_bytes().get(1) == Some(&b':'));
+-    if is_absolute {
+-        !CODE_FILE_EXTENSIONS.contains(&ext.as_str())
+-    } else {
+-        DOWNLOADABLE_EXTENSIONS.contains(&ext.as_str())
+-    }
+-}
+-
+-/// Only file paths that can be resolved to existing files are returned.
+-/// Directories and missing paths are skipped. Duplicate paths are deduplicated
+-/// before returning.
+-pub fn extract_computer_file_paths(text: &str, workspace_root: Option<&std::path::Path>) -> Vec<String> {
+-    const PREFIX: &str = "computer://";
+-    let mut paths: Vec<String> = Vec::new();
+-    let mut search = text;
+-
+-    while let Some(idx) = search.find(PREFIX) {
+-        let rest = &search[idx + PREFIX.len()..];
+-        let end = rest
+-            .find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '(' | ')' | '"' | '\''))
+-            .unwrap_or(rest.len());
+-        let raw_suffix = rest[..end].trim_end_matches(['.', ',', ';', ':', ')', ']']);
+-        if !raw_suffix.is_empty() {
+-            push_if_existing_file(&format!("{PREFIX}{raw_suffix}"), &mut paths, workspace_root);
+-        }
+-        search = &rest[end..];
+-    }
+-
+-    paths
+-}
+-
+-/// Try to resolve `file_path` and, if it exists as a regular file, push
+-/// its absolute path into `out` (deduplicating).
+-fn push_if_existing_file(file_path: &str, out: &mut Vec<String>, workspace_root: Option<&std::path::Path>) {
+-    if let Some(abs) = resolve_workspace_path(file_path, workspace_root) {
+-        let abs_str = abs.to_string_lossy().into_owned();
+-        if abs.exists() && abs.is_file() && !out.contains(&abs_str) {
+-            out.push(abs_str);
+-        }
+-    }
+-}
+-
+-/// Extract all downloadable file paths from agent response markdown text.
+-///
+-/// Detects three kinds of references:
+-/// 1. `computer://` links in plain text.
+-/// 2. `file://` links in plain text.
+-/// 3. Markdown hyperlinks `[text](href)` pointing to absolute local files
+-///    (excluding code/config source files).
+-///
+-/// Only paths that exist as regular files on disk are returned.
+-/// Duplicate paths are deduplicated.
+-pub fn extract_downloadable_file_paths(text: &str, workspace_root: Option<&std::path::Path>) -> Vec<String> {
+-    let mut paths: Vec<String> = Vec::new();
+-
+-    // Phase 1: protocol-prefixed links (`computer://` and `file://`).
+-    for prefix in ["computer://", "file://"] {
+-        let mut search = text;
+-        while let Some(idx) = search.find(prefix) {
+-            let rest = &search[idx + prefix.len()..];
+-            let end = rest
+-                .find(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '(' | ')' | '"' | '\''))
+-                .unwrap_or(rest.len());
+-            let raw_suffix = rest[..end].trim_end_matches(['.', ',', ';', ':', ')', ']']);
+-            if !raw_suffix.is_empty() {
+-                let resolve_input = if prefix == "computer://" {
+-                    format!("{prefix}{raw_suffix}")
+-                } else {
+-                    raw_suffix.to_string()
+-                };
+-                push_if_existing_file(&resolve_input, &mut paths, workspace_root);
+-            }
+-            search = &rest[end..];
+-        }
+-    }
+-
+-    // Phase 2: markdown hyperlinks `[text](href)` referencing local files.
+-    let bytes = text.as_bytes();
+-    let len = bytes.len();
+-    let mut i = 0;
+-    while i + 2 < len {
+-        if bytes[i] == b']' && bytes[i + 1] == b'(' {
+-            let href_start = i + 2;
+-            if let Some(rel_end) = text[href_start..].find(')') {
+-                let href = text[href_start..href_start + rel_end].trim();
+-                // Skip protocols already handled above and non-local URLs.
+-                if !href.is_empty()
+-                    && !href.starts_with("computer://")
+-                    && !href.starts_with("file://")
+-                    && !href.starts_with("http://")
+-                    && !href.starts_with("https://")
+-                    && !href.starts_with("mailto:")
+-                    && !href.starts_with("tel:")
+-                    && !href.starts_with('#')
+-                    && !href.starts_with("//")
+-                    && is_downloadable_by_extension(href)
+-                {
+-                    push_if_existing_file(href, &mut paths, workspace_root);
+-                }
+-                i = href_start + rel_end + 1;
+-            } else {
+-                i += 2;
+-            }
+-        } else {
+-            i += 1;
+-        }
+-    }
+-
+-    paths
+-}
+-
+-// ===== Auto-push file delivery helpers =====
+-
+-/// One file to be auto-pushed to the IM peer alongside an agent reply.
+-#[derive(Debug, Clone)]
+-pub struct AutoPushFile {
+-    /// Absolute path on the desktop (already resolved).
+-    pub abs_path: String,
+-    /// User-visible filename (basename of `abs_path`).
+-    pub name: String,
+-    /// Plaintext file size in bytes (for size-limit checks and UI).
+-    pub size: u64,
+-}
+-
+-/// Scan an agent reply for downloadable file references and resolve their
+-/// metadata so each platform adapter can push them directly to the user
+-/// without an intermediate "tap to download" prompt.
+-pub fn collect_auto_push_files(text: &str, workspace_root: Option<&std::path::Path>) -> Vec<AutoPushFile> {
+-    extract_downloadable_file_paths(text, workspace_root)
+-        .into_iter()
+-        .filter_map(|path| {
+-            get_file_metadata(&path, workspace_root).map(|(name, size)| AutoPushFile {
+-                abs_path: path,
+-                name,
+-                size,
+-            })
+-        })
+-        .collect()
+-}
+-
+-/// Caption sent once before the first auto-pushed file.
+-pub fn auto_push_intro(language: BotLanguage, count: usize) -> String {
+-    let strings = locale::strings_for(language);
+-    if count <= 1 {
+-        strings.auto_push_intro_one.to_string()
+-    } else {
+-        locale::fmt_count(strings.auto_push_intro_many_fmt, count)
+-    }
+-}
+-
+-/// Notice sent when a single file exceeds the platform's size limit and is skipped.
+-pub fn auto_push_skip_too_large_message(language: BotLanguage, file_name: &str, size: u64, limit: u64) -> String {
+-    let strings = locale::strings_for(language);
+-    strings
+-        .auto_push_skip_too_large_fmt
+-        .replace("{name}", file_name)
+-        .replace("{size}", &format_file_size(size))
+-        .replace("{limit}", &format_file_size(limit))
+-}
+-
+-/// Notice sent when an upload/send call fails for a single file.
+-pub fn auto_push_failed_message(language: BotLanguage, file_name: &str, err: &str) -> String {
+-    let strings = locale::strings_for(language);
+-    strings
+-        .auto_push_failed_fmt
+-        .replace("{name}", file_name)
+-        .replace("{err}", err)
+-}
+-
+-const REMOTE_CONNECT_PERSISTENCE_FILENAME: &str = "remote_connect_persistence.json";
+-const LEGACY_BOT_PERSISTENCE_FILENAME: &str = "bot_connections.json";
+-
+-pub fn bot_persistence_path() -> Option<std::path::PathBuf> {
+-    dirs::home_dir().map(|home| home.join(".northhing").join(REMOTE_CONNECT_PERSISTENCE_FILENAME))
+-}
+-
+-fn legacy_bot_persistence_path() -> Option<std::path::PathBuf> {
+-    dirs::home_dir().map(|home| home.join(".northhing").join(LEGACY_BOT_PERSISTENCE_FILENAME))
+-}
+-
+-/// Errors surfaced by bot persistence reads and transactional updates.
+-///
+-/// The `Read` / `Parse` / `Io` categories let callers match on the failing
+-/// phase; `Corrupted` marks a fail-closed abort where an existing file could
+-/// not be fully read back and was therefore left untouched.
+-#[derive(Debug, thiserror::Error)]
+-pub enum BotPersistenceError {
+-    #[error("Failed to read bot persistence file {path}: {source}")]
+-    Read {
+-        path: std::path::PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("Failed to parse bot persistence file {path}: {source}")]
+-    Parse {
+-        path: std::path::PathBuf,
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("Failed to write bot persistence file {path}: {source}")]
+-    Io {
+-        path: std::path::PathBuf,
+-        #[source]
+-        source: std::io::Error,
+-    },
+-    #[error("Failed to serialize bot persistence data: {source}")]
+-    Serialize {
+-        #[source]
+-        source: serde_json::Error,
+-    },
+-    #[error("Bot persistence is corrupted, refusing to overwrite: {0}")]
+-    Corrupted(#[source] Box<BotPersistenceError>),
+-    #[error("Cannot resolve bot persistence path: home directory unavailable")]
+-    NoHomeDirectory,
+-}
+-
+-/// Process-local single-writer guard for bot persistence.
+-///
+-/// Every load → mutate → write cycle (`update_bot_persistence`) serializes
+-/// through this mutex so concurrent saves cannot clobber each other's
+-/// changes. The critical section only mutates in-memory data and writes one
+-/// file — no `await`, no other IO — so `std::sync::Mutex` fits this
+-/// synchronous context (a tokio mutex would needlessly carry an async
+-/// runtime dependency into callers).
+-static PERSISTENCE_WRITE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+-
+-/// Fail-open read used by read-only callers: returns the default data and
+-/// logs a `warn` when the file is corrupted. Corrupted files are never
+-/// written back through this path, so the damage stays confined to a single
+-/// read.
+-pub fn load_bot_persistence() -> BotPersistenceData {
+-    let Some(main) = bot_persistence_path() else {
+-        return BotPersistenceData::default();
+-    };
+-    let Some(legacy) = legacy_bot_persistence_path() else {
+-        return BotPersistenceData::default();
+-    };
+-    load_bot_persistence_at(&main, &legacy)
+-}
+-
+-fn load_bot_persistence_at(main: &std::path::Path, legacy: &std::path::Path) -> BotPersistenceData {
+-    match try_load_bot_persistence_at(main, legacy) {
+-        Ok(data) => data,
+-        Err(error) => {
+-            tracing::warn!("Bot persistence corrupted or unreadable, returning default: {error}");
+-            BotPersistenceData::default()
+-        }
+-    }
+-}
+-
+-/// Fail-closed load for `update_bot_persistence` and callers that must not
+-/// proceed on partial data.
+-///
+-/// Returns `Err` when the main file exists but cannot be read or parsed, and
+-/// when the legacy fallback is present but corrupted. A missing main file
+-/// falls back to the legacy file (existing migration semantics); a missing
+-/// legacy file is the empty initial state.
+-pub fn try_load_bot_persistence() -> Result<BotPersistenceData, BotPersistenceError> {
+-    let Some(main) = bot_persistence_path() else {
+-        return Ok(BotPersistenceData::default());
+-    };
+-    let Some(legacy) = legacy_bot_persistence_path() else {
+-        return Ok(BotPersistenceData::default());
+-    };
+-    try_load_bot_persistence_at(&main, &legacy)
+-}
+-
+-fn try_load_bot_persistence_at(
+-    main: &std::path::Path,
+-    legacy: &std::path::Path,
+-) -> Result<BotPersistenceData, BotPersistenceError> {
+-    if let Some(data) = read_bot_persistence_file(main)? {
+-        return Ok(data);
+-    }
+-    match read_bot_persistence_file(legacy)? {
+-        Some(data) => Ok(data),
+-        None => Ok(BotPersistenceData::default()),
+-    }
+-}
+-
+-fn read_bot_persistence_file(path: &std::path::Path) -> Result<Option<BotPersistenceData>, BotPersistenceError> {
+-    match std::fs::read_to_string(path) {
+-        Ok(content) => serde_json::from_str(&content)
+-            .map(Some)
+-            .map_err(|source| BotPersistenceError::Parse {
+-                path: path.to_path_buf(),
+-                source,
+-            }),
+-        Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(None),
+-        Err(source) => Err(BotPersistenceError::Read {
+-            path: path.to_path_buf(),
+-            source,
+-        }),
+-    }
+-}
+-
+-/// Transactional single-writer update of the bot persistence file.
+-///
+-/// Runs the whole load → `f` → atomic-write cycle under
+-/// [`PERSISTENCE_WRITE_LOCK`]. Fail-closed on load: a corrupted main file
+-/// aborts with [`BotPersistenceError::Corrupted`] before `f` runs, so a
+-/// partial read can never be written back over valid data.
+-pub fn update_bot_persistence(f: impl FnOnce(&mut BotPersistenceData)) -> Result<(), BotPersistenceError> {
+-    let Some(main) = bot_persistence_path() else {
+-        return Err(BotPersistenceError::NoHomeDirectory);
+-    };
+-    let Some(legacy) = legacy_bot_persistence_path() else {
+-        return Err(BotPersistenceError::NoHomeDirectory);
+-    };
+-    update_bot_persistence_at(&main, &legacy, f)
+-}
+-
+-fn update_bot_persistence_at(
+-    main: &std::path::Path,
+-    legacy: &std::path::Path,
+-    f: impl FnOnce(&mut BotPersistenceData),
+-) -> Result<(), BotPersistenceError> {
+-    let _guard = match PERSISTENCE_WRITE_LOCK.lock() {
+-        Ok(guard) => guard,
+-        Err(poisoned) => {
+-            tracing::warn!("Bot persistence write lock poisoned, recovering");
+-            poisoned.into_inner()
+-        }
+-    };
+-    let mut data =
+-        try_load_bot_persistence_at(main, legacy).map_err(|source| BotPersistenceError::Corrupted(Box::new(source)))?;
+-    f(&mut data);
+-    write_bot_persistence_atomic(main, &data)
+-}
+-
+-/// Atomic file write: serialize to a `.<name>.<pid>.<nonce>.tmp` sibling in
+-/// the same directory, then rename over the target (same-directory rename is
+-/// atomic). The previous content is copied to `<name>.bak` first; a failed
+-/// backup is warn-only and never blocks the write.
+-///
+-/// Mirrors the tmp+nonce+rename pattern of `services-core` `json_store.rs`
+-/// (`build_temp_json_path` / `replace_file_from_temp`), adapted to this
+-/// synchronous context without tokio.
+-fn write_bot_persistence_atomic(path: &std::path::Path, data: &BotPersistenceData) -> Result<(), BotPersistenceError> {
+-    let parent = path.parent().ok_or_else(|| BotPersistenceError::Io {
+-        path: path.to_path_buf(),
+-        source: std::io::Error::new(std::io::ErrorKind::InvalidInput, "target path has no parent directory"),
+-    })?;
+-    std::fs::create_dir_all(parent).map_err(|source| BotPersistenceError::Io {
+-        path: path.to_path_buf(),
+-        source,
+-    })?;
+-    let json = serde_json::to_string_pretty(data).map_err(|source| BotPersistenceError::Serialize { source })?;
+-
+-    let file_name = path
+-        .file_name()
+-        .map(|name| name.to_string_lossy().into_owned())
+-        .unwrap_or_else(|| "data.json".to_string());
+-    let nonce = std::time::SystemTime::now()
+-        .duration_since(std::time::UNIX_EPOCH)
+-        .unwrap_or_default()
+-        .as_nanos();
+-    let tmp_path = parent.join(format!(".{file_name}.{}.{nonce}.tmp", std::process::id()));
+-
+-    if path.exists() {
+-        if let Err(error) = std::fs::copy(path, path.with_extension("bak")) {
+-            tracing::warn!("Failed to back up bot persistence {}: {error}", path.display());
+-        }
+-    }
+-
+-    // Write + flush the tmp file before rename so the published file is never
+-    // a partial write. The handle drops at the end of this block, releasing
+-    // the file before the rename below (Windows may otherwise fail the rename).
+-    {
+-        use std::io::Write;
+-        let mut file = match std::fs::File::create(&tmp_path) {
+-            Ok(file) => file,
+-            Err(source) => {
+-                let _ = std::fs::remove_file(&tmp_path);
+-                return Err(BotPersistenceError::Io { path: tmp_path, source });
+-            }
+-        };
+-        if let Err(source) = file.write_all(json.as_bytes()) {
+-            let _ = std::fs::remove_file(&tmp_path);
+-            return Err(BotPersistenceError::Io { path: tmp_path, source });
+-        }
+-        if let Err(source) = file.flush() {
+-            let _ = std::fs::remove_file(&tmp_path);
+-            return Err(BotPersistenceError::Io { path: tmp_path, source });
+-        }
+-    }
+-
+-    match std::fs::rename(&tmp_path, path) {
+-        Ok(()) => Ok(()),
+-        Err(_first_error) => {
+-            // Windows: external scanners/indexers may briefly hold a
+-            // non-shareable handle on the target, making rename fail with
+-            // PermissionDenied. Retry once after removing the target — same
+-            // fallback as json_store.rs `replace_file_from_temp`.
+-            if path.exists() {
+-                match std::fs::remove_file(path) {
+-                    Ok(()) => {}
+-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+-                    Err(error) => {
+-                        let _ = std::fs::remove_file(&tmp_path);
+-                        return Err(BotPersistenceError::Io {
+-                            path: path.to_path_buf(),
+-                            source: error,
+-                        });
+-                    }
+-                }
+-            }
+-            match std::fs::rename(&tmp_path, path) {
+-                Ok(()) => Ok(()),
+-                Err(source) => {
+-                    let _ = std::fs::remove_file(&tmp_path);
+-                    Err(BotPersistenceError::Io { path: tmp_path, source })
+-                }
+-            }
+-        }
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::{collect_auto_push_files, extract_downloadable_file_paths, resolve_workspace_path};
+-
+-    fn make_temp_workspace() -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+-        let base = std::env::temp_dir().join(format!("northhing-remote-connect-test-{}", uuid::Uuid::new_v4()));
+-        let workspace = base.join("workspace");
+-        let artifacts = workspace.join("artifacts");
+-        let report = artifacts.join("report.pptx");
+-        std::fs::create_dir_all(&artifacts).unwrap();
+-        std::fs::write(&report, b"ppt").unwrap();
+-        (base, workspace, report)
+-    }
+-
+-    #[test]
+-    fn resolves_relative_paths_within_workspace_root() {
+-        let (base, workspace, report) = make_temp_workspace();
+-
+-        let resolved = resolve_workspace_path("computer://artifacts/report.pptx", Some(&workspace)).unwrap();
+-
+-        assert_eq!(resolved, std::fs::canonicalize(report).unwrap());
+-        let _ = std::fs::remove_dir_all(base);
+-    }
+-
+-    #[test]
+-    fn rejects_relative_paths_that_escape_workspace_root() {
+-        let (base, workspace, _report) = make_temp_workspace();
+-        let secret = base.join("secret.txt");
+-        std::fs::write(&secret, b"secret").unwrap();
+-
+-        let resolved = resolve_workspace_path("computer://../secret.txt", Some(&workspace));
+-
+-        assert!(resolved.is_none());
+-        let _ = std::fs::remove_dir_all(base);
+-    }
+-
+-    /// Regression: `[name.pptx](name.pptx)` style relative markdown links
+-    /// emitted by the agent must be auto-pushed when the active workspace
+-    /// (Pro mode `current_workspace` OR Assistant mode `current_assistant`)
+-    /// is known. Previously only `current_workspace` was consulted, so
+-    /// assistant-mode replies silently dropped attachments — see
+-    /// `BotChatState::active_workspace_path` and the per-platform
+-    /// `notify_files_ready` callers.
+-    #[test]
+-    fn collects_relative_pptx_link_against_assistant_workspace_root() {
+-        let (base, workspace, _report) = make_temp_workspace();
+-        let pptx = workspace.join("apple-vision-pro-keynote-style.pptx");
+-        std::fs::write(&pptx, b"pptx-bytes").unwrap();
+-
+-        let text = "[apple-vision-pro-keynote-style.pptx](apple-vision-pro-keynote-style.pptx)";
+-        let files = collect_auto_push_files(text, Some(&workspace));
+-
+-        assert_eq!(files.len(), 1, "relative pptx link must be auto-pushed");
+-        assert_eq!(files[0].name, "apple-vision-pro-keynote-style.pptx");
+-        assert_eq!(files[0].size, b"pptx-bytes".len() as u64);
+-        let _ = std::fs::remove_dir_all(base);
+-    }
+-
+-    #[test]
+-    fn extracts_relative_computer_links_when_workspace_root_is_known() {
+-        let (base, workspace, _report) = make_temp_workspace();
+-        let text = "Download [deck](computer://artifacts/report.pptx)";
+-
+-        let paths = extract_downloadable_file_paths(text, Some(&workspace));
+-
+-        assert_eq!(paths.len(), 1);
+-        assert!(std::path::Path::new(&paths[0]).is_absolute());
+-        assert!(std::path::Path::new(&paths[0]).ends_with(std::path::Path::new("artifacts").join("report.pptx")));
+-        assert!(std::path::Path::new(&paths[0]).exists());
+-        let _ = std::fs::remove_dir_all(base);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/persistence_tests.rs b/src/crates/assembly/core/src/service/remote_connect/bot/persistence_tests.rs
+deleted file mode 100644
+index 6c76ec5..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/persistence_tests.rs
++++ /dev/null
+@@ -1,191 +0,0 @@
+-//! Tests for transactional bot persistence (H-6 audit fix): single-writer
+-//! `update_bot_persistence`, fail-closed loads, atomic writes with `.bak`
+-//! backup, and the legacy-file migration path.
+-//!
+-//! Path isolation: the tests exercise the path-parameterized internals
+-//! (`*_at` variants) against `TestTempDir` paths instead of touching
+-//! `dirs::home_dir()`, so they are parallel-safe and never touch the real
+-//! user profile.
+-
+-use super::command_router::BotChatState;
+-use super::{
+-    load_bot_persistence_at, try_load_bot_persistence_at, update_bot_persistence_at, BotConfig, BotPersistenceData,
+-    BotPersistenceError, SavedBotConnection,
+-};
+-use northhing_test_support::TestTempDir;
+-use std::path::PathBuf;
+-use std::sync::atomic::{AtomicBool, Ordering};
+-use std::sync::Arc;
+-
+-fn test_bot(chat_id: &str) -> SavedBotConnection {
+-    SavedBotConnection {
+-        bot_type: chat_id.to_string(),
+-        chat_id: chat_id.to_string(),
+-        config: BotConfig::Telegram {
+-            bot_token: format!("token-{chat_id}"),
+-        },
+-        chat_state: BotChatState::new(chat_id.to_string()),
+-        connected_at: 0,
+-    }
+-}
+-
+-fn persistence_paths(dir: &TestTempDir) -> (PathBuf, PathBuf) {
+-    (
+-        dir.path().join("remote_connect_persistence.json"),
+-        dir.path().join("bot_connections.json"),
+-    )
+-}
+-
+-#[test]
+-fn concurrent_updates_do_not_lose_entries() {
+-    let dir = TestTempDir::new("bot-persistence-concurrent");
+-    let (main, legacy) = persistence_paths(&dir);
+-
+-    std::thread::scope(|scope| {
+-        for i in 0..10 {
+-            let main = main.clone();
+-            let legacy = legacy.clone();
+-            scope.spawn(move || {
+-                update_bot_persistence_at(&main, &legacy, |data| {
+-                    data.connections.push(test_bot(&format!("bot-{i}")));
+-                })
+-                .unwrap();
+-            });
+-        }
+-    });
+-
+-    let data = try_load_bot_persistence_at(&main, &legacy).unwrap();
+-    assert_eq!(data.connections.len(), 10, "all 10 concurrent updates must survive");
+-    for i in 0..10 {
+-        assert!(
+-            data.connections.iter().any(|c| c.bot_type == format!("bot-{i}")),
+-            "connection bot-{i} lost by a concurrent save"
+-        );
+-    }
+-}
+-
+-#[test]
+-fn update_fails_closed_on_corrupted_main_file_without_running_f() {
+-    let dir = TestTempDir::new("bot-persistence-corrupt");
+-    let (main, legacy) = persistence_paths(&dir);
+-    let corrupted = b"{ not valid json !!!";
+-    std::fs::write(&main, corrupted).unwrap();
+-
+-    let f_ran = AtomicBool::new(false);
+-    let result = update_bot_persistence_at(&main, &legacy, |data| {
+-        f_ran.store(true, Ordering::SeqCst);
+-        data.connections.push(test_bot("bot-x"));
+-    });
+-
+-    assert!(matches!(result, Err(BotPersistenceError::Corrupted(_))));
+-    assert!(
+-        !f_ran.load(Ordering::SeqCst),
+-        "f must not run when the main file is corrupted"
+-    );
+-    assert_eq!(
+-        std::fs::read(&main).unwrap(),
+-        corrupted,
+-        "corrupted file bytes must be left untouched"
+-    );
+-}
+-
+-#[test]
+-fn load_returns_default_with_warn_on_corrupted_file() {
+-    let dir = TestTempDir::new("bot-persistence-load-warn");
+-    let (main, legacy) = persistence_paths(&dir);
+-    std::fs::write(&main, b"{ not valid json !!!").unwrap();
+-
+-    let warn_seen = Arc::new(AtomicBool::new(false));
+-    let subscriber = CapturingSubscriber {
+-        warn_seen: warn_seen.clone(),
+-    };
+-    tracing::subscriber::with_default(subscriber, || {
+-        let data = load_bot_persistence_at(&main, &legacy);
+-        assert_eq!(data.connections.len(), 0, "corrupted load must fall back to default");
+-        assert!(!data.verbose_mode);
+-    });
+-
+-    assert!(warn_seen.load(Ordering::SeqCst), "corrupted load must emit a warn");
+-}
+-
+-#[test]
+-fn second_write_keeps_previous_version_in_bak() {
+-    let dir = TestTempDir::new("bot-persistence-bak");
+-    let (main, legacy) = persistence_paths(&dir);
+-
+-    update_bot_persistence_at(&main, &legacy, |data| data.connections.push(test_bot("first"))).unwrap();
+-    update_bot_persistence_at(&main, &legacy, |data| data.connections.push(test_bot("second"))).unwrap();
+-
+-    let bak_path = main.with_extension("bak");
+-    assert!(bak_path.exists(), ".bak must exist after a second write");
+-    let previous: BotPersistenceData = serde_json::from_str(&std::fs::read_to_string(&bak_path).unwrap()).unwrap();
+-    assert!(previous.connections.iter().any(|c| c.bot_type == "first"));
+-    assert!(
+-        !previous.connections.iter().any(|c| c.bot_type == "second"),
+-        ".bak must hold the previous version, not the latest"
+-    );
+-}
+-
+-#[test]
+-fn missing_main_file_falls_back_to_legacy_file() {
+-    let dir = TestTempDir::new("bot-persistence-legacy");
+-    let (main, legacy) = persistence_paths(&dir);
+-    let mut legacy_data = BotPersistenceData::default();
+-    legacy_data.connections.push(test_bot("legacy-bot"));
+-    std::fs::write(&legacy, serde_json::to_string_pretty(&legacy_data).unwrap()).unwrap();
+-
+-    let data = try_load_bot_persistence_at(&main, &legacy).unwrap();
+-    assert_eq!(data.connections.len(), 1);
+-    assert_eq!(data.connections[0].bot_type, "legacy-bot");
+-}
+-
+-#[test]
+-fn corrupted_legacy_file_is_fail_closed() {
+-    let dir = TestTempDir::new("bot-persistence-legacy-corrupt");
+-    let (main, legacy) = persistence_paths(&dir);
+-    std::fs::write(&legacy, b"{ not valid json !!!").unwrap();
+-
+-    let result = try_load_bot_persistence_at(&main, &legacy);
+-    assert!(matches!(result, Err(BotPersistenceError::Parse { .. })));
+-}
+-
+-#[test]
+-fn missing_both_files_is_empty_state() {
+-    let dir = TestTempDir::new("bot-persistence-empty");
+-    let (main, legacy) = persistence_paths(&dir);
+-
+-    let data = try_load_bot_persistence_at(&main, &legacy).unwrap();
+-    assert_eq!(data.connections.len(), 0);
+-    assert!(!data.verbose_mode);
+-}
+-
+-/// Minimal `tracing` subscriber that records whether a WARN event was
+-/// emitted during the wrapped call. Thread-local via
+-/// `tracing::subscriber::with_default`, so parallel tests are unaffected.
+-struct CapturingSubscriber {
+-    warn_seen: Arc<AtomicBool>,
+-}
+-
+-impl tracing::subscriber::Subscriber for CapturingSubscriber {
+-    fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+-        true
+-    }
+-
+-    fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+-        tracing::span::Id::from_u64(1)
+-    }
+-
+-    fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+-
+-    fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+-
+-    fn event(&self, event: &tracing::Event<'_>) {
+-        if event.metadata().level() == &tracing::Level::WARN {
+-            self.warn_seen.store(true, Ordering::SeqCst);
+-        }
+-    }
+-
+-    fn enter(&self, _span: &tracing::span::Id) {}
+-
+-    fn exit(&self, _span: &tracing::span::Id) {}
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/telegram.rs b/src/crates/assembly/core/src/service/remote_connect/bot/telegram.rs
+deleted file mode 100644
+index 58a8532..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/telegram.rs
++++ /dev/null
+@@ -1,653 +0,0 @@
+-//! Telegram bot integration for Remote Connect.
+-//!
+-//! Users create their own bot via @BotFather, obtain a token, and enter it
+-//! in northhing settings.  The desktop polls for updates via the Telegram Bot
+-//! API (long polling) and routes messages through the shared command router.
+-
+-use anyhow::{anyhow, Result};
+-use serde::{Deserialize, Serialize};
+-use std::collections::HashMap;
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-use tracing::{debug, error, info, warn};
+-
+-use super::command_router::{
+-    complete_im_bot_pairing, current_bot_language, execute_forwarded_turn, handle_command, parse_command,
+-    welcome_message, BotAction, BotChatState, BotInteractionHandler, BotInteractiveRequest, BotLanguage,
+-    BotMessageSender, HandleResult,
+-};
+-use super::{load_bot_persistence, update_bot_persistence, BotConfig, SavedBotConnection};
+-use crate::service::remote_connect::remote_server::ImageAttachment;
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct TelegramConfig {
+-    pub bot_token: String,
+-}
+-
+-pub struct TelegramBot {
+-    config: TelegramConfig,
+-    pending_pairings: Arc<RwLock<HashMap<String, PendingPairing>>>,
+-    last_update_id: Arc<RwLock<i64>>,
+-    chat_states: Arc<RwLock<HashMap<i64, BotChatState>>>,
+-}
+-
+-#[derive(Debug, Clone)]
+-struct PendingPairing {
+-    created_at: i64,
+-}
+-
+-/// Telegram Bot API hard limit for `sendDocument` uploads (50 MB), aligned
+-/// across all IM platforms by capping at 30 MB to match Feishu / WeChat.
+-const MAX_TELEGRAM_FILE_BYTES: u64 = 30 * 1024 * 1024;
+-
+-/// Telegram caps `sendMessage.text` at 4096 UTF-16 code units. We chunk on
+-/// char boundaries and stay slightly under the limit to leave headroom for
+-/// any client-side counting differences.
+-const MAX_TELEGRAM_TEXT_CHUNK: usize = 4000;
+-
+-fn chunk_text_for_telegram(text: &str) -> Vec<String> {
+-    if text.len() <= MAX_TELEGRAM_TEXT_CHUNK {
+-        return vec![text.to_string()];
+-    }
+-    let mut out = Vec::new();
+-    let mut rest = text;
+-    while !rest.is_empty() {
+-        if rest.len() <= MAX_TELEGRAM_TEXT_CHUNK {
+-            out.push(rest.to_string());
+-            break;
+-        }
+-        let mut cut = MAX_TELEGRAM_TEXT_CHUNK;
+-        while cut > 0 && !rest.is_char_boundary(cut) {
+-            cut -= 1;
+-        }
+-        if cut == 0 {
+-            cut = rest.chars().next().map(|c| c.len_utf8()).unwrap_or(1);
+-        }
+-        out.push(rest[..cut].to_string());
+-        rest = &rest[cut..];
+-    }
+-    out
+-}
+-
+-impl TelegramBot {
+-    fn invalid_pairing_code_message(language: BotLanguage) -> &'static str {
+-        if language.is_chinese() {
+-            "配对码无效或已过期，请重试。"
+-        } else {
+-            "Invalid or expired pairing code. Please try again."
+-        }
+-    }
+-
+-    fn enter_pairing_code_message(language: BotLanguage) -> &'static str {
+-        if language.is_chinese() {
+-            "请输入 northhing Desktop 中显示的 6 位配对码。"
+-        } else {
+-            "Please enter the 6-digit pairing code from northhing Desktop."
+-        }
+-    }
+-
+-    pub fn new(config: TelegramConfig) -> Self {
+-        Self {
+-            config,
+-            pending_pairings: Arc::new(RwLock::new(HashMap::new())),
+-            last_update_id: Arc::new(RwLock::new(0)),
+-            chat_states: Arc::new(RwLock::new(HashMap::new())),
+-        }
+-    }
+-
+-    /// Restore a previously paired chat so the bot skips the pairing step.
+-    pub async fn restore_chat_state(&self, chat_id: i64, state: BotChatState) {
+-        self.chat_states.write().await.insert(chat_id, state);
+-    }
+-
+-    fn api_url(&self, method: &str) -> String {
+-        format!("https://api.telegram.org/bot{}/{}", self.config.bot_token, method)
+-    }
+-
+-    pub async fn send_message(&self, chat_id: i64, text: &str) -> Result<()> {
+-        let client = reqwest::Client::new();
+-        // Telegram caps a single sendMessage at 4096 UTF-16 code units. We
+-        // conservatively chunk on byte/char boundaries so long agent
+-        // replies are delivered as multiple messages instead of being
+-        // rejected or silently dropped.
+-        for chunk in chunk_text_for_telegram(text) {
+-            let resp = client
+-                .post(self.api_url("sendMessage"))
+-                .json(&serde_json::json!({
+-                    "chat_id": chat_id,
+-                    "text": chunk,
+-                }))
+-                .send()
+-                .await?;
+-
+-            if !resp.status().is_success() {
+-                let body = resp.text().await.unwrap_or_default();
+-                return Err(anyhow!("telegram sendMessage failed: {body}"));
+-            }
+-        }
+-        debug!("Telegram message sent to chat {chat_id}");
+-        Ok(())
+-    }
+-
+-    /// Send a message with Telegram inline keyboard buttons.
+-    ///
+-    /// Each `BotAction` becomes one button row.  The `callback_data` carries
+-    /// the full command string so the bot receives it as a synthetic message
+-    /// when the user taps the button.
+-    ///
+-    /// Telegram limits `callback_data` to 64 bytes.  All commands used here
+-    /// (including `/cancel_task turn_<uuid>`) fit within that limit.
+-    async fn send_message_with_keyboard(&self, chat_id: i64, text: &str, actions: &[BotAction]) -> Result<()> {
+-        // Build inline keyboard: one button per row for clarity.
+-        let keyboard: Vec<Vec<serde_json::Value>> = actions
+-            .iter()
+-            .map(|action| {
+-                vec![serde_json::json!({
+-                    "text": action.label,
+-                    "callback_data": action.command,
+-                })]
+-            })
+-            .collect();
+-
+-        let client = reqwest::Client::new();
+-        let resp = client
+-            .post(self.api_url("sendMessage"))
+-            .json(&serde_json::json!({
+-                "chat_id": chat_id,
+-                "text": text,
+-                "reply_markup": {
+-                    "inline_keyboard": keyboard,
+-                },
+-            }))
+-            .send()
+-            .await?;
+-
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("telegram sendMessage (keyboard) failed: {body}"));
+-        }
+-        debug!("Telegram keyboard message sent to chat {chat_id}");
+-        Ok(())
+-    }
+-
+-    /// Send a local file to a Telegram chat as a document attachment.
+-    /// Caller is expected to pre-check the size against `MAX_TELEGRAM_FILE_BYTES`.
+-    async fn send_file_as_document(&self, chat_id: i64, file_path: &str) -> Result<()> {
+-        let content = super::read_workspace_file(file_path, MAX_TELEGRAM_FILE_BYTES, None).await?;
+-
+-        let part = reqwest::multipart::Part::bytes(content.bytes)
+-            .file_name(content.name.clone())
+-            .mime_str("application/octet-stream")?;
+-
+-        let form = reqwest::multipart::Form::new()
+-            .text("chat_id", chat_id.to_string())
+-            .part("document", part);
+-
+-        let client = reqwest::Client::new();
+-        let resp = client.post(self.api_url("sendDocument")).multipart(form).send().await?;
+-
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            return Err(anyhow!("telegram sendDocument failed: {body}"));
+-        }
+-        debug!("Telegram document sent to chat {chat_id}: {}", content.name);
+-        Ok(())
+-    }
+-
+-    /// Scan `text` for downloadable file references and push every matching
+-    /// file directly to the Telegram chat as an attachment.  Files exceeding
+-    /// `MAX_TELEGRAM_FILE_BYTES` are skipped with a brief notice; per-file
+-    /// upload failures are reported as plain-text replies.
+-    async fn notify_files_ready(&self, chat_id: i64, text: &str) {
+-        let language = current_bot_language().await;
+-        let workspace_root = {
+-            let states = self.chat_states.read().await;
+-            states.get(&chat_id).and_then(|s| s.active_workspace_path())
+-        };
+-        let files = super::collect_auto_push_files(text, workspace_root.as_deref().map(std::path::Path::new));
+-        if files.is_empty() {
+-            return;
+-        }
+-
+-        // Skip the "正在为你发送 N 个文件……" intro: the document message
+-        // itself is visible in the chat; only error / size-skip notices
+-        // below need to surface to the user.
+-        for file in files {
+-            if file.size > MAX_TELEGRAM_FILE_BYTES {
+-                let notice =
+-                    super::auto_push_skip_too_large_message(language, &file.name, file.size, MAX_TELEGRAM_FILE_BYTES);
+-                let _ = self.send_message(chat_id, &notice).await;
+-                continue;
+-            }
+-            match self.send_file_as_document(chat_id, &file.abs_path).await {
+-                Ok(()) => info!("Telegram auto-pushed file to chat {chat_id}: {}", file.abs_path),
+-                Err(e) => {
+-                    warn!("Telegram auto-push failed for {} in chat {chat_id}: {e}", file.name);
+-                    let notice = super::auto_push_failed_message(language, &file.name, &e.to_string());
+-                    let _ = self.send_message(chat_id, &notice).await;
+-                }
+-            }
+-        }
+-    }
+-
+-    /// Acknowledge a callback query so Telegram removes the button loading state.
+-    async fn answer_callback_query(&self, callback_query_id: &str) {
+-        let client = reqwest::Client::new();
+-        let _ = client
+-            .post(self.api_url("answerCallbackQuery"))
+-            .json(&serde_json::json!({ "callback_query_id": callback_query_id }))
+-            .send()
+-            .await;
+-    }
+-
+-    /// Send a `HandleResult`, using an inline keyboard when actions are present.
+-    ///
+-    /// For the "Processing your message…" reply the cancel command line in the
+-    /// text is replaced with a friendlier prompt, and a Cancel Task button is
+-    /// added via the inline keyboard.
+-    async fn send_handle_result(&self, chat_id: i64, result: &HandleResult) {
+-        let text = if result.menu.items.is_empty() && result.menu.title.is_empty() {
+-            result.reply.clone()
+-        } else {
+-            result.menu.render_text_block()
+-        };
+-        // Empty replies (e.g. the silent "forward only" result returned by
+-        // `handle_chat`) must not be sent — Telegram rejects empty bodies
+-        // and a lone whitespace message is just noise to the user.
+-        if text.trim().is_empty() {
+-            return;
+-        }
+-        if result.actions.is_empty() {
+-            if let Err(e) = self.send_message(chat_id, &text).await {
+-                warn!("Failed to send Telegram message to {chat_id}: {e}");
+-            }
+-        } else if let Err(e) = self.send_message_with_keyboard(chat_id, &text, &result.actions).await {
+-            warn!("Failed to send Telegram keyboard message: {e}; falling back to plain text");
+-            if let Err(e2) = self.send_message(chat_id, &result.reply).await {
+-                warn!("Telegram fallback plain send to {chat_id} also failed: {e2}");
+-            }
+-        }
+-    }
+-
+-    /// Register the bot command menu visible in Telegram's "/" menu.
+-    pub async fn set_bot_commands(&self) -> Result<()> {
+-        let client = reqwest::Client::new();
+-        let commands = serde_json::json!({
+-            "commands": [
+-                { "command": "menu", "description": "Show the main menu" },
+-                { "command": "new", "description": "Create a new session" },
+-                { "command": "resume", "description": "Resume an existing session" },
+-                { "command": "switch", "description": "Switch assistant or workspace" },
+-                { "command": "cancel", "description": "Cancel the current task" },
+-                { "command": "expert", "description": "Switch to Expert mode" },
+-                { "command": "assistant", "description": "Switch to Assistant mode" },
+-                { "command": "settings", "description": "Open settings" },
+-                { "command": "help", "description": "Show help" },
+-            ]
+-        });
+-        let resp = client
+-            .post(self.api_url("setMyCommands"))
+-            .json(&commands)
+-            .send()
+-            .await?;
+-        if !resp.status().is_success() {
+-            let body = resp.text().await.unwrap_or_default();
+-            warn!("Failed to set Telegram bot commands: {body}");
+-        }
+-        Ok(())
+-    }
+-
+-    pub async fn register_pairing(&self, pairing_code: &str) -> Result<()> {
+-        self.pending_pairings.write().await.insert(
+-            pairing_code.to_string(),
+-            PendingPairing {
+-                created_at: chrono::Utc::now().timestamp(),
+-            },
+-        );
+-        Ok(())
+-    }
+-
+-    pub async fn verify_pairing_code(&self, code: &str) -> bool {
+-        let mut pairings = self.pending_pairings.write().await;
+-        if let Some(p) = pairings.remove(code) {
+-            let age = chrono::Utc::now().timestamp() - p.created_at;
+-            return age < 300;
+-        }
+-        false
+-    }
+-
+-    /// Download a Telegram photo by file_id and return it as an `ImageAttachment`.
+-    ///
+-    /// Telegram photo updates contain multiple `PhotoSize` entries; callers should
+-    /// pass the `file_id` of the last (largest) entry.
+-    async fn download_photo(&self, file_id: &str) -> Result<ImageAttachment> {
+-        let client = reqwest::Client::new();
+-
+-        // Step 1: resolve file_path via getFile
+-        let get_file_url = self.api_url("getFile");
+-        let resp = client
+-            .post(&get_file_url)
+-            .json(&serde_json::json!({ "file_id": file_id }))
+-            .send()
+-            .await?;
+-        let body: serde_json::Value = resp.json().await?;
+-        let file_path = body
+-            .pointer("/result/file_path")
+-            .and_then(|v| v.as_str())
+-            .ok_or_else(|| anyhow!("Telegram getFile: missing file_path for file_id={file_id}"))?
+-            .to_string();
+-
+-        // Step 2: download the actual bytes
+-        let download_url = format!(
+-            "https://api.telegram.org/file/bot{}/{}",
+-            self.config.bot_token, file_path
+-        );
+-        let bytes = client.get(&download_url).send().await?.bytes().await?;
+-
+-        // Step 3: encode as base64 data-URL
+-        use base64::Engine as _;
+-        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+-        let mime_type = if file_path.ends_with(".jpg") || file_path.ends_with(".jpeg") {
+-            "image/jpeg"
+-        } else if file_path.ends_with(".png") {
+-            "image/png"
+-        } else if file_path.ends_with(".gif") {
+-            "image/gif"
+-        } else if file_path.ends_with(".webp") {
+-            "image/webp"
+-        } else {
+-            "image/jpeg"
+-        };
+-        let data_url = format!("data:{mime_type};base64,{b64}");
+-        let name = file_path.rsplit('/').next().unwrap_or("photo.jpg").to_string();
+-
+-        debug!("Telegram photo downloaded: file_id={file_id}, size={}B", bytes.len());
+-        Ok(ImageAttachment { name, data_url })
+-    }
+-
+-    /// Returns `(chat_id, text, images)` tuples for each incoming message.
+-    ///
+-    /// Handles both plain-text messages and photo messages with an optional
+-    /// caption.  For photo messages the highest-resolution variant is downloaded
+-    /// and returned as an `ImageAttachment`.
+-    pub async fn poll_updates(&self) -> Result<Vec<(i64, String, Vec<ImageAttachment>)>> {
+-        let offset = *self.last_update_id.read().await;
+-        let client = reqwest::Client::builder()
+-            .timeout(std::time::Duration::from_secs(35))
+-            .build()?;
+-
+-        let resp = client
+-            .get(self.api_url("getUpdates"))
+-            .query(&[("offset", (offset + 1).to_string()), ("timeout", "30".to_string())])
+-            .send()
+-            .await?;
+-
+-        let body: serde_json::Value = resp.json().await?;
+-        let results = body["result"].as_array().cloned().unwrap_or_default();
+-
+-        let mut messages = Vec::new();
+-        for update in results {
+-            if let Some(update_id) = update["update_id"].as_i64() {
+-                let mut last = self.last_update_id.write().await;
+-                if update_id > *last {
+-                    *last = update_id;
+-                }
+-            }
+-
+-            // Inline keyboard button press – treat callback_data as a message.
+-            if let Some(cq) = update.get("callback_query") {
+-                let cq_id = cq["id"].as_str().unwrap_or("").to_string();
+-                let chat_id = cq.pointer("/message/chat/id").and_then(|v| v.as_i64());
+-                let data = cq["data"].as_str().map(|s| s.trim().to_string());
+-                if let (Some(chat_id), Some(data)) = (chat_id, data) {
+-                    // Answer the callback query to dismiss the button spinner.
+-                    self.answer_callback_query(&cq_id).await;
+-                    messages.push((chat_id, data, vec![]));
+-                }
+-                continue;
+-            }
+-
+-            let Some(chat_id) = update.pointer("/message/chat/id").and_then(|v| v.as_i64()) else {
+-                continue;
+-            };
+-
+-            // Plain-text message
+-            if let Some(text) = update.pointer("/message/text").and_then(|v| v.as_str()) {
+-                messages.push((chat_id, text.trim().to_string(), vec![]));
+-                continue;
+-            }
+-
+-            // Photo message (caption is optional)
+-            if let Some(photo_array) = update.pointer("/message/photo").and_then(|v| v.as_array()) {
+-                // The last PhotoSize entry has the highest resolution
+-                let file_id = photo_array
+-                    .last()
+-                    .and_then(|p| p["file_id"].as_str())
+-                    .map(|s| s.to_string());
+-
+-                let caption = update
+-                    .pointer("/message/caption")
+-                    .and_then(|v| v.as_str())
+-                    .unwrap_or("")
+-                    .trim()
+-                    .to_string();
+-
+-                let images = if let Some(fid) = file_id {
+-                    match self.download_photo(&fid).await {
+-                        Ok(attachment) => vec![attachment],
+-                        Err(e) => {
+-                            warn!("Failed to download Telegram photo file_id={fid}: {e}");
+-                            vec![]
+-                        }
+-                    }
+-                } else {
+-                    vec![]
+-                };
+-
+-                messages.push((chat_id, caption, images));
+-            }
+-        }
+-
+-        Ok(messages)
+-    }
+-
+-    /// Start a polling loop that checks for pairing codes.
+-    /// Returns the chat_id when a valid pairing code is received.
+-    pub async fn wait_for_pairing(&self, stop_rx: &mut tokio::sync::watch::Receiver<bool>) -> Result<i64> {
+-        info!("Telegram bot waiting for pairing code...");
+-        loop {
+-            if *stop_rx.borrow() {
+-                return Err(anyhow!("bot stop requested"));
+-            }
+-            let poll_result = tokio::select! {
+-                result = self.poll_updates() => result,
+-                _ = stop_rx.changed() => {
+-                    info!("Telegram wait_for_pairing stopped by signal");
+-                    return Err(anyhow!("bot stop requested"));
+-                }
+-            };
+-            match poll_result {
+-                Ok(messages) => {
+-                    for (chat_id, text, _images) in messages {
+-                        let trimmed = text.trim();
+-                        let language = current_bot_language().await;
+-
+-                        if trimmed == "/start" {
+-                            self.send_message(chat_id, welcome_message(language)).await.ok();
+-                            continue;
+-                        }
+-
+-                        if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-                            if self.verify_pairing_code(trimmed).await {
+-                                info!("Telegram pairing successful, chat_id={chat_id}");
+-                                let mut state = BotChatState::new(chat_id.to_string());
+-                                let result = complete_im_bot_pairing(&mut state).await;
+-                                self.chat_states.write().await.insert(chat_id, state.clone());
+-                                self.persist_chat_state(chat_id, &state).await;
+-                                self.send_handle_result(chat_id, &result).await;
+-                                self.set_bot_commands().await.ok();
+-
+-                                return Ok(chat_id);
+-                            } else {
+-                                self.send_message(chat_id, Self::invalid_pairing_code_message(language))
+-                                    .await
+-                                    .ok();
+-                            }
+-                        } else {
+-                            self.send_message(chat_id, Self::enter_pairing_code_message(language))
+-                                .await
+-                                .ok();
+-                        }
+-                    }
+-                }
+-                Err(e) => {
+-                    error!("Telegram poll error: {e}");
+-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+-                }
+-            }
+-        }
+-    }
+-
+-    /// Main message loop that runs after pairing is complete.
+-    /// Continuously polls for messages and routes them through the command router.
+-    pub async fn run_message_loop(self: Arc<Self>, stop_rx: tokio::sync::watch::Receiver<bool>) {
+-        info!("Telegram bot message loop started");
+-        let mut stop = stop_rx;
+-
+-        loop {
+-            if *stop.borrow() {
+-                info!("Telegram bot message loop stopped by signal");
+-                break;
+-            }
+-
+-            let poll_result = tokio::select! {
+-                result = self.poll_updates() => result,
+-                _ = stop.changed() => {
+-                    info!("Telegram bot message loop stopped by signal");
+-                    break;
+-                }
+-            };
+-
+-            match poll_result {
+-                Ok(messages) => {
+-                    for (chat_id, text, images) in messages {
+-                        let bot = self.clone();
+-                        tokio::spawn(async move {
+-                            bot.handle_incoming_message(chat_id, &text, images).await;
+-                        });
+-                    }
+-                }
+-                Err(e) => {
+-                    error!("Telegram poll error in message loop: {e}");
+-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+-                }
+-            }
+-        }
+-    }
+-
+-    async fn handle_incoming_message(self: &Arc<Self>, chat_id: i64, text: &str, images: Vec<ImageAttachment>) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(chat_id).or_insert_with(|| {
+-            let mut s = BotChatState::new(chat_id.to_string());
+-            s.paired = true;
+-            s
+-        });
+-        let language = current_bot_language().await;
+-
+-        if !state.paired {
+-            let trimmed = text.trim();
+-            if trimmed == "/start" {
+-                self.send_message(chat_id, welcome_message(language)).await.ok();
+-                return;
+-            }
+-            if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-                if self.verify_pairing_code(trimmed).await {
+-                    let result = complete_im_bot_pairing(state).await;
+-                    self.persist_chat_state(chat_id, state).await;
+-                    self.send_handle_result(chat_id, &result).await;
+-                    self.set_bot_commands().await.ok();
+-                    return;
+-                } else {
+-                    self.send_message(chat_id, Self::invalid_pairing_code_message(language))
+-                        .await
+-                        .ok();
+-                    return;
+-                }
+-            }
+-            self.send_message(chat_id, Self::enter_pairing_code_message(language))
+-                .await
+-                .ok();
+-            return;
+-        }
+-
+-        let cmd = parse_command(text);
+-        let result = handle_command(state, cmd, images).await;
+-
+-        self.persist_chat_state(chat_id, state).await;
+-        drop(states);
+-
+-        self.send_handle_result(chat_id, &result).await;
+-
+-        if let Some(forward) = result.forward_to_session {
+-            let bot = self.clone();
+-            tokio::spawn(async move {
+-                let interaction_bot = bot.clone();
+-                let handler: BotInteractionHandler = std::sync::Arc::new(move |interaction: BotInteractiveRequest| {
+-                    let interaction_bot = interaction_bot.clone();
+-                    Box::pin(async move {
+-                        interaction_bot.deliver_interaction(chat_id, interaction).await;
+-                    })
+-                });
+-                let msg_bot = bot.clone();
+-                let sender: BotMessageSender = std::sync::Arc::new(move |text: String| {
+-                    let msg_bot = msg_bot.clone();
+-                    Box::pin(async move {
+-                        msg_bot.send_message(chat_id, &text).await.ok();
+-                    })
+-                });
+-                let verbose_mode = load_bot_persistence().verbose_mode;
+-                let result = execute_forwarded_turn(forward, Some(handler), Some(sender), verbose_mode).await;
+-                if !result.display_text.is_empty() {
+-                    bot.send_message(chat_id, &result.display_text).await.ok();
+-                }
+-                bot.notify_files_ready(chat_id, &result.full_text).await;
+-            });
+-        }
+-    }
+-
+-    async fn deliver_interaction(&self, chat_id: i64, interaction: BotInteractiveRequest) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(chat_id).or_insert_with(|| {
+-            let mut s = BotChatState::new(chat_id.to_string());
+-            s.paired = true;
+-            s
+-        });
+-        super::command_router::apply_interactive_request(state, &interaction);
+-        self.persist_chat_state(chat_id, state).await;
+-        drop(states);
+-
+-        let result = HandleResult {
+-            reply: interaction.reply,
+-            actions: interaction.actions,
+-            forward_to_session: None,
+-            menu: interaction.menu,
+-        };
+-        self.send_handle_result(chat_id, &result).await;
+-    }
+-
+-    async fn persist_chat_state(&self, chat_id: i64, state: &BotChatState) {
+-        if let Err(error) = update_bot_persistence(|data| {
+-            data.upsert(SavedBotConnection {
+-                bot_type: "telegram".to_string(),
+-                chat_id: chat_id.to_string(),
+-                config: BotConfig::Telegram {
+-                    bot_token: self.config.bot_token.clone(),
+-                },
+-                chat_state: state.clone(),
+-                connected_at: chrono::Utc::now().timestamp(),
+-            });
+-        }) {
+-            warn!("Failed to persist Telegram chat state: {error}");
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin.rs
+deleted file mode 100644
+index 5a58cc5..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin.rs
++++ /dev/null
+@@ -1,46 +0,0 @@
+-//! Weixin (微信) iLink bot integration — Round 39a facade.
+-//!
+-//! The original `weixin.rs` was a 2157-line god-file.  After the R39a god-
+-//! split it became a thin facade: every cross-crate consumer still reaches
+-//! the public API through `bot::weixin::XYZ`, but the body is now spread
+-//! across the following siblings (all `pub mod` declared in `bot/mod.rs`):
+-//!
+-//!   * [`weixin_crypto`]    — AES-128-ECB + CDN URL helpers (`pub(super)`)
+-//!   * [`weixin_qr_login`]  — QR session store + `weixin_qr_start` / `weixin_qr_poll`
+-//!                            + helpers used by the bot driver
+-//!                            (`load_sync_buf` / `now_ms` / `random_wechat_uin_header` /
+-//!                            `ensure_trailing_slash`)
+-//!   * [`weixin_bot`]       — `WeixinConfig`, `WeixinBot` struct, `TypingHandle` +
+-//!                            Drop, `PendingPairing`, `new` / `restore_chat_state` /
+-//!                            `base_url` / `is_session_paused` / `pause_session` /
+-//!                            `build_auth_headers` / `post_ilink`.  Cross-sibling
+-//!                            tunables (`API_TIMEOUT_SECS`, `CHANNEL_VERSION`,
+-//!                            `LONG_POLL_TIMEOUT_SECS`, `SESSION_EXPIRED_ERRCODE`,
+-//!                            `SESSION_PAUSE_SECS`, `MAX_TEXT_CHUNK`,
+-//!                            `MAX_INBOUND_IMAGES`) live here.
+-//!   * [`weixin_bot_media`]  — outbound `send_message_*`, `send_workspace_*`,
+-//!                             `send_text`, `cdn_base_url`, `fetch_weixin_cdn_bytes`,
+-//!                             `ilink_get_upload_url`, `upload_bytes_to_weixin_cdn`,
+-//!                             `media_aes_key_b64`, typing indicator (`start_typing`,
+-//!                             `fetch_typing_ticket`, `send_typing`),
+-//!                             `chunk_text_for_weixin`.  Tests for
+-//!                             `context_token_error_heuristic` +
+-//!                             `media_aes_key_b64_*`.
+-//!   * [`weixin_bot_inbound`] — inbound parsing (`body_from_message`,
+-//!                              `peer_id`, `context_token`, …), pairing store
+-//!                              (`register_pairing`, `verify_pairing_code`),
+-//!                              `wait_for_pairing`, `run_message_loop`,
+-//!                              `handle_incoming_message`, `deliver_interaction`,
+-//!                              `send_handle_result`, `notify_files_ready`,
+-//!                              `persist_chat_state`.  Tests for
+-//!                              `body_from_message_*`.
+-//!
+-//! The classic `bot::weixin::WeixinConfig` / `bot::weixin::WeixinBot` /
+-//! `bot::weixin::weixin_qr_start` / `bot::weixin::weixin_qr_poll` paths
+-//! are kept alive via wildcard re-exports of every sibling below.
+-
+-pub use super::weixin_bot::WeixinBot;
+-pub use super::weixin_bot::WeixinConfig;
+-pub use super::weixin_qr_login::{
+-    weixin_qr_poll, weixin_qr_start, WeixinQrPollResponse, WeixinQrPollStatus, WeixinQrStartResponse,
+-};
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot.rs
+deleted file mode 100644
+index b8b35fb..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot.rs
++++ /dev/null
+@@ -1,248 +0,0 @@
+-//! Weixin iLink bot core: struct definitions, configuration, and the small
+-//! set of methods that all other siblings depend on (`new`,
+-//! `restore_chat_state`, `base_url`, `is_session_paused`, `pause_session`,
+-//! `build_auth_headers`, `post_ilink`).  All sibling files implement
+-//! additional `impl WeixinBot { ... }` blocks (`weixin_bot_media.rs`,
+-////! `weixin_bot_inbound.rs`) — Rust merges them at link time.
+-//!
+-//! `TypingHandle` (RAII guard for the WeChat "正在输入" indicator) lives
+-//! here because both `start_typing` (in `weixin_bot_media.rs`) and
+-//! `deliver_interaction` (in `weixin_bot_inbound.rs`) need direct access to
+-//! the same struct layout.  `PendingPairing` is `pub(super)` because
+-//! `register_pairing` / `verify_pairing_code` use it from
+-//! `weixin_bot_inbound.rs`.
+-use anyhow::{anyhow, Result};
+-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+-use serde::{Deserialize, Serialize};
+-use serde_json::Value;
+-use std::collections::HashMap;
+-use std::sync::Arc;
+-use std::time::Duration;
+-use tokio::sync::RwLock;
+-use tracing::warn;
+-
+-use super::command_router::BotChatState;
+-use super::weixin_qr_login::{ensure_trailing_slash, now_ms, random_wechat_uin_header};
+-
+-// ── Cross-sibling tunables ────────────────────────────────────────────────────
+-
+-/// Default HTTP timeout for short iLink calls; used everywhere in `weixin_*`.
+-pub(super) const API_TIMEOUT_SECS: u64 = 20;
+-/// Channel version stamped into every outbound `base_info.channel_version`
+-/// payload (matches OpenClaw).  Referenced from `weixin_bot_media.rs`
+-/// (`send_message_*`, `ilink_get_upload_url`, `get_updates_once`,
+-/// `fetch_typing_ticket`) and `weixin_bot_inbound.rs` (`run_message_loop`).
+-pub(super) const CHANNEL_VERSION: &str = "1.0.2";
+-/// Long-poll timeout for `ilink/bot/getupdates` (server keeps the call open
+-/// up to this long).  Used by `wait_for_pairing` / `run_message_loop`.
+-pub(super) const LONG_POLL_TIMEOUT_SECS: u64 = 36;
+-/// iLink application error code for "session expired — re-login required";
+-/// triggers a session pause window in `is_session_paused`.
+-pub(super) const SESSION_EXPIRED_ERRCODE: i64 = -14;
+-/// How long the bot refuses all iLink calls after seeing `SESSION_EXPIRED_ERRCODE`.
+-pub(super) const SESSION_PAUSE_SECS: u64 = 3600;
+-/// WeChat `sendmessage` rejects strings over this length; `chunk_text_for_weixin`
+-/// splits outbound replies at this boundary.
+-pub(super) const MAX_TEXT_CHUNK: usize = 3500;
+-/// Hard cap on inbound images per user-message (matches Feishu — referenced by
+-/// `weixin_bot_media.rs::inbound_image_attachments_from_message` and the
+-/// truncation notice in `weixin_bot_inbound.rs::run_message_loop`).
+-pub(super) const MAX_INBOUND_IMAGES: usize = 5;
+-
+-// ── Public configuration + struct ────────────────────────────────────────────
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct WeixinConfig {
+-    pub ilink_token: String,
+-    pub base_url: String,
+-    /// Normalized ilink bot id (filesystem-safe); used for sync buffer path.
+-    pub bot_account_id: String,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub(super) struct PendingPairing {
+-    pub(super) created_at: i64,
+-}
+-
+-pub struct WeixinBot {
+-    pub(super) config: WeixinConfig,
+-    pub(super) pending_pairings: Arc<RwLock<HashMap<String, PendingPairing>>>,
+-    pub(super) chat_states: Arc<RwLock<HashMap<String, BotChatState>>>,
+-    pub(super) context_tokens: Arc<RwLock<HashMap<String, String>>>,
+-    /// Per-peer typing ticket cache (returned by `ilink/bot/getconfig`,
+-    /// required by `ilink/bot/sendtyping`).  Refreshed lazily and dropped
+-    /// whenever a typing API call signals an invalid/expired ticket.
+-    pub(super) typing_tickets: Arc<RwLock<HashMap<String, String>>>,
+-    pub(super) session_pause_until_ms: Arc<RwLock<HashMap<String, i64>>>,
+-}
+-
+-/// RAII guard returned by [`WeixinBot::start_typing`].  Dropping or calling
+-/// [`TypingHandle::stop`] cancels the periodic refresher and best-effort
+-/// emits a `sendtyping(status=2)` to clear the "正在输入" UI on the peer side.
+-///
+-/// Cancellation uses an [`AtomicBool`] (not `tokio::sync::Notify`) on purpose:
+-/// `Notify::notify_waiters` only wakes tasks that are *currently* parked on
+-/// `.notified()`, so signalling while the loop is mid-`send_typing` HTTP call
+-/// silently drops the wake-up and the task would refresh "正在输入" forever.
+-/// An atomic flag plus short-grained polling makes the cancel deterministic.
+-pub struct TypingHandle {
+-    pub(super) cancel: Arc<std::sync::atomic::AtomicBool>,
+-    pub(super) handle: Option<tokio::task::JoinHandle<()>>,
+-    pub(super) bot: Arc<WeixinBot>,
+-    pub(super) peer_id: String,
+-    pub(super) stopped: bool,
+-}
+-
+-impl TypingHandle {
+-    /// Stop the typing loop and explicitly send a cancel event. Awaiting this
+-    /// gives callers visibility into the cancel attempt; not awaiting (i.e.
+-    /// just dropping) still cancels the loop and fires a best-effort cancel
+-    /// from the Drop impl.
+-    pub async fn stop(mut self) {
+-        self.stopped = true;
+-        self.cancel.store(true, std::sync::atomic::Ordering::Release);
+-        if let Some(h) = self.handle.take() {
+-            let _ = h.await;
+-        }
+-        if let Err(e) = self.bot.send_typing(&self.peer_id, 2).await {
+-            warn!(
+-                "weixin: send typing(cancel) failed for peer {peer}: {e}",
+-                peer = self.peer_id
+-            );
+-        }
+-    }
+-}
+-
+-impl Drop for TypingHandle {
+-    fn drop(&mut self) {
+-        if self.stopped {
+-            return;
+-        }
+-        self.cancel.store(true, std::sync::atomic::Ordering::Release);
+-        if let Some(h) = self.handle.take() {
+-            h.abort();
+-        }
+-        // Fire-and-forget cancel: we can't await in Drop, but we still want
+-        // the peer's "正在输入" indicator to clear in case the future was
+-        // dropped without `stop().await`.
+-        let bot = self.bot.clone();
+-        let peer = self.peer_id.clone();
+-        tokio::spawn(async move {
+-            if let Err(e) = bot.send_typing(&peer, 2).await {
+-                warn!("weixin: drop-cancel typing failed for peer {peer}: {e}");
+-            }
+-        });
+-    }
+-}
+-
+-impl WeixinBot {
+-    pub fn new(config: WeixinConfig) -> Self {
+-        Self {
+-            config,
+-            pending_pairings: Arc::new(RwLock::new(HashMap::new())),
+-            chat_states: Arc::new(RwLock::new(HashMap::new())),
+-            context_tokens: Arc::new(RwLock::new(HashMap::new())),
+-            typing_tickets: Arc::new(RwLock::new(HashMap::new())),
+-            session_pause_until_ms: Arc::new(RwLock::new(HashMap::new())),
+-        }
+-    }
+-
+-    pub async fn restore_chat_state(&self, peer_id: &str, state: BotChatState) {
+-        self.chat_states.write().await.insert(peer_id.to_string(), state);
+-    }
+-
+-    pub(super) fn base_url(&self) -> String {
+-        ensure_trailing_slash(&self.config.base_url)
+-    }
+-
+-    pub(super) async fn is_session_paused(&self) -> bool {
+-        let id = &self.config.bot_account_id;
+-        let mut m = self.session_pause_until_ms.write().await;
+-        let now = now_ms();
+-        if let Some(until) = m.get(id).copied() {
+-            if now >= until {
+-                m.remove(id);
+-                return false;
+-            }
+-            return true;
+-        }
+-        false
+-    }
+-
+-    pub(super) async fn pause_session(&self) {
+-        let until = now_ms() + (SESSION_PAUSE_SECS as i64) * 1000;
+-        self.session_pause_until_ms
+-            .write()
+-            .await
+-            .insert(self.config.bot_account_id.clone(), until);
+-        warn!(
+-            "weixin: session expired (err -14), pausing API for {}s",
+-            SESSION_PAUSE_SECS
+-        );
+-    }
+-
+-    pub(super) fn build_auth_headers(&self, body: &str) -> HeaderMap {
+-        let mut h = HeaderMap::new();
+-        h.insert(
+-            HeaderName::from_static("content-type"),
+-            HeaderValue::from_static("application/json"),
+-        );
+-        h.insert(
+-            HeaderName::from_static("authorizationtype"),
+-            HeaderValue::from_static("ilink_bot_token"),
+-        );
+-        h.insert(
+-            HeaderName::from_static("content-length"),
+-            HeaderValue::from_str(&body.len().to_string()).unwrap_or(HeaderValue::from_static("0")),
+-        );
+-        h.insert(
+-            HeaderName::from_static("x-wechat-uin"),
+-            HeaderValue::from_str(&random_wechat_uin_header()).unwrap_or(HeaderValue::from_static("MA==")),
+-        );
+-        if let Ok(v) = HeaderValue::from_str(&format!("Bearer {}", self.config.ilink_token.trim())) {
+-            h.insert(HeaderName::from_static("authorization"), v);
+-        }
+-        h
+-    }
+-
+-    pub(super) async fn post_ilink(&self, endpoint: &str, body: Value, timeout: Duration) -> Result<String> {
+-        let url = format!("{}{}", self.base_url(), endpoint.trim_start_matches('/'));
+-        let body_str = serde_json::to_string(&body)?;
+-        let client = reqwest::Client::builder().timeout(timeout).build()?;
+-        let resp = client
+-            .post(&url)
+-            .headers(self.build_auth_headers(&body_str))
+-            .body(body_str)
+-            .send()
+-            .await?;
+-        let status = resp.status();
+-        let text = resp.text().await.unwrap_or_default();
+-        if !status.is_success() {
+-            return Err(anyhow!("ilink {endpoint} HTTP {status}: {text}"));
+-        }
+-        // WeChat iLink returns HTTP 200 even on application errors. The actual
+-        // status lives in the JSON body's `ret` / `errcode` fields. We MUST
+-        // surface those as errors here so callers (e.g. `send_message_raw`)
+-        // notice failures like expired `context_token` instead of silently
+-        // dropping messages. `getupdates` callers parse the body themselves
+-        // and tolerate `ret == -14`, so we only enforce this for the
+-        // `sendmessage` endpoint where the body is well-defined.
+-        if endpoint.contains("sendmessage") || endpoint.contains("sendtyping") || endpoint.contains("getconfig") {
+-            if let Ok(v) = serde_json::from_str::<Value>(&text) {
+-                let ret = v["ret"].as_i64().unwrap_or(0);
+-                let errcode = v["errcode"].as_i64().unwrap_or(0);
+-                if ret != 0 || errcode != 0 {
+-                    let errmsg = v["errmsg"]
+-                        .as_str()
+-                        .or_else(|| v["msg"].as_str())
+-                        .unwrap_or("")
+-                        .to_string();
+-                    return Err(anyhow!(
+-                        "ilink {endpoint} application error ret={ret} errcode={errcode} errmsg={errmsg}"
+-                    ));
+-                }
+-            }
+-        }
+-        Ok(text)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_inbound.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_inbound.rs
+deleted file mode 100644
+index 57d716e..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_inbound.rs
++++ /dev/null
+@@ -1,567 +0,0 @@
+-//! Weixin bot — inbound parsing + pairing + message loop.
+-//!
+-//! Owns every `impl WeixinBot` method that *receives* from the peer:
+-//!   * Item-list parsing (body, peer id, context token, image sentinel)
+-//!   * Pairing store (`register_pairing` / `verify_pairing_code`)
+-//!   * `send_handle_result` (command_router reply), `notify_files_ready`
+-//!     (auto-push), `persist_chat_state` (disk save)
+-//!   * `wait_for_pairing` (pre-pairing long-poll), `run_message_loop`
+-//!     (post-pairing long-poll), `handle_incoming_message`,
+-//!     `deliver_interaction`
+-//!
+-//! `PendingPairing` is imported from `weixin_bot.rs` (R38 lesson —
+-//! cross-sibling `pub(super)` field access).  Outbound CDN / send_* helpers
+-//! live in `weixin_bot_media.rs`; structure / auth / `post_ilink` live in
+-//! `weixin_bot.rs`.
+-use anyhow::{anyhow, Result};
+-use serde_json::Value;
+-use std::sync::Arc;
+-use std::time::Duration;
+-use tracing::{error, info, warn};
+-
+-use super::command_router::{
+-    apply_interactive_request, complete_im_bot_pairing, current_bot_language, execute_forwarded_turn, handle_command,
+-    parse_command, welcome_message, BotChatState, BotInteractionHandler, BotInteractiveRequest, BotMessageSender,
+-    HandleResult,
+-};
+-use super::weixin_bot::{
+-    PendingPairing, WeixinBot, CHANNEL_VERSION, LONG_POLL_TIMEOUT_SECS, MAX_INBOUND_IMAGES, SESSION_EXPIRED_ERRCODE,
+-};
+-use super::weixin_qr_login::{load_sync_buf, save_sync_buf};
+-use super::{load_bot_persistence, update_bot_persistence, BotConfig, SavedBotConnection};
+-use crate::service::remote_connect::remote_server::ImageAttachment;
+-
+-impl WeixinBot {
+-    fn is_weixin_media_item_type(type_id: i64) -> bool {
+-        matches!(type_id, 2..=5)
+-    }
+-
+-    fn body_from_item_list(items: &[Value]) -> String {
+-        for item in items {
+-            let t = item["type"].as_i64().unwrap_or(0);
+-            if t == 1 {
+-                if let Some(tx) = item["text_item"]["text"].as_str() {
+-                    let text = tx.to_string();
+-                    let ref_msg = &item["ref_msg"];
+-                    if !ref_msg.is_object() {
+-                        return text;
+-                    }
+-                    let ref_title = ref_msg["title"].as_str();
+-                    let ref_item = &ref_msg["message_item"];
+-                    if ref_item.is_object() {
+-                        let mt = ref_item["type"].as_i64().unwrap_or(0);
+-                        if Self::is_weixin_media_item_type(mt) {
+-                            return text;
+-                        }
+-                        let ref_body = Self::body_from_item_list(std::slice::from_ref(ref_item));
+-                        if ref_title.is_none() && ref_body.is_empty() {
+-                            return text;
+-                        }
+-                        let mut parts: Vec<String> = Vec::new();
+-                        if let Some(tt) = ref_title {
+-                            parts.push(tt.to_string());
+-                        }
+-                        if !ref_body.is_empty() {
+-                            parts.push(ref_body);
+-                        }
+-                        if parts.is_empty() {
+-                            return text;
+-                        }
+-                        let joined = parts.join(" | ");
+-                        return format!("[引用: {joined}]\n{text}");
+-                    }
+-                    if let Some(tt) = ref_title {
+-                        return format!("[引用: {tt}]\n{text}");
+-                    }
+-                    return text;
+-                }
+-            }
+-            if t == 3 {
+-                if let Some(tx) = item["voice_item"]["text"].as_str() {
+-                    return tx.to_string();
+-                }
+-            }
+-        }
+-        String::new()
+-    }
+-
+-    fn body_from_message(msg: &Value) -> String {
+-        let Some(items) = msg["item_list"].as_array() else {
+-            return String::new();
+-        };
+-        Self::body_from_item_list(items)
+-    }
+-
+-    /// True if the message carries at least one `image_item` (pairing wait UX / guards).
+-    fn has_inbound_image_items(msg: &Value) -> bool {
+-        let Some(items) = msg["item_list"].as_array() else {
+-            return false;
+-        };
+-        items.iter().any(|i| {
+-            i["type"].as_i64() == Some(2)
+-                && i["image_item"]["media"]["encrypt_query_param"]
+-                    .as_str()
+-                    .is_some_and(|s| !s.is_empty())
+-        })
+-    }
+-
+-    fn is_user_message(msg: &Value) -> bool {
+-        msg["message_type"].as_i64() == Some(1)
+-    }
+-
+-    fn peer_id(msg: &Value) -> Option<String> {
+-        msg["from_user_id"]
+-            .as_str()
+-            .map(|s| s.to_string())
+-            .filter(|s| !s.is_empty())
+-    }
+-
+-    fn context_token(msg: &Value) -> Option<String> {
+-        msg["context_token"]
+-            .as_str()
+-            .map(|s| s.to_string())
+-            .filter(|s| !s.is_empty())
+-    }
+-
+-    pub async fn register_pairing(&self, pairing_code: &str) -> Result<()> {
+-        self.pending_pairings.write().await.insert(
+-            pairing_code.to_string(),
+-            PendingPairing {
+-                created_at: chrono::Utc::now().timestamp(),
+-            },
+-        );
+-        Ok(())
+-    }
+-
+-    pub async fn verify_pairing_code(&self, code: &str) -> bool {
+-        let mut pairings = self.pending_pairings.write().await;
+-        if let Some(p) = pairings.remove(code) {
+-            let age = chrono::Utc::now().timestamp() - p.created_at;
+-            return age < 300;
+-        }
+-        false
+-    }
+-
+-    async fn send_handle_result(&self, peer_id: &str, result: &HandleResult) {
+-        let language = current_bot_language().await;
+-        let text = if result.menu.items.is_empty() && result.menu.title.is_empty() {
+-            result.reply.clone()
+-        } else {
+-            result.menu.render_plain_text(language)
+-        };
+-        if text.trim().is_empty() {
+-            return;
+-        }
+-        if let Err(e) = self.send_text(peer_id, &text).await {
+-            warn!("weixin send_handle_result: {e}");
+-        }
+-    }
+-
+-    /// Scan `text` for downloadable file references and push each matching
+-    /// file directly to the peer via the iLink CDN pipeline.  Files exceeding
+-    /// `MAX_WEIXIN_FILE_BYTES` are skipped with a brief notice; per-file
+-    /// failures are reported as plain-text replies.
+-    async fn notify_files_ready(&self, peer_id: &str, text: &str) {
+-        use super::weixin_crypto::MAX_WEIXIN_FILE_BYTES;
+-        let language = current_bot_language().await;
+-        let workspace_root = {
+-            let states = self.chat_states.read().await;
+-            states.get(peer_id).and_then(|s| s.active_workspace_path())
+-        };
+-        let files = super::collect_auto_push_files(text, workspace_root.as_deref().map(std::path::Path::new));
+-        if files.is_empty() {
+-            return;
+-        }
+-
+-        // Intentionally do NOT send a "正在为你发送 N 个文件……" intro: the
+-        // file message itself already shows up in the chat, and the intro
+-        // line just adds noise (and on WeChat costs a context_token slot
+-        // per send). Errors / size-skips below still surface as their own
+-        // notice messages so the user is informed when something is wrong.
+-        let root_path = workspace_root.as_deref().map(std::path::Path::new);
+-        for file in files {
+-            if file.size > MAX_WEIXIN_FILE_BYTES {
+-                let notice =
+-                    super::auto_push_skip_too_large_message(language, &file.name, file.size, MAX_WEIXIN_FILE_BYTES);
+-                if let Err(e) = self.send_text(peer_id, &notice).await {
+-                    warn!("Weixin auto-push skip notice failed for peer {peer_id}: {e}");
+-                }
+-                continue;
+-            }
+-            match self
+-                .send_workspace_file_to_peer(peer_id, &file.abs_path, root_path)
+-                .await
+-            {
+-                Ok(()) => info!("Weixin auto-pushed file to peer {peer_id}: {}", file.abs_path),
+-                Err(e) => {
+-                    warn!("Weixin auto-push failed for {} to peer {peer_id}: {e}", file.name);
+-                    let notice = super::auto_push_failed_message(language, &file.name, &e.to_string());
+-                    if let Err(send_err) = self.send_text(peer_id, &notice).await {
+-                        warn!("Weixin auto-push failure notice failed for peer {peer_id}: {send_err}");
+-                    }
+-                }
+-            }
+-        }
+-    }
+-
+-    async fn persist_chat_state(&self, peer_id: &str, state: &BotChatState) {
+-        if let Err(error) = update_bot_persistence(|data| {
+-            data.upsert(SavedBotConnection {
+-                bot_type: "weixin".to_string(),
+-                chat_id: peer_id.to_string(),
+-                config: BotConfig::Weixin {
+-                    ilink_token: self.config.ilink_token.clone(),
+-                    base_url: self.config.base_url.clone(),
+-                    bot_account_id: self.config.bot_account_id.clone(),
+-                },
+-                chat_state: state.clone(),
+-                connected_at: chrono::Utc::now().timestamp(),
+-            });
+-        }) {
+-            warn!("Failed to persist Weixin chat state: {error}");
+-        }
+-    }
+-
+-    /// Pairing + message loop: long-poll getupdates.
+-    pub async fn wait_for_pairing(&self, stop_rx: &mut tokio::sync::watch::Receiver<bool>) -> Result<String> {
+-        info!("Weixin bot waiting for pairing code (getupdates)...");
+-        let mut buf = load_sync_buf(&self.config.bot_account_id);
+-
+-        loop {
+-            if *stop_rx.borrow() {
+-                return Err(anyhow!("bot stop requested"));
+-            }
+-
+-            let poll = tokio::select! {
+-                _ = stop_rx.changed() => {
+-                    return Err(anyhow!("bot stop requested"));
+-                }
+-                r = self.get_updates_once(
+-                    &buf,
+-                    Duration::from_secs(LONG_POLL_TIMEOUT_SECS),
+-                ) => r,
+-            };
+-
+-            let resp = match poll {
+-                Ok(v) => v,
+-                Err(e) => {
+-                    error!("weixin getupdates: {e}");
+-                    tokio::time::sleep(Duration::from_secs(5)).await;
+-                    continue;
+-                }
+-            };
+-
+-            let ret = resp["ret"].as_i64().unwrap_or(0);
+-            let errcode = resp["errcode"].as_i64().unwrap_or(0);
+-            if (ret != 0 && ret != SESSION_EXPIRED_ERRCODE) || (errcode != 0 && errcode != SESSION_EXPIRED_ERRCODE) {
+-                if errcode == SESSION_EXPIRED_ERRCODE || ret == SESSION_EXPIRED_ERRCODE {
+-                    tokio::time::sleep(Duration::from_secs(5)).await;
+-                    continue;
+-                }
+-                warn!("weixin getupdates ret={ret} errcode={errcode}");
+-                tokio::time::sleep(Duration::from_secs(2)).await;
+-                continue;
+-            }
+-
+-            if let Some(new_buf) = resp["get_updates_buf"].as_str() {
+-                buf = new_buf.to_string();
+-                save_sync_buf(&self.config.bot_account_id, &buf);
+-            }
+-
+-            if let Some(msgs) = resp["msgs"].as_array() {
+-                for msg in msgs {
+-                    if !Self::is_user_message(msg) {
+-                        continue;
+-                    }
+-                    let Some(peer) = Self::peer_id(msg) else {
+-                        continue;
+-                    };
+-                    if let Some(ct) = Self::context_token(msg) {
+-                        self.context_tokens.write().await.insert(peer.clone(), ct);
+-                    }
+-                    let text = Self::body_from_message(msg).trim().to_string();
+-                    let language = current_bot_language().await;
+-
+-                    if text == "/start" {
+-                        self.try_send_text(&peer, welcome_message(language), "welcome").await;
+-                        continue;
+-                    }
+-
+-                    if text.len() == 6 && text.chars().all(|c| c.is_ascii_digit()) {
+-                        if self.verify_pairing_code(&text).await {
+-                            info!("Weixin pairing successful peer={peer}");
+-                            let mut state = BotChatState::new(peer.clone());
+-                            let result = complete_im_bot_pairing(&mut state).await;
+-                            self.chat_states.write().await.insert(peer.clone(), state.clone());
+-                            self.persist_chat_state(&peer, &state).await;
+-
+-                            self.send_handle_result(&peer, &result).await;
+-                            return Ok(peer);
+-                        } else {
+-                            let err = if language.is_chinese() {
+-                                "配对码无效或已过期，请重试。"
+-                            } else {
+-                                "Invalid or expired pairing code."
+-                            };
+-                            self.try_send_text(&peer, err, "pairing-invalid").await;
+-                        }
+-                    } else if !text.is_empty() {
+-                        let err = if language.is_chinese() {
+-                            "请输入 northhing 桌面端远程连接中显示的 6 位配对码。"
+-                        } else {
+-                            "Please send the 6-digit pairing code from northhing Desktop Remote Connect."
+-                        };
+-                        self.try_send_text(&peer, err, "pairing-prompt").await;
+-                    } else if Self::has_inbound_image_items(msg) {
+-                        let err = if language.is_chinese() {
+-                            "配对请直接发送 6 位数字配对码；完成配对后再发送图片与助手对话。"
+-                        } else {
+-                            "To pair, send the 6-digit code only. After pairing you can send images to chat."
+-                        };
+-                        self.try_send_text(&peer, err, "pairing-image-hint").await;
+-                    }
+-                }
+-            }
+-        }
+-    }
+-
+-    pub async fn run_message_loop(self: Arc<Self>, stop_rx: tokio::sync::watch::Receiver<bool>) {
+-        info!("Weixin message loop started");
+-        let mut stop = stop_rx;
+-        let mut buf = load_sync_buf(&self.config.bot_account_id);
+-
+-        loop {
+-            if *stop.borrow() {
+-                break;
+-            }
+-
+-            let poll = tokio::select! {
+-                _ = stop.changed() => break,
+-                r = self.get_updates_once(
+-                    &buf,
+-                    Duration::from_secs(LONG_POLL_TIMEOUT_SECS),
+-                ) => r,
+-            };
+-
+-            let resp = match poll {
+-                Ok(v) => v,
+-                Err(e) => {
+-                    error!("weixin getupdates (loop): {e}");
+-                    tokio::time::sleep(Duration::from_secs(5)).await;
+-                    continue;
+-                }
+-            };
+-
+-            let ret = resp["ret"].as_i64().unwrap_or(0);
+-            let errcode = resp["errcode"].as_i64().unwrap_or(0);
+-            if (ret != 0 && ret != SESSION_EXPIRED_ERRCODE) || (errcode != 0 && errcode != SESSION_EXPIRED_ERRCODE) {
+-                if errcode == SESSION_EXPIRED_ERRCODE || ret == SESSION_EXPIRED_ERRCODE {
+-                    tokio::time::sleep(Duration::from_secs(5)).await;
+-                    continue;
+-                }
+-                tokio::time::sleep(Duration::from_secs(2)).await;
+-                continue;
+-            }
+-
+-            if let Some(new_buf) = resp["get_updates_buf"].as_str() {
+-                buf = new_buf.to_string();
+-                save_sync_buf(&self.config.bot_account_id, &buf);
+-            }
+-
+-            let Some(msgs) = resp["msgs"].as_array() else {
+-                continue;
+-            };
+-
+-            for msg in msgs {
+-                if !Self::is_user_message(msg) {
+-                    continue;
+-                }
+-                let Some(peer) = Self::peer_id(msg) else {
+-                    continue;
+-                };
+-                if let Some(ct) = Self::context_token(msg) {
+-                    self.context_tokens.write().await.insert(peer.clone(), ct);
+-                }
+-                let msg_value = msg.clone();
+-                let bot = self.clone();
+-                tokio::spawn(async move {
+-                    let (images, skipped_images) = bot.inbound_image_attachments_from_message(&msg_value).await;
+-                    let language = current_bot_language().await;
+-                    // Match Feishu: truncation is a separate user-visible message, not mixed into command text.
+-                    if skipped_images > 0 {
+-                        let note = if language.is_chinese() {
+-                            format!(
+-                                "仅会处理前 {} 张图片，其余 {} 张已丢弃。",
+-                                MAX_INBOUND_IMAGES, skipped_images
+-                            )
+-                        } else {
+-                            format!(
+-                                "Only the first {} images will be processed; the remaining {} were discarded.",
+-                                MAX_INBOUND_IMAGES, skipped_images
+-                            )
+-                        };
+-                        bot.try_send_text(&peer, &note, "image-truncation-notice").await;
+-                    }
+-                    let body = WeixinBot::body_from_message(&msg_value);
+-                    let text = if body.trim().is_empty() && !images.is_empty() {
+-                        if language.is_chinese() {
+-                            "[用户发送了一张图片]".to_string()
+-                        } else {
+-                            "[User sent an image]".to_string()
+-                        }
+-                    } else {
+-                        body
+-                    };
+-                    bot.handle_incoming_message(peer, &text, images).await;
+-                });
+-            }
+-        }
+-        info!("Weixin message loop stopped");
+-    }
+-
+-    async fn handle_incoming_message(self: &Arc<Self>, peer_id: String, text: &str, images: Vec<ImageAttachment>) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(peer_id.clone()).or_insert_with(|| {
+-            let mut s = BotChatState::new(peer_id.clone());
+-            s.paired = true;
+-            s
+-        });
+-        let language = current_bot_language().await;
+-
+-        if !state.paired {
+-            let trimmed = text.trim();
+-            if trimmed == "/start" {
+-                drop(states);
+-                self.try_send_text(&peer_id, welcome_message(language), "welcome").await;
+-                return;
+-            }
+-            if trimmed.len() == 6 && trimmed.chars().all(|c| c.is_ascii_digit()) {
+-                if self.verify_pairing_code(trimmed).await {
+-                    let result = complete_im_bot_pairing(state).await;
+-                    self.persist_chat_state(&peer_id, state).await;
+-                    drop(states);
+-                    self.send_handle_result(&peer_id, &result).await;
+-                    return;
+-                } else {
+-                    let err = if language.is_chinese() {
+-                        "配对码无效或已过期。"
+-                    } else {
+-                        "Invalid or expired pairing code."
+-                    };
+-                    drop(states);
+-                    self.try_send_text(&peer_id, err, "pairing-invalid").await;
+-                    return;
+-                }
+-            }
+-            drop(states);
+-            let err = if language.is_chinese() {
+-                "请输入 6 位配对码。"
+-            } else {
+-                "Please send the 6-digit pairing code."
+-            };
+-            self.try_send_text(&peer_id, err, "pairing-prompt").await;
+-            return;
+-        }
+-
+-        let cmd = parse_command(text);
+-        let result = handle_command(state, cmd, images).await;
+-        self.persist_chat_state(&peer_id, state).await;
+-        drop(states);
+-
+-        self.send_handle_result(&peer_id, &result).await;
+-
+-        if let Some(forward) = result.forward_to_session {
+-            let bot = self.clone();
+-            let peer = peer_id.clone();
+-            // Only show "正在输入" when there's an actual agentic turn to run.
+-            // Local command/menu replies are already sent synchronously above,
+-            // so a typing indicator there would either flash for a few ms or,
+-            // worse, linger if the cancel call is delayed — both look broken
+-            // to the user.  Agentic turns are the long-running case where
+-            // typing genuinely tells the user "the bot is still working".
+-            let typing_for_turn = self.start_typing(peer_id.clone());
+-            tokio::spawn(async move {
+-                let interaction_bot = bot.clone();
+-                let peer_c = peer.clone();
+-                let handler: BotInteractionHandler = Arc::new(move |interaction: BotInteractiveRequest| {
+-                    let interaction_bot = interaction_bot.clone();
+-                    let peer_i = peer_c.clone();
+-                    Box::pin(async move {
+-                        interaction_bot.deliver_interaction(peer_i, interaction).await;
+-                    })
+-                });
+-                let msg_bot = bot.clone();
+-                let peer_m = peer.clone();
+-                let sender: BotMessageSender = Arc::new(move |t: String| {
+-                    let msg_bot = msg_bot.clone();
+-                    let peer_s = peer_m.clone();
+-                    Box::pin(async move {
+-                        if let Err(e) = msg_bot.send_text(&peer_s, &t).await {
+-                            warn!("weixin: send intermediate message to peer {peer_s} failed: {e}");
+-                        }
+-                    })
+-                });
+-                let verbose_mode = load_bot_persistence().verbose_mode;
+-                let turn_result = execute_forwarded_turn(forward, Some(handler), Some(sender), verbose_mode).await;
+-                if !turn_result.display_text.is_empty() {
+-                    if let Err(e) = bot.send_text(&peer, &turn_result.display_text).await {
+-                        warn!("weixin: send final reply to peer {peer} failed: {e}");
+-                    }
+-                }
+-                bot.notify_files_ready(&peer, &turn_result.full_text).await;
+-                // Stop typing AFTER both the final reply and any auto-pushed
+-                // files have been dispatched, so the indicator does not flap
+-                // off between the text answer and its attachments.
+-                typing_for_turn.stop().await;
+-            });
+-        }
+-    }
+-
+-    async fn deliver_interaction(&self, peer_id: String, interaction: BotInteractiveRequest) {
+-        let mut states = self.chat_states.write().await;
+-        let state = states.entry(peer_id.clone()).or_insert_with(|| {
+-            let mut s = BotChatState::new(peer_id.clone());
+-            s.paired = true;
+-            s
+-        });
+-        apply_interactive_request(state, &interaction);
+-        self.persist_chat_state(&peer_id, state).await;
+-        drop(states);
+-
+-        let result = HandleResult {
+-            reply: interaction.reply,
+-            actions: interaction.actions,
+-            forward_to_session: None,
+-            menu: interaction.menu,
+-        };
+-        self.send_handle_result(&peer_id, &result).await;
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use serde_json::json;
+-
+-    #[test]
+-    fn body_from_message_plain_text() {
+-        let msg = json!({
+-            "item_list": [{ "type": 1, "text_item": { "text": "hi" } }]
+-        });
+-        assert_eq!(WeixinBot::body_from_message(&msg), "hi");
+-    }
+-
+-    #[test]
+-    fn body_from_message_quoted_text() {
+-        let msg = json!({
+-            "item_list": [{
+-                "type": 1,
+-                "text_item": { "text": "reply" },
+-                "ref_msg": { "title": " earlier ", "message_item": { "type": 1, "text_item": { "text": "orig" } } }
+-            }]
+-        });
+-        let b = WeixinBot::body_from_message(&msg);
+-        assert!(b.contains("[引用:"));
+-        assert!(b.contains("reply"));
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_media.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_media.rs
+deleted file mode 100644
+index cda8ffc..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_bot_media.rs
++++ /dev/null
+@@ -1,31 +0,0 @@
+-//! Weixin bot — outbound media + messaging pipeline (facade).
+-//!
+-//! Owns every `impl WeixinBot` method that pushes bytes / messages to the
+-//! peer, plus the inbound CDN download pipeline that the dialog turn
+-//! pipeline relies on.  Implementation is split across sibling files for
+-//! navigation; this module is purely a facade + module index — the actual
+-//! `impl` blocks live in the sibling files declared next to it in
+-//! [`super::mod`]:
+-//!
+-//!   * [`media_types`](super::media_types) — DTOs returned by the upload
+-//!     pipeline (`UploadedMediaInfo`, `UploadUrlResult`).
+-//!   * [`media_validate`](super::media_validate) — encoding helpers
+-//!     ([`media_aes_key_b64`](super::media_validate::media_aes_key_b64),
+-//!     [`chunk_text_for_weixin`](super::media_validate::chunk_text_for_weixin),
+-//!     [`is_context_token_error`](super::media_validate::is_context_token_error))
+-//!     plus the corresponding unit tests.
+-//!   * [`media_download`](super::media_download) — CDN download + AES
+-//!     decryption for inbound images
+-//!     ([`inbound_image_attachments_from_message`]).
+-//!   * [`media_upload`](super::media_upload) — CDN upload pipeline
+-//!     ([`upload_bytes_to_weixin_cdn`]) + workspace file send
+-//!     ([`send_workspace_file_to_peer`]).
+-//!   * [`media_send_text`](super::media_send_text) — outbound text message
+-//!     pipeline ([`send_text`], [`try_send_text`]) +
+-//!     `ilink/bot/getupdates` poll ([`get_updates_once`]).
+-//!   * [`media_typing`](super::media_typing) — typing indicator
+-//!     ([`start_typing`] returning the RAII guard from `weixin_bot.rs`).
+-//!
+-//! Methods that *receive* / dispatch inbound messages live in the sibling
+-//! [`super::weixin_bot_inbound`].  Rust merges all `impl WeixinBot { ... }`
+-//! blocks at link time, so the split is purely organisational.
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/helpers.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/helpers.rs
+deleted file mode 100644
+index 1281f53..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/helpers.rs
++++ /dev/null
+@@ -1,83 +0,0 @@
+-//! Pure helpers for the Weixin iLink crypto pipeline.
+-//!
+-//! No crypto state, no network — just deterministic URL/MIME utilities.
+-
+-/// MD5 digest as a lowercase hex string.
+-pub(crate) fn md5_hex_lower(data: &[u8]) -> String {
+-    format!("{:x}", md5::compute(data))
+-}
+-
+-/// Build the outbound CDN upload URL from components.
+-pub(crate) fn build_cdn_upload_url(cdn_base: &str, upload_param: &str, filekey: &str) -> String {
+-    let base = cdn_base.trim_end_matches('/');
+-    format!(
+-        "{}/upload?encrypted_query_param={}&filekey={}",
+-        base,
+-        urlencoding::encode(upload_param),
+-        urlencoding::encode(filekey)
+-    )
+-}
+-
+-/// CDN download URL (same as `@tencent-weixin/openclaw-weixin` `buildCdnDownloadUrl`).
+-pub(crate) fn build_cdn_download_url(cdn_base: &str, encrypted_query_param: &str) -> String {
+-    let base = cdn_base.trim_end_matches('/');
+-    format!(
+-        "{}/download?encrypted_query_param={}",
+-        base,
+-        urlencoding::encode(encrypted_query_param)
+-    )
+-}
+-
+-/// Best-effort MIME type from magic bytes.
+-pub(crate) fn sniff_image_mime(bytes: &[u8]) -> &'static str {
+-    if bytes.len() >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff {
+-        return "image/jpeg";
+-    }
+-    if bytes.len() >= 8 && bytes[..8] == [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] {
+-        return "image/png";
+-    }
+-    if bytes.len() >= 6 && (&bytes[..6] == b"GIF87a".as_slice() || &bytes[..6] == b"GIF89a".as_slice()) {
+-        return "image/gif";
+-    }
+-    if bytes.len() >= 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+-        return "image/webp";
+-    }
+-    "image/jpeg"
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn build_upload_url_formats_query() {
+-        let url = build_cdn_upload_url("https://cdn.example.com/", "param=1", "filekey_abc");
+-        assert!(url.starts_with("https://cdn.example.com/upload?"));
+-        assert!(url.contains("encrypted_query_param=param%3D1"));
+-        assert!(url.contains("filekey=filekey_abc"));
+-    }
+-
+-    #[test]
+-    fn build_download_url_formats_query() {
+-        let url = build_cdn_download_url("https://cdn.example.com", "token");
+-        assert_eq!(url, "https://cdn.example.com/download?encrypted_query_param=token");
+-    }
+-
+-    #[test]
+-    fn sniff_jpeg_magic() {
+-        assert_eq!(sniff_image_mime(&[0xff, 0xd8, 0xff]), "image/jpeg");
+-    }
+-
+-    #[test]
+-    fn sniff_png_magic() {
+-        assert_eq!(
+-            sniff_image_mime(&[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+-            "image/png"
+-        );
+-    }
+-
+-    #[test]
+-    fn sniff_unknown_falls_back_to_jpeg() {
+-        assert_eq!(sniff_image_mime(b"UNKNOWN"), "image/jpeg");
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/init.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/init.rs
+deleted file mode 100644
+index bbce73c..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/init.rs
++++ /dev/null
+@@ -1,106 +0,0 @@
+-//! AES-128-ECB encrypt/decrypt + CDN AES key parsing for the Weixin iLink pipeline.
+-
+-use aes::cipher::{BlockDecrypt, BlockEncrypt, KeyInit};
+-use aes::Aes128;
+-use anyhow::{anyhow, Result};
+-use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+-
+-/// Encrypt `plaintext` with AES-128-ECB + PKCS#7 padding.
+-pub(crate) fn encrypt_aes_128_ecb_pkcs7(plaintext: &[u8], key: &[u8; 16]) -> Vec<u8> {
+-    let cipher = Aes128::new_from_slice(key).expect("AES-128 key len");
+-    let pad_len = 16 - (plaintext.len() % 16);
+-    let pad_len = if pad_len == 0 { 16 } else { pad_len };
+-    let mut buf = plaintext.to_vec();
+-    buf.extend(std::iter::repeat_n(pad_len as u8, pad_len));
+-    let mut out = Vec::with_capacity(buf.len());
+-    for chunk in buf.chunks_exact(16) {
+-        let mut block = aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+-        cipher.encrypt_block(&mut block);
+-        out.extend_from_slice(&block);
+-    }
+-    out
+-}
+-
+-/// Decrypt `ciphertext` with AES-128-ECB + PKCS#7 unpadding.
+-pub(crate) fn decrypt_aes_128_ecb_pkcs7(ciphertext: &[u8], key: &[u8; 16]) -> Result<Vec<u8>> {
+-    if ciphertext.is_empty() || !ciphertext.len().is_multiple_of(16) {
+-        return Err(anyhow!("invalid ciphertext length {}", ciphertext.len()));
+-    }
+-    let cipher = Aes128::new_from_slice(key).expect("AES-128 key len");
+-    let mut out = Vec::with_capacity(ciphertext.len());
+-    for chunk in ciphertext.chunks_exact(16) {
+-        let mut block = aes::cipher::generic_array::GenericArray::clone_from_slice(chunk);
+-        cipher.decrypt_block(&mut block);
+-        out.extend_from_slice(&block);
+-    }
+-    let Some(&pad_byte) = out.last() else {
+-        return Err(anyhow!("empty after decrypt"));
+-    };
+-    let pad = pad_byte as usize;
+-    if pad == 0 || pad > 16 || pad > out.len() {
+-        return Err(anyhow!("invalid PKCS#7 padding (pad={pad})"));
+-    }
+-    if !out[out.len() - pad..].iter().all(|&b| b == pad_byte) {
+-        return Err(anyhow!("invalid PKCS#7 padding bytes"));
+-    }
+-    out.truncate(out.len() - pad);
+-    Ok(out)
+-}
+-
+-/// `CDNMedia.aes_key`: base64(raw 16 bytes) or base64(32-char hex) — OpenClaw `parseAesKey`.
+-pub(crate) fn parse_weixin_cdn_aes_key(aes_key_base64: &str) -> Result<[u8; 16]> {
+-    let decoded = B64
+-        .decode(aes_key_base64.trim())
+-        .map_err(|e| anyhow!("aes_key base64: {e}"))?;
+-    if decoded.len() == 16 {
+-        let mut k = [0u8; 16];
+-        k.copy_from_slice(&decoded);
+-        return Ok(k);
+-    }
+-    if decoded.len() == 32 {
+-        let s = std::str::from_utf8(&decoded).map_err(|_| anyhow!("aes_key: expected utf8 hex"))?;
+-        if s.len() == 32 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+-            let bytes = hex::decode(s).map_err(|e| anyhow!("aes_key inner hex: {e}"))?;
+-            if bytes.len() == 16 {
+-                let mut k = [0u8; 16];
+-                k.copy_from_slice(&bytes);
+-                return Ok(k);
+-            }
+-        }
+-    }
+-    Err(anyhow!(
+-        "aes_key: unsupported encoding (decoded {} bytes)",
+-        decoded.len()
+-    ))
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn aes_ecb_roundtrip() {
+-        let key = [9u8; 16];
+-        let plain = b"hello weixin cdn";
+-        let ct = encrypt_aes_128_ecb_pkcs7(plain, &key);
+-        let back = decrypt_aes_128_ecb_pkcs7(&ct, &key).unwrap();
+-        assert_eq!(back.as_slice(), plain.as_slice());
+-    }
+-
+-    #[test]
+-    fn parse_aes_key_raw16_base64() {
+-        let raw = [1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+-        let b64 = B64.encode(raw);
+-        let k = parse_weixin_cdn_aes_key(&b64).unwrap();
+-        assert_eq!(k, raw);
+-    }
+-
+-    #[test]
+-    fn parse_aes_key_hex_wrapped_base64() {
+-        let raw = [0xabu8; 16];
+-        let hex_str = hex::encode(raw);
+-        let b64 = B64.encode(hex_str.as_bytes());
+-        let k = parse_weixin_cdn_aes_key(&b64).unwrap();
+-        assert_eq!(k, raw);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/mod.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/mod.rs
+deleted file mode 100644
+index 966e013..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/mod.rs
++++ /dev/null
+@@ -1,18 +0,0 @@
+-//! Weixin (微信) iLink crypto + CDN URL helpers.
+-//!
+-//! Split into domain-specific sibling modules:
+-//! - `types`: constants + size/padding helpers
+-//! - `helpers`: pure URL/MIME utilities
+-//! - `init`: AES-128-ECB encrypt/decrypt + key parsing
+-//!
+-//! The public surface is re-exported here so existing callers
+-//! (`super::weixin_crypto::XYZ`) keep compiling unchanged.
+-
+-pub(crate) mod helpers;
+-pub(crate) mod init;
+-pub(crate) mod types;
+-
+-// Re-export the full public surface under the old path.
+-pub(crate) use helpers::*;
+-pub(crate) use init::*;
+-pub(crate) use types::*;
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/types.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/types.rs
+deleted file mode 100644
+index 1d2d620..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_crypto/types.rs
++++ /dev/null
+@@ -1,27 +0,0 @@
+-//! Constants + size/padding helpers for the Weixin iLink crypto pipeline.
+-
+-/// Weixin CDN host for encrypted upload (same as `@tencent-weixin/openclaw-weixin`).
+-pub(crate) const DEFAULT_CDN_BASE_URL: &str = "https://novac2c.cdn.weixin.qq.com/c2c";
+-/// Same cap as Feishu bot file send.
+-pub(crate) const MAX_WEIXIN_FILE_BYTES: u64 = 30 * 1024 * 1024;
+-pub(crate) const CDN_UPLOAD_MAX_RETRIES: u32 = 3;
+-
+-/// PKCS#7-padded ciphertext length for a given plaintext length (AES-128 block = 16).
+-pub(crate) fn aes_ecb_ciphertext_len(plaintext_len: usize) -> usize {
+-    let pad = 16 - (plaintext_len % 16);
+-    let pad = if pad == 0 { 16 } else { pad };
+-    plaintext_len + pad
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn ciphertext_len_pads_to_block_boundary() {
+-        assert_eq!(aes_ecb_ciphertext_len(0), 16);
+-        assert_eq!(aes_ecb_ciphertext_len(15), 16);
+-        assert_eq!(aes_ecb_ciphertext_len(16), 32);
+-        assert_eq!(aes_ecb_ciphertext_len(17), 32);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_qr_login.rs b/src/crates/assembly/core/src/service/remote_connect/bot/weixin_qr_login.rs
+deleted file mode 100644
+index f6ab142..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/bot/weixin_qr_login.rs
++++ /dev/null
+@@ -1,448 +0,0 @@
+-//! Weixin QR login flow + DTOs + session state (`qr_sessions`).
+-//!
+-//! Split out from the original `weixin.rs` god-file in R39a so each sibling
+-//! stays under 800 canonical lines.  The actual iLink bot driver lives in
+-//! the sibling `weixin_bot.rs` (struct + core lifecycle + HTTP/auth helpers);
+-//! CDN/messaging helpers live in `weixin_bot_media.rs`; inbound parsing,
+-//! pairing and message loop live in `weixin_bot_inbound.rs`.
+-//!
+-//! Constants and helpers exported `pub(super)` here are needed across
+-//! siblings: `now_ms` / `ensure_trailing_slash` / `random_wechat_uin_header`
+-//! are used by the iLink authenticated client (`weixin_bot.rs`); the
+-//! `*_sync_buf` helpers are used by `wait_for_pairing` / `run_message_loop`
+-//! in `weixin_bot_inbound.rs`.
+-use anyhow::{anyhow, Result};
+-use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+-use rand::Rng;
+-use serde::{Deserialize, Serialize};
+-use std::collections::HashMap;
+-use std::path::PathBuf;
+-use std::sync::{Mutex, OnceLock};
+-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+-use tracing::warn;
+-
+-pub(super) const DEFAULT_BASE_URL: &str = "https://ilinkai.weixin.qq.com";
+-pub(super) const DEFAULT_ILINK_BOT_TYPE: &str = "3";
+-pub(super) const QR_POLL_TIMEOUT_SECS: u64 = 36;
+-pub(super) const MAX_QR_REFRESH: u32 = 3;
+-
+-/// Cross-sibling timestamp helper: used by QR freshness checks, by
+-/// `is_session_paused` / `pause_session` (`weixin_bot.rs`), and by the QR
+-/// session store below.
+-pub(super) fn now_ms() -> i64 {
+-    SystemTime::now()
+-        .duration_since(UNIX_EPOCH)
+-        .map(|d| d.as_millis() as i64)
+-        .unwrap_or(0)
+-}
+-
+-/// Cross-sibling URL helper used both by QR call URLs and by `base_url`
+-/// in `weixin_bot.rs`.
+-pub(super) fn ensure_trailing_slash(url: &str) -> String {
+-    if url.ends_with('/') {
+-        url.to_string()
+-    } else {
+-        format!("{url}/")
+-    }
+-}
+-
+-/// Random base64-encoded 32-bit value used in `build_auth_headers`
+-/// (`weixin_bot.rs`) as the `x-wechat-uin` request header.
+-pub(super) fn random_wechat_uin_header() -> String {
+-    let n: u32 = rand::thread_rng().gen();
+-    B64.encode(n.to_string().as_bytes())
+-}
+-
+-fn normalize_weixin_account_id(raw: &str) -> String {
+-    raw.chars()
+-        .map(|c| {
+-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+-                c
+-            } else {
+-                '-'
+-            }
+-        })
+-        .collect()
+-}
+-
+-/// Path of the persisted `get_updates_buf` for this bot account — used by
+-/// QR-confirmed bots to resume long-poll after restart.
+-pub(super) fn sync_buf_path(bot_account_id: &str) -> PathBuf {
+-    let base = dirs::home_dir().unwrap_or_else(std::env::temp_dir);
+-    base.join(".northhing")
+-        .join("weixin")
+-        .join(format!("{bot_account_id}_get_updates_buf.txt"))
+-}
+-
+-/// Load the long-poll sync buffer (empty string if missing).
+-pub(super) fn load_sync_buf(bot_account_id: &str) -> String {
+-    let p = sync_buf_path(bot_account_id);
+-    std::fs::read_to_string(&p).unwrap_or_default().trim().to_string()
+-}
+-
+-/// Persist the long-poll sync buffer (best-effort; logs warnings).
+-pub(super) fn save_sync_buf(bot_account_id: &str, buf: &str) {
+-    let p = sync_buf_path(bot_account_id);
+-    if let Some(parent) = p.parent() {
+-        let _ = std::fs::create_dir_all(parent);
+-    }
+-    if let Err(e) = std::fs::write(&p, buf) {
+-        warn!("weixin: failed to save sync buf {}: {e}", p.display());
+-    }
+-}
+-
+-// ── QR login session store (in-memory, same role as OpenClaw installer) ─────
+-
+-#[derive(Debug, Clone)]
+-struct QrLoginSession {
+-    qrcode: String,
+-    qr_image_url: String,
+-    started_at_ms: i64,
+-    refresh_count: u32,
+-}
+-
+-enum QrSessionLookup {
+-    Missing,
+-    TimedOut,
+-    Found(QrLoginSession),
+-}
+-
+-fn qr_sessions() -> &'static Mutex<HashMap<String, QrLoginSession>> {
+-    static CELL: OnceLock<Mutex<HashMap<String, QrLoginSession>>> = OnceLock::new();
+-    CELL.get_or_init(|| Mutex::new(HashMap::new()))
+-}
+-
+-// ── Public QR API (used from Tauri) ───────────────────────────────────────────
+-
+-#[derive(Debug, Serialize)]
+-pub struct WeixinQrStartResponse {
+-    pub session_key: String,
+-    pub qr_image_url: String,
+-    pub message: String,
+-}
+-
+-#[derive(Debug, Serialize)]
+-#[serde(rename_all = "snake_case")]
+-pub enum WeixinQrPollStatus {
+-    Wait,
+-    Scanned,
+-    Confirmed,
+-    Expired,
+-    Error,
+-}
+-
+-#[derive(Debug, Serialize)]
+-pub struct WeixinQrPollResponse {
+-    pub status: WeixinQrPollStatus,
+-    pub message: String,
+-    /// Present when a new QR was issued after expiry (client should refresh image).
+-    pub qr_image_url: Option<String>,
+-    pub ilink_token: Option<String>,
+-    pub bot_account_id: Option<String>,
+-    pub base_url: Option<String>,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-struct QrCodeApiResponse {
+-    qrcode: Option<String>,
+-    qrcode_img_content: Option<String>,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-struct QrStatusApiResponse {
+-    status: Option<String>,
+-    bot_token: Option<String>,
+-    ilink_bot_id: Option<String>,
+-    baseurl: Option<String>,
+-}
+-
+-/// Start Weixin QR login: fetch QR from iLink and register a session.
+-pub async fn weixin_qr_start(base_url_override: Option<String>) -> Result<WeixinQrStartResponse> {
+-    let base = ensure_trailing_slash(
+-        base_url_override
+-            .as_deref()
+-            .filter(|s| !s.is_empty())
+-            .unwrap_or(DEFAULT_BASE_URL),
+-    );
+-    let url = format!(
+-        "{}ilink/bot/get_bot_qrcode?bot_type={}",
+-        base,
+-        urlencoding::encode(DEFAULT_ILINK_BOT_TYPE)
+-    );
+-
+-    let client = reqwest::Client::builder()
+-        .timeout(Duration::from_secs(super::weixin_bot::API_TIMEOUT_SECS))
+-        .build()?;
+-
+-    let resp = client.get(&url).send().await?;
+-    let status = resp.status();
+-    if !status.is_success() {
+-        let body = resp.text().await.unwrap_or_default();
+-        return Err(anyhow!("get_bot_qrcode HTTP {status}: {body}"));
+-    }
+-    let parsed: QrCodeApiResponse = resp.json().await?;
+-    let qrcode = parsed
+-        .qrcode
+-        .filter(|s| !s.is_empty())
+-        .ok_or_else(|| anyhow!("get_bot_qrcode: missing qrcode"))?;
+-    let qr_image_url = parsed
+-        .qrcode_img_content
+-        .filter(|s| !s.is_empty())
+-        .ok_or_else(|| anyhow!("get_bot_qrcode: missing qrcode_img_content"))?;
+-
+-    let session_key = uuid::Uuid::new_v4().to_string();
+-    let session = QrLoginSession {
+-        qrcode,
+-        qr_image_url: qr_image_url.clone(),
+-        started_at_ms: now_ms(),
+-        refresh_count: 0,
+-    };
+-    qr_sessions()
+-        .lock()
+-        .map_err(|e| anyhow!("qr session lock: {e}"))?
+-        .insert(session_key.clone(), session);
+-
+-    Ok(WeixinQrStartResponse {
+-        session_key,
+-        qr_image_url,
+-        message: "Scan the QR code with WeChat.".to_string(),
+-    })
+-}
+-
+-/// Poll QR login status (long-poll once). Call repeatedly from the UI until `confirmed` or `error`.
+-pub async fn weixin_qr_poll(session_key: &str, base_url_override: Option<String>) -> Result<WeixinQrPollResponse> {
+-    let base = ensure_trailing_slash(
+-        base_url_override
+-            .as_deref()
+-            .filter(|s| !s.is_empty())
+-            .unwrap_or(DEFAULT_BASE_URL),
+-    );
+-
+-    let lookup = {
+-        let mut map = qr_sessions().lock().map_err(|e| anyhow!("qr session lock: {e}"))?;
+-        match map.get(session_key) {
+-            None => QrSessionLookup::Missing,
+-            Some(s) => {
+-                if now_ms() - s.started_at_ms > 5 * 60_000 {
+-                    map.remove(session_key);
+-                    QrSessionLookup::TimedOut
+-                } else {
+-                    QrSessionLookup::Found(s.clone())
+-                }
+-            }
+-        }
+-    };
+-
+-    match lookup {
+-        QrSessionLookup::Missing => Ok(WeixinQrPollResponse {
+-            status: WeixinQrPollStatus::Error,
+-            message: "No active QR session. Start login again.".to_string(),
+-            qr_image_url: None,
+-            ilink_token: None,
+-            bot_account_id: None,
+-            base_url: None,
+-        }),
+-        QrSessionLookup::TimedOut => Ok(WeixinQrPollResponse {
+-            status: WeixinQrPollStatus::Error,
+-            message: "QR session expired. Start again.".to_string(),
+-            qr_image_url: None,
+-            ilink_token: None,
+-            bot_account_id: None,
+-            base_url: None,
+-        }),
+-        QrSessionLookup::Found(session) => {
+-            let qrcode_enc = urlencoding::encode(&session.qrcode);
+-            let url = format!("{}ilink/bot/get_qrcode_status?qrcode={}", base, qrcode_enc);
+-
+-            let client = reqwest::Client::builder()
+-                .timeout(Duration::from_secs(QR_POLL_TIMEOUT_SECS))
+-                .build()?;
+-
+-            let resp = client.get(&url).header("iLink-App-ClientVersion", "1").send().await;
+-
+-            let resp = match resp {
+-                Ok(r) => r,
+-                Err(e) => {
+-                    if e.is_timeout() {
+-                        return Ok(WeixinQrPollResponse {
+-                            status: WeixinQrPollStatus::Wait,
+-                            message: "waiting".to_string(),
+-                            qr_image_url: None,
+-                            ilink_token: None,
+-                            bot_account_id: None,
+-                            base_url: None,
+-                        });
+-                    }
+-                    qr_sessions()
+-                        .lock()
+-                        .map_err(|e| anyhow!("qr session lock: {e}"))?
+-                        .remove(session_key);
+-                    return Err(anyhow!("get_qrcode_status: {e}"));
+-                }
+-            };
+-
+-            let status = resp.status();
+-            if !status.is_success() {
+-                let body = resp.text().await.unwrap_or_default();
+-                qr_sessions()
+-                    .lock()
+-                    .map_err(|e| anyhow!("qr session lock: {e}"))?
+-                    .remove(session_key);
+-                return Ok(WeixinQrPollResponse {
+-                    status: WeixinQrPollStatus::Error,
+-                    message: format!("HTTP {status}: {body}"),
+-                    qr_image_url: None,
+-                    ilink_token: None,
+-                    bot_account_id: None,
+-                    base_url: None,
+-                });
+-            }
+-
+-            let status_json: QrStatusApiResponse = resp.json().await?;
+-            let st = status_json.status.as_deref().unwrap_or("wait");
+-
+-            match st {
+-                "wait" => Ok(WeixinQrPollResponse {
+-                    status: WeixinQrPollStatus::Wait,
+-                    message: "waiting".to_string(),
+-                    qr_image_url: None,
+-                    ilink_token: None,
+-                    bot_account_id: None,
+-                    base_url: None,
+-                }),
+-                "scaned" => Ok(WeixinQrPollResponse {
+-                    status: WeixinQrPollStatus::Scanned,
+-                    message: "Scanned; confirm on your phone.".to_string(),
+-                    qr_image_url: None,
+-                    ilink_token: None,
+-                    bot_account_id: None,
+-                    base_url: None,
+-                }),
+-                "confirmed" => {
+-                    let token = status_json
+-                        .bot_token
+-                        .clone()
+-                        .filter(|s| !s.is_empty())
+-                        .ok_or_else(|| anyhow!("confirmed but bot_token missing"))?;
+-                    let raw_id = status_json
+-                        .ilink_bot_id
+-                        .clone()
+-                        .filter(|s| !s.is_empty())
+-                        .ok_or_else(|| anyhow!("confirmed but ilink_bot_id missing"))?;
+-                    let normalized = normalize_weixin_account_id(&raw_id);
+-                    let baseurl = status_json
+-                        .baseurl
+-                        .clone()
+-                        .filter(|s| !s.is_empty())
+-                        .unwrap_or_else(|| base.trim_end_matches('/').to_string());
+-
+-                    qr_sessions()
+-                        .lock()
+-                        .map_err(|e| anyhow!("qr session lock: {e}"))?
+-                        .remove(session_key);
+-
+-                    Ok(WeixinQrPollResponse {
+-                        status: WeixinQrPollStatus::Confirmed,
+-                        message: "WeChat linked.".to_string(),
+-                        qr_image_url: None,
+-                        ilink_token: Some(token),
+-                        bot_account_id: Some(normalized),
+-                        base_url: Some(baseurl),
+-                    })
+-                }
+-                "expired" => {
+-                    let over_limit = {
+-                        let mut map = qr_sessions().lock().map_err(|e| anyhow!("qr session lock: {e}"))?;
+-                        let Some(s) = map.get_mut(session_key) else {
+-                            return Ok(WeixinQrPollResponse {
+-                                status: WeixinQrPollStatus::Error,
+-                                message: "Session lost. Start again.".to_string(),
+-                                qr_image_url: None,
+-                                ilink_token: None,
+-                                bot_account_id: None,
+-                                base_url: None,
+-                            });
+-                        };
+-                        s.refresh_count += 1;
+-                        if s.refresh_count > MAX_QR_REFRESH {
+-                            map.remove(session_key);
+-                            true
+-                        } else {
+-                            false
+-                        }
+-                    };
+-
+-                    if over_limit {
+-                        return Ok(WeixinQrPollResponse {
+-                            status: WeixinQrPollStatus::Error,
+-                            message: "QR expired too many times; start again.".to_string(),
+-                            qr_image_url: None,
+-                            ilink_token: None,
+-                            bot_account_id: None,
+-                            base_url: None,
+-                        });
+-                    }
+-
+-                    let refresh_url = format!(
+-                        "{}ilink/bot/get_bot_qrcode?bot_type={}",
+-                        base,
+-                        urlencoding::encode(DEFAULT_ILINK_BOT_TYPE)
+-                    );
+-                    let client = reqwest::Client::builder()
+-                        .timeout(Duration::from_secs(super::weixin_bot::API_TIMEOUT_SECS))
+-                        .build()?;
+-                    let refresh = client.get(&refresh_url).send().await?;
+-                    if !refresh.status().is_success() {
+-                        qr_sessions()
+-                            .lock()
+-                            .map_err(|e| anyhow!("qr session lock: {e}"))?
+-                            .remove(session_key);
+-                        return Ok(WeixinQrPollResponse {
+-                            status: WeixinQrPollStatus::Error,
+-                            message: "Failed to refresh QR.".to_string(),
+-                            qr_image_url: None,
+-                            ilink_token: None,
+-                            bot_account_id: None,
+-                            base_url: None,
+-                        });
+-                    }
+-                    let parsed: QrCodeApiResponse = refresh.json().await?;
+-                    let qrcode = parsed
+-                        .qrcode
+-                        .filter(|s| !s.is_empty())
+-                        .ok_or_else(|| anyhow!("refresh: missing qrcode"))?;
+-                    let qr_image_url = parsed
+-                        .qrcode_img_content
+-                        .filter(|s| !s.is_empty())
+-                        .ok_or_else(|| anyhow!("refresh: missing qrcode_img_content"))?;
+-
+-                    {
+-                        let mut m = qr_sessions().lock().map_err(|e| anyhow!("qr session lock: {e}"))?;
+-                        if let Some(s) = m.get_mut(session_key) {
+-                            s.qrcode = qrcode;
+-                            s.qr_image_url = qr_image_url.clone();
+-                            s.started_at_ms = now_ms();
+-                        }
+-                    }
+-
+-                    Ok(WeixinQrPollResponse {
+-                        status: WeixinQrPollStatus::Expired,
+-                        message: "QR refreshed.".to_string(),
+-                        qr_image_url: Some(qr_image_url),
+-                        ilink_token: None,
+-                        bot_account_id: None,
+-                        base_url: None,
+-                    })
+-                }
+-                _ => Ok(WeixinQrPollResponse {
+-                    status: WeixinQrPollStatus::Wait,
+-                    message: st.to_string(),
+-                    qr_image_url: None,
+-                    ilink_token: None,
+-                    bot_account_id: None,
+-                    base_url: None,
+-                }),
+-            }
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/command.rs b/src/crates/assembly/core/src/service/remote_connect/command.rs
+deleted file mode 100644
+index c23a7c0..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/command.rs
++++ /dev/null
+@@ -1,130 +0,0 @@
+-//! Sub-domain: remote command execution.
+-//! Spec step-3.7 — extracted from remote_connect/mod.rs (R55e refactor).
+-
+-use super::connect::TrustedMobileIdentity;
+-use super::*;
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-
+-pub(super) async fn send_pairing_error_response(
+-    relay_arc: &Arc<RwLock<Option<RelayClient>>>,
+-    correlation_id: &str,
+-    shared_secret: &[u8; 32],
+-    message: String,
+-) {
+-    let server = RemoteServer::new(*shared_secret);
+-    if let Ok((enc, nonce)) = server.encrypt_response(&remote_server::RemoteResponse::Error { message }, None) {
+-        if let Some(ref client) = *relay_arc.read().await {
+-            let _ = client.send_relay_response(correlation_id, &enc, &nonce).await;
+-        }
+-    }
+-}
+-
+-pub(super) async fn handle_command_event(
+-    correlation_id: &str,
+-    encrypted_data: &str,
+-    nonce: &str,
+-    pairing_arc: &Arc<RwLock<PairingProtocol>>,
+-    relay_arc: &Arc<RwLock<Option<RelayClient>>>,
+-    server_arc: &Arc<RwLock<Option<RemoteServer>>>,
+-    trusted_mobile_identity_arc: &Arc<RwLock<Option<TrustedMobileIdentity>>>,
+-) {
+-    let mut handled_as_active_command = false;
+-    {
+-        let server_guard = server_arc.read().await;
+-        if let Some(ref server) = *server_guard {
+-            match server.decrypt_command(encrypted_data, nonce) {
+-                Ok((cmd, request_id)) => {
+-                    handled_as_active_command = true;
+-                    debug!("Remote command: {cmd:?}");
+-                    let response = server.dispatch(&cmd).await;
+-                    match server.encrypt_response(&response, request_id.as_deref()) {
+-                        Ok((enc, resp_nonce)) => {
+-                            if let Some(ref client) = *relay_arc.read().await {
+-                                let _ = client.send_relay_response(correlation_id, &enc, &resp_nonce).await;
+-                            }
+-                        }
+-                        Err(e) => {
+-                            error!("Failed to encrypt response: {e}");
+-                        }
+-                    }
+-                }
+-                Err(e) => {
+-                    debug!("Active session could not decrypt command, falling back to pairing verification: {e}");
+-                }
+-            }
+-        }
+-    }
+-    if handled_as_active_command {
+-        return;
+-    }
+-
+-    let p = pairing_arc.read().await;
+-    if let Some(secret) = p.shared_secret() {
+-        let shared_secret = *secret;
+-        if let Ok(json) = encryption::decrypt_from_base64(&shared_secret, encrypted_data, nonce) {
+-            if let Ok(response) = serde_json::from_str::<pairing::PairingResponse>(&json) {
+-                let submitted_identity = match RemoteConnectService::validate_mobile_identity(
+-                    trusted_mobile_identity_arc,
+-                    &response,
+-                )
+-                .await
+-                {
+-                    Ok(identity) => identity,
+-                    Err(message) => {
+-                        drop(p);
+-                        send_pairing_error_response(relay_arc, correlation_id, &shared_secret, message).await;
+-                        return;
+-                    }
+-                };
+-                drop(p);
+-                let mut pw = pairing_arc.write().await;
+-                match pw.verify_response(&response).await {
+-                    Ok(true) => {
+-                        info!("Pairing verified successfully");
+-                        RemoteConnectService::persist_mobile_identity(
+-                            trusted_mobile_identity_arc,
+-                            submitted_identity.clone(),
+-                        )
+-                        .await;
+-                        if let Some(s) = pw.shared_secret() {
+-                            let server = RemoteServer::new(*s);
+-
+-                            let initial_sync = server
+-                                .generate_initial_sync(Some(submitted_identity.user_id.clone()))
+-                                .await;
+-                            if let Ok((enc, resp_nonce)) = server.encrypt_response(&initial_sync, None) {
+-                                if let Some(ref client) = *relay_arc.read().await {
+-                                    info!("Sending initial sync to mobile after pairing");
+-                                    let _ = client.send_relay_response(correlation_id, &enc, &resp_nonce).await;
+-                                }
+-                            }
+-
+-                            *server_arc.write().await = Some(server);
+-                        }
+-                    }
+-                    Ok(false) => {
+-                        error!("Pairing verification failed");
+-                        send_pairing_error_response(
+-                            relay_arc,
+-                            correlation_id,
+-                            &shared_secret,
+-                            "Pairing verification failed".to_string(),
+-                        )
+-                        .await;
+-                    }
+-                    Err(e) => {
+-                        error!("Pairing verification error: {e}");
+-                        send_pairing_error_response(
+-                            relay_arc,
+-                            correlation_id,
+-                            &shared_secret,
+-                            format!("Pairing verification error: {e}"),
+-                        )
+-                        .await;
+-                    }
+-                }
+-            }
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/connect.rs b/src/crates/assembly/core/src/service/remote_connect/connect.rs
+deleted file mode 100644
+index 977ff06..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/connect.rs
++++ /dev/null
+@@ -1,155 +0,0 @@
+-//! Sub-domain: SSH/remote connection lifecycle.
+-//!
+-//! Spec step-3.7 — extracted from remote_connect/mod.rs (R55e refactor).
+-//!
+-//! # R73-5 layout (Mavis M3 take-over)
+-//!
+-//! The original single 741-line file carried a single `impl RemoteConnectService`
+-//! block that mixed 4 concerns: ctor / device identity, mobile identity helpers,
+-//! relay connection lifecycle, and bot connection lifecycle. R73-5 splits
+-//! these into:
+-//!
+-//! - `connect.rs` (this file) — entry facade: struct, `new`, `device_identity`,
+-//!   `update_bot_config`, `available_methods`, `stop`, `stop_all`, plus the
+-//!   `BotHandle` and `TrustedMobileIdentity` helper types.
+-//! - `connect/mobile_identity.rs` — `validate_mobile_identity` +
+-//!   `persist_mobile_identity` (static-style helpers used by the pairing flow).
+-//! - `connect/relay_connection.rs` — `start` (relay methods: LAN / ngrok /
+-//!   northhing Server / Custom Server) + `stop_relay`.
+-//! - `connect/bot_connection.rs` — `start_bot_connection` (Feishu / Telegram /
+-//!   Weixin) + `restore_bot` + `stop_bots`.
+-//!
+-//! All three siblings use the inherent-impl pattern
+-//! `impl super::RemoteConnectService { ... }`. Unlike `impl Trait for Type`,
+-//! inherent impls can be split across multiple files in the same crate
+-//! without triggering E0119. The 4 entry + 3 siblings preserve the public
+-//! API byte-for-byte; `service/remote_connect/mod.rs` continues to re-export
+-//! `pub mod connect;` and consumers see no change.
+-
+-mod bot_connection;
+-mod mobile_identity;
+-mod relay_connection;
+-
+-use super::*;
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-
+-impl RemoteConnectService {
+-    pub fn new(config: RemoteConnectConfig) -> Result<Self> {
+-        let device_identity = DeviceIdentity::from_current_machine()?;
+-        let pairing = PairingProtocol::new(device_identity.clone());
+-
+-        Ok(Self {
+-            config,
+-            device_identity,
+-            pairing: Arc::new(RwLock::new(pairing)),
+-            relay_client: Arc::new(RwLock::new(None)),
+-            remote_server: Arc::new(RwLock::new(None)),
+-            active_method: Arc::new(RwLock::new(None)),
+-            ngrok_tunnel: Arc::new(RwLock::new(None)),
+-            embedded_relay: Arc::new(RwLock::new(None)),
+-            bot_telegram_handle: Arc::new(RwLock::new(None)),
+-            bot_feishu_handle: Arc::new(RwLock::new(None)),
+-            bot_weixin_handle: Arc::new(RwLock::new(None)),
+-            telegram_bot: Arc::new(RwLock::new(None)),
+-            feishu_bot: Arc::new(RwLock::new(None)),
+-            weixin_bot: Arc::new(RwLock::new(None)),
+-            bot_connected_info: Arc::new(RwLock::new(None)),
+-            trusted_mobile_identity: Arc::new(RwLock::new(None)),
+-        })
+-    }
+-
+-    pub fn device_identity(&self) -> &DeviceIdentity {
+-        &self.device_identity
+-    }
+-
+-    pub fn update_bot_config(&mut self, bot_config: bot::BotConfig) {
+-        match bot_config {
+-            bot::BotConfig::Feishu { app_id, app_secret } => {
+-                self.config.bot_feishu = Some(bot::BotConfig::Feishu { app_id, app_secret });
+-            }
+-            bot::BotConfig::Telegram { bot_token } => {
+-                self.config.bot_telegram = Some(bot::BotConfig::Telegram { bot_token });
+-            }
+-            bot::BotConfig::Weixin {
+-                ilink_token,
+-                base_url,
+-                bot_account_id,
+-            } => {
+-                self.config.bot_weixin = Some(bot::BotConfig::Weixin {
+-                    ilink_token,
+-                    base_url,
+-                    bot_account_id,
+-                });
+-            }
+-        }
+-    }
+-
+-    pub async fn available_methods(&self) -> Vec<ConnectionMethod> {
+-        vec![
+-            ConnectionMethod::Lan,
+-            ConnectionMethod::Ngrok,
+-            ConnectionMethod::NortHingServer,
+-            ConnectionMethod::CustomServer {
+-                url: self.config.custom_server_url.clone().unwrap_or_default(),
+-            },
+-            ConnectionMethod::BotFeishu,
+-            ConnectionMethod::BotTelegram,
+-            ConnectionMethod::BotWeixin,
+-        ]
+-    }
+-
+-    /// Legacy `stop()` — only stops relay for backward compatibility.
+-    /// Bot connections persist independently.
+-    pub async fn stop(&self) {
+-        self.stop_relay().await;
+-    }
+-
+-    /// Stop everything (relay + bots).
+-    pub async fn stop_all(&self) {
+-        self.stop_relay().await;
+-        self.stop_bots().await;
+-    }
+-}
+-
+-/// Handle to a running bot (Telegram, Feishu, or Weixin).
+-pub(crate) struct BotHandle {
+-    stop_tx: tokio::sync::watch::Sender<bool>,
+-}
+-
+-impl BotHandle {
+-    fn stop(&self) {
+-        let _ = self.stop_tx.send(true);
+-    }
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub(crate) struct TrustedMobileIdentity {
+-    pub(crate) mobile_install_id: String,
+-    pub(crate) user_id: String,
+-}
+-
+-/// Unified Remote Connect service that orchestrates all connection methods.
+-pub struct RemoteConnectService {
+-    pub(crate) config: RemoteConnectConfig,
+-    pub(crate) device_identity: DeviceIdentity,
+-    pub(crate) pairing: Arc<RwLock<PairingProtocol>>,
+-    pub(crate) relay_client: Arc<RwLock<Option<RelayClient>>>,
+-    pub(crate) remote_server: Arc<RwLock<Option<RemoteServer>>>,
+-    pub(crate) active_method: Arc<RwLock<Option<ConnectionMethod>>>,
+-    pub(crate) ngrok_tunnel: Arc<RwLock<Option<ngrok::NgrokTunnel>>>,
+-    pub(crate) embedded_relay: Arc<RwLock<Option<embedded_relay::EmbeddedRelayHandle>>>,
+-    // Bot handles live independently of relay connections
+-    pub(crate) bot_telegram_handle: Arc<RwLock<Option<BotHandle>>>,
+-    pub(crate) bot_feishu_handle: Arc<RwLock<Option<BotHandle>>>,
+-    pub(crate) bot_weixin_handle: Arc<RwLock<Option<BotHandle>>>,
+-    // Keep Arc references to bots for send_message etc.
+-    pub(crate) telegram_bot: Arc<RwLock<Option<Arc<bot::telegram::TelegramBot>>>>,
+-    pub(crate) feishu_bot: Arc<RwLock<Option<Arc<bot::feishu::FeishuBot>>>>,
+-    pub(crate) weixin_bot: Arc<RwLock<Option<Arc<bot::weixin::WeixinBot>>>>,
+-    /// Independent bot connection state — not tied to PairingProtocol.
+-    /// Stores the peer description (e.g. "Telegram(7096812005)") when a bot is active.
+-    pub(crate) bot_connected_info: Arc<RwLock<Option<String>>>,
+-    /// Trusted mobile identity for the current relay lifecycle only.
+-    pub(crate) trusted_mobile_identity: Arc<RwLock<Option<TrustedMobileIdentity>>>,
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/connect/bot_connection.rs b/src/crates/assembly/core/src/service/remote_connect/connect/bot_connection.rs
+deleted file mode 100644
+index a33ff0a..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/connect/bot_connection.rs
++++ /dev/null
+@@ -1,332 +0,0 @@
+-//! Bot connection lifecycle: Feishu, Telegram, Weixin.
+-//!
+-//! Carries the `start_bot_connection`, `restore_bot`, and `stop_bots` methods
+-//! of `RemoteConnectService`. Bot connections run independently of relay
+-//! state: stopping the relay (`stop_relay`) does not affect them, and
+-//! `stop_bots` does not affect the relay.
+-
+-use std::sync::Arc;
+-use tracing::info;
+-
+-use super::*;
+-
+-impl super::RemoteConnectService {
+-    pub(crate) async fn start_bot_connection(&self, method: &ConnectionMethod) -> Result<ConnectionResult> {
+-        let pairing_code = PairingProtocol::generate_bot_pairing_code();
+-
+-        let bot_link = match method {
+-            ConnectionMethod::BotTelegram => {
+-                match &self.config.bot_telegram {
+-                    Some(bot::BotConfig::Telegram { bot_token }) if !bot_token.is_empty() => {
+-                        // Stop any existing Telegram bot
+-                        if let Some(handle) = self.bot_telegram_handle.write().await.take() {
+-                            handle.stop();
+-                        }
+-
+-                        let tg_bot = Arc::new(bot::telegram::TelegramBot::new(bot::telegram::TelegramConfig {
+-                            bot_token: bot_token.clone(),
+-                        }));
+-                        tg_bot.register_pairing(&pairing_code).await?;
+-
+-                        let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-
+-                        let bot_connected_info = self.bot_connected_info.clone();
+-                        let bot_for_pair = tg_bot.clone();
+-                        let bot_for_loop = tg_bot.clone();
+-                        let tg_bot_ref = self.telegram_bot.clone();
+-
+-                        *tg_bot_ref.write().await = Some(tg_bot.clone());
+-
+-                        tokio::spawn(async move {
+-                            let mut stop_rx = stop_rx;
+-                            match bot_for_pair.wait_for_pairing(&mut stop_rx).await {
+-                                Ok(chat_id) => {
+-                                    // Guard against the race where stop_bots() cleared
+-                                    // bot_connected_info between pairing completing and
+-                                    // this task running.
+-                                    if !*stop_rx.borrow() {
+-                                        *bot_connected_info.write().await = Some(format!("Telegram({chat_id})"));
+-                                        info!("Telegram bot paired, starting message loop");
+-                                        bot_for_loop.run_message_loop(stop_rx).await;
+-                                    } else {
+-                                        info!("Telegram pairing completed but bot was stopped; discarding");
+-                                    }
+-                                }
+-                                Err(e) => {
+-                                    info!("Telegram pairing ended: {e}");
+-                                }
+-                            }
+-                        });
+-
+-                        *self.bot_telegram_handle.write().await = Some(BotHandle { stop_tx });
+-
+-                        "https://t.me/BotFather".to_string()
+-                    }
+-                    _ => {
+-                        return Err(anyhow::anyhow!(
+-                            "Telegram bot token not configured. Please set bot token first."
+-                        ));
+-                    }
+-                }
+-            }
+-            ConnectionMethod::BotFeishu => {
+-                match &self.config.bot_feishu {
+-                    Some(bot::BotConfig::Feishu { app_id, app_secret })
+-                        if !app_id.is_empty() && !app_secret.is_empty() =>
+-                    {
+-                        if let Some(handle) = self.bot_feishu_handle.write().await.take() {
+-                            handle.stop();
+-                        }
+-
+-                        let fs_bot = Arc::new(bot::feishu::FeishuBot::new(bot::feishu::FeishuConfig {
+-                            app_id: app_id.clone(),
+-                            app_secret: app_secret.clone(),
+-                        }));
+-                        fs_bot.register_pairing(&pairing_code).await?;
+-
+-                        let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-
+-                        let bot_connected_info = self.bot_connected_info.clone();
+-                        let bot_for_pair = fs_bot.clone();
+-                        let bot_for_loop = fs_bot.clone();
+-                        let fs_bot_ref = self.feishu_bot.clone();
+-
+-                        *fs_bot_ref.write().await = Some(fs_bot.clone());
+-
+-                        tokio::spawn(async move {
+-                            let mut stop_rx = stop_rx;
+-                            match bot_for_pair.wait_for_pairing(&mut stop_rx).await {
+-                                Ok(chat_id) => {
+-                                    // Guard against the race where stop_bots() cleared
+-                                    // bot_connected_info between pairing completing and
+-                                    // this task running.
+-                                    if !*stop_rx.borrow() {
+-                                        *bot_connected_info.write().await = Some(format!("Feishu({chat_id})"));
+-                                        info!("Feishu bot paired, starting message loop");
+-                                        bot_for_loop.run_message_loop(stop_rx).await;
+-                                    } else {
+-                                        info!("Feishu pairing completed but bot was stopped; discarding");
+-                                    }
+-                                }
+-                                Err(e) => {
+-                                    info!("Feishu pairing ended: {e}");
+-                                }
+-                            }
+-                        });
+-
+-                        *self.bot_feishu_handle.write().await = Some(BotHandle { stop_tx });
+-
+-                        "https://open.feishu.cn/app".to_string()
+-                    }
+-                    _ => {
+-                        return Err(anyhow::anyhow!(
+-                            "Feishu bot credentials not configured. \
+-                             Please set App ID and App Secret first."
+-                        ));
+-                    }
+-                }
+-            }
+-            ConnectionMethod::BotWeixin => match &self.config.bot_weixin {
+-                Some(bot::BotConfig::Weixin {
+-                    ilink_token,
+-                    base_url,
+-                    bot_account_id,
+-                }) if !ilink_token.is_empty() && !bot_account_id.is_empty() => {
+-                    if let Some(handle) = self.bot_weixin_handle.write().await.take() {
+-                        handle.stop();
+-                    }
+-
+-                    let wx_cfg = bot::weixin::WeixinConfig {
+-                        ilink_token: ilink_token.clone(),
+-                        base_url: if base_url.trim().is_empty() {
+-                            "https://ilinkai.weixin.qq.com".to_string()
+-                        } else {
+-                            base_url.clone()
+-                        },
+-                        bot_account_id: bot_account_id.clone(),
+-                    };
+-
+-                    let wx_bot = Arc::new(bot::weixin::WeixinBot::new(wx_cfg));
+-                    wx_bot.register_pairing(&pairing_code).await?;
+-
+-                    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-
+-                    let bot_connected_info = self.bot_connected_info.clone();
+-                    let bot_for_pair = wx_bot.clone();
+-                    let bot_for_loop = wx_bot.clone();
+-                    let wx_bot_ref = self.weixin_bot.clone();
+-
+-                    *wx_bot_ref.write().await = Some(wx_bot.clone());
+-
+-                    tokio::spawn(async move {
+-                        let mut stop_rx = stop_rx;
+-                        match bot_for_pair.wait_for_pairing(&mut stop_rx).await {
+-                            Ok(peer_id) => {
+-                                if !*stop_rx.borrow() {
+-                                    *bot_connected_info.write().await = Some(format!("Weixin({peer_id})"));
+-                                    info!("Weixin bot paired, starting message loop");
+-                                    bot_for_loop.run_message_loop(stop_rx).await;
+-                                } else {
+-                                    info!("Weixin pairing completed but bot was stopped; discarding");
+-                                }
+-                            }
+-                            Err(e) => {
+-                                info!("Weixin pairing ended: {e}");
+-                            }
+-                        }
+-                    });
+-
+-                    *self.bot_weixin_handle.write().await = Some(BotHandle { stop_tx });
+-
+-                    "https://www.wechat.com".to_string()
+-                }
+-                _ => {
+-                    return Err(anyhow::anyhow!(
+-                        "Weixin not linked. Complete WeChat QR login in Remote Connect first."
+-                    ));
+-                }
+-            },
+-            _ => {
+-                return Err(anyhow::anyhow!("start_bot_connection: unsupported method {method:?}"));
+-            }
+-        };
+-
+-        Ok(ConnectionResult {
+-            method: method.clone(),
+-            qr_data: None,
+-            qr_svg: None,
+-            qr_url: None,
+-            bot_pairing_code: Some(pairing_code),
+-            bot_link: Some(bot_link),
+-            pairing_state: PairingState::WaitingForScan,
+-        })
+-    }
+-
+-    /// Restore a previously paired bot from persistence.
+-    /// Skips the pairing step and directly starts the message loop.
+-    pub async fn restore_bot(&self, saved: &bot::SavedBotConnection) -> Result<()> {
+-        match saved.config {
+-            bot::BotConfig::Telegram { ref bot_token } => {
+-                if let Some(handle) = self.bot_telegram_handle.write().await.take() {
+-                    handle.stop();
+-                }
+-
+-                let tg_bot = Arc::new(bot::telegram::TelegramBot::new(bot::telegram::TelegramConfig {
+-                    bot_token: bot_token.clone(),
+-                }));
+-
+-                let chat_id: i64 = saved
+-                    .chat_id
+-                    .parse()
+-                    .map_err(|_| anyhow::anyhow!("invalid saved telegram chat_id: {}", saved.chat_id))?;
+-                tg_bot.restore_chat_state(chat_id, saved.chat_state.clone()).await;
+-
+-                let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-                *self.telegram_bot.write().await = Some(tg_bot.clone());
+-                *self.bot_connected_info.write().await = Some(format!("Telegram({chat_id})"));
+-
+-                let bot_for_loop = tg_bot.clone();
+-                tokio::spawn(async move {
+-                    info!("Telegram bot restored from persistence, starting message loop");
+-                    bot_for_loop.run_message_loop(stop_rx).await;
+-                });
+-
+-                *self.bot_telegram_handle.write().await = Some(BotHandle { stop_tx });
+-                info!("Telegram bot restored for chat_id={chat_id}");
+-            }
+-            bot::BotConfig::Feishu {
+-                ref app_id,
+-                ref app_secret,
+-            } => {
+-                if let Some(handle) = self.bot_feishu_handle.write().await.take() {
+-                    handle.stop();
+-                }
+-
+-                let fs_bot = Arc::new(bot::feishu::FeishuBot::new(bot::feishu::FeishuConfig {
+-                    app_id: app_id.clone(),
+-                    app_secret: app_secret.clone(),
+-                }));
+-
+-                fs_bot
+-                    .restore_chat_state(&saved.chat_id, saved.chat_state.clone())
+-                    .await;
+-
+-                let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-                *self.feishu_bot.write().await = Some(fs_bot.clone());
+-
+-                let cid = saved.chat_id.clone();
+-                *self.bot_connected_info.write().await = Some(format!("Feishu({cid})"));
+-
+-                let bot_for_loop = fs_bot.clone();
+-                tokio::spawn(async move {
+-                    info!("Feishu bot restored from persistence, starting message loop");
+-                    bot_for_loop.run_message_loop(stop_rx).await;
+-                });
+-
+-                *self.bot_feishu_handle.write().await = Some(BotHandle { stop_tx });
+-                info!("Feishu bot restored for chat_id={}", saved.chat_id);
+-            }
+-            bot::BotConfig::Weixin {
+-                ref ilink_token,
+-                ref base_url,
+-                ref bot_account_id,
+-            } => {
+-                if let Some(handle) = self.bot_weixin_handle.write().await.take() {
+-                    handle.stop();
+-                }
+-
+-                let wx_cfg = bot::weixin::WeixinConfig {
+-                    ilink_token: ilink_token.clone(),
+-                    base_url: if base_url.trim().is_empty() {
+-                        "https://ilinkai.weixin.qq.com".to_string()
+-                    } else {
+-                        base_url.clone()
+-                    },
+-                    bot_account_id: bot_account_id.clone(),
+-                };
+-
+-                let wx_bot = Arc::new(bot::weixin::WeixinBot::new(wx_cfg));
+-                wx_bot
+-                    .restore_chat_state(&saved.chat_id, saved.chat_state.clone())
+-                    .await;
+-
+-                let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+-                *self.weixin_bot.write().await = Some(wx_bot.clone());
+-
+-                let cid = saved.chat_id.clone();
+-                *self.bot_connected_info.write().await = Some(format!("Weixin({cid})"));
+-
+-                let bot_for_loop = wx_bot.clone();
+-                tokio::spawn(async move {
+-                    info!("Weixin bot restored from persistence, starting message loop");
+-                    bot_for_loop.run_message_loop(stop_rx).await;
+-                });
+-
+-                *self.bot_weixin_handle.write().await = Some(BotHandle { stop_tx });
+-                info!("Weixin bot restored for chat_id={}", saved.chat_id);
+-            }
+-        }
+-        Ok(())
+-    }
+-
+-    /// Stop all bot connections.
+-    pub async fn stop_bots(&self) {
+-        if let Some(handle) = self.bot_telegram_handle.write().await.take() {
+-            handle.stop();
+-        }
+-        *self.telegram_bot.write().await = None;
+-
+-        if let Some(handle) = self.bot_feishu_handle.write().await.take() {
+-            handle.stop();
+-        }
+-        *self.feishu_bot.write().await = None;
+-
+-        if let Some(handle) = self.bot_weixin_handle.write().await.take() {
+-            handle.stop();
+-        }
+-        *self.weixin_bot.write().await = None;
+-        *self.bot_connected_info.write().await = None;
+-
+-        info!("Bot connections stopped");
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/connect/mobile_identity.rs b/src/crates/assembly/core/src/service/remote_connect/connect/mobile_identity.rs
+deleted file mode 100644
+index 8dc284c..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/connect/mobile_identity.rs
++++ /dev/null
+@@ -1,61 +0,0 @@
+-//! Mobile identity validation and persistence for the pairing flow.
+-//!
+-//! Carries the two `pub(crate)` static-style helpers that manage the trusted
+-//! mobile identity state held by `RemoteConnectService` during a relay
+-//! lifecycle. The helpers take the `Arc<RwLock<Option<TrustedMobileIdentity>>>`
+-//! as an explicit first argument rather than `&self` because they are
+-//! invoked from places that hold only the lock handle (e.g. command
+-//! handlers that have already borrowed the parent `pairing_arc`).
+-
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-
+-use super::pairing;
+-use super::TrustedMobileIdentity;
+-
+-impl super::RemoteConnectService {
+-    pub(crate) async fn validate_mobile_identity(
+-        trusted_mobile_identity: &Arc<RwLock<Option<TrustedMobileIdentity>>>,
+-        response: &pairing::PairingResponse,
+-    ) -> std::result::Result<TrustedMobileIdentity, String> {
+-        let mobile_install_id = response
+-            .mobile_install_id
+-            .as_deref()
+-            .map(str::trim)
+-            .filter(|value| !value.is_empty())
+-            .ok_or_else(|| "Missing mobile installation ID".to_string())?;
+-        let user_id = response
+-            .user_id
+-            .as_deref()
+-            .map(str::trim)
+-            .filter(|value| !value.is_empty())
+-            .ok_or_else(|| "Missing user ID".to_string())?;
+-
+-        let submitted = TrustedMobileIdentity {
+-            mobile_install_id: mobile_install_id.to_string(),
+-            user_id: user_id.to_string(),
+-        };
+-
+-        let trusted = trusted_mobile_identity.read().await.clone();
+-        match trusted {
+-            Some(existing) if existing.mobile_install_id == submitted.mobile_install_id => {
+-                if existing.user_id != submitted.user_id {
+-                    Err("This mobile device must continue using the previously confirmed user ID".to_string())
+-                } else {
+-                    Ok(submitted)
+-                }
+-            }
+-            Some(existing) if existing.user_id != submitted.user_id => Err(
+-                "This remote URL is already protected. Enter the previously confirmed user ID to continue.".to_string(),
+-            ),
+-            _ => Ok(submitted),
+-        }
+-    }
+-
+-    pub(crate) async fn persist_mobile_identity(
+-        trusted_mobile_identity: &Arc<RwLock<Option<TrustedMobileIdentity>>>,
+-        identity: TrustedMobileIdentity,
+-    ) {
+-        *trusted_mobile_identity.write().await = Some(identity);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/connect/relay_connection.rs b/src/crates/assembly/core/src/service/remote_connect/connect/relay_connection.rs
+deleted file mode 100644
+index ca736ee..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/connect/relay_connection.rs
++++ /dev/null
+@@ -1,262 +0,0 @@
+-//! Relay connection lifecycle: LAN, ngrok, northhing Server, Custom Server.
+-//!
+-//! Carries the `start` and `stop_relay` methods of `RemoteConnectService`.
+-//! Bot connections (Feishu / Telegram / Weixin) are dispatched from
+-//! `bot_connection.rs` instead and run independently of relay state.
+-
+-use tracing::{error, info};
+-
+-use super::*;
+-use crate::service::config::get_app_language_code;
+-
+-impl super::RemoteConnectService {
+-    /// Start a remote connection with the given method.
+-    ///
+-    /// For relay methods (LAN / ngrok / northhing Server / Custom Server) this
+-    /// tears down any existing relay and starts a new one.
+-    /// For bot methods, this starts the bot pairing flow without affecting
+-    /// any running relay connection.
+-    pub async fn start(&self, method: ConnectionMethod) -> Result<ConnectionResult> {
+-        info!("Starting remote connect: {method:?}");
+-
+-        match &method {
+-            ConnectionMethod::BotFeishu | ConnectionMethod::BotTelegram | ConnectionMethod::BotWeixin => {
+-                return self.start_bot_connection(&method).await;
+-            }
+-            _ => {}
+-        }
+-
+-        // Relay methods: clean up previous relay (but leave bots alone)
+-        self.stop_relay().await;
+-
+-        let static_dir = self.config.mobile_web_dir.as_deref();
+-
+-        let relay_url = match &method {
+-            ConnectionMethod::Lan => {
+-                let handle = embedded_relay::start_embedded_relay(self.config.lan_port, static_dir).await?;
+-                *self.embedded_relay.write().await = Some(handle);
+-                match lan::build_lan_relay_url(self.config.lan_port) {
+-                    Ok(url) => url,
+-                    Err(e) => {
+-                        if let Some(ref mut relay) = *self.embedded_relay.write().await {
+-                            relay.stop();
+-                        }
+-                        *self.embedded_relay.write().await = None;
+-                        return Err(e);
+-                    }
+-                }
+-            }
+-            ConnectionMethod::Ngrok => {
+-                let handle = embedded_relay::start_embedded_relay(self.config.lan_port, static_dir).await?;
+-                *self.embedded_relay.write().await = Some(handle);
+-
+-                let tunnel = match ngrok::start_ngrok_tunnel(self.config.lan_port).await {
+-                    Ok(tunnel) => tunnel,
+-                    Err(e) => {
+-                        if let Some(ref mut relay) = *self.embedded_relay.write().await {
+-                            relay.stop();
+-                        }
+-                        *self.embedded_relay.write().await = None;
+-                        return Err(e);
+-                    }
+-                };
+-                let url = tunnel.public_url.clone();
+-                *self.ngrok_tunnel.write().await = Some(tunnel);
+-                url
+-            }
+-            ConnectionMethod::NortHingServer => self.config.northhing_server_url.clone(),
+-            ConnectionMethod::CustomServer { url } => url.clone(),
+-            // Bot variants are handled earlier (lines 283-290); this branch is for
+-            // future variants. Refuse explicitly so a new `ConnectionMethod` added
+-            // without an explicit relay URL strategy fails the call instead of
+-            // crashing the remote-connect subsystem.
+-            other => {
+-                return Err(anyhow::anyhow!(
+-                    "ConnectionMethod::{other:?} has no relay URL resolution strategy; \
+-                     add an explicit arm before this fallback"
+-                ));
+-            }
+-        };
+-
+-        let mut pairing = self.pairing.write().await;
+-        pairing.reset().await;
+-        let qr_payload = pairing.initiate(&relay_url).await?;
+-
+-        let ws_url = match &method {
+-            ConnectionMethod::Lan | ConnectionMethod::Ngrok => {
+-                format!("ws://127.0.0.1:{}/ws", self.config.lan_port)
+-            }
+-            _ => {
+-                format!(
+-                    "{}/ws",
+-                    relay_url.replace("https://", "wss://").replace("http://", "ws://")
+-                )
+-            }
+-        };
+-
+-        let (client, mut event_rx) = RelayClient::new();
+-        client.connect(&ws_url).await?;
+-        client
+-            .create_room(
+-                &self.device_identity.device_id,
+-                &qr_payload.public_key,
+-                Some(&qr_payload.room_id),
+-            )
+-            .await?;
+-
+-        let web_app_url: String = match &method {
+-            ConnectionMethod::Lan | ConnectionMethod::Ngrok => relay_url.clone(),
+-            ConnectionMethod::NortHingServer => {
+-                if let Some(web_dir) = static_dir {
+-                    match sync::upload_mobile_web(&relay_url, &qr_payload.room_id, web_dir).await {
+-                        Ok(()) => {
+-                            let url = format!("{}/r/{}", relay_url.trim_end_matches('/'), qr_payload.room_id);
+-                            info!("Uploaded mobile-web to relay: {url}");
+-                            url
+-                        }
+-                        Err(e) => {
+-                            error!("Failed to upload mobile-web to relay: {e}; falling back to server-hosted version");
+-                            self.config.web_app_url.clone()
+-                        }
+-                    }
+-                } else {
+-                    info!("No mobile_web_dir configured; using server-hosted mobile web");
+-                    self.config.web_app_url.clone()
+-                }
+-            }
+-            ConnectionMethod::CustomServer { .. } => {
+-                if let Some(web_dir) = static_dir {
+-                    match sync::upload_mobile_web(&relay_url, &qr_payload.room_id, web_dir).await {
+-                        Ok(()) => {
+-                            let url = format!("{}/r/{}", relay_url.trim_end_matches('/'), qr_payload.room_id);
+-                            info!("Uploaded mobile-web to custom relay: {url}");
+-                            url
+-                        }
+-                        Err(e) => {
+-                            error!(
+-                                "Failed to upload mobile-web to custom relay: {e}; using custom server URL directly"
+-                            );
+-                            relay_url.clone()
+-                        }
+-                    }
+-                } else {
+-                    info!("No mobile_web_dir configured; using custom server URL directly");
+-                    relay_url.clone()
+-                }
+-            }
+-            _ => self.config.web_app_url.clone(),
+-        };
+-
+-        let client_language = get_app_language_code().await;
+-        let qr_url = QrGenerator::build_url(&qr_payload, &web_app_url, &client_language);
+-        let qr_svg = QrGenerator::generate_svg_from_url(&qr_url)?;
+-        let qr_data = QrGenerator::generate_png_base64_from_url(&qr_url)?;
+-
+-        *self.active_method.write().await = Some(method.clone());
+-        *self.relay_client.write().await = Some(client);
+-
+-        let pairing_arc = self.pairing.clone();
+-        let relay_arc = self.relay_client.clone();
+-        let server_arc = self.remote_server.clone();
+-        let trusted_mobile_identity_arc = self.trusted_mobile_identity.clone();
+-        tokio::spawn(async move {
+-            while let Some(event) = event_rx.recv().await {
+-                match event {
+-                    relay_client::RelayEvent::PairRequest {
+-                        correlation_id,
+-                        public_key,
+-                        device_id,
+-                        device_name: _,
+-                    } => {
+-                        info!("PairRequest from {device_id}");
+-                        let mut p = pairing_arc.write().await;
+-                        match p.on_peer_joined(&public_key).await {
+-                            Ok(challenge) => {
+-                                if let Some(secret) = p.shared_secret() {
+-                                    let challenge_json = serde_json::to_string(&challenge).unwrap_or_default();
+-                                    if let Ok((enc, nonce)) = encryption::encrypt_to_base64(secret, &challenge_json) {
+-                                        if let Some(ref client) = *relay_arc.read().await {
+-                                            let _ = client.send_relay_response(&correlation_id, &enc, &nonce).await;
+-                                        }
+-                                    }
+-                                }
+-                            }
+-                            Err(e) => {
+-                                error!("Pairing error on pair_request: {e}");
+-                            }
+-                        }
+-                    }
+-                    relay_client::RelayEvent::CommandReceived {
+-                        correlation_id,
+-                        encrypted_data,
+-                        nonce,
+-                    } => {
+-                        super::command::handle_command_event(
+-                            &correlation_id,
+-                            &encrypted_data,
+-                            &nonce,
+-                            &pairing_arc,
+-                            &relay_arc,
+-                            &server_arc,
+-                            &trusted_mobile_identity_arc,
+-                        )
+-                        .await;
+-                    }
+-                    relay_client::RelayEvent::Reconnected => {
+-                        info!("Relay reconnected - pairing + server preserved for mobile polling");
+-                    }
+-                    relay_client::RelayEvent::Disconnected => {
+-                        info!("Relay disconnected");
+-                        pairing_arc.write().await.disconnect().await;
+-                        *server_arc.write().await = None;
+-                    }
+-                    relay_client::RelayEvent::Error { message } => {
+-                        error!("Relay error: {message}");
+-                        if message.contains("Room not found") {
+-                            info!("Room expired, disconnecting");
+-                            pairing_arc.write().await.disconnect().await;
+-                            *server_arc.write().await = None;
+-                        }
+-                    }
+-                    _ => {}
+-                }
+-            }
+-        });
+-
+-        let state = pairing.state().await;
+-        Ok(ConnectionResult {
+-            method,
+-            qr_data: Some(qr_data),
+-            qr_svg: Some(qr_svg),
+-            qr_url: Some(qr_url),
+-            bot_pairing_code: None,
+-            bot_link: None,
+-            pairing_state: state,
+-        })
+-    }
+-
+-    /// Stop relay connections (LAN / ngrok / northhing Server / Custom Server).
+-    /// Bot connections are left running.
+-    pub async fn stop_relay(&self) {
+-        if let Some(ref client) = *self.relay_client.read().await {
+-            client.disconnect().await;
+-        }
+-        *self.relay_client.write().await = None;
+-        *self.remote_server.write().await = None;
+-        *self.active_method.write().await = None;
+-
+-        if let Some(ref mut tunnel) = *self.ngrok_tunnel.write().await {
+-            tunnel.stop().await;
+-        }
+-        *self.ngrok_tunnel.write().await = None;
+-
+-        if let Some(ref mut relay) = *self.embedded_relay.write().await {
+-            relay.stop();
+-        }
+-        *self.embedded_relay.write().await = None;
+-
+-        self.pairing.write().await.reset().await;
+-        *self.trusted_mobile_identity.write().await = None;
+-        info!("Relay connections stopped (bots unaffected)");
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs b/src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs
+deleted file mode 100644
+index 1bc5de3..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs
++++ /dev/null
+@@ -1,131 +0,0 @@
+-//! Embedded mini relay server for LAN / ngrok modes.
+-//!
+-//! Runs inside the desktop process, reusing the same relay logic as the
+-//! standalone relay-server binary. Uses `MemoryAssetStore` for in-memory
+-//! mobile-web file storage (no disk I/O for uploaded assets).
+-//!
+-//! # Security note (P1-7, registered 2026-08-04)
+-//!
+-//! This relay binds on `0.0.0.0:{port}` with no API key authentication
+-//! (open mode). This is a product-required open surface for LAN/ngrok
+-//! mobile phone pairing — the pairing protocol itself must carry an
+-//! out-of-band key (design task). Until that is implemented, a warning
+-//! is logged at startup.
+-
+-use northhing_relay_core::{build_relay_router, MemoryAssetStore, RoomManager};
+-use std::sync::Arc;
+-use tracing::info;
+-use tracing::warn;
+-
+-/// Start the embedded relay and return a shutdown handle.
+-///
+-/// If `static_dir` is provided, the server also serves mobile-web static files
+-/// as a fallback for requests that don't match any API or WebSocket route.
+-pub async fn start_embedded_relay(port: u16, static_dir: Option<&str>) -> anyhow::Result<EmbeddedRelayHandle> {
+-    let room_manager = RoomManager::new();
+-    let asset_store = Arc::new(MemoryAssetStore::new());
+-    let start_time = std::time::Instant::now();
+-
+-    let cleanup_rm = room_manager.clone();
+-    tokio::spawn(async move {
+-        loop {
+-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+-            cleanup_rm.cleanup_stale_rooms(300);
+-        }
+-    });
+-
+-    // 2026-06-26: embedded relay runs in the desktop process on loopback
+-    // (LAN / ngrok modes). It does not currently surface an `api_key`
+-    // configuration — passing `None` keeps pair/command open. When the
+-    // embedded relay's threat model changes (e.g. ngrok public exposure),
+-    // thread an API key through the same path the standalone relay uses.
+-    let mut app = build_relay_router(room_manager, asset_store, start_time, None);
+-
+-    // P1-7 warn: embedded relay is open (no key) and binds 0.0.0.0.
+-    warn!(
+-        "Embedded relay started on 0.0.0.0:{port} with no API key (open mode) \
+-         and no authentication on pair/command endpoints. This is intentional \
+-         for LAN/ngrok phone pairing. See P1-7 in tech-debt-ledger.md."
+-    );
+-
+-    // Apply permissive CORS for embedded relay (LAN/ngrok origins must be
+-    // able to connect from arbitrary IPs). The CORS was moved from the
+-    // shared build_relay_router to each consumer (P1-5, 2026-08-04).
+-    use tower_http::cors::CorsLayer;
+-    app = app.layer(CorsLayer::permissive());
+-
+-    if let Some(dir) = static_dir {
+-        info!("Embedded relay: serving static files from {dir}");
+-        let serve_dir = tower_http::services::ServeDir::new(dir).append_index_html_on_directories(true);
+-        let static_app = axum::Router::<()>::new()
+-            .fallback_service(serve_dir)
+-            .layer(axum::middleware::from_fn(static_cache_headers));
+-        app = app.fallback_service(static_app);
+-    }
+-
+-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+-        .await
+-        .map_err(|e| anyhow::anyhow!("failed to bind embedded relay on port {port}: {e}"))?;
+-
+-    info!("Embedded relay started on 0.0.0.0:{port}");
+-
+-    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+-    tokio::spawn(async move {
+-        axum::serve(listener, app)
+-            .with_graceful_shutdown(async {
+-                let _ = shutdown_rx.await;
+-            })
+-            .await
+-            .ok();
+-    });
+-
+-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+-
+-    Ok(EmbeddedRelayHandle {
+-        _shutdown: Some(shutdown_tx),
+-    })
+-}
+-
+-async fn static_cache_headers(
+-    request: axum::extract::Request,
+-    next: axum::middleware::Next,
+-) -> axum::response::Response {
+-    let path = request.uri().path().to_string();
+-    let mut response = next.run(request).await;
+-    let headers = response.headers_mut();
+-    if path == "/" || path.ends_with(".html") {
+-        headers.insert(
+-            axum::http::header::CACHE_CONTROL,
+-            axum::http::HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+-        );
+-        headers.insert(
+-            axum::http::header::PRAGMA,
+-            axum::http::HeaderValue::from_static("no-cache"),
+-        );
+-    } else if path.starts_with("/assets/") {
+-        headers.insert(
+-            axum::http::header::CACHE_CONTROL,
+-            axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"),
+-        );
+-    }
+-    response
+-}
+-
+-pub struct EmbeddedRelayHandle {
+-    _shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+-}
+-
+-impl EmbeddedRelayHandle {
+-    pub fn stop(&mut self) {
+-        if let Some(tx) = self._shutdown.take() {
+-            let _ = tx.send(());
+-            info!("Embedded relay stopped");
+-        }
+-    }
+-}
+-
+-impl Drop for EmbeddedRelayHandle {
+-    fn drop(&mut self) {
+-        self.stop();
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/lan.rs b/src/crates/assembly/core/src/service/remote_connect/lan.rs
+deleted file mode 100644
+index ef94803..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/lan.rs
++++ /dev/null
+@@ -1,34 +0,0 @@
+-//! LAN mode: starts an embedded relay server on the local network.
+-//!
+-//! The desktop runs a mini relay server, and the QR code points to the local IP.
+-
+-use anyhow::{anyhow, Result};
+-use tracing::info;
+-
+-/// Detect the local LAN IP address.
+-pub fn local_ip() -> Result<String> {
+-    let ip = local_ip_address::local_ip().map_err(|e| anyhow!("failed to detect LAN IP: {e}"))?;
+-    Ok(ip.to_string())
+-}
+-
+-/// Build the relay URL for LAN mode.
+-pub fn build_lan_relay_url(port: u16) -> Result<String> {
+-    let ip = local_ip()?;
+-    let url = format!("http://{ip}:{port}");
+-    info!("LAN relay URL: {url}");
+-    Ok(url)
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn test_get_local_ip() {
+-        let ip = local_ip();
+-        // May fail in CI environments without network, so just check it doesn't panic
+-        if let Ok(ip) = ip {
+-            assert!(!ip.is_empty());
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/mod.rs b/src/crates/assembly/core/src/service/remote_connect/mod.rs
+deleted file mode 100644
+index 433e96e..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/mod.rs
++++ /dev/null
+@@ -1,108 +0,0 @@
+-//! Remote Connect service module.
+-//!
+-//! Provides phone-to-desktop remote connection capabilities with E2E encryption.
+-//! Supports multiple connection methods: LAN, ngrok, relay server, and bots.
+-//!
+-//! Bot connections (Telegram / Feishu / Weixin) run independently of relay connections
+-//! (LAN / ngrok / northhing Server / Custom Server).  Calling `stop()` only
+-//! tears down the relay side; bots keep running.  Use `stop_bot()` or
+-//! `stop_all()` to shut everything down.
+-
+-pub mod bot;
+-pub mod embedded_relay;
+-pub mod lan;
+-pub mod ngrok;
+-pub mod remote_server;
+-
+-pub mod command;
+-pub mod connect;
+-pub mod session;
+-pub mod sync;
+-
+-pub mod device {
+-    pub use northhing_services_integrations::remote_connect::device::*;
+-}
+-
+-pub mod encryption {
+-    pub use northhing_services_integrations::remote_connect::encryption::*;
+-}
+-
+-pub mod pairing {
+-    pub use northhing_services_integrations::remote_connect::pairing::*;
+-}
+-
+-pub mod qr_generator {
+-    pub use northhing_services_integrations::remote_connect::qr_generator::*;
+-}
+-
+-pub mod relay_client {
+-    pub use northhing_services_integrations::remote_connect::relay_client::*;
+-}
+-
+-pub use connect::RemoteConnectService;
+-pub use device::DeviceIdentity;
+-pub use encryption::{decrypt_from_base64, encrypt_to_base64, KeyPair};
+-pub use pairing::{PairingProtocol, PairingState};
+-pub use qr_generator::QrGenerator;
+-pub use relay_client::ensure_rustls_crypto_provider;
+-pub use relay_client::RelayClient;
+-pub use remote_server::RemoteServer;
+-
+-use anyhow::Result;
+-use serde::{Deserialize, Serialize};
+-use std::sync::Arc;
+-use tokio::sync::RwLock;
+-use tracing::{debug, error, info};
+-
+-/// Supported connection methods.
+-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+-#[serde(rename_all = "snake_case")]
+-pub enum ConnectionMethod {
+-    Lan,
+-    Ngrok,
+-    NortHingServer,
+-    CustomServer { url: String },
+-    BotFeishu,
+-    BotTelegram,
+-    BotWeixin,
+-}
+-
+-/// Configuration for Remote Connect.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct RemoteConnectConfig {
+-    pub lan_port: u16,
+-    pub northhing_server_url: String,
+-    pub web_app_url: String,
+-    pub custom_server_url: Option<String>,
+-    pub bot_feishu: Option<bot::BotConfig>,
+-    pub bot_telegram: Option<bot::BotConfig>,
+-    pub bot_weixin: Option<bot::BotConfig>,
+-    pub mobile_web_dir: Option<String>,
+-}
+-
+-impl Default for RemoteConnectConfig {
+-    fn default() -> Self {
+-        Self {
+-            lan_port: 9700,
+-            northhing_server_url: "https://remote.openagentapp.com/relay".to_string(),
+-            web_app_url: "https://remote.openagentapp.com/relay".to_string(),
+-            custom_server_url: None,
+-            bot_feishu: None,
+-            bot_telegram: None,
+-            bot_weixin: None,
+-            mobile_web_dir: None,
+-        }
+-    }
+-}
+-
+-/// Result of starting a remote connection.
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ConnectionResult {
+-    pub method: ConnectionMethod,
+-    pub qr_data: Option<String>,
+-    pub qr_svg: Option<String>,
+-    pub qr_url: Option<String>,
+-    pub bot_pairing_code: Option<String>,
+-    pub bot_link: Option<String>,
+-    pub pairing_state: PairingState,
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/ngrok.rs b/src/crates/assembly/core/src/service/remote_connect/ngrok.rs
+deleted file mode 100644
+index c21cdfd..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/ngrok.rs
++++ /dev/null
+@@ -1,275 +0,0 @@
+-//! ngrok tunnel mode for Remote Connect.
+-//!
+-//! Supports macOS (pgrep) and Windows (tasklist) for process detection.
+-
+-use crate::util::process_manager;
+-use anyhow::{anyhow, Result};
+-use std::path::PathBuf;
+-use std::process::Stdio;
+-use std::sync::atomic::{AtomicU32, Ordering};
+-use tokio::io::{AsyncBufReadExt, BufReader};
+-use tracing::{info, warn};
+-
+-/// Tracks the PID of the ngrok process we started, so it can be killed
+-/// synchronously during application exit even if async cleanup didn't run.
+-static NGROK_PID: AtomicU32 = AtomicU32::new(0);
+-
+-/// Find the ngrok binary, checking common locations beyond just PATH.
+-fn find_ngrok() -> Option<PathBuf> {
+-    if let Ok(path) = which::which("ngrok") {
+-        return Some(path);
+-    }
+-
+-    let candidates: Vec<PathBuf> = vec![
+-        PathBuf::from("/usr/local/bin/ngrok"),
+-        PathBuf::from("/opt/homebrew/bin/ngrok"),
+-        dirs::home_dir().map(|h| h.join("ngrok")).unwrap_or_default(),
+-        dirs::home_dir().map(|h| h.join(".ngrok/ngrok")).unwrap_or_default(),
+-        dirs::home_dir().map(|h| h.join("bin/ngrok")).unwrap_or_default(),
+-        #[cfg(target_os = "windows")]
+-        {
+-            let appdata = std::env::var("LOCALAPPDATA").unwrap_or_default();
+-            PathBuf::from(format!("{appdata}\\ngrok\\ngrok.exe"))
+-        },
+-        #[cfg(target_os = "windows")]
+-        PathBuf::from("C:\\ngrok\\ngrok.exe"),
+-    ];
+-
+-    candidates.into_iter().find(|path| path.exists() && path.is_file())
+-}
+-
+-/// Check if ngrok is installed and available.
+-pub async fn is_ngrok_available() -> bool {
+-    find_ngrok().is_some()
+-}
+-
+-/// Check if any ngrok process is already running on the system.
+-/// Returns `Some(pids)` if found, `None` if not.
+-pub fn detect_running_ngrok() -> Option<Vec<u32>> {
+-    let pids = list_ngrok_pids();
+-    if pids.is_empty() {
+-        None
+-    } else {
+-        Some(pids)
+-    }
+-}
+-
+-#[cfg(unix)]
+-fn list_ngrok_pids() -> Vec<u32> {
+-    std::process::Command::new("pgrep")
+-        .args(["-x", "ngrok"])
+-        .output()
+-        .ok()
+-        .and_then(|out| {
+-            if out.status.success() {
+-                let text = String::from_utf8_lossy(&out.stdout);
+-                Some(text.lines().filter_map(|l| l.trim().parse::<u32>().ok()).collect())
+-            } else {
+-                None
+-            }
+-        })
+-        .unwrap_or_default()
+-}
+-
+-#[cfg(windows)]
+-fn list_ngrok_pids() -> Vec<u32> {
+-    process_manager::create_command("tasklist")
+-        .args(["/FI", "IMAGENAME eq ngrok.exe", "/FO", "CSV", "/NH"])
+-        .output()
+-        .ok()
+-        .map(|out| {
+-            let text = String::from_utf8_lossy(&out.stdout);
+-            text.lines()
+-                .filter_map(|line| {
+-                    // CSV format: "ngrok.exe","PID",...
+-                    let parts: Vec<&str> = line.split(',').collect();
+-                    parts
+-                        .get(1)
+-                        .and_then(|s| s.trim_matches('"').trim().parse::<u32>().ok())
+-                })
+-                .collect()
+-        })
+-        .unwrap_or_default()
+-}
+-
+-/// Start an ngrok HTTP tunnel and return the public URL.
+-///
+-/// Parses the tunnel URL directly from ngrok's stdout JSON logs instead of
+-/// querying the shared 4040 API, which avoids conflicts with any pre-existing
+-/// ngrok process.
+-///
+-/// Returns a descriptive error if:
+-/// - ngrok is not installed
+-/// - another ngrok process is already running
+-/// - the tunnel fails to establish within the timeout
+-pub async fn start_ngrok_tunnel(local_port: u16) -> Result<NgrokTunnel> {
+-    let ngrok_path = find_ngrok().ok_or_else(|| {
+-        anyhow!(
+-            "ngrok is not installed.\n\
+-             Please install ngrok and configure your auth token, then retry.\n\
+-             No need to start ngrok manually — northhing will start it automatically.\n\
+-             Setup guide: https://dashboard.ngrok.com/get-started/setup"
+-        )
+-    })?;
+-
+-    if let Some(pids) = detect_running_ngrok() {
+-        return Err(anyhow!(
+-            "An ngrok process is already running (PID: {}).\n\
+-             Please stop the existing ngrok process before starting a new tunnel,\n\
+-             or use the existing tunnel directly.",
+-            pids.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ")
+-        ));
+-    }
+-
+-    info!("Using ngrok at: {}", ngrok_path.display());
+-
+-    let mut child = process_manager::create_tokio_command(&ngrok_path)
+-        .args([
+-            "http",
+-            &local_port.to_string(),
+-            "--log",
+-            "stdout",
+-            "--log-format",
+-            "json",
+-        ])
+-        .stdout(Stdio::piped())
+-        .stderr(Stdio::piped())
+-        .spawn()
+-        .map_err(|e| {
+-            anyhow!(
+-                "Failed to start ngrok process: {e}\n\
+-                 Please ensure ngrok is installed and your auth token is configured \
+-                 (run: ngrok config add-authtoken <YOUR_TOKEN>).\n\
+-                 No need to start ngrok manually — northhing will start it automatically."
+-            )
+-        })?;
+-
+-    let pid = child.id().unwrap_or(0);
+-    NGROK_PID.store(pid, Ordering::Relaxed);
+-    info!("ngrok process started, pid={pid}");
+-
+-    let stdout = child
+-        .stdout
+-        .take()
+-        .ok_or_else(|| anyhow!("Failed to capture ngrok stdout"))?;
+-
+-    let public_url = match parse_tunnel_url_from_stdout(stdout).await {
+-        Ok(url) => url,
+-        Err(e) => {
+-            let _ = child.kill().await;
+-            return Err(anyhow!(
+-                "ngrok tunnel failed to establish: {e}\n\
+-                 Possible causes:\n\
+-                 - ngrok auth token not configured (run: ngrok config add-authtoken <YOUR_TOKEN>)\n\
+-                 - Network connectivity issue\n\
+-                 - ngrok service outage\n\
+-                 Note: You do not need to start ngrok manually."
+-            ));
+-        }
+-    };
+-
+-    info!("ngrok tunnel established: {public_url}");
+-
+-    Ok(NgrokTunnel {
+-        public_url,
+-        local_port,
+-        pid: Some(pid),
+-        process: Some(child),
+-    })
+-}
+-
+-/// Read ngrok's JSON log lines from stdout until we find the tunnel URL.
+-/// ngrok v3 emits: `{"url":"https://xxx.ngrok-free.app", "msg":"started tunnel", ...}`
+-async fn parse_tunnel_url_from_stdout(stdout: tokio::process::ChildStdout) -> Result<String> {
+-    let reader = BufReader::new(stdout);
+-    let mut lines = reader.lines();
+-
+-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(15);
+-
+-    let (url_tx, url_rx) = tokio::sync::oneshot::channel::<String>();
+-    let mut url_tx = Some(url_tx);
+-
+-    tokio::spawn(async move {
+-        while let Ok(Some(line)) = lines.next_line().await {
+-            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line) {
+-                if let Some(url) = obj.get("url").and_then(|v| v.as_str()) {
+-                    if url.starts_with("https://") || url.starts_with("http://") {
+-                        if let Some(tx) = url_tx.take() {
+-                            let _ = tx.send(url.to_string());
+-                        }
+-                    }
+-                }
+-            }
+-        }
+-        drop(url_tx);
+-    });
+-
+-    match tokio::time::timeout_at(deadline, url_rx).await {
+-        Ok(Ok(url)) => Ok(url),
+-        Ok(Err(_)) => Err(anyhow!("ngrok exited before establishing a tunnel")),
+-        Err(_) => Err(anyhow!("timed out (15s)")),
+-    }
+-}
+-
+-/// Force-kill an ngrok process by PID.
+-#[cfg(unix)]
+-fn kill_process(pid: u32) {
+-    let _ = std::process::Command::new("kill")
+-        .args(["-9", &pid.to_string()])
+-        .output();
+-}
+-
+-#[cfg(windows)]
+-fn kill_process(pid: u32) {
+-    let _ = process_manager::create_command("taskkill")
+-        .args(["/F", "/PID", &pid.to_string()])
+-        .output();
+-}
+-
+-pub struct NgrokTunnel {
+-    pub public_url: String,
+-    pub local_port: u16,
+-    pid: Option<u32>,
+-    process: Option<tokio::process::Child>,
+-}
+-
+-impl NgrokTunnel {
+-    pub fn ws_url(&self) -> String {
+-        self.public_url
+-            .replace("https://", "wss://")
+-            .replace("http://", "ws://")
+-    }
+-
+-    pub async fn stop(&mut self) {
+-        if let Some(ref mut child) = self.process {
+-            let _ = child.kill().await;
+-            info!("ngrok tunnel stopped");
+-        }
+-        self.process = None;
+-        self.pid = None;
+-        NGROK_PID.store(0, Ordering::Relaxed);
+-    }
+-}
+-
+-impl Drop for NgrokTunnel {
+-    fn drop(&mut self) {
+-        if let Some(ref mut child) = self.process {
+-            let _ = child.start_kill();
+-        }
+-        if let Some(pid) = self.pid.take() {
+-            kill_process(pid);
+-            warn!("Force-killed ngrok process pid={pid} during cleanup");
+-        }
+-        NGROK_PID.store(0, Ordering::Relaxed);
+-    }
+-}
+-
+-/// Synchronous cleanup: kill the ngrok process we started (if any).
+-/// Safe to call from exit handlers and drop implementations.
+-pub fn cleanup_all_ngrok() {
+-    let pid = NGROK_PID.swap(0, Ordering::Relaxed);
+-    if pid != 0 {
+-        info!("Cleaning up ngrok process pid={pid} on application exit");
+-        kill_process(pid);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/remote_server.rs b/src/crates/assembly/core/src/service/remote_connect/remote_server.rs
+deleted file mode 100644
+index 7f61a59..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/remote_server.rs
++++ /dev/null
+@@ -1,561 +0,0 @@
+-//! Session bridge: translates remote commands into local session operations.
+-//!
+-//! Mobile clients send encrypted commands via the relay (HTTP → WS bridge).
+-//! The desktop decrypts, dispatches, and returns encrypted responses.
+-//!
+-//! Instead of streaming events to the mobile, the desktop maintains an
+-//! in-memory `RemoteSessionStateTracker` per session. The mobile polls
+-//! for state changes using the `PollSession` command, receiving only
+-//! incremental updates (new messages + current active turn snapshot).
+-
+-use crate::service_agent_runtime::{CoreRemoteSessionTrackerHost, CoreServiceAgentRuntime};
+-use anyhow::{anyhow, Result};
+-use serde_json::Value;
+-use std::sync::{Arc, OnceLock};
+-
+-use super::encryption;
+-use northhing_services_integrations::remote_connect::{
+-    build_remote_image_contexts, cancel_remote_task, generate_remote_initial_sync, handle_remote_command,
+-    handle_remote_interaction_command, handle_remote_poll_command, handle_remote_session_command,
+-    handle_remote_workspace_command, handle_remote_workspace_file_command, submit_remote_dialog,
+-    RemoteCancelTaskRequest, RemoteCommandRuntimeHost, RemoteConnectSubmissionSource, RemoteDialogSubmissionPolicy,
+-    RemoteDialogSubmissionRequest, RemoteDialogSubmitOutcome, RemoteImageContext, RemoteSessionTrackerRegistry,
+-};
+-pub use northhing_services_integrations::remote_connect::{
+-    ActiveTurnSnapshot, AssistantEntry, ChatImageAttachment, ChatMessage, ChatMessageItem, ImageAttachment,
+-    RecentWorkspaceEntry, RemoteCommand, RemoteDefaultModelsConfig, RemoteModelCatalog, RemoteModelConfig,
+-    RemoteResponse, RemoteSessionStateTracker, RemoteToolStatus, SessionInfo, TrackerEvent,
+-};
+-
+-pub type EncryptedPayload = (String, String);
+-
+-/// Convert legacy `ImageAttachment` to unified `ImageContextData`.
+-pub fn images_to_contexts(
+-    images: Option<&Vec<ImageAttachment>>,
+-) -> Vec<crate::agentic::image_analysis::ImageContextData> {
+-    build_core_image_contexts(images.map(Vec::as_slice))
+-}
+-
+-fn build_core_image_contexts(
+-    images: Option<&[ImageAttachment]>,
+-) -> Vec<crate::agentic::image_analysis::ImageContextData> {
+-    build_remote_image_contexts(images)
+-        .into_iter()
+-        .map(remote_image_context_to_core)
+-        .collect()
+-}
+-
+-fn remote_image_context_to_core(context: RemoteImageContext) -> crate::agentic::image_analysis::ImageContextData {
+-    CoreServiceAgentRuntime::remote_image_context(context)
+-}
+-
+-// ── RemoteExecutionDispatcher (global singleton) ────────────────────
+-
+-/// Shared tracker adapter for remote relay and bot execution paths.
+-///
+-/// Command routing lives in `northhing-services-integrations`; core only keeps the
+-/// global tracker registry adapter needed by concrete session/runtime hosts.
+-pub struct RemoteExecutionDispatcher {
+-    tracker_registry: RemoteSessionTrackerRegistry,
+-}
+-
+-static GLOBAL_DISPATCHER: OnceLock<Arc<RemoteExecutionDispatcher>> = OnceLock::new();
+-
+-pub fn get_or_init_global_dispatcher() -> Arc<RemoteExecutionDispatcher> {
+-    GLOBAL_DISPATCHER
+-        .get_or_init(|| {
+-            Arc::new(RemoteExecutionDispatcher {
+-                tracker_registry: RemoteSessionTrackerRegistry::new(),
+-            })
+-        })
+-        .clone()
+-}
+-
+-pub fn global_dispatcher() -> Option<Arc<RemoteExecutionDispatcher>> {
+-    GLOBAL_DISPATCHER.get().cloned()
+-}
+-
+-impl RemoteExecutionDispatcher {
+-    /// Ensure a state tracker exists for the given session and return it.
+-    ///
+-    /// When the tracker is freshly created and the session already has an active
+-    /// turn (e.g. a desktop-triggered dialog), the tracker is seeded with the
+-    /// turn id so that `snapshot_active_turn()` immediately returns a valid
+-    /// snapshot.  Without this, a late-created tracker would miss the
+-    /// `DialogTurnStarted` event and the mobile would see no active-turn
+-    /// overlay until the turn completes.
+-    pub fn ensure_tracker(&self, session_id: &str) -> Arc<RemoteSessionStateTracker> {
+-        self.tracker_registry
+-            .ensure_tracker_with_host(session_id, &CoreRemoteSessionTrackerHost)
+-    }
+-
+-    pub fn get_tracker(&self, session_id: &str) -> Option<Arc<RemoteSessionStateTracker>> {
+-        self.tracker_registry.get_tracker(session_id)
+-    }
+-
+-    pub fn remove_tracker(&self, session_id: &str) {
+-        self.tracker_registry
+-            .remove_tracker_with_host(session_id, &CoreRemoteSessionTrackerHost);
+-    }
+-
+-    /// Dispatch a SendMessage command through the remote-connect runtime owner.
+-    ///
+-    /// `northhing-services-integrations` owns the orchestration order; core supplies
+-    /// the concrete tracker, session restore, terminal, and scheduler adapters.
+-    /// When the session is already processing, the message is queued and the current turn
+-    /// may yield after the current model round for interactive remote sources.
+-    /// Returns whether this message started immediately or was only queued, plus ids.
+-    /// If `turn_id` is `None`, one is auto-generated before queueing.
+-    ///
+-    /// All platforms (desktop, mobile, bot) use the same `ImageContextData` format.
+-    pub async fn send_message(
+-        &self,
+-        session_id: &str,
+-        content: String,
+-        agent_type: Option<&str>,
+-        image_contexts: Vec<crate::agentic::image_analysis::ImageContextData>,
+-        source: RemoteConnectSubmissionSource,
+-        turn_id: Option<String>,
+-    ) -> std::result::Result<RemoteDialogSubmitOutcome, String> {
+-        let host = CoreServiceAgentRuntime::remote_dialog_host(self)?;
+-
+-        submit_remote_dialog(
+-            &host,
+-            RemoteDialogSubmissionRequest {
+-                session_id: session_id.to_string(),
+-                content,
+-                agent_type: agent_type.map(ToOwned::to_owned),
+-                image_contexts,
+-                policy: RemoteDialogSubmissionPolicy::for_source(source),
+-                turn_id,
+-            },
+-        )
+-        .await
+-    }
+-
+-    /// Cancel a running dialog turn.
+-    pub async fn cancel_task(
+-        &self,
+-        session_id: &str,
+-        requested_turn_id: Option<&str>,
+-    ) -> std::result::Result<(), String> {
+-        let host = CoreServiceAgentRuntime::remote_cancel_host()?;
+-        cancel_remote_task(
+-            &host,
+-            RemoteCancelTaskRequest {
+-                session_id: session_id.to_string(),
+-                requested_turn_id: requested_turn_id.map(ToOwned::to_owned),
+-            },
+-        )
+-        .await
+-    }
+-}
+-
+-struct CoreRemoteCommandRuntimeHost<'a> {
+-    dispatcher: &'a RemoteExecutionDispatcher,
+-}
+-
+-impl<'a> CoreRemoteCommandRuntimeHost<'a> {
+-    fn new(dispatcher: &'a RemoteExecutionDispatcher) -> Self {
+-        Self { dispatcher }
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteCommandRuntimeHost for CoreRemoteCommandRuntimeHost<'_> {
+-    type ImageContext = crate::agentic::image_analysis::ImageContextData;
+-
+-    async fn handle_workspace_command(&self, command: &RemoteCommand) -> RemoteResponse {
+-        let host = CoreServiceAgentRuntime::remote_workspace_host();
+-        handle_remote_workspace_command(&host, command).await
+-    }
+-
+-    async fn handle_session_command(&self, command: &RemoteCommand) -> RemoteResponse {
+-        let host = match CoreServiceAgentRuntime::remote_session_host() {
+-            Ok(host) => host,
+-            Err(message) => return RemoteResponse::Error { message },
+-        };
+-        handle_remote_session_command(&host, command).await
+-    }
+-
+-    async fn handle_poll_command(&self, command: &RemoteCommand) -> RemoteResponse {
+-        let host = CoreServiceAgentRuntime::remote_poll_host(self.dispatcher);
+-        handle_remote_poll_command(&host, command).await
+-    }
+-
+-    async fn handle_workspace_file_command(&self, command: &RemoteCommand) -> RemoteResponse {
+-        let host = CoreServiceAgentRuntime::remote_workspace_file_host();
+-        handle_remote_workspace_file_command(&host, command).await
+-    }
+-
+-    async fn handle_interaction_command(&self, command: &RemoteCommand) -> RemoteResponse {
+-        let host = CoreServiceAgentRuntime::remote_interaction_host();
+-        handle_remote_interaction_command(&host, command).await
+-    }
+-
+-    async fn submit_dialog(
+-        &self,
+-        request: RemoteDialogSubmissionRequest<Self::ImageContext>,
+-    ) -> std::result::Result<RemoteDialogSubmitOutcome, String> {
+-        let host = CoreServiceAgentRuntime::remote_dialog_host(self.dispatcher)?;
+-        submit_remote_dialog(&host, request).await
+-    }
+-
+-    async fn cancel_task(&self, request: RemoteCancelTaskRequest) -> std::result::Result<(), String> {
+-        let host = CoreServiceAgentRuntime::remote_cancel_host()?;
+-        cancel_remote_task(&host, request).await
+-    }
+-
+-    fn legacy_image_contexts(&self, images: Option<&[ImageAttachment]>) -> Vec<Self::ImageContext> {
+-        build_core_image_contexts(images)
+-    }
+-
+-    fn explicit_image_contexts(&self, contexts: Vec<RemoteImageContext>) -> Vec<Self::ImageContext> {
+-        contexts.into_iter().map(remote_image_context_to_core).collect()
+-    }
+-}
+-
+-// ── RemoteServer ───────────────────────────────────────────────────
+-
+-/// Bridges encrypted remote payloads to the integrations-owned command router.
+-pub struct RemoteServer {
+-    shared_secret: [u8; 32],
+-}
+-
+-impl RemoteServer {
+-    pub fn new(shared_secret: [u8; 32]) -> Self {
+-        get_or_init_global_dispatcher();
+-        Self { shared_secret }
+-    }
+-
+-    pub fn shared_secret(&self) -> &[u8; 32] {
+-        &self.shared_secret
+-    }
+-
+-    pub fn decrypt_command(&self, encrypted_data: &str, nonce: &str) -> Result<(RemoteCommand, Option<String>)> {
+-        let json = encryption::decrypt_from_base64(&self.shared_secret, encrypted_data, nonce)?;
+-        let value: Value = serde_json::from_str(&json).map_err(|e| anyhow!("parse json: {e}"))?;
+-        let request_id = value.get("_request_id").and_then(|v| v.as_str()).map(String::from);
+-        let cmd: RemoteCommand = serde_json::from_value(value).map_err(|e| anyhow!("parse command: {e}"))?;
+-        Ok((cmd, request_id))
+-    }
+-
+-    pub fn encrypt_response(&self, response: &RemoteResponse, request_id: Option<&str>) -> Result<EncryptedPayload> {
+-        let mut value = serde_json::to_value(response).map_err(|e| anyhow!("serialize response: {e}"))?;
+-        if let (Some(id), Some(obj)) = (request_id, value.as_object_mut()) {
+-            obj.insert("_request_id".to_string(), Value::String(id.to_string()));
+-        }
+-        let json = serde_json::to_string(&value).map_err(|e| anyhow!("to_string: {e}"))?;
+-        encryption::encrypt_to_base64(&self.shared_secret, &json)
+-    }
+-
+-    pub async fn dispatch(&self, cmd: &RemoteCommand) -> RemoteResponse {
+-        let dispatcher = get_or_init_global_dispatcher();
+-        let host = CoreRemoteCommandRuntimeHost::new(dispatcher.as_ref());
+-        handle_remote_command(&host, cmd, RemoteConnectSubmissionSource::Relay).await
+-    }
+-
+-    pub async fn generate_initial_sync(&self, authenticated_user_id: Option<String>) -> RemoteResponse {
+-        let host = CoreServiceAgentRuntime::remote_initial_sync_host();
+-        generate_remote_initial_sync(&host, authenticated_user_id).await
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use crate::service::remote_connect::encryption::KeyPair;
+-    use northhing_services_integrations::remote_connect::{
+-        remote_session_restore_target, resolve_remote_cancel_decision, resolve_remote_execution_image_contexts,
+-        RemoteCancelDecision,
+-    };
+-
+-    #[test]
+-    fn test_command_round_trip() {
+-        let alice = KeyPair::generate();
+-        let bob = KeyPair::generate();
+-        let shared = alice.derive_shared_secret(&bob.public_key_bytes());
+-
+-        let bridge = RemoteServer::new(shared);
+-
+-        let cmd_json = serde_json::json!({
+-            "cmd": "send_message",
+-            "session_id": "sess-123",
+-            "content": "Hello from mobile!",
+-            "_request_id": "req_abc"
+-        });
+-        let json = cmd_json.to_string();
+-        let (enc, nonce) = encryption::encrypt_to_base64(&shared, &json).unwrap();
+-        let (decoded, req_id) = bridge.decrypt_command(&enc, &nonce).unwrap();
+-
+-        assert_eq!(req_id.as_deref(), Some("req_abc"));
+-        if let RemoteCommand::SendMessage {
+-            session_id, content, ..
+-        } = decoded
+-        {
+-            assert_eq!(session_id, "sess-123");
+-            assert_eq!(content, "Hello from mobile!");
+-        } else {
+-            panic!("unexpected command variant");
+-        }
+-    }
+-
+-    #[test]
+-    fn test_response_with_request_id() {
+-        let alice = KeyPair::generate();
+-        let shared = alice.derive_shared_secret(&alice.public_key_bytes());
+-        let bridge = RemoteServer::new(shared);
+-
+-        let resp = RemoteResponse::Pong;
+-        let (enc, nonce) = bridge.encrypt_response(&resp, Some("req_xyz")).unwrap();
+-
+-        let json = encryption::decrypt_from_base64(&shared, &enc, &nonce).unwrap();
+-        let value: Value = serde_json::from_str(&json).unwrap();
+-        assert_eq!(value["resp"], "pong");
+-        assert_eq!(value["_request_id"], "req_xyz");
+-    }
+-
+-    #[tokio::test]
+-    async fn remote_answer_question_preserves_user_input_manager_path() {
+-        let (sender, receiver) = tokio::sync::oneshot::channel();
+-        crate::agentic::tools::user_input_manager::user_input_manager()
+-            .register_channel("question-tool".to_string(), sender);
+-        let bridge = RemoteServer::new([7; 32]);
+-        let answers = serde_json::json!({ "choice": "yes" });
+-
+-        let response = bridge
+-            .dispatch(&RemoteCommand::AnswerQuestion {
+-                tool_id: "question-tool".to_string(),
+-                answers: answers.clone(),
+-            })
+-            .await;
+-
+-        assert_eq!(response, RemoteResponse::AnswerAccepted);
+-        assert_eq!(receiver.await.unwrap().answers, answers);
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_maps_remote_image_context() {
+-        let metadata = serde_json::json!({ "source": "relay" });
+-        let context = RemoteImageContext {
+-            id: "image-1".to_string(),
+-            image_path: Some("/workspace/screenshot.png".to_string()),
+-            data_url: None,
+-            mime_type: "image/png".to_string(),
+-            metadata: Some(metadata.clone()),
+-        };
+-
+-        let mapped = crate::service_agent_runtime::CoreServiceAgentRuntime::remote_image_context(context);
+-
+-        assert_eq!(mapped.id, "image-1");
+-        assert_eq!(mapped.image_path.as_deref(), Some("/workspace/screenshot.png"));
+-        assert_eq!(mapped.mime_type, "image/png");
+-        assert_eq!(mapped.metadata, Some(metadata));
+-    }
+-
+-    #[test]
+-    fn remote_execution_prefers_unified_image_contexts_over_legacy_images() {
+-        let explicit_context = crate::agentic::image_analysis::ImageContextData {
+-            id: "ctx-1".to_string(),
+-            image_path: Some("/workspace/project/screenshot.png".to_string()),
+-            data_url: None,
+-            mime_type: "image/png".to_string(),
+-            metadata: Some(serde_json::json!({ "source": "desktop" })),
+-        };
+-        let legacy_images = vec![ImageAttachment {
+-            name: "legacy.png".to_string(),
+-            data_url: "data:image/png;base64,legacy".to_string(),
+-        }];
+-
+-        let resolved = resolve_remote_execution_image_contexts(
+-            Some(legacy_images.as_slice()),
+-            Some(vec![explicit_context.clone()]),
+-            build_core_image_contexts,
+-        );
+-
+-        assert_eq!(resolved.len(), 1);
+-        assert_eq!(resolved[0].id, explicit_context.id);
+-        assert_eq!(resolved[0].image_path, explicit_context.image_path);
+-        assert!(resolved[0].data_url.is_none());
+-    }
+-
+-    #[test]
+-    fn remote_execution_falls_back_to_legacy_images_as_image_contexts() {
+-        let legacy_images = vec![ImageAttachment {
+-            name: "clip.png".to_string(),
+-            data_url: "data:image/png;base64,abc".to_string(),
+-        }];
+-
+-        let resolved =
+-            resolve_remote_execution_image_contexts(Some(legacy_images.as_slice()), None, build_core_image_contexts);
+-
+-        assert_eq!(resolved.len(), 1);
+-        assert!(resolved[0].id.starts_with("remote_img_"));
+-        assert_eq!(resolved[0].data_url.as_deref(), Some("data:image/png;base64,abc"));
+-        assert_eq!(resolved[0].mime_type, "image/png");
+-        assert_eq!(resolved[0].metadata.as_ref().unwrap()["name"], "clip.png");
+-    }
+-
+-    #[test]
+-    fn remote_cancel_decision_preserves_current_turn_boundaries() {
+-        assert_eq!(
+-            resolve_remote_cancel_decision(Some("turn-current"), Some("turn-current")),
+-            RemoteCancelDecision::CancelCurrent("turn-current".to_string())
+-        );
+-        assert_eq!(
+-            resolve_remote_cancel_decision(Some("turn-current"), None),
+-            RemoteCancelDecision::CancelCurrent("turn-current".to_string())
+-        );
+-        assert_eq!(
+-            resolve_remote_cancel_decision(Some("turn-current"), Some("turn-stale")),
+-            RemoteCancelDecision::StaleRequestedTurn
+-        );
+-        assert_eq!(
+-            resolve_remote_cancel_decision(None, Some("turn-finished")),
+-            RemoteCancelDecision::AlreadyFinished
+-        );
+-        assert_eq!(
+-            resolve_remote_cancel_decision(None, None),
+-            RemoteCancelDecision::NoRunningTask
+-        );
+-    }
+-
+-    #[test]
+-    fn remote_restore_target_only_restores_cold_sessions_with_workspace_binding() {
+-        assert_eq!(
+-            remote_session_restore_target(false, Some("/workspace/project")),
+-            Some("/workspace/project")
+-        );
+-        assert_eq!(remote_session_restore_target(true, Some("/workspace/project")), None);
+-        assert_eq!(remote_session_restore_target(false, None), None);
+-    }
+-
+-    #[test]
+-    fn remote_command_snapshot_covers_execution_poll_and_cancel_surfaces() {
+-        let command = RemoteCommand::SendMessage {
+-            session_id: "session-1".to_string(),
+-            content: "hello".to_string(),
+-            agent_type: Some("code".to_string()),
+-            images: Some(vec![ImageAttachment {
+-                name: "clip.png".to_string(),
+-                data_url: "data:image/png;base64,abc".to_string(),
+-            }]),
+-            image_contexts: None,
+-        };
+-        let json = serde_json::to_value(command).expect("serialize send command");
+-        assert_eq!(json["cmd"], "send_message");
+-        assert_eq!(json["session_id"], "session-1");
+-        assert_eq!(json["agent_type"], "code");
+-        assert_eq!(json["images"][0]["name"], "clip.png");
+-        assert!(json["image_contexts"].is_null());
+-        assert!(json.get("imageContexts").is_none());
+-
+-        let cancel = serde_json::to_value(RemoteCommand::CancelTask {
+-            session_id: "session-1".to_string(),
+-            turn_id: Some("turn-1".to_string()),
+-        })
+-        .expect("serialize cancel command");
+-        assert_eq!(cancel["cmd"], "cancel_task");
+-        assert_eq!(cancel["turn_id"], "turn-1");
+-
+-        let list = serde_json::to_value(RemoteCommand::ListSessions {
+-            workspace_path: Some("/workspace/project".to_string()),
+-            limit: Some(30),
+-            offset: Some(0),
+-            query: Some("alpha".to_string()),
+-        })
+-        .expect("serialize list command");
+-        assert_eq!(list["cmd"], "list_sessions");
+-        assert_eq!(list["query"], "alpha");
+-
+-        let rename = serde_json::to_value(RemoteCommand::UpdateSessionTitle {
+-            session_id: "session-1".to_string(),
+-            title: "Renamed session".to_string(),
+-        })
+-        .expect("serialize rename command");
+-        assert_eq!(rename["cmd"], "update_session_title");
+-        assert_eq!(rename["title"], "Renamed session");
+-
+-        let poll = serde_json::to_value(RemoteCommand::PollSession {
+-            session_id: "session-1".to_string(),
+-            since_version: 7,
+-            known_msg_count: 3,
+-            known_model_catalog_version: Some(11),
+-        })
+-        .expect("serialize poll command");
+-        assert_eq!(poll["cmd"], "poll_session");
+-        assert_eq!(poll["since_version"], 7);
+-        assert_eq!(poll["known_msg_count"], 3);
+-        assert_eq!(poll["known_model_catalog_version"], 11);
+-    }
+-
+-    #[test]
+-    fn remote_response_snapshot_preserves_active_turn_and_result_shapes() {
+-        let active_turn = ActiveTurnSnapshot {
+-            turn_id: "turn-1".to_string(),
+-            status: "active".to_string(),
+-            text: String::new(),
+-            thinking: String::new(),
+-            tools: vec![RemoteToolStatus {
+-                id: "tool-1".to_string(),
+-                name: "Read".to_string(),
+-                status: "running".to_string(),
+-                duration_ms: None,
+-                start_ms: Some(42),
+-                input_preview: Some("{\"path\":\"README.md\"}".to_string()),
+-                tool_input: None,
+-            }],
+-            round_index: 2,
+-            items: Some(vec![ChatMessageItem {
+-                item_type: "tool".to_string(),
+-                content: None,
+-                tool: None,
+-                is_subagent: None,
+-            }]),
+-        };
+-
+-        let poll = serde_json::to_value(RemoteResponse::SessionPoll {
+-            version: 8,
+-            changed: true,
+-            session_state: Some("running".to_string()),
+-            title: Some("session title".to_string()),
+-            new_messages: None,
+-            total_msg_count: None,
+-            active_turn: Some(active_turn),
+-            model_catalog: Box::new(None),
+-        })
+-        .expect("serialize poll response");
+-
+-        assert_eq!(poll["resp"], "session_poll");
+-        assert_eq!(poll["version"], 8);
+-        assert_eq!(poll["active_turn"]["turn_id"], "turn-1");
+-        assert_eq!(
+-            poll["active_turn"]["tools"][0]["input_preview"],
+-            "{\"path\":\"README.md\"}"
+-        );
+-        assert!(poll.get("new_messages").is_none());
+-
+-        let sent = serde_json::to_value(RemoteResponse::MessageSent {
+-            session_id: "session-1".to_string(),
+-            turn_id: "turn-1".to_string(),
+-        })
+-        .expect("serialize sent response");
+-        assert_eq!(sent["resp"], "message_sent");
+-        assert_eq!(sent["turn_id"], "turn-1");
+-
+-        let cancelled = serde_json::to_value(RemoteResponse::TaskCancelled {
+-            session_id: "session-1".to_string(),
+-        })
+-        .expect("serialize cancelled response");
+-        assert_eq!(cancelled["resp"], "task_cancelled");
+-        assert_eq!(cancelled["session_id"], "session-1");
+-
+-        let title_updated = serde_json::to_value(RemoteResponse::SessionTitleUpdated {
+-            session_id: "session-1".to_string(),
+-            title: "Renamed session".to_string(),
+-        })
+-        .expect("serialize title response");
+-        assert_eq!(title_updated["resp"], "session_title_updated");
+-        assert_eq!(title_updated["title"], "Renamed session");
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/session.rs b/src/crates/assembly/core/src/service/remote_connect/session.rs
+deleted file mode 100644
+index 35a41a4..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/session.rs
++++ /dev/null
+@@ -1,45 +0,0 @@
+-//! Sub-domain: session + workspace projection state queries.
+-//! Spec step-3.7 — extracted from remote_connect/mod.rs (R55e refactor).
+-
+-use super::connect::RemoteConnectService;
+-use super::*;
+-
+-impl RemoteConnectService {
+-    pub async fn pairing_state(&self) -> PairingState {
+-        self.pairing.read().await.state().await
+-    }
+-
+-    pub async fn is_connected(&self) -> bool {
+-        self.pairing.read().await.state().await == PairingState::Connected
+-    }
+-
+-    pub async fn active_method(&self) -> Option<ConnectionMethod> {
+-        self.active_method.read().await.clone()
+-    }
+-
+-    pub async fn peer_device_name(&self) -> Option<String> {
+-        self.pairing.read().await.peer_device_name().map(String::from)
+-    }
+-
+-    /// Check whether a specific bot type is currently running.
+-    pub async fn is_bot_running(&self, bot_type: &str) -> bool {
+-        match bot_type {
+-            "telegram" => self.bot_telegram_handle.read().await.is_some(),
+-            "feishu" => self.bot_feishu_handle.read().await.is_some(),
+-            "weixin" => self.bot_weixin_handle.read().await.is_some(),
+-            _ => false,
+-        }
+-    }
+-
+-    pub async fn bot_connected_info(&self) -> Option<String> {
+-        self.bot_connected_info.read().await.clone()
+-    }
+-
+-    pub async fn trusted_mobile_user_id(&self) -> Option<String> {
+-        self.trusted_mobile_identity
+-            .read()
+-            .await
+-            .as_ref()
+-            .map(|identity| identity.user_id.clone())
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service/remote_connect/sync.rs b/src/crates/assembly/core/src/service/remote_connect/sync.rs
+deleted file mode 100644
+index e3dbe8f..0000000
+--- a/src/crates/assembly/core/src/service/remote_connect/sync.rs
++++ /dev/null
+@@ -1,315 +0,0 @@
+-//! Sub-domain: file sync (upload/download).
+-//! Spec step-3.7 — extracted from remote_connect/mod.rs (R55e refactor).
+-
+-use super::*;
+-use base64::{engine::general_purpose::STANDARD as B64, Engine};
+-
+-/// File metadata used for the incremental upload check.
+-#[derive(serde::Serialize)]
+-pub(super) struct FileManifestEntry {
+-    path: String,
+-    hash: String,
+-    size: u64,
+-}
+-
+-/// Collected file data ready for upload.
+-pub(super) struct CollectedFile {
+-    rel_path: String,
+-    content: Vec<u8>,
+-    hash: String,
+-}
+-
+-const MAX_UPLOAD_BATCH_BASE64_BYTES: usize = 256 * 1024;
+-
+-pub(super) async fn upload_mobile_web(relay_url: &str, room_id: &str, web_dir: &str) -> Result<()> {
+-    let base = std::path::Path::new(web_dir);
+-    if !base.join("index.html").exists() {
+-        return Err(anyhow::anyhow!("mobile-web dir missing index.html: {}", web_dir));
+-    }
+-
+-    let mut all_files: Vec<CollectedFile> = Vec::new();
+-    collect_files_with_hash(base, base, &mut all_files)?;
+-
+-    info!(
+-        "Collected {} mobile-web files ({} bytes total) for room {room_id}",
+-        all_files.len(),
+-        all_files.iter().map(|f| f.content.len()).sum::<usize>()
+-    );
+-
+-    let client = reqwest::Client::new();
+-    let relay_base = relay_url.trim_end_matches('/');
+-
+-    // Step 1: try incremental check
+-    let manifest: Vec<FileManifestEntry> = all_files
+-        .iter()
+-        .map(|f| FileManifestEntry {
+-            path: f.rel_path.clone(),
+-            hash: f.hash.clone(),
+-            size: f.content.len() as u64,
+-        })
+-        .collect();
+-
+-    let check_url = format!("{relay_base}/api/rooms/{room_id}/check-web-files");
+-    let check_result = client
+-        .post(&check_url)
+-        .json(&serde_json::json!({ "files": manifest }))
+-        .timeout(std::time::Duration::from_secs(15))
+-        .send()
+-        .await;
+-
+-    match check_result {
+-        Ok(resp) if resp.status().is_success() => {
+-            let body: serde_json::Value = resp
+-                .json()
+-                .await
+-                .map_err(|e| anyhow::anyhow!("parse check-web-files response: {e}"))?;
+-            let needed: Vec<String> = body["needed"]
+-                .as_array()
+-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+-                .unwrap_or_default();
+-
+-            let existing = body["existing_count"].as_u64().unwrap_or(0);
+-            let total = body["total_count"].as_u64().unwrap_or(0);
+-            if needed.is_empty() {
+-                info!("All {total} files already exist on relay server, no upload needed");
+-                return Ok(());
+-            }
+-
+-            info!(
+-                "Incremental upload: {existing}/{total} files already on server, uploading {} needed",
+-                needed.len()
+-            );
+-
+-            upload_needed_files(&client, relay_base, room_id, &all_files, &needed).await
+-        }
+-        Ok(resp) if resp.status().as_u16() == 404 => {
+-            info!("Relay server does not support incremental upload, falling back to full upload");
+-            upload_all_files(&client, relay_base, room_id, &all_files).await
+-        }
+-        Ok(resp) => {
+-            let status = resp.status();
+-            info!("check-web-files returned HTTP {status}, falling back to full upload");
+-            upload_all_files(&client, relay_base, room_id, &all_files).await
+-        }
+-        Err(e) => {
+-            info!("check-web-files request failed ({e}), falling back to full upload");
+-            upload_all_files(&client, relay_base, room_id, &all_files).await
+-        }
+-    }
+-}
+-
+-/// Upload only the files that the server said it needs.
+-async fn upload_needed_files(
+-    client: &reqwest::Client,
+-    relay_base: &str,
+-    room_id: &str,
+-    all_files: &[CollectedFile],
+-    needed: &[String],
+-) -> Result<()> {
+-    let needed_set: std::collections::HashSet<&str> = needed.iter().map(|s| s.as_str()).collect();
+-
+-    let mut files_payload: Vec<(String, serde_json::Value, usize)> = Vec::new();
+-    for f in all_files {
+-        if needed_set.contains(f.rel_path.as_str()) {
+-            let encoded = B64.encode(&f.content);
+-            let encoded_len = encoded.len();
+-            files_payload.push((
+-                f.rel_path.clone(),
+-                serde_json::json!({
+-                    "content": encoded,
+-                    "hash": f.hash,
+-                }),
+-                encoded_len,
+-            ));
+-        }
+-    }
+-
+-    let url = format!("{relay_base}/api/rooms/{room_id}/upload-web-files");
+-    let total_b64_bytes: usize = files_payload.iter().map(|(_, _, len)| *len).sum();
+-
+-    info!(
+-        "Uploading {} needed files ({} bytes base64) to {url}",
+-        files_payload.len(),
+-        total_b64_bytes
+-    );
+-
+-    let mut current_batch: std::collections::HashMap<String, serde_json::Value> = std::collections::HashMap::new();
+-    let mut current_batch_b64_bytes = 0usize;
+-    let mut batch_index = 0usize;
+-    for (path, entry, entry_len) in files_payload {
+-        let should_flush =
+-            !current_batch.is_empty() && current_batch_b64_bytes + entry_len > MAX_UPLOAD_BATCH_BASE64_BYTES;
+-        if should_flush {
+-            upload_web_files_batch(
+-                client,
+-                &url,
+-                room_id,
+-                batch_index,
+-                &current_batch,
+-                current_batch_b64_bytes,
+-            )
+-            .await?;
+-            batch_index += 1;
+-            current_batch = std::collections::HashMap::new();
+-            current_batch_b64_bytes = 0;
+-        }
+-        current_batch.insert(path, entry);
+-        current_batch_b64_bytes += entry_len;
+-    }
+-
+-    if !current_batch.is_empty() {
+-        upload_web_files_batch(
+-            client,
+-            &url,
+-            room_id,
+-            batch_index,
+-            &current_batch,
+-            current_batch_b64_bytes,
+-        )
+-        .await?;
+-    }
+-
+-    Ok(())
+-}
+-
+-/// Fallback: upload all files using the legacy endpoint.
+-async fn upload_all_files(
+-    client: &reqwest::Client,
+-    relay_base: &str,
+-    room_id: &str,
+-    all_files: &[CollectedFile],
+-) -> Result<()> {
+-    let mut files: Vec<(String, String, usize)> = Vec::new();
+-    for f in all_files {
+-        let encoded = B64.encode(&f.content);
+-        let encoded_len = encoded.len();
+-        files.push((f.rel_path.clone(), encoded, encoded_len));
+-    }
+-
+-    let url = format!("{relay_base}/api/rooms/{room_id}/upload-web");
+-
+-    info!(
+-        "Full upload: {} files ({} bytes base64) to {url}",
+-        files.len(),
+-        files.iter().map(|(_, _, len)| *len).sum::<usize>()
+-    );
+-
+-    let mut current_batch: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+-    let mut current_batch_b64_bytes = 0usize;
+-    let mut batch_index = 0usize;
+-    for (path, encoded, encoded_len) in files {
+-        let should_flush =
+-            !current_batch.is_empty() && current_batch_b64_bytes + encoded_len > MAX_UPLOAD_BATCH_BASE64_BYTES;
+-        if should_flush {
+-            upload_web_legacy_batch(
+-                client,
+-                &url,
+-                room_id,
+-                batch_index,
+-                &current_batch,
+-                current_batch_b64_bytes,
+-            )
+-            .await?;
+-            batch_index += 1;
+-            current_batch = std::collections::HashMap::new();
+-            current_batch_b64_bytes = 0;
+-        }
+-        current_batch.insert(path, encoded);
+-        current_batch_b64_bytes += encoded_len;
+-    }
+-
+-    if !current_batch.is_empty() {
+-        upload_web_legacy_batch(
+-            client,
+-            &url,
+-            room_id,
+-            batch_index,
+-            &current_batch,
+-            current_batch_b64_bytes,
+-        )
+-        .await?;
+-    }
+-
+-    Ok(())
+-}
+-
+-async fn upload_web_files_batch(
+-    client: &reqwest::Client,
+-    url: &str,
+-    _room_id: &str,
+-    batch_index: usize,
+-    files_payload: &std::collections::HashMap<String, serde_json::Value>,
+-    _total_b64_bytes: usize,
+-) -> Result<()> {
+-    let resp = client
+-        .post(url)
+-        .json(&serde_json::json!({ "files": files_payload }))
+-        .timeout(std::time::Duration::from_secs(30))
+-        .send()
+-        .await
+-        .map_err(|e| anyhow::anyhow!("upload-web-files batch {batch_index}: {e}"))?;
+-
+-    if !resp.status().is_success() {
+-        let status = resp.status();
+-        let body = resp.text().await.unwrap_or_default();
+-        return Err(anyhow::anyhow!(
+-            "upload-web-files batch {batch_index} failed: HTTP {status} — {body}"
+-        ));
+-    }
+-    Ok(())
+-}
+-
+-async fn upload_web_legacy_batch(
+-    client: &reqwest::Client,
+-    url: &str,
+-    _room_id: &str,
+-    batch_index: usize,
+-    files_payload: &std::collections::HashMap<String, String>,
+-    _total_b64_bytes: usize,
+-) -> Result<()> {
+-    let resp = client
+-        .post(url)
+-        .json(&serde_json::json!({ "files": files_payload }))
+-        .timeout(std::time::Duration::from_secs(30))
+-        .send()
+-        .await
+-        .map_err(|e| anyhow::anyhow!("upload mobile-web batch {batch_index}: {e}"))?;
+-
+-    if !resp.status().is_success() {
+-        let status = resp.status();
+-        let body = resp.text().await.unwrap_or_default();
+-        return Err(anyhow::anyhow!(
+-            "upload mobile-web batch {batch_index} failed: HTTP {status} — {body}"
+-        ));
+-    }
+-    Ok(())
+-}
+-
+-/// Recursively collect files with their SHA-256 hash.
+-fn collect_files_with_hash(base: &std::path::Path, dir: &std::path::Path, out: &mut Vec<CollectedFile>) -> Result<()> {
+-    use sha2::{Digest, Sha256};
+-
+-    for entry in std::fs::read_dir(dir)? {
+-        let entry = entry?;
+-        let path = entry.path();
+-        if path.is_dir() {
+-            collect_files_with_hash(base, &path, out)?;
+-        } else if path.is_file() {
+-            let rel = path
+-                .strip_prefix(base)
+-                .unwrap_or(&path)
+-                .to_string_lossy()
+-                .replace('\\', "/");
+-            let content = std::fs::read(&path)?;
+-            let mut hasher = Sha256::new();
+-            hasher.update(&content);
+-            let hash = format!("{:x}", hasher.finalize());
+-            out.push(CollectedFile {
+-                rel_path: rel,
+-                content,
+-                hash,
+-            });
+-        }
+-    }
+-    Ok(())
+-}
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/mod.rs b/src/crates/assembly/core/src/service_agent_runtime/mod.rs
+index f94b6ec..f2c765f 100644
+--- a/src/crates/assembly/core/src/service_agent_runtime/mod.rs
++++ b/src/crates/assembly/core/src/service_agent_runtime/mod.rs
+@@ -1,48 +1,25 @@
+ //! Core-owned bindings for service and agent runtime ports.
+ //!
+ //! Owner crates keep portable contracts and orchestration policy. This module
+ //! centralizes the concrete core adapters that still own scheduler execution,
+-//! session restore, terminal pre-warm, remote image conversion, and runtime-port
+-//! implementations until a reviewed port/provider migration proves equivalence.
++//! session restore, terminal pre-warm, and runtime-port implementations until a
++//! reviewed port/provider migration proves equivalence.
+ 
+ pub use sar_dispatch::CoreServiceAgentRuntime;
+-pub use sar_handler::{
+-    CoreRemoteDialogRuntimeHost, CoreRemotePollRuntimeHost, CoreRemoteSessionTrackerHost,
+-    CoreRemoteWorkspaceFileRuntimeHost, CoreRemoteWorkspaceRuntimeHost,
+-};
+-pub use sar_lifecycle::CoreRemoteSessionRuntimeHost;
+-pub use sar_state::{CoreRemoteCancelRuntimeHost, CoreRemoteInteractionRuntimeHost};
+ 
+ #[path = "sar_dispatch.rs"]
+ mod sar_dispatch;
+-#[path = "sar_handler.rs"]
+-mod sar_handler;
+-#[path = "sar_lifecycle.rs"]
+-mod sar_lifecycle;
+-#[path = "sar_state.rs"]
+-mod sar_state;
+-#[path = "sar_types.rs"]
+-mod sar_types;
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::sar_dispatch::CoreServiceAgentRuntime;
+-    use super::sar_types::{
+-        agent_input_attachment_from_image_context, core_dialog_submission_policy, normalize_remote_model_selection,
+-        normalize_remote_session_model_id, remote_chat_messages_from_turns, strip_remote_user_input_tags,
+-    };
+-    use crate::agentic::image_analysis::ImageContextData;
+-    use crate::service::session::{
+-        DialogTurnData, DialogTurnKind, ModelRoundData, TextItemData, ThinkingItemData, ToolCallData, ToolItemData,
+-        TurnStatus, UserMessageData,
+-    };
+ 
+     #[test]
+     fn core_service_agent_runtime_owner_keeps_coordinator_port_contracts() {
+         fn assert_runtime_ports<T>()
+         where
+             T: northhing_runtime_ports::AgentSubmissionPort
+                 + northhing_runtime_ports::AgentSessionManagementPort
+                 + northhing_runtime_ports::AgentTurnCancellationPort
+                 + northhing_runtime_ports::RemoteControlStatePort
+                 + northhing_runtime_ports::SessionTranscriptReader,
+@@ -87,277 +64,16 @@ mod tests {
+             CoreServiceAgentRuntime::agent_runtime_with_lifecycle_delivery(coordinator, scheduler)
+         }
+ 
+         fn assert_agent_runtime_with_scheduler_ports(
+             coordinator: std::sync::Arc<crate::agentic::coordination::ConversationCoordinator>,
+             scheduler: std::sync::Arc<crate::agentic::coordination::DialogScheduler>,
+         ) -> Result<northhing_agent_runtime::runtime::AgentRuntime, String> {
+             CoreServiceAgentRuntime::agent_runtime_with_scheduler_ports(coordinator, scheduler)
+         }
+ 
+-        fn assert_remote_control_port(
+-            coordinator: &crate::agentic::coordination::ConversationCoordinator,
+-        ) -> &(dyn northhing_runtime_ports::RemoteControlStatePort + '_) {
+-            CoreServiceAgentRuntime::remote_control_state_port(coordinator)
+-        }
+-
+         let _ = assert_agent_runtime;
+         let _ = assert_agent_runtime_with_dialog_turns;
+         let _ = assert_agent_runtime_with_lifecycle_delivery;
+         let _ = assert_agent_runtime_with_scheduler_ports;
+-        let _ = assert_remote_control_port;
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_maps_remote_dialog_policy() {
+-        let relay = core_dialog_submission_policy(
+-            northhing_services_integrations::remote_connect::RemoteDialogSubmissionPolicy {
+-                source: northhing_services_integrations::remote_connect::RemoteConnectSubmissionSource::Relay,
+-                queue_priority: northhing_services_integrations::remote_connect::RemoteDialogQueuePriority::High,
+-                skip_tool_confirmation: true,
+-            },
+-        );
+-        assert_eq!(
+-            relay.trigger_source,
+-            crate::agentic::coordination::DialogTriggerSource::RemoteRelay
+-        );
+-        assert_eq!(
+-            relay.queue_priority,
+-            crate::agentic::coordination::DialogQueuePriority::High
+-        );
+-        assert!(relay.skip_tool_confirmation);
+-
+-        let bot = core_dialog_submission_policy(
+-            northhing_services_integrations::remote_connect::RemoteDialogSubmissionPolicy {
+-                source: northhing_services_integrations::remote_connect::RemoteConnectSubmissionSource::Bot,
+-                queue_priority: northhing_services_integrations::remote_connect::RemoteDialogQueuePriority::Low,
+-                skip_tool_confirmation: false,
+-            },
+-        );
+-        assert_eq!(
+-            bot.trigger_source,
+-            crate::agentic::coordination::DialogTriggerSource::Bot
+-        );
+-        assert_eq!(
+-            bot.queue_priority,
+-            crate::agentic::coordination::DialogQueuePriority::Low
+-        );
+-        assert!(!bot.skip_tool_confirmation);
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_maps_image_context_to_lifecycle_attachment() {
+-        let attachment = agent_input_attachment_from_image_context(ImageContextData {
+-            id: "ctx-1".to_string(),
+-            image_path: Some("/workspace/clip.png".to_string()),
+-            data_url: Some("data:image/png;base64,abc".to_string()),
+-            mime_type: "image/png".to_string(),
+-            metadata: Some(serde_json::json!({ "name": "clip.png" })),
+-        });
+-
+-        assert_eq!(attachment.kind, "remote_image");
+-        assert_eq!(attachment.id, "ctx-1");
+-        assert_eq!(
+-            attachment.metadata.get("imagePath"),
+-            Some(&serde_json::json!("/workspace/clip.png"))
+-        );
+-        assert_eq!(
+-            attachment.metadata.get("dataUrl"),
+-            Some(&serde_json::json!("data:image/png;base64,abc"))
+-        );
+-        assert_eq!(
+-            attachment.metadata.get("mimeType"),
+-            Some(&serde_json::json!("image/png"))
+-        );
+-        assert_eq!(
+-            attachment.metadata.get("metadata").and_then(|value| value.get("name")),
+-            Some(&serde_json::json!("clip.png"))
+-        );
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_normalizes_remote_session_model_ids() {
+-        assert_eq!(normalize_remote_session_model_id(None), Some("auto".to_string()));
+-        assert_eq!(
+-            normalize_remote_session_model_id(Some("".to_string())),
+-            Some("auto".to_string())
+-        );
+-        assert_eq!(
+-            normalize_remote_session_model_id(Some("  default  ".to_string())),
+-            Some("auto".to_string())
+-        );
+-        assert_eq!(
+-            normalize_remote_session_model_id(Some(" model-1 ".to_string())),
+-            Some("model-1".to_string())
+-        );
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_normalizes_remote_model_selection_aliases() {
+-        assert_eq!(normalize_remote_model_selection("auto", None).unwrap(), "auto");
+-        assert_eq!(normalize_remote_model_selection("default", None).unwrap(), "auto");
+-        assert_eq!(normalize_remote_model_selection("primary", None).unwrap(), "primary");
+-        assert_eq!(normalize_remote_model_selection("fast", None).unwrap(), "fast");
+-        assert_eq!(
+-            normalize_remote_model_selection("   ", None).unwrap_err(),
+-            "model_id is required"
+-        );
+-        assert_eq!(
+-            normalize_remote_model_selection("custom-alias", None).unwrap_err(),
+-            "Config service not available"
+-        );
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_preserves_remote_chat_history_shape() {
+-        let turn = remote_history_test_turn(
+-            TurnStatus::Completed,
+-            Some(serde_json::json!({
+-                "original_text": "original question",
+-                "images": [
+-                    {
+-                        "name": "screenshot.png",
+-                        "data_url": "data:image/png;base64,abcd"
+-                    }
+-                ]
+-            })),
+-        );
+-
+-        let messages = remote_chat_messages_from_turns(&[turn]);
+-
+-        assert_eq!(messages.len(), 2);
+-        assert_eq!(messages[0].role, "user");
+-        assert_eq!(messages[0].content, "original question");
+-        assert_eq!(messages[0].images.as_ref().unwrap()[0].name, "screenshot.png");
+-
+-        assert_eq!(messages[1].role, "assistant");
+-        assert_eq!(messages[1].content, "visible text");
+-        assert_eq!(messages[1].thinking.as_deref(), Some("visible thought"));
+-        let items = messages[1].items.as_ref().expect("assistant items");
+-        assert_eq!(items.len(), 3);
+-        assert_eq!(items[0].item_type, "thinking");
+-        assert_eq!(items[1].item_type, "text");
+-        assert_eq!(items[2].item_type, "tool");
+-        assert_eq!(messages[1].tools.as_ref().unwrap()[0].name, "AskUserQuestion");
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_skips_in_progress_remote_assistant_history() {
+-        let turn = remote_history_test_turn(TurnStatus::InProgress, None);
+-
+-        let messages = remote_chat_messages_from_turns(&[turn]);
+-
+-        assert_eq!(messages.len(), 1);
+-        assert_eq!(messages[0].role, "user");
+-    }
+-
+-    #[test]
+-    fn core_service_agent_runtime_owner_strips_enhanced_remote_user_input() {
+-        let content = "User uploaded a file.\nUser's question:\n  explain this  ";
+-
+-        assert_eq!(strip_remote_user_input_tags(content), "explain this");
+-    }
+-
+-    fn remote_history_test_turn(status: TurnStatus, metadata: Option<serde_json::Value>) -> DialogTurnData {
+-        DialogTurnData {
+-            turn_id: "turn-1".to_string(),
+-            turn_index: 0,
+-            session_id: "session-1".to_string(),
+-            timestamp: 1_000,
+-            kind: DialogTurnKind::UserDialog,
+-            agent_type: None,
+-            user_message: UserMessageData {
+-                id: "user-1".to_string(),
+-                content: "fallback text".to_string(),
+-                timestamp: 1_000,
+-                metadata,
+-            },
+-            model_rounds: vec![ModelRoundData {
+-                id: "round-1".to_string(),
+-                turn_id: "turn-1".to_string(),
+-                round_index: 0,
+-                timestamp: 1_100,
+-                text_items: vec![
+-                    TextItemData {
+-                        id: "text-hidden".to_string(),
+-                        content: "hidden text".to_string(),
+-                        is_streaming: false,
+-                        timestamp: 1_111,
+-                        is_markdown: true,
+-                        order_index: Some(1),
+-                        is_subagent_item: Some(true),
+-                        parent_task_tool_id: None,
+-                        subagent_session_id: None,
+-                        status: None,
+-                    },
+-                    TextItemData {
+-                        id: "text-1".to_string(),
+-                        content: "visible text".to_string(),
+-                        is_streaming: false,
+-                        timestamp: 1_112,
+-                        is_markdown: true,
+-                        order_index: Some(1),
+-                        is_subagent_item: None,
+-                        parent_task_tool_id: None,
+-                        subagent_session_id: None,
+-                        status: None,
+-                    },
+-                ],
+-                tool_items: vec![ToolItemData {
+-                    id: "tool-1".to_string(),
+-                    tool_name: "AskUserQuestion".to_string(),
+-                    tool_call: ToolCallData {
+-                        input: serde_json::json!({ "question": "confirm?" }),
+-                        id: "call-1".to_string(),
+-                    },
+-                    tool_result: None,
+-                    ai_intent: None,
+-                    start_time: 1_130,
+-                    end_time: None,
+-                    duration_ms: Some(25),
+-                    queue_wait_ms: None,
+-                    preflight_ms: None,
+-                    confirmation_wait_ms: None,
+-                    execution_ms: None,
+-                    order_index: Some(2),
+-                    is_subagent_item: None,
+-                    parent_task_tool_id: None,
+-                    subagent_session_id: None,
+-                    subagent_model_id: None,
+-                    subagent_model_alias: None,
+-                    status: Some("running".to_string()),
+-                    interruption_reason: None,
+-                }],
+-                thinking_items: vec![ThinkingItemData {
+-                    id: "thinking-1".to_string(),
+-                    content: "visible thought".to_string(),
+-                    is_streaming: false,
+-                    is_collapsed: false,
+-                    timestamp: 1_105,
+-                    order_index: Some(0),
+-                    status: None,
+-                    is_subagent_item: None,
+-                    parent_task_tool_id: None,
+-                    subagent_session_id: None,
+-                }],
+-                start_time: 1_100,
+-                end_time: Some(1_200),
+-                duration_ms: Some(100),
+-                provider_id: None,
+-                model_id: None,
+-                model_alias: None,
+-                first_chunk_ms: None,
+-                first_visible_output_ms: None,
+-                stream_duration_ms: None,
+-                attempt_count: None,
+-                failure_category: None,
+-                token_details: None,
+-                status: "completed".to_string(),
+-            }],
+-            start_time: 1_000,
+-            end_time: Some(1_250),
+-            duration_ms: Some(250),
+-            token_usage: None,
+-            status,
+-        }
+     }
+ }
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs b/src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs
+index 345e4d6..7bfc4ee 100644
+--- a/src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs
++++ b/src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs
+@@ -1,208 +1,22 @@
+ use northhing_agent_runtime::runtime::{AgentRuntime, AgentRuntimeBuilder, RuntimeError};
+ use northhing_runtime_ports::{
+-    AgentDialogTurnPort, AgentDialogTurnRequest, AgentInputAttachment, AgentLifecycleDeliveryPort,
+-    AgentSessionCreateRequest, AgentSessionManagementPort, AgentSubmissionPort, AgentSubmissionSource,
+-    AgentTurnCancellationPort, AgentTurnCancellationRequest, RemoteControlStatePort, RemoteControlStateRequest,
+-    RemoteControlStateSnapshot, RuntimeServiceCapability, RuntimeServicePort,
++    AgentDialogTurnPort, AgentLifecycleDeliveryPort, AgentSessionManagementPort, AgentSubmissionPort,
++    AgentTurnCancellationPort,
+ };
+ use std::sync::Arc;
+-use tracing::info;
+ 
+ use crate::agentic::coordination::{global_coordinator, global_scheduler, ConversationCoordinator, DialogScheduler};
+-use crate::agentic::image_analysis::ImageContextData;
+-use crate::service::config::types::AIConfig;
+-use northhing_services_integrations::remote_connect::RemoteImageContextAdapter;
++
+ pub struct CoreServiceAgentRuntime;
+ 
+ impl CoreServiceAgentRuntime {
+-    pub(crate) async fn resolve_session_workspace_path(session_id: &str) -> Option<std::path::PathBuf> {
+-        let coordinator = global_coordinator()?;
+-        coordinator.resolve_session_workspace_path(session_id).await
+-    }
+-
+-    pub(crate) async fn resolve_remote_file_workspace_root(session_id: Option<&str>) -> Option<std::path::PathBuf> {
+-        if let Some(session_id) = session_id {
+-            if let Some(workspace_path) = Self::resolve_session_workspace_path(session_id).await {
+-                return Some(workspace_path);
+-            }
+-        }
+-
+-        super::sar_types::current_workspace_path()
+-    }
+-
+-    pub(crate) fn remote_dialog_host(
+-        dispatcher: &crate::service::remote_connect::remote_server::RemoteExecutionDispatcher,
+-    ) -> Result<super::sar_handler::CoreRemoteDialogRuntimeHost<'_>, String> {
+-        super::sar_handler::CoreRemoteDialogRuntimeHost::new(dispatcher)
+-    }
+-
+-    pub(crate) fn remote_cancel_host() -> Result<super::sar_state::CoreRemoteCancelRuntimeHost, String> {
+-        super::sar_state::CoreRemoteCancelRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_workspace_file_host() -> super::sar_handler::CoreRemoteWorkspaceFileRuntimeHost {
+-        super::sar_handler::CoreRemoteWorkspaceFileRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_workspace_host() -> super::sar_handler::CoreRemoteWorkspaceRuntimeHost {
+-        super::sar_handler::CoreRemoteWorkspaceRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_initial_sync_host() -> super::sar_handler::CoreRemoteWorkspaceRuntimeHost {
+-        super::sar_handler::CoreRemoteWorkspaceRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_session_host() -> Result<super::sar_lifecycle::CoreRemoteSessionRuntimeHost, String> {
+-        super::sar_lifecycle::CoreRemoteSessionRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_poll_host(
+-        dispatcher: &crate::service::remote_connect::remote_server::RemoteExecutionDispatcher,
+-    ) -> super::sar_handler::CoreRemotePollRuntimeHost<'_> {
+-        super::sar_handler::CoreRemotePollRuntimeHost::new(dispatcher)
+-    }
+-
+-    pub(crate) fn remote_interaction_host() -> super::sar_state::CoreRemoteInteractionRuntimeHost {
+-        super::sar_state::CoreRemoteInteractionRuntimeHost::new()
+-    }
+-
+-    pub(crate) fn remote_image_context(
+-        context: northhing_services_integrations::remote_connect::RemoteImageContext,
+-    ) -> crate::agentic::image_analysis::ImageContextData {
+-        crate::agentic::image_analysis::ImageContextData::from_remote_image_context(context)
+-    }
+-
+-    pub(crate) async fn load_remote_chat_messages(
+-        workspace_path: &std::path::Path,
+-        session_id: &str,
+-    ) -> (Vec<northhing_services_integrations::remote_connect::ChatMessage>, bool) {
+-        let Ok(pm) = crate::infrastructure::PathManager::new() else {
+-            return (vec![], false);
+-        };
+-        let pm = std::sync::Arc::new(pm);
+-        let Ok(store) = crate::agentic::persistence::PersistenceManager::new(pm) else {
+-            return (vec![], false);
+-        };
+-        let Ok(turns) = store.load_session_turns(workspace_path, session_id).await else {
+-            return (vec![], false);
+-        };
+-        (super::sar_types::remote_chat_messages_from_turns(&turns), false)
+-    }
+-
+-    pub(crate) async fn load_remote_model_catalog(
+-        session_id: Option<&str>,
+-    ) -> Result<northhing_services_integrations::remote_connect::RemoteModelCatalog, String> {
+-        let config_service = crate::service::config::get_global_config_service()
+-            .await
+-            .map_err(|e| format!("Config service not available: {e}"))?;
+-        let global_config: crate::service::config::types::GlobalConfig = config_service
+-            .config(None)
+-            .await
+-            .map_err(|e| format!("Failed to load global config: {e}"))?;
+-        let ai_config: AIConfig = global_config.ai;
+-
+-        let models: Vec<northhing_services_integrations::remote_connect::RemoteModelFacts> = ai_config
+-            .models
+-            .into_iter()
+-            .map(|model| {
+-                let reasoning_mode = model.effective_reasoning_mode();
+-
+-                northhing_services_integrations::remote_connect::RemoteModelFacts {
+-                    id: model.id,
+-                    name: model.name,
+-                    provider: model.provider,
+-                    base_url: model.base_url,
+-                    model_name: model.model_name,
+-                    context_window: model.context_window,
+-                    enabled: model.enabled,
+-                    capabilities: model
+-                        .capabilities
+-                        .into_iter()
+-                        .map(super::sar_types::remote_model_capability_fact)
+-                        .collect(),
+-                    enable_thinking_process: model.enable_thinking_process,
+-                    reasoning_mode: Some(super::sar_types::remote_reasoning_mode_fact(reasoning_mode)),
+-                    reasoning_effort: model.reasoning_effort,
+-                    thinking_budget_tokens: model.thinking_budget_tokens,
+-                }
+-            })
+-            .collect();
+-
+-        let session_model_id = if let Some(session_id) = session_id {
+-            super::sar_types::resolve_session_model_id(session_id).await
+-        } else {
+-            None
+-        };
+-        Ok(
+-            northhing_services_integrations::remote_connect::build_remote_model_catalog(
+-                northhing_services_integrations::remote_connect::RemoteModelCatalogFacts {
+-                    last_modified_ms: global_config.last_modified.timestamp_millis(),
+-                    models,
+-                    default_models: northhing_services_integrations::remote_connect::RemoteDefaultModelsConfig {
+-                        primary: ai_config.default_models.primary,
+-                        fast: ai_config.default_models.fast,
+-                        search: ai_config.default_models.search,
+-                        image_understanding: ai_config.default_models.image_understanding,
+-                        image_generation: ai_config.default_models.image_generation,
+-                        speech_recognition: ai_config.default_models.speech_recognition,
+-                    },
+-                    session_model_id,
+-                },
+-            ),
+-        )
+-    }
+-
+-    pub(crate) async fn update_remote_session_model(
+-        coordinator: &ConversationCoordinator,
+-        session_id: &str,
+-        model_id: &str,
+-    ) -> Result<String, String> {
+-        let ai_config = if super::sar_types::remote_model_selection_needs_config(model_id) {
+-            let config_service = crate::service::config::get_global_config_service()
+-                .await
+-                .map_err(|_| "Config service not available".to_string())?;
+-            Some(
+-                config_service
+-                    .config::<AIConfig>(Some("ai"))
+-                    .await
+-                    .map_err(|e| format!("Failed to load AI config: {e}"))?,
+-            )
+-        } else {
+-            None
+-        };
+-        let normalized_model_id = super::sar_types::normalize_remote_model_selection(model_id, ai_config.as_ref())?;
+-
+-        if coordinator.session_manager().get_session(session_id).is_none() {
+-            let Some(workspace_path) = Self::resolve_session_workspace_path(session_id).await else {
+-                return Err(format!("Workspace path not available for session: {session_id}"));
+-            };
+-            coordinator
+-                .restore_session(&workspace_path, session_id)
+-                .await
+-                .map_err(|e| format!("Failed to restore session: {e}"))?;
+-        }
+-
+-        coordinator
+-            .session_manager()
+-            .update_session_model_id(session_id, &normalized_model_id)
+-            .await
+-            .map_err(|e| e.to_string())?;
+-        Ok(normalized_model_id)
+-    }
+-
+-    pub(crate) fn remote_control_state_port(
+-        coordinator: &ConversationCoordinator,
+-    ) -> &(dyn RemoteControlStatePort + '_) {
+-        coordinator
+-    }
+-
+     pub(crate) fn agent_runtime(coordinator: Arc<ConversationCoordinator>) -> Result<AgentRuntime, String> {
+         let submission: Arc<dyn AgentSubmissionPort> = coordinator.clone();
+         let session_management: Arc<dyn AgentSessionManagementPort> = coordinator.clone();
+         let cancellation: Arc<dyn AgentTurnCancellationPort> = coordinator;
+         AgentRuntimeBuilder::new()
+             .with_submission_port(submission)
+             .with_session_management_port(session_management)
+             .with_cancellation_port(cancellation)
+             .build()
+             .map_err(|error| error.to_string())
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs b/src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs
+deleted file mode 100644
+index b652dea..0000000
+--- a/src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs
++++ /dev/null
+@@ -1,323 +0,0 @@
+-use async_trait::async_trait;
+-use northhing_runtime_ports::{
+-    AgentDialogTurnRequest, AgentInputAttachment, AgentLifecycleDeliveryPort, AgentSessionManagementPort,
+-    AgentSubmissionPort, AgentTurnCancellationPort, AgentTurnCancellationRequest, RemoteControlStatePort,
+-    RemoteControlStateRequest, RemoteControlStateSnapshot, RuntimeServiceCapability, RuntimeServicePort,
+-};
+-use northhing_services_integrations::remote_connect::{
+-    remote_dialog_submit_outcome_from_scheduler, ChatMessage, RemoteAssistantWorkspaceFacts, RemoteCancelRuntimeHost,
+-    RemoteChatHistoryRound, RemoteChatHistoryTextItem, RemoteChatHistoryThinkingItem, RemoteChatHistoryToolCall,
+-    RemoteChatHistoryToolItem, RemoteChatHistoryTurn, RemoteConnectSubmissionSource, RemoteDefaultModelsConfig,
+-    RemoteDialogQueuePriority, RemoteDialogResolvedSubmission, RemoteDialogRuntimeHost,
+-    RemoteDialogSchedulerOutcomeFact, RemoteDialogSubmissionPolicy, RemoteDialogSubmitOutcome, RemoteImageContext,
+-    RemoteInitialSyncRuntimeHost, RemoteInteractionRuntimeHost, RemoteModelCatalog, RemoteModelCatalogFacts,
+-    RemoteModelFacts, RemotePollRuntimeHost, RemoteReasoningModeFact, RemoteRecentWorkspaceFacts,
+-    RemoteSessionMetadata as RemoteConnectSessionMetadata, RemoteSessionStateTracker, RemoteSessionTrackerHost,
+-    RemoteTerminalPrewarmRequest, RemoteWorkspaceFacts, RemoteWorkspaceFileRuntimeHost,
+-    RemoteWorkspaceKind as RemoteConnectWorkspaceKind, RemoteWorkspaceRuntimeHost, RemoteWorkspaceUpdate,
+-};
+-use std::sync::Arc;
+-use tracing::{debug, info};
+-
+-use crate::agentic::coordination::{global_coordinator, global_scheduler, ConversationCoordinator, DialogScheduler};
+-use crate::agentic::events::{AgenticEvent, EventSubscriber};
+-use crate::agentic::image_analysis::ImageContextData;
+-use crate::service::remote_connect::remote_server::RemoteExecutionDispatcher;
+-use crate::service::workspace::global_workspace_service;
+-
+-pub struct CoreRemoteSessionTrackerHost;
+-
+-#[async_trait::async_trait]
+-impl EventSubscriber for Arc<RemoteSessionStateTracker> {
+-    async fn on_event(&self, event: &AgenticEvent) -> crate::util::errors::NortHingResult<()> {
+-        self.handle_agentic_event(event);
+-        Ok(())
+-    }
+-}
+-
+-impl RemoteSessionTrackerHost for CoreRemoteSessionTrackerHost {
+-    fn subscribe_tracker(&self, session_id: &str, tracker: Arc<RemoteSessionStateTracker>) {
+-        if let Some(coordinator) = global_coordinator() {
+-            let sub_id = format!("remote_tracker_{}", session_id);
+-            coordinator.subscribe_internal(sub_id, tracker);
+-            info!("Registered state tracker for session {session_id}");
+-        }
+-    }
+-
+-    fn unsubscribe_tracker(&self, session_id: &str) {
+-        if let Some(coordinator) = global_coordinator() {
+-            let sub_id = format!("remote_tracker_{}", session_id);
+-            coordinator.unsubscribe_internal(&sub_id);
+-        }
+-    }
+-
+-    fn active_turn_id(&self, session_id: &str) -> Option<String> {
+-        let coordinator = global_coordinator()?;
+-        let session_mgr = coordinator.session_manager();
+-        let session = session_mgr.get_session(session_id)?;
+-        match &session.state {
+-            crate::agentic::core::SessionState::Processing { current_turn_id, .. } => {
+-                info!(
+-                    "Seeded tracker with existing active turn {} for session {}",
+-                    current_turn_id, session_id
+-                );
+-                Some(current_turn_id.clone())
+-            }
+-            _ => None,
+-        }
+-    }
+-}
+-
+-pub struct CoreRemoteDialogRuntimeHost<'a> {
+-    dispatcher: &'a RemoteExecutionDispatcher,
+-    coordinator: Arc<ConversationCoordinator>,
+-    runtime: northhing_agent_runtime::runtime::AgentRuntime,
+-}
+-
+-impl<'a> CoreRemoteDialogRuntimeHost<'a> {
+-    pub fn new(dispatcher: &'a RemoteExecutionDispatcher) -> Result<Self, String> {
+-        let coordinator = global_coordinator().ok_or_else(|| "Desktop session system not ready".to_string())?;
+-        let scheduler = global_scheduler().ok_or_else(|| "Dialog scheduler is not initialized".to_string())?;
+-        let runtime = super::sar_dispatch::CoreServiceAgentRuntime::agent_runtime_with_dialog_turns(
+-            coordinator.clone(),
+-            scheduler,
+-        )?;
+-
+-        Ok(Self {
+-            dispatcher,
+-            coordinator,
+-            runtime,
+-        })
+-    }
+-}
+-
+-pub struct CoreRemoteWorkspaceFileRuntimeHost;
+-
+-impl CoreRemoteWorkspaceFileRuntimeHost {
+-    pub fn new() -> Self {
+-        Self
+-    }
+-}
+-
+-impl RuntimeServicePort for CoreRemoteWorkspaceFileRuntimeHost {
+-    fn capability(&self) -> RuntimeServiceCapability {
+-        RuntimeServiceCapability::RemoteProjection
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteWorkspaceFileRuntimeHost for CoreRemoteWorkspaceFileRuntimeHost {
+-    async fn resolve_remote_file_workspace_root(&self, session_id: Option<&str>) -> Option<std::path::PathBuf> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::resolve_remote_file_workspace_root(session_id).await
+-    }
+-}
+-
+-pub struct CoreRemoteWorkspaceRuntimeHost;
+-
+-impl CoreRemoteWorkspaceRuntimeHost {
+-    pub fn new() -> Self {
+-        Self
+-    }
+-}
+-
+-impl RuntimeServicePort for CoreRemoteWorkspaceRuntimeHost {
+-    fn capability(&self) -> RuntimeServiceCapability {
+-        RuntimeServiceCapability::RemoteWorkspace
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteWorkspaceRuntimeHost for CoreRemoteWorkspaceRuntimeHost {
+-    async fn current_workspace(&self) -> Option<RemoteWorkspaceFacts> {
+-        super::sar_types::current_remote_workspace_facts().await
+-    }
+-
+-    async fn recent_workspaces(&self) -> Vec<RemoteRecentWorkspaceFacts> {
+-        let Some(workspace_service) = global_workspace_service() else {
+-            return Vec::new();
+-        };
+-        workspace_service
+-            .recent_workspaces()
+-            .await
+-            .into_iter()
+-            .map(|workspace| RemoteRecentWorkspaceFacts {
+-                path: workspace.root_path.to_string_lossy().to_string(),
+-                name: workspace.name,
+-                last_opened: workspace.last_accessed.to_rfc3339(),
+-                kind: super::sar_types::remote_workspace_kind(workspace.workspace_kind),
+-            })
+-            .collect()
+-    }
+-
+-    async fn open_workspace(&self, path: &str) -> Result<RemoteWorkspaceUpdate, String> {
+-        super::sar_types::open_workspace_with_snapshot(path, "remote workspace set").await
+-    }
+-
+-    async fn assistant_workspaces(&self) -> Vec<RemoteAssistantWorkspaceFacts> {
+-        let Some(workspace_service) = global_workspace_service() else {
+-            return Vec::new();
+-        };
+-        workspace_service
+-            .get_assistant_workspaces()
+-            .await
+-            .into_iter()
+-            .map(|workspace| RemoteAssistantWorkspaceFacts {
+-                path: workspace.root_path.to_string_lossy().to_string(),
+-                name: workspace.name,
+-                assistant_id: workspace.assistant_id,
+-            })
+-            .collect()
+-    }
+-
+-    async fn open_assistant_workspace(&self, path: &str) -> Result<RemoteWorkspaceUpdate, String> {
+-        super::sar_types::open_workspace_with_snapshot(path, "remote assistant set").await
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteInitialSyncRuntimeHost for CoreRemoteWorkspaceRuntimeHost {
+-    async fn current_workspace(&self) -> Option<RemoteWorkspaceFacts> {
+-        super::sar_types::current_remote_workspace_facts().await
+-    }
+-
+-    async fn list_session_metadata(
+-        &self,
+-        workspace_path: &std::path::Path,
+-    ) -> Result<Vec<RemoteConnectSessionMetadata>, String> {
+-        super::sar_types::load_remote_session_metadata_for_workspace(workspace_path).await
+-    }
+-}
+-
+-pub struct CoreRemotePollRuntimeHost<'a> {
+-    dispatcher: &'a RemoteExecutionDispatcher,
+-}
+-
+-impl<'a> CoreRemotePollRuntimeHost<'a> {
+-    pub fn new(dispatcher: &'a RemoteExecutionDispatcher) -> Self {
+-        Self { dispatcher }
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemotePollRuntimeHost for CoreRemotePollRuntimeHost<'_> {
+-    fn ensure_tracker(&self, session_id: &str) -> Arc<RemoteSessionStateTracker> {
+-        self.dispatcher.ensure_tracker(session_id)
+-    }
+-
+-    async fn load_model_catalog(&self, session_id: &str) -> Option<RemoteModelCatalog> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::load_remote_model_catalog(Some(session_id))
+-            .await
+-            .ok()
+-    }
+-
+-    async fn resolve_session_workspace_path(&self, session_id: &str) -> Option<std::path::PathBuf> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::resolve_session_workspace_path(session_id).await
+-    }
+-
+-    async fn load_remote_chat_messages(
+-        &self,
+-        workspace_path: &std::path::Path,
+-        session_id: &str,
+-    ) -> (Vec<ChatMessage>, bool) {
+-        super::sar_dispatch::CoreServiceAgentRuntime::load_remote_chat_messages(workspace_path, session_id).await
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteDialogRuntimeHost for CoreRemoteDialogRuntimeHost<'_> {
+-    type ImageContext = ImageContextData;
+-
+-    fn ensure_tracker(&self, session_id: &str) {
+-        self.dispatcher.ensure_tracker(session_id);
+-    }
+-
+-    async fn resolve_binding_workspace(&self, session_id: &str) -> Option<String> {
+-        self.coordinator
+-            .resolve_session_workspace_path(session_id)
+-            .await
+-            .map(|path| path.to_string_lossy().into_owned())
+-    }
+-
+-    async fn remote_session_exists(&self, session_id: &str) -> Result<bool, String> {
+-        Ok(self.coordinator.session_manager().get_session(session_id).is_some())
+-    }
+-
+-    async fn restore_remote_session(&self, session_id: &str, workspace_path: &str) -> Result<(), String> {
+-        self.coordinator
+-            .restore_session(std::path::Path::new(workspace_path), session_id)
+-            .await
+-            .map(|_| ())
+-            .map_err(|e| e.to_string())
+-    }
+-
+-    fn prewarm_remote_terminal(&self, request: RemoteTerminalPrewarmRequest) {
+-        use terminal_core::session::SessionSource;
+-        use terminal_core::{TerminalApi, TerminalBindingOptions};
+-
+-        let sid = request.session_id;
+-        let binding_workspace_for_terminal = request.binding_workspace;
+-        tokio::spawn(async move {
+-            let Ok(api) = TerminalApi::from_singleton() else {
+-                return;
+-            };
+-            let binding = api.session_manager().binding();
+-            if binding.get(&sid).is_some() {
+-                return;
+-            }
+-            let workspace = binding_workspace_for_terminal;
+-            let name = format!("Chat-{}", &sid[..8.min(sid.len())]);
+-            match binding
+-                .get_or_create(
+-                    &sid,
+-                    TerminalBindingOptions {
+-                        working_directory: workspace,
+-                        session_id: Some(sid.clone()),
+-                        session_name: Some(name),
+-                        env: Some(crate::agentic::tools::implementations::bash_tool::BashTool::noninteractive_env()),
+-                        source: Some(SessionSource::Agent),
+-                        ..Default::default()
+-                    },
+-                )
+-                .await
+-            {
+-                Ok(_) => info!("Terminal pre-warmed for remote session {sid}"),
+-                Err(e) => debug!("Terminal pre-warm skipped for {sid}: {e}"),
+-            }
+-        });
+-    }
+-
+-    fn generate_turn_id(&self) -> String {
+-        format!("turn_{}", chrono::Utc::now().timestamp_millis())
+-    }
+-
+-    async fn submit_dialog(
+-        &self,
+-        submission: RemoteDialogResolvedSubmission<Self::ImageContext>,
+-    ) -> Result<RemoteDialogSubmitOutcome, String> {
+-        let policy = super::sar_types::core_dialog_submission_policy(submission.policy);
+-        let attachments = submission
+-            .image_contexts
+-            .into_iter()
+-            .map(super::sar_types::agent_input_attachment_from_image_context)
+-            .collect();
+-
+-        self.runtime
+-            .submit_dialog_turn(AgentDialogTurnRequest {
+-                session_id: submission.session_id,
+-                message: submission.content,
+-                original_message: None,
+-                turn_id: Some(submission.turn_id),
+-                agent_type: submission.resolved_agent_type,
+-                workspace_path: submission.binding_workspace,
+-                policy,
+-                reply_route: None,
+-                prepended_reminders: Vec::new(),
+-                attachments,
+-                metadata: serde_json::Map::new(),
+-            })
+-            .await
+-            .map(super::sar_types::remote_dialog_scheduler_outcome_fact)
+-            .map(remote_dialog_submit_outcome_from_scheduler)
+-            .map_err(super::sar_dispatch::CoreServiceAgentRuntime::runtime_error_message)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/sar_lifecycle.rs b/src/crates/assembly/core/src/service_agent_runtime/sar_lifecycle.rs
+deleted file mode 100644
+index 16a4497..0000000
+--- a/src/crates/assembly/core/src/service_agent_runtime/sar_lifecycle.rs
++++ /dev/null
+@@ -1,121 +0,0 @@
+-use async_trait::async_trait;
+-use northhing_runtime_ports::{
+-    AgentSessionCreateRequest, AgentSessionManagementPort, AgentSubmissionPort, AgentTurnCancellationPort,
+-};
+-use northhing_services_integrations::remote_connect::{
+-    ChatMessage, RemoteModelCatalog, RemoteSessionMetadata as RemoteConnectSessionMetadata, RemoteSessionRuntimeHost,
+-};
+-use std::sync::Arc;
+-
+-use crate::agentic::coordination::{global_coordinator, ConversationCoordinator};
+-use crate::service::workspace::global_workspace_service;
+-
+-pub struct CoreRemoteSessionRuntimeHost {
+-    coordinator: Arc<ConversationCoordinator>,
+-    runtime: northhing_agent_runtime::runtime::AgentRuntime,
+-}
+-
+-impl CoreRemoteSessionRuntimeHost {
+-    pub fn new() -> Result<Self, String> {
+-        let coordinator = global_coordinator().ok_or_else(|| "Desktop session system not ready".to_string())?;
+-        let runtime = super::sar_dispatch::CoreServiceAgentRuntime::agent_runtime(coordinator.clone())?;
+-        Ok(Self { coordinator, runtime })
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl RemoteSessionRuntimeHost for CoreRemoteSessionRuntimeHost {
+-    async fn list_session_metadata(
+-        &self,
+-        workspace_path: &std::path::Path,
+-    ) -> Result<Vec<RemoteConnectSessionMetadata>, String> {
+-        super::sar_types::load_remote_session_metadata_for_workspace(workspace_path).await
+-    }
+-
+-    async fn resolve_default_assistant_workspace_path(&self) -> Result<String, String> {
+-        let workspace_service =
+-            global_workspace_service().ok_or_else(|| "Workspace service not available".to_string())?;
+-        let workspaces = workspace_service.get_assistant_workspaces().await;
+-        if let Some(default_workspace) = workspaces
+-            .into_iter()
+-            .find(|workspace| workspace.assistant_id.is_none())
+-        {
+-            return Ok(default_workspace.root_path.to_string_lossy().to_string());
+-        }
+-
+-        workspace_service
+-            .create_assistant_workspace(None)
+-            .await
+-            .map(|workspace| workspace.root_path.to_string_lossy().to_string())
+-            .map_err(|error| format!("Failed to create assistant workspace: {}", error))
+-    }
+-
+-    async fn create_session(&self, request: AgentSessionCreateRequest) -> Result<String, String> {
+-        self.runtime
+-            .create_session(request)
+-            .await
+-            .map(|session| session.session_id)
+-            .map_err(super::sar_dispatch::CoreServiceAgentRuntime::runtime_error_message)
+-    }
+-
+-    async fn load_model_catalog(&self, session_id: Option<&str>) -> Result<RemoteModelCatalog, String> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::load_remote_model_catalog(session_id).await
+-    }
+-
+-    async fn update_session_model(&self, session_id: &str, model_id: &str) -> Result<String, String> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::update_remote_session_model(
+-            self.coordinator.as_ref(),
+-            session_id,
+-            model_id,
+-        )
+-        .await
+-    }
+-
+-    async fn ensure_session_loaded(&self, session_id: &str) -> Result<(), String> {
+-        if self.coordinator.session_manager().get_session(session_id).is_some() {
+-            return Ok(());
+-        }
+-
+-        let Some(workspace_path) =
+-            super::sar_dispatch::CoreServiceAgentRuntime::resolve_session_workspace_path(session_id).await
+-        else {
+-            return Err(format!("Workspace path not available for session: {}", session_id));
+-        };
+-        self.coordinator
+-            .restore_session(&workspace_path, session_id)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| format!("Failed to restore session: {error}"))
+-    }
+-
+-    async fn update_session_title(&self, session_id: &str, title: &str) -> Result<String, String> {
+-        self.coordinator
+-            .update_session_title(session_id, title)
+-            .await
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    async fn resolve_session_workspace_path(&self, session_id: &str) -> Option<std::path::PathBuf> {
+-        super::sar_dispatch::CoreServiceAgentRuntime::resolve_session_workspace_path(session_id).await
+-    }
+-
+-    async fn load_remote_chat_messages(
+-        &self,
+-        workspace_path: &std::path::Path,
+-        session_id: &str,
+-    ) -> (Vec<ChatMessage>, bool) {
+-        super::sar_dispatch::CoreServiceAgentRuntime::load_remote_chat_messages(workspace_path, session_id).await
+-    }
+-
+-    async fn delete_session(&self, workspace_path: &std::path::Path, session_id: &str) -> Result<(), String> {
+-        self.coordinator
+-            .delete_session(workspace_path, session_id)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    fn remove_tracker(&self, session_id: &str) {
+-        crate::service::remote_connect::remote_server::get_or_init_global_dispatcher().remove_tracker(session_id);
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/sar_state.rs b/src/crates/assembly/core/src/service_agent_runtime/sar_state.rs
+deleted file mode 100644
+index 7830d89..0000000
+--- a/src/crates/assembly/core/src/service_agent_runtime/sar_state.rs
++++ /dev/null
+@@ -1,119 +0,0 @@
+-use async_trait::async_trait;
+-use northhing_runtime_ports::{
+-    AgentSessionManagementPort, AgentSubmissionPort, AgentTurnCancellationPort, AgentTurnCancellationRequest,
+-    RemoteControlStatePort, RemoteControlStateRequest, RemoteControlStateSnapshot,
+-};
+-use std::sync::Arc;
+-use tracing::info;
+-
+-use crate::agentic::coordination::{global_coordinator, ConversationCoordinator};
+-use crate::agentic::tools::user_input_manager::user_input_manager;
+-use crate::service::remote_connect::remote_server::RemoteExecutionDispatcher;
+-
+-pub struct CoreRemoteCancelRuntimeHost {
+-    coordinator: Arc<ConversationCoordinator>,
+-    runtime: northhing_agent_runtime::runtime::AgentRuntime,
+-}
+-
+-impl CoreRemoteCancelRuntimeHost {
+-    pub fn new() -> Result<Self, String> {
+-        let coordinator = global_coordinator().ok_or_else(|| "Desktop session system not ready".to_string())?;
+-        let runtime = super::sar_dispatch::CoreServiceAgentRuntime::agent_runtime(coordinator.clone())?;
+-        Ok(Self { coordinator, runtime })
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl northhing_services_integrations::remote_connect::RemoteCancelRuntimeHost for CoreRemoteCancelRuntimeHost {
+-    async fn resolve_restore_workspace(&self, session_id: &str) -> Option<String> {
+-        self.coordinator
+-            .resolve_session_workspace_path(session_id)
+-            .await
+-            .map(|path| path.to_string_lossy().into_owned())
+-    }
+-
+-    async fn remote_control_state(&self, session_id: &str) -> Result<Option<RemoteControlStateSnapshot>, String> {
+-        let state_port =
+-            super::sar_dispatch::CoreServiceAgentRuntime::remote_control_state_port(self.coordinator.as_ref());
+-        state_port
+-            .read_remote_control_state(RemoteControlStateRequest {
+-                session_id: session_id.to_string(),
+-            })
+-            .await
+-            .map_err(|error| error.message)
+-    }
+-
+-    async fn restore_remote_session(&self, session_id: &str, workspace_path: &str) -> Result<(), String> {
+-        self.coordinator
+-            .restore_session(std::path::Path::new(workspace_path), session_id)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    async fn cancel_remote_turn(&self, session_id: &str, turn_id: &str) -> Result<(), String> {
+-        self.runtime
+-            .cancel_turn(northhing_runtime_ports::AgentTurnCancellationRequest {
+-                session_id: session_id.to_string(),
+-                turn_id: Some(turn_id.to_string()),
+-                source: Some(northhing_runtime_ports::AgentSubmissionSource::RemoteRelay),
+-                requester_session_id: None,
+-                reason: None,
+-                wait_timeout_ms: None,
+-            })
+-            .await
+-            .map(|_| ())
+-            .map_err(super::sar_dispatch::CoreServiceAgentRuntime::runtime_error_message)
+-    }
+-}
+-
+-pub struct CoreRemoteInteractionRuntimeHost {
+-    coordinator: Option<Arc<ConversationCoordinator>>,
+-}
+-
+-impl CoreRemoteInteractionRuntimeHost {
+-    pub fn new() -> Self {
+-        Self {
+-            coordinator: global_coordinator(),
+-        }
+-    }
+-
+-    fn coordinator(&self) -> Result<&ConversationCoordinator, String> {
+-        self.coordinator
+-            .as_deref()
+-            .ok_or_else(|| "Desktop session system not ready".to_string())
+-    }
+-}
+-
+-#[async_trait::async_trait]
+-impl northhing_services_integrations::remote_connect::RemoteInteractionRuntimeHost
+-    for CoreRemoteInteractionRuntimeHost
+-{
+-    async fn confirm_tool(&self, tool_id: &str, updated_input: Option<serde_json::Value>) -> Result<(), String> {
+-        self.coordinator()?
+-            .confirm_tool(tool_id, updated_input)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    async fn reject_tool(&self, tool_id: &str, reason: String) -> Result<(), String> {
+-        self.coordinator()?
+-            .reject_tool(tool_id, reason)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    async fn cancel_tool(&self, tool_id: &str, reason: String) -> Result<(), String> {
+-        self.coordinator()?
+-            .cancel_tool(tool_id, reason)
+-            .await
+-            .map(|_| ())
+-            .map_err(|error| error.to_string())
+-    }
+-
+-    fn answer_question(&self, tool_id: &str, answers: serde_json::Value) -> Result<(), String> {
+-        user_input_manager().send_answer(tool_id, answers)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/service_agent_runtime/sar_types.rs b/src/crates/assembly/core/src/service_agent_runtime/sar_types.rs
+deleted file mode 100644
+index c14032c..0000000
+--- a/src/crates/assembly/core/src/service_agent_runtime/sar_types.rs
++++ /dev/null
+@@ -1,396 +0,0 @@
+-use northhing_runtime_ports::AgentInputAttachment;
+-use northhing_services_integrations::remote_connect::{
+-    build_remote_chat_messages, build_remote_model_catalog,
+-    normalize_remote_model_selection as normalize_remote_model_selection_contract,
+-    normalize_remote_session_model_id as normalize_remote_session_model_id_contract,
+-    remote_dialog_submit_outcome_from_scheduler,
+-    remote_model_selection_needs_config as remote_model_selection_needs_config_contract, ChatImageAttachment,
+-    ChatMessage, RemoteAssistantWorkspaceFacts, RemoteCancelRuntimeHost, RemoteChatHistoryRound,
+-    RemoteChatHistoryTextItem, RemoteChatHistoryThinkingItem, RemoteChatHistoryToolCall, RemoteChatHistoryToolItem,
+-    RemoteChatHistoryTurn, RemoteConnectSubmissionSource, RemoteDefaultModelsConfig, RemoteDialogQueuePriority,
+-    RemoteDialogResolvedSubmission, RemoteDialogRuntimeHost, RemoteDialogSchedulerOutcomeFact,
+-    RemoteDialogSubmissionPolicy, RemoteDialogSubmitOutcome, RemoteImageContext, RemoteImageContextAdapter,
+-    RemoteInitialSyncRuntimeHost, RemoteInteractionRuntimeHost, RemoteModelCapabilityFact, RemoteModelCatalog,
+-    RemoteModelCatalogFacts, RemoteModelFacts, RemotePollRuntimeHost, RemoteReasoningModeFact,
+-    RemoteRecentWorkspaceFacts, RemoteSessionMetadata, RemoteSessionRuntimeHost, RemoteSessionStateTracker,
+-    RemoteSessionTrackerHost, RemoteTerminalPrewarmRequest, RemoteWorkspaceFacts, RemoteWorkspaceFileRuntimeHost,
+-    RemoteWorkspaceKind as RemoteConnectWorkspaceKind, RemoteWorkspaceRuntimeHost, RemoteWorkspaceUpdate,
+-};
+-use std::sync::Arc;
+-use tracing::{debug, error, info};
+-
+-use crate::agentic::image_analysis::ImageContextData;
+-use crate::service::config::types::{AIConfig, GlobalConfig, ModelCapability, ReasoningMode};
+-use crate::service::session::{DialogTurnData, TurnStatus};
+-
+-/// Max thumbnail size per remote chat image sent to mobile (100 KB).
+-const MOBILE_IMAGE_MAX_BYTES: usize = 100 * 1024;
+-
+-pub(crate) fn current_workspace_path() -> Option<std::path::PathBuf> {
+-    crate::service::workspace::global_workspace_service().and_then(|service| service.try_get_current_workspace_path())
+-}
+-
+-pub(crate) fn remote_workspace_kind(kind: crate::service::workspace::WorkspaceKind) -> RemoteConnectWorkspaceKind {
+-    match kind {
+-        crate::service::workspace::WorkspaceKind::Normal => RemoteConnectWorkspaceKind::Normal,
+-        crate::service::workspace::WorkspaceKind::Assistant => RemoteConnectWorkspaceKind::Assistant,
+-        crate::service::workspace::WorkspaceKind::Remote => RemoteConnectWorkspaceKind::Remote,
+-    }
+-}
+-
+-fn git_branch_for_workspace_path(path: &std::path::Path) -> Option<String> {
+-    let path_str = path.to_string_lossy();
+-    northhing_services_integrations::git::execute_git_command_sync(&path_str, &["rev-parse", "--abbrev-ref", "HEAD"])
+-        .ok()
+-        .map(|s| s.trim().to_string())
+-        .filter(|s| !s.is_empty() && s != "HEAD")
+-}
+-
+-pub(crate) async fn current_remote_workspace_facts() -> Option<RemoteWorkspaceFacts> {
+-    let workspace_service = crate::service::workspace::global_workspace_service()?;
+-    workspace_service.current_workspace().await.map(|workspace| {
+-        let root_path = workspace.root_path.clone();
+-        RemoteWorkspaceFacts {
+-            path: root_path.to_string_lossy().to_string(),
+-            name: workspace.name,
+-            git_branch: git_branch_for_workspace_path(&root_path),
+-            kind: remote_workspace_kind(workspace.workspace_kind),
+-            assistant_id: workspace.assistant_id,
+-        }
+-    })
+-}
+-
+-pub(crate) async fn open_workspace_with_snapshot(
+-    path: &str,
+-    snapshot_log_context: &str,
+-) -> Result<RemoteWorkspaceUpdate, String> {
+-    let workspace_service = crate::service::workspace::global_workspace_service()
+-        .ok_or_else(|| "Workspace service not available".to_string())?;
+-    let path_buf = std::path::PathBuf::from(path);
+-    let info = workspace_service
+-        .open_workspace(path_buf)
+-        .await
+-        .map_err(|error| error.to_string())?;
+-    if let Err(error) =
+-        crate::service::snapshot::initialize_snapshot_manager_for_workspace(info.root_path.clone(), None).await
+-    {
+-        error!("Failed to initialize snapshot after {snapshot_log_context}: {error}");
+-    }
+-    Ok(RemoteWorkspaceUpdate {
+-        path: info.root_path.to_string_lossy().to_string(),
+-        name: info.name,
+-    })
+-}
+-
+-pub(crate) async fn load_remote_session_metadata_for_workspace(
+-    workspace_path: &std::path::Path,
+-) -> Result<Vec<RemoteSessionMetadata>, String> {
+-    let workspace_path_display = workspace_path.to_string_lossy().to_string();
+-    let path_manager =
+-        crate::infrastructure::PathManager::new().map_err(|_| "Failed to initialize path manager".to_string())?;
+-    let path_manager = std::sync::Arc::new(path_manager);
+-    let store = crate::agentic::persistence::PersistenceManager::new(path_manager).map_err(|error| {
+-        debug!("PersistenceManager init failed for {workspace_path_display}: {error}");
+-        format!("Failed to initialize session storage: {error}")
+-    })?;
+-    let metadata = store.list_session_metadata(workspace_path).await.map_err(|error| {
+-        debug!("Session list read failed for {workspace_path_display}: {error}");
+-        format!("Failed to list sessions for workspace: {error}")
+-    })?;
+-
+-    Ok(metadata
+-        .into_iter()
+-        .map(|session| RemoteSessionMetadata {
+-            session_id: session.session_id,
+-            name: session.session_name,
+-            agent_type: session.agent_type,
+-            created_at_ms: session.created_at,
+-            last_active_at_ms: session.last_active_at,
+-            turn_count: session.turn_count,
+-        })
+-        .collect())
+-}
+-
+-pub(crate) fn normalize_remote_session_model_id(model_id: Option<String>) -> Option<String> {
+-    normalize_remote_session_model_id_contract(model_id.as_deref())
+-}
+-
+-pub(crate) fn normalize_remote_model_selection(
+-    requested_model_id: &str,
+-    ai_config: Option<&AIConfig>,
+-) -> Result<String, String> {
+-    if remote_model_selection_needs_config(requested_model_id) && ai_config.is_none() {
+-        return Err("Config service not available".to_string());
+-    }
+-
+-    normalize_remote_model_selection_contract(requested_model_id, |model_id| {
+-        ai_config.and_then(|config| config.resolve_model_reference(model_id))
+-    })
+-}
+-
+-pub(crate) fn remote_model_selection_needs_config(requested_model_id: &str) -> bool {
+-    remote_model_selection_needs_config_contract(requested_model_id)
+-}
+-
+-pub(crate) fn remote_model_capability_fact(capability: ModelCapability) -> RemoteModelCapabilityFact {
+-    match capability {
+-        ModelCapability::TextChat => RemoteModelCapabilityFact::TextChat,
+-        ModelCapability::ImageUnderstanding => RemoteModelCapabilityFact::ImageUnderstanding,
+-        ModelCapability::ImageGeneration => RemoteModelCapabilityFact::ImageGeneration,
+-        ModelCapability::Embedding => RemoteModelCapabilityFact::Embedding,
+-        ModelCapability::Search => RemoteModelCapabilityFact::Search,
+-        ModelCapability::CodeSpecialized => RemoteModelCapabilityFact::CodeSpecialized,
+-        ModelCapability::FunctionCalling => RemoteModelCapabilityFact::FunctionCalling,
+-        ModelCapability::SpeechRecognition => RemoteModelCapabilityFact::SpeechRecognition,
+-    }
+-}
+-
+-pub(crate) fn remote_reasoning_mode_fact(reasoning_mode: ReasoningMode) -> RemoteReasoningModeFact {
+-    match reasoning_mode {
+-        ReasoningMode::Default => RemoteReasoningModeFact::Default,
+-        ReasoningMode::Enabled => RemoteReasoningModeFact::Enabled,
+-        ReasoningMode::Disabled => RemoteReasoningModeFact::Disabled,
+-        ReasoningMode::Adaptive => RemoteReasoningModeFact::Adaptive,
+-    }
+-}
+-
+-/// Compress a base64 data-URL image to a small thumbnail for mobile display.
+-/// Falls back to the original if decoding/compression fails or the image is
+-/// already within `max_bytes`.
+-fn compress_remote_chat_data_url_for_mobile(data_url: &str, max_bytes: usize) -> String {
+-    use base64::engine::general_purpose::STANDARD as BASE64;
+-    use base64::Engine;
+-    use image::imageops::FilterType;
+-
+-    const MAX_THUMBNAIL_DIM: u32 = 400;
+-
+-    let Some(comma_pos) = data_url.find(',') else {
+-        return data_url.to_string();
+-    };
+-    let b64_data = &data_url[comma_pos + 1..];
+-
+-    if b64_data.len() * 3 / 4 <= max_bytes {
+-        return data_url.to_string();
+-    }
+-
+-    let Ok(raw_bytes) = BASE64.decode(b64_data) else {
+-        return data_url.to_string();
+-    };
+-
+-    let Ok(img) = image::load_from_memory(&raw_bytes) else {
+-        return data_url.to_string();
+-    };
+-
+-    let resized = if img.width() > MAX_THUMBNAIL_DIM || img.height() > MAX_THUMBNAIL_DIM {
+-        img.resize(MAX_THUMBNAIL_DIM, MAX_THUMBNAIL_DIM, FilterType::Triangle)
+-    } else {
+-        img
+-    };
+-
+-    fn encode_jpeg(img: &image::DynamicImage, quality: u8) -> Option<Vec<u8>> {
+-        let mut buf = Vec::new();
+-        let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, quality);
+-        img.write_with_encoder(encoder).ok()?;
+-        Some(buf)
+-    }
+-
+-    for quality in [75u8, 60, 45, 30] {
+-        if let Some(buf) = encode_jpeg(&resized, quality) {
+-            if buf.len() <= max_bytes || quality == 30 {
+-                let b64 = BASE64.encode(&buf);
+-                return format!("data:image/jpeg;base64,{b64}");
+-            }
+-        }
+-    }
+-
+-    data_url.to_string()
+-}
+-
+-/// Convert persisted turns into mobile ChatMessages.
+-/// This is the same data source the desktop frontend uses.
+-pub(crate) fn remote_chat_messages_from_turns(turns: &[DialogTurnData]) -> Vec<ChatMessage> {
+-    let projected_turns = turns
+-        .iter()
+-        .filter(|turn| turn.kind.is_model_visible())
+-        .map(remote_chat_history_turn_from_core_turn)
+-        .collect::<Vec<_>>();
+-    build_remote_chat_messages(projected_turns)
+-}
+-
+-pub(crate) fn remote_chat_history_turn_from_core_turn(turn: &DialogTurnData) -> RemoteChatHistoryTurn {
+-    let user_images = turn
+-        .user_message
+-        .metadata
+-        .as_ref()
+-        .and_then(|m| m.get("images"))
+-        .and_then(|v| v.as_array())
+-        .map(|arr| {
+-            arr.iter()
+-                .filter_map(|v| {
+-                    let name = v.get("name")?.as_str()?.to_string();
+-                    let raw_url = v.get("data_url")?.as_str()?;
+-                    let data_url = compress_remote_chat_data_url_for_mobile(raw_url, MOBILE_IMAGE_MAX_BYTES);
+-                    Some(ChatImageAttachment { name, data_url })
+-                })
+-                .collect::<Vec<_>>()
+-        })
+-        .unwrap_or_default();
+-
+-    // Prefer original_text from metadata (pre-enhancement) for display.
+-    let user_display_content = turn
+-        .user_message
+-        .metadata
+-        .as_ref()
+-        .and_then(|m| m.get("original_text"))
+-        .and_then(|v| v.as_str())
+-        .map(|s| s.to_string())
+-        .unwrap_or_else(|| strip_remote_user_input_tags(&turn.user_message.content));
+-
+-    let rounds = turn
+-        .model_rounds
+-        .iter()
+-        .map(|round| RemoteChatHistoryRound {
+-            start_time_ms: round.start_time,
+-            end_time_ms: round.end_time,
+-            text_items: round
+-                .text_items
+-                .iter()
+-                .map(|item| RemoteChatHistoryTextItem {
+-                    content: item.content.clone(),
+-                    order_index: item.order_index,
+-                    is_subagent: item.is_subagent_item.unwrap_or(false),
+-                })
+-                .collect(),
+-            thinking_items: round
+-                .thinking_items
+-                .iter()
+-                .map(|item| RemoteChatHistoryThinkingItem {
+-                    content: item.content.clone(),
+-                    order_index: item.order_index,
+-                    is_subagent: item.is_subagent_item.unwrap_or(false),
+-                })
+-                .collect(),
+-            tool_items: round
+-                .tool_items
+-                .iter()
+-                .map(|item| RemoteChatHistoryToolItem {
+-                    id: item.id.clone(),
+-                    name: item.tool_name.clone(),
+-                    call: RemoteChatHistoryToolCall {
+-                        id: item.tool_call.id.clone(),
+-                        input: item.tool_call.input.clone(),
+-                    },
+-                    has_result: item.tool_result.is_some(),
+-                    status: item.status.clone(),
+-                    duration_ms: item.duration_ms,
+-                    start_ms: item.start_time,
+-                    order_index: item.order_index,
+-                    is_subagent: item.is_subagent_item.unwrap_or(false),
+-                })
+-                .collect(),
+-        })
+-        .collect();
+-
+-    RemoteChatHistoryTurn {
+-        turn_id: turn.turn_id.clone(),
+-        user_message_id: turn.user_message.id.clone(),
+-        user_display_content,
+-        user_timestamp_ms: turn.user_message.timestamp,
+-        user_images,
+-        is_in_progress: turn.status == TurnStatus::InProgress,
+-        start_time_ms: turn.start_time,
+-        rounds,
+-    }
+-}
+-
+-pub(crate) fn strip_remote_user_input_tags(content: &str) -> String {
+-    let s = crate::agentic::core::strip_prompt_markup(content);
+-    if s.starts_with("User uploaded") {
+-        if let Some(pos) = s.find("User's question:\n") {
+-            return s[pos + "User's question:\n".len()..].trim().to_string();
+-        }
+-    }
+-    s
+-}
+-
+-pub(crate) async fn resolve_session_model_id(session_id: &str) -> Option<String> {
+-    let coordinator = crate::agentic::coordination::global_coordinator()?;
+-    let session_manager = coordinator.session_manager();
+-
+-    if let Some(session) = session_manager.get_session(session_id) {
+-        return normalize_remote_session_model_id(session.config.model_id.clone());
+-    }
+-
+-    let workspace_path =
+-        super::sar_dispatch::CoreServiceAgentRuntime::resolve_session_workspace_path(session_id).await?;
+-    coordinator
+-        .restore_session(&workspace_path, session_id)
+-        .await
+-        .ok()
+-        .and_then(|session| normalize_remote_session_model_id(session.config.model_id.clone()))
+-}
+-
+-pub(crate) fn core_dialog_submission_policy(
+-    policy: RemoteDialogSubmissionPolicy,
+-) -> crate::agentic::coordination::DialogSubmissionPolicy {
+-    let trigger_source = match policy.source {
+-        RemoteConnectSubmissionSource::Relay => crate::agentic::coordination::DialogTriggerSource::RemoteRelay,
+-        RemoteConnectSubmissionSource::Bot => crate::agentic::coordination::DialogTriggerSource::Bot,
+-    };
+-    let queue_priority = match policy.queue_priority {
+-        RemoteDialogQueuePriority::Low => crate::agentic::coordination::DialogQueuePriority::Low,
+-        RemoteDialogQueuePriority::Normal => crate::agentic::coordination::DialogQueuePriority::Normal,
+-        RemoteDialogQueuePriority::High => crate::agentic::coordination::DialogQueuePriority::High,
+-    };
+-
+-    crate::agentic::coordination::DialogSubmissionPolicy::new(
+-        trigger_source,
+-        queue_priority,
+-        policy.skip_tool_confirmation,
+-    )
+-}
+-
+-pub(crate) fn remote_dialog_scheduler_outcome_fact(
+-    outcome: crate::agentic::coordination::DialogSubmitOutcome,
+-) -> RemoteDialogSchedulerOutcomeFact {
+-    match outcome {
+-        crate::agentic::coordination::DialogSubmitOutcome::Started { session_id, turn_id } => {
+-            RemoteDialogSchedulerOutcomeFact::Started { session_id, turn_id }
+-        }
+-        crate::agentic::coordination::DialogSubmitOutcome::Queued { session_id, turn_id } => {
+-            RemoteDialogSchedulerOutcomeFact::Queued { session_id, turn_id }
+-        }
+-    }
+-}
+-
+-pub(crate) fn agent_input_attachment_from_image_context(context: ImageContextData) -> AgentInputAttachment {
+-    let mut metadata = serde_json::Map::new();
+-    if let Some(image_path) = context.image_path {
+-        metadata.insert("imagePath".to_string(), serde_json::Value::String(image_path));
+-    }
+-    if let Some(data_url) = context.data_url {
+-        metadata.insert("dataUrl".to_string(), serde_json::Value::String(data_url));
+-    }
+-    metadata.insert("mimeType".to_string(), serde_json::Value::String(context.mime_type));
+-    if let Some(context_metadata) = context.metadata {
+-        metadata.insert("metadata".to_string(), context_metadata);
+-    }
+-
+-    AgentInputAttachment {
+-        kind: "remote_image".to_string(),
+-        id: context.id,
+-        metadata,
+-    }
+-}
+-
+-impl RemoteImageContextAdapter for ImageContextData {
+-    fn from_remote_image_context(context: RemoteImageContext) -> Self {
+-        Self {
+-            id: context.id,
+-            image_path: context.image_path,
+-            data_url: context.data_url,
+-            mime_type: context.mime_type,
+-            metadata: context.metadata,
+-        }
+-    }
+-}
