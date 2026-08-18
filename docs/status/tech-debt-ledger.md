@@ -163,6 +163,7 @@
 - **Evidence**: External review 2026-07-23 §四.6; `src/crates/assembly/core/src/agentic/judge_gate/` receipt consumption path (consumed set not persisted — verify exact location when fixing).
 - **Proposed fix**: Persist the consumed-receipt set (append-only, per red line #4) so consumption survives restart; or make promote idempotent + write-ahead so a failed promote cannot be replayed into a different outcome.
 - **Status**: resolved (`47b6202`, 2026-07-23: `receipt_store.rs` — append-only JSONL at `data_dir/judge-gate/consumed_receipts.jsonl`; LazyLock init replays log; persist on consume/release; best-effort non-blocking; 26 judge_gate tests pass)
+- **Note (2026-08-18 T2-2b)**: 适配层整体已删（含 `receipt_store.rs` 的 append-only JSONL + LazyLock 重放实现，`47b6202`）；**教训移交 TH-5（T3-8）**：consume-once 凭证必须 append-only 持久化 + 初始化重放，否则重启可重放已消费凭证（原症状描述见本条 Symptom）。
 
 ### P2-12: episodes "agent does not read" boundary is convention-layer, not structure-layer (HIGH PRIORITY)
 

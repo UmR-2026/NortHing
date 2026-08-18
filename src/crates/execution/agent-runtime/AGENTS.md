@@ -43,6 +43,7 @@ port-backed `AgentRuntime` facade that can be built and tested without
   mutation outside this crate until a reviewed migration proves behavior
   equivalence.
 - Add focused tests before moving any runtime decision into this crate.
+- Reserved vocabulary: `judge_gate` protocol layer (`types`, `verdict`, `redlines`, `evidence`, `brief` — pure types) is reserved for TH-5 identity evolution (T3-8, approved 2026-08-17 in T-08/G15). Its zero-wiring status is intentional; do not mark or delete as dead code in subsequent cleanup rounds.
 
 ## Verification
 
