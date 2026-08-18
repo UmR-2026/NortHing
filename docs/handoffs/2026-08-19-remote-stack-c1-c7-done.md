@@ -54,3 +54,29 @@
 - 续作 C8：`subagent-driven-development`（brief→implementer→reviewer 循环）。
 - MiniApp 批启动前：`writing-plans` 或直接在 recon 基础上拆批；参考 C1-C7 的 brief 模板。
 - 下次停手/交接：`handoff`（本文件即模板）。
+
+---
+
+## 追加（2026-08-19 07:0x，用户拍板后）：rust-skills 移植落地 —— 编排基础设施，非产品代码
+
+> 本段不改变上方 T2-2 队列与基线；只记录 subagent 运维变更。计划与实测细节见 `.opencode/plans/2026-08-19-rust-skills-opencode-port.md`（含完整代码与验证记录），此处不复制。
+
+**落地内容**（均在 `E:\agent-project\.opencode\`，按仓规被根 .gitignore 排除，**不在任何 git 仓里**，机器本地状态）：
+
+- `skills/rust-skills/` × 24：从 actionbook/rust-skills 精选清洗（m01-m07 / m09-m15 / domain×7 / rust-router / coding-guidelines / unsafe-checker）；`scripts/port-rust-skills.mjs` 可重跑同步上游。清洗要点：剥 Claude 专属 frontmatter、行首锚定清 `!`shell 注入``（初版误伤 `panic!` 宏已修）、删除 rust-router 的 Default Project Settings（防通用模板盖仓库规范）。
+- `plugins/rust-meta-router.mjs` + 已在 `.opencode/opencode.json` 注册：`chat.message` 匹配派发特征词注入 Rust 工作约定（每会话一次）；`tool.execute.after` 捕获 bash 输出里的 `error[E0xxxx]` 追加 skill 路由（每会话每码一次）。
+- `templates/rust-brief-block.md`：涉 Rust 任务派发时必贴 brief 文末（首发层主通道，不依赖插件）。
+- `command/rust-features.md`、`crate-info.md`、`rust-docs.md`（webfetch 版；**未实测**，下次 TUI 会话顺手验 `/crate-info serde`）。
+
+**实测结论**（`opencode run` 新进程验证，记忆仓 LEARNINGS.md 有全文）：
+
+- 插件三事实：① 必须显式注册才加载；② 追加 part 需带 id/sessionID/messageID，messageID 从已有 part 上抄，缺字段整 prompt 500 → 钩子必须 try/catch；③ **chat.message / tool.execute.after 对子代理会话同样生效**（explore 子代理实测注入成功）——首发层注入可依赖。
+- 注入有效性：测试模型收到提示后按约定引用 skill 路由，并主动向用户解释提示来源。
+
+**记忆仓 commits**（独立 git）：`c2f3793`（CORE.md：涉 Rust 派发必贴 brief block）、`3cd81c1`（LEARNINGS.md：插件三事实）。
+
+**下一 session 注意**：
+
+- 本 session 启动于插件注册**之前**，未加载 rust-meta-router；**重启 opencode 后生效**（届时含 "cargo" 的用户消息每会话首次注入 ~500 tokens，设计内行为）。
+- 今后涉 Rust 的 coder 派发：brief 贴 rust-brief-block + 插件双通道会同时命中，属预期，不是重复 bug。
+- 子代理 report 新增约定：遇到的每个编译错误写明修在哪一层（机制层/设计层），judge 可据此审查。
