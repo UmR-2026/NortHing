@@ -20,8 +20,6 @@ pub mod i18n; // I18n service
 pub mod lsp; // LSP (Language Server Protocol) system
 #[cfg(all(feature = "service-integrations", feature = "product-full"))]
 pub mod mcp; // MCP (Model Context Protocol) system
-#[cfg(all(feature = "service-integrations", feature = "product-full"))]
-pub mod remote_connect; // Remote Connect (phone → desktop)
 pub mod remote_ssh; // Remote SSH (desktop → server)
 #[cfg(feature = "service-integrations")]
 pub mod review_platform; // Pull request review platform adapters

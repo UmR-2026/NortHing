@@ -137,9 +137,6 @@ tokio-tungstenite = { workspace = true, optional = true }
 # SSH - Remote SSH support (optional feature)
 russh = { workspace = true, optional = true }
 
-# Relay server shared library (embedded relay reuses standalone relay logic)
-northhing-relay-core = { path = "../../services/relay-core", optional = true }
-
 # Event layer dependency (lowest layer)
 northhing-core-types = { path = "../../contracts/core-types" }
 northhing-events = { path = "../../contracts/events" }
@@ -209,7 +206,6 @@ service-integrations = [
     "dep:aes",
     "dep:aes-gcm",
     "dep:axum",
-    "dep:northhing-relay-core",
     "dep:git2",
     "dep:image",
     "dep:local-ip-address",

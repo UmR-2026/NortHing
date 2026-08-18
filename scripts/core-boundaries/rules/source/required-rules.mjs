@@ -2551,10 +2551,6 @@ export const requiredContentRules = [
         message: 'MCP service facade must stay behind service-integrations',
       },
       {
-        regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub mod remote_connect\b/s,
-        message: 'remote-connect service facade must stay behind service-integrations',
-      },
-      {
         regex: /#\[cfg\(feature = "service-integrations"\)\]\s*pub mod review_platform\b/s,
         message: 'review platform facade must stay behind service-integrations',
       },
@@ -3820,39 +3816,11 @@ export const requiredContentRules = [
   {
     path: 'src/crates/assembly/core/src/service_agent_runtime/sar_dispatch.rs',
     reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+      'core service/agent runtime owner must centralize concrete agent runtime port bindings without moving runtime behavior',
     patterns: [
       {
         regex: /\bpub(\(crate\))? struct CoreServiceAgentRuntime\b/,
         message: 'missing core service/agent runtime owner type',
-      },
-      {
-        regex: /\bfn remote_dialog_host\b/,
-        message: 'missing remote dialog host owner factory',
-      },
-      {
-        regex: /\bfn remote_cancel_host\b/,
-        message: 'missing remote cancel host owner factory',
-      },
-      {
-        regex: /\bfn remote_image_context\b/,
-        message: 'missing remote image context owner adapter',
-      },
-      {
-        regex: /\bfn load_remote_model_catalog\b/,
-        message: 'missing remote model catalog owner adapter',
-      },
-      {
-        regex: /\bbuild_remote_model_catalog\b/,
-        message: 'missing remote model catalog assembly delegation',
-      },
-      {
-        regex: /\bfn update_remote_session_model\b/,
-        message: 'missing remote session model update owner adapter',
-      },
-      {
-        regex: /\bfn load_remote_chat_messages\b/,
-        message: 'missing remote chat history persistence owner adapter',
       },
       {
         regex: /\bfn agent_runtime\b/,
@@ -3886,180 +3854,16 @@ export const requiredContentRules = [
         regex: /\bAgentRuntimeBuilder\b/,
         message: 'missing agent runtime builder binding',
       },
-      {
-        regex: /\bfn remote_control_state_port\b/,
-        message: 'missing remote control state port owner binding',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_types.rs',
-    reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
-    patterns: [
-      {
-        regex: /\bRemoteModelCatalogFacts\b/,
-        message: 'missing remote model catalog fact projection',
-      },
-      {
-        regex: /\bRemoteModelCapabilityFact\b/,
-        message: 'missing remote model capability fact projection',
-      },
-      {
-        regex: /\bRemoteReasoningModeFact\b/,
-        message: 'missing remote reasoning mode fact projection',
-      },
-      {
-        regex: /\bfn normalize_remote_session_model_id\b/,
-        message: 'missing remote session model id normalization regression hook',
-      },
-      {
-        regex: /\bnormalize_remote_session_model_id_contract\b/,
-        message: 'missing remote session model id owner delegation',
-      },
-      {
-        regex: /\bfn normalize_remote_model_selection\b/,
-        message: 'missing remote model selection normalization regression hook',
-      },
-      {
-        regex: /\bnormalize_remote_model_selection_contract\b/,
-        message: 'missing remote model selection owner delegation',
-      },
-      {
-        regex: /\bfn remote_chat_messages_from_turns\b/,
-        message: 'missing remote chat history conversion owner adapter',
-      },
-      {
-        regex: /\bRemoteDialogSchedulerOutcomeFact\b/,
-        message: 'missing remote dialog scheduler outcome fact projection',
-      },
-      {
-        regex: /\bremote_dialog_submit_outcome_from_scheduler\b/,
-        message: 'missing remote dialog submit outcome assembly delegation',
-      },
-      {
-        regex: /\bRemoteChatHistoryTurn\b/,
-        message: 'missing remote chat history owner DTO projection',
-      },
-      {
-        regex: /\bbuild_remote_chat_messages\b/,
-        message: 'missing remote chat history assembly delegation',
-      },
-      {
-        regex: /\bfn strip_remote_user_input_tags\b/,
-        message: 'missing remote user input display cleanup owner adapter',
-      },
-      {
-        regex: /\bfn compress_remote_chat_data_url_for_mobile\b/,
-        message: 'missing remote chat thumbnail compression owner adapter',
-      },
-      {
-        regex: /\bagent_input_attachment_from_image_context\b/,
-        message: 'missing remote image to lifecycle attachment adapter',
-      },
-      {
-        regex: /\bRemoteImageContextAdapter\b/,
-        message: 'missing remote image context adapter implementation',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs',
-    reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
-    patterns: [
-      {
-        regex: /\bAgentDialogTurnRequest\b/,
-        message: 'missing dialog lifecycle request binding',
-      },
-      {
-        regex: /\bsubmit_dialog_turn\b/,
-        message: 'missing dialog lifecycle submit delegation',
-      },
-      {
-        regex: /\bCoreRemoteSessionTrackerHost\b/,
-        message: 'missing core remote session tracker host binding',
-      },
-      {
-        regex: /\bimpl RemoteDialogRuntimeHost for CoreRemoteDialogRuntimeHost\b/,
-        message: 'missing remote dialog host adapter implementation in runtime owner',
-      },
-      {
-        regex: /\bimpl RemoteWorkspaceFileRuntimeHost for CoreRemoteWorkspaceFileRuntimeHost\b/,
-        message: 'missing remote workspace file host adapter implementation in runtime owner',
-      },
-      {
-        regex: /\bimpl RemoteSessionTrackerHost for CoreRemoteSessionTrackerHost\b/,
-        message: 'missing remote tracker host adapter implementation in runtime owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_state.rs',
-    reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
-    patterns: [
-      {
-        regex: /\bCoreRemoteCancelRuntimeHost\b/,
-        message: 'missing core remote cancel host binding',
-      },
-      {
-        regex: /pub(\(crate\))? struct CoreRemoteCancelRuntimeHost\s*\{[\s\S]*?\bruntime:\s*(?:northhing_agent_runtime::runtime::)?AgentRuntime\b/,
-        message: 'missing remote cancel host runtime field',
-      },
-      {
-        regex: /\bimpl\s+(?:northhing_services_integrations::remote_connect::)?RemoteCancelRuntimeHost\s+for\s+CoreRemoteCancelRuntimeHost\b/,
-        message: 'missing remote cancel host adapter implementation in runtime owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_lifecycle.rs',
-    reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
-    patterns: [
-      {
-        regex: /\bCoreRemoteSessionRuntimeHost\b/,
-        message: 'missing core remote session runtime host binding',
-      },
-      {
-        regex: /pub(\(crate\))? struct CoreRemoteSessionRuntimeHost\s*\{[\s\S]*?\bruntime:\s*(?:northhing_agent_runtime::runtime::)?AgentRuntime\b/,
-        message: 'missing remote session host runtime field',
-      },
     ],
   },
   {
     path: 'src/crates/assembly/core/src/service_agent_runtime/mod.rs',
     reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
+      'core service/agent runtime owner must centralize concrete agent runtime port bindings without moving runtime behavior',
     patterns: [
       {
-        regex: /\bCoreRemoteDialogRuntimeHost\b/,
-        message: 'missing core remote dialog host binding',
-      },
-      {
         regex: /\bCoreServiceAgentRuntime::agent_runtime_with_scheduler_ports\b/,
-        message: 'missing remote cancel scheduler-backed runtime binding',
-      },
-      {
-        regex: /\bCoreRemoteWorkspaceFileRuntimeHost\b/,
-        message: 'missing core remote workspace file host binding',
-      },
-      {
-        regex: /\bCoreRemoteWorkspaceRuntimeHost\b/,
-        message: 'missing core remote workspace runtime host binding',
-      },
-      {
-        regex: /\bCoreRemotePollRuntimeHost\b/,
-        message: 'missing core remote poll runtime host binding',
-      },
-      {
-        regex: /\bCoreRemoteInteractionRuntimeHost\b/,
-        message: 'missing core remote interaction runtime host binding',
-      },
-      {
-        regex: /\bImageContextData\b/,
-        message: 'missing core image context binding',
+        message: 'missing scheduler-backed runtime binding',
       },
       {
         regex: /\bAgentSubmissionPort\b/,
@@ -4090,39 +3894,8 @@ export const requiredContentRules = [
         message: 'missing coordinator runtime port contract regression',
       },
       {
-        regex: /\bcore_service_agent_runtime_owner_normalizes_remote_session_model_ids\b/,
-        message: 'missing remote session model id normalization regression',
-      },
-      {
-        regex: /\bcore_service_agent_runtime_owner_normalizes_remote_model_selection_aliases\b/,
-        message: 'missing remote model selection alias regression',
-      },
-      {
-        regex: /\bcore_service_agent_runtime_owner_preserves_remote_chat_history_shape\b/,
-        message: 'missing remote chat history conversion regression',
-      },
-      {
-        regex: /\bcore_service_agent_runtime_owner_skips_in_progress_remote_assistant_history\b/,
-        message: 'missing in-progress remote assistant history regression',
-      },
-      {
-        regex: /\bcore_service_agent_runtime_owner_maps_image_context_to_lifecycle_attachment\b/,
-        message: 'missing remote image lifecycle attachment regression',
-      },
-      {
         regex: /\bcore_service_agent_runtime_owner_keeps_scheduler_lifecycle_port_contracts\b/,
         message: 'missing scheduler lifecycle port contract regression',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service_agent_runtime/sar_handler.rs',
-    reason:
-      'core service/agent runtime owner must centralize concrete remote-connect and agent runtime port bindings without moving runtime behavior',
-    patterns: [
-      {
-        regex: /\bRemoteExecutionDispatcher\b/,
-        message: 'missing remote execution dispatcher binding',
       },
     ],
   },
@@ -4886,139 +4659,6 @@ export const requiredContentRules = [
       {
         regex: /\bremote_connect_command_owner_preserves_cancel_and_group_routing\b/,
         message: 'missing remote command routing group/cancel regression',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service/remote_connect/mod.rs',
-    reason:
-      'core remote-connect root keeps compatibility re-exports while services-integrations owns device, pairing, encryption, QR, and relay primitives',
-    patterns: [
-      {
-        regex: /\bpub mod device\s*\{[\s\S]*northhing_services_integrations::remote_connect::device::\*/m,
-        message: 'missing device compatibility re-export module',
-      },
-      {
-        regex: /\bpub mod encryption\s*\{[\s\S]*northhing_services_integrations::remote_connect::encryption::\*/m,
-        message: 'missing encryption compatibility re-export module',
-      },
-      {
-        regex: /\bpub mod pairing\s*\{[\s\S]*northhing_services_integrations::remote_connect::pairing::\*/m,
-        message: 'missing pairing compatibility re-export module',
-      },
-      {
-        regex: /\bpub mod qr_generator\s*\{[\s\S]*northhing_services_integrations::remote_connect::qr_generator::\*/m,
-        message: 'missing QR compatibility re-export module',
-      },
-      {
-        regex: /\bpub mod relay_client\s*\{[\s\S]*northhing_services_integrations::remote_connect::relay_client::\*/m,
-        message: 'missing relay client compatibility re-export module',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
-    reason:
-      'core remote-connect server must remain a product runtime adapter around integrations-owned contracts',
-    patterns: [
-      {
-        regex: /\bCoreServiceAgentRuntime\b/,
-        message: 'missing core service/agent runtime owner routing',
-      },
-      {
-        regex: /\bsubmit_remote_dialog\b/,
-        message: 'missing remote dialog owner orchestration delegation',
-      },
-      {
-        regex: /\bcancel_remote_task\b/,
-        message: 'missing remote cancel owner orchestration delegation',
-      },
-      {
-        regex: /\bhandle_remote_workspace_file_command\b/,
-        message: 'missing remote file command owner delegation',
-      },
-      {
-        regex: /\bRemoteCommandRuntimeHost\b/,
-        message: 'missing remote command runtime host adapter',
-      },
-      {
-        regex: /\bhandle_remote_command\b/,
-        message: 'missing remote command routing owner delegation',
-      },
-      {
-        regex: /\bhandle_remote_interaction_command\b/,
-        message: 'missing remote interaction command owner orchestration delegation',
-      },
-      {
-        regex: /\bgenerate_remote_initial_sync\b/,
-        message: 'missing remote initial-sync owner orchestration delegation',
-      },
-      {
-        regex: /\bhandle_remote_workspace_command\b/,
-        message: 'missing remote workspace command owner orchestration delegation',
-      },
-      {
-        regex: /\bhandle_remote_session_command\b/,
-        message: 'missing remote session command owner orchestration delegation',
-      },
-      {
-        regex: /\bhandle_remote_poll_command\b/,
-        message: 'missing remote poll command owner orchestration delegation',
-      },
-      {
-        regex: /\bhandle_remote_interaction_command\b/,
-        message: 'missing remote interaction command owner orchestration delegation',
-      },
-      {
-        regex: /\bremote_image_context\b/,
-        message: 'missing image context adapter contract delegation',
-      },
-      {
-        regex: /\bcore_service_agent_runtime_owner_maps_remote_image_context\b/,
-        message: 'missing core service/agent image-context owner regression',
-      },
-      {
-        regex: /\bremote_execution_prefers_unified_image_contexts_over_legacy_images\b/,
-        message: 'missing unified image context preference regression',
-      },
-      {
-        regex: /\bremote_execution_falls_back_to_legacy_images_as_image_contexts\b/,
-        message: 'missing legacy image context fallback regression',
-      },
-      {
-        regex: /\bremote_cancel_decision_preserves_current_turn_boundaries\b/,
-        message: 'missing remote cancel boundary regression',
-      },
-      {
-        regex: /\bremote_restore_target_only_restores_cold_sessions_with_workspace_binding\b/,
-        message: 'missing remote restore target regression',
-      },
-      {
-        regex: /\bremote_command_snapshot_covers_execution_poll_and_cancel_surfaces\b/,
-        message: 'missing remote command snapshot regression',
-      },
-      {
-        regex: /\bremote_response_snapshot_preserves_active_turn_and_result_shapes\b/,
-        message: 'missing remote response snapshot regression',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
-    reason:
-      'remote-connect bot must route concrete agent runtime port bindings through the core service/agent runtime owner',
-    patterns: [
-      {
-        regex: /\bCoreServiceAgentRuntime\b/,
-        message: 'missing core service/agent runtime owner routing',
-      },
-      {
-        regex: /\bagent_runtime\b/,
-        message: 'missing agent runtime owner binding',
-      },
-      {
-        regex: /\bbuild_remote_session_create_request\b/,
-        message: 'missing integrations-owned remote session create request builder',
       },
     ],
   },

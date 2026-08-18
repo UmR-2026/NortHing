@@ -1,7 +1,6 @@
 // 2026-07-31 (H-9): disk IO regression tests for the settings single-writer
 // transaction + atomic write. Tests use the private `*_at(path)` variants so
-// no test touches the real `~/.northhing/config/app.json` (same path
-// injection scheme as Task 5 `remote_connect/bot/persistence_tests.rs`).
+// no test touches the real `~/.northhing/config/app.json` (path injection scheme).
 //
 // 2026-08-04 (C3, P1-2): tests now use a MockKeyring so they do not depend
 // on the real OS keyring. The `_at` variants accept a `&dyn KeyringBackend`.
