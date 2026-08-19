@@ -93,7 +93,6 @@ pub fn shared_coding_mode_tools() -> Vec<String> {
         "Git".to_string(),
         "Log".to_string(),
         "ControlHub".to_string(),
-        "InitMiniApp".to_string(),
     ]
 }
 

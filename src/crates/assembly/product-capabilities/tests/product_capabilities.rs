@@ -16,7 +16,7 @@ fn capability_packs_describe_service_requirements() {
         .collect::<Vec<_>>();
     assert_eq!(
         capability_ids,
-        vec!["code-agent", "deep-review", "deep-research", "miniapp"]
+        vec!["code-agent", "deep-review", "deep-research"]
     );
 
     let service_capabilities = registry.required_service_capabilities();
@@ -28,7 +28,7 @@ fn capability_packs_describe_service_requirements() {
 
 #[test]
 fn product_assembly_plan_makes_delivery_profile_explicit_without_reducing_capabilities() {
-    let expected_capabilities = vec!["code-agent", "deep-review", "deep-research", "miniapp"];
+    let expected_capabilities = vec!["code-agent", "deep-review", "deep-research"];
 
     for profile in DeliveryProfile::all_current_product_profiles().iter().copied() {
         let plan = product_assembly_plan_for_profile(profile);
@@ -83,7 +83,7 @@ fn default_capability_assembly_keeps_service_facts_together() {
         .collect::<Vec<_>>();
     assert_eq!(
         capability_ids,
-        vec!["code-agent", "deep-review", "deep-research", "miniapp"]
+        vec!["code-agent", "deep-review", "deep-research"]
     );
 
     let service_capabilities = assembly.required_service_capabilities();

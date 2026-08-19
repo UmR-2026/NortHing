@@ -206,7 +206,6 @@ mod tests {
             "GenerativeUI",
             "Git",
             "ReviewPlatform",
-            "InitMiniApp",
             "ControlHub",
             "ComputerUse",
             "Playbook",
@@ -346,7 +345,6 @@ mod tests {
         assert!(!registry.is_tool_collapsed("GetToolSpec"));
         assert!(registry.is_tool_collapsed("Git"));
         assert!(registry.is_tool_collapsed("ReviewPlatform"));
-        assert!(!registry.is_tool_collapsed("InitMiniApp"));
     }
 
     #[test]

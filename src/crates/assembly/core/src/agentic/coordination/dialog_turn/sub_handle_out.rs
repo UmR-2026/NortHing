@@ -24,9 +24,7 @@ use crate::agentic::core::{ProcessingPhase, SessionState};
 use crate::agentic::events::{AgenticEvent, EventPriority};
 use crate::agentic::execution::ExecutionContext;
 use crate::agentic::session::SessionManager;
-use crate::agentic::tools::{
-    is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
-};
+use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::util::errors::{NortHingError, NortHingResult};
 use northhing_runtime_ports::DelegationPolicy;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -153,12 +151,7 @@ impl ConversationCoordinator {
         let session_storage_path = session_workspace
             .as_ref()
             .map(|workspace| workspace.session_storage_path().to_path_buf());
-        let runtime_tool_restrictions =
-            if is_miniapp_headless_agent_run(user_message_metadata.as_ref(), session.created_by.as_deref()) {
-                miniapp_headless_agent_tool_restrictions()
-            } else {
-                ToolRuntimeRestrictions::default()
-            };
+        let runtime_tool_restrictions = ToolRuntimeRestrictions::default();
         let execution_context = ExecutionContext {
             session_id: session_id.clone(),
             dialog_turn_id: turn_id.clone(),

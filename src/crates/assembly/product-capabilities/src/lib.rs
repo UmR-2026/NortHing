@@ -14,7 +14,6 @@ pub enum ProductCapabilityId {
     CodeAgent,
     DeepReview,
     DeepResearch,
-    MiniApp,
 }
 
 impl ProductCapabilityId {
@@ -23,7 +22,6 @@ impl ProductCapabilityId {
             Self::CodeAgent => "code-agent",
             Self::DeepReview => "deep-review",
             Self::DeepResearch => "deep-research",
-            Self::MiniApp => "miniapp",
         }
     }
 }
@@ -363,12 +361,6 @@ const DEEP_RESEARCH_SERVICES: &[RuntimeServiceCapability] = &[
     RuntimeServiceCapability::Permission,
     RuntimeServiceCapability::Events,
 ];
-const MINIAPP_SERVICES: &[RuntimeServiceCapability] = &[
-    RuntimeServiceCapability::FileSystem,
-    RuntimeServiceCapability::Workspace,
-    RuntimeServiceCapability::Permission,
-    RuntimeServiceCapability::Events,
-];
 
 const DEFAULT_PRODUCT_CAPABILITY_PACKS: &[ProductCapabilityPack] = &[
     ProductCapabilityPack::new(
@@ -382,10 +374,6 @@ const DEFAULT_PRODUCT_CAPABILITY_PACKS: &[ProductCapabilityPack] = &[
     ProductCapabilityPack::new(
         ProductCapabilityId::DeepResearch,
         DEEP_RESEARCH_SERVICES,
-    ),
-    ProductCapabilityPack::new(
-        ProductCapabilityId::MiniApp,
-        MINIAPP_SERVICES,
     ),
 ];
 
