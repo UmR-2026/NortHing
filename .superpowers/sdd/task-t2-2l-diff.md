@@ -1,0 +1,3617 @@
+diff --git a/scripts/core-boundaries/rules/source/forbidden-rules.mjs b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+index 2ec033d..a4c8255 100644
+--- a/scripts/core-boundaries/rules/source/forbidden-rules.mjs
++++ b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+@@ -391,36 +391,6 @@ export const forbiddenContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
+-    patterns: [
+-      {
+-        regex: /\btokio::fs\b/,
+-        message:
+-          'core MiniApp host-dispatch adapter must not own filesystem execution; use northhing-services-integrations::miniapp::host_dispatch',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message:
+-          'core MiniApp host-dispatch adapter must not own shell process execution; use northhing-services-integrations::miniapp::host_dispatch',
+-      },
+-      {
+-        regex: /\breqwest::Client\b/,
+-        message:
+-          'core MiniApp host-dispatch adapter must not own net.fetch execution; use northhing-services-integrations::miniapp::host_dispatch',
+-      },
+-      {
+-        regex: /\basync fn dispatch_fs\b/,
+-        message:
+-          'core MiniApp host-dispatch adapter must not re-own fs dispatch helpers',
+-      },
+-      {
+-        regex: /\basync fn dispatch_shell\b/,
+-        message:
+-          'core MiniApp host-dispatch adapter must not re-own shell dispatch helpers',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
+     patterns: [
+@@ -431,86 +401,6 @@ export const forbiddenContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
+-    patterns: [
+-      {
+-        regex: /\btokio::process\b/,
+-        message:
+-          'core MiniApp JS worker facade must not own worker process types; use northhing-services-integrations::miniapp::worker',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message:
+-          'core MiniApp JS worker facade must not spawn worker processes; use northhing-services-integrations::miniapp::worker',
+-      },
+-      {
+-        regex: /\bPendingResponseMap\b/,
+-        message:
+-          'core MiniApp JS worker facade must not own JSON-RPC response routing; use northhing-services-integrations::miniapp::worker',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
+-    patterns: [
+-      {
+-        regex: /\bworker_pool_at_capacity\b/,
+-        message:
+-          'core MiniApp worker pool facade must not own pool policy; use northhing-services-integrations::miniapp::worker_pool',
+-      },
+-      {
+-        regex: /\bselect_lru_worker\b/,
+-        message:
+-          'core MiniApp worker pool facade must not own LRU policy; use northhing-services-integrations::miniapp::worker_pool',
+-      },
+-      {
+-        regex: /\bplan_install_deps\b/,
+-        message:
+-          'core MiniApp worker pool facade must not own install-deps planning; use northhing-services-integrations::miniapp::worker_pool',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message:
+-          'core MiniApp worker pool facade must not execute install-deps processes; use northhing-services-integrations::miniapp::worker_pool',
+-      },
+-      {
+-        regex: /\bHashMap<String, WorkerEntry>\b/,
+-        message:
+-          'core MiniApp worker pool facade must not own worker pool state; use northhing-services-integrations::miniapp::worker_pool',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/storage.rs',
+-    patterns: [
+-      {
+-        regex: /\btokio::fs\b/,
+-        message:
+-          'core MiniApp storage facade must not own filesystem IO; use northhing-services-integrations::miniapp::storage',
+-      },
+-      {
+-        regex: /\bMiniAppStorageLayout\b/,
+-        message:
+-          'core MiniApp storage facade must not own storage layout logic; use northhing-services-integrations::miniapp::storage',
+-      },
+-      {
+-        regex: /\bbuild_package_json\b/,
+-        message:
+-          'core MiniApp storage facade must not own package-json storage assembly; use northhing-services-integrations::miniapp::storage',
+-      },
+-      {
+-        regex: /\bparse_npm_dependencies\b/,
+-        message:
+-          'core MiniApp storage facade must not own package-json dependency parsing; use northhing-services-integrations::miniapp::storage',
+-      },
+-      {
+-        regex: /\bDRAFTS_CLEANUP_MARKER\b/,
+-        message:
+-          'core MiniApp storage facade must not own draft cleanup marker IO; use northhing-services-integrations::miniapp::storage',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/function_agents/runtime_services.rs',
+     patterns: [
+@@ -685,31 +575,6 @@ export const forbiddenContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
+-    patterns: [
+-      {
+-        regex: /\bCoreMiniAppRuntimeProbe\b/,
+-        message:
+-          'core MiniApp runtime_detect must remain a compatibility facade; concrete probe owner is product-domains',
+-      },
+-      {
+-        regex: /\bwhich::which\b/,
+-        message:
+-          'core MiniApp runtime_detect must not own PATH lookup; use product-domain runtime detection',
+-      },
+-      {
+-        regex: /\bcreate_command\b/,
+-        message:
+-          'core MiniApp runtime_detect must not own version process execution; use product-domain runtime detection',
+-      },
+-      {
+-        regex: /\bstd::fs::read_dir\b/,
+-        message:
+-          'core MiniApp runtime_detect must not own version-manager directory scanning; use product-domain runtime detection',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/agentic/agents/prompt_builder/user_context.rs',
+     patterns: [
+@@ -2337,103 +2202,6 @@ export const forbiddenContentUnderRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/manager',
+-    reason:
+-      'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
+-    patterns: [
+-      {
+-        regex: /\bbuild_runtime_state\b/,
+-        message: 'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
+-      },
+-      {
+-        regex: /\bbuild_source_revision\b/,
+-        message: 'core MiniApp manager must not build source revisions directly; use product-domain lifecycle helpers',
+-      },
+-      {
+-        regex: /\bbuild_deps_revision\b/,
+-        message:
+-          'core MiniApp manager must not build dependency revisions directly; use product-domain lifecycle helpers',
+-      },
+-      {
+-        regex: /\bapp\.version\s*\+=\s*1\b/,
+-        message:
+-          'core MiniApp manager must not own version increments for lifecycle transitions; use product-domain lifecycle helpers',
+-      },
+-      {
+-        regex: /\bapp\.runtime\s*=/,
+-        message:
+-          'core MiniApp manager must not own runtime-state replacement for lifecycle transitions; use product-domain lifecycle helpers',
+-      },
+-      {
+-        regex: /\bbuild_created_app\b/,
+-        message: 'core MiniApp manager must not own create workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bapply_update_patch\b/,
+-        message: 'core MiniApp manager must not own update workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bprepare_draft_app\b/,
+-        message: 'core MiniApp manager must not own draft creation workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bapply_draft_source_sync_result\b/,
+-        message: 'core MiniApp manager must not own draft source-sync workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bapply_draft_permission_update_result\b/,
+-        message: 'core MiniApp manager must not own draft permission workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bapply_draft_to_active\b/,
+-        message: 'core MiniApp manager must not own apply-draft workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bapply_draft_customization_metadata\b/,
+-        message: 'core MiniApp manager must not own draft customization workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bmark_builtin_update_available_metadata\b/,
+-        message: 'core MiniApp manager must not own built-in update workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bdecline_builtin_update_metadata\b/,
+-        message:
+-          'core MiniApp manager must not own built-in update decline workflow assembly; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bprepare_imported_meta\b/,
+-        message:
+-          'core MiniApp manager must not own import metadata rehome planning; use product-domain import bundle plan',
+-      },
+-      {
+-        regex: /\bbuild_import_fallbacks\b/,
+-        message: 'core MiniApp manager must not own import fallback planning; use product-domain import bundle plan',
+-      },
+-      {
+-        regex: /\bbuild_import_bundle_plan\b/,
+-        message: 'core MiniApp manager must not own import bundle planning; use MiniAppRuntimeFacade',
+-      },
+-      {
+-        regex: /\bread_import_meta_json\b/,
+-        message: 'core MiniApp manager must not own import metadata IO; use MiniAppRuntimeFacade import ports',
+-      },
+-      {
+-        regex: /\bwrite_import_bundle\b/,
+-        message: 'core MiniApp manager must not own import bundle IO; use MiniAppRuntimeFacade import ports',
+-      },
+-      {
+-        regex: /\bworkspace_dir_string\b/,
+-        message: 'core MiniApp manager must not own compile workspace path adaptation; use MiniAppCompileRequest',
+-      },
+-      {
+-        regex: /\bresolve_policy\s*\(/,
+-        message:
+-          'core MiniApp manager must not own permission policy path adaptation; use MiniAppPermissionPolicyRequest',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/agentic/tools/registry',
+     reason:
+diff --git a/scripts/core-boundaries/rules/source/required-rules.mjs b/scripts/core-boundaries/rules/source/required-rules.mjs
+index 56e4549..7bcc269 100644
+--- a/scripts/core-boundaries/rules/source/required-rules.mjs
++++ b/scripts/core-boundaries/rules/source/required-rules.mjs
+@@ -2443,10 +2443,6 @@ export const requiredContentRules = [
+         regex: /product-domains = \[[^\]]*"northhing-services-integrations\/function-agents"[^\]]*\]/,
+         message: 'core product-domain facade must enable the function-agent service owner feature it imports',
+       },
+-      {
+-        regex: /product-domains = \[[^\]]*"northhing-services-integrations\/miniapp-runtime"[^\]]*\]/,
+-        message: 'core product-domain facade must enable the MiniApp service owner feature it imports',
+-      },
+       {
+         regex:
+           /northhing-product-domains = \{ path = "\.\.\/\.\.\/contracts\/product-domains", default-features = false, optional = true \}/,
+@@ -2473,8 +2469,8 @@ export const requiredContentRules = [
+           'core product-capabilities feature must explicitly enable the optional dependency',
+       },
+       {
+-        regex: /"northhing-product-domains\/product-full"/,
+-        message: 'core product-full must explicitly enable product-domain features',
++        regex: /"northhing-product-domains\/function-agents"/,
++        message: 'core product-domains feature must explicitly enable function-agent features',
+       },
+     ],
+   },
+@@ -2491,10 +2487,6 @@ export const requiredContentRules = [
+         regex: /#\[cfg\(feature = "product-domains"\)\]\s*pub mod function_agents\b/s,
+         message: 'function-agent product domain facade must stay behind product-domains',
+       },
+-      {
+-        regex: /#\[cfg\(feature = "product-domains"\)\]\s*pub mod miniapp\b/s,
+-        message: 'MiniApp product domain facade must stay behind product-domains',
+-      },
+       {
+         regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub\(crate\) mod service_agent_runtime\b/s,
+         message: 'service agent runtime owner assembly must stay behind service-integrations',
+@@ -5366,115 +5358,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/storage.rs',
+-    reason:
+-      'core MiniApp storage path must stay a compatibility facade over the integrations owner',
+-    patterns: [
+-      {
+-        regex: /\bServiceMiniAppStorage\b/,
+-        message: 'missing services-owned MiniApp storage delegation',
+-      },
+-      {
+-        regex: /\bmap_storage_error\b/,
+-        message: 'missing MiniApp storage error compatibility mapping',
+-      },
+-      {
+-        regex: /\bMiniAppImportBundleWriteRequest\b/,
+-        message: 'missing MiniApp import bundle IO compatibility write request',
+-      },
+-      {
+-        regex: /\bread_import_meta_json\b/,
+-        message: 'missing MiniApp import metadata IO compatibility delegation',
+-      },
+-      {
+-        regex: /\bwrite_import_bundle\b/,
+-        message: 'missing MiniApp import bundle IO compatibility delegation',
+-      },
+-      {
+-        regex: /\bimpl MiniAppStoragePort for MiniAppStorage\b/,
+-        message: 'missing MiniApp storage port adapter owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/builtin/mod.rs',
+-    reason:
+-      'core must coordinate built-in MiniApp seed decisions and recompilation while services-integrations owns seed filesystem IO',
+-    patterns: [
+-      {
+-        regex: /\bBUILTIN_APPS\b/,
+-        message: 'missing product-domain built-in MiniApp bundle re-export/use',
+-      },
+-      {
+-        regex: /\bbuiltin_content_hash\b/,
+-        message: 'missing product-domain built-in MiniApp content hash use',
+-      },
+-      {
+-        regex: /\bshould_seed_builtin_app\b/,
+-        message: 'missing product-domain built-in MiniApp seed decision use',
+-      },
+-      {
+-        regex: /\bresolve_builtin_seed_check\b/,
+-        message: 'missing product-domain built-in MiniApp seed check use',
+-      },
+-      {
+-        regex: /\bresolve_builtin_seed_action\b/,
+-        message: 'missing product-domain built-in MiniApp seed action use',
+-      },
+-      {
+-        regex: /\bminiapp_builtin_io::prepare_builtin_seed_bundle_files\b/,
+-        message: 'missing services-owned built-in MiniApp seed file IO delegation',
+-      },
+-      {
+-        regex: /\bread_builtin_install_marker\b/,
+-        message: 'missing built-in MiniApp marker read compatibility wrapper',
+-      },
+-      {
+-        regex: /\bminiapp_builtin_io::read_builtin_install_marker\b/,
+-        message: 'missing services-owned built-in MiniApp marker read delegation',
+-      },
+-      {
+-        regex: /\bwrite_builtin_install_marker\b/,
+-        message: 'missing built-in MiniApp marker write compatibility wrapper',
+-      },
+-      {
+-        regex: /\bminiapp_builtin_io::write_builtin_install_marker\b/,
+-        message: 'missing services-owned built-in MiniApp marker write delegation',
+-      },
+-      {
+-        regex: /\brecompile\b/,
+-        message: 'missing core-owned built-in MiniApp recompile orchestration',
+-      },
+-      {
+-        regex: /\bload_customization_metadata\b/,
+-        message: 'missing customized built-in preservation path',
+-      },
+-      {
+-        regex: /\bavailable_builtin_update\b/,
+-        message: 'missing customized built-in update metadata path',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
+-    reason:
+-      'core MiniApp host-dispatch path must stay a compatibility adapter over the integrations owner',
+-    patterns: [
+-      {
+-        regex: /\bpub async fn dispatch_host\b/,
+-        message: 'missing MiniApp host dispatch entry',
+-      },
+-      {
+-        regex: /\bnorthhing_services_integrations::miniapp::host_dispatch::dispatch_host\b/,
+-        message: 'missing MiniApp host dispatch integrations owner delegation',
+-      },
+-      {
+-        regex: /\bmap_host_dispatch_error\b/,
+-        message: 'missing MiniApp host dispatch error compatibility mapping',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
+     reason:
+@@ -5985,25 +5868,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/exporter.rs',
+-    reason:
+-      'core MiniApp exporter must delegate export check result policy while retaining runtime detection and export skeleton',
+-    patterns: [
+-      {
+-        regex: /\bdetect_runtime\b/,
+-        message: 'missing core-owned MiniApp export runtime detection',
+-      },
+-      {
+-        regex: /\bbuild_export_check_result\b/,
+-        message: 'missing product-domain MiniApp export check helper use',
+-      },
+-      {
+-        regex: /Export not yet implemented \(skeleton\)/,
+-        message: 'missing core-owned MiniApp export skeleton behavior',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
+     reason:
+@@ -6043,111 +5907,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs',
+-    reason:
+-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
+-    patterns: [
+-      {
+-        regex: /\bMiniAppRuntimeFacade\b/,
+-        message: 'missing product-domain MiniApp runtime-state facade use',
+-      },
+-      {
+-        regex: /\bCoreProductDomainRuntime\b/,
+-        message: 'missing core-owned product-domain runtime owner delegation',
+-      },
+-      {
+-        regex: /\bMiniAppCompileRequest::from_paths\b/,
+-        message: 'missing product-domain MiniApp compile request/path delegation',
+-      },
+-      {
+-        regex: /\bcompile_with_request\b/,
+-        message: 'missing product-domain MiniApp compile facade delegation',
+-      },
+-      {
+-        regex: /\bMiniAppPermissionPolicyRequest::from_paths\b/,
+-        message: 'missing product-domain MiniApp permission policy request/path delegation',
+-      },
+-      {
+-        regex: /\bresolve_policy_with_request\b/,
+-        message: 'missing product-domain MiniApp permission policy facade delegation',
+-      },
+-      {
+-        regex: /\bMiniAppCompilePort\b/,
+-        message: 'missing core MiniApp compile port adapter for product-domain import workflow',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs',
+-    reason:
+-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
+-    patterns: [
+-      {
+-        regex: /\bcreate_app\b/,
+-        message: 'missing product-domain MiniApp create workflow facade delegation',
+-      },
+-      {
+-        regex: /\bpersist_update_result_for_app\b/,
+-        message: 'missing product-domain MiniApp update workflow facade delegation',
+-      },
+-      {
+-        regex: /\bpersist_draft_for_app\b/,
+-        message: 'missing product-domain MiniApp create-draft workflow facade delegation',
+-      },
+-      {
+-        regex: /\bpersist_draft_source_sync_result\b/,
+-        message: 'missing product-domain MiniApp draft source-sync workflow facade delegation',
+-      },
+-      {
+-        regex: /\bpersist_draft_permission_update_result\b/,
+-        message: 'missing product-domain MiniApp draft permission workflow facade delegation',
+-      },
+-      {
+-        regex: /\bapply_draft_app\b/,
+-        message: 'missing product-domain MiniApp apply-draft workflow facade delegation',
+-      },
+-      {
+-        regex: /\bmark_builtin_update_available\b/,
+-        message: 'missing product-domain MiniApp built-in update workflow facade delegation',
+-      },
+-      {
+-        regex: /\bdecline_builtin_update\b/,
+-        message: 'missing product-domain MiniApp built-in update decline workflow facade delegation',
+-      },
+-      {
+-        regex: /\bpersist_sync_from_fs_result_for_app\b/,
+-        message: 'missing product-domain MiniApp sync-from-fs facade delegation',
+-      },
+-      {
+-        regex: /\bcompile_source\b/,
+-        message: 'missing core MiniApp compile compatibility entry point',
+-      },
+-      {
+-        regex: /\bMiniAppImportFromPathRequest\b/,
+-        message: 'missing product-domain MiniApp import workflow request delegation',
+-      },
+-      {
+-        regex: /\.import_from_path\s*\(/,
+-        message: 'missing product-domain MiniApp import workflow facade delegation',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/manager/mod.rs',
+-    reason:
+-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
+-    patterns: [
+-      {
+-        regex: /\bruntime_preflight_preserves_recompile_sync_rollback_and_deps_state\b/,
+-        message: 'missing MiniApp manager runtime preflight regression test',
+-      },
+-      {
+-        regex: /\bimport_from_path_preserves_fallback_files_recompile_and_runtime_state\b/,
+-        message: 'missing MiniApp import runtime preflight regression test',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/contracts/product-domains/src/miniapp/compiler.rs',
+     reason:
+@@ -6641,63 +6400,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
+-    reason:
+-      'core MiniApp runtime detection must be a compatibility facade over product-domain runtime detection',
+-    patterns: [
+-      {
+-        regex: /\bpub use northhing_product_domains::miniapp::runtime::\{/,
+-        message: 'missing product-domain MiniApp runtime facade re-export',
+-      },
+-      {
+-        regex: /\bdetect_runtime\b/,
+-        message: 'missing product-domain detect_runtime facade export',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
+-    reason:
+-      'core MiniApp worker pool path must stay a compatibility facade over the integrations owner',
+-    patterns: [
+-      {
+-        regex: /\bServiceJsWorkerPool\b/,
+-        message: 'missing services-owned MiniApp worker pool delegation',
+-      },
+-      {
+-        regex: /\bCoreMiniAppWorkerEventSink\b/,
+-        message: 'missing core MiniApp worker event compatibility sink',
+-      },
+-      {
+-        regex: /\bemit_global_event\b/,
+-        message: 'missing MiniApp worker event bridge to existing core event bus',
+-      },
+-      {
+-        regex: /\bmap_worker_pool_error\b/,
+-        message: 'missing MiniApp worker pool error compatibility mapping',
+-      },
+-      {
+-        regex: /\bimpl MiniAppRuntimePort for JsWorkerPool\b/,
+-        message: 'missing MiniApp runtime port adapter owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
+-    reason:
+-      'core MiniApp JS worker path must stay a compatibility re-export over the integrations owner',
+-    patterns: [
+-      {
+-        regex: /\bpub use northhing_services_integrations::miniapp::worker::\{/,
+-        message: 'missing services-owned MiniApp JS worker facade re-export',
+-      },
+-      {
+-        regex: /\bMiniAppWorkerEventSink\b/,
+-        message: 'missing MiniApp worker event sink facade export',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
+     reason:
+@@ -6806,16 +6508,12 @@ export const requiredContentRules = [
+   {
+     path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
+     reason:
+-      'core product-domain runtime owner must centralize concrete MiniApp and function-agent runtime port bindings without moving runtime behavior',
++      'core product-domain runtime owner must centralize concrete function-agent runtime port bindings without moving runtime behavior',
+     patterns: [
+       {
+         regex: /\bpub\(crate\) struct CoreProductDomainRuntime\b/,
+         message: 'missing core product-domain runtime owner type',
+       },
+-      {
+-        regex: /\bfn miniapp_runtime_facade\b/,
+-        message: 'missing MiniApp runtime facade owner factory',
+-      },
+       {
+         regex: /\bfn function_agent_git_adapter\b/,
+         message: 'missing function-agent Git adapter owner factory',
+@@ -6844,14 +6542,6 @@ export const requiredContentRules = [
+         regex: /\bCoreFunctionAgentAiAdapter\b/,
+         message: 'missing core-owned AI adapter binding',
+       },
+-      {
+-        regex: /\bMiniAppRuntimeFacade\b/,
+-        message: 'missing MiniApp product-domain facade binding',
+-      },
+-      {
+-        regex: /\bMiniAppStoragePort\b/,
+-        message: 'missing MiniApp storage port owner binding',
+-      },
+       {
+         regex: /\bFunctionAgentRuntimeFacade\b/,
+         message: 'missing function-agent product-domain facade binding',
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index c49d67b..b6456fc 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -2117,11 +2117,10 @@ export function runManifestParserSelfTest({
+         'dep:northhing-ai-adapters',
+         'ai-adapter-runtime',
+         'northhing-services-integrations\\/function-agents',
+-        'northhing-services-integrations\\/miniapp-runtime',
+         'dep:northhing-product-capabilities',
+         'northhing-services-integrations\\/product-full',
+         'dep:northhing-product-domains',
+-        'northhing-product-domains\\/product-full',
++        'northhing-product-domains\\/function-agents',
+       ],
+     },
+     {
+@@ -2131,7 +2130,6 @@ export function runManifestParserSelfTest({
+         'pub mod agentic',
+         'feature = "product-domains"',
+         'pub mod function_agents',
+-        'pub mod miniapp',
+         'feature = "service-integrations"',
+         'service_agent_runtime',
+       ],
+@@ -2198,17 +2196,6 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/interfaces/acp/src/client/manager_errors.rs',
+       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/storage.rs',
+-      contracts: [
+-        'ServiceMiniAppStorage',
+-        'map_storage_error',
+-        'MiniAppImportBundleWriteRequest',
+-        'read_import_meta_json',
+-        'write_import_bundle',
+-        'MiniAppStoragePort',
+-      ],
+-    },
+     {
+       path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
+       contracts: [
+@@ -2236,24 +2223,6 @@ export function runManifestParserSelfTest({
+         'import_bundle_io_preserves_copy_and_fallback_contract',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/builtin/mod.rs',
+-      contracts: [
+-        'BUILTIN_APPS',
+-        'builtin_content_hash',
+-        'should_seed_builtin_app',
+-        'resolve_builtin_seed_check',
+-        'resolve_builtin_seed_action',
+-        'miniapp_builtin_io::prepare_builtin_seed_bundle_files',
+-        'read_builtin_install_marker',
+-        'miniapp_builtin_io::read_builtin_install_marker',
+-        'write_builtin_install_marker',
+-        'miniapp_builtin_io::write_builtin_install_marker',
+-        'recompile',
+-        'load_customization_metadata',
+-        'available_builtin_update',
+-      ],
+-    },
+     {
+       path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
+       contracts: [
+@@ -2293,14 +2262,6 @@ export function runManifestParserSelfTest({
+         'build_builtin_seed_meta',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
+-      contracts: [
+-        'dispatch_host',
+-        'northhing_services_integrations::miniapp::host_dispatch::dispatch_host',
+-        'map_host_dispatch_error',
+-      ],
+-    },
+     {
+       path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
+       contracts: [
+@@ -2321,23 +2282,6 @@ export function runManifestParserSelfTest({
+         'process_manager::create_tokio_command',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
+-      contracts: [
+-        'MiniAppRuntimePort',
+-        'ServiceJsWorkerPool',
+-        'CoreMiniAppWorkerEventSink',
+-        'emit_global_event',
+-        'map_worker_pool_error',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
+-      contracts: [
+-        'pub use northhing_services_integrations::miniapp::worker::{',
+-        'MiniAppWorkerEventSink',
+-      ],
+-    },
+     {
+       path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
+       contracts: [
+@@ -2375,14 +2319,11 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
+       contracts: [
+         'CoreProductDomainRuntime',
+-        'miniapp_runtime_facade',
+         'function_agent_git_adapter',
+         'function_agent_ai_adapter',
+         'function_agent_runtime_facade',
+         'CoreFunctionAgentGitAdapter',
+         'CoreFunctionAgentAiAdapter',
+-        'MiniAppRuntimeFacade',
+-        'MiniAppStoragePort',
+         'FunctionAgentRuntimeFacade',
+         'FunctionAgentGitPort',
+         'FunctionAgentAiPort',
+@@ -2572,10 +2513,6 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/contracts/product-domains/src/miniapp/exporter.rs',
+       contracts: ['MISSING_JS_RUNTIME_MESSAGE', 'export_runtime_label', 'build_export_check_result'],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/exporter.rs',
+-      contracts: ['detect_runtime', 'build_export_check_result', 'Export not yet implemented'],
+-    },
+     {
+       path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
+       contracts: [
+@@ -2589,32 +2526,6 @@ export function runManifestParserSelfTest({
+         'is_current_declined_builtin_update',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/manager.rs',
+-      contracts: [
+-        'CoreProductDomainRuntime',
+-        'MiniAppRuntimeFacade',
+-        'create_app',
+-        'persist_update_result_for_app',
+-        'persist_draft_for_app',
+-        'persist_draft_source_sync_result',
+-        'persist_draft_permission_update_result',
+-        'apply_draft_app',
+-        'mark_builtin_update_available',
+-        'decline_builtin_update',
+-        'persist_sync_from_fs_result_for_app',
+-        'compile_source',
+-        'MiniAppCompileRequest::from_paths',
+-        'compile_with_request',
+-        'MiniAppPermissionPolicyRequest::from_paths',
+-        'resolve_policy_with_request',
+-        'MiniAppCompilePort',
+-        'MiniAppImportFromPathRequest',
+-        'import_from_path',
+-        'runtime_preflight_preserves_recompile_sync_rollback_and_deps_state',
+-        'import_from_path_preserves_fallback_files_recompile_and_runtime_state',
+-      ],
+-    },
+     {
+       path: 'src/crates/assembly/core/src/function_agents/runtime_services.rs',
+       contracts: [
+@@ -2705,10 +2616,6 @@ export function runManifestParserSelfTest({
+         'parse_commit_ai_response',
+       ],
+     },
+-    {
+-      path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
+-      contracts: ['pub use northhing_product_domains::miniapp::runtime::{', 'detect_runtime'],
+-    },
+   ];
+   for (const { path, contracts } of requiredContentContracts) {
+     const prefix = path.replace(/\.(rs|tsx?)$/, '');
+diff --git a/src/crates/assembly/core/Cargo.toml b/src/crates/assembly/core/Cargo.toml
+index daf1882..f719b6d 100644
+--- a/src/crates/assembly/core/Cargo.toml
++++ b/src/crates/assembly/core/Cargo.toml
+@@ -198,8 +198,7 @@ product-domains = [
+     "ai-adapter-runtime",
+     "dep:northhing-product-domains",
+     "northhing-services-integrations/function-agents",
+-    "northhing-services-integrations/miniapp-runtime",
+-    "northhing-product-domains/product-full",
++    "northhing-product-domains/function-agents",
+ ]
+ runtime-services = ["dep:northhing-runtime-services"]
+ service-integrations = [
+diff --git a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager.rs b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager.rs
+index 10f807a..c359904 100644
+--- a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager.rs
++++ b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager.rs
+@@ -6,7 +6,7 @@
+ //! env helpers, default/test constructors, and the global singleton.
+ //! Path accessors live in dedicated submodules under `path_manager/`:
+ //! - `assistant_workspace` — `~/.northhing/personal_assistant/workspace-*` (incl. legacy)
+-//! - `user_paths`          — `~/.config/northhing/{config,agents,skills,cache,runtimes,data,cron,rules,miniapps,logs,temp}`
++//! - `user_paths`          — `~/.config/northhing/{config,agents,skills,cache,runtimes,data,cron,rules,logs,temp}`
+ //!                           and `~/.northhing/remote_ssh/`
+ //! - `project_paths`       — `{workspace}/.northhing/...` and `~/.northhing/projects/<slug>/...`
+ //!                           + project runtime slug cache
+diff --git a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/init.rs b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/init.rs
+index 62a99e4..0e050fa 100644
+--- a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/init.rs
++++ b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/init.rs
+@@ -32,7 +32,6 @@ impl PathManager {
+             self.user_data_dir(),
+             self.user_cron_dir(),
+             self.user_rules_dir(),
+-            self.miniapps_dir(),
+             self.logs_dir(),
+             self.temp_dir(),
+         ];
+diff --git a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/user_paths.rs b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/user_paths.rs
+index 832f41a..a746c7d 100644
+--- a/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/user_paths.rs
++++ b/src/crates/assembly/core/src/infrastructure/app_paths/path_manager/user_paths.rs
+@@ -96,16 +96,6 @@ impl PathManager {
+         self.user_cron_dir().join("jobs.json")
+     }
+ 
+-    /// Get miniapps root directory: ~/.config/northhing/data/miniapps/
+-    pub fn miniapps_dir(&self) -> PathBuf {
+-        self.user_data_dir().join("miniapps")
+-    }
+-
+-    /// Get directory for a specific miniapp: ~/.config/northhing/data/miniapps/{app_id}/
+-    pub fn miniapp_dir(&self, app_id: &str) -> PathBuf {
+-        self.miniapps_dir().join(app_id)
+-    }
+-
+     /// Get user-level rules directory: ~/.config/northhing/data/rules/
+     pub fn user_rules_dir(&self) -> PathBuf {
+         self.user_data_dir().join("rules")
+diff --git a/src/crates/assembly/core/src/lib.rs b/src/crates/assembly/core/src/lib.rs
+index 1015a25..e43eba9 100644
+--- a/src/crates/assembly/core/src/lib.rs
++++ b/src/crates/assembly/core/src/lib.rs
+@@ -14,8 +14,6 @@ pub mod error;
+ #[cfg(feature = "product-domains")]
+ pub mod function_agents; // Function-based agents
+ pub mod infrastructure; // AI clients, storage, logging, events
+-#[cfg(feature = "product-domains")]
+-pub mod miniapp; // AI-generated instant apps (Zero-Dialect Runtime)
+ #[cfg(feature = "product-full")]
+ pub mod product_assembly;
+ #[cfg(feature = "product-domains")]
+diff --git a/src/crates/assembly/core/src/miniapp/builtin/mod.rs b/src/crates/assembly/core/src/miniapp/builtin/mod.rs
+deleted file mode 100644
+index 20fd308..0000000
+--- a/src/crates/assembly/core/src/miniapp/builtin/mod.rs
++++ /dev/null
+@@ -1,638 +0,0 @@
+-//! Built-in MiniApps — bundled, seeded into miniapps_dir on first launch / upgrade.
+-//!
+-//! Each built-in app has a fixed id (so it can be located across runs). On startup
+-//! we compare `.builtin-manifest.json` with the bundled asset hash and only rewrite
+-//! source files when newer code is available.
+-//! The user's `storage.json` is preserved across upgrades.
+-
+-use crate::miniapp::manager::MiniAppManager;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use chrono::Utc;
+-use northhing_product_domains::miniapp::builtin::{
+-    resolve_builtin_seed_action, resolve_builtin_seed_check, BuiltinInstallMarker, BuiltinSeedAction, BuiltinSeedCheck,
+-    BUILTIN_INSTALL_MARKER,
+-};
+-pub use northhing_product_domains::miniapp::builtin::{BuiltinMiniAppBundle as BuiltinApp, BUILTIN_APPS};
+-use northhing_services_integrations::miniapp::builtin_io as miniapp_builtin_io;
+-use std::path::Path;
+-use std::sync::Arc;
+-
+-/// Seed all built-in MiniApps into the user data directory. Idempotent: skips apps
+-/// whose on-disk marker hash matches the bundled content. User's `storage.json`
+-/// is preserved across reseeds; source files & meta.json (without timestamps) are
+-/// overwritten.
+-pub async fn seed_builtin_miniapps(manager: &Arc<MiniAppManager>) -> NortHingResult<()> {
+-    for app in BUILTIN_APPS {
+-        if let Err(e) = seed_one(manager, app).await {
+-            tracing::warn!("seed builtin miniapp '{}' failed: {}", app.id, e);
+-        }
+-    }
+-    Ok(())
+-}
+-
+-async fn seed_one(manager: &Arc<MiniAppManager>, app: &BuiltinApp) -> NortHingResult<()> {
+-    let app_dir = manager.path_manager().miniapp_dir(app.id);
+-    let marker_path = app_dir.join(BUILTIN_INSTALL_MARKER);
+-    let installed_marker = read_builtin_install_marker(&marker_path).await?;
+-    let seed_artifacts = match resolve_builtin_seed_check(app, installed_marker.as_ref()) {
+-        BuiltinSeedCheck::Skip => return Ok(()),
+-        BuiltinSeedCheck::NeedsSeed(artifacts) => artifacts,
+-    };
+-
+-    let now = Utc::now().timestamp_millis();
+-    let has_local_override = match manager.load_customization_metadata(app.id).await {
+-        Ok(Some(metadata)) => metadata.local_override,
+-        Ok(None) => false,
+-        Err(e) => {
+-            tracing::warn!(
+-                "read customization metadata for builtin miniapp '{}' failed: {}",
+-                app.id,
+-                e
+-            );
+-            false
+-        }
+-    };
+-
+-    match resolve_builtin_seed_action(seed_artifacts, has_local_override) {
+-        BuiltinSeedAction::PreserveLocalOverride(artifacts) => {
+-            let recorded = manager
+-                .mark_builtin_update_available(app.id, app.version, &artifacts.content_hash, now)
+-                .await?;
+-            write_builtin_install_marker(&marker_path, &artifacts.marker).await?;
+-            write_legacy_builtin_version_marker(&app_dir, &artifacts.legacy_version).await?;
+-            if recorded {
+-                tracing::info!(
+-                    "preserved customized builtin miniapp '{}' and recorded bundled update v{}",
+-                    app.id,
+-                    app.version
+-                );
+-            } else {
+-                tracing::info!(
+-                    "preserved customized builtin miniapp '{}' and skipped previously declined bundled update v{}",
+-                    app.id,
+-                    app.version
+-                );
+-            }
+-            Ok(())
+-        }
+-        BuiltinSeedAction::SeedBundle(artifacts) => seed_builtin_bundle(manager, app, artifacts, now).await,
+-    }
+-}
+-
+-async fn seed_builtin_bundle(
+-    manager: &Arc<MiniAppManager>,
+-    app: &BuiltinApp,
+-    artifacts: northhing_product_domains::miniapp::builtin::BuiltinSeedArtifacts,
+-    now: i64,
+-) -> NortHingResult<()> {
+-    let app_dir = manager.path_manager().miniapp_dir(app.id);
+-    miniapp_builtin_io::prepare_builtin_seed_bundle_files(&app_dir, app, now)
+-        .await
+-        .map_err(map_builtin_io_error)?;
+-
+-    // Recompile to assemble the final compiled.html with bridge + theme + import map.
+-    manager.recompile(app.id, "dark", None).await?;
+-
+-    let marker_path = app_dir.join(BUILTIN_INSTALL_MARKER);
+-    write_builtin_install_marker(&marker_path, &artifacts.marker).await?;
+-    write_legacy_builtin_version_marker(&app_dir, &artifacts.legacy_version).await?;
+-    tracing::info!(
+-        "seeded builtin miniapp '{}' (v{}, {})",
+-        app.id,
+-        app.version,
+-        artifacts.marker.hash
+-    );
+-    Ok(())
+-}
+-
+-async fn read_builtin_install_marker(path: &Path) -> NortHingResult<Option<BuiltinInstallMarker>> {
+-    miniapp_builtin_io::read_builtin_install_marker(path)
+-        .await
+-        .map_err(map_builtin_io_error)
+-}
+-
+-async fn write_builtin_install_marker(path: &Path, marker: &BuiltinInstallMarker) -> NortHingResult<()> {
+-    miniapp_builtin_io::write_builtin_install_marker(path, marker)
+-        .await
+-        .map_err(map_builtin_io_error)
+-}
+-
+-async fn write_legacy_builtin_version_marker(path: &Path, content: &str) -> NortHingResult<()> {
+-    miniapp_builtin_io::write_legacy_builtin_version_marker(path, content)
+-        .await
+-        .map_err(map_builtin_io_error)
+-}
+-
+-fn map_builtin_io_error(err: miniapp_builtin_io::MiniAppBuiltinIoError) -> NortHingError {
+-    match err {
+-        err @ miniapp_builtin_io::MiniAppBuiltinIoError::Io { .. } => NortHingError::io(err.to_string()),
+-        miniapp_builtin_io::MiniAppBuiltinIoError::InvalidBundledMeta(source) => {
+-            NortHingError::parse(format!("invalid bundled meta.json: {}", source))
+-        }
+-        miniapp_builtin_io::MiniAppBuiltinIoError::MarkerSerialization(source)
+-        | miniapp_builtin_io::MiniAppBuiltinIoError::MetaSerialization(source)
+-        | miniapp_builtin_io::MiniAppBuiltinIoError::PackageSerialization(source) => NortHingError::from(source),
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_product_domains::miniapp::builtin::{builtin_content_hash, should_seed_builtin_app};
+-    use northhing_product_domains::miniapp::customization::{
+-        MiniAppCustomizationMetadata, MiniAppCustomizationOrigin, MiniAppCustomizationOriginKind,
+-    };
+-
+-    fn test_manager() -> Arc<MiniAppManager> {
+-        let root = std::env::temp_dir().join(format!(
+-            "northhing-miniapp-builtin-customization-{}",
+-            uuid::Uuid::new_v4()
+-        ));
+-        let path_manager = Arc::new(crate::infrastructure::PathManager::with_user_root_for_tests(root));
+-        Arc::new(MiniAppManager::new(path_manager))
+-    }
+-
+-    async fn write_outdated_builtin_marker(app_dir: &std::path::Path) {
+-        write_builtin_install_marker(
+-            &app_dir.join(BUILTIN_INSTALL_MARKER),
+-            &BuiltinInstallMarker {
+-                version: 0,
+-                hash: "sha256:outdated".to_string(),
+-            },
+-        )
+-        .await
+-        .unwrap();
+-    }
+-
+-    #[tokio::test]
+-    async fn builtin_reseed_preserves_local_override_and_records_available_update() {
+-        let manager = test_manager();
+-        let builtin = &BUILTIN_APPS[0];
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-
+-        let custom_css = "body { background: #f7f7f7; }";
+-        let app_dir = manager.path_manager().miniapp_dir(builtin.id);
+-        tokio::fs::write(app_dir.join("source").join("style.css"), custom_css)
+-            .await
+-            .unwrap();
+-        manager
+-            .save_customization_metadata(
+-                builtin.id,
+-                &MiniAppCustomizationMetadata {
+-                    origin: MiniAppCustomizationOrigin {
+-                        kind: MiniAppCustomizationOriginKind::Builtin,
+-                        builtin_id: Some(builtin.id.to_string()),
+-                        builtin_version: Some(builtin.version),
+-                    },
+-                    local_override: true,
+-                    last_applied_draft_id: Some("draft-1".to_string()),
+-                    available_builtin_update: None,
+-                    declined_builtin_updates: Vec::new(),
+-                    updated_at: Utc::now().timestamp_millis(),
+-                },
+-            )
+-            .await
+-            .unwrap();
+-        write_outdated_builtin_marker(&app_dir).await;
+-
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-
+-        let css = tokio::fs::read_to_string(app_dir.join("source").join("style.css"))
+-            .await
+-            .unwrap();
+-        assert_eq!(css, custom_css);
+-
+-        let metadata = manager.load_customization_metadata(builtin.id).await.unwrap().unwrap();
+-        assert!(metadata.local_override);
+-        let update = metadata.available_builtin_update.unwrap();
+-        assert_eq!(update.builtin_version, builtin.version);
+-        assert!(!update.source_hash.is_empty());
+-    }
+-
+-    #[tokio::test]
+-    async fn builtin_reseed_skips_declined_update_until_local_override_changes() {
+-        let manager = test_manager();
+-        let builtin = &BUILTIN_APPS[0];
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-
+-        let custom_css = "body { background: #fafafa; }";
+-        let app_dir = manager.path_manager().miniapp_dir(builtin.id);
+-        tokio::fs::write(app_dir.join("source").join("style.css"), custom_css)
+-            .await
+-            .unwrap();
+-        manager
+-            .save_customization_metadata(
+-                builtin.id,
+-                &MiniAppCustomizationMetadata {
+-                    origin: MiniAppCustomizationOrigin {
+-                        kind: MiniAppCustomizationOriginKind::Builtin,
+-                        builtin_id: Some(builtin.id.to_string()),
+-                        builtin_version: Some(builtin.version),
+-                    },
+-                    local_override: true,
+-                    last_applied_draft_id: Some("draft-1".to_string()),
+-                    available_builtin_update: None,
+-                    declined_builtin_updates: Vec::new(),
+-                    updated_at: Utc::now().timestamp_millis(),
+-                },
+-            )
+-            .await
+-            .unwrap();
+-
+-        write_outdated_builtin_marker(&app_dir).await;
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-        let first_metadata = manager.load_customization_metadata(builtin.id).await.unwrap().unwrap();
+-        let first_update = first_metadata.available_builtin_update.unwrap();
+-        let source_hash = first_update.source_hash.clone();
+-
+-        manager
+-            .decline_builtin_update(builtin.id, first_update.builtin_version, &source_hash, 1234)
+-            .await
+-            .unwrap();
+-        write_outdated_builtin_marker(&app_dir).await;
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-
+-        let declined_metadata = manager.load_customization_metadata(builtin.id).await.unwrap().unwrap();
+-        assert!(declined_metadata.available_builtin_update.is_none());
+-        assert_eq!(declined_metadata.declined_builtin_updates.len(), 1);
+-        assert_eq!(declined_metadata.declined_builtin_updates[0].source_hash, source_hash);
+-        let repeated_same_source = manager
+-            .mark_builtin_update_available(builtin.id, builtin.version + 1, &source_hash, 5678)
+-            .await
+-            .unwrap();
+-        assert!(!repeated_same_source);
+-        let css = tokio::fs::read_to_string(app_dir.join("source").join("style.css"))
+-            .await
+-            .unwrap();
+-        assert_eq!(css, custom_css);
+-
+-        tokio::fs::write(
+-            app_dir.join("source").join("style.css"),
+-            "body { background: #ffffff; }",
+-        )
+-        .await
+-        .unwrap();
+-        manager.sync_from_fs(builtin.id, "dark", None).await.unwrap();
+-        write_outdated_builtin_marker(&app_dir).await;
+-        seed_builtin_miniapps(&manager).await.unwrap();
+-
+-        let updated_metadata = manager.load_customization_metadata(builtin.id).await.unwrap().unwrap();
+-        assert_eq!(
+-            updated_metadata
+-                .available_builtin_update
+-                .as_ref()
+-                .map(|update| (update.builtin_version, update.source_hash.as_str())),
+-            Some((builtin.version, source_hash.as_str()))
+-        );
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_app_is_seeded_as_a_builtin_miniapp() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        let meta: serde_json::Value = serde_json::from_str(app.meta_json).unwrap();
+-        assert_eq!(meta["permissions"]["node"]["enabled"], false);
+-        assert_eq!(meta["permissions"]["notifications"]["system"], true);
+-        assert!(meta["permissions"]["fs"]["read"]
+-            .as_array()
+-            .is_some_and(|read| read.iter().any(|value| value.as_str() == Some("{workspace}"))));
+-        assert!(meta["permissions"]["shell"]["allow"]
+-            .as_array()
+-            .is_some_and(|allow| allow.iter().any(|value| value.as_str() == Some("gh"))));
+-        assert!(meta["permissions"]["shell"]["allow"]
+-            .as_array()
+-            .is_some_and(|allow| allow.iter().any(|value| value.as_str() == Some("git"))));
+-        assert!(meta["i18n"]["locales"].get("en-US").is_some());
+-        assert!(meta["i18n"]["locales"].get("zh-CN").is_some());
+-        assert!(meta["i18n"]["locales"].get("zh-TW").is_some());
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_app_exposes_a_guided_review_workspace() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("queueModeAll"));
+-        assert!(app.ui_js.contains("queueModeMine"));
+-        assert!(app.ui_js.contains("data-action=\"start-review\""));
+-        assert!(app.ui_js.contains("data-action=\"delete-subscription\""));
+-        assert!(app.ui_js.contains("subscription.enabled !== false"));
+-        assert!(app.ui_js.contains("data-action=\"toggle-subscription\""));
+-        assert!(app.ui_js.contains("normalizeSubscription"));
+-        assert!(app.ui_js.contains("activeSubscriptions"));
+-        assert!(app.ui_js.contains("refreshQueueOnOpen"));
+-        assert!(app.ui_js.contains("formatDate(updatedAt"));
+-        assert!(app.ui_js.contains("pr-queue-actor"));
+-        assert!(app.ui_js.contains("modeLabel(mode)"));
+-        assert!(app.ui_js.contains("progressPct"));
+-        assert!(app.ui_js.contains("openSelectedPrExternal"));
+-        assert!(app.ui_js.contains("data-action=\"sync-current\""));
+-        assert!(app.ui_js.contains("renderComposerStatus"));
+-        assert!(app.ui_js.contains("data-action=\"delete-operation\""));
+-        assert!(app.ui_js.contains("data-action=\"jump-file-target\""));
+-        assert!(app.ui_js.contains("compactPath"));
+-        assert!(app.css.contains("pr-file-link"));
+-        assert!(!app.ui_js.contains("Please double-check this change"));
+-        assert!(app.ui_js.contains("data-action=\"delete-provider\""));
+-        assert!(app.ui_js.contains("manualComment"));
+-        assert!(app.ui_js.contains("renderFilesExplorer"));
+-        assert!(app.ui_js.contains("authorizeGitHubCli"));
+-        assert!(app.ui_js.contains("ensureProfileToken"));
+-        assert!(app.ui_js.contains("persistableState"));
+-        assert!(app.ui_js.contains("data-action=\"cancel-review\""));
+-        assert!(app.ui_js.contains("parseRepositoryRef"));
+-        assert!(app.ui_js.contains("discoverWorkspaceRepositories"));
+-        assert!(app.ui_js.contains("applyWorkspaceDiscoveredRepositories"));
+-        assert!(app.ui_js.contains("dismissedWorkspaceRepos"));
+-        assert!(app.ui_js.contains("MAX_WORKSPACE_SCAN_DIRS"));
+-        assert!(app.ui_js.contains("renderHighlightedDiff"));
+-        assert!(app.ui_js.contains("reviewProgress"));
+-        assert!(app.ui_js.contains("renderWatchRepositoryCard"));
+-        assert!(app.css.contains("pr-command-bar"));
+-        assert!(app.css.contains("pr-review-workspace"));
+-        assert!(app.css.contains("--northhing-bg"));
+-        assert!(app.css.contains("data-theme-type=\"light\""));
+-        assert!(app.css.contains("pr-url-card"));
+-        assert!(app.css.contains("background-size: 240% 240%"));
+-        assert!(app.css.contains("pr-btn--compact"));
+-        assert!(app.css.contains("pr-listen-switch"));
+-        assert!(app.css.contains("pr-token-details"));
+-        assert!(app.css.contains("pr-text-btn"));
+-        assert!(!app.ui_js.contains("value=\"${esc(state.volatile.sessionTokens"));
+-        assert!(!app.css.contains("background: #0f1114"));
+-        assert!(!app.css.contains("background: rgba(23, 25, 28"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_file_switch_preserves_detail_scroll() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function readReviewWorkspaceScroll"));
+-        assert!(app.ui_js.contains("function restoreReviewWorkspaceScroll"));
+-        assert!(app.ui_js.contains("function render(options = {})"));
+-        assert!(app.ui_js.contains("options.preserveReviewWorkspaceScroll"));
+-        assert!(app.ui_js.contains("render({ preserveReviewWorkspaceScroll: true })"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_keeps_review_output_actionable_and_detail_compact() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function buildReviewOperations"));
+-        assert!(app.ui_js.contains("Do not create a general summary comment"));
+-        assert!(app.ui_js.contains("summaryComment only when"));
+-        assert!(!app.ui_js.contains("id: `summary-${snapshot.headSha || Date.now()}`"));
+-        assert!(app.ui_js.contains("function renderDraftStateChip"));
+-        assert!(app.ui_js.contains("pr-overview-fold"));
+-        assert!(app.css.contains(".pr-chip.is-draft"));
+-        assert!(app.css.contains(".pr-chip.is-ready"));
+-        assert!(app.css.contains("max-height: min(320px, 45vh)"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_exposes_guarded_github_lifecycle_actions() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("refreshMergeReadiness"));
+-        assert!(app.ui_js.contains("transitionDraftState"));
+-        assert!(app.ui_js.contains("mergePullRequest"));
+-        assert!(app.ui_js.contains("githubGraphql"));
+-        assert!(app.ui_js.contains("requestLifecycleAction"));
+-        assert!(app.ui_js.contains("confirmLifecycleAction"));
+-        assert!(app.ui_js.contains("renderMergeReadinessPanel"));
+-        assert!(app.ui_js.contains("data-action=\"request-lifecycle\""));
+-        assert!(app.ui_js.contains("data-action=\"confirm-lifecycle\""));
+-        assert!(app.ui_js.contains("expectedHeadSha"));
+-        assert!(app.ui_js.contains("merge_method"));
+-        assert!(app.ui_js.contains("markPullRequestReadyForReview"));
+-        assert!(app.ui_js.contains("convertPullRequestToDraft"));
+-        assert!(app.css.contains("pr-lifecycle-panel"));
+-        assert!(app.css.contains("pr-btn--merge"));
+-        assert!(app.css.contains("pr-btn--secondary"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_polishes_queue_notifications_scroll_and_review_focus() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function shouldSuppressSystemNotification"));
+-        assert!(app.ui_js.contains("document.visibilityState"));
+-        assert!(app.ui_js.contains("function buildNotificationDigest"));
+-        assert!(app.ui_js.contains("queueOrigin"));
+-        assert!(app.ui_js.contains("queueOrigin: 'assigned'"));
+-        assert!(app.ui_js.contains("function sourceAccessError"));
+-        assert!(app.ui_js.contains("function preferAccessError"));
+-        assert!(app.ui_js.contains("errorSourceUnavailable"));
+-        assert!(app.ui_js.contains("statusPartialSync"));
+-        assert!(app.ui_js.contains("throw sourceAccessError(identity, error)"));
+-        assert!(app.ui_js.contains("const sourceErrors = []"));
+-        assert!(app.ui_js.contains("let refreshedSourceCount = 0"));
+-        assert!(app.ui_js.contains("state.ui.status = t('statusPartialSync'"));
+-        assert!(!app.ui_js.contains("rawMessage"));
+-        assert!(!app.ui_js.contains("error.body"));
+-        assert!(app.ui_js.contains("dropMissing: !hadSourceError"));
+-        assert!(app.ui_js.contains("function readPaneScrolls"));
+-        assert!(app.ui_js.contains("preservePaneScroll"));
+-        assert!(app.ui_js.contains("reviewLanguage"));
+-        assert!(app.ui_js.contains("reviewLanguageZh"));
+-        assert!(app.ui_js.contains("suggestedFix"));
+-        assert!(app.ui_js.contains("renderReviewingBanner"));
+-        assert!(app.ui_js.contains("prDraftPathRow"));
+-        assert!(app.css.contains("max-height: min(560px, 56vh)"));
+-        assert!(app.css.contains("pr-btn--danger"));
+-        assert!(app.css.contains("pr-reviewing-banner"));
+-        assert!(app.css.contains("pr-draft-path-row"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_keeps_primary_review_surface_minimal() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function renderSettingsModal"));
+-        assert!(app.ui_js.contains("settingsOpen"));
+-        assert!(app.ui_js.contains("data-action=\"open-settings\""));
+-        assert!(app.ui_js.contains("data-action=\"close-settings\""));
+-        assert!(app.ui_js.contains("function shouldShowComposer"));
+-        assert!(app.ui_js.contains("renderComposerPlaceholder"));
+-        assert!(app.ui_js.contains("pr-files-fold"));
+-        assert!(app.ui_js.contains("pr-queue-item--compact"));
+-        assert!(app.css.contains("pr-command-bar--simple"));
+-        assert!(app.css.contains("pr-settings-modal"));
+-        assert!(app.css.contains("pr-main-layout--reviewing"));
+-        assert!(app.css.contains("pr-main-layout--no-composer"));
+-        assert!(app.css.contains("pr-queue-item--compact"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_keeps_secondary_details_compact_and_actionable() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function checkStateTone"));
+-        assert!(app.ui_js.contains("pr-ci-row"));
+-        assert!(app.ui_js.contains("ciFreshnessHint"));
+-        assert!(app.ui_js.contains("function lifecycleButtonTitle"));
+-        assert!(app.ui_js.contains("lifecycleAutoAuthHint"));
+-        assert!(app.ui_js.contains("ensureProfileToken(profile)"));
+-        assert!(app.ui_js.contains("decisionBody && !hasInlineFindings"));
+-        assert!(app.css.contains(".pr-fold summary::before"));
+-        assert!(app.css.contains(".pr-ci-row"));
+-        assert!(!app.ui_js.contains("renderLifecycleGuidance(problemKeys)"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_keeps_review_layout_stable_while_generating() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("pr-fold-title"));
+-        assert!(app.ui_js.contains("pr-fold-meta"));
+-        assert!(app.ui_js.contains("pr-btn--review"));
+-        assert!(app.ui_js.contains("render({ preservePaneScroll: true });"));
+-        assert!(app
+-            .ui_js
+-            .contains("finish('statusReady', { preservePaneScroll: true })"));
+-        assert!(app.css.contains(".pr-fold-title"));
+-        assert!(app.css.contains(".pr-fold-meta"));
+-        assert!(app.css.contains(".pr-btn--review"));
+-        assert!(app.css.contains("flex-wrap: nowrap"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_confirms_draft_replacement_and_reuses_published_context() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("function requestGenerateDraft"));
+-        assert!(app.ui_js.contains("function unpublishedDraftOperations"));
+-        assert!(app.ui_js.contains("renderDraftOverwriteConfirm"));
+-        assert!(app.ui_js.contains("data-action=\"confirm-overwrite-draft\""));
+-        assert!(app.ui_js.contains("publishedReviewContext"));
+-        assert!(app.ui_js.contains("recordPublishedReviewContext"));
+-        assert!(app.ui_js.contains("previousPublishedFindings"));
+-        assert!(app.ui_js.contains("Do not repeat previous published review comments"));
+-        assert!(app
+-            .ui_js
+-            .contains("You may disagree with or refine those earlier comments"));
+-    }
+-
+-    #[test]
+-    fn bundled_pr_review_keeps_sync_jump_and_manual_comment_flows_clear() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        assert!(app.ui_js.contains("startupSyncing"));
+-        assert!(app.ui_js.contains("pr-status--busy"));
+-        assert!(app.ui_js.contains("function shouldShowShellStatus"));
+-        assert!(app.ui_js.contains("pr-shell--with-status"));
+-        assert!(app.ui_js.contains("function resetSelectedPrTransientUi"));
+-        assert!(app.ui_js.contains("state.data.selectedKey !== nextKey"));
+-        assert!(app.ui_js.contains("statusPublishFailed"));
+-        assert!(app.ui_js.contains("publishedCount > 0"));
+-        assert!(app.ui_js.contains("state.ui.focusedDiffPosition = null"));
+-        assert!(app.ui_js.contains("shouldShowShellStatus() ? '' : renderStatus()"));
+-        assert!(app.ui_js.contains("state.ui.filesExpanded = true"));
+-        assert!(app.ui_js.contains("data-fold=\"files\""));
+-        assert!(app.ui_js.contains("function directOpenBusyReason"));
+-        assert!(app.ui_js.contains("function busyActionReason"));
+-        assert!(app.ui_js.contains("function actionAvailabilityAttrs"));
+-        assert!(app.ui_js.contains("directOpenBusySync"));
+-        assert!(app.ui_js.contains("busyActionSync"));
+-        assert!(app
+-            .ui_js
+-            .contains("aria-disabled=\"${disabledReason ? 'true' : 'false'}\""));
+-        assert!(app.ui_js.contains("data-disabled-reason"));
+-        assert!(app
+-            .ui_js
+-            .contains("const disabledAttrs = busyActionAttrs('open-direct')"));
+-        assert!(!app.ui_js.contains("state.ui.busy ? 'disabled'"));
+-        assert!(!app
+-            .ui_js
+-            .contains("data-action=\"open-direct\" ${state.ui.busy ? 'disabled' : ''}"));
+-        assert!(!app.ui_js.contains("data-action=\"mark-reviewed\""));
+-        assert!(!app.ui_js.contains("markReviewed"));
+-        assert!(app.ui_js.contains("manualCommentExpanded"));
+-        assert!(app.ui_js.contains("data-action=\"toggle-manual-comment\""));
+-        assert!(app
+-            .ui_js
+-            .contains("rows=\"${state.ui.manualCommentExpanded ? 15 : 2}\""));
+-        assert!(app.css.contains(".pr-manual-comment-head"));
+-        assert!(app.css.contains(".pr-status--busy"));
+-        assert!(app.css.contains("grid-template-rows: auto auto minmax(0, 1fr)"));
+-        assert!(app.css.contains(".pr-shell--with-status .pr-main-layout"));
+-        assert!(app.css.contains(".pr-btn[aria-disabled=\"true\"]"));
+-        assert!(app.css.contains(".pr-sync-tile[aria-disabled=\"true\"]"));
+-        assert!(!app
+-            .ui_js
+-            .contains("${renderReviews(snapshot.reviews)}\n        ${renderManualComment()}"));
+-    }
+-
+-    #[test]
+-    fn builtin_app_content_hash_changes_when_assets_change() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-
+-        let changed = super::BuiltinApp {
+-            ui_js: "changed ui",
+-            ..*app
+-        };
+-
+-        assert_ne!(builtin_content_hash(app), builtin_content_hash(&changed));
+-    }
+-
+-    #[test]
+-    fn builtin_seed_decision_uses_content_hash_before_version_marker() {
+-        let app = BUILTIN_APPS
+-            .iter()
+-            .find(|app| app.id == "builtin-pr-review")
+-            .expect("PR Review must be delivered as a built-in MiniApp");
+-        let current_marker = BuiltinInstallMarker {
+-            version: app.version,
+-            hash: builtin_content_hash(app),
+-        };
+-        let content_hash = builtin_content_hash(app);
+-        let stale_hash_marker = BuiltinInstallMarker {
+-            version: app.version,
+-            hash: "sha256:stale".to_string(),
+-        };
+-        let older_version_marker = BuiltinInstallMarker {
+-            version: app.version.saturating_sub(1),
+-            hash: content_hash.clone(),
+-        };
+-
+-        assert!(!should_seed_builtin_app(app, &content_hash, Some(&current_marker)));
+-        assert!(should_seed_builtin_app(app, &content_hash, Some(&stale_hash_marker)));
+-        assert!(should_seed_builtin_app(app, &content_hash, Some(&older_version_marker)));
+-        assert!(should_seed_builtin_app(app, &content_hash, None));
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/compiler.rs b/src/crates/assembly/core/src/miniapp/compiler.rs
+deleted file mode 100644
+index 2f9cb5c..0000000
+--- a/src/crates/assembly/core/src/miniapp/compiler.rs
++++ /dev/null
+@@ -1,37 +0,0 @@
+-//! MiniApp compiler compatibility facade.
+-
+-pub use northhing_product_domains::miniapp::compiler::{
+-    MiniAppCompileError, MiniAppCompileRequest, MiniAppCompileResult,
+-};
+-
+-use crate::miniapp::types::{MiniAppPermissions, MiniAppSource};
+-use crate::util::errors::{NortHingError, NortHingResult};
+-
+-/// Compile MiniApp source into full HTML with Import Map, Runtime Adapter, and CSP injected.
+-pub fn compile(
+-    source: &MiniAppSource,
+-    permissions: &MiniAppPermissions,
+-    app_id: &str,
+-    app_data_dir: &str,
+-    workspace_dir: &str,
+-    theme: &str,
+-) -> NortHingResult<String> {
+-    northhing_product_domains::miniapp::compiler::compile(
+-        source,
+-        permissions,
+-        app_id,
+-        app_data_dir,
+-        workspace_dir,
+-        theme,
+-    )
+-    .map_err(|e| NortHingError::validation(e.to_string()))
+-}
+-
+-pub fn compile_with_request(
+-    source: &MiniAppSource,
+-    permissions: &MiniAppPermissions,
+-    request: &MiniAppCompileRequest,
+-) -> NortHingResult<String> {
+-    northhing_product_domains::miniapp::compiler::compile_with_request(source, permissions, request)
+-        .map_err(|e| NortHingError::validation(e.to_string()))
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/exporter.rs b/src/crates/assembly/core/src/miniapp/exporter.rs
+deleted file mode 100644
+index d19cc98..0000000
+--- a/src/crates/assembly/core/src/miniapp/exporter.rs
++++ /dev/null
+@@ -1,39 +0,0 @@
+-//! MiniApp export engine — export to Electron or Tauri standalone app (skeleton).
+-
+-pub use northhing_product_domains::miniapp::exporter::{
+-    build_export_check_result, ExportCheckResult, ExportOptions, ExportResult, ExportTarget,
+-};
+-
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use std::path::PathBuf;
+-use std::sync::Arc;
+-
+-/// Export engine: check prerequisites and export MiniApp to standalone app.
+-pub struct MiniAppExporter {
+-    // reason: path_manager is held for the upcoming path-resolver integration in the export pipeline; today's export derives paths inline
+-    path_manager: Arc<crate::infrastructure::PathManager>,
+-    // reason: templates_dir is held for the upcoming template-driven export; today's export reads templates from a hardcoded location
+-    templates_dir: PathBuf,
+-}
+-
+-impl MiniAppExporter {
+-    pub fn new(path_manager: Arc<crate::infrastructure::PathManager>, templates_dir: PathBuf) -> Self {
+-        Self {
+-            path_manager,
+-            templates_dir,
+-        }
+-    }
+-
+-    /// Check if export is possible (runtime, electron-builder, etc.).
+-    pub async fn check(&self, _app_id: &str) -> NortHingResult<ExportCheckResult> {
+-        let runtime = crate::miniapp::runtime_detect::detect_runtime();
+-        Ok(build_export_check_result(runtime.as_ref().map(|runtime| &runtime.kind)))
+-    }
+-
+-    /// Export the MiniApp to a standalone application.
+-    pub async fn export(&self, _app_id: &str, _options: ExportOptions) -> NortHingResult<ExportResult> {
+-        Err(NortHingError::validation(
+-            "Export not yet implemented (skeleton)".to_string(),
+-        ))
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/host_dispatch.rs b/src/crates/assembly/core/src/miniapp/host_dispatch.rs
+deleted file mode 100644
+index 6f541f8..0000000
+--- a/src/crates/assembly/core/src/miniapp/host_dispatch.rs
++++ /dev/null
+@@ -1,45 +0,0 @@
+-//! Compatibility adapter for MiniApp host primitive dispatch.
+-//!
+-//! Concrete fs/shell/net/os dispatch lives in `northhing-services-integrations`.
+-
+-use crate::miniapp::types::MiniAppPermissions;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use serde_json::Value;
+-use std::path::{Path, PathBuf};
+-
+-pub use northhing_services_integrations::miniapp::host_dispatch::is_host_primitive;
+-
+-pub async fn dispatch_host(
+-    perms: &MiniAppPermissions,
+-    app_id: &str,
+-    app_data_dir: &Path,
+-    workspace_dir: Option<&Path>,
+-    granted_paths: &[PathBuf],
+-    method: &str,
+-    params: Value,
+-) -> NortHingResult<Value> {
+-    northhing_services_integrations::miniapp::host_dispatch::dispatch_host(
+-        perms,
+-        app_id,
+-        app_data_dir,
+-        workspace_dir,
+-        granted_paths,
+-        method,
+-        params,
+-    )
+-    .await
+-    .map_err(map_host_dispatch_error)
+-}
+-
+-fn map_host_dispatch_error(
+-    err: northhing_services_integrations::miniapp::host_dispatch::MiniAppHostDispatchError,
+-) -> NortHingError {
+-    use northhing_services_integrations::miniapp::host_dispatch::MiniAppHostDispatchErrorKind;
+-
+-    match err.kind() {
+-        MiniAppHostDispatchErrorKind::Parse => NortHingError::parse(err.message().to_string()),
+-        MiniAppHostDispatchErrorKind::Validation => NortHingError::validation(err.message().to_string()),
+-        MiniAppHostDispatchErrorKind::Io => NortHingError::io(err.message().to_string()),
+-        MiniAppHostDispatchErrorKind::Service => NortHingError::service(err.message().to_string()),
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/js_worker.rs b/src/crates/assembly/core/src/miniapp/js_worker.rs
+deleted file mode 100644
+index a7b5508..0000000
+--- a/src/crates/assembly/core/src/miniapp/js_worker.rs
++++ /dev/null
+@@ -1,5 +0,0 @@
+-//! Compatibility facade for MiniApp JS worker processes.
+-
+-pub use northhing_services_integrations::miniapp::worker::{
+-    JsWorker, MiniAppWorkerEvent, MiniAppWorkerEventFuture, MiniAppWorkerEventSink, SharedMiniAppWorkerEventSink,
+-};
+diff --git a/src/crates/assembly/core/src/miniapp/js_worker_pool.rs b/src/crates/assembly/core/src/miniapp/js_worker_pool.rs
+deleted file mode 100644
+index bcd2c63..0000000
+--- a/src/crates/assembly/core/src/miniapp/js_worker_pool.rs
++++ /dev/null
+@@ -1,305 +0,0 @@
+-//! Compatibility facade for the MiniApp JS worker pool.
+-
+-use crate::infrastructure::events::{emit_global_event, BackendEvent};
+-use crate::miniapp::js_worker::{JsWorker, MiniAppWorkerEvent, MiniAppWorkerEventFuture};
+-use crate::miniapp::runtime_detect::DetectedRuntime;
+-use crate::miniapp::types::{NodePermissions, NpmDep};
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use northhing_product_domains::miniapp::ports::{
+-    MiniAppInstallDepsRequest, MiniAppPortError, MiniAppPortErrorKind, MiniAppPortFuture, MiniAppRuntimePort,
+-};
+-pub use northhing_product_domains::miniapp::worker::InstallResult;
+-use northhing_services_integrations::miniapp::worker::{MiniAppWorkerEventSink, SharedMiniAppWorkerEventSink};
+-use northhing_services_integrations::miniapp::worker_pool::{
+-    JsWorkerPool as ServiceJsWorkerPool, MiniAppWorkerPoolError, MiniAppWorkerPoolErrorKind,
+-};
+-use serde_json::Value;
+-use std::path::{Path, PathBuf};
+-use std::sync::Arc;
+-use tokio::sync::Mutex;
+-
+-pub struct JsWorkerPool {
+-    inner: ServiceJsWorkerPool,
+-}
+-
+-impl JsWorkerPool {
+-    pub fn new(
+-        path_manager: Arc<crate::infrastructure::PathManager>,
+-        worker_host_path: PathBuf,
+-    ) -> NortHingResult<Self> {
+-        let event_sink: SharedMiniAppWorkerEventSink = Arc::new(CoreMiniAppWorkerEventSink);
+-        ServiceJsWorkerPool::new(path_manager.miniapps_dir(), worker_host_path, Some(event_sink))
+-            .map(|inner| Self { inner })
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub fn runtime_info(&self) -> &DetectedRuntime {
+-        self.inner.runtime_info()
+-    }
+-
+-    pub async fn get_or_spawn(
+-        &self,
+-        app_id: &str,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        node_perms: Option<&NodePermissions>,
+-    ) -> NortHingResult<Arc<Mutex<JsWorker>>> {
+-        self.inner
+-            .get_or_spawn(app_id, worker_revision, policy_json, node_perms)
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub async fn get_or_spawn_with_app_dir(
+-        &self,
+-        worker_key: &str,
+-        app_id: &str,
+-        app_dir: &Path,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        node_perms: Option<&NodePermissions>,
+-    ) -> NortHingResult<Arc<Mutex<JsWorker>>> {
+-        self.inner
+-            .get_or_spawn_with_app_dir(worker_key, app_id, app_dir, worker_revision, policy_json, node_perms)
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub async fn call(
+-        &self,
+-        app_id: &str,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        permissions: Option<&NodePermissions>,
+-        method: &str,
+-        params: Value,
+-    ) -> NortHingResult<Value> {
+-        self.inner
+-            .call(app_id, worker_revision, policy_json, permissions, method, params)
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub async fn call_with_app_dir(
+-        &self,
+-        worker_key: &str,
+-        app_id: &str,
+-        app_dir: &Path,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        permissions: Option<&NodePermissions>,
+-        method: &str,
+-        params: Value,
+-    ) -> NortHingResult<Value> {
+-        self.inner
+-            .call_with_app_dir(
+-                worker_key,
+-                app_id,
+-                app_dir,
+-                worker_revision,
+-                policy_json,
+-                permissions,
+-                method,
+-                params,
+-            )
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub async fn stop(&self, app_id: &str) {
+-        self.inner.stop(app_id).await;
+-    }
+-
+-    pub async fn list_running(&self) -> Vec<String> {
+-        self.inner.list_running().await
+-    }
+-
+-    pub async fn is_running(&self, app_id: &str) -> bool {
+-        self.inner.is_running(app_id).await
+-    }
+-
+-    pub async fn stop_all(&self) {
+-        self.inner.stop_all().await;
+-    }
+-
+-    pub fn has_installed_deps(&self, app_id: &str) -> bool {
+-        self.inner.has_installed_deps(app_id)
+-    }
+-
+-    pub fn has_installed_deps_in_dir(&self, app_dir: &Path) -> bool {
+-        self.inner.has_installed_deps_in_dir(app_dir)
+-    }
+-
+-    pub async fn install_deps(&self, app_id: &str, deps: &[NpmDep]) -> NortHingResult<InstallResult> {
+-        self.inner
+-            .install_deps(app_id, deps)
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    pub async fn install_deps_in_dir(&self, app_dir: &Path, deps: &[NpmDep]) -> NortHingResult<InstallResult> {
+-        self.inner
+-            .install_deps_in_dir(app_dir, deps)
+-            .await
+-            .map_err(map_worker_pool_error)
+-    }
+-
+-    #[cfg(test)]
+-    fn from_runtime_for_tests(
+-        path_manager: Arc<crate::infrastructure::PathManager>,
+-        worker_host_path: PathBuf,
+-        runtime: DetectedRuntime,
+-    ) -> Self {
+-        Self {
+-            inner: ServiceJsWorkerPool::from_runtime(
+-                path_manager.miniapps_dir(),
+-                worker_host_path,
+-                runtime,
+-                Some(Arc::new(CoreMiniAppWorkerEventSink)),
+-            ),
+-        }
+-    }
+-}
+-
+-impl MiniAppRuntimePort for JsWorkerPool {
+-    fn detect_runtime(&self) -> MiniAppPortFuture<'_, Option<DetectedRuntime>> {
+-        Box::pin(async move { Ok(Some(self.runtime_info().clone())) })
+-    }
+-
+-    fn install_deps(&self, request: MiniAppInstallDepsRequest) -> MiniAppPortFuture<'_, InstallResult> {
+-        Box::pin(async move {
+-            self.install_deps(&request.app_id, &request.dependencies)
+-                .await
+-                .map_err(map_miniapp_runtime_port_error)
+-        })
+-    }
+-}
+-
+-fn map_worker_pool_error(error: MiniAppWorkerPoolError) -> NortHingError {
+-    match error.kind() {
+-        MiniAppWorkerPoolErrorKind::NotFound => NortHingError::NotFound(error.message().to_string()),
+-        MiniAppWorkerPoolErrorKind::Validation => NortHingError::validation(error.message().to_string()),
+-        MiniAppWorkerPoolErrorKind::Io => NortHingError::io(error.message().to_string()),
+-        MiniAppWorkerPoolErrorKind::RuntimeUnavailable => NortHingError::ProcessError(error.message().to_string()),
+-        MiniAppWorkerPoolErrorKind::Backend => NortHingError::service(error.message().to_string()),
+-    }
+-}
+-
+-fn map_miniapp_runtime_port_error(error: NortHingError) -> MiniAppPortError {
+-    let kind = match &error {
+-        NortHingError::NotFound(_) => MiniAppPortErrorKind::NotFound,
+-        NortHingError::Validation(_) | NortHingError::Deserialization(_) => MiniAppPortErrorKind::InvalidInput,
+-        NortHingError::Io(io_error) if io_error.kind() == std::io::ErrorKind::PermissionDenied => {
+-            MiniAppPortErrorKind::PermissionDenied
+-        }
+-        NortHingError::Io(_) => MiniAppPortErrorKind::Io,
+-        NortHingError::ProcessError(_) | NortHingError::Timeout(_) => MiniAppPortErrorKind::RuntimeUnavailable,
+-        _ => MiniAppPortErrorKind::Backend,
+-    };
+-    MiniAppPortError::new(kind, error.to_string())
+-}
+-
+-struct CoreMiniAppWorkerEventSink;
+-
+-impl MiniAppWorkerEventSink for CoreMiniAppWorkerEventSink {
+-    fn emit_worker_event<'a>(&'a self, event: MiniAppWorkerEvent) -> MiniAppWorkerEventFuture<'a> {
+-        Box::pin(async move {
+-            let event_full_name = format!("miniapp://worker-event:{}", event.app_id);
+-            let payload = serde_json::json!({
+-                "appId": event.app_id,
+-                "event": event.event,
+-                "data": event.data,
+-            });
+-            let _ = emit_global_event(BackendEvent::Custom {
+-                event_name: event_full_name,
+-                payload,
+-            })
+-            .await;
+-        })
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_product_domains::miniapp::runtime::RuntimeKind;
+-    use northhing_test_support::TestTempDir;
+-    use std::fs;
+-
+-    #[tokio::test]
+-    async fn runtime_port_adapter_preserves_existing_runtime_and_noop_install() {
+-        let root = TestTempDir::new("northhing-miniapp-runtime-port");
+-        let path_manager = Arc::new(crate::infrastructure::PathManager::with_user_root_for_tests(
+-            root.path().to_path_buf(),
+-        ));
+-        let app_id = "demo_app";
+-        tokio::fs::create_dir_all(path_manager.miniapp_dir(app_id))
+-            .await
+-            .unwrap();
+-        let pool = JsWorkerPool::from_runtime_for_tests(
+-            path_manager,
+-            PathBuf::from("worker-host.js"),
+-            DetectedRuntime {
+-                kind: RuntimeKind::Node,
+-                path: PathBuf::from("node"),
+-                version: "v20.0.0".to_string(),
+-            },
+-        );
+-        let port: &dyn MiniAppRuntimePort = &pool;
+-
+-        let runtime = port.detect_runtime().await.unwrap().unwrap();
+-        assert_eq!(runtime.kind, RuntimeKind::Node);
+-        assert_eq!(runtime.version, "v20.0.0");
+-
+-        let result = port
+-            .install_deps(MiniAppInstallDepsRequest {
+-                app_id: app_id.to_string(),
+-                dependencies: vec![NpmDep {
+-                    name: "lodash".to_string(),
+-                    version: "^4.17.21".to_string(),
+-                }],
+-            })
+-            .await
+-            .unwrap();
+-        assert!(result.success);
+-        assert!(result.stdout.is_empty());
+-        assert!(result.stderr.is_empty());
+-    }
+-
+-    #[tokio::test]
+-    async fn install_deps_in_dir_noops_without_package_json() {
+-        let root = TestTempDir::new("northhing-miniapp-runtime-draft-port");
+-        let path_manager = Arc::new(crate::infrastructure::PathManager::with_user_root_for_tests(
+-            root.path().to_path_buf(),
+-        ));
+-        let draft_dir = path_manager
+-            .miniapps_dir()
+-            .join(".drafts")
+-            .join("demo_app")
+-            .join("draft_1");
+-        tokio::fs::create_dir_all(&draft_dir).await.unwrap();
+-        let pool = JsWorkerPool::from_runtime_for_tests(
+-            path_manager,
+-            PathBuf::from("worker-host.js"),
+-            DetectedRuntime {
+-                kind: RuntimeKind::Node,
+-                path: PathBuf::from("node"),
+-                version: "v20.0.0".to_string(),
+-            },
+-        );
+-
+-        let result = pool
+-            .install_deps_in_dir(
+-                &draft_dir,
+-                &[NpmDep {
+-                    name: "lodash".to_string(),
+-                    version: "^4.17.21".to_string(),
+-                }],
+-            )
+-            .await
+-            .unwrap();
+-        assert!(result.success);
+-        assert!(result.stdout.is_empty());
+-        assert!(result.stderr.is_empty());
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs b/src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs
+deleted file mode 100644
+index b1e6481..0000000
+--- a/src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs
++++ /dev/null
+@@ -1,401 +0,0 @@
+-//! Lifecycle / write-side operations on [`MiniAppManager`]:
+-//! create, update, delete, draft create/sync/permission/apply/discard,
+-//! app and draft KV storage, customization metadata, builtin-update flow,
+-//! mark-deps-installed / clear-worker-restart, rollback, recompile, sync-from-fs,
+-//! and import-from-path.
+-//!
+-//! Everything in here goes through `runtime_facade()` for persistence; errors
+-//! are normalised through [`super::mgr_types::map_miniapp_port_error`].
+-
+-use super::mgr_types::map_miniapp_port_error;
+-use super::MiniAppManager;
+-use crate::miniapp::types::{MiniApp, MiniAppAiContext, MiniAppPermissions, MiniAppSource};
+-use crate::util::errors::NortHingResult;
+-use chrono::Utc;
+-use northhing_product_domains::miniapp::customization::MiniAppCustomizationMetadata;
+-use northhing_product_domains::miniapp::draft::MiniAppDraft;
+-use northhing_product_domains::miniapp::lifecycle::{MiniAppCreateInput, MiniAppUpdatePatch};
+-use northhing_product_domains::miniapp::ports::MiniAppImportFromPathRequest;
+-use std::path::{Path, PathBuf};
+-use uuid::Uuid;
+-
+-impl MiniAppManager {
+-    /// Create a new MiniApp (generates id, sets created_at/updated_at, compiles).
+-    #[allow(clippy::too_many_arguments)]
+-    pub async fn create(
+-        &self,
+-        name: String,
+-        description: String,
+-        icon: String,
+-        category: String,
+-        tags: Vec<String>,
+-        source: MiniAppSource,
+-        permissions: MiniAppPermissions,
+-        ai_context: Option<MiniAppAiContext>,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniApp> {
+-        let id = Uuid::new_v4().to_string();
+-        let now = Utc::now().timestamp_millis();
+-
+-        let compiled_html = self.compile_source(&id, &source, &permissions, "dark", workspace_root)?;
+-
+-        self.runtime_facade()
+-            .create_app(
+-                id,
+-                MiniAppCreateInput {
+-                    name,
+-                    description,
+-                    icon,
+-                    category,
+-                    tags,
+-                    source,
+-                    permissions,
+-                    ai_context,
+-                },
+-                compiled_html,
+-                now,
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Update existing MiniApp (increment version, recompile, save).
+-    #[allow(clippy::too_many_arguments)]
+-    pub async fn update(
+-        &self,
+-        app_id: &str,
+-        name: Option<String>,
+-        description: Option<String>,
+-        icon: Option<String>,
+-        category: Option<String>,
+-        tags: Option<Vec<String>>,
+-        source: Option<MiniAppSource>,
+-        permissions: Option<MiniAppPermissions>,
+-        ai_context: Option<MiniAppAiContext>,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniApp> {
+-        let previous_app = self.storage.load(app_id).await?;
+-        let patch = MiniAppUpdatePatch {
+-            name,
+-            description,
+-            icon,
+-            category,
+-            tags,
+-            source,
+-            permissions,
+-            ai_context,
+-        };
+-        let now = Utc::now().timestamp_millis();
+-        let compiled_html = self.compile_source(
+-            app_id,
+-            patch.source_for_compile(&previous_app),
+-            patch.permissions_for_compile(&previous_app),
+-            "dark",
+-            workspace_root,
+-        )?;
+-        self.runtime_facade()
+-            .persist_update_result_for_app(app_id.to_string(), previous_app, patch, compiled_html, now)
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Delete MiniApp and its directory.
+-    pub async fn delete(&self, app_id: &str) -> NortHingResult<()> {
+-        self.granted_paths.write().await.remove(app_id);
+-        self.storage.delete(app_id).await
+-    }
+-
+-    /// Get app storage (KV) value.
+-    pub async fn get_storage(&self, app_id: &str, key: &str) -> NortHingResult<serde_json::Value> {
+-        let storage = self.storage.load_app_storage(app_id).await?;
+-        Ok(storage.get(key).cloned().unwrap_or(serde_json::Value::Null))
+-    }
+-
+-    /// Set app storage (KV) value.
+-    pub async fn set_storage(&self, app_id: &str, key: &str, value: serde_json::Value) -> NortHingResult<()> {
+-        self.storage.save_app_storage(app_id, key, value).await
+-    }
+-
+-    pub async fn get_draft_storage(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        key: &str,
+-    ) -> NortHingResult<serde_json::Value> {
+-        let storage = self.storage.load_draft_storage(app_id, draft_id).await?;
+-        Ok(storage.get(key).cloned().unwrap_or(serde_json::Value::Null))
+-    }
+-
+-    pub async fn set_draft_storage(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        key: &str,
+-        value: serde_json::Value,
+-    ) -> NortHingResult<()> {
+-        self.storage.save_draft_storage(app_id, draft_id, key, value).await
+-    }
+-
+-    pub async fn create_draft(
+-        &self,
+-        app_id: &str,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniAppDraft> {
+-        let app = self.get(app_id).await?;
+-        let now = Utc::now().timestamp_millis();
+-        let draft_id = Uuid::new_v4().to_string();
+-        let compiled_html = self.compile_source_with_app_data_dir(
+-            app_id,
+-            &self.storage.draft_dir(app_id, &draft_id),
+-            &app.source,
+-            &app.permissions,
+-            theme,
+-            workspace_root,
+-        )?;
+-        let draft_root = self.storage.draft_dir(app_id, &draft_id).to_string_lossy().to_string();
+-        self.runtime_facade()
+-            .persist_draft_for_app(app_id.to_string(), draft_id, draft_root, app, compiled_html, now)
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn get_draft(&self, app_id: &str, draft_id: &str) -> NortHingResult<MiniAppDraft> {
+-        self.runtime_facade()
+-            .get_draft(
+-                app_id.to_string(),
+-                draft_id.to_string(),
+-                self.draft_root_string(app_id, draft_id),
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn sync_draft_from_fs(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniAppDraft> {
+-        let draft = self.get_draft(app_id, draft_id).await?;
+-        let now = Utc::now().timestamp_millis();
+-        let compiled_html = self.compile_source_with_app_data_dir(
+-            app_id,
+-            &self.storage.draft_dir(app_id, draft_id),
+-            &draft.app.source,
+-            &draft.app.permissions,
+-            theme,
+-            workspace_root,
+-        )?;
+-        self.runtime_facade()
+-            .persist_draft_source_sync_result(draft, compiled_html, now)
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn set_draft_permissions(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        permissions: MiniAppPermissions,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniAppDraft> {
+-        let draft = self.get_draft(app_id, draft_id).await?;
+-        let now = Utc::now().timestamp_millis();
+-        let compiled_html = self.compile_source_with_app_data_dir(
+-            app_id,
+-            &self.storage.draft_dir(app_id, draft_id),
+-            &draft.app.source,
+-            &permissions,
+-            theme,
+-            workspace_root,
+-        )?;
+-        self.runtime_facade()
+-            .persist_draft_permission_update_result(draft, permissions, compiled_html, now)
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn permission_diff_for_draft(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-    ) -> NortHingResult<northhing_product_domains::miniapp::customization::MiniAppPermissionDiff> {
+-        self.runtime_facade()
+-            .permission_diff_for_draft(app_id.to_string(), draft_id.to_string())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn apply_draft(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniApp> {
+-        let current = self.get(app_id).await?;
+-        let draft_app = self.storage.load_draft_app(app_id, draft_id).await?;
+-        let now = Utc::now().timestamp_millis();
+-        let compiled_html =
+-            self.compile_source(app_id, &draft_app.source, &draft_app.permissions, theme, workspace_root)?;
+-        self.runtime_facade()
+-            .apply_draft_app(
+-                current,
+-                draft_id.to_string(),
+-                draft_app,
+-                compiled_html,
+-                self.customization_baseline(app_id),
+-                now,
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn discard_draft(&self, app_id: &str, draft_id: &str) -> NortHingResult<()> {
+-        self.runtime_facade()
+-            .discard_draft(app_id.to_string(), draft_id.to_string())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn mark_stale_drafts_for_cleanup(&self) -> NortHingResult<Vec<PathBuf>> {
+-        self.storage.mark_stale_drafts_for_cleanup().await
+-    }
+-
+-    pub async fn cleanup_marked_drafts(&self, targets: Vec<PathBuf>) -> NortHingResult<()> {
+-        self.storage.cleanup_marked_drafts(targets).await
+-    }
+-
+-    pub async fn load_customization_metadata(
+-        &self,
+-        app_id: &str,
+-    ) -> NortHingResult<Option<MiniAppCustomizationMetadata>> {
+-        self.storage.load_customization_metadata(app_id).await
+-    }
+-
+-    pub async fn save_customization_metadata(
+-        &self,
+-        app_id: &str,
+-        metadata: &MiniAppCustomizationMetadata,
+-    ) -> NortHingResult<()> {
+-        self.storage.save_customization_metadata(app_id, metadata).await
+-    }
+-
+-    pub async fn mark_builtin_update_available(
+-        &self,
+-        app_id: &str,
+-        builtin_version: u32,
+-        source_hash: &str,
+-        detected_at: i64,
+-    ) -> NortHingResult<bool> {
+-        self.runtime_facade()
+-            .mark_builtin_update_available(
+-                app_id.to_string(),
+-                builtin_version,
+-                source_hash.to_string(),
+-                detected_at,
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn decline_builtin_update(
+-        &self,
+-        app_id: &str,
+-        builtin_version: u32,
+-        source_hash: &str,
+-        declined_at: i64,
+-    ) -> NortHingResult<Option<MiniAppCustomizationMetadata>> {
+-        self.runtime_facade()
+-            .decline_builtin_update(
+-                app_id.to_string(),
+-                builtin_version,
+-                source_hash.to_string(),
+-                declined_at,
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn mark_deps_installed(&self, app_id: &str) -> NortHingResult<MiniApp> {
+-        self.runtime_facade()
+-            .mark_deps_installed(app_id.to_string())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn clear_worker_restart_required(&self, app_id: &str) -> NortHingResult<MiniApp> {
+-        self.runtime_facade()
+-            .clear_worker_restart_required(app_id.to_string())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Rollback app to a previous version (loads version snapshot, saves as current).
+-    pub async fn rollback(&self, app_id: &str, version: u32) -> NortHingResult<MiniApp> {
+-        let now = Utc::now().timestamp_millis();
+-        self.runtime_facade()
+-            .rollback(app_id.to_string(), version, now)
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Recompile app (e.g. after workspace or theme change). Updates compiled_html and saves.
+-    pub async fn recompile(&self, app_id: &str, theme: &str, workspace_root: Option<&Path>) -> NortHingResult<MiniApp> {
+-        let app = self.storage.load(app_id).await?;
+-        let compiled_html = self.compile_source(app_id, &app.source, &app.permissions, theme, workspace_root)?;
+-        self.runtime_facade()
+-            .persist_recompile_result_for_app(app, compiled_html, Utc::now().timestamp_millis())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    pub async fn sync_from_fs(
+-        &self,
+-        app_id: &str,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniApp> {
+-        let previous_app = self.storage.load(app_id).await?;
+-        let source = self.storage.load_source_only(app_id).await?;
+-        let compiled_html = self.compile_source(app_id, &source, &previous_app.permissions, theme, workspace_root)?;
+-        self.runtime_facade()
+-            .persist_sync_from_fs_result_for_app(
+-                app_id.to_string(),
+-                previous_app,
+-                source,
+-                compiled_html,
+-                Utc::now().timestamp_millis(),
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Import a MiniApp from a directory (e.g. miniapps/git-graph). Copies meta, source, package.json, storage into a new app id and recompiles.
+-    pub async fn import_from_path(
+-        &self,
+-        source_path: PathBuf,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<MiniApp> {
+-        let id = Uuid::new_v4().to_string();
+-        let imported_at = Utc::now().timestamp_millis();
+-        self.runtime_facade()
+-            .import_from_path(
+-                &self.storage,
+-                self,
+-                MiniAppImportFromPathRequest {
+-                    source_path,
+-                    app_id: id,
+-                    theme: "dark".to_string(),
+-                    workspace_root: workspace_root.map(Path::to_path_buf),
+-                    imported_at,
+-                    recompiled_at: Utc::now().timestamp_millis(),
+-                },
+-            )
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/manager/mgr_registry.rs b/src/crates/assembly/core/src/miniapp/manager/mgr_registry.rs
+deleted file mode 100644
+index 50f4287..0000000
+--- a/src/crates/assembly/core/src/miniapp/manager/mgr_registry.rs
++++ /dev/null
+@@ -1,40 +0,0 @@
+-//! Read-side lookups on [`MiniAppManager`]: list metadata, load full app by id,
+-//! list version numbers, and the small `draft_dir` helpers used by the
+-//! lifecycle and draft modules.
+-
+-use super::mgr_types::map_miniapp_port_error;
+-use super::MiniAppManager;
+-use crate::miniapp::types::MiniAppMeta;
+-use crate::util::errors::NortHingResult;
+-use std::path::PathBuf;
+-
+-impl MiniAppManager {
+-    /// List all MiniApp metadata.
+-    pub async fn list(&self) -> NortHingResult<Vec<MiniAppMeta>> {
+-        self.runtime_facade()
+-            .list_metadata()
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// Get full MiniApp by id.
+-    pub async fn get(&self, app_id: &str) -> NortHingResult<crate::miniapp::types::MiniApp> {
+-        self.runtime_facade()
+-            .load_app_ensuring_runtime_state(app_id.to_string())
+-            .await
+-            .map_err(map_miniapp_port_error)
+-    }
+-
+-    /// List version numbers for an app.
+-    pub async fn list_versions(&self, app_id: &str) -> NortHingResult<Vec<u32>> {
+-        self.storage.list_versions(app_id).await
+-    }
+-
+-    pub fn draft_dir(&self, app_id: &str, draft_id: &str) -> PathBuf {
+-        self.storage.draft_dir(app_id, draft_id)
+-    }
+-
+-    pub(super) fn draft_root_string(&self, app_id: &str, draft_id: &str) -> String {
+-        self.storage.draft_dir(app_id, draft_id).to_string_lossy().to_string()
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs b/src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs
+deleted file mode 100644
+index d88b344..0000000
+--- a/src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs
++++ /dev/null
+@@ -1,126 +0,0 @@
+-//! Runtime-side helpers on [`MiniAppManager`]:
+-//! compile sources, resolve permission policy, manage user-granted paths,
+-//! plus the [`MiniAppCompilePort`] trait impl and the worker-revision builder.
+-
+-use super::mgr_types::map_northhing_error_to_miniapp_port_error;
+-use super::MiniAppManager;
+-use crate::miniapp::compiler::{compile_with_request, MiniAppCompileRequest};
+-use crate::miniapp::permission_policy::{resolve_policy_with_request, MiniAppPermissionPolicyRequest};
+-use crate::miniapp::types::{MiniAppPermissions, MiniAppSource};
+-use crate::miniapp::BUILTIN_APPS;
+-use crate::product_domain_runtime::CoreProductDomainRuntime;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use northhing_product_domains::miniapp::customization::MiniAppCustomizationBaseline;
+-use northhing_product_domains::miniapp::lifecycle::build_worker_revision;
+-use northhing_product_domains::miniapp::ports::{MiniAppCompilePort, MiniAppPortFuture};
+-use std::path::{Path, PathBuf};
+-
+-impl MiniAppManager {
+-    pub(super) fn runtime_facade(&self) -> northhing_product_domains::miniapp::ports::MiniAppRuntimeFacade<'_> {
+-        CoreProductDomainRuntime::miniapp_runtime_facade(&self.storage)
+-    }
+-
+-    pub fn build_worker_revision(&self, app: &crate::miniapp::types::MiniApp, policy_json: &str) -> String {
+-        build_worker_revision(app, policy_json)
+-    }
+-
+-    pub fn compile_source(
+-        &self,
+-        app_id: &str,
+-        source: &MiniAppSource,
+-        permissions: &MiniAppPermissions,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<String> {
+-        let app_data_dir = self.path_manager.miniapp_dir(app_id);
+-        let request = MiniAppCompileRequest::from_paths(app_id, &app_data_dir, workspace_root, theme);
+-        compile_with_request(source, permissions, &request)
+-    }
+-
+-    pub(super) fn compile_source_with_app_data_dir(
+-        &self,
+-        app_id: &str,
+-        app_data_dir: &Path,
+-        source: &MiniAppSource,
+-        permissions: &MiniAppPermissions,
+-        theme: &str,
+-        workspace_root: Option<&Path>,
+-    ) -> NortHingResult<String> {
+-        let request = MiniAppCompileRequest::from_paths(app_id, app_data_dir, workspace_root, theme);
+-        compile_with_request(source, permissions, &request)
+-    }
+-
+-    /// Resolve permission policy for the given app (for JS Worker startup).
+-    pub async fn resolve_policy_for_app(
+-        &self,
+-        app_id: &str,
+-        permissions: &MiniAppPermissions,
+-        workspace_root: Option<&Path>,
+-    ) -> serde_json::Value {
+-        let app_data_dir = self.path_manager.miniapp_dir(app_id);
+-        let gp = self.granted_paths.read().await;
+-        let granted = gp.get(app_id).map(Vec::as_slice).unwrap_or(&[]);
+-        let request = MiniAppPermissionPolicyRequest::from_paths(app_id, &app_data_dir, workspace_root, granted);
+-        resolve_policy_with_request(permissions, &request)
+-    }
+-
+-    pub async fn resolve_policy_for_draft(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        permissions: &MiniAppPermissions,
+-        workspace_root: Option<&Path>,
+-    ) -> serde_json::Value {
+-        let app_data_dir = self.storage.draft_dir(app_id, draft_id);
+-        let gp = self.granted_paths.read().await;
+-        let granted = gp.get(app_id).map(Vec::as_slice).unwrap_or(&[]);
+-        let request = MiniAppPermissionPolicyRequest::from_paths(app_id, &app_data_dir, workspace_root, granted);
+-        resolve_policy_with_request(permissions, &request)
+-    }
+-
+-    /// Snapshot of user-granted extra paths for an app (used by the host-side dispatch
+-    /// to mirror what `resolve_policy_for_app` would inject into the worker policy).
+-    pub async fn granted_paths_for_app(&self, app_id: &str) -> Vec<PathBuf> {
+-        let gp = self.granted_paths.read().await;
+-        gp.get(app_id).cloned().unwrap_or_default()
+-    }
+-
+-    /// Grant workspace access for an app (no-op; workspace context is supplied by caller).
+-    pub async fn grant_workspace(&self, _app_id: &str) {}
+-
+-    /// Grant path (user-selected) for an app.
+-    pub async fn grant_path(&self, app_id: &str, path: PathBuf) {
+-        let mut guard = self.granted_paths.write().await;
+-        let list = guard.entry(app_id.to_string()).or_default();
+-        if !list.contains(&path) {
+-            list.push(path);
+-        }
+-    }
+-
+-    pub(super) fn customization_baseline(&self, app_id: &str) -> MiniAppCustomizationBaseline {
+-        if let Some(builtin) = BUILTIN_APPS.iter().find(|builtin| builtin.id == app_id) {
+-            MiniAppCustomizationBaseline::Builtin {
+-                builtin_id: builtin.id.to_string(),
+-                builtin_version: builtin.version,
+-            }
+-        } else {
+-            MiniAppCustomizationBaseline::UserCreated
+-        }
+-    }
+-}
+-
+-impl MiniAppCompilePort for MiniAppManager {
+-    fn compile_app(
+-        &self,
+-        app_id: String,
+-        source: MiniAppSource,
+-        permissions: MiniAppPermissions,
+-        theme: String,
+-        workspace_root: Option<PathBuf>,
+-    ) -> MiniAppPortFuture<'_, String> {
+-        Box::pin(async move {
+-            self.compile_source(&app_id, &source, &permissions, &theme, workspace_root.as_deref())
+-                .map_err(|error: NortHingError| map_northhing_error_to_miniapp_port_error(error))
+-        })
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/manager/mgr_types.rs b/src/crates/assembly/core/src/miniapp/manager/mgr_types.rs
+deleted file mode 100644
+index 02984bb..0000000
+--- a/src/crates/assembly/core/src/miniapp/manager/mgr_types.rs
++++ /dev/null
+@@ -1,61 +0,0 @@
+-//! Error mapping helpers shared across the [`super`] siblings.
+-//!
+-//! Translates between [`NortHingError`] and the `MiniAppPortError` contract type, plus a
+-//! small prefix-stripping helper that keeps downstream error messages consistent
+-//! regardless of which side produced them.
+-
+-use crate::util::errors::NortHingError;
+-use northhing_product_domains::miniapp::ports::{MiniAppPortError, MiniAppPortErrorKind};
+-
+-/// Convert a [`NortHingError`] into the miniapp-port error contract type.
+-pub(super) fn map_northhing_error_to_miniapp_port_error(error: NortHingError) -> MiniAppPortError {
+-    let kind = match &error {
+-        NortHingError::NotFound(_) => MiniAppPortErrorKind::NotFound,
+-        NortHingError::Validation(_) => MiniAppPortErrorKind::InvalidInput,
+-        NortHingError::Deserialization(_) | NortHingError::Serialization(_) => MiniAppPortErrorKind::Deserialization,
+-        NortHingError::Io(io_error) if io_error.kind() == std::io::ErrorKind::PermissionDenied => {
+-            MiniAppPortErrorKind::PermissionDenied
+-        }
+-        NortHingError::Io(_) => MiniAppPortErrorKind::Io,
+-        NortHingError::ProcessError(_) => MiniAppPortErrorKind::RuntimeUnavailable,
+-        _ => MiniAppPortErrorKind::Backend,
+-    };
+-    MiniAppPortError::new(kind, error.to_string())
+-}
+-
+-/// Convert a miniapp-port error back into a [`NortHingError`].
+-pub(super) fn map_miniapp_port_error(error: MiniAppPortError) -> NortHingError {
+-    let message = strip_northhing_error_prefix(error.message);
+-    match error.kind {
+-        MiniAppPortErrorKind::NotFound => NortHingError::NotFound(message),
+-        MiniAppPortErrorKind::InvalidInput => NortHingError::validation(message),
+-        MiniAppPortErrorKind::Deserialization => NortHingError::parse(message),
+-        MiniAppPortErrorKind::PermissionDenied => {
+-            NortHingError::Io(std::io::Error::new(std::io::ErrorKind::PermissionDenied, message))
+-        }
+-        MiniAppPortErrorKind::RuntimeUnavailable => NortHingError::ProcessError(message),
+-        MiniAppPortErrorKind::Io => NortHingError::io(message),
+-        MiniAppPortErrorKind::Backend => NortHingError::service(message),
+-    }
+-}
+-
+-/// Strip a leading `Not found: ` / `Validation error: ` / `IO error: ` / etc.
+-/// prefix so that downstream code sees the original message without
+-/// double-prefixing on the round-trip.
+-pub(super) fn strip_northhing_error_prefix(message: String) -> String {
+-    const PREFIXES: &[&str] = &[
+-        "Not found: ",
+-        "Validation error: ",
+-        "Deserialization error: ",
+-        "IO error: ",
+-        "Process error: ",
+-        "Service error: ",
+-    ];
+-
+-    for prefix in PREFIXES {
+-        if let Some(stripped) = message.strip_prefix(prefix) {
+-            return stripped.to_string();
+-        }
+-    }
+-    message
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/manager/mod.rs b/src/crates/assembly/core/src/miniapp/manager/mod.rs
+deleted file mode 100644
+index 3d8e1de..0000000
+--- a/src/crates/assembly/core/src/miniapp/manager/mod.rs
++++ /dev/null
+@@ -1,514 +0,0 @@
+-//! MiniApp manager: facade over compile / policy / registry / lifecycle modules.
+-//!
+-//! Implementation is split across sibling files within this directory:
+-//! - [`mgr_runtime`]   compile, policy resolution, grant tracking, port trait impl
+-//! - [`mgr_registry`]  read-side lookups (list / get / versions / draft paths)
+-//! - [`mgr_lifecycle`] create / update / delete / draft / storage / rollback / import
+-//! - [`mgr_types`]     error mapping helpers (miniapp port errors <-> `NortHingError`)
+-//!
+-//! Public surface stays on this facade: struct, [`new`], [`path_manager`],
+-//! global initialiser/getter.
+-
+-use std::sync::{Arc, OnceLock};
+-
+-mod mgr_lifecycle;
+-mod mgr_registry;
+-mod mgr_runtime;
+-mod mgr_types;
+-
+-static GLOBAL_MINIAPP_MANAGER: OnceLock<Arc<MiniAppManager>> = OnceLock::new();
+-
+-/// Initialize the global MiniAppManager (called once at startup from Tauri app_state).
+-pub fn initialize_global_miniapp_manager(manager: Arc<MiniAppManager>) {
+-    let _ = GLOBAL_MINIAPP_MANAGER.set(manager);
+-}
+-
+-/// Get the global MiniAppManager, returning None if not initialized.
+-pub fn try_get_global_miniapp_manager() -> Option<Arc<MiniAppManager>> {
+-    GLOBAL_MINIAPP_MANAGER.get().cloned()
+-}
+-
+-/// MiniApp manager: create, read, update, delete, list, compile, rollback.
+-pub struct MiniAppManager {
+-    pub(super) storage: crate::miniapp::storage::MiniAppStorage,
+-    pub(super) path_manager: Arc<crate::infrastructure::PathManager>,
+-    /// User-granted paths per app (for resolve_policy).
+-    pub(super) granted_paths: tokio::sync::RwLock<std::collections::HashMap<String, Vec<std::path::PathBuf>>>,
+-}
+-
+-impl MiniAppManager {
+-    pub fn new(path_manager: Arc<crate::infrastructure::PathManager>) -> Self {
+-        let storage = crate::miniapp::storage::MiniAppStorage::new(path_manager.clone());
+-        Self {
+-            storage,
+-            path_manager,
+-            granted_paths: tokio::sync::RwLock::new(std::collections::HashMap::new()),
+-        }
+-    }
+-
+-    /// Get the path manager (for external callers that need paths like miniapp_dir).
+-    pub fn path_manager(&self) -> &Arc<crate::infrastructure::PathManager> {
+-        &self.path_manager
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use crate::miniapp::types::{FsPermissions, MiniAppMeta, MiniAppPermissions, MiniAppSource, NpmDep};
+-    use northhing_product_domains::miniapp::storage::{
+-        COMPILED_HTML, DRAFT_JSON, ESM_DEPS_JSON, INDEX_HTML, META_JSON, PACKAGE_JSON, SOURCE_DIR, STORAGE_JSON,
+-        STYLE_CSS, UI_JS, WORKER_JS,
+-    };
+-
+-    fn test_manager() -> MiniAppManager {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-manager-draft-{}", uuid::Uuid::new_v4()));
+-        let path_manager = Arc::new(crate::infrastructure::PathManager::with_user_root_for_tests(root));
+-        MiniAppManager::new(path_manager)
+-    }
+-
+-    fn sample_source(css: &str) -> MiniAppSource {
+-        MiniAppSource {
+-            html: "<!DOCTYPE html><html><head></head><body><div id=\"app\"></div></body></html>".to_string(),
+-            css: css.to_string(),
+-            ui_js: "document.getElementById('app').textContent = 'demo';".to_string(),
+-            esm_dependencies: Vec::new(),
+-            worker_js: String::new(),
+-            npm_dependencies: Vec::new(),
+-        }
+-    }
+-
+-    async fn create_sample_app(manager: &MiniAppManager) -> crate::miniapp::types::MiniApp {
+-        manager
+-            .create(
+-                "Demo".to_string(),
+-                "Demo app".to_string(),
+-                "box".to_string(),
+-                "utility".to_string(),
+-                vec!["demo".to_string()],
+-                sample_source("body { color: black; }"),
+-                MiniAppPermissions::default(),
+-                None,
+-                None,
+-            )
+-            .await
+-            .expect("invariant: manager.create in create_sample_app helper succeeds")
+-    }
+-
+-    #[test]
+-    fn miniapp_port_error_mapping_preserves_manager_error_shape() {
+-        let not_found =
+-            super::mgr_types::map_miniapp_port_error(northhing_product_domains::miniapp::ports::MiniAppPortError::new(
+-                northhing_product_domains::miniapp::ports::MiniAppPortErrorKind::NotFound,
+-                "Not found: MiniApp not found: missing",
+-            ));
+-        assert_eq!(not_found.to_string(), "Not found: MiniApp not found: missing");
+-
+-        let deserialization =
+-            super::mgr_types::map_miniapp_port_error(northhing_product_domains::miniapp::ports::MiniAppPortError::new(
+-                northhing_product_domains::miniapp::ports::MiniAppPortErrorKind::Deserialization,
+-                "Deserialization error: Invalid draft manifest",
+-            ));
+-        assert_eq!(
+-            deserialization.to_string(),
+-            "Deserialization error: Invalid draft manifest"
+-        );
+-
+-        let permission_denied =
+-            super::mgr_types::map_miniapp_port_error(northhing_product_domains::miniapp::ports::MiniAppPortError::new(
+-                northhing_product_domains::miniapp::ports::MiniAppPortErrorKind::PermissionDenied,
+-                "IO error: access denied",
+-            ));
+-        match permission_denied {
+-            crate::util::errors::NortHingError::Io(error) => {
+-                assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+-                assert_eq!(error.to_string(), "access denied");
+-            }
+-            other => panic!("expected permission denied IO error, got {other:?}"),
+-        }
+-    }
+-
+-    async fn write_import_source(root: &std::path::Path) {
+-        let source_dir = root.join(SOURCE_DIR);
+-        tokio::fs::create_dir_all(&source_dir)
+-            .await
+-            .expect("invariant: tokio::fs::create_dir_all succeeds");
+-        let meta = MiniAppMeta {
+-            id: "template-id".to_string(),
+-            name: "Imported".to_string(),
+-            description: "Imported app".to_string(),
+-            icon: "box".to_string(),
+-            category: "utility".to_string(),
+-            tags: vec!["imported".to_string()],
+-            version: 7,
+-            created_at: 11,
+-            updated_at: 12,
+-            permissions: MiniAppPermissions::default(),
+-            ai_context: None,
+-            runtime: Default::default(),
+-            i18n: None,
+-        };
+-        tokio::fs::write(
+-            root.join(META_JSON),
+-            serde_json::to_string_pretty(&meta).expect("invariant: serde_json serialization succeeds"),
+-        )
+-        .await
+-        .expect("invariant: tokio::fs::write succeeds");
+-        tokio::fs::write(
+-            source_dir.join(INDEX_HTML),
+-            "<!DOCTYPE html><html><head></head><body><div id=\"app\"></div></body></html>",
+-        )
+-        .await
+-        .expect("invariant: tokio::fs::write succeeds");
+-        tokio::fs::write(source_dir.join(STYLE_CSS), "body { color: blue; }")
+-            .await
+-            .expect("invariant: tokio::fs::write succeeds");
+-        tokio::fs::write(
+-            source_dir.join(UI_JS),
+-            "document.getElementById('app').textContent = 'imported';",
+-        )
+-        .await
+-        .expect("invariant: tokio::fs::write succeeds");
+-        tokio::fs::write(source_dir.join(WORKER_JS), "")
+-            .await
+-            .expect("invariant: tokio::fs::write worker.js succeeds");
+-    }
+-
+-    #[tokio::test]
+-    async fn runtime_preflight_preserves_recompile_sync_rollback_and_deps_state() {
+-        let manager = test_manager();
+-        let mut app = create_sample_app(&manager).await;
+-        app.source.npm_dependencies = vec![NpmDep {
+-            name: "lodash".to_string(),
+-            version: "^4.17.21".to_string(),
+-        }];
+-        manager
+-            .storage
+-            .save(&app)
+-            .await
+-            .expect("invariant: storage.save succeeds");
+-
+-        let installed = manager
+-            .mark_deps_installed(&app.id)
+-            .await
+-            .expect("invariant: manager.mark_deps_installed succeeds");
+-        assert!(!installed.runtime.deps_dirty);
+-        assert!(installed.runtime.worker_restart_required);
+-        let cleared = manager
+-            .clear_worker_restart_required(&app.id)
+-            .await
+-            .expect("invariant: manager.clear_worker_restart_required succeeds");
+-        assert!(!cleared.runtime.worker_restart_required);
+-
+-        let style_path = manager
+-            .path_manager()
+-            .miniapp_dir(&app.id)
+-            .join(SOURCE_DIR)
+-            .join(STYLE_CSS);
+-        tokio::fs::write(&style_path, "body { color: red; }")
+-            .await
+-            .expect("invariant: manager.sync_from_fs succeeds");
+-        let synced = manager
+-            .sync_from_fs(&app.id, "dark", None)
+-            .await
+-            .expect("invariant: manager.sync_from_fs succeeds");
+-        assert_eq!(synced.version, app.version + 1);
+-        assert_eq!(synced.source.css, "body { color: red; }");
+-        assert!(synced.runtime.deps_dirty);
+-        assert!(synced.runtime.worker_restart_required);
+-        assert_eq!(
+-            manager
+-                .list_versions(&app.id)
+-                .await
+-                .expect("invariant: manager.recompile succeeds"),
+-            vec![1]
+-        );
+-
+-        let recompiled = manager
+-            .recompile(&app.id, "dark", None)
+-            .await
+-            .expect("invariant: manager.recompile succeeds");
+-        assert_eq!(recompiled.version, synced.version);
+-        assert_eq!(recompiled.source.css, synced.source.css);
+-        assert!(recompiled.compiled_html.contains("body { color: red; }"));
+-        assert!(!recompiled.runtime.ui_recompile_required);
+-
+-        let rolled_back = manager
+-            .rollback(&app.id, app.version)
+-            .await
+-            .expect("invariant: manager.rollback succeeds");
+-        assert_eq!(rolled_back.version, recompiled.version + 1);
+-        // sync_from_fs snapshots the source already loaded from disk; keep this
+-        // boundary explicit before moving manager/runtime ownership.
+-        assert_eq!(rolled_back.source.css, "body { color: red; }");
+-        assert!(rolled_back.runtime.deps_dirty);
+-        assert!(rolled_back.runtime.worker_restart_required);
+-        assert_eq!(
+-            manager
+-                .list_versions(&app.id)
+-                .await
+-                .expect("invariant: manager.list_versions succeeds"),
+-            vec![1, 2]
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn sync_from_fs_fails_closed_and_skips_persist_when_source_is_corrupt() {
+-        let manager = test_manager();
+-        let app = create_sample_app(&manager).await;
+-        manager
+-            .storage
+-            .save(&app)
+-            .await
+-            .expect("invariant: storage.save succeeds");
+-        let index_path = manager
+-            .path_manager()
+-            .miniapp_dir(&app.id)
+-            .join(SOURCE_DIR)
+-            .join(INDEX_HTML);
+-        tokio::fs::remove_file(&index_path)
+-            .await
+-            .expect("invariant: remove index.html succeeds");
+-
+-        let error = manager
+-            .sync_from_fs(&app.id, "dark", None)
+-            .await
+-            .expect_err("sync_from_fs must abort when the source directory is corrupt");
+-        assert!(
+-            error.to_string().contains("index.html"),
+-            "expected a missing index.html error, got: {error}"
+-        );
+-
+-        let meta = manager
+-            .storage
+-            .load_meta(&app.id)
+-            .await
+-            .expect("meta.json is untouched by the aborted sync");
+-        assert_eq!(meta.version, app.version, "no sync persist may run on a corrupt source dir");
+-        assert!(
+-            manager
+-                .list_versions(&app.id)
+-                .await
+-                .expect("invariant: manager.list_versions succeeds")
+-                .is_empty(),
+-            "no version snapshot may be persisted on a corrupt source dir"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn import_from_path_preserves_fallback_files_recompile_and_runtime_state() {
+-        let manager = test_manager();
+-        let import_root =
+-            std::env::temp_dir().join(format!("northhing-miniapp-import-source-{}", uuid::Uuid::new_v4()));
+-        write_import_source(&import_root).await;
+-        let imported = manager
+-            .import_from_path(import_root.clone(), None)
+-            .await
+-            .expect("invariant: manager.import_from_path succeeds");
+-        let app_dir = manager.path_manager().miniapp_dir(&imported.id);
+-        let source_dir = app_dir.join(SOURCE_DIR);
+-
+-        assert_ne!(imported.id, "template-id");
+-        assert_eq!(imported.name, "Imported");
+-        assert_eq!(imported.version, 7);
+-        assert_eq!(imported.source.css, "body { color: blue; }");
+-        assert!(imported.compiled_html.contains("textContent = 'imported'"));
+-        assert!(!imported.runtime.deps_dirty);
+-        assert!(imported.runtime.worker_restart_required);
+-        assert!(!imported.runtime.ui_recompile_required);
+-
+-        assert_eq!(
+-            tokio::fs::read_to_string(source_dir.join(ESM_DEPS_JSON))
+-                .await
+-                .expect("invariant: tokio::fs::read_to_string succeeds"),
+-            "[]"
+-        );
+-        assert_eq!(
+-            tokio::fs::read_to_string(app_dir.join(STORAGE_JSON))
+-                .await
+-                .expect("invariant: serde_json deserialization succeeds"),
+-            "{}"
+-        );
+-        let package_json: serde_json::Value = serde_json::from_str(
+-            &tokio::fs::read_to_string(app_dir.join(PACKAGE_JSON))
+-                .await
+-                .expect("invariant: tokio::fs::read_to_string package.json succeeds"),
+-        )
+-        .expect("invariant: serde_json deserialization succeeds");
+-        assert_eq!(package_json["name"], format!("miniapp-{}", imported.id));
+-        assert_eq!(package_json["dependencies"], serde_json::json!({}));
+-        assert!(tokio::fs::read_to_string(app_dir.join(COMPILED_HTML))
+-            .await
+-            .expect("invariant: tokio::fs::read_to_string compiled.html succeeds")
+-            .contains("textContent = 'imported'"));
+-
+-        let _ = tokio::fs::remove_dir_all(import_root).await;
+-    }
+-
+-    #[tokio::test]
+-    async fn import_from_path_preserves_invalid_meta_error_shape() {
+-        let manager = test_manager();
+-        let import_root = std::env::temp_dir().join(format!(
+-            "northhing-miniapp-invalid-import-source-{}",
+-            uuid::Uuid::new_v4()
+-        ));
+-        tokio::fs::create_dir_all(&import_root)
+-            .await
+-            .expect("invariant: tokio::fs::create_dir_all succeeds");
+-        let source_dir = import_root.join(SOURCE_DIR);
+-        tokio::fs::create_dir_all(&source_dir)
+-            .await
+-            .expect("invariant: tokio::fs::create_dir_all succeeds");
+-        for file_name in [INDEX_HTML, STYLE_CSS, UI_JS, WORKER_JS] {
+-            tokio::fs::write(source_dir.join(file_name), "")
+-                .await
+-                .expect("invariant: tokio::fs::write succeeds");
+-        }
+-        tokio::fs::write(import_root.join(META_JSON), "{")
+-            .await
+-            .expect("invariant: manager.import_from_path succeeds");
+-
+-        let error = manager.import_from_path(import_root.clone(), None).await;
+-
+-        match error {
+-            Err(crate::util::errors::NortHingError::Deserialization(message)) => {
+-                assert!(message.starts_with("Invalid meta.json:"));
+-            }
+-            other => panic!("expected invalid meta deserialization error, got {other:?}"),
+-        }
+-        let _ = tokio::fs::remove_dir_all(import_root).await;
+-    }
+-
+-    #[tokio::test]
+-    async fn draft_lifecycle_keeps_active_storage_and_source_isolated_until_apply() {
+-        let manager = test_manager();
+-        let app = create_sample_app(&manager).await;
+-        manager
+-            .set_storage(&app.id, "score", serde_json::json!(3))
+-            .await
+-            .expect("invariant: manager.create_draft succeeds");
+-
+-        let draft = manager
+-            .create_draft(&app.id, "dark", None)
+-            .await
+-            .expect("invariant: manager.create_draft succeeds");
+-        assert_eq!(draft.source_version, app.version);
+-        assert_eq!(draft.app.source.css, "body { color: black; }");
+-
+-        let draft_css = manager
+-            .storage
+-            .draft_dir(&app.id, &draft.draft_id)
+-            .join("source")
+-            .join("style.css");
+-        tokio::fs::write(&draft_css, "body { background: white; }")
+-            .await
+-            .expect("invariant: tokio::fs::write draft style.css succeeds");
+-
+-        let draft = manager
+-            .sync_draft_from_fs(&app.id, &draft.draft_id, "dark", None)
+-            .await
+-            .expect("invariant: manager.get succeeds");
+-        assert_eq!(draft.app.source.css, "body { background: white; }");
+-
+-        let active_before_apply = manager
+-            .get(&app.id)
+-            .await
+-            .expect("invariant: manager.get_storage succeeds");
+-        assert_eq!(active_before_apply.source.css, "body { color: black; }");
+-        assert_eq!(
+-            manager
+-                .get_storage(&app.id, "score")
+-                .await
+-                .expect("invariant: manager.get_storage succeeds"),
+-            serde_json::json!(3)
+-        );
+-
+-        let applied = manager
+-            .apply_draft(&app.id, &draft.draft_id, "dark", None)
+-            .await
+-            .expect("invariant: manager.list_versions succeeds");
+-
+-        assert_eq!(applied.version, app.version + 1);
+-        assert_eq!(applied.source.css, "body { background: white; }");
+-        assert_eq!(
+-            manager
+-                .list_versions(&app.id)
+-                .await
+-                .expect("invariant: manager.get_storage succeeds"),
+-            vec![1]
+-        );
+-        assert_eq!(
+-            manager
+-                .get_storage(&app.id, "score")
+-                .await
+-                .expect("invariant: manager.get_storage succeeds"),
+-            serde_json::json!(3)
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn apply_draft_does_not_require_manifest_metadata() {
+-        let manager = test_manager();
+-        let app = create_sample_app(&manager).await;
+-        let draft = manager
+-            .create_draft(&app.id, "dark", None)
+-            .await
+-            .expect("invariant: manager.create_draft succeeds");
+-        let draft_dir = manager.storage.draft_dir(&app.id, &draft.draft_id);
+-        tokio::fs::remove_file(draft_dir.join(DRAFT_JSON))
+-            .await
+-            .expect("invariant: tokio::fs::remove_file draft.json succeeds");
+-
+-        let applied = manager
+-            .apply_draft(&app.id, &draft.draft_id, "dark", None)
+-            .await
+-            .expect("invariant: manager.list_versions succeeds");
+-
+-        assert_eq!(applied.version, app.version + 1);
+-        assert_eq!(applied.source.css, app.source.css);
+-        assert_eq!(
+-            manager
+-                .list_versions(&app.id)
+-                .await
+-                .expect("invariant: manager.list_versions succeeds"),
+-            vec![1]
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn draft_permission_diff_flags_high_risk_changes_before_apply() {
+-        let manager = test_manager();
+-        let app = create_sample_app(&manager).await;
+-        let draft = manager
+-            .create_draft(&app.id, "dark", None)
+-            .await
+-            .expect("invariant: manager.create_draft succeeds");
+-
+-        let draft_permissions = MiniAppPermissions {
+-            fs: Some(FsPermissions {
+-                read: None,
+-                write: Some(vec!["{workspace}".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-        manager
+-            .set_draft_permissions(&app.id, &draft.draft_id, draft_permissions, "dark", None)
+-            .await
+-            .expect("invariant: manager.set_draft_permissions succeeds");
+-
+-        let diff = manager
+-            .permission_diff_for_draft(&app.id, &draft.draft_id)
+-            .await
+-            .expect("invariant: manager.get succeeds");
+-
+-        assert!(diff.high_risk);
+-        assert_eq!(diff.added, vec!["fs.write:{workspace}".to_string()]);
+-        assert!(manager
+-            .get(&app.id)
+-            .await
+-            .expect("invariant: manager.get succeeds")
+-            .permissions
+-            .fs
+-            .is_none());
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/miniapp/mod.rs b/src/crates/assembly/core/src/miniapp/mod.rs
+deleted file mode 100644
+index de107d7..0000000
+--- a/src/crates/assembly/core/src/miniapp/mod.rs
++++ /dev/null
+@@ -1,32 +0,0 @@
+-//! MiniApp module — V2: ESM UI + Node Worker, Runtime Adapter, permission policy.
+-
+-pub mod builtin;
+-pub mod compiler;
+-pub mod exporter;
+-#[cfg(feature = "product-full")]
+-pub mod host_dispatch;
+-pub mod js_worker;
+-pub mod js_worker_pool;
+-pub mod manager;
+-pub mod runtime_detect;
+-pub mod storage;
+-pub use northhing_product_domains::miniapp::customization::{
+-    MiniAppAvailableBuiltinUpdate, MiniAppCustomizationMetadata, MiniAppCustomizationOrigin,
+-    MiniAppCustomizationOriginKind, MiniAppDeclinedBuiltinUpdate, MiniAppPermissionDiff,
+-};
+-pub use northhing_product_domains::miniapp::draft::{MiniAppDraft, MiniAppDraftManifest};
+-pub use northhing_product_domains::miniapp::{bridge_builder, permission_policy, types};
+-
+-pub use builtin::{seed_builtin_miniapps, BuiltinApp, BUILTIN_APPS};
+-pub use exporter::{ExportCheckResult, ExportOptions, ExportResult, ExportTarget, MiniAppExporter};
+-#[cfg(feature = "product-full")]
+-pub use host_dispatch::{dispatch_host, is_host_primitive};
+-pub use js_worker_pool::{InstallResult, JsWorkerPool};
+-pub use manager::{initialize_global_miniapp_manager, try_get_global_miniapp_manager, MiniAppManager};
+-pub use permission_policy::resolve_policy;
+-pub use runtime_detect::{DetectedRuntime, RuntimeKind};
+-pub use storage::MiniAppStorage;
+-pub use types::{
+-    AgentPermissions, AiPermissions, EsmDep, FsPermissions, MiniApp, MiniAppAiContext, MiniAppMeta, MiniAppPermissions,
+-    MiniAppSource, NetPermissions, NodePermissions, NpmDep, PathScope, ShellPermissions,
+-};
+diff --git a/src/crates/assembly/core/src/miniapp/runtime_detect.rs b/src/crates/assembly/core/src/miniapp/runtime_detect.rs
+deleted file mode 100644
+index 17fa628..0000000
+--- a/src/crates/assembly/core/src/miniapp/runtime_detect.rs
++++ /dev/null
+@@ -1,3 +0,0 @@
+-//! Compatibility facade for MiniApp runtime detection.
+-
+-pub use northhing_product_domains::miniapp::runtime::{detect_runtime, DetectedRuntime, RuntimeKind};
+diff --git a/src/crates/assembly/core/src/miniapp/storage.rs b/src/crates/assembly/core/src/miniapp/storage.rs
+deleted file mode 100644
+index cc49f87..0000000
+--- a/src/crates/assembly/core/src/miniapp/storage.rs
++++ /dev/null
+@@ -1,353 +0,0 @@
+-//! Compatibility facade for MiniApp storage.
+-
+-use crate::miniapp::types::{MiniApp, MiniAppMeta, MiniAppSource};
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use northhing_product_domains::miniapp::customization::MiniAppCustomizationMetadata;
+-use northhing_product_domains::miniapp::ports::{
+-    MiniAppImportPort, MiniAppPortError, MiniAppPortErrorKind, MiniAppPortFuture, MiniAppStoragePort,
+-};
+-pub use northhing_product_domains::miniapp::storage::MiniAppImportBundleWriteRequest;
+-use northhing_services_integrations::miniapp::storage::{
+-    MiniAppStorage as ServiceMiniAppStorage, MiniAppStorageError, MiniAppStorageErrorKind,
+-};
+-use std::path::{Path, PathBuf};
+-use std::sync::Arc;
+-
+-/// MiniApp storage service facade that preserves the historical core API.
+-pub struct MiniAppStorage {
+-    inner: ServiceMiniAppStorage,
+-}
+-
+-impl MiniAppStorage {
+-    pub fn new(path_manager: Arc<crate::infrastructure::PathManager>) -> Self {
+-        Self {
+-            inner: ServiceMiniAppStorage::new(path_manager.miniapps_dir()),
+-        }
+-    }
+-
+-    pub async fn ensure_app_dir(&self, app_id: &str) -> NortHingResult<()> {
+-        self.inner.ensure_app_dir(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn list_app_ids(&self) -> NortHingResult<Vec<String>> {
+-        self.inner.list_app_ids().await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn load(&self, app_id: &str) -> NortHingResult<MiniApp> {
+-        self.inner.load(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_meta(&self, app_id: &str) -> NortHingResult<MiniAppMeta> {
+-        self.inner.load_meta(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_source_only(&self, app_id: &str) -> NortHingResult<MiniAppSource> {
+-        self.inner.load_source_only(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn save(&self, app: &MiniApp) -> NortHingResult<()> {
+-        self.inner.save(app).await.map_err(map_storage_error)
+-    }
+-
+-    pub fn drafts_root(&self) -> PathBuf {
+-        self.inner.drafts_root()
+-    }
+-
+-    pub fn app_drafts_dir(&self, app_id: &str) -> PathBuf {
+-        self.inner.app_drafts_dir(app_id)
+-    }
+-
+-    pub fn draft_dir(&self, app_id: &str, draft_id: &str) -> PathBuf {
+-        self.inner.draft_dir(app_id, draft_id)
+-    }
+-
+-    pub async fn save_draft(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        app: &MiniApp,
+-        manifest: &serde_json::Value,
+-    ) -> NortHingResult<()> {
+-        self.inner
+-            .save_draft(app_id, draft_id, app, manifest)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_draft_app(&self, app_id: &str, draft_id: &str) -> NortHingResult<MiniApp> {
+-        self.inner
+-            .load_draft_app(app_id, draft_id)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_draft_manifest(&self, app_id: &str, draft_id: &str) -> NortHingResult<serde_json::Value> {
+-        self.inner
+-            .load_draft_manifest(app_id, draft_id)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn delete_draft(&self, app_id: &str, draft_id: &str) -> NortHingResult<()> {
+-        self.inner
+-            .delete_draft(app_id, draft_id)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn mark_stale_drafts_for_cleanup(&self) -> NortHingResult<Vec<PathBuf>> {
+-        self.inner
+-            .mark_stale_drafts_for_cleanup()
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn cleanup_marked_drafts(&self, targets: Vec<PathBuf>) -> NortHingResult<()> {
+-        self.inner
+-            .cleanup_marked_drafts(targets)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn save_version(&self, app_id: &str, version: u32, app: &MiniApp) -> NortHingResult<()> {
+-        self.inner
+-            .save_version(app_id, version, app)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_app_storage(&self, app_id: &str) -> NortHingResult<serde_json::Value> {
+-        self.inner.load_app_storage(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_draft_storage(&self, app_id: &str, draft_id: &str) -> NortHingResult<serde_json::Value> {
+-        self.inner
+-            .load_draft_storage(app_id, draft_id)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn save_app_storage(&self, app_id: &str, key: &str, value: serde_json::Value) -> NortHingResult<()> {
+-        self.inner
+-            .save_app_storage(app_id, key, value)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn save_draft_storage(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        key: &str,
+-        value: serde_json::Value,
+-    ) -> NortHingResult<()> {
+-        self.inner
+-            .save_draft_storage(app_id, draft_id, key, value)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_customization_metadata(
+-        &self,
+-        app_id: &str,
+-    ) -> NortHingResult<Option<MiniAppCustomizationMetadata>> {
+-        self.inner
+-            .load_customization_metadata(app_id)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn save_customization_metadata(
+-        &self,
+-        app_id: &str,
+-        metadata: &MiniAppCustomizationMetadata,
+-    ) -> NortHingResult<()> {
+-        self.inner
+-            .save_customization_metadata(app_id, metadata)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn delete(&self, app_id: &str) -> NortHingResult<()> {
+-        self.inner.delete(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn list_versions(&self, app_id: &str) -> NortHingResult<Vec<u32>> {
+-        self.inner.list_versions(app_id).await.map_err(map_storage_error)
+-    }
+-
+-    pub async fn load_version(&self, app_id: &str, version: u32) -> NortHingResult<MiniApp> {
+-        self.inner
+-            .load_version(app_id, version)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn read_import_meta_json(&self, source_path: &Path) -> NortHingResult<String> {
+-        self.inner
+-            .read_import_meta_json(source_path)
+-            .await
+-            .map_err(map_storage_error)
+-    }
+-
+-    pub async fn write_import_bundle(&self, request: MiniAppImportBundleWriteRequest) -> NortHingResult<()> {
+-        self.inner.write_import_bundle(request).await.map_err(map_storage_error)
+-    }
+-}
+-
+-impl MiniAppStoragePort for MiniAppStorage {
+-    fn list_app_ids(&self) -> MiniAppPortFuture<'_, Vec<String>> {
+-        Box::pin(async move { self.list_app_ids().await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load(&self, app_id: String) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move { self.load(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_meta(&self, app_id: String) -> MiniAppPortFuture<'_, MiniAppMeta> {
+-        Box::pin(async move { self.load_meta(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_source(&self, app_id: String) -> MiniAppPortFuture<'_, MiniAppSource> {
+-        Box::pin(async move { self.load_source_only(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save(&self, app: MiniApp) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move { self.save(&app).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save_version(&self, app_id: String, version: u32, app: MiniApp) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_version(&app_id, version, &app)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_app_storage(&self, app_id: String) -> MiniAppPortFuture<'_, serde_json::Value> {
+-        Box::pin(async move { self.load_app_storage(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save_app_storage(&self, app_id: String, key: String, value: serde_json::Value) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_app_storage(&app_id, &key, value)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_draft_app(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move {
+-            self.load_draft_app(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_draft_manifest(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, serde_json::Value> {
+-        Box::pin(async move {
+-            self.load_draft_manifest(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn save_draft(
+-        &self,
+-        app_id: String,
+-        draft_id: String,
+-        app: MiniApp,
+-        manifest: serde_json::Value,
+-    ) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_draft(&app_id, &draft_id, &app, &manifest)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn delete_draft(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.delete_draft(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_customization_metadata(
+-        &self,
+-        app_id: String,
+-    ) -> MiniAppPortFuture<'_, Option<MiniAppCustomizationMetadata>> {
+-        Box::pin(async move {
+-            self.load_customization_metadata(&app_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn save_customization_metadata(
+-        &self,
+-        app_id: String,
+-        metadata: MiniAppCustomizationMetadata,
+-    ) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_customization_metadata(&app_id, &metadata)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn delete(&self, app_id: String) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move { self.delete(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn list_versions(&self, app_id: String) -> MiniAppPortFuture<'_, Vec<u32>> {
+-        Box::pin(async move { self.list_versions(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_version(&self, app_id: String, version: u32) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move {
+-            self.load_version(&app_id, version)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-}
+-
+-fn map_storage_error(error: MiniAppStorageError) -> NortHingError {
+-    match error.kind() {
+-        MiniAppStorageErrorKind::NotFound => NortHingError::NotFound(error.message().to_string()),
+-        MiniAppStorageErrorKind::Validation => NortHingError::validation(error.message().to_string()),
+-        MiniAppStorageErrorKind::Deserialization => NortHingError::parse(error.message().to_string()),
+-        MiniAppStorageErrorKind::Io => NortHingError::io(error.message().to_string()),
+-        MiniAppStorageErrorKind::Backend => NortHingError::service(error.message().to_string()),
+-    }
+-}
+-
+-impl MiniAppImportPort for MiniAppStorage {
+-    fn read_import_meta_json(&self, source_path: PathBuf) -> MiniAppPortFuture<'_, String> {
+-        Box::pin(async move {
+-            self.read_import_meta_json(&source_path)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn write_import_bundle(&self, request: MiniAppImportBundleWriteRequest) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move { self.write_import_bundle(request).await.map_err(map_miniapp_port_error) })
+-    }
+-}
+-
+-fn map_miniapp_port_error(error: NortHingError) -> MiniAppPortError {
+-    let kind = match &error {
+-        NortHingError::NotFound(_) => MiniAppPortErrorKind::NotFound,
+-        NortHingError::Validation(_) => MiniAppPortErrorKind::InvalidInput,
+-        NortHingError::Deserialization(_) => MiniAppPortErrorKind::Deserialization,
+-        NortHingError::Io(io_error) if io_error.kind() == std::io::ErrorKind::PermissionDenied => {
+-            MiniAppPortErrorKind::PermissionDenied
+-        }
+-        NortHingError::Io(_) => MiniAppPortErrorKind::Io,
+-        _ => MiniAppPortErrorKind::Backend,
+-    };
+-    MiniAppPortError::new(kind, error.to_string())
+-}
+diff --git a/src/crates/assembly/core/src/product_domain_runtime.rs b/src/crates/assembly/core/src/product_domain_runtime.rs
+index 4bea671..6bb3853 100644
+--- a/src/crates/assembly/core/src/product_domain_runtime.rs
++++ b/src/crates/assembly/core/src/product_domain_runtime.rs
+@@ -1,7 +1,7 @@
+ //! Core-owned adapters for product-domain runtime ports.
+ //!
+ //! Product-domain crates own stable contracts and pure orchestration. This
+-//! module keeps the concrete MiniApp and function-agent runtime bindings in
++//! module keeps the concrete function-agent runtime bindings in
+ //! core so filesystem, process, Git, and AI behavior stays on the legacy path.
+ 
+ use std::path::Path;
+@@ -11,7 +11,6 @@ use chrono::{Local, Timelike};
+ use northhing_product_domains::function_agents::ports::{
+     FunctionAgentAiPort, FunctionAgentGitPort, FunctionAgentRuntimeFacade,
+ };
+-use northhing_product_domains::miniapp::ports::{MiniAppRuntimeFacade, MiniAppStoragePort};
+ use tracing::info;
+ 
+ use crate::function_agents::common::AgentResult;
+@@ -22,10 +21,6 @@ use crate::infrastructure::ai::AIClientFactory;
+ pub(crate) struct CoreProductDomainRuntime;
+ 
+ impl CoreProductDomainRuntime {
+-    pub(crate) fn miniapp_runtime_facade(storage: &dyn MiniAppStoragePort) -> MiniAppRuntimeFacade<'_> {
+-        MiniAppRuntimeFacade::new(storage)
+-    }
+-
+     pub(crate) fn function_agent_git_adapter() -> CoreFunctionAgentGitAdapter {
+         CoreFunctionAgentGitAdapter
+     }
