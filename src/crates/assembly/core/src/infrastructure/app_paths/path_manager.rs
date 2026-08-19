@@ -6,7 +6,7 @@
 //! env helpers, default/test constructors, and the global singleton.
 //! Path accessors live in dedicated submodules under `path_manager/`:
 //! - `assistant_workspace` — `~/.northhing/personal_assistant/workspace-*` (incl. legacy)
-//! - `user_paths`          — `~/.config/northhing/{config,agents,skills,cache,runtimes,data,cron,rules,miniapps,logs,temp}`
+//! - `user_paths`          — `~/.config/northhing/{config,agents,skills,cache,runtimes,data,cron,rules,logs,temp}`
 //!                           and `~/.northhing/remote_ssh/`
 //! - `project_paths`       — `{workspace}/.northhing/...` and `~/.northhing/projects/<slug>/...`
 //!                           + project runtime slug cache

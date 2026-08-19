@@ -198,8 +198,7 @@ product-domains = [
     "ai-adapter-runtime",
     "dep:northhing-product-domains",
     "northhing-services-integrations/function-agents",
-    "northhing-services-integrations/miniapp-runtime",
-    "northhing-product-domains/product-full",
+    "northhing-product-domains/function-agents",
 ]
 runtime-services = ["dep:northhing-runtime-services"]
 service-integrations = [

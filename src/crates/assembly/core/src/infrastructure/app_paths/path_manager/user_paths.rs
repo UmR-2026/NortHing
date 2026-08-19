@@ -96,16 +96,6 @@ impl PathManager {
         self.user_cron_dir().join("jobs.json")
     }
 
-    /// Get miniapps root directory: ~/.config/northhing/data/miniapps/
-    pub fn miniapps_dir(&self) -> PathBuf {
-        self.user_data_dir().join("miniapps")
-    }
-
-    /// Get directory for a specific miniapp: ~/.config/northhing/data/miniapps/{app_id}/
-    pub fn miniapp_dir(&self, app_id: &str) -> PathBuf {
-        self.miniapps_dir().join(app_id)
-    }
-
     /// Get user-level rules directory: ~/.config/northhing/data/rules/
     pub fn user_rules_dir(&self) -> PathBuf {
         self.user_data_dir().join("rules")

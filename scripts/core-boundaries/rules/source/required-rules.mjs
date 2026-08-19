@@ -2444,10 +2444,6 @@ export const requiredContentRules = [
         message: 'core product-domain facade must enable the function-agent service owner feature it imports',
       },
       {
-        regex: /product-domains = \[[^\]]*"northhing-services-integrations\/miniapp-runtime"[^\]]*\]/,
-        message: 'core product-domain facade must enable the MiniApp service owner feature it imports',
-      },
-      {
         regex:
           /northhing-product-domains = \{ path = "\.\.\/\.\.\/contracts\/product-domains", default-features = false, optional = true \}/,
         message:
@@ -2473,8 +2469,8 @@ export const requiredContentRules = [
           'core product-capabilities feature must explicitly enable the optional dependency',
       },
       {
-        regex: /"northhing-product-domains\/product-full"/,
-        message: 'core product-full must explicitly enable product-domain features',
+        regex: /"northhing-product-domains\/function-agents"/,
+        message: 'core product-domains feature must explicitly enable function-agent features',
       },
     ],
   },
@@ -2490,10 +2486,6 @@ export const requiredContentRules = [
       {
         regex: /#\[cfg\(feature = "product-domains"\)\]\s*pub mod function_agents\b/s,
         message: 'function-agent product domain facade must stay behind product-domains',
-      },
-      {
-        regex: /#\[cfg\(feature = "product-domains"\)\]\s*pub mod miniapp\b/s,
-        message: 'MiniApp product domain facade must stay behind product-domains',
       },
       {
         regex: /#\[cfg\(all\(feature = "service-integrations", feature = "product-full"\)\)\]\s*pub\(crate\) mod service_agent_runtime\b/s,
@@ -5367,115 +5359,6 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/storage.rs',
-    reason:
-      'core MiniApp storage path must stay a compatibility facade over the integrations owner',
-    patterns: [
-      {
-        regex: /\bServiceMiniAppStorage\b/,
-        message: 'missing services-owned MiniApp storage delegation',
-      },
-      {
-        regex: /\bmap_storage_error\b/,
-        message: 'missing MiniApp storage error compatibility mapping',
-      },
-      {
-        regex: /\bMiniAppImportBundleWriteRequest\b/,
-        message: 'missing MiniApp import bundle IO compatibility write request',
-      },
-      {
-        regex: /\bread_import_meta_json\b/,
-        message: 'missing MiniApp import metadata IO compatibility delegation',
-      },
-      {
-        regex: /\bwrite_import_bundle\b/,
-        message: 'missing MiniApp import bundle IO compatibility delegation',
-      },
-      {
-        regex: /\bimpl MiniAppStoragePort for MiniAppStorage\b/,
-        message: 'missing MiniApp storage port adapter owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/builtin/mod.rs',
-    reason:
-      'core must coordinate built-in MiniApp seed decisions and recompilation while services-integrations owns seed filesystem IO',
-    patterns: [
-      {
-        regex: /\bBUILTIN_APPS\b/,
-        message: 'missing product-domain built-in MiniApp bundle re-export/use',
-      },
-      {
-        regex: /\bbuiltin_content_hash\b/,
-        message: 'missing product-domain built-in MiniApp content hash use',
-      },
-      {
-        regex: /\bshould_seed_builtin_app\b/,
-        message: 'missing product-domain built-in MiniApp seed decision use',
-      },
-      {
-        regex: /\bresolve_builtin_seed_check\b/,
-        message: 'missing product-domain built-in MiniApp seed check use',
-      },
-      {
-        regex: /\bresolve_builtin_seed_action\b/,
-        message: 'missing product-domain built-in MiniApp seed action use',
-      },
-      {
-        regex: /\bminiapp_builtin_io::prepare_builtin_seed_bundle_files\b/,
-        message: 'missing services-owned built-in MiniApp seed file IO delegation',
-      },
-      {
-        regex: /\bread_builtin_install_marker\b/,
-        message: 'missing built-in MiniApp marker read compatibility wrapper',
-      },
-      {
-        regex: /\bminiapp_builtin_io::read_builtin_install_marker\b/,
-        message: 'missing services-owned built-in MiniApp marker read delegation',
-      },
-      {
-        regex: /\bwrite_builtin_install_marker\b/,
-        message: 'missing built-in MiniApp marker write compatibility wrapper',
-      },
-      {
-        regex: /\bminiapp_builtin_io::write_builtin_install_marker\b/,
-        message: 'missing services-owned built-in MiniApp marker write delegation',
-      },
-      {
-        regex: /\brecompile\b/,
-        message: 'missing core-owned built-in MiniApp recompile orchestration',
-      },
-      {
-        regex: /\bload_customization_metadata\b/,
-        message: 'missing customized built-in preservation path',
-      },
-      {
-        regex: /\bavailable_builtin_update\b/,
-        message: 'missing customized built-in update metadata path',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
-    reason:
-      'core MiniApp host-dispatch path must stay a compatibility adapter over the integrations owner',
-    patterns: [
-      {
-        regex: /\bpub async fn dispatch_host\b/,
-        message: 'missing MiniApp host dispatch entry',
-      },
-      {
-        regex: /\bnorthhing_services_integrations::miniapp::host_dispatch::dispatch_host\b/,
-        message: 'missing MiniApp host dispatch integrations owner delegation',
-      },
-      {
-        regex: /\bmap_host_dispatch_error\b/,
-        message: 'missing MiniApp host dispatch error compatibility mapping',
-      },
-    ],
-  },
-  {
     path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
     reason:
       'services-integrations must own built-in MiniApp seed files, marker IO, and storage-preservation writes behind the miniapp-runtime feature',
@@ -5986,25 +5869,6 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/exporter.rs',
-    reason:
-      'core MiniApp exporter must delegate export check result policy while retaining runtime detection and export skeleton',
-    patterns: [
-      {
-        regex: /\bdetect_runtime\b/,
-        message: 'missing core-owned MiniApp export runtime detection',
-      },
-      {
-        regex: /\bbuild_export_check_result\b/,
-        message: 'missing product-domain MiniApp export check helper use',
-      },
-      {
-        regex: /Export not yet implemented \(skeleton\)/,
-        message: 'missing core-owned MiniApp export skeleton behavior',
-      },
-    ],
-  },
-  {
     path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
     reason:
       'product-domains owns MiniApp customization metadata, built-in update policy, and permission-diff contracts while core keeps draft storage/runtime',
@@ -6040,111 +5904,6 @@ export const requiredContentRules = [
       {
         regex: /\bpub fn is_current_declined_builtin_update\b/,
         message: 'missing MiniApp declined update current-state helper',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_runtime.rs',
-    reason:
-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
-    patterns: [
-      {
-        regex: /\bMiniAppRuntimeFacade\b/,
-        message: 'missing product-domain MiniApp runtime-state facade use',
-      },
-      {
-        regex: /\bCoreProductDomainRuntime\b/,
-        message: 'missing core-owned product-domain runtime owner delegation',
-      },
-      {
-        regex: /\bMiniAppCompileRequest::from_paths\b/,
-        message: 'missing product-domain MiniApp compile request/path delegation',
-      },
-      {
-        regex: /\bcompile_with_request\b/,
-        message: 'missing product-domain MiniApp compile facade delegation',
-      },
-      {
-        regex: /\bMiniAppPermissionPolicyRequest::from_paths\b/,
-        message: 'missing product-domain MiniApp permission policy request/path delegation',
-      },
-      {
-        regex: /\bresolve_policy_with_request\b/,
-        message: 'missing product-domain MiniApp permission policy facade delegation',
-      },
-      {
-        regex: /\bMiniAppCompilePort\b/,
-        message: 'missing core MiniApp compile port adapter for product-domain import workflow',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/manager/mgr_lifecycle.rs',
-    reason:
-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
-    patterns: [
-      {
-        regex: /\bcreate_app\b/,
-        message: 'missing product-domain MiniApp create workflow facade delegation',
-      },
-      {
-        regex: /\bpersist_update_result_for_app\b/,
-        message: 'missing product-domain MiniApp update workflow facade delegation',
-      },
-      {
-        regex: /\bpersist_draft_for_app\b/,
-        message: 'missing product-domain MiniApp create-draft workflow facade delegation',
-      },
-      {
-        regex: /\bpersist_draft_source_sync_result\b/,
-        message: 'missing product-domain MiniApp draft source-sync workflow facade delegation',
-      },
-      {
-        regex: /\bpersist_draft_permission_update_result\b/,
-        message: 'missing product-domain MiniApp draft permission workflow facade delegation',
-      },
-      {
-        regex: /\bapply_draft_app\b/,
-        message: 'missing product-domain MiniApp apply-draft workflow facade delegation',
-      },
-      {
-        regex: /\bmark_builtin_update_available\b/,
-        message: 'missing product-domain MiniApp built-in update workflow facade delegation',
-      },
-      {
-        regex: /\bdecline_builtin_update\b/,
-        message: 'missing product-domain MiniApp built-in update decline workflow facade delegation',
-      },
-      {
-        regex: /\bpersist_sync_from_fs_result_for_app\b/,
-        message: 'missing product-domain MiniApp sync-from-fs facade delegation',
-      },
-      {
-        regex: /\bcompile_source\b/,
-        message: 'missing core MiniApp compile compatibility entry point',
-      },
-      {
-        regex: /\bMiniAppImportFromPathRequest\b/,
-        message: 'missing product-domain MiniApp import workflow request delegation',
-      },
-      {
-        regex: /\.import_from_path\s*\(/,
-        message: 'missing product-domain MiniApp import workflow facade delegation',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/manager/mod.rs',
-    reason:
-      'core MiniApp manager must delegate manager workflow persistence and compile request/path adaptation to product-domain facades while retaining product orchestration and built-in source-hash lookup',
-    patterns: [
-      {
-        regex: /\bruntime_preflight_preserves_recompile_sync_rollback_and_deps_state\b/,
-        message: 'missing MiniApp manager runtime preflight regression test',
-      },
-      {
-        regex: /\bimport_from_path_preserves_fallback_files_recompile_and_runtime_state\b/,
-        message: 'missing MiniApp import runtime preflight regression test',
       },
     ],
   },
@@ -6642,63 +6401,6 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
-    reason:
-      'core MiniApp runtime detection must be a compatibility facade over product-domain runtime detection',
-    patterns: [
-      {
-        regex: /\bpub use northhing_product_domains::miniapp::runtime::\{/,
-        message: 'missing product-domain MiniApp runtime facade re-export',
-      },
-      {
-        regex: /\bdetect_runtime\b/,
-        message: 'missing product-domain detect_runtime facade export',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
-    reason:
-      'core MiniApp worker pool path must stay a compatibility facade over the integrations owner',
-    patterns: [
-      {
-        regex: /\bServiceJsWorkerPool\b/,
-        message: 'missing services-owned MiniApp worker pool delegation',
-      },
-      {
-        regex: /\bCoreMiniAppWorkerEventSink\b/,
-        message: 'missing core MiniApp worker event compatibility sink',
-      },
-      {
-        regex: /\bemit_global_event\b/,
-        message: 'missing MiniApp worker event bridge to existing core event bus',
-      },
-      {
-        regex: /\bmap_worker_pool_error\b/,
-        message: 'missing MiniApp worker pool error compatibility mapping',
-      },
-      {
-        regex: /\bimpl MiniAppRuntimePort for JsWorkerPool\b/,
-        message: 'missing MiniApp runtime port adapter owner',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
-    reason:
-      'core MiniApp JS worker path must stay a compatibility re-export over the integrations owner',
-    patterns: [
-      {
-        regex: /\bpub use northhing_services_integrations::miniapp::worker::\{/,
-        message: 'missing services-owned MiniApp JS worker facade re-export',
-      },
-      {
-        regex: /\bMiniAppWorkerEventSink\b/,
-        message: 'missing MiniApp worker event sink facade export',
-      },
-    ],
-  },
-  {
     path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
     reason:
       'services-integrations must own MiniApp JS worker process spawning and RPC routing behind the miniapp-runtime feature',
@@ -6806,15 +6508,11 @@ export const requiredContentRules = [
   {
     path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
     reason:
-      'core product-domain runtime owner must centralize concrete MiniApp and function-agent runtime port bindings without moving runtime behavior',
+      'core product-domain runtime owner must centralize concrete function-agent runtime port bindings without moving runtime behavior',
     patterns: [
       {
         regex: /\bpub\(crate\) struct CoreProductDomainRuntime\b/,
         message: 'missing core product-domain runtime owner type',
-      },
-      {
-        regex: /\bfn miniapp_runtime_facade\b/,
-        message: 'missing MiniApp runtime facade owner factory',
       },
       {
         regex: /\bfn function_agent_git_adapter\b/,
@@ -6843,14 +6541,6 @@ export const requiredContentRules = [
       {
         regex: /\bCoreFunctionAgentAiAdapter\b/,
         message: 'missing core-owned AI adapter binding',
-      },
-      {
-        regex: /\bMiniAppRuntimeFacade\b/,
-        message: 'missing MiniApp product-domain facade binding',
-      },
-      {
-        regex: /\bMiniAppStoragePort\b/,
-        message: 'missing MiniApp storage port owner binding',
       },
       {
         regex: /\bFunctionAgentRuntimeFacade\b/,

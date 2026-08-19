@@ -392,122 +392,12 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
-    patterns: [
-      {
-        regex: /\btokio::fs\b/,
-        message:
-          'core MiniApp host-dispatch adapter must not own filesystem execution; use northhing-services-integrations::miniapp::host_dispatch',
-      },
-      {
-        regex: /\bprocess_manager::create_tokio_command\b/,
-        message:
-          'core MiniApp host-dispatch adapter must not own shell process execution; use northhing-services-integrations::miniapp::host_dispatch',
-      },
-      {
-        regex: /\breqwest::Client\b/,
-        message:
-          'core MiniApp host-dispatch adapter must not own net.fetch execution; use northhing-services-integrations::miniapp::host_dispatch',
-      },
-      {
-        regex: /\basync fn dispatch_fs\b/,
-        message:
-          'core MiniApp host-dispatch adapter must not re-own fs dispatch helpers',
-      },
-      {
-        regex: /\basync fn dispatch_shell\b/,
-        message:
-          'core MiniApp host-dispatch adapter must not re-own shell dispatch helpers',
-      },
-    ],
-  },
-  {
     path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
     patterns: [
       {
         regex: /\bresolve_policy\s*\(/,
         message:
           'services MiniApp host-dispatch must use MiniAppPermissionPolicyRequest for permission path adaptation',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
-    patterns: [
-      {
-        regex: /\btokio::process\b/,
-        message:
-          'core MiniApp JS worker facade must not own worker process types; use northhing-services-integrations::miniapp::worker',
-      },
-      {
-        regex: /\bprocess_manager::create_tokio_command\b/,
-        message:
-          'core MiniApp JS worker facade must not spawn worker processes; use northhing-services-integrations::miniapp::worker',
-      },
-      {
-        regex: /\bPendingResponseMap\b/,
-        message:
-          'core MiniApp JS worker facade must not own JSON-RPC response routing; use northhing-services-integrations::miniapp::worker',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
-    patterns: [
-      {
-        regex: /\bworker_pool_at_capacity\b/,
-        message:
-          'core MiniApp worker pool facade must not own pool policy; use northhing-services-integrations::miniapp::worker_pool',
-      },
-      {
-        regex: /\bselect_lru_worker\b/,
-        message:
-          'core MiniApp worker pool facade must not own LRU policy; use northhing-services-integrations::miniapp::worker_pool',
-      },
-      {
-        regex: /\bplan_install_deps\b/,
-        message:
-          'core MiniApp worker pool facade must not own install-deps planning; use northhing-services-integrations::miniapp::worker_pool',
-      },
-      {
-        regex: /\bprocess_manager::create_tokio_command\b/,
-        message:
-          'core MiniApp worker pool facade must not execute install-deps processes; use northhing-services-integrations::miniapp::worker_pool',
-      },
-      {
-        regex: /\bHashMap<String, WorkerEntry>\b/,
-        message:
-          'core MiniApp worker pool facade must not own worker pool state; use northhing-services-integrations::miniapp::worker_pool',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/storage.rs',
-    patterns: [
-      {
-        regex: /\btokio::fs\b/,
-        message:
-          'core MiniApp storage facade must not own filesystem IO; use northhing-services-integrations::miniapp::storage',
-      },
-      {
-        regex: /\bMiniAppStorageLayout\b/,
-        message:
-          'core MiniApp storage facade must not own storage layout logic; use northhing-services-integrations::miniapp::storage',
-      },
-      {
-        regex: /\bbuild_package_json\b/,
-        message:
-          'core MiniApp storage facade must not own package-json storage assembly; use northhing-services-integrations::miniapp::storage',
-      },
-      {
-        regex: /\bparse_npm_dependencies\b/,
-        message:
-          'core MiniApp storage facade must not own package-json dependency parsing; use northhing-services-integrations::miniapp::storage',
-      },
-      {
-        regex: /\bDRAFTS_CLEANUP_MARKER\b/,
-        message:
-          'core MiniApp storage facade must not own draft cleanup marker IO; use northhing-services-integrations::miniapp::storage',
       },
     ],
   },
@@ -682,31 +572,6 @@ export const forbiddenContentRules = [
           /\bpub\s+(?:const|struct|fn)\s+(?:REMOTE_OS_PROBES|REMOTE_ARCHITECTURE_PROBES|LocalFlashgrepBundle|build_remote_scope|remote_flashgrep_install_dir|remote_workspace_search_storage_root|looks_like_linux_workspace_root|parse_remote_architecture_output|parse_remote_os_output|local_flashgrep_bundle_for_arch|remote_stdio_search_mode|should_retry_remote_scan_fallback_as_files_with_matches|join_remote_path|shell_escape)\b/,
         message:
           'remote workspace-search helper APIs must stay crate-internal; expose only reviewed provider/service contracts',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
-    patterns: [
-      {
-        regex: /\bCoreMiniAppRuntimeProbe\b/,
-        message:
-          'core MiniApp runtime_detect must remain a compatibility facade; concrete probe owner is product-domains',
-      },
-      {
-        regex: /\bwhich::which\b/,
-        message:
-          'core MiniApp runtime_detect must not own PATH lookup; use product-domain runtime detection',
-      },
-      {
-        regex: /\bcreate_command\b/,
-        message:
-          'core MiniApp runtime_detect must not own version process execution; use product-domain runtime detection',
-      },
-      {
-        regex: /\bstd::fs::read_dir\b/,
-        message:
-          'core MiniApp runtime_detect must not own version-manager directory scanning; use product-domain runtime detection',
       },
     ],
   },
@@ -2334,103 +2199,6 @@ export const forbiddenContentUnderRules = [
       {
         regex: /\benum\s+DialogSteerOutcome\b/,
         message: 'core scheduler must not redefine DialogSteerOutcome; use northhing-runtime-ports',
-      },
-    ],
-  },
-  {
-    path: 'src/crates/assembly/core/src/miniapp/manager',
-    reason:
-      'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
-    patterns: [
-      {
-        regex: /\bbuild_runtime_state\b/,
-        message: 'core MiniApp manager must not build runtime state directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_source_revision\b/,
-        message: 'core MiniApp manager must not build source revisions directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_deps_revision\b/,
-        message:
-          'core MiniApp manager must not build dependency revisions directly; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bapp\.version\s*\+=\s*1\b/,
-        message:
-          'core MiniApp manager must not own version increments for lifecycle transitions; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bapp\.runtime\s*=/,
-        message:
-          'core MiniApp manager must not own runtime-state replacement for lifecycle transitions; use product-domain lifecycle helpers',
-      },
-      {
-        regex: /\bbuild_created_app\b/,
-        message: 'core MiniApp manager must not own create workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_update_patch\b/,
-        message: 'core MiniApp manager must not own update workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bprepare_draft_app\b/,
-        message: 'core MiniApp manager must not own draft creation workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_source_sync_result\b/,
-        message: 'core MiniApp manager must not own draft source-sync workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_permission_update_result\b/,
-        message: 'core MiniApp manager must not own draft permission workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_to_active\b/,
-        message: 'core MiniApp manager must not own apply-draft workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bapply_draft_customization_metadata\b/,
-        message: 'core MiniApp manager must not own draft customization workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bmark_builtin_update_available_metadata\b/,
-        message: 'core MiniApp manager must not own built-in update workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bdecline_builtin_update_metadata\b/,
-        message:
-          'core MiniApp manager must not own built-in update decline workflow assembly; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bprepare_imported_meta\b/,
-        message:
-          'core MiniApp manager must not own import metadata rehome planning; use product-domain import bundle plan',
-      },
-      {
-        regex: /\bbuild_import_fallbacks\b/,
-        message: 'core MiniApp manager must not own import fallback planning; use product-domain import bundle plan',
-      },
-      {
-        regex: /\bbuild_import_bundle_plan\b/,
-        message: 'core MiniApp manager must not own import bundle planning; use MiniAppRuntimeFacade',
-      },
-      {
-        regex: /\bread_import_meta_json\b/,
-        message: 'core MiniApp manager must not own import metadata IO; use MiniAppRuntimeFacade import ports',
-      },
-      {
-        regex: /\bwrite_import_bundle\b/,
-        message: 'core MiniApp manager must not own import bundle IO; use MiniAppRuntimeFacade import ports',
-      },
-      {
-        regex: /\bworkspace_dir_string\b/,
-        message: 'core MiniApp manager must not own compile workspace path adaptation; use MiniAppCompileRequest',
-      },
-      {
-        regex: /\bresolve_policy\s*\(/,
-        message:
-          'core MiniApp manager must not own permission policy path adaptation; use MiniAppPermissionPolicyRequest',
       },
     ],
   },

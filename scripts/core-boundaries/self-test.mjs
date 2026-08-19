@@ -2117,11 +2117,10 @@ export function runManifestParserSelfTest({
         'dep:northhing-ai-adapters',
         'ai-adapter-runtime',
         'northhing-services-integrations\\/function-agents',
-        'northhing-services-integrations\\/miniapp-runtime',
         'dep:northhing-product-capabilities',
         'northhing-services-integrations\\/product-full',
         'dep:northhing-product-domains',
-        'northhing-product-domains\\/product-full',
+        'northhing-product-domains\\/function-agents',
       ],
     },
     {
@@ -2131,7 +2130,6 @@ export function runManifestParserSelfTest({
         'pub mod agentic',
         'feature = "product-domains"',
         'pub mod function_agents',
-        'pub mod miniapp',
         'feature = "service-integrations"',
         'service_agent_runtime',
       ],
@@ -2199,17 +2197,6 @@ export function runManifestParserSelfTest({
       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
-      path: 'src/crates/assembly/core/src/miniapp/storage.rs',
-      contracts: [
-        'ServiceMiniAppStorage',
-        'map_storage_error',
-        'MiniAppImportBundleWriteRequest',
-        'read_import_meta_json',
-        'write_import_bundle',
-        'MiniAppStoragePort',
-      ],
-    },
-    {
       path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
       contracts: [
         'pub struct MiniAppStorage',
@@ -2234,24 +2221,6 @@ export function runManifestParserSelfTest({
       contracts: [
         'storage_port_adapter_preserves_existing_file_lifecycle',
         'import_bundle_io_preserves_copy_and_fallback_contract',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/builtin/mod.rs',
-      contracts: [
-        'BUILTIN_APPS',
-        'builtin_content_hash',
-        'should_seed_builtin_app',
-        'resolve_builtin_seed_check',
-        'resolve_builtin_seed_action',
-        'miniapp_builtin_io::prepare_builtin_seed_bundle_files',
-        'read_builtin_install_marker',
-        'miniapp_builtin_io::read_builtin_install_marker',
-        'write_builtin_install_marker',
-        'miniapp_builtin_io::write_builtin_install_marker',
-        'recompile',
-        'load_customization_metadata',
-        'available_builtin_update',
       ],
     },
     {
@@ -2294,14 +2263,6 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
-      contracts: [
-        'dispatch_host',
-        'northhing_services_integrations::miniapp::host_dispatch::dispatch_host',
-        'map_host_dispatch_error',
-      ],
-    },
-    {
       path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
       contracts: [
         'dispatch_host',
@@ -2319,23 +2280,6 @@ export function runManifestParserSelfTest({
         'command_basename_allowed',
         'host_allowed_by_allowlist',
         'process_manager::create_tokio_command',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
-      contracts: [
-        'MiniAppRuntimePort',
-        'ServiceJsWorkerPool',
-        'CoreMiniAppWorkerEventSink',
-        'emit_global_event',
-        'map_worker_pool_error',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
-      contracts: [
-        'pub use northhing_services_integrations::miniapp::worker::{',
-        'MiniAppWorkerEventSink',
       ],
     },
     {
@@ -2375,14 +2319,11 @@ export function runManifestParserSelfTest({
       path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
       contracts: [
         'CoreProductDomainRuntime',
-        'miniapp_runtime_facade',
         'function_agent_git_adapter',
         'function_agent_ai_adapter',
         'function_agent_runtime_facade',
         'CoreFunctionAgentGitAdapter',
         'CoreFunctionAgentAiAdapter',
-        'MiniAppRuntimeFacade',
-        'MiniAppStoragePort',
         'FunctionAgentRuntimeFacade',
         'FunctionAgentGitPort',
         'FunctionAgentAiPort',
@@ -2573,10 +2514,6 @@ export function runManifestParserSelfTest({
       contracts: ['MISSING_JS_RUNTIME_MESSAGE', 'export_runtime_label', 'build_export_check_result'],
     },
     {
-      path: 'src/crates/assembly/core/src/miniapp/exporter.rs',
-      contracts: ['detect_runtime', 'build_export_check_result', 'Export not yet implemented'],
-    },
-    {
       path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
       contracts: [
         'MiniAppCustomizationMetadata',
@@ -2587,32 +2524,6 @@ export function runManifestParserSelfTest({
         'mark_builtin_update_available_metadata',
         'decline_builtin_update_metadata',
         'is_current_declined_builtin_update',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/manager.rs',
-      contracts: [
-        'CoreProductDomainRuntime',
-        'MiniAppRuntimeFacade',
-        'create_app',
-        'persist_update_result_for_app',
-        'persist_draft_for_app',
-        'persist_draft_source_sync_result',
-        'persist_draft_permission_update_result',
-        'apply_draft_app',
-        'mark_builtin_update_available',
-        'decline_builtin_update',
-        'persist_sync_from_fs_result_for_app',
-        'compile_source',
-        'MiniAppCompileRequest::from_paths',
-        'compile_with_request',
-        'MiniAppPermissionPolicyRequest::from_paths',
-        'resolve_policy_with_request',
-        'MiniAppCompilePort',
-        'MiniAppImportFromPathRequest',
-        'import_from_path',
-        'runtime_preflight_preserves_recompile_sync_rollback_and_deps_state',
-        'import_from_path_preserves_fallback_files_recompile_and_runtime_state',
       ],
     },
     {
@@ -2704,10 +2615,6 @@ export function runManifestParserSelfTest({
         'prepare_commit_ai_prompt',
         'parse_commit_ai_response',
       ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
-      contracts: ['pub use northhing_product_domains::miniapp::runtime::{', 'detect_runtime'],
     },
   ];
   for (const { path, contracts } of requiredContentContracts) {
