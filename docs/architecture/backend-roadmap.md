@@ -82,7 +82,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 
 | review 编号 | 内容 | 台账对应 |
 |---|---|---|
-| SW1-1 | MiniApp shell/net 空 allowlist=放行（语义翻转） | 新登记 |
+| ~~SW1-1~~ | ~~MiniApp shell/net 空 allowlist=放行（语义翻转）~~ | **随 MiniApp 整删关闭（moot）**（2026-08-17，T2-2） |
 | SW1-2 | 嵌入式 relay 0.0.0.0 无鉴权（默认 loopback + fail-closed） | = P1-7 |
 | SW1-3 | 远程来源对话取消跳过确认 | 新登记 |
 | SW1-4 | ComputerUse run_script 系接入 guard | 新登记 |
@@ -93,7 +93,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | SW1-9 | bot 配对码爆破防护 | 新登记 |
 | SW1-10 | 低危批量（恒时比较/Origin/hash 校验/ACP 钉版本） | 新登记 |
 
-依赖关系（2026-08-17 终版）：remote 栈已决删除——**T1-2 / T1-3 / T1-7 / T1-9 随栈关闭**；**MiniApp 已决整删——T1-1 / T3-5 随子系统关闭**。安全清单由 10 项缩至 **5 项（T1-4/5/6/8/10）**。删除前唯一要求：先摘除所有启动入口（feature/配置/UI），确保 dormant 期间不可被意外拉起。
+依赖关系（2026-08-17 终版）：remote 栈已整删（commits fa88342..d16b037）——**T1-2 / T1-3 / T1-7 / T1-9 随栈关闭**；**MiniApp 已整删（commits a930c93..T2-2o）——T1-1 / T3-5 随子系统关闭**。安全清单由 10 项缩至 **5 项（T1-4/5/6/8/10）**。启动入口（feature/配置/UI）已全数摘除，整删已完成。
 
 ### 1.5 债线（台账 backend active 项）
 
@@ -114,7 +114,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | `apps/server` | 位腐（源码 import core 但 Cargo.toml 未声明，编译不过；内含未接线 `ai_relay.rs`/`rpc_dispatcher.rs`） | T1-8 修复（删 ai_relay、修依赖）→ **T5 升格为进程外 core 宿主**（或新建 host，T5 时定） |
 | `apps/relay-server` | 已整删（T2-2 C5, commit f6a011b, PEND-1） | 随删除关闭；原维持/解冻评估规划失效 |
 | `apps/cli` | frozen（编译产物已有 CI：cli-package.yml） | T4（= K4b CLI 半）后评估解冻 |
-| MiniApp host | frozen（沙箱语义待修） | SW1-1 修复是任何 MiniApp 开放的前置 |
+| MiniApp host | 已整删（T2-2 M1-M5, commits a930c93..T2-2o） | 随删除关闭；原 SW1-1 / 开放规划失效 |
 | mobile-web/remote_connect | 已整删（TH-4 删除已执行，T2-2 C1-C7, commits fa88342..d16b037） | P1-4/P1-7/D-2 已随删除关闭；将来移动需求 = T5 协议客户端重建 |
 
 ---
@@ -164,7 +164,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | # | 内容 | 来源线 | 量 |
 |---|---|---|---|
 | T2-1 | **CI 补齐**：check 去 exclude、test 扩面、`cargo tree -p northhing-kernel-api` 守卫已在 CI（kernel-api-clean job）、desktop check 强制门（P2-15 流程结转） | K+review | S |
-| T2-2 | 死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / **judge_gate 适配层**（assembly/core 1,690L；**协议层 1,473L 保留**转 TH-5 词汇，2026-08-17 G15 修正）≈6.5k 行）**+ remote 栈整删（TH-4：remote_connect 11.5k + mobile-web 4.7k + embedded relay 入口先摘后删；P1-4/P1-7/D-2 随之关闭；remote 栈部分（含 relay-server/relay-core 整删、mobile-web、contracts 修剪、i18n 面）已完成 C1-C8（commits fa88342..本批），MiniApp 部分待执行）** **+ MiniApp 子系统整删（2026-08-17 拍板：内置四件套 + 宿主 host_routing/bridge/manager/契约 ≈6k 行；permission_policy 默认拒绝语义先提炼进 PCS 设计再删码；连带关闭 T1-1、T3-5）**+ relay-server + relay-core 整删（PEND-1 拍板 2026-08-17：≈4-5k 行；surfaces.md 同 commit 同步）** + plan-compliance-checker(894L) + harness(571L，或并入 test-support)**，合计 ≈35k 行 | review+论题 | M |
+| ~~T2-2~~ | **已完成**（2026-08-19）：死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / judge_gate 适配层 ≈6.5k 行，commits 38eb04a..0fbc987）+ remote 栈整删（TH-4：remote_connect / mobile-web / relay-server / relay-core，commits fa88342..3702baf）+ MiniApp 子系统整删（内置 6 套资产 / 宿主 / 顶层 MiniApp/，M1-M5 commits a930c93..T2-2o；连带关闭 T1-1、T3-5）+ plan-compliance-checker + harness，合计删除 ≈40k+ 行 | review+论题 | **Done** |
 | T2-9 | **功能冗余合并批次**（2026-08-17 冗余扫描）：第一批 S 级——deep_research 去重（255L×2，diff 仅 10 行注释→re-export）、ndjson_log 统一（4 个追加+轮转实现 ~1,320L）、now_unix_ms 统一（3 同名函数+25 内联）、原子写收口 json_store（顺修 P2-16 save_config 裸写；删 PersistenceService FILE_LOCKS）、初始化收口（server bootstrap 手抄 + CLI 样板×4 → init_agentic_system）；第二批 M 级——app.json↔GlobalConfig 镜像拆除（写穿 kernel API）、**事件管道收敛 A7**（BackendEvent 死管道并入 EventQueue 或删除）、**desktop NullDispatcher 空转路径移除**（agent-dispatch B2，回退直连直至 dispatcher 真接线）；延期 L 级——ExecCommand↔Bash 合并（Bash/PTY 为正）、双 ToolRegistry 迁移收尾、MCP core 包装层（3,641L）收口 | 冗余扫描 | 第一批 S / 第二批 M / 延期 L |
 | T2-10 | **连续性自检测试**：自动化"杀 core → 恢复 → diff 会话/记忆/身份"（T5"agent 不死"验收的轻量前置版，0.3 即可写，依赖 fake AI backend 提供确定性） | 论题 §3 度量 | S |
 
@@ -182,7 +182,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | PCS-6 | 协议插件：ACP 客户端作为插件形态接入（随 T4-5 协议冻结）；2.0 C 选项的生态入口 | 随 T4/T5 |
 | T2-3 | i18n 生成器大小写修复 + 幽灵目录清除 | review | XS |
 | T2-4 | 债项：P2-16（save_config 原子写）、P2-7（subagent_ports fake AI backend） | 债 | S |
-| T2-5 | unwrap 定向治理（password_vault / mcp::auth / miniapp::manager / facts） | review | M |
+| T2-5 | unwrap 定向治理（password_vault / mcp::auth / facts） | review | M |
 | T2-6 | god-file 复拆 + 行数守卫（callbacks_lifecycle 1063L / theme.rs 990L） | review+台账纪律 | M |
 | T2-7 | `code-rot-scan.sh` 建实或删引用；debug-log 轮转 | review | XS |
 | T2-8 | 命名 canonical 统一（随 D-4 拍板） | review | S |
@@ -213,7 +213,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T3-2 | WebSearch 可配置（provider 化 + 降级路径） | review | M |
 | T3-3 | Provider 目录（preset 列表 + 能力声明化，替代名字推断） | review | M |
 | T3-4 | Gemini 视觉接通（放开 gating） | review | S |
-| ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17） | — |
+| ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17，随 T2-2 M1-M5 完成） | — |
 | T3-6 | 体验洞后端部分：P2-5 失败 turn 落史、P2-6 事件丢弃策略、P2-4 CleanupService 调度 | 债 | M |
 | T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 + **本地度量埋点**（P-10 边界：不离机；记忆纠正频率/审计覆盖率/工具成功率） | M 线（论题） | M |
 | T3-8 | **TH-5 身份演化机制**（**owner = growth session**，E-08；G15-b 自评审模式：触发限轮内/维护周期，评审执行器新写参考 SubagentJudgeRunner，**复用保留的 judge_gate 协议层**，证据禁取 episodes（P2-12），consume-once 凭证继承 P2-11 教训；insights 删除不复活） | M 线（论题） | L |
@@ -244,7 +244,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | 选项 | 触发条件 | 前置 |
 |---|---|---|
 | 移动/IM 远程 | **已决删除**（论题 v1.1，D-1 终值）；将来如需 = T5 协议客户端重写，旧栈不复用 | T4-5 协议冻结 |
-| MiniApp 第三方生态 | 真实第三方开发者需求 | T1-1 + T3-5（否则沙箱是假的） |
+| ~~MiniApp 第三方生态~~ | **已失效**（MiniApp 子系统已整删；将来如需 = 2.0 协议插件形态） | 前提 T1-1 + T3-5 已随整删关闭 |
 | 多宿主/被嵌入 | T4-5 协议冻结后自动获得 | ACP server 已在；论题要求协议不锁死单 agent 假设（为 C 留口） |
 | CLI 解冻 | T4-1 完 + doctor 统一（P2-1 尾款） | surfaces 协议四要件 |
 

@@ -147,7 +147,6 @@ mod tests {
             ("Grep", "Arguments are invalid JSON"),
             ("WebSearch", "OpenAI Agents SDK"),
             ("WebFetch", "https://example.com"),
-            ("InitMiniApp", "Markdown Viewer"),
         ];
 
         for (tool_name, raw_arguments) in cases {
