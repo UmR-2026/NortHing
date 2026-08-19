@@ -2197,48 +2197,6 @@ export function runManifestParserSelfTest({
       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
-      contracts: [
-        'pub struct MiniAppStorage',
-        'MiniAppStorageError',
-        'tokio::fs::read_to_string',
-        'tokio::fs::write',
-        'tokio::fs::remove_dir_all',
-        'MiniAppStorageLayout',
-        'MiniAppStoragePort',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
-      contracts: [
-        'MiniAppImportBundleWriteRequest',
-        'read_import_meta_json',
-        'write_import_bundle',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
-      contracts: [
-        'storage_port_adapter_preserves_existing_file_lifecycle',
-        'import_bundle_io_preserves_copy_and_fallback_contract',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
-      contracts: [
-        'read_builtin_install_marker',
-        'parse_builtin_install_marker',
-        'write_builtin_install_marker',
-        'serialize_builtin_install_marker',
-        'prepare_builtin_seed_bundle_files',
-        'builtin_source_files',
-        'build_builtin_seed_meta',
-        'preserved_builtin_created_at',
-        'BUILTIN_PLACEHOLDER_COMPILED_HTML',
-        'storage.json',
-      ],
-    },
-    {
       path: 'src/crates/contracts/product-domains/src/miniapp/builtin.rs',
       contracts: [
         'builtin-pr-review',
@@ -2260,48 +2218,6 @@ export function runManifestParserSelfTest({
         'build_builtin_package_json',
         'preserved_builtin_created_at',
         'build_builtin_seed_meta',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
-      contracts: [
-        'dispatch_host',
-        'split_host_method',
-        'dispatch_fs',
-        'plan_fs_legacy_path_check',
-        'plan_fs_host_call',
-        'fs_policy_scopes',
-        'MiniAppPermissionPolicyRequest::from_paths',
-        'resolve_policy_with_request',
-        'fs_resolved_path_allowed',
-        'dispatch_shell',
-        'plan_shell_host_call',
-        'shell_exec_default_env',
-        'command_basename_allowed',
-        'host_allowed_by_allowlist',
-        'process_manager::create_tokio_command',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
-      contracts: [
-        'pub struct JsWorker',
-        'pub trait MiniAppWorkerEventSink',
-        'process_manager::create_tokio_command',
-        'PendingResponseMap',
-        'uuid::Uuid::new_v4',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/worker_pool.rs',
-      contracts: [
-        'pub struct JsWorkerPool',
-        'MiniAppWorkerPoolError',
-        'worker_pool_at_capacity',
-        'select_lru_worker',
-        'plan_install_deps',
-        'process_manager::create_tokio_command',
-        'MiniAppRuntimePort',
       ],
     },
     {

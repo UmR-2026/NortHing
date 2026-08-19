@@ -75,16 +75,6 @@ mcp = [
     "rmcp/transport-streamable-http-client-reqwest",
     "sse-stream",
 ]
-miniapp-runtime = [
-    "base64",
-    "northhing-product-domains/miniapp",
-    "northhing-services-core",
-    "dep:northhing-product-domains",
-    "dirs",
-    "reqwest",
-    "uuid",
-    "which",
-]
 remote-ssh = ["dunce", "sha2", "tokio-util"]
 remote-ssh-concrete = [
     "remote-ssh",
@@ -118,7 +108,6 @@ product-full = [
     "file-watch",
     "function-agents",
     "git",
-    "miniapp-runtime",
     "mcp",
     "remote-ssh",
     "remote-ssh-concrete",

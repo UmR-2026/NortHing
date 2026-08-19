@@ -392,16 +392,6 @@ export const forbiddenContentRules = [
     ],
   },
   {
-    path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
-    patterns: [
-      {
-        regex: /\bresolve_policy\s*\(/,
-        message:
-          'services MiniApp host-dispatch must use MiniAppPermissionPolicyRequest for permission path adaptation',
-      },
-    ],
-  },
-  {
     path: 'src/crates/assembly/core/src/function_agents/runtime_services.rs',
     patterns: [
       {
