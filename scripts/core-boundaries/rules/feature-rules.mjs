@@ -82,11 +82,7 @@ export const optionalDependencyFeatureOwnerRules = [
     crateName: 'product-domains',
     reason:
       'product-domains optional runtime dependencies must stay owned by explicit product-domain features',
-    dependencies: [
-      { depName: 'dirs', ownerFeatures: ['miniapp'] },
-      { depName: 'sha2', ownerFeatures: ['miniapp'] },
-      { depName: 'which', ownerFeatures: ['miniapp'] },
-    ],
+    dependencies: [],
   },
 ];
 
@@ -147,6 +143,6 @@ export const ownerCrateFeatureAssemblyRules = [
   {
     manifestPath: 'src/crates/contracts/product-domains/Cargo.toml',
     reason: 'product-domains must keep product domain feature groups explicit and default-light',
-    requiredProductFullFeatures: ['miniapp', 'function-agents'],
+    requiredProductFullFeatures: ['function-agents'],
   },
 ];

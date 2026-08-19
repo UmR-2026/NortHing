@@ -1820,11 +1820,6 @@ function createLocaleFormatScanSpecs() {
         !shouldSkipLocaleFormatSourceScan(file)
       ),
     },
-    {
-      surface: 'core-miniapp',
-      root: path.join(root, 'src', 'crates', 'contracts', 'product-domains', 'src', 'miniapp', 'builtin', 'assets'),
-      predicate: (file) => file.endsWith('.js'),
-    },
   ];
 }
 

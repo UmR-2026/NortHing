@@ -1730,9 +1730,7 @@ export const forbiddenContentUnderRules = [
     patterns: [
       {
         regex: /\bCommand::new\(/,
-        allowPaths: ['src/crates/contracts/product-domains/src/miniapp/runtime.rs'],
-        message:
-          'product-domains must not spawn processes outside the reviewed MiniApp runtime detector owner',
+        message: 'product-domains must not spawn processes',
       },
       {
         regex: /\bprocess_manager::/,

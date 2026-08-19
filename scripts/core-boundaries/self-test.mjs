@@ -576,14 +576,6 @@ export function runManifestParserSelfTest({
       throw new Error(`services-integrations optional dependency owner rule must cover ${dep}`);
     }
   }
-  const productDomainsOptionalOwnerRule = optionalDependencyFeatureOwnerRules.find(
-    (rule) => rule.crateName === 'product-domains',
-  );
-  for (const dep of ['dirs', 'sha2']) {
-    if (!productDomainsOptionalOwnerRule?.dependencies.some((dependency) => dependency.depName === dep)) {
-      throw new Error(`product-domains optional dependency owner rule must cover ${dep}`);
-    }
-  }
   const productDomainRuntimeRule = forbiddenContentUnderRules.find(
     (rule) => rule.path === 'src/crates/contracts/product-domains/src',
   );
@@ -604,16 +596,6 @@ export function runManifestParserSelfTest({
     if (!productDomainRuntimeRuleText.includes(contract)) {
       throw new Error(`product-domains runtime boundary rule must forbid: ${contract}`);
     }
-  }
-  const productDomainCommandRule = productDomainRuntimeRule.patterns.find((pattern) =>
-    pattern.regex.source.includes('Command::new'),
-  );
-  if (
-    !productDomainCommandRule?.allowPaths?.includes(
-      'src/crates/contracts/product-domains/src/miniapp/runtime.rs',
-    )
-  ) {
-    throw new Error('product-domains Command::new exception must stay scoped to MiniApp runtime detection');
   }
   const coreTypesProfile = dependencyProfileRules.find((rule) => rule.crateName === 'core-types');
   if (!coreTypesProfile?.forbiddenNonOptionalDeps.includes('northhing-ai-adapters')) {
@@ -2197,30 +2179,6 @@ export function runManifestParserSelfTest({
       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
-      path: 'src/crates/contracts/product-domains/src/miniapp/builtin.rs',
-      contracts: [
-        'builtin-pr-review',
-        'BUILTIN_APPS',
-        'BuiltinMiniAppBundle',
-        'BuiltinInstallMarker',
-        'BUILTIN_INSTALL_MARKER',
-        'builtin_content_hash',
-        'should_seed_builtin_app',
-        'BuiltinSeedArtifacts',
-        'BuiltinSeedCheck',
-        'BuiltinSeedAction',
-        'resolve_builtin_seed_check',
-        'resolve_builtin_seed_action',
-        'serialize_builtin_install_marker',
-        'parse_builtin_install_marker',
-        'builtin_source_files',
-        'BUILTIN_PLACEHOLDER_COMPILED_HTML',
-        'build_builtin_package_json',
-        'preserved_builtin_created_at',
-        'build_builtin_seed_meta',
-      ],
-    },
-    {
       path: 'src/crates/assembly/core/src/function_agents/port_adapters.rs',
       contracts: [
         'CoreFunctionAgentGitAdapter',
@@ -2290,156 +2248,6 @@ export function runManifestParserSelfTest({
         'normalize_local_workspace_root_for_stable_id',
         'local_workspace_roots_equal',
         'unresolved_remote_session_storage_dir',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/runtime_facade.rs',
-      contracts: [
-        'MiniAppRuntimeFacade',
-        'create_app',
-        'persist_update_result_for_app',
-        'persist_draft_for_app',
-        'persist_draft_source_sync_result',
-        'persist_draft_permission_update_result',
-        'apply_draft_app',
-        'mark_builtin_update_available',
-        'mark_deps_installed_state',
-        'persist_sync_from_fs_result_for_app',
-        'persist_import_runtime_state',
-        'pub async fn import_from_path',
-        'MiniAppImportPort',
-        'MiniAppCompilePort',
-        'MiniAppImportBundleWriteRequest',
-        'build_import_bundle_plan',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/compiler.rs',
-      contracts: [
-        'MiniAppCompileRequest',
-        'from_paths',
-        'compile_with_request',
-        'compile_request_from_paths_preserves_runtime_paths',
-        'compile_with_request_preserves_legacy_compile_output',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/permission_policy.rs',
-      contracts: [
-        'MiniAppPermissionPolicyRequest',
-        'from_paths',
-        'resolve_policy_with_request',
-        'permission_policy_request_preserves_path_scope_and_granted_paths',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/storage.rs',
-      contracts: [
-        'MiniAppStorageLayout',
-        'META_JSON',
-        'source_file_path',
-        'versions_dir',
-        'DRAFT_JSON',
-        'draft_dir',
-        'customization_path',
-        'REQUIRED_SOURCE_FILES',
-        'PLACEHOLDER_COMPILED_HTML',
-        'MiniAppImportLayout',
-        'build_import_fallbacks',
-        'MiniAppImportBundlePlan',
-        'MiniAppImportBundlePlanError',
-        'MiniAppImportBundleWriteRequest',
-        'build_import_bundle_plan',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/lifecycle.rs',
-      contracts: [
-        'MiniAppCreateInput',
-        'MiniAppUpdatePatch',
-        'build_created_app',
-        'apply_update_patch',
-        'prepare_draft_app',
-        'apply_draft_source_sync_result',
-        'apply_draft_permission_update_result',
-        'apply_draft_to_active',
-        'mark_deps_installed_state',
-        'clear_worker_restart_required_state',
-        'prepare_rollback_app',
-        'apply_recompile_result',
-        'apply_sync_from_fs_result',
-        'apply_import_runtime_state',
-        'prepare_imported_meta',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/draft.rs',
-      contracts: ['MiniAppDraftManifest', 'MiniAppDraft', 'build_draft_manifest', 'build_draft_response'],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/runtime.rs',
-      contracts: [
-        'runtime_lookup_order',
-        'detect_runtime',
-        'DefaultMiniAppRuntimeProbe',
-        'MiniAppRuntimeProbe',
-        'detect_runtime_with_probe',
-        'which::which',
-        'std::fs::read_dir',
-        'create_version_command',
-        'candidate_executable_path',
-        'versioned_executable_candidate',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/worker.rs',
-      contracts: [
-        'InstallDepsPlan',
-        'plan_install_deps',
-        'worker_pool_capacity',
-        'worker_idle_timeout_ms',
-        'worker_is_idle',
-        'select_lru_worker',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/host_routing.rs',
-      contracts: [
-        'split_host_method',
-        'FsAccessMode',
-        'fs_method_access_mode',
-        'MiniAppFsHostCallPlan',
-        'plan_fs_host_call',
-        'plan_fs_legacy_path_check',
-        'fs_policy_scopes',
-        'fs_resolved_path_allowed',
-        'command_basename_for_allowlist',
-        'command_basename_allowed',
-        'host_allowed_by_allowlist',
-        'shell_exec_first_token',
-        'shell_exec_input_is_empty',
-        'shell_exec_cwd',
-        'shell_exec_timeout_ms',
-        'shell_exec_default_env',
-        'MiniAppShellHostCallPlan',
-        'plan_shell_host_call',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/exporter.rs',
-      contracts: ['MISSING_JS_RUNTIME_MESSAGE', 'export_runtime_label', 'build_export_check_result'],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
-      contracts: [
-        'MiniAppCustomizationMetadata',
-        'MiniAppDeclinedBuiltinUpdate',
-        'MiniAppPermissionDiff',
-        'diff_permissions',
-        'apply_draft_customization_metadata',
-        'mark_builtin_update_available_metadata',
-        'decline_builtin_update_metadata',
-        'is_current_declined_builtin_update',
       ],
     },
     {
