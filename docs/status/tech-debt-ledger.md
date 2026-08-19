@@ -49,7 +49,7 @@
 - **Symptom**: `PairingPage.tsx` has pairing logic but no re-pairing guidance when connection drops.
 - **Evidence**: `src/mobile-web/src/pages/PairingPage.tsx` — no re-pair UI.
 - **Proposed fix**: Add re-pair guidance UI to PairingPage.
-- **Status**: active (mobile-web: frozen surface)
+- **Status**: `resolved` — mobile-web 面已整删（T2-2 C6 commit `646f93d`），条目随删除关闭；`docs/architecture/backend-roadmap.md:118` 已预先声明此关闭方式。
 
 ### P1-4b: ~~Desktop Rust i18n mojibake~~ (resolved)
 
@@ -70,7 +70,7 @@
 - **Symptom**: `start_embedded_relay` binds `0.0.0.0:{port}` and passes `None` to `build_relay_router`, leaving pair/command endpoints open. This is a product-required open surface for LAN/ngrok mobile phone pairing — the pairing protocol itself must carry an out-of-band key.
 - **Evidence**: `src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs:28-33` (passes `None`), `:44-46` (binds `0.0.0.0:{port}`).
 - **Proposed fix**: Thread an API key through the embedded relay path, gated by the pairing protocol handshake (design task). Options: (1) Generate ephemeral key on each desktop start and include in QR code/pairing URL. (2) Use a configurable key from desktop settings. (3) Pairing-level token exchange before relay commands.
-- **Status**: active (registered 2026-08-04, P1-5 standalone mitigation complete; a startup `warn!` has been added at `embedded_relay.rs`)
+- **Status**: `resolved` — relay-server + relay-core 已整删（T2-2 C5 commit `f6a011b`，PEND-1），embedded relay 入口不复存在，条目随删除关闭。
 
 ### P1-8: MCPServerConfig.env serialized as plaintext in app.json
 
@@ -214,6 +214,20 @@
 - **Evidence**: Task B2 review observation + Wave1 final review §5 (2026-08-06), commit `7a4bdca`.
 - **Proposed fix**: either wire plugin uninstall into the product surface or record it explicitly as an API kept for a planned surface; also note `stop_server` always returns `Ok`, which makes the new warn branch unreachable.
 - **Status**: active (low priority)
+
+### P2-19: `src/apps/server/README.md:5-10` 包含 3 条指向已删 relay-server 的悬空链接
+
+- **Symptom**: `src/apps/server/README.md:5-10` 中存在 3 条指向 `src/apps/relay-server` 的链接与描述引用，但 relay-server 已在 T2-2 C5（commit `f6a011b`）整删。
+- **Evidence**: `src/apps/server/README.md:5-10`。
+- **Proposed fix**: server 为 frozen 面，留待 server 解冻时同步修整文档链接（来源：T2-2g review M-g-2）。
+- **Status**: active (frozen surface)
+
+### P2-20: `pnpm-workspace.yaml` 中注册了孤儿工作区 `desktop-tauri`
+
+- **Symptom**: `pnpm-workspace.yaml` 中包含 `src/apps/desktop-tauri` 注册条目，但磁盘上该目录不存在（已随架构演进清理）。
+- **Evidence**: `pnpm-workspace.yaml:5`。
+- **Proposed fix**: 作为独立决策项处理，在后续工作区配置清理批次中移除（来源：T2-2h review F1/M-h）。
+- **Status**: active
 
 ## Change Protocol
 

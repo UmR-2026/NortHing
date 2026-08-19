@@ -1281,9 +1281,6 @@ function collectL10nQualityCandidates(resourceGroups, allowedIdenticalMatches) {
   }
 }
 
-function collectConfirmedUnusedKeys() {
-}
-
 function auditGovernanceCategoryBudget(category, budget) {
   if (!isPlainObject(budget)) {
     reportError(`scripts/i18n-governance-baseline.json ${category} budget must be an object`);
@@ -1372,7 +1369,6 @@ function auditI18nGovernanceReport(namespaces) {
   const resourceGroups = buildResourceGroups(resourceEntries);
   const allowedIdenticalMatches = collectAllowedL10nIdenticalMatches(resourceGroups);
 
-  collectConfirmedUnusedKeys();
   collectDynamicKeyCandidates(resourceGroups);
   collectSharedTermDuplicates(resourceEntries);
   collectSameTextLocaleInventory(resourceGroups, allowedIdenticalMatches);

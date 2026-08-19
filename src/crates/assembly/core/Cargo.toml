@@ -121,12 +121,12 @@ rusqlite = { workspace = true }
 fluent-bundle = { workspace = true }
 unic-langid = { workspace = true }
 
-# Encryption (Remote Connect E2E)
+# Encryption
 aes-gcm = { workspace = true, optional = true }
 sha2 = { workspace = true }
 rand = { workspace = true, optional = true }
 
-# Device/Network info (Remote Connect)
+# Device/Network info
 local-ip-address = { workspace = true, optional = true }
 
 # QR code generation

@@ -43,7 +43,7 @@ mod tests {
     }
 
     #[test]
-    fn core_service_agent_runtime_owner_exposes_agent_runtime_and_remote_control_port() {
+    fn core_service_agent_runtime_owner_exposes_agent_runtime() {
         fn assert_agent_runtime(
             coordinator: std::sync::Arc<crate::agentic::coordination::ConversationCoordinator>,
         ) -> Result<northhing_agent_runtime::runtime::AgentRuntime, String> {

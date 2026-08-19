@@ -112,10 +112,10 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | 面 | 状态 | 规划 |
 |---|---|---|
 | `apps/server` | 位腐（源码 import core 但 Cargo.toml 未声明，编译不过；内含未接线 `ai_relay.rs`/`rpc_dispatcher.rs`） | T1-8 修复（删 ai_relay、修依赖）→ **T5 升格为进程外 core 宿主**（或新建 host，T5 时定） |
-| `apps/relay-server` | 已加固（fail-closed 绑定、自动 key、CORS localhost 默认，2026-08-04） | 维持；M5 解冻评估时按 surfaces 协议走 |
+| `apps/relay-server` | 已整删（T2-2 C5, commit f6a011b, PEND-1） | 随删除关闭；原维持/解冻评估规划失效 |
 | `apps/cli` | frozen（编译产物已有 CI：cli-package.yml） | T4（= K4b CLI 半）后评估解冻 |
 | MiniApp host | frozen（沙箱语义待修） | SW1-1 修复是任何 MiniApp 开放的前置 |
-| mobile-web/remote_connect | 已决删除（论题 v1.1） | TH-4 删除执行单入 T2-2；P1-4/P1-7/D-2 随删除关闭；将来移动需求 = T5 协议客户端重写 |
+| mobile-web/remote_connect | 已整删（TH-4 删除已执行，T2-2 C1-C7, commits fa88342..d16b037） | P1-4/P1-7/D-2 已随删除关闭；将来移动需求 = T5 协议客户端重建 |
 
 ---
 
@@ -126,7 +126,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 3. **ACP server**：`interfaces/acp` 已实现 stdio 服务端（`AcpServer<R>` over agent-client-protocol）——T5 协议候选之一，也是"多宿主/被嵌入"战略选项的零成本通路；
 4. **持久化**：会话/轮次/prompt cache（`session_persistence/*`、`restore_session_with_turns`）+ agent memory（sqlite WAL）——T5 重启恢复的地基已存在；
 5. **动态性**：MCP 全动态（add/remove/restart）、LSP 插件热装卸——T5 之外的既有热插拔面；
-6. **relay-server fail-closed 模式**：SW1-2 修 embedded relay 时直接复用其绑定/key 策略；
+6. **relay-server fail-closed 模式**（已失效：relay-server 已整删，T2-2 C5 commit `f6a011b`）：原 SW1-2 复用策略随载体删除失效；
 7. **治理设施**：core-boundaries 检查器（已入 CI）、技术债台账、surfaces 变更协议、B 线 brief/report 流程。
 
 ---
@@ -164,7 +164,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | # | 内容 | 来源线 | 量 |
 |---|---|---|---|
 | T2-1 | **CI 补齐**：check 去 exclude、test 扩面、`cargo tree -p northhing-kernel-api` 守卫已在 CI（kernel-api-clean job）、desktop check 强制门（P2-15 流程结转） | K+review | S |
-| T2-2 | 死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / **judge_gate 适配层**（assembly/core 1,690L；**协议层 1,473L 保留**转 TH-5 词汇，2026-08-17 G15 修正）≈6.5k 行）**+ remote 栈整删（TH-4：remote_connect 11.5k + mobile-web 4.7k + embedded relay 入口先摘后删；P1-4/P1-7/D-2 随之关闭）** **+ MiniApp 子系统整删（2026-08-17 拍板：内置四件套 + 宿主 host_routing/bridge/manager/契约 ≈6k 行；permission_policy 默认拒绝语义先提炼进 PCS 设计再删码；连带关闭 T1-1、T3-5）**+ relay-server + relay-core 整删（PEND-1 拍板 2026-08-17：≈4-5k 行；surfaces.md 同 commit 同步）** + plan-compliance-checker(894L) + harness(571L，或并入 test-support)**，合计 ≈35k 行 | review+论题 | M |
+| T2-2 | 死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / **judge_gate 适配层**（assembly/core 1,690L；**协议层 1,473L 保留**转 TH-5 词汇，2026-08-17 G15 修正）≈6.5k 行）**+ remote 栈整删（TH-4：remote_connect 11.5k + mobile-web 4.7k + embedded relay 入口先摘后删；P1-4/P1-7/D-2 随之关闭；remote 栈部分（含 relay-server/relay-core 整删、mobile-web、contracts 修剪、i18n 面）已完成 C1-C8（commits fa88342..本批），MiniApp 部分待执行）** **+ MiniApp 子系统整删（2026-08-17 拍板：内置四件套 + 宿主 host_routing/bridge/manager/契约 ≈6k 行；permission_policy 默认拒绝语义先提炼进 PCS 设计再删码；连带关闭 T1-1、T3-5）**+ relay-server + relay-core 整删（PEND-1 拍板 2026-08-17：≈4-5k 行；surfaces.md 同 commit 同步）** + plan-compliance-checker(894L) + harness(571L，或并入 test-support)**，合计 ≈35k 行 | review+论题 | M |
 | T2-9 | **功能冗余合并批次**（2026-08-17 冗余扫描）：第一批 S 级——deep_research 去重（255L×2，diff 仅 10 行注释→re-export）、ndjson_log 统一（4 个追加+轮转实现 ~1,320L）、now_unix_ms 统一（3 同名函数+25 内联）、原子写收口 json_store（顺修 P2-16 save_config 裸写；删 PersistenceService FILE_LOCKS）、初始化收口（server bootstrap 手抄 + CLI 样板×4 → init_agentic_system）；第二批 M 级——app.json↔GlobalConfig 镜像拆除（写穿 kernel API）、**事件管道收敛 A7**（BackendEvent 死管道并入 EventQueue 或删除）、**desktop NullDispatcher 空转路径移除**（agent-dispatch B2，回退直连直至 dispatcher 真接线）；延期 L 级——ExecCommand↔Bash 合并（Bash/PTY 为正）、双 ToolRegistry 迁移收尾、MCP core 包装层（3,641L）收口 | 冗余扫描 | 第一批 S / 第二批 M / 延期 L |
 | T2-10 | **连续性自检测试**：自动化"杀 core → 恢复 → diff 会话/记忆/身份"（T5"agent 不死"验收的轻量前置版，0.3 即可写，依赖 fake AI backend 提供确定性） | 论题 §3 度量 | S |
 

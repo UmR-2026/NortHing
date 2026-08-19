@@ -1,4 +1,4 @@
-//! R26 sibling 2/4: session_workspace — session storage + workspace filesystem/shell + permission + clock + terminal + network + git + mcp + remote-connection port traits.
+//! R26 sibling 2/4: session_workspace — session storage + workspace filesystem/shell + permission + clock + terminal + network + git + mcp port traits.
 //!
 //! Mavis take-over (interface crate, all items `pub`).
 
