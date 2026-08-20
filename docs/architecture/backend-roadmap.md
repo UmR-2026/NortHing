@@ -163,7 +163,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 
 | # | 内容 | 来源线 | 量 |
 |---|---|---|---|
-| T2-1 | **CI 补齐**：check 去 exclude、test 扩面、`cargo tree -p northhing-kernel-api` 守卫已在 CI（kernel-api-clean job）、desktop check 强制门（P2-15 流程结转） | K+review | S |
+| ~~T2-1~~ | ~~**CI 补齐**：check 去 exclude、test 扩面、`cargo tree -p northhing-kernel-api` 守卫已在 CI（kernel-api-clean job）、desktop check 强制门（P2-15 流程结转）~~ | **已完成**（2026-08-17，commits 3a6695f..05905ee；i18n-contract 24 个预存失败归 T2-3，i18n frozen） | ~~S~~ |
 | ~~T2-2~~ | **已完成**（2026-08-19）：死代码删除第一批（insights / tool-provider-groups / 空 session 目录 / webdriver / enigo+screenshots / judge_gate 适配层 ≈6.5k 行，commits 38eb04a..0fbc987）+ remote 栈整删（TH-4：remote_connect / mobile-web / relay-server / relay-core，commits fa88342..3702baf）+ MiniApp 子系统整删（内置 6 套资产 / 宿主 / 顶层 MiniApp/，M1-M5 commits a930c93..T2-2o；连带关闭 T1-1、T3-5）+ plan-compliance-checker + harness，合计删除 ≈40k+ 行 | review+论题 | **Done** |
 | T2-9 | **功能冗余合并批次**（2026-08-17 冗余扫描）：第一批 S 级——deep_research 去重（255L×2，diff 仅 10 行注释→re-export）、ndjson_log 统一（4 个追加+轮转实现 ~1,320L）、now_unix_ms 统一（3 同名函数+25 内联）、原子写收口 json_store（顺修 P2-16 save_config 裸写；删 PersistenceService FILE_LOCKS）、初始化收口（server bootstrap 手抄 + CLI 样板×4 → init_agentic_system）；第二批 M 级——app.json↔GlobalConfig 镜像拆除（写穿 kernel API）、**事件管道收敛 A7**（BackendEvent 死管道并入 EventQueue 或删除）、**desktop NullDispatcher 空转路径移除**（agent-dispatch B2，回退直连直至 dispatcher 真接线）；延期 L 级——ExecCommand↔Bash 合并（Bash/PTY 为正）、双 ToolRegistry 迁移收尾、MCP core 包装层（3,641L）收口 | 冗余扫描 | 第一批 S / 第二批 M / 延期 L |
 | T2-10 | **连续性自检测试**：自动化"杀 core → 恢复 → diff 会话/记忆/身份"（T5"agent 不死"验收的轻量前置版，0.3 即可写，依赖 fake AI backend 提供确定性） | 论题 §3 度量 | S |
