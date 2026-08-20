@@ -351,3 +351,11 @@
 - Task T2-7: complete (commits d4180cf..1644eac = e3dd528 + 1644eac, review Round1 Approved-1I → fix → Round2 APPROVED 0C/0I/0M, judge minimax-m3). code-rot-scan.sh 死引用删除（guide 三处，编排者裁定删引用——bash 脚本异质工具链且扫描内容已被家规 3 + P2-10 登记 + check-core-boundaries 覆盖）+ debug.log 8MiB 单轮转（私有 helper `rotate_if_oversized(path, max_bytes)` + `backup_path_for` 泛化命名 x.log→x.1.log，Windows remove-before-rename；3 新测试含 8MiB+1 真实轮转端到端）。Round1 Important（plan-mandated）：并发 append 竞态未在代码注释说明 → 1644eac 三行 doc comment 闭环（second rename 失败丢行符合 crate 吞错语义）。Round1 Minor 误报记录：judge 声称 lib.rs:26 doc comment 含 U+200B 零宽空格，编排者字节级实测**不存在**（judge 编码显示假象）。另 2 Minor（guide 小节标题顺手改名 + 空小节头删除）属越简范围但合理，接受。roadmap:187 核销同 commit。验证：debug-log 5/5、cargo check --workspace + -p northhing 干净。**T2-7 CLOSED。**
 
 - Task T3-4: complete (commits 4858e1c..80651bf, review clean: SPEC 12/12 / QUALITY Approved by minimax-m3, 0C/0I/0M). Gemini computer_use screenshot 链路贯通：gemini message_content converter tool 分支（含 is_error 路径）追加 inlineData parts（mimeType/data ← ToolImageAttachment）；metadata.rs 多模态门禁白名单扩至五个 Gemini 格式字符串（gemini/google/gemini-code-assist/gemini_code_assist/code-assist，与 client/format.rs:22-23 权威集合逐字一致）+ 报错文案与 doc comment 同步。第一道门（用户模型配置 capabilities/category）不动。judge 独立抽跑 ai-adapters image_attachments 2/2 + core multimodal_tool_output 1/1 复核。3 文件 +127/-5；新测试 3 个（converter 多图、error 带图、门禁判定）。**T3-4 CLOSED。**
+
+---
+
+# T1 Ledger (2026-08-20)
+
+计划源：roadmap T1 安全收尾段 + full-review SW1 表（SW1-4/5/6/8/10，remote/MiniApp 删除后缩至 5 项）。
+
+- Task T1-4: complete (commits 0ac7e9a..0b656dd, review clean: SPEC 10/10 / QUALITY Approved by minimax-m3, 0C/0I/1M). SW1-4 落地：ComputerUse 三条 shell 路径（handle_run_script 含 shell fallback / handle_open_app 含 fallback / run_apple_script_impl）全部在任何 spawn 前过 guard_command_execution("ComputerUse", skip_confirmation=true) + tool-execution banned_shell_command 双检；Denied 不 spawn 逐分支 judge 核实；audit tool_name 与消费方兼容；AppleScript 判定 = 合成命令串 + 脚本正文双重检查。9 新测试（4 apple_script + 5 system_*）。3 文件 +330/-0。Gates: cargo check --workspace clean、core computer_use 28/28、fmt:rs。Minor 挂账终审 triage：M-1 app_control.rs:107-112 pre-loop check_command_denied(app_name) 同步快查绕过 guard 自带 audit log（执行仍拦、loop 内 guard 兜底，denylist 命中走 pre-loop 时少一条审计日志）。
