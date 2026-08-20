@@ -220,7 +220,7 @@
 - **Symptom**: `src/apps/server/README.md:5-10` 中存在 3 条指向 `src/apps/relay-server` 的链接与描述引用，但 relay-server 已在 T2-2 C5（commit `f6a011b`）整删。
 - **Evidence**: `src/apps/server/README.md:5-10`。
 - **Proposed fix**: server 为 frozen 面，留待 server 解冻时同步修整文档链接（来源：T2-2g review M-g-2）。
-- **Status**: active (frozen surface)
+- **Status**: `resolved` — T1-8 顺手清删除 3 条指向已删 relay-server 的悬空链接与废弃说明。
 
 ### P2-20: `pnpm-workspace.yaml` 中注册了孤儿工作区 `desktop-tauri`
 

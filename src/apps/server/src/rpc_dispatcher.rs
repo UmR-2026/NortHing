@@ -3,6 +3,18 @@
 //! Maps Tauri command names (used by the frontend `api.invoke()`) to
 //! server-side handler functions. Each handler receives the raw JSON
 //! `params` and returns a JSON `result`.
+//!
+//! # Status & Authentication Notice
+//!
+//! - **Orphan / Not Compiled**: This module is currently not wired into `main.rs`
+//!   (`mod rpc_dispatcher;` is omitted) and does not participate in compilation.
+//! - **Security Scope**: Contains handlers for sensitive operations including
+//!   DeepReview queue control, configuration reload, and filesystem/workspace actions.
+//! - **Authentication Requirement**: Before re-wiring or exposing this dispatcher
+//!   over WebSocket/HTTP, robust authentication and authorization MUST be implemented.
+//!   Exposing these RPC methods without authentication is strictly prohibited.
+//! - **Protocol Alignment**: Future retention, refactoring, or deprecation will be
+//!   determined upon wire protocol freezing per T4-5 / ACP alignment.
 
 use crate::bootstrap::ServerAppState;
 use anyhow::{anyhow, Result};
