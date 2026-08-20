@@ -486,49 +486,22 @@ pub fn normalize_path_for_comparison(path_str: &str) -> String {
     if trimmed.is_empty() {
         return String::new();
     }
-    let p = Path::new(trimmed);
-    if let Ok(canon) = p.canonicalize() {
-        let mut s = canon.to_string_lossy().to_string();
-        if let Some(stripped) = s.strip_prefix(r"\\?\UNC\") {
-            s = format!(r"\\{}", stripped);
-        } else if let Some(stripped) = s.strip_prefix(r"\\?\") {
-            s = stripped.to_string();
-        }
-        return s.replace('\\', "/").trim_end_matches('/').to_lowercase();
+
+    let mut s = trimmed.replace('\\', "/");
+
+    let lower_prefix = s.to_ascii_lowercase();
+    if lower_prefix.starts_with("//?/unc/") {
+        s = format!("//{}", &s[8..]);
+    } else if lower_prefix.starts_with("//?/") {
+        s = s[4..].to_string();
     }
 
-    let mut normalized = String::new();
-    for comp in p.components() {
-        match comp {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                if let Some(idx) = normalized.rfind('/') {
-                    normalized.truncate(idx);
-                } else {
-                    normalized.clear();
-                }
-            }
-            std::path::Component::RootDir => {
-                if !normalized.ends_with('/') {
-                    normalized.push('/');
-                }
-            }
-            std::path::Component::Prefix(prefix) => {
-                normalized.push_str(&prefix.as_os_str().to_string_lossy());
-            }
-            std::path::Component::Normal(part) => {
-                if !normalized.is_empty()
-                    && !normalized.ends_with('/')
-                    && !normalized.ends_with('\\')
-                    && !normalized.ends_with(':')
-                {
-                    normalized.push('/');
-                }
-                normalized.push_str(&part.to_string_lossy());
-            }
-        }
+    let trimmed_end = s.trim_end_matches('/');
+    if trimmed_end.is_empty() && s.starts_with('/') {
+        "/".to_string()
+    } else {
+        trimmed_end.to_ascii_lowercase()
     }
-    normalized.replace('\\', "/").trim_end_matches('/').to_lowercase()
 }
 
 pub fn verify_uninstall_path(
@@ -644,6 +617,14 @@ mod tests {
             normalize_path_for_comparison(r"C:\Program Files\northhing")
         );
         assert_eq!(
+            normalize_path_for_comparison(r"\\?\C:\Program Files\northhing"),
+            normalize_path_for_comparison(r"C:\Program Files\northhing")
+        );
+        assert_eq!(
+            normalize_path_for_comparison(r"\\?\UNC\server\share\northhing"),
+            normalize_path_for_comparison(r"\\server\share\northhing")
+        );
+        assert_eq!(
             normalize_path_for_comparison("/opt/northhing"),
             normalize_path_for_comparison("/opt/northhing/")
         );
@@ -659,6 +640,7 @@ mod tests {
         assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing").is_ok());
         assert!(verify_uninstall_path(reg, r"C:/Program Files/northhing/").is_ok());
         assert!(verify_uninstall_path(reg, r"c:\program files\northhing").is_ok());
+        assert!(verify_uninstall_path(reg, r"\\?\C:\Program Files\northhing").is_ok());
     }
 
     #[test]
@@ -667,6 +649,15 @@ mod tests {
         assert!(verify_uninstall_path(reg, r"C:\Windows").is_err());
         assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing-other").is_err());
         assert!(verify_uninstall_path(reg, r"C:\Program Files").is_err());
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_junction_or_link_literal_mismatch_rejected() {
+        // Pure string comparison does not follow filesystem junctions/symlinks.
+        // Even if C:\AppJunction pointed to C:\Program Files\northhing, differing literals are rejected.
+        let reg = Some(r"C:\Program Files\northhing");
+        assert!(verify_uninstall_path(reg, r"C:\AppJunction").is_err());
+        assert!(verify_uninstall_path(reg, r"C:\SymlinkTarget").is_err());
     }
 
     #[test]
