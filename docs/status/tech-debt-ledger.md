@@ -135,7 +135,7 @@
 - **Symptom**: tests_cancel / tests_timeout / tests_concurrent / tests_error / tests_parent_chain assume dev environment has no LLM and init_turn fails in microseconds; on machines with available LLM configuration these tests fail reliably (unrelated to code correctness).
 - **Evidence**: `src/crates/assembly/core/src/agentic/coordination/tests/subagent_ports/tests_cancel.rs:7-12` (test doc comment self-documents the assumption); `docs/plans/2026-07-21-three-track-refinement-plan.md` §v0.2.4 B5 retro section.
 - **Proposed fix**: Inject a deterministic fake AI backend (独立测试基建单), replacing the implicit assumption on local machine configuration.
-- **Status**: active
+- **Status**: resolved-by-alternative (2026-08-20, T2-4b verification). The environment-sensitivity was actually fixed by Task 9 B-2 (2026-08-01, commit 6574b01): `ensure_global_config_for_tests` no longer initializes `AIClientFactory`, so `init_turn` fails fast at `get_global_ai_client_factory` in microseconds regardless of host LLM configuration (see the doc comment at `subagent_ports/mod.rs:131-146`). Verified 2026-08-20 on a machine with live LLM config: `cargo test -p northhing-core --features product-full --lib subagent_ports` = 10/10 passed in 0.09s, deterministic. The fake-AI-backend test infra remains desired by roadmap T2-10 (连续性自检测试) and is tracked there, not here.
 
 ### P2-8: kernel_facade/mod.rs god file (2213 lines)
 
