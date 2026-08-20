@@ -233,8 +233,8 @@
 
 - **Symptom**: MiniApp 子系统整删后，契约层保留了三处 serde/wire 残留：`core-types/src/surface.rs:52` `RuntimeArtifactKind::MiniApp`、`services-core/src/session/session_metadata.rs:27` `SessionRelationshipKind::Miniapp`、`services-core/src/session/lineage.rs:19` `"miniapp"` tag。当前代码中零构造、零生产者，但直接删除存在旧会话/工件数据反序列化兼容风险。
 - **Evidence**: T2-2 MiniApp recon Q7 (`.superpowers/sdd/task-t2-2-miniapp-recon.md`)；`rg` 实测全仓零业务构造。
-- **Proposed fix**: 2026-08-19 用户决策超时未拍板，默认保守路径悬置待决。后续若确认无旧数据迁移负担可整删变体，或在反序列化层增加 serde alias/fallback 后删除。
-- **Status**: active (suspended / pending user decision)
+- **Proposed fix**: 整删三处残留（曾悬置待用户拍板；经实测零生产者，磁盘旧数据不可能含这些值，风险≈0）。
+- **Status**: `resolved` — 用户 2026-08-19 拍板删除，T2-2p 执行完毕，commits 见 git log。
 
 ## Change Protocol
 

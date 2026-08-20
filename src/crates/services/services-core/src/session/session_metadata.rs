@@ -24,7 +24,6 @@ pub enum SessionRelationshipKind {
     Btw,
     Review,
     DeepReview,
-    Miniapp,
     Subagent,
 }
 

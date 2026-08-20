@@ -49,7 +49,6 @@ pub enum RuntimeArtifactKind {
     Preview,
     Usage,
     ReviewReport,
-    MiniApp,
     McpManifest,
 }
 
