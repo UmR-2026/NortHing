@@ -355,7 +355,7 @@ fn default_tool_confirmation_timeout() -> Option<u64> {
 }
 
 fn default_skip_tool_confirmation() -> bool {
-    true
+    false
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -487,7 +487,7 @@ impl Default for AIConfig {
             stream_ttft_timeout_secs: default_stream_ttft_timeout(),
             tool_execution_timeout_secs: default_tool_execution_timeout(),
             tool_confirmation_timeout_secs: default_tool_confirmation_timeout(),
-            skip_tool_confirmation: true,
+            skip_tool_confirmation: false,
             shell_security: ShellSecurityConfig::default(),
             debug_mode_config: DebugModeConfig::default(),
             computer_use_enabled: false,
@@ -506,5 +506,74 @@ mod tests {
         let config = AIConfig::default();
         assert_eq!(config.tool_execution_timeout_secs, Some(300));
         assert_eq!(config.tool_confirmation_timeout_secs, Some(300));
+    }
+
+    #[test]
+    fn default_ai_config_skip_tool_confirmation_is_false() {
+        let config = AIConfig::default();
+        assert!(!config.skip_tool_confirmation);
+    }
+
+    #[test]
+    fn deserializes_missing_skip_tool_confirmation_as_false() {
+        let config: AIConfig =
+            serde_json::from_str("{}").expect("empty object should deserialize into default AIConfig");
+        assert!(!config.skip_tool_confirmation);
+    }
+
+    #[test]
+    fn deserializes_explicit_skip_tool_confirmation_true_as_true() {
+        let config: AIConfig = serde_json::from_str(r#"{"skip_tool_confirmation": true}"#)
+            .expect("legacy config with explicit skip_tool_confirmation=true should deserialize");
+        assert!(config.skip_tool_confirmation);
+    }
+
+    #[test]
+    fn combined_skip_tool_confirmation_logic_fresh_config_requires_confirmation() {
+        let config = AIConfig::default();
+        let agent_type = "agentic";
+        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
+        // ShellSecurity defaults to Permissive (skip=true), but global legacy skip defaults to false
+        assert!(shell_security_skip);
+        assert!(!config.skip_tool_confirmation);
+
+        // Combined AND decision requires confirmation on fresh config
+        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
+        assert!(!combined_skip, "fresh configuration must not skip tool confirmation");
+    }
+
+    #[test]
+    fn combined_skip_tool_confirmation_logic_legacy_config_skips_when_both_true() {
+        let mut config = AIConfig::default();
+        config.skip_tool_confirmation = true;
+        let agent_type = "agentic";
+        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
+        assert!(shell_security_skip);
+        assert!(config.skip_tool_confirmation);
+
+        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
+        assert!(
+            combined_skip,
+            "legacy configuration with explicit skip=true and permissive security should skip confirmation"
+        );
+    }
+
+    #[test]
+    fn combined_skip_tool_confirmation_logic_mode_override_strict_prevents_skip() {
+        let mut config = AIConfig::default();
+        config.skip_tool_confirmation = true;
+        config
+            .shell_security
+            .mode_overrides
+            .insert("admin".to_string(), ConfirmationMode::Strict);
+
+        let shell_security_skip = config.shell_security.should_skip_confirmation("admin");
+        assert!(!shell_security_skip);
+
+        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
+        assert!(
+            !combined_skip,
+            "strict mode override must prevent skip even if legacy skip is true"
+        );
     }
 }

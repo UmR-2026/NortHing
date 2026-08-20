@@ -84,7 +84,7 @@
 - **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
 - **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
 - **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
-- **Status**: active (discovered by C1 review 2026-08-04)
+- **Status**: `resolved` (2026-08-21, T1-5) — 删除了 `DeleteFileTool` 的 `needs_permissions` 覆写，恢复 Tool trait 默认实现 `needs_permissions() = !self.is_readonly()`（由于 `is_readonly() == false`，恢复返回 `true`）。所有删除操作（含 permanent=true、含 remote SSH 路径）全部走确认门。覆盖单元测试验证通过。
 
 ## P2 — Experience and operations
 
