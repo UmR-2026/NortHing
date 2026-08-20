@@ -151,13 +151,13 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | ~~T1-1~~ | ~~MiniApp allowlist 语义翻转~~ | **随 MiniApp 整删关闭**（2026-08-17，T2-2） | — |
 | ~~T1-2~~ | ~~嵌入式 relay 鉴权~~ | **随栈删除关闭**（remote 栈已决删，T2-2） | — |
 | ~~T1-3~~ | ~~远程确认门~~ | **随栈删除关闭** | — |
-| T1-4 | ComputerUse 接 guard | S（SW1-4） | S |
-| T1-5 | 出货默认确认 + Phase 3 门接线 + P1-6 修复 | S+债（SW1-5） | M |
-| T1-6 | 安装器三修 | S（SW1-6） | S |
+| ~~T1-4~~ | ~~ComputerUse 接 guard~~ | **已完成**（2026-08-21，0b656dd；三路径双检+审计，双判决 clean） | ~~S~~ |
+| ~~T1-5~~ | ~~出货默认确认 + Phase 3 门接线 + P1-6 修复~~ | **已完成**（2026-08-21，bec0ae7+ea55c80；默认 false 翻转 + Delete/Write/Edit 三覆写删除，四工具确认门对齐；F1 用户拍板选项 b） | ~~M~~ |
+| ~~T1-6~~ | ~~安装器三修~~ | **已完成**（2026-08-21，cdfd059+3891080；zip-slip/注册目录校验/webview 原串三修，F1 junction 混淆同轮修复） | ~~S~~ |
 | ~~T1-7~~ | ~~远程 ReadFile 遏制 + 重放保护~~ | **随栈删除关闭** | — |
-| T1-8 | apps/server 修复 + 删 ai_relay | S+面（SW1-8=R-21） | S |
+| ~~T1-8~~ | ~~apps/server 修复 + 删 ai_relay~~ | **已完成**（2026-08-21，61ba73a；ai_relay 孤儿整删 + rpc_dispatcher 鉴权注记 + P2-19 同 commit 收口） | ~~S~~ |
 | ~~T1-9~~ | ~~bot 配对码限流~~ | **随栈删除关闭** | — |
-| T1-10 | 低危批量（恒时比较/Origin/upload-web hash/ACP 钉版本/P1-8） | S+债（SW1-10） | S |
+| ~~T1-10~~ | ~~低危批量（恒时比较/Origin/upload-web hash/ACP 钉版本/P1-8）~~ | **已完成**（2026-08-21，1d1d4ff；WS Origin 403 + ACP 钉版 0.16.2/0.16.0 + debug-log CORS loopback 收紧；恒时比较/upload-web 核销无现存目标。**注意 P1-8 不在本行落地**——SW1-10 原文五子项无 P1-8，P1-8（MCP env 明文）仍在债线待排） | ~~S~~ |
 
 ### T2 结构与基建（1-2 周）
 
