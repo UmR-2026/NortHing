@@ -1,6 +1,7 @@
 use super::manager::ConfigManager;
 use crate::service::config::types::{AIModelConfig, GlobalConfig};
 use crate::util::errors::*;
+use northhing_services_core::JsonFileStore;
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::fs;
@@ -142,20 +143,10 @@ impl ConfigManager {
         }
     }
 
-    /// Saves the configuration file.
+    /// Saves the configuration file atomically.
     pub(crate) async fn save_config(&self) -> NortHingResult<()> {
-        let content = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| NortHingError::config(format!("Config serialization failed: {}", e)))?;
-
-        if let Some(parent) = self.config_file.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent).await.map_err(|e| {
-                    NortHingError::config(format!("Failed to create config directory {:?}: {}", parent, e))
-                })?;
-            }
-        }
-
-        fs::write(&self.config_file, content)
+        JsonFileStore
+            .write_atomic(&self.config_file, &self.config)
             .await
             .map_err(|e| NortHingError::config(format!("Failed to write config file {:?}: {}", self.config_file, e)))?;
         Ok(())
@@ -183,5 +174,68 @@ impl ConfigManager {
 
         info!("Created config backup: {:?}", backup_file);
         Ok(backup_file)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::infrastructure::PathManager;
+    use crate::service::config::manager::ConfigManagerSettings;
+    use std::sync::Arc;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn save_config_atomically_persists_content_and_leaves_no_temp_files() {
+        let temp_root = std::env::temp_dir().join(format!("northhing-save-config-test-{}", Uuid::new_v4()));
+        let path_manager = Arc::new(PathManager::with_user_root_for_tests(temp_root.join("user-root")));
+        let settings = ConfigManagerSettings {
+            path_manager: Some(path_manager),
+            auto_save: false,
+            backup_count: 5,
+        };
+
+        let mut manager = ConfigManager::new(settings)
+            .await
+            .expect("config manager should initialize with isolated temp root");
+
+        manager.config.app.language = "zh-CN".to_string();
+        manager.save_config().await.expect("save_config should succeed");
+
+        let saved_content = tokio::fs::read_to_string(&manager.config_file)
+            .await
+            .expect("saved config file should be readable");
+        let parsed_config: GlobalConfig =
+            serde_json::from_str(&saved_content).expect("saved config should parse into GlobalConfig");
+        assert_eq!(parsed_config.app.language, "zh-CN");
+        assert_eq!(parsed_config.version, manager.config.version);
+
+        let config_dir = manager
+            .config_file
+            .parent()
+            .expect("config file must have a parent directory");
+        let mut dir_entries = tokio::fs::read_dir(config_dir)
+            .await
+            .expect("config directory should be readable");
+
+        let mut found_tmp_files = Vec::new();
+        while let Some(entry) = dir_entries
+            .next_entry()
+            .await
+            .expect("reading directory entries should succeed")
+        {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.ends_with(".tmp") || file_name.starts_with(".app.json.") {
+                found_tmp_files.push(file_name);
+            }
+        }
+
+        assert!(
+            found_tmp_files.is_empty(),
+            "expected no leftover temp files, but found: {:?}",
+            found_tmp_files
+        );
+
+        let _ = tokio::fs::remove_dir_all(&temp_root).await;
     }
 }

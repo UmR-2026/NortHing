@@ -199,7 +199,7 @@
 - **Symptom**: `save_config` writes the global config with a plain whole-file write, so an interrupted write can leave a truncated / partial `app.json`.
 - **Evidence**: Task B1 review Minor-1 (backend follow-ups round, 2026-08-05); Wave1 final review §5 triage ruled it a separate debt item (out of FU-1 scope).
 - **Proposed fix**: route the write through the `json_store::write_atomic` pattern (temp file + rename), matching the settings/vault write paths.
-- **Status**: active
+- **Status**: resolved (2026-08-20, T2-4a)
 
 ### P2-17: `init_once_with` double-checked-lock skeleton is duplicated between core config and AI factory
 
