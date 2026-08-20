@@ -186,6 +186,9 @@ fn backup_path_for(path: &Path) -> Option<PathBuf> {
     Some(path.with_file_name(new_name))
 }
 
+/// Note on concurrency: concurrent appends may both pass the size check;
+/// the second rename will fail and that log line is dropped.
+/// This matches the crate's existing fire-and-forget / caller-swallows-errors semantics.
 fn rotate_if_oversized(path: &Path, max_bytes: u64) -> Result<()> {
     match fs::metadata(path) {
         Ok(metadata) => {
