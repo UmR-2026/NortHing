@@ -182,7 +182,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | PCS-6 | 协议插件：ACP 客户端作为插件形态接入（随 T4-5 协议冻结）；2.0 C 选项的生态入口 | 随 T4/T5 |
 | T2-3 | i18n 生成器大小写修复 + 幽灵目录清除 | review | XS |
 | T2-4 | 债项：P2-16（save_config 原子写）、P2-7（subagent_ports fake AI backend） | 债 | S |
-| T2-5 | unwrap 定向治理（password_vault / mcp::auth / facts） | review | M |
+| ~~T2-5~~ | ~~unwrap 定向治理（password_vault / mcp::auth / facts）~~ | **核销：三目标点生产区实测零 unwrap**（2026-08-20 预检 `.superpowers/sdd/t2-5-preflight-2026-08-20.md`；唯一活口 remote_exec/manager.rs expect 已结构性消除） | ~~M~~ |
 | T2-6 | god-file 复拆 + 行数守卫（callbacks_lifecycle 1063L / theme.rs 990L） | review+台账纪律 | M |
 | T2-7 | `code-rot-scan.sh` 建实或删引用；debug-log 轮转 | review | XS |
 | T2-8 | 命名 canonical 统一（随 D-4 拍板） | review | S |
