@@ -3,6 +3,4 @@ packages:
   # Restore when web UI is reintroduced.
   # - "src/web-ui"
   - "northing-installer"
-  - "src/apps/desktop-tauri"
-  - "src/apps/desktop-tauri/ui"
   - "tests/e2e"

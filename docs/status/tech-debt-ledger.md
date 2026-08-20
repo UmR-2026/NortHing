@@ -226,8 +226,8 @@
 
 - **Symptom**: `pnpm-workspace.yaml` 中包含 `src/apps/desktop-tauri` 注册条目，但磁盘上该目录不存在（已随架构演进清理）。
 - **Evidence**: `pnpm-workspace.yaml:5`。
-- **Proposed fix**: 作为独立决策项处理，在后续工作区配置清理批次中移除（来源：T2-2h review F1/M-h）。
-- **Status**: active
+- **Proposed fix**: 作为独立决策项处理，在后续工作区配置清理批次中移除（来源：T2-2h review F1/M-h）。考古：注册引入于 `e3daf75`（2026-07-19，Tauri 2 scaffold F0.1），孤儿化于 `34a2397`（2026-07-23，desktop-tauri 删除转 Slint 时漏摘注册）。
+- **Status**: `resolved` — 用户 2026-08-19 拍板清除，本批移除两行注册（`src/apps/desktop-tauri` + `src/apps/desktop-tauri/ui`）。
 
 ### P2-21: MiniApp 契约层三处 serde/wire 残留（零构造零生产者，反序列化兼容悬置待决）
 
