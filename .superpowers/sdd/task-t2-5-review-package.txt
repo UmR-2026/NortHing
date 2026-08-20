@@ -1,0 +1,86 @@
+c795fad refactor(remote_exec): eliminate expect in control_session & close T2-5
+
+=== STAT ===
+ docs/architecture/backend-roadmap.md               |  2 +-
+ .../src/remote_ssh/remote_exec/manager.rs          | 26 ++++++++++++----------
+ 2 files changed, 15 insertions(+), 13 deletions(-)
+
+=== DIFF -U10 ===
+diff --git a/docs/architecture/backend-roadmap.md b/docs/architecture/backend-roadmap.md
+index eec1f15..05e1502 100644
+--- a/docs/architecture/backend-roadmap.md
++++ b/docs/architecture/backend-roadmap.md
+@@ -175,21 +175,21 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
+ | # | 内容 | 量 |
+ |---|---|---|
+ | PCS-1 | P0 可逆注册原语（DisposableList/guard）+ 三注册表 guard 化（ToolRegistry / AgentRegistry / MCP 注册路径）——插件可拔的地基 | S |
+ | PCS-2 | skills 出 crate → 数据目录 + fs watch 热加载（**第一个 DataPlugin**；顺解 T3-1 skills 面板数据源与 builtin 依赖） | S-M |
+ | PCS-3 | 统一插件清单/注册表/健康状态 + **权限框架**（提炼 MiniApp `permission_policy` 默认拒绝语义，在 T2-2 删码之前完成提炼；**批准者 = 用户安装时批准**，P-16）+ 设置页统一插件面板（MCP/skills/providers/LSP 一处可见，消费 kernel-api `list_tools` 等） | M |
+ | PCS-4 | P2 配置驱动重组（配置 diff → 事务应用 → 失败回滚），MCP 启停接入——"改配置即生效、无需重启" | M |
+ | PCS-5 | core-agent 自省：插件/技能/工具/模型注册表注入 agent 自我描述（B1b 模型运行时信息的扩展——"同事知道自己有什么"） | S |
+ | PCS-6 | 协议插件：ACP 客户端作为插件形态接入（随 T4-5 协议冻结）；2.0 C 选项的生态入口 | 随 T4/T5 |
+ | T2-3 | i18n 生成器大小写修复 + 幽灵目录清除 | review | XS |
+ | T2-4 | 债项：P2-16（save_config 原子写）、P2-7（subagent_ports fake AI backend） | 债 | S |
+-| T2-5 | unwrap 定向治理（password_vault / mcp::auth / facts） | review | M |
++| ~~T2-5~~ | ~~unwrap 定向治理（password_vault / mcp::auth / facts）~~ | **核销：三目标点生产区实测零 unwrap**（2026-08-20 预检 `.superpowers/sdd/t2-5-preflight-2026-08-20.md`；唯一活口 remote_exec/manager.rs expect 已结构性消除） | ~~M~~ |
+ | T2-6 | god-file 复拆 + 行数守卫（callbacks_lifecycle 1063L / theme.rs 990L） | review+台账纪律 | M |
+ | T2-7 | `code-rot-scan.sh` 建实或删引用；debug-log 轮转 | review | XS |
+ | T2-8 | 命名 canonical 统一（随 D-4 拍板） | review | S |
+ 
+ #### PCS-3 权限框架语义（提炼自 MiniApp `permission_policy`，2026-08-17，T2-2 删码前固化）
+ 
+ > 源实现随 T2-2 删除，本节自足—— PCS-3 实现时以本节为准，不回溯旧码。证据锚点（删前）：`contracts/product-domains/src/miniapp/types.rs:42-80`、`.../miniapp/permission_policy.rs:34-97`、`services-integrations/src/miniapp/host_dispatch.rs:106-135`。
+ 
+ **声明模型**：清单（manifest）声明能力项，每项 `Option<T>`：`fs`（read/write 路径作用域列表）/ `shell`（命令允许表）/ `net`（域名允许表）/ `node` / `ai` / `agent` / `notifications`。
+ 
+diff --git a/src/crates/services/services-integrations/src/remote_ssh/remote_exec/manager.rs b/src/crates/services/services-integrations/src/remote_ssh/remote_exec/manager.rs
+index a73f33b..cd3488d 100644
+--- a/src/crates/services/services-integrations/src/remote_ssh/remote_exec/manager.rs
++++ b/src/crates/services/services-integrations/src/remote_ssh/remote_exec/manager.rs
+@@ -269,32 +269,34 @@ impl RemoteExecProcessManager {
+             &process,
+             if request.origin == RemoteExecControlOrigin::ModelTool {
+                 collected.cursor.clone()
+             } else {
+                 cursor
+             },
+             lifecycle_status,
+             exit_code,
+         )
+         .await;
+-        if request.origin == RemoteExecControlOrigin::OutOfBand && closed {
+-            self.store_completed_session(
+-                request.session_id,
+-                CompletedRemoteExecSession {
+-                    output: collected.output.clone(),
+-                    exit_code,
+-                    original_output_chars: collected.original_output_chars,
+-                    completion: completion.expect("closed process should have completion"),
+-                    completed_at: Instant::now(),
+-                },
+-            )
+-            .await;
++        if let Some(completion) = completion {
++            if request.origin == RemoteExecControlOrigin::OutOfBand {
++                self.store_completed_session(
++                    request.session_id,
++                    CompletedRemoteExecSession {
++                        output: collected.output.clone(),
++                        exit_code,
++                        original_output_chars: collected.original_output_chars,
++                        completion,
++                        completed_at: Instant::now(),
++                    },
++                )
++                .await;
++            }
+         }
+ 
+         Ok(RemoteExecCommandResponse {
+             chunk_id: new_chunk_id(),
+             wall_time_seconds: started_at.elapsed().as_secs_f64(),
+             output: collected.output,
+             session_id: (!closed).then_some(request.session_id),
+             exit_code,
+             original_output_chars: collected.original_output_chars,
+             completion,
