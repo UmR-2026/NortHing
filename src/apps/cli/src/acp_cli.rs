@@ -48,8 +48,13 @@ impl ExternalAcpClient {
     fn config(self) -> AcpClientConfig {
         let (command, args) = match self {
             Self::Opencode => ("opencode", vec!["acp"]),
-            Self::ClaudeCode => ("npx", vec!["--yes", "@zed-industries/claude-code-acp@latest"]),
-            Self::Codex => ("npx", vec!["--yes", "@zed-industries/codex-acp@latest"]),
+            // Pinned 2026-08-21 from npm latest @zed-industries/claude-code-acp
+            Self::ClaudeCode => (
+                "npx",
+                vec!["--yes", northhing_acp::client::CLAUDE_CODE_ACP_PACKAGE_PINNED],
+            ),
+            // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
+            Self::Codex => ("npx", vec!["--yes", northhing_acp::client::CODEX_ACP_PACKAGE_PINNED]),
         };
         AcpClientConfig {
             name: Some(self.display_name().to_string()),
