@@ -134,3 +134,18 @@ jobs:
       - name: Run core boundary checker
         run: node scripts/check-core-boundaries.mjs
 
+  # ── rot budget check ───────────────────────────────────────────────
+  rot-budget:
+    name: rot budget check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run rot budget checker and self-tests
+        run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
+
+
