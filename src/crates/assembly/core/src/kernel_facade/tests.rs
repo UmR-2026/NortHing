@@ -599,3 +599,197 @@ fn test_backward_compat_deserialization_missing_new_fields() {
     assert_eq!(dto3.turn_id, "t1");
     assert_eq!(dto3.outcome_kind, None);
 }
+
+// ── T3-1a list_tools tests ───────────────────────────────────────────────────
+
+struct MockKernelTool {
+    name: String,
+    description: Option<String>,
+    schema: serde_json::Value,
+}
+
+#[async_trait::async_trait]
+impl crate::agentic::tools::framework::Tool for MockKernelTool {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    async fn description(&self) -> crate::util::errors::NortHingResult<String> {
+        self.description
+            .clone()
+            .ok_or_else(|| crate::util::errors::NortHingError::Tool("failed description".into()))
+    }
+
+    fn short_description(&self) -> String {
+        self.description.clone().unwrap_or_default()
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        self.schema.clone()
+    }
+
+    async fn call_impl(
+        &self,
+        _input: &serde_json::Value,
+        _context: &crate::agentic::tools::framework::ToolUseContext,
+    ) -> crate::util::errors::NortHingResult<Vec<crate::agentic::tools::framework::ToolResult>> {
+        Ok(vec![])
+    }
+}
+
+fn build_test_facade_with_tools(
+    tools: Vec<Arc<dyn crate::agentic::tools::framework::Tool>>,
+) -> Arc<KernelFacade> {
+    let event_queue = Arc::new(crate::agentic::events::EventQueue::new(
+        crate::agentic::events::EventQueueConfig::default(),
+    ));
+    let session_manager = Arc::new(crate::agentic::session::SessionManager::new(
+        Arc::new(crate::agentic::session::SessionContextStore::new()),
+        Arc::new(
+            crate::agentic::persistence::PersistenceManager::new(
+                Arc::new(crate::infrastructure::PathManager::new().expect("path manager")),
+            )
+            .expect("persistence manager"),
+        ),
+        crate::agentic::session::SessionManagerConfig {
+            max_active_sessions: 100,
+            session_idle_timeout: std::time::Duration::from_secs(3600),
+            auto_save_interval: std::time::Duration::from_secs(300),
+            enable_persistence: false,
+            prompt_cache_policy: crate::agentic::session::PromptCachePolicy::default(),
+        },
+    ));
+    let mut registry = crate::agentic::tools::registry::ToolRegistry::new();
+    for tool in tools {
+        registry.register_tool(tool);
+    }
+    let tool_registry = Arc::new(tokio::sync::RwLock::new(registry));
+    let tool_pipeline = Arc::new(crate::agentic::tools::pipeline::ToolPipeline::new(
+        tool_registry,
+        Arc::new(crate::agentic::tools::pipeline::ToolStateManager::new(
+            event_queue.clone(),
+        )),
+        None,
+        Arc::new(std::sync::OnceLock::new()),
+    ));
+    let execution_engine = Arc::new(crate::agentic::execution::ExecutionEngine::new(
+        Arc::new(crate::agentic::execution::RoundExecutor::new(
+            Arc::new(crate::agentic::execution::StreamProcessor::new(
+                event_queue.clone(),
+            )),
+            event_queue.clone(),
+            tool_pipeline.clone(),
+        )),
+        event_queue.clone(),
+        session_manager.clone(),
+        Arc::new(crate::agentic::ContextCompressor::new(
+            crate::agentic::CompressionConfig::default(),
+        )),
+        crate::agentic::execution::ExecutionEngineConfig::default(),
+    ));
+    let coordinator = crate::agentic::coordination::ConversationCoordinator::new(
+        session_manager,
+        execution_engine,
+        tool_pipeline,
+        event_queue,
+        Arc::new(crate::agentic::events::EventRouter::new()),
+    );
+    let facade = KernelFacade::new();
+    facade.set_coordinator(Arc::new(coordinator));
+    Arc::new(facade)
+}
+
+#[tokio::test]
+async fn test_list_tools_returns_err_before_init() {
+    use northhing_kernel_api::KernelToolsApi;
+    let facade = KernelFacade::new();
+    let result = facade.list_tools().await;
+    match result {
+        Err(northhing_kernel_api::error::KernelError::Internal(_)) => {}
+        Err(other) => panic!("expected KernelError::Internal, got {:?}", other),
+        Ok(_) => panic!("expected Err before init"),
+    }
+}
+
+#[tokio::test]
+async fn test_list_tools_single_tool_field_mapping() {
+    use northhing_kernel_api::KernelToolsApi;
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "query": { "type": "string" }
+        }
+    });
+    let tool = Arc::new(MockKernelTool {
+        name: "test_mock_tool_custom".to_string(),
+        description: Some("test description for custom mock tool".to_string()),
+        schema: schema.clone(),
+    });
+
+    let facade = build_test_facade_with_tools(vec![tool]);
+    let tools = facade.list_tools().await.expect("list_tools should succeed");
+
+    let found = tools
+        .iter()
+        .find(|t| t.name == "test_mock_tool_custom")
+        .expect("list_tools must contain the registered mock tool");
+    assert_eq!(found.id, "test_mock_tool_custom");
+    assert_eq!(found.name, "test_mock_tool_custom");
+    assert_eq!(found.description, "test description for custom mock tool");
+    assert_eq!(found.input_schema, Some(schema));
+}
+
+#[tokio::test]
+async fn test_list_tools_ordering_and_degraded_description() {
+    use northhing_kernel_api::KernelToolsApi;
+
+    let tool_z = Arc::new(MockKernelTool {
+        name: "zzz_mock_tool".to_string(),
+        description: Some("zebra desc".to_string()),
+        schema: serde_json::json!({ "type": "object" }),
+    });
+    let tool_a = Arc::new(MockKernelTool {
+        name: "aaa_mock_tool".to_string(),
+        description: None, // Description will fail, should degrade to empty string
+        schema: serde_json::json!({ "type": "string" }),
+    });
+    let tool_m = Arc::new(MockKernelTool {
+        name: "mmm_mock_tool".to_string(),
+        description: Some("mango desc".to_string()),
+        schema: serde_json::json!({ "type": "number" }),
+    });
+
+    let facade = build_test_facade_with_tools(vec![tool_z, tool_a, tool_m]);
+    let tools = facade.list_tools().await.expect("list_tools should succeed");
+
+    // Must be strictly sorted by name
+    assert!(
+        tools.windows(2).all(|w| w[0].name <= w[1].name),
+        "tools list must be sorted by name deterministically"
+    );
+
+    let found_a = tools
+        .iter()
+        .find(|t| t.name == "aaa_mock_tool")
+        .expect("aaa_mock_tool must exist");
+    assert_eq!(found_a.description, ""); // Degraded on error
+
+    let found_m = tools
+        .iter()
+        .find(|t| t.name == "mmm_mock_tool")
+        .expect("mmm_mock_tool must exist");
+    assert_eq!(found_m.description, "mango desc");
+
+    let found_z = tools
+        .iter()
+        .find(|t| t.name == "zzz_mock_tool")
+        .expect("zzz_mock_tool must exist");
+    assert_eq!(found_z.description, "zebra desc");
+
+    // Verify ordering between the three mock tools
+    let pos_a = tools.iter().position(|t| t.name == "aaa_mock_tool").unwrap();
+    let pos_m = tools.iter().position(|t| t.name == "mmm_mock_tool").unwrap();
+    let pos_z = tools.iter().position(|t| t.name == "zzz_mock_tool").unwrap();
+    assert!(pos_a < pos_m && pos_m < pos_z, "mock tools must appear in alphabetical order");
+}

@@ -209,7 +209,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 
 | # | 内容 | 来源线 | 量 |
 |---|---|---|---|
-| T3-1 | kernel_facade 10+ `not yet wired` 接线（list_tools / list_artifacts / load_project_skills / generate_session_usage / onboarding 状态优先） | F 交汇+review | M |
+| T3-1 | kernel_facade 10+ `not yet wired` 接线（list_tools / list_artifacts / load_project_skills / generate_session_usage / onboarding 状态优先；2026-08-20 list_tools 已接） | F 交汇+review | M |
 | T3-2 | WebSearch 可配置（provider 化 + 降级路径） | review | M |
 | T3-3 | Provider 目录（preset 列表 + 能力声明化，替代名字推断） | review | M |
 | T3-4 | Gemini 视觉接通（放开 gating） | review | S |
