@@ -1,0 +1,164 @@
+bec0ae7 fix(core): default tool confirmation to required and restore DeleteFileTool permission gate (T1-5)
+=== name-status ===
+M	docs/status/tech-debt-ledger.md
+M	src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+M	src/crates/assembly/core/src/service/config/ai.rs
+=== numstat ===
+1	1	docs/status/tech-debt-ledger.md
+26	4	src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+71	2	src/crates/assembly/core/src/service/config/ai.rs
+=== diff ===
+diff --git a/docs/status/tech-debt-ledger.md b/docs/status/tech-debt-ledger.md
+index 6759a42..235a9b5 100644
+--- a/docs/status/tech-debt-ledger.md
++++ b/docs/status/tech-debt-ledger.md
+@@ -84,7 +84,7 @@
+ - **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
+ - **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
+ - **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
+-- **Status**: active (discovered by C1 review 2026-08-04)
++- **Status**: `resolved` (2026-08-21, T1-5) — 删除了 `DeleteFileTool` 的 `needs_permissions` 覆写，恢复 Tool trait 默认实现 `needs_permissions() = !self.is_readonly()`（由于 `is_readonly() == false`，恢复返回 `true`）。所有删除操作（含 permanent=true、含 remote SSH 路径）全部走确认门。覆盖单元测试验证通过。
+ 
+ ## P2 — Experience and operations
+ 
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+index d4420fc..168ad93 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+@@ -112,10 +112,6 @@ Important notes:
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         let path_str = match input.get("path").and_then(|v| v.as_str()) {
+             Some(p) => p,
+@@ -343,3 +339,29 @@ Important notes:
+         }])
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn delete_file_tool_is_not_readonly() {
++        let tool = DeleteFileTool::new();
++        assert!(!tool.is_readonly());
++    }
++
++    #[test]
++    fn delete_file_tool_needs_permissions_returns_true() {
++        let tool = DeleteFileTool::new();
++        // Without override, needs_permissions defaults to !is_readonly() == true
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({"path": "test.txt"}))));
++        assert!(tool.needs_permissions(Some(&json!({"path": "folder", "recursive": true}))));
++    }
++
++    #[test]
++    fn delete_file_tool_concurrency_safety_is_false() {
++        let tool = DeleteFileTool::new();
++        assert!(!tool.is_concurrency_safe(None));
++    }
++}
+diff --git a/src/crates/assembly/core/src/service/config/ai.rs b/src/crates/assembly/core/src/service/config/ai.rs
+index 3f8a7c4..39bd540 100644
+--- a/src/crates/assembly/core/src/service/config/ai.rs
++++ b/src/crates/assembly/core/src/service/config/ai.rs
+@@ -355,7 +355,7 @@ fn default_tool_confirmation_timeout() -> Option<u64> {
+ }
+ 
+ fn default_skip_tool_confirmation() -> bool {
+-    true
++    false
+ }
+ 
+ // ═══════════════════════════════════════════════════════════════════
+@@ -487,7 +487,7 @@ impl Default for AIConfig {
+             stream_ttft_timeout_secs: default_stream_ttft_timeout(),
+             tool_execution_timeout_secs: default_tool_execution_timeout(),
+             tool_confirmation_timeout_secs: default_tool_confirmation_timeout(),
+-            skip_tool_confirmation: true,
++            skip_tool_confirmation: false,
+             shell_security: ShellSecurityConfig::default(),
+             debug_mode_config: DebugModeConfig::default(),
+             computer_use_enabled: false,
+@@ -507,4 +507,73 @@ mod tests {
+         assert_eq!(config.tool_execution_timeout_secs, Some(300));
+         assert_eq!(config.tool_confirmation_timeout_secs, Some(300));
+     }
++
++    #[test]
++    fn default_ai_config_skip_tool_confirmation_is_false() {
++        let config = AIConfig::default();
++        assert!(!config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn deserializes_missing_skip_tool_confirmation_as_false() {
++        let config: AIConfig =
++            serde_json::from_str("{}").expect("empty object should deserialize into default AIConfig");
++        assert!(!config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn deserializes_explicit_skip_tool_confirmation_true_as_true() {
++        let config: AIConfig = serde_json::from_str(r#"{"skip_tool_confirmation": true}"#)
++            .expect("legacy config with explicit skip_tool_confirmation=true should deserialize");
++        assert!(config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_fresh_config_requires_confirmation() {
++        let config = AIConfig::default();
++        let agent_type = "agentic";
++        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
++        // ShellSecurity defaults to Permissive (skip=true), but global legacy skip defaults to false
++        assert!(shell_security_skip);
++        assert!(!config.skip_tool_confirmation);
++
++        // Combined AND decision requires confirmation on fresh config
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(!combined_skip, "fresh configuration must not skip tool confirmation");
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_legacy_config_skips_when_both_true() {
++        let mut config = AIConfig::default();
++        config.skip_tool_confirmation = true;
++        let agent_type = "agentic";
++        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
++        assert!(shell_security_skip);
++        assert!(config.skip_tool_confirmation);
++
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(
++            combined_skip,
++            "legacy configuration with explicit skip=true and permissive security should skip confirmation"
++        );
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_mode_override_strict_prevents_skip() {
++        let mut config = AIConfig::default();
++        config.skip_tool_confirmation = true;
++        config
++            .shell_security
++            .mode_overrides
++            .insert("admin".to_string(), ConfirmationMode::Strict);
++
++        let shell_security_skip = config.shell_security.should_skip_confirmation("admin");
++        assert!(!shell_security_skip);
++
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(
++            !combined_skip,
++            "strict mode override must prevent skip even if legacy skip is true"
++        );
++    }
+ }

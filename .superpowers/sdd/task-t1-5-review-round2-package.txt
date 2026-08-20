@@ -1,0 +1,74 @@
+ea55c80 fix(core): restore needs_permissions gate for FileWriteTool and FileEditTool (T1-5 fix)
+=== name-status ===
+M	src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+=== diff ===
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+index ae68f6a..b25308f 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+@@ -154,10 +154,6 @@ impl Tool for FileEditTool {
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         let file_path = match input.get("file_path").and_then(|v| v.as_str()) {
+             Some(path) if !path.is_empty() => path,
+@@ -379,7 +375,7 @@ impl Tool for FileEditTool {
+ mod tests {
+     use super::{FileEditTool, EDIT_TOOL_PROMPT};
+     use crate::agentic::tools::framework::Tool;
+-    use serde_json::Value;
++    use serde_json::{json, Value};
+ 
+     #[tokio::test]
+     async fn edit_tool_prompt_matches_claude_style() {
+@@ -445,4 +441,16 @@ mod tests {
+         ));
+         assert!(!FileEditTool::is_edit_content_guardrail_error("Permission denied"));
+     }
++
++    #[test]
++    fn file_edit_tool_needs_permissions_returns_true() {
++        let tool = FileEditTool::new();
++        assert!(!tool.is_readonly());
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({
++            "file_path": "test.txt",
++            "old_string": "a",
++            "new_string": "b"
++        }))));
++    }
+ }
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs b/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+index 399b0e9..ce1553d 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+@@ -65,10 +65,6 @@ impl Tool for FileWriteTool {
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         validate_input(input, context).await
+     }
+@@ -300,4 +296,12 @@ mod tests {
+             Some("mode must be either 'w' (overwrite) or 'a' (append), got 'x'")
+         );
+     }
++
++    #[test]
++    fn file_write_tool_needs_permissions_returns_true() {
++        let tool = FileWriteTool::new();
++        assert!(!tool.is_readonly());
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({ "file_path": "new.txt", "content": "hello" }))));
++    }
+ }
