@@ -212,7 +212,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T3-1 | kernel_facade 10+ `not yet wired` 接线（list_tools / list_artifacts / load_project_skills / generate_session_usage / onboarding 状态优先；2026-08-20 list_tools 已接） | F 交汇+review | M |
 | T3-2 | WebSearch 可配置（provider 化 + 降级路径） | review | M |
 | T3-3 | Provider 目录（preset 列表 + 能力声明化，替代名字推断） | review | M |
-| T3-4 | Gemini 视觉接通（放开 gating） | review | S |
+| ~~T3-4~~ | ~~Gemini 视觉接通（放开 gating）~~ | **已完成**（2026-08-20，commit 80651bf：converter tool 分支 inlineData + 门禁白名单扩五个 Gemini 格式，双判决 0C/0I/0M） | ~~S~~ |
 | ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17，随 T2-2 M1-M5 完成） | — |
 | T3-6 | 体验洞后端部分：P2-5 失败 turn 落史、P2-6 事件丢弃策略、P2-4 CleanupService 调度 | 债 | M |
 | T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 + **本地度量埋点**（P-10 边界：不离机；记忆纠正频率/审计覆盖率/工具成功率） | M 线（论题） | M |
