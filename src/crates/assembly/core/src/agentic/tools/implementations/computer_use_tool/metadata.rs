@@ -319,7 +319,7 @@ The **primary model cannot consume images** in tool results — **do not** use *
     }
 
     /// Screenshot tool results attach JPEGs via `tool_image_attachments`; only providers whose
-    /// request converters emit multimodal tool output are supported (Anthropic + OpenAI-compatible).
+    /// request converters emit multimodal tool output are supported (Anthropic, OpenAI-compatible, and Gemini).
     pub(crate) fn require_multimodal_tool_output_for_screenshot_impl(ctx: &ToolUseContext) -> NortHingResult<()> {
         if !ctx.primary_model_supports_image_understanding() {
             return Err(NortHingError::tool(
@@ -327,12 +327,28 @@ The **primary model cannot consume images** in tool results — **do not** use *
             ));
         }
         let f = Self::primary_api_format_impl(ctx);
-        if matches!(f.as_str(), "anthropic" | "openai" | "response" | "responses") {
+        if Self::supports_multimodal_tool_output(&f) {
             return Ok(());
         }
         Err(NortHingError::tool(
-            "Screenshot results include images in tool results; set the primary model to Anthropic (Claude) or OpenAI-compatible API format. Other providers are not supported for screenshots yet.".to_string(),
+            "Screenshot results include images in tool results; set the primary model to Anthropic (Claude), OpenAI-compatible, or Gemini API format. Other providers are not supported for screenshots yet.".to_string(),
         ))
+    }
+
+    /// True when the given API format string supports multimodal tool output attachments.
+    pub(crate) fn supports_multimodal_tool_output(format: &str) -> bool {
+        matches!(
+            format,
+            "anthropic"
+                | "openai"
+                | "response"
+                | "responses"
+                | "gemini"
+                | "google"
+                | "gemini-code-assist"
+                | "gemini_code_assist"
+                | "code-assist"
+        )
     }
 
     /// Runtime host OS label for tool description (desktop session matches this process).
@@ -352,5 +368,31 @@ The **primary model cannot consume images** in tool results — **do not** use *
             "linux" => "On this host use control, alt, shift, and meta/super as appropriate for the desktop. **System clipboard:** typically control+a/c/x/v (match the app and DE).",
             _ => "Match key_chord modifiers to the host OS in Runtime Context. Prefer standard clipboard chords (select all, copy, cut, paste) before long type_text.",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ComputerUseTool;
+
+    #[test]
+    fn multimodal_tool_output_format_whitelist() {
+        // Anthropic & OpenAI formats
+        assert!(ComputerUseTool::supports_multimodal_tool_output("anthropic"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("openai"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("response"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("responses"));
+
+        // Gemini formats
+        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("google"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini-code-assist"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini_code_assist"));
+        assert!(ComputerUseTool::supports_multimodal_tool_output("code-assist"));
+
+        // Unknown / unsupported formats
+        assert!(!ComputerUseTool::supports_multimodal_tool_output("mystery"));
+        assert!(!ComputerUseTool::supports_multimodal_tool_output("unknown"));
+        assert!(!ComputerUseTool::supports_multimodal_tool_output(""));
     }
 }

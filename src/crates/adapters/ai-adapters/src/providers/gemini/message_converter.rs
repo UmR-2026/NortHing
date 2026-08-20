@@ -40,7 +40,7 @@ impl GeminiMessageConverter {
 #[cfg(test)]
 mod tests {
     use super::GeminiMessageConverter;
-    use crate::types::{Message, ToolCall, ToolDefinition};
+    use crate::types::{Message, ToolCall, ToolDefinition, ToolImageAttachment};
     use serde_json::json;
 
     #[test]
@@ -294,5 +294,74 @@ mod tests {
         let converted = GeminiMessageConverter::convert_tools(tools).expect("converted tools");
         assert_eq!(converted.len(), 1);
         assert_eq!(converted[0]["urlContext"], json!({}));
+    }
+
+    #[test]
+    fn converts_tool_message_with_image_attachments_to_inline_data_parts() {
+        let messages = vec![Message {
+            role: "tool".to_string(),
+            content: Some("{\"status\":\"ok\"}".to_string()),
+            reasoning_content: None,
+            thinking_signature: None,
+            tool_calls: None,
+            tool_call_id: Some("call_screenshot".to_string()),
+            name: Some("screenshot".to_string()),
+            is_error: None,
+            tool_image_attachments: Some(vec![
+                ToolImageAttachment {
+                    mime_type: "image/jpeg".to_string(),
+                    data_base64: "base64_jpeg_data_1".to_string(),
+                },
+                ToolImageAttachment {
+                    mime_type: "image/png".to_string(),
+                    data_base64: "base64_png_data_2".to_string(),
+                },
+            ]),
+        }];
+
+        let (_, contents) = GeminiMessageConverter::convert_messages(messages, "gemini-2.5-pro");
+
+        assert_eq!(contents.len(), 1);
+        assert_eq!(contents[0]["role"], json!("user"));
+        let parts = contents[0]["parts"].as_array().expect("parts array");
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[0]["functionResponse"]["name"], json!("screenshot"));
+        assert_eq!(parts[0]["functionResponse"]["response"]["status"], json!("ok"));
+        assert_eq!(parts[1]["inlineData"]["mimeType"], json!("image/jpeg"));
+        assert_eq!(parts[1]["inlineData"]["data"], json!("base64_jpeg_data_1"));
+        assert_eq!(parts[2]["inlineData"]["mimeType"], json!("image/png"));
+        assert_eq!(parts[2]["inlineData"]["data"], json!("base64_png_data_2"));
+    }
+
+    #[test]
+    fn converts_error_tool_message_with_image_attachments() {
+        let messages = vec![Message {
+            role: "tool".to_string(),
+            content: Some("Capture failed partially".to_string()),
+            reasoning_content: None,
+            thinking_signature: None,
+            tool_calls: None,
+            tool_call_id: Some("call_screenshot_err".to_string()),
+            name: Some("screenshot".to_string()),
+            is_error: Some(true),
+            tool_image_attachments: Some(vec![ToolImageAttachment {
+                mime_type: "image/jpeg".to_string(),
+                data_base64: "error_preview_base64".to_string(),
+            }]),
+        }];
+
+        let (_, contents) = GeminiMessageConverter::convert_messages(messages, "gemini-2.5-pro");
+
+        assert_eq!(contents.len(), 1);
+        assert_eq!(contents[0]["role"], json!("user"));
+        let parts = contents[0]["parts"].as_array().expect("parts array");
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0]["functionResponse"]["name"], json!("screenshot"));
+        assert_eq!(
+            parts[0]["functionResponse"]["response"]["error"],
+            json!("Capture failed partially")
+        );
+        assert_eq!(parts[1]["inlineData"]["mimeType"], json!("image/jpeg"));
+        assert_eq!(parts[1]["inlineData"]["data"], json!("error_preview_base64"));
     }
 }

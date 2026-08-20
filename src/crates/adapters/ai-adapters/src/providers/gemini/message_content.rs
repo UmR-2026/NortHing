@@ -101,12 +101,23 @@ pub fn convert_messages(messages: Vec<Message>, model_name: &str) -> (Option<Val
                 } else {
                     parse_tool_response(msg.content.as_deref())
                 };
-                let parts = vec![json!({
+                let mut parts = vec![json!({
                     "functionResponse": {
                         "name": tool_name,
                         "response": response,
                     }
                 })];
+
+                if let Some(attachments) = msg.tool_image_attachments {
+                    for att in attachments {
+                        parts.push(json!({
+                            "inlineData": {
+                                "mimeType": att.mime_type,
+                                "data": att.data_base64,
+                            }
+                        }));
+                    }
+                }
 
                 push_content(&mut contents, "user", parts);
             }
