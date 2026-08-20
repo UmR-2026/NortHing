@@ -332,6 +332,14 @@
 
 ---
 
+# T3 Ledger (2026-08-20)
+
+计划源：roadmap T3 功能补全段。T3-1 拆分：usage 两项卡 K4b PersistenceManager 折叠（session.rs:192 自述 deferred）、load_project_skills 卡契约层 API 形状（facade 拿不到 workspace_path）、list_artifacts/onboarding 缺数据源——均不在首批。
+
+- Task T3-1a: complete (commits b251b8f..fbae573, review clean: SPEC ✅ 7/7 约束逐条核实 / QUALITY Approved by minimax-m3, 0C/0I/3M). kernel_facade list_tools 接线：coordinator.tool_pipeline（pub）→ tool_registry（pub(crate)）→ all_tools() → ToolInfoDto 映射（id=name、description 失败降级空串+注释、Some(input_schema)）、按 name 排序（load-bearing：IndexMap 注册序非确定序）、列全部已注册含 collapsed（doc comment 写明）。锁纪律正确（read guard 块内 drop，未跨 description().await 持锁）。测试夹具用 per-instance KernelFacade::new() 而非全局 FACADE OnceLock，隔离性强于 brief 建议路径。3 文件 +223/-3；kernel_facade 35/35。Minors parked 终审 triage：M1 测试夹具触真实 config dir（enable_persistence:false，已知天花板）；M2 fmt:rs——编排者已补跑，No changed Rust files（代码已提交故脚本无目标，格式本即合规）；M3 tests.rs 达 795/800 警戒线，下次扩张先拆。**T3-1 行保持 active（list_tools 注记已追加），剩余 4 项待各自解阻塞。**
+
+---
+
 # T2-4 Ledger (2026-08-20)
 
 计划源：roadmap:184 T2-4 = P2-16 + P2-7 两债项（拆 a/b 执行）。
