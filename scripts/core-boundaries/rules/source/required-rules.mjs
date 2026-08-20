@@ -540,6 +540,10 @@ export const requiredContentRules = [
         regex: /\bProductCapabilityAssembly\b/,
         message: 'missing product capability assembly owner',
       },
+      {
+        regex: /\bpub fn product_assembly_plan_for_profile\b/,
+        message: 'missing product assembly plan entry',
+      },
     ],
   },
   {
@@ -3166,6 +3170,18 @@ export const requiredContentRules = [
         message: 'missing pure tool manifest policy resolver',
       },
       {
+        regex: /\bpub fn tool_spec_input_schema\b/,
+        message: 'missing GetToolSpec input schema contract',
+      },
+      {
+        regex: /\bpub fn tool_spec_short_description\b/,
+        message: 'missing GetToolSpec short description contract',
+      },
+      {
+        regex: /\bpub fn tool_spec_is_readonly\b/,
+        message: 'missing GetToolSpec readonly flag contract',
+      },
+      {
         regex: /\bpub fn build_tool_manifest_policy_tools\b/,
         message: 'missing registry snapshot to manifest policy input helper',
       },
@@ -3400,6 +3416,10 @@ export const requiredContentRules = [
       {
         regex: /\bpub struct StaticToolProviderGroup\b/,
         message: 'missing generic static provider group container',
+      },
+      {
+        regex: /\bpub fn collapsed_tool_names\b/,
+        message: 'missing collapsed tool names accessor',
       },
       {
         regex: /\bpub trait StaticToolProviderPlan\b/,
