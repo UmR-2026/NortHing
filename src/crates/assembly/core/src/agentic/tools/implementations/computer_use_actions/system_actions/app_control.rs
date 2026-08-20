@@ -3,10 +3,12 @@
 use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
 use crate::agentic::tools::implementations::computer_use_actions::{utilities, ComputerUseActions};
 use crate::agentic::tools::implementations::control_hub::{err_response, ControlHubError, ErrorCode};
+use crate::agentic::tools::implementations::shell_safety;
 use crate::util::elapsed_ms_u64;
 use crate::util::errors::{NortHingError, NortHingResult};
 use crate::util::process_manager;
 use serde_json::{json, Value};
+use tool_runtime::shell::banned_shell_command;
 
 impl ComputerUseActions {
     fn platform_open_command(app_name: &str) -> (String, Vec<String>) {
@@ -95,11 +97,52 @@ impl ComputerUseActions {
             }
         };
 
+        // Guard check for banned commands or shell denylist before executing fallback commands.
+        if let Some(base_cmd) = banned_shell_command(app_name.trim()) {
+            return Err(NortHingError::tool(format!(
+                "Command '{}' is not allowed for security reasons",
+                base_cmd
+            )));
+        }
+        if let Some(pattern) = shell_safety::check_command_denied(app_name) {
+            return Err(NortHingError::tool(format!(
+                "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                app_name, pattern
+            )));
+        }
+
         let mut last_err: Option<String> = None;
         let mut output_opt = None;
         let mut chosen_cmd = String::new();
         let mut chosen_args: Vec<String> = vec![];
         for (cmd, args) in &attempts {
+            let cmd_str = shell_safety::program_args_to_command_string(cmd, args);
+            if let Some(base_cmd) = banned_shell_command(&cmd_str) {
+                return Err(NortHingError::tool(format!(
+                    "Command '{}' is not allowed for security reasons",
+                    base_cmd
+                )));
+            }
+
+            match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
+                Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                    return Err(NortHingError::tool(format!(
+                        "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                        cmd_str, pattern
+                    )));
+                }
+                Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
+                    return Err(NortHingError::tool(format!(
+                        "Command execution denied by confirmation: {}",
+                        reason
+                    )));
+                }
+                Ok(shell_safety::GuardOutcome::Allowed) => {}
+                Err(e) => {
+                    return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
+                }
+            }
+
             match crate::util::process_manager::create_command(cmd).args(args).output() {
                 Ok(out) => {
                     if out.status.success() {
@@ -178,6 +221,48 @@ impl ComputerUseActions {
             .and_then(|v| v.as_u64())
             .unwrap_or(16 * 1024)
             .clamp(1024, 256 * 1024) as usize;
+
+        // Guard check: verify script content before interpreter dispatch
+        if let Some(base_cmd) = banned_shell_command(script.trim()) {
+            return Ok(err_response(
+                "system",
+                "run_script",
+                ControlHubError::new(
+                    ErrorCode::GuardRejected,
+                    format!("Command '{}' is not allowed for security reasons", base_cmd),
+                ),
+            ));
+        }
+
+        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
+            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                return Ok(err_response(
+                    "system",
+                    "run_script",
+                    ControlHubError::new(
+                        ErrorCode::GuardRejected,
+                        format!(
+                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                            script, pattern
+                        ),
+                    ),
+                ));
+            }
+            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
+                return Ok(err_response(
+                    "system",
+                    "run_script",
+                    ControlHubError::new(
+                        ErrorCode::GuardRejected,
+                        format!("Command execution denied by confirmation: {}", reason),
+                    ),
+                ));
+            }
+            Ok(shell_safety::GuardOutcome::Allowed) => {}
+            Err(e) => {
+                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
+            }
+        }
 
         let (program, args) = match script_type {
             "applescript" => {
@@ -293,6 +378,48 @@ impl ComputerUseActions {
                 )))
             }
         };
+
+        let cmd_str = shell_safety::program_args_to_command_string(&program, &args);
+        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
+            return Ok(err_response(
+                "system",
+                "run_script",
+                ControlHubError::new(
+                    ErrorCode::GuardRejected,
+                    format!("Command '{}' is not allowed for security reasons", base_cmd),
+                ),
+            ));
+        }
+
+        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
+            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                return Ok(err_response(
+                    "system",
+                    "run_script",
+                    ControlHubError::new(
+                        ErrorCode::GuardRejected,
+                        format!(
+                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                            cmd_str, pattern
+                        ),
+                    ),
+                ));
+            }
+            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
+                return Ok(err_response(
+                    "system",
+                    "run_script",
+                    ControlHubError::new(
+                        ErrorCode::GuardRejected,
+                        format!("Command execution denied by confirmation: {}", reason),
+                    ),
+                ));
+            }
+            Ok(shell_safety::GuardOutcome::Allowed) => {}
+            Err(e) => {
+                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
+            }
+        }
 
         let started = std::time::Instant::now();
         let child = process_manager::create_tokio_command(&program)
