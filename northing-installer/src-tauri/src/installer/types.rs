@@ -144,7 +144,11 @@ pub struct LaunchApplicationRequest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchRegisteredUninstallerRequest {
-    pub uninstall_command: String,
+    /// Deprecated: Backend reads uninstall command directly from registry; this field is ignored for security.
+    #[deprecated(note = "Backend reads uninstall command directly from registry; this field is ignored for security")]
+    #[serde(default)]
+    pub uninstall_command: Option<String>,
+    #[serde(default)]
     pub install_path: Option<String>,
 }
 
