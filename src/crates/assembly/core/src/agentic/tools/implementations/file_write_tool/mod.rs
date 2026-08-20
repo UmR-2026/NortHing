@@ -65,10 +65,6 @@ impl Tool for FileWriteTool {
         false
     }
 
-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
-        false
-    }
-
     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
         validate_input(input, context).await
     }
@@ -299,5 +295,13 @@ mod tests {
             validation.message.as_deref(),
             Some("mode must be either 'w' (overwrite) or 'a' (append), got 'x'")
         );
+    }
+
+    #[test]
+    fn file_write_tool_needs_permissions_returns_true() {
+        let tool = FileWriteTool::new();
+        assert!(!tool.is_readonly());
+        assert!(tool.needs_permissions(None));
+        assert!(tool.needs_permissions(Some(&json!({ "file_path": "new.txt", "content": "hello" }))));
     }
 }
