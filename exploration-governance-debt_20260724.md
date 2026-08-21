@@ -198,7 +198,7 @@ agentic_mode.md 现在是一个**纯能力/行为指南**，没有身份/人格�
 - 安全策略（defensive security only）
 - 语气风格（concise, no emojis）
 
-身份现在来自**独立的人格层**（self-cognition），由首次启动时 LLM 生成，设计文档在 `docs/design/2026-07-23-self-cognition/first-entry-design.md`。
+身份现在来自**独立的人格层**（self-cognition），由首次启动时 LLM 生成，设计文档在 `docs/archive/design/2026-07-23-self-cognition/first-entry-design.md`。
 
 ### 评价
 

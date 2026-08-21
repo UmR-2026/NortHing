@@ -46,7 +46,7 @@ pnpm run installer:build:only
 ## Architecture
 
 ```
-northhing-Installer/
+northing-installer/
 âââ src-tauri/                 # Tauri / Rust backend
 â?  âââ src/
 â?  â?  âââ main.rs            # Entry point
@@ -228,13 +228,13 @@ Add to your GitHub Actions workflow:
 ```yaml
 - name: Build Installer
   run: |
-    cd northhing-Installer
+    cd northing-installer
     pnpm install
     pnpm run installer:build:only
 
 - name: Upload Installer
   uses: actions/upload-artifact@v4
   with:
-    name: northhing-Installer-Exe
-    path: northhing-Installer/src-tauri/target/release/northhing-installer.exe
+    name: northing-installer-exe
+    path: northing-installer/src-tauri/target/release/northhing-installer.exe
 ```

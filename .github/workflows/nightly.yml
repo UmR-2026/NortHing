@@ -198,7 +198,7 @@ jobs:
             target/*/release/bundle
             target/release/bundle
             src/apps/desktop/target/release/bundle
-            northhing-Installer/src-tauri/target/release/northhing-installer.exe
+            northing-installer/src-tauri/target/release/northhing-installer.exe
 
   # ── Publish nightly pre-release ────────────────────────────────────
   publish-nightly:

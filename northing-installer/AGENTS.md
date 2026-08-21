@@ -4,11 +4,11 @@
 
 ## Scope
 
-This file applies to `northhing-Installer`. Use the top-level `AGENTS.md` for repository-wide rules.
+This file applies to `northing-installer`. Use the top-level `AGENTS.md` for repository-wide rules.
 
 ## What matters here
 
-`northhing-Installer` is a separate Tauri + React app, not part of the main Cargo workspace.
+`northing-installer` is a separate Tauri + React app, not part of the main Cargo workspace.
 
 Important areas called out by the module README:
 
@@ -32,11 +32,11 @@ These are command references, not the default precheck list. Use Verification
 below for PR scope.
 
 ```bash
-pnpm --dir northhing-Installer run installer:dev
-pnpm --dir northhing-Installer run tauri:dev
-pnpm --dir northhing-Installer run type-check
-pnpm --dir northhing-Installer run build # React build / CI reproduction
-pnpm --dir northhing-Installer run installer:build # packaging only
+pnpm --dir northing-installer run installer:dev
+pnpm --dir northing-installer run tauri:dev
+pnpm --dir northing-installer run type-check
+pnpm --dir northing-installer run build # React build / CI reproduction
+pnpm --dir northing-installer run installer:build # packaging only
 ```
 
 ## Verification
@@ -46,15 +46,15 @@ Use the smallest matching check:
 ```bash
 pnpm run i18n:audit # resource-only i18n
 pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit
-pnpm --dir northhing-Installer run type-check # frontend i18n/runtime
-cargo check --manifest-path northhing-Installer/src-tauri/Cargo.toml # Tauri/Rust changes
+pnpm --dir northing-installer run type-check # frontend i18n/runtime
+cargo check --manifest-path northing-installer/src-tauri/Cargo.toml # Tauri/Rust changes
 ```
 
 Run the full installer build only for packaging, payload, native bundling,
 install/uninstall flow, registry, shortcut, or extraction changes:
 
 ```bash
-pnpm --dir northhing-Installer run type-check && pnpm --dir northhing-Installer run installer:build
+pnpm --dir northing-installer run type-check && pnpm --dir northing-installer run installer:build
 ```
 
-If you modify uninstall flow, also validate the uninstall mode entry points described in `northhing-Installer/README.md`.
+If you modify uninstall flow, also validate the uninstall mode entry points described in `northing-installer/README.md`.

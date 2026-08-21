@@ -11,7 +11,7 @@
 
 ### 1.1 首次启动流程
 
-**设计文档**：`docs/design/2026-07-23-self-cognition/first-entry-design.md`
+**设计文档**：`docs/archive/design/2026-07-23-self-cognition/first-entry-design.md`
 
 流程为四字段配置 → LLM 生成身份提示词 → 持久化存储：
 
@@ -463,9 +463,9 @@ Episode log 是给**人类**看的记录；memory（facts + keyword_weights）�
 
 | 文件 | 状态 | 说明 |
 |---|---|---|
-| `docs/design/2026-07-23-self-cognition/first-entry-design.md` | 已提交 | 自我认知首次启动设计 |
-| `docs/design/2026-07-23-self-cognition/memory-multi-agent-architecture.md` | 已提交 | C4 多 agent 架构 spec |
-| `docs/design/2026-07-23-self-cognition/memory-retrieval-design.md` | 已提交 | 检索层设计 |
+| `docs/archive/design/2026-07-23-self-cognition/first-entry-design.md` | 已提交 | 自我认知首次启动设计 |
+| `docs/archive/design/2026-07-23-self-cognition/memory-multi-agent-architecture.md` | 已提交 | C4 多 agent 架构 spec |
+| `docs/archive/design/2026-07-23-self-cognition/memory-retrieval-design.md` | 已提交 | 检索层设计 |
 | `src/crates/assembly/core/src/agentic/identity.rs` | 已提交 (9c95faf) | 身份存储 + prompt 构建 |
 | `src/crates/assembly/core/src/agentic/agents/prompt_builder/system_prompt.rs` | 已提交 (9c95faf) | identity 注入 system prompt |
 | `src/crates/assembly/core/src/service/agent_memory/facts.rs` | 已提交 | Fact 结构 + JSONL 读写 |

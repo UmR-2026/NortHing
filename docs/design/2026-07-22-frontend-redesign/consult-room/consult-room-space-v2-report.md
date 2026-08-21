@@ -6,7 +6,7 @@
 
 **戒律自检**：rep 只属 agent（暗门/沉积门/走廊自身皆无 rep 色，门缝所见明写"沉积属于房间，不属于此刻的它"）；无 dashboard 数字（计数全叙事化："一间亮着 / 三间熄灯"）；无 emoji（符号集 ☀☾─□✕▴▾×≡⌗➤■↗◦· 全为真值/v1 已用字符）；阴影仅真值同款 4 型（`var(--shadow)` / `+var(--lift)` / `0 0 26px var(--mind-glow)` / `0 0 0 1px var(--line)`）；无 backdrop-filter，color-mix 规则数 7 = 真值 7（零新增）。
 
-**验证**：`node --check`（内联 JS）通过；标签开闭配平（div 110/110、span 43/43、button 22/22）；Edge headless 实测三态截图 + rect 量测：暗态默认 `space-v2-dark.png`、双抽屉开 `space-v2-open.png`（mind 82..362 / corridor 378..1158 / ante 1174..1494，无重叠）、亮态 `space-v2-light.png`（白昼无菌室成立：无光晕、线边界、深铜口音），均在 `C:\Users\UmR\AppData\Local\Temp\opencode\`。
+**验证**：`node --check`（内联 JS）通过；标签开闭配平（div 110/110、span 43/43、button 22/22）；Edge headless 实测三态截图 + rect 量测：暗态默认 `space-v2-dark.png`、双抽屉开 `space-v2-open.png`（mind 82..362 / corridor 378..1158 / ante 1174..1494，无重叠）、亮态 `space-v2-light.png`（白昼无菌室成立：无光晕、线边界、深铜口音），均在 `<temp>/opencode/`。
 
 **最大一注**：真值 §1.3 的 room-head「顶晕染色」在走廊里主动让位。走廊没有 agent 头像——它只住在亮着的那间房里，若中枢再点一盏顶灯，页面特则"亮门独占光源"当场失效；故 hall-head 只继承可收纳胶囊 + 状态 pill 两件语法，radial 顶晕整条不写，唯一光源留给亮门门灯（aura 也锚在那里）。这是特则压制通则的取舍，非漏抄。
 
