@@ -10,10 +10,10 @@ use super::page::{build_session_metadata_page, empty_session_metadata_page};
 use super::types::{SessionMetadata, StoredSessionIndexFile, StoredSessionMetadataFile};
 use super::SessionMetadataPage;
 use crate::json_store::{JsonFileStore, JsonFileStoreError};
+use northhing_core_types::time::now_unix_ms as current_unix_ms;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use tokio::fs;
 use tokio::sync::Mutex;
@@ -382,13 +382,6 @@ impl SessionMetadataStore {
             .map_err(|source| SessionMetadataStoreError::CreateSessionDir { source })?;
         Ok(dir)
     }
-}
-
-fn current_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64
 }
 
 #[cfg(test)]

@@ -32,12 +32,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-pub fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis() as u64)
-        .unwrap_or(0)
-}
+pub use northhing_core_types::time::now_unix_ms as now_ms;
 
 pub fn now_epoch_seconds() -> i64 {
     SystemTime::now()
