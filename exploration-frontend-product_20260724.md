@@ -482,9 +482,9 @@ northing 前端处于一个**骨架完备、皮肤待换、灵魂未生**的阶�
 | `docs/design/2026-07-22-frontend-redesign/slint-retarget-notes.md` | Slint 翻译映射票据 |
 | `docs/design/2026-07-22-frontend-redesign/tokens-draft.css` | OKLCH 单一事实源 |
 | `docs/design/2026-07-22-frontend-redesign/tokens-srgb-table.md` | OKLCH→sRGB 对照表 |
-| `docs/design/2026-07-23-self-cognition/first-entry-design.md` | 自我认知首次启动设计 |
-| `docs/design/2026-07-23-self-cognition/memory-multi-agent-architecture.md` | C4 多 agent 架构 |
-| `docs/design/2026-07-23-self-cognition/memory-retrieval-design.md` | 检索层设计 |
+| `docs/archive/design/2026-07-23-self-cognition/first-entry-design.md` | 自我认知首次启动设计 |
+| `docs/archive/design/2026-07-23-self-cognition/memory-multi-agent-architecture.md` | C4 多 agent 架构 |
+| `docs/archive/design/2026-07-23-self-cognition/memory-retrieval-design.md` | 检索层设计 |
 | `src/apps/desktop/src/ui/redesign_palette.slint` | FR-T1 产出调色板 |
 | `src/apps/desktop/src/ui/fonts/FONTS.md` | FR-T2 字体文档 |
 | `docs/handoffs/2026-07-23-session3-handoff.md` | Session 3 交接 |
