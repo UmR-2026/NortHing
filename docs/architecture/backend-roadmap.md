@@ -174,8 +174,8 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 
 | # | 内容 | 量 |
 |---|---|---|
-| PCS-1 | P0 可逆注册原语（DisposableList/guard）+ 三注册表 guard 化（ToolRegistry / AgentRegistry / MCP 注册路径）——插件可拔的地基 | S |
-| PCS-2 | skills 出 crate → 数据目录 + fs watch 热加载（**第一个 DataPlugin**；顺解 T3-1 skills 面板数据源与 builtin 依赖） | S-M |
+| ~~PCS-1~~ | ~~P0 可逆注册原语 + 三注册表 guard 化~~ | **已完成**（2026-08-21，merge bb8503b：`northhing-disposable` crate + ToolRegistry/AgentRegistry/MCP guard 化） | ~~S~~ |
+| ~~PCS-2~~ | ~~skills 出 crate → 数据目录 + fs watch 热加载~~ | **已完成**（2026-08-21，merge ea9314e：SkillWatchService + DisposableList 生命周期 + 面板项目槽聚合 + load_project_skills 接线[签名零变] + catalog 去硬编码；T3-1 的 skills 面板阻塞项部分解除——workspace override 列已激活，剩余 facade 未接线方法归 T3-1） | ~~S-M~~ |
 | PCS-3 | 统一插件清单/注册表/健康状态 + **权限框架**（提炼 MiniApp `permission_policy` 默认拒绝语义，在 T2-2 删码之前完成提炼；**批准者 = 用户安装时批准**，P-16）+ 设置页统一插件面板（MCP/skills/providers/LSP 一处可见，消费 kernel-api `list_tools` 等） | M |
 | PCS-4 | P2 配置驱动重组（配置 diff → 事务应用 → 失败回滚），MCP 启停接入——"改配置即生效、无需重启" | M |
 | PCS-5 | core-agent 自省：插件/技能/工具/模型注册表注入 agent 自我描述（B1b 模型运行时信息的扩展——"同事知道自己有什么"） | S |
