@@ -1,0 +1,675 @@
+diff --git a/.superpowers/sdd/task-rot1-brief.md b/.superpowers/sdd/task-rot1-brief.md
+new file mode 100644
+index 0000000..4125da7
+--- /dev/null
++++ b/.superpowers/sdd/task-rot1-brief.md
+@@ -0,0 +1,76 @@
++# Task ROT-1 Brief — T2-9 冗余合并批 1（预检后重定义：2 真做 + 4 核销）
++
++## 来源与验收标准（逐字）
++
++来源：`docs/architecture/backend-roadmap.md` T2-9 行第一批：
++
++> deep_research 去重（255L×2，diff 仅 10 行注释→re-export）、ndjson_log 统一（4 个追加+轮转实现 ~1,320L）、now_unix_ms 统一（3 同名函数+25 内联）、原子写收口 json_store（顺修 P2-16 save_config 裸写；删 PersistenceService FILE_LOCKS）、初始化收口（server bootstrap 手抄 + CLI 样板×4 → init_agentic_system）
++
++**验收**：Spec 1-2 全部落地 + Spec 3 四项核销各带证据 + 验证命令输出进 report。
++
++## 编排者预检结论（2026-08-21 实测，直接采信）
++
++| 扫描项 | 预检发现 | 处置 |
++|---|---|---|
++| deep_research 去重 | 双胞胎实证：`contracts/runtime-ports/src/deep_research.rs` 与 `execution/agent-runtime/src/deep_research.rs` 各 255 行，git diff 仅 5 行（10 +/-）；canonical = runtime-ports（services-integrations 已从其导入）；agent-runtime 消费方 = 自身 lib.rs:32 re-export + tests/deep_research_contracts.rs | **做**（Spec 1） |
++| now_unix_ms 统一 | 命名无 `now_unix_ms`，实为 8-10 个异名 3 行时间函数 + 全仓 80 处内联 `duration_since(UNIX_EPOCH)`；类型分裂 u64/i64；agent-runtime 与 debug-log **不依赖 core-types**（为 3 行函数加依赖 = 依赖膨胀） | **做但缩圈**（Spec 2）：helper 落 core-types，只转已依赖 core-types 的 crate 内命名重复 |
++| ndjson_log 统一 | 扫描计数于 T2-2 大删除之前；现存 append 面语义各不同：audit_log.rs（295 行，age-based 轮转）、debug-log（T2-7 size-based 单轮转）、facts.rs/episodes/store.rs/config/runtime.rs 纯 append 无轮转、write_file.rs 是文件工具不是 log | **核销**：重复主体已随 T2-2 消失，现存实现语义不同不该强行合并（Spec 3a） |
++| FILE_LOCKS 删除 | `persistence.rs:16` 的 FILE_LOCKS 守的是 save_json 的 **backup+rename 序列**（`:100-117`），json_store.write_atomic 只保证内容原子写、不覆盖 backup 协调 | **验证后核销或删**（Spec 3b，按证据走） |
++| server bootstrap 手抄 | `apps/server/src/main.rs` 仅 61 行、零手抄 bootstrap（T1-8 后孤儿 bootstrap.rs 不参与编译） | **核销**（Spec 3c） |
++| CLI 样板×4 收口 | CLI 是 frozen 面；两处 `init_agentic_system_for_cli` + 两处 `init_agentic_system` 并存 | **核销**：frozen 面不做无用户收益的改动（Spec 3d） |
++
++## 复用侦察（强制）
++
++动手前 codegraph/rg 查：core-types 是否已有时间工具（预检：无）；audit_log 与 debug-log 轮转语义（核销证据用）；json_store.write_atomic 的调用面（Spec 3b 用）。report 写「复用侦察」节。
++
++## Spec（必须全部满足）
++
++1. **deep_research re-export**：`execution/agent-runtime/src/deep_research.rs` 255 行副本删除，改为 `pub use northhing_runtime_ports::deep_research::*;`（或逐项 re-export，保持 `northhing_agent_runtime::deep_research::{renumber_research_report, ResearchCitationDisplayMapEntry}` 路径存活——tests/deep_research_contracts.rs 与 lib.rs:32 的 re-export 不许改）；**核对 agent-runtime Cargo.toml 已有 runtime-ports 依赖**（层方向 execution→contracts 合法）。不加测试（既有 contract 测试即回归）。
++2. **时间 helper 收口**：
++   - core-types 新增小模块（如 `time.rs`，lib.rs 挂载）：`pub fn now_unix_ms() -> u64` 与 `pub fn now_unix_millis() -> i64`，doc comment 注明 SystemTime::now + UNIX_EPOCH 语义与溢出行为；各配 1 个平凡单测（>0 且单调非降）。
++   - 转换以下 4 个命名重复为调用 helper（删除本地 fn，调用点改路径；若调用点多用 re-export 保路径）：
++     - `assembly/core/src/agentic/goal_mode/mod.rs:35 now_ms() -> u64`
++     - `assembly/core/src/agentic/session/evidence_ledger.rs:324 current_time_millis() -> u64`
++     - `assembly/core/src/service/cron/service_helpers.rs:205 now_ms() -> i64`
++     - `services-core/src/session/metadata_store.rs:387 current_unix_ms() -> u64`
++   - **不动**：agent-runtime cache_types、debug-log、acp manager_process（无 core-types 依赖，report 注明原因）；全仓 80 处内联点不转（编排者收口时注册 ratchet 条目）。
++3. **核销四项**（无代码改动，report 各一段证据）：
++   - a. ndjson：上述预检语义差异 + T2-2 删除面，rg 证据。
++   - b. FILE_LOCKS：查 `PersistenceService::save_json` 全部调用方（rg）——若证据支持"backup+rename 序列协调仍需要文件锁"则核销保留（预期结论）；只有当你发现调用方全部无并发同 key 写且 backup 可弃时才可删除，且须补测试。
++   - c. server bootstrap：main.rs 行数与内容证据。
++   - d. CLI init：frozen 面声明 + 四调用点清单。
++4. 不顺手碰：rot-budget.json（编排者收口拧）、growth 线文件（`memory/`、`.graph/`、`.opencode/model-capability-notes.md`）、任何 CLI 代码。
++
++## Global Constraints（逐字遵守）
++
++- 日志/注释 English-only、无 emoji。
++- 行为等价纯搬移：除删除副本外，任何可观察行为变化都必须 STOP 报 BLOCKED。
++- 历史事故禁令（ERRORS.md）：搬移后逐符号 rg 核实 import 干净——crate 级 `#![allow(unused_imports)]` 会让 cargo check 漏报（S-1 教训）。
++
++## 验证（命令 + 输出都要进 report）
++
++Windows MSVC wrapper：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo ...`
++
++1. `cargo check --workspace`
++2. `cargo test -p northhing-agent-runtime --test deep_research_contracts`（或实际测试目标名）
++3. `cargo test -p northhing-core-types`
++4. 受影响 crate 的 focused 测试（goal_mode / evidence_ledger / cron / metadata_store 就近）
++5. `node scripts/check-core-boundaries.mjs`
++6. `pnpm run check:rot`
++7. `pnpm run fmt:rs`
++
++## 报告
++
++写到本 worktree `.superpowers/sdd/task-rot1-report.md`：Spec 逐条、核销四项证据、复用侦察节、验证输出尾部、偏离声明。最后一条消息以 DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED 开头。
++
++## 派发元信息
++
++- BASE commit：`30a8590`；worktree `E:\agent-project\.worktrees\northing-rot1`（分支 `feat/rot1-dedup-0821`）
++- commit message 后缀 `(ROT-1)`；只 stage 你改的文件。
++
++## Rust 工作约定（涉 Rust 任务必须遵守）
++
++1. 仓库根 AGENTS.md / 就近 AGENTS.md 是规范唯一事实源（六层分层、骨干不变量、i18n、日志、平台边界），优先于任何通用 Rust 惯例；Cargo.toml 的 edition/lints 维持现状，不许套模板。
++2. 遇编译错误（E0xxx）先用 skill 工具加载对应 skill（m01-ownership / m03-mutability / m04-zero-cost / m06-error-handling / m07-concurrency / unsafe-checker），trace 到设计层原因（谁该拥有这份数据？为什么跨线程？）再改代码——禁止无脑 .clone() / .unwrap() / Arc 包一切糊住编译器。
++3. 设计取舍（错误分层、生命周期、并发模型）可查 m09-m15 与 domain-* skill；完整路由见 rust-router skill。
++4. report 里写明：遇到的每个编译错误最终修在哪一层（机制层/设计层），一行一个。
+diff --git a/.superpowers/sdd/task-rot1-report.md b/.superpowers/sdd/task-rot1-report.md
+new file mode 100644
+index 0000000..7ff05bc
+--- /dev/null
++++ b/.superpowers/sdd/task-rot1-report.md
+@@ -0,0 +1,112 @@
++# Task ROT-1 Report — T2-9 冗余合并批 1
++
++## 概述
++
++按 `.superpowers/sdd/task-rot1-brief.md` 要求完成 2 个真做项（deep_research re-export、时间 helper 统一收口）与 4 个核销项的证据复核，无行为变化，全工作区通过编译、单测、core boundary 检查及 rot 预算校验。
++
++---
++
++## 复用侦察
++
++1. **`core-types` 时间工具**：查验 `src/crates/contracts/core-types` 确认之前无统一时间 helper。现新建 `src/crates/contracts/core-types/src/time.rs`，挂载至 `lib.rs`。
++2. **`ndjson_log` 轮转语义**：
++   - `src/crates/assembly/core/src/service/audit_log.rs`：采用 10MB 或 7 天 age-based 多代轮转策略（安全审计日志）。
++   - `src/crates/services/debug-log/src/lib.rs`：采用 8MiB 单代 size-based 轮转策略（`.1` 单备份，调试日志）。
++   - `facts.rs`/`episodes`/`store.rs`/`config`/`runtime.rs`：纯文件 append，不具备轮转语义。
++   - `write_file.rs`：工具层文件写入原子封装，非日志追加。
++   结论：各日志面语义及生命周期完全不同，强行合并会破坏领域正交性。
++3. **`PersistenceService::FILE_LOCKS` 调用面**：
++   - 全仓调用方共 3 处：`workspace/service.rs:230`（`"workspace_data"`）、`workspace/admin.rs:197`（`"workspace_data"`）、`cron/store.rs:86`（`"jobs"`）。
++   - `save_json` 内部持有 `FILE_LOCKS` 保护 `create_backup`（多代备份轮转）与静态临时文件 `.json.tmp` 写入及重命名序列。去锁会导致同 key 并发写入时临时文件覆盖与备份破坏。
++   结论：文件锁对多步骤备份+原子重命名序列协调必不可少，核销保留。
++
++---
++
++## Spec 实施细节
++
++### 1. `deep_research` 去重与 re-export
++- 文件：`src/crates/execution/agent-runtime/src/deep_research.rs`
++- 改动：删除 255 行副本实现，替换为 `pub use northhing_runtime_ports::deep_research::*;`。
++- 依赖校验：`northhing-agent-runtime` 的 `Cargo.toml` 已有 `northhing-runtime-ports` 依赖，层级方向 `execution -> contracts` 合法。
++- 保持接口兼容：`northhing_agent_runtime::deep_research::{renumber_research_report, ResearchCitationDisplayMapEntry}` 路径与 `tests/deep_research_contracts.rs` 保持不变。
++- 边界规则同步：`scripts/core-boundaries/rules/source/required-rules.mjs` 与 `scripts/core-boundaries/self-test.mjs` 中的 canonical 路径规则同步指向 canonical 拥有方 `src/crates/contracts/runtime-ports/src/deep_research.rs`。
++
++### 2. 时间 helper 统一收口
++- 新增：`src/crates/contracts/core-types/src/time.rs`，实现 `now_unix_ms() -> u64` 与 `now_unix_millis() -> i64`，附带 `SystemTime::now` + `UNIX_EPOCH` 语义及溢出兜底说明与单调性测试。
++- 挂载：`src/crates/contracts/core-types/src/lib.rs` 导出 `time` 模块及 `now_unix_ms`, `now_unix_millis`。
++- 4 处命名重复收口：
++  1. `src/crates/assembly/core/src/agentic/goal_mode/mod.rs:35`：`now_ms() -> u64` 改为 `pub use northhing_core_types::time::now_unix_ms as now_ms;`。
++  2. `src/crates/assembly/core/src/agentic/session/evidence_ledger.rs:324`：删除本地 `current_time_millis() -> u64`，调用点直接切换为 `northhing_core_types::time::now_unix_ms()`。
++  3. `src/crates/assembly/core/src/service/cron/service_helpers.rs:205`：`now_ms() -> i64` 改为 `pub(super) use northhing_core_types::time::now_unix_millis as now_ms;`。
++  4. `src/crates/services/services-core/src/session/metadata_store.rs:387`：删除本地 `current_unix_ms() -> u64`，导入 `northhing_core_types::time::now_unix_ms as current_unix_ms;`。
++- 不动项：`agent-runtime` cache_types、`debug-log`、`acp` manager_process 保持现状（无 core-types 依赖，避免跨层引入不必要依赖）；全仓 80 处内联点保持现状。
++
++---
++
++## 核销四项证据（Spec 3）
++
++1. **Spec 3a — ndjson_log 统一**：
++   - 证据：`audit_log.rs`（295L）实现基于大小（10MB）与时间（7天）的双条件多代轮转；`debug-log` 实现 8MiB 单代（`.1`）轮转；`facts.rs`/`episodes` 等纯 append 无轮转。重复主体随 T2-2 已清理，现存差异为领域所需语义不同，核销不合。
++2. **Spec 3b — FILE_LOCKS 删除**：
++   - 证据：`save_json` 序列为 `ensure_parent_dir -> create_backup(backup_count=5) -> write(key.json.tmp) -> rename(key.json.tmp, key.json)`。临时文件路径为固定扩展名 `.json.tmp`，若无 `FILE_LOCKS` 互斥，同 key 并发写入会导致临时文件碰撞及备份文件乱序损坏。核销保留。
++3. **Spec 3c — server bootstrap 手抄**：
++   - 证据：`src/apps/server/src/main.rs` 全文仅 61 行，只包含基础 Axum 路由（`/health`, `/api/v1/health`, `/api/v1/info`, `/ws`），无任何手抄 bootstrap 逻辑；孤儿文件 `src/apps/server/src/bootstrap.rs` 不在编译单元内。核销无需改动。
++4. **Spec 3d — CLI init 样板收口**：
++   - 证据：CLI 属于 frozen-experimental 界面，4 处调用点（`src/apps/cli/src/agent/agentic_system.rs:8`, `src/apps/cli/src/management.rs:198`, `src/apps/cli/src/main.rs:400`, `src/apps/cli/src/root_handlers.rs:100/331`）运行稳定，无用户收益，按 frozen 面守则核销。
++
++---
++
++## 偏离声明与编译错误说明
++
++- **偏离声明**：无任何行为偏离。
++- **编译错误排查记录**：
++  - 错误：新 worktree 未生成 i18n 契约导致 `E0583: file not found for module generated_locale_contract`。
++  - 修复层级：机制层（构建产物），执行 `node scripts/generate-i18n-contract.mjs` 生成契约文件。
++
++---
++
++## 验证结果
++
++1. **`cargo check --workspace`**：
++   ```
++   Finished `dev` profile [unoptimized + debuginfo] target(s) in 50.66s
++   ```
++2. **`cargo test -p northhing-agent-runtime --test deep_research_contracts`**：
++   ```
++   running 2 tests
++   test deep_research_citation_renumber_owner_is_idempotent_without_citations ... ok
++   test deep_research_citation_renumber_owner_preserves_report_and_display_map_contracts ... ok
++   test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
++   ```
++3. **`cargo test -p northhing-core-types`**：
++   ```
++   running 4 tests
++   test time::tests::test_now_unix_millis_positive_and_monotonic ... ok
++   test errors::tests::builds_ai_error_detail_from_provider_metadata ... ok
++   test errors::tests::classifies_quota_and_provider_unavailable_errors ... ok
++   test time::tests::test_now_unix_ms_positive_and_monotonic ... ok
++   test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
++   ```
++4. **受影响模块针对性测试**：
++   - `northhing-services-core session`：48 unit tests + 12 contract tests 全部 pass。
++   - `northhing-core cron`：10 tests 全部 pass。
++   - `northhing-core evidence_ledger`：7 tests 全部 pass。
++   - `northhing-core goal_mode`：12 tests 全部 pass。
++5. **`node scripts/check-core-boundaries.mjs`**：
++   ```
++   Core boundary check passed.
++   ```
++6. **`pnpm run check:rot`**：
++   ```
++   ✔ compliant fixture exits 0 and reports success
++   ✔ grep count exceeding ceiling fails and exits 1 with guidance message
++   ✔ unregistered file exceeding 800 lines fails and exits 1
++   ✔ registered god-file exceeding ceiling fails
++   ✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry
++   ✔ actual workspace rot budget passes with current manifest
++   Rot budget verification passed (3 grep rules, 7 god-file rules checked across 1362 files).
++   ```
++7. **`pnpm run fmt:rs`**：
++   ```
++   [format-changed-rust] Formatting 7 Rust file(s).
++   ```
+diff --git a/scripts/core-boundaries/rules/source/required-rules.mjs b/scripts/core-boundaries/rules/source/required-rules.mjs
+index 2d2b575..630dec7 100644
+--- a/scripts/core-boundaries/rules/source/required-rules.mjs
++++ b/scripts/core-boundaries/rules/source/required-rules.mjs
+@@ -1573,9 +1573,9 @@ export const requiredContentRules = [
+     ],
+   },
+   {
+-    path: 'src/crates/execution/agent-runtime/src/deep_research.rs',
++    path: 'src/crates/contracts/runtime-ports/src/deep_research.rs',
+     reason:
+-      'agent-runtime must own provider-neutral DeepResearch citation renumbering without core session or filesystem IO dependencies',
++      'runtime-ports must own provider-neutral DeepResearch citation renumbering without core session or filesystem IO dependencies',
+     patterns: [
+       {
+         regex: /\bpub fn renumber_research_report\b/,
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index 32e7d7d..4116323 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -2012,7 +2012,7 @@ export function runManifestParserSelfTest({
+       contracts: ['run_for_session_workspace', 'try_renumber_research_report', 'renumber_research_report', 'report.md', 'citations.md', 'display_map', 'REJECTED'],
+     },
+     {
+-      path: 'src/crates/execution/agent-runtime/src/deep_research.rs',
++      path: 'src/crates/contracts/runtime-ports/src/deep_research.rs',
+       contracts: ['renumber_research_report', 'ResearchCitationRenumberOutput', 'ResearchCitationDisplayMapEntry', 'rejected_index_rows_dropped'],
+     },
+     {
+diff --git a/src/crates/assembly/core/src/agentic/goal_mode/mod.rs b/src/crates/assembly/core/src/agentic/goal_mode/mod.rs
+index 383f916..5410669 100644
+--- a/src/crates/assembly/core/src/agentic/goal_mode/mod.rs
++++ b/src/crates/assembly/core/src/agentic/goal_mode/mod.rs
+@@ -32,12 +32,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
+ use tracing::{info, warn};
+ use uuid::Uuid;
+ 
+-pub fn now_ms() -> u64 {
+-    SystemTime::now()
+-        .duration_since(UNIX_EPOCH)
+-        .map(|duration| duration.as_millis() as u64)
+-        .unwrap_or(0)
+-}
++pub use northhing_core_types::time::now_unix_ms as now_ms;
+ 
+ pub fn now_epoch_seconds() -> i64 {
+     SystemTime::now()
+diff --git a/src/crates/assembly/core/src/agentic/session/evidence_ledger.rs b/src/crates/assembly/core/src/agentic/session/evidence_ledger.rs
+index 9cbf7b4..7f39ec8 100644
+--- a/src/crates/assembly/core/src/agentic/session/evidence_ledger.rs
++++ b/src/crates/assembly/core/src/agentic/session/evidence_ledger.rs
+@@ -1,8 +1,8 @@
+ use crate::agentic::core::{CompressionContract, CompressionContractItem};
+ use dashmap::DashMap;
++use northhing_core_types::time::now_unix_ms;
+ use serde::{Deserialize, Serialize};
+ use std::sync::Arc;
+-use std::time::{SystemTime, UNIX_EPOCH};
+ 
+ const MAX_PARTIAL_OUTPUT_BYTES: usize = 8_000;
+ 
+@@ -121,7 +121,7 @@ impl EvidenceLedgerEvent {
+             summary: summary.into(),
+             partial_output: None,
+             checkpoint: None,
+-            created_at_ms: current_time_millis(),
++            created_at_ms: now_unix_ms(),
+         }
+     }
+ 
+@@ -321,13 +321,6 @@ fn event_status_label(status: &EvidenceLedgerEventStatus) -> &'static str {
+     }
+ }
+ 
+-fn current_time_millis() -> u64 {
+-    SystemTime::now()
+-        .duration_since(UNIX_EPOCH)
+-        .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
+-        .unwrap_or(0)
+-}
+-
+ fn is_verification_command(command: &str) -> bool {
+     let command = command.to_ascii_lowercase();
+     command.contains(" test")
+diff --git a/src/crates/assembly/core/src/service/cron/service_helpers.rs b/src/crates/assembly/core/src/service/cron/service_helpers.rs
+index 45ae4f4..44b2e89 100644
+--- a/src/crates/assembly/core/src/service/cron/service_helpers.rs
++++ b/src/crates/assembly/core/src/service/cron/service_helpers.rs
+@@ -4,7 +4,7 @@ use super::schedule::{compute_initial_next_run_at_ms, validate_schedule};
+ use super::types::{CronJob, CronJobPayload, CronJobTarget, CronLaunchSpec, CronSchedule, CronWorkspaceRef};
+ use crate::agentic::coordination::{DialogQueuePriority, DialogSubmissionPolicy, DialogTriggerSource};
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use chrono::{Local, SecondsFormat, TimeZone, Utc};
++use chrono::{Local, SecondsFormat, TimeZone};
+ use northhing_runtime_ports::AgentDialogPrependedReminder;
+ 
+ pub(super) fn reconcile_loaded_job(job: &mut CronJob, now_ms: i64) -> NortHingResult<bool> {
+@@ -202,9 +202,7 @@ pub(super) fn scheduled_job_policy() -> DialogSubmissionPolicy {
+     DialogSubmissionPolicy::new(DialogTriggerSource::ScheduledJob, DialogQueuePriority::Low, true)
+ }
+ 
+-pub(super) fn now_ms() -> i64 {
+-    Utc::now().timestamp_millis()
+-}
++pub(super) use northhing_core_types::time::now_unix_millis as now_ms;
+ 
+ pub(super) struct EnqueueInput {
+     pub job_id: String,
+diff --git a/src/crates/contracts/core-types/src/lib.rs b/src/crates/contracts/core-types/src/lib.rs
+index 6fca4d1..ac7822d 100644
+--- a/src/crates/contracts/core-types/src/lib.rs
++++ b/src/crates/contracts/core-types/src/lib.rs
+@@ -8,6 +8,7 @@ pub mod ai;
+ pub mod errors;
+ pub mod session;
+ pub mod surface;
++pub mod time;
+ pub mod tool_image_attachment;
+ 
+ pub use ai::{
+@@ -20,4 +21,5 @@ pub use surface::{
+     ApprovalSource, CapabilityRequest, CapabilityRequestKind, PermissionDecision, PermissionScope, RuntimeArtifactKind,
+     RuntimeArtifactRef, SurfaceKind, ThreadEnvironment, ThreadEnvironmentKind,
+ };
++pub use time::{now_unix_millis, now_unix_ms};
+ pub use tool_image_attachment::ToolImageAttachment;
+diff --git a/src/crates/contracts/core-types/src/time.rs b/src/crates/contracts/core-types/src/time.rs
+new file mode 100644
+index 0000000..9d1f363
+--- /dev/null
++++ b/src/crates/contracts/core-types/src/time.rs
+@@ -0,0 +1,51 @@
++//! Shared time helper functions.
++//!
++//! Provides lightweight timestamp retrieval based on [`SystemTime::now`]
++//! relative to [`UNIX_EPOCH`].
++
++use std::time::{SystemTime, UNIX_EPOCH};
++
++/// Returns the current Unix timestamp in milliseconds as `u64`.
++///
++/// If the system clock is set before [`UNIX_EPOCH`], this returns `0`.
++/// If the millisecond representation exceeds [`u64::MAX`], it saturates at [`u64::MAX`].
++#[inline]
++pub fn now_unix_ms() -> u64 {
++    SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .map(|d| d.as_millis().min(u128::from(u64::MAX)) as u64)
++        .unwrap_or(0)
++}
++
++/// Returns the current Unix timestamp in milliseconds as `i64`.
++///
++/// If the system clock is set before [`UNIX_EPOCH`], this returns `0`.
++/// If the millisecond representation exceeds [`i64::MAX`], it saturates at [`i64::MAX`].
++#[inline]
++pub fn now_unix_millis() -> i64 {
++    SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .map(|d| d.as_millis().min(i64::MAX as u128) as i64)
++        .unwrap_or(0)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_now_unix_ms_positive_and_monotonic() {
++        let t1 = now_unix_ms();
++        assert!(t1 > 0);
++        let t2 = now_unix_ms();
++        assert!(t2 >= t1);
++    }
++
++    #[test]
++    fn test_now_unix_millis_positive_and_monotonic() {
++        let t1 = now_unix_millis();
++        assert!(t1 > 0);
++        let t2 = now_unix_millis();
++        assert!(t2 >= t1);
++    }
++}
+diff --git a/src/crates/execution/agent-runtime/src/deep_research.rs b/src/crates/execution/agent-runtime/src/deep_research.rs
+index f5e4a45..9d5125a 100644
+--- a/src/crates/execution/agent-runtime/src/deep_research.rs
++++ b/src/crates/execution/agent-runtime/src/deep_research.rs
+@@ -1,255 +1,5 @@
+ //! Provider-neutral DeepResearch report post-processing.
+ //!
+-//! This module owns deterministic citation renumbering for finalized research
+-//! reports. It does not read or write files; callers provide the report body
+-//! and optional citation registry content, then persist the returned report and
+-//! display map in their own storage boundary.
++//! Re-exports canonical citation renumbering contracts from `northhing_runtime_ports`.
+ 
+-use regex::Regex;
+-use std::collections::HashMap;
+-use std::sync::LazyLock;
+-
+-static CIT_ID_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bcit_\d+\b").unwrap());
+-static REGISTRY_ROW_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(cit_\d+)\b").unwrap());
+-static REGISTRY_STATUS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"status\s*=\s*([A-Za-z_]+)").unwrap());
+-static CITATION_INDEX_RE: LazyLock<Regex> =
+-    LazyLock::new(|| Regex::new(r"(?m)^#{1,6}\s*(Citation Index|引用索引|引用列表)\s*$").unwrap());
+-static BRACKETED_GROUP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[(cit_\d+(?:\s*,\s*cit_\d+)*)\]").unwrap());
+-
+-/// Outcome summary returned to the storage adapter for logging or telemetry.
+-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+-pub struct ResearchCitationRenumberStats {
+-    pub citations_renumbered: usize,
+-    pub rejected_refs_in_body: usize,
+-    pub rejected_index_rows_dropped: usize,
+-}
+-
+-/// One entry in the persisted display-map sidecar.
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct ResearchCitationDisplayMapEntry {
+-    pub display: String,
+-    pub internal: String,
+-}
+-
+-/// Pure output of DeepResearch report renumbering.
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct ResearchCitationRenumberOutput {
+-    pub report: String,
+-    pub display_map: Vec<ResearchCitationDisplayMapEntry>,
+-    pub stats: ResearchCitationRenumberStats,
+-}
+-
+-/// Renumber internal `cit_XXX` references in a finalized DeepResearch report.
+-///
+-/// The numbering order is based on first appearance in the report body. Any
+-/// citation marked `status=REJECTED` in the registry remains visible as a
+-/// warning marker in body text but is removed from the user-facing Citation
+-/// Index. This function is idempotent for reports that no longer contain
+-/// internal citation ids.
+-pub fn renumber_research_report(report: &str, registry_content: Option<&str>) -> ResearchCitationRenumberOutput {
+-    let registry_status = registry_content.map(parse_registry_status).unwrap_or_default();
+-    let (body, index_section) = split_at_citation_index(report);
+-    let (display_map, order, rejected_refs_in_body) = build_display_map(body, &registry_status);
+-
+-    if display_map.is_empty() {
+-        return ResearchCitationRenumberOutput {
+-            report: report.to_string(),
+-            display_map: Vec::new(),
+-            stats: ResearchCitationRenumberStats {
+-                citations_renumbered: 0,
+-                rejected_refs_in_body,
+-                rejected_index_rows_dropped: 0,
+-            },
+-        };
+-    }
+-
+-    let new_body = renumber_body(body, &display_map);
+-    let (new_index, rejected_index_rows_dropped) = match index_section {
+-        Some(section) => renumber_index_section(section, &display_map),
+-        None => (String::new(), 0),
+-    };
+-    let report = if new_index.is_empty() {
+-        new_body
+-    } else {
+-        format!("{}{}", new_body, new_index)
+-    };
+-    let display_map = order
+-        .iter()
+-        .enumerate()
+-        .map(|(index, internal)| ResearchCitationDisplayMapEntry {
+-            display: format!("[{}]", index + 1),
+-            internal: internal.clone(),
+-        })
+-        .collect::<Vec<_>>();
+-
+-    ResearchCitationRenumberOutput {
+-        report,
+-        display_map,
+-        stats: ResearchCitationRenumberStats {
+-            citations_renumbered: order.len(),
+-            rejected_refs_in_body,
+-            rejected_index_rows_dropped,
+-        },
+-    }
+-}
+-
+-fn parse_registry_status(content: &str) -> HashMap<String, String> {
+-    let mut out = HashMap::new();
+-    for line in content.lines() {
+-        let trimmed = line.trim_start_matches(|c: char| c == '|' || c.is_whitespace());
+-        let Some(id_m) = REGISTRY_ROW_RE.captures(trimmed) else {
+-            continue;
+-        };
+-        let id = id_m.get(1).unwrap().as_str().to_string();
+-        let status = REGISTRY_STATUS_RE
+-            .captures(line)
+-            .and_then(|captures| captures.get(1).map(|m| m.as_str().to_string()))
+-            .unwrap_or_else(|| "ACCEPTED".to_string());
+-        out.insert(id, status.to_ascii_uppercase());
+-    }
+-    out
+-}
+-
+-fn split_at_citation_index(report: &str) -> (&str, Option<&str>) {
+-    match CITATION_INDEX_RE.find(report) {
+-        Some(m) => (&report[..m.start()], Some(&report[m.start()..])),
+-        None => (report, None),
+-    }
+-}
+-
+-fn build_display_map(
+-    body: &str,
+-    registry_status: &HashMap<String, String>,
+-) -> (HashMap<String, usize>, Vec<String>, usize) {
+-    let mut display_map: HashMap<String, usize> = HashMap::new();
+-    let mut order: Vec<String> = Vec::new();
+-    let mut rejected_refs_in_body = 0usize;
+-
+-    for m in CIT_ID_RE.find_iter(body) {
+-        let cit_id = m.as_str();
+-        if display_map.contains_key(cit_id) {
+-            continue;
+-        }
+-        if let Some(status) = registry_status.get(cit_id) {
+-            if status == "REJECTED" {
+-                rejected_refs_in_body += 1;
+-                continue;
+-            }
+-        }
+-        let n = order.len() + 1;
+-        display_map.insert(cit_id.to_string(), n);
+-        order.push(cit_id.to_string());
+-    }
+-
+-    (display_map, order, rejected_refs_in_body)
+-}
+-
+-fn renumber_body(body: &str, display_map: &HashMap<String, usize>) -> String {
+-    let pass1 = BRACKETED_GROUP_RE.replace_all(body, |caps: &regex::Captures| {
+-        let inside = &caps[1];
+-        let mapped = CIT_ID_RE
+-            .find_iter(inside)
+-            .map(|m| {
+-                let cit = m.as_str();
+-                match display_map.get(cit) {
+-                    Some(n) => format!("{}", n),
+-                    None => format!("{} (rejected)", cit),
+-                }
+-            })
+-            .collect::<Vec<_>>();
+-        format!("[{}]", mapped.join(", "))
+-    });
+-
+-    CIT_ID_RE
+-        .replace_all(&pass1, |caps: &regex::Captures| {
+-            let cit = caps.get(0).unwrap().as_str();
+-            match display_map.get(cit) {
+-                Some(n) => format!("[{}]", n),
+-                None => format!("[{} (rejected)]", cit),
+-            }
+-        })
+-        .to_string()
+-}
+-
+-fn renumber_index_section(section: &str, display_map: &HashMap<String, usize>) -> (String, usize) {
+-    let marked = CIT_ID_RE
+-        .replace_all(section, |caps: &regex::Captures| {
+-            let cit = caps.get(0).unwrap().as_str();
+-            match display_map.get(cit) {
+-                Some(n) => format!("[{}] {}", n, cit),
+-                None => format!("[REJECTED] {}", cit),
+-            }
+-        })
+-        .to_string();
+-
+-    let mut lines: Vec<String> = marked.lines().map(|s| s.to_string()).collect();
+-    let mut dropped_rejected = 0usize;
+-    let mut i = 0;
+-    while i < lines.len() {
+-        if !is_index_data_row(&lines[i]) {
+-            i += 1;
+-            continue;
+-        }
+-        let start = i;
+-        while i < lines.len() && is_index_data_row(&lines[i]) {
+-            i += 1;
+-        }
+-        let mut kept: Vec<String> = lines
+-            .splice(start..i, std::iter::empty::<String>())
+-            .filter(|row| {
+-                let drop = row_is_rejected(row);
+-                if drop {
+-                    dropped_rejected += 1;
+-                }
+-                !drop
+-            })
+-            .collect();
+-        kept.sort_by_key(|line| extract_display_sort_key(line));
+-        let kept_len = kept.len();
+-        for (offset, row) in kept.into_iter().enumerate() {
+-            lines.insert(start + offset, row);
+-        }
+-        i = start + kept_len;
+-    }
+-
+-    let mut out = lines.join("\n");
+-    if section.ends_with('\n') && !out.ends_with('\n') {
+-        out.push('\n');
+-    }
+-    (out, dropped_rejected)
+-}
+-
+-fn row_is_rejected(line: &str) -> bool {
+-    let bytes = line.as_bytes();
+-    let Some(open) = bytes.iter().position(|&b| b == b'[') else {
+-        return false;
+-    };
+-    let Some(close_off) = bytes[open + 1..].iter().position(|&b| b == b']') else {
+-        return false;
+-    };
+-    &line[open + 1..open + 1 + close_off] == "REJECTED"
+-}
+-
+-fn is_index_data_row(line: &str) -> bool {
+-    let trimmed = line.trim_start();
+-    if !trimmed.starts_with('|') {
+-        return false;
+-    }
+-    if trimmed.contains("---") {
+-        return false;
+-    }
+-    let after_pipe = trimmed[1..].trim_start();
+-    after_pipe.starts_with('[')
+-}
+-
+-fn extract_display_sort_key(line: &str) -> usize {
+-    let bytes = line.as_bytes();
+-    let Some(open) = bytes.iter().position(|&b| b == b'[') else {
+-        return usize::MAX;
+-    };
+-    let Some(close_offset) = bytes[open + 1..].iter().position(|&b| b == b']') else {
+-        return usize::MAX;
+-    };
+-    let inner = &line[open + 1..open + 1 + close_offset];
+-    inner.parse().unwrap_or(usize::MAX)
+-}
++pub use northhing_runtime_ports::deep_research::*;
+diff --git a/src/crates/services/services-core/src/session/metadata_store.rs b/src/crates/services/services-core/src/session/metadata_store.rs
+index 64b42b4..e9c52c0 100644
+--- a/src/crates/services/services-core/src/session/metadata_store.rs
++++ b/src/crates/services/services-core/src/session/metadata_store.rs
+@@ -10,10 +10,10 @@ use super::page::{build_session_metadata_page, empty_session_metadata_page};
+ use super::types::{SessionMetadata, StoredSessionIndexFile, StoredSessionMetadataFile};
+ use super::SessionMetadataPage;
+ use crate::json_store::{JsonFileStore, JsonFileStoreError};
++use northhing_core_types::time::now_unix_ms as current_unix_ms;
+ use std::collections::HashMap;
+ use std::path::{Path, PathBuf};
+ use std::sync::{Arc, OnceLock};
+-use std::time::{SystemTime, UNIX_EPOCH};
+ use thiserror::Error;
+ use tokio::fs;
+ use tokio::sync::Mutex;
+@@ -384,13 +384,6 @@ impl SessionMetadataStore {
+     }
+ }
+ 
+-fn current_unix_ms() -> u64 {
+-    SystemTime::now()
+-        .duration_since(UNIX_EPOCH)
+-        .unwrap_or_default()
+-        .as_millis() as u64
+-}
+-
+ #[cfg(test)]
+ mod tests {
+     use super::*;
