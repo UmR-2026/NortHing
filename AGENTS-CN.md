@@ -19,7 +19,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 
 | # | 层 | 路径 | 职责 | 模块 / 入口 | 层文档 |
 |---|---|---|---|---|---|
-| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
 | 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
 | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
@@ -100,7 +100,7 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 
 - 区域标识、别名、回退规则以及表面默认由 `src/shared/i18n/contract/locales.json` 拥有。编辑后请运行 `pnpm run i18n:generate`。
 - 共享的稳定标签存放在 `src/shared/i18n/resources/shared/<locale>/terms.json`；工作流文案保留在所属的产品表面中。
-- 不要在小型产品表面（如 `northhing-Installer`）中引入 Web UI 的区域资源。详见 `docs/architecture/i18n.md`。
+- 不要在小型产品表面（如 `northing-installer`）中引入 Web UI 的区域资源。详见 `docs/architecture/i18n.md`。
 - 静态自包含页面可以使用生成的、页面作用域的共享词条文件；但不得引入 Web UI 的区域目录。
 - Web UI 仅急切加载 bootstrap 命名空间；路由或功能文案请使用 `useI18n(namespace)`，并把直接的 `i18nService.t(...)` 调用保留在 bootstrap 命名空间。
 - 用户可见的日期、时间和数字请使用共享的 i18n 格式化辅助函数，而不是直接使用 `Intl.*` 或 `toLocale*`。
@@ -190,8 +190,8 @@ await api.invoke('your_command', { request: { ... } });
 | 桌面集成、Tauri API、浏览器/电脑使用或仅桌面行为 | `cargo check -p northhing-desktop`，并在行为变化时附加聚焦桌面测试 |
 | 由桌面冒烟/功能流程覆盖的行为 | 优先使用最近的聚焦 E2E/冒烟检查；除非构建行为变化，否则依赖 CI 完成广覆盖构建/测试 |
 | `src/crates/adapters/ai-adapters` | 使用上面相关的 Rust 检查；仅当流契约变化时附加 `cargo test -p northhing-agent-stream` |
-| 安装器前端或不涉及打包变更的 i18n 运行时 | `pnpm --dir northhing-Installer run type-check` |
-| 安装器的 Tauri/Rust 变更 | `cargo check --manifest-path northhing-Installer/src-tauri/Cargo.toml` |
+| 安装器前端或不涉及打包变更的 i18n 运行时 | `pnpm --dir northing-installer run type-check` |
+| 安装器的 Tauri/Rust 变更 | `cargo check --manifest-path northing-installer/src-tauri/Cargo.toml` |
 | 安装器的打包、载荷、安装/卸载流程或原生打包 | `pnpm run installer:build` |
 
 ## Agent 文档优先级
