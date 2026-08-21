@@ -12,7 +12,7 @@ const outputs = [
     generate: generateWebLocaleContract,
   },
   {
-    path: path.join(root, 'northhing-Installer', 'src', 'i18n', 'generatedLocaleContract.ts'),
+    path: path.join(root, 'northing-installer', 'src', 'i18n', 'generatedLocaleContract.ts'),
     generate: generateInstallerLocaleContract,
   },
   {
@@ -20,7 +20,7 @@ const outputs = [
     generate: generateCoreRustLocaleContract,
   },
   {
-    path: path.join(root, 'northhing-Installer', 'src-tauri', 'src', 'installer', 'generated_locale_contract.rs'),
+    path: path.join(root, 'northing-installer', 'src-tauri', 'src', 'installer', 'generated_locale_contract.rs'),
     generate: generateInstallerRustLocaleContract,
   },
 ];

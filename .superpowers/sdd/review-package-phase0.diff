@@ -1,0 +1,122 @@
+diff --git a/.agents/skills/lightweight-agent-execution/SKILL.md b/.agents/skills/lightweight-agent-execution/SKILL.md
+index 59d7db1..a9cfc8e 100644
+--- a/.agents/skills/lightweight-agent-execution/SKILL.md
++++ b/.agents/skills/lightweight-agent-execution/SKILL.md
+@@ -65,7 +65,7 @@ Phase 3: Review Model
+ 
+ ## Phase 3: Review Model
+ 
+-**Prompt:** Use `.agents/skills/lightweight-agent-execution/review-prompt.md`
++**Prompt:** Use `.agents/skills/lightweight-agent-execution/reviewer-prompt.md`
+ 
+ **Key rules:**
+ - Do not run any commands
+@@ -108,7 +108,7 @@ cp .task/templates/Taskfile.toml .task/Taskfile.toml
+ # Run LAEP (three phases)
+ # Phase 1: Coding Model (dispatch with coding-prompt.md)
+ # Phase 2: Testing Model (dispatch with testing-prompt.md)
+-# Phase 3: Review Model (dispatch with review-prompt.md)
++# Phase 3: Review Model (dispatch with reviewer-prompt.md)
+ 
+ # Clean up after task
+ rm .task/change-log.json .task/verification-report.json
+diff --git a/.agents/skills/lightweight-agent-execution/review-prompt.md b/.agents/skills/lightweight-agent-execution/reviewer-prompt.md
+similarity index 100%
+rename from .agents/skills/lightweight-agent-execution/review-prompt.md
+rename to .agents/skills/lightweight-agent-execution/reviewer-prompt.md
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 46ce146..776b1b5 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -83,7 +83,9 @@ jobs:
+ 
+       - name: Generate i18n locale contract
+         shell: bash
+-        run: node scripts/generate-i18n-contract.mjs
++        run: |
++          node scripts/generate-i18n-contract.mjs
++          test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
+         # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+ 
+       - name: Check compilation
+@@ -148,4 +150,40 @@ jobs:
+       - name: Run rot budget checker and self-tests
+         run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
+ 
++  # ── repo hygiene check ─────────────────────────────────────────────
++  repo-hygiene:
++    name: repo hygiene check
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: "22"
++
++      - name: Run repo hygiene checker
++        run: node scripts/check-repo-hygiene.mjs
++
++  # ── i18n contract check ────────────────────────────────────────────
++  i18n-contract:
++    name: i18n contract check
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: pnpm/action-setup@v4
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: "22"
++          cache: pnpm
++
++      - name: Install dependencies
++        run: pnpm install --frozen-lockfile
++
++      # Observation slot: 24 pre-existing failures belong to frozen T2-3 surface, convert to hard gate when unfrozen
++      - name: Run i18n contract test
++        continue-on-error: true
++        run: pnpm run i18n:contract:test:ci
++
+ 
+diff --git a/scripts/generate-i18n-contract.mjs b/scripts/generate-i18n-contract.mjs
+index 1dfce91..ce0d2cd 100644
+--- a/scripts/generate-i18n-contract.mjs
++++ b/scripts/generate-i18n-contract.mjs
+@@ -12,7 +12,7 @@ const outputs = [
+     generate: generateWebLocaleContract,
+   },
+   {
+-    path: path.join(root, 'northhing-Installer', 'src', 'i18n', 'generatedLocaleContract.ts'),
++    path: path.join(root, 'northing-installer', 'src', 'i18n', 'generatedLocaleContract.ts'),
+     generate: generateInstallerLocaleContract,
+   },
+   {
+@@ -20,7 +20,7 @@ const outputs = [
+     generate: generateCoreRustLocaleContract,
+   },
+   {
+-    path: path.join(root, 'northhing-Installer', 'src-tauri', 'src', 'installer', 'generated_locale_contract.rs'),
++    path: path.join(root, 'northing-installer', 'src-tauri', 'src', 'installer', 'generated_locale_contract.rs'),
+     generate: generateInstallerRustLocaleContract,
+   },
+ ];
+diff --git a/src/apps/cli/src/ui/theme.rs b/src/apps/cli/src/ui/theme.rs
+index 0118d4f..61c95de 100644
+--- a/src/apps/cli/src/ui/theme.rs
++++ b/src/apps/cli/src/ui/theme.rs
+@@ -1,4 +1,3 @@
+-// allow-god-file: 972L — cohesive theme/style constant table; split deferred (CLI frozen surface)
+ use once_cell::sync::Lazy;
+ /// Theme and style definitions
+ use std::collections::{HashMap, HashSet};
+diff --git a/src/apps/desktop/src/app_state/callbacks_lifecycle.rs b/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
+index 281bb00..168f013 100644
+--- a/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
++++ b/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
+@@ -1,4 +1,3 @@
+-// allow-god-file: 917L — lifecycle callbacks share heavy AppState/Slint context; split planned with callbacks_settings paradigm
+ //! Lifecycle Slint callback wirings (R37a split from mod.rs)
+ //!
+ //! Each `register_X_callback` function takes a `&AppWindow` +

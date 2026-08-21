@@ -1,4 +1,3 @@
-// allow-god-file: 972L — cohesive theme/style constant table; split deferred (CLI frozen surface)
 use once_cell::sync::Lazy;
 /// Theme and style definitions
 use std::collections::{HashMap, HashSet};
