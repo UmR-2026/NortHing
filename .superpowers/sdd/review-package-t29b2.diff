@@ -1,0 +1,1546 @@
+diff --git a/docs/design/2026-07-25-k4a-desktop-facade.md b/docs/design/2026-07-25-k4a-desktop-facade.md
+index 82faeed..7d4f8bc 100644
+--- a/docs/design/2026-07-25-k4a-desktop-facade.md
++++ b/docs/design/2026-07-25-k4a-desktop-facade.md
+@@ -70,7 +70,7 @@
+ - **P2 零新增**：53 方法已满额。任何"facade 缺方法"的发现 → 停步，按 northstar P2 三要素（提出人/覆盖缺口分析/合并可行性）走评审，严禁顺手加。
+ - **cargo 机制约束**（northstar §4）：kernel-api 不得引入 product-full feature 传染；facade 不得 re-export kernel 内部泛型/derive 类型；T5 含 `cargo tree` 零命中守卫。
+ - **P5 行为不变**：每片 `cargo check --workspace` + focused 测试全绿 + GUI 冒烟。
+-- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① desktop 各模块的 `kernel_facade()` 手柄调用与导入（单一全局 handle，见 `src/crates/assembly/core/src/kernel_facade/mod.rs:37`）+ `main.rs` 的 `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）③ `actor.rs` 的 `set_actor_runtime` 注入 + `state.rs` 的 `coordinator()`（§12 缺口 5：TaskTool actor 注入路径，待 P2 评审决定是否开 facade 方法）。T5 grep 守卫按此豁免清单执行。
++- **feature 口径**：desktop 依赖 kernel-api 只取默认 feature。**依赖保留口径（2026-07-25 修订，遵循 K2b `ae15d22` 先例）**：desktop **保留对 `northhing-core` 的 Cargo 依赖**——composition-root 手柄 `northhing_core::kernel_facade::kernel_facade()` 住在 core 内，且 desktop 是单 crate bin，删依赖不现实也无编译收益（K2b 验收已按此口径通过）；代码面口径 = 除显式豁免清单外不得出现 `northhing_core::` 引用。**豁免清单**：① desktop 各模块的 `kernel_facade()` 手柄调用与导入（单一全局 handle，见 `src/crates/assembly/core/src/kernel_facade/mod.rs:37`）+ `main.rs` 的 `shutdown_mcp_servers`（facade 无 shutdown 生命周期方法，新增须走 P2 评审）② `src/bin/w4_repro.rs`（D3）③ [已在 T2-9-B2 移除] 历史上的 `actor.rs` 与 `state.rs` `coordinator()` 注入路径已随 NullDispatcher 清理删除，豁免撤销。T5 grep 守卫按此豁免清单执行。
+ - **并发改动带测试**（家规④）；god-file 防线：callbacks_lifecycle.rs 迁移时若超 800 行警戒，顺手拆分记 commit message（家规①）。
+ - **UI 线程纪律**：事件订阅 callback 写 Slint 属性必须经 `slint::invoke_from_event_loop`（沿用 error_banners.rs 既有包装）。
+ 
+diff --git a/docs/status/audit-compile-health_20260727.md b/docs/status/audit-compile-health_20260727.md
+index 5730fc7..8f3d544 100644
+--- a/docs/status/audit-compile-health_20260727.md
++++ b/docs/status/audit-compile-health_20260727.md
+@@ -108,7 +108,7 @@
+ |----|-----------|-----------------|
+ | coordination (turn) | `submit_turn`, `stop_turn`, `get_turn_state` | ✅ 全覆盖 |
+ | session | `create_session`, `list_sessions`, `get_session`, `delete_session`, `rename_session`, `get_messages`, `create_branch`, `archive_session`, `get_session_metadata` 等 | ✅ 全覆盖 |
+-| events | `subscribe_events`, `unsubscribe_events`, `emit_backend_event` | ✅ 全覆盖 |
++| events | `subscribe_events`, `unsubscribe_events` | ✅ 全覆盖（死方法 `emit_backend_event` 已在 T2-9-B2 移除） |
+ | bootstrap | `init_core` | ✅ 全覆盖 |
+ | settings/config | `get_global_config`, `update_global_config`, `list_model_configs`, `upsert_model_config`, `delete_model_config`, `set_default_provider` | ✅ 全覆盖 |
+ | MCP | `list_mcp_servers`, `upsert_mcp_server`, `delete_mcp_server`, `get_mcp_status` | ✅ 全覆盖 |
+@@ -121,11 +121,11 @@
+ | platform | `open_terminal`, `analyze_image`, `get_core_health` 等 | ✅ 全覆盖 |
+ | debug_log | **无 facade 方法** | ⚠️ 已按 D1 决策拆为 `northhing-debug-log` 微 crate（T5 已落地） |
+ | shutdown_mcp_servers | **无 facade 方法** | ⚠️ 豁免保留直连 core（§6 豁免清单①） |
+-| set_actor_runtime / coordinator() | **无 facade 方法** | ⚠️ 豁免保留直连 core（§12 缺口 5，待 P2 评审） |
++| set_actor_runtime / coordinator() | **无 facade 方法** | <s>⚠️ 豁免保留直连 core</s>（已在 T2-9-B2 随 NullDispatcher 清理移除，豁免撤销） |
+ 
+ **Facade 方法总数**：55 个 async fn + 1 个 sync fn（`strip_prompt_markup`）= 56 个公开方法（设计文档记录 53 满额，实测有 55 async + 1 sync = 56，差异可能因 T23q/T4p DTO 补缺时新增辅助方法）。
+ 
+-**覆盖判定**：facade 完整覆盖 desktop 产品面需求。3 个缺口（debug_log / shutdown / actor_runtime）均已按 K4a 设计决策豁免，不影响 K3 闸门。
++**覆盖判定**：facade 完整覆盖 desktop 产品面需求。历史缺口中 debug_log 已下沉微 crate，actor_runtime 注入已随 NullDispatcher 清理移除，仅剩 shutdown 直连豁免，不影响 K3 闸门。
+ 
+ ---
+ 
+diff --git a/scripts/split_manager.py b/scripts/split_manager.py
+index 6d42b4b..15cd204 100644
+--- a/scripts/split_manager.py
++++ b/scripts/split_manager.py
+@@ -58,8 +58,6 @@ IMPORT_GROUPS = [
+     (["FuturesAsyncRead", "FuturesAsyncWrite"],
+      "use futures::io::{AsyncRead as FuturesAsyncRead, AsyncWrite as FuturesAsyncWrite};"),
+     (["get_global_tool_registry"], "use northhing_core::agentic::tools::registry::get_global_tool_registry;"),
+-    (["emit_global_event", "BackendEvent"],
+-     "use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};"),
+     (["PathManager"], "use northhing_core::infrastructure::PathManager;"),
+     (["ConfigService"], "use northhing_core::service::config::ConfigService;"),
+     (["get_remote_workspace_manager"],
+diff --git a/src/apps/desktop/src/app_state/actor.rs b/src/apps/desktop/src/app_state/actor.rs
+deleted file mode 100644
+index c994240..0000000
+--- a/src/apps/desktop/src/app_state/actor.rs
++++ /dev/null
+@@ -1,121 +0,0 @@
+-//! actor module — see mod.rs for the wiring entry point.
+-
+-use super::log::log_debug_event;
+-use super::slint_glue::AppWindow;
+-use super::*;
+-
+-/// Phase I.3 (2026-06-20): construct an `ActorRuntime` at app boot
+-/// when `USE_LIGHTWEIGHT_ACTOR` is true, and register a heartbeat
+-/// actor that ticks once per minute.
+-///
+-/// This is the **first** real call site for the actor runtime — it
+-/// doesn't replace any existing production path yet. The heartbeat
+-/// actor's `tick` is a no-op; the point is to prove the runtime is
+-/// live, that the `SkillActor` impl compiles, and that the
+-/// `TelemetrySink` wired into `AppState` receives an `ActorTicked`
+-/// event per tick. Manual tests can `grep '"component":"actor_runtime"'`
+-/// in `.northhing/debug.log` to confirm.
+-///
+-/// The runtime is owned by `AppState` (`actor_runtime: OnceLock<...>`).
+-/// Future Phase I.x work can replace `ConversationCoordinator::execute_hidden_subagent_internal`
+-/// with `state.actor_runtime().spawn_actor(...)`.
+-pub(super) fn maybe_construct_actor_runtime(app_state: &AppState, ui: &AppWindow) {
+-    use async_trait::async_trait;
+-    use northhing_agent_dispatch::{
+-        ActorContext, ActorOutput, ActorSchedule, ActorTrigger, NoopTelemetrySink, SkillActor, TelemetryEvent,
+-        TelemetrySink, USE_LIGHTWEIGHT_ACTOR,
+-    };
+-    use northhing_runtime_ports::{LightweightTaskOutput, LightweightTaskRequest, ToolDispatcherPort};
+-    use std::sync::Arc;
+-    use tokio_util::sync::CancellationToken;
+-
+-    if !USE_LIGHTWEIGHT_ACTOR {
+-        return;
+-    }
+-
+-    // Phase I.3 (2026-06-20): trivial `ToolDispatcher` stub. Phase I.x
+-    // will wire a real coordinator-backed dispatcher.
+-    struct NullDispatcher;
+-    #[async_trait]
+-    impl ToolDispatcherPort for NullDispatcher {
+-        async fn dispatch_once(&self, _req: LightweightTaskRequest) -> LightweightTaskOutput {
+-            LightweightTaskOutput::NoToolMatched {
+-                reason: "phase-i3-stub".into(),
+-            }
+-        }
+-    }
+-
+-    /// Phase I.3 heartbeat actor. Demonstrates the full path:
+-    /// `SkillActor` impl → `ActorRuntime::spawn_actor` →
+-    /// `ActorTicked` telemetry → debug log.
+-    struct HeartbeatActor {
+-        id: String,
+-    }
+-    #[async_trait]
+-    impl SkillActor for HeartbeatActor {
+-        fn id(&self) -> &str {
+-            &self.id
+-        }
+-        fn skill_name(&self) -> &str {
+-            "heartbeat"
+-        }
+-        async fn tick(
+-            &mut self,
+-            ctx: &ActorContext,
+-        ) -> Result<Option<ActorOutput>, northhing_agent_dispatch::ActorError> {
+-            // Phase H (actor_runtime component): record the heartbeat
+-            // so manual tests can confirm the runtime is alive.
+-            log_debug_event(
+-                northhing_debug_log::COMP_ACTOR_RUNTIME,
+-                "actor::heartbeat:tick",
+-                crate::flags::DEFAULT_MODE_ID,
+-                "heartbeat actor tick",
+-                Some([
+-                    ("actor_id", self.id.clone()),
+-                    ("", String::new()),
+-                    ("", String::new()),
+-                    ("", String::new()),
+-                ]),
+-            );
+-            ctx.telemetry.emit(TelemetryEvent::ActorTicked { id: self.id.clone() });
+-            Ok(Some(ActorOutput::Silent))
+-        }
+-    }
+-
+-    let dispatcher: Arc<dyn ToolDispatcherPort> = Arc::new(NullDispatcher);
+-    let telemetry: Arc<dyn TelemetrySink> = Arc::new(NoopTelemetrySink);
+-
+-    let runtime = northhing_agent_dispatch::ActorRuntime::new(dispatcher, telemetry);
+-    let handle = runtime.spawn_actor(
+-        Box::new(HeartbeatActor { id: "heartbeat".into() }),
+-        ActorSchedule::OneShot,
+-    );
+-    // Detach the JoinHandle — the actor will run to completion on the
+-    // current tokio runtime and exit. A future Phase I.x can register
+-    // a Periodic actor instead.
+-    drop(handle);
+-
+-    let runtime_arc = Arc::new(runtime);
+-    app_state.set_actor_runtime(runtime_arc.clone());
+-    // K.2.3 follow-up: forward the runtime to the coordinator's
+-    // ToolPipeline so TaskTool sees it via ToolUseContext.
+-    if let Some(coordinator) = app_state.coordinator() {
+-        coordinator.set_actor_runtime(runtime_arc);
+-    }
+-    let _ = ui; // reserved for future Phase I.x Periodic actor wiring
+-
+-    // Phase H: log the activation so manual tests can grep for it.
+-    log_debug_event(
+-        northhing_debug_log::COMP_ACTOR_RUNTIME,
+-        "actor::runtime:activated",
+-        crate::flags::DEFAULT_MODE_ID,
+-        "ActorRuntime constructed at app boot",
+-        Some([
+-            ("flag", "USE_LIGHTWEIGHT_ACTOR".into()),
+-            ("value", "true".into()),
+-            ("actors", "1".into()),
+-            ("", String::new()),
+-        ]),
+-    );
+-    let _ = (CancellationToken::new(), ActorTrigger::Opaque); // silence unused
+-}
+diff --git a/src/apps/desktop/src/app_state/callbacks_lifecycle.rs b/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
+index 20e9fcc..cc1a7b0 100644
+--- a/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
++++ b/src/apps/desktop/src/app_state/callbacks_lifecycle.rs
+@@ -56,52 +56,6 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
+             ]),
+         );
+ 
+-        // Phase I.x (2026-06-20, A3): minimal landing for the actor
+-        // runtime. When `USE_LIGHTWEIGHT_ACTOR = true` AND the runtime
+-        // was constructed at app boot, spawn a one-shot `DispatchActor`
+-        // that records the event end-to-end. The `ActorTicked`
+-        // telemetry reaches the same telemetry sink the heartbeat
+-        // actor uses, proving the runtime is reachable from the
+-        // production on_send_message path.
+-        //
+-        // This is a *demonstration* wiring, not a replacement: the
+-        // existing `coordinator.start_dialog_turn` path still runs
+-        // (the actor doesn't suppress it). A3 is the smallest landing
+-        // that proves the wiring works end-to-end; A1/A2 (multi-turn
+-        // redesign or a parallel LongRunningSubagent path) are out
+-        // of MVP scope.
+-        if northhing_agent_dispatch::USE_LIGHTWEIGHT_ACTOR {
+-            if let Some(runtime) = app_state_arc_send.actor_runtime() {
+-                let msg_id = format!("dispatch-{}", text_str.len());
+-                // Recompute the preview rather than cloning — `truncated`
+-                // was already moved into the on_send_message:enter
+-                // log line above. Cheap: text is already capped at 80
+-                // chars at the user-input boundary.
+-                let preview: String = text_str.chars().take(80).collect();
+-                let mode = crate::flags::DEFAULT_MODE_ID.to_string();
+-                runtime.spawn_one_shot(move |ctx| {
+-                    // The skill actor body is a no-op beyond the
+-                    // structured log + telemetry emit; the point is
+-                    // to prove the runtime path runs in production.
+-                    log_debug_event(
+-                        northhing_debug_log::COMP_ACTOR_RUNTIME,
+-                        "actor::dispatch:tick",
+-                        &mode,
+-                        "one-shot dispatch actor ticked",
+-                        Some([
+-                            ("actor", msg_id.clone()),
+-                            ("preview", preview.clone()),
+-                            ("", String::new()),
+-                            ("", String::new()),
+-                        ]),
+-                    );
+-                    ctx.telemetry
+-                        .emit(northhing_agent_dispatch::TelemetryEvent::ActorTicked { id: msg_id.clone() });
+-                    Ok(Some(northhing_agent_dispatch::ActorOutput::Silent))
+-                });
+-            }
+-        }
+-
+         let app_state = &*app_state_arc_send;
+         let Some(_system) = app_state.get_agentic_system() else {
+             // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.
+diff --git a/src/apps/desktop/src/app_state/create_ui.rs b/src/apps/desktop/src/app_state/create_ui.rs
+index a8f1fe2..eba1964 100644
+--- a/src/apps/desktop/src/app_state/create_ui.rs
++++ b/src/apps/desktop/src/app_state/create_ui.rs
+@@ -9,7 +9,6 @@
+ //! Bodies + comments are preserved verbatim from the original `mod.rs`
+ //! (R37a spec: preserve all comments + bodies).
+ 
+-use super::actor::maybe_construct_actor_runtime;
+ use super::callbacks_lifecycle::{
+     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
+     register_delete_session_callback, register_dismiss_banner_callback, register_export_markdown_callback,
+@@ -167,10 +166,6 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
+         });
+     });
+ 
+-    // Phase I.3: construct an `ActorRuntime` (when the flag is on)
+-    // and register a heartbeat actor. The runtime is a no-op when the
+-    // flag is `false` (the default) — no behavior change for users.
+-    maybe_construct_actor_runtime(&app_state, &ui);
+     // Phase G.3: bind the show-subagents toggle. Initial value comes from
+     // `AppState::new` (default true). The user can flip it via the
+     // sidebar checkbox; the callback updates both the Slint property
+diff --git a/src/apps/desktop/src/app_state/mod.rs b/src/apps/desktop/src/app_state/mod.rs
+index 021ee57..1a3cfce 100644
+--- a/src/apps/desktop/src/app_state/mod.rs
++++ b/src/apps/desktop/src/app_state/mod.rs
+@@ -18,7 +18,6 @@
+ //! audit.
+ 
+ // Existing siblings (Phase B split, preserved)
+-pub(super) mod actor;
+ pub(super) mod inspector;
+ pub(super) mod inspector_model_status;
+ pub(super) mod log;
+diff --git a/src/apps/desktop/src/app_state/state.rs b/src/apps/desktop/src/app_state/state.rs
+index cfc1949..2a1bc51 100644
+--- a/src/apps/desktop/src/app_state/state.rs
++++ b/src/apps/desktop/src/app_state/state.rs
+@@ -24,12 +24,6 @@ pub struct AppState {
+     // R37a: pub(super) accessor needed by callbacks_lifecycle::register_toggle_show_subagents_callback
+     // and create_ui::create_ui (initial binding). Field stays private; access goes through the
+     // `show_subagents_handle()` method below to keep visibility explicit.
+-    /// Phase I.3 (2026-06-20): the actor runtime, constructed at
+-    /// `create_ui` time when `USE_LIGHTWEIGHT_ACTOR = true`. The
+-    /// `OnceLock` stays empty when the flag is false (the default).
+-    /// Future Phase I.x work can use this to replace the heavy
+-    /// `ConversationCoordinator::execute_hidden_subagent_internal` path.
+-    actor_runtime: std::sync::OnceLock<std::sync::Arc<northhing_agent_dispatch::ActorRuntime>>,
+     /// A7: tracks which session is currently streaming a response.
+     /// Set when user sends a message, cleared when response completes.
+     current_streaming_session: Mutex<Option<String>>,
+@@ -67,32 +61,12 @@ impl AppState {
+             current_session_id: Mutex::new(String::new()),
+             load_more_cursor: Mutex::new(None),
+             show_subagents: Mutex::new(true),
+-            actor_runtime: std::sync::OnceLock::new(),
+             current_streaming_session: Mutex::new(None),
+             active_turn_id: Mutex::new(None),
+             session_metadata: Mutex::new(std::collections::HashMap::new()),
+         }
+     }
+ 
+-    /// Phase I.3: install the actor runtime (called from
+-    /// `maybe_construct_actor_runtime` when the flag is on). Idempotent
+-    /// — the first setter wins, subsequent calls are ignored.
+-    pub fn set_actor_runtime(&self, runtime: std::sync::Arc<northhing_agent_dispatch::ActorRuntime>) {
+-        let _ = self.actor_runtime.set(runtime);
+-    }
+-
+-    /// Phase I.3: get a reference to the actor runtime, if it was
+-    /// constructed. Returns `None` when `USE_LIGHTWEIGHT_ACTOR` is false.
+-    /// `#[allow(dead_code)]` because Phase I.3 only constructs the
+-    /// runtime — Phase I.x (the next plan phase) will replace the
+-    /// `ConversationCoordinator::execute_hidden_subagent_internal` call
+-    /// site with `state.actor_runtime().spawn_actor(...)` and use this
+-    /// getter for the first time.
+-    #[allow(dead_code)]
+-    pub fn actor_runtime(&self) -> Option<std::sync::Arc<northhing_agent_dispatch::ActorRuntime>> {
+-        self.actor_runtime.get().cloned()
+-    }
+-
+     /// Mark the kernel facade core as initialized
+     pub fn set_core_ready(&self) {
+         let _ = self.core_ready.set(());
+@@ -103,15 +77,6 @@ impl AppState {
+         self.core_ready.get()
+     }
+ 
+-    /// K.2.3 follow-up: get the `ConversationCoordinator` (if
+-    /// initialized). Used by `maybe_construct_actor_runtime` to
+-    /// forward the runtime into the coordinator's `ToolPipeline`.
+-    pub fn coordinator(
+-        &self,
+-    ) -> Option<std::sync::Arc<northhing_core::agentic::coordination::ConversationCoordinator>> {
+-        northhing_core::agentic::coordination::global_coordinator()
+-    }
+-
+     /// Get the current session ID
+     pub fn get_current_session_id(&self) -> String {
+         self.current_session_id.lock().clone()
+diff --git a/src/crates/assembly/core/src/agentic/coordination/a1_path.rs b/src/crates/assembly/core/src/agentic/coordination/a1_path.rs
+index e4bd5c8..1538a07 100644
+--- a/src/crates/assembly/core/src/agentic/coordination/a1_path.rs
++++ b/src/crates/assembly/core/src/agentic/coordination/a1_path.rs
+@@ -364,9 +364,9 @@ pub(crate) fn map_lightweight_to_subagent_result(out: LightweightTaskOutput) ->
+ mod activation_tests {
+     //! Activation regression tests for the A2 long-running path.
+     //!
+-    //! Per spec `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`,
+-    //! `USE_LIGHTWEIGHT_ACTOR` was activated on 2026-06-23. These tests pin
+-    //! the activation contract: the const flag is on.
++    //! Note (2026-08-21, T2-9-B2): Currently there is no production runtime producer
++    //! (desktop NullDispatcher removed); A2 path awaits true dispatcher wiring.
++    //! The flag remains `true` as a backbone invariant.
+     use northhing_agent_dispatch::USE_LIGHTWEIGHT_ACTOR;
+ 
+     /// K.2.3 follow-up T5 — regression for the A2 activation.
+@@ -376,8 +376,7 @@ mod activation_tests {
+     fn use_lightweight_actor_is_activated() {
+         assert!(
+             USE_LIGHTWEIGHT_ACTOR,
+-            "USE_LIGHTWEIGHT_ACTOR must be true as of 2026-06-23 \
+-             (spec docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md). \
++            "USE_LIGHTWEIGHT_ACTOR must be true as a backbone invariant. \
+              If this test fails after a deliberate revert, update the spec + \
+              this test together."
+         );
+diff --git a/src/crates/assembly/core/src/agentic/coordination/dialog_turn/coordinator_init.rs b/src/crates/assembly/core/src/agentic/coordination/dialog_turn/coordinator_init.rs
+index faa0af5..f8a5a5c 100644
+--- a/src/crates/assembly/core/src/agentic/coordination/dialog_turn/coordinator_init.rs
++++ b/src/crates/assembly/core/src/agentic/coordination/dialog_turn/coordinator_init.rs
+@@ -90,15 +90,6 @@ impl ConversationCoordinator {
+         }
+     }
+ 
+-    /// K.2.3 follow-up: late-bind the actor runtime after
+-    /// coordinator construction. Forwards to `tool_pipeline` so the
+-    /// runtime shows up in every `ToolUseContext` built from this
+-    /// coordinator's pipeline. Idempotent (OnceLock semantics on
+-    /// the pipeline's setter).
+-    pub fn set_actor_runtime(&self, runtime: std::sync::Arc<northhing_agent_dispatch::ActorRuntime>) {
+-        self.tool_pipeline.set_actor_runtime(runtime);
+-    }
+-
+     /// Dynamically adjust a running subagent's timeout.
+     pub async fn set_subagent_timeout(&self, session_id: &str, action: SubagentTimeoutAction) -> NortHingResult<()> {
+         let registry = self.subagent_timeout_registry.read().await;
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/ask_user_question_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/ask_user_question_tool.rs
+index 3a588ac..08135df 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/ask_user_question_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/ask_user_question_tool.rs
+@@ -14,7 +14,6 @@ use uuid::Uuid;
+ 
+ use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
+ use crate::agentic::tools::user_input_manager::user_input_manager;
+-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent};
+ use crate::util::errors::NortHingResult;
+ 
+ /// AskUserQuestion tool
+@@ -196,24 +195,7 @@ Usage notes:
+         let manager = user_input_manager();
+         manager.register_channel(tool_id.clone(), tx);
+ 
+-        // 6. Send backend event to notify frontend to display question card
+-        let event_system = global_event_system();
+-        let session_id = context.session_id.clone().unwrap_or_else(|| "unknown".to_string());
+-
+-        // Send complete questions array to frontend
+-        let event = BackendEvent::ToolAwaitingUserInput {
+-            tool_id: tool_id.clone(),
+-            session_id,
+-            questions: serde_json::to_value(&tool_input).unwrap_or_else(|_| json!({})),
+-        };
+-
+-        let _ = event_system.emit(event).await;
+-        debug!(
+-            "AskUserQuestion tool event emitted, waiting for user input, tool_id: {}",
+-            tool_id
+-        );
+-
+-        // 7. Wait for user answer, cancellation, or timeout.
++        // 6. Wait for user answer, cancellation, or timeout.
+         // 2026-07-18 (W3a-1): Replaced bare rx.await with tokio::select! to
+         // prevent turn-task leaks when no consumer exists for
+         // ToolAwaitingUserInput (desktop) or when the dialog turn is cancelled.
+@@ -384,14 +366,24 @@ mod tests {
+                 .expect("send_answer should succeed");
+         });
+ 
+-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
++        let results = tool
++            .call_impl(&input, &context)
++            .await
++            .expect("call_impl should succeed");
+ 
+         assert_eq!(results.len(), 1);
+         match &results[0] {
+-            ToolResult::Result { data, result_for_assistant, .. } => {
++            ToolResult::Result {
++                data,
++                result_for_assistant,
++                ..
++            } => {
+                 assert_eq!(data["status"], "answered");
+                 assert_eq!(data["answers"]["0"], "A");
+-                assert!(result_for_assistant.as_ref().unwrap().contains("Which path should be used?"));
++                assert!(result_for_assistant
++                    .as_ref()
++                    .unwrap()
++                    .contains("Which path should be used?"));
+             }
+             _ => panic!("expected Result variant"),
+         }
+@@ -412,11 +404,18 @@ mod tests {
+             token.cancel();
+         });
+ 
+-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
++        let results = tool
++            .call_impl(&input, &context)
++            .await
++            .expect("call_impl should succeed");
+ 
+         assert_eq!(results.len(), 1);
+         match &results[0] {
+-            ToolResult::Result { data, result_for_assistant, .. } => {
++            ToolResult::Result {
++                data,
++                result_for_assistant,
++                ..
++            } => {
+                 assert_eq!(data["status"], "cancelled");
+                 assert!(result_for_assistant.as_ref().unwrap().contains("cancelled"));
+             }
+@@ -432,17 +431,23 @@ mod tests {
+         let tool = AskUserQuestionTool::new();
+         let token = CancellationToken::new();
+         let mut context = context_with_cancellation_token("test-timeout-1", token.clone());
+-        context.custom_data.insert(
+-            "__ask_user_timeout_secs".to_string(),
+-            serde_json::json!(1),
+-        );
++        context
++            .custom_data
++            .insert("__ask_user_timeout_secs".to_string(), serde_json::json!(1));
+         let input = valid_input();
+ 
+-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
++        let results = tool
++            .call_impl(&input, &context)
++            .await
++            .expect("call_impl should succeed");
+ 
+         assert_eq!(results.len(), 1);
+         match &results[0] {
+-            ToolResult::Result { data, result_for_assistant, .. } => {
++            ToolResult::Result {
++                data,
++                result_for_assistant,
++                ..
++            } => {
+                 assert_eq!(data["status"], "cancelled");
+                 assert_eq!(data["reason"], "timed_out");
+                 assert!(result_for_assistant.as_ref().unwrap().contains("timed out"));
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_sandbox.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_sandbox.rs
+index f5207cd..fb4159d 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_sandbox.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_sandbox.rs
+@@ -1,11 +1,8 @@
+ use super::bash_types::ResolvedShell;
+ use crate::agentic::tools::framework::ToolUseContext;
+ use crate::agentic::tools::implementations::shell_safety;
+-use crate::infrastructure::events::event_system::global_event_system;
+-use crate::infrastructure::events::event_system::BackendEvent::ToolTerminalReady;
+ use crate::service::config::global::get_global_config_service;
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::event::ToolTerminalReadyInfo;
+ use terminal_core::shell::{ShellDetector, ShellType};
+ use tool_runtime::shell::{bash_noninteractive_env, detect_osascript_im_app, detect_osascript_keystroke_non_ascii};
+ use tracing::{debug, error};
+@@ -49,22 +46,6 @@ fn system_default_shell() -> ResolvedShell {
+     }
+ }
+ 
+-pub(crate) fn emit_terminal_ready_event(tool_use_id: &str, terminal_session_id: &str) {
+-    let event = ToolTerminalReady(ToolTerminalReadyInfo {
+-        tool_use_id: tool_use_id.to_string(),
+-        terminal_session_id: terminal_session_id.to_string(),
+-        timestamp: std::time::SystemTime::now()
+-            .duration_since(std::time::UNIX_EPOCH)
+-            .unwrap_or_default()
+-            .as_secs(),
+-    });
+-
+-    let event_system = global_event_system();
+-    tokio::spawn(async move {
+-        let _ = event_system.emit(event).await;
+-    });
+-}
+-
+ pub(crate) fn cancellation_requested(context: &ToolUseContext) -> bool {
+     context.cancellation_token().is_some_and(|token| token.is_cancelled())
+ }
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_tool_impl.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_tool_impl.rs
+index 1700379..887eed7 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_tool_impl.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/bash_tool_impl.rs
+@@ -11,9 +11,7 @@ use tool_runtime::shell::{
+     LocalShellResultRenderRequest, RemoteShellResultRenderRequest, BASH_RESULT_MAX_OUTPUT_LENGTH,
+ };
+ 
+-use super::bash_sandbox::{
+-    cancellation_error, cancellation_requested, emit_terminal_ready_event, noninteractive_env, resolve_shell,
+-};
++use super::bash_sandbox::{cancellation_error, cancellation_requested, noninteractive_env, resolve_shell};
+ use super::execute::execute_call;
+ 
+ pub struct BashTool;
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_loop.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_loop.rs
+index 26ed9c5..083fe6a 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_loop.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_loop.rs
+@@ -1,11 +1,8 @@
+ use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
+ use crate::agentic::workspace::WorkspaceCommandOptions;
+-use crate::infrastructure::events::event_system::global_event_system;
+-use crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress;
+ use crate::service_agent_runtime::CoreServiceAgentRuntime;
+ use crate::util::elapsed_ms_u64;
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::event::ToolExecutionProgressInfo;
+ use futures::StreamExt;
+ use northhing_runtime_ports::AgentBackgroundResultRequest;
+ use serde_json::{json, Value};
+@@ -26,7 +23,7 @@ use tool_runtime::shell::{
+ use tracing::{debug, error, info};
+ 
+ use super::execute_format::{format_local_result, format_remote_result};
+-use super::execute_signal::{close_background_session, emit_terminal_ready_event, send_interrupt_signal};
++use super::execute_signal::{close_background_session, send_interrupt_signal};
+ use super::execute_stream::{process_stream_event, run_background_stream_task};
+ use crate::agentic::tools::implementations::bash_tool::bash_helpers::background_output_file_reference;
+ use crate::agentic::tools::implementations::bash_tool::bash_sandbox::{
+@@ -254,8 +251,6 @@ pub(crate) async fn execute_call(input: &Value, context: &ToolUseContext) -> Nor
+         .map_err(|e| NortHingError::tool(format!("Failed to create Terminal session: {}", e)))?;
+     let terminal_ready_ms = elapsed_ms_u64(terminal_ready_started_at);
+ 
+-    emit_terminal_ready_event(&tool_use_id, &primary_session_id);
+-
+     let primary_cwd = terminal_api
+         .get_session(&primary_session_id)
+         .await
+@@ -302,8 +297,6 @@ pub(crate) async fn execute_call(input: &Value, context: &ToolUseContext) -> Nor
+     let mut interrupt_drain_deadline: Option<tokio::time::Instant> = None;
+     let command_stream_started_at = Instant::now();
+ 
+-    let event_system = global_event_system();
+-
+     loop {
+         let next_event = if let Some(deadline) = interrupt_drain_deadline {
+             let now = tokio::time::Instant::now();
+@@ -457,7 +450,6 @@ pub(crate) async fn call_background(
+         .tool_call_id
+         .clone()
+         .unwrap_or_else(|| format!("bash_{}", uuid::Uuid::new_v4()));
+-    emit_terminal_ready_event(&tool_use_id, &bg_session_id);
+ 
+     if cancellation_requested(context) {
+         if let Err(e) = close_background_session(&bg_session_id).await {
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_signal.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_signal.rs
+index 635f16b..cecea70 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_signal.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_signal.rs
+@@ -1,10 +1,7 @@
+-use crate::infrastructure::events::event_system::BackendEvent::{ToolExecutionProgress, ToolTerminalReady};
+-use crate::util::types::event::{ToolExecutionProgressInfo, ToolTerminalReadyInfo};
+ use serde_json::json;
+ 
+ use super::execute_loop::{background_output_file_path, deliver_background_bash_result};
+ use crate::agentic::tools::framework::ToolUseContext;
+-use crate::infrastructure::events::event_system::global_event_system;
+ use crate::service_agent_runtime::CoreServiceAgentRuntime;
+ use crate::util::elapsed_ms_u64;
+ use crate::util::errors::{NortHingError, NortHingResult};
+@@ -54,27 +51,6 @@ pub(crate) async fn close_background_session(session_id: &str) -> NortHingResult
+     Ok(())
+ }
+ 
+-/// Emit a `ToolTerminalReady` event for the given terminal session.
+-pub(crate) fn emit_terminal_ready_event(tool_use_id: &str, terminal_session_id: &str) {
+-    use crate::infrastructure::events::event_system::BackendEvent::ToolTerminalReady;
+-    use crate::util::types::event::ToolTerminalReadyInfo;
+-
+-    let event_system = global_event_system();
+-    let event = ToolTerminalReady(ToolTerminalReadyInfo {
+-        tool_use_id: tool_use_id.to_string(),
+-        terminal_session_id: terminal_session_id.to_string(),
+-        timestamp: std::time::SystemTime::now()
+-            .duration_since(std::time::UNIX_EPOCH)
+-            .unwrap_or_default()
+-            .as_secs(),
+-    });
+-    let event_system_clone = event_system.clone();
+-    let tool_use_id = tool_use_id.to_string();
+-    tokio::spawn(async move {
+-        let _ = event_system_clone.emit(event).await;
+-    });
+-}
+-
+ /// Deliver a "stream ended without completion" error for a background command.
+ pub(crate) async fn deliver_background_stream_end_error(
+     terminal_session_id: &str,
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_stream.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_stream.rs
+index 9a7af89..52c5264 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_stream.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/execute/execute_stream.rs
+@@ -28,7 +28,7 @@ enum BackgroundStreamCommand {
+ pub(crate) fn process_stream_event(
+     event: CommandStreamEvent,
+     tool_use_id: &str,
+-    tool_name: &str,
++    _tool_name: &str,
+     accumulated_output: &mut String,
+     final_exit_code: &mut Option<i32>,
+     was_interrupted: &mut bool,
+@@ -42,24 +42,6 @@ pub(crate) fn process_stream_event(
+         }
+         CommandStreamEvent::Output { data } => {
+             accumulated_output.push_str(&data);
+-
+-            let progress_event = crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress(
+-                crate::util::types::event::ToolExecutionProgressInfo {
+-                    tool_use_id: tool_use_id.to_string(),
+-                    tool_name: tool_name.to_string(),
+-                    progress_message: data,
+-                    percentage: None,
+-                    timestamp: std::time::SystemTime::now()
+-                        .duration_since(std::time::UNIX_EPOCH)
+-                        .unwrap_or_default()
+-                        .as_secs(),
+-                },
+-            );
+-
+-            let event_system_clone = crate::infrastructure::events::event_system::global_event_system().clone();
+-            tokio::spawn(async move {
+-                let _ = event_system_clone.emit(progress_event).await;
+-            });
+         }
+         CommandStreamEvent::Completed {
+             exit_code,
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/mod.rs b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/mod.rs
+index 37d4482..e5e5508 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/mod.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/bash_tool/mod.rs
+@@ -1,13 +1,10 @@
+ use crate::agentic::tools::framework::{Tool, ToolRenderOptions, ToolResult, ToolUseContext, ValidationResult};
+ use crate::agentic::tools::implementations::shell_safety;
+ use crate::agentic::workspace::WorkspaceCommandOptions;
+-use crate::infrastructure::events::event_system::global_event_system;
+-use crate::infrastructure::events::event_system::BackendEvent::{ToolExecutionProgress, ToolTerminalReady};
+ use crate::service::config::global::get_global_config_service;
+ use crate::service_agent_runtime::CoreServiceAgentRuntime;
+ use crate::util::elapsed_ms_u64;
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::event::{ToolExecutionProgressInfo, ToolTerminalReadyInfo};
+ use async_trait::async_trait;
+ use futures::StreamExt;
+ use northhing_runtime_ports::AgentBackgroundResultRequest;
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/local.rs b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/local.rs
+index 11bc01a..9c45ff8 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/local.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/local.rs
+@@ -21,13 +21,10 @@ use super::super::background_command_output::{
+ };
+ use super::super::local_shell::{resolve_local_exec_shell, ResolvedLocalExecShell};
+ use super::super::progress::ExecOutputProgressBridge;
+-use super::shell_helpers::now_unix_seconds;
+ pub(super) use super::tool::ExecCommandTool;
+ use super::types::{DEFAULT_TOOL_YIELD_TIME_MS, POWERSHELL_UTF8_OUTPUT_PREFIX};
+ use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
+-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent::BackgroundCommandLifecycle};
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::event::BackgroundCommandLifecycleInfo;
+ 
+ /// Build the local command environment that suppresses pagers, colours, and
+ /// interactive git prompts. Returned as a `HashMap` because the underlying
+@@ -173,18 +170,6 @@ pub(super) fn local_background_output_status_for_completion(
+     }
+ }
+ 
+-/// String label for a local lifecycle status, used in the
+-/// `BackgroundCommandLifecycleInfo` event.
+-pub(super) fn local_lifecycle_status(status: ExecProcessLifecycleStatus) -> &'static str {
+-    match status {
+-        ExecProcessLifecycleStatus::Running => "running",
+-        ExecProcessLifecycleStatus::Exited => "exited",
+-        ExecProcessLifecycleStatus::Interrupted => "interrupted",
+-        ExecProcessLifecycleStatus::Killed => "killed",
+-        ExecProcessLifecycleStatus::Pruned => "pruned",
+-    }
+-}
+-
+ /// Map a local mid-flight lifecycle status to the
+ /// [`BackgroundCommandOutputStatus`] the capture needs.
+ pub(super) fn local_background_output_status(status: ExecProcessLifecycleStatus) -> BackgroundCommandOutputStatus {
+@@ -197,42 +182,21 @@ pub(super) fn local_background_output_status(status: ExecProcessLifecycleStatus)
+     }
+ }
+ 
+-/// Spawn the task that translates local process lifecycle events into
+-/// `BackgroundCommandLifecycle` global events. Returns `None` when the
+-/// call has no `tool_call_id` to attach metadata to.
++/// Spawn the task that updates local process lifecycle metadata on output capture.
++/// Returns `None` when the call has no `tool_call_id` to attach metadata to.
+ pub(super) fn start_local_lifecycle_bridge(
+     context: &ToolUseContext,
+     _tool_name: &str,
+ ) -> Option<mpsc::UnboundedSender<ExecProcessLifecycleEvent>> {
+     let capture_id = context.tool_call_id.clone()?;
+-    let agent_session_id = context.session_id.clone();
+     let (tx, mut rx) = mpsc::unbounded_channel::<ExecProcessLifecycleEvent>();
+     tokio::spawn(async move {
+-        let event_system = global_event_system();
+         let output_capture = background_command_output_capture();
+         while let Some(event) = rx.recv().await {
+             let capture_status = local_background_output_status(event.status);
+-            if let Some(metadata) = output_capture
++            let _ = output_capture
+                 .update_lifecycle(&capture_id, event.session_id, capture_status, event.exit_code)
+-                .await
+-            {
+-                let timestamp = now_unix_seconds();
+-                let _ = event_system
+-                    .emit(BackgroundCommandLifecycle(BackgroundCommandLifecycleInfo {
+-                        agent_session_id: metadata.agent_session_id.or(agent_session_id.clone()),
+-                        exec_session_id: event.session_id,
+-                        command: metadata.command,
+-                        workdir: metadata.workdir,
+-                        remote: false,
+-                        tty: metadata.tty,
+-                        status: local_lifecycle_status(event.status).to_string(),
+-                        exit_code: event.exit_code,
+-                        started_at: metadata.started_at,
+-                        ended_at: metadata.ended_at,
+-                        timestamp,
+-                    }))
+-                    .await;
+-            }
++                .await;
+         }
+     });
+     Some(tx)
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/remote.rs b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/remote.rs
+index 643dcfe..4259597 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/remote.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/remote.rs
+@@ -17,20 +17,18 @@ use super::super::background_command_output::{
+ };
+ use super::super::env_snapshot::{remote_env_snapshot_for, RemoteEnvSnapshot};
+ use super::super::progress::ExecOutputProgressBridge;
+-use super::shell_helpers::{now_unix_seconds, remote_command_env_words, remote_shell_login_args, shell_escape};
++use super::shell_helpers::{remote_command_env_words, remote_shell_login_args, shell_escape};
+ pub(super) use super::tool::ExecCommandTool;
+ use super::types::{
+     RemoteShell, DEFAULT_TOOL_YIELD_TIME_MS, REMOTE_NON_TTY_INTERRUPT_GRACE_SECONDS, REMOTE_SHELL_PROBE_TIMEOUT_MS,
+ };
+ use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
+-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent::BackgroundCommandLifecycle};
+ use crate::service::remote_ssh::{
+     global_remote_exec_process_manager, remote_workspace_manager, RemoteExecCommandRequest,
+     RemoteExecProcessLifecycleEvent, RemoteExecProcessLifecycleStatus, RemoteExecSessionCompletion,
+     RemoteExecSessionCompletionSource, RemoteExecSessionCompletionStatus, SSHCommandOptions, SSHConnectionManager,
+ };
+ use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::event::BackgroundCommandLifecycleInfo;
+ 
+ /// Resolve the remote `workdir` parameter: explicit absolute path wins, else
+ /// the workspace root. The path must be absolute (starts with `/`) and must
+@@ -222,18 +220,6 @@ pub(super) fn remote_background_output_status_for_completion(
+     }
+ }
+ 
+-/// String label for a remote lifecycle status, used in the
+-/// `BackgroundCommandLifecycleInfo` event.
+-pub(super) fn remote_lifecycle_status(status: RemoteExecProcessLifecycleStatus) -> &'static str {
+-    match status {
+-        RemoteExecProcessLifecycleStatus::Running => "running",
+-        RemoteExecProcessLifecycleStatus::Exited => "exited",
+-        RemoteExecProcessLifecycleStatus::Interrupted => "interrupted",
+-        RemoteExecProcessLifecycleStatus::Killed => "killed",
+-        RemoteExecProcessLifecycleStatus::Pruned => "pruned",
+-    }
+-}
+-
+ /// Map a remote mid-flight lifecycle status to the
+ /// [`BackgroundCommandOutputStatus`] the capture needs.
+ pub(super) fn remote_background_output_status(
+@@ -248,42 +234,21 @@ pub(super) fn remote_background_output_status(
+     }
+ }
+ 
+-/// Spawn the task that translates remote process lifecycle events into
+-/// `BackgroundCommandLifecycle` global events. Returns `None` when the
+-/// call has no `tool_call_id` to attach metadata to.
++/// Spawn the task that updates remote process lifecycle metadata on output capture.
++/// Returns `None` when the call has no `tool_call_id` to attach metadata to.
+ pub(super) fn start_remote_lifecycle_bridge(
+     context: &ToolUseContext,
+     _tool_name: &str,
+ ) -> Option<mpsc::UnboundedSender<RemoteExecProcessLifecycleEvent>> {
+     let capture_id = context.tool_call_id.clone()?;
+-    let agent_session_id = context.session_id.clone();
+     let (tx, mut rx) = mpsc::unbounded_channel::<RemoteExecProcessLifecycleEvent>();
+     tokio::spawn(async move {
+-        let event_system = global_event_system();
+         let output_capture = background_command_output_capture();
+         while let Some(event) = rx.recv().await {
+             let capture_status = remote_background_output_status(event.status);
+-            if let Some(metadata) = output_capture
++            let _ = output_capture
+                 .update_lifecycle(&capture_id, event.session_id, capture_status, event.exit_code)
+-                .await
+-            {
+-                let timestamp = now_unix_seconds();
+-                let _ = event_system
+-                    .emit(BackgroundCommandLifecycle(BackgroundCommandLifecycleInfo {
+-                        agent_session_id: metadata.agent_session_id.or(agent_session_id.clone()),
+-                        exec_session_id: event.session_id,
+-                        command: metadata.command,
+-                        workdir: metadata.workdir,
+-                        remote: true,
+-                        tty: metadata.tty,
+-                        status: remote_lifecycle_status(event.status).to_string(),
+-                        exit_code: event.exit_code,
+-                        started_at: metadata.started_at,
+-                        ended_at: metadata.ended_at,
+-                        timestamp,
+-                    }))
+-                    .await;
+-            }
++                .await;
+         }
+     });
+     Some(tx)
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/shell_helpers.rs b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/shell_helpers.rs
+index a21c73e..839f9dd 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/shell_helpers.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/command/shell_helpers.rs
+@@ -57,13 +57,3 @@ pub(super) fn remote_command_env_words(env: HashMap<String, String>) -> String {
+ pub(super) fn remote_shell_login_args() -> &'static [&'static str] {
+     &["-lc"]
+ }
+-
+-/// Current wall-clock seconds since the UNIX epoch, with `0` as the fallback
+-/// when the system clock is somehow before the epoch. Used for the
+-/// `BackgroundCommandLifecycleInfo` timestamp field.
+-pub(super) fn now_unix_seconds() -> u64 {
+-    std::time::SystemTime::now()
+-        .duration_since(std::time::UNIX_EPOCH)
+-        .unwrap_or_default()
+-        .as_secs()
+-}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/progress.rs b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/progress.rs
+index 5c5978e..808e98b 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/progress.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/exec_command/progress.rs
+@@ -1,12 +1,8 @@
+ use crate::agentic::tools::framework::ToolUseContext;
+-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent::ToolExecutionProgress};
+-use crate::util::types::event::ToolExecutionProgressInfo;
+-use std::time::{Duration, SystemTime, UNIX_EPOCH};
++use std::time::Duration;
+ use tokio::sync::mpsc;
+ use tokio::task::JoinHandle;
+ 
+-const PROGRESS_FLUSH_INTERVAL_MS: u64 = 60;
+-const PROGRESS_FLUSH_MAX_CHARS: usize = 16 * 1024;
+ const PROGRESS_CHANNEL_CAPACITY: usize = 256;
+ 
+ pub(super) struct ExecOutputProgressBridge {
+@@ -15,35 +11,10 @@ pub(super) struct ExecOutputProgressBridge {
+ }
+ 
+ impl ExecOutputProgressBridge {
+-    pub(super) fn start(context: &ToolUseContext, tool_name: &str) -> Option<Self> {
+-        let tool_use_id = context.tool_call_id.clone()?;
++    pub(super) fn start(context: &ToolUseContext, _tool_name: &str) -> Option<Self> {
++        let _tool_use_id = context.tool_call_id.clone()?;
+         let (tx, mut rx) = mpsc::channel::<String>(PROGRESS_CHANNEL_CAPACITY);
+-        let tool_name = tool_name.to_string();
+-        let task = tokio::spawn(async move {
+-            let event_system = global_event_system();
+-            let mut pending = String::new();
+-
+-            loop {
+-                match tokio::time::timeout(Duration::from_millis(PROGRESS_FLUSH_INTERVAL_MS), rx.recv()).await {
+-                    Ok(Some(chunk)) => {
+-                        if chunk.is_empty() {
+-                            continue;
+-                        }
+-                        pending.push_str(&chunk);
+-                        if pending.chars().count() >= PROGRESS_FLUSH_MAX_CHARS {
+-                            emit_progress(&event_system, &tool_use_id, &tool_name, &mut pending).await;
+-                        }
+-                    }
+-                    Ok(None) => {
+-                        emit_progress(&event_system, &tool_use_id, &tool_name, &mut pending).await;
+-                        break;
+-                    }
+-                    Err(_) => {
+-                        emit_progress(&event_system, &tool_use_id, &tool_name, &mut pending).await;
+-                    }
+-                }
+-            }
+-        });
++        let task = tokio::spawn(async move { while let Some(_chunk) = rx.recv().await {} });
+ 
+         Some(Self { tx, task })
+     }
+@@ -57,28 +28,3 @@ impl ExecOutputProgressBridge {
+         let _ = tokio::time::timeout(Duration::from_millis(500), self.task).await;
+     }
+ }
+-
+-async fn emit_progress(
+-    event_system: &std::sync::Arc<crate::infrastructure::events::event_system::BackendEventSystem>,
+-    tool_use_id: &str,
+-    tool_name: &str,
+-    pending: &mut String,
+-) {
+-    if pending.is_empty() {
+-        return;
+-    }
+-
+-    let progress_message = std::mem::take(pending);
+-    let progress_event = ToolExecutionProgress(ToolExecutionProgressInfo {
+-        tool_use_id: tool_use_id.to_string(),
+-        tool_name: tool_name.to_string(),
+-        progress_message,
+-        percentage: None,
+-        timestamp: SystemTime::now()
+-            .duration_since(UNIX_EPOCH)
+-            .unwrap_or_default()
+-            .as_secs(),
+-    });
+-
+-    let _ = event_system.emit(progress_event).await;
+-}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/grep_tool/local.rs b/src/crates/assembly/core/src/agentic/tools/implementations/grep_tool/local.rs
+index 6cbcb6d..7ec895e 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/grep_tool/local.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/grep_tool/local.rs
+@@ -6,10 +6,8 @@
+ //! and forwards progress updates through the global event system so the
+ //! assistant UI can stream search progress.
+ 
+-use std::sync::Arc;
+-
+ use serde_json::{json, Value};
+-use tool_runtime::search::grep_search::{grep_search, GrepSearchResult, ProgressCallback};
++use tool_runtime::search::grep_search::{grep_search, GrepSearchResult};
+ 
+ use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
+ use crate::util::errors::{NortHingError, NortHingResult};
+@@ -24,43 +22,7 @@ impl super::tool::GrepTool {
+         let path = resolved.logical_path.clone();
+         let output_mode = grep_options.output_mode.to_string();
+ 
+-        let event_system = crate::infrastructure::events::event_system::global_event_system();
+-        let tool_use_id = context
+-            .tool_call_id
+-            .clone()
+-            .unwrap_or_else(|| format!("grep_{}", uuid::Uuid::new_v4()));
+-        let tool_name = self.name().to_string();
+-
+-        let tool_use_id_clone = tool_use_id.clone();
+-        let tool_name_clone = tool_name.clone();
+-        let event_system_clone = event_system.clone();
+-        let progress_callback: ProgressCallback = Arc::new(move |files_processed, file_count, total_matches| {
+-            let progress_message = format!(
+-                "Scanned {} files | Found {} matching files ({} matches)",
+-                files_processed, file_count, total_matches
+-            );
+-
+-            let event = crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress(
+-                crate::util::types::event::ToolExecutionProgressInfo {
+-                    tool_use_id: tool_use_id_clone.clone(),
+-                    tool_name: tool_name_clone.clone(),
+-                    progress_message,
+-                    percentage: None,
+-                    timestamp: std::time::SystemTime::now()
+-                        .duration_since(std::time::UNIX_EPOCH)
+-                        .unwrap_or_default()
+-                        .as_secs(),
+-                },
+-            );
+-
+-            let event_system = event_system_clone.clone();
+-            tokio::spawn(async move {
+-                let _ = event_system.emit(event).await;
+-            });
+-        });
+-
+-        let search_result =
+-            tokio::task::spawn_blocking(move || grep_search(grep_options, Some(progress_callback), Some(500))).await;
++        let search_result = tokio::task::spawn_blocking(move || grep_search(grep_options, None, Some(500))).await;
+ 
+         let GrepSearchResult {
+             file_count,
+diff --git a/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_pre.rs b/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_pre.rs
+index bb7e29c..26489d6 100644
+--- a/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_pre.rs
++++ b/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_pre.rs
+@@ -81,7 +81,7 @@ impl ToolPipeline {
+             task,
+             self.computer_use_host.clone(),
+             cancellation_token,
+-            self.actor_runtime.get().cloned(),
++            None,
+         )
+     }
+ 
+@@ -171,10 +171,7 @@ impl ToolPipeline {
+         for task in &tasks {
+             let tool_id = &task.tool_call.tool_id;
+             if manager.cancel(tool_id) {
+-                debug!(
+-                    "Cleared user-input channel during turn cancel: tool_id={}",
+-                    tool_id
+-                );
++                debug!("Cleared user-input channel during turn cancel: tool_id={}", tool_id);
+             }
+         }
+ 
+diff --git a/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_types.rs b/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_types.rs
+index 795209b..4c4e52a 100644
+--- a/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_types.rs
++++ b/src/crates/assembly/core/src/agentic/tools/pipeline/tool_pipeline/pipeline_types.rs
+@@ -25,13 +25,6 @@ pub struct ToolPipeline {
+     /// Cancellation token management (tool_id -> CancellationToken)
+     pub(crate) cancellation_tokens: Arc<DashMap<String, CancellationToken>>,
+     pub(crate) computer_use_host: Option<ComputerUseHostRef>,
+-    /// K.2.3 follow-up: the optional `ActorRuntime` shared with
+-    /// `ToolUseContext` so tools can drive long-running skills.
+-    /// `Arc<OnceLock<...>>` because `ToolPipeline` is wrapped in
+-    /// `Arc<ToolPipeline>` at call sites — the inner OnceLock gives
+-    /// idempotent late-binding (matches `AppState::actor_runtime`
+-    /// pattern).
+-    pub(crate) actor_runtime: Arc<OnceLock<Arc<northhing_agent_dispatch::ActorRuntime>>>,
+ }
+ 
+ impl ToolPipeline {
+@@ -39,7 +32,7 @@ impl ToolPipeline {
+         tool_registry: Arc<TokioRwLock<ToolRegistry>>,
+         state_manager: Arc<ToolStateManager>,
+         computer_use_host: Option<ComputerUseHostRef>,
+-        actor_runtime: Arc<OnceLock<Arc<northhing_agent_dispatch::ActorRuntime>>>,
++        _actor_runtime: Arc<OnceLock<Arc<northhing_agent_dispatch::ActorRuntime>>>,
+     ) -> Self {
+         Self {
+             tool_registry,
+@@ -47,18 +40,9 @@ impl ToolPipeline {
+             confirmation_channels: Arc::new(DashMap::new()),
+             cancellation_tokens: Arc::new(DashMap::new()),
+             computer_use_host,
+-            actor_runtime,
+         }
+     }
+ 
+-    /// K.2.3 follow-up: late-bind the `ActorRuntime` after
+-    /// `ToolPipeline::new()`. Idempotent — `set` returns Err if
+-    /// already set, which we silently ignore (matches
+-    /// `AppState::set_actor_runtime` semantics).
+-    pub fn set_actor_runtime(&self, runtime: Arc<northhing_agent_dispatch::ActorRuntime>) {
+-        let _ = self.actor_runtime.set(runtime);
+-    }
+-
+     pub fn computer_use_host(&self) -> Option<ComputerUseHostRef> {
+         self.computer_use_host.clone()
+     }
+diff --git a/src/crates/assembly/core/src/infrastructure/events/event_system.rs b/src/crates/assembly/core/src/infrastructure/events/event_system.rs
+deleted file mode 100644
+index e1ffe99..0000000
+--- a/src/crates/assembly/core/src/infrastructure/events/event_system.rs
++++ /dev/null
+@@ -1,93 +0,0 @@
+-//! Backend event system for tool execution and custom events
+-
+-use crate::infrastructure::events::EventEmitter;
+-use crate::util::types::event::{BackgroundCommandLifecycleInfo, ToolExecutionProgressInfo, ToolTerminalReadyInfo};
+-use anyhow::Result;
+-use serde::{Deserialize, Serialize};
+-use std::sync::Arc;
+-use tokio::sync::Mutex;
+-use tracing::{error, trace, warn};
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type", content = "value")]
+-pub enum BackendEvent {
+-    ToolExecutionProgress(ToolExecutionProgressInfo),
+-    ToolTerminalReady(ToolTerminalReadyInfo),
+-    BackgroundCommandLifecycle(BackgroundCommandLifecycleInfo),
+-    ToolAwaitingUserInput {
+-        tool_id: String,
+-        session_id: String,
+-        questions: serde_json::Value,
+-    },
+-    Custom {
+-        event_name: String,
+-        payload: serde_json::Value,
+-    },
+-}
+-
+-pub struct BackendEventSystem {
+-    emitter: Arc<Mutex<Option<Arc<dyn EventEmitter>>>>,
+-}
+-
+-impl BackendEventSystem {
+-    pub fn new() -> Self {
+-        Self {
+-            emitter: Arc::new(Mutex::new(None)),
+-        }
+-    }
+-
+-    pub async fn set_emitter(&self, emitter: Arc<dyn EventEmitter>) {
+-        let mut e = self.emitter.lock().await;
+-        *e = Some(emitter);
+-    }
+-
+-    pub async fn emit(&self, event: BackendEvent) -> Result<()> {
+-        trace!("Emitting event: {:?}", event);
+-
+-        let emitter_guard = self.emitter.lock().await;
+-        if let Some(ref emitter) = *emitter_guard {
+-            let event_name = match &event {
+-                BackendEvent::Custom { event_name, .. } => event_name.clone(),
+-                BackendEvent::ToolExecutionProgress(_) => "backend-event-toolexecutionprogress".to_string(),
+-                BackendEvent::ToolTerminalReady(_) => "backend-event-toolterminalready".to_string(),
+-                BackendEvent::BackgroundCommandLifecycle(_) => "backend-event-backgroundcommandlifecycle".to_string(),
+-                BackendEvent::ToolAwaitingUserInput { .. } => "backend-event-toolawaitinguserinput".to_string(),
+-            };
+-
+-            let event_data = match &event {
+-                BackendEvent::Custom { payload, .. } => payload.clone(),
+-                _ => match serde_json::to_value(&event) {
+-                    Ok(v) => v,
+-                    Err(e) => {
+-                        error!("Failed to serialize event: {}", e);
+-                        return Ok(());
+-                    }
+-                },
+-            };
+-
+-            if let Err(e) = emitter.emit(&event_name, event_data).await {
+-                warn!("Failed to emit to frontend: {}", e);
+-            }
+-        }
+-
+-        Ok(())
+-    }
+-}
+-
+-impl Default for BackendEventSystem {
+-    fn default() -> Self {
+-        Self::new()
+-    }
+-}
+-
+-static GLOBAL_EVENT_SYSTEM: std::sync::OnceLock<Arc<BackendEventSystem>> = std::sync::OnceLock::new();
+-
+-pub fn global_event_system() -> Arc<BackendEventSystem> {
+-    GLOBAL_EVENT_SYSTEM
+-        .get_or_init(|| Arc::new(BackendEventSystem::new()))
+-        .clone()
+-}
+-
+-pub async fn emit_global_event(event: BackendEvent) -> Result<()> {
+-    global_event_system().emit(event).await
+-}
+diff --git a/src/crates/assembly/core/src/infrastructure/events/mod.rs b/src/crates/assembly/core/src/infrastructure/events/mod.rs
+index 723529f..6e3c719 100644
+--- a/src/crates/assembly/core/src/infrastructure/events/mod.rs
++++ b/src/crates/assembly/core/src/infrastructure/events/mod.rs
+@@ -1,8 +1,5 @@
+ //! Event system module
+ 
+ pub mod emitter;
+-pub mod event_system;
+ 
+ pub use emitter::EventEmitter;
+-pub use event_system::BackendEventSystem as BackendEventManager;
+-pub use event_system::{emit_global_event, global_event_system, BackendEvent, BackendEventSystem};
+diff --git a/src/crates/assembly/core/src/infrastructure/mod.rs b/src/crates/assembly/core/src/infrastructure/mod.rs
+index a74289f..3f05c2c 100644
+--- a/src/crates/assembly/core/src/infrastructure/mod.rs
++++ b/src/crates/assembly/core/src/infrastructure/mod.rs
+@@ -16,7 +16,6 @@ pub mod storage;
+ #[cfg(feature = "ai-adapter-runtime")]
+ pub use ai::AIClient;
+ pub use app_paths::{path_manager_arc, try_get_path_manager_arc, PathManager, StorageLevel};
+-pub use events::BackendEventManager;
+ pub use filesystem::{
+     BatchedFileSearchProgressSink, FileContentSearchOptions, FileInfo, FileNameSearchOptions, FileOperationOptions,
+     FileOperationService, FileReadResult, FileSearchOutcome, FileSearchProgressSink, FileSearchResult,
+diff --git a/src/crates/assembly/core/src/kernel_facade/events.rs b/src/crates/assembly/core/src/kernel_facade/events.rs
+index 729a0c9..412bc80 100644
+--- a/src/crates/assembly/core/src/kernel_facade/events.rs
++++ b/src/crates/assembly/core/src/kernel_facade/events.rs
+@@ -4,11 +4,10 @@ use std::sync::{Arc, Mutex};
+ 
+ use async_trait::async_trait;
+ use northhing_kernel_api::error::KernelError;
+-use northhing_kernel_api::events::{BackendEventDto, KernelEventDto, SubscriptionId};
++use northhing_kernel_api::events::{KernelEventDto, SubscriptionId};
+ use tracing::warn;
+ 
+ use crate::agentic::events::{AgenticEvent, EventSubscriber};
+-use crate::infrastructure::events::{emit_global_event, BackendEvent};
+ 
+ struct KernelEventSubscriber {
+     callback: Arc<Mutex<Box<dyn Fn(KernelEventDto) + Send + 'static>>>,
+@@ -64,16 +63,6 @@ impl northhing_kernel_api::KernelEventsApi for super::KernelFacade {
+         self.coordinator()?.unsubscribe_internal(&id);
+         Ok(())
+     }
+-
+-    async fn emit_backend_event(&self, event: BackendEventDto) -> Result<(), KernelError> {
+-        let be = BackendEvent::Custom {
+-            event_name: event.event_type,
+-            payload: event.payload.unwrap_or(serde_json::Value::Null),
+-        };
+-        emit_global_event(be)
+-            .await
+-            .map_err(|e| KernelError::Runtime(format!("emit_backend_event failed: {e}")))
+-    }
+ }
+ 
+ /// Classifies an error category into TurnErrorKind.
+diff --git a/src/crates/assembly/core/src/kernel_facade/mod.rs b/src/crates/assembly/core/src/kernel_facade/mod.rs
+index 252c686..6607778 100644
+--- a/src/crates/assembly/core/src/kernel_facade/mod.rs
++++ b/src/crates/assembly/core/src/kernel_facade/mod.rs
+@@ -14,8 +14,7 @@ use crate::agentic::core::SessionConfig;
+ 
+ // Re-exports for DTO types used in trait method signatures
+ pub use northhing_kernel_api::events::{
+-    BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase, TurnErrorKind,
+-    TurnPhaseKind,
++    BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase, TurnErrorKind, TurnPhaseKind,
+ };
+ pub use northhing_kernel_api::session::{
+     BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, PersistenceHandleDto,
+diff --git a/src/crates/assembly/core/src/lib.rs b/src/crates/assembly/core/src/lib.rs
+index e43eba9..d1ef0c9 100644
+--- a/src/crates/assembly/core/src/lib.rs
++++ b/src/crates/assembly/core/src/lib.rs
+@@ -15,14 +15,14 @@ pub mod error;
+ pub mod function_agents; // Function-based agents
+ pub mod infrastructure; // AI clients, storage, logging, events
+ #[cfg(feature = "product-full")]
++pub mod kernel_facade; // Kernel-api facade: pure passthrough impl (K1b1)
++#[cfg(feature = "product-full")]
+ pub mod product_assembly;
+ #[cfg(feature = "product-domains")]
+ pub(crate) mod product_domain_runtime;
+ #[cfg(feature = "product-full")]
+ pub mod product_runtime;
+ pub mod service; // Workspace, Config, FileSystem, Terminal, Git
+-#[cfg(feature = "product-full")]
+-pub mod kernel_facade; // Kernel-api facade: pure passthrough impl (K1b1)
+ #[cfg(all(feature = "service-integrations", feature = "product-full"))]
+ pub(crate) mod service_agent_runtime;
+ pub mod util; // General types, errors, helper functions // Unified error facade (re-exports util::errors)
+@@ -45,7 +45,6 @@ pub use service::{
+ // Export infrastructure components
+ #[cfg(feature = "ai-adapter-runtime")]
+ pub use infrastructure::ai::AIClient;
+-pub use infrastructure::events::BackendEventManager;
+ 
+ // Export Agentic service core types
+ #[cfg(feature = "product-full")]
+diff --git a/src/crates/assembly/core/src/service/mcp/server/manager/interaction.rs b/src/crates/assembly/core/src/service/mcp/server/manager/interaction.rs
+index ea1259a..7740647 100644
+--- a/src/crates/assembly/core/src/service/mcp/server/manager/interaction.rs
++++ b/src/crates/assembly/core/src/service/mcp/server/manager/interaction.rs
+@@ -111,28 +111,6 @@ impl MCPServerManager {
+             pending.insert(interaction_id.clone(), PendingMCPInteraction { sender: tx });
+         }
+ 
+-        let event_payload = json!({
+-            "interactionId": interaction_id,
+-            "serverId": server_id,
+-            "serverName": server_name,
+-            "method": method.clone(),
+-            "params": params,
+-        });
+-
+-        let event_system = global_event_system();
+-        if let Err(e) = event_system
+-            .emit(BackendEvent::Custom {
+-                event_name: "backend-event-mcpinteractionrequest".to_string(),
+-                payload: event_payload,
+-            })
+-            .await
+-        {
+-            warn!(
+-                "Failed to emit MCP interaction request event: server_name={} server_id={} method={} error={}",
+-                server_name, server_id, method, e
+-            );
+-        }
+-
+         let decision = rx.await;
+         {
+             let mut pending = self.pending_interactions.write().await;
+diff --git a/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs b/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
+index 6905f6f..c27f64c 100644
+--- a/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
++++ b/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
+@@ -14,7 +14,6 @@ mod tools;
+ 
+ use super::connection::{MCPConnection, MCPConnectionEvent, MCPConnectionPool};
+ use super::{MCPServerConfig, MCPServerRegistry, MCPServerStatus};
+-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent};
+ use crate::service::mcp::adapter::MCPToolAdapter;
+ use crate::service::mcp::auth::MCPRemoteOAuthSessionSnapshot;
+ use crate::service::mcp::config::MCPConfigService;
+diff --git a/src/crates/assembly/core/src/util/types/event.rs b/src/crates/assembly/core/src/util/types/event.rs
+index 57e11a7..34b8e62 100644
+--- a/src/crates/assembly/core/src/util/types/event.rs
++++ b/src/crates/assembly/core/src/util/types/event.rs
+@@ -12,37 +12,6 @@ pub struct ToolExecutionStartedInfo {
+     pub ai_intent: Option<String>, // AI intent content
+ }
+ 
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ToolExecutionProgressInfo {
+-    pub tool_use_id: String,
+-    pub tool_name: String,
+-    pub progress_message: String,
+-    pub percentage: Option<f32>,
+-    pub timestamp: u64,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ToolTerminalReadyInfo {
+-    pub tool_use_id: String,
+-    pub terminal_session_id: String,
+-    pub timestamp: u64,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BackgroundCommandLifecycleInfo {
+-    pub agent_session_id: Option<String>,
+-    pub exec_session_id: i32,
+-    pub command: String,
+-    pub workdir: Option<String>,
+-    pub remote: bool,
+-    pub tty: bool,
+-    pub status: String,
+-    pub exit_code: Option<i32>,
+-    pub started_at: u64,
+-    pub ended_at: Option<u64>,
+-    pub timestamp: u64,
+-}
+-
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+ pub struct ToolExecutionCompletedInfo {
+     pub tool_use_id: String,
+diff --git a/src/crates/contracts/kernel-api/src/events.rs b/src/crates/contracts/kernel-api/src/events.rs
+index 6c42917..ffdfc74 100644
+--- a/src/crates/contracts/kernel-api/src/events.rs
++++ b/src/crates/contracts/kernel-api/src/events.rs
+@@ -68,7 +68,10 @@ pub enum TurnPhaseKind {
+ #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+ #[serde(rename_all = "snake_case", tag = "kind")]
+ pub enum KernelEventDto {
+-    TextChunk { session_id: String, text: String },
++    TextChunk {
++        session_id: String,
++        text: String,
++    },
+     TurnState {
+         session_id: String,
+         turn_id: String,
+@@ -88,16 +91,13 @@ pub enum KernelEventDto {
+         #[serde(skip_serializing_if = "Option::is_none")]
+         tool_name: Option<String>,
+     },
+-    Banner { level: BannerLevel, message: String },
+-    Error { message: String },
+-}
+-
+-/// Backend event DTO for host→kernel broadcast (enumerated at implementation time).
+-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+-pub struct BackendEventDto {
+-    pub event_type: String,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub payload: Option<serde_json::Value>,
++    Banner {
++        level: BannerLevel,
++        message: String,
++    },
++    Error {
++        message: String,
++    },
+ }
+ 
+ // ── KernelEventsApi ────────────────────────────────────────────────────────────
+@@ -106,13 +106,12 @@ pub struct BackendEventDto {
+ pub trait KernelEventsApi: Send + Sync {
+     /// Subscribe to kernel events (TextChunk/TurnState/ToolCall/Banner/Error).
+     /// Source: #20 #21 #22
+-    async fn subscribe_events(&self, callback: Box<dyn Fn(KernelEventDto) + Send>) -> Result<SubscriptionId, KernelError>;
++    async fn subscribe_events(
++        &self,
++        callback: Box<dyn Fn(KernelEventDto) + Send>,
++    ) -> Result<SubscriptionId, KernelError>;
+ 
+     /// Unsubscribe from events.
+     /// Source: #20
+     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError>;
+-
+-    /// Broadcast an event to the backend (host→kernel).
+-    /// Source: #83 #84
+-    async fn emit_backend_event(&self, event: BackendEventDto) -> Result<(), KernelError>;
+ }
+diff --git a/src/crates/contracts/kernel-api/src/lib.rs b/src/crates/contracts/kernel-api/src/lib.rs
+index c72ff83..4a57832 100644
+--- a/src/crates/contracts/kernel-api/src/lib.rs
++++ b/src/crates/contracts/kernel-api/src/lib.rs
+@@ -30,9 +30,7 @@ pub use agents::{
+ };
+ pub use bootstrap::KernelBootstrapApi;
+ pub use error::{KernelError, KernelResult};
+-pub use events::{
+-    BackendEventDto, BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase,
+-};
++pub use events::{BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase};
+ pub use memory::{EpisodeDto, KernelMemoryApi, ToolFailureRecordDto, ToolUseRecordDto};
+ pub use platform::{
+     AnalysisDto, ArtifactDto, CoreHealthDto, ImageContextDto, InspectorDataDto, KernelPlatformApi, PanelDto,
+diff --git a/src/crates/execution/agent-dispatch/src/flags.rs b/src/crates/execution/agent-dispatch/src/flags.rs
+index 97f4db3..e1ee718 100644
+--- a/src/crates/execution/agent-dispatch/src/flags.rs
++++ b/src/crates/execution/agent-dispatch/src/flags.rs
+@@ -13,9 +13,10 @@
+ ///
+ /// ACTIVATED 2026-06-23 per
+ /// `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`.
+-/// Phase 2 of the impl plan has passed integration; the A2 long-running path
+-/// now replaces the legacy `execute_hidden_subagent_phase1/2/3` for all
+-/// `Task` tool invocations on the desktop app.
++///
++/// Note (2026-08-21, T2-9-B2): Currently there is no production runtime producer
++/// (desktop NullDispatcher removed); A2 path awaits true dispatcher wiring.
++/// The flag remains `true` as a backbone invariant.
+ ///
+ /// Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC)
+ /// officially descoped 2026-07-20 — those flags have been deleted.
+diff --git a/src/crates/interfaces/acp/src/client/manager.rs b/src/crates/interfaces/acp/src/client/manager.rs
+index 75e87a6..6467956 100644
+--- a/src/crates/interfaces/acp/src/client/manager.rs
++++ b/src/crates/interfaces/acp/src/client/manager.rs
+@@ -58,7 +58,6 @@ use agent_client_protocol::{ActiveSession, Agent, ByteStreams, Client, Connectio
+ use dashmap::DashMap;
+ use futures::io::{AsyncRead as FuturesAsyncRead, AsyncWrite as FuturesAsyncWrite};
+ use northhing_core::agentic::tools::registry::global_tool_registry;
+-use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};
+ use northhing_core::infrastructure::PathManager;
+ use northhing_core::service::config::ConfigService;
+ use northhing_core::service::remote_ssh::workspace_state::remote_workspace_manager;
+diff --git a/src/crates/interfaces/acp/src/client/manager_permission.rs b/src/crates/interfaces/acp/src/client/manager_permission.rs
+index 09e285e..46decda 100644
+--- a/src/crates/interfaces/acp/src/client/manager_permission.rs
++++ b/src/crates/interfaces/acp/src/client/manager_permission.rs
+@@ -34,9 +34,7 @@ use agent_client_protocol::schema::{
+     SetSessionModelRequest, StopReason,
+ };
+ use agent_client_protocol::{ActiveSession, Agent, ByteStreams, Client, ConnectionTo, Error, SessionMessage};
+-use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};
+ use northhing_core::util::errors::{NortHingError, NortHingResult};
+-use serde_json::json;
+ use std::sync::Arc;
+ use tokio::sync::{oneshot, Mutex, RwLock};
+ use tracing::{debug, info, warn};
+@@ -100,22 +98,6 @@ impl AcpClientService {
+             },
+         );
+ 
+-        let payload = json!({
+-            "permissionId": permission_id,
+-            "sessionId": session_id,
+-            "toolCall": request.tool_call,
+-            "options": request.options,
+-        });
+-
+-        if let Err(error) = emit_global_event(BackendEvent::Custom {
+-            event_name: "backend-event-acppermissionrequest".to_string(),
+-            payload,
+-        })
+-        .await
+-        {
+-            warn!("Failed to emit ACP permission request: {}", error);
+-        }
+-
+         match tokio::time::timeout(PERMISSION_TIMEOUT, rx).await {
+             Ok(Ok(response)) => Ok(response),
+             Ok(Err(_)) => Ok(RequestPermissionResponse::new(RequestPermissionOutcome::Cancelled)),
