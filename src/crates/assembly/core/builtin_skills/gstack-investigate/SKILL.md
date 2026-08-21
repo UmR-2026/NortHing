@@ -1,5 +1,6 @@
 ---
 name: investigate
+group: gstack
 description: |
   Systematic debugging with root cause investigation. Four phases: investigate,
   analyze, hypothesize, implement. Iron Law: no fixes without root cause.

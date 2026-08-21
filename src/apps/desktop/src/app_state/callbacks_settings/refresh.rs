@@ -130,51 +130,16 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
                 .ok()
                 .map(|o| o.overrides)
                 .unwrap_or_default();
-            let items = build_skill_state_items(&facade, &skills, &overrides, mode_id).await;
-            // Probe per-workspace support: `load_project_skills`
-            // currently returns a stub `Err` (the trait
-            // signature has no `workspace_path` parameter,
-            // so it cannot resolve the per-workspace document
-            // without one). When the user is on a project
-            // workspace AND the facade returns real data,
-            // we'd compute per-row workspace overrides here
-            // and set `workspace_override_supported = true`.
-            let workspace_override_supported = match s.current_workspace.as_ref() {
-                Some(_workspace) => {
-                    // 2026-07-27 (K4a R3, fix #5): trait
-                    // signature is `load_project_skills(&self)
-                    // -> ProjectSkillsDto` — no
-                    // `workspace_path` arg. The current
-                    // implementation is a stub that returns
-                    // `KernelError::Internal("not yet wired:
-                    // load_project_skills — workspace_path not
-                    // available")`. The pre-fix code silently
-                    // wrote `workspace_override = ""` for
-                    // every row; the panel then rendered the
-                    // cycle button which silently no-op'd the
-                    // user's clicks (the callback wrote
-                    // `set-skill-workspace` to the AppSettings,
-                    // but no one ever reads from there in the
-                    // data flow). That's a UX trap: the
-                    // button LOOKED clickable but the override
-                    // never actually took effect.
-                    //
-                    // The honest path: try the facade probe;
-                    // if it returns the unwired-stub error,
-                    // tell the panel "we can't honor a
-                    // workspace override right now" via
-                    // `workspace_override_supported = false`
-                    // and let the panel hide the column.
-                    let supported = facade
-                        .load_project_skills()
-                        .await
-                        .ok()
-                        .map(|doc| !doc.skills.is_empty() || !s.current_workspace.is_none())
-                        .unwrap_or(false);
-                    supported
-                }
-                None => false,
-            };
+            let project_doc = facade.load_project_skills().await.ok();
+            let workspace_override_supported = s.current_workspace.is_some() && project_doc.is_some();
+            let items = build_skill_state_items(
+                &facade,
+                &skills,
+                &overrides,
+                mode_id,
+                project_doc.as_ref().map(|d| d.skills.as_slice()),
+            )
+            .await;
             (items, workspace_override_supported)
         }
         Err(e) => {
@@ -329,6 +294,7 @@ pub(crate) async fn build_skill_state_items(
     skills: &[northhing_kernel_api::agents::SkillInfoDto],
     overrides: &[northhing_kernel_api::agents::SkillOverrideEntry],
     mode_id: &str,
+    project_skills: Option<&[northhing_kernel_api::agents::ProjectSkillEntry]>,
 ) -> Vec<SkillStateItem> {
     use northhing_kernel_api::KernelAgentsApi;
     // 2026-07-27 (K4a R3, fix #4): accept ANY boolean override
@@ -362,13 +328,29 @@ pub(crate) async fn build_skill_state_items(
                 .await
                 .unwrap_or(false)
         };
+
+        let (workspace_override, effective_enabled) = match project_skills {
+            Some(entries) => {
+                if let Some(entry) = entries.iter().find(|e| e.skill_id == key) {
+                    if entry.enabled {
+                        ("on", true)
+                    } else {
+                        ("off", false)
+                    }
+                } else {
+                    ("", global_enabled)
+                }
+            }
+            None => ("", global_enabled),
+        };
+
         out.push(SkillStateItem {
             id: SharedString::from(skill.id.clone()),
             name: SharedString::from(skill.name.clone()),
             description: SharedString::from(skill.description.clone()),
             global_enabled,
-            workspace_override: SharedString::from(""),
-            effective_enabled: global_enabled,
+            workspace_override: SharedString::from(workspace_override),
+            effective_enabled,
         });
     }
     out
@@ -377,7 +359,7 @@ pub(crate) async fn build_skill_state_items(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northhing_kernel_api::agents::{SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
+    use northhing_kernel_api::agents::{ProjectSkillEntry, SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
     use northhing_kernel_api::settings::{ConfigLocationDto, MCPServerConfigDto, MCPServerDto};
     use serde_json::json;
 
@@ -487,7 +469,7 @@ mod tests {
             override_entry("user::home.agents::isaac-ai-game", true),
             override_entry("user::northhing::smoke-placeholder", false),
         ];
-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
         assert_eq!(items.len(), 2);
 
         let isaac = items
@@ -522,7 +504,7 @@ mod tests {
             key: "user_mode".to_string(),
             value: json!(true),
         }];
-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
         assert_eq!(items.len(), 1);
         // The non-user_enabled boolean-true override MUST flip
         // the row to enabled — the Inspector's `build_skills_model`
@@ -546,11 +528,60 @@ mod tests {
             skill("user::home.agents::a", "a", "a"),
             skill("user::home.agents::b", "b", "b"),
         ];
-        let items = build_skill_state_items(&facade, &skills, &[], "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &[], "agentic", None).await;
         assert_eq!(items.len(), 2);
         for item in &items {
             assert_eq!(item.effective_enabled, item.global_enabled);
             assert_eq!(item.workspace_override.as_str(), "");
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn build_skill_state_items_workspace_overrides() {
+        let facade = kernel_facade();
+        let skills = vec![
+            skill("user::home.agents::a", "a", "a"),
+            skill("user::home.agents::b", "b", "b"),
+            skill("user::home.agents::c", "c", "c"),
+        ];
+        let overrides = vec![
+            override_entry("user::home.agents::a", true),
+            override_entry("user::home.agents::b", false),
+        ];
+        let project_skills = vec![
+            ProjectSkillEntry {
+                skill_id: "user::home.agents::a".to_string(),
+                enabled: false,
+                config: None,
+            },
+            ProjectSkillEntry {
+                skill_id: "user::home.agents::b".to_string(),
+                enabled: true,
+                config: None,
+            },
+        ];
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", Some(&project_skills)).await;
+
+        if let Some(a) = items.iter().find(|s| s.id.as_str() == "user::home.agents::a") {
+            assert!(a.global_enabled);
+            assert_eq!(a.workspace_override.as_str(), "off");
+            assert!(!a.effective_enabled);
+        } else {
+            panic!("missing skill a");
+        }
+
+        if let Some(b) = items.iter().find(|s| s.id.as_str() == "user::home.agents::b") {
+            assert!(!b.global_enabled);
+            assert_eq!(b.workspace_override.as_str(), "on");
+            assert!(b.effective_enabled);
+        } else {
+            panic!("missing skill b");
+        }
+
+        if let Some(c) = items.iter().find(|s| s.id.as_str() == "user::home.agents::c") {
+            assert_eq!(c.workspace_override.as_str(), "");
+        } else {
+            panic!("missing skill c");
         }
     }
 }

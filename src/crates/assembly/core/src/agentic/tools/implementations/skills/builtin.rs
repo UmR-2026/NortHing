@@ -17,7 +17,7 @@ use tokio::fs;
 use tokio::task;
 use tracing::{debug, error, warn};
 
-static BUILTIN_SKILLS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/builtin_skills");
+pub(crate) static BUILTIN_SKILLS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/builtin_skills");
 static BUILTIN_SKILL_DIR_NAMES: OnceLock<HashSet<String>> = OnceLock::new();
 include!(concat!(env!("OUT_DIR"), "/embedded_builtin_skills.rs"));
 

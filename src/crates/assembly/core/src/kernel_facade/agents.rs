@@ -127,10 +127,35 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
     }
 
     async fn load_project_skills(&self) -> Result<northhing_kernel_api::agents::ProjectSkillsDto, KernelError> {
-        // NEEDS_CONTEXT: workspace_path required but not present in trait signature.
-        Err(KernelError::Internal(
-            "not yet wired: load_project_skills — workspace_path not available".to_string(),
-        ))
+        use crate::agentic::tools::implementations::skills::mode_overrides::load_project_mode_skills_document_local;
+        use northhing_kernel_api::agents::ProjectSkillEntry;
+
+        let ws = crate::service::workspace::global_workspace_service()
+            .ok_or_else(|| KernelError::Internal("workspace service not available".to_string()))?;
+        let current_ws = ws
+            .current_workspace()
+            .await
+            .ok_or_else(|| KernelError::NotFound("no current workspace".to_string()))?;
+
+        let workspace_path = current_ws.root_path.to_string_lossy().to_string();
+        let document = load_project_mode_skills_document_local(&current_ws.root_path)
+            .await
+            .map_err(|e| KernelError::Config(format!("load_project_mode_skills_document_local: {e}")))?;
+
+        let mut skills = Vec::new();
+        for (_profile_id, entry) in &document {
+            for skill_id in &entry.skills.disabled_project_skills {
+                if !skills.iter().any(|s: &ProjectSkillEntry| &s.skill_id == skill_id) {
+                    skills.push(ProjectSkillEntry {
+                        skill_id: skill_id.clone(),
+                        enabled: false,
+                        config: None,
+                    });
+                }
+            }
+        }
+
+        Ok(northhing_kernel_api::agents::ProjectSkillsDto { workspace_path, skills })
     }
 
     async fn save_project_skills(
@@ -141,20 +166,33 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
             load_project_mode_skills_document_local, save_project_mode_skills_document_local,
             set_disabled_mode_skills_in_document,
         };
-        use crate::service::config::agent_profile_project_store::ProjectAgentProfilesDocument;
 
-        let workspace_root = std::path::Path::new(&doc.workspace_path);
-        let mut document = load_project_mode_skills_document_local(workspace_root)
+        let workspace_root = if !doc.workspace_path.is_empty() {
+            std::path::PathBuf::from(&doc.workspace_path)
+        } else {
+            let ws = crate::service::workspace::global_workspace_service()
+                .ok_or_else(|| KernelError::Internal("workspace service not available".to_string()))?;
+            let current_ws = ws
+                .current_workspace()
+                .await
+                .ok_or_else(|| KernelError::NotFound("no current workspace".to_string()))?;
+            current_ws.root_path
+        };
+
+        let mut document = load_project_mode_skills_document_local(&workspace_root)
             .await
             .map_err(|e| KernelError::Config(format!("load_project_mode_skills_document_local: {e}")))?;
 
-        for skill_entry in &doc.skills {
-            // mode_id is not in ProjectSkillEntry; use default profile.
-            // NEEDS_CONTEXT: proper implementation requires mode_id per skill.
-            let _ = set_disabled_mode_skills_in_document(&mut document, "default", vec![skill_entry.skill_id.clone()]);
-        }
+        let disabled_skills: Vec<String> = doc
+            .skills
+            .iter()
+            .filter(|s| !s.enabled)
+            .map(|s| s.skill_id.clone())
+            .collect();
 
-        save_project_mode_skills_document_local(workspace_root, &document)
+        let _ = set_disabled_mode_skills_in_document(&mut document, "default", disabled_skills);
+
+        save_project_mode_skills_document_local(&workspace_root, &document)
             .await
             .map_err(|e| KernelError::Config(format!("save_project_mode_skills_document_local: {e}")))
     }

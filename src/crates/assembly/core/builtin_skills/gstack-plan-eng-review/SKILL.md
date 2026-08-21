@@ -1,5 +1,6 @@
 ---
 name: plan-eng-review
+group: gstack
 description: |
   Eng manager-mode plan review. Lock in the execution plan —architecture,
   data flow, diagrams, edge cases, test coverage, performance. Walks through

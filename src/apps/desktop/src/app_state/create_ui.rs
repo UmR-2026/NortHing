@@ -20,8 +20,9 @@ use super::callbacks_lifecycle::{
 use super::callbacks_settings::{
     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
     register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
-    register_remove_workspace_callback, register_set_default_model_callback, register_test_provider_callback,
-    register_test_provider_config_callback, register_upsert_provider_callback,
+    register_remove_workspace_callback, register_set_default_model_callback, register_set_skill_global_callback,
+    register_set_skill_workspace_callback, register_test_provider_callback, register_test_provider_config_callback,
+    register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -276,6 +277,14 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // expected to be available here.
     event_bridge::register_desktop_event_bridge(&ui, &app_state);
 
+    // Register SkillWatchService event listener for live reload (PCS-2)
+    if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
+        let emitter = Arc::new(DesktopSkillEventEmitter { ui: ui.as_weak() });
+        tokio::spawn(async move {
+            skill_watch.set_event_emitter(emitter).await.ok();
+        });
+    }
+
     // --- Register all 17 Slint callbacks ---
     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
     register_send_message_callback(&ui, &app_state);
@@ -299,6 +308,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_upsert_provider_callback(&ui, &app_state);
     // 2026-07-18 (D2h): refresh settings lists when settings route is entered.
     register_refresh_settings_callback(&ui, &app_state);
+    register_set_skill_global_callback(&ui, &app_state);
+    register_set_skill_workspace_callback(&ui, &app_state);
     // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
     register_pick_folder_callback(&ui, &app_state);
     register_add_workspace_callback(&ui, &app_state);
@@ -470,4 +481,27 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
             }
         });
     });
+}
+
+/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
+struct DesktopSkillEventEmitter {
+    ui: slint::Weak<AppWindow>,
+}
+
+#[async_trait::async_trait]
+impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
+    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
+        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
+            let ui_weak = self.ui.clone();
+            slint::invoke_from_event_loop(move || {
+                let ui_weak2 = ui_weak.clone();
+                tokio::spawn(async move {
+                    refresh_settings_lists(ui_weak2.clone()).await;
+                    refresh_skills_ui(ui_weak2).await;
+                });
+            })
+            .ok();
+        }
+        Ok(())
+    }
 }
