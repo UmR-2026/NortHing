@@ -14,7 +14,7 @@
   "let_underscore": {
     "kind": "grep-count",
     "pattern": "let _ =",
-    "ceiling": 390,
+    "ceiling": 389,
     "note": "R-13, ratchet: only down"
   },
   "unix_epoch_inline": {
