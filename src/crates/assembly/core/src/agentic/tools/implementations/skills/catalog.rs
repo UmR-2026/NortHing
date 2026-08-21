@@ -50,23 +50,33 @@ static BUILTIN_SPECS: LazyLock<HashMap<String, BuiltinSkillSpec>> = LazyLock::ne
             continue;
         };
         let skill_md_path = dir.path().join("SKILL.md");
-        if let Some(file) = dir.get_file(&skill_md_path) {
-            if let Ok(content) = std::str::from_utf8(file.contents()) {
-                if let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) {
-                    if let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) {
-                        if let Some(group) = BuiltinSkillGroup::parse(group_str) {
-                            map.insert(
-                                dir_name.to_string(),
-                                BuiltinSkillSpec {
-                                    dir_name: dir_name.to_string(),
-                                    group,
-                                },
-                            );
-                        }
-                    }
-                }
-            }
-        }
+        let Some(file) = dir.get_file(&skill_md_path) else {
+            tracing::warn!("Built-in skill directory '{}' is missing SKILL.md", dir_name);
+            continue;
+        };
+        let Ok(content) = std::str::from_utf8(file.contents()) else {
+            tracing::warn!("SKILL.md in built-in skill '{}' is not valid UTF-8", dir_name);
+            continue;
+        };
+        let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) else {
+            tracing::warn!("Failed to parse frontmatter in built-in skill '{}'", dir_name);
+            continue;
+        };
+        let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) else {
+            tracing::warn!("Built-in skill '{}' is missing 'group' in frontmatter", dir_name);
+            continue;
+        };
+        let Some(group) = BuiltinSkillGroup::parse(group_str) else {
+            tracing::warn!("Unknown group '{}' in built-in skill '{}'", group_str, dir_name);
+            continue;
+        };
+        map.insert(
+            dir_name.to_string(),
+            BuiltinSkillSpec {
+                dir_name: dir_name.to_string(),
+                group,
+            },
+        );
     }
     map
 });

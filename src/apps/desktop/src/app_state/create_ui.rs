@@ -277,13 +277,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // expected to be available here.
     event_bridge::register_desktop_event_bridge(&ui, &app_state);
 
-    // Register SkillWatchService event listener for live reload (PCS-2)
-    if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
-        let emitter = Arc::new(DesktopSkillEventEmitter { ui: ui.as_weak() });
-        tokio::spawn(async move {
-            skill_watch.set_event_emitter(emitter).await.ok();
-        });
-    }
+    // Register SkillWatchService event listener for live reload (PCS-2 race-free mount)
+    crate::app_state::skills::register_desktop_skill_watch_listener(ui.as_weak());
 
     // --- Register all 17 Slint callbacks ---
     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
@@ -481,27 +476,4 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
             }
         });
     });
-}
-
-/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
-struct DesktopSkillEventEmitter {
-    ui: slint::Weak<AppWindow>,
-}
-
-#[async_trait::async_trait]
-impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
-    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
-        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
-            let ui_weak = self.ui.clone();
-            slint::invoke_from_event_loop(move || {
-                let ui_weak2 = ui_weak.clone();
-                tokio::spawn(async move {
-                    refresh_settings_lists(ui_weak2.clone()).await;
-                    refresh_skills_ui(ui_weak2).await;
-                });
-            })
-            .ok();
-        }
-        Ok(())
-    }
 }
