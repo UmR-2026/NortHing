@@ -1,6 +1,5 @@
 use super::load_app_settings_quiet;
 use crate::app_state::error_banners::set_banner_message;
-use crate::app_state::settings::ProviderType;
 use crate::app_state::slint_glue::{AppWindow, MCPItem, ProviderItem, SkillStateItem, WorkspaceItem};
 use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::settings::MCPServerDto;
@@ -45,32 +44,28 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         }
     };
 
-    // ProviderItem: map ProviderConfig → UI struct. The `type` string is
-    // the inverse of the type→ProviderType parsing in register_upsert_provider_callback.
-    let providers: Vec<ProviderItem> = s
-        .providers
+    let facade = kernel_facade();
+    let core_models = facade.list_model_configs().await.unwrap_or_default();
+    let global_cfg = facade.get_global_config().await.ok();
+
+    // ProviderItem: map AIModelConfigDto → UI struct.
+    let providers: Vec<ProviderItem> = core_models
         .iter()
         .map(|p| {
-            let type_str = match p.provider_type {
-                ProviderType::Anthropic => "anthropic",
-                ProviderType::Openai => "openai",
-                ProviderType::Gemini => "gemini",
-                ProviderType::CustomOpenaiCompatible => "custom-openai",
-                ProviderType::CustomAnthropicCompatible => "custom-anthropic",
-            };
-            let verified = match p.last_verified_ok {
-                None => "",
-                Some(true) => "ok",
-                Some(false) => "fail",
+            let type_str = match p.provider_id.as_str() {
+                "anthropic" => "anthropic",
+                "openai" => "openai",
+                "gemini" => "gemini",
+                _ => "custom-openai",
             };
             ProviderItem {
                 id: SharedString::from(p.id.clone()),
-                name: SharedString::from(p.name.clone()),
+                name: SharedString::from(p.display_name.clone().unwrap_or_else(|| p.id.clone())),
                 r#type: SharedString::from(type_str),
-                base_url: SharedString::from(p.base_url.clone()),
+                base_url: SharedString::from(p.base_url.clone().unwrap_or_default()),
                 model: SharedString::from(p.model.clone()),
-                enabled: p.enabled,
-                verified: SharedString::from(verified),
+                enabled: p.enabled.unwrap_or(true),
+                verified: SharedString::from(""),
             }
         })
         .collect();
@@ -92,16 +87,6 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         })
         .collect();
 
-    // 2026-07-27 (K4a R3, Bug D): MCP servers come from the live core MCP
-    // service via the kernel facade, not the (always-empty after K4a)
-    // AppSettings.mcp_servers. The DTO has no transport field — the
-    // transport is inferred from the `command` field (non-empty → stdio;
-    // the only transport supported by the current MCP wire config). The
-    // `verified` field is left empty here; the Inspector's MCP status
-    // already summarizes the connection health, and per-server status
-    // probes would force N+1 RPCs (K4a-T4 deliberately punted on this
-    // — `McpCatalogAdapter` does the N+1 for the status string).
-    let facade = kernel_facade();
     let mcp_servers: Vec<MCPItem> = match facade.list_mcp_servers().await {
         Ok(servers) => build_mcp_items(&servers),
         Err(e) => {
@@ -209,18 +194,16 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         .map(|i| i as i32)
         .unwrap_or(-1);
 
-    // default-model-provider-id: use the configured value directly (not resolve_default_model).
-    let default_model_provider_id = s
-        .default_model
+    // default-model-provider-id: from core global config.
+    let default_model_provider_id = global_cfg
         .as_ref()
-        .map(|m| m.provider_id.clone())
+        .and_then(|c| c.default_provider_id.clone())
         .unwrap_or_default();
 
     // legacy-placeholder-count: providers with id containing "-default" and disabled.
-    let legacy_placeholder_count = s
-        .providers
+    let legacy_placeholder_count = core_models
         .iter()
-        .filter(|p| p.id.contains("-default") && !p.enabled)
+        .filter(|p| p.id.contains("-default") && p.enabled == Some(false))
         .count() as i32;
 
     // All 7 property sets in a single invoke_from_event_loop.

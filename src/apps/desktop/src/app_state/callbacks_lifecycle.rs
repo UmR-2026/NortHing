@@ -10,7 +10,6 @@
 //! `Arc::clone(app_state)` to match the `&Arc<AppState>` parameter;
 //! semantics are identical (clone the Arc, no behavior change).
 
-use super::callbacks_settings::load_app_settings_quiet;
 use super::error_banners::{set_banner_message, set_inline_error, set_input_error, set_session_error};
 use super::log::log_debug_event;
 use super::sessions::{build_messages_model, refresh_messages_ui, refresh_sessions_ui};
@@ -26,6 +25,7 @@ use northhing_kernel_api::turn::{
     DialogSubmitOutcomeKindDto, KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnInputDto,
 };
 use northhing_kernel_api::KernelAgentsApi;
+use northhing_kernel_api::KernelSettingsApi;
 use slint::{ComponentHandle, SharedString};
 use std::sync::Arc;
 
@@ -324,16 +324,9 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
                         app_state.set_current_session_id(sid.clone());
                         app_state.set_load_more_cursor(None); // Reset pagination for new session
 
-                        // 2026-06-26 (Phase 5): record session metadata
-                        // so `validate_session_integrity` can detect
-                        // Q6/Q7 issues in the live wire-up. Provider id
-                        // comes from the current default_model; empty
-                        // when no default is set (will still report
-                        // Q7 issues but not Q6).
-                        let provider_id = match load_app_settings_quiet().await {
-                            Ok(s) => s.resolve_default_model().map(|m| m.provider_id).unwrap_or_default(),
-                            Err(_) => String::new(),
-                        };
+                        // Record session metadata for session integrity validation.
+                        let cfg = facade.get_global_config().await.ok();
+                        let provider_id = cfg.and_then(|c| c.default_provider_id).unwrap_or_default();
                         app_state.record_session_meta(
                             sid.clone(),
                             SessionMeta {

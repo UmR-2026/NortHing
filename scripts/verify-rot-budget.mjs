@@ -4,9 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Generated artifact exempt from >800 lines god-file limit
+// Generated artifact exempt from >800 lines god-file limit and grep counts
 const EXEMPT_FILE_PATHS = [
   'src/shared/i18n/generated_locale_contract.rs',
+  'src/crates/assembly/core/src/service/i18n/generated_locale_contract.rs',
+  'northhing-installer/src-tauri/src/installer/generated_locale_contract.rs',
 ];
 
 const GOD_FILE_LINE_THRESHOLD = 800;
@@ -96,6 +98,9 @@ export function verifyRotBudget({
   const seenGodFiles = new Set();
 
   for (const file of files) {
+    if (EXEMPT_FILE_PATHS.includes(file.relPath)) {
+      continue;
+    }
     const content = fs.readFileSync(file.fullPath, 'utf8');
     const lineCount = countLines(content);
     counts[file.relPath] = lineCount;

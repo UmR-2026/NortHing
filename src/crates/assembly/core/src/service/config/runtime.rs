@@ -252,6 +252,8 @@ pub struct AIModelConfig {
     #[serde(default)]
     pub request_url: Option<String>,
 
+    /// Plaintext API key held in memory only. Never persisted to disk (Scheme C).
+    #[serde(default, skip_serializing)]
     pub api_key: String,
     /// Context window size (total token limit for input + output).
     pub context_window: Option<u32>,
