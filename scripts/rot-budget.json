@@ -25,12 +25,12 @@
   },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
-    "ceiling": 1010,
+    "ceiling": 1009,
     "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/theme.rs": {
     "kind": "file-lines",
-    "ceiling": 990,
+    "ceiling": 989,
     "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
