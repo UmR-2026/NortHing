@@ -1,0 +1,55 @@
+{
+  "unwrap_production": {
+    "kind": "grep-count",
+    "pattern": "\\.unwrap\\(\\)",
+    "ceiling": 521,
+    "note": "R-13, ratchet: only down"
+  },
+  "expect_production": {
+    "kind": "grep-count",
+    "pattern": "\\.expect\\(",
+    "ceiling": 1098,
+    "note": "R-13, ratchet: only down"
+  },
+  "let_underscore": {
+    "kind": "grep-count",
+    "pattern": "let _ =",
+    "ceiling": 402,
+    "note": "R-13, ratchet: only down"
+  },
+  "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
+    "kind": "file-lines",
+    "ceiling": 1063,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/apps/cli/src/ui/theme.rs": {
+    "kind": "file-lines",
+    "ceiling": 990,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
+    "kind": "file-lines",
+    "ceiling": 918,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/crates/assembly/core/src/service/agent_memory/facts.rs": {
+    "kind": "file-lines",
+    "ceiling": 905,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
+    "kind": "file-lines",
+    "ceiling": 877,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
+    "kind": "file-lines",
+    "ceiling": 836,
+    "note": "R-14 god-file; split planned in ROT-2"
+  },
+  "god_file:src/apps/cli/src/modes/chat/input.rs": {
+    "kind": "file-lines",
+    "ceiling": 802,
+    "note": "R-14 god-file; split planned in ROT-2"
+  }
+}

@@ -77,6 +77,25 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 
 ## 全局规则
 
+### 内务规则（2026-07-22，适用于每次 commit）
+
+0. **Lazy Senior Dev 规则 (YAGNI)**：在写代码前，先爬这个阶梯：
+   1. 这真的需要构建吗？（YAGNI）
+   2. 本代码库中已有现成的？复用它。
+   3. 标准库已支持？用标准库。
+   4. 原生平台特性已覆盖？用原生特性。
+   5. 已安装依赖已解决？用已有依赖。
+   6. 能写成一行吗？写成一行。
+   7. 只有这时：写出能工作的最少代码。
+   （绝不要为了简短而牺牲安全性、错误处理或信任边界）。
+1. **顺手清配额**：一次 commit 可以顺带包含在 scope 内发现的附近小债务修复（过期文档、缺失测试、文件增长超过 800 行）——不需要单独提清理任务；在 commit message 中保持可追溯即可。
+2. **文档同步作为硬规则**：变更 crate 结构（增加/删除 crate、移动路径）必须在同一个 commit 中更新 `docs/status/surfaces.md`；解决技术债务项必须在同一个 commit 中翻转其 ledger 状态。不搞“稍后补文档”。
+3. **God-file 防线**：生产环境超过 800 行的 `.rs` 文件会增加 review 压力；超过 1000 行必须拆分或在文件顶部带有 `// allow-god-file` 合理化注释。新模块从底线以下开始。
+4. **并发测试绑定**：触及 `tokio::select!`、cancellation token 或 timeout 竞态的变更必须随附至少一个自动化测试；judge review 不能替代。其他类型的变更可以依赖 judge review。
+5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
+6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
+7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。
+
 ### 国际化
 
 - 区域标识、别名、回退规则以及表面默认由 `src/shared/i18n/contract/locales.json` 拥有。编辑后请运行 `pnpm run i18n:generate`。
