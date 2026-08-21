@@ -3,8 +3,7 @@
 
 use crate::util::errors::{NortHingError, NortHingResult};
 use std::path::Path;
-use tokio::fs::{self, OpenOptions};
-use tokio::io::AsyncWriteExt;
+use tokio::fs;
 use tracing::{debug, warn};
 
 const FACTS_FILE_NAME: &str = "facts.jsonl";
@@ -63,87 +62,86 @@ impl Fact {
     }
 }
 
-/// Append facts to the facts.jsonl file in the memory directory.
-/// Append-only; does not interfere with memory.md.
-pub(crate) async fn append_facts(memory_dir: &Path, facts: &[Fact]) -> NortHingResult<()> {
+/// Migrate legacy `facts.jsonl` into SQLite `MemoryDb` once per workspace.
+/// Uses `judge_mom` table for persistent marking (`facts_jsonl_migrated_v1:<ws_key>`).
+/// Deduplicates facts by exact text, skips damaged lines, and inserts into SQLite.
+pub(crate) async fn migrate_facts_jsonl_once(
+    db: &super::memory_db::MemoryDb,
+    memory_dir: &Path,
+    ws_key: &str,
+) -> NortHingResult<usize> {
+    let marker_key = format!("facts_jsonl_migrated_v1:{}", ws_key);
+    if let Ok(Some(val)) = db.get_judge_mom_value(&marker_key) {
+        if val == "true" {
+            return Ok(0);
+        }
+    }
+
     let facts_path = memory_dir.join(FACTS_FILE_NAME);
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&facts_path)
-        .await
-        .map_err(|e| {
-            NortHingError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open facts file {}: {}", facts_path.display(), e),
-            ))
-        })?;
-
-    for fact in facts {
-        let line = serde_json::to_string(fact).map_err(|e| {
-            NortHingError::Serialization(e)
-        })?;
-        file.write_all(line.as_bytes()).await.map_err(|e| {
-            NortHingError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to write fact: {}", e),
-            ))
-        })?;
-        file.write_all(b"\n").await.map_err(|e| {
-            NortHingError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to write newline: {}", e),
-            ))
-        })?;
+    if !facts_path.exists() {
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        if let Err(e) = db.set_judge_mom_value(&marker_key, "true", now_ms) {
+            warn!("Facts: failed to set migration marker: {}", e);
+        }
+        return Ok(0);
     }
 
-    debug!(
-        "Appended {} facts to {}",
-        facts.len(),
-        facts_path.display()
-    );
-
-    Ok(())
-}
-
-/// Append candidate facts, skipping exact-text duplicates (history + batch).
-/// Returns the number of facts actually appended. IO errors are logged as
-/// warnings and result in no append (never propagated to the caller).
-pub(crate) async fn append_facts_dedup(memory_dir: &Path, candidates: Vec<Fact>) -> usize {
-    if candidates.is_empty() {
-        return 0;
-    }
-
-    let existing = match read_facts(memory_dir).await {
-        Ok(facts) => facts,
+    let content = match fs::read_to_string(&facts_path).await {
+        Ok(c) => c,
         Err(e) => {
-            warn!(
-                "Facts: failed to read existing facts for deduplication, skipping append: {}",
-                e
-            );
-            return 0;
+            warn!("Facts: failed to read {} for migration: {}", facts_path.display(), e);
+            return Err(NortHingError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to read facts file {}: {}", facts_path.display(), e),
+            )));
         }
     };
 
-    let mut seen: std::collections::HashSet<String> = existing.iter().map(|f| f.text.clone()).collect();
-    let new_facts: Vec<Fact> = candidates.into_iter().filter(|c| seen.insert(c.text.clone())).collect();
-
-    if new_facts.is_empty() {
-        return 0;
+    let mut seen_texts = std::collections::HashSet::new();
+    let mut count = 0;
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        match serde_json::from_str::<Fact>(line) {
+            Ok(fact) => {
+                if seen_texts.insert(fact.text.clone()) {
+                    if let Err(e) = db.insert_fact(&fact, Some(ws_key)) {
+                        warn!("Facts: failed to insert migrated fact {}: {}", fact.id, e);
+                    } else {
+                        count += 1;
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Skipping damaged fact line during migration: {}", e);
+            }
+        }
     }
 
-    let appended = new_facts.len();
-    if let Err(e) = append_facts(memory_dir, &new_facts).await {
-        warn!("Facts: failed to append facts: {}", e);
-        return 0;
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    if let Err(e) = db.set_judge_mom_value(&marker_key, "true", now_ms) {
+        warn!("Facts: failed to set migration marker: {}", e);
     }
-    appended
+    debug!(
+        "Facts: migrated {} facts for ws_key={}, set marker {}",
+        count, ws_key, marker_key
+    );
+    Ok(count)
 }
 
 /// Read all facts from the facts.jsonl file.
 /// Skips damaged lines with a warning.
-pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {    let facts_path = memory_dir.join(FACTS_FILE_NAME);
+// compat: facts.jsonl read fallback, remove after one release cycle
+pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {
+    let facts_path = memory_dir.join(FACTS_FILE_NAME);
 
     if !facts_path.exists() {
         return Ok(Vec::new());
@@ -236,15 +234,23 @@ pub fn select_facts_for_prompt(facts: &[Fact], token_budget: usize) -> Vec<Fact>
 /// Distill candidate facts from a user message.
 /// Returns a list of candidate facts based on keyword matching.
 /// Each candidate has confidence Med and scope Workspace.
-pub fn distill_facts_from_user_message(
-    user_input: &str,
-    session_id: &str,
-    turn_id: &str,
-) -> Vec<Fact> {
+pub fn distill_facts_from_user_message(user_input: &str, session_id: &str, turn_id: &str) -> Vec<Fact> {
     // Bilingual keyword triggers from task spec
     let keywords = [
-        "以后", "记住", "记得", "不要", "别", "总是", "一直", "优先", "别再",
-        "prefer", "always", "never", "remember", "from now on",
+        "以后",
+        "记住",
+        "记得",
+        "不要",
+        "别",
+        "总是",
+        "一直",
+        "优先",
+        "别再",
+        "prefer",
+        "always",
+        "never",
+        "remember",
+        "from now on",
     ];
 
     let has_keyword = keywords.iter().any(|kw| user_input.contains(kw));
@@ -432,51 +438,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn append_and_read_facts_round_trip() {
-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
-
-        let facts = vec![
-            Fact {
-                schema_version: 1,
-                id: "id1".to_string(),
-                text: "First fact".to_string(),
-                provenance: FactProvenance {
-                    session_id: "s1".to_string(),
-                    turn_id: "t1".to_string(),
-                },
-                confidence: FactConfidence::High,
-                scope: FactScope::Workspace,
-                fact_type: FactType::Feedback,
-                created_at: 1000,
-            },
-            Fact {
-                schema_version: 1,
-                id: "id2".to_string(),
-                text: "Second fact".to_string(),
-                provenance: FactProvenance {
-                    session_id: "s1".to_string(),
-                    turn_id: "t2".to_string(),
-                },
-                confidence: FactConfidence::Med,
-                scope: FactScope::Global,
-                fact_type: FactType::Feedback,
-                created_at: 2000,
-            },
-        ];
-
-        append_facts(&temp_dir, &facts).await.unwrap();
-
-        let read_back = read_facts(&temp_dir).await.unwrap();
-        assert_eq!(read_back.len(), 2);
-        assert_eq!(read_back[0].id, "id1");
-        assert_eq!(read_back[1].id, "id2");
-
-        // Cleanup
-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
-    }
-
-    #[tokio::test]
     async fn read_facts_skips_damaged_lines() {
         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&temp_dir).await.unwrap();
@@ -495,52 +456,6 @@ DAMAGED LINE HERE
         assert_eq!(facts.len(), 2);
         assert_eq!(facts[0].id, "good1");
         assert_eq!(facts[1].id, "good2");
-
-        // Cleanup
-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn append_facts_is_append_only() {
-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
-
-        let fact1 = vec![Fact {
-            schema_version: 1,
-            id: "id1".to_string(),
-            text: "First".to_string(),
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t1".to_string(),
-            },
-            confidence: FactConfidence::High,
-            scope: FactScope::Workspace,
-            fact_type: FactType::Feedback,
-            created_at: 1000,
-        }];
-
-        append_facts(&temp_dir, &fact1).await.unwrap();
-
-        let fact2 = vec![Fact {
-            schema_version: 1,
-            id: "id2".to_string(),
-            text: "Second".to_string(),
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t2".to_string(),
-            },
-            confidence: FactConfidence::Med,
-            scope: FactScope::Global,
-            fact_type: FactType::Feedback,
-            created_at: 2000,
-        }];
-
-        append_facts(&temp_dir, &fact2).await.unwrap();
-
-        let facts = read_facts(&temp_dir).await.unwrap();
-        assert_eq!(facts.len(), 2);
-        assert_eq!(facts[0].id, "id1");
-        assert_eq!(facts[1].id, "id2");
 
         // Cleanup
         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
@@ -607,7 +522,8 @@ DAMAGED LINE HERE
 
     #[test]
     fn distill_facts_multiple_sentences_with_keyword() {
-        let user_input = "Hello there. please remember I prefer pnpm. How is the weather? also always run tests before commit";
+        let user_input =
+            "Hello there. please remember I prefer pnpm. How is the weather? also always run tests before commit";
         let facts = distill_facts_from_user_message(user_input, "s1", "t1");
 
         // Should get 2 facts: one for "prefer pnpm" and one for "always run tests"
@@ -726,108 +642,6 @@ DAMAGED LINE HERE
         assert_eq!(parsed.fact_type, FactType::Feedback);
     }
 
-    // --- Deduplication tests ---
-
-    #[tokio::test]
-    async fn deduplication_existing_fact_prevents_append() {
-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
-
-        let existing = Fact {
-            schema_version: 1,
-            id: "id1".to_string(),
-            text: "I prefer pnpm".to_string(),
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t1".to_string(),
-            },
-            confidence: FactConfidence::High,
-            scope: FactScope::Workspace,
-            fact_type: FactType::Feedback,
-            created_at: 1000,
-        };
-
-        // Write existing fact
-        append_facts(&temp_dir, &[existing]).await.unwrap();
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
-
-        // Try to append duplicate
-        let dup = Fact {
-            schema_version: 1,
-            id: "id2".to_string(),
-            text: "I prefer pnpm".to_string(), // same text
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t2".to_string(),
-            },
-            confidence: FactConfidence::Med,
-            scope: FactScope::Workspace,
-            fact_type: FactType::Feedback,
-            created_at: 2000,
-        };
-
-        // Dedupe at call site (distill) — simulate by filtering
-        let existing_facts = read_facts(&temp_dir).await.unwrap();
-        let existing_texts: std::collections::HashSet<String> =
-            existing_facts.iter().map(|f| f.text.clone()).collect();
-        let new_facts: Vec<_> = vec![dup].into_iter().filter(|c| !existing_texts.contains(&c.text)).collect();
-        assert!(new_facts.is_empty());
-
-        // Original file still has only 1 fact
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
-
-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn deduplication_batch_internal_prevents_duplicates() {
-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
-
-        // Empty existing facts
-        assert!(read_facts(&temp_dir).await.unwrap().is_empty());
-
-        // Two facts with same text (simulating same sentence hit twice)
-        let fact1 = Fact {
-            schema_version: 1,
-            id: "id1".to_string(),
-            text: "I prefer pnpm".to_string(),
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t1".to_string(),
-            },
-            confidence: FactConfidence::Med,
-            scope: FactScope::Workspace,
-            fact_type: FactType::Feedback,
-            created_at: 1000,
-        };
-        let fact2 = Fact {
-            schema_version: 1,
-            id: "id2".to_string(),
-            text: "I prefer pnpm".to_string(), // same text
-            provenance: FactProvenance {
-                session_id: "s1".to_string(),
-                turn_id: "t1".to_string(),
-            },
-            confidence: FactConfidence::Med,
-            scope: FactScope::Workspace,
-            fact_type: FactType::Feedback,
-            created_at: 1001,
-        };
-
-        // Dedupe using HashSet::insert (unified batch + history dedup)
-        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-        let unique: Vec<_> = vec![fact1, fact2]
-            .into_iter()
-            .filter(|f| seen.insert(f.text.clone()))
-            .collect();
-
-        // Only one should survive
-        assert_eq!(unique.len(), 1);
-
-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
-    }
-
     // --- Read facts IO error test ---
 
     #[tokio::test]
@@ -839,66 +653,91 @@ DAMAGED LINE HERE
         assert!(result.unwrap().is_empty());
     }
 
-    // --- append_facts_dedup tests (real production path) ---
+    // --- Migration tests ---
 
     #[tokio::test]
-    async fn append_facts_dedup_skips_existing_identical_text() {
+    async fn migrate_facts_jsonl_once_idempotency_and_marker() {
+        use crate::service::agent_memory::{
+            default_memory_db_path, unique_test_memory_db_path, with_test_memory_db_path, MemoryDb,
+        };
+
+        let _guard = with_test_memory_db_path(unique_test_memory_db_path());
         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&temp_dir).await.unwrap();
 
-        let existing = distill_facts_from_user_message("以后都用 pnpm", "s1", "t1");
-        assert_eq!(existing.len(), 1);
-        let appended_first = append_facts_dedup(&temp_dir, existing).await;
-        assert_eq!(appended_first, 1);
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+        let db = MemoryDb::open(&default_memory_db_path()).unwrap();
+        let ws_key = "test_workspace_key";
 
-        // Same text again — production dedup must skip it.
-        let again = distill_facts_from_user_message("以后都用 pnpm", "s1", "t2");
-        let appended_second = append_facts_dedup(&temp_dir, again).await;
-        assert_eq!(appended_second, 0);
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+        let facts_path = temp_dir.join(FACTS_FILE_NAME);
+        tokio::fs::write(
+            &facts_path,
+            r#"{"schema_version":1,"id":"id-1","text":"prefer pnpm","provenance":{"session_id":"s1","turn_id":"t1"},"confidence":"high","scope":"workspace","fact_type":"feedback","created_at":1000}
+DAMAGED_CORRUPTED_JSON_LINE
+{"schema_version":1,"id":"id-2","text":"run tests before commit","provenance":{"session_id":"s1","turn_id":"t2"},"confidence":"med","scope":"global","fact_type":"feedback","created_at":2000}
+{"schema_version":1,"id":"id-3","text":"prefer pnpm","provenance":{"session_id":"s1","turn_id":"t3"},"confidence":"low","scope":"workspace","fact_type":"feedback","created_at":3000}"#,
+        )
+        .await
+        .unwrap();
+
+        // First migration run: imports 2 distinct facts (id-1, id-2), skips damaged line and text-duplicate id-3
+        let migrated_count = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
+        assert_eq!(migrated_count, 2);
+
+        // Verify facts in DB: 2 facts ("id-1" and "id-2"), "id-3" was deduped by text, damaged line was skipped
+        let db_facts = db.get_facts(Some(ws_key)).unwrap();
+        assert_eq!(db_facts.len(), 2);
+        let ids: Vec<&str> = db_facts.iter().map(|f| f.id.as_str()).collect();
+        assert!(ids.contains(&"id-1"));
+        assert!(ids.contains(&"id-2"));
+
+        // Verify judge_mom marker was persisted
+        let marker = db
+            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
+            .unwrap();
+        assert_eq!(marker, Some("true".to_string()));
+
+        // Second migration run (same DB session) -> returns 0, no duplicate import
+        let second_run = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
+        assert_eq!(second_run, 0);
+
+        // Simulating process restart: open a new MemoryDb connection to the same DB file
+        let db_reopened = MemoryDb::open(&default_memory_db_path()).unwrap();
+        let marker_after_restart = db_reopened
+            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
+            .unwrap();
+        assert_eq!(marker_after_restart, Some("true".to_string()));
+
+        // Migration after restart -> returns 0 immediately because of persistent mark
+        let after_restart_run = migrate_facts_jsonl_once(&db_reopened, &temp_dir, ws_key).await.unwrap();
+        assert_eq!(after_restart_run, 0);
+
+        // DB facts count remains 2
+        let db_facts_after = db_reopened.get_facts(Some(ws_key)).unwrap();
+        assert_eq!(db_facts_after.len(), 2);
 
         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
     }
 
     #[tokio::test]
-    async fn append_facts_dedup_batch_internal_duplicates_write_once() {
+    async fn migrate_facts_jsonl_once_missing_file_sets_marker() {
+        use crate::service::agent_memory::{
+            default_memory_db_path, unique_test_memory_db_path, with_test_memory_db_path, MemoryDb,
+        };
+
+        let _guard = with_test_memory_db_path(unique_test_memory_db_path());
         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&temp_dir).await.unwrap();
 
-        // Two identical candidates in one batch → only one written.
-        let batch = vec![
-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-        assert_eq!(batch.len(), 2);
+        let db = MemoryDb::open(&default_memory_db_path()).unwrap();
+        let ws_key = "test_workspace_empty";
 
-        let appended = append_facts_dedup(&temp_dir, batch).await;
-        assert_eq!(appended, 1);
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+        let migrated_count = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
+        assert_eq!(migrated_count, 0);
 
-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn append_facts_dedup_appends_distinct_facts() {
-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
-
-        let batch = vec![
-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
-            distill_facts_from_user_message("不要总是提交锁文件", "s1", "t1"),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-
-        let appended = append_facts_dedup(&temp_dir, batch).await;
-        assert_eq!(appended, 2);
-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 2);
+        let marker = db
+            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
+            .unwrap();
+        assert_eq!(marker, Some("true".to_string()));
 
         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
     }
