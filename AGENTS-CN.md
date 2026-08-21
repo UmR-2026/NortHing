@@ -151,7 +151,7 @@ await api.invoke('your_command', { request: { ... } });
 改动以下任一项需要 flag flip + 集成测试，并在同一 commit 更新本节。
 
 - **桌面包名是 `northhing`（Slint）**，不是 `northhing-desktop`。agent-dispatch flags：只剩 `USE_LIGHTWEIGHT_ACTOR = true`；Phase 3 IPC（`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` + IpcSpawnAdapter）已于 2026-07-20 descope 并删除。
-- **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。桌面 `AppSettings` 仍是 UI owner，经 `sync_providers_to_core` 适配推送到 core（见 `95e29ba`）。禁止再出现第二个运行时可读的配置文件。
+- **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。providers 与 default_model 单一事实源为 core GlobalConfig（段 1 拆镜像；用户拍板方案 C：core 不落 api_key 字段，桌面启动/变更时经 facade 推送明文仅内存；桌面 AppSettings 保留 workspaces/onboarding，段 2 待迁）。禁止再出现第二个运行时可读的配置文件。
 - **UI 线程纪律**：非事件循环线程写 Slint 属性会被静默丢弃。所有此类写入必须走 `slint::invoke_from_event_loop`（`error_banners.rs` 的 helper 已封装，直接复用，见 `ad349f9`）。
 - **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入。
 - **项目运行时 slug 恒带路径哈希**（CJK 路径不得冲突，见 `c7e7218`）。

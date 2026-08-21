@@ -53,9 +53,11 @@ const KEYRING_SERVICE: &str = "northhing.desktop.providers";
 /// - A UUID — adds 36 chars for no benefit.
 /// - Opaque base64 — hurts debugging for no security gain (it's a sentinel,
 ///   not a secret).
+#[allow(dead_code)]
 pub const API_KEY_SENTINEL: &str = "__kr__";
 
 /// Returns `true` when `s` is the keyring sentinel value.
+#[allow(dead_code)]
 pub fn is_keyring_sentinel(s: &str) -> bool {
     s == API_KEY_SENTINEL
 }
@@ -120,11 +122,13 @@ impl KeyringBackend for ProductionKeyring {
 ///
 /// Thread-safe via `std::sync::Mutex`. Available in all builds so tests
 /// can construct it directly — no `#[cfg(test)]` gates needed on the trait.
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct MockKeyring {
     store: Mutex<HashMap<String, String>>,
 }
 
+#[allow(dead_code)]
 impl MockKeyring {
     pub fn new() -> Self {
         Self::default()
@@ -163,9 +167,9 @@ impl KeyringBackend for MockKeyring {
 
     fn get(&self, account: &str) -> Result<String> {
         let map = self.store.lock().unwrap();
-        map.get(account).cloned().ok_or_else(|| {
-            anyhow::anyhow!("keyring: credential not found for '{account}'")
-        })
+        map.get(account)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("keyring: credential not found for '{account}'"))
     }
 
     fn delete(&self, account: &str) -> Result<()> {
@@ -193,6 +197,7 @@ pub(crate) static PRODUCTION_KEYRING: Lazy<ProductionKeyring> = Lazy::new(|| Pro
 /// fetched from `keyring`; otherwise the field value is returned as-is
 /// (empty string means no key configured; non-empty non-sentinel means
 /// a plaintext key that hasn't been migrated yet — handled at load time).
+#[allow(dead_code)]
 pub fn resolve_api_key(keyring: &dyn KeyringBackend, provider_id: &str, api_key_field: &str) -> Result<String> {
     if is_keyring_sentinel(api_key_field) {
         keyring.get(provider_id)
@@ -211,6 +216,7 @@ pub fn resolve_api_key(keyring: &dyn KeyringBackend, provider_id: &str, api_key_
 ///
 /// Returns `Err` when the keyring is unavailable (fail-closed) — the
 /// caller must abort and not write plaintext to disk.
+#[allow(dead_code)]
 pub fn store_api_key(keyring: &dyn KeyringBackend, provider_id: &str, plaintext: &str) -> Result<String> {
     if plaintext.is_empty() || is_keyring_sentinel(plaintext) {
         return Ok(plaintext.to_string());

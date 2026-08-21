@@ -3,6 +3,7 @@ use super::update_app_settings_quiet;
 use crate::app_state::error_banners::{set_banner_message, set_inline_error};
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
+use northhing_kernel_api::KernelSettingsApi;
 use slint::ComponentHandle;
 use std::sync::Arc;
 
@@ -58,7 +59,11 @@ pub(crate) fn register_remove_workspace_callback(ui: &AppWindow, app_state: &Arc
                         .find(|(id, _)| id == sid)
                         .map(|(_, m)| m.workspace_path.clone())
                 };
-                let issues = s.validate_session_integrity(session_ids, &provider_lookup, &workspace_lookup);
+                let facade = northhing_core::kernel_facade::kernel_facade();
+                let existing_models = facade.list_model_configs().await.unwrap_or_default();
+                let known_ids: std::collections::HashSet<String> =
+                    existing_models.iter().map(|m| m.id.clone()).collect();
+                let issues = s.validate_session_integrity(&known_ids, session_ids, &provider_lookup, &workspace_lookup);
 
                 // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
                 let q7_count = issues.iter().filter(|i| i.kind == "workspace-removed").count();

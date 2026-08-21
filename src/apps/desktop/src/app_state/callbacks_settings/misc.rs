@@ -1,15 +1,15 @@
 use super::refresh_settings_lists;
 use super::update_app_settings_quiet;
 use crate::app_state::error_banners::set_banner_message;
-use crate::app_state::settings::ModelRef;
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::KernelSettingsApi;
 use slint::ComponentHandle;
 use std::sync::Arc;
 
-// 2026-07-18 (D2b): set-default-model handler. Finds the provider by id,
-// verifies it is enabled, persists the ModelRef, then refreshes the
-// settings lists and shows a success banner.
+// 2026-07-18 (D2b): set-default-model handler. Calls facade to set default
+// provider, then refreshes the settings lists and shows a success banner.
 pub(crate) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     let ui_weak = ui.as_weak();
     ui.on_set_default_model(move |provider_id| {
@@ -28,51 +28,13 @@ pub(crate) fn register_set_default_model_callback(ui: &AppWindow, _app_state: &A
                 }
             };
             rt.block_on(async move {
-                // 2026-07-31 (H-9): load → lookup → mutate → save as one
-                // transaction under the settings single-writer lock. A
-                // missing provider aborts without writing anything.
-                let mut provider_missing = false;
-                let s = match update_app_settings_quiet(|s| {
-                    let provider = match s.providers.iter().find(|p| p.id == pid && p.enabled) {
-                        Some(p) => p.clone(),
-                        None => {
-                            // H-9: keep the exact message for the banner; the
-                            // error side channel only signals the abort.
-                            provider_missing = true;
-                            return Err(anyhow::anyhow!("未找到已启用的指定 AI 服务"));
-                        }
-                    };
-                    s.default_model = Some(ModelRef {
-                        provider_id: pid,
-                        model: provider.model.clone(),
-                    });
-                    Ok(s.clone())
-                })
-                .await
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                        let msg = if provider_missing {
-                            "未找到已启用的指定 AI 服务".to_string()
-                        } else {
-                            e
-                        };
-                        set_banner_message(ui_weak.clone(), msg, "");
-                        return;
-                    }
-                };
-                // 2026-07-18 (D2g): push default model into core so the runtime
-                // sees the updated primary. Failure is non-fatal — the user's
-                // data is safe on disk; we surface a banner and let them retry.
-                if let Err(e) = crate::app_state::settings::sync_providers_to_core(&s).await {
-                    tracing::warn!(target: "app_state", "set-default-model sync-to-core failed: {e}");
-                    // 2026-07-18 (D2j): pass weak directly; helper upgrades on UI thread.
-                    set_banner_message(ui_weak.clone(), "同步到运行时配置失败，请重试".to_string(), "");
-                    // do NOT return — data is already persisted
+                let facade = kernel_facade();
+                if let Err(e) = facade.set_default_provider(&pid).await {
+                    tracing::warn!(target: "app_state", "set-default-model set_default_provider failed: {e}");
+                    set_banner_message(ui_weak.clone(), "未找到已启用的指定 AI 服务".to_string(), "");
+                    return;
                 }
-                // 2026-07-18 (D2j): pass weak directly; helpers upgrade on UI thread.
-                set_banner_message(ui_weak.clone(), "已设置默认模型", "");
+                set_banner_message(ui_weak.clone(), "已设置默认模型".to_string(), "");
                 refresh_settings_lists(ui_weak.clone()).await;
             });
         });

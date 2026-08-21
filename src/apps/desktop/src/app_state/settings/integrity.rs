@@ -32,6 +32,7 @@ impl AppSettings {
     /// healthy produce no issue.
     pub fn validate_session_integrity<I, P, W>(
         &self,
+        known_provider_ids: &std::collections::HashSet<String>,
         session_ids: I,
         session_provider_id: P,
         session_workspace_path: W,
@@ -41,8 +42,6 @@ impl AppSettings {
         P: Fn(&str) -> Option<String>,
         W: Fn(&str) -> Option<std::path::PathBuf>,
     {
-        let known_provider_ids: std::collections::HashSet<&str> =
-            self.providers.iter().map(|p| p.id.as_str()).collect();
         let known_workspace_paths: std::collections::HashSet<std::path::PathBuf> =
             self.workspaces.iter().map(|w| w.path.clone()).collect();
 

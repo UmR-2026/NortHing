@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use uuid::Uuid;
 
 // ===== Provider =====
 
 /// LLM provider type. Spec §5.6 (5 variants).
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProviderType {
@@ -21,6 +21,7 @@ pub enum ProviderType {
     CustomAnthropicCompatible,
 }
 
+#[allow(dead_code)]
 impl ProviderType {
     /// Default endpoint for the provider, when not user-overridden.
     pub fn default_base_url(&self) -> &'static str {
@@ -45,6 +46,7 @@ impl ProviderType {
 }
 
 /// Single LLM provider entry.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderConfig {
     /// UUID v4, immutable. Used as the canonical handle.
@@ -69,6 +71,7 @@ pub struct ProviderConfig {
     pub last_verified_ok: Option<bool>,
 }
 
+#[allow(dead_code)]
 impl ProviderConfig {
     pub fn new(name: String, provider_type: ProviderType) -> Self {
         let id = Uuid::new_v4().to_string();
@@ -108,119 +111,11 @@ pub struct WorkspaceEntry {
     pub identity_md_path: Option<PathBuf>,
 }
 
-// ===== Skill =====
-
-/// Per-skill enable state. One entry per discovered builtin skill.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SkillState {
-    /// Matches the folder name under `crates/assembly/core/builtin_skills/`.
-    pub name: String,
-    /// Default true; toggleable globally.
-    pub global_enabled: bool,
-    /// Per-workspace overrides (Q5 = E2 = c: global + per-workspace).
-    /// Lookup uses `PathBuf` as key; serialization uses the path string.
-    #[serde(with = "pathbuf_map_serde")]
-    pub workspace_overrides: HashMap<PathBuf, bool>,
-}
-
-impl SkillState {
-    /// Effective enable state for a given workspace: workspace override wins,
-    /// otherwise fall back to global, otherwise default-on (true).
-    /// Used only by `#[cfg(test)]` in `tests.rs`.
-    #[allow(dead_code)]
-    pub fn effective_in(&self, workspace: &Path) -> bool {
-        self.workspace_overrides
-            .get(workspace)
-            .copied()
-            .unwrap_or(self.global_enabled)
-    }
-}
-
-// ===== MCP Server =====
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "kebab-case")]
-pub enum MCPTransport {
-    Stdio,
-    Sse,
-    StreamableHttp,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MCPServerConfig {
-    pub id: String,
-    pub name: String,
-    pub transport: MCPTransport,
-    pub enabled: bool,
-    /// `command` for stdio transports (e.g. `npx`, `node`).
-    pub command: Option<String>,
-    pub args: Vec<String>,
-    /// `url` for SSE / StreamableHttp transports.
-    pub url: Option<String>,
-    /// Environment variables for the stdio subprocess.
-    #[serde(default)]
-    pub env: HashMap<String, String>,
-    pub last_verified_at: Option<i64>,
-    pub last_verified_ok: Option<bool>,
-    /// Tool names returned by the last successful `tools/list`.
-    pub last_tools: Vec<String>,
-}
-
 // ===== Default model =====
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelRef {
     pub provider_id: String,
     pub model: String,
-}
-
-// `serde(default)` workaround: HashMap<PathBuf, V> requires a custom
-// serializer for PathBuf keys (which serialize as strings on platforms
-// where OsStr is valid UTF-8). We only target Windows + macOS + Linux in
-// this crate and workspace paths are always UTF-8 in practice, so a
-// string round-trip is safe.
-mod pathbuf_map_serde {
-    use serde::de::{MapAccess, Visitor};
-    use serde::ser::SerializeMap;
-    use serde::{Deserializer, Serializer};
-    use std::collections::HashMap;
-    use std::path::PathBuf;
-
-    pub fn serialize<S, V>(map: &HashMap<PathBuf, V>, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        V: serde::Serialize,
-    {
-        let mut ser = s.serialize_map(Some(map.len()))?;
-        for (k, v) in map {
-            let key_str = k.to_string_lossy().into_owned();
-            ser.serialize_entry(&key_str, v)?;
-        }
-        ser.end()
-    }
-
-    pub fn deserialize<'de, D, V>(d: D) -> Result<HashMap<PathBuf, V>, D::Error>
-    where
-        D: Deserializer<'de>,
-        V: serde::Deserialize<'de>,
-    {
-        struct V<V2>(std::marker::PhantomData<V2>);
-        impl<'de, V2> Visitor<'de> for V<V2>
-        where
-            V2: serde::Deserialize<'de>,
-        {
-            type Value = HashMap<PathBuf, V2>;
-            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                f.write_str("a map of path string -> value")
-            }
-            fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
-                let mut out = HashMap::new();
-                while let Some((k, v)) = access.next_entry::<String, V2>()? {
-                    out.insert(PathBuf::from(k), v);
-                }
-                Ok(out)
-            }
-        }
-        d.deserialize_map(V(std::marker::PhantomData))
-    }
 }
