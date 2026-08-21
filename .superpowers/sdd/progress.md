@@ -369,3 +369,11 @@
 - Task T1-10: complete (commits 1f537f6..1d1d4ff, review clean: SPEC 6/6+GC 4/4 / QUALITY Approved by minimax-m3, 0C/0I/3M-全为 report 精度类). SW1-10 五项处置：恒时比较+upload-web 核销（无现存目标，随 T2-2 remote 栈消失，rg 证据 judge 复核属实）；WS Origin 检查（is_allowed_origin 纯函数，缺失放行/存在必须 loopback，403 在 upgrade 前，judge 21 case 推演零偏差，CSWSH 物理关闭）；ACP 钉版（claude-code-acp@0.16.2 / codex-acp@0.16.0 共享常量 + 2026-08-21 钉版注释，4 生产+2 测试全改，@latest 零命中）；debug-log CORS 收紧不删除（judge 实证 BUILTIN_JS_TEMPLATE 浏览器 fetch 调用方真实存在于 debug.rs:66+runtime.rs:54 → 白名单 loopback origins + GET/POST/OPTIONS + Content-Type/Authorization）。6 文件 +206/-13。Minors 挂账终审 triage：3 条全为 report 措辞/行号锚精度，无代码问题。**T1-10 CLOSED；SW1 五项（T1-4/5/6/8/10）全部落地，待 T1 线终审。**
 
 - **T1 线终审：APPROVED**（reviewer/gemini-37-flash_reviewer，0C/0I/0 阻塞 Minor，7 项挂账 Minors 全部 triage：5 挂账成立 + 2 无需动作）。跨任务一致性：T1-5 外层确认门 + T1-4 内层 denylist/banned/audit 构成双层纵深；全仓扫描无漏接 shell-like 执行面；SW1 五项验收 100% 达成。实证：cargo check --workspace 0 errors（52.60s）、家规 6 `cargo check -p northhing` 0 errors（1m02s）、八组 focused 测试全绿。roadmap T1-4/5/6/8/10 五行同 commit 划销；P1-8 勘误记录：roadmap T1-10 行文本混入 P1-8 但 SW1-10 原文五子项无 P1-8，P1-8（MCP env 明文）仍挂债线待排（roadmap §1.5 指向 T1 收尾或 T3）。**T1 安全收尾线 CLOSED（10 行全关：5 执行 + 5 随删除关闭）。**
+
+---
+
+# 源头防腐轮 Ledger (2026-08-21)
+
+计划源：编排者防腐体系调研综合（dsh verify-doc-budgets 模式 + ETH/Anthropic/GitClear/METR 证据）；流程文件 = `.opencode/templates/task-brief-template.md`（含强制「复用侦察」段）+ `judge-brief-block.md`（skeptical 校准 + 三防腐必查项），编排者侧已落地（memory commit 63d2287）。
+
+- Task ROT-3': complete (commits 43c2c29..ded3544 = 964afda + 64cae0c + merge ded3544, review APPROVED 0C/0I/2M by minimax-m3；implementer gemini-37-flash-agy 连续第四单一次 DONE) — **rot-budget 预算闸落地**：`scripts/rot-budget.json`（基线：unwrap 521 / expect 1098 / let_ 402 + 7 个 god-file ceiling，编排者预检钉死逐字）+ `verify-rot-budget.mjs`（140 行纯 Node，含未登记 >800 行拦截 + 生成物豁免常量）+ 自测 6/6（judge 额外手动变红实证：ceiling 521→520 时 exit 1 且报错含当前值/上限/修复指引）+ `pnpm run check:rot` + CI `rot-budget` job + AGENTS.md/AGENTS-CN.md 家规 7「Rot budget only decreases」。Minors 挂账：report 的 diff --stat 漏列 3 新文件；AGENTS-CN.md 顺手补齐规则 0-6 整段（结构对齐，接受）。**ROT-3' CLOSED——闸已立，后续 ROT-1/2 清理成果不会退化；升 ceiling 一律需用户拍板。**
