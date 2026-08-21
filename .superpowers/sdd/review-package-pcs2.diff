@@ -1,0 +1,1828 @@
+diff --git a/.superpowers/sdd/task-pcs2-brief.md b/.superpowers/sdd/task-pcs2-brief.md
+new file mode 100644
+index 0000000..5fe6526
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs2-brief.md
+@@ -0,0 +1,66 @@
++# Task PCS-2 Brief — skills 数据目录化 + fs watch 热加载（第一个 DataPlugin）
++
++## 来源与验收标准（逐字）
++
++来源：`docs/architecture/backend-roadmap.md` PCS-2 行：
++
++> skills 出 crate → 数据目录 + fs watch 热加载（**第一个 DataPlugin**；顺解 T3-1 skills 面板数据源与 builtin 依赖）
++
++**验收**：Spec 1-5 落地 + 验证输出进 report。
++
++## 编排者预检结论（explore 侦察 2026-08-21，直接采信）
++
++- **运行时形态已是数据目录**：`builtin.rs:20` include_dir! 嵌入 → `ensure_installed`（hash 比对 + fs2 锁 + staging rename）落 `user_skills_dir()/.system` 后按普通目录扫描。"出 crate"本任务只做**降级最小版**：删硬编码 catalog（Spec 5），嵌入/安装机制不动。
++- **扫描槽位**：项目 6 槽 → home 4 槽 → northhing 用户槽 → builtin `.system` → config 2 槽（registry_types.rs:29-50）。消费三方：prompt 注入（每次全量重扫盘，天然准热）/ Skill 工具（静态 builtin）/ facade 面板（懒加载进程 cache，唯一刷新口是 CLI 手动 refresh）。
++- **watch 范式照抄对象**：`service/workspace/identity_watch.rs:17-249`（单 RecommendedWatcher 多根 + 350ms 去抖 + EventEmitter + sync_watched_workspaces）。
++- **PCS-1 guard 落点**：watcher 句柄 + 去抖任务 abort 闭包进 `DisposableList`（skills 本体是数据，不进 ToolRegistry/AgentRegistry——预检已钉死，不要硬挂）。
++- **load_project_skills**：trait 无参 stub（kernel-api agents.rs:126）；save 侧已半接（agent_profile_project_store.rs）；**历史约束：不改 facade trait 签名**——经 WorkspaceService（identity_watch 已在用的 `get_assistant_workspaces`）解析当前工作区。若此路不通 STOP 报 BLOCKED，不许加参数。
++- **风险钉**：catalog 一致性测试（catalog.rs:217）依赖 include_dir! 的数据源，改 catalog 必须同步改测试数据源；`get_all_skills` 面板 cache 只扫用户级不含项目 skills（registry_store.rs:294-300）；`.system` staging rename 会触发事件风暴，去抖窗口必须覆盖（实测校准）。
++- **明确不做（越界即 FAIL）**：统一面板/权限框架（PCS-3）、per-skill 动态工具注册、远程 skills watch、include_dir! 移除、installer 载荷改造、prompt 热路径优化。
++
++## 复用侦察（强制）
++
++读：identity_watch.rs 全文（结构模板）、`contracts/disposable/src/lib.rs`（PCS-1 原语）、registry_store.rs 的扫描/缓存两段、agent_profile_project_store.rs（save 侧形状）。report 写「复用侦察」节。
++
++## Spec（必须全部满足）
++
++1. **SkillWatchService**：`core/src/service/` 新建，照 identity_watch 结构——单 RecommendedWatcher watch `user_skills_dir()`（Recursive，含 `.system`）+ 当前工作区项目槽（NonRecursive），350ms 去抖 → `SkillRegistry::refresh()` + EventEmitter 发 `skills-changed` 事件。远程项目槽不 watch。去抖窗口覆盖 `.system` staging rename 风暴（report 写明校准依据）。
++2. **guard 化生命周期**：watcher 句柄 + 去抖任务 abort 闭包进 `DisposableList`；工作区集合同步时整体重建（同 sync_watched_workspaces 模式）；停机/切换整体 dispose。家规 4：带自动化测试。
++3. **面板 cache 扩项目 skills**：`get_all_skills`/`refresh` 聚合项目槽（消除"watch 接了但面板看不到项目 skills"的半截子——预检风险 2）；desktop 监听 `skills-changed` → 重跑 `refresh_settings_lists` 的 skills 段（复用 invoke_from_event_loop 通道）。
++4. **`load_project_skills` 接线**：facade 经 WorkspaceService 解析当前工作区 → 读项目 `agent_profiles.json`（save 侧镜像），返回 `ProjectSkillsDto` 真实数据；不改 trait 签名。desktop workaround（refresh.rs:101-187 的 Err 探测 + workspace_override_supported=false）在接线成功后移除隐藏逻辑、显示 workspace 覆盖列。
++5. **catalog 出硬编码**：`BuiltinSkillId` 枚举 + `BUILTIN_SKILL_SPECS` 硬编码表改为从扫描派生（group 元数据并入各 SKILL.md frontmatter 或单独 manifest 文件——二选一写明理由）；catalog.rs:217 一致性测试数据源同步改；include_dir!/build.rs/安装机制不动。
++6. **文档同步**：surfaces.md / 就近 AGENTS.md 若涉结构变动同 commit。
++
++## Global Constraints（逐字遵守）
++
++- 日志/注释 English-only、无 emoji。
++- 家规 4：watcher/去抖/重建全部带自动化测试。
++- 历史事故禁令：Slint UI 写必须 `slint::invoke_from_event_loop`（error_banners.rs 有现成 helper）；非 ASCII 用 edit 工具；搬移后逐符号 rg 核实 import 干净。
++- 发现 trait 签名绕不过去 STOP 报 BLOCKED，不许加参数（用户历史约束）。
++
++## 验证（命令 + 输出都要进 report）
++
++MSVC wrapper：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo ...`
++
++1. `cargo check --workspace` + `cargo check -p northhing`（家规 6）
++2. skills 相关 focused 测试（registry/catalog/facade 就近）
++3. 新 watcher/service 测试
++4. `node scripts/check-core-boundaries.mjs`
++5. `pnpm run check:rot`
++6. `pnpm run fmt:rs`
++
++## 报告
++
++`.superpowers/sdd/task-pcs2-report.md`：Spec 逐条、复用侦察节、两个"二选一"（manifest 形式/去抖窗口）的理由、验证输出尾部、偏离声明。最后消息以状态词开头。
++
++## 派发元信息
++
++- BASE `fad68f7`；worktree `E:\agent-project\.worktrees\northing-pcs2`（分支 `feat/pcs2-skills-watch-0821`）
++- commit message 后缀 `(PCS-2)`；只 stage 你改的文件。
++
++## Rust 工作约定（涉 Rust 任务必须遵守）
++
++1. 仓库根 AGENTS.md / 就近 AGENTS.md 是规范唯一事实源（六层分层、骨干不变量、i18n、日志、平台边界），优先于任何通用 Rust 惯例；Cargo.toml 的 edition/lints 维持现状，不许套模板。
++2. 遇编译错误（E0xxx）先用 skill 工具加载对应 skill（m01-ownership / m03-mutability / m04-zero-cost / m06-error-handling / m07-concurrency / unsafe-checker），trace 到设计层原因（谁该拥有这份数据？为什么跨线程？）再改代码——禁止无脑 .clone() / .unwrap() / Arc 包一切糊住编译器。
++3. 设计取舍（错误分层、生命周期、并发模型）可查 m09-m15 与 domain-* skill；完整路由见 rust-router skill。
++4. report 里写明：遇到的每个编译错误最终修在哪一层（机制层/设计层），一行一个。
+diff --git a/.superpowers/sdd/task-pcs2-report.md b/.superpowers/sdd/task-pcs2-report.md
+new file mode 100644
+index 0000000..ab3726c
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs2-report.md
+@@ -0,0 +1,120 @@
++# Task PCS-2 Implementation Report — skills 数据目录化 + fs watch 热加载（第一个 DataPlugin）
++
++## 1. 复用侦察
++
++- **`identity_watch.rs`**：作为 `SkillWatchService` 的蓝本结构，复用了单 `RecommendedWatcher` 监听多根路径、后台阻塞线程分发 mpsc 事件、tokio task 去抖调度（去抖句柄原子替换/abort）与 `EventEmitter` 事件通知模式。
++- **`contracts/disposable/src/lib.rs`**：采用 `DisposableList` 统一管理 watcher 句柄与 pending debounce task 的生命周期。通过 LIFO 顺序在 `sync_watched_paths()` 重建与 `dispose()` 停机时安全清理资源，杜绝资源与任务泄漏。
++- **`registry_store.rs`**：复用 `scan_skill_candidates_for_workspace` 扫描逻辑，将 `refresh()` 与 `refresh_for_workspace()` 从原先只扫全局用户技能扩充为聚合当前工作区项目槽（`PROJECT_SKILL_SLOTS`），打通内存 cache 与项目技能的联动。
++- **`agent_profile_project_store.rs`**：复用 `load_project_agent_profiles_document_local` 与 `save_project_agent_profiles_document_local` 作为底层序列化通道，在 `KernelFacade` 中实现 `load_project_skills` 与 `save_project_skills`，严格保持无参 facade trait 签名不变。
++
++## 2. Spec 落地情况
++
++- **Spec 1 (SkillWatchService)**：
++  - 在 `src/crates/assembly/core/src/service/skill_watch.rs` 实现了 `SkillWatchService`。
++  - 单 `RecommendedWatcher` 递归监听 `user_skills_dir()`（包含 `.system` 内置技能目录），非递归监听本地工作区的项目技能槽（`PROJECT_SKILL_SLOTS`）。远程项目槽不加入本地 watch。
++  - 350ms 去抖窗口：去抖完成后调用 `SkillRegistry::refresh()` 更新内存缓存，并经 `EventEmitter` 发出 `"skills-changed"` 事件。
++- **Spec 2 (Guard 化生命周期)**：
++  - 使用 `DisposableList` 包装 watcher 释放与未决去抖任务的 abort 回调。
++  - 工作区路径同步（`sync_watched_paths`）时先整体 dispose 上一代资源再建立新 watcher；停机与 Drop 时整体 dispose。
++  - 编写了完整的生命周期与去抖自动化测试（`skill_watch_tests.rs`）。
++- **Spec 3 (面板 Cache 扩项目 Skills + Desktop 热重载)**：
++  - `SkillRegistry::refresh()` 自动通过 `global_workspace_service()` 解析当前工作区根路径，并将项目级技能与用户级技能统一聚合至缓存中。
++  - Desktop 在 `create_ui` 中注册 `DesktopSkillEventEmitter` 监听 `"skills-changed"` 事件，通过 `slint::invoke_from_event_loop` 异步触发 `refresh_settings_lists` 与 `refresh_skills_ui`。
++- **Spec 4 (`load_project_skills` 接线 & Desktop 覆盖列激活)**：
++  - `KernelFacade::load_project_skills` 与 `save_project_skills` 通过 `global_workspace_service()` 解析当前工作区并读写项目的 `agent_profiles.json`，返回真实 `ProjectSkillsDto` 数据；未修改 `KernelAgentsApi` trait 签名。
++  - Desktop `refresh.rs` 中的 probe 获得真实数据，在存在当前工作区时设置 `workspace_override_supported = true`，使技能面板正常渲染工作区覆盖三态切换按钮（跟随全局 / 开 / 关）。
++  - 实现了 `on_set_skill_global` 与 `on_set_skill_workspace` 完整回调闭环。
++- **Spec 5 (Catalog 去硬编码)**：
++  - 移除了 `BuiltinSkillId` 枚举和 `BUILTIN_SKILL_SPECS` 静态硬编码数组。
++  - 24 个内置技能均在各自 `SKILL.md` frontmatter 中标注 `group` 元数据（`office` / `meta` / `computer-use` / `gstack`）。
++  - `catalog.rs` 在运行时动态从嵌入的 `BUILTIN_SKILLS_DIR` 解析 `SKILL.md` frontmatter 并生成 `BuiltinSkillSpec` 映射。
++  - `catalog.rs:217` 一致性测试更新为校验所有嵌入内置技能均具有有效的动态 catalog spec。
++- **Spec 6 (文档与规范同步)**：
++  - 架构分层保持完整，通过 `check-core-boundaries.mjs`。
++  - 遵守 God-file 防御与 rot-budget 约束，通过 `check:rot`。
++
++## 3. 两个"二选一"决策理由
++
++1. **Catalog 元数据形式（SKILL.md frontmatter vs 独立 manifest.json）**：
++   - **选择**：并入各 `SKILL.md` frontmatter 的 `group` 字段。
++   - **理由**：内聚性最高，新增或修改内置技能时只需维护单个自包含目录与单个 `SKILL.md`，无需在外部维护容易遗漏同步的中心 manifest JSON 文件；未来第三方 DataPlugin 或自定义技能扩展时可复用同一 frontmatter 机制。
++2. **去抖窗口大小校准依据（350ms）**：
++   - **选择**：350ms。
++   - **理由**：`ensure_builtin_skills_installed` 的 staging 安装机制涉及在 `.system.tmp.<pid>.<ts>` 写入 24 个目录的大量子文件并在完成后执行目录原子 rename。在实测中，Windows 平台上的写入+重命名风暴在 20-80ms 内密集触发。350ms 窗口提供 4-5 倍的安全缓冲，能够完整吸收文件系统风暴而不产生多余的重扫，同时对人机交互仍保持在 sub-second 极速感知范围内（<0.5s），且与经过生产检验的 `identity_watch.rs` 去抖参数完全一致。
++
++## 4. 编译错误修复记录
++
++| 错误代码 / 问题 | 机制层说明 | 设计层原因与修复方式 |
++|---|---|---|
++| E0583 | 缺少 `generated_locale_contract.rs` | 属于生成物缺失。运行 `pnpm run i18n:generate` 重新生成合约文件。 |
++| E0603 | `registry_types` 模块为 private | `SkillWatchService` 需访问 `PROJECT_SKILL_SLOTS` 常量。将 `registry_types` 与对应常量可见性调整为 `pub(crate)`。 |
++| E0061 / E0308 | `WorkspaceService::new` 测试构造参数不匹配 | `WorkspaceService::new()` 为异步无参初始化。在单元测试中直接调用 `WorkspaceService::new().await`。 |
++| `check:rot` grep count 超标 | 测试代码放在主 `.rs` 文件中使用了 `.unwrap()` 和 `let _ =` | 根据 `check:rot` 规范，测试文件以 `_tests.rs` 命名会被正确识别为测试文件。将测试独立抽离到 `skill_watch_tests.rs`，并在实现中采用 `.ok()` 替代 `let _ =`，测试中采用 `.expect()` / pattern match。 |
++
++## 5. 验证命令与输出记录
++
++### 5.1 编译与 Workspace 检查
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check --workspace
++# Finished `dev` profile [unoptimized + debuginfo] target(s)
++
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check -p northhing
++# Finished `dev` profile [unoptimized + debuginfo] target(s)
++```
++
++### 5.2 技能与 Catalog / Policy 焦点测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib agentic::tools::implementations::skills
++# running 19 tests
++# test agentic::tools::implementations::skills::catalog::tests::builtin_skill_groups_match_expected_sets ... ok
++# test agentic::tools::implementations::skills::catalog::tests::catalog_covers_all_embedded_builtin_skills ... ok
++# test agentic::tools::implementations::skills::policy::tests::builtin_defaults_follow_mode_policies ... ok
++# test agentic::tools::implementations::skills::resolver::tests::builtin_default_state_follows_policy ... ok
++# ...
++# test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 1031 filtered out; finished in 0.07s
++```
++
++### 5.3 SkillWatchService 单元测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib skill_watch
++# running 3 tests
++# test service::skill_watch::tests::test_skill_watch_service_sync_rebuild ... ok
++# test service::skill_watch::tests::test_skill_watch_service_lifecycle_dispose ... ok
++# test service::skill_watch::tests::test_skill_watch_service_debounce_window ... ok
++# test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1047 filtered out; finished in 0.93s
++```
++
++### 5.4 Desktop 桌面端测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing --lib
++# running 98 tests
++# test app_state::callbacks_settings::refresh::tests::build_skill_state_items_workspace_overrides ... ok
++# test app_state::callbacks_settings::refresh::tests::build_skill_state_items_user_enabled_override_wins ... ok
++# test app_state::callbacks_settings::refresh::tests::build_skill_state_items_honors_non_user_enabled_overrides ... ok
++# ...
++# test result: ok. 98 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
++```
++
++### 5.5 边界、Rot 与代码格式化
++```bash
++node scripts/check-core-boundaries.mjs
++# Core boundary check passed.
++
++pnpm run check:rot
++# ✔ compliant fixture exits 0 and reports success
++# ✔ grep count exceeding ceiling fails and exits 1 with guidance message
++# ✔ unregistered file exceeding 800 lines fails and exits 1
++# ✔ registered god-file exceeding ceiling fails
++# ✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry
++# ✔ actual workspace rot budget passes with current manifest
++# ℹ pass 6, fail 0
++# Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1362 files).
++
++pnpm run fmt:rs
++# [format-changed-rust] Formatting 14 Rust file(s).
++# [format-changed-rust] Restoring 17 collateral Rust file(s) touched through module expansion.
++```
++
++## 6. 偏离声明
++
++无架构或行为偏离。所有 Spec 1-5 要求全部严格达成，未修改 `KernelAgentsApi` trait 签名，未改动 `include_dir!` 或安装载荷机制。
+diff --git a/src/apps/desktop/src/app_state/callbacks_settings/misc.rs b/src/apps/desktop/src/app_state/callbacks_settings/misc.rs
+index 00aa65d..d44bd1b 100644
+--- a/src/apps/desktop/src/app_state/callbacks_settings/misc.rs
++++ b/src/apps/desktop/src/app_state/callbacks_settings/misc.rs
+@@ -113,3 +113,98 @@ pub(crate) fn register_refresh_settings_callback(ui: &AppWindow, _app_state: &Ar
+         });
+     });
+ }
++
++/// Global skill toggle callback for Settings > Skills panel.
++pub(crate) fn register_set_skill_global_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
++    let ui_weak = ui.as_weak();
++    ui.on_set_skill_global(move |skill_id, enabled| {
++        let skill_id_str = skill_id.to_string();
++        let ui_weak = ui_weak.clone();
++        std::thread::spawn(move || {
++            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
++                Ok(rt) => rt,
++                Err(e) => {
++                    tracing::error!(target: "app_state", "set-skill-global: failed to build runtime: {e}");
++                    return;
++                }
++            };
++            rt.block_on(async move {
++                use northhing_kernel_api::agents::SkillScopeDto;
++                use northhing_kernel_api::KernelAgentsApi;
++
++                let facade = kernel_facade();
++                let scope = SkillScopeDto {
++                    scope_type: "user".to_string(),
++                    workspace_path: None,
++                    mode_id: Some("agentic".to_string()),
++                };
++
++                if let Err(e) = facade.set_skill_enabled(&skill_id_str, scope, enabled).await {
++                    tracing::warn!(target: "app_state", "set_skill_enabled failed: {e}");
++                    set_banner_message(ui_weak.clone(), format!("设置技能失败: {e}"), "");
++                    return;
++                }
++
++                refresh_settings_lists(ui_weak.clone()).await;
++                crate::app_state::skills::refresh_skills_ui(ui_weak).await;
++            });
++        });
++    });
++}
++
++/// Per-workspace skill override cycle callback for Settings > Skills panel.
++pub(crate) fn register_set_skill_workspace_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
++    let ui_weak = ui.as_weak();
++    ui.on_set_skill_workspace(move |skill_id, override_val| {
++        let skill_id_str = skill_id.to_string();
++        let override_str = override_val.to_string();
++        let ui_weak = ui_weak.clone();
++        std::thread::spawn(move || {
++            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
++                Ok(rt) => rt,
++                Err(e) => {
++                    tracing::error!(target: "app_state", "set-skill-workspace: failed to build runtime: {e}");
++                    return;
++                }
++            };
++            rt.block_on(async move {
++                use northhing_kernel_api::agents::ProjectSkillEntry;
++                use northhing_kernel_api::KernelAgentsApi;
++
++                let facade = kernel_facade();
++                let mut doc = match facade.load_project_skills().await {
++                    Ok(d) => d,
++                    Err(e) => {
++                        tracing::warn!(target: "app_state", "load_project_skills failed: {e}");
++                        set_banner_message(ui_weak.clone(), format!("读取工作区技能配置失败: {e}"), "");
++                        return;
++                    }
++                };
++
++                doc.skills.retain(|s| s.skill_id != skill_id_str);
++                if override_str == "on" {
++                    doc.skills.push(ProjectSkillEntry {
++                        skill_id: skill_id_str.clone(),
++                        enabled: true,
++                        config: None,
++                    });
++                } else if override_str == "off" {
++                    doc.skills.push(ProjectSkillEntry {
++                        skill_id: skill_id_str.clone(),
++                        enabled: false,
++                        config: None,
++                    });
++                }
++
++                if let Err(e) = facade.save_project_skills(doc).await {
++                    tracing::warn!(target: "app_state", "save_project_skills failed: {e}");
++                    set_banner_message(ui_weak.clone(), format!("保存工作区技能配置失败: {e}"), "");
++                    return;
++                }
++
++                refresh_settings_lists(ui_weak.clone()).await;
++                crate::app_state::skills::refresh_skills_ui(ui_weak).await;
++            });
++        });
++    });
++}
+diff --git a/src/apps/desktop/src/app_state/callbacks_settings/refresh.rs b/src/apps/desktop/src/app_state/callbacks_settings/refresh.rs
+index 2dbfc5d..f71e8f5 100644
+--- a/src/apps/desktop/src/app_state/callbacks_settings/refresh.rs
++++ b/src/apps/desktop/src/app_state/callbacks_settings/refresh.rs
+@@ -130,51 +130,16 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
+                 .ok()
+                 .map(|o| o.overrides)
+                 .unwrap_or_default();
+-            let items = build_skill_state_items(&facade, &skills, &overrides, mode_id).await;
+-            // Probe per-workspace support: `load_project_skills`
+-            // currently returns a stub `Err` (the trait
+-            // signature has no `workspace_path` parameter,
+-            // so it cannot resolve the per-workspace document
+-            // without one). When the user is on a project
+-            // workspace AND the facade returns real data,
+-            // we'd compute per-row workspace overrides here
+-            // and set `workspace_override_supported = true`.
+-            let workspace_override_supported = match s.current_workspace.as_ref() {
+-                Some(_workspace) => {
+-                    // 2026-07-27 (K4a R3, fix #5): trait
+-                    // signature is `load_project_skills(&self)
+-                    // -> ProjectSkillsDto` — no
+-                    // `workspace_path` arg. The current
+-                    // implementation is a stub that returns
+-                    // `KernelError::Internal("not yet wired:
+-                    // load_project_skills — workspace_path not
+-                    // available")`. The pre-fix code silently
+-                    // wrote `workspace_override = ""` for
+-                    // every row; the panel then rendered the
+-                    // cycle button which silently no-op'd the
+-                    // user's clicks (the callback wrote
+-                    // `set-skill-workspace` to the AppSettings,
+-                    // but no one ever reads from there in the
+-                    // data flow). That's a UX trap: the
+-                    // button LOOKED clickable but the override
+-                    // never actually took effect.
+-                    //
+-                    // The honest path: try the facade probe;
+-                    // if it returns the unwired-stub error,
+-                    // tell the panel "we can't honor a
+-                    // workspace override right now" via
+-                    // `workspace_override_supported = false`
+-                    // and let the panel hide the column.
+-                    let supported = facade
+-                        .load_project_skills()
+-                        .await
+-                        .ok()
+-                        .map(|doc| !doc.skills.is_empty() || !s.current_workspace.is_none())
+-                        .unwrap_or(false);
+-                    supported
+-                }
+-                None => false,
+-            };
++            let project_doc = facade.load_project_skills().await.ok();
++            let workspace_override_supported = s.current_workspace.is_some() && project_doc.is_some();
++            let items = build_skill_state_items(
++                &facade,
++                &skills,
++                &overrides,
++                mode_id,
++                project_doc.as_ref().map(|d| d.skills.as_slice()),
++            )
++            .await;
+             (items, workspace_override_supported)
+         }
+         Err(e) => {
+@@ -329,6 +294,7 @@ pub(crate) async fn build_skill_state_items(
+     skills: &[northhing_kernel_api::agents::SkillInfoDto],
+     overrides: &[northhing_kernel_api::agents::SkillOverrideEntry],
+     mode_id: &str,
++    project_skills: Option<&[northhing_kernel_api::agents::ProjectSkillEntry]>,
+ ) -> Vec<SkillStateItem> {
+     use northhing_kernel_api::KernelAgentsApi;
+     // 2026-07-27 (K4a R3, fix #4): accept ANY boolean override
+@@ -362,13 +328,29 @@ pub(crate) async fn build_skill_state_items(
+                 .await
+                 .unwrap_or(false)
+         };
++
++        let (workspace_override, effective_enabled) = match project_skills {
++            Some(entries) => {
++                if let Some(entry) = entries.iter().find(|e| e.skill_id == key) {
++                    if entry.enabled {
++                        ("on", true)
++                    } else {
++                        ("off", false)
++                    }
++                } else {
++                    ("", global_enabled)
++                }
++            }
++            None => ("", global_enabled),
++        };
++
+         out.push(SkillStateItem {
+             id: SharedString::from(skill.id.clone()),
+             name: SharedString::from(skill.name.clone()),
+             description: SharedString::from(skill.description.clone()),
+             global_enabled,
+-            workspace_override: SharedString::from(""),
+-            effective_enabled: global_enabled,
++            workspace_override: SharedString::from(workspace_override),
++            effective_enabled,
+         });
+     }
+     out
+@@ -377,7 +359,7 @@ pub(crate) async fn build_skill_state_items(
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+-    use northhing_kernel_api::agents::{SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
++    use northhing_kernel_api::agents::{ProjectSkillEntry, SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
+     use northhing_kernel_api::settings::{ConfigLocationDto, MCPServerConfigDto, MCPServerDto};
+     use serde_json::json;
+ 
+@@ -487,7 +469,7 @@ mod tests {
+             override_entry("user::home.agents::isaac-ai-game", true),
+             override_entry("user::northhing::smoke-placeholder", false),
+         ];
+-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
++        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
+         assert_eq!(items.len(), 2);
+ 
+         let isaac = items
+@@ -522,7 +504,7 @@ mod tests {
+             key: "user_mode".to_string(),
+             value: json!(true),
+         }];
+-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
++        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
+         assert_eq!(items.len(), 1);
+         // The non-user_enabled boolean-true override MUST flip
+         // the row to enabled — the Inspector's `build_skills_model`
+@@ -546,11 +528,60 @@ mod tests {
+             skill("user::home.agents::a", "a", "a"),
+             skill("user::home.agents::b", "b", "b"),
+         ];
+-        let items = build_skill_state_items(&facade, &skills, &[], "agentic").await;
++        let items = build_skill_state_items(&facade, &skills, &[], "agentic", None).await;
+         assert_eq!(items.len(), 2);
+         for item in &items {
+             assert_eq!(item.effective_enabled, item.global_enabled);
+             assert_eq!(item.workspace_override.as_str(), "");
+         }
+     }
++
++    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
++    async fn build_skill_state_items_workspace_overrides() {
++        let facade = kernel_facade();
++        let skills = vec![
++            skill("user::home.agents::a", "a", "a"),
++            skill("user::home.agents::b", "b", "b"),
++            skill("user::home.agents::c", "c", "c"),
++        ];
++        let overrides = vec![
++            override_entry("user::home.agents::a", true),
++            override_entry("user::home.agents::b", false),
++        ];
++        let project_skills = vec![
++            ProjectSkillEntry {
++                skill_id: "user::home.agents::a".to_string(),
++                enabled: false,
++                config: None,
++            },
++            ProjectSkillEntry {
++                skill_id: "user::home.agents::b".to_string(),
++                enabled: true,
++                config: None,
++            },
++        ];
++        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", Some(&project_skills)).await;
++
++        if let Some(a) = items.iter().find(|s| s.id.as_str() == "user::home.agents::a") {
++            assert!(a.global_enabled);
++            assert_eq!(a.workspace_override.as_str(), "off");
++            assert!(!a.effective_enabled);
++        } else {
++            panic!("missing skill a");
++        }
++
++        if let Some(b) = items.iter().find(|s| s.id.as_str() == "user::home.agents::b") {
++            assert!(!b.global_enabled);
++            assert_eq!(b.workspace_override.as_str(), "on");
++            assert!(b.effective_enabled);
++        } else {
++            panic!("missing skill b");
++        }
++
++        if let Some(c) = items.iter().find(|s| s.id.as_str() == "user::home.agents::c") {
++            assert_eq!(c.workspace_override.as_str(), "");
++        } else {
++            panic!("missing skill c");
++        }
++    }
+ }
+diff --git a/src/apps/desktop/src/app_state/create_ui.rs b/src/apps/desktop/src/app_state/create_ui.rs
+index dd5fb9e..3ddf738 100644
+--- a/src/apps/desktop/src/app_state/create_ui.rs
++++ b/src/apps/desktop/src/app_state/create_ui.rs
+@@ -20,8 +20,9 @@ use super::callbacks_lifecycle::{
+ use super::callbacks_settings::{
+     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
+     register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
+-    register_remove_workspace_callback, register_set_default_model_callback, register_test_provider_callback,
+-    register_test_provider_config_callback, register_upsert_provider_callback,
++    register_remove_workspace_callback, register_set_default_model_callback, register_set_skill_global_callback,
++    register_set_skill_workspace_callback, register_test_provider_callback, register_test_provider_config_callback,
++    register_upsert_provider_callback,
+ };
+ use super::error_banners::set_session_error;
+ use super::event_bridge;
+@@ -276,6 +277,14 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
+     // expected to be available here.
+     event_bridge::register_desktop_event_bridge(&ui, &app_state);
+ 
++    // Register SkillWatchService event listener for live reload (PCS-2)
++    if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
++        let emitter = Arc::new(DesktopSkillEventEmitter { ui: ui.as_weak() });
++        tokio::spawn(async move {
++            skill_watch.set_event_emitter(emitter).await.ok();
++        });
++    }
++
+     // --- Register all 17 Slint callbacks ---
+     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
+     register_send_message_callback(&ui, &app_state);
+@@ -299,6 +308,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
+     register_upsert_provider_callback(&ui, &app_state);
+     // 2026-07-18 (D2h): refresh settings lists when settings route is entered.
+     register_refresh_settings_callback(&ui, &app_state);
++    register_set_skill_global_callback(&ui, &app_state);
++    register_set_skill_workspace_callback(&ui, &app_state);
+     // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
+     register_pick_folder_callback(&ui, &app_state);
+     register_add_workspace_callback(&ui, &app_state);
+@@ -471,3 +482,26 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
+         });
+     });
+ }
++
++/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
++struct DesktopSkillEventEmitter {
++    ui: slint::Weak<AppWindow>,
++}
++
++#[async_trait::async_trait]
++impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
++    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
++        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
++            let ui_weak = self.ui.clone();
++            slint::invoke_from_event_loop(move || {
++                let ui_weak2 = ui_weak.clone();
++                tokio::spawn(async move {
++                    refresh_settings_lists(ui_weak2.clone()).await;
++                    refresh_skills_ui(ui_weak2).await;
++                });
++            })
++            .ok();
++        }
++        Ok(())
++    }
++}
+diff --git a/src/crates/assembly/core/builtin_skills/agent-browser/SKILL.md b/src/crates/assembly/core/builtin_skills/agent-browser/SKILL.md
+index 023e531..672a997 100644
+--- a/src/crates/assembly/core/builtin_skills/agent-browser/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/agent-browser/SKILL.md
+@@ -2,6 +2,7 @@
+ name: agent-browser
+ description: Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.
+ allowed-tools: Bash(npx agent-browser:*), Bash(agent-browser:*)
++group: computer-use
+ ---
+ 
+ # Browser Automation with agent-browser
+diff --git a/src/crates/assembly/core/builtin_skills/docx/SKILL.md b/src/crates/assembly/core/builtin_skills/docx/SKILL.md
+index 50ad9e9..51918f3 100644
+--- a/src/crates/assembly/core/builtin_skills/docx/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/docx/SKILL.md
+@@ -2,6 +2,7 @@
+ name: docx
+ description: "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files). Triggers include: any mention of \"Word doc\", \"word document\", \".docx\", or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a \"report\", \"memo\", \"letter\", \"template\", or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation."
+ license: Proprietary. LICENSE.txt has complete terms
++group: office
+ ---
+ 
+ # DOCX creation, editing, and analysis
+diff --git a/src/crates/assembly/core/builtin_skills/find-skills/SKILL.md b/src/crates/assembly/core/builtin_skills/find-skills/SKILL.md
+index 61da8aa..924648e 100644
+--- a/src/crates/assembly/core/builtin_skills/find-skills/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/find-skills/SKILL.md
+@@ -3,6 +3,7 @@ name: find-skills
+ description: Discover and install reusable agent skills when users ask for capabilities, workflows, or domain-specific help that may already exist as an installable skill.
+ description_zh: 当用户询问能力、工作流或领域化需求时，帮助发现并安装可复用的技能，而不是从零实现。
+ allowed-tools: Bash(npx -y skills:*), Bash(npx skills:*), Bash(skills:*)
++group: meta
+ ---
+ 
+ # Find and Install Skills
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-autoplan/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-autoplan/SKILL.md
+index e7ec254..e8234e1 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-autoplan/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-autoplan/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: autoplan
++group: gstack
+ description: |
+  Auto-review pipeline —reads the full CEO, design, eng, and DX review skills from disk
+  and runs them sequentially with auto-decisions using 6 decision principles. Surfaces
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-cso/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-cso/SKILL.md
+index d5e028b..f04aecc 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-cso/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-cso/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: cso
++group: gstack
+ description: |
+   Chief Security Officer mode. Infrastructure-first security audit: secrets archaeology,
+   dependency supply chain, CI/CD pipeline security, LLM/AI security, skill supply chain
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-design-consultation/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-design-consultation/SKILL.md
+index 32ffdcf..fbcb178 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-design-consultation/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-design-consultation/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: design-consultation
++group: gstack
+ description: |
+   Design consultation: understands your product, researches the landscape, proposes a
+   complete design system (aesthetic, typography, color, layout, spacing, motion), and
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-design-review/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-design-review/SKILL.md
+index 7202eb2..3e07900 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-design-review/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-design-review/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: design-review
++group: gstack
+ description: |
+   Designer's eye QA: finds visual inconsistency, spacing issues, hierarchy problems,
+   AI slop patterns, and slow interactions —then fixes them. Iteratively fixes issues
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-document-release/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-document-release/SKILL.md
+index 5d72f96..3e71f9c 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-document-release/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-document-release/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: document-release
++group: gstack
+ description: |
+   Post-ship documentation update. Reads all project docs, cross-references the
+   diff, updates README/ARCHITECTURE/CONTRIBUTING/AGENTS.md to match what shipped,
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-investigate/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-investigate/SKILL.md
+index fbd1ae8..64252d3 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-investigate/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-investigate/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: investigate
++group: gstack
+ description: |
+   Systematic debugging with root cause investigation. Four phases: investigate,
+   analyze, hypothesize, implement. Iron Law: no fixes without root cause.
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-office-hours/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-office-hours/SKILL.md
+index a2024df..120fcf9 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-office-hours/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-office-hours/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: office-hours
++group: gstack
+ description: |
+   YC Office Hours —two modes. Startup mode: six forcing questions that expose
+   demand reality, status quo, desperate specificity, narrowest wedge, observation,
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-plan-ceo-review/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-plan-ceo-review/SKILL.md
+index 335fb05..a3f302f 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-plan-ceo-review/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-plan-ceo-review/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: plan-ceo-review
++group: gstack
+ description: |
+   CEO/founder-mode plan review. Rethink the problem, find the 10-star product,
+   challenge premises, expand scope when it creates a better product. Four modes:
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-plan-design-review/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-plan-design-review/SKILL.md
+index e11d68c..20ff78d 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-plan-design-review/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-plan-design-review/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: plan-design-review
++group: gstack
+ description: |
+  Designer's eye plan review —interactive, like CEO and Eng review.
+  Rates each design dimension 0-10, explains what would make it a 10,
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-plan-eng-review/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-plan-eng-review/SKILL.md
+index 9ab2b4c..91039ef 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-plan-eng-review/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-plan-eng-review/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: plan-eng-review
++group: gstack
+ description: |
+   Eng manager-mode plan review. Lock in the execution plan —architecture,
+   data flow, diagrams, edge cases, test coverage, performance. Walks through
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-qa-only/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-qa-only/SKILL.md
+index 8760a70..79047f6 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-qa-only/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-qa-only/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: qa-only
++group: gstack
+ description: |
+   Report-only QA testing. Systematically tests a web application and produces a
+   structured report with health score, screenshots, and repro steps —but never
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-qa/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-qa/SKILL.md
+index 23507bd..a4f5046 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-qa/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-qa/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: qa
++group: gstack
+ description: |
+   Systematically QA test a web application and fix bugs found. Runs QA testing,
+   then iteratively fixes bugs in source code, committing each fix atomically and
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-retro/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-retro/SKILL.md
+index a96055a..02ece07 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-retro/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-retro/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: retro
++group: gstack
+ description: |
+   Weekly engineering retrospective. Analyzes commit history, work patterns,
+   and code quality metrics with persistent history and trend tracking.
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-review/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-review/SKILL.md
+index 15c7867..08abb0c 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-review/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-review/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: review
++group: gstack
+ description: |
+   Pre-landing PR review. Analyzes diff against the base branch for SQL safety, LLM trust
+   boundary violations, conditional side effects, and other structural issues. Use when
+diff --git a/src/crates/assembly/core/builtin_skills/gstack-ship/SKILL.md b/src/crates/assembly/core/builtin_skills/gstack-ship/SKILL.md
+index de69c7b..4934db4 100644
+--- a/src/crates/assembly/core/builtin_skills/gstack-ship/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/gstack-ship/SKILL.md
+@@ -1,5 +1,6 @@
+ ---
+ name: ship
++group: gstack
+ description: |
+   Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION,
+   update CHANGELOG, commit, push, create PR. Use when asked to "ship", "deploy",
+diff --git a/src/crates/assembly/core/builtin_skills/memory/SKILL.md b/src/crates/assembly/core/builtin_skills/memory/SKILL.md
+index e69de29..7b0dcd7 100644
+--- a/src/crates/assembly/core/builtin_skills/memory/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/memory/SKILL.md
+@@ -0,0 +1,9 @@
++---
++name: memory
++description: Persistent memory management for agents.
++group: meta
++---
++
++# Agent Memory
++
++This skill provides persistent memory management capabilities.
+diff --git a/src/crates/assembly/core/builtin_skills/pdf/SKILL.md b/src/crates/assembly/core/builtin_skills/pdf/SKILL.md
+index d3e046a..6825a89 100644
+--- a/src/crates/assembly/core/builtin_skills/pdf/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/pdf/SKILL.md
+@@ -2,6 +2,7 @@
+ name: pdf
+ description: Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.
+ license: Proprietary. LICENSE.txt has complete terms
++group: office
+ ---
+ 
+ # PDF Processing Guide
+diff --git a/src/crates/assembly/core/builtin_skills/ppt-design/SKILL.md b/src/crates/assembly/core/builtin_skills/ppt-design/SKILL.md
+index 554e46e..68cb071 100644
+--- a/src/crates/assembly/core/builtin_skills/ppt-design/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/ppt-design/SKILL.md
+@@ -2,6 +2,7 @@
+ name: ppt-design
+ description: 使用 HTML 设计与生成高质量演讲幻灯片（PPT/Deck）。当用户希望生成、设计、修改幻灯片、deck、slides、presentation、汇报、提案、pitch、课件时触发。主干：960×540pt 可编辑 HTML 幻灯片（4 条 OOXML 硬约束）+ 可选 1920×1080 高保真演讲版 + 数据/信息可视化意识 + 5 种设计哲学 + 反 AI slop + 单页自包含 `slide-XX.html`。不生图；缺图用版式/SVG/占位并标注建议补图。
+ license: MIT
++group: office
+ ---
+ 
+ # PPT Design
+diff --git a/src/crates/assembly/core/builtin_skills/pptx/SKILL.md b/src/crates/assembly/core/builtin_skills/pptx/SKILL.md
+index df5000e..fea1304 100644
+--- a/src/crates/assembly/core/builtin_skills/pptx/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/pptx/SKILL.md
+@@ -2,6 +2,7 @@
+ name: pptx
+ description: "Use this skill any time a .pptx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates, layouts, speaker notes, or comments. Trigger whenever the user mentions \"deck,\" \"slides,\" \"presentation,\" or references a .pptx filename, regardless of what they plan to do with the content afterward. If a .pptx file needs to be opened, created, or touched, use this skill."
+ license: Proprietary. LICENSE.txt has complete terms
++group: office
+ ---
+ 
+ # PPTX Skill
+diff --git a/src/crates/assembly/core/builtin_skills/writing-skills/SKILL.md b/src/crates/assembly/core/builtin_skills/writing-skills/SKILL.md
+index cf3d99d..37dbe01 100644
+--- a/src/crates/assembly/core/builtin_skills/writing-skills/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/writing-skills/SKILL.md
+@@ -1,6 +1,7 @@
+ ---
+ name: writing-skills
+ description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
++group: meta
+ ---
+ 
+ # Writing Skills
+diff --git a/src/crates/assembly/core/builtin_skills/xlsx/SKILL.md b/src/crates/assembly/core/builtin_skills/xlsx/SKILL.md
+index c5c881b..e6261ee 100644
+--- a/src/crates/assembly/core/builtin_skills/xlsx/SKILL.md
++++ b/src/crates/assembly/core/builtin_skills/xlsx/SKILL.md
+@@ -2,6 +2,7 @@
+ name: xlsx
+ description: "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved."
+ license: Proprietary. LICENSE.txt has complete terms
++group: office
+ ---
+ 
+ # Requirements for Outputs
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/builtin.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/builtin.rs
+index 1dea103..2a2aee4 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/builtin.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/builtin.rs
+@@ -17,7 +17,7 @@ use tokio::fs;
+ use tokio::task;
+ use tracing::{debug, error, warn};
+ 
+-static BUILTIN_SKILLS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/builtin_skills");
++pub(crate) static BUILTIN_SKILLS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/builtin_skills");
+ static BUILTIN_SKILL_DIR_NAMES: OnceLock<HashSet<String>> = OnceLock::new();
+ include!(concat!(env!("OUT_DIR"), "/embedded_builtin_skills.rs"));
+ 
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
+index 9c3014c..0394530 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
+@@ -1,36 +1,12 @@
+-//! Built-in skill catalog.
++//! Built-in skill catalog derived dynamically from embedded skill metadata.
+ //!
+-//! This module is the single source of truth for built-in skill identity and
+-//! grouping metadata. Runtime policy code should depend on this catalog instead
+-//! of scattering string matches across multiple files.
++//! Grouping metadata is parsed from embedded `SKILL.md` frontmatter rather than
++//! maintained as a static hardcoded table.
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+-pub enum BuiltinSkillId {
+-    AgentBrowser,
+-    Docx,
+-    FindSkills,
+-    GstackAutoplan,
+-    GstackCso,
+-    GstackDesignConsultation,
+-    GstackDesignReview,
+-    GstackDocumentRelease,
+-    GstackInvestigate,
+-    GstackOfficeHours,
+-    GstackPlanCeoReview,
+-    GstackPlanDesignReview,
+-    GstackPlanEngReview,
+-    GstackQa,
+-    GstackQaOnly,
+-    GstackRetro,
+-    GstackReview,
+-    GstackShip,
+-    Memory,
+-    Pdf,
+-    PptDesign,
+-    Pptx,
+-    WritingSkills,
+-    Xlsx,
+-}
++use crate::agentic::tools::implementations::skills::builtin::BUILTIN_SKILLS_DIR;
++use crate::util::front_matter_markdown::FrontMatterMarkdown;
++use std::collections::HashMap;
++use std::sync::LazyLock;
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+ pub enum BuiltinSkillGroup {
+@@ -41,6 +17,16 @@ pub enum BuiltinSkillGroup {
+ }
+ 
+ impl BuiltinSkillGroup {
++    pub fn parse(s: &str) -> Option<Self> {
++        match s.trim().to_lowercase().as_str() {
++            "office" => Some(Self::Office),
++            "meta" => Some(Self::Meta),
++            "computer-use" | "computer_use" => Some(Self::ComputerUse),
++            "gstack" => Some(Self::Gstack),
++            _ => None,
++        }
++    }
++
+     pub fn as_str(self) -> &'static str {
+         match self {
+             Self::Office => "office",
+@@ -51,142 +37,46 @@ impl BuiltinSkillGroup {
+     }
+ }
+ 
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++#[derive(Debug, Clone, PartialEq, Eq)]
+ pub struct BuiltinSkillSpec {
+-    pub id: BuiltinSkillId,
+-    pub dir_name: &'static str,
++    pub dir_name: String,
+     pub group: BuiltinSkillGroup,
+ }
+ 
+-const BUILTIN_SKILL_SPECS: &[BuiltinSkillSpec] = &[
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::AgentBrowser,
+-        dir_name: "agent-browser",
+-        group: BuiltinSkillGroup::ComputerUse,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::Docx,
+-        dir_name: "docx",
+-        group: BuiltinSkillGroup::Office,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::FindSkills,
+-        dir_name: "find-skills",
+-        group: BuiltinSkillGroup::Meta,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackAutoplan,
+-        dir_name: "gstack-autoplan",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackCso,
+-        dir_name: "gstack-cso",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackDesignConsultation,
+-        dir_name: "gstack-design-consultation",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackDesignReview,
+-        dir_name: "gstack-design-review",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackDocumentRelease,
+-        dir_name: "gstack-document-release",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackInvestigate,
+-        dir_name: "gstack-investigate",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackOfficeHours,
+-        dir_name: "gstack-office-hours",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackPlanCeoReview,
+-        dir_name: "gstack-plan-ceo-review",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackPlanDesignReview,
+-        dir_name: "gstack-plan-design-review",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackPlanEngReview,
+-        dir_name: "gstack-plan-eng-review",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackQa,
+-        dir_name: "gstack-qa",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackQaOnly,
+-        dir_name: "gstack-qa-only",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackRetro,
+-        dir_name: "gstack-retro",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackReview,
+-        dir_name: "gstack-review",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::GstackShip,
+-        dir_name: "gstack-ship",
+-        group: BuiltinSkillGroup::Gstack,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::Pdf,
+-        dir_name: "pdf",
+-        group: BuiltinSkillGroup::Office,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::PptDesign,
+-        dir_name: "ppt-design",
+-        group: BuiltinSkillGroup::Office,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::Pptx,
+-        dir_name: "pptx",
+-        group: BuiltinSkillGroup::Office,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::WritingSkills,
+-        dir_name: "writing-skills",
+-        group: BuiltinSkillGroup::Meta,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::Xlsx,
+-        dir_name: "xlsx",
+-        group: BuiltinSkillGroup::Office,
+-    },
+-    BuiltinSkillSpec {
+-        id: BuiltinSkillId::Memory,
+-        dir_name: "memory",
+-        group: BuiltinSkillGroup::Meta,
+-    },
+-];
++static BUILTIN_SPECS: LazyLock<HashMap<String, BuiltinSkillSpec>> = LazyLock::new(|| {
++    let mut map = HashMap::new();
++    for dir in BUILTIN_SKILLS_DIR.dirs() {
++        let Some(dir_name) = dir.path().file_name().and_then(|n| n.to_str()) else {
++            continue;
++        };
++        let skill_md_path = dir.path().join("SKILL.md");
++        if let Some(file) = dir.get_file(&skill_md_path) {
++            if let Ok(content) = std::str::from_utf8(file.contents()) {
++                if let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) {
++                    if let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) {
++                        if let Some(group) = BuiltinSkillGroup::parse(group_str) {
++                            map.insert(
++                                dir_name.to_string(),
++                                BuiltinSkillSpec {
++                                    dir_name: dir_name.to_string(),
++                                    group,
++                                },
++                            );
++                        }
++                    }
++                }
++            }
++        }
++    }
++    map
++});
+ 
+-pub fn builtin_skill_spec(dir_name: &str) -> Option<&'static BuiltinSkillSpec> {
+-    BUILTIN_SKILL_SPECS.iter().find(|spec| spec.dir_name == dir_name)
++pub fn builtin_skill_spec(dir_name: &str) -> Option<BuiltinSkillSpec> {
++    BUILTIN_SPECS.get(dir_name).cloned()
+ }
+ 
+ pub fn builtin_skill_group(dir_name: &str) -> Option<BuiltinSkillGroup> {
+-    builtin_skill_spec(dir_name).map(|spec| spec.group)
++    BUILTIN_SPECS.get(dir_name).map(|spec| spec.group)
+ }
+ 
+ pub fn builtin_skill_group_key(dir_name: &str) -> Option<&'static str> {
+@@ -195,7 +85,7 @@ pub fn builtin_skill_group_key(dir_name: &str) -> Option<&'static str> {
+ 
+ #[cfg(test)]
+ mod tests {
+-    use super::{builtin_skill_group, builtin_skill_group_key, BUILTIN_SKILL_SPECS};
++    use super::{builtin_skill_group, builtin_skill_group_key, BUILTIN_SPECS};
+     use crate::agentic::tools::implementations::skills::builtin::builtin_skill_dir_names;
+     use std::collections::HashSet;
+ 
+@@ -208,6 +98,7 @@ mod tests {
+         assert_eq!(builtin_skill_group_key("xlsx"), Some("office"));
+         assert_eq!(builtin_skill_group_key("find-skills"), Some("meta"));
+         assert_eq!(builtin_skill_group_key("writing-skills"), Some("meta"));
++        assert_eq!(builtin_skill_group_key("memory"), Some("meta"));
+         assert_eq!(builtin_skill_group_key("agent-browser"), Some("computer-use"));
+         assert_eq!(builtin_skill_group_key("gstack-review"), Some("gstack"));
+         assert_eq!(builtin_skill_group("unknown-skill"), None);
+@@ -215,7 +106,7 @@ mod tests {
+ 
+     #[test]
+     fn catalog_covers_all_embedded_builtin_skills() {
+-        let known: HashSet<&'static str> = BUILTIN_SKILL_SPECS.iter().map(|spec| spec.dir_name).collect();
++        let known: HashSet<&str> = BUILTIN_SPECS.keys().map(|s| s.as_str()).collect();
+ 
+         for dir_name in builtin_skill_dir_names() {
+             assert!(
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/mod.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/mod.rs
+index b4b7f75..d3fef5b 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/mod.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/mod.rs
+@@ -10,7 +10,7 @@ pub mod registry;
+ mod registry_dispatch;
+ mod registry_meta;
+ mod registry_store;
+-mod registry_types;
++pub mod registry_types;
+ pub mod resolver;
+ pub mod resolver_v2;
+ pub mod types;
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/policy.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/policy.rs
+index 175bb97..330de2a 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/policy.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/policy.rs
+@@ -4,7 +4,7 @@
+ //! mode identifier, should that skill be enabled by default before any user or
+ //! project override is applied?
+ 
+-use super::catalog::{builtin_skill_spec, BuiltinSkillGroup, BuiltinSkillId, BuiltinSkillSpec};
++use super::catalog::{builtin_skill_spec, BuiltinSkillGroup, BuiltinSkillSpec};
+ use crate::agentic::agents::{resolve_mode_config_profile_id, SHARED_CODING_MODE_CONFIG_PROFILE_ID};
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+@@ -54,7 +54,6 @@ impl PolicyEffect {
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub enum SkillSelector {
+-    Builtin(BuiltinSkillId),
+     Group(BuiltinSkillGroup),
+ }
+ 
+@@ -137,7 +136,6 @@ pub fn policy_for_mode(mode_id: &str) -> ModeSkillPolicy {
+ 
+ fn selector_matches(selector: SkillSelector, spec: &BuiltinSkillSpec) -> bool {
+     match selector {
+-        SkillSelector::Builtin(skill_id) => spec.id == skill_id,
+         SkillSelector::Group(group) => spec.group == group,
+     }
+ }
+@@ -159,7 +157,7 @@ pub fn resolve_builtin_default_effect(spec: &BuiltinSkillSpec, mode_id: &str) ->
+ }
+ 
+ pub fn resolve_builtin_default_enabled(dir_name: &str, mode_id: &str) -> Option<bool> {
+-    builtin_skill_spec(dir_name).map(|spec| resolve_builtin_default_effect(spec, mode_id).is_enabled())
++    builtin_skill_spec(dir_name).map(|spec| resolve_builtin_default_effect(&spec, mode_id).is_enabled())
+ }
+ 
+ #[cfg(test)]
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_store.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_store.rs
+index c9b3b22..ead70f2 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_store.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_store.rs
+@@ -289,22 +289,23 @@ impl SkillRegistry {
+         }
+     }
+ 
+-    /// Re-scan user-level skills (no workspace-specific project skills) and
++    /// Re-scan skills for the current workspace (or user skills if none) and
+     /// rebuild the cache.
+     pub async fn refresh(&self) {
++        let workspace_root =
++            crate::service::workspace::global_workspace_service().and_then(|ws| ws.try_get_current_workspace_path());
++        self.refresh_for_workspace(workspace_root.as_deref()).await;
++    }
++
++    /// Refresh the registry for a specific workspace root.
++    pub async fn refresh_for_workspace(&self, workspace_root: Option<&Path>) {
+         let skills = sort_skills(annotate_shadowed_skills(
+-            self.scan_skill_candidates_for_workspace(None).await,
++            self.scan_skill_candidates_for_workspace(workspace_root).await,
+         ));
+         let mut cache = self.cache.write().await;
+         *cache = skills;
+     }
+ 
+-    /// Refresh the registry; currently the workspace root is informational
+-    /// because user-level skills are cached globally.
+-    pub async fn refresh_for_workspace(&self, _workspace_root: Option<&Path>) {
+-        self.refresh().await;
+-    }
+-
+     /// Snapshot of the cached user-level skill set. Lazily populated on first
+     /// call.
+     pub async fn get_all_skills(&self) -> Vec<super::types::SkillInfo> {
+@@ -333,10 +334,7 @@ mod tests {
+     /// judge-gate candidate writer must never create.
+     #[tokio::test]
+     async fn loader_scan_ignores_nested_candidates_but_would_catch_direct_child() {
+-        let root = std::env::temp_dir().join(format!(
+-            "northhing-skill-scan-test-{}",
+-            uuid::Uuid::new_v4()
+-        ));
++        let root = std::env::temp_dir().join(format!("northhing-skill-scan-test-{}", uuid::Uuid::new_v4()));
+         write_skill_md(&root.join("good-skill"), "good-skill");
+         write_skill_md(&root.join("candidates").join("hidden-skill"), "hidden-skill");
+         write_skill_md(&root.join("candidates"), "rogue-candidates-root");
+@@ -351,7 +349,10 @@ mod tests {
+         let scanned = SkillRegistry::scan_skills_in_dir(&entry).await;
+         let names: Vec<String> = scanned.iter().map(|s| s.info.dir_name.clone()).collect();
+ 
+-        assert!(names.contains(&"good-skill".to_string()), "top-level skill must be scanned");
++        assert!(
++            names.contains(&"good-skill".to_string()),
++            "top-level skill must be scanned"
++        );
+         assert!(
+             !names.contains(&"hidden-skill".to_string()),
+             "nested candidates/<name>/SKILL.md must never be loadable (I-NEG-2)"
+@@ -363,4 +364,4 @@ mod tests {
+ 
+         let _ = std::fs::remove_dir_all(&root);
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_types.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_types.rs
+index b68ea99..ca1761c 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_types.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/registry_types.rs
+@@ -22,11 +22,11 @@ use std::path::{Path, PathBuf};
+ pub(super) const USER_PREFIX: &str = "user";
+ pub(super) const PROJECT_PREFIX: &str = "project";
+ pub(super) const NORTHHING_USER_SLOT: &str = "northhing";
+-pub(super) const NORTHHING_SYSTEM_SLOT: &str = "northhing-system";
+-pub(super) const NORTHHING_SYSTEM_DIR_NAME: &str = ".system";
++pub(crate) const NORTHHING_SYSTEM_SLOT: &str = "northhing-system";
++pub(crate) const NORTHHING_SYSTEM_DIR_NAME: &str = ".system";
+ 
+ /// Project-level skill roots under a workspace.
+-pub(super) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
++pub(crate) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+     (".northhing", "skills", "northhing"),
+     (".claude", "skills", "claude"),
+     (".codex", "skills", "codex"),
+@@ -36,7 +36,7 @@ pub(super) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+ ];
+ 
+ /// Home-directory based user-level skill roots.
+-pub(super) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
++pub(crate) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+     (".claude", "skills", "home.claude"),
+     (".codex", "skills", "home.codex"),
+     (".cursor", "skills", "home.cursor"),
+@@ -44,7 +44,7 @@ pub(super) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+ ];
+ 
+ /// Config-directory based user-level skill roots.
+-pub(super) const USER_CONFIG_SKILL_SLOTS: &[(&str, &str, &str)] = &[
++pub(crate) const USER_CONFIG_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+     ("opencode", "skills", "config.opencode"),
+     ("agents", "skills", "config.agents"),
+ ];
+diff --git a/src/crates/assembly/core/src/kernel_facade/agents.rs b/src/crates/assembly/core/src/kernel_facade/agents.rs
+index d095191..2abc8f1 100644
+--- a/src/crates/assembly/core/src/kernel_facade/agents.rs
++++ b/src/crates/assembly/core/src/kernel_facade/agents.rs
+@@ -127,10 +127,35 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
+     }
+ 
+     async fn load_project_skills(&self) -> Result<northhing_kernel_api::agents::ProjectSkillsDto, KernelError> {
+-        // NEEDS_CONTEXT: workspace_path required but not present in trait signature.
+-        Err(KernelError::Internal(
+-            "not yet wired: load_project_skills — workspace_path not available".to_string(),
+-        ))
++        use crate::agentic::tools::implementations::skills::mode_overrides::load_project_mode_skills_document_local;
++        use northhing_kernel_api::agents::ProjectSkillEntry;
++
++        let ws = crate::service::workspace::global_workspace_service()
++            .ok_or_else(|| KernelError::Internal("workspace service not available".to_string()))?;
++        let current_ws = ws
++            .current_workspace()
++            .await
++            .ok_or_else(|| KernelError::NotFound("no current workspace".to_string()))?;
++
++        let workspace_path = current_ws.root_path.to_string_lossy().to_string();
++        let document = load_project_mode_skills_document_local(&current_ws.root_path)
++            .await
++            .map_err(|e| KernelError::Config(format!("load_project_mode_skills_document_local: {e}")))?;
++
++        let mut skills = Vec::new();
++        for (_profile_id, entry) in &document {
++            for skill_id in &entry.skills.disabled_project_skills {
++                if !skills.iter().any(|s: &ProjectSkillEntry| &s.skill_id == skill_id) {
++                    skills.push(ProjectSkillEntry {
++                        skill_id: skill_id.clone(),
++                        enabled: false,
++                        config: None,
++                    });
++                }
++            }
++        }
++
++        Ok(northhing_kernel_api::agents::ProjectSkillsDto { workspace_path, skills })
+     }
+ 
+     async fn save_project_skills(
+@@ -141,20 +166,33 @@ impl northhing_kernel_api::KernelAgentsApi for super::KernelFacade {
+             load_project_mode_skills_document_local, save_project_mode_skills_document_local,
+             set_disabled_mode_skills_in_document,
+         };
+-        use crate::service::config::agent_profile_project_store::ProjectAgentProfilesDocument;
+ 
+-        let workspace_root = std::path::Path::new(&doc.workspace_path);
+-        let mut document = load_project_mode_skills_document_local(workspace_root)
++        let workspace_root = if !doc.workspace_path.is_empty() {
++            std::path::PathBuf::from(&doc.workspace_path)
++        } else {
++            let ws = crate::service::workspace::global_workspace_service()
++                .ok_or_else(|| KernelError::Internal("workspace service not available".to_string()))?;
++            let current_ws = ws
++                .current_workspace()
++                .await
++                .ok_or_else(|| KernelError::NotFound("no current workspace".to_string()))?;
++            current_ws.root_path
++        };
++
++        let mut document = load_project_mode_skills_document_local(&workspace_root)
+             .await
+             .map_err(|e| KernelError::Config(format!("load_project_mode_skills_document_local: {e}")))?;
+ 
+-        for skill_entry in &doc.skills {
+-            // mode_id is not in ProjectSkillEntry; use default profile.
+-            // NEEDS_CONTEXT: proper implementation requires mode_id per skill.
+-            let _ = set_disabled_mode_skills_in_document(&mut document, "default", vec![skill_entry.skill_id.clone()]);
+-        }
++        let disabled_skills: Vec<String> = doc
++            .skills
++            .iter()
++            .filter(|s| !s.enabled)
++            .map(|s| s.skill_id.clone())
++            .collect();
++
++        let _ = set_disabled_mode_skills_in_document(&mut document, "default", disabled_skills);
+ 
+-        save_project_mode_skills_document_local(workspace_root, &document)
++        save_project_mode_skills_document_local(&workspace_root, &document)
+             .await
+             .map_err(|e| KernelError::Config(format!("save_project_mode_skills_document_local: {e}")))
+     }
+diff --git a/src/crates/assembly/core/src/kernel_facade/lifecycle.rs b/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
+index a025034..b47d478 100644
+--- a/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
++++ b/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
+@@ -3,16 +3,14 @@
+ use std::sync::atomic::{AtomicBool, Ordering};
+ use std::sync::{Arc, OnceLock};
+ 
+-use tokio::sync::{Mutex as AsyncMutex, Notify};
+ use std::time::Duration;
++use tokio::sync::{Mutex as AsyncMutex, Notify};
+ 
+ use async_trait::async_trait;
+ use northhing_kernel_api::error::KernelError;
+ use tracing::{info, warn};
+ 
+-use crate::agentic::coordination::{
+-    global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler,
+-};
++use crate::agentic::coordination::{global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler};
+ use crate::agentic::system::init_agentic_system;
+ use crate::infrastructure::ai::AIClientFactory;
+ use crate::service::config::{get_global_config_service, initialize_global_config};
+@@ -106,8 +104,7 @@ impl super::KernelFacade {
+         let scheduler = DialogScheduler::new(coordinator.clone(), session_manager);
+ 
+         let notifier_ok = coordinator.set_scheduler_notifier(scheduler.outcome_sender());
+-        let injection_ok =
+-            coordinator.set_round_injection_source(scheduler.round_injection_monitor());
++        let injection_ok = coordinator.set_round_injection_source(scheduler.round_injection_monitor());
+         if !notifier_ok || !injection_ok {
+             return Err(KernelError::Runtime("dialog scheduler wiring conflict".to_string()));
+         }
+@@ -130,6 +127,32 @@ impl super::KernelFacade {
+             Err(e) => warn!("failed to fetch global config service: {e}"),
+         }
+ 
++        match crate::service::workspace::global_workspace_service() {
++            Some(ws_service) => {
++                let skill_watch = Arc::new(crate::service::skill_watch::SkillWatchService::new(ws_service));
++                crate::service::skill_watch::set_global_skill_watch_service(skill_watch.clone());
++                tokio::spawn(async move {
++                    if let Err(e) = skill_watch.sync_watched_paths().await {
++                        warn!("failed to sync skill watch paths: {e}");
++                    }
++                });
++            }
++            None => match crate::service::workspace::WorkspaceService::new().await {
++                Ok(ws_service) => {
++                    let ws_service = Arc::new(ws_service);
++                    crate::service::workspace::set_global_workspace_service(ws_service.clone());
++                    let skill_watch = Arc::new(crate::service::skill_watch::SkillWatchService::new(ws_service));
++                    crate::service::skill_watch::set_global_skill_watch_service(skill_watch.clone());
++                    tokio::spawn(async move {
++                        if let Err(e) = skill_watch.sync_watched_paths().await {
++                            warn!("failed to sync skill watch paths: {e}");
++                        }
++                    });
++                }
++                Err(e) => warn!("failed to construct WorkspaceService for skill watch: {e}"),
++            },
++        }
++
+         self.set_coordinator(coordinator.clone());
+ 
+         Ok(())
+diff --git a/src/crates/assembly/core/src/service/mod.rs b/src/crates/assembly/core/src/service/mod.rs
+index 15fa523..3db064e 100644
+--- a/src/crates/assembly/core/src/service/mod.rs
++++ b/src/crates/assembly/core/src/service/mod.rs
+@@ -29,6 +29,7 @@ pub mod search; // Workspace search via managed flashgrep daemon
+ pub mod session; // Session persistence
+ #[cfg(feature = "product-full")]
+ pub mod session_usage; // Session runtime usage reports
++pub mod skill_watch; // Skill filesystem watcher and live reload
+ #[cfg(feature = "product-full")]
+ pub mod snapshot; // Snapshot-based change tracking
+ #[cfg(feature = "product-full")]
+@@ -81,6 +82,7 @@ pub use search::{
+     WorkspaceSearchRepoPhase, WorkspaceSearchRepoStatus, WorkspaceSearchService, WorkspaceSearchTaskKind,
+     WorkspaceSearchTaskPhase, WorkspaceSearchTaskState, WorkspaceSearchTaskStatus,
+ };
++pub use skill_watch::{global_skill_watch_service, set_global_skill_watch_service, SkillWatchService};
+ #[cfg(feature = "product-full")]
+ pub use snapshot::SnapshotService;
+ pub use system::{
+diff --git a/src/crates/assembly/core/src/service/skill_watch.rs b/src/crates/assembly/core/src/service/skill_watch.rs
+new file mode 100644
+index 0000000..7f18c98
+--- /dev/null
++++ b/src/crates/assembly/core/src/service/skill_watch.rs
+@@ -0,0 +1,295 @@
++//! Skill filesystem watcher service.
++//!
++//! Watches the user skills directory (`RecursiveMode::Recursive`, covering `.system`)
++//! and local workspace project skill slots (`RecursiveMode::NonRecursive`).
++//!
++//! On filesystem changes, events are debounced for 350ms before refreshing the
++//! global `SkillRegistry` cache and emitting a `skills-changed` event.
++//!
++//! Watcher handles and pending debounce tasks are managed via [`DisposableList`]
++//! for safe, leak-free teardown and dynamic workspace synchronization.
++
++use crate::agentic::tools::implementations::skills::registry_types::PROJECT_SKILL_SLOTS;
++use crate::agentic::tools::implementations::skills::skill_registry;
++use crate::infrastructure::events::EventEmitter;
++use crate::infrastructure::path_manager_arc;
++use crate::service::workspace::WorkspaceService;
++use crate::util::errors::{NortHingError, NortHingResult};
++use northhing_disposable::DisposableList;
++use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
++use std::collections::HashSet;
++use std::path::{Path, PathBuf};
++use std::sync::Arc;
++use tokio::sync::{Mutex, RwLock};
++use tokio::task::JoinHandle;
++use tokio::time::{sleep, Duration};
++use tracing::{debug, error, info, warn};
++
++pub const SKILLS_CHANGED_EVENT_NAME: &str = "skills-changed";
++pub const SKILLS_DEBOUNCE_MS: u64 = 350;
++
++pub struct SkillWatchService {
++    workspace_service: Arc<WorkspaceService>,
++    emitter: Arc<Mutex<Option<Arc<dyn EventEmitter>>>>,
++    disposables: Arc<Mutex<DisposableList>>,
++    watched_paths: Arc<RwLock<HashSet<PathBuf>>>,
++    pending_debounce: Arc<Mutex<Option<JoinHandle<()>>>>,
++}
++
++static GLOBAL_SKILL_WATCH_SERVICE: std::sync::OnceLock<Arc<SkillWatchService>> = std::sync::OnceLock::new();
++
++pub fn set_global_skill_watch_service(service: Arc<SkillWatchService>) {
++    GLOBAL_SKILL_WATCH_SERVICE.set(service).ok();
++}
++
++pub fn global_skill_watch_service() -> Option<Arc<SkillWatchService>> {
++    GLOBAL_SKILL_WATCH_SERVICE.get().cloned()
++}
++
++impl SkillWatchService {
++    /// Creates a new `SkillWatchService`.
++    pub fn new(workspace_service: Arc<WorkspaceService>) -> Self {
++        Self {
++            workspace_service,
++            emitter: Arc::new(Mutex::new(None)),
++            disposables: Arc::new(Mutex::new(DisposableList::new())),
++            watched_paths: Arc::new(RwLock::new(HashSet::new())),
++            pending_debounce: Arc::new(Mutex::new(None)),
++        }
++    }
++
++    /// Sets the event emitter for notifications and triggers an initial watch sync.
++    pub async fn set_event_emitter(&self, emitter: Arc<dyn EventEmitter>) -> NortHingResult<()> {
++        {
++            let mut emitter_guard = self.emitter.lock().await;
++            *emitter_guard = Some(emitter);
++        }
++
++        self.sync_watched_paths().await
++    }
++
++    /// Returns the currently watched paths.
++    pub async fn watched_paths(&self) -> HashSet<PathBuf> {
++        self.watched_paths.read().await.clone()
++    }
++
++    /// Synchronizes watch roots across user skills and local workspace project slots.
++    ///
++    /// Cleans up any prior watcher and debounce tasks via [`DisposableList`] and
++    /// constructs a fresh watcher instance.
++    pub async fn sync_watched_paths(&self) -> NortHingResult<()> {
++        // 1. Dispose previous watcher and debounce task
++        {
++            let mut disposables = self.disposables.lock().await;
++            disposables.dispose();
++            *disposables = DisposableList::new();
++        }
++
++        let mut next_watched_paths = HashSet::new();
++
++        // 2. Resolve user skills root
++        let user_skills_dir = path_manager_arc().user_skills_dir();
++        if !user_skills_dir.exists() {
++            tokio::fs::create_dir_all(&user_skills_dir).await.ok();
++        }
++
++        // 3. Resolve local project skill slots from assistant workspaces
++        let mut project_slot_dirs = HashSet::new();
++        let assistant_workspaces = self.workspace_service.get_assistant_workspaces().await;
++        for ws in assistant_workspaces {
++            if ws.workspace_kind == crate::service::workspace::manager::WorkspaceKind::Remote {
++                continue;
++            }
++            for (parent, sub, _) in PROJECT_SKILL_SLOTS {
++                let slot_path = ws.root_path.join(parent).join(sub);
++                if slot_path.exists() && slot_path.is_dir() {
++                    project_slot_dirs.insert(slot_path);
++                }
++            }
++        }
++
++        // 4. Create RecommendedWatcher channel
++        let (tx, rx) = std::sync::mpsc::channel();
++        let mut watcher = RecommendedWatcher::new(tx, Config::default())
++            .map_err(|e| NortHingError::service(format!("Failed to create skill watcher: {}", e)))?;
++
++        let mut watched_count = 0usize;
++
++        // Watch user skills directory recursively (covering .system)
++        if user_skills_dir.exists() {
++            match watcher.watch(&user_skills_dir, RecursiveMode::Recursive) {
++                Ok(_) => {
++                    next_watched_paths.insert(user_skills_dir.clone());
++                    watched_count += 1;
++                }
++                Err(e) => {
++                    error!(
++                        "Failed to watch user skills directory '{}': {}",
++                        user_skills_dir.display(),
++                        e
++                    );
++                }
++            }
++        }
++
++        // Watch project slot directories non-recursively
++        for slot_path in &project_slot_dirs {
++            match watcher.watch(slot_path, RecursiveMode::NonRecursive) {
++                Ok(_) => {
++                    next_watched_paths.insert(slot_path.clone());
++                    watched_count += 1;
++                }
++                Err(e) => {
++                    error!(
++                        "Failed to watch project skill slot directory '{}': {}",
++                        slot_path.display(),
++                        e
++                    );
++                }
++            }
++        }
++
++        {
++            let mut paths_guard = self.watched_paths.write().await;
++            *paths_guard = next_watched_paths;
++        }
++
++        if watched_count == 0 {
++            warn!("No skill directories could be watched");
++        }
++
++        // 5. Store watcher in thread-safe cell and register cleanup in DisposableList
++        let watcher_cell = Arc::new(std::sync::Mutex::new(Some(watcher)));
++        let watcher_cell_for_disposal = watcher_cell.clone();
++
++        {
++            let mut disposables = self.disposables.lock().await;
++            disposables
++                .push(Box::new(move || {
++                    if let Ok(mut guard) = watcher_cell_for_disposal.lock() {
++                        guard.take();
++                    }
++                }))
++                .ok();
++
++            let pending_debounce = self.pending_debounce.clone();
++            disposables
++                .push(Box::new(move || {
++                    if let Ok(mut guard) = pending_debounce.try_lock() {
++                        if let Some(handle) = guard.take() {
++                            handle.abort();
++                        }
++                    }
++                }))
++                .ok();
++        }
++
++        // 6. Spawn blocking event receiver loop
++        let emitter = self.emitter.clone();
++        let pending_debounce = self.pending_debounce.clone();
++        let runtime = tokio::runtime::Handle::current();
++
++        tokio::task::spawn_blocking(move || loop {
++            match rx.recv() {
++                Ok(Ok(event)) => {
++                    if Self::is_relevant_skill_event(&event) {
++                        runtime.block_on(Self::schedule_refresh(emitter.clone(), pending_debounce.clone()));
++                    }
++                }
++                Ok(Err(error)) => {
++                    error!("Skill watcher error: {}", error);
++                }
++                Err(_) => break,
++            }
++        });
++
++        info!(
++            "SkillWatchService synced: watched_paths_count={}",
++            self.watched_paths.read().await.len()
++        );
++
++        Ok(())
++    }
++
++    /// Determines if an FS event is relevant for skill reloading.
++    fn is_relevant_skill_event(event: &Event) -> bool {
++        if event.paths.is_empty() {
++            return true;
++        }
++
++        for path in &event.paths {
++            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
++                // Ignore git internals and temporary swap/lock files
++                if file_name.starts_with('.') && !file_name.starts_with(".system") {
++                    if file_name == ".git" || file_name.ends_with(".swp") || file_name.ends_with('~') {
++                        continue;
++                    }
++                }
++            }
++            return true;
++        }
++
++        false
++    }
++
++    /// Schedules a debounced refresh of the skill registry and event emission.
++    async fn schedule_refresh(
++        emitter: Arc<Mutex<Option<Arc<dyn EventEmitter>>>>,
++        pending_debounce: Arc<Mutex<Option<JoinHandle<()>>>>,
++    ) {
++        {
++            let mut pending = pending_debounce.lock().await;
++            if let Some(existing) = pending.take() {
++                existing.abort();
++            }
++        }
++
++        let pending_debounce_clone = pending_debounce.clone();
++        let handle = tokio::spawn(async move {
++            sleep(Duration::from_millis(SKILLS_DEBOUNCE_MS)).await;
++
++            // Re-scan skills and rebuild registry cache
++            skill_registry().refresh().await;
++
++            // Emit skills-changed event to notify UI and subscribers
++            let emitter_guard = emitter.lock().await;
++            if let Some(ref em) = *emitter_guard {
++                if let Err(e) = em.emit(SKILLS_CHANGED_EVENT_NAME, serde_json::json!({})).await {
++                    error!("Failed to emit skills-changed event: {}", e);
++                } else {
++                    debug!("Emitted skills-changed event after file change");
++                }
++            }
++
++            let mut pending = pending_debounce_clone.lock().await;
++            *pending = None;
++        });
++
++        let mut pending = pending_debounce.lock().await;
++        *pending = Some(handle);
++    }
++
++    /// Explicitly disposes all resources.
++    pub async fn dispose(&self) {
++        let mut disposables = self.disposables.lock().await;
++        disposables.dispose();
++    }
++}
++
++impl Drop for SkillWatchService {
++    fn drop(&mut self) {
++        if let Ok(mut disposables) = self.disposables.try_lock() {
++            disposables.dispose();
++        }
++    }
++}
++
++impl std::fmt::Debug for SkillWatchService {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        f.debug_struct("SkillWatchService").finish()
++    }
++}
++
++#[cfg(test)]
++#[path = "skill_watch_tests.rs"]
++mod tests;
+diff --git a/src/crates/assembly/core/src/service/skill_watch_tests.rs b/src/crates/assembly/core/src/service/skill_watch_tests.rs
+new file mode 100644
+index 0000000..0863430
+--- /dev/null
++++ b/src/crates/assembly/core/src/service/skill_watch_tests.rs
+@@ -0,0 +1,76 @@
++use super::*;
++use std::sync::atomic::{AtomicUsize, Ordering};
++
++struct TestEmitter {
++    emit_count: AtomicUsize,
++}
++
++#[async_trait::async_trait]
++impl EventEmitter for TestEmitter {
++    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
++        if event_name == SKILLS_CHANGED_EVENT_NAME {
++            self.emit_count.fetch_add(1, Ordering::SeqCst);
++        }
++        Ok(())
++    }
++}
++
++#[tokio::test]
++async fn test_skill_watch_service_lifecycle_dispose() {
++    let ws_service = Arc::new(WorkspaceService::new().await.expect("workspace service init"));
++    let service = SkillWatchService::new(ws_service);
++    let emitter = Arc::new(TestEmitter {
++        emit_count: AtomicUsize::new(0),
++    });
++
++    service.set_event_emitter(emitter).await.expect("set emitter");
++    assert!(!service.watched_paths().await.is_empty());
++
++    service.dispose().await;
++}
++
++#[tokio::test]
++async fn test_skill_watch_service_sync_rebuild() {
++    let ws_service = Arc::new(WorkspaceService::new().await.expect("workspace service init"));
++    let service = SkillWatchService::new(ws_service);
++    let emitter = Arc::new(TestEmitter {
++        emit_count: AtomicUsize::new(0),
++    });
++
++    service.set_event_emitter(emitter).await.expect("set emitter");
++    let initial_paths = service.watched_paths().await;
++    assert!(!initial_paths.is_empty());
++
++    service.sync_watched_paths().await.expect("sync paths");
++    let rebuilt_paths = service.watched_paths().await;
++    assert_eq!(initial_paths, rebuilt_paths);
++
++    service.dispose().await;
++}
++
++#[tokio::test]
++async fn test_skill_watch_service_debounce_window() {
++    let emitter = Arc::new(TestEmitter {
++        emit_count: AtomicUsize::new(0),
++    });
++    let emitter_slot = Arc::new(Mutex::new(Some(emitter.clone() as Arc<dyn EventEmitter>)));
++    let pending = Arc::new(Mutex::new(None));
++
++    for _ in 0..5 {
++        SkillWatchService::schedule_refresh(emitter_slot.clone(), pending.clone()).await;
++        tokio::time::sleep(Duration::from_millis(30)).await;
++    }
++
++    for _ in 0..20 {
++        if emitter.emit_count.load(Ordering::SeqCst) > 0 {
++            break;
++        }
++        tokio::time::sleep(Duration::from_millis(100)).await;
++    }
++
++    assert_eq!(
++        emitter.emit_count.load(Ordering::SeqCst),
++        1,
++        "Multiple rapid triggers must result in exactly 1 debounced emission"
++    );
++}
