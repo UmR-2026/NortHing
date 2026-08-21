@@ -4,11 +4,10 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
-use northhing_kernel_api::events::{BackendEventDto, KernelEventDto, SubscriptionId};
+use northhing_kernel_api::events::{KernelEventDto, SubscriptionId};
 use tracing::warn;
 
 use crate::agentic::events::{AgenticEvent, EventSubscriber};
-use crate::infrastructure::events::{emit_global_event, BackendEvent};
 
 struct KernelEventSubscriber {
     callback: Arc<Mutex<Box<dyn Fn(KernelEventDto) + Send + 'static>>>,
@@ -63,16 +62,6 @@ impl northhing_kernel_api::KernelEventsApi for super::KernelFacade {
     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError> {
         self.coordinator()?.unsubscribe_internal(&id);
         Ok(())
-    }
-
-    async fn emit_backend_event(&self, event: BackendEventDto) -> Result<(), KernelError> {
-        let be = BackendEvent::Custom {
-            event_name: event.event_type,
-            payload: event.payload.unwrap_or(serde_json::Value::Null),
-        };
-        emit_global_event(be)
-            .await
-            .map_err(|e| KernelError::Runtime(format!("emit_backend_event failed: {e}")))
     }
 }
 

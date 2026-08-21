@@ -17,20 +17,18 @@ use super::super::background_command_output::{
 };
 use super::super::env_snapshot::{remote_env_snapshot_for, RemoteEnvSnapshot};
 use super::super::progress::ExecOutputProgressBridge;
-use super::shell_helpers::{now_unix_seconds, remote_command_env_words, remote_shell_login_args, shell_escape};
+use super::shell_helpers::{remote_command_env_words, remote_shell_login_args, shell_escape};
 pub(super) use super::tool::ExecCommandTool;
 use super::types::{
     RemoteShell, DEFAULT_TOOL_YIELD_TIME_MS, REMOTE_NON_TTY_INTERRUPT_GRACE_SECONDS, REMOTE_SHELL_PROBE_TIMEOUT_MS,
 };
 use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent::BackgroundCommandLifecycle};
 use crate::service::remote_ssh::{
     global_remote_exec_process_manager, remote_workspace_manager, RemoteExecCommandRequest,
     RemoteExecProcessLifecycleEvent, RemoteExecProcessLifecycleStatus, RemoteExecSessionCompletion,
     RemoteExecSessionCompletionSource, RemoteExecSessionCompletionStatus, SSHCommandOptions, SSHConnectionManager,
 };
 use crate::util::errors::{NortHingError, NortHingResult};
-use crate::util::types::event::BackgroundCommandLifecycleInfo;
 
 /// Resolve the remote `workdir` parameter: explicit absolute path wins, else
 /// the workspace root. The path must be absolute (starts with `/`) and must
@@ -222,18 +220,6 @@ pub(super) fn remote_background_output_status_for_completion(
     }
 }
 
-/// String label for a remote lifecycle status, used in the
-/// `BackgroundCommandLifecycleInfo` event.
-pub(super) fn remote_lifecycle_status(status: RemoteExecProcessLifecycleStatus) -> &'static str {
-    match status {
-        RemoteExecProcessLifecycleStatus::Running => "running",
-        RemoteExecProcessLifecycleStatus::Exited => "exited",
-        RemoteExecProcessLifecycleStatus::Interrupted => "interrupted",
-        RemoteExecProcessLifecycleStatus::Killed => "killed",
-        RemoteExecProcessLifecycleStatus::Pruned => "pruned",
-    }
-}
-
 /// Map a remote mid-flight lifecycle status to the
 /// [`BackgroundCommandOutputStatus`] the capture needs.
 pub(super) fn remote_background_output_status(
@@ -248,42 +234,21 @@ pub(super) fn remote_background_output_status(
     }
 }
 
-/// Spawn the task that translates remote process lifecycle events into
-/// `BackgroundCommandLifecycle` global events. Returns `None` when the
-/// call has no `tool_call_id` to attach metadata to.
+/// Spawn the task that updates remote process lifecycle metadata on output capture.
+/// Returns `None` when the call has no `tool_call_id` to attach metadata to.
 pub(super) fn start_remote_lifecycle_bridge(
     context: &ToolUseContext,
     _tool_name: &str,
 ) -> Option<mpsc::UnboundedSender<RemoteExecProcessLifecycleEvent>> {
     let capture_id = context.tool_call_id.clone()?;
-    let agent_session_id = context.session_id.clone();
     let (tx, mut rx) = mpsc::unbounded_channel::<RemoteExecProcessLifecycleEvent>();
     tokio::spawn(async move {
-        let event_system = global_event_system();
         let output_capture = background_command_output_capture();
         while let Some(event) = rx.recv().await {
             let capture_status = remote_background_output_status(event.status);
-            if let Some(metadata) = output_capture
+            let _ = output_capture
                 .update_lifecycle(&capture_id, event.session_id, capture_status, event.exit_code)
-                .await
-            {
-                let timestamp = now_unix_seconds();
-                let _ = event_system
-                    .emit(BackgroundCommandLifecycle(BackgroundCommandLifecycleInfo {
-                        agent_session_id: metadata.agent_session_id.or(agent_session_id.clone()),
-                        exec_session_id: event.session_id,
-                        command: metadata.command,
-                        workdir: metadata.workdir,
-                        remote: true,
-                        tty: metadata.tty,
-                        status: remote_lifecycle_status(event.status).to_string(),
-                        exit_code: event.exit_code,
-                        started_at: metadata.started_at,
-                        ended_at: metadata.ended_at,
-                        timestamp,
-                    }))
-                    .await;
-            }
+                .await;
         }
     });
     Some(tx)

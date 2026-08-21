@@ -108,7 +108,7 @@
 |----|-----------|-----------------|
 | coordination (turn) | `submit_turn`, `stop_turn`, `get_turn_state` | ✅ 全覆盖 |
 | session | `create_session`, `list_sessions`, `get_session`, `delete_session`, `rename_session`, `get_messages`, `create_branch`, `archive_session`, `get_session_metadata` 等 | ✅ 全覆盖 |
-| events | `subscribe_events`, `unsubscribe_events`, `emit_backend_event` | ✅ 全覆盖 |
+| events | `subscribe_events`, `unsubscribe_events` | ✅ 全覆盖（死方法 `emit_backend_event` 已在 T2-9-B2 移除） |
 | bootstrap | `init_core` | ✅ 全覆盖 |
 | settings/config | `get_global_config`, `update_global_config`, `list_model_configs`, `upsert_model_config`, `delete_model_config`, `set_default_provider` | ✅ 全覆盖 |
 | MCP | `list_mcp_servers`, `upsert_mcp_server`, `delete_mcp_server`, `get_mcp_status` | ✅ 全覆盖 |
@@ -121,11 +121,11 @@
 | platform | `open_terminal`, `analyze_image`, `get_core_health` 等 | ✅ 全覆盖 |
 | debug_log | **无 facade 方法** | ⚠️ 已按 D1 决策拆为 `northhing-debug-log` 微 crate（T5 已落地） |
 | shutdown_mcp_servers | **无 facade 方法** | ⚠️ 豁免保留直连 core（§6 豁免清单①） |
-| set_actor_runtime / coordinator() | **无 facade 方法** | ⚠️ 豁免保留直连 core（§12 缺口 5，待 P2 评审） |
+| set_actor_runtime / coordinator() | **无 facade 方法** | <s>⚠️ 豁免保留直连 core</s>（已在 T2-9-B2 随 NullDispatcher 清理移除，豁免撤销） |
 
 **Facade 方法总数**：55 个 async fn + 1 个 sync fn（`strip_prompt_markup`）= 56 个公开方法（设计文档记录 53 满额，实测有 55 async + 1 sync = 56，差异可能因 T23q/T4p DTO 补缺时新增辅助方法）。
 
-**覆盖判定**：facade 完整覆盖 desktop 产品面需求。3 个缺口（debug_log / shutdown / actor_runtime）均已按 K4a 设计决策豁免，不影响 K3 闸门。
+**覆盖判定**：facade 完整覆盖 desktop 产品面需求。历史缺口中 debug_log 已下沉微 crate，actor_runtime 注入已随 NullDispatcher 清理移除，仅剩 shutdown 直连豁免，不影响 K3 闸门。
 
 ---
 

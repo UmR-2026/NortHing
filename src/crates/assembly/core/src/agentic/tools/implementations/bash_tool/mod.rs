@@ -1,13 +1,10 @@
 use crate::agentic::tools::framework::{Tool, ToolRenderOptions, ToolResult, ToolUseContext, ValidationResult};
 use crate::agentic::tools::implementations::shell_safety;
 use crate::agentic::workspace::WorkspaceCommandOptions;
-use crate::infrastructure::events::event_system::global_event_system;
-use crate::infrastructure::events::event_system::BackendEvent::{ToolExecutionProgress, ToolTerminalReady};
 use crate::service::config::global::get_global_config_service;
 use crate::service_agent_runtime::CoreServiceAgentRuntime;
 use crate::util::elapsed_ms_u64;
 use crate::util::errors::{NortHingError, NortHingResult};
-use crate::util::types::event::{ToolExecutionProgressInfo, ToolTerminalReadyInfo};
 use async_trait::async_trait;
 use futures::StreamExt;
 use northhing_runtime_ports::AgentBackgroundResultRequest;

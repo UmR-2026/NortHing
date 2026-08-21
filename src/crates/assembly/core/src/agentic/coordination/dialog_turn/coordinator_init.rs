@@ -90,15 +90,6 @@ impl ConversationCoordinator {
         }
     }
 
-    /// K.2.3 follow-up: late-bind the actor runtime after
-    /// coordinator construction. Forwards to `tool_pipeline` so the
-    /// runtime shows up in every `ToolUseContext` built from this
-    /// coordinator's pipeline. Idempotent (OnceLock semantics on
-    /// the pipeline's setter).
-    pub fn set_actor_runtime(&self, runtime: std::sync::Arc<northhing_agent_dispatch::ActorRuntime>) {
-        self.tool_pipeline.set_actor_runtime(runtime);
-    }
-
     /// Dynamically adjust a running subagent's timeout.
     pub async fn set_subagent_timeout(&self, session_id: &str, action: SubagentTimeoutAction) -> NortHingResult<()> {
         let registry = self.subagent_timeout_registry.read().await;

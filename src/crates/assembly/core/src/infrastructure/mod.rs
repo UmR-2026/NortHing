@@ -16,7 +16,6 @@ pub mod storage;
 #[cfg(feature = "ai-adapter-runtime")]
 pub use ai::AIClient;
 pub use app_paths::{path_manager_arc, try_get_path_manager_arc, PathManager, StorageLevel};
-pub use events::BackendEventManager;
 pub use filesystem::{
     BatchedFileSearchProgressSink, FileContentSearchOptions, FileInfo, FileNameSearchOptions, FileOperationOptions,
     FileOperationService, FileReadResult, FileSearchOutcome, FileSearchProgressSink, FileSearchResult,

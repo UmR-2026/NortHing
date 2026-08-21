@@ -56,52 +56,6 @@ pub(super) fn register_send_message_callback(ui: &AppWindow, app_state: &Arc<App
             ]),
         );
 
-        // Phase I.x (2026-06-20, A3): minimal landing for the actor
-        // runtime. When `USE_LIGHTWEIGHT_ACTOR = true` AND the runtime
-        // was constructed at app boot, spawn a one-shot `DispatchActor`
-        // that records the event end-to-end. The `ActorTicked`
-        // telemetry reaches the same telemetry sink the heartbeat
-        // actor uses, proving the runtime is reachable from the
-        // production on_send_message path.
-        //
-        // This is a *demonstration* wiring, not a replacement: the
-        // existing `coordinator.start_dialog_turn` path still runs
-        // (the actor doesn't suppress it). A3 is the smallest landing
-        // that proves the wiring works end-to-end; A1/A2 (multi-turn
-        // redesign or a parallel LongRunningSubagent path) are out
-        // of MVP scope.
-        if northhing_agent_dispatch::USE_LIGHTWEIGHT_ACTOR {
-            if let Some(runtime) = app_state_arc_send.actor_runtime() {
-                let msg_id = format!("dispatch-{}", text_str.len());
-                // Recompute the preview rather than cloning — `truncated`
-                // was already moved into the on_send_message:enter
-                // log line above. Cheap: text is already capped at 80
-                // chars at the user-input boundary.
-                let preview: String = text_str.chars().take(80).collect();
-                let mode = crate::flags::DEFAULT_MODE_ID.to_string();
-                runtime.spawn_one_shot(move |ctx| {
-                    // The skill actor body is a no-op beyond the
-                    // structured log + telemetry emit; the point is
-                    // to prove the runtime path runs in production.
-                    log_debug_event(
-                        northhing_debug_log::COMP_ACTOR_RUNTIME,
-                        "actor::dispatch:tick",
-                        &mode,
-                        "one-shot dispatch actor ticked",
-                        Some([
-                            ("actor", msg_id.clone()),
-                            ("preview", preview.clone()),
-                            ("", String::new()),
-                            ("", String::new()),
-                        ]),
-                    );
-                    ctx.telemetry
-                        .emit(northhing_agent_dispatch::TelemetryEvent::ActorTicked { id: msg_id.clone() });
-                    Ok(Some(northhing_agent_dispatch::ActorOutput::Silent))
-                });
-            }
-        }
-
         let app_state = &*app_state_arc_send;
         let Some(_system) = app_state.get_agentic_system() else {
             // 2026-07-18 (D2j): UI thread — pass weak directly; helper upgrades on UI thread.

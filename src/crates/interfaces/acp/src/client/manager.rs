@@ -58,7 +58,6 @@ use agent_client_protocol::{ActiveSession, Agent, ByteStreams, Client, Connectio
 use dashmap::DashMap;
 use futures::io::{AsyncRead as FuturesAsyncRead, AsyncWrite as FuturesAsyncWrite};
 use northhing_core::agentic::tools::registry::global_tool_registry;
-use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};
 use northhing_core::infrastructure::PathManager;
 use northhing_core::service::config::ConfigService;
 use northhing_core::service::remote_ssh::workspace_state::remote_workspace_manager;

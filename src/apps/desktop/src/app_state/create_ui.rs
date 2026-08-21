@@ -9,7 +9,6 @@
 //! Bodies + comments are preserved verbatim from the original `mod.rs`
 //! (R37a spec: preserve all comments + bodies).
 
-use super::actor::maybe_construct_actor_runtime;
 use super::callbacks_lifecycle::{
     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
     register_delete_session_callback, register_dismiss_banner_callback, register_export_markdown_callback,
@@ -167,10 +166,6 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
         });
     });
 
-    // Phase I.3: construct an `ActorRuntime` (when the flag is on)
-    // and register a heartbeat actor. The runtime is a no-op when the
-    // flag is `false` (the default) — no behavior change for users.
-    maybe_construct_actor_runtime(&app_state, &ui);
     // Phase G.3: bind the show-subagents toggle. Initial value comes from
     // `AppState::new` (default true). The user can flip it via the
     // sidebar checkbox; the callback updates both the Slint property

@@ -30,9 +30,7 @@ pub use agents::{
 };
 pub use bootstrap::KernelBootstrapApi;
 pub use error::{KernelError, KernelResult};
-pub use events::{
-    BackendEventDto, BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase,
-};
+pub use events::{BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase};
 pub use memory::{EpisodeDto, KernelMemoryApi, ToolFailureRecordDto, ToolUseRecordDto};
 pub use platform::{
     AnalysisDto, ArtifactDto, CoreHealthDto, ImageContextDto, InspectorDataDto, KernelPlatformApi, PanelDto,

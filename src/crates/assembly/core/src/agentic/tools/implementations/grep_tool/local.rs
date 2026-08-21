@@ -6,10 +6,8 @@
 //! and forwards progress updates through the global event system so the
 //! assistant UI can stream search progress.
 
-use std::sync::Arc;
-
 use serde_json::{json, Value};
-use tool_runtime::search::grep_search::{grep_search, GrepSearchResult, ProgressCallback};
+use tool_runtime::search::grep_search::{grep_search, GrepSearchResult};
 
 use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
 use crate::util::errors::{NortHingError, NortHingResult};
@@ -24,43 +22,7 @@ impl super::tool::GrepTool {
         let path = resolved.logical_path.clone();
         let output_mode = grep_options.output_mode.to_string();
 
-        let event_system = crate::infrastructure::events::event_system::global_event_system();
-        let tool_use_id = context
-            .tool_call_id
-            .clone()
-            .unwrap_or_else(|| format!("grep_{}", uuid::Uuid::new_v4()));
-        let tool_name = self.name().to_string();
-
-        let tool_use_id_clone = tool_use_id.clone();
-        let tool_name_clone = tool_name.clone();
-        let event_system_clone = event_system.clone();
-        let progress_callback: ProgressCallback = Arc::new(move |files_processed, file_count, total_matches| {
-            let progress_message = format!(
-                "Scanned {} files | Found {} matching files ({} matches)",
-                files_processed, file_count, total_matches
-            );
-
-            let event = crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress(
-                crate::util::types::event::ToolExecutionProgressInfo {
-                    tool_use_id: tool_use_id_clone.clone(),
-                    tool_name: tool_name_clone.clone(),
-                    progress_message,
-                    percentage: None,
-                    timestamp: std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_secs(),
-                },
-            );
-
-            let event_system = event_system_clone.clone();
-            tokio::spawn(async move {
-                let _ = event_system.emit(event).await;
-            });
-        });
-
-        let search_result =
-            tokio::task::spawn_blocking(move || grep_search(grep_options, Some(progress_callback), Some(500))).await;
+        let search_result = tokio::task::spawn_blocking(move || grep_search(grep_options, None, Some(500))).await;
 
         let GrepSearchResult {
             file_count,

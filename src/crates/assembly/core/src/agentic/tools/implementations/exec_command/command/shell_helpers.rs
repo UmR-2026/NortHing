@@ -57,13 +57,3 @@ pub(super) fn remote_command_env_words(env: HashMap<String, String>) -> String {
 pub(super) fn remote_shell_login_args() -> &'static [&'static str] {
     &["-lc"]
 }
-
-/// Current wall-clock seconds since the UNIX epoch, with `0` as the fallback
-/// when the system clock is somehow before the epoch. Used for the
-/// `BackgroundCommandLifecycleInfo` timestamp field.
-pub(super) fn now_unix_seconds() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}

@@ -13,9 +13,10 @@
 ///
 /// ACTIVATED 2026-06-23 per
 /// `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`.
-/// Phase 2 of the impl plan has passed integration; the A2 long-running path
-/// now replaces the legacy `execute_hidden_subagent_phase1/2/3` for all
-/// `Task` tool invocations on the desktop app.
+///
+/// Note (2026-08-21, T2-9-B2): Currently there is no production runtime producer
+/// (desktop NullDispatcher removed); A2 path awaits true dispatcher wiring.
+/// The flag remains `true` as a backbone invariant.
 ///
 /// Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC)
 /// officially descoped 2026-07-20 — those flags have been deleted.

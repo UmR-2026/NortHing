@@ -58,8 +58,6 @@ IMPORT_GROUPS = [
     (["FuturesAsyncRead", "FuturesAsyncWrite"],
      "use futures::io::{AsyncRead as FuturesAsyncRead, AsyncWrite as FuturesAsyncWrite};"),
     (["get_global_tool_registry"], "use northhing_core::agentic::tools::registry::get_global_tool_registry;"),
-    (["emit_global_event", "BackendEvent"],
-     "use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};"),
     (["PathManager"], "use northhing_core::infrastructure::PathManager;"),
     (["ConfigService"], "use northhing_core::service::config::ConfigService;"),
     (["get_remote_workspace_manager"],
