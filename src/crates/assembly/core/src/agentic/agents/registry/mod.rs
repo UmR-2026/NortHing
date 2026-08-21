@@ -13,12 +13,66 @@ pub mod visibility;
 use self::types::AgentEntry;
 use self::types::{AgentCategory, SubAgentSource};
 use super::Agent;
+use northhing_disposable::DisposalGuard;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use std::sync::{Arc, OnceLock};
 use tracing::{debug, warn};
+
+/// An RAII guard for a registered agent in [`AgentRegistry`].
+///
+/// When dropped or explicitly disposed, the agent is removed from the registry
+/// if the registry entry still references this exact agent instance.
+pub struct AgentRegistrationGuard {
+    guard: DisposalGuard,
+    agent_id: String,
+    agent: Arc<dyn Agent>,
+}
+
+impl fmt::Debug for AgentRegistrationGuard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AgentRegistrationGuard")
+            .field("agent_id", &self.agent_id)
+            .field("is_disposed", &self.guard.is_disposed())
+            .finish()
+    }
+}
+
+impl AgentRegistrationGuard {
+    /// Returns the ID of the registered agent.
+    pub fn agent_id(&self) -> &str {
+        &self.agent_id
+    }
+
+    /// Returns the reference to the registered agent.
+    pub fn agent(&self) -> &Arc<dyn Agent> {
+        &self.agent
+    }
+
+    /// Explicitly unregisters the agent (idempotent).
+    pub fn dispose(&mut self) {
+        self.guard.dispose();
+    }
+
+    /// Disarms the guard so the agent remains registered even when the guard is dropped.
+    pub fn disarm(self) {
+        self.guard.disarm();
+    }
+
+    /// Returns `true` if the guard has already been disposed or disarmed.
+    pub fn is_disposed(&self) -> bool {
+        self.guard.is_disposed()
+    }
+}
+
+impl From<AgentRegistrationGuard> for DisposalGuard {
+    fn from(guard: AgentRegistrationGuard) -> Self {
+        guard.guard
+    }
+}
 
 /// Full sub-agent definition for editing (user/project custom agents only)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,9 +95,9 @@ pub struct CustomSubagentDetail {
 /// Registry for managing all available agents
 pub struct AgentRegistry {
     /// id -> agent_entry
-    agents: RwLock<HashMap<String, AgentEntry>>,
+    agents: Arc<RwLock<HashMap<String, AgentEntry>>>,
     /// workspace root -> (project subagent id -> agent_entry)
-    project_subagents: RwLock<HashMap<PathBuf, HashMap<String, AgentEntry>>>,
+    project_subagents: Arc<RwLock<HashMap<PathBuf, HashMap<String, AgentEntry>>>>,
 }
 
 impl Default for AgentRegistry {

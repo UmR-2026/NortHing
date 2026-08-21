@@ -259,7 +259,10 @@ impl MCPServerManager {
                 .add_connection(server_id.to_string(), connection.clone())
                 .await;
 
-            match Self::register_mcp_tools(server_id, &config.name, connection.clone()).await {
+            match self
+                .register_mcp_tools(server_id, &config.name, connection.clone())
+                .await
+            {
                 Ok(count) => {
                     info!(
                         "Registered {} MCP tools: server_name={} server_id={}",
@@ -307,7 +310,7 @@ impl MCPServerManager {
         self.connection_pool.remove_connection(server_id).await;
         self.catalog_cache.remove_server(server_id).await;
 
-        Self::unregister_mcp_tools(server_id).await;
+        self.unregister_mcp_tools(server_id).await;
 
         stop_result
     }

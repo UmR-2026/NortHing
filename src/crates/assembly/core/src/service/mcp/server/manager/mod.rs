@@ -96,6 +96,14 @@ pub struct MCPServerManager {
     pending_interactions: Arc<tokio::sync::RwLock<HashMap<String, PendingMCPInteraction>>>,
     oauth_sessions: Arc<tokio::sync::RwLock<HashMap<String, Arc<ActiveRemoteOAuthSession>>>>,
     ephemeral_configs: Arc<tokio::sync::RwLock<HashMap<String, MCPServerConfig>>>,
+    server_tool_guards: Arc<
+        tokio::sync::RwLock<
+            HashMap<
+                String,
+                Vec<crate::agentic::tools::registry::ToolRegistrationGuard<dyn crate::agentic::tools::framework::Tool>>,
+            >,
+        >,
+    >,
 }
 
 impl MCPServerManager {
@@ -113,6 +121,7 @@ impl MCPServerManager {
             pending_interactions: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             oauth_sessions: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             ephemeral_configs: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            server_tool_guards: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
         }
     }
 }

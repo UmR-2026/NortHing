@@ -3,6 +3,7 @@
 export const noCoreDependencyCrates = [
   'core-types',
   'events',
+  'disposable',
   'ai-adapters',
   'agent-stream',
   'agent-runtime',
@@ -18,6 +19,35 @@ export const noCoreDependencyCrates = [
 ];
 
 export const lightweightBoundaryRules = [
+  {
+    crateName: 'disposable',
+    reason: 'disposable must stay a pure RAII contract primitive without dependencies',
+    forbiddenDeps: [
+      'northhing-core',
+      'northhing-events',
+      'northhing-ai-adapters',
+      'northhing-agent-stream',
+      'northhing-runtime-ports',
+      'northhing-services-core',
+      'northhing-services-integrations',
+      'northhing-agent-tools',
+      'northhing-product-domains',
+      'northhing-transport',
+      'terminal-core',
+      'tool-runtime',
+      'tauri',
+      'reqwest',
+      'git2',
+      'rmcp',
+      'image',
+      'tokio-tungstenite',
+      'northhing-cli',
+      'ratatui',
+      'crossterm',
+      'arboard',
+      'syntect-tui',
+    ],
+  },
   {
     crateName: 'core-types',
     reason: 'core-types must stay low-level DTO-only',

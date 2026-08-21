@@ -7,6 +7,7 @@ export const crateLayoutRules = [
   { crateName: 'product-domains', layer: 'contracts', path: 'src/crates/contracts/product-domains' },
   { crateName: 'runtime-ports', layer: 'contracts', path: 'src/crates/contracts/runtime-ports' },
   { crateName: 'kernel-api', layer: 'contracts', path: 'src/crates/contracts/kernel-api' },
+  { crateName: 'disposable', layer: 'contracts', path: 'src/crates/contracts/disposable' },
 
   { crateName: 'agent-runtime', layer: 'execution', path: 'src/crates/execution/agent-runtime' },
   { crateName: 'agent-stream', layer: 'execution', path: 'src/crates/execution/agent-stream' },
