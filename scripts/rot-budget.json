@@ -2,7 +2,7 @@
   "unwrap_production": {
     "kind": "grep-count",
     "pattern": "\\.unwrap\\(\\)",
-    "ceiling": 521,
+    "ceiling": 513,
     "note": "R-13, ratchet: only down"
   },
   "expect_production": {
@@ -17,39 +17,45 @@
     "ceiling": 402,
     "note": "R-13, ratchet: only down"
   },
+  "unix_epoch_inline": {
+    "kind": "grep-count",
+    "pattern": "duration_since\\([^\\n]*UNIX_EPOCH",
+    "ceiling": 79,
+    "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down"
+  },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
     "ceiling": 1063,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/theme.rs": {
     "kind": "file-lines",
     "ceiling": 990,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
     "kind": "file-lines",
     "ceiling": 918,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/crates/assembly/core/src/service/agent_memory/facts.rs": {
     "kind": "file-lines",
     "ceiling": 905,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
     "kind": "file-lines",
     "ceiling": 877,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
     "kind": "file-lines",
     "ceiling": 836,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/modes/chat/input.rs": {
     "kind": "file-lines",
     "ceiling": 802,
-    "note": "R-14 god-file; split planned in ROT-2"
+    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   }
 }
