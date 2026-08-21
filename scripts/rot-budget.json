@@ -2,19 +2,19 @@
   "unwrap_production": {
     "kind": "grep-count",
     "pattern": "\\.unwrap\\(\\)",
-    "ceiling": 513,
+    "ceiling": 511,
     "note": "R-13, ratchet: only down"
   },
   "expect_production": {
     "kind": "grep-count",
     "pattern": "\\.expect\\(",
-    "ceiling": 1098,
+    "ceiling": 1093,
     "note": "R-13, ratchet: only down"
   },
   "let_underscore": {
     "kind": "grep-count",
     "pattern": "let _ =",
-    "ceiling": 392,
+    "ceiling": 390,
     "note": "R-13, ratchet: only down"
   },
   "unix_epoch_inline": {
@@ -25,7 +25,7 @@
   },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
-    "ceiling": 1017,
+    "ceiling": 1010,
     "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/theme.rs": {
