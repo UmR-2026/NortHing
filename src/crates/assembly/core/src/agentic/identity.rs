@@ -12,10 +12,61 @@ pub struct IdentityConfig {
 }
 
 pub fn identity_path() -> PathBuf {
+    #[cfg(test)]
+    if let Some(path) = test_identity_path_override() {
+        return path;
+    }
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("northhing")
         .join(IDENTITY_FILE_NAME)
+}
+
+// ── Test-only isolation seam ────────────────────────────────────────
+//
+// `identity_path` normally points at `<config_dir>/northhing/identity.md`.
+// In tests, writing to this path mutates the real user configuration directory.
+// The seam below is a thread-local override mirroring `MemoryDbPathGuard`.
+
+#[cfg(test)]
+thread_local! {
+    static TEST_IDENTITY_PATH: std::cell::RefCell<Option<PathBuf>> = std::cell::RefCell::new(None);
+}
+
+#[cfg(test)]
+fn test_identity_path_override() -> Option<PathBuf> {
+    TEST_IDENTITY_PATH.with(|c| c.borrow().clone())
+}
+
+/// RAII guard that redirects [`identity_path`] to an isolated path
+/// for the lifetime of the guard on the calling thread only.
+#[cfg(test)]
+pub(crate) struct IdentityPathGuard {
+    prev: Option<PathBuf>,
+    path: Option<PathBuf>,
+}
+
+#[cfg(test)]
+pub(crate) fn with_test_identity_path(path: PathBuf) -> IdentityPathGuard {
+    let prev = TEST_IDENTITY_PATH.with(|c| c.borrow_mut().replace(path.clone()));
+    IdentityPathGuard { prev, path: Some(path) }
+}
+
+/// Generates a unique temp-file path for an isolated identity file.
+#[cfg(test)]
+pub(crate) fn unique_test_identity_path() -> PathBuf {
+    std::env::temp_dir().join(format!("northhing-test-identity-{}.md", uuid::Uuid::new_v4()))
+}
+
+#[cfg(test)]
+impl Drop for IdentityPathGuard {
+    fn drop(&mut self) {
+        let path = self.path.take();
+        TEST_IDENTITY_PATH.with(|c| *c.borrow_mut() = self.prev.take());
+        if let Some(path) = path {
+            std::fs::remove_file(&path).ok();
+        }
+    }
 }
 
 pub fn identity_exists() -> bool {
@@ -34,7 +85,7 @@ pub fn load_identity() -> Option<String> {
 pub fn clear_identity() {
     let path = identity_path();
     if path.exists() {
-        let _ = std::fs::remove_file(path);
+        std::fs::remove_file(path).ok();
     }
 }
 

@@ -1,0 +1,646 @@
+diff --git a/.superpowers/sdd/task-t210-brief.md b/.superpowers/sdd/task-t210-brief.md
+new file mode 100644
+index 0000000..db9eef6
+--- /dev/null
++++ b/.superpowers/sdd/task-t210-brief.md
+@@ -0,0 +1,63 @@
++# Task T2-10 Brief — 连续性自检测试（seed-restore-diff 形态）
++
++## 来源与验收标准（逐字）
++
++来源：`docs/architecture/backend-roadmap.md` T2-10 行：
++
++> **连续性自检测试**：自动化"杀 core → 恢复 → diff 会话/记忆/身份"（T5"agent 不死"验收的轻量前置版，0.3 即可写，依赖 fake AI backend 提供确定性）
++
++**编排者裁定（2026-08-21，偏离点已授权写进 commit message）**：fake AI backend 依赖**绕过**——预检实证其为"数据罐头半成品、不接 agent loop"（test-support/src/offline_profile.rs:9-13,182-214 故意不实现 LongRunningSkill），而 seed-restore-diff 形态不需要真回合即可获得同等确定性。roadmap 的依赖注记视为过时；fake backend 真需求（驱动完整回合含 distill）留待将来。
++
++**验收**：连续性测试落地全绿 + identity 测试隔离缝 + 验证输出进 report。
++
++## 编排者预检结论（explore 侦察 2026-08-21，直接采信）
++
++- 测试必须在 core crate 内（`with_user_root_for_tests` / `restore_session_with_turns` / memory guard 全是 `pub(crate)`）。
++- 先例范式：`src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests_restore_dialog.rs:19-137`（TestWorkspace + 隔离 user_root + enable_persistence + seed context→start turn→断言）。
++- memory 隔离缝已有：thread-local `with_test_memory_db_path`（`memory_db.rs:822-854`，仅 current-thread runtime 有效——单个 `#[tokio::test]` 内完成全部步骤）。
++- **identity 无隔离缝**：`identity.rs:14-48` 直接写 `<config_dir>/northhing/identity.md`——测试直调会**写真实用户配置目录**（破坏性）。必须先加 test-only override（照抄 `MemoryDbPathGuard` 模式，~10 行，唯一新增生产侧代码）。
++- GlobalConfigManager 是 OnceLock 不可重置 → "杀"的范围 = drop SessionManager/PersistenceManager 层重建；进程级杀留 T5。测试注释须声明此天花板。
++- diff 判定字段：会话（turns 数/turn_id 序列/(role,text) 消息序列/state==Idle）、记忆（facts 条数+text/scope/confidence/session_id/turn_id，**排除 `*_at`**）、身份（`load_identity()` 全文字符串相等）。UUID 固定：`Session::new_with_id` + 显式 turn_id。
++- 风险钉：绕过真回合→不走 turn_persist 的 distill 段，直接 `MemoryDb::insert_fact` 插固定 facts；restore 需 `ensure_global_config_for_tests`（先例 subagent_ports/mod.rs:147），AIClientFactory 保持未初始化。
++
++## 复用侦察（强制）
++
++读：restore_dialog 先例全文、MemoryDbPathGuard 实现（memory_db.rs:822-854）、identity.rs 全文、agentic session 测试 mod 挂载方式。report 写「复用侦察」节。
++
++## Spec（必须全部满足）
++
++1. **identity 测试隔离缝**：`identity.rs` 加 `#[cfg(test)]` 的路径 override guard（照 MemoryDbPathGuard 模式：thread-local 或 OnceLock 重定向 + RAII 复位），零生产行为变化。
++2. **连续性测试**：新文件 `session/session_manager_lifecycle_tests/continuity_selfcheck.rs`（挂进同目录 mod）：隔离环境 → 建 manager → create_session（固定 id）→ seed 造 2 turn（显式 turn_id）→ 插 2 条固定 facts → save_identity 固定文本 → drop 一切 → 同路径重建 → `restore_session_with_turns` → 断言预检 §diff 判定字段三组等价。文件头部注释写明天花板（"杀"仅 SessionManager 层；进程级恢复属 T5/core 进程化）。
++3. 不顺手碰：fake AI backend 建设（超出本任务裁定范围）、turn_persist、identity 生产路径语义。
++
++## Global Constraints（逐字遵守）
++
++- 日志/注释 English-only、无 emoji。
++- identity override 必须是 `#[cfg(test)]`——生产代码路径零变化（reviewer 会专查）。
++- 测试必须确定性：重复跑 3 次结果一致（report 附 3 连跑证据）。
++- 历史事故禁令：非 ASCII 用 edit 工具；测试断言与实现一致性 judge 会人工复核（ling 事故教训）。
++
++## 验证（命令 + 输出都要进 report）
++
++MSVC wrapper：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo ...`
++
++1. 新测试 3 连跑（`cargo test -p northhing-core --features product-full continuity` 或实际名）
++2. `cargo test -p northhing-core --features product-full --lib session`（就近回归）
++3. `cargo check --workspace` + `cargo check -p northhing`（家规 6）
++4. `node scripts/check-core-boundaries.mjs` + `pnpm run check:rot` + `pnpm run fmt:rs`
++
++## 报告
++
++`.superpowers/sdd/task-t210-report.md`：Spec 逐条、复用侦察节、3 连跑证据、偏离声明。最后消息以状态词开头。
++
++## 派发元信息
++
++- BASE `c3fb72e`；worktree `E:\agent-project\.worktrees\northing-t210`（分支 `feat/t210-continuity-0821`）
++- commit message 后缀 `(T2-10)`；只 stage 你改的文件。
++
++## Rust 工作约定（涉 Rust 任务必须遵守）
++
++1. 仓库根 AGENTS.md / 就近 AGENTS.md 是规范唯一事实源（六层分层、骨干不变量、i18n、日志、平台边界），优先于任何通用 Rust 惯例；Cargo.toml 的 edition/lints 维持现状，不许套模板。
++2. 遇编译错误（E0xxx）先用 skill 工具加载对应 skill（m01-ownership / m03-mutability / m04-zero-cost / m06-error-handling / m07-concurrency / unsafe-checker），trace 到设计层原因（谁该拥有这份数据？为什么跨线程？）再改代码——禁止无脑 .clone() / .unwrap() / Arc 包一切糊住编译器。
++3. 设计取舍（错误分层、生命周期、并发模型）可查 m09-m15 与 domain-* skill；完整路由见 rust-router skill。
++4. report 里写明：遇到的每个编译错误最终修在哪一层（机制层/设计层），一行一个。
+diff --git a/.superpowers/sdd/task-t210-report.md b/.superpowers/sdd/task-t210-report.md
+new file mode 100644
+index 0000000..8337426
+--- /dev/null
++++ b/.superpowers/sdd/task-t210-report.md
+@@ -0,0 +1,138 @@
++# Task T2-10 Report — 连续性自检测试（seed-restore-diff 形态）
++
++## 1. 复用侦察（Mandatory Reconnaissance）
++
++- **`restore_dialog` 先例**（`session_manager_lifecycle_tests_restore_dialog.rs:19-137`）：
++  - 侦察到 `TestWorkspace` + `with_user_root_for_tests` 隔离 user_root 模式。
++  - 侦察到 `PersistenceManager::new` + `test_manager` 装配 `SessionManager` 的完整范式。
++  - 侦察到 `save_dialog_turn` / `save_turn_context_snapshot` / `replace_context_messages` 的上下文快照一致性保证机制。
++- **`MemoryDbPathGuard` 实现**（`memory_db.rs:822-854`）：
++  - 侦察到 thread-local `TEST_MEMORY_DB_PATH` + `unique_test_memory_db_path()` + RAII `Drop` 模式。
++  - `#[tokio::test]` current-thread runtime 下线程内路径重定向，并在 drop 时清理临时 SQLite DB 及其 WAL/SHM 附带文件。
++- **`identity.rs` 现状与隔离需求**：
++  - 侦察到 `identity_path()` 直接解析 `<config_dir>/northhing/identity.md`，测试直写会导致真实用户环境污染。
++  - 遵循 `MemoryDbPathGuard` 模式，在 `identity.rs` 增加 `#[cfg(test)]` 隔离缝（`IdentityPathGuard` + `with_test_identity_path` + `unique_test_identity_path`），确保零生产环境破坏与零生产运行时变化。
++- **Agentic Session 测试挂载方式**：
++  - `session_manager_tests.rs` 通过 `#[path = "session_manager_lifecycle_tests/mod.rs"] mod session_manager_lifecycle_tests;` 引入生命周期测试子模块目录。
++  - 新建 `continuity_selfcheck.rs` 并挂入 `session_manager_lifecycle_tests/mod.rs`。
++
++---
++
++## 2. Spec 逐条实现（Spec Compliance）
++
++1. **Identity 测试隔离缝**（`identity.rs`）：
++   - 增加 `#[cfg(test)]` 隔离：`TEST_IDENTITY_PATH` thread-local，`with_test_identity_path` 返回 RAII guard，drop 时重置 thread-local 并删除临时 `.md` 文件。
++   - `identity_path()` 仅在 `#[cfg(test)]` 且存在 override 时返回隔离路径；生产代码路径与行为零变化。
++2. **连续性自检测试**（`src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/continuity_selfcheck.rs`）：
++   - 文件头部详细声明天花板注释：当前 "kill" 范围局限于 `SessionManager` / `PersistenceManager` / `MemoryDb` / `Identity` 层 drop 与重建；完整 OS 进程级杀与守护进程恢复由 T5 负责。
++   - 步骤：
++     1. 初始化 `TestWorkspace`、`with_test_memory_db_path`、`with_test_identity_path`、`ensure_global_config_for_tests`。
++     2. `create_session_with_id` 创建固定 session id 会话。
++     3. 注入 2 个 dialog turns（包含用户消息和 assistant model round），持久化 turns 与 session 以及 context snapshot。
++     4. `MemoryDb::insert_fact` 插入 2 条固定 facts（1 条 workspace scope，1 条 global scope）。
++     5. `save_identity` 写入固定身份文本。
++     6. `drop(manager)` / `drop(persistence_manager)` / `drop(memory_db)` 彻底销毁内存句柄。
++     7. 从相同路径重建 `PersistenceManager`、`SessionManager`，调用 `restore_session_with_turns`。
++     8. 三组等价断言：
++        - **Session**：`restored_turns.len() == 2`、`dialog_turn_ids` 序列一致、`turn_id` 序列一致、`context_messages` (role, text) 序列严格匹配、`SessionState::Idle`。
++        - **Memory**：2 条 facts 的 `text`、`scope`、`confidence`、`session_id`、`turn_id`、`fact_type` 逐字段匹配（排除 `created_at`/`last_mentioned_at`）。
++        - **Identity**：`load_identity()` 恢复字符串全字等价。
++3. **分层与范围收敛**：
++   - 不碰 fake AI backend 建设，不碰 turn_persist，不碰 identity 生产语义。
++
++---
++
++## 3. 偏离声明（Authorized Deviation）
++
++- **Fake AI backend 依赖绕过**：
++  - 编排者裁定（2026-08-21）：预检实证 fake AI backend 为数据罐头半成品（故意不实现 `LongRunningSkill`），本测试采用 seed-restore-diff 形态，以固化 DTO 与 snapshot 直接复现 2 回合上下文与记忆，获得同等且更高的确定性。
++
++---
++
++## 4. 编译错误与解决记录（Rust Router & Error Tracing）
++
++| 编译错误 | 现象 | 根因与分层处理 |
++|---|---|---|
++| E0432 (Unresolved imports) | `FactConfidence`/`FactProvenance`/`FactScope` 无法从 `service::agent_memory` 导入 | **机制层**：`service::agent_memory::mod` 未 re-export 兄弟模块 `facts.rs` 中的这几个公共类型。在 `agent_memory/mod.rs` 中补全 re-export。 |
++| E0063 (Missing fields) | `TextItemData` 直接结构体字面量初始化缺少 7 个非必填/默认字段 | **机制层**：`TextItemData` 具有较多可选与默认字段。定义 `create_text_item` / `create_model_round_with_text` 测试 helper 封装构建。 |
++| E0369 / E0609 (Message API) | `MessageContent` 未实现 `PartialEq`；`Message` 的 turn_id 在 `metadata` 中 | **设计层**：`Message` 结构由 `role`、`content`（枚举）和 `metadata`（含 `turn_id`、`semantic_kind`）组成。提取 `extract_role_and_text` helper，针对 `(MessageRole, String)` 及 `metadata.turn_id` 进行精确断言。 |
++
++---
++
++## 5. 验证证据（Verification Evidence）
++
++### 5.1 新测试 3 连跑确定性证据
++
++```powershell
++# Run 1:
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full continuity
++# Output:
++running 1 test
++test agentic::session::session_manager_tests::session_manager_lifecycle_tests::continuity_selfcheck::continuity_selfcheck_seed_restore_diff ... ok
++test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1050 filtered out; finished in 0.17s
++
++# Run 2:
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full continuity
++# Output:
++running 1 test
++test agentic::session::session_manager_tests::session_manager_lifecycle_tests::continuity_selfcheck::continuity_selfcheck_seed_restore_diff ... ok
++test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1050 filtered out; finished in 0.15s
++
++# Run 3:
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full continuity
++# Output:
++running 1 test
++test agentic::session::session_manager_tests::session_manager_lifecycle_tests::continuity_selfcheck::continuity_selfcheck_seed_restore_diff ... ok
++test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1050 filtered out; finished in 0.13s
++```
++
++### 5.2 Session 就近回归测试
++
++```powershell
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib session
++# Output:
++test result: ok. 153 passed; 0 failed; 1 ignored; 0 measured; 897 filtered out; finished in 0.46s
++```
++
++### 5.3 编译与全工作区检查（House Rule 6）
++
++```powershell
++# Workspace Check:
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check --workspace
++# Output:
++Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 44s
++
++# Desktop Check (House rule 6 gate):
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check -p northhing
++# Output:
++Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 52s
++```
++
++### 5.4 边界、Rot 预算与格式化检查
++
++```powershell
++node scripts/check-core-boundaries.mjs && pnpm run check:rot && pnpm run fmt:rs
++# Output:
++Core boundary check passed.
++✔ compliant fixture exits 0 and reports success (98.9726ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (86.7497ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (89.6641ms)
++✔ registered god-file exceeding ceiling fails (5.2093ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (5.9399ms)
++✔ actual workspace rot budget passes with current manifest (329.0193ms)
++ℹ tests 6
++ℹ pass 6
++ℹ fail 0
++Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1363 files).
++[format-changed-rust] Formatting 4 Rust file(s).
++[format-changed-rust] Restoring 8 collateral Rust file(s) touched through module expansion.
++```
++
++---
++
++## 6. Global Constraints 检查清单
++
++- [x] 日志/注释 English-only，无 emoji。
++- [x] `identity.rs` 测试隔离缝严格 `#[cfg(test)]`，生产环境 0 行为变化。
++- [x] 3 连跑确定性实测通过（0.17s / 0.15s / 0.13s 全部 pass）。
++- [x] 断言字段与实现严格一致，无任何伪造断言。
+diff --git a/src/crates/assembly/core/src/agentic/identity.rs b/src/crates/assembly/core/src/agentic/identity.rs
+index a30db2f..e248c84 100644
+--- a/src/crates/assembly/core/src/agentic/identity.rs
++++ b/src/crates/assembly/core/src/agentic/identity.rs
+@@ -12,12 +12,63 @@ pub struct IdentityConfig {
+ }
+ 
+ pub fn identity_path() -> PathBuf {
++    #[cfg(test)]
++    if let Some(path) = test_identity_path_override() {
++        return path;
++    }
+     dirs::config_dir()
+         .unwrap_or_else(|| PathBuf::from("."))
+         .join("northhing")
+         .join(IDENTITY_FILE_NAME)
+ }
+ 
++// ── Test-only isolation seam ────────────────────────────────────────
++//
++// `identity_path` normally points at `<config_dir>/northhing/identity.md`.
++// In tests, writing to this path mutates the real user configuration directory.
++// The seam below is a thread-local override mirroring `MemoryDbPathGuard`.
++
++#[cfg(test)]
++thread_local! {
++    static TEST_IDENTITY_PATH: std::cell::RefCell<Option<PathBuf>> = std::cell::RefCell::new(None);
++}
++
++#[cfg(test)]
++fn test_identity_path_override() -> Option<PathBuf> {
++    TEST_IDENTITY_PATH.with(|c| c.borrow().clone())
++}
++
++/// RAII guard that redirects [`identity_path`] to an isolated path
++/// for the lifetime of the guard on the calling thread only.
++#[cfg(test)]
++pub(crate) struct IdentityPathGuard {
++    prev: Option<PathBuf>,
++    path: Option<PathBuf>,
++}
++
++#[cfg(test)]
++pub(crate) fn with_test_identity_path(path: PathBuf) -> IdentityPathGuard {
++    let prev = TEST_IDENTITY_PATH.with(|c| c.borrow_mut().replace(path.clone()));
++    IdentityPathGuard { prev, path: Some(path) }
++}
++
++/// Generates a unique temp-file path for an isolated identity file.
++#[cfg(test)]
++pub(crate) fn unique_test_identity_path() -> PathBuf {
++    std::env::temp_dir().join(format!("northhing-test-identity-{}.md", uuid::Uuid::new_v4()))
++}
++
++#[cfg(test)]
++impl Drop for IdentityPathGuard {
++    fn drop(&mut self) {
++        let path = self.path.take();
++        TEST_IDENTITY_PATH.with(|c| *c.borrow_mut() = self.prev.take());
++        if let Some(path) = path {
++            std::fs::remove_file(&path).ok();
++        }
++    }
++}
++
+ pub fn identity_exists() -> bool {
+     identity_path().exists()
+ }
+@@ -34,7 +85,7 @@ pub fn load_identity() -> Option<String> {
+ pub fn clear_identity() {
+     let path = identity_path();
+     if path.exists() {
+-        let _ = std::fs::remove_file(path);
++        std::fs::remove_file(path).ok();
+     }
+ }
+ 
+diff --git a/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/continuity_selfcheck.rs b/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/continuity_selfcheck.rs
+new file mode 100644
+index 0000000..e8504ab
+--- /dev/null
++++ b/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/continuity_selfcheck.rs
+@@ -0,0 +1,321 @@
++//! Continuity self-check test (seed-restore-diff pattern) for T2-10.
++//!
++//! Architectural ceiling / scope note:
++//! This test verifies continuity across SessionManager / PersistenceManager /
++//! MemoryDb / Identity drop and rebuild within the core crate.
++//! The "kill" boundary tested here is at the manager and persistence layer.
++//! True OS process-level termination and daemon crash recovery is owned by T5
++//! (core daemonization and process supervisor lifecycle).
++
++#![cfg(test)]
++#![allow(unused_imports)]
++
++use super::super::super::session_manager::SessionManager;
++use super::super::{test_manager, TestWorkspace};
++use super::*;
++use crate::agentic::core::{
++    Message, MessageContent, MessageRole, MessageSemanticKind, Session, SessionConfig, SessionState,
++};
++use crate::agentic::identity::{load_identity, save_identity, unique_test_identity_path, with_test_identity_path};
++use crate::agentic::persistence::PersistenceManager;
++use crate::service::agent_memory::{
++    default_memory_db_path, unique_test_memory_db_path, with_test_memory_db_path, Fact, FactConfidence, FactProvenance,
++    FactScope, FactType, MemoryDb,
++};
++use crate::service::session::{
++    DialogTurnData, DialogTurnKind, ModelRoundData, TextItemData, TurnStatus, UserMessageData,
++};
++use std::sync::Arc;
++use std::sync::OnceLock;
++
++async fn ensure_global_config_for_tests() {
++    static DONE: OnceLock<()> = OnceLock::new();
++    if DONE.get().is_some() {
++        return;
++    }
++    if let Err(e) = crate::service::config::GlobalConfigManager::initialize().await {
++        eprintln!("GlobalConfigManager::initialize failed in test setup: {}", e);
++    }
++    DONE.set(()).ok();
++}
++
++fn create_text_item(id: &str, content: &str) -> TextItemData {
++    TextItemData {
++        id: id.to_string(),
++        content: content.to_string(),
++        is_streaming: false,
++        timestamp: 0,
++        is_markdown: true,
++        order_index: None,
++        is_subagent_item: None,
++        parent_task_tool_id: None,
++        subagent_session_id: None,
++        status: None,
++    }
++}
++
++fn create_model_round_with_text(round_id: &str, turn_id: &str, text: &str) -> ModelRoundData {
++    ModelRoundData {
++        id: round_id.to_string(),
++        turn_id: turn_id.to_string(),
++        round_index: 0,
++        timestamp: 1001,
++        text_items: vec![create_text_item(&format!("text-{}", round_id), text)],
++        tool_items: Vec::new(),
++        thinking_items: Vec::new(),
++        start_time: 1000,
++        end_time: Some(1002),
++        duration_ms: Some(2),
++        provider_id: None,
++        model_id: None,
++        model_alias: None,
++        first_chunk_ms: None,
++        first_visible_output_ms: None,
++        stream_duration_ms: None,
++        attempt_count: None,
++        failure_category: None,
++        token_details: None,
++        status: "completed".to_string(),
++    }
++}
++
++fn extract_role_and_text(msg: &Message) -> (MessageRole, String) {
++    let text = match &msg.content {
++        MessageContent::Text(t) => t.clone(),
++        MessageContent::Multimodal { text, .. } => text.clone(),
++        MessageContent::Mixed { text, .. } => text.clone(),
++        MessageContent::ToolResult {
++            result_for_assistant, ..
++        } => result_for_assistant.clone().unwrap_or_default(),
++    };
++    (msg.role.clone(), text)
++}
++
++#[tokio::test]
++async fn continuity_selfcheck_seed_restore_diff() -> Result<(), Box<dyn std::error::Error>> {
++    // 1. Isolated test environment
++    let workspace = TestWorkspace::new();
++    let memory_guard = with_test_memory_db_path(unique_test_memory_db_path());
++    let identity_guard = with_test_identity_path(unique_test_identity_path());
++    ensure_global_config_for_tests().await;
++
++    let session_id = "session-continuity-seed-001".to_string();
++    let persistence_manager = Arc::new(PersistenceManager::new(workspace.path_manager())?);
++    let manager = test_manager(persistence_manager.clone());
++
++    // 2. Create session with fixed ID
++    let session = manager
++        .create_session_with_id(
++            Some(session_id.clone()),
++            "Continuity Selfcheck Session".to_string(),
++            "agentic".to_string(),
++            SessionConfig {
++                workspace_path: Some(workspace.path().to_string_lossy().to_string()),
++                ..Default::default()
++            },
++        )
++        .await?;
++
++    // 3. Seed 2 dialog turns
++    let turn_1_id = "turn-001".to_string();
++    let turn_2_id = "turn-002".to_string();
++
++    let mut turn_1 = DialogTurnData::new(
++        turn_1_id.clone(),
++        0,
++        session_id.clone(),
++        UserMessageData {
++            id: "turn-1-user".to_string(),
++            content: "User prompt for turn 1".to_string(),
++            timestamp: 1000,
++            metadata: None,
++        },
++    );
++    turn_1.kind = DialogTurnKind::UserDialog;
++    turn_1.status = TurnStatus::Completed;
++    turn_1.model_rounds.push(create_model_round_with_text(
++        "round-1",
++        &turn_1_id,
++        "Assistant response for turn 1",
++    ));
++    persistence_manager.save_dialog_turn(workspace.path(), &turn_1).await?;
++
++    let mut turn_2 = DialogTurnData::new(
++        turn_2_id.clone(),
++        1,
++        session_id.clone(),
++        UserMessageData {
++            id: "turn-2-user".to_string(),
++            content: "User prompt for turn 2".to_string(),
++            timestamp: 2000,
++            metadata: None,
++        },
++    );
++    turn_2.kind = DialogTurnKind::UserDialog;
++    turn_2.status = TurnStatus::Completed;
++    turn_2.model_rounds.push(create_model_round_with_text(
++        "round-2",
++        &turn_2_id,
++        "Assistant response for turn 2",
++    ));
++    persistence_manager.save_dialog_turn(workspace.path(), &turn_2).await?;
++
++    let mut updated_session = session.clone();
++    updated_session.dialog_turn_ids = vec![turn_1_id.clone(), turn_2_id.clone()];
++    persistence_manager
++        .save_session(workspace.path(), &updated_session)
++        .await?;
++
++    let seeded_messages = vec![
++        Message::user("User prompt for turn 1".to_string())
++            .with_turn_id(turn_1_id.clone())
++            .with_semantic_kind(MessageSemanticKind::ActualUserInput),
++        Message::assistant("Assistant response for turn 1".to_string()).with_turn_id(turn_1_id.clone()),
++        Message::user("User prompt for turn 2".to_string())
++            .with_turn_id(turn_2_id.clone())
++            .with_semantic_kind(MessageSemanticKind::ActualUserInput),
++        Message::assistant("Assistant response for turn 2".to_string()).with_turn_id(turn_2_id.clone()),
++    ];
++    persistence_manager
++        .save_turn_context_snapshot(workspace.path(), &session_id, 1, &seeded_messages)
++        .await?;
++    manager
++        .replace_context_messages(&session_id, seeded_messages.clone())
++        .await;
++
++    // 4. Seed 2 memory facts
++    let memory_db = MemoryDb::open(&default_memory_db_path())?;
++    let workspace_key = workspace.path().to_string_lossy().to_string();
++
++    let fact_1 = Fact {
++        schema_version: 1,
++        id: "fact-continuity-001".to_string(),
++        text: "User prefers concise diffs and verified tests".to_string(),
++        provenance: FactProvenance {
++            session_id: session_id.clone(),
++            turn_id: turn_1_id.clone(),
++        },
++        confidence: FactConfidence::High,
++        scope: FactScope::Workspace,
++        fact_type: FactType::Feedback,
++        created_at: 1000,
++    };
++    let fact_2 = Fact {
++        schema_version: 1,
++        id: "fact-continuity-002".to_string(),
++        text: "Global identity key continuity requirement".to_string(),
++        provenance: FactProvenance {
++            session_id: session_id.clone(),
++            turn_id: turn_2_id.clone(),
++        },
++        confidence: FactConfidence::High,
++        scope: FactScope::Global,
++        fact_type: FactType::Project,
++        created_at: 2000,
++    };
++
++    memory_db.insert_fact(&fact_1, Some(&workspace_key))?;
++    memory_db.insert_fact(&fact_2, None)?;
++
++    // 5. Seed identity configuration
++    let expected_identity_text = "I am northhing assistant, focused on reliable orchestration.";
++    save_identity(expected_identity_text)?;
++
++    // 6. Kill / drop all in-memory runtime handles
++    drop(manager);
++    drop(persistence_manager);
++    drop(memory_db);
++
++    // 7. Rebuild runtime from persistent state
++    let persistence_manager_rebuilt = Arc::new(PersistenceManager::new(workspace.path_manager())?);
++    let manager_rebuilt = test_manager(persistence_manager_rebuilt.clone());
++
++    let (restored_session, restored_turns) = manager_rebuilt
++        .restore_session_with_turns(workspace.path(), &session_id)
++        .await?;
++
++    // 8. Equivalence Assertions
++
++    // 8a. Session diff assertions
++    assert_eq!(restored_turns.len(), 2);
++    assert_eq!(
++        restored_session.dialog_turn_ids,
++        vec![turn_1_id.clone(), turn_2_id.clone()]
++    );
++    assert_eq!(restored_turns[0].turn_id, turn_1_id);
++    assert_eq!(restored_turns[1].turn_id, turn_2_id);
++    assert!(matches!(restored_session.state, SessionState::Idle));
++
++    let restored_messages = manager_rebuilt.context_store.get_context_messages(&session_id);
++    assert_eq!(restored_messages.len(), 4);
++    assert_eq!(
++        extract_role_and_text(&restored_messages[0]),
++        (MessageRole::User, "User prompt for turn 1".to_string())
++    );
++    assert_eq!(
++        restored_messages[0].metadata.turn_id.as_deref(),
++        Some(turn_1_id.as_str())
++    );
++
++    assert_eq!(
++        extract_role_and_text(&restored_messages[1]),
++        (MessageRole::Assistant, "Assistant response for turn 1".to_string())
++    );
++    assert_eq!(
++        restored_messages[1].metadata.turn_id.as_deref(),
++        Some(turn_1_id.as_str())
++    );
++
++    assert_eq!(
++        extract_role_and_text(&restored_messages[2]),
++        (MessageRole::User, "User prompt for turn 2".to_string())
++    );
++    assert_eq!(
++        restored_messages[2].metadata.turn_id.as_deref(),
++        Some(turn_2_id.as_str())
++    );
++
++    assert_eq!(
++        extract_role_and_text(&restored_messages[3]),
++        (MessageRole::Assistant, "Assistant response for turn 2".to_string())
++    );
++    assert_eq!(
++        restored_messages[3].metadata.turn_id.as_deref(),
++        Some(turn_2_id.as_str())
++    );
++
++    // 8b. Memory diff assertions (text, scope, confidence, session_id, turn_id; excluding *_at)
++    let memory_db_rebuilt = MemoryDb::open(&default_memory_db_path())?;
++    let restored_facts = memory_db_rebuilt.get_facts(Some(&workspace_key))?;
++    assert_eq!(restored_facts.len(), 2);
++
++    let f1 = restored_facts
++        .iter()
++        .find(|f| f.id == "fact-continuity-001")
++        .ok_or("fact 1 should exist")?;
++    assert_eq!(f1.text, fact_1.text);
++    assert_eq!(f1.scope, fact_1.scope);
++    assert_eq!(f1.confidence, fact_1.confidence);
++    assert_eq!(f1.provenance.session_id, fact_1.provenance.session_id);
++    assert_eq!(f1.provenance.turn_id, fact_1.provenance.turn_id);
++    assert_eq!(f1.fact_type, fact_1.fact_type);
++
++    let f2 = restored_facts
++        .iter()
++        .find(|f| f.id == "fact-continuity-002")
++        .ok_or("fact 2 should exist")?;
++    assert_eq!(f2.text, fact_2.text);
++    assert_eq!(f2.scope, fact_2.scope);
++    assert_eq!(f2.confidence, fact_2.confidence);
++    assert_eq!(f2.provenance.session_id, fact_2.provenance.session_id);
++    assert_eq!(f2.provenance.turn_id, fact_2.provenance.turn_id);
++    assert_eq!(f2.fact_type, fact_2.fact_type);
++
++    // 8c. Identity diff assertion (full string match)
++    let restored_identity = load_identity().ok_or("restored identity should exist")?;
++    assert_eq!(restored_identity, expected_identity_text);
++
++    drop(memory_guard);
++    drop(identity_guard);
++    Ok(())
++}
+diff --git a/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/mod.rs b/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/mod.rs
+index e8b1e97..26c464d 100644
+--- a/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/mod.rs
++++ b/src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/mod.rs
+@@ -12,6 +12,8 @@
+ #[cfg(test)]
+ pub use super::*;
+ 
++#[cfg(test)]
++mod continuity_selfcheck;
+ #[cfg(test)]
+ mod session_manager_lifecycle_tests_ephemeral_lineage;
+ #[cfg(test)]
+diff --git a/src/crates/assembly/core/src/service/agent_memory/mod.rs b/src/crates/assembly/core/src/service/agent_memory/mod.rs
+index ef860ab..fc59921 100644
+--- a/src/crates/assembly/core/src/service/agent_memory/mod.rs
++++ b/src/crates/assembly/core/src/service/agent_memory/mod.rs
+@@ -11,7 +11,10 @@ pub(crate) use auto_memory::build_workspace_agent_memory_prompt;
+ pub(crate) use auto_memory::build_workspace_memory_files_context;
+ pub(crate) use distiller::distill_facts_with_llm;
+ pub(crate) use dream::run_dream_sweep;
+-pub(crate) use facts::{append_facts, append_facts_dedup, distill_facts_from_user_message, read_facts, select_facts_for_prompt, Fact, FactType};
++pub(crate) use facts::{
++    append_facts, append_facts_dedup, distill_facts_from_user_message, read_facts, select_facts_for_prompt, Fact,
++    FactConfidence, FactProvenance, FactScope, FactType,
++};
+ pub(crate) use instruction_context::build_workspace_instruction_files_context;
+ pub(crate) use judge_memory::{get_judge_state, set_judge_state};
+ pub(crate) use memory_db::{default_memory_db_path, FactReview, MemoryDb};
