@@ -8,6 +8,7 @@ pub mod ai;
 pub mod errors;
 pub mod session;
 pub mod surface;
+pub mod time;
 pub mod tool_image_attachment;
 
 pub use ai::{
@@ -20,4 +21,5 @@ pub use surface::{
     ApprovalSource, CapabilityRequest, CapabilityRequestKind, PermissionDecision, PermissionScope, RuntimeArtifactKind,
     RuntimeArtifactRef, SurfaceKind, ThreadEnvironment, ThreadEnvironmentKind,
 };
+pub use time::{now_unix_millis, now_unix_ms};
 pub use tool_image_attachment::ToolImageAttachment;

@@ -2012,7 +2012,7 @@ export function runManifestParserSelfTest({
       contracts: ['run_for_session_workspace', 'try_renumber_research_report', 'renumber_research_report', 'report.md', 'citations.md', 'display_map', 'REJECTED'],
     },
     {
-      path: 'src/crates/execution/agent-runtime/src/deep_research.rs',
+      path: 'src/crates/contracts/runtime-ports/src/deep_research.rs',
       contracts: ['renumber_research_report', 'ResearchCitationRenumberOutput', 'ResearchCitationDisplayMapEntry', 'rejected_index_rows_dropped'],
     },
     {

@@ -1573,9 +1573,9 @@ export const requiredContentRules = [
     ],
   },
   {
-    path: 'src/crates/execution/agent-runtime/src/deep_research.rs',
+    path: 'src/crates/contracts/runtime-ports/src/deep_research.rs',
     reason:
-      'agent-runtime must own provider-neutral DeepResearch citation renumbering without core session or filesystem IO dependencies',
+      'runtime-ports must own provider-neutral DeepResearch citation renumbering without core session or filesystem IO dependencies',
     patterns: [
       {
         regex: /\bpub fn renumber_research_report\b/,

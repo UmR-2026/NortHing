@@ -1,8 +1,8 @@
 use crate::agentic::core::{CompressionContract, CompressionContractItem};
 use dashmap::DashMap;
+use northhing_core_types::time::now_unix_ms;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_PARTIAL_OUTPUT_BYTES: usize = 8_000;
 
@@ -121,7 +121,7 @@ impl EvidenceLedgerEvent {
             summary: summary.into(),
             partial_output: None,
             checkpoint: None,
-            created_at_ms: current_time_millis(),
+            created_at_ms: now_unix_ms(),
         }
     }
 
@@ -319,13 +319,6 @@ fn event_status_label(status: &EvidenceLedgerEventStatus) -> &'static str {
         EvidenceLedgerEventStatus::Cancelled => "cancelled",
         EvidenceLedgerEventStatus::Unknown => "unknown",
     }
-}
-
-fn current_time_millis() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
-        .unwrap_or(0)
 }
 
 fn is_verification_command(command: &str) -> bool {
