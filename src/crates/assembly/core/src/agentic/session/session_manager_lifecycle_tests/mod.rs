@@ -13,6 +13,8 @@
 pub use super::*;
 
 #[cfg(test)]
+mod continuity_selfcheck;
+#[cfg(test)]
 mod session_manager_lifecycle_tests_ephemeral_lineage;
 #[cfg(test)]
 mod session_manager_lifecycle_tests_restore_dialog;
