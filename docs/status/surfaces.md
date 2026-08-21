@@ -47,7 +47,7 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
 | `assembly-core` | `src/crates/assembly/core` | Core assembly |
 | `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
-| `test-support` | `src/crates/test-support` | Test utilities |
+| `test-support` | `src/crates/support/test-support` | Test utilities |
 
 ## Change Protocol
 

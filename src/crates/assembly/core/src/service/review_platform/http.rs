@@ -8,7 +8,7 @@ use std::time::Duration;
 
 pub(super) fn http_client() -> Result<reqwest::Client, ReviewPlatformError> {
     reqwest::Client::builder()
-        .use_native_tls()
+        .use_rustls_tls()
         .timeout(Duration::from_secs(25))
         .build()
         .map_err(|error| ReviewPlatformError::Network(error.to_string()))
