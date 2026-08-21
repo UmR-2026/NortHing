@@ -14,18 +14,18 @@
   "let_underscore": {
     "kind": "grep-count",
     "pattern": "let _ =",
-    "ceiling": 402,
+    "ceiling": 392,
     "note": "R-13, ratchet: only down"
   },
   "unix_epoch_inline": {
     "kind": "grep-count",
     "pattern": "duration_since\\([^\\n]*UNIX_EPOCH",
-    "ceiling": 79,
+    "ceiling": 73,
     "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down"
   },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
-    "ceiling": 1063,
+    "ceiling": 1017,
     "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/theme.rs": {
