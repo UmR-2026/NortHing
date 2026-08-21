@@ -5813,6 +5813,7 @@ dependencies = [
  "async-trait",
  "indexmap 2.14.0",
  "northhing-core-types",
+ "northhing-disposable",
  "northhing-runtime-ports",
  "serde",
  "serde_json",
@@ -5925,6 +5926,7 @@ dependencies = [
  "northhing-ai-adapters",
  "northhing-core-types",
  "northhing-debug-log",
+ "northhing-disposable",
  "northhing-events",
  "northhing-kernel-api",
  "northhing-product-capabilities",
@@ -5988,6 +5990,10 @@ dependencies = [
  "tokio",
  "uuid",
 ]
+
+[[package]]
+name = "northhing-disposable"
+version = "0.2.10"
 
 [[package]]
 name = "northhing-events"

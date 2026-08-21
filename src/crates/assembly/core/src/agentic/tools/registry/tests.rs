@@ -670,4 +670,46 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn guarded_tool_and_mcp_registration_lifecycle() {
+        let mut registry = ToolRegistry::new();
+        let tool1 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
+        let tool2 = mcp_dynamic_tool("mcp__server1__tool_b", None, "server1", "Server 1", "tool_b");
+
+        let guards = registry.register_mcp_tools_guarded(vec![tool1.clone(), tool2.clone()]);
+        assert_eq!(guards.len(), 2);
+        assert!(registry.get_tool("mcp__server1__tool_a").is_some());
+        assert!(registry.get_tool("mcp__server1__tool_b").is_some());
+
+        // Dropping the guards automatically unregisters both tools
+        drop(guards);
+        assert!(registry.get_tool("mcp__server1__tool_a").is_none());
+        assert!(registry.get_tool("mcp__server1__tool_b").is_none());
+    }
+
+    #[test]
+    fn guarded_mcp_registration_overwritten_safety() {
+        let mut registry = ToolRegistry::new();
+        let tool1_v1 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
+        let tool1_v2 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
+
+        let guard_v1 = registry.register_tool_guarded(tool1_v1.clone());
+        let current1 = registry.get_tool("mcp__server1__tool_a");
+        assert!(current1.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v1)));
+
+        let guard_v2 = registry.register_tool_guarded(tool1_v2.clone());
+        let current2 = registry.get_tool("mcp__server1__tool_a");
+        assert!(current2.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v2)));
+
+        // Dropping guard_v1 must not unregister v2
+        drop(guard_v1);
+        assert!(registry.get_tool("mcp__server1__tool_a").is_some());
+        let current3 = registry.get_tool("mcp__server1__tool_a");
+        assert!(current3.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v2)));
+
+        // Dropping guard_v2 unregisters v2
+        drop(guard_v2);
+        assert!(registry.get_tool("mcp__server1__tool_a").is_none());
+    }
 }

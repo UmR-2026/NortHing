@@ -473,3 +473,131 @@ async fn parent_subagent_overrides_follow_source_scopes() {
     assert_eq!(visible.1.override_state, Some(SubagentOverrideState::Disabled));
     assert_eq!(visible.2.override_state, Some(SubagentOverrideState::Disabled));
 }
+
+#[tokio::test]
+async fn test_agent_registration_guard_unregisters_on_drop() {
+    let registry = AgentRegistry::new();
+    let agent = Arc::new(TestAgent {
+        id: "GuardedAgent".to_string(),
+    });
+
+    assert!(!registry.check_agent_exists("GuardedAgent"));
+    let guard = match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None)
+    {
+        Some(g) => g,
+        None => panic!("registration should succeed"),
+    };
+
+    assert!(registry.check_agent_exists("GuardedAgent"));
+    assert_eq!(guard.agent_id(), "GuardedAgent");
+
+    drop(guard);
+    assert!(!registry.check_agent_exists("GuardedAgent"));
+}
+
+#[tokio::test]
+async fn test_agent_registration_guard_does_not_unregister_if_overwritten() {
+    let registry = AgentRegistry::new();
+    let agent1 = Arc::new(TestAgent {
+        id: "DynamicAgent".to_string(),
+    });
+    let agent2 = Arc::new(TestAgent {
+        id: "DynamicAgent".to_string(),
+    });
+
+    let guard1 = match registry.register_agent_guarded(
+        agent1.clone(),
+        AgentCategory::SubAgent,
+        Some(SubAgentSource::User),
+        None,
+    ) {
+        Some(g) => g,
+        None => panic!("first registration"),
+    };
+
+    // Manually overwrite in map
+    {
+        let mut map = registry.write_agents();
+        map.insert(
+            "DynamicAgent".to_string(),
+            AgentEntry {
+                category: AgentCategory::SubAgent,
+                subagent_source: Some(SubAgentSource::User),
+                agent: agent2.clone(),
+                visibility_policy: SubagentVisibilityPolicy::public(),
+                custom_config: None,
+            },
+        );
+    }
+
+    // Dropping guard1 must NOT remove agent2 because Arc::ptr_eq fails
+    drop(guard1);
+    assert!(registry.check_agent_exists("DynamicAgent"));
+    let current = match registry.get_agent("DynamicAgent", None) {
+        Some(a) => a,
+        None => panic!("agent exists"),
+    };
+    assert!(Arc::ptr_eq(&current, &(agent2 as Arc<dyn Agent>)));
+}
+
+#[tokio::test]
+async fn test_agent_registration_guard_idempotent_dispose_and_disarm() {
+    let registry = AgentRegistry::new();
+    let agent = Arc::new(TestAgent {
+        id: "IdempotentAgent".to_string(),
+    });
+
+    let mut guard =
+        match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None) {
+            Some(g) => g,
+            None => panic!("registration succeeds"),
+        };
+
+    assert!(registry.check_agent_exists("IdempotentAgent"));
+
+    guard.dispose();
+    assert!(!registry.check_agent_exists("IdempotentAgent"));
+
+    // Second dispose is no-op
+    guard.dispose();
+    drop(guard);
+    assert!(!registry.check_agent_exists("IdempotentAgent"));
+
+    // Test disarm
+    let agent2 = Arc::new(TestAgent {
+        id: "DisarmedAgent".to_string(),
+    });
+    let guard2 =
+        match registry.register_agent_guarded(agent2, AgentCategory::SubAgent, Some(SubAgentSource::User), None) {
+            Some(g) => g,
+            None => panic!("registration succeeds"),
+        };
+    guard2.disarm();
+    assert!(registry.check_agent_exists("DisarmedAgent"));
+}
+
+#[test]
+fn test_agent_registration_guard_concurrent_poison_safe() {
+    let registry = Arc::new(AgentRegistry::new());
+    let agent = Arc::new(TestAgent {
+        id: "PoisonSafeAgent".to_string(),
+    });
+
+    let guard = match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None)
+    {
+        Some(g) => g,
+        None => panic!("registration succeeds"),
+    };
+
+    // Poison the agents lock in a spawned thread
+    let reg_clone = Arc::clone(&registry);
+    let _join = std::thread::spawn(move || {
+        let _lock = reg_clone.agents.write();
+        panic!("intentional panic to poison lock");
+    })
+    .join();
+
+    // Dropping guard must safely recover from lock poisoning and unregister without panicking
+    drop(guard);
+    assert!(!registry.check_agent_exists("PoisonSafeAgent"));
+}

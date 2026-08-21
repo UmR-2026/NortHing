@@ -15,6 +15,7 @@ implementation details upward.
 | `kernel-api` | Host↔kernel facade: DTOs, trait signatures, and error types | (none) |
 | `product-domains` | Product domain DTOs, rules, policies, and narrow ports | [AGENTS.md](product-domains/AGENTS.md) |
 | `runtime-ports` | Runtime-facing traits and ports used by owner crates | [AGENTS.md](runtime-ports/AGENTS.md) |
+| `disposable` | Reversible registration and disposal RAII primitives | [AGENTS.md](disposable/AGENTS.md) |
 
 ## Placement Rules
 

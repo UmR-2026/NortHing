@@ -24,6 +24,7 @@ members = [
     "src/crates/contracts/events",
     "src/crates/contracts/kernel-api",
     "src/crates/contracts/runtime-ports",
+    "src/crates/contracts/disposable",
 ]
 
 exclude = [

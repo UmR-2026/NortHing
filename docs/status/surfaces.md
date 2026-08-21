@@ -45,6 +45,7 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `core-types` | `src/crates/contracts/core-types` | Core type definitions |
 | `events` | `src/crates/contracts/events` | Event contracts |
 | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
+| `disposable` | `src/crates/contracts/disposable` | Reversible registration and disposal RAII primitives (PCS-1) |
 | `assembly-core` | `src/crates/assembly/core` | Core assembly |
 | `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
 | `test-support` | `src/crates/support/test-support` | Test utilities |

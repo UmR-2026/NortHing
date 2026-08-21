@@ -141,6 +141,7 @@ russh = { workspace = true, optional = true }
 northhing-core-types = { path = "../../contracts/core-types" }
 northhing-events = { path = "../../contracts/events" }
 northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-disposable = { path = "../../contracts/disposable" }
 northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
 
 # Tauri dependency (optional, enabled only when needed)
