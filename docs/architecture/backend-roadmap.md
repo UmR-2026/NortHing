@@ -183,7 +183,7 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
 | T2-3 | i18n 生成器大小写修复 + 幽灵目录清除 | review | XS |
 | ~~T2-4~~ | ~~债项：P2-16（save_config 原子写）、P2-7（subagent_ports fake AI backend）~~ | **双resolved**（2026-08-20：P2-16 原子写落地 T2-4a；P2-7 实证已被 Task 9 B-2 fail-fast 方案修复，fake backend 需求归 T2-10） | ~~S~~ |
 | ~~T2-5~~ | ~~unwrap 定向治理（password_vault / mcp::auth / facts）~~ | **核销：三目标点生产区实测零 unwrap**（2026-08-20 预检 `.superpowers/sdd/t2-5-preflight-2026-08-20.md`；唯一活口 remote_exec/manager.rs expect 已结构性消除） | ~~M~~ |
-| T2-6 | god-file 复拆 + 行数守卫（callbacks_lifecycle 1063L / theme.rs 990L） | review+台账纪律 | M |
+| ~~T2-6~~ | ~~god-file 复拆 + 行数守卫~~ | **裁定变更（2026-08-21 用户拍板）**：不拆。行数守卫已由 rot-budget 闸落地（ROT-3'，merge ded3544）；7 个超 800 行文件转为**活体对照组**——ceiling 钉死后观测后续迭代腐化程度（judge 验收块已挂「god-file 观测点」，每次触碰附健康度数据点；cb_lifecycle 1063 仍是唯一超 1000 硬线者，若观测显示继续纠结化再重启拆分） | — |
 | ~~T2-7~~ | ~~`code-rot-scan.sh` 建实或删引用；debug-log 轮转~~ | **完成**（2026-08-20：裁定删引用[现行机制已覆盖]，debug.log 加 8MiB 单轮转） | ~~XS~~ |
 | T2-8 | 命名 canonical 统一（随 D-4 拍板） | review | S |
 
