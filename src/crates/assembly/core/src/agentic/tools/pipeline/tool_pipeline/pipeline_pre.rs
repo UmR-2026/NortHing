@@ -81,7 +81,7 @@ impl ToolPipeline {
             task,
             self.computer_use_host.clone(),
             cancellation_token,
-            self.actor_runtime.get().cloned(),
+            None,
         )
     }
 
@@ -171,10 +171,7 @@ impl ToolPipeline {
         for task in &tasks {
             let tool_id = &task.tool_call.tool_id;
             if manager.cancel(tool_id) {
-                debug!(
-                    "Cleared user-input channel during turn cancel: tool_id={}",
-                    tool_id
-                );
+                debug!("Cleared user-input channel during turn cancel: tool_id={}", tool_id);
             }
         }
 

@@ -1,10 +1,7 @@
-use crate::infrastructure::events::event_system::BackendEvent::{ToolExecutionProgress, ToolTerminalReady};
-use crate::util::types::event::{ToolExecutionProgressInfo, ToolTerminalReadyInfo};
 use serde_json::json;
 
 use super::execute_loop::{background_output_file_path, deliver_background_bash_result};
 use crate::agentic::tools::framework::ToolUseContext;
-use crate::infrastructure::events::event_system::global_event_system;
 use crate::service_agent_runtime::CoreServiceAgentRuntime;
 use crate::util::elapsed_ms_u64;
 use crate::util::errors::{NortHingError, NortHingResult};
@@ -52,27 +49,6 @@ pub(crate) async fn close_background_session(session_id: &str) -> NortHingResult
         .await
         .map_err(|e| NortHingError::tool(format!("Failed to close background session: {}", e)))?;
     Ok(())
-}
-
-/// Emit a `ToolTerminalReady` event for the given terminal session.
-pub(crate) fn emit_terminal_ready_event(tool_use_id: &str, terminal_session_id: &str) {
-    use crate::infrastructure::events::event_system::BackendEvent::ToolTerminalReady;
-    use crate::util::types::event::ToolTerminalReadyInfo;
-
-    let event_system = global_event_system();
-    let event = ToolTerminalReady(ToolTerminalReadyInfo {
-        tool_use_id: tool_use_id.to_string(),
-        terminal_session_id: terminal_session_id.to_string(),
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-    });
-    let event_system_clone = event_system.clone();
-    let tool_use_id = tool_use_id.to_string();
-    tokio::spawn(async move {
-        let _ = event_system_clone.emit(event).await;
-    });
 }
 
 /// Deliver a "stream ended without completion" error for a background command.

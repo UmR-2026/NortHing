@@ -28,7 +28,7 @@ enum BackgroundStreamCommand {
 pub(crate) fn process_stream_event(
     event: CommandStreamEvent,
     tool_use_id: &str,
-    tool_name: &str,
+    _tool_name: &str,
     accumulated_output: &mut String,
     final_exit_code: &mut Option<i32>,
     was_interrupted: &mut bool,
@@ -42,24 +42,6 @@ pub(crate) fn process_stream_event(
         }
         CommandStreamEvent::Output { data } => {
             accumulated_output.push_str(&data);
-
-            let progress_event = crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress(
-                crate::util::types::event::ToolExecutionProgressInfo {
-                    tool_use_id: tool_use_id.to_string(),
-                    tool_name: tool_name.to_string(),
-                    progress_message: data,
-                    percentage: None,
-                    timestamp: std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_secs(),
-                },
-            );
-
-            let event_system_clone = crate::infrastructure::events::event_system::global_event_system().clone();
-            tokio::spawn(async move {
-                let _ = event_system_clone.emit(progress_event).await;
-            });
         }
         CommandStreamEvent::Completed {
             exit_code,

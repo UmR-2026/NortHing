@@ -111,28 +111,6 @@ impl MCPServerManager {
             pending.insert(interaction_id.clone(), PendingMCPInteraction { sender: tx });
         }
 
-        let event_payload = json!({
-            "interactionId": interaction_id,
-            "serverId": server_id,
-            "serverName": server_name,
-            "method": method.clone(),
-            "params": params,
-        });
-
-        let event_system = global_event_system();
-        if let Err(e) = event_system
-            .emit(BackendEvent::Custom {
-                event_name: "backend-event-mcpinteractionrequest".to_string(),
-                payload: event_payload,
-            })
-            .await
-        {
-            warn!(
-                "Failed to emit MCP interaction request event: server_name={} server_id={} method={} error={}",
-                server_name, server_id, method, e
-            );
-        }
-
         let decision = rx.await;
         {
             let mut pending = self.pending_interactions.write().await;

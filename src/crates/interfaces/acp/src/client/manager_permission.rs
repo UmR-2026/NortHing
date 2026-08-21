@@ -34,9 +34,7 @@ use agent_client_protocol::schema::{
     SetSessionModelRequest, StopReason,
 };
 use agent_client_protocol::{ActiveSession, Agent, ByteStreams, Client, ConnectionTo, Error, SessionMessage};
-use northhing_core::infrastructure::events::{emit_global_event, BackendEvent};
 use northhing_core::util::errors::{NortHingError, NortHingResult};
-use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::{oneshot, Mutex, RwLock};
 use tracing::{debug, info, warn};
@@ -99,22 +97,6 @@ impl AcpClientService {
                 options: request.options.clone(),
             },
         );
-
-        let payload = json!({
-            "permissionId": permission_id,
-            "sessionId": session_id,
-            "toolCall": request.tool_call,
-            "options": request.options,
-        });
-
-        if let Err(error) = emit_global_event(BackendEvent::Custom {
-            event_name: "backend-event-acppermissionrequest".to_string(),
-            payload,
-        })
-        .await
-        {
-            warn!("Failed to emit ACP permission request: {}", error);
-        }
 
         match tokio::time::timeout(PERMISSION_TIMEOUT, rx).await {
             Ok(Ok(response)) => Ok(response),

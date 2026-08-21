@@ -14,7 +14,6 @@ mod tools;
 
 use super::connection::{MCPConnection, MCPConnectionEvent, MCPConnectionPool};
 use super::{MCPServerConfig, MCPServerRegistry, MCPServerStatus};
-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent};
 use crate::service::mcp::adapter::MCPToolAdapter;
 use crate::service::mcp::auth::MCPRemoteOAuthSessionSnapshot;
 use crate::service::mcp::config::MCPConfigService;

@@ -68,7 +68,10 @@ pub enum TurnPhaseKind {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum KernelEventDto {
-    TextChunk { session_id: String, text: String },
+    TextChunk {
+        session_id: String,
+        text: String,
+    },
     TurnState {
         session_id: String,
         turn_id: String,
@@ -88,16 +91,13 @@ pub enum KernelEventDto {
         #[serde(skip_serializing_if = "Option::is_none")]
         tool_name: Option<String>,
     },
-    Banner { level: BannerLevel, message: String },
-    Error { message: String },
-}
-
-/// Backend event DTO for host→kernel broadcast (enumerated at implementation time).
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct BackendEventDto {
-    pub event_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payload: Option<serde_json::Value>,
+    Banner {
+        level: BannerLevel,
+        message: String,
+    },
+    Error {
+        message: String,
+    },
 }
 
 // ── KernelEventsApi ────────────────────────────────────────────────────────────
@@ -106,13 +106,12 @@ pub struct BackendEventDto {
 pub trait KernelEventsApi: Send + Sync {
     /// Subscribe to kernel events (TextChunk/TurnState/ToolCall/Banner/Error).
     /// Source: #20 #21 #22
-    async fn subscribe_events(&self, callback: Box<dyn Fn(KernelEventDto) + Send>) -> Result<SubscriptionId, KernelError>;
+    async fn subscribe_events(
+        &self,
+        callback: Box<dyn Fn(KernelEventDto) + Send>,
+    ) -> Result<SubscriptionId, KernelError>;
 
     /// Unsubscribe from events.
     /// Source: #20
     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError>;
-
-    /// Broadcast an event to the backend (host→kernel).
-    /// Source: #83 #84
-    async fn emit_backend_event(&self, event: BackendEventDto) -> Result<(), KernelError>;
 }

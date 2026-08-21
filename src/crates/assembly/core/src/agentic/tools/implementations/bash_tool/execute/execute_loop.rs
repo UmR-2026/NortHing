@@ -1,11 +1,8 @@
 use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
 use crate::agentic::workspace::WorkspaceCommandOptions;
-use crate::infrastructure::events::event_system::global_event_system;
-use crate::infrastructure::events::event_system::BackendEvent::ToolExecutionProgress;
 use crate::service_agent_runtime::CoreServiceAgentRuntime;
 use crate::util::elapsed_ms_u64;
 use crate::util::errors::{NortHingError, NortHingResult};
-use crate::util::types::event::ToolExecutionProgressInfo;
 use futures::StreamExt;
 use northhing_runtime_ports::AgentBackgroundResultRequest;
 use serde_json::{json, Value};
@@ -26,7 +23,7 @@ use tool_runtime::shell::{
 use tracing::{debug, error, info};
 
 use super::execute_format::{format_local_result, format_remote_result};
-use super::execute_signal::{close_background_session, emit_terminal_ready_event, send_interrupt_signal};
+use super::execute_signal::{close_background_session, send_interrupt_signal};
 use super::execute_stream::{process_stream_event, run_background_stream_task};
 use crate::agentic::tools::implementations::bash_tool::bash_helpers::background_output_file_reference;
 use crate::agentic::tools::implementations::bash_tool::bash_sandbox::{
@@ -254,8 +251,6 @@ pub(crate) async fn execute_call(input: &Value, context: &ToolUseContext) -> Nor
         .map_err(|e| NortHingError::tool(format!("Failed to create Terminal session: {}", e)))?;
     let terminal_ready_ms = elapsed_ms_u64(terminal_ready_started_at);
 
-    emit_terminal_ready_event(&tool_use_id, &primary_session_id);
-
     let primary_cwd = terminal_api
         .get_session(&primary_session_id)
         .await
@@ -301,8 +296,6 @@ pub(crate) async fn execute_call(input: &Value, context: &ToolUseContext) -> Nor
     let mut completion_reason_label = "stream_end".to_string();
     let mut interrupt_drain_deadline: Option<tokio::time::Instant> = None;
     let command_stream_started_at = Instant::now();
-
-    let event_system = global_event_system();
 
     loop {
         let next_event = if let Some(deadline) = interrupt_drain_deadline {
@@ -457,7 +450,6 @@ pub(crate) async fn call_background(
         .tool_call_id
         .clone()
         .unwrap_or_else(|| format!("bash_{}", uuid::Uuid::new_v4()));
-    emit_terminal_ready_event(&tool_use_id, &bg_session_id);
 
     if cancellation_requested(context) {
         if let Err(e) = close_background_session(&bg_session_id).await {
