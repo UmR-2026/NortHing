@@ -29,6 +29,7 @@ pub mod search; // Workspace search via managed flashgrep daemon
 pub mod session; // Session persistence
 #[cfg(feature = "product-full")]
 pub mod session_usage; // Session runtime usage reports
+pub mod skill_watch; // Skill filesystem watcher and live reload
 #[cfg(feature = "product-full")]
 pub mod snapshot; // Snapshot-based change tracking
 #[cfg(feature = "product-full")]
@@ -81,6 +82,7 @@ pub use search::{
     WorkspaceSearchRepoPhase, WorkspaceSearchRepoStatus, WorkspaceSearchService, WorkspaceSearchTaskKind,
     WorkspaceSearchTaskPhase, WorkspaceSearchTaskState, WorkspaceSearchTaskStatus,
 };
+pub use skill_watch::{global_skill_watch_service, set_global_skill_watch_service, SkillWatchService};
 #[cfg(feature = "product-full")]
 pub use snapshot::SnapshotService;
 pub use system::{

@@ -113,3 +113,98 @@ pub(crate) fn register_refresh_settings_callback(ui: &AppWindow, _app_state: &Ar
         });
     });
 }
+
+/// Global skill toggle callback for Settings > Skills panel.
+pub(crate) fn register_set_skill_global_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_set_skill_global(move |skill_id, enabled| {
+        let skill_id_str = skill_id.to_string();
+        let ui_weak = ui_weak.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(target: "app_state", "set-skill-global: failed to build runtime: {e}");
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                use northhing_kernel_api::agents::SkillScopeDto;
+                use northhing_kernel_api::KernelAgentsApi;
+
+                let facade = kernel_facade();
+                let scope = SkillScopeDto {
+                    scope_type: "user".to_string(),
+                    workspace_path: None,
+                    mode_id: Some("agentic".to_string()),
+                };
+
+                if let Err(e) = facade.set_skill_enabled(&skill_id_str, scope, enabled).await {
+                    tracing::warn!(target: "app_state", "set_skill_enabled failed: {e}");
+                    set_banner_message(ui_weak.clone(), format!("设置技能失败: {e}"), "");
+                    return;
+                }
+
+                refresh_settings_lists(ui_weak.clone()).await;
+                crate::app_state::skills::refresh_skills_ui(ui_weak).await;
+            });
+        });
+    });
+}
+
+/// Per-workspace skill override cycle callback for Settings > Skills panel.
+pub(crate) fn register_set_skill_workspace_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
+    let ui_weak = ui.as_weak();
+    ui.on_set_skill_workspace(move |skill_id, override_val| {
+        let skill_id_str = skill_id.to_string();
+        let override_str = override_val.to_string();
+        let ui_weak = ui_weak.clone();
+        std::thread::spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    tracing::error!(target: "app_state", "set-skill-workspace: failed to build runtime: {e}");
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                use northhing_kernel_api::agents::ProjectSkillEntry;
+                use northhing_kernel_api::KernelAgentsApi;
+
+                let facade = kernel_facade();
+                let mut doc = match facade.load_project_skills().await {
+                    Ok(d) => d,
+                    Err(e) => {
+                        tracing::warn!(target: "app_state", "load_project_skills failed: {e}");
+                        set_banner_message(ui_weak.clone(), format!("读取工作区技能配置失败: {e}"), "");
+                        return;
+                    }
+                };
+
+                doc.skills.retain(|s| s.skill_id != skill_id_str);
+                if override_str == "on" {
+                    doc.skills.push(ProjectSkillEntry {
+                        skill_id: skill_id_str.clone(),
+                        enabled: true,
+                        config: None,
+                    });
+                } else if override_str == "off" {
+                    doc.skills.push(ProjectSkillEntry {
+                        skill_id: skill_id_str.clone(),
+                        enabled: false,
+                        config: None,
+                    });
+                }
+
+                if let Err(e) = facade.save_project_skills(doc).await {
+                    tracing::warn!(target: "app_state", "save_project_skills failed: {e}");
+                    set_banner_message(ui_weak.clone(), format!("保存工作区技能配置失败: {e}"), "");
+                    return;
+                }
+
+                refresh_settings_lists(ui_weak.clone()).await;
+                crate::app_state::skills::refresh_skills_ui(ui_weak).await;
+            });
+        });
+    });
+}

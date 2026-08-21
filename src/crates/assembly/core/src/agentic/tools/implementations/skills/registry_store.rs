@@ -289,20 +289,21 @@ impl SkillRegistry {
         }
     }
 
-    /// Re-scan user-level skills (no workspace-specific project skills) and
+    /// Re-scan skills for the current workspace (or user skills if none) and
     /// rebuild the cache.
     pub async fn refresh(&self) {
+        let workspace_root =
+            crate::service::workspace::global_workspace_service().and_then(|ws| ws.try_get_current_workspace_path());
+        self.refresh_for_workspace(workspace_root.as_deref()).await;
+    }
+
+    /// Refresh the registry for a specific workspace root.
+    pub async fn refresh_for_workspace(&self, workspace_root: Option<&Path>) {
         let skills = sort_skills(annotate_shadowed_skills(
-            self.scan_skill_candidates_for_workspace(None).await,
+            self.scan_skill_candidates_for_workspace(workspace_root).await,
         ));
         let mut cache = self.cache.write().await;
         *cache = skills;
-    }
-
-    /// Refresh the registry; currently the workspace root is informational
-    /// because user-level skills are cached globally.
-    pub async fn refresh_for_workspace(&self, _workspace_root: Option<&Path>) {
-        self.refresh().await;
     }
 
     /// Snapshot of the cached user-level skill set. Lazily populated on first
@@ -333,10 +334,7 @@ mod tests {
     /// judge-gate candidate writer must never create.
     #[tokio::test]
     async fn loader_scan_ignores_nested_candidates_but_would_catch_direct_child() {
-        let root = std::env::temp_dir().join(format!(
-            "northhing-skill-scan-test-{}",
-            uuid::Uuid::new_v4()
-        ));
+        let root = std::env::temp_dir().join(format!("northhing-skill-scan-test-{}", uuid::Uuid::new_v4()));
         write_skill_md(&root.join("good-skill"), "good-skill");
         write_skill_md(&root.join("candidates").join("hidden-skill"), "hidden-skill");
         write_skill_md(&root.join("candidates"), "rogue-candidates-root");
@@ -351,7 +349,10 @@ mod tests {
         let scanned = SkillRegistry::scan_skills_in_dir(&entry).await;
         let names: Vec<String> = scanned.iter().map(|s| s.info.dir_name.clone()).collect();
 
-        assert!(names.contains(&"good-skill".to_string()), "top-level skill must be scanned");
+        assert!(
+            names.contains(&"good-skill".to_string()),
+            "top-level skill must be scanned"
+        );
         assert!(
             !names.contains(&"hidden-skill".to_string()),
             "nested candidates/<name>/SKILL.md must never be loadable (I-NEG-2)"

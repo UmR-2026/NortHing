@@ -20,8 +20,9 @@ use super::callbacks_lifecycle::{
 use super::callbacks_settings::{
     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
     register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
-    register_remove_workspace_callback, register_set_default_model_callback, register_test_provider_callback,
-    register_test_provider_config_callback, register_upsert_provider_callback,
+    register_remove_workspace_callback, register_set_default_model_callback, register_set_skill_global_callback,
+    register_set_skill_workspace_callback, register_test_provider_callback, register_test_provider_config_callback,
+    register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
 use super::event_bridge;
@@ -276,6 +277,9 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // expected to be available here.
     event_bridge::register_desktop_event_bridge(&ui, &app_state);
 
+    // Register SkillWatchService event listener for live reload (PCS-2 race-free mount)
+    crate::app_state::skills::register_desktop_skill_watch_listener(ui.as_weak());
+
     // --- Register all 17 Slint callbacks ---
     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
     register_send_message_callback(&ui, &app_state);
@@ -299,6 +303,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_upsert_provider_callback(&ui, &app_state);
     // 2026-07-18 (D2h): refresh settings lists when settings route is entered.
     register_refresh_settings_callback(&ui, &app_state);
+    register_set_skill_global_callback(&ui, &app_state);
+    register_set_skill_workspace_callback(&ui, &app_state);
     // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
     register_pick_folder_callback(&ui, &app_state);
     register_add_workspace_callback(&ui, &app_state);

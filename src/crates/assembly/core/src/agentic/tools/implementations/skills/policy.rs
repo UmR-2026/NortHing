@@ -4,7 +4,7 @@
 //! mode identifier, should that skill be enabled by default before any user or
 //! project override is applied?
 
-use super::catalog::{builtin_skill_spec, BuiltinSkillGroup, BuiltinSkillId, BuiltinSkillSpec};
+use super::catalog::{builtin_skill_spec, BuiltinSkillGroup, BuiltinSkillSpec};
 use crate::agentic::agents::{resolve_mode_config_profile_id, SHARED_CODING_MODE_CONFIG_PROFILE_ID};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,7 +54,6 @@ impl PolicyEffect {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SkillSelector {
-    Builtin(BuiltinSkillId),
     Group(BuiltinSkillGroup),
 }
 
@@ -137,7 +136,6 @@ pub fn policy_for_mode(mode_id: &str) -> ModeSkillPolicy {
 
 fn selector_matches(selector: SkillSelector, spec: &BuiltinSkillSpec) -> bool {
     match selector {
-        SkillSelector::Builtin(skill_id) => spec.id == skill_id,
         SkillSelector::Group(group) => spec.group == group,
     }
 }
@@ -159,7 +157,7 @@ pub fn resolve_builtin_default_effect(spec: &BuiltinSkillSpec, mode_id: &str) ->
 }
 
 pub fn resolve_builtin_default_enabled(dir_name: &str, mode_id: &str) -> Option<bool> {
-    builtin_skill_spec(dir_name).map(|spec| resolve_builtin_default_effect(spec, mode_id).is_enabled())
+    builtin_skill_spec(dir_name).map(|spec| resolve_builtin_default_effect(&spec, mode_id).is_enabled())
 }
 
 #[cfg(test)]

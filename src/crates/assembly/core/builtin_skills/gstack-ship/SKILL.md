@@ -1,5 +1,6 @@
 ---
 name: ship
+group: gstack
 description: |
   Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION,
   update CHANGELOG, commit, push, create PR. Use when asked to "ship", "deploy",

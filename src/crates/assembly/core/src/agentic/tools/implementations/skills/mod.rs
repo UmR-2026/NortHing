@@ -10,7 +10,7 @@ pub mod registry;
 mod registry_dispatch;
 mod registry_meta;
 mod registry_store;
-mod registry_types;
+pub mod registry_types;
 pub mod resolver;
 pub mod resolver_v2;
 pub mod types;

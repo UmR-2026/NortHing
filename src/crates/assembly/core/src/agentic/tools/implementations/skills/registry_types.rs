@@ -22,11 +22,11 @@ use std::path::{Path, PathBuf};
 pub(super) const USER_PREFIX: &str = "user";
 pub(super) const PROJECT_PREFIX: &str = "project";
 pub(super) const NORTHHING_USER_SLOT: &str = "northhing";
-pub(super) const NORTHHING_SYSTEM_SLOT: &str = "northhing-system";
-pub(super) const NORTHHING_SYSTEM_DIR_NAME: &str = ".system";
+pub(crate) const NORTHHING_SYSTEM_SLOT: &str = "northhing-system";
+pub(crate) const NORTHHING_SYSTEM_DIR_NAME: &str = ".system";
 
 /// Project-level skill roots under a workspace.
-pub(super) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+pub(crate) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
     (".northhing", "skills", "northhing"),
     (".claude", "skills", "claude"),
     (".codex", "skills", "codex"),
@@ -36,7 +36,7 @@ pub(super) const PROJECT_SKILL_SLOTS: &[(&str, &str, &str)] = &[
 ];
 
 /// Home-directory based user-level skill roots.
-pub(super) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+pub(crate) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
     (".claude", "skills", "home.claude"),
     (".codex", "skills", "home.codex"),
     (".cursor", "skills", "home.cursor"),
@@ -44,7 +44,7 @@ pub(super) const USER_HOME_SKILL_SLOTS: &[(&str, &str, &str)] = &[
 ];
 
 /// Config-directory based user-level skill roots.
-pub(super) const USER_CONFIG_SKILL_SLOTS: &[(&str, &str, &str)] = &[
+pub(crate) const USER_CONFIG_SKILL_SLOTS: &[(&str, &str, &str)] = &[
     ("opencode", "skills", "config.opencode"),
     ("agents", "skills", "config.agents"),
 ];
