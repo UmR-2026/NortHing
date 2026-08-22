@@ -1,0 +1,616 @@
+diff --git a/.superpowers/sdd/task-phase2-brief.md b/.superpowers/sdd/task-phase2-brief.md
+new file mode 100644
+index 0000000..f85cc23
+--- /dev/null
++++ b/.superpowers/sdd/task-phase2-brief.md
+@@ -0,0 +1,56 @@
++# Task PHASE-2 Brief — 棘轮扩展（4 新计数条目 + crate 准入守卫 + checker 读数输出）
++
++## 来源与验收标准
++
++来源：GLM-5.3 咨询方案 Phase 2（编排者修正版）+ 本日流程校准教训（拧 ceiling 必须用 checker 读数）。
++
++**验收**：Spec 1-4 落地 + 验证输出进 report。
++
++## 编排者预检结论（2026-08-21 用 checker 口径实测，直接采信）
++
++| 新指标 | 基线（ceiling） | 说明 |
++|---|---|---|
++| `allow_dead_code` | **111** | grep-count，pattern `allow\(dead_code\)`，R-13 家族 |
++| `dir_entries:scripts` | **45** | 新 kind：目录条目计数 |
++| `dir_entries:docs/design` | **3** | 同上（PHASE-1A 归档后现状） |
++| `dir_entries:.superpowers/sdd` | **400** | 同上；**刻意留 5 余量**——每任务自然产 4-6 工件，见顶触发归档循环（非只降指标，是防沉积 cap；manifest note 里写明这个语义差异） |
++
++C1（password_vault/keyring/mcp::auth unwrap 清零）**已核销**：T2-5（2026-08-20）实证三目标生产区零 unwrap，本任务不重做。
++
++## 复用侦察（强制）
++
++读：`scripts/verify-rot-budget.mjs` 全文 + `verify-rot-budget.test.mjs` + `scripts/core-boundaries/rules/crate-layout.mjs` + `crate-rules.mjs`（crate 断言先例）+ core-boundaries 自测结构。report 写「复用侦察」节。
++
++## Spec（必须全部满足）
++
++1. **checker 扩展**（`verify-rot-budget.mjs`）：
++   - 新增 kind `dir-entry-count`：统计指定目录（相对仓库根，可含 `.` 开头的隐藏目录）顶层条目数（文件+目录，二选一写明）；目录不存在 = 违规（防"删了目录反而变绿"）。
++   - 通过输出行追加各 grep 规则的**实测读数**（如 `passed (unwrap=511/513, expect=1093/1093, ...)`）——这是拧 ceiling 的防呆口径。
++2. **rot-budget.json 新增 4 条目**（值逐字用预检表；note 写明语义：前三个 only-down；sdd 为 cap-and-archive）。
++3. **crate 准入守卫**：在 core-boundaries 规则族中新增——根 Cargo.toml workspace members 里每个 crate 必须在 `docs/status/surfaces.md` 有行（按 crate 名或路径匹配，匹配规则写明）；`.superpowers/sdd` 等豁免不进 surfaces 的非产品成员若有，列豁免常量数组带注释。挂进 check-core-boundaries.mjs 主检查；**自测必须有"构造一个未登记 crate 的 fixture → 变红"用例**。
++4. **文档同步**：surfaces.md 若因本任务发现漏登成员，同 commit 补登（不许为了让 gate 变绿而删成员）；家规 7 条目在 AGENTS.md/CN 追加一句"dir-entry-count 指标的 sdd 条目是 cap-and-archive 语义"。
++5. 不顺手碰：i18n 冻结区、产品代码逻辑、既有 ceiling 数值（编排者收口拧）。
++
++## Global Constraints（逐字遵守）
++
++- 输出/注释 English-only、无 emoji。
++- 自测覆盖：新 kind 的违规/合规两路 + crate 准入的红绿两路。
++- 历史事故禁令：checker 计数口径变更必须与"编排者预检基线"一致（本会话已有一次口径失真事故）；非 ASCII 用 edit 工具。
++
++## 验证（命令 + 输出都要进 report）
++
++1. `node scripts/verify-rot-budget.mjs`（贴带读数的输出）
++2. `node scripts/verify-rot-budget.test.mjs`（贴输出）
++3. `node scripts/check-core-boundaries.mjs`（含自测，如有）
++4. `pnpm run check:rot`
++5. `cargo check --workspace`（MSVC wrapper：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo ...`）
++6. `git diff --stat`
++
++## 报告
++
++`.superpowers/sdd/task-phase2-report.md`：Spec 逐条、复用侦察节、两个"写明"点（目录计数口径/匹配规则）、验证输出尾部、偏离声明。最后消息以状态词开头。
++
++## 派发元信息
++
++- BASE `fe91147`；worktree `E:\agent-project\.worktrees\northing-p2`（分支 `feat/phase2-ratchet-0821`）
++- commit message 后缀 `(PHASE-2)`；只 stage 你改的文件。
+diff --git a/.superpowers/sdd/task-phase2-report.md b/.superpowers/sdd/task-phase2-report.md
+new file mode 100644
+index 0000000..e9ad6e3
+--- /dev/null
++++ b/.superpowers/sdd/task-phase2-report.md
+@@ -0,0 +1,131 @@
++# Task PHASE-2 Report — 棘轮扩展（4 新计数条目 + crate 准入守卫 + checker 读数输出）
++
++## 1. Spec 逐条落实
++
++- **Spec 1: checker 扩展 (`scripts/verify-rot-budget.mjs`)**
++  - 新增 `dir-entry-count` kind：统计指定目录（相对仓库根路径，支持 `.` 开头的隐藏目录）顶层常规文件数量；目录不存在或非目录均判定为违规并阻断。
++  - 通过输出行追加实测读数（如 `5 grep rules [unwrap_production=502/511, expect_production=1092/1093, let_underscore=388/389, unix_epoch_inline=69/69, allow_dead_code=111/111], 3 dir rules [dir_entries:scripts=45/45, dir_entries:docs/design=1/3, dir_entries:.superpowers/sdd=372/400]`），提供精确的拧紧防呆口径。
++- **Spec 2: `rot-budget.json` 新增 4 条目**
++  - `allow_dead_code`: grep-count (`allow\(dead_code\)`), ceiling 111, note: `R-13 allow(dead_code) ratchet: only down`
++  - `dir_entries:scripts`: dir-entry-count, ceiling 45, note: `directory top-level files ratchet: only down`
++  - `dir_entries:docs/design`: dir-entry-count, ceiling 3, note: `directory top-level files ratchet: only down`
++  - `dir_entries:.superpowers/sdd`: dir-entry-count, ceiling 400, note: `directory top-level files cap-and-archive: cap triggers archive rotation (not only-down)`
++- **Spec 3: crate 准入守卫**
++  - 在 `scripts/core-boundaries/checker.mjs` 中实现 `checkCrateSurfaceRegistration` 并接入主检查 `runCoreBoundaryCheck()` 与自测 `runManifestParserSelfTest()`。
++  - 支持 `surfacesExemptMembers` 豁免列表常量带注释。
++  - 自测覆盖：`self-test.mjs` 与 `check-core-boundaries.test.mjs` 均加入构造未登记 crate fixture 导致变红的断言用例。
++- **Spec 4: 文档同步**
++  - 核验 `docs/status/surfaces.md` 已完整覆盖当前 25 个 workspace members，无遗漏。
++  - 在 `AGENTS.md` 与 `AGENTS-CN.md` 家规 7 同步追加 `dir-entry-count` 中 `.superpowers/sdd` 的 cap-and-archive 语义说明。
++- **Spec 5: 边界防线**
++  - 未触碰 i18n 冻结区、产品代码逻辑及既有 ceiling 数值。
++
++## 2. 复用侦察（Mandatory Reconnaissance）
++
++- `scripts/verify-rot-budget.mjs` & `verify-rot-budget.test.mjs`：
++  - 复用了 manifest 解析循环、line/rule count 结构、`collectRustFiles` 豁免列表模式、fixture 目录构建与 `spawnSync` 断言模式。
++- `scripts/core-boundaries/` 规则族：
++  - 复用了 `parseWorkspaceMembers` 解析器与 `ROOT` / `repoPathToFsPath` 路径规范化机制；
++  - 复用了 `self-test.mjs` 的 in-memory fixture 检查与 `check-core-boundaries.test.mjs` 的 node:test 异步模块加载断言风格。
++
++## 3. 两个"写明"点
++
++1. **目录计数口径 (Directory entry count criteria)**:
++   - 统计目标目录下直接包含的**顶层常规文件数**（`fs.readdirSync(targetDir, { withFileTypes: true }).filter(e => e.isFile()).length`），不递归统计子目录内文件，也不将子目录本身计入文件数。
++   - 若目标路径不存在或不是有效目录，直接判定违规失败。
++2. **crate 准入匹配规则 (Crate admission matching rule)**:
++   - 遍历 `Cargo.toml` 的 `workspace.members` 路径（过滤 `surfacesExemptMembers` 豁免项）。
++   - 对每个 member 路径，优先检查 `docs/status/surfaces.md` 中是否存在该路径的行内代码引用（如 `` `src/apps/desktop` ``）或整词匹配；
++   - 若未直接匹配路径，则读取该 crate 的 `Cargo.toml` 获取 `package.name`（如 `northhing-core-types` 及短名 `core-types`），检查 `docs/status/surfaces.md` 中是否存在该 crate 名称的引用。
++   - 两者均未命中时报告违规。
++
++## 4. 验证命令与输出
++
++### 4.1 `node scripts/verify-rot-budget.mjs`
++```text
++Rot budget verification passed (5 grep rules [unwrap_production=502/511, expect_production=1092/1093, let_underscore=388/389, unix_epoch_inline=69/69, allow_dead_code=111/111], 3 dir rules [dir_entries:scripts=45/45, dir_entries:docs/design=1/3, dir_entries:.superpowers/sdd=372/400], 7 god-file rules checked across 1362 files).
++```
++
++### 4.2 `node scripts/verify-rot-budget.test.mjs`
++```text
++✔ compliant fixture exits 0 and reports success (118.9657ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (106.2628ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (105.6508ms)
++✔ registered god-file exceeding ceiling fails (6.0571ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (8.8572ms)
++✔ dir-entry-count compliant fixture passes (110.4359ms)
++✔ dir-entry-count exceeding ceiling fails and exits 1 (103.0007ms)
++✔ dir-entry-count on non-existent directory fails and exits 1 (91.4931ms)
++✔ actual workspace rot budget passes with current manifest (375.7328ms)
++ℹ tests 9
++ℹ suites 0
++ℹ pass 9
++ℹ fail 0
++ℹ cancelled 0
++ℹ skipped 0
++ℹ todo 0
++ℹ duration_ms 1035.3096
++```
++
++### 4.3 `node scripts/check-core-boundaries.mjs` & test
++```text
++Core boundary check passed.
++✔ core boundary check is split into focused modules (6.6882ms)
++✔ split core boundary check keeps self-test and default execution behavior (1020.4304ms)
++✔ crate admission guard flags unregistered workspace member (21.0895ms)
++ℹ tests 3
++ℹ suites 0
++ℹ pass 3
++ℹ fail 0
++ℹ cancelled 0
++ℹ skipped 0
++ℹ todo 0
++ℹ duration_ms 1054.1101
++```
++
++### 4.4 `pnpm run check:rot`
++```text
++> northhing@0.2.10 check:rot E:\agent-project\.worktrees\northing-p2
++> node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
++
++✔ compliant fixture exits 0 and reports success (121.4279ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (117.3484ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (122.2304ms)
++✔ registered god-file exceeding ceiling fails (6.4148ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (7.1625ms)
++✔ dir-entry-count compliant fixture passes (107.3271ms)
++✔ dir-entry-count exceeding ceiling fails and exits 1 (105.8742ms)
++✔ dir-entry-count on non-existent directory fails and exits 1 (89.6923ms)
++✔ actual workspace rot budget passes with current manifest (360.4254ms)
++ℹ tests 9
++ℹ suites 0
++ℹ pass 9
++ℹ fail 0
++ℹ cancelled 0
++ℹ skipped 0
++ℹ todo 0
++ℹ duration_ms 1046.4009
++Rot budget verification passed (5 grep rules [unwrap_production=502/511, expect_production=1092/1093, let_underscore=388/389, unix_epoch_inline=69/69, allow_dead_code=111/111], 3 dir rules [dir_entries:scripts=45/45, dir_entries:docs/design=1/3, dir_entries:.superpowers/sdd=372/400], 7 god-file rules checked across 1362 files).
++```
++
++### 4.5 `cargo check --workspace` (stable-msvc)
++```text
++    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 47s
++```
++
++### 4.6 `git diff --stat`
++```text
++ AGENTS-CN.md                           |   2 +-
++ AGENTS.md                              |   2 +-
++ scripts/check-core-boundaries.test.mjs |  17 +++++
++ scripts/core-boundaries/checker.mjs    |  56 +++++++++++++++++
++ scripts/core-boundaries/self-test.mjs  |  33 ++++++++++
++ scripts/rot-budget.json                |  21 +++++++
++ scripts/verify-rot-budget.mjs          |  45 ++++++++++++-
++ scripts/verify-rot-budget.test.mjs     | 112 +++++++++++++++++++++++++++++++++
++ 8 files changed, 285 insertions(+), 3 deletions(-)
++```
++
++## 5. 偏离声明
++
++- 零偏离（Zero deviations from brief）。
+diff --git a/AGENTS-CN.md b/AGENTS-CN.md
+index eaaebbd..b148df1 100644
+--- a/AGENTS-CN.md
++++ b/AGENTS-CN.md
+@@ -94,7 +94,7 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast
+ 4. **并发测试绑定**：触及 `tokio::select!`、cancellation token 或 timeout 竞态的变更必须随附至少一个自动化测试；judge review 不能替代。其他类型的变更可以依赖 judge review。
+ 5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
+ 6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
+-7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。
++7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。dir-entry-count 指标的 sdd 条目是 cap-and-archive 语义（达到上限触发归档，而非只降不升）。
+ 
+ ### 国际化
+ 
+diff --git a/AGENTS.md b/AGENTS.md
+index f15e871..3c21ffb 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -98,7 +98,7 @@ For the full script list, see [`package.json`](package.json).
+ 4. **Concurrency test binding**: changes touching `tokio::select!`, cancellation tokens, or timeout races must ship with at least one automated test; judge review does not substitute. Other change types may rely on judge review.
+ 5. **Coding curfew**: no coding work after 03:00 daily (user health rule, recorded 2026-07-22).
+ 6. **Desktop compile gate before merging to main** (recorded 2026-08-06): `cargo check -p northhing` must pass on the branch tip before it merges to main, and a round handoff must not carry forward a verification baseline it did not measure itself. Reason: P1-C3 landed on main with the desktop crate not compiling at all (keyring feature missing) and it went unnoticed across a whole round because the report's verification section was incomplete and the next handoff reused a pre-C3 test figure. See `docs/status/tech-debt-ledger.md` P2-15.
+-7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message.
++7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message. The `dir-entry-count` metric for `.superpowers/sdd` uses cap-and-archive semantics (triggers archiving rotation when full, rather than strictly decreasing).
+ 
+ ### Internationalization
+ 
+diff --git a/scripts/check-core-boundaries.test.mjs b/scripts/check-core-boundaries.test.mjs
+index 3baf8d3..be0ca3e 100644
+--- a/scripts/check-core-boundaries.test.mjs
++++ b/scripts/check-core-boundaries.test.mjs
+@@ -2,6 +2,7 @@ import { access, readFile } from 'node:fs/promises';
+ import { spawnSync } from 'node:child_process';
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
++import { fileURLToPath } from 'node:url';
+ 
+ const ENTRYPOINT = new URL('./check-core-boundaries.mjs', import.meta.url);
+ const MODULES = [
+@@ -63,3 +64,19 @@ test('split core boundary check keeps self-test and default execution behavior',
+   assert.equal(defaultRun.status, 0, defaultRun.stderr || defaultRun.stdout);
+   assert.match(defaultRun.stdout, /Core boundary check passed\./);
+ });
++
++test('crate admission guard flags unregistered workspace member', async () => {
++  const { checkCrateSurfaceRegistration } = await import('./core-boundaries/checker.mjs');
++  const failures = [];
++  checkCrateSurfaceRegistration({
++    workspaceMembers: ['src/apps/desktop', 'src/crates/unregistered_fixture_crate'],
++    surfacesPath: fileURLToPath(new URL('../docs/status/surfaces.md', import.meta.url)),
++    exemptMembers: [],
++    recordFailure: (f) => failures.push(f),
++  });
++  assert.equal(failures.length, 1);
++  assert.match(
++    failures[0].message,
++    /workspace member crate "src\/crates\/unregistered_fixture_crate" is not registered in docs\/status\/surfaces\.md/,
++  );
++});
+diff --git a/scripts/core-boundaries/checker.mjs b/scripts/core-boundaries/checker.mjs
+index 95267e8..930f258 100644
+--- a/scripts/core-boundaries/checker.mjs
++++ b/scripts/core-boundaries/checker.mjs
+@@ -412,6 +412,58 @@ function checkCrateLayoutRules() {
+   }
+ }
+ 
++// Non-product workspace members exempt from docs/status/surfaces.md registration (e.g. internal test-only harnesses).
++export const surfacesExemptMembers = [];
++
++export function checkCrateSurfaceRegistration({
++  workspaceMembers = parseWorkspaceMembers(),
++  surfacesPath = join(ROOT, 'docs', 'status', 'surfaces.md'),
++  exemptMembers = surfacesExemptMembers,
++  projectRoot = ROOT,
++  recordFailure = (failure) => failures.push(failure),
++} = {}) {
++  if (!existsSync(surfacesPath)) {
++    recordFailure({
++      path: surfacesPath,
++      line: 1,
++      message: 'surfaces status ledger not found: docs/status/surfaces.md',
++    });
++    return;
++  }
++  const surfacesContent = readFileSync(surfacesPath, 'utf8');
++
++  for (const member of workspaceMembers) {
++    if (exemptMembers.includes(member)) {
++      continue;
++    }
++    // Match by exact member path in surfaces.md or by crate package name
++    const pathPattern = new RegExp(`\`${escapeRegex(member)}\`|\\b${escapeRegex(member)}\\b`);
++    let isRegistered = pathPattern.test(surfacesContent);
++
++    if (!isRegistered) {
++      const memberCargoPath = join(projectRoot, ...member.split('/'), 'Cargo.toml');
++      if (existsSync(memberCargoPath)) {
++        const cargoText = readFileSync(memberCargoPath, 'utf8');
++        const nameMatch = cargoText.match(/^name\s*=\s*"([^"]+)"/m);
++        if (nameMatch) {
++          const pkgName = nameMatch[1];
++          const shortName = pkgName.replace(/^northhing-/, '');
++          const namePattern = new RegExp(`\`${escapeRegex(pkgName)}\`|\`${escapeRegex(shortName)}\``);
++          isRegistered = namePattern.test(surfacesContent);
++        }
++      }
++    }
++
++    if (!isRegistered) {
++      recordFailure({
++        path: surfacesPath,
++        line: 1,
++        message: `workspace member crate "${member}" is not registered in docs/status/surfaces.md — add entry to shipping, frozen, or capability table (House Rule 2)`,
++      });
++    }
++  }
++}
++
+ function forbiddenRuleTextForPath(path) {
+   const direct = forbiddenContentRules
+     .filter((rule) => rule.path === path)
+@@ -904,12 +956,16 @@ export function runCoreBoundaryCheck() {
+       regexSourceContainsContract,
+       createFacadeLineChecker,
+       escapeRegex,
++      checkCrateSurfaceRegistration,
++      surfacesExemptMembers,
++      ROOT,
+     });
+     console.log('Core boundary check self-test passed.');
+     return;
+   }
+ 
+   checkCrateLayoutRules();
++  checkCrateSurfaceRegistration();
+ 
+   for (const crateName of noCoreDependencyCrates) {
+     const crateDir = crateDirForName(crateName);
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index 4116323..a56cd70 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -23,6 +23,9 @@ export function runManifestParserSelfTest({
+   regexSourceContainsContract,
+   createFacadeLineChecker,
+   escapeRegex,
++  checkCrateSurfaceRegistration,
++  surfacesExemptMembers,
++  ROOT,
+ }) {
+   const positiveCases = [
+     'northhing-core = { path = "../core" }',
+@@ -2686,4 +2689,34 @@ export function runManifestParserSelfTest({
+       throw new Error(`missing MCP runtime facade-only rule for ${path}`);
+     }
+   }
++
++  // Crate surface registration admission guard self-tests
++  const unregisteredFailures = [];
++  checkCrateSurfaceRegistration({
++    workspaceMembers: ['src/apps/desktop', 'src/crates/unregistered_fixture_crate'],
++    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
++    exemptMembers: [],
++    projectRoot: ROOT,
++    recordFailure: (f) => unregisteredFailures.push(f),
++  });
++  if (
++    unregisteredFailures.length !== 1 ||
++    !unregisteredFailures[0].message.includes('src/crates/unregistered_fixture_crate')
++  ) {
++    throw new Error('crate surface registration guard must flag unregistered workspace member');
++  }
++
++  const compliantFailures = [];
++  checkCrateSurfaceRegistration({
++    workspaceMembers: ['src/apps/desktop', 'src/crates/contracts/core-types'],
++    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
++    exemptMembers: [],
++    projectRoot: ROOT,
++    recordFailure: (f) => compliantFailures.push(f),
++  });
++  if (compliantFailures.length !== 0) {
++    throw new Error(
++      `crate surface registration guard falsely flagged compliant members: ${compliantFailures.map((f) => f.message).join(', ')}`,
++    );
++  }
+ }
+diff --git a/scripts/rot-budget.json b/scripts/rot-budget.json
+index e9b460c..3d4e195 100644
+--- a/scripts/rot-budget.json
++++ b/scripts/rot-budget.json
+@@ -23,6 +23,27 @@
+     "ceiling": 69,
+     "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down; ceiling rebased 2026-08-21 to checker semantics (excludes tests dirs/_tests.rs)"
+   },
++  "allow_dead_code": {
++    "kind": "grep-count",
++    "pattern": "allow\\(dead_code\\)",
++    "ceiling": 111,
++    "note": "R-13 allow(dead_code) ratchet: only down"
++  },
++  "dir_entries:scripts": {
++    "kind": "dir-entry-count",
++    "ceiling": 45,
++    "note": "directory top-level files ratchet: only down"
++  },
++  "dir_entries:docs/design": {
++    "kind": "dir-entry-count",
++    "ceiling": 3,
++    "note": "directory top-level files ratchet: only down"
++  },
++  "dir_entries:.superpowers/sdd": {
++    "kind": "dir-entry-count",
++    "ceiling": 400,
++    "note": "directory top-level files cap-and-archive: cap triggers archive rotation (not only-down)"
++  },
+   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
+     "kind": "file-lines",
+     "ceiling": 1009,
+diff --git a/scripts/verify-rot-budget.mjs b/scripts/verify-rot-budget.mjs
+index d7c646d..a67b93e 100644
+--- a/scripts/verify-rot-budget.mjs
++++ b/scripts/verify-rot-budget.mjs
+@@ -75,6 +75,7 @@ export function verifyRotBudget({
+ 
+   const grepRules = [];
+   const godFileRules = new Map();
++  const dirRules = [];
+ 
+   for (const [key, entry] of Object.entries(manifest)) {
+     if (entry.kind === 'grep-count') {
+@@ -90,6 +91,13 @@ export function verifyRotBudget({
+         key,
+         ceiling: entry.ceiling,
+       });
++    } else if (entry.kind === 'dir-entry-count') {
++      const dirRelPath = entry.dir || (key.startsWith('dir_entries:') ? key.slice('dir_entries:'.length) : key);
++      dirRules.push({
++        key,
++        dirRelPath,
++        ceiling: entry.ceiling,
++      });
+     }
+   }
+ 
+@@ -141,12 +149,47 @@ export function verifyRotBudget({
+     }
+   }
+ 
++  // Check dir-entry-count rules (top-level regular files)
++  for (const rule of dirRules) {
++    const fullDirPath = path.join(projectRoot, rule.dirRelPath);
++    if (!fs.existsSync(fullDirPath)) {
++      violations.push(
++        `${rule.key}: directory does not exist at ${rule.dirRelPath} — non-existent directory violates dir-entry-count guard`,
++      );
++      continue;
++    }
++    const stat = fs.statSync(fullDirPath);
++    if (!stat.isDirectory()) {
++      violations.push(
++        `${rule.key}: ${rule.dirRelPath} is not a directory — non-directory violates dir-entry-count guard`,
++      );
++      continue;
++    }
++    const entries = fs.readdirSync(fullDirPath, { withFileTypes: true });
++    const count = entries.filter((e) => e.isFile()).length;
++    counts[rule.key] = count;
++    if (count > rule.ceiling) {
++      violations.push(
++        `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — clean up directory entries, archive, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
++      );
++    }
++  }
++
+   const success = violations.length === 0;
+ 
+   if (!silent) {
+     if (success) {
++      const grepReadings = grepRules.map((r) => `${r.key}=${r.count}/${r.ceiling}`).join(', ');
++      const dirReadings = dirRules.map((r) => `${r.key}=${counts[r.key] ?? 0}/${r.ceiling}`).join(', ');
++      const readingsSummary = [
++        grepRules.length > 0 ? `${grepRules.length} grep rules [${grepReadings}]` : null,
++        dirRules.length > 0 ? `${dirRules.length} dir rules [${dirReadings}]` : null,
++        `${godFileRules.size} god-file rules`,
++      ]
++        .filter(Boolean)
++        .join(', ');
+       console.log(
+-        `Rot budget verification passed (${grepRules.length} grep rules, ${godFileRules.size} god-file rules checked across ${files.length} files).`,
++        `Rot budget verification passed (${readingsSummary} checked across ${files.length} files).`,
+       );
+     } else {
+       for (const violation of violations) {
+diff --git a/scripts/verify-rot-budget.test.mjs b/scripts/verify-rot-budget.test.mjs
+index 6830f7a..8ca2dc1 100644
+--- a/scripts/verify-rot-budget.test.mjs
++++ b/scripts/verify-rot-budget.test.mjs
+@@ -191,6 +191,118 @@ test('exempt file generated_locale_contract.rs >800 lines is permitted without m
+   }
+ });
+ 
++test('dir-entry-count compliant fixture passes', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    const targetDir = path.join(tmpDir, 'docs', 'design');
++    fs.mkdirSync(scriptsDir, { recursive: true });
++    fs.mkdirSync(targetDir, { recursive: true });
++
++    fs.writeFileSync(path.join(targetDir, 'a.md'), '// a', 'utf8');
++    fs.writeFileSync(path.join(targetDir, 'b.md'), '// b', 'utf8');
++    // Subdirectories should not be counted as top-level files
++    fs.mkdirSync(path.join(targetDir, 'subdir'));
++
++    const manifest = {
++      'dir_entries:docs/design': {
++        kind: 'dir-entry-count',
++        ceiling: 2,
++        note: 'test dir entry count',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, true);
++    assert.equal(result.violations.length, 0);
++    assert.equal(result.counts['dir_entries:docs/design'], 2);
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 0);
++    assert.match(proc.stdout, /Rot budget verification passed/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('dir-entry-count exceeding ceiling fails and exits 1', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    const targetDir = path.join(tmpDir, 'docs', 'design');
++    fs.mkdirSync(scriptsDir, { recursive: true });
++    fs.mkdirSync(targetDir, { recursive: true });
++
++    fs.writeFileSync(path.join(targetDir, 'a.md'), '// a', 'utf8');
++    fs.writeFileSync(path.join(targetDir, 'b.md'), '// b', 'utf8');
++    fs.writeFileSync(path.join(targetDir, 'c.md'), '// c', 'utf8');
++
++    const manifest = {
++      'dir_entries:docs/design': {
++        kind: 'dir-entry-count',
++        ceiling: 2,
++        note: 'test dir entry ceiling 2',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, false);
++    assert.equal(result.violations.length, 1);
++    assert.match(
++      result.violations[0],
++      /dir_entries:docs\/design: current 3 exceeds ceiling 2/,
++    );
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 1);
++    assert.match(proc.stderr, /dir_entries:docs\/design: current 3 exceeds ceiling 2/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('dir-entry-count on non-existent directory fails and exits 1', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    const manifest = {
++      'dir_entries:non_existent_dir': {
++        kind: 'dir-entry-count',
++        ceiling: 5,
++        note: 'test non existent directory',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, false);
++    assert.equal(result.violations.length, 1);
++    assert.match(
++      result.violations[0],
++      /dir_entries:non_existent_dir: directory does not exist at non_existent_dir/,
++    );
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 1);
++    assert.match(proc.stderr, /directory does not exist at non_existent_dir/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
+ test('actual workspace rot budget passes with current manifest', () => {
+   const result = verifyRotBudget({ projectRoot: REPO_ROOT, silent: true });
+   assert.equal(result.success, true, `Expected workspace rot budget to pass, got violations: ${result.violations.join('\n')}`);

@@ -2,6 +2,7 @@ import { access, readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 
 const ENTRYPOINT = new URL('./check-core-boundaries.mjs', import.meta.url);
 const MODULES = [
@@ -62,4 +63,37 @@ test('split core boundary check keeps self-test and default execution behavior',
   });
   assert.equal(defaultRun.status, 0, defaultRun.stderr || defaultRun.stdout);
   assert.match(defaultRun.stdout, /Core boundary check passed\./);
+});
+
+test('crate admission guard flags unregistered workspace member', async () => {
+  const { checkCrateSurfaceRegistration } = await import('./core-boundaries/checker.mjs');
+  const failures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop', 'src/crates/unregistered_fixture_crate'],
+    surfacesPath: fileURLToPath(new URL('../docs/status/surfaces.md', import.meta.url)),
+    exemptMembers: [],
+    recordFailure: (f) => failures.push(f),
+  });
+  assert.equal(failures.length, 1);
+  assert.match(
+    failures[0].message,
+    /workspace member crate "src\/crates\/unregistered_fixture_crate" is not registered in docs\/status\/surfaces\.md/,
+  );
+});
+
+test('crate admission guard rejects prefix-similar paths to prevent false positives', async () => {
+  const { checkCrateSurfaceRegistration } = await import('./core-boundaries/checker.mjs');
+  const failures = [];
+  // surfaces.md contains `src/apps/desktop`, but not `src/apps/desktop-unregistered`
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop-unregistered'],
+    surfacesPath: fileURLToPath(new URL('../docs/status/surfaces.md', import.meta.url)),
+    exemptMembers: [],
+    recordFailure: (f) => failures.push(f),
+  });
+  assert.equal(failures.length, 1);
+  assert.match(
+    failures[0].message,
+    /workspace member crate "src\/apps\/desktop-unregistered" is not registered in docs\/status\/surfaces\.md/,
+  );
 });

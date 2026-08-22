@@ -191,6 +191,118 @@ test('exempt file generated_locale_contract.rs >800 lines is permitted without m
   }
 });
 
+test('dir-entry-count compliant fixture passes', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    const targetDir = path.join(tmpDir, 'docs', 'design');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    fs.writeFileSync(path.join(targetDir, 'a.md'), '// a', 'utf8');
+    fs.writeFileSync(path.join(targetDir, 'b.md'), '// b', 'utf8');
+    // Subdirectories should not be counted as top-level files
+    fs.mkdirSync(path.join(targetDir, 'subdir'));
+
+    const manifest = {
+      'dir_entries:docs/design': {
+        kind: 'dir-entry-count',
+        ceiling: 2,
+        note: 'test dir entry count',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.counts['dir_entries:docs/design'], 2);
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 0);
+    assert.match(proc.stdout, /Rot budget verification passed/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('dir-entry-count exceeding ceiling fails and exits 1', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    const targetDir = path.join(tmpDir, 'docs', 'design');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    fs.writeFileSync(path.join(targetDir, 'a.md'), '// a', 'utf8');
+    fs.writeFileSync(path.join(targetDir, 'b.md'), '// b', 'utf8');
+    fs.writeFileSync(path.join(targetDir, 'c.md'), '// c', 'utf8');
+
+    const manifest = {
+      'dir_entries:docs/design': {
+        kind: 'dir-entry-count',
+        ceiling: 2,
+        note: 'test dir entry ceiling 2',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.equal(result.violations.length, 1);
+    assert.match(
+      result.violations[0],
+      /dir_entries:docs\/design: current 3 exceeds ceiling 2/,
+    );
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 1);
+    assert.match(proc.stderr, /dir_entries:docs\/design: current 3 exceeds ceiling 2/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('dir-entry-count on non-existent directory fails and exits 1', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const manifest = {
+      'dir_entries:non_existent_dir': {
+        kind: 'dir-entry-count',
+        ceiling: 5,
+        note: 'test non existent directory',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.equal(result.violations.length, 1);
+    assert.match(
+      result.violations[0],
+      /dir_entries:non_existent_dir: directory does not exist at non_existent_dir/,
+    );
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 1);
+    assert.match(proc.stderr, /directory does not exist at non_existent_dir/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('actual workspace rot budget passes with current manifest', () => {
   const result = verifyRotBudget({ projectRoot: REPO_ROOT, silent: true });
   assert.equal(result.success, true, `Expected workspace rot budget to pass, got violations: ${result.violations.join('\n')}`);
