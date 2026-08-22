@@ -208,6 +208,9 @@ impl ConversationCoordinator {
             context,
             subagent_parent_info: subagent_parent_info.clone(),
             delegation_policy,
+            // Intentional exemption (hidden-subagent phase2): this delegated turn runs headless
+            // with no interactive user to approve, so the tool-confirmation gate is skipped by
+            // design; tool scope is limited by `runtime_tool_restrictions` from phase1.
             skip_tool_confirmation: true,
             runtime_tool_restrictions,
             workspace_services: subagent_services,

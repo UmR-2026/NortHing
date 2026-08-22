@@ -253,6 +253,9 @@ fn build_execution_context(
         context: request.context.clone(),
         subagent_parent_info: phase1.subagent_parent_info.clone(),
         delegation_policy: phase1.delegation_policy,
+        // Intentional exemption (A2 hidden-subagent path): the subagent runs headless on
+        // behalf of the parent agent, so the interactive tool-confirmation gate does not
+        // apply; tool scope is enforced by `runtime_tool_restrictions` inherited from phase1.
         skip_tool_confirmation: true,
         runtime_tool_restrictions: phase1.runtime_tool_restrictions.clone(),
         workspace_services: None, // A2: services built in init_turn
