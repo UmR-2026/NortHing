@@ -202,17 +202,14 @@ impl StartupPage {
                 .as_millis()
         );
 
-        let custom_headers: Option<std::collections::HashMap<String, String>> = if result.custom_headers.is_empty() {
-            None
-        } else {
-            serde_json::from_str(&result.custom_headers).ok()
-        };
+        let custom_headers: Option<std::collections::HashMap<String, String>> = (!result.custom_headers.is_empty())
+            .then(|| serde_json::from_str(&result.custom_headers).ok())
+            .flatten();
+        let headers_mode = result.custom_headers_mode.clone();
+        let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then_some(headers_mode);
 
-        let custom_request_body: Option<String> = if result.custom_request_body.is_empty() {
-            None
-        } else {
-            Some(result.custom_request_body.clone())
-        };
+        let custom_request_body: Option<String> =
+            (!result.custom_request_body.is_empty()).then(|| result.custom_request_body.clone());
 
         let model_config = northhing_core::service::config::AIModelConfig {
             id: model_id.clone(),
@@ -227,11 +224,7 @@ impl StartupPage {
             enable_thinking_process: result.enable_thinking || result.support_preserved_thinking,
             skip_ssl_verify: result.skip_ssl_verify,
             custom_headers,
-            custom_headers_mode: if result.custom_headers_mode.is_empty() || result.custom_headers_mode == "merge" {
-                None
-            } else {
-                Some(result.custom_headers_mode.clone())
-            },
+            custom_headers_mode,
             custom_request_body,
             ..Default::default()
         };
@@ -252,6 +245,11 @@ impl StartupPage {
                 if let Err(e) = config_service.add_ai_model(model_config).await {
                     tracing::error!("Failed to add AI model: {}", e);
                     return false;
+                }
+
+                // Scheme C: persist the key to the OS keyring so it survives restarts.
+                if let Err(e) = crate::keyring_keys::store_model_key(&model_id, &result.api_key) {
+                    tracing::warn!("keyring store failed for '{model_id}': {e}");
                 }
 
                 // Auto-set as primary model if no primary model exists
@@ -343,17 +341,17 @@ impl StartupPage {
             None => return,
         };
 
-        let custom_headers: Option<std::collections::HashMap<String, String>> = if result.custom_headers.is_empty() {
-            None
-        } else {
-            serde_json::from_str(&result.custom_headers).ok()
-        };
+        let custom_headers: Option<std::collections::HashMap<String, String>> = (!result.custom_headers.is_empty())
+            .then(|| serde_json::from_str(&result.custom_headers).ok())
+            .flatten();
+        let headers_mode = result.custom_headers_mode.clone();
+        let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then_some(headers_mode);
 
-        let custom_request_body: Option<String> = if result.custom_request_body.is_empty() {
-            None
-        } else {
-            Some(result.custom_request_body.clone())
-        };
+        // Scheme C: an empty key field on edit inherits the stored keyring key.
+        let effective_key = crate::keyring_keys::resolve_effective_model_key(&model_id, &result.api_key);
+
+        let custom_request_body: Option<String> =
+            (!result.custom_request_body.is_empty()).then(|| result.custom_request_body.clone());
 
         let model_config = northhing_core::service::config::AIModelConfig {
             id: model_id.clone(),
@@ -361,18 +359,14 @@ impl StartupPage {
             provider: result.provider_format.clone(),
             model_name: result.model_name.clone(),
             base_url: result.base_url.clone(),
-            api_key: result.api_key.clone(),
+            api_key: effective_key.clone(),
             context_window: Some(result.context_window),
             max_tokens: Some(result.max_tokens),
             enabled: true,
             enable_thinking_process: result.enable_thinking || result.support_preserved_thinking,
             skip_ssl_verify: result.skip_ssl_verify,
             custom_headers,
-            custom_headers_mode: if result.custom_headers_mode.is_empty() || result.custom_headers_mode == "merge" {
-                None
-            } else {
-                Some(result.custom_headers_mode.clone())
-            },
+            custom_headers_mode,
             custom_request_body,
             ..Default::default()
         };
@@ -400,6 +394,10 @@ impl StartupPage {
         });
 
         if success {
+            // Keep the keyring in sync with the (possibly inherited) key.
+            if let Err(e) = crate::keyring_keys::store_model_key(&model_id, &effective_key) {
+                tracing::warn!("keyring store failed for '{model_id}': {e}");
+            }
             self.model_display_name = result_model_display;
             self.status = Some(format!("Model updated: {}", result_name));
             tracing::info!("Updated AI model: {}", model_id);

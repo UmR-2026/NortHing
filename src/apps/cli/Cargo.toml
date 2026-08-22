@@ -26,6 +26,9 @@ crossterm = { workspace = true }
 dirs = { workspace = true }
 toml = { workspace = true }
 
+# OS keyring for API key storage (Scheme C parity with the desktop)
+keyring = { workspace = true }
+
 # Session management
 uuid = { workspace = true }
 chrono = { workspace = true }

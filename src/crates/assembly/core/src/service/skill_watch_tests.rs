@@ -74,3 +74,25 @@ async fn test_skill_watch_service_debounce_window() {
         "Multiple rapid triggers must result in exactly 1 debounced emission"
     );
 }
+
+#[tokio::test]
+async fn test_skill_watch_service_concurrent_syncs_serialize() {
+    // Boot path fires sync_watched_paths twice in quick succession (init spawn
+    // + set_event_emitter). The sync_lock must serialize them: both complete
+    // without error and the end state still reports a full watched-path set
+    // that a subsequent sync reproduces identically.
+    let ws_service = Arc::new(WorkspaceService::new().await.expect("workspace service init"));
+    let service = SkillWatchService::new(ws_service);
+
+    let (ra, rb) = tokio::join!(service.sync_watched_paths(), service.sync_watched_paths());
+    ra.expect("concurrent sync a");
+    rb.expect("concurrent sync b");
+
+    let after_race = service.watched_paths().await;
+    assert!(!after_race.is_empty(), "watched paths survive the sync race");
+
+    service.sync_watched_paths().await.expect("post-race sync");
+    assert_eq!(after_race, service.watched_paths().await);
+
+    service.dispose().await;
+}

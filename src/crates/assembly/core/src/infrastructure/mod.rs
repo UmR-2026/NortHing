@@ -11,6 +11,7 @@ pub mod cli_credentials;
 pub mod debug_log;
 pub mod events;
 pub mod filesystem;
+pub mod keyring;
 pub mod storage;
 
 #[cfg(feature = "ai-adapter-runtime")]

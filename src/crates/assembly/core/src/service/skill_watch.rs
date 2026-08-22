@@ -34,6 +34,10 @@ pub struct SkillWatchService {
     disposables: Arc<Mutex<DisposableList>>,
     watched_paths: Arc<RwLock<HashSet<PathBuf>>>,
     pending_debounce: Arc<Mutex<Option<JoinHandle<()>>>>,
+    /// Serializes `sync_watched_paths` runs. Boot triggers it twice (init spawn
+    /// + `set_event_emitter`); without the lock the interleaved dispose/register
+    /// windows leave two live watchers feeding duplicate event loops.
+    sync_lock: Arc<Mutex<()>>,
 }
 
 static GLOBAL_SKILL_WATCH_SERVICE: std::sync::OnceLock<Arc<SkillWatchService>> = std::sync::OnceLock::new();
@@ -55,6 +59,7 @@ impl SkillWatchService {
             disposables: Arc::new(Mutex::new(DisposableList::new())),
             watched_paths: Arc::new(RwLock::new(HashSet::new())),
             pending_debounce: Arc::new(Mutex::new(None)),
+            sync_lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -78,6 +83,11 @@ impl SkillWatchService {
     /// Cleans up any prior watcher and debounce tasks via [`DisposableList`] and
     /// constructs a fresh watcher instance.
     pub async fn sync_watched_paths(&self) -> NortHingResult<()> {
+        // Hold across the whole dispose→rebuild sequence so concurrent callers
+        // (init spawn vs `set_event_emitter`) cannot interleave and both end
+        // up registering a watcher.
+        let _sync_guard = self.sync_lock.lock().await;
+
         // 1. Dispose previous watcher and debounce task
         {
             let mut disposables = self.disposables.lock().await;

@@ -11,6 +11,7 @@ mod agent;
 mod chat_state;
 mod commands;
 mod config;
+mod keyring_keys;
 mod management;
 mod modes;
 mod prompts;
@@ -369,26 +370,28 @@ async fn initialize_core_services(
     skip_tool_confirmation: bool,
 ) -> Result<(agent::agentic_system::AgenticSystem, bool)> {
     use northhing_core::infrastructure::ai::AIClientFactory;
+    use northhing_core::service::config::types::AIConfig;
 
     northhing_core::service::config::initialize_global_config()
         .await
         .context("Failed to initialize global config service")?;
     tracing::info!("Global config service initialized");
 
+    // Scheme C: resolve OS-keyring keys into core memory before any AI client is built.
+    keyring_keys::push_keyring_keys_into_core().await;
+
     // Save and override tool confirmation setting
     let config_service = northhing_core::service::config::get_global_config_service().await.ok();
     let original_skip_confirmation = if let Some(ref svc) = config_service {
-        let ai_config: northhing_core::service::config::types::AIConfig =
-            svc.config(Some("ai")).await.unwrap_or_default();
-        ai_config.skip_tool_confirmation
-    } else {
-        false
-    };
-    if let Some(ref svc) = config_service {
+        let ai_config: AIConfig = svc.config(Some("ai")).await.unwrap_or_default();
+        let original = ai_config.skip_tool_confirmation;
         let _ = svc
             .set_config("ai.skip_tool_confirmation", skip_tool_confirmation)
             .await;
-    }
+        original
+    } else {
+        false
+    };
 
     AIClientFactory::initialize_global()
         .await

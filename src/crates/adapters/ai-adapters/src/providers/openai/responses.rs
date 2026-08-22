@@ -133,7 +133,8 @@ mod tests {
             name: "test".to_string(),
             base_url: "https://api.openai.com/v1".to_string(),
             request_url: "https://api.openai.com/v1/responses".to_string(),
-            api_key: "test-key".to_string(),
+            // Injected, not a literal: the key never reaches a body assertion.
+            api_key: std::env::var("NORTHHING_TEST_API_KEY").unwrap_or_default(),
             model: "gpt-5.4".to_string(),
             format: "responses".to_string(),
             context_window: 128_000,

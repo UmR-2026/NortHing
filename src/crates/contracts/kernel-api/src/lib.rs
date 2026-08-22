@@ -43,8 +43,8 @@ pub use session::{
     WorkspaceSessionsDto,
 };
 pub use settings::{
-    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, KernelSettingsApi, MCPServerConfigDto,
-    MCPServerDto, MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
+    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, KernelSettingsApi, MCPServerConfigDto, MCPServerDto,
+    MCPServerStatusDto, ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
 };
 pub use tools::{
     KernelToolsApi, ToolInfoDto, ToolPort, ToolRenderOptionsDto, ToolResultDto, ToolUseContextDto, UserInputRequestDto,

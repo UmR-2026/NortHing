@@ -29,7 +29,8 @@ use std::sync::Mutex;
 
 /// Keyring service name — used by the OS keychain to namespace credentials.
 /// All provider API keys are stored under this service, keyed by provider UUID.
-const KEYRING_SERVICE: &str = "northhing.desktop.providers";
+// Single source of truth lives in core so the CLI addresses the same entries.
+use northhing_core::infrastructure::keyring::KEYRING_SERVICE;
 
 // ===== Sentinel =====
 

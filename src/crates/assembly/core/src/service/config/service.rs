@@ -301,6 +301,7 @@ impl ConfigService {
 
     /// Adds an AI model configuration.
     pub async fn add_ai_model(&self, model: AIModelConfig) -> NortHingResult<()> {
+        let model_id = model.id.clone();
         {
             let mut manager = self.manager.write().await;
             manager.config.ai.models.push(model);
@@ -308,6 +309,7 @@ impl ConfigService {
             manager.save_config().await?;
         }
         self.reconcile_models("add_ai_model").await?;
+        Self::invalidate_cached_ai_client(&model_id).await;
         Ok(())
     }
 
@@ -324,6 +326,7 @@ impl ConfigService {
             }
         }
         self.reconcile_models("update_ai_model").await?;
+        Self::invalidate_cached_ai_client(model_id).await;
         Ok(())
     }
 
@@ -343,7 +346,19 @@ impl ConfigService {
         }
 
         self.reconcile_models("delete_ai_model").await?;
+        Self::invalidate_cached_ai_client(model_id).await;
         Ok(())
+    }
+
+    /// Best-effort: drop the cached AI client for `model_id` so the next request
+    /// rebuilds it against the updated in-memory config. Scheme C key pushes are
+    /// key-only changes, so `reconcile_models` reports a noop for them and the
+    /// `ModelsReconciled` invalidation path never fires — without this call a
+    /// cached client keeps the stale (possibly empty) key until restart.
+    async fn invalidate_cached_ai_client(model_id: &str) {
+        if let Ok(factory) = crate::infrastructure::ai::get_global_ai_client_factory().await {
+            factory.invalidate_model(model_id);
+        }
     }
 
     /// Bring `ai.default_models`, `ai.agent_models`, and `ai.func_agent_models`

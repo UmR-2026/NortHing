@@ -28,17 +28,6 @@ pub struct ProviderConfigDto {
     pub provider_type: Option<String>,
 }
 
-/// Global config patch DTO.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct GlobalConfigPatchDto {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub providers: Option<Vec<ProviderConfigDto>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub default_provider_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub workspace_config: Option<serde_json::Value>,
-}
-
 /// AI model config DTO (enumerated from core at implementation time).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AIModelConfigDto {
@@ -146,10 +135,6 @@ pub trait KernelSettingsApi: Send + Sync {
     /// Get global config.
     /// Source: #49 #50 #51
     async fn get_global_config(&self) -> Result<GlobalConfigDto, KernelError>;
-
-    /// Update global config (patch semantics).
-    /// Source: #52 (GlobalConfigManager is alias mapping for get_global_config_service, not separately exposed)
-    async fn update_global_config(&self, patch: GlobalConfigPatchDto) -> Result<(), KernelError>;
 
     /// List model configs.
     /// Source: #53

@@ -140,17 +140,6 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                             );
                         }
                     }
-                    // Push keyring-resolved keys into core's in-memory model config (Scheme C).
-                    if let Err(e) = crate::app_state::settings::push_resolved_keys_to_core(
-                        &*crate::app_state::settings::PRODUCTION_KEYRING,
-                    )
-                    .await
-                    {
-                        tracing::warn!(
-                            target: "app_state",
-                            "startup push_resolved_keys_to_core failed: {e}"
-                        );
-                    }
                 }
                 Err(e) => {
                     // Settings load failure is non-fatal — show the main
@@ -161,6 +150,17 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                         "Phase 4: first-run check skipped: settings load failed: {e}"
                     );
                 }
+            }
+            // Push keyring-resolved keys into core's in-memory model config
+            // (Scheme C). Deliberately outside the match above: the push reads
+            // core's model list + the OS keyring, not desktop settings, so a
+            // settings-load failure must not skip it (previously the Err arm
+            // left core key-less until restart).
+            if let Err(e) =
+                crate::app_state::settings::push_resolved_keys_to_core(&*crate::app_state::settings::PRODUCTION_KEYRING)
+                    .await
+            {
+                tracing::warn!(target: "app_state", "startup push_resolved_keys_to_core failed: {e}");
             }
         });
     });

@@ -5855,6 +5855,7 @@ dependencies = [
  "crossterm 0.28.1",
  "dirs",
  "dunce",
+ "keyring",
  "libc",
  "northhing-acp",
  "northhing-core",
