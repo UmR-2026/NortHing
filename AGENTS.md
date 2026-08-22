@@ -98,7 +98,7 @@ For the full script list, see [`package.json`](package.json).
 4. **Concurrency test binding**: changes touching `tokio::select!`, cancellation tokens, or timeout races must ship with at least one automated test; judge review does not substitute. Other change types may rely on judge review.
 5. **Coding curfew**: no coding work after 03:00 daily (user health rule, recorded 2026-07-22).
 6. **Desktop compile gate before merging to main** (recorded 2026-08-06): `cargo check -p northhing` must pass on the branch tip before it merges to main, and a round handoff must not carry forward a verification baseline it did not measure itself. Reason: P1-C3 landed on main with the desktop crate not compiling at all (keyring feature missing) and it went unnoticed across a whole round because the report's verification section was incomplete and the next handoff reused a pre-C3 test figure. See `docs/status/tech-debt-ledger.md` P2-15.
-7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message.
+7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message. The `dir-entry-count` metric for `.superpowers/sdd` uses cap-and-archive semantics (triggers archiving rotation when full, rather than strictly decreasing).
 
 ### Internationalization
 

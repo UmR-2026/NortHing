@@ -23,6 +23,27 @@
     "ceiling": 69,
     "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down; ceiling rebased 2026-08-21 to checker semantics (excludes tests dirs/_tests.rs)"
   },
+  "allow_dead_code": {
+    "kind": "grep-count",
+    "pattern": "allow\\(dead_code\\)",
+    "ceiling": 111,
+    "note": "R-13 allow(dead_code) ratchet: only down"
+  },
+  "dir_entries:scripts": {
+    "kind": "dir-entry-count",
+    "ceiling": 45,
+    "note": "directory top-level files ratchet: only down"
+  },
+  "dir_entries:docs/design": {
+    "kind": "dir-entry-count",
+    "ceiling": 3,
+    "note": "directory top-level files ratchet: only down"
+  },
+  "dir_entries:.superpowers/sdd": {
+    "kind": "dir-entry-count",
+    "ceiling": 400,
+    "note": "directory top-level files cap-and-archive: cap triggers archive rotation (not only-down)"
+  },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
     "ceiling": 1009,

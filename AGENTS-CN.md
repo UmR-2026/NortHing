@@ -94,7 +94,7 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 4. **并发测试绑定**：触及 `tokio::select!`、cancellation token 或 timeout 竞态的变更必须随附至少一个自动化测试；judge review 不能替代。其他类型的变更可以依赖 judge review。
 5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
 6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
-7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。
+7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。dir-entry-count 指标的 sdd 条目是 cap-and-archive 语义（达到上限触发归档，而非只降不升）。
 
 ### 国际化
 

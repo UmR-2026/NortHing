@@ -23,6 +23,9 @@ export function runManifestParserSelfTest({
   regexSourceContainsContract,
   createFacadeLineChecker,
   escapeRegex,
+  checkCrateSurfaceRegistration,
+  surfacesExemptMembers,
+  ROOT,
 }) {
   const positiveCases = [
     'northhing-core = { path = "../core" }',
@@ -2685,5 +2688,35 @@ export function runManifestParserSelfTest({
     if (!facadePaths.has(path)) {
       throw new Error(`missing MCP runtime facade-only rule for ${path}`);
     }
+  }
+
+  // Crate surface registration admission guard self-tests
+  const unregisteredFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop', 'src/crates/unregistered_fixture_crate'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => unregisteredFailures.push(f),
+  });
+  if (
+    unregisteredFailures.length !== 1 ||
+    !unregisteredFailures[0].message.includes('src/crates/unregistered_fixture_crate')
+  ) {
+    throw new Error('crate surface registration guard must flag unregistered workspace member');
+  }
+
+  const compliantFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop', 'src/crates/contracts/core-types'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => compliantFailures.push(f),
+  });
+  if (compliantFailures.length !== 0) {
+    throw new Error(
+      `crate surface registration guard falsely flagged compliant members: ${compliantFailures.map((f) => f.message).join(', ')}`,
+    );
   }
 }

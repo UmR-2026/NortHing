@@ -75,6 +75,7 @@ export function verifyRotBudget({
 
   const grepRules = [];
   const godFileRules = new Map();
+  const dirRules = [];
 
   for (const [key, entry] of Object.entries(manifest)) {
     if (entry.kind === 'grep-count') {
@@ -88,6 +89,13 @@ export function verifyRotBudget({
       const fileRelPath = key.startsWith('god_file:') ? key.slice('god_file:'.length) : key;
       godFileRules.set(fileRelPath, {
         key,
+        ceiling: entry.ceiling,
+      });
+    } else if (entry.kind === 'dir-entry-count') {
+      const dirRelPath = entry.dir || (key.startsWith('dir_entries:') ? key.slice('dir_entries:'.length) : key);
+      dirRules.push({
+        key,
+        dirRelPath,
         ceiling: entry.ceiling,
       });
     }
@@ -141,12 +149,47 @@ export function verifyRotBudget({
     }
   }
 
+  // Check dir-entry-count rules (top-level regular files)
+  for (const rule of dirRules) {
+    const fullDirPath = path.join(projectRoot, rule.dirRelPath);
+    if (!fs.existsSync(fullDirPath)) {
+      violations.push(
+        `${rule.key}: directory does not exist at ${rule.dirRelPath} — non-existent directory violates dir-entry-count guard`,
+      );
+      continue;
+    }
+    const stat = fs.statSync(fullDirPath);
+    if (!stat.isDirectory()) {
+      violations.push(
+        `${rule.key}: ${rule.dirRelPath} is not a directory — non-directory violates dir-entry-count guard`,
+      );
+      continue;
+    }
+    const entries = fs.readdirSync(fullDirPath, { withFileTypes: true });
+    const count = entries.filter((e) => e.isFile()).length;
+    counts[rule.key] = count;
+    if (count > rule.ceiling) {
+      violations.push(
+        `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — clean up directory entries, archive, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
+      );
+    }
+  }
+
   const success = violations.length === 0;
 
   if (!silent) {
     if (success) {
+      const grepReadings = grepRules.map((r) => `${r.key}=${r.count}/${r.ceiling}`).join(', ');
+      const dirReadings = dirRules.map((r) => `${r.key}=${counts[r.key] ?? 0}/${r.ceiling}`).join(', ');
+      const readingsSummary = [
+        grepRules.length > 0 ? `${grepRules.length} grep rules [${grepReadings}]` : null,
+        dirRules.length > 0 ? `${dirRules.length} dir rules [${dirReadings}]` : null,
+        `${godFileRules.size} god-file rules`,
+      ]
+        .filter(Boolean)
+        .join(', ');
       console.log(
-        `Rot budget verification passed (${grepRules.length} grep rules, ${godFileRules.size} god-file rules checked across ${files.length} files).`,
+        `Rot budget verification passed (${readingsSummary} checked across ${files.length} files).`,
       );
     } else {
       for (const violation of violations) {
