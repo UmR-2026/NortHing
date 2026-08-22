@@ -2,19 +2,19 @@
   "unwrap_production": {
     "kind": "grep-count",
     "pattern": "\\.unwrap\\(\\)",
-    "ceiling": 511,
+    "ceiling": 502,
     "note": "R-13, ratchet: only down"
   },
   "expect_production": {
     "kind": "grep-count",
     "pattern": "\\.expect\\(",
-    "ceiling": 1093,
+    "ceiling": 1092,
     "note": "R-13, ratchet: only down"
   },
   "let_underscore": {
     "kind": "grep-count",
     "pattern": "let _ =",
-    "ceiling": 389,
+    "ceiling": 388,
     "note": "R-13, ratchet: only down"
   },
   "unix_epoch_inline": {
@@ -36,13 +36,13 @@
   },
   "dir_entries:docs/design": {
     "kind": "dir-entry-count",
-    "ceiling": 3,
-    "note": "directory top-level files ratchet: only down"
+    "ceiling": 1,
+    "note": "files-only semantics; post-PHASE-1A archive state"
   },
   "dir_entries:.superpowers/sdd": {
     "kind": "dir-entry-count",
     "ceiling": 400,
-    "note": "directory top-level files cap-and-archive: cap triggers archive rotation (not only-down)"
+    "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/"
   },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
@@ -57,11 +57,6 @@
   "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
     "kind": "file-lines",
     "ceiling": 918,
-    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
-  },
-  "god_file:src/crates/assembly/core/src/service/agent_memory/facts.rs": {
-    "kind": "file-lines",
-    "ceiling": 905,
     "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
   "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
