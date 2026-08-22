@@ -124,3 +124,6 @@ VERSIONS_DIR=.
 
 __pycache__/
 *.pyc
+
+# Tool state (parallel-session agents)
+**/.mimosa/

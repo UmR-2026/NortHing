@@ -31,8 +31,8 @@
   },
   "dir_entries:scripts": {
     "kind": "dir-entry-count",
-    "ceiling": 45,
-    "note": "directory top-level files ratchet: only down"
+    "ceiling": 42,
+    "note": "only down; new script requires retiring an old one first"
   },
   "dir_entries:docs/design": {
     "kind": "dir-entry-count",
