@@ -251,6 +251,7 @@ Memory is one of several persistence mechanisms available to you as you assist t
             db_opened = true;
             db_facts = db.get_facts(Some(&workspace_key)).unwrap_or_default();
             if db_facts.is_empty() {
+                // compat: facts.jsonl read fallback, remove after one release cycle
                 db_facts = read_facts(&memory_dir).await.unwrap_or_default();
             }
             let selected = select_facts_for_prompt(&db_facts, 1000);
@@ -266,6 +267,7 @@ Memory is one of several persistence mechanisms available to you as you assist t
             }
         }
         if !db_opened {
+            // compat: facts.jsonl read fallback, remove after one release cycle
             db_facts = read_facts(&memory_dir).await.unwrap_or_default();
         }
         let selected = if selected_for_touch.is_empty() {
@@ -403,9 +405,7 @@ Topic-oriented durable memory files available in this workspace.{topic_descripti
 
 #[cfg(test)]
 mod tests {
-    use super::super::facts::{
-        append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType,
-    };
+    use super::super::facts::{select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType};
     use crate::service::agent_memory::{
         build_workspace_agent_memory_prompt, unique_test_memory_db_path, with_test_memory_db_path,
     };
@@ -437,7 +437,10 @@ mod tests {
         tokio::fs::create_dir_all(&memory_dir).await.unwrap();
 
         let fact = make_fact("I prefer pnpm");
-        append_facts(&memory_dir, &[fact]).await.unwrap();
+        let fact_json = serde_json::to_string(&fact).unwrap();
+        tokio::fs::write(memory_dir.join("facts.jsonl"), format!("{}\n", fact_json))
+            .await
+            .unwrap();
 
         // Build prompt
         let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
@@ -486,7 +489,10 @@ mod tests {
 
         // Create a fact that uses tokens
         let fact = make_fact("short");
-        append_facts(&memory_dir, &[fact]).await.unwrap();
+        let fact_json = serde_json::to_string(&fact).unwrap();
+        tokio::fs::write(memory_dir.join("facts.jsonl"), format!("{}\n", fact_json))
+            .await
+            .unwrap();
 
         let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
         assert!(prompt.contains("# Remembered facts"));
@@ -557,7 +563,9 @@ mod query_aware_tests {
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
-        let result = build_query_aware_facts_reminder(&workspace, "zzzz_no_match_zzzz").await.unwrap();
+        let result = build_query_aware_facts_reminder(&workspace, "zzzz_no_match_zzzz")
+            .await
+            .unwrap();
         assert!(result.is_none());
 
         tokio::fs::remove_dir_all(&workspace).await.unwrap();

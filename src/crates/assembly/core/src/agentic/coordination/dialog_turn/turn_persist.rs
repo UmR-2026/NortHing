@@ -433,9 +433,11 @@ impl ConversationCoordinator {
     ) {
         use crate::agentic::persistence::PersistenceManager;
         use crate::infrastructure::PathManager;
-        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
-        use crate::service::agent_memory::{append_facts_dedup, distill_facts_with_llm, get_judge_state, set_judge_state};
         use crate::service::agent_memory::FactReview;
+        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+        use crate::service::agent_memory::{
+            distill_facts_with_llm, get_judge_state, migrate_facts_jsonl_once, set_judge_state,
+        };
 
         // Load the previous turn's assistant text for context (design M2).
         // Warn-only: any failure yields None and does not block the flow.
@@ -460,19 +462,14 @@ impl ConversationCoordinator {
             .as_ref()
             .ok()
             .and_then(|db| get_judge_state(db, "distiller_paused").ok().flatten())
-            .as_deref() == Some("true");
+            .as_deref()
+            == Some("true");
 
         // Distill candidate facts from user input using LLM (with keyword fallback).
         let candidates = if distiller_paused {
             Vec::new()
         } else {
-            distill_facts_with_llm(
-                user_input,
-                last_assistant_text.as_deref(),
-                session_id,
-                turn_id,
-            )
-            .await
+            distill_facts_with_llm(user_input, last_assistant_text.as_deref(), session_id, turn_id).await
         };
 
         // Hit-rate counting and self-learning brake (before early return).
@@ -548,59 +545,17 @@ impl ConversationCoordinator {
         // Get the memory directory path
         let memory_dir = path_manager.project_memory_dir(&workspace_path_buf);
 
-        {
-            use crate::service::agent_memory::{default_memory_db_path, Fact, MemoryDb};
-            use std::collections::HashSet;
-            use std::sync::{Mutex, OnceLock};
-
-            static MIGRATED_WORKSPACES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-
-            let db_path = default_memory_db_path();
-            if let Ok(db) = MemoryDb::open(&db_path) {
-                let mut should_migrate = false;
-                match MIGRATED_WORKSPACES.get_or_init(|| Mutex::new(HashSet::new())).lock() {
-                    Ok(mut migrated) => {
-                        if !migrated.contains(workspace_path) {
-                            migrated.insert(workspace_path.to_string());
-                            should_migrate = true;
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Facts: migration guard lock poisoned: {}", e);
-                    }
-                }
-                if should_migrate {
-                    let memory_dir_for_migration = path_manager.project_memory_dir(&workspace_path_buf);
-                    if let Ok(facts) = std::fs::read_to_string(memory_dir_for_migration.join("facts.jsonl")) {
-                        for line in facts.lines() {
-                            let line = line.trim();
-                            if line.is_empty() { continue; }
-                            if let Ok(fact) = serde_json::from_str::<crate::service::agent_memory::Fact>(line) {
-                                let _ = db.insert_fact(&fact, Some(workspace_path));
-                            }
-                        }
-                    }
-                }
-
-                for fact in &candidates {
-                    if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {
-                        warn!("Facts: MemoryDb insert failed: {}", e);
-                    }
-                }
-                let _ = db.decay_all_weights(0.99, 0.1);
+        if let Ok(db) = &db {
+            if let Err(e) = migrate_facts_jsonl_once(db, &memory_dir, workspace_path).await {
+                warn!("Facts: migration failed for {}: {}", workspace_path, e);
             }
-        }
 
-        // Append with exact-text deduplication (history + batch). IO failures
-        // are logged inside append_facts_dedup and never propagated.
-        let appended = append_facts_dedup(&memory_dir, candidates).await;
-        if appended > 0 {
-            debug!(
-                "Facts: appended {} facts: session_id={}, turn_id={}",
-                appended,
-                session_id,
-                turn_id,
-            );
+            for fact in &candidates {
+                if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {
+                    warn!("Facts: MemoryDb insert failed: {}", e);
+                }
+            }
+            let _ = db.decay_all_weights(0.99, 0.1);
         }
 
         crate::service::agent_memory::run_dream_sweep(&workspace_path_buf).await;
@@ -668,9 +623,7 @@ impl ConversationCoordinator {
             .find_map(|round| round.text_items.last().map(|item| item.content.clone()));
 
         match last_text {
-            Some(text) if !text.trim().is_empty() => {
-                Some(text.chars().take(500).collect())
-            }
+            Some(text) if !text.trim().is_empty() => Some(text.chars().take(500).collect()),
             _ => {
                 warn!(
                     "Facts: no assistant text found in turn: session_id={}, turn_index={}",

@@ -1,0 +1,871 @@
+diff --git a/.superpowers/sdd/task-phase1b-report.md b/.superpowers/sdd/task-phase1b-report.md
+new file mode 100644
+index 0000000..4e48c8d
+--- /dev/null
++++ b/.superpowers/sdd/task-phase1b-report.md
+@@ -0,0 +1,108 @@
++# Task PHASE-1B Report — facts jsonl 收口 SQLite
++
++## Spec 落实情况
++
++- **Spec 1（迁移抽取）**：在 `facts.rs` 中实现了 `migrate_facts_jsonl_once(db, memory_dir, ws_key)`，并在 `mod.rs` 导出。迁移时通过 `judge_mom` 表持久化记录 `facts_jsonl_migrated_v1:<ws_key>` 标记，读取 `facts.jsonl`，自动跳过损坏行（`warn!` 日志），按 text 级别去重后批量插入 SQLite（`db.insert_fact`），保留 `INSERT OR IGNORE` 双重保障。在 `turn_persist.rs` 的 `append_facts_entry` finalize 钩子中懒触发。
++- **Spec 2（删 jsonl 写路径）**：从 `facts.rs` 删除了 `append_facts` 与 `append_facts_dedup` 及其测试用例；在 `mod.rs` 中删除了对应导出；在 `turn_persist.rs:594-604` 中彻底删除了写 jsonl 的调用。
++- **Spec 3（留读兼容）**：保留了 `facts.rs` 中的 `read_facts` 以及 `auto_memory.rs` 中的两处 fallback 读取点，均添加了 `// compat: facts.jsonl read fallback, remove after one release cycle` 注释；未重命名或删除存量 `facts.jsonl` 文件。
++- **Spec 4（测试）**：
++  - 在 `facts.rs` 中增加了 `migrate_facts_jsonl_once_idempotency_and_marker`（验证迁移计数、ID保留、坏行跳过、文本去重、持久标记防重灌、模拟重启后不重灌）和 `migrate_facts_jsonl_once_missing_file_sets_marker` 测试。
++  - 将 `auto_memory.rs` 中的种子测试改为通过 `tokio::fs::write` 直写 `facts.jsonl`，保留 fallback 降级测试。
++- **Spec 5（边界保持）**：未触碰 `agentic/episodes/store.rs`、distill/dream/评审记账钩子及 growth 线文件。
++
++## 复用侦察
++
++1. **`turn_persist.rs:425-607` (`append_facts_entry`)**：原先使用 OnceLock 内存守卫进行内联迁移并在文末通过 `append_facts_dedup` 双写 jsonl。重构后直接在已有 `db` 连接上调用 `migrate_facts_jsonl_once`，移除 jsonl 追加，保留候选事实 SQLite 入库、权重衰减与 dream sweep。
++2. **`memory_db.rs` 的 `judge_mom` 表**：表结构为 `(key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)`，直接复用已有的 `db.get_judge_mom_value(key)` 与 `db.set_judge_mom_value(key, value, at_ms)` 方法，未新建表或修改数据库 schema。
++3. **`with_test_memory_db_path` 隔离缝 (`memory_db.rs:838`)**：在新增迁移测试中完整使用 thread-local `with_test_memory_db_path(unique_test_memory_db_path())` 隔离临时 SQLite 文件，保证测试密闭性。
++4. **`auto_memory.rs:240-280` fallback 段**：保留了 DB 为空或打不开时的 `read_facts(&memory_dir).await` 降级逻辑，并已加明确的 release 兼容标记。
++
++## ws_key 同源比对证据（最高危点核实）
++
++- **读侧**（`auto_memory.rs:245` 及 `system_prompt.rs:76`）：
++  ```rust
++  // system_prompt.rs:
++  let workspace = Path::new(&self.context.workspace_path);
++  build_workspace_agent_memory_prompt(workspace).await;
++
++  // auto_memory.rs:
++  let workspace_key = workspace_root.to_string_lossy().to_string();
++  db.get_facts(Some(&workspace_key));
++  ```
++- **写侧与迁移侧**（`turn_persist.rs:429,548` 及 `facts.rs:67`）：
++  ```rust
++  // turn_persist.rs:
++  migrate_facts_jsonl_once(db, &memory_dir, workspace_path).await;
++  db.insert_fact(fact, Some(workspace_path));
++
++  // facts.rs:
++  let marker_key = format!("facts_jsonl_migrated_v1:{}", ws_key);
++  db.insert_fact(&fact, Some(ws_key));
++  ```
++- **比对结论**：
++  两端均直接使用会话上下文中的 workspace 原始路径字符串（`self.context.workspace_path`），`Path::new(&path).to_string_lossy()` 在标准路径下与 `workspace_path` 逐字节完全同源，无大小写/斜杠格式转换，保证迁移写入的 `workspace_key` 与读侧检索完全一致。
++
++## growth 冲突预警声明
++
++`feat/growth-core-0804` 未合并分支同样修改 `append_facts_entry`。本次重构严格局限于迁移逻辑抽取与 jsonl 写路径移除，未改动函数签名、上下文蒸馏、评审记账及 dream 流程，将后续合并冲突面降至最低。
++
++## 健康度与行数（God-file 观测数据）
++
++- `facts.rs`：905 行 → **744 行**（净减 161 行，成功跌破 800 行软线，退出 god-file 观察名单）。
++- `turn_persist.rs`：683 行 → **636 行**（净减 47 行）。
++
++## Rust 错误与修复分层
++
++- `E0583 (module not found for generated_locale_contract)`：机制层，执行 `pnpm run i18n:generate` 生成 contract 模块。
++- `Rot budget let_underscore exceeding ceiling`：机制层，将迁移代码中的 `let _ = db.set_judge_mom_value(...)` 改为显式 `if let Err(e) = ...` 处理并打日志，未放宽 ceiling。
++
++## 验证命令与输出证据
++
++### 1. `cargo test -p northhing-core --features product-full --lib agent_memory`
++```text
++running 67 tests
++test service::agent_memory::facts::tests::migrate_facts_jsonl_once_missing_file_sets_marker ... ok
++test service::agent_memory::facts::tests::migrate_facts_jsonl_once_idempotency_and_marker ... ok
++test service::agent_memory::auto_memory::tests::prompt_injection_with_facts_includes_remembered_facts_section ... ok
++test service::agent_memory::auto_memory::tests::prompt_injection_without_facts_excludes_remembered_facts_section ... ok
++test service::agent_memory::auto_memory::tests::prompt_injection_degrades_when_facts_file_unreadable ... ok
++...
++test result: ok. 67 passed; 0 failed; 0 ignored; 0 measured; 979 filtered out; finished in 0.23s
++```
++
++### 2. `cargo test -p northhing-core --features product-full --lib turn`
++```text
++running 118 tests
++...
++test result: ok. 118 passed; 0 failed; 0 ignored; 0 measured; 928 filtered out; finished in 1.54s
++```
++
++### 3. `cargo check --workspace`
++```text
++Finished `dev` profile [unoptimized + debuginfo] target(s) - 0 errors
++```
++
++### 4. `cargo check -p northhing`
++```text
++Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 05s - 0 errors (House Rule 6 satisfied)
++```
++
++### 5. `node scripts/check-core-boundaries.mjs`
++```text
++Core boundary check passed.
++```
++
++### 6. `pnpm run check:rot`
++```text
++✔ actual workspace rot budget passes with current manifest (390.5486ms)
++Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1363 files).
++```
++
++### 7. `pnpm run fmt:rs`
++```text
++[format-changed-rust] Formatting 4 Rust file(s).
++```
++
++## 偏离声明
++
++无偏离。
+diff --git a/src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_persist.rs b/src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_persist.rs
+index 0ce7ef0..a454a61 100644
+--- a/src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_persist.rs
++++ b/src/crates/assembly/core/src/agentic/coordination/dialog_turn/turn_persist.rs
+@@ -433,9 +433,11 @@ impl ConversationCoordinator {
+     ) {
+         use crate::agentic::persistence::PersistenceManager;
+         use crate::infrastructure::PathManager;
+-        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
+-        use crate::service::agent_memory::{append_facts_dedup, distill_facts_with_llm, get_judge_state, set_judge_state};
+         use crate::service::agent_memory::FactReview;
++        use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
++        use crate::service::agent_memory::{
++            distill_facts_with_llm, get_judge_state, migrate_facts_jsonl_once, set_judge_state,
++        };
+ 
+         // Load the previous turn's assistant text for context (design M2).
+         // Warn-only: any failure yields None and does not block the flow.
+@@ -460,19 +462,14 @@ impl ConversationCoordinator {
+             .as_ref()
+             .ok()
+             .and_then(|db| get_judge_state(db, "distiller_paused").ok().flatten())
+-            .as_deref() == Some("true");
++            .as_deref()
++            == Some("true");
+ 
+         // Distill candidate facts from user input using LLM (with keyword fallback).
+         let candidates = if distiller_paused {
+             Vec::new()
+         } else {
+-            distill_facts_with_llm(
+-                user_input,
+-                last_assistant_text.as_deref(),
+-                session_id,
+-                turn_id,
+-            )
+-            .await
++            distill_facts_with_llm(user_input, last_assistant_text.as_deref(), session_id, turn_id).await
+         };
+ 
+         // Hit-rate counting and self-learning brake (before early return).
+@@ -548,59 +545,17 @@ impl ConversationCoordinator {
+         // Get the memory directory path
+         let memory_dir = path_manager.project_memory_dir(&workspace_path_buf);
+ 
+-        {
+-            use crate::service::agent_memory::{default_memory_db_path, Fact, MemoryDb};
+-            use std::collections::HashSet;
+-            use std::sync::{Mutex, OnceLock};
+-
+-            static MIGRATED_WORKSPACES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+-
+-            let db_path = default_memory_db_path();
+-            if let Ok(db) = MemoryDb::open(&db_path) {
+-                let mut should_migrate = false;
+-                match MIGRATED_WORKSPACES.get_or_init(|| Mutex::new(HashSet::new())).lock() {
+-                    Ok(mut migrated) => {
+-                        if !migrated.contains(workspace_path) {
+-                            migrated.insert(workspace_path.to_string());
+-                            should_migrate = true;
+-                        }
+-                    }
+-                    Err(e) => {
+-                        warn!("Facts: migration guard lock poisoned: {}", e);
+-                    }
+-                }
+-                if should_migrate {
+-                    let memory_dir_for_migration = path_manager.project_memory_dir(&workspace_path_buf);
+-                    if let Ok(facts) = std::fs::read_to_string(memory_dir_for_migration.join("facts.jsonl")) {
+-                        for line in facts.lines() {
+-                            let line = line.trim();
+-                            if line.is_empty() { continue; }
+-                            if let Ok(fact) = serde_json::from_str::<crate::service::agent_memory::Fact>(line) {
+-                                let _ = db.insert_fact(&fact, Some(workspace_path));
+-                            }
+-                        }
+-                    }
+-                }
++        if let Ok(db) = &db {
++            if let Err(e) = migrate_facts_jsonl_once(db, &memory_dir, workspace_path).await {
++                warn!("Facts: migration failed for {}: {}", workspace_path, e);
++            }
+ 
+-                for fact in &candidates {
+-                    if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {
+-                        warn!("Facts: MemoryDb insert failed: {}", e);
+-                    }
++            for fact in &candidates {
++                if let Err(e) = db.insert_fact(fact, Some(workspace_path)) {
++                    warn!("Facts: MemoryDb insert failed: {}", e);
+                 }
+-                let _ = db.decay_all_weights(0.99, 0.1);
+             }
+-        }
+-
+-        // Append with exact-text deduplication (history + batch). IO failures
+-        // are logged inside append_facts_dedup and never propagated.
+-        let appended = append_facts_dedup(&memory_dir, candidates).await;
+-        if appended > 0 {
+-            debug!(
+-                "Facts: appended {} facts: session_id={}, turn_id={}",
+-                appended,
+-                session_id,
+-                turn_id,
+-            );
++            let _ = db.decay_all_weights(0.99, 0.1);
+         }
+ 
+         crate::service::agent_memory::run_dream_sweep(&workspace_path_buf).await;
+@@ -668,9 +623,7 @@ impl ConversationCoordinator {
+             .find_map(|round| round.text_items.last().map(|item| item.content.clone()));
+ 
+         match last_text {
+-            Some(text) if !text.trim().is_empty() => {
+-                Some(text.chars().take(500).collect())
+-            }
++            Some(text) if !text.trim().is_empty() => Some(text.chars().take(500).collect()),
+             _ => {
+                 warn!(
+                     "Facts: no assistant text found in turn: session_id={}, turn_index={}",
+diff --git a/src/crates/assembly/core/src/service/agent_memory/auto_memory.rs b/src/crates/assembly/core/src/service/agent_memory/auto_memory.rs
+index b8235af..d4d9ce1 100644
+--- a/src/crates/assembly/core/src/service/agent_memory/auto_memory.rs
++++ b/src/crates/assembly/core/src/service/agent_memory/auto_memory.rs
+@@ -251,6 +251,7 @@ Memory is one of several persistence mechanisms available to you as you assist t
+             db_opened = true;
+             db_facts = db.get_facts(Some(&workspace_key)).unwrap_or_default();
+             if db_facts.is_empty() {
++                // compat: facts.jsonl read fallback, remove after one release cycle
+                 db_facts = read_facts(&memory_dir).await.unwrap_or_default();
+             }
+             let selected = select_facts_for_prompt(&db_facts, 1000);
+@@ -266,6 +267,7 @@ Memory is one of several persistence mechanisms available to you as you assist t
+             }
+         }
+         if !db_opened {
++            // compat: facts.jsonl read fallback, remove after one release cycle
+             db_facts = read_facts(&memory_dir).await.unwrap_or_default();
+         }
+         let selected = if selected_for_touch.is_empty() {
+@@ -403,9 +405,7 @@ Topic-oriented durable memory files available in this workspace.{topic_descripti
+ 
+ #[cfg(test)]
+ mod tests {
+-    use super::super::facts::{
+-        append_facts, select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType,
+-    };
++    use super::super::facts::{select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType};
+     use crate::service::agent_memory::{
+         build_workspace_agent_memory_prompt, unique_test_memory_db_path, with_test_memory_db_path,
+     };
+@@ -437,7 +437,10 @@ mod tests {
+         tokio::fs::create_dir_all(&memory_dir).await.unwrap();
+ 
+         let fact = make_fact("I prefer pnpm");
+-        append_facts(&memory_dir, &[fact]).await.unwrap();
++        let fact_json = serde_json::to_string(&fact).unwrap();
++        tokio::fs::write(memory_dir.join("facts.jsonl"), format!("{}\n", fact_json))
++            .await
++            .unwrap();
+ 
+         // Build prompt
+         let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+@@ -486,7 +489,10 @@ mod tests {
+ 
+         // Create a fact that uses tokens
+         let fact = make_fact("short");
+-        append_facts(&memory_dir, &[fact]).await.unwrap();
++        let fact_json = serde_json::to_string(&fact).unwrap();
++        tokio::fs::write(memory_dir.join("facts.jsonl"), format!("{}\n", fact_json))
++            .await
++            .unwrap();
+ 
+         let prompt = build_workspace_agent_memory_prompt(&workspace).await.unwrap();
+         assert!(prompt.contains("# Remembered facts"));
+@@ -557,7 +563,9 @@ mod query_aware_tests {
+         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+         tokio::fs::create_dir_all(&workspace).await.unwrap();
+ 
+-        let result = build_query_aware_facts_reminder(&workspace, "zzzz_no_match_zzzz").await.unwrap();
++        let result = build_query_aware_facts_reminder(&workspace, "zzzz_no_match_zzzz")
++            .await
++            .unwrap();
+         assert!(result.is_none());
+ 
+         tokio::fs::remove_dir_all(&workspace).await.unwrap();
+diff --git a/src/crates/assembly/core/src/service/agent_memory/facts.rs b/src/crates/assembly/core/src/service/agent_memory/facts.rs
+index 8839730..1a688bf 100644
+--- a/src/crates/assembly/core/src/service/agent_memory/facts.rs
++++ b/src/crates/assembly/core/src/service/agent_memory/facts.rs
+@@ -3,8 +3,7 @@
+ 
+ use crate::util::errors::{NortHingError, NortHingResult};
+ use std::path::Path;
+-use tokio::fs::{self, OpenOptions};
+-use tokio::io::AsyncWriteExt;
++use tokio::fs;
+ use tracing::{debug, warn};
+ 
+ const FACTS_FILE_NAME: &str = "facts.jsonl";
+@@ -63,87 +62,86 @@ impl Fact {
+     }
+ }
+ 
+-/// Append facts to the facts.jsonl file in the memory directory.
+-/// Append-only; does not interfere with memory.md.
+-pub(crate) async fn append_facts(memory_dir: &Path, facts: &[Fact]) -> NortHingResult<()> {
+-    let facts_path = memory_dir.join(FACTS_FILE_NAME);
+-
+-    let mut file = OpenOptions::new()
+-        .create(true)
+-        .append(true)
+-        .open(&facts_path)
+-        .await
+-        .map_err(|e| {
+-            NortHingError::Io(std::io::Error::new(
+-                std::io::ErrorKind::Other,
+-                format!("Failed to open facts file {}: {}", facts_path.display(), e),
+-            ))
+-        })?;
+-
+-    for fact in facts {
+-        let line = serde_json::to_string(fact).map_err(|e| {
+-            NortHingError::Serialization(e)
+-        })?;
+-        file.write_all(line.as_bytes()).await.map_err(|e| {
+-            NortHingError::Io(std::io::Error::new(
+-                std::io::ErrorKind::Other,
+-                format!("Failed to write fact: {}", e),
+-            ))
+-        })?;
+-        file.write_all(b"\n").await.map_err(|e| {
+-            NortHingError::Io(std::io::Error::new(
+-                std::io::ErrorKind::Other,
+-                format!("Failed to write newline: {}", e),
+-            ))
+-        })?;
++/// Migrate legacy `facts.jsonl` into SQLite `MemoryDb` once per workspace.
++/// Uses `judge_mom` table for persistent marking (`facts_jsonl_migrated_v1:<ws_key>`).
++/// Deduplicates facts by exact text, skips damaged lines, and inserts into SQLite.
++pub(crate) async fn migrate_facts_jsonl_once(
++    db: &super::memory_db::MemoryDb,
++    memory_dir: &Path,
++    ws_key: &str,
++) -> NortHingResult<usize> {
++    let marker_key = format!("facts_jsonl_migrated_v1:{}", ws_key);
++    if let Ok(Some(val)) = db.get_judge_mom_value(&marker_key) {
++        if val == "true" {
++            return Ok(0);
++        }
+     }
+ 
+-    debug!(
+-        "Appended {} facts to {}",
+-        facts.len(),
+-        facts_path.display()
+-    );
+-
+-    Ok(())
+-}
+-
+-/// Append candidate facts, skipping exact-text duplicates (history + batch).
+-/// Returns the number of facts actually appended. IO errors are logged as
+-/// warnings and result in no append (never propagated to the caller).
+-pub(crate) async fn append_facts_dedup(memory_dir: &Path, candidates: Vec<Fact>) -> usize {
+-    if candidates.is_empty() {
+-        return 0;
++    let facts_path = memory_dir.join(FACTS_FILE_NAME);
++    if !facts_path.exists() {
++        let now_ms = std::time::SystemTime::now()
++            .duration_since(std::time::UNIX_EPOCH)
++            .map(|d| d.as_millis() as u64)
++            .unwrap_or(0);
++        if let Err(e) = db.set_judge_mom_value(&marker_key, "true", now_ms) {
++            warn!("Facts: failed to set migration marker: {}", e);
++        }
++        return Ok(0);
+     }
+ 
+-    let existing = match read_facts(memory_dir).await {
+-        Ok(facts) => facts,
++    let content = match fs::read_to_string(&facts_path).await {
++        Ok(c) => c,
+         Err(e) => {
+-            warn!(
+-                "Facts: failed to read existing facts for deduplication, skipping append: {}",
+-                e
+-            );
+-            return 0;
++            warn!("Facts: failed to read {} for migration: {}", facts_path.display(), e);
++            return Err(NortHingError::Io(std::io::Error::new(
++                std::io::ErrorKind::Other,
++                format!("Failed to read facts file {}: {}", facts_path.display(), e),
++            )));
+         }
+     };
+ 
+-    let mut seen: std::collections::HashSet<String> = existing.iter().map(|f| f.text.clone()).collect();
+-    let new_facts: Vec<Fact> = candidates.into_iter().filter(|c| seen.insert(c.text.clone())).collect();
+-
+-    if new_facts.is_empty() {
+-        return 0;
++    let mut seen_texts = std::collections::HashSet::new();
++    let mut count = 0;
++    for line in content.lines() {
++        let line = line.trim();
++        if line.is_empty() {
++            continue;
++        }
++        match serde_json::from_str::<Fact>(line) {
++            Ok(fact) => {
++                if seen_texts.insert(fact.text.clone()) {
++                    if let Err(e) = db.insert_fact(&fact, Some(ws_key)) {
++                        warn!("Facts: failed to insert migrated fact {}: {}", fact.id, e);
++                    } else {
++                        count += 1;
++                    }
++                }
++            }
++            Err(e) => {
++                warn!("Skipping damaged fact line during migration: {}", e);
++            }
++        }
+     }
+ 
+-    let appended = new_facts.len();
+-    if let Err(e) = append_facts(memory_dir, &new_facts).await {
+-        warn!("Facts: failed to append facts: {}", e);
+-        return 0;
++    let now_ms = std::time::SystemTime::now()
++        .duration_since(std::time::UNIX_EPOCH)
++        .map(|d| d.as_millis() as u64)
++        .unwrap_or(0);
++    if let Err(e) = db.set_judge_mom_value(&marker_key, "true", now_ms) {
++        warn!("Facts: failed to set migration marker: {}", e);
+     }
+-    appended
++    debug!(
++        "Facts: migrated {} facts for ws_key={}, set marker {}",
++        count, ws_key, marker_key
++    );
++    Ok(count)
+ }
+ 
+ /// Read all facts from the facts.jsonl file.
+ /// Skips damaged lines with a warning.
+-pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {    let facts_path = memory_dir.join(FACTS_FILE_NAME);
++// compat: facts.jsonl read fallback, remove after one release cycle
++pub(crate) async fn read_facts(memory_dir: &Path) -> NortHingResult<Vec<Fact>> {
++    let facts_path = memory_dir.join(FACTS_FILE_NAME);
+ 
+     if !facts_path.exists() {
+         return Ok(Vec::new());
+@@ -236,15 +234,23 @@ pub fn select_facts_for_prompt(facts: &[Fact], token_budget: usize) -> Vec<Fact>
+ /// Distill candidate facts from a user message.
+ /// Returns a list of candidate facts based on keyword matching.
+ /// Each candidate has confidence Med and scope Workspace.
+-pub fn distill_facts_from_user_message(
+-    user_input: &str,
+-    session_id: &str,
+-    turn_id: &str,
+-) -> Vec<Fact> {
++pub fn distill_facts_from_user_message(user_input: &str, session_id: &str, turn_id: &str) -> Vec<Fact> {
+     // Bilingual keyword triggers from task spec
+     let keywords = [
+-        "以后", "记住", "记得", "不要", "别", "总是", "一直", "优先", "别再",
+-        "prefer", "always", "never", "remember", "from now on",
++        "以后",
++        "记住",
++        "记得",
++        "不要",
++        "别",
++        "总是",
++        "一直",
++        "优先",
++        "别再",
++        "prefer",
++        "always",
++        "never",
++        "remember",
++        "from now on",
+     ];
+ 
+     let has_keyword = keywords.iter().any(|kw| user_input.contains(kw));
+@@ -431,51 +437,6 @@ mod tests {
+         assert!(selected.is_empty());
+     }
+ 
+-    #[tokio::test]
+-    async fn append_and_read_facts_round_trip() {
+-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+-
+-        let facts = vec![
+-            Fact {
+-                schema_version: 1,
+-                id: "id1".to_string(),
+-                text: "First fact".to_string(),
+-                provenance: FactProvenance {
+-                    session_id: "s1".to_string(),
+-                    turn_id: "t1".to_string(),
+-                },
+-                confidence: FactConfidence::High,
+-                scope: FactScope::Workspace,
+-                fact_type: FactType::Feedback,
+-                created_at: 1000,
+-            },
+-            Fact {
+-                schema_version: 1,
+-                id: "id2".to_string(),
+-                text: "Second fact".to_string(),
+-                provenance: FactProvenance {
+-                    session_id: "s1".to_string(),
+-                    turn_id: "t2".to_string(),
+-                },
+-                confidence: FactConfidence::Med,
+-                scope: FactScope::Global,
+-                fact_type: FactType::Feedback,
+-                created_at: 2000,
+-            },
+-        ];
+-
+-        append_facts(&temp_dir, &facts).await.unwrap();
+-
+-        let read_back = read_facts(&temp_dir).await.unwrap();
+-        assert_eq!(read_back.len(), 2);
+-        assert_eq!(read_back[0].id, "id1");
+-        assert_eq!(read_back[1].id, "id2");
+-
+-        // Cleanup
+-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+-    }
+-
+     #[tokio::test]
+     async fn read_facts_skips_damaged_lines() {
+         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+@@ -500,52 +461,6 @@ DAMAGED LINE HERE
+         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+     }
+ 
+-    #[tokio::test]
+-    async fn append_facts_is_append_only() {
+-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+-
+-        let fact1 = vec![Fact {
+-            schema_version: 1,
+-            id: "id1".to_string(),
+-            text: "First".to_string(),
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t1".to_string(),
+-            },
+-            confidence: FactConfidence::High,
+-            scope: FactScope::Workspace,
+-            fact_type: FactType::Feedback,
+-            created_at: 1000,
+-        }];
+-
+-        append_facts(&temp_dir, &fact1).await.unwrap();
+-
+-        let fact2 = vec![Fact {
+-            schema_version: 1,
+-            id: "id2".to_string(),
+-            text: "Second".to_string(),
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t2".to_string(),
+-            },
+-            confidence: FactConfidence::Med,
+-            scope: FactScope::Global,
+-            fact_type: FactType::Feedback,
+-            created_at: 2000,
+-        }];
+-
+-        append_facts(&temp_dir, &fact2).await.unwrap();
+-
+-        let facts = read_facts(&temp_dir).await.unwrap();
+-        assert_eq!(facts.len(), 2);
+-        assert_eq!(facts[0].id, "id1");
+-        assert_eq!(facts[1].id, "id2");
+-
+-        // Cleanup
+-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+-    }
+-
+     #[tokio::test]
+     async fn read_facts_nonexistent_file_returns_empty() {
+         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+@@ -607,7 +522,8 @@ DAMAGED LINE HERE
+ 
+     #[test]
+     fn distill_facts_multiple_sentences_with_keyword() {
+-        let user_input = "Hello there. please remember I prefer pnpm. How is the weather? also always run tests before commit";
++        let user_input =
++            "Hello there. please remember I prefer pnpm. How is the weather? also always run tests before commit";
+         let facts = distill_facts_from_user_message(user_input, "s1", "t1");
+ 
+         // Should get 2 facts: one for "prefer pnpm" and one for "always run tests"
+@@ -726,108 +642,6 @@ DAMAGED LINE HERE
+         assert_eq!(parsed.fact_type, FactType::Feedback);
+     }
+ 
+-    // --- Deduplication tests ---
+-
+-    #[tokio::test]
+-    async fn deduplication_existing_fact_prevents_append() {
+-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+-
+-        let existing = Fact {
+-            schema_version: 1,
+-            id: "id1".to_string(),
+-            text: "I prefer pnpm".to_string(),
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t1".to_string(),
+-            },
+-            confidence: FactConfidence::High,
+-            scope: FactScope::Workspace,
+-            fact_type: FactType::Feedback,
+-            created_at: 1000,
+-        };
+-
+-        // Write existing fact
+-        append_facts(&temp_dir, &[existing]).await.unwrap();
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+-
+-        // Try to append duplicate
+-        let dup = Fact {
+-            schema_version: 1,
+-            id: "id2".to_string(),
+-            text: "I prefer pnpm".to_string(), // same text
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t2".to_string(),
+-            },
+-            confidence: FactConfidence::Med,
+-            scope: FactScope::Workspace,
+-            fact_type: FactType::Feedback,
+-            created_at: 2000,
+-        };
+-
+-        // Dedupe at call site (distill) — simulate by filtering
+-        let existing_facts = read_facts(&temp_dir).await.unwrap();
+-        let existing_texts: std::collections::HashSet<String> =
+-            existing_facts.iter().map(|f| f.text.clone()).collect();
+-        let new_facts: Vec<_> = vec![dup].into_iter().filter(|c| !existing_texts.contains(&c.text)).collect();
+-        assert!(new_facts.is_empty());
+-
+-        // Original file still has only 1 fact
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+-
+-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+-    }
+-
+-    #[tokio::test]
+-    async fn deduplication_batch_internal_prevents_duplicates() {
+-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+-
+-        // Empty existing facts
+-        assert!(read_facts(&temp_dir).await.unwrap().is_empty());
+-
+-        // Two facts with same text (simulating same sentence hit twice)
+-        let fact1 = Fact {
+-            schema_version: 1,
+-            id: "id1".to_string(),
+-            text: "I prefer pnpm".to_string(),
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t1".to_string(),
+-            },
+-            confidence: FactConfidence::Med,
+-            scope: FactScope::Workspace,
+-            fact_type: FactType::Feedback,
+-            created_at: 1000,
+-        };
+-        let fact2 = Fact {
+-            schema_version: 1,
+-            id: "id2".to_string(),
+-            text: "I prefer pnpm".to_string(), // same text
+-            provenance: FactProvenance {
+-                session_id: "s1".to_string(),
+-                turn_id: "t1".to_string(),
+-            },
+-            confidence: FactConfidence::Med,
+-            scope: FactScope::Workspace,
+-            fact_type: FactType::Feedback,
+-            created_at: 1001,
+-        };
+-
+-        // Dedupe using HashSet::insert (unified batch + history dedup)
+-        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+-        let unique: Vec<_> = vec![fact1, fact2]
+-            .into_iter()
+-            .filter(|f| seen.insert(f.text.clone()))
+-            .collect();
+-
+-        // Only one should survive
+-        assert_eq!(unique.len(), 1);
+-
+-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+-    }
+-
+     // --- Read facts IO error test ---
+ 
+     #[tokio::test]
+@@ -839,66 +653,91 @@ DAMAGED LINE HERE
+         assert!(result.unwrap().is_empty());
+     }
+ 
+-    // --- append_facts_dedup tests (real production path) ---
++    // --- Migration tests ---
+ 
+     #[tokio::test]
+-    async fn append_facts_dedup_skips_existing_identical_text() {
++    async fn migrate_facts_jsonl_once_idempotency_and_marker() {
++        use crate::service::agent_memory::{
++            default_memory_db_path, unique_test_memory_db_path, with_test_memory_db_path, MemoryDb,
++        };
++
++        let _guard = with_test_memory_db_path(unique_test_memory_db_path());
+         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+         tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+ 
+-        let existing = distill_facts_from_user_message("以后都用 pnpm", "s1", "t1");
+-        assert_eq!(existing.len(), 1);
+-        let appended_first = append_facts_dedup(&temp_dir, existing).await;
+-        assert_eq!(appended_first, 1);
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
++        let db = MemoryDb::open(&default_memory_db_path()).unwrap();
++        let ws_key = "test_workspace_key";
+ 
+-        // Same text again — production dedup must skip it.
+-        let again = distill_facts_from_user_message("以后都用 pnpm", "s1", "t2");
+-        let appended_second = append_facts_dedup(&temp_dir, again).await;
+-        assert_eq!(appended_second, 0);
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
++        let facts_path = temp_dir.join(FACTS_FILE_NAME);
++        tokio::fs::write(
++            &facts_path,
++            r#"{"schema_version":1,"id":"id-1","text":"prefer pnpm","provenance":{"session_id":"s1","turn_id":"t1"},"confidence":"high","scope":"workspace","fact_type":"feedback","created_at":1000}
++DAMAGED_CORRUPTED_JSON_LINE
++{"schema_version":1,"id":"id-2","text":"run tests before commit","provenance":{"session_id":"s1","turn_id":"t2"},"confidence":"med","scope":"global","fact_type":"feedback","created_at":2000}
++{"schema_version":1,"id":"id-3","text":"prefer pnpm","provenance":{"session_id":"s1","turn_id":"t3"},"confidence":"low","scope":"workspace","fact_type":"feedback","created_at":3000}"#,
++        )
++        .await
++        .unwrap();
++
++        // First migration run: imports 2 distinct facts (id-1, id-2), skips damaged line and text-duplicate id-3
++        let migrated_count = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
++        assert_eq!(migrated_count, 2);
++
++        // Verify facts in DB: 2 facts ("id-1" and "id-2"), "id-3" was deduped by text, damaged line was skipped
++        let db_facts = db.get_facts(Some(ws_key)).unwrap();
++        assert_eq!(db_facts.len(), 2);
++        let ids: Vec<&str> = db_facts.iter().map(|f| f.id.as_str()).collect();
++        assert!(ids.contains(&"id-1"));
++        assert!(ids.contains(&"id-2"));
++
++        // Verify judge_mom marker was persisted
++        let marker = db
++            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
++            .unwrap();
++        assert_eq!(marker, Some("true".to_string()));
++
++        // Second migration run (same DB session) -> returns 0, no duplicate import
++        let second_run = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
++        assert_eq!(second_run, 0);
++
++        // Simulating process restart: open a new MemoryDb connection to the same DB file
++        let db_reopened = MemoryDb::open(&default_memory_db_path()).unwrap();
++        let marker_after_restart = db_reopened
++            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
++            .unwrap();
++        assert_eq!(marker_after_restart, Some("true".to_string()));
++
++        // Migration after restart -> returns 0 immediately because of persistent mark
++        let after_restart_run = migrate_facts_jsonl_once(&db_reopened, &temp_dir, ws_key).await.unwrap();
++        assert_eq!(after_restart_run, 0);
++
++        // DB facts count remains 2
++        let db_facts_after = db_reopened.get_facts(Some(ws_key)).unwrap();
++        assert_eq!(db_facts_after.len(), 2);
+ 
+         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+     }
+ 
+     #[tokio::test]
+-    async fn append_facts_dedup_batch_internal_duplicates_write_once() {
++    async fn migrate_facts_jsonl_once_missing_file_sets_marker() {
++        use crate::service::agent_memory::{
++            default_memory_db_path, unique_test_memory_db_path, with_test_memory_db_path, MemoryDb,
++        };
++
++        let _guard = with_test_memory_db_path(unique_test_memory_db_path());
+         let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+         tokio::fs::create_dir_all(&temp_dir).await.unwrap();
+ 
+-        // Two identical candidates in one batch → only one written.
+-        let batch = vec![
+-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+-        ]
+-        .into_iter()
+-        .flatten()
+-        .collect::<Vec<_>>();
+-        assert_eq!(batch.len(), 2);
+-
+-        let appended = append_facts_dedup(&temp_dir, batch).await;
+-        assert_eq!(appended, 1);
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 1);
+-
+-        tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+-    }
++        let db = MemoryDb::open(&default_memory_db_path()).unwrap();
++        let ws_key = "test_workspace_empty";
+ 
+-    #[tokio::test]
+-    async fn append_facts_dedup_appends_distinct_facts() {
+-        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+-        tokio::fs::create_dir_all(&temp_dir).await.unwrap();
++        let migrated_count = migrate_facts_jsonl_once(&db, &temp_dir, ws_key).await.unwrap();
++        assert_eq!(migrated_count, 0);
+ 
+-        let batch = vec![
+-            distill_facts_from_user_message("以后都用 pnpm", "s1", "t1"),
+-            distill_facts_from_user_message("不要总是提交锁文件", "s1", "t1"),
+-        ]
+-        .into_iter()
+-        .flatten()
+-        .collect::<Vec<_>>();
+-
+-        let appended = append_facts_dedup(&temp_dir, batch).await;
+-        assert_eq!(appended, 2);
+-        assert_eq!(read_facts(&temp_dir).await.unwrap().len(), 2);
++        let marker = db
++            .get_judge_mom_value(&format!("facts_jsonl_migrated_v1:{}", ws_key))
++            .unwrap();
++        assert_eq!(marker, Some("true".to_string()));
+ 
+         tokio::fs::remove_dir_all(&temp_dir).await.unwrap();
+     }
+diff --git a/src/crates/assembly/core/src/service/agent_memory/mod.rs b/src/crates/assembly/core/src/service/agent_memory/mod.rs
+index fc59921..bf1ab6f 100644
+--- a/src/crates/assembly/core/src/service/agent_memory/mod.rs
++++ b/src/crates/assembly/core/src/service/agent_memory/mod.rs
+@@ -12,7 +12,7 @@ pub(crate) use auto_memory::build_workspace_memory_files_context;
+ pub(crate) use distiller::distill_facts_with_llm;
+ pub(crate) use dream::run_dream_sweep;
+ pub(crate) use facts::{
+-    append_facts, append_facts_dedup, distill_facts_from_user_message, read_facts, select_facts_for_prompt, Fact,
++    distill_facts_from_user_message, migrate_facts_jsonl_once, read_facts, select_facts_for_prompt, Fact,
+     FactConfidence, FactProvenance, FactScope, FactType,
+ };
+ pub(crate) use instruction_context::build_workspace_instruction_files_context;
