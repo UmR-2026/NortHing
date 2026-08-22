@@ -436,8 +436,8 @@ export function checkCrateSurfaceRegistration({
     if (exemptMembers.includes(member)) {
       continue;
     }
-    // Match by exact member path in surfaces.md or by crate package name
-    const pathPattern = new RegExp(`\`${escapeRegex(member)}\`|\\b${escapeRegex(member)}\\b`);
+    // Match by exact member path in surfaces.md with explicit delimiter boundaries (not word boundary \b which breaks on -)
+    const pathPattern = new RegExp(`(?<=[\`\\s|()]|^)${escapeRegex(member)}(?=[/\`\\s,;|()]|$)`);
     let isRegistered = pathPattern.test(surfacesContent);
 
     if (!isRegistered) {

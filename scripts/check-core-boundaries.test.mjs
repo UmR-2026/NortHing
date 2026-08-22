@@ -80,3 +80,20 @@ test('crate admission guard flags unregistered workspace member', async () => {
     /workspace member crate "src\/crates\/unregistered_fixture_crate" is not registered in docs\/status\/surfaces\.md/,
   );
 });
+
+test('crate admission guard rejects prefix-similar paths to prevent false positives', async () => {
+  const { checkCrateSurfaceRegistration } = await import('./core-boundaries/checker.mjs');
+  const failures = [];
+  // surfaces.md contains `src/apps/desktop`, but not `src/apps/desktop-unregistered`
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop-unregistered'],
+    surfacesPath: fileURLToPath(new URL('../docs/status/surfaces.md', import.meta.url)),
+    exemptMembers: [],
+    recordFailure: (f) => failures.push(f),
+  });
+  assert.equal(failures.length, 1);
+  assert.match(
+    failures[0].message,
+    /workspace member crate "src\/apps\/desktop-unregistered" is not registered in docs\/status\/surfaces\.md/,
+  );
+});

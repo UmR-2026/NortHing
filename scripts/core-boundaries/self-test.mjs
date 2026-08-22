@@ -2719,4 +2719,20 @@ export function runManifestParserSelfTest({
       `crate surface registration guard falsely flagged compliant members: ${compliantFailures.map((f) => f.message).join(', ')}`,
     );
   }
+
+  // Prefix similarity collision test: member "src/apps/desktop-unknown" must not be matched by "src/apps/desktop" in surfaces.md
+  const prefixCollisionFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop-unknown'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => prefixCollisionFailures.push(f),
+  });
+  if (
+    prefixCollisionFailures.length !== 1 ||
+    !prefixCollisionFailures[0].message.includes('src/apps/desktop-unknown')
+  ) {
+    throw new Error('crate surface registration guard falsely matched prefix-similar unregistered crate');
+  }
 }
