@@ -97,3 +97,29 @@ test('crate admission guard rejects prefix-similar paths to prevent false positi
     /workspace member crate "src\/apps\/desktop-unregistered" is not registered in docs\/status\/surfaces\.md/,
   );
 });
+
+test('crate admission guard reports unregistered member when surfaces lists only a prefix-similar sibling', async () => {
+  const { checkCrateSurfaceRegistration } = await import('./core-boundaries/checker.mjs');
+  const failures = [];
+  // Regression for the legacy pattern `\`path\`|\bpath\b`: its `\b` alternative matched
+  // inside the longer `src/apps/desktop-tauri` ledger entry (a `-` satisfies a word
+  // boundary), so an unregistered `src/apps/desktop` member slipped through. The fixture
+  // ledger registers only `src/apps/desktop-tauri`; the real repo cannot express this
+  // scenario because its surfaces.md lists both paths. projectRoot points at the fixture
+  // directory so the Cargo package-name fallback cannot mask the missing entry. Under the
+  // legacy pattern no violation is reported and this test fails; the boundary-aware
+  // pattern must report the member as unregistered.
+  const fixtureDir = new URL('./core-boundaries/fixtures/', import.meta.url);
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop'],
+    surfacesPath: fileURLToPath(new URL('surfaces-desktop-tauri-only.md', fixtureDir)),
+    exemptMembers: [],
+    projectRoot: fileURLToPath(fixtureDir),
+    recordFailure: (f) => failures.push(f),
+  });
+  assert.equal(failures.length, 1);
+  assert.match(
+    failures[0].message,
+    /workspace member crate "src\/apps\/desktop" is not registered in docs\/status\/surfaces\.md/,
+  );
+});
