@@ -20,8 +20,8 @@
   "unix_epoch_inline": {
     "kind": "grep-count",
     "pattern": "duration_since\\([^\\n]*UNIX_EPOCH",
-    "ceiling": 73,
-    "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down"
+    "ceiling": 69,
+    "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down; ceiling rebased 2026-08-21 to checker semantics (excludes tests dirs/_tests.rs)"
   },
   "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
     "kind": "file-lines",
