@@ -257,41 +257,17 @@ fn integration_welcome_provider_session_delete_provider() {
 // ===== Core sync helper tests =====
 
 #[test]
-fn provider_wire_format_mapping() {
-    assert_eq!(provider_wire_format(&ProviderType::Anthropic), "anthropic");
-    assert_eq!(provider_wire_format(&ProviderType::Openai), "openai");
-    assert_eq!(provider_wire_format(&ProviderType::Gemini), "gemini");
-    assert_eq!(provider_wire_format(&ProviderType::CustomOpenaiCompatible), "openai");
-    assert_eq!(
-        provider_wire_format(&ProviderType::CustomAnthropicCompatible),
-        "anthropic"
-    );
-}
-
-#[test]
 fn provider_wire_format_from_str_mapping() {
     assert_eq!(provider_wire_format_from_str("anthropic"), "anthropic");
     assert_eq!(provider_wire_format_from_str("custom-anthropic"), "anthropic");
     assert_eq!(provider_wire_format_from_str("openai"), "openai");
     assert_eq!(provider_wire_format_from_str("custom-openai"), "openai");
-    assert_eq!(provider_wire_format_from_str("gemini"), "gemini");
-    assert_eq!(provider_wire_format_from_str("other"), "openai");
 }
 
 #[test]
-fn provider_to_ai_model_config_fields() {
-    let kr = MockKeyring::new();
-    let p = ProviderConfig::new("我的 Anthropic".into(), ProviderType::Anthropic);
-    let m = provider_to_ai_model_config(&p, &kr);
-    assert_eq!(m.id, p.id);
-    assert_eq!(m.display_name, Some("我的 Anthropic".to_string()));
-    assert_eq!(m.provider_id, "anthropic");
-    assert_eq!(m.model, p.model);
-    assert_eq!(m.api_key, Some(p.api_key.clone()));
-    assert_eq!(m.enabled, Some(p.enabled));
-    assert!(m.base_url.as_deref().unwrap_or("").contains("anthropic"));
-    assert_eq!(m.category, Some("general_chat".to_string()));
-    assert_eq!(m.auth, Some("api_key".to_string()));
+fn provider_wire_format_from_str_other_defaults_to_openai() {
+    assert_eq!(provider_wire_format_from_str("gemini"), "gemini");
+    assert_eq!(provider_wire_format_from_str("other"), "openai");
 }
 
 #[test]
@@ -369,8 +345,9 @@ fn resolve_effective_api_key_whitespace_only_treated_as_empty() {
 // ===== Push stream test (Spec 3/5) =====
 
 #[tokio::test]
-async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_clean() {
+async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_clean() -> anyhow::Result<()> {
     use northhing_core::kernel_facade::kernel_facade;
+    use northhing_core::service::config::get_global_config_service;
     use northhing_kernel_api::settings::AIModelConfigDto;
     use northhing_kernel_api::KernelSettingsApi;
 
@@ -390,7 +367,6 @@ async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_cl
         max_tokens: None,
         temperature: None,
         base_url: Some("https://api.openai.com/v1".to_string()),
-        api_key: None,
         enabled: Some(true),
         category: Some("general_chat".to_string()),
         capabilities: Some(vec!["text_chat".to_string()]),
@@ -398,24 +374,23 @@ async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_cl
         inline_think_in_text: Some(true),
     };
 
-    facade
-        .upsert_model_config(model_dto)
-        .await
-        .expect("upsert model in core");
+    facade.upsert_model_config(model_dto, None).await?;
 
     // Run push_resolved_keys_to_core
-    let pushed_count = push_resolved_keys_to_core(&kr).await.expect("push resolved keys");
+    let pushed_count = push_resolved_keys_to_core(&kr).await?;
     assert!(pushed_count >= 1);
 
-    // Verify in-memory core global config has plaintext key
-    let global_cfg = facade.get_global_config().await.expect("get global config");
-    let pushed_provider = global_cfg
-        .providers
+    // Verify the in-memory key via the core-internal config service — the
+    // contract surface is keyless by design and must not be used as an oracle.
+    let cfg_svc = get_global_config_service().await?;
+    let models = cfg_svc.get_ai_models().await?;
+    let pushed = models
         .iter()
-        .find(|p| p.id == model_id)
-        .expect("provider must exist in global config");
-    assert_eq!(pushed_provider.api_key, "sk-push-secret-999");
+        .find(|m| m.id == model_id)
+        .expect("model must exist in core memory");
+    assert_eq!(pushed.api_key, "sk-push-secret-999");
 
     // Clean up
     let _ = facade.delete_model_config(&model_id).await;
+    Ok(())
 }

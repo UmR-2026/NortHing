@@ -318,10 +318,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_export_markdown_callback(&ui, &app_state);
     register_open_session_settings_callback(&ui, &app_state);
 
-    // FR-T3b: frameless 窗口控制按钮接 Rust slint::Window API。
+    // FR-T3b: frameless window controls wired to the Rust slint::Window API.
     // minimize -> set_minimized(true); maximize -> toggle is_maximized;
-    // close -> hide()（hide 递减 window_count，归零自动 quit_event_loop，
-    // 见 i-slint-core window.rs Window::hide）。无 AppState 依赖。
+    // close -> hide() (hide decrements window_count; reaching zero quits the
+    // event loop automatically, see i-slint-core window.rs Window::hide).
+    // No AppState dependency.
     let ui_weak_min = ui.as_weak();
     ui.on_window_minimize(move || {
         if let Some(ui) = ui_weak_min.upgrade() {

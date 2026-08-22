@@ -33,7 +33,6 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                     id: m.id.clone(),
                     name: m.name.clone(),
                     base_url: m.base_url.clone(),
-                    api_key: m.api_key.clone(),
                     model: m.model_name.clone(),
                     extra: None,
                     enabled: Some(m.enabled),
@@ -63,7 +62,6 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 max_tokens: m.max_tokens,
                 temperature: m.temperature,
                 base_url: Some(m.base_url),
-                api_key: Some(m.api_key),
                 enabled: Some(m.enabled),
                 category: Some(category_to_str(&m.category)),
                 capabilities: Some(m.capabilities.iter().map(|c| capability_to_str(c)).collect()),
@@ -73,7 +71,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
             .collect())
     }
 
-    async fn upsert_model_config(&self, config: AIModelConfigDto) -> Result<(), KernelError> {
+    async fn upsert_model_config(&self, config: AIModelConfigDto, api_key: Option<String>) -> Result<(), KernelError> {
         let cfg_svc = get_global_config_service()
             .await
             .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
@@ -90,7 +88,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 model_name: config.model.clone(),
                 base_url: config.base_url.unwrap_or_else(|| existing_model.base_url.clone()),
                 request_url: existing_model.request_url.clone(),
-                api_key: config.api_key.unwrap_or_else(|| existing_model.api_key.clone()),
+                api_key: api_key.clone().unwrap_or_else(|| existing_model.api_key.clone()),
                 context_window: existing_model.context_window,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,
@@ -134,7 +132,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 model_name: config.model.clone(),
                 base_url: config.base_url.unwrap_or_default(),
                 request_url: None,
-                api_key: config.api_key.unwrap_or_default(),
+                api_key: api_key.clone().unwrap_or_default(),
                 context_window: None,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,

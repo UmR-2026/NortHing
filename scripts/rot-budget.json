@@ -8,7 +8,7 @@
  "expect_production": {
   "kind": "grep-count",
   "pattern": "\\.expect\\(",
-  "ceiling": 1092,
+  "ceiling": 1089,
   "note": "R-13, ratchet: only down"
  },
  "let_underscore": {
@@ -26,7 +26,7 @@
  "allow_dead_code": {
   "kind": "grep-count",
   "pattern": "allow\\(dead_code\\)",
-  "ceiling": 111,
+  "ceiling": 109,
   "note": "R-13 allow(dead_code) ratchet: only down"
  },
  "dir_entries:scripts": {

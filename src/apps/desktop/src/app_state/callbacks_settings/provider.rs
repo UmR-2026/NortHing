@@ -148,7 +148,6 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                     max_tokens: None,
                     temperature: None,
                     base_url: Some(pbase.clone()),
-                    api_key: Some(effective_key),
                     enabled: Some(penabled),
                     category: Some("general_chat".to_string()),
                     capabilities: Some(vec!["text_chat".to_string(), "function_calling".to_string()]),
@@ -157,7 +156,9 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
                 };
 
                 let facade = kernel_facade();
-                if let Err(e) = facade.upsert_model_config(model_dto).await {
+                // Scheme C write-only key channel: the key rides the explicit
+                // parameter, never the DTO shape.
+                if let Err(e) = facade.upsert_model_config(model_dto, Some(effective_key)).await {
                     tracing::warn!(target: "app_state", "upsert-provider upsert_model_config failed: {e}");
                     set_inline_error(ui_weak.clone(), "保存配置失败，请重试".to_string());
                     return;

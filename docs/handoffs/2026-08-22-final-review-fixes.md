@@ -38,10 +38,24 @@
 - **门机制查明**：harness 层（非 git hook——命令文本含 `git commit` 即触发整条拦截，`--no-verify` 未必有用）；规则库加密（8145 条），无可见 allowlist/豁免口。昨日 12+ commit 能过是因为走的 opencode 环境，不是本门。
 - **待用户三选一（修订版）**：(a) 在 opencode 环境落这批 staged 提交（历史证明可过）；(b) 给 mimosa 配 tests/e2e + builtin_skills 路径豁免（需维护方/加密插件侧配置）；(c) 明确授权对 e2e TS 做扫描器形态改写（不建议）。
 
+## P2 落地：契约去秘密化（Scheme C 只写 key 通道，2026-08-23 第二轮）
+
+**设计裁决（用户授权按最优解实施）**：终审遗留 P2（facade DTO 明文 key 泄漏面）按方案 B 落地——**任何 kernel 返回的 DTO 形状都不能携带秘密值**；key 只经 `upsert_model_config(config, api_key: Option<String>)` 显式参数进入（`Some` 设置、`None` 更新时保留现值）。设计依据：核过全部消费方，出方向 key 零真实读者（B3 整 DTO 读-改-写的意外表面）。
+
+- 契约：`AIModelConfigDto`/`ProviderConfigDto` 删 `api_key` 字段（`ProviderFormDto` 纯入向保留）；不变量写进 DTO doc。
+- facade：`list_model_configs`/`get_global_config` 映射不再产 key；upsert 用参数并保留 merge 语义。
+- desktop：推送循环简化为"读 id 列表 + set key"（读-改-写整 DTO 模式消灭）；upsert-provider 传 `Some(effective_key)`；dead 的 `provider_to_ai_model_config`/`provider_wire_format`（enum 版）连测试删除；push 测试改走 core 内部 `get_ai_models()` 断言（契约不再当 key oracle）。
+- **治理即代码**：kernel-api 新增 `contract_shape_tests`——源级扫描全部 crate DTO，`pub` 字段名含秘密形态词即 fail。**C1 修复（用户独立审核打回，2026-08-23）**：初版匹配器用 `name.split('_')` 段比较，含下划线的复合 banned 词（api_key/access_key/private_key）永远命不中，guard 名存实亡（`ProviderFormDto.api_key` 在 crate 里却 1/1 绿即铁证）。修复 = 段界匹配（`name == b || starts_with(b+"_") || ends_with("_"+b) || contains("_"+b+"_")`）+ 显式入向豁免表 `ALLOWED_INBOUND_SECRET_FIELDS: [(file, field)]`（现仅 `("settings.rs","api_key")` = ProviderFormDto 入向表单，方向语义编码进 guard 而非靠 bug 豁免）+ 匹配器五边界自测（api_key 命中/access_key_id 命中/prompt_tokens 豁免/key 豁免/fn 参数无 pub 豁免）。**负向验证过**：摘掉豁免条目，扫描测试 fail 并精确指向 `settings.rs: pub field 'api_key'`——guard 实证复活。
+- 验证：core/cli/desktop 三编译门绿；kernel-api contract_shape 1/1；desktop app_state 90/90；rot-budget 绿且 expect 1092→1089、dead_code 111→109（ceiling 同步下调）。
+- **提交状态**：7 文件 staged 未落（Mimosa 门仍拦 69 个 tests/e2e SSRF 类结构性误报，见上节）；F1-F5+fixture 批已由用户侧以 `cbedffa` 落 main。
+- 并行警示：用户侧 review 会话在途改动（`kernel-api/memory.rs`、`turn.rs`、`.superpowers/sdd/progress.md`、`reviews/`）与本地工作共存，收尾禁止 `git add -A`（本轮已发生一次误裹挟并立即 restore --staged）。
+
+- **Minor×2 清理（2026-08-23，reviewer 判决落地）**：(1) `create_ui.rs` FR-T3b 窗口控制注释中英混排 → 英文（全触点文件 CJK 注释扫描过，UI 硬编码中文文案/对应断言按 v0.1.0 i18n 冻结决定保留）；(2) `desktop settings/keyring.rs` 原 const 的 `///` 文档注释在 F4 改 import 后悬空挂在 use 上 → 合并为单一普通注释指向 core 单一事实源。desktop 编译门 + fmt + rot-budget 复核绿。
+
 ## 终审遗留（未修，按优先级）
 
-- **P2**：facade `list_model_configs`/`get_global_config` DTO 携带明文 key（契约面暴露；当前仅 desktop 进程内消费、server 未暴露 HTTP；未来进程外 kernel 接入即泄漏）——需设计裁决（去 key 化会破坏 desktop provider-test 流）。
 - **P3**：`ensure_assistant_bootstrap`（coordinator_bootstrap.rs）snapshot 预存死代码，其 `skip_tool_confirmation(true)` 不在三处已注解豁免之列；删或接线待定。注意 `service::bootstrap`（persona 文件）若仅此处使用会连带孤儿化。
+- **P3**：desktop settings `refresh.rs` 等处 `list_model_configs` 消费面在契约去 key 后语义未变，无需动。
 - **P3**：desktop settings `refresh.rs` 等处 `list_model_configs` 消费面在 F4 后语义未变，无需动。
 
 ## 环境事实更新
