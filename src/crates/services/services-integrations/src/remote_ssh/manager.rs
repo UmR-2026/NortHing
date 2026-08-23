@@ -24,7 +24,7 @@ use crate::remote_ssh::password_vault::SSHPasswordVault;
 use crate::remote_ssh::types::{RemoteWorkspace, SSHConnectionConfig, SavedConnection};
 use anyhow::Context;
 use russh::client::Handle;
-use russh_keys::key::PublicKey;
+use russh::keys::PublicKey;
 use russh_sftp::client::SftpSession;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};

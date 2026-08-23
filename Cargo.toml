@@ -211,9 +211,8 @@ rmcp = { version = "1.7", default-features = false, features = [
     "server",
 ] }
 agent-client-protocol = { version = "0.12", features = ["unstable"] }
-russh = "0.45"
-russh-sftp = "2.1"
-russh-keys = "0.45"
+russh = "0.62.7"
+russh-sftp = "2.4.0"
 shellexpand = "3"
 ssh_config = "0.1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

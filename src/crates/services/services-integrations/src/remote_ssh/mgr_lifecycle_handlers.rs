@@ -52,7 +52,7 @@ impl SSHConnectionManager {
     async fn prepare_session_transport(
         config: &SSHConnectionConfig,
         timeout_secs: u64,
-    ) -> anyhow::Result<(TcpStream, Option<russh_keys::key::KeyPair>)> {
+    ) -> anyhow::Result<(TcpStream, Option<russh::keys::PrivateKey>)> {
         let addr = format!("{}:{}", config.host, config.port);
 
         // Connect to the server with timeout
@@ -67,7 +67,7 @@ impl SSHConnectionManager {
 
     /// Load and decode the private key referenced by `auth`. Returns `None` for
     /// password auth (no key needed).
-    fn load_private_key_for_auth(auth: &SSHAuthMethod) -> anyhow::Result<Option<russh_keys::key::KeyPair>> {
+    fn load_private_key_for_auth(auth: &SSHAuthMethod) -> anyhow::Result<Option<russh::keys::PrivateKey>> {
         match auth {
             SSHAuthMethod::Password { .. } => Ok(None),
             SSHAuthMethod::PrivateKey { key_path, passphrase } => {
@@ -78,7 +78,7 @@ impl SSHConnectionManager {
                 );
                 let key_content = Self::read_private_key_file(key_path)?;
                 tracing::info!("Decoding private key...");
-                let key_pair = russh_keys::decode_secret_key(&key_content, passphrase.as_ref().map(|s| s.as_str()))
+                let key_pair = russh::keys::decode_secret_key(&key_content, passphrase.as_ref().map(|s| s.as_str()))
                     .map_err(|e| anyhow!("Failed to decode private key: {}", e))?;
                 tracing::info!("Successfully decoded private key");
                 Ok(Some(key_pair))
@@ -179,12 +179,20 @@ impl SSHConnectionManager {
                 ]),
                 // Host key algorithms: include ssh-rsa for older servers
                 key: std::borrow::Cow::Owned(vec![
-                    russh_keys::key::ED25519,
-                    russh_keys::key::ECDSA_SHA2_NISTP256,
-                    russh_keys::key::ECDSA_SHA2_NISTP521,
-                    russh_keys::key::RSA_SHA2_256,
-                    russh_keys::key::RSA_SHA2_512,
-                    russh_keys::key::SSH_RSA, // legacy servers that only advertise ssh-rsa
+                    russh::keys::Algorithm::Ed25519,
+                    russh::keys::Algorithm::Ecdsa {
+                        curve: russh::keys::EcdsaCurve::NistP256,
+                    },
+                    russh::keys::Algorithm::Ecdsa {
+                        curve: russh::keys::EcdsaCurve::NistP521,
+                    },
+                    russh::keys::Algorithm::Rsa {
+                        hash: Some(russh::keys::HashAlg::Sha256),
+                    },
+                    russh::keys::Algorithm::Rsa {
+                        hash: Some(russh::keys::HashAlg::Sha512),
+                    },
+                    russh::keys::Algorithm::Rsa { hash: None }, // legacy servers that only advertise ssh-rsa
                 ]),
                 ..russh::Preferred::DEFAULT
             },
@@ -228,16 +236,17 @@ impl SSHConnectionManager {
     async fn perform_session_auth(
         handle: &mut Handle<SSHHandler>,
         config: &SSHConnectionConfig,
-        key_pair: Option<&russh_keys::key::KeyPair>,
+        key_pair: Option<&russh::keys::PrivateKey>,
     ) -> anyhow::Result<()> {
         tracing::info!("Starting authentication for user {}", config.username);
         let auth_success: bool = match &config.auth {
             SSHAuthMethod::Password { password } => {
                 tracing::debug!("Using password authentication");
-                handle
+                let result = handle
                     .authenticate_password(&config.username, password.clone())
                     .await
-                    .map_err(|e| anyhow!("Password authentication failed: {:?}", e))?
+                    .map_err(|e| anyhow!("Password authentication failed: {:?}", e))?;
+                result.success()
             }
             SSHAuthMethod::PrivateKey {
                 key_path,
@@ -246,16 +255,23 @@ impl SSHConnectionManager {
                 tracing::info!("Using public key authentication with key: {}", key_path);
                 if let Some(key) = key_pair {
                     tracing::info!("Attempting to authenticate user '{}' with public key", config.username);
-                    let result = handle
-                        .authenticate_publickey(&config.username, Arc::new(key.clone()))
-                        .await;
+                    let hash_alg = if key.algorithm().is_rsa() {
+                        match handle.best_supported_rsa_hash().await {
+                            Ok(Some(alg)) => alg,
+                            _ => Some(russh::keys::HashAlg::Sha256),
+                        }
+                    } else {
+                        None
+                    };
+                    let key_with_alg = russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key.clone()), hash_alg);
+                    let result = handle.authenticate_publickey(&config.username, key_with_alg).await;
                     tracing::info!("Public key auth result: {:?}", result);
                     match result {
-                        Ok(true) => {
+                        Ok(auth_result) if auth_result.success() => {
                             tracing::info!("Public key authentication successful");
                             true
                         }
-                        Ok(false) => {
+                        Ok(_) => {
                             tracing::warn!(
                                 "Public key authentication rejected by server for user '{}'",
                                 config.username
