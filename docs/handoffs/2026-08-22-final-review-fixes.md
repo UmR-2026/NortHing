@@ -68,11 +68,20 @@
 | CLI keyring 桥 | `cargo test -p northhing-cli keyring` | 2 passed |
 | 棘轮 | `node scripts/verify-rot-budget.mjs` | passed；unwrap 502 / expect 1089 / let_ 388 / epoch 69 / dead_code 109 / scripts 42 / docs/design 1 / sdd 136/400 / selectors 875 |
 
+## P3a 落地：ensure_assistant_bootstrap 死代码删除（2026-08-23 第三轮，用户指令"删或接线"）
+
+**裁决：删**。依据：snapshot 先天孤儿（全历史唯一触碰符号的 commit 是 2026-07-12 快照导入，无调用方——非 B2 误删触发点）；"接线"= 凭空激活一个带 `skip_tool_confirmation(true)` 的自动系统 turn，属产品决策非修复；YAGNI + 本仓"删除即最好的拆分"文化。附带收益：终审笔记中"第四处未注解 skip_tool_confirmation 豁免"随文件消失。
+
+**删除范围**（级联全查证）：`coordinator_bootstrap.rs` 整文件（137 行）+ `dialog_turn/mod.rs` 声明与 §2.1 文档行 + `turn.rs` 三孤儿助手（kickoff_query / system_reminder / is_chinese_locale）+ `coordinator.rs` 三枚举、`ASSISTANT_BOOTSTRAP_AGENT_TYPE` 常量、死 import + 6 个文件的空挂 import（compaction/session/thread_goal/workspace/so_handlers/coordinator，预存 unused 债顺手清）+ `bootstrap_impl.rs` 的 `is_workspace_bootstrap_pending`、`reset_workspace_persona_files_to_default`（零调用方死 pub API）及两处 re-export。
+
+**保留边界（重要修正）**：`ensure_workspace_persona_files_for_prompt` 初判为死、删除后编译报错——**`build_workspace_persona_prompt`（活，prompt_builder ×3 消费）内部调用它**做 persona 桩回填。初判遗漏原因：消费方扫描把 bootstrap 模块自身排除在 grep 之外，内部依赖不可见。已恢复函数 + 其测试。教训：死代码判定必须包含"同模块内部调用"维度。
+
+**验证（对 staged 树实测）**：core 编译 0 error；`cargo test -p northhing-core --features product-full --lib service::bootstrap` → **6 passed**；`... --lib coordination` → **52 passed**；cli+desktop 编译门过；fmt + rot-budget 全绿（文件数 1365→1364）；残留符号 grep 零命中（除 mod.rs 的 P3a 注记行）。
+
 ## 终审遗留（未修，按优先级）
 
-- **P3**：`ensure_assistant_bootstrap`（coordinator_bootstrap.rs）snapshot 预存死代码，其 `skip_tool_confirmation(true)` 不在三处已注解豁免之列；删或接线待定。注意 `service::bootstrap`（persona 文件）若仅此处使用会连带孤儿化。
+- ~~**P3a**：`ensure_assistant_bootstrap` 死代码~~ → 已删（见上节）。
 - **P3**：desktop settings `refresh.rs` 等处 `list_model_configs` 消费面在契约去 key 后语义未变，无需动。
-- **P3**：desktop settings `refresh.rs` 等处 `list_model_configs` 消费面在 F4 后语义未变，无需动。
 
 ## 环境事实更新
 

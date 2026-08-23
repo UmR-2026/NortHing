@@ -13,7 +13,6 @@
 //! Spec §2.1 — facade methods split by domain:
 //!   - coordinator_init         constructor, accessors, setters
 //!   - coordinator_session      session lifecycle (create/update/delete/list/...)
-//!   - coordinator_bootstrap    ensure_assistant_bootstrap
 //!   - coordinator_turn_start   start_dialog_turn_* wrappers
 //!   - coordinator_thread_goal  12 thread_goal_* facade methods
 //!   - coordinator_compact      compact_session_manually
@@ -22,9 +21,11 @@
 //!
 //! Wildcard re-export below keeps the historical flat import path
 //! `crate::agentic::coordination::dialog_turn::*` working for downstream code.
+//! (2026-08-23, P3a: coordinator_bootstrap / ensure_assistant_bootstrap removed —
+//! snapshot-era dead code with zero callers since 2026-07-12.)
 
 // Import types from sibling coordinator.rs module (the struct,
-// AssistantBootstrap enums, SubagentTimeoutAction, get_global_coordinator, etc.)
+// SubagentTimeoutAction, get_global_coordinator, etc.)
 use super::coordinator::*;
 // Import from sibling ports.rs (get_global_coordinator lives there)
 use super::ports::{global_coordinator, is_ai_session_title_generation_enabled, GLOBAL_COORDINATOR};
@@ -32,7 +33,6 @@ use super::ports::{global_coordinator, is_ai_session_title_generation_enabled, G
 pub use northhing_runtime_ports::DialogTriggerSource;
 
 // Sub-domain facade impl blocks (facade methods only — public API).
-pub mod coordinator_bootstrap;
 pub mod coordinator_cancel;
 pub mod coordinator_compact;
 pub mod coordinator_init;

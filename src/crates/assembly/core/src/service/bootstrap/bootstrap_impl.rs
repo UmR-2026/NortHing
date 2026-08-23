@@ -128,11 +128,6 @@ pub(crate) async fn initialize_workspace_persona_files(workspace_root: &Path) ->
 }
 
 #[cfg(feature = "product-full")]
-pub(crate) fn is_workspace_bootstrap_pending(workspace_root: &Path) -> bool {
-    workspace_root.join(BOOTSTRAP_FILE_NAME).exists()
-}
-
-#[cfg(feature = "product-full")]
 pub(crate) async fn ensure_workspace_persona_files_for_prompt(workspace_root: &Path) -> NortHingResult<()> {
     let gitignore_updated = ensure_workspace_gitignore_ignores_northhing_best_effort(workspace_root).await;
     let bootstrap_path = workspace_root.join(BOOTSTRAP_FILE_NAME);
@@ -184,30 +179,6 @@ pub(crate) async fn ensure_workspace_persona_files_for_prompt(workspace_root: &P
         created_soul,
         created_user,
         created_identity
-    );
-
-    Ok(())
-}
-
-pub async fn reset_workspace_persona_files_to_default(workspace_root: &Path) -> NortHingResult<()> {
-    let persona_templates = [
-        (BOOTSTRAP_FILE_NAME, BOOTSTRAP_TEMPLATE),
-        (SOUL_FILE_NAME, SOUL_TEMPLATE),
-        (USER_FILE_NAME, USER_TEMPLATE),
-        (IDENTITY_FILE_NAME, IDENTITY_TEMPLATE),
-    ];
-
-    for (file_name, template) in persona_templates {
-        let file_path = workspace_root.join(file_name);
-        let normalized_content = normalize_line_endings(template);
-        fs::write(&file_path, normalized_content).await.map_err(|e| {
-            NortHingError::service(format!("Failed to reset persona file '{}': {}", file_path.display(), e))
-        })?;
-    }
-
-    debug!(
-        "Reset workspace persona files to defaults: path={}",
-        workspace_root.display()
     );
 
     Ok(())

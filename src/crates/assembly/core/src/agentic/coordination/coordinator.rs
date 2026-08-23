@@ -35,7 +35,6 @@ use crate::agentic::tools::pipeline::{SubagentParentInfo, ToolPipeline};
 use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::agentic::workspace::WorkspaceServices;
 use crate::agentic::WorkspaceBinding;
-use crate::service::bootstrap::{ensure_workspace_persona_files_for_prompt, is_workspace_bootstrap_pending};
 use crate::service::config::global::GlobalConfigManager;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
 use crate::service::session::{SessionRelationship, SessionRelationshipKind};
@@ -244,37 +243,6 @@ pub(crate) struct HiddenSubagentExecutionRequest {
 }
 
 pub use northhing_runtime_ports::DialogTriggerSource;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssistantBootstrapSkipReason {
-    BootstrapNotRequired,
-    SessionHasExistingTurns,
-    SessionNotIdle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssistantBootstrapBlockReason {
-    ModelUnavailable,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AssistantBootstrapEnsureOutcome {
-    Started {
-        session_id: String,
-        turn_id: String,
-    },
-    Skipped {
-        session_id: String,
-        reason: AssistantBootstrapSkipReason,
-    },
-    Blocked {
-        session_id: String,
-        reason: AssistantBootstrapBlockReason,
-        detail: String,
-    },
-}
-
-pub const ASSISTANT_BOOTSTRAP_AGENT_TYPE: &str = "Claw";
 
 /// Cancel token cleanup guard
 ///

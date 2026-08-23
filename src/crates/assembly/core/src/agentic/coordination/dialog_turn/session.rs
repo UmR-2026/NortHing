@@ -40,7 +40,6 @@ use crate::agentic::tools::pipeline::{SubagentParentInfo, ToolPipeline};
 use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::agentic::workspace::WorkspaceServices;
 use crate::agentic::WorkspaceBinding;
-use crate::service::bootstrap::{ensure_workspace_persona_files_for_prompt, is_workspace_bootstrap_pending};
 use crate::service::config::global::GlobalConfigManager;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
 use crate::service::session::{SessionRelationship, SessionRelationshipKind};
@@ -218,11 +217,8 @@ impl ConversationCoordinator {
 
         if let Some(workspace) = workspace {
             if !workspace.is_remote() {
-                match crate::service::agent_memory::build_query_aware_facts_reminder(
-                    workspace.root_path(),
-                    &user_input,
-                )
-                .await
+                match crate::service::agent_memory::build_query_aware_facts_reminder(workspace.root_path(), &user_input)
+                    .await
                 {
                     Ok(Some(memory_reminder)) => {
                         prepended_messages.push(Message::internal_reminder(

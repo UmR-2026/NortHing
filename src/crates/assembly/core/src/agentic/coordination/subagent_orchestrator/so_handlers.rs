@@ -15,7 +15,6 @@ use crate::agentic::goal_mode::{
 };
 use crate::agentic::session::SessionManager;
 use crate::agentic::side_question::build_btw_user_input;
-use crate::service::bootstrap::{ensure_workspace_persona_files_for_prompt, is_workspace_bootstrap_pending};
 use crate::service::config::global::GlobalConfigManager;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
 use crate::service::session::{SessionRelationship, SessionRelationshipKind};

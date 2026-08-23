@@ -44,7 +44,6 @@ pub use terminal_core as terminal;
 // Re-export main components.
 #[cfg(feature = "service-integrations")]
 pub use announcement::{AnnouncementCard, AnnouncementScheduler, AnnouncementSchedulerRef};
-pub use bootstrap::reset_workspace_persona_files_to_default;
 pub use config::{ConfigManager, ConfigProvider, ConfigService};
 #[cfg(feature = "product-full")]
 pub use cron::{global_cron_service, set_global_cron_service, CronEventSubscriber, CronService};
