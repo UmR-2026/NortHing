@@ -134,6 +134,9 @@ impl ConversationCoordinator {
             Some(turn_id.clone()),
             child_session.agent_type.clone(),
             child_session.config.workspace_path.clone(),
+            // Intentional exemption (/btw side question): the side-question turn runs as an
+            // ephemeral child session alongside the main conversation without an interactive
+            // confirmation prompt attached to the background sub-thread.
             DialogSubmissionPolicy::for_source(DialogTriggerSource::DesktopApi).with_skip_tool_confirmation(true),
             user_message_metadata,
             prepended_messages,

@@ -23,8 +23,8 @@ pub fn provider_wire_format_from_str(s: &str) -> &'static str {
 }
 
 /// Push resolved keyring keys to core in-memory models on startup or change (Scheme C).
-/// Reads the model-id list from core facade (keyless contract shape), resolves
-/// each id's key from the OS keyring, and pushes it into core memory via the
+/// Reads model configs from core facade (keyless contract shape), resolves
+/// each model's key from the OS keyring, and pushes it into core memory via the
 /// explicit `api_key` parameter on `upsert_model_config`.
 pub async fn push_resolved_keys_to_core(keyring: &dyn KeyringBackend) -> anyhow::Result<usize> {
     use northhing_core::kernel_facade::kernel_facade;

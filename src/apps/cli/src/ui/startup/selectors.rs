@@ -312,7 +312,7 @@ impl StartupPage {
                     name: model.name,
                     model_name: model.model_name,
                     base_url: model.base_url,
-                    api_key: model.api_key,
+                    api_key: String::new(),
                     provider_format: model.provider.clone(),
                     context_window: model.context_window.unwrap_or(128000),
                     max_tokens: model.max_tokens.unwrap_or(8192),

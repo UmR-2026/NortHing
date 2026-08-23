@@ -384,11 +384,10 @@ async fn initialize_core_services(
     let config_service = northhing_core::service::config::get_global_config_service().await.ok();
     let original_skip_confirmation = if let Some(ref svc) = config_service {
         let ai_config: AIConfig = svc.config(Some("ai")).await.unwrap_or_default();
-        let original = ai_config.skip_tool_confirmation;
         let _ = svc
             .set_config("ai.skip_tool_confirmation", skip_tool_confirmation)
             .await;
-        original
+        ai_config.skip_tool_confirmation
     } else {
         false
     };
