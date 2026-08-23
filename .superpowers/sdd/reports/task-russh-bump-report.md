@@ -343,6 +343,192 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; fini
 (grep 为空，即 russh / russh-sftp / russh-keys 无任何漏洞条目)
 ```
 
-## 6. 状态
+## 6. Fixer 修复记录（Finding I-1）
+
+### 6.1 Finding I-1 原文与问题
+- **Finding I-1**: `manager_handler.rs:128,132` 使用 `fingerprint(Default::default())`。旧版 `russh_keys 0.45` 的 fingerprint 默认是 SHA256（OpenSSH 风格 base64），磁盘上已存的 `KnownHostEntry.fingerprint` 都按此格式。ssh-key 0.7 的 `HashAlg::default()` 实际值需查证确认，以防止旧 known_hosts 指纹失效。
+
+### 6.2 证据查证
+1. **Cargo.lock 版本核查**：`ssh-key` 锁定版本为 `0.7.0-rc.11`。
+2. **源码实际默认值核查**：在 `ssh-key 0.7.0-rc.11` 的 `src/algorithm.rs:416-425` 中：
+   ```rust
+   #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
+   #[non_exhaustive]
+   pub enum HashAlg {
+       /// SHA-256
+       #[default]
+       Sha256,
+
+       /// SHA-512
+       Sha512,
+   }
+   ```
+   `HashAlg::default()` 确为 `HashAlg::Sha256`。
+3. **指纹格式核查**：在 `src/fingerprint.rs` 中，`Fingerprint::Display` 实现格式为 `SHA256:<unpadded-base64>`，与旧版 `russh_keys 0.45` 及 OpenSSH 标准指纹格式完全一致。
+
+### 6.3 修复实施
+在 `manager_handler.rs:128, 132` 中：
+- 显式传递 `russh::keys::HashAlg::Sha256` 代替 `Default::default()`，彻底消除未来隐式默认值变更的风险；
+- 在源码中添加锁定注释：`// pinned: ssh-key HashAlg::default() == Sha256 (verified 0.7.0-rc.11)`。
+
+### 6.4 Fixer 验证输出
+
+#### 1. `cargo check -p northhing-services-integrations 2>&1`
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.54s
+```
+
+#### 2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-services-integrations remote_ssh --all-features 2>&1`
+```text
+warning: unused import: `serde_json::json`
+ --> src\crates\services\services-integrations\tests\context_enhancer_and_catalog.rs:7:5
+  |
+7 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `serde_json::json`
+ --> src\crates\services\services-integrations\tests\tool_names_and_protocol.rs:7:5
+  |
+7 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `PathBuf`
+ --> src\crates\services\services-integrations\tests\function_agent_contracts.rs:6:23
+  |
+6 | use std::path::{Path, PathBuf};
+  |                       ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `serde_json::json`
+ --> src\crates\services\services-integrations\tests\request_builders_and_adapters.rs:7:5
+  |
+7 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `serde_json::json`
+ --> src\crates\services\services-integrations\tests\dynamic_tools_and_runtime.rs:7:5
+  |
+7 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `northhing-services-integrations` (test "tool_names_and_protocol") generated 1 warning (run `cargo fix --test "tool_names_and_protocol" -p northhing-services-integrations` to apply 1 suggestion)
+warning: `northhing-services-integrations` (test "context_enhancer_and_catalog") generated 1 warning (run `cargo fix --test "context_enhancer_and_catalog" -p northhing-services-integrations` to apply 1 suggestion)
+warning: `northhing-services-integrations` (test "request_builders_and_adapters") generated 1 warning (run `cargo fix --test "request_builders_and_adapters" -p northhing-services-integrations` to apply 1 suggestion)
+warning: `northhing-services-integrations` (test "dynamic_tools_and_runtime") generated 1 warning (run `cargo fix --test "dynamic_tools_and_runtime" -p northhing-services-integrations` to apply 1 suggestion)
+warning: `northhing-services-integrations` (test "function_agent_contracts") generated 1 warning (run `cargo fix --test "function_agent_contracts" -p northhing-services-integrations` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.29s
+     Running unittests src\lib.rs (target\debug\deps\northhing_services_integrations-762801d1916f277d.exe)
+
+running 29 tests
+test remote_ssh::manager_tests::tests::mkdir_all_prefixes_expand_absolute_posix_path ... ok
+test remote_ssh::manager_tests::tests::mkdir_all_prefixes_collapse_redundant_separators ... ok
+test remote_ssh::workspace_search::tests::preserves_supported_linux_flashgrep_bundle_order ... ok
+test remote_ssh::remote_exec::output::tests::head_tail_text_keeps_full_output_when_unbounded ... ok
+test remote_ssh::remote_exec::output::tests::remote_exec_session_ids_match_local_test_baseline ... ok
+test remote_ssh::workspace_search::service_helpers::tests::remote_search_cache_keys_normalize_workspace_root ... ok
+test remote_ssh::workspace_search::tests::remote_scan_fallback_retry_policy_preserves_current_contract ... ok
+test remote_ssh::workspace_search::service_helpers::tests::remote_search_context_ignores_stale_cache_before_resolving_connection ... ok
+test remote_ssh::workspace_search::tests::remote_workspace_search_mode_preserves_current_contract ... ok
+test remote_ssh::workspace_search::tests::remote_workspace_search_bundle_rejects_unsupported_linux_arch ... ok
+test remote_ssh::workspace_search::tests::remote_workspace_search_paths_preserve_current_contract ... ok
+test remote_ssh::workspace_search::tests::remote_workspace_search_scope_preserves_current_contract ... ok
+test remote_ssh::workspace_search::tests::remote_workspace_search_probe_parsers_preserve_current_contract ... ok
+test remote_ssh::manager_tests::tests::rejects_saving_password_connection_without_password ... ok
+test remote_ssh::password_vault::tests::migrate_fails_closed_on_truncated_vault_without_touching_file ... ok
+test remote_ssh::password_vault::tests::remove_fails_closed_on_corrupted_vault_without_touching_file ... ok
+test remote_ssh::password_vault::tests::migrate_fails_closed_on_corrupted_vault_without_touching_file ... ok
+test remote_ssh::password_vault::tests::remove_fails_closed_on_truncated_vault_without_touching_file ... ok
+test remote_ssh::password_vault::tests::store_fails_closed_on_truncated_vault_without_touching_file ... ok
+test remote_ssh::password_vault::tests::store_fails_closed_on_corrupted_vault_without_touching_file ... ok
+test remote_ssh::manager_tests::tests::prunes_password_connection_without_vault_entry ... ok
+test remote_ssh::manager_tests::tests::prunes_remote_workspaces_without_saved_connection ... ok
+test remote_ssh::password_vault::tests::load_returns_error_on_corrupted_vault ... ok
+test remote_ssh::manager_tests::tests::restores_connection_config_from_saved_password_profile ... ok
+test remote_ssh::password_vault::tests::vault_remove_deletes_file_when_last_entry_is_removed ... ok
+test remote_ssh::password_vault::tests::migrate_entry_moves_password_to_new_connection_id ... ok
+test remote_ssh::password_vault::tests::vault_store_is_atomic_and_keeps_bak_of_previous_content ... ok
+test remote_ssh::workspace_search::service_helpers::tests::remote_search_open_guard_is_removed_when_stdio_spawn_fails ... ok
+test remote_ssh::workspace_search::service_helpers::tests::remote_search_rejects_non_linux_before_stdio_open ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.30s
+
+     Running tests\announcement_contracts.rs (target\debug\deps\announcement_contracts-1eaad2d7ec740da5.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests\config_and_server_lifecycle.rs (target\debug\deps\config_and_server_lifecycle-098c1c8c330acada.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s
+
+     Running tests\context_enhancer_and_catalog.rs (target\debug\deps\context_enhancer_and_catalog-53175886cd22b9aa.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests\dynamic_tools_and_runtime.rs (target\debug\deps\dynamic_tools_and_runtime-1fa2759a71f320ef.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests\file_watch_contracts.rs (target\debug\deps\file_watch_contracts-49ed354474f96a88.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests\function_agent_contracts.rs (target\debug\deps\function_agent_contracts-364243c235b31d4c.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests\git_contracts.rs (target\debug\deps\git_contracts-9f91bb2f545fc77c.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests\remote_ssh_contracts.rs (target\debug\deps\remote_ssh_contracts-5f2f3f39e3e1d90d.exe)
+
+running 1 test
+test remote_ssh_legacy_agent_auth_maps_to_default_private_key ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests\request_builders_and_adapters.rs (target\debug\deps\request_builders_and_adapters-8954274577489e4d.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests\tool_names_and_protocol.rs (target\debug\deps\tool_names_and_protocol-9235b132755b8b85.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests\workspace_search_contracts.rs (target\debug\deps\workspace_search_contracts-5b8a30e015c9c19b.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+```
+
+## 7. 状态
 
 DONE

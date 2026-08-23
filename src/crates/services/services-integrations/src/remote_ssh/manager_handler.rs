@@ -125,11 +125,12 @@ impl Handler for SSHHandler {
     type Error = HandlerError;
 
     async fn check_server_key(&mut self, server_public_key: &PublicKey) -> Result<bool, Self::Error> {
-        let server_fingerprint = server_public_key.fingerprint(Default::default()).to_string();
+        // pinned: ssh-key HashAlg::default() == Sha256 (verified 0.7.0-rc.11)
+        let server_fingerprint = server_public_key.fingerprint(russh::keys::HashAlg::Sha256).to_string();
 
         // 1. If we have an expected key, verify it matches
         if let Some((ref host, port, ref expected)) = self.expected_key {
-            let expected_fingerprint = expected.fingerprint(Default::default()).to_string();
+            let expected_fingerprint = expected.fingerprint(russh::keys::HashAlg::Sha256).to_string();
             if expected_fingerprint == server_fingerprint {
                 tracing::debug!("Server key matches expected key for {}:{}", host, port);
                 return Ok(true);
