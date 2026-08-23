@@ -1,216 +1,125 @@
-// R3' migration (2026-08-13) - room main window component.
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// R3' / W1 migration (2026-08-15) - room main window component.
 //
 // Mirrors the truth HTML consult-room-main.html body (LL275..L459).
 // Includes:
 //   * chrome (LL334..L340) with theme toggle + min/max/close buttons
-//   * room-status (LL342..L357) with brand-inline (5-path SVG + Fraunces
-//     italic "northing") - see truth-rulings C4: brand goes in the
-//     status row, NOT a left-bottom seal
+//   * room-status (LL342..L357) with brand-inline
 //   * room-head (LL359..L364) with avatar, name, chronicle bar, state
-//   * chat-flow (LL366..L416) with mock session seed + 5 record kinds
-//   * room-input (LL418..L427) deck with witness note + attach +
-//     placeholder + send/stop
-//   * membrane (LL328..L329) + membrane-node (LL330..L331) + room-fog
-//   * vertical-label (LL215..L218) hidden by default per block-contract
-//     §3.1 - only appears when inner/outer are hidden
-//   * containment + membrane-frame + global-aura (LL277..L279) -
-//     background atmosphere
+//   * chat-flow (LL366..L416) with mock session seed
+//   * room-input (LL418..L427) deck with attach + input + send/stop
+//   * membrane + membrane-nodes (jewels) for dynamic module window toggles
 //
 // Brief §4.5 - "CSS 原样内联（禁翻译成 Rust 样式）; id/data-* 锚点不改名".
-// We inject the truth CSS as a <style> tag (css.rs) and keep every id
-// from the truth HTML byte-for-byte. The CDP acceptance chain (brief
-// §1.4) uses these selectors; renaming would break the verification.
-//
-// R3' delta vs R3 (0.7 -> 0.8 alpha):
-//   * The root is now `fn() -> Element` (0.8 desktop API), not a struct.
-//     Context (geometry_tx, geometry_rx_arc) is pulled via
-//     `use_context` from the providers in entry.rs.
-//   * Inner/outer window VirtualDoms are spawned inside a `use_effect`
-//     that fires once on mount, since the `dioxus::desktop::window()`
-//     context is only valid after the main window's launch has started.
-//   * The position publisher runs in a `use_future` that polls every
-//     100ms (spike §2 + brief §4.2).
-//   * `html` / `doctype` elements are not exported in 0.8 alpha's
-//     dioxus-html; we mount the body directly (WebView2 wraps with the
-//     html/head envelope automatically).
-//
-// R3' r3p3 delta (2026-08-13) - Bug B root cause fix:
-//   The original implementation called `LocalePack::load(...)` at the
-//   top of the room window's body and ran two 100ms `use_future`
-//   tasks (theme + geometry) that called `.set(...)` on Signals every
-//   tick. Dioxus 0.8-alpha.1 re-renders the component on every Signal
-//   `set`, regardless of whether the value actually changed. The room
-//   component body therefore re-ran every ~108ms, re-loading the locale
-//   pack from disk each time (15 reloads in 1.4s - observed in
-//   `build-shots-tmp/runtime-launch.txt`, r3p report §2). Three fixes:
-//
-//     1. Mount-once `LocalePack` via `use_hook(|| Rc::new(...))`. The
-//        closure runs only on the first render, so disk reads happen
-//        exactly once per window regardless of how often the component
-//        re-renders.
-//     2. Theme `use_future` only calls `theme_dark.set(...)` when the
-//        polled value actually changed (last-value cache lives in the
-//        future's stack frame).
-//     3. Geometry `use_future` only calls `geom_tx.send(...)` when the
-//        polled Geometry actually changed (last-value cache lives in
-//        the future's stack frame; `watch::send` returns Err if there
-//        are no receivers, which we keep handling with `let _ =`).
-//
-//   inner / outer windows in `windows.rs` get only fix #1 because their
-//   theme Signals are never updated (they follow the room's theme via
-//   context) and they don't poll geometry.
-//
-// R3' r3p4 delta (2026-08-14) - Bug B root fix, event-driven theme +
-// geometry (zero sleeping use_future in the room window):
-//   The theme `use_future` (the room window's second sleeping future)
-//   is deleted, and so is the geometry polling future. Controlled CPU
-//   experiments (fix brief §1 + experiments A/B/C recorded in
-//   `task-migrate-room-report-r3p4.md`) proved that ANY sleeping
-//   use_future in the room window - even a bare `loop{sleep(100ms)}`
-//   with no setters - makes a background thread busy-spin at ~97%
-//   single-core CPU on dioxus 0.8.0-alpha.1; and that waking a
-//   use_future at drag frequency (geometry updates) hangs all three
-//   windows. The poison is the polling/wakeup shape itself, not the
-//   content. The theme now flows purely through events: the chrome
-//   toggle writes the room's local Signal synchronously and broadcasts
-//   over the `GlobalTheme` watch channel (state.rs); inner/outer
-//   subscribe via their props. Geometry is published from a tao
-//   event-loop handler (entry.rs) and consumed by plain std::threads
-//   (windows.rs) - the whole shell has zero use_future with tokio
-//   sleeps and zero event-loop wakeup storms.
 
 use dioxus::core::VirtualDom;
-use dioxus::desktop::tao::dpi::{PhysicalPosition, PhysicalSize, Position};
-use dioxus::desktop::{tao::window::WindowBuilder, Config};
-use dioxus::desktop::window;
+use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
+use dioxus::desktop::tao::window::WindowBuilder;
+use dioxus::desktop::{window, Config, WindowCloseBehaviour};
 use dioxus::prelude::*;
 use std::rc::Rc;
-use tokio::sync::watch;
 
 use super::css;
 use super::entry::{
-    shared_webview_data_directory_for_inner, DOCK_GAP_PX, INNER_WINDOW_WIDTH,
-    OUTER_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT, ROOM_WINDOW_INITIAL_X, ROOM_WINDOW_INITIAL_Y,
-    ROOM_WINDOW_WIDTH,
+    shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX,
 };
 use super::i18n::{keys, LocalePack};
+use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
-use super::state::{
-    Geometry, GeometryRxArc, GeometryTx, GlobalTheme, GlobalVisibility, VisibilityState,
-};
-use super::windows::{inner_app_root, inner_app_root_props, outer_app_root, outer_app_root_props};
+use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme};
+
+#[cfg(target_os = "windows")]
+mod win_ops {
+    use std::ffi::c_void;
+
+    unsafe extern "system" {
+        pub fn ShowWindow(h_wnd: *mut c_void, n_cmd_show: i32) -> i32;
+        pub fn PostMessageW(h_wnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> i32;
+        pub fn IsWindow(h_wnd: *mut c_void) -> i32;
+    }
+
+    pub const WM_CLOSE: u32 = 0x0010;
+    pub const SW_HIDE: i32 = 0;
+
+    /// Hides and posts WM_CLOSE to an OS window by HWND, with a background watchdog
+    /// (std thread, never use_future) to guarantee window destruction.
+    pub fn close_os_window(hwnd: usize) {
+        if hwnd == 0 {
+            return;
+        }
+        unsafe {
+            ShowWindow(hwnd as *mut c_void, SW_HIDE);
+            PostMessageW(hwnd as *mut c_void, WM_CLOSE, 0, 0);
+        }
+
+        std::thread::Builder::new()
+            .name("window-close-watchdog".into())
+            .spawn(move || {
+                let hwnd_ptr = hwnd as *mut c_void;
+                for _ in 0..5 {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    unsafe {
+                        if IsWindow(hwnd_ptr) == 0 {
+                            break;
+                        }
+                        ShowWindow(hwnd_ptr, SW_HIDE);
+                        PostMessageW(hwnd_ptr, WM_CLOSE, 0, 0);
+                    }
+                }
+            })
+            .ok();
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+mod win_ops {
+    pub fn close_os_window(_hwnd: usize) {}
+}
+
+fn close_module(id: &'static str, wm: &ShellWindowManager) {
+    if let Some((wid, hwnd)) = wm.mark_closing_target(id) {
+        window().close_window(wid);
+        win_ops::close_os_window(hwnd);
+    }
+}
 
 /// RSX root for the room main window.
-///
-/// Pulls `GeometryTx` (to publish position updates) and `GeometryRxArc`
-/// (to clone into inner/outer VirtualDoms) from context, then runs:
-///   1. `use_effect` once on mount: spawn inner + outer VirtualDoms.
-///   2. `use_future` async: 100ms position publisher task.
-///   3. RSX rendering of the consult-room shell.
 pub fn room_app_root() -> Element {
-    // Pull shared state from context. `use_context` returns `Result`
-    // in 0.8; we unwrap because the provider in entry.rs guarantees
-    // these are present whenever this root is invoked.
     let geometry_tx = use_context::<GeometryTx>();
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
-    // R3' A+B+C fix: shared visibility channel (same watch pattern as
-    // `GlobalTheme`). The jewel click handlers write synchronously here;
-    // inner/outer subscribe through their props and call
-    // `window().set_visible(bool)` (windows.rs).
-    let visibility_chan = use_context::<GlobalVisibility>();
-    // r3p4 root-fix: shared slot written by entry.rs's tao event handler
-    // to identify the room window; `room_app_root` fills it on mount so
-    // only the room's Moved/Resized events publish geometry.
+    let window_manager = use_context::<ShellWindowManager>();
     let room_window_id = use_context::<std::sync::Arc<std::sync::Mutex<Option<dioxus::desktop::tao::window::WindowId>>>>();
 
-    // R3' r3p3 fix #1 (Bug B root cause) - mount-once LocalePack.
-    // The room window re-renders on every Signal `set`; loading the
-    // pack from disk + parsing 147 keys on each re-render caused the
-    // ~108ms reload cadence observed in r3p report §2. `use_hook`'s
-    // closure runs exactly once on the first render and the resulting
-    // `Rc` is returned by reference on subsequent renders, so the disk
-    // read happens once for the lifetime of this window.
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
 
-    // Theme signal: written by the chrome toggle synchronously, read by
-    // the chrome buttons to render the right `data-theme` attribute on
-    // the <html> element.
-    //
-    // R3' r3p4 delta (2026-08-13) - Bug B root fix: the polling
-    // `use_future` (100ms sleep + `theme.is_dark().await`) is deleted
-    // entirely - a second sleeping use_future is what made the main
-    // thread spin at ~97% CPU under dioxus 0.8-alpha.1 (fix brief §1).
-    // The room now updates its local Signal synchronously in the click
-    // handler and broadcasts the new value to inner/outer via the
-    // `GlobalTheme` watch channel (which they subscribe to through
-    // their props - see windows.rs).
     let mut theme_dark = use_signal(|| true);
-
-    // Visibility state for inner / outer windows (brief §3.2 /
-    // block-contract §3.1: jewel clicks toggle this, the dock task
-    // reads it).
-    let mut visibility = use_signal(VisibilityState::new);
-
-    // F5 (fix2 brief): room-head fold state - purely local to the room
-    // (no watch channel; the truth HTML toggles the `folded` class via
-    // JS on the same button, L536..L539). Drives the `.room-head.folded`
-    // capsule styling in TRUTH_CSS (L110..L113) + the ▴/▾ glyph.
     let mut head_folded = use_signal(|| false);
-
-    // Streaming state - drives the send/stop toggle (truth HTML L425
-    // `sendStop.classList.toggle('streaming')`).
     let mut streaming = use_signal(|| false);
+    let entries = use_signal(|| seed_session());
 
-    // Mock chat log - seed with the truth HTML's verbatim record list
-    // (L367..L415). New tokens stream in via `push_mock_stream`
-    // (called below in a use_effect).
-    let _entries = use_signal(|| seed_session());
+    let mut active_set = use_signal(|| window_manager.subscribe_active().borrow().clone());
 
-    // Position publisher - r3p4 root-fix (2026-08-14): REMOVED entirely.
-    //
-    // The original 100ms `use_future` polling loop (with r3p3's
-    // change-guarded send) is gone. Controlled CPU experiments (fix
-    // brief §1 root cause + experiments A/B/C recorded in
-    // `task-migrate-room-report-r3p4.md`) proved that ANY sleeping
-    // use_future in the room window makes one background thread
-    // busy-spin at ~97% single-core CPU on dioxus 0.8.0-alpha.1 - even
-    // a bare `loop { sleep(100ms).await }` with no window()/send calls.
-    // The polling shape itself is the poison.
-    //
-    // Geometry is now published event-driven from `entry.rs`: a tao
-    // event-loop handler listens for the room window's Moved/Resized
-    // OS events and sends the composed Geometry into the same watch
-    // channel (this future's former contract). Inner/outer follow runs
-    // on plain std::threads in `windows.rs` - kept off the dioxus task
-    // system because drag experiments proved that waking a use_future
-    // at drag frequency hangs all three windows.
-    //
-    // The mount-once initial publish happens in the spawn use_effect
-    // below (room window id registration + one synchronous send).
+    let wm_future = window_manager.clone();
+    use_future(move || {
+        let wm = wm_future.clone();
+        async move {
+            let mut active_rx = wm.subscribe_active();
+            loop {
+                if active_rx.changed().await.is_err() {
+                    break;
+                }
+                active_set.set(active_rx.borrow().clone());
+            }
+        }
+    });
 
-    // Spawn the inner / outer VirtualDoms once on mount. The
-    // `dioxus::desktop::window()` context is only valid after the
-    // main window's launch has started, which is exactly when
-    // use_effect fires (this is the spike's pattern from main.rs).
-    //
-    // R3' r3p4 delta: the room's `GlobalTheme` handle is cloned in and
-    // `subscribe()` produces the theme receiver handed to the
-    // inner/outer props - both windows render the room's initial theme
-    // at mount and follow every toggle from then on (event-driven, no
-    // polling involved).
+    // Register room window ID on mount
     {
         let geometry_tx = geometry_tx.clone();
-        let geometry_rx_arc = geometry_rx_arc.clone();
         let room_window_id = room_window_id.clone();
-        let theme = theme.clone();
-        let visibility_chan = visibility_chan.clone();
-        let data_directory = shared_webview_data_directory_for_inner();
         use_effect(move || {
-            // r3p4 root-fix: register the room's OS window id so the tao
-            // event handler in entry.rs can filter Moved/Resized events,
-            // then publish the initial geometry once (the event handler
-            // takes over from here - zero polling).
             *room_window_id.lock().unwrap() = Some(window().id());
             if let Ok(pos) = window().outer_position() {
                 let size = window().outer_size();
@@ -221,106 +130,73 @@ pub fn room_app_root() -> Element {
                     height: size.height,
                 });
             }
-            let theme_rx = theme.subscribe();
-            // R3' A+B+C: one receiver per spawned window (watch Receiver
-            // is Clone; each clone consumes the full event stream, so both
-            // windows react to every jewel toggle).
-            let visibility_rx = visibility_chan.subscribe();
-            spawn_inner_window(
-                geometry_rx_arc.clone(),
-                theme_rx.clone(),
-                visibility_rx.clone(),
-                data_directory.clone(),
-            );
-            spawn_outer_window(
-                geometry_rx_arc.clone(),
-                theme_rx,
-                visibility_rx,
-                data_directory.clone(),
-            );
         });
     }
 
     let theme_class = if theme_dark() { "dark" } else { "light" };
 
-    // R3' A+B+C (D): per-handler clones of the visibility channel —
-    // each jewel onclick is a `move` closure and must own its handle.
-    let visibility_chan_inner = visibility_chan.clone();
-    let visibility_chan_outer = visibility_chan.clone();
+    let (left_open, right_open) = {
+        let active = active_set.read();
+        (
+            active.contains("self") || active.contains("facility"),
+            active.contains("work"),
+        )
+    };
+
+    // chrome 控件文案 i18n 化（2026-08-22，审查 M1 + 终审 Minor×2 合并修）：
+    // aria-label/title 全走 locale 键；条件文案在此预计算（单 guard 复用，
+    // 同轮修 FYI-2 双 borrow）。
+    let head_seam_label = if head_folded() {
+        locale.t(keys::CHROME_HEAD_UNFOLD).to_string()
+    } else {
+        locale.t(keys::CHROME_HEAD_FOLD).to_string()
+    };
+    let send_label = if streaming() {
+        locale.t(keys::DECK_SEND_STREAMING).to_string()
+    } else {
+        locale.t(keys::DECK_SEND).to_string()
+    };
+
+    let wm_left = window_manager.clone();
+    let geom_rx_left = geometry_rx_arc.clone();
+    let theme_left = theme.clone();
+
+    let wm_right = window_manager.clone();
+    let geom_rx_right = geometry_rx_arc.clone();
+    let theme_right = theme.clone();
 
     rsx! {
         body {
             "data-theme": "{theme_class}",
             lang: "zh-CN",
-            // The truth HTML's `<head>` is wrapped by WebView2; in 0.8
-            // alpha there's no `html` / `doctype` element exported so
-            // we mount the body directly. We inject the truth CSS via
-            // a `<style>` block as the body's first child so the
-            // visual layout matches the HTML.
             style { dangerous_inner_html: "{css::truth_css()}" }
-            // R3' A+B+C: 转写层覆盖样式（scrim 压暗层等）——TRUTH_CSS
-            // 逐字节锁死，覆盖规则只能走这个第二 style 块。
             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
             meta { charset: "UTF-8" }
             meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
             title { "{locale.t(keys::WINDOW_TITLE_ROOM)}" }
 
-            // Background atmosphere layers - containment,
-            // membrane-frame, global-aura (truth HTML LL277..L279).
             div { id: "containment" }
             div { class: "membrane-frame" }
             div { id: "global-aura" }
 
-            // R8 (2026-08-14 用户判决): scrim 退役。真值里它是侧栏
-            // 浮于 room 之上时的压暗层（block-contract §2 规则 4 降级
-            // 形态）；三窗独立后 room 不再被遮挡，scrim 常开只会让
-            // 主框永久变暗 22%，与两侧栏色温拉开（用户实测判决
-            // 「主框与两个模块的颜色差别非常大」）。元素移除，
-            // #room-scrim CSS 规则同步退役（css.rs R8 注记）。
-
-            // Room - the central column. The inner / outer windows
-            // are no longer siblings in the DOM tree; they're
-            // separate OS windows. Brief §3.2 - the room DOM only
-            // contains itself.
             div { id: "engine",
                 div { id: "room-wrap",
                     section { id: "room",
-                        // Membrane + jewel nodes - brief §3.1: jewel
-                        // sits at the membrane line, drives
-                        // visibility toggles.
                         span { class: "membrane l" }
                         span { class: "membrane r" }
-                        // R6.2 (2026-08-14 用户判决): 竖签「它的内在」
-                        // 「身外之物」移除——隐藏态只留宝石光斑，不再
-                        // 落文字（vlabel 元素删除，i18n key 保留未用）。
                         div { class: "room-fog" }
 
-                        // Window controls (truth HTML LL334..L340).
-                        // R7.1 (用户判决): ▴ 收纳钮从此排移除——它控制
-                        // 头块而非窗口，混在窗控里语义错位且小点形态
-                        // 视觉太不明显；新形态见 room-head 内的骑缝
-                        // 边缘条（.head-seam-fold）。
                         div { class: "room-controls",
                             button {
                                 class: "rc-btn",
                                 id: "theme-toggle",
-                                "aria-label": "切换明暗",
-                                title: "切换明暗",
+                                "aria-label": "{locale.t(keys::CHROME_THEME_TOGGLE)}",
+                                title: "{locale.t(keys::CHROME_THEME_TOGGLE)}",
                                 onclick: move |_| {
-                                    // R3' r3p4: synchronous write - no
-                                    // spawn, no await. The room's own
-                                    // Signal flips instantly; the watch
-                                    // channel broadcast reaches
-                                    // inner/outer subscribers and they
-                                    // re-render on their side.
                                     let next = !theme_dark();
                                     theme_dark.set(next);
                                     theme.set_dark(next);
                                 },
-                                // R6.3: ☀/☾ 字形在字体回退链里落进
-                                // dingbat（实测渲染成齿轮/雪花），换
-                                // 内联 SVG；语义不变（暗态示日=点击
-                                // 转亮，亮态示月=点击转暗）。
                                 if theme_dark() {
                                     svg {
                                         view_box: "0 0 16 16",
@@ -347,13 +223,10 @@ pub fn room_app_root() -> Element {
                                     }
                                 }
                             }
-                            // R4 W1: frameless 真窗控（用户裁定 D=方案一，
-                            // handoff-20260814 §4）。DesktopContext Deref 到
-                            // tao Window：set_minimized 直接可用。
                             button {
                                 class: "rc-btn",
-                                "aria-label": "最小化",
-                                title: "最小化",
+                                "aria-label": "{locale.t(keys::CHROME_MINIMIZE)}",
+                                title: "{locale.t(keys::CHROME_MINIMIZE)}",
                                 onclick: move |_| {
                                     window().set_minimized(true);
                                 },
@@ -361,8 +234,8 @@ pub fn room_app_root() -> Element {
                             }
                             button {
                                 class: "rc-btn",
-                                "aria-label": "最大化",
-                                title: "最大化",
+                                "aria-label": "{locale.t(keys::CHROME_MAXIMIZE)}",
+                                title: "{locale.t(keys::CHROME_MAXIMIZE)}",
                                 onclick: move |_| {
                                     window().toggle_maximized();
                                 },
@@ -370,31 +243,16 @@ pub fn room_app_root() -> Element {
                             }
                             button {
                                 class: "rc-btn close",
-                                "aria-label": "关闭",
-                                title: "关闭",
+                                "aria-label": "{locale.t(keys::CHROME_CLOSE)}",
+                                title: "{locale.t(keys::CHROME_CLOSE)}",
                                 onclick: move |_| {
-                                    // R4 W1: 关闭 room = 退出整个 dioxus
-                                    // shell。dioxus 0.8a1 只在所有窗口关闭后
-                                    // 才退出（exit_on_last_window_close），
-                                    // 单关 room 会留下 inner/outer 孤儿窗；
-                                    // DesktopContext 无枚举/全局退出 API，
-                                    // process::exit 与 dioxus 自身路径
-                                    // (app.rs L601) 同形态。无持久化写入，
-                                    // follow 线程随进程消亡（r3p4 已披露）。
                                     quit_shell();
                                 },
                                 "✕"
                             }
                         }
 
-                        // Status row - brand inline (5-path northing
-                        // SVG, 200x200 viewBox, stroke=currentColor),
-                        // followed by the "知序·在场" identity label
-                        // and the state-dot. C4 ruling: brand lives
-                        // here, NOT in a left-bottom seal.
                         div { class: "room-status",
-                            // R4 W1: frameless 拖动区（真值 L89
-                            // `-webkit-app-region: drag` 的转写）。
                             onmousedown: move |_| {
                                 window().drag();
                             },
@@ -442,29 +300,15 @@ pub fn room_app_root() -> Element {
                             }
                             span { "architect_sub 介入中" }
                             span { class: "sp" }
-                            // R9 (用户判决): 呼吸点（state-dot）移除——
-                            // 视觉太突兀；8s 呼吸时钟移植到头像渐变
-                            // （css.rs R9.2 breath-avatar-fill/glow/ring）。
                         }
 
-                        // Room-head - avatar (Fraunces italic 22px
-                        // mono-glyph "序"), name, chronicle bar (4px
-                        // tall, gradient drift), state pill (mind color
-                        // 22% backdrop, square corners per C2
-                        // ruling). F5: `folded` class switches the
-                        // TRUTH_CSS capsule state (.room-head.folded).
                         div {
                             class: if head_folded() { "room-head folded" } else { "room-head" },
                             id: "room-head",
-                            // R4 W1: frameless 拖动区（真值 L93 的
-                            // `-webkit-app-region: drag` 在 wry 不生效，
-                            // dioxus 0.8a1 DesktopContext::drag 是支持路径，
-                            // 文档要求在 onmousedown 里调）。
                             onmousedown: move |_| {
                                 window().drag();
                             },
                             div { class: "agent-avatar", id: "avatar-core",
-                                // 真值 L114 no-drag：头像不发起窗口拖动。
                                 onmousedown: move |e| {
                                     e.stop_propagation();
                                 },
@@ -475,7 +319,6 @@ pub fn room_app_root() -> Element {
                                 class: "chronicle-bar",
                                 id: "chronicle-bar",
                                 title: "它换代表色时：新色自右端进入，旧色慢慢沉向左（双击演示）",
-                                // 真值 L100 no-drag。
                                 onmousedown: move |e| {
                                     e.stop_propagation();
                                 },
@@ -483,16 +326,10 @@ pub fn room_app_root() -> Element {
                             div { class: "state",
                                 "{locale.t(keys::ROOM_HEAD_STATE)}"
                             }
-                            // R7.1 (用户判决): 骑缝边缘条收纳钮。
-                            // 骑 room-head 下缘虚线（被控对象的边界）；
-                            // 折叠态 room-head 收起为胶囊行但 border-bottom
-                            // 保留（真值 L110）→ 钮随缝上移仍在原位可
-                            // 展开。onmousedown stop_propagation 防触发
-                            // room-head 的窗口拖动。
                             button {
                                 class: "head-seam-fold",
-                                "aria-label": if head_folded() { "展开中枢" } else { "收纳中枢" },
-                                title: if head_folded() { "展开中枢" } else { "收纳中枢" },
+                                "aria-label": "{head_seam_label}",
+                                title: "{head_seam_label}",
                                 onmousedown: move |e| {
                                     e.stop_propagation();
                                 },
@@ -503,25 +340,19 @@ pub fn room_app_root() -> Element {
                             }
                         }
 
-                        // Chat flow - mock session. The five record
-                        // kinds render with a single `match`.
                         div { class: "chat-flow", id: "chat-flow",
                             div { class: "session-open",
                                 "{locale.t(keys::SESSION_BANNER)}"
                             }
-                            {render_entries(_entries.read().iter(), &locale)}
+                            {render_entries(entries.read().iter(), &locale)}
                         }
 
-                        // Room input - R6.5: witness-row（见证说明）
-                        // 移除（用户判决）；R6.4: 挂载文字钮 → 圆环
-                        // 十字图标钮。send/stop 切换不变（truth HTML
-                        // L597..L603）。
                         div { class: "room-input",
                             div { class: "input-row",
                                 button {
                                     class: "attach",
-                                    "aria-label": "挂载文件",
-                                    title: "挂载文件",
+                                    "aria-label": "{locale.t(keys::DECK_ATTACH)}",
+                                    title: "{locale.t(keys::DECK_ATTACH)}",
                                     svg {
                                         view_box: "0 0 18 18",
                                         width: "16", height: "16",
@@ -540,7 +371,7 @@ pub fn room_app_root() -> Element {
                                 button {
                                     class: if streaming() { "send streaming" } else { "send" },
                                     id: "send-stop",
-                                    "aria-label": if streaming() { "停止" } else { "发送" },
+                                    "aria-label": "{send_label}",
                                     onclick: move |_| {
                                         streaming.set(!streaming());
                                     },
@@ -549,35 +380,38 @@ pub fn room_app_root() -> Element {
                             }
                         }
 
-                        // Membrane nodes (jewels) - drive inner /
-                        // outer visibility (brief §3.1,
-                        // conversion-annotations §2 row 3). R3' A+B+C:
-                        // toggle writes the local Signal (vlabel +
-                        // scrim re-render) and broadcasts over the
-                        // GlobalVisibility watch channel so the OS
-                        // window itself hides/shows (windows.rs).
-                        // F4: `is-open` class follows the real
-                        // visibility (truth CSS L193: opacity .22).
+                        // Left Jewel: toggles self + facility windows pair.
+                        // 文案 i18n 化（2026-08-22）：W2 改名后 self 窗 = 「沉积」，
+                        // 左结文案随改名联动（旧「它的自我」已无引用对象）。
                         button {
-                            class: if visibility().inner_visible { "membrane-node left is-open" } else { "membrane-node left" },
+                            class: if left_open { "membrane-node left is-open" } else { "membrane-node left" },
                             id: "trig-mind",
-                            "aria-label": "唤起 它的内在",
-                            "aria-expanded": if visibility().inner_visible { "true" } else { "false" },
-                            title: "它的内在",
+                            "aria-label": "{locale.t(keys::GEM_LEFT_LABEL)}",
+                            "aria-expanded": if left_open { "true" } else { "false" },
+                            title: "{locale.t(keys::GEM_LEFT_TITLE)}",
                             onclick: move |_| {
-                                visibility.write().toggle_inner();
-                                visibility_chan_inner.set_inner(visibility().inner_visible);
+                                if wm_left.is_any_active(&["self", "facility"]) {
+                                    close_module("self", &wm_left);
+                                    close_module("facility", &wm_left);
+                                } else {
+                                    spawn_module_window("self", &wm_left, &geom_rx_left, &theme_left);
+                                    spawn_module_window("facility", &wm_left, &geom_rx_left, &theme_left);
+                                }
                             }
                         }
+                        // Right Jewel: toggles work window
                         button {
-                            class: if visibility().outer_visible { "membrane-node right is-open" } else { "membrane-node right" },
+                            class: if right_open { "membrane-node right is-open" } else { "membrane-node right" },
                             id: "trig-work",
-                            "aria-label": "唤起 身外之物",
-                            "aria-expanded": if visibility().outer_visible { "true" } else { "false" },
-                            title: "身外之物",
+                            "aria-label": "{locale.t(keys::GEM_RIGHT_LABEL)}",
+                            "aria-expanded": if right_open { "true" } else { "false" },
+                            title: "{locale.t(keys::GEM_RIGHT_TITLE)}",
                             onclick: move |_| {
-                                visibility.write().toggle_outer();
-                                visibility_chan_outer.set_outer(visibility().outer_visible);
+                                if wm_right.is_active("work") {
+                                    close_module("work", &wm_right);
+                                } else {
+                                    spawn_module_window("work", &wm_right, &geom_rx_right, &theme_right);
+                                }
                             }
                         }
                     }
@@ -587,84 +421,102 @@ pub fn room_app_root() -> Element {
     }
 }
 
-/// Spawn the inner-window VirtualDom + its own OS window.
-///
-/// `theme_rx` is the shared theme watch channel; the inner window reads
-/// its initial value at mount and follows every change (see windows.rs).
-/// `visibility_rx` is the shared visibility watch channel; the inner
-/// window calls `window().set_visible(...)` on every jewel toggle.
-fn spawn_inner_window(
-    geometry_rx: GeometryRxArc,
-    theme_rx: watch::Receiver<bool>,
-    visibility_rx: watch::Receiver<VisibilityState>,
-    data_directory: std::path::PathBuf,
+/// Dynamic module window spawner using `new_window` and `WindowCloseBehaviour::WindowCloses`.
+pub fn spawn_module_window(
+    id: &'static str,
+    manager: &ShellWindowManager,
+    geometry_rx: &GeometryRxArc,
+    theme: &GlobalTheme,
 ) {
-    let mut inner_builder = WindowBuilder::new()
-        .with_title("northhing - inner (dioxus)")
-        .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(INNER_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT))
-        .with_position(dioxus::desktop::tao::dpi::LogicalPosition::new(
-            (ROOM_WINDOW_INITIAL_X as i32 - INNER_WINDOW_WIDTH as i32 - DOCK_GAP_PX) as f64,
-            ROOM_WINDOW_INITIAL_Y as f64,
-        ))
+    let plugin = match manager.registry().get(id) {
+        Some(p) => p.clone(),
+        None => return,
+    };
+
+    let gen = match manager.mark_opening(id) {
+        Some(g) => g,
+        None => return,
+    };
+
+    let data_directory = shared_webview_data_directory_for_inner();
+    let theme_rx = theme.subscribe();
+
+    // I2 审查降级证据（2026-08-22，review-w2 I2 不修的决定依据）：
+    // 此处 borrow 到的几何在 gem 可点击前必然已是真实值——两层保证：
+    //   1. 通道初值 = 房间创建位（entry.rs initial_geometry 与
+    //      with_position 同源常量，非病态占位）；
+    //   2. entry.rs tao 事件处理器 pre-mount 接纳（r3p5）：窗口创建
+    //      的首个 Moved 事件即发布真实物理几何，早于 webview 渲染。
+    // gem 位于 room webview 内，渲染完成才可点击，故「首帧前点击」
+    // 时序不可达；残留风险仅 cosmetic。行为不改，避免触碰 W1 取证区。
+    let room_geom = *geometry_rx.borrow();
+    let scale = startup_scale_factor();
+    let scale = if scale > 0.0 { scale } else { 1.0 };
+    let room_x_log = room_geom.x as f64 / scale;
+    let room_y_log = room_geom.y as f64 / scale;
+    let room_w_log = room_geom.width as f64 / scale;
+    let room_h_log = room_geom.height as f64 / scale;
+
+    let (initial_x, initial_y, initial_w, initial_h) = match plugin.dock_side {
+        DockSide::LeftTop => (
+            room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
+            room_y_log,
+            plugin.initial_width,
+            if room_h_log > 0.0 { room_h_log / 2.0 } else { plugin.initial_height },
+        ),
+        DockSide::LeftBottom => (
+            room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
+            room_y_log + room_h_log / 2.0,
+            plugin.initial_width,
+            if room_h_log > 0.0 { room_h_log / 2.0 } else { plugin.initial_height },
+        ),
+        DockSide::RightFull => (
+            room_x_log + room_w_log + DOCK_GAP_PX as f64,
+            room_y_log,
+            plugin.initial_width,
+            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
+        ),
+    };
+
+    let mut builder = WindowBuilder::new()
+        .with_title(plugin.title)
+        .with_inner_size(LogicalSize::new(initial_w, initial_h))
+        .with_position(LogicalPosition::new(initial_x, initial_y))
         .with_decorations(false);
 
     #[cfg(target_os = "windows")]
     {
         use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
-        inner_builder = inner_builder.with_skip_taskbar(true);
+        builder = builder.with_skip_taskbar(true);
     }
 
     let cfg = Config::default()
-        .with_window(inner_builder)
+        .with_window(builder)
+        .with_close_behaviour(WindowCloseBehaviour::WindowCloses)
         .with_data_directory(data_directory);
 
-    let offset_x = ROOM_WINDOW_INITIAL_X as i32 - INNER_WINDOW_WIDTH as i32 - DOCK_GAP_PX;
-    let props = inner_app_root_props(geometry_rx, theme_rx, visibility_rx, offset_x);
-    let dom = VirtualDom::new_with_props(inner_app_root, props);
+    let props = ModuleAppProps {
+        plugin_id: id,
+        gen,
+        rx: geometry_rx.clone(),
+        theme_rx,
+        manager: manager.clone(),
+    };
+
+    let dom = VirtualDom::new_with_props(plugin.component, props);
+
+    // T7 裁定（③-c 接受+注释）：new_window 返回的 PendingDesktopContext 有意丢弃。
+    // 影响面 = 放弃经 dioxus DesktopContext API 操控本窗；模块窗生命周期（开/关/析构）
+    // 已由 registry + HWND 通道全权负责（W1 racefix，见 registry.rs close_os_window），
+    // 且本窗 chrome 只有 收纳/✕，min/max/drag 等 DesktopContext 能力用不上。
+    // 若未来确需 dioxus 原生窗控，再透传并 resolve()。
     let _ = window().new_window(dom, cfg);
 }
 
-/// Symmetric to `spawn_inner_window`.
-fn spawn_outer_window(
-    geometry_rx: GeometryRxArc,
-    theme_rx: watch::Receiver<bool>,
-    visibility_rx: watch::Receiver<VisibilityState>,
-    data_directory: std::path::PathBuf,
-) {
-    let mut outer_builder = WindowBuilder::new()
-        .with_title("northhing - outer (dioxus)")
-        .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(OUTER_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT))
-        .with_position(dioxus::desktop::tao::dpi::LogicalPosition::new(
-            (ROOM_WINDOW_INITIAL_X as i32 + ROOM_WINDOW_WIDTH as i32 + DOCK_GAP_PX) as f64,
-            ROOM_WINDOW_INITIAL_Y as f64,
-        ))
-        .with_decorations(false);
-
-    #[cfg(target_os = "windows")]
-    {
-        use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
-        outer_builder = outer_builder.with_skip_taskbar(true);
-    }
-
-    let cfg = Config::default()
-        .with_window(outer_builder)
-        .with_data_directory(data_directory);
-
-    let offset_x = ROOM_WINDOW_INITIAL_X as i32 + ROOM_WINDOW_WIDTH as i32 + DOCK_GAP_PX;
-    let props = outer_app_root_props(geometry_rx, theme_rx, visibility_rx, offset_x);
-    let dom = VirtualDom::new_with_props(outer_app_root, props);
-    let _ = window().new_window(dom, cfg);
-}
-
-/// R4 W1: exit the whole dioxus shell (room ✕). Free function with a
-/// `()` return so the onclick handler does not depend on never-type
-/// fallback (deny-by-default in this crate's lint set).
 fn quit_shell() {
     std::process::exit(0);
 }
 
-/// Render the mock chat-flow entries. Five kinds (entity, witness,
-/// approval x 2 states) per brief §4.6 + truth HTML LL367..L415.
 fn render_entries<'a>(
     iter: impl Iterator<Item = &'a MockEntry>,
     locale: &LocalePack,

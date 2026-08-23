@@ -25,6 +25,7 @@ pub use entry::launch;
 
 mod entry;
 mod state;
+mod registry;
 mod css;
 mod i18n;
 mod session_mock;

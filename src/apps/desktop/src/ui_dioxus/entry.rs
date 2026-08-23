@@ -32,7 +32,7 @@ use std::sync::{Arc, Mutex};
 use crate::flags::DIOXUS_SHELL;
 
 use super::app::room_app_root;
-use super::state::{Geometry, GeometryRxArc, GlobalTheme, GlobalVisibility};
+use super::state::{Geometry, GeometryRxArc, GlobalTheme};
 
 /// Width of the room main window. Matches the truth HTML `#room` max-width
 /// (`min(780px, 100%)`) plus the chrome (`padding: 26px 48px`), so the
@@ -59,12 +59,9 @@ pub const ROOM_WINDOW_HEIGHT: f64 = 820.0;
 pub const ROOM_WINDOW_INITIAL_X: f32 = 296.0;
 pub const ROOM_WINDOW_INITIAL_Y: f32 = 120.0;
 
-/// Brief §3.2 - inner/outer window widths (280px / 320px) and the
-/// docking gap between room and its floating modules (16px gap; same
+/// Docking gap between room and its floating modules (16px gap; same
 /// constant as the Slint `block_registry.rs` to keep both stacks
 /// visually equivalent).
-pub const INNER_WINDOW_WIDTH: f64 = 280.0;
-pub const OUTER_WINDOW_WIDTH: f64 = 320.0;
 pub const DOCK_GAP_PX: i32 = 16;
 
 /// Startup DPI scale for converting the logical launch constants into
@@ -80,7 +77,7 @@ pub const DOCK_GAP_PX: i32 = 16;
 /// on mount (entry.rs event handler + app.rs use_effect), so this is a
 /// startup-only fallback either way.
 #[cfg(target_os = "windows")]
-fn startup_scale_factor() -> f64 {
+pub fn startup_scale_factor() -> f64 {
     unsafe extern "system" {
         fn GetDpiForSystem() -> u32;
     }
@@ -88,7 +85,7 @@ fn startup_scale_factor() -> f64 {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn startup_scale_factor() -> f64 {
+pub fn startup_scale_factor() -> f64 {
     1.0
 }
 
@@ -268,11 +265,13 @@ pub fn launch() -> anyhow::Result<()> {
     // dioxus 0.8-alpha.1 `use_context` panics ("Could not find context ...")
     // when the type is missing. The boxed-`Any` panic surfaced as
     // "Encountered panic: Any { .. }" in the room window.
+    let window_manager = super::registry::ShellWindowManager::default();
+
     dioxus::LaunchBuilder::desktop()
         .with_context(geometry_tx)
         .with_context(geometry_rx_arc)
         .with_context(GlobalTheme::new())
-        .with_context(GlobalVisibility::new())
+        .with_context(window_manager)
         .with_context(room_window_id)
         .with_cfg(config)
         .launch(room_app_root);

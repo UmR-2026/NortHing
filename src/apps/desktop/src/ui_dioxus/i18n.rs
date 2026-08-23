@@ -171,10 +171,10 @@ pub mod keys {
     pub const APPROVAL_STATE: &str = "dioxus-room-approval-state";
 
     // ===== Deck / input =====
-    // R6 (2026-08-14 用户判决): DECK_ATTACH/DECK_WITNESS_NOTE 用法已
-    // 从 app.rs 移除（挂载→图标钮、见证说明删除）；key 保留为词表
-    // 资产，locale 词条不动，i18n:audit 基线不受影响。
-    #[allow(dead_code)]
+    // R6 (2026-08-14 用户判决): DECK_WITNESS_NOTE 用法已从 app.rs 移除
+    // （见证说明删除）；key 保留为词表资产，locale 词条不动。
+    // 2026-08-22（审查 M1 修）：DECK_ATTACH/DECK_SEND/DECK_SEND_STREAMING
+    // 复活——attach/send/stop 钮的 aria-label 改走 locale 键。
     pub const DECK_ATTACH: &str = "dioxus-room-deck-attach";
     pub const DECK_PLACEHOLDER: &str = "dioxus-room-deck-placeholder";
     #[allow(dead_code)]
@@ -196,9 +196,16 @@ pub mod keys {
     pub const INNER_SECTION_SEDIMENT_TITLE: &str = "dioxus-room-inner-section-sediment-title";
     pub const INNER_SECTION_SEDIMENT_EM: &str = "dioxus-room-inner-section-sediment-em";
     pub const INNER_SECTION_SEDIMENT_NOTE: &str = "dioxus-room-inner-section-sediment-note";
+    // W2 视觉解耦（2026-08-21）：ENGINE/CONTEXT 两节并入 RUNTIME 卡，
+    // 四个 section 键不再被引用；key 与 locale 词条保留为词表资产
+    // （同 DECK_ATTACH 先例），i18n:audit 基线不受影响。
+    #[allow(dead_code)]
     pub const INNER_SECTION_ENGINE_TITLE: &str = "dioxus-room-inner-section-engine-title";
+    #[allow(dead_code)]
     pub const INNER_SECTION_ENGINE_EM: &str = "dioxus-room-inner-section-engine-em";
+    #[allow(dead_code)]
     pub const INNER_SECTION_CONTEXT_TITLE: &str = "dioxus-room-inner-section-context-title";
+    #[allow(dead_code)]
     pub const INNER_SECTION_CONTEXT_EM: &str = "dioxus-room-inner-section-context-em";
     pub const INNER_SECTION_AXIOMS_TITLE: &str = "dioxus-room-inner-section-axioms-title";
     pub const INNER_SECTION_AXIOMS_EM: &str = "dioxus-room-inner-section-axioms-em";
@@ -225,4 +232,39 @@ pub mod keys {
     pub const EMPTY_STREAMING_INTERRUPT: &str = "dioxus-room-empty-streaming-interrupt";
     pub const EMPTY_PROVIDER_TEST_FAILED: &str = "dioxus-room-empty-provider-test-failed";
     pub const EMPTY_APPROVAL_TIMEOUT: &str = "dioxus-room-empty-approval-timeout";
+
+    // ===== W2 视觉解耦（2026-08-21，用户定案 §2.2）=====
+    // 设施窗 RUNTIME 卡（模型引擎 + 上下文 + 全局状态合并卡）。
+    pub const INNER_SECTION_RUNTIME_TITLE: &str = "dioxus-room-inner-section-runtime-title";
+    pub const INNER_SECTION_RUNTIME_EM: &str = "dioxus-room-inner-section-runtime-em";
+    // RUNTIME 卡 token 消耗行 + 清空动作。
+    pub const INNER_RUNTIME_TOKEN_USAGE: &str = "dioxus-room-inner-runtime-token-usage";
+    pub const INNER_RUNTIME_TOKEN_CLEAR: &str = "dioxus-room-inner-runtime-token-clear";
+    // 沉积窗「沉积skill」卡：agent 自己发掘、可整理成新 skill 的候选
+    // 清单（≠ settings 能力集），mock 三条候选 + 两态状态词。
+    pub const INNER_SECTION_SKILL_TITLE: &str = "dioxus-room-inner-section-skill-title";
+    pub const INNER_SECTION_SKILL_EM: &str = "dioxus-room-inner-section-skill-em";
+    pub const INNER_SKILL_CAND_1: &str = "dioxus-room-inner-skill-cand-1";
+    pub const INNER_SKILL_CAND_2: &str = "dioxus-room-inner-skill-cand-2";
+    pub const INNER_SKILL_CAND_3: &str = "dioxus-room-inner-skill-cand-3";
+    pub const INNER_SKILL_STAT_SHAPE: &str = "dioxus-room-inner-skill-stat-shape";
+    pub const INNER_SKILL_STAT_WATCH: &str = "dioxus-room-inner-skill-stat-watch";
+
+    // ===== chrome 控件文案（2026-08-22，审查 M1 + 终审 Minor×2 合并修）=====
+    // 模块窗 fold/close 钮（箭头 ▴/▾ 为形态字面量留在代码，词走键）。
+    pub const WINDOW_FOLD_BTN: &str = "dioxus-room-window-fold-btn";
+    pub const WINDOW_CLOSE_BTN: &str = "dioxus-room-window-close-btn";
+    // room chrome 控件簇（主题/最小化/最大化/关闭/中枢缝折叠两态）。
+    pub const CHROME_THEME_TOGGLE: &str = "dioxus-room-chrome-theme-toggle";
+    pub const CHROME_MINIMIZE: &str = "dioxus-room-chrome-minimize";
+    pub const CHROME_MAXIMIZE: &str = "dioxus-room-chrome-maximize";
+    pub const CHROME_CLOSE: &str = "dioxus-room-chrome-close";
+    pub const CHROME_HEAD_FOLD: &str = "dioxus-room-chrome-head-fold";
+    pub const CHROME_HEAD_UNFOLD: &str = "dioxus-room-chrome-head-unfold";
+    // 宝石（模块窗唤起件）aria-label/title；左结文案随 W2 改名联动
+    // （self 窗 = 「沉积」，旧「它的自我」已无引用对象）。
+    pub const GEM_LEFT_LABEL: &str = "dioxus-room-gem-left-label";
+    pub const GEM_LEFT_TITLE: &str = "dioxus-room-gem-left-title";
+    pub const GEM_RIGHT_LABEL: &str = "dioxus-room-gem-right-label";
+    pub const GEM_RIGHT_TITLE: &str = "dioxus-room-gem-right-title";
 }

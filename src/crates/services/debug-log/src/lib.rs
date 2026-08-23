@@ -226,6 +226,9 @@ pub const COMP_SESSION_LIFECYCLE: &str = "session_lifecycle";
 pub const COMP_MODE_ROUTING: &str = "mode_routing";
 pub const COMP_SKILL_PANEL: &str = "skill_panel";
 pub const COMP_ACTOR_RUNTIME: &str = "actor_runtime";
+/// W2-polish (2026-08-22): Dioxus consult-room shell window-lifecycle
+/// forensics (W1 race evidence channel, handoff-20260821 §3 option ④).
+pub const COMP_UI_DIOXUS_WIN: &str = "ui_dioxus_win";
 
 /// Emit one structured debug log line. Fire-and-forget — never blocks
 /// the caller, never panics. Failures are silently swallowed (the
@@ -250,9 +253,12 @@ pub async fn log_event(
     // Validate component against the known list. Unknown values fall
     // back to "unknown" so the file stays clean (typos don't pollute).
     let component: &'static str = match component {
-        COMP_APP_LIFECYCLE | COMP_SESSION_LIFECYCLE | COMP_MODE_ROUTING | COMP_SKILL_PANEL | COMP_ACTOR_RUNTIME => {
-            component
-        }
+        COMP_APP_LIFECYCLE
+        | COMP_SESSION_LIFECYCLE
+        | COMP_MODE_ROUTING
+        | COMP_SKILL_PANEL
+        | COMP_ACTOR_RUNTIME
+        | COMP_UI_DIOXUS_WIN => component,
         _ => "unknown",
     };
 
@@ -312,7 +318,8 @@ mod component_tests {
                 | COMP_SESSION_LIFECYCLE
                 | COMP_MODE_ROUTING
                 | COMP_SKILL_PANEL
-                | COMP_ACTOR_RUNTIME => c,
+                | COMP_ACTOR_RUNTIME
+                | COMP_UI_DIOXUS_WIN => c,
                 _ => "unknown",
             }
         }

@@ -71,7 +71,13 @@ fn ensure_log_consumer() {
 /// Note: `location` is `'static` (matches `log_event`'s signature),
 /// while `mode_id` and `message` are borrowed.  The channel owns the
 /// cloned strings and passes them by reference inside the async block.
-pub(super) fn log_debug_event(
+///
+/// Visibility is `pub(crate)` (2026-08-22) so the feature-gated Dioxus
+/// shell (`ui_dioxus`, W1 window-lifecycle forensics) can share the same
+/// `.northhing/debug.log` channel — the tracing subscriber writes to
+/// stdout only, which is lost under detached launches, while this channel
+/// persists via the debug-log service (T2-7 rotation).
+pub(crate) fn log_debug_event(
     component: &'static str,
     location: &'static str,
     mode_id: &str,
