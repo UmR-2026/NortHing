@@ -127,3 +127,6 @@ __pycache__/
 
 # Tool state (parallel-session agents)
 **/.mimosa/
+
+# Local build temp (GNU toolchain mingw ld response-file workaround)
+.tmp-build/

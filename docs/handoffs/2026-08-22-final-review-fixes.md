@@ -52,6 +52,22 @@
 
 - **Minor×2 清理（2026-08-23，reviewer 判决落地）**：(1) `create_ui.rs` FR-T3b 窗口控制注释中英混排 → 英文（全触点文件 CJK 注释扫描过，UI 硬编码中文文案/对应断言按 v0.1.0 i18n 冻结决定保留）；(2) `desktop settings/keyring.rs` 原 const 的 `///` 文档注释在 F4 改 import 后悬空挂在 use 上 → 合并为单一普通注释指向 core 单一事实源。desktop 编译门 + fmt + rot-budget 复核绿。
 
+## 验证复算命令（2026-08-23 规则：验证数字一律可复算——绿测试 ≠ 有效测试，数字必须附命令）
+
+> 环境：本机 GNU toolchain 需 `TMP=TEMP=<repo>/.tmp-build`（mingw ld 响应文件问题）；家规惯例 MSVC wrapper。以下数字均对 staged 树（10 文件）实测。
+
+| 断言 | 复算命令 | 期望 |
+|---|---|---|
+| 治理 guard 存活 | `cargo test -p northhing-kernel-api --lib contract_shape` | 2 passed |
+| **guard 负向验证**（证明会咬人） | 把 `ALLOWED_INBOUND_SECRET_FIELDS` 置空后重跑上一条 | **FAILED**，panic 指向 `settings.rs: pub field 'api_key'`；恢复豁免后回到 2 passed |
+| desktop 测试面 | `cargo test -p northhing --lib app_state` | 90 passed |
+| 编译门×3 | `cargo check -p northhing-core --features product-full` / `-p northhing-cli` / `-p northhing` | 无 error |
+| fixture 清扫回归 | `cargo test -p northhing-ai-adapters --lib` | 129 passed |
+| skill watch（含并发测试） | `cargo test -p northhing-core --features product-full --lib skill_watch` | 4 passed |
+| config（scrub/方案 C） | `cargo test -p northhing-core --features product-full --lib service::config` | 38 passed |
+| CLI keyring 桥 | `cargo test -p northhing-cli keyring` | 2 passed |
+| 棘轮 | `node scripts/verify-rot-budget.mjs` | passed；unwrap 502 / expect 1089 / let_ 388 / epoch 69 / dead_code 109 / scripts 42 / docs/design 1 / sdd 136/400 / selectors 875 |
+
 ## 终审遗留（未修，按优先级）
 
 - **P3**：`ensure_assistant_bootstrap`（coordinator_bootstrap.rs）snapshot 预存死代码，其 `skip_tool_confirmation(true)` 不在三处已注解豁免之列；删或接线待定。注意 `service::bootstrap`（persona 文件）若仅此处使用会连带孤儿化。
