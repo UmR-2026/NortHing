@@ -3,7 +3,7 @@
 计划：`.superpowers/sdd/plan.md`
 分支：`feat/consult-room-slint`（worktree `E:\agent-project\northing\.worktrees\consult-room-build`）
 基线：8e43dc4 (main, 2026-08-04)；终裁：五页套全部按现状通过（FINAL-RULING.md）
-**最新接续点：`handoff-20260824.md`——E/F 三页窗收口（archive/space/settings 已入库），W2.7 流体卡片已入库；onboarding 按契约暂不迁**
+**最新接续点：`handoff-20260824.md`——W2.7 + E/F 三页窗已入库（a8b799f），E4 onboarding 处方在案待派**
 
 | Task | 状态 | Commits | 备注 |
 |---|---|---|---|
