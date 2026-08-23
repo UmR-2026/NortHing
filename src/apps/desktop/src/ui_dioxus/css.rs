@@ -95,8 +95,8 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window] aside { height: 100vh; max-height: none; display: flex; flex-direction: column; }
   body[data-window="inner"] aside#mind .mod { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
   body[data-window="inner"] aside#mind .card-body { flex: 1 1 0; min-height: 0; overflow-y: auto; }
-  body[data-window="outer"] aside#work .side-section { flex: 1 1 0; min-height: 0; overflow-y: auto; }
-  body[data-window="outer"] aside#work .term-well { margin-top: 10px; }
+  body[data-window="outer"] aside#work .side-section { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  body[data-window="outer"] aside#work .term-well { margin-top: 10px; flex: 0 0 auto; }
 
   /* ---- F2. room 填满窗高（deck 钉底）。
      真值骨架：body,html{100vh;overflow:hidden} → #engine{height:100vh;
@@ -218,20 +218,21 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window] { padding: 0; }
 
   /* ---- R5.3 outer 模块卡片化（image-6 → image-8）。
-     port DOM 里 aside#work 带 class="mod"（真值单卡设计）；用户判决
-     改为四独立卡。aside 卸卡样（真值 #work 无重置规则，此处补齐），
-     side-section 升级为卡（真值 .mod 五件套：border/bevel/radius/
-     bg2/shadow），卡间距 margin-bottom 14px（对齐真值 #mind gap）。
-     flex:1 均分（F1 顺带成果）保留 → 三卡等高分布，term-well 自然
-     高贴底。 */
+      port DOM 里 aside#work 带 class="mod"（真值单卡设计）；用户判决
+      改为四独立卡。aside 卸卡样（真值 #work 无重置规则，此处补齐），
+      side-section 升级为卡（真值 .mod 五件套：border/bevel/radius/
+      bg2/shadow），卡间距 margin-bottom 14px（对齐真值 #mind gap）。
+      W2.7：推翻 flex:1 均分——卡 hug 内容，空盒子退役。 */
   body[data-window="outer"] aside#work { background: transparent; border: none; border-radius: 0; box-shadow: none; }
   body[data-window="outer"] aside#work .side-section {
     border: 1px solid var(--line); border-top-color: var(--bevel);
     border-radius: 4px; background: var(--bg2); box-shadow: var(--shadow);
     margin-bottom: 14px;
+    flex: 0 1 auto;
+    min-height: 0;
   }
   body[data-window="outer"] aside#work .side-section:last-child { border-bottom: 1px solid var(--line); }
-  body[data-window="outer"] aside#work .term-well { margin: 0; }
+  body[data-window="outer"] aside#work .term-well { margin: 0; flex: 0 0 auto; }
 
   /* ============ R6 主面板收口（2026-08-14 用户判决，四张反馈图）
      用户逐字：「左右侧光点的位置不和谐」「现在的字变得多余了【它的
@@ -367,83 +368,78 @@ pub const OVERLAY_CSS: &str = r#"
   @keyframes breath-avatar-glow { 0%, 100% { box-shadow: 0 0 14px color-mix(in srgb, var(--mind-glow) 55%, transparent); } 50% { box-shadow: 0 0 30px var(--mind-glow); } }
   @keyframes breath-avatar-ring { 0%, 100% { border-color: var(--mind-line); } 50% { border-color: var(--accent-solid); } }
 
-  /* ============ W2 视觉解耦（2026-08-21，用户定案 §2.2）============
-     self 窗→「沉积」：三卡（沉积 SEDIMENT / 知识沉积 RAG ← facility
-     迁入 / 沉积skill 新建 mock）；facility 窗→两卡（RUNTIME = 模型
-     引擎+上下文+token+全局设置、AXIOMS 独立浮卡）；work 窗零改动。
-     滚动语义：窗体永不滚动、卡标题钉住、列表区内滚、总高超窗时各卡
-     flex 收缩出内滚动条。DOM（windows.rs 同轮重组）：aside#mind 卸卡
-     样（真值 #mind 本就是透明容器 + gap:14px）→ station-head.w2-head
-     独立拖拽条 + 一串 .mod 卡（真值卡五件套）。R5.3 outer 四浮卡模式
-     的 inner 侧对位实现。 */
+  /* ============ W2.7 流体卡片打磨（2026-08-24 用户定案）============
+     左列五卡满高同窗 + 沉积|设施分组缝；右列三卡+终端填满窗底。
+     左右每卡支持点击标题折叠到只剩标题；展开卡流体拉伸吃空区。 */
 
   /* 窗体永不滚动（覆盖 F1 的 overflow-y:auto）。 */
   body[data-window="inner"] { overflow: hidden; }
 
-  /* aside 卸卡样 + 填满内容盒：宽度链沿用 F1/R4 收口（100%），高度
-     100% 让卡列在窗内做 flex 分配；gap:14px 由真值 #mind 提供。 */
-  body[data-window="inner"] aside#mind { width: 100%; max-width: 100%; height: 100%; display: flex; flex-direction: column; gap: 14px; background: transparent; border: none; border-radius: 0; box-shadow: none; }
+  /* aside 卸卡样 + 填满内容盒：宽度链沿用 F1/R4 收口（100%），高度 100% */
+  body[data-window="inner"] aside#mind { width: 100%; max-width: 100%; height: 100%; display: flex; flex-direction: column; gap: 10px; background: transparent; border: none; border-radius: 0; box-shadow: none; }
 
-  /* 独立拖拽条：复用 station-head 字体色，去卡式下边线、压缩纵向占位。 */
-  body[data-window="inner"] aside#mind > .w2-head { flex: 0 0 auto; border-bottom: none; padding: 8px 2px; }
+  /* 独立拖拽条：左垫 12px 呼应卡标题节奏 */
+  body[data-window="inner"] aside#mind > .w2-head { flex: 0 0 auto; border-bottom: 1px dashed var(--line); padding: 6px 6px 6px 12px; }
+  body[data-window="inner"] aside#mind > .w2-head .fold-btn { margin-left: auto; background: none; border: none; border-radius: 0; color: var(--faint); font-size: 10px; padding: 2px 6px; cursor: pointer; }
+  body[data-window="inner"] aside#mind > .w2-head .fold-btn:hover { color: var(--accent-solid); border-color: transparent; }
 
-  /* 卡尺寸策略：内容高优先 + 溢出收缩（min-height:0 解锁收缩，
-     覆盖 F1 的 flex:1 均分）；收缩时内滚条落在 w2-scroll 上。 */
-  body[data-window="inner"] aside#mind > .mod { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  /* work chrome 与左列对齐：左垫 12px + 控件右缘成组 */
+  body[data-window="outer"] aside#work > .w2-head { display: flex; align-items: center; padding: 6px 6px 6px 12px; border-bottom: 1px dashed var(--line); }
+  body[data-window="outer"] aside#work > .w2-head .fold-btn { margin-left: auto; background: none; border: none; border-radius: 0; color: var(--faint); font-size: 10px; padding: 2px 6px; cursor: pointer; }
+  body[data-window="outer"] aside#work > .w2-head .fold-btn:hover { color: var(--accent-solid); }
 
-  /* 标题钉住（w2-pin）+ 列表区内滚（w2-scroll）+ 卡尾钉住（w2-foot）。
-     side-title 真值 margin-bottom:8px 归零，改由 w2-scroll padding 承。 */
-  body[data-window="inner"] aside#mind > .mod .w2-pin { flex: 0 0 auto; margin: 0; padding: 12px 14px 0; }
-  body[data-window="inner"] aside#mind > .mod .w2-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding: 8px 14px; }
-  body[data-window="inner"] aside#mind > .mod .w2-foot { flex: 0 0 auto; margin: 0; padding: 8px 14px; border-top: 1px solid var(--line); }
+  /* 标题行可点击折叠 + 呼吸对齐（水平 18px） */
+  body[data-window] aside .side-title { display: flex; align-items: center; cursor: pointer; user-select: none; }
+  body[data-window] aside .side-title:hover { color: var(--text); }
+  body[data-window] aside .side-title .fold-caret { margin-left: auto; font-size: 9px; color: var(--faint); font-family: var(--font-mono); flex-shrink: 0; padding-left: 6px; transition: color .15s; }
+  body[data-window] aside .side-title:hover .fold-caret { color: var(--accent-solid); }
+
+  /* 左列卡尺寸策略：展开卡拉伸吃剩余高度（1 1 auto），折叠卡收缩（0 0 auto） */
+  body[data-window="inner"] aside#mind > .mod { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  body[data-window="inner"] aside#mind > .mod.is-folded { flex: 0 0 auto !important; min-height: 0; }
+  body[data-window="inner"] aside#mind > .mod.is-folded > :not(.side-title) { display: none !important; }
+
+  /* 标题钉住（w2-pin）+ 列表区内滚（w2-scroll）+ 卡尾钉住（w2-foot）+ 水平 18px 内边距 */
+  body[data-window="inner"] aside#mind > .mod .w2-pin { flex: 0 0 auto; margin: 0; padding: 12px 18px 0; }
+  body[data-window="inner"] aside#mind > .mod.is-folded .w2-pin { padding: 10px 18px; }
+  body[data-window="inner"] aside#mind > .mod .w2-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 18px; mask-image: linear-gradient(to bottom, #000 calc(100% - 8px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 8px), transparent 100%); }
+  body[data-window="inner"] aside#mind > .mod .w2-foot { flex: 0 0 auto; margin: 0; padding: 8px 18px; border-top: 1px solid var(--line); }
+
+  /* 左列分组缝（沉积 | 设施） */
+  body[data-window="inner"] aside#mind > .w2-group-seam { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 2px 12px; margin: 0; color: var(--faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; }
+  body[data-window="inner"] aside#mind > .w2-group-seam::before,
+  body[data-window="inner"] aside#mind > .w2-group-seam::after { content: ""; flex: 1 1 auto; border-bottom: 1px dashed var(--line); }
+
+  /* 右列卡片：折叠收缩 + 水平 18px 内边距 + 终端填底吃满高度 */
+  body[data-window="outer"] aside#work { background: transparent; border: none; border-radius: 0; box-shadow: none; height: 100%; display: flex; flex-direction: column; }
+  body[data-window="outer"] aside#work .side-section { border: 1px solid var(--line); border-top-color: var(--bevel); border-radius: 4px; background: var(--bg2); box-shadow: var(--shadow); margin-bottom: 12px; flex: 0 1 auto; min-height: 0; padding: 12px 18px; }
+  body[data-window="outer"] aside#work .side-section.is-folded { flex: 0 0 auto !important; margin-bottom: 12px; padding: 10px 18px; }
+  body[data-window="outer"] aside#work .side-section.is-folded > :not(.side-title) { display: none !important; }
+  body[data-window="outer"] aside#work .side-section.is-folded .side-title { margin-bottom: 0; }
+  body[data-window="outer"] aside#work .term-well { margin: 0; flex: 1 1 auto; min-height: 72px; overflow-y: auto; padding: 10px 18px; }
 
   /* 沉积skill 候选状态词（右缘淡字）。 */
   body[data-window="inner"] aside#mind .w2-stat { margin-left: auto; color: var(--faint); font-family: var(--font-mono); font-size: 9px; flex-shrink: 0; white-space: nowrap; }
 
-  /* RUNTIME 卡 token 消耗行：标签 + 数值 + 「清空」钮。清空归零后
-     钮 disabled（opacity .4）作为已清空的状态反馈。 */
+  /* RUNTIME 卡 token 消耗行 */
   body[data-window="inner"] aside#mind .w2-token { cursor: default; }
   body[data-window="inner"] aside#mind .w2-token .w2-token-label { color: var(--faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; }
-  body[data-window="inner"] aside#mind .w2-token .w2-token-value { color: var(--text); font-family: var(--font-mono); font-size: 10px; }
+  body[data-window="inner"] aside#mind .w2-token .w2-token-value { color: var(--accent-solid); font-family: var(--font-mono); font-size: 11px; }
   body[data-window="inner"] aside#mind .w2-token .w2-token-clear { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-family: var(--font-mono); font-size: 9px; line-height: 1.4; padding: 1px 8px; cursor: pointer; flex-shrink: 0; transition: color .15s, border-color .15s; }
   body[data-window="inner"] aside#mind .w2-token .w2-token-clear:hover { color: var(--accent-solid); border-color: var(--accent-solid); }
   body[data-window="inner"] aside#mind .w2-token .w2-token-clear:disabled { opacity: .4; cursor: default; color: var(--faint); border-color: var(--line); }
 
-  /* ============ W2.5 美学润色（2026-08-21 编排者美学裁定）============
-     诊断：head 重心散（收纳居中）/ seg-bar 被内滚裁掉情感焦点 / 设施
-     窗底空构图失衡 / em 全灰语义色未用 / 行距紧 / token 数不醒目。 */
-
-  /* head 瘦身 + 虚线缝（呼应 room-head 缝线语言）+ 控件右对齐成组。 */
-  body[data-window="inner"] aside#mind > .w2-head { padding: 6px 6px 6px 2px; border-bottom: 1px dashed var(--line); }
-  body[data-window="inner"] aside#mind > .w2-head .fold-btn { margin-left: auto; background: none; border: none; border-radius: 0; color: var(--faint); font-size: 10px; padding: 2px 6px; }
-  body[data-window="inner"] aside#mind > .w2-head .fold-btn:hover { color: var(--accent-solid); border-color: transparent; }
-
-  /* 卡撑满窗：空余均分消除窗底死空（溢出时仍收缩内滚）。 */
-  body[data-window="inner"] aside#mind > .mod { flex: 1 1 auto; }
-
-  /* 列表呼吸感。 */
+  /* 列表呼吸感与卡尾堆叠 */
   body[data-window="inner"] aside#mind .w2-scroll .row { padding: 4px 0; }
-
-  /* seg-bar 卡尾钉住区堆叠（进度 + 心境语常可见）。 */
   body[data-window="inner"] aside#mind .w2-foot .seg-bar { margin: 0 0 6px; }
   body[data-window="inner"] aside#mind .w2-foot .seg-note { margin: 0; }
 
-  /* em 语义着色：沉积系=mind-line、skill=node-right、RUNTIME=accent、
-     AXIOMS=ok（与 sq-toggle 绿同族）。只动 em，标题主体仍 muted。 */
+  /* em 语义着色 */
   body[data-window="inner"] aside#mind .w2c-sediment .side-title em,
   body[data-window="inner"] aside#mind .w2c-rag .side-title em { color: var(--mind-line); }
   body[data-window="inner"] aside#mind .w2c-skill .side-title em { color: var(--node-right); }
   body[data-window="inner"] aside#mind .w2c-runtime .side-title em { color: var(--accent-solid); }
   body[data-window="inner"] aside#mind .w2c-axioms .side-title em { color: var(--ok); }
-
-  /* token 数值提亮（用户关注的活指标）。 */
-  body[data-window="inner"] aside#mind .w2-token .w2-token-value { color: var(--accent-solid); font-size: 11px; }
-
-  /* ============ W2.6（2026-08-22，handoff-20260821 §5.2 编排者建议项）
-     w2-scroll 底部渐隐遮罩：内滚列表的半行裁切改为淡出。纯 CSS 常开
-     （无滚动态探测，handoff 定性「一行级」）；w2-foot 钉住区在 scroll
-     盒外不受影响。mask 双前缀兼容 WebView2。 */
-  body[data-window="inner"] aside#mind > .mod .w2-scroll { mask-image: linear-gradient(to bottom, #000 calc(100% - 8px), transparent 100%); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 8px), transparent 100%); }
 "#;
 
 /// Build a `dioxus::desktop::wry::WebViewBuilder` attribute that injects

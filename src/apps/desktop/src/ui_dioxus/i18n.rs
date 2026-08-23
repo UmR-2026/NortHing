@@ -191,7 +191,9 @@ pub mod keys {
     pub const VLABEL_OUTER: &str = "dioxus-room-vlabel-outer";
 
     // ===== Inner / outer station heads =====
+    #[allow(dead_code)]
     pub const INNER_HEAD_TITLE: &str = "dioxus-room-inner-head-title";
+    #[allow(dead_code)]
     pub const INNER_HEAD_FACILITY_TITLE: &str = "dioxus-room-inner-head-facility-title";
     pub const INNER_SECTION_SEDIMENT_TITLE: &str = "dioxus-room-inner-section-sediment-title";
     pub const INNER_SECTION_SEDIMENT_EM: &str = "dioxus-room-inner-section-sediment-em";

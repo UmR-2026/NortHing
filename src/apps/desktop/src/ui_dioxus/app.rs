@@ -135,10 +135,10 @@ pub fn room_app_root() -> Element {
 
     let theme_class = if theme_dark() { "dark" } else { "light" };
 
-    let (left_open, right_open) = {
+            let (left_open, right_open) = {
         let active = active_set.read();
         (
-            active.contains("self") || active.contains("facility"),
+            active.contains("self"),
             active.contains("work"),
         )
     };
@@ -380,9 +380,7 @@ pub fn room_app_root() -> Element {
                             }
                         }
 
-                        // Left Jewel: toggles self + facility windows pair.
-                        // 文案 i18n 化（2026-08-22）：W2 改名后 self 窗 = 「沉积」，
-                        // 左结文案随改名联动（旧「它的自我」已无引用对象）。
+                        // Left Jewel: 单扇满高「沉积与设施」（W2.7，半高对切退役）。
                         button {
                             class: if left_open { "membrane-node left is-open" } else { "membrane-node left" },
                             id: "trig-mind",
@@ -390,12 +388,10 @@ pub fn room_app_root() -> Element {
                             "aria-expanded": if left_open { "true" } else { "false" },
                             title: "{locale.t(keys::GEM_LEFT_TITLE)}",
                             onclick: move |_| {
-                                if wm_left.is_any_active(&["self", "facility"]) {
+                                if wm_left.is_active("self") {
                                     close_module("self", &wm_left);
-                                    close_module("facility", &wm_left);
                                 } else {
                                     spawn_module_window("self", &wm_left, &geom_rx_left, &theme_left);
-                                    spawn_module_window("facility", &wm_left, &geom_rx_left, &theme_left);
                                 }
                             }
                         }
@@ -458,17 +454,11 @@ pub fn spawn_module_window(
     let room_h_log = room_geom.height as f64 / scale;
 
     let (initial_x, initial_y, initial_w, initial_h) = match plugin.dock_side {
-        DockSide::LeftTop => (
+        DockSide::LeftFull => (
             room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
             room_y_log,
             plugin.initial_width,
-            if room_h_log > 0.0 { room_h_log / 2.0 } else { plugin.initial_height },
-        ),
-        DockSide::LeftBottom => (
-            room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
-            room_y_log + room_h_log / 2.0,
-            plugin.initial_width,
-            if room_h_log > 0.0 { room_h_log / 2.0 } else { plugin.initial_height },
+            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
         ),
         DockSide::RightFull => (
             room_x_log + room_w_log + DOCK_GAP_PX as f64,

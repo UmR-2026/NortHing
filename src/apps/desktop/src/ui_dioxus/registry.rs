@@ -20,8 +20,7 @@ static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 /// Dock position relative to the main room window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DockSide {
-    LeftTop,
-    LeftBottom,
+    LeftFull,
     RightFull,
 }
 
@@ -76,11 +75,13 @@ impl WindowRegistry {
         let mut reg = Self::new();
         reg.register(WindowPlugin {
             id: "self",
-            // W2（2026-08-21，用户定案 §2.2）：self 窗改名「沉积」。
-            title: "northhing - 沉积 (dioxus)",
+            // W2.7（2026-08-23）：左列半高对切改为单扇满高「沉积与设施」。
+            // facility 插件仍注册（生命周期测试覆盖 mark_opening("facility")），
+            // 左宝石不再 spawn 第二扇 OS 窗。
+            title: "northhing - 沉积与设施 (dioxus)",
             initial_width: 280.0,
-            initial_height: 410.0,
-            dock_side: DockSide::LeftTop,
+            initial_height: 820.0,
+            dock_side: DockSide::LeftFull,
             component: super::windows::self_app_root,
         });
         reg.register(WindowPlugin {
@@ -88,7 +89,7 @@ impl WindowRegistry {
             title: "northhing - facility (dioxus)",
             initial_width: 280.0,
             initial_height: 410.0,
-            dock_side: DockSide::LeftBottom,
+            dock_side: DockSide::LeftFull,
             component: super::windows::facility_app_root,
         });
         reg.register(WindowPlugin {
