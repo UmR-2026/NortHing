@@ -22,6 +22,7 @@ static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 pub enum DockSide {
     LeftFull,
     RightFull,
+    Center,
 }
 
 /// Props for module windows (`self`, `facility`, `work`).
@@ -99,6 +100,30 @@ impl WindowRegistry {
             initial_height: 820.0,
             dock_side: DockSide::RightFull,
             component: super::windows::work_app_root,
+        });
+        reg.register(WindowPlugin {
+            id: "archive",
+            title: "northhing - 档案馆 (dioxus)",
+            initial_width: 720.0,
+            initial_height: 820.0,
+            dock_side: DockSide::Center,
+            component: super::pages_archive::archive_app_root,
+        });
+        reg.register(WindowPlugin {
+            id: "space",
+            title: "northhing - 走廊 (dioxus)",
+            initial_width: 760.0,
+            initial_height: 820.0,
+            dock_side: DockSide::Center,
+            component: super::pages_space::space_app_root,
+        });
+        reg.register(WindowPlugin {
+            id: "settings",
+            title: "northhing - 全局设置 (dioxus)",
+            initial_width: 760.0,
+            initial_height: 580.0,
+            dock_side: DockSide::Center,
+            component: super::pages_settings::settings_app_root,
         });
         reg
     }
@@ -369,5 +394,76 @@ mod tests {
         let target = manager.mark_closing_target("facility");
         assert_eq!(target, Some((mock_wid, mock_hwnd)));
         assert!(!manager.is_active("facility"));
+    }
+
+    #[test]
+    fn test_archive_registration_and_lifecycle() {
+        let registry = WindowRegistry::default_registry();
+        let plugin = registry.get("archive").expect("archive plugin registered");
+        assert_eq!(plugin.id, "archive");
+        assert_eq!(plugin.dock_side, DockSide::Center);
+        assert_eq!(plugin.initial_width, 720.0);
+        assert_eq!(plugin.initial_height, 820.0);
+
+        let manager = ShellWindowManager::new(Arc::new(registry));
+        assert!(!manager.is_active("archive"));
+        let gen = manager.mark_opening("archive").expect("mark_opening archive");
+        assert!(manager.is_active("archive"));
+        assert!(manager.mark_opening("archive").is_none(), "singleton: duplicate mark_opening must be rejected");
+
+        let mock_wid = unsafe { std::mem::transmute(3usize) };
+        assert!(manager.register_window_with_hwnd("archive", gen, mock_wid, 0x5678));
+        assert!(manager.is_active("archive"));
+
+        let target = manager.mark_closing_target("archive");
+        assert_eq!(target, Some((mock_wid, 0x5678)));
+        assert!(!manager.is_active("archive"));
+    }
+
+    #[test]
+    fn test_space_registration_and_lifecycle() {
+        let registry = WindowRegistry::default_registry();
+        let plugin = registry.get("space").expect("space plugin registered");
+        assert_eq!(plugin.id, "space");
+        assert_eq!(plugin.dock_side, DockSide::Center);
+        assert_eq!(plugin.initial_height, 820.0);
+
+        let manager = ShellWindowManager::new(Arc::new(registry));
+        assert!(!manager.is_active("space"));
+        let gen = manager.mark_opening("space").expect("mark_opening space");
+        assert!(manager.is_active("space"));
+        assert!(manager.mark_opening("space").is_none(), "singleton: duplicate mark_opening must be rejected");
+
+        let mock_wid = unsafe { std::mem::transmute(4usize) };
+        assert!(manager.register_window_with_hwnd("space", gen, mock_wid, 0x9abc));
+        assert!(manager.is_active("space"));
+
+        let target = manager.mark_closing_target("space");
+        assert_eq!(target, Some((mock_wid, 0x9abc)));
+        assert!(!manager.is_active("space"));
+    }
+
+    #[test]
+    fn test_settings_registration_and_lifecycle() {
+        let registry = WindowRegistry::default_registry();
+        let plugin = registry.get("settings").expect("settings plugin registered");
+        assert_eq!(plugin.id, "settings");
+        assert_eq!(plugin.dock_side, DockSide::Center);
+        assert_eq!(plugin.initial_width, 760.0);
+        assert_eq!(plugin.initial_height, 580.0);
+
+        let manager = ShellWindowManager::new(Arc::new(registry));
+        assert!(!manager.is_active("settings"));
+        let gen = manager.mark_opening("settings").expect("mark_opening settings");
+        assert!(manager.is_active("settings"));
+        assert!(manager.mark_opening("settings").is_none(), "singleton: duplicate mark_opening must be rejected");
+
+        let mock_wid = unsafe { std::mem::transmute(5usize) };
+        assert!(manager.register_window_with_hwnd("settings", gen, mock_wid, 0xdef0));
+        assert!(manager.is_active("settings"));
+
+        let target = manager.mark_closing_target("settings");
+        assert_eq!(target, Some((mock_wid, 0xdef0)));
+        assert!(!manager.is_active("settings"));
     }
 }

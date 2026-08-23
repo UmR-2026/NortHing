@@ -30,4 +30,7 @@ mod css;
 mod i18n;
 mod session_mock;
 mod windows;
+mod pages_archive;
+mod pages_space;
+mod pages_settings;
 mod app;

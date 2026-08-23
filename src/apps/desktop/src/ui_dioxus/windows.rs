@@ -20,7 +20,7 @@ use super::state::Geometry;
 use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 
 #[cfg(target_os = "windows")]
-mod win {
+pub(crate) mod win {
     use std::ffi::c_void;
 
     unsafe extern "system" {
@@ -178,8 +178,10 @@ pub fn self_app_root(props: ModuleAppProps) -> Element {
         });
     }
 
+    let theme_rx_for_settings = props.theme_rx.clone();
+    let theme_rx_for_future = props.theme_rx.clone();
     use_future(move || {
-        let mut theme_rx = theme_rx.clone();
+        let mut theme_rx = theme_rx_for_future.clone();
         let mut theme_dark = theme_dark.clone();
         async move {
             loop {
@@ -329,7 +331,19 @@ pub fn self_app_root(props: ModuleAppProps) -> Element {
                             }
                         }
                     }
-                    button { class: "sys-config w2-foot", "≡ {locale.t(keys::INNER_GLOBAL_SETTINGS)}" }
+                    button {
+                        class: "sys-config w2-foot",
+                        onclick: {
+                            let mgr = manager.clone();
+                            let rx = rx_arc.clone();
+                            let theme_rx = theme_rx_for_settings.clone();
+                            move |e| {
+                                e.stop_propagation();
+                                super::app::spawn_module_window_with_theme_rx("settings", &mgr, &rx, theme_rx.clone());
+                            }
+                        },
+                        "≡ {locale.t(keys::INNER_GLOBAL_SETTINGS)}"
+                    }
                 }
                 div {
                     class: if folded_axioms() { "mod w2c-axioms is-folded" } else { "mod w2c-axioms" },
@@ -431,8 +445,10 @@ pub fn facility_app_root(props: ModuleAppProps) -> Element {
         });
     }
 
+    let theme_rx_for_settings = props.theme_rx.clone();
+    let theme_rx_for_future = props.theme_rx.clone();
     use_future(move || {
-        let mut theme_rx = theme_rx.clone();
+        let mut theme_rx = theme_rx_for_future.clone();
         let mut theme_dark = theme_dark.clone();
         async move {
             loop {
@@ -509,7 +525,19 @@ pub fn facility_app_root(props: ModuleAppProps) -> Element {
                             }
                         }
                     }
-                    button { class: "sys-config w2-foot", "≡ {locale.t(keys::INNER_GLOBAL_SETTINGS)}" }
+                    button {
+                        class: "sys-config w2-foot",
+                        onclick: {
+                            let mgr = manager.clone();
+                            let rx = rx_arc.clone();
+                            let theme_rx = theme_rx_for_settings.clone();
+                            move |e| {
+                                e.stop_propagation();
+                                super::app::spawn_module_window_with_theme_rx("settings", &mgr, &rx, theme_rx.clone());
+                            }
+                        },
+                        "≡ {locale.t(keys::INNER_GLOBAL_SETTINGS)}"
+                    }
                 }
                 div { class: "mod w2c-axioms",
                     div { class: "side-title w2-pin",

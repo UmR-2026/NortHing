@@ -28,6 +28,7 @@ use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme};
+use tokio::sync::watch;
 
 #[cfg(target_os = "windows")]
 mod win_ops {
@@ -165,6 +166,14 @@ pub fn room_app_root() -> Element {
     let geom_rx_right = geometry_rx_arc.clone();
     let theme_right = theme.clone();
 
+    let wm_nav_archive = window_manager.clone();
+    let geom_rx_nav_archive = geometry_rx_arc.clone();
+    let theme_nav_archive = theme.clone();
+
+    let wm_nav_space = window_manager.clone();
+    let geom_rx_nav_space = geometry_rx_arc.clone();
+    let theme_nav_space = theme.clone();
+
     rsx! {
         body {
             "data-theme": "{theme_class}",
@@ -299,6 +308,30 @@ pub fn room_app_root() -> Element {
                                 span { class: "seal-name", "northing" }
                             }
                             span { "architect_sub 介入中" }
+                            button {
+                                class: "status-nav-link",
+                                id: "nav-archive",
+                                title: "{locale.t(keys::NAV_ARCHIVE)}",
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
+                                onclick: move |_| {
+                                    spawn_module_window("archive", &wm_nav_archive, &geom_rx_nav_archive, &theme_nav_archive);
+                                },
+                                "{locale.t(keys::NAV_ARCHIVE)}"
+                            }
+                            button {
+                                class: "status-nav-link",
+                                id: "nav-space",
+                                title: "{locale.t(keys::NAV_SPACE)}",
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
+                                onclick: move |_| {
+                                    spawn_module_window("space", &wm_nav_space, &geom_rx_nav_space, &theme_nav_space);
+                                },
+                                "{locale.t(keys::NAV_SPACE)}"
+                            }
                             span { class: "sp" }
                         }
 
@@ -424,6 +457,17 @@ pub fn spawn_module_window(
     geometry_rx: &GeometryRxArc,
     theme: &GlobalTheme,
 ) {
+    let theme_rx = theme.subscribe();
+    spawn_module_window_with_theme_rx(id, manager, geometry_rx, theme_rx);
+}
+
+/// Dynamic module window spawner accepting a theme receiver.
+pub fn spawn_module_window_with_theme_rx(
+    id: &'static str,
+    manager: &ShellWindowManager,
+    geometry_rx: &GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+) {
     let plugin = match manager.registry().get(id) {
         Some(p) => p.clone(),
         None => return,
@@ -435,7 +479,6 @@ pub fn spawn_module_window(
     };
 
     let data_directory = shared_webview_data_directory_for_inner();
-    let theme_rx = theme.subscribe();
 
     // I2 审查降级证据（2026-08-22，review-w2 I2 不修的决定依据）：
     // 此处 borrow 到的几何在 gem 可点击前必然已是真实值——两层保证：
@@ -465,6 +508,12 @@ pub fn spawn_module_window(
             room_y_log,
             plugin.initial_width,
             if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
+        ),
+        DockSide::Center => (
+            room_x_log + (room_w_log - plugin.initial_width) / 2.0,
+            room_y_log + 24.0,
+            plugin.initial_width,
+            plugin.initial_height,
         ),
     };
 

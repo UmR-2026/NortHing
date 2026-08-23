@@ -269,4 +269,65 @@ pub mod keys {
     pub const GEM_LEFT_TITLE: &str = "dioxus-room-gem-left-title";
     pub const GEM_RIGHT_LABEL: &str = "dioxus-room-gem-right-label";
     pub const GEM_RIGHT_TITLE: &str = "dioxus-room-gem-right-title";
+
+    // ===== Archive window (2026-08-24 Task EF-E1) =====
+    pub const NAV_ARCHIVE: &str = "dioxus-room-nav-archive";
+    pub const ARCHIVE_WINDOW_TITLE: &str = "dioxus-room-archive-window-title";
+    pub const ARCHIVE_HEAD_NAME: &str = "dioxus-room-archive-head-name";
+    pub const ARCHIVE_HEAD_INITIAL: &str = "dioxus-room-archive-head-initial";
+    pub const ARCHIVE_HEAD_STATE: &str = "dioxus-room-archive-head-state";
+    pub const ARCHIVE_STATUS_MODE: &str = "dioxus-room-archive-status-mode";
+    pub const ARCHIVE_STATUS_TAG: &str = "dioxus-room-archive-status-tag";
+    pub const ARCHIVE_SECTION_DEPTH_TITLE: &str = "dioxus-room-archive-section-depth-title";
+    pub const ARCHIVE_SECTION_DEPTH_EM: &str = "dioxus-room-archive-section-depth-em";
+    pub const ARCHIVE_SECTION_SOLAR_TITLE: &str = "dioxus-room-archive-section-solar-title";
+    pub const ARCHIVE_SECTION_SOLAR_EM: &str = "dioxus-room-archive-section-solar-em";
+    pub const ARCHIVE_SECTION_WITNESS_TITLE: &str = "dioxus-room-archive-section-witness-title";
+    pub const ARCHIVE_SECTION_WITNESS_EM: &str = "dioxus-room-archive-section-witness-em";
+    pub const ARCHIVE_FOOT_NOTE: &str = "dioxus-room-archive-foot-note";
+
+    // ===== Space window (2026-08-24 Task EF-E2) =====
+    pub const NAV_SPACE: &str = "dioxus-room-nav-space";
+    pub const SPACE_WINDOW_TITLE: &str = "dioxus-room-space-window-title";
+    pub const SPACE_HEAD_NAME: &str = "dioxus-room-space-head-name";
+    pub const SPACE_HEAD_STATE: &str = "dioxus-room-space-head-state";
+    pub const SPACE_HEAD_NOTE: &str = "dioxus-room-space-head-note";
+    pub const SPACE_STATUS_CORRIDOR: &str = "dioxus-room-space-status-corridor";
+    pub const SPACE_STATUS_ONE_LIT: &str = "dioxus-room-space-status-one-lit";
+    pub const SPACE_STATUS_REST_DIM: &str = "dioxus-room-space-status-rest-dim";
+    pub const SPACE_SECTION_ORDER_TITLE: &str = "dioxus-room-space-section-order-title";
+    pub const SPACE_SECTION_ORDER_EM: &str = "dioxus-room-space-section-order-em";
+    pub const SPACE_SECTION_WORKSPACE_TITLE: &str = "dioxus-room-space-section-workspace-title";
+    pub const SPACE_SECTION_WORKSPACE_EM: &str = "dioxus-room-space-section-workspace-em";
+    pub const SPACE_SECTION_DISPLAY_TITLE: &str = "dioxus-room-space-section-display-title";
+    pub const SPACE_SECTION_DISPLAY_EM: &str = "dioxus-room-space-section-display-em";
+    pub const SPACE_SECTION_PEEK_TITLE: &str = "dioxus-room-space-section-peek-title";
+    pub const SPACE_SECTION_PEEK_EM: &str = "dioxus-room-space-section-peek-em";
+    pub const SPACE_BTN_ARCHIVE_LINK: &str = "dioxus-room-space-btn-archive-link";
+
+    // ===== Settings window (2026-08-24 Task EF-E3) =====
+    pub const SETTINGS_WINDOW_TITLE: &str = "dioxus-room-settings-window-title";
+    pub const SETTINGS_HEAD_SELF: &str = "dioxus-room-settings-head-self";
+    pub const SETTINGS_HEAD_FACILITY: &str = "dioxus-room-settings-head-facility";
+    pub const SETTINGS_SECTION_SEDIMENT_TITLE: &str = "dioxus-room-settings-section-sediment-title";
+    pub const SETTINGS_SECTION_SEDIMENT_EM: &str = "dioxus-room-settings-section-sediment-em";
+    pub const SETTINGS_SECTION_CHRONICLES_TITLE: &str = "dioxus-room-settings-section-chronicles-title";
+    pub const SETTINGS_SECTION_CHRONICLES_EM: &str = "dioxus-room-settings-section-chronicles-em";
+    pub const SETTINGS_SECTION_IDENTITY_TITLE: &str = "dioxus-room-settings-section-identity-title";
+    pub const SETTINGS_SECTION_IDENTITY_EM: &str = "dioxus-room-settings-section-identity-em";
+    pub const SETTINGS_SECTION_AXIOMS_TITLE: &str = "dioxus-room-settings-section-axioms-title";
+    pub const SETTINGS_SECTION_AXIOMS_EM: &str = "dioxus-room-settings-section-axioms-em";
+    pub const SETTINGS_SECTION_ENGINE_TITLE: &str = "dioxus-room-settings-section-engine-title";
+    pub const SETTINGS_SECTION_ENGINE_EM: &str = "dioxus-room-settings-section-engine-em";
+    pub const SETTINGS_SECTION_CONTEXT_TITLE: &str = "dioxus-room-settings-section-context-title";
+    pub const SETTINGS_SECTION_CONTEXT_EM: &str = "dioxus-room-settings-section-context-em";
+    pub const SETTINGS_SECTION_PROVIDER_TITLE: &str = "dioxus-room-settings-section-provider-title";
+    pub const SETTINGS_SECTION_PROVIDER_EM: &str = "dioxus-room-settings-section-provider-em";
+    pub const SETTINGS_SECTION_MCP_TITLE: &str = "dioxus-room-settings-section-mcp-title";
+    pub const SETTINGS_SECTION_MCP_EM: &str = "dioxus-room-settings-section-mcp-em";
+    pub const SETTINGS_SECTION_WORKSPACE_TITLE: &str = "dioxus-room-settings-section-workspace-title";
+    pub const SETTINGS_SECTION_WORKSPACE_EM: &str = "dioxus-room-settings-section-workspace-em";
+    pub const SETTINGS_SECTION_DISPLAY_TITLE: &str = "dioxus-room-settings-section-display-title";
+    pub const SETTINGS_SECTION_DISPLAY_EM: &str = "dioxus-room-settings-section-display-em";
+    pub const SETTINGS_BTN_RELOCATE: &str = "dioxus-room-settings-btn-relocate";
 }
