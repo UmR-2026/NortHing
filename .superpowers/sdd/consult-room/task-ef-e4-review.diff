@@ -1,0 +1,289 @@
+diff --git a/src/apps/desktop/src/ui_dioxus/app.rs b/src/apps/desktop/src/ui_dioxus/app.rs
+index 270d421..c922e0b 100644
+--- a/src/apps/desktop/src/ui_dioxus/app.rs
++++ b/src/apps/desktop/src/ui_dioxus/app.rs
+@@ -174,6 +174,10 @@ pub fn room_app_root() -> Element {
+     let geom_rx_nav_space = geometry_rx_arc.clone();
+     let theme_nav_space = theme.clone();
+ 
++    let wm_nav_onboarding = window_manager.clone();
++    let geom_rx_nav_onboarding = geometry_rx_arc.clone();
++    let theme_nav_onboarding = theme.clone();
++
+     rsx! {
+         body {
+             "data-theme": "{theme_class}",
+@@ -332,6 +336,18 @@ pub fn room_app_root() -> Element {
+                                 },
+                                 "{locale.t(keys::NAV_SPACE)}"
+                             }
++                            button {
++                                class: "status-nav-link",
++                                id: "nav-onboarding",
++                                title: "{locale.t(keys::NAV_ONBOARDING)}",
++                                onmousedown: move |e| {
++                                    e.stop_propagation();
++                                },
++                                onclick: move |_| {
++                                    spawn_module_window("onboarding", &wm_nav_onboarding, &geom_rx_nav_onboarding, &theme_nav_onboarding);
++                                },
++                                "{locale.t(keys::NAV_ONBOARDING)}"
++                            }
+                             span { class: "sp" }
+                         }
+ 
+@@ -515,6 +531,12 @@ pub fn spawn_module_window_with_theme_rx(
+             plugin.initial_width,
+             plugin.initial_height,
+         ),
++        DockSide::Fullscreen => (
++            room_x_log,
++            room_y_log,
++            if room_w_log > 0.0 { room_w_log } else { plugin.initial_width },
++            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
++        ),
+     };
+ 
+     let mut builder = WindowBuilder::new()
+diff --git a/src/apps/desktop/src/ui_dioxus/i18n.rs b/src/apps/desktop/src/ui_dioxus/i18n.rs
+index 0d21819..104f9aa 100644
+--- a/src/apps/desktop/src/ui_dioxus/i18n.rs
++++ b/src/apps/desktop/src/ui_dioxus/i18n.rs
+@@ -330,4 +330,39 @@ pub mod keys {
+     pub const SETTINGS_SECTION_DISPLAY_TITLE: &str = "dioxus-room-settings-section-display-title";
+     pub const SETTINGS_SECTION_DISPLAY_EM: &str = "dioxus-room-settings-section-display-em";
+     pub const SETTINGS_BTN_RELOCATE: &str = "dioxus-room-settings-btn-relocate";
++
++    // ===== Onboarding window (2026-08-24 Task EF-E4) =====
++    pub const NAV_ONBOARDING: &str = "dioxus-room-nav-onboarding";
++    pub const ONBOARDING_WINDOW_TITLE: &str = "dioxus-room-onboarding-window-title";
++    pub const ONBOARDING_STATUS_TITLE: &str = "dioxus-room-onboarding-status-title";
++    pub const ONBOARDING_STATUS_INITIAL: &str = "dioxus-room-onboarding-status-initial";
++    pub const ONBOARDING_HEAD_STATE_INITIAL: &str = "dioxus-room-onboarding-head-state-initial";
++    pub const ONBOARDING_HEAD_NAME_INITIAL: &str = "dioxus-room-onboarding-head-name-initial";
++    pub const ONBOARDING_HEAD_FOLD_BTN: &str = "dioxus-room-onboarding-head-fold-btn";
++    pub const ONBOARDING_DRAWER_MIND_HEAD: &str = "dioxus-room-onboarding-drawer-mind-head";
++    pub const ONBOARDING_DRAWER_FACILITY_HEAD: &str = "dioxus-room-onboarding-drawer-facility-head";
++    pub const ONBOARDING_DRAWER_WORK_HEAD: &str = "dioxus-room-onboarding-drawer-work-head";
++    pub const ONBOARDING_SECTION_IDENTITY_TITLE: &str = "dioxus-room-onboarding-section-identity-title";
++    pub const ONBOARDING_SECTION_IDENTITY_EM: &str = "dioxus-room-onboarding-section-identity-em";
++    pub const ONBOARDING_SECTION_PROVIDER_TITLE: &str = "dioxus-room-onboarding-section-provider-title";
++    pub const ONBOARDING_SECTION_PROVIDER_EM: &str = "dioxus-room-onboarding-section-provider-em";
++    pub const ONBOARDING_SECTION_WORKSPACE_TITLE: &str = "dioxus-room-onboarding-section-workspace-title";
++    pub const ONBOARDING_SECTION_WORKSPACE_EM: &str = "dioxus-room-onboarding-section-workspace-em";
++    pub const ONBOARDING_STEP_1: &str = "dioxus-room-onboarding-step-1";
++    pub const ONBOARDING_STEP_2: &str = "dioxus-room-onboarding-step-2";
++    pub const ONBOARDING_STEP_3: &str = "dioxus-room-onboarding-step-3";
++    pub const ONBOARDING_LABEL_USER: &str = "dioxus-room-onboarding-label-user";
++    pub const ONBOARDING_LABEL_AGENT: &str = "dioxus-room-onboarding-label-agent";
++    pub const ONBOARDING_LABEL_RELATION: &str = "dioxus-room-onboarding-label-relation";
++    pub const ONBOARDING_LABEL_PALETTE: &str = "dioxus-room-onboarding-label-palette";
++    pub const ONBOARDING_LABEL_PALETTE_EM: &str = "dioxus-room-onboarding-label-palette-em";
++    pub const ONBOARDING_LABEL_MODEL: &str = "dioxus-room-onboarding-label-model";
++    pub const ONBOARDING_LABEL_BASE_URL: &str = "dioxus-room-onboarding-label-base-url";
++    pub const ONBOARDING_LABEL_API_KEY: &str = "dioxus-room-onboarding-label-api-key";
++    pub const ONBOARDING_LABEL_WORKSPACE: &str = "dioxus-room-onboarding-label-workspace";
++    pub const ONBOARDING_BTN_TEST: &str = "dioxus-room-onboarding-btn-test";
++    pub const ONBOARDING_TEST_STATUS_WAIT: &str = "dioxus-room-onboarding-test-status-wait";
++    pub const ONBOARDING_BTN_BROWSE: &str = "dioxus-room-onboarding-btn-browse";
++    pub const ONBOARDING_BTN_COMPLETE: &str = "dioxus-room-onboarding-btn-complete";
++    pub const ONBOARDING_PREVIEW_UNCOLORED: &str = "dioxus-room-onboarding-preview-uncolored";
+ }
+diff --git a/src/apps/desktop/src/ui_dioxus/mod.rs b/src/apps/desktop/src/ui_dioxus/mod.rs
+index 178fb2e..2d8b3b8 100644
+--- a/src/apps/desktop/src/ui_dioxus/mod.rs
++++ b/src/apps/desktop/src/ui_dioxus/mod.rs
+@@ -33,4 +33,6 @@ mod windows;
+ mod pages_archive;
+ mod pages_space;
+ mod pages_settings;
++mod pages_onboarding;
++mod pages_onboarding_css;
+ mod app;
+diff --git a/src/apps/desktop/src/ui_dioxus/registry.rs b/src/apps/desktop/src/ui_dioxus/registry.rs
+index e26a221..c3ec4e3 100644
+--- a/src/apps/desktop/src/ui_dioxus/registry.rs
++++ b/src/apps/desktop/src/ui_dioxus/registry.rs
+@@ -23,6 +23,7 @@ pub enum DockSide {
+     LeftFull,
+     RightFull,
+     Center,
++    Fullscreen,
+ }
+ 
+ /// Props for module windows (`self`, `facility`, `work`).
+@@ -125,6 +126,14 @@ impl WindowRegistry {
+             dock_side: DockSide::Center,
+             component: super::pages_settings::settings_app_root,
+         });
++        reg.register(WindowPlugin {
++            id: "onboarding",
++            title: "northhing - 房间诞生仪式 (dioxus)",
++            initial_width: 1280.0,
++            initial_height: 860.0,
++            dock_side: DockSide::Fullscreen,
++            component: super::pages_onboarding::onboarding_app_root,
++        });
+         reg
+     }
+ }
+@@ -466,4 +475,28 @@ mod tests {
+         assert_eq!(target, Some((mock_wid, 0xdef0)));
+         assert!(!manager.is_active("settings"));
+     }
++
++    #[test]
++    fn test_onboarding_registration_and_lifecycle() {
++        let registry = WindowRegistry::default_registry();
++        let plugin = registry.get("onboarding").expect("onboarding plugin registered");
++        assert_eq!(plugin.id, "onboarding");
++        assert_eq!(plugin.dock_side, DockSide::Fullscreen);
++        assert_eq!(plugin.initial_width, 1280.0);
++        assert_eq!(plugin.initial_height, 860.0);
++
++        let manager = ShellWindowManager::new(Arc::new(registry));
++        assert!(!manager.is_active("onboarding"));
++        let gen = manager.mark_opening("onboarding").expect("mark_opening onboarding");
++        assert!(manager.is_active("onboarding"));
++        assert!(manager.mark_opening("onboarding").is_none(), "singleton: duplicate mark_opening must be rejected");
++
++        let mock_wid = unsafe { std::mem::transmute(6usize) };
++        assert!(manager.register_window_with_hwnd("onboarding", gen, mock_wid, 0x1357));
++        assert!(manager.is_active("onboarding"));
++
++        let target = manager.mark_closing_target("onboarding");
++        assert_eq!(target, Some((mock_wid, 0x1357)));
++        assert!(!manager.is_active("onboarding"));
++    }
+ }
+diff --git a/src/crates/assembly/core/locales/en-US.ftl b/src/crates/assembly/core/locales/en-US.ftl
+index e93a0d5..a455730 100644
+--- a/src/crates/assembly/core/locales/en-US.ftl
++++ b/src/crates/assembly/core/locales/en-US.ftl
+@@ -299,3 +299,36 @@ dioxus-room-settings-section-workspace-em = WORKSPACE
+ dioxus-room-settings-section-display-title = Display Mode
+ dioxus-room-settings-section-display-em = DISPLAY
+ dioxus-room-settings-btn-relocate = Relocate Anchor
++dioxus-room-nav-onboarding = Onboarding
++dioxus-room-onboarding-window-title = Room Birth Ritual
++dioxus-room-onboarding-status-title = Room Birth Ritual 00
++dioxus-room-onboarding-status-initial = Silent · Awaiting imprint
++dioxus-room-onboarding-head-state-initial = Silent state · Awaiting human mind color
++dioxus-room-onboarding-head-name-initial = Unnamed Chamber
++dioxus-room-onboarding-head-fold-btn = Collapse Hub
++dioxus-room-onboarding-drawer-mind-head = Eve of Birth
++dioxus-room-onboarding-drawer-facility-head = Facility Preparation
++dioxus-room-onboarding-drawer-work-head = Birth Stub
++dioxus-room-onboarding-section-identity-title = Identity Imprint
++dioxus-room-onboarding-section-identity-em = IDENTITY
++dioxus-room-onboarding-section-provider-title = Facility Provider
++dioxus-room-onboarding-section-provider-em = PROVIDER
++dioxus-room-onboarding-section-workspace-title = Physical Boundary
++dioxus-room-onboarding-section-workspace-em = WORKSPACE
++dioxus-room-onboarding-step-1 = Step I / III
++dioxus-room-onboarding-step-2 = Step II / III
++dioxus-room-onboarding-step-3 = Step III / III
++dioxus-room-onboarding-label-user = User is []
++dioxus-room-onboarding-label-agent = You are []
++dioxus-room-onboarding-label-relation = You are user's []
++dioxus-room-onboarding-label-palette = Personality Palette = Big Five
++dioxus-room-onboarding-label-palette-em = MIND PALETTE (Human-only color entry)
++dioxus-room-onboarding-label-model = Model ENGINE
++dioxus-room-onboarding-label-base-url = Base BASE URL
++dioxus-room-onboarding-label-api-key = Key API KEY
++dioxus-room-onboarding-label-workspace = Workspace ROOT DIRECTORY
++dioxus-room-onboarding-btn-test = ↯ Test Heartbeat Pulse
++dioxus-room-onboarding-test-status-wait = Awaiting test signal...
++dioxus-room-onboarding-btn-browse = Browse...
++dioxus-room-onboarding-btn-complete = ☩ Awaken Chamber · Open Imprint
++dioxus-room-onboarding-preview-uncolored = Uncolored (Gray)
+diff --git a/src/crates/assembly/core/locales/zh-CN.ftl b/src/crates/assembly/core/locales/zh-CN.ftl
+index 8176df4..5c5321d 100644
+--- a/src/crates/assembly/core/locales/zh-CN.ftl
++++ b/src/crates/assembly/core/locales/zh-CN.ftl
+@@ -277,4 +277,37 @@ dioxus-room-settings-section-workspace-title = 工作区目录
+ dioxus-room-settings-section-workspace-em = WORKSPACE
+ dioxus-room-settings-section-display-title = 显示模式
+ dioxus-room-settings-section-display-em = DISPLAY
+-dioxus-room-settings-btn-relocate = 重新定位锚点
+\ No newline at end of file
++dioxus-room-settings-btn-relocate = 重新定位锚点
++dioxus-room-nav-onboarding = 诞生仪式
++dioxus-room-onboarding-window-title = 房间诞生仪式
++dioxus-room-onboarding-status-title = 房间诞生仪式 00
++dioxus-room-onboarding-status-initial = 沉寂中 · 待注入印记
++dioxus-room-onboarding-head-state-initial = 沉寂态 · 等待人类决定第一个色彩
++dioxus-room-onboarding-head-name-initial = 未命名诊室
++dioxus-room-onboarding-head-fold-btn = 收纳中枢
++dioxus-room-onboarding-drawer-mind-head = 诞生前夜
++dioxus-room-onboarding-drawer-facility-head = 设施预备
++dioxus-room-onboarding-drawer-work-head = 诞生存根
++dioxus-room-onboarding-section-identity-title = 身份印记
++dioxus-room-onboarding-section-identity-em = IDENTITY
++dioxus-room-onboarding-section-provider-title = 设施接入
++dioxus-room-onboarding-section-provider-em = PROVIDER
++dioxus-room-onboarding-section-workspace-title = 物理边界
++dioxus-room-onboarding-section-workspace-em = WORKSPACE
++dioxus-room-onboarding-step-1 = 步骤 I / III
++dioxus-room-onboarding-step-2 = 步骤 II / III
++dioxus-room-onboarding-step-3 = 步骤 III / III
++dioxus-room-onboarding-label-user = 用户是【】
++dioxus-room-onboarding-label-agent = 你是【】
++dioxus-room-onboarding-label-relation = 你是用户的【】
++dioxus-room-onboarding-label-palette = 性格色板 = 大五
++dioxus-room-onboarding-label-palette-em = MIND PALETTE（人类唯一可改色入口）
++dioxus-room-onboarding-label-model = 模型 ENGINE
++dioxus-room-onboarding-label-base-url = 基址 BASE URL
++dioxus-room-onboarding-label-api-key = 密钥 API KEY
++dioxus-room-onboarding-label-workspace = 工作文件夹 ROOT DIRECTORY
++dioxus-room-onboarding-btn-test = ↯ 测定心跳脉冲
++dioxus-room-onboarding-test-status-wait = 等待测试信号...
++dioxus-room-onboarding-btn-browse = 浏览...
++dioxus-room-onboarding-btn-complete = ☩ 唤醒诊室 · 开启印记
++dioxus-room-onboarding-preview-uncolored = 未着色 (灰)
+\ No newline at end of file
+diff --git a/src/crates/assembly/core/locales/zh-TW.ftl b/src/crates/assembly/core/locales/zh-TW.ftl
+index 78744a5..8a22dbb 100644
+--- a/src/crates/assembly/core/locales/zh-TW.ftl
++++ b/src/crates/assembly/core/locales/zh-TW.ftl
+@@ -277,4 +277,37 @@ dioxus-room-settings-section-workspace-title = 工作區目錄
+ dioxus-room-settings-section-workspace-em = WORKSPACE
+ dioxus-room-settings-section-display-title = 顯示模式
+ dioxus-room-settings-section-display-em = DISPLAY
+-dioxus-room-settings-btn-relocate = 重新定位錨點
+\ No newline at end of file
++dioxus-room-settings-btn-relocate = 重新定位錨點
++dioxus-room-nav-onboarding = 誕生儀式
++dioxus-room-onboarding-window-title = 房間誕生儀式
++dioxus-room-onboarding-status-title = 房間誕生儀式 00
++dioxus-room-onboarding-status-initial = 沉寂中 · 待注入印記
++dioxus-room-onboarding-head-state-initial = 沉寂態 · 等待人類決定第一個色彩
++dioxus-room-onboarding-head-name-initial = 未命名診室
++dioxus-room-onboarding-head-fold-btn = 收納中樞
++dioxus-room-onboarding-drawer-mind-head = 誕生前夜
++dioxus-room-onboarding-drawer-facility-head = 設施預備
++dioxus-room-onboarding-drawer-work-head = 誕生存根
++dioxus-room-onboarding-section-identity-title = 身分印記
++dioxus-room-onboarding-section-identity-em = IDENTITY
++dioxus-room-onboarding-section-provider-title = 設施接入
++dioxus-room-onboarding-section-provider-em = PROVIDER
++dioxus-room-onboarding-section-workspace-title = 物理邊界
++dioxus-room-onboarding-section-workspace-em = WORKSPACE
++dioxus-room-onboarding-step-1 = 步驟 I / III
++dioxus-room-onboarding-step-2 = 步驟 II / III
++dioxus-room-onboarding-step-3 = 步驟 III / III
++dioxus-room-onboarding-label-user = 使用者是【】
++dioxus-room-onboarding-label-agent = 你是【】
++dioxus-room-onboarding-label-relation = 你是使用者的【】
++dioxus-room-onboarding-label-palette = 性格色板 = 大五
++dioxus-room-onboarding-label-palette-em = MIND PALETTE（人類唯一可改色入口）
++dioxus-room-onboarding-label-model = 模型 ENGINE
++dioxus-room-onboarding-label-base-url = 基底網址 BASE URL
++dioxus-room-onboarding-label-api-key = 金鑰 API KEY
++dioxus-room-onboarding-label-workspace = 工作資料夾 ROOT DIRECTORY
++dioxus-room-onboarding-btn-test = ↯ 測定心跳脈衝
++dioxus-room-onboarding-test-status-wait = 等待測試訊號...
++dioxus-room-onboarding-btn-browse = 瀏覽...
++dioxus-room-onboarding-btn-complete = ☩ 喚醒診室 · 開啟印記
++dioxus-room-onboarding-preview-uncolored = 未著色 (灰)
+\ No newline at end of file
