@@ -33,4 +33,6 @@ mod windows;
 mod pages_archive;
 mod pages_space;
 mod pages_settings;
+mod pages_onboarding;
+mod pages_onboarding_css;
 mod app;

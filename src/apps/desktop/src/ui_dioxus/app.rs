@@ -174,6 +174,10 @@ pub fn room_app_root() -> Element {
     let geom_rx_nav_space = geometry_rx_arc.clone();
     let theme_nav_space = theme.clone();
 
+    let wm_nav_onboarding = window_manager.clone();
+    let geom_rx_nav_onboarding = geometry_rx_arc.clone();
+    let theme_nav_onboarding = theme.clone();
+
     rsx! {
         body {
             "data-theme": "{theme_class}",
@@ -331,6 +335,18 @@ pub fn room_app_root() -> Element {
                                     spawn_module_window("space", &wm_nav_space, &geom_rx_nav_space, &theme_nav_space);
                                 },
                                 "{locale.t(keys::NAV_SPACE)}"
+                            }
+                            button {
+                                class: "status-nav-link",
+                                id: "nav-onboarding",
+                                title: "{locale.t(keys::NAV_ONBOARDING)}",
+                                onmousedown: move |e| {
+                                    e.stop_propagation();
+                                },
+                                onclick: move |_| {
+                                    spawn_module_window("onboarding", &wm_nav_onboarding, &geom_rx_nav_onboarding, &theme_nav_onboarding);
+                                },
+                                "{locale.t(keys::NAV_ONBOARDING)}"
                             }
                             span { class: "sp" }
                         }
@@ -514,6 +530,12 @@ pub fn spawn_module_window_with_theme_rx(
             room_y_log + 24.0,
             plugin.initial_width,
             plugin.initial_height,
+        ),
+        DockSide::Fullscreen => (
+            room_x_log,
+            room_y_log,
+            if room_w_log > 0.0 { room_w_log } else { plugin.initial_width },
+            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
         ),
     };
 

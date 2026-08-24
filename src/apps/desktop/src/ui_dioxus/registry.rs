@@ -23,6 +23,7 @@ pub enum DockSide {
     LeftFull,
     RightFull,
     Center,
+    Fullscreen,
 }
 
 /// Props for module windows (`self`, `facility`, `work`).
@@ -124,6 +125,14 @@ impl WindowRegistry {
             initial_height: 580.0,
             dock_side: DockSide::Center,
             component: super::pages_settings::settings_app_root,
+        });
+        reg.register(WindowPlugin {
+            id: "onboarding",
+            title: "northhing - 房间诞生仪式 (dioxus)",
+            initial_width: 1280.0,
+            initial_height: 860.0,
+            dock_side: DockSide::Fullscreen,
+            component: super::pages_onboarding::onboarding_app_root,
         });
         reg
     }
@@ -465,5 +474,29 @@ mod tests {
         let target = manager.mark_closing_target("settings");
         assert_eq!(target, Some((mock_wid, 0xdef0)));
         assert!(!manager.is_active("settings"));
+    }
+
+    #[test]
+    fn test_onboarding_registration_and_lifecycle() {
+        let registry = WindowRegistry::default_registry();
+        let plugin = registry.get("onboarding").expect("onboarding plugin registered");
+        assert_eq!(plugin.id, "onboarding");
+        assert_eq!(plugin.dock_side, DockSide::Fullscreen);
+        assert_eq!(plugin.initial_width, 1280.0);
+        assert_eq!(plugin.initial_height, 860.0);
+
+        let manager = ShellWindowManager::new(Arc::new(registry));
+        assert!(!manager.is_active("onboarding"));
+        let gen = manager.mark_opening("onboarding").expect("mark_opening onboarding");
+        assert!(manager.is_active("onboarding"));
+        assert!(manager.mark_opening("onboarding").is_none(), "singleton: duplicate mark_opening must be rejected");
+
+        let mock_wid = unsafe { std::mem::transmute(6usize) };
+        assert!(manager.register_window_with_hwnd("onboarding", gen, mock_wid, 0x1357));
+        assert!(manager.is_active("onboarding"));
+
+        let target = manager.mark_closing_target("onboarding");
+        assert_eq!(target, Some((mock_wid, 0x1357)));
+        assert!(!manager.is_active("onboarding"));
     }
 }

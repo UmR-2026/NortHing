@@ -330,4 +330,39 @@ pub mod keys {
     pub const SETTINGS_SECTION_DISPLAY_TITLE: &str = "dioxus-room-settings-section-display-title";
     pub const SETTINGS_SECTION_DISPLAY_EM: &str = "dioxus-room-settings-section-display-em";
     pub const SETTINGS_BTN_RELOCATE: &str = "dioxus-room-settings-btn-relocate";
+
+    // ===== Onboarding window (2026-08-24 Task EF-E4) =====
+    pub const NAV_ONBOARDING: &str = "dioxus-room-nav-onboarding";
+    pub const ONBOARDING_WINDOW_TITLE: &str = "dioxus-room-onboarding-window-title";
+    pub const ONBOARDING_STATUS_TITLE: &str = "dioxus-room-onboarding-status-title";
+    pub const ONBOARDING_STATUS_INITIAL: &str = "dioxus-room-onboarding-status-initial";
+    pub const ONBOARDING_HEAD_STATE_INITIAL: &str = "dioxus-room-onboarding-head-state-initial";
+    pub const ONBOARDING_HEAD_NAME_INITIAL: &str = "dioxus-room-onboarding-head-name-initial";
+    pub const ONBOARDING_HEAD_FOLD_BTN: &str = "dioxus-room-onboarding-head-fold-btn";
+    pub const ONBOARDING_DRAWER_MIND_HEAD: &str = "dioxus-room-onboarding-drawer-mind-head";
+    pub const ONBOARDING_DRAWER_FACILITY_HEAD: &str = "dioxus-room-onboarding-drawer-facility-head";
+    pub const ONBOARDING_DRAWER_WORK_HEAD: &str = "dioxus-room-onboarding-drawer-work-head";
+    pub const ONBOARDING_SECTION_IDENTITY_TITLE: &str = "dioxus-room-onboarding-section-identity-title";
+    pub const ONBOARDING_SECTION_IDENTITY_EM: &str = "dioxus-room-onboarding-section-identity-em";
+    pub const ONBOARDING_SECTION_PROVIDER_TITLE: &str = "dioxus-room-onboarding-section-provider-title";
+    pub const ONBOARDING_SECTION_PROVIDER_EM: &str = "dioxus-room-onboarding-section-provider-em";
+    pub const ONBOARDING_SECTION_WORKSPACE_TITLE: &str = "dioxus-room-onboarding-section-workspace-title";
+    pub const ONBOARDING_SECTION_WORKSPACE_EM: &str = "dioxus-room-onboarding-section-workspace-em";
+    pub const ONBOARDING_STEP_1: &str = "dioxus-room-onboarding-step-1";
+    pub const ONBOARDING_STEP_2: &str = "dioxus-room-onboarding-step-2";
+    pub const ONBOARDING_STEP_3: &str = "dioxus-room-onboarding-step-3";
+    pub const ONBOARDING_LABEL_USER: &str = "dioxus-room-onboarding-label-user";
+    pub const ONBOARDING_LABEL_AGENT: &str = "dioxus-room-onboarding-label-agent";
+    pub const ONBOARDING_LABEL_RELATION: &str = "dioxus-room-onboarding-label-relation";
+    pub const ONBOARDING_LABEL_PALETTE: &str = "dioxus-room-onboarding-label-palette";
+    pub const ONBOARDING_LABEL_PALETTE_EM: &str = "dioxus-room-onboarding-label-palette-em";
+    pub const ONBOARDING_LABEL_MODEL: &str = "dioxus-room-onboarding-label-model";
+    pub const ONBOARDING_LABEL_BASE_URL: &str = "dioxus-room-onboarding-label-base-url";
+    pub const ONBOARDING_LABEL_API_KEY: &str = "dioxus-room-onboarding-label-api-key";
+    pub const ONBOARDING_LABEL_WORKSPACE: &str = "dioxus-room-onboarding-label-workspace";
+    pub const ONBOARDING_BTN_TEST: &str = "dioxus-room-onboarding-btn-test";
+    pub const ONBOARDING_TEST_STATUS_WAIT: &str = "dioxus-room-onboarding-test-status-wait";
+    pub const ONBOARDING_BTN_BROWSE: &str = "dioxus-room-onboarding-btn-browse";
+    pub const ONBOARDING_BTN_COMPLETE: &str = "dioxus-room-onboarding-btn-complete";
+    pub const ONBOARDING_PREVIEW_UNCOLORED: &str = "dioxus-room-onboarding-preview-uncolored";
 }
