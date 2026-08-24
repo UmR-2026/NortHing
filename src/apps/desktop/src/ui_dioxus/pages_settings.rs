@@ -145,30 +145,12 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                         onclick: move |_| {
                             theme_dark.toggle();
                         },
-                        if theme_dark() {
-                            svg {
-                                view_box: "0 0 16 16",
-                                width: "12", height: "12",
-                                fill: "none", stroke: "currentColor",
-                                stroke_width: "1.3", stroke_linecap: "round",
-                                circle { cx: "8", cy: "8", r: "3" }
-                                line { x1: "8", y1: "1.4", x2: "8", y2: "3.2" }
-                                line { x1: "8", y1: "12.8", x2: "8", y2: "14.6" }
-                                line { x1: "1.4", y1: "8", x2: "3.2", y2: "8" }
-                                line { x1: "12.8", y1: "8", x2: "14.6", y2: "8" }
-                                line { x1: "3.3", y1: "3.3", x2: "4.6", y2: "4.6" }
-                                line { x1: "11.4", y1: "11.4", x2: "12.7", y2: "12.7" }
-                                line { x1: "12.7", y1: "3.3", x2: "11.4", y2: "4.6" }
-                                line { x1: "4.6", y1: "11.4", x2: "3.3", y2: "12.7" }
-                            }
-                        } else {
-                            svg {
-                                view_box: "0 0 16 16",
-                                width: "12", height: "12",
-                                fill: "none", stroke: "currentColor",
-                                stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
-                                path { d: "M 13.2 9.4 A 5.6 5.6 0 1 1 6.6 2.8 A 4.5 4.5 0 0 0 13.2 9.4 Z" }
-                            }
+                        svg {
+                            view_box: "0 0 16 16",
+                            width: "12", height: "12",
+                            fill: "none", stroke: "currentColor",
+                            stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
+                            dangerous_inner_html: "{css::theme_toggle_svg(theme_dark())}",
                         }
                     }
                     button {
@@ -213,7 +195,7 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                 div { class: "seg" }
                                 div { class: "seg" }
                             }
-                            div { class: "seg-note", "深渊级 · 封存层" }
+                            div { class: "seg-note", "{locale.t(keys::SETTINGS_SEDIMENT_FOOT)}" }
                         }
                     }
 
@@ -298,22 +280,22 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                 class: if active_engine() == 0 { "row active" } else { "row" },
                                 onclick: move |_| active_engine.set(0),
                                 span { class: "dot-radio" }
-                                "Claude 3.7 Sonnet"
+                                "{locale.t(keys::SETTINGS_ENGINE_CLAUDE)}"
                                 if active_engine() == 0 {
-                                    span { class: "tag-x current", "当前" }
+                                    span { class: "tag-x current", "{locale.t(keys::SETTINGS_ENGINE_CURRENT)}" }
                                 }
                             }
                             div {
                                 class: if active_engine() == 1 { "row active" } else { "row" },
                                 onclick: move |_| active_engine.set(1),
                                 span { class: "dot-radio" }
-                                "Gemini 3.1 Pro"
+                                "{locale.t(keys::SETTINGS_ENGINE_GEMINI)}"
                             }
                             div {
                                 class: if active_engine() == 2 { "row active" } else { "row" },
                                 onclick: move |_| active_engine.set(2),
                                 span { class: "dot-radio" }
-                                "GPT-4o"
+                                "{locale.t(keys::SETTINGS_ENGINE_GPT4O)}"
                             }
                         }
                     }
@@ -358,14 +340,14 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                 class: if active_provider_anthropic() { "row active" } else { "row" },
                                 onclick: move |_| active_provider_anthropic.toggle(),
                                 span { class: "sq-toggle" }
-                                "Anthropic API"
-                                span { class: "row-meta", "直接连接" }
+                                "{locale.t(keys::SETTINGS_PROVIDER_ANTHROPIC)}"
+                                span { class: "row-meta", "{locale.t(keys::SETTINGS_PROVIDER_DIRECT)}" }
                             }
                             div {
                                 class: if active_provider_google() { "row active" } else { "row" },
                                 onclick: move |_| active_provider_google.toggle(),
                                 span { class: "sq-toggle" }
-                                "Google AI Studio"
+                                "{locale.t(keys::SETTINGS_PROVIDER_GOOGLE)}"
                             }
                         }
                     }
@@ -385,22 +367,22 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                 class: if mcp_filesystem() { "row active" } else { "row" },
                                 onclick: move |_| mcp_filesystem.toggle(),
                                 span { class: "sq-toggle" }
-                                "@filesystem"
-                                span { class: "row-meta", "读写存取" }
+                                "{locale.t(keys::SETTINGS_MCP_FILESYSTEM)}"
+                                span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_READWRITE)}" }
                             }
                             div {
                                 class: if mcp_philosophy() { "row active" } else { "row" },
                                 onclick: move |_| mcp_philosophy.toggle(),
                                 span { class: "sq-toggle" }
-                                "@philosophy-core"
-                                span { class: "row-meta", "哲理外挂" }
+                                "{locale.t(keys::SETTINGS_MCP_PHILOSOPHY)}"
+                                span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_PLUGIN)}" }
                             }
                             div {
                                 class: if mcp_terminal() { "row active" } else { "row" },
                                 onclick: move |_| mcp_terminal.toggle(),
                                 span { class: "sq-toggle danger" }
-                                "@terminal"
-                                span { class: "row-meta danger", "未授权" }
+                                "{locale.t(keys::SETTINGS_MCP_TERMINAL)}"
+                                span { class: "row-meta danger", "{locale.t(keys::SETTINGS_MCP_UNAUTHORIZED)}" }
                             }
                         }
                     }
@@ -416,7 +398,7 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             span { class: "fold-caret", if folded_workspace() { "▸" } else { "▾" } }
                         }
                         div { class: "w2-scroll",
-                            div { class: "row static", "E:\\agent-project\\northing\\" }
+                            div { class: "row static", "{locale.t(keys::SETTINGS_WORKSPACE_PATH)}" }
                             button {
                                 class: "btn-undo",
                                 onmousedown: move |e| e.stop_propagation(),
@@ -440,15 +422,15 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                 class: if display_breath() { "row active" } else { "row" },
                                 onclick: move |_| display_breath.toggle(),
                                 span { class: "sq-toggle" }
-                                "生物态呼吸"
-                                span { class: "row-meta", "8s 周期" }
+                                "{locale.t(keys::SETTINGS_DISPLAY_BREATH)}"
+                                span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_BREATH_PERIOD)}" }
                             }
                             div {
                                 class: if display_dual_optics() { "row active" } else { "row" },
                                 onclick: move |_| display_dual_optics.toggle(),
                                 span { class: "sq-toggle" }
-                                "双光学响应"
-                                span { class: "row-meta", "明暗自动流转" }
+                                "{locale.t(keys::SETTINGS_DISPLAY_DUAL)}"
+                                span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_DUAL_NOTE)}" }
                             }
                         }
                     }

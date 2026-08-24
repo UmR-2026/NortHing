@@ -12,8 +12,8 @@ use std::rc::Rc;
 
 use super::css;
 use super::i18n::{keys, LocalePack};
+use super::page_shell::{render_close_button, use_page_shell};
 use super::registry::ModuleAppProps;
-use super::windows::WindowDropGuard;
 
 #[cfg(target_os = "windows")]
 use dioxus::desktop::tao::platform::windows::WindowExtWindows;
@@ -140,47 +140,10 @@ const DOORS: &[DoorItem] = &[
 /// Space ("走廊") module window root component.
 pub fn space_app_root(props: ModuleAppProps) -> Element {
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
-    let plugin_id = props.plugin_id;
-    let gen = props.gen;
     let manager = props.manager.clone();
     let rx = props.rx.clone();
     let theme_rx_for_archive = props.theme_rx.clone();
-
-    let mgr_guard = manager.clone();
-    use_hook(move || Rc::new(WindowDropGuard::new(plugin_id, gen, mgr_guard)));
-
-    {
-        let manager = manager.clone();
-        use_effect(move || {
-            let wid = window().id();
-            #[cfg(target_os = "windows")]
-            let hwnd = window().hwnd() as usize;
-            #[cfg(not(target_os = "windows"))]
-            let hwnd = 0usize;
-
-            if !manager.register_window_with_hwnd(plugin_id, gen, wid, hwnd) {
-                #[cfg(target_os = "windows")]
-                hide_and_close_hwnd(hwnd as isize);
-                window().close();
-            }
-        });
-    }
-
-    let theme_rx = props.theme_rx.clone();
-    let mut theme_dark = use_signal(|| *theme_rx.borrow());
-
-    use_future(move || {
-        let mut theme_rx = theme_rx.clone();
-        let mut theme_dark = theme_dark.clone();
-        async move {
-            loop {
-                if theme_rx.changed().await.is_err() {
-                    break;
-                }
-                theme_dark.set(*theme_rx.borrow());
-            }
-        }
-    });
+    let mut theme_dark = use_page_shell(&props);
 
     let theme_class = if theme_dark() { "dark" } else { "light" };
 
@@ -247,44 +210,15 @@ pub fn space_app_root(props: ModuleAppProps) -> Element {
                         onclick: move |_| {
                             theme_dark.toggle();
                         },
-                        if theme_dark() {
-                            svg {
-                                view_box: "0 0 16 16",
-                                width: "12", height: "12",
-                                fill: "none", stroke: "currentColor",
-                                stroke_width: "1.3", stroke_linecap: "round",
-                                circle { cx: "8", cy: "8", r: "3" }
-                                line { x1: "8", y1: "1.4", x2: "8", y2: "3.2" }
-                                line { x1: "8", y1: "12.8", x2: "8", y2: "14.6" }
-                                line { x1: "1.4", y1: "8", x2: "3.2", y2: "8" }
-                                line { x1: "12.8", y1: "8", x2: "14.6", y2: "8" }
-                                line { x1: "3.3", y1: "3.3", x2: "4.6", y2: "4.6" }
-                                line { x1: "11.4", y1: "11.4", x2: "12.7", y2: "12.7" }
-                                line { x1: "12.7", y1: "3.3", x2: "11.4", y2: "4.6" }
-                                line { x1: "4.6", y1: "11.4", x2: "3.3", y2: "12.7" }
-                            }
-                        } else {
-                            svg {
-                                view_box: "0 0 16 16",
-                                width: "12", height: "12",
-                                fill: "none", stroke: "currentColor",
-                                stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
-                                path { d: "M 13.2 9.4 A 5.6 5.6 0 1 1 6.6 2.8 A 4.5 4.5 0 0 0 13.2 9.4 Z" }
-                            }
+                        svg {
+                            view_box: "0 0 16 16",
+                            width: "12", height: "12",
+                            fill: "none", stroke: "currentColor",
+                            stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
+                            dangerous_inner_html: "{css::theme_toggle_svg(theme_dark())}",
                         }
                     }
-                    button {
-                        class: "close-btn",
-                        title: "{locale.t(keys::WINDOW_CLOSE_BTN)}",
-                        "aria-label": "{locale.t(keys::WINDOW_CLOSE_BTN)}",
-                        onmousedown: move |e| { e.stop_propagation(); },
-                        onclick: move |_| {
-                            #[cfg(target_os = "windows")]
-                            hide_and_close_hwnd(window().hwnd() as isize);
-                            window().close();
-                        },
-                        "✕"
-                    }
+                    {render_close_button(&locale)}
                 }
             }
 
@@ -370,41 +304,7 @@ pub fn space_app_root(props: ModuleAppProps) -> Element {
                             svg {
                                 view_box: "0 0 200 200",
                                 "aria-label": "northing",
-                                path {
-                                    d: "M 112.68 72.84 A 30 30 0 1 1 87.32 72.84",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    stroke_width: "2.5",
-                                    stroke_linecap: "round"
-                                }
-                                path {
-                                    d: "M 126 54.97 A 52 52 0 1 1 82.28 51.22",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    stroke_width: "5",
-                                    stroke_linecap: "round"
-                                }
-                                path {
-                                    d: "M 132.13 31.13 A 76 76 0 1 1 56.35 37.47",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    stroke_width: "9",
-                                    stroke_linecap: "round"
-                                }
-                                path {
-                                    d: "M 56.35 37.47 Q 48 30, 44 24",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    stroke_width: "8",
-                                    stroke_linecap: "round"
-                                }
-                                path {
-                                    d: "M 132.13 31.13 Q 137 24, 139 19",
-                                    fill: "none",
-                                    stroke: "currentColor",
-                                    stroke_width: "8",
-                                    stroke_linecap: "round"
-                                }
+                                dangerous_inner_html: "{css::brand_logo_svg()}",
                             }
                             span { class: "seal-name", "northing" }
                         }

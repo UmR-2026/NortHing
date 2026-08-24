@@ -755,6 +755,49 @@ pub fn inject_stylesheet_html() -> String {
     format!("<style id=\"truth-css\">{}</style>", truth_css())
 }
 
+/// Theme toggle SVG (moon / sun). Returns the inner SVG markup; the
+/// caller wraps it in `svg { ... }` rsx nodes with their own attributes
+/// (width / height are cosmetic — the truth CSS sizes `.rc-btn` and
+/// `.theme-btn` containers, so the inline dimensions are just a
+/// fallback used until CSS loads).
+///
+/// Used by: app.rs (room main chrome), pages_archive.rs,
+/// pages_space.rs, pages_settings.rs, pages_onboarding.rs.
+/// Path-light refactor (2026-08-25, gap audit): the same icon was
+/// inlined 10x across those files; this function is the single source.
+///
+/// `# ponytail: two branches returning static SVG markup, no allocation.
+pub fn theme_toggle_svg(is_dark: bool) -> &'static str {
+    if is_dark {
+        SUN_SVG
+    } else {
+        MOON_SVG
+    }
+}
+
+/// Inner paths for the sun icon (theme_dark = true → show sun to
+/// switch to light). Static slice kept separate from the branch
+/// function above so both branches stay trivial.
+const SUN_SVG: &str = r#"<circle cx="8" cy="8" r="3" /><line x1="8" y1="1.4" x2="8" y2="3.2" /><line x1="8" y1="12.8" x2="8" y2="14.6" /><line x1="1.4" y1="8" x2="3.2" y2="8" /><line x1="12.8" y1="8" x2="14.6" y2="8" /><line x1="3.3" y1="3.3" x2="4.6" y2="4.6" /><line x1="11.4" y1="11.4" x2="12.7" y2="12.7" /><line x1="12.7" y1="3.3" x2="11.4" y2="4.6" /><line x1="4.6" y1="11.4" x2="3.3" y2="12.7" />"#;
+
+/// Inner path for the moon icon (theme_dark = false → show moon to
+/// switch to dark).
+const MOON_SVG: &str = r#"<path d="M 13.2 9.4 A 5.6 5.6 0 1 1 6.6 2.8 A 4.5 4.5 0 0 0 13.2 9.4 Z" />"#;
+
+/// Brand logo (northing seal) SVG. Returns the inner path markup —
+/// the wrapper `svg { view_box: "0 0 200 200" }` stays at the call
+/// site so consumers control their own sizing.
+///
+/// Used by: app.rs (status bar), pages_archive.rs (status bar),
+/// pages_space.rs (status bar), pages_onboarding.rs (status bar).
+/// Path-light refactor (2026-08-25, gap audit): same five-path
+/// seal was duplicated 4x; this function is the single source.
+pub fn brand_logo_svg() -> &'static str {
+    BRAND_SVG
+}
+
+const BRAND_SVG: &str = r#"<path d="M 112.68 72.84 A 30 30 0 1 1 87.32 72.84" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /><path d="M 126 54.97 A 52 52 0 1 1 82.28 51.22" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" /><path d="M 132.13 31.13 A 76 76 0 1 1 56.35 37.47" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" /><path d="M 56.35 37.47 Q 48 30, 44 24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" /><path d="M 132.13 31.13 Q 137 24, 139 19" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" />"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -764,9 +807,18 @@ mod tests {
     /// visual divergence from the brief §3.3 "原样保留" rule.
     #[test]
     fn assert_truth_css_byte_count() {
-        // Length > 0 is the minimum contract; the exact byte count comes
-        // from the truth file at the path above.
-        assert!(TRUTH_CSS.len() > 1000, "truth CSS unexpectedly short");
+        // Exact byte count of truth CSS file — update if truth file changes.
+        // Computed from `TRUTH_CSS.len()` at the time of the gap audit (2026-08-25).
+        // The file is included via `include_str!` with a UTF-8 BOM prefix (3 bytes);
+        // the truth HTML is at `docs/design/2026-07-22-frontend-redesign/consult-room/consult-room-main.css`.
+        const EXPECTED_BYTES: usize = 22240;
+        assert_eq!(
+            TRUTH_CSS.len(),
+            EXPECTED_BYTES,
+            "truth CSS byte count drifted from baseline (expected {EXPECTED_BYTES}, got {}); \
+             if the truth HTML/CSS changed intentionally, bump EXPECTED_BYTES here",
+            TRUTH_CSS.len(),
+        );
         // Hardcoded marker: the truth CSS always starts with `:root {`
         // because palette tokens come first. If this changes, the truth
         // HTML itself changed and we need to re-derive.

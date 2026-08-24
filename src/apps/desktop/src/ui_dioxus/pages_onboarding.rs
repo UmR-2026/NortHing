@@ -10,6 +10,7 @@ use dioxus::desktop::window;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
+use super::css;
 use super::i18n::{keys, LocalePack};
 use super::registry::ModuleAppProps;
 use super::windows::WindowDropGuard;
@@ -270,30 +271,12 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                 "aria-label": "{locale.t(keys::CHROME_THEME_TOGGLE)}",
                                 onmousedown: move |e| e.stop_propagation(),
                                 onclick: move |_| theme_dark.toggle(),
-                                if theme_dark() {
-                                    svg {
-                                        view_box: "0 0 16 16",
-                                        width: "12", height: "12",
-                                        fill: "none", stroke: "currentColor",
-                                        stroke_width: "1.3", stroke_linecap: "round",
-                                        circle { cx: "8", cy: "8", r: "3" }
-                                        line { x1: "8", y1: "1.4", x2: "8", y2: "3.2" }
-                                        line { x1: "8", y1: "12.8", x2: "8", y2: "14.6" }
-                                        line { x1: "1.4", y1: "8", x2: "3.2", y2: "8" }
-                                        line { x1: "12.8", y1: "8", x2: "14.6", y2: "8" }
-                                        line { x1: "3.3", y1: "3.3", x2: "4.6", y2: "4.6" }
-                                        line { x1: "11.4", y1: "11.4", x2: "12.7", y2: "12.7" }
-                                        line { x1: "12.7", y1: "3.3", x2: "11.4", y2: "4.6" }
-                                        line { x1: "4.6", y1: "11.4", x2: "3.3", y2: "12.7" }
-                                    }
-                                } else {
-                                    svg {
-                                        view_box: "0 0 16 16",
-                                        width: "12", height: "12",
-                                        fill: "none", stroke: "currentColor",
-                                        stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
-                                        path { d: "M 13.2 9.4 A 5.6 5.6 0 1 1 6.6 2.8 A 4.5 4.5 0 0 0 13.2 9.4 Z" }
-                                    }
+                                svg {
+                                    view_box: "0 0 16 16",
+                                    width: "12", height: "12",
+                                    fill: "none", stroke: "currentColor",
+                                    stroke_width: "1.3", stroke_linecap: "round", stroke_linejoin: "round",
+                                    dangerous_inner_html: "{css::theme_toggle_svg(theme_dark())}",
                                 }
                             }
                             button {
@@ -317,26 +300,7 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                 svg {
                                     view_box: "0 0 200 200",
                                     "aria-label": "northing",
-                                    path {
-                                        d: "M 112.68 72.84 A 30 30 0 1 1 87.32 72.84",
-                                        fill: "none", stroke: "currentColor", stroke_width: "2.5", stroke_linecap: "round"
-                                    }
-                                    path {
-                                        d: "M 126 54.97 A 52 52 0 1 1 82.28 51.22",
-                                        fill: "none", stroke: "currentColor", stroke_width: "5", stroke_linecap: "round"
-                                    }
-                                    path {
-                                        d: "M 132.13 31.13 A 76 76 0 1 1 56.35 37.47",
-                                        fill: "none", stroke: "currentColor", stroke_width: "9", stroke_linecap: "round"
-                                    }
-                                    path {
-                                        d: "M 56.35 37.47 Q 48 30, 44 24",
-                                        fill: "none", stroke: "currentColor", stroke_width: "8", stroke_linecap: "round"
-                                    }
-                                    path {
-                                        d: "M 132.13 31.13 Q 137 24, 139 19",
-                                        fill: "none", stroke: "currentColor", stroke_width: "8", stroke_linecap: "round"
-                                    }
+                                    dangerous_inner_html: "{css::brand_logo_svg()}",
                                 }
                                 span { class: "seal-name", "northing" }
                             }

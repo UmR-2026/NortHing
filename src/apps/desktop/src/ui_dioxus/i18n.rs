@@ -146,6 +146,7 @@ pub mod keys {
     // ===== Status row (room-status) =====
     pub const STATUS_IDENTITY: &str = "dioxus-room-status-identity";
     pub const STATUS_CONTEXT: &str = "dioxus-room-status-context";
+    pub const STATUS_PILL: &str = "dioxus-room-status-pill";
 
     // ===== Room head =====
     pub const ROOM_HEAD_NAME: &str = "dioxus-room-head-name";
@@ -330,6 +331,26 @@ pub mod keys {
     pub const SETTINGS_SECTION_DISPLAY_TITLE: &str = "dioxus-room-settings-section-display-title";
     pub const SETTINGS_SECTION_DISPLAY_EM: &str = "dioxus-room-settings-section-display-em";
     pub const SETTINGS_BTN_RELOCATE: &str = "dioxus-room-settings-btn-relocate";
+    // ===== Settings engine/provider/MCP entries (2026-08-25, gap audit) =====
+    pub const SETTINGS_ENGINE_CLAUDE: &str = "dioxus-room-settings-engine-claude";
+    pub const SETTINGS_ENGINE_GEMINI: &str = "dioxus-room-settings-engine-gemini";
+    pub const SETTINGS_ENGINE_GPT4O: &str = "dioxus-room-settings-engine-gpt4o";
+    pub const SETTINGS_ENGINE_CURRENT: &str = "dioxus-room-settings-engine-current";
+    pub const SETTINGS_PROVIDER_ANTHROPIC: &str = "dioxus-room-settings-provider-anthropic";
+    pub const SETTINGS_PROVIDER_GOOGLE: &str = "dioxus-room-settings-provider-google";
+    pub const SETTINGS_PROVIDER_DIRECT: &str = "dioxus-room-settings-provider-direct";
+    pub const SETTINGS_MCP_FILESYSTEM: &str = "dioxus-room-settings-mcp-filesystem";
+    pub const SETTINGS_MCP_PHILOSOPHY: &str = "dioxus-room-settings-mcp-philosophy";
+    pub const SETTINGS_MCP_TERMINAL: &str = "dioxus-room-settings-mcp-terminal";
+    pub const SETTINGS_MCP_READWRITE: &str = "dioxus-room-settings-mcp-readwrite";
+    pub const SETTINGS_MCP_PLUGIN: &str = "dioxus-room-settings-mcp-plugin";
+    pub const SETTINGS_MCP_UNAUTHORIZED: &str = "dioxus-room-settings-mcp-unauthorized";
+    pub const SETTINGS_WORKSPACE_PATH: &str = "dioxus-room-settings-workspace-path";
+    pub const SETTINGS_DISPLAY_BREATH: &str = "dioxus-room-settings-display-breath";
+    pub const SETTINGS_DISPLAY_BREATH_PERIOD: &str = "dioxus-room-settings-display-breath-period";
+    pub const SETTINGS_DISPLAY_DUAL: &str = "dioxus-room-settings-display-dual";
+    pub const SETTINGS_DISPLAY_DUAL_NOTE: &str = "dioxus-room-settings-display-dual-note";
+    pub const SETTINGS_SEDIMENT_FOOT: &str = "dioxus-room-settings-sediment-foot";
 
     // ===== Onboarding window (2026-08-24 Task EF-E4) =====
     pub const NAV_ONBOARDING: &str = "dioxus-room-nav-onboarding";

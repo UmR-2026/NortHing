@@ -1,0 +1,17 @@
+ .../sdd/consult-room/gap-audit-brief-20260825.md   |  95 +++++++
+ .../consult-room-gap-audit-20260825/brief.md       |  95 +++++++
+ .../consult-room-gap-audit-20260825/diffstat.txt   |  14 +
+ .../consult-room-gap-audit-20260825/report.md      | 287 +++++++++++++++++++++
+ src/apps/desktop/src/ui_dioxus/app.rs              |  68 +----
+ src/apps/desktop/src/ui_dioxus/css.rs              |  58 ++++-
+ src/apps/desktop/src/ui_dioxus/i18n.rs             |  21 ++
+ src/apps/desktop/src/ui_dioxus/mod.rs              |   1 +
+ src/apps/desktop/src/ui_dioxus/page_shell.rs       | 131 ++++++++++
+ src/apps/desktop/src/ui_dioxus/pages_archive.rs    | 124 +--------
+ src/apps/desktop/src/ui_dioxus/pages_onboarding.rs |  52 +---
+ src/apps/desktop/src/ui_dioxus/pages_settings.rs   |  68 ++---
+ src/apps/desktop/src/ui_dioxus/pages_space.rs      | 120 +--------
+ src/crates/assembly/core/locales/en-US.ftl         |  20 ++
+ src/crates/assembly/core/locales/zh-CN.ftl         |  20 ++
+ src/crates/assembly/core/locales/zh-TW.ftl         |  20 ++
+ 16 files changed, 820 insertions(+), 374 deletions(-)
