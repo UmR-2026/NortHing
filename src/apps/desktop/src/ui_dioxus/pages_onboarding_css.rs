@@ -192,6 +192,14 @@ pub const ONBOARDING_CSS: &str = r#"
 
   .mod.is-folded .card-body, #work.is-folded .side-section, #work.is-folded .term-well { display: none; }
 
+  /* R4 W4 自定义细滚动条——同 css.rs 同款；本窗自包含不注 TRUTH_CSS，需自带（转写层新增，真值零 scrollbar 规则） */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 3px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
   @media (max-width: 1180px) {
     #engine { padding: 18px 20px; gap: 12px; }
   }
