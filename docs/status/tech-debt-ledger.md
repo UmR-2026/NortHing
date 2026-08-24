@@ -27,28 +27,29 @@
 - **Symptom**: `save_app_settings` uses `tokio::fs::write` directly. No temp-file + rename pattern. Code comment acknowledges: "Phase 1: simple write — upgrade to atomic in Phase 5".
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:655-667`. `src/crates/assembly/core/src/infrastructure/storage/persistence.rs:15-20` has file lock mechanism but `save_app_settings` does not use it.
 - **Proposed fix**: Write to `app.json.tmp`, then `tokio::fs::rename` (atomic on same filesystem). Use existing `FILE_LOCKS` from persistence.rs.
-- **Status**: active (code comment says Phase 5)
+- **Status**: `resolved` — fixed by `9be74ec` (Task 7 / H-9 desktop settings atomic落盘). Ledger flipped retroactively per `.superpowers/sdd/final-review.md` §3.2.
 
 ### P1-2: API key stored in plaintext
 
 - **Symptom**: `ProviderConfig.api_key` stored as plaintext string in `app.json`. No keyring, encryption, or obfuscation. Code comment: "Stored in plaintext in app.json. Never logged."
 - **Evidence**: `src/apps/desktop/src/app_state/settings.rs:104-105`. Search for `keyring` / `encrypt` in `src/` returns no matches (except unrelated relay E2E encryption).
 - **Proposed fix**: (1) Short-term: use OS keyring crate. (2) Mid-term: AES-256-GCM with machine-derived key. (3) Long-term: env var injection, no disk storage.
-- **Status**: active
+- **Status**: `resolved` (2026-08-04, `fix/p1-security-0804`, C3). `ProviderConfig.api_key` migrated to OS keyring via `keyring` crate v4.1.6. See below for details.
+- **Resolution details**: `KeyringBackend` trait with `ProductionKeyring` (wraps `keyring` crate) and `MockKeyring` (Mutex-guarded HashMap for tests). Sentinel `"__kr__"` replaces plaintext on disk after migration. Load-time migration (`keyring_migrate_providers` at `io.rs:79-113`) moves plaintext keys to keyring atomically; fail-closed on keyring error. Update path also migrates newly entered keys before save (`io.rs:138-148`). `resolve_api_key()` unified entry point reads from keyring when sentinel present (`keyring.rs:196-200`). All `provider.api_key` call points updated: `sync.rs` (`provider_to_ai_model_config`), `provider_test.rs` (test callback). No log prints any API key value (grep verified). 15 keyring unit tests (keyring.rs) + 4 IO integration tests (io_tests.rs), verified by grep `^[[:space:]]*#\[test\]` / `^[[:space:]]*#\[tokio::test\]`.
 
 ### P1-3: Delete bypasses recycle bin
 
 - **Symptom**: `delete_local_path` calls `fs::remove_file` / `fs::remove_dir_all` directly. Remote uses `rm -rf`. Deletions are irreversible.
 - **Evidence**: `src/crates/execution/tool-execution/src/fs/delete_path.rs:49-64` (local), `:70-75` (remote `rm -rf`). No `trash` / `recycle` references in `src/`.
 - **Proposed fix**: Use `trash` crate for local deletes. Add config option for recycle bin vs permanent. Remote: keep `rm` but add confirmation.
-- **Status**: active
+- **Status**: `resolved` — trash crate v5.2.6 integrated; `DeleteLocalPathRequest.permanent` field; fail-closed: trash error returns Err; test seam with thread-local mock; 5 new unit tests + 1 integration test updated (trash default, permanent bypass, fail-closed, dir, nonexistent paths).
 
 ### P1-4: Mobile-web re-pairing has no guidance + ~~desktop Rust i18n mojibake~~
 
 - **Symptom**: `PairingPage.tsx` has pairing logic but no re-pairing guidance when connection drops.
 - **Evidence**: `src/mobile-web/src/pages/PairingPage.tsx` — no re-pair UI.
 - **Proposed fix**: Add re-pair guidance UI to PairingPage.
-- **Status**: active (mobile-web: frozen surface)
+- **Status**: `resolved` — mobile-web 面已整删（T2-2 C6 commit `646f93d`），条目随删除关闭；`docs/architecture/backend-roadmap.md:118` 已预先声明此关闭方式。
 
 ### P1-4b: ~~Desktop Rust i18n mojibake~~ (resolved)
 
@@ -61,7 +62,29 @@
 - **Symptom**: Relay server defaults to `0.0.0.0:9700`, `api_key: None`, CORS `*`. `RELAY_API_KEY` env var exists but is optional.
 - **Evidence**: `src/apps/relay-server/src/config.rs:30,41-42,63-67`. `routes/api.rs:32-72` — `AuthExtractor` only enforces when `api_key` is `Some`.
 - **Proposed fix**: (1) Default bind to `127.0.0.1`. (2) Auto-generate API key on first run. (3) CORS default to `http://localhost:*`. (4) Print security warning if running unauthenticated on 0.0.0.0.
-- **Status**: active (partially mitigated — `RELAY_API_KEY` available but off by default)
+- **Status**: resolved (2026-08-04, `fix/p1-security-0804`). See details below.
+- **Resolution details**: Default bind changed to `127.0.0.1:9700` (`src/apps/relay-server/src/config.rs`). `RELAY_BIND` env var overrides the full socket addr. Auto-generates API key on first run at `~/.northhing/relay/api_key` with atomic write (tmp+rename). `RELAY_API_KEY` env always takes priority. Non-loopback bind without key → `from_env` returns error (fail-closed). CORS defaults to localhost-origin predicate (any port) instead of `*`; `RELAY_CORS_ALLOW_ORIGINS` env var overrides. CORS `cors_allow_origins` config field now wired to the axum router (was previously unused — `build_relay_router` used hardcoded `CorsLayer::permissive()` at `relay-core/src/lib.rs:168`). Embedded relay (P1-7) remains open mode per product requirement.
+
+### P1-7: Embedded relay open mode — 0.0.0.0 with no API key (LAN pairing product requirement)
+
+- **Symptom**: `start_embedded_relay` binds `0.0.0.0:{port}` and passes `None` to `build_relay_router`, leaving pair/command endpoints open. This is a product-required open surface for LAN/ngrok mobile phone pairing — the pairing protocol itself must carry an out-of-band key.
+- **Evidence**: `src/crates/assembly/core/src/service/remote_connect/embedded_relay.rs:28-33` (passes `None`), `:44-46` (binds `0.0.0.0:{port}`).
+- **Proposed fix**: Thread an API key through the embedded relay path, gated by the pairing protocol handshake (design task). Options: (1) Generate ephemeral key on each desktop start and include in QR code/pairing URL. (2) Use a configurable key from desktop settings. (3) Pairing-level token exchange before relay commands.
+- **Status**: `resolved` — relay-server + relay-core 已整删（T2-2 C5 commit `f6a011b`，PEND-1），embedded relay 入口不复存在，条目随删除关闭。
+
+### P1-8: MCPServerConfig.env serialized as plaintext in app.json
+
+- **Symptom**: `MCPServerConfig.env` (`HashMap<String, String>`) stores environment variables for stdio subprocesses as plaintext in `app.json`. These env vars commonly carry credentials (e.g. `OPENAI_API_KEY=sk-xxx`, `AWS_ACCESS_KEY_ID=...`), creating the same plaintext-on-disk risk as P1-2.
+- **Evidence**: `src/apps/desktop/src/app_state/settings/types.rs:161-162` — `pub env: HashMap<String, String>` in `MCPServerConfig`. The field is serialized/deserialized without any encryption or keyring-backed indirection.
+- **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改").
+- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7)
+
+### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
+
+- **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
+- **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
+- **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
+- **Status**: `resolved` (2026-08-21, T1-5) — 删除了 `DeleteFileTool` 的 `needs_permissions` 覆写，恢复 Tool trait 默认实现 `needs_permissions() = !self.is_readonly()`（由于 `is_readonly() == false`，恢复返回 `true`）。所有删除操作（含 permanent=true、含 remote SSH 路径）全部走确认门。覆盖单元测试验证通过。
 
 ## P2 — Experience and operations
 
@@ -112,7 +135,7 @@
 - **Symptom**: tests_cancel / tests_timeout / tests_concurrent / tests_error / tests_parent_chain assume dev environment has no LLM and init_turn fails in microseconds; on machines with available LLM configuration these tests fail reliably (unrelated to code correctness).
 - **Evidence**: `src/crates/assembly/core/src/agentic/coordination/tests/subagent_ports/tests_cancel.rs:7-12` (test doc comment self-documents the assumption); `docs/plans/2026-07-21-three-track-refinement-plan.md` §v0.2.4 B5 retro section.
 - **Proposed fix**: Inject a deterministic fake AI backend (独立测试基建单), replacing the implicit assumption on local machine configuration.
-- **Status**: active
+- **Status**: resolved-by-alternative (2026-08-20, T2-4b verification). The environment-sensitivity was actually fixed by Task 9 B-2 (2026-08-01, commit 6574b01): `ensure_global_config_for_tests` no longer initializes `AIClientFactory`, so `init_turn` fails fast at `get_global_ai_client_factory` in microseconds regardless of host LLM configuration (see the doc comment at `subagent_ports/mod.rs:131-146`). Verified 2026-08-20 on a machine with live LLM config: `cargo test -p northhing-core --features product-full --lib subagent_ports` = 10/10 passed in 0.09s, deterministic. The fake-AI-backend test infra remains desired by roadmap T2-10 (连续性自检测试) and is tracked there, not here.
 
 ### P2-8: kernel_facade/mod.rs god file (2213 lines)
 
@@ -140,6 +163,7 @@
 - **Evidence**: External review 2026-07-23 §四.6; `src/crates/assembly/core/src/agentic/judge_gate/` receipt consumption path (consumed set not persisted — verify exact location when fixing).
 - **Proposed fix**: Persist the consumed-receipt set (append-only, per red line #4) so consumption survives restart; or make promote idempotent + write-ahead so a failed promote cannot be replayed into a different outcome.
 - **Status**: resolved (`47b6202`, 2026-07-23: `receipt_store.rs` — append-only JSONL at `data_dir/judge-gate/consumed_receipts.jsonl`; LazyLock init replays log; persist on consume/release; best-effort non-blocking; 26 judge_gate tests pass)
+- **Note (2026-08-18 T2-2b)**: 适配层整体已删（含 `receipt_store.rs` 的 append-only JSONL + LazyLock 重放实现，`47b6202`）；**教训移交 TH-5（T3-8）**：consume-once 凭证必须 append-only 持久化 + 初始化重放，否则重启可重放已消费凭证（原症状描述见本条 Symptom）。
 
 ### P2-12: episodes "agent does not read" boundary is convention-layer, not structure-layer (HIGH PRIORITY)
 
@@ -153,7 +177,7 @@
 - **Symptom**: C1 rewrote the identity (IDE tool -> independent colleague): agentic_mode.md front half says "not an IDE, not a coding tool", but the back half is still large blocks of programming guidance. Identity and behavior are split.
 - **Evidence**: External review 2026-07-23 §三 / high-priority.3; the agentic_mode.md identity section vs its programming-guidance section.
 - **Proposed fix**: Reconcile the behavior section with the new identity — reframe the programming guidance for the "independent colleague" stance or trim it; resolve the "not a coding tool" vs coding-guidance contradiction deliberately.
-- **Status**: resolved (2026-07-23) — identity removed from agentic_mode.md (capability layer); self-cognition is a separate persona layer generated at first entry (see docs/design/2026-07-23-self-cognition/first-entry-design.md); "Doing tasks" reframed as conditional
+- **Status**: resolved (2026-07-23) — identity removed from agentic_mode.md (capability layer); self-cognition is a separate persona layer generated at first entry (see docs/archive/design/2026-07-23-self-cognition/first-entry-design.md); "Doing tasks" reframed as conditional
 
 ### P2-14: C3 facts dedup is exact-text (fragile); confidence all Med / scope all Workspace (paths unimplemented)
 
@@ -161,6 +185,56 @@
 - **Evidence**: External review 2026-07-23 §四.4 / §四.8; C3 facts distillation code.
 - **Proposed fix**: Normalize before dedup (or similarity-based dedup); implement confidence/scope derivation paths or remove the unused enum variants.
 - **Status**: active (low priority)
+
+### P2-15: P1-C3 merged to main while the desktop crate did not compile (process defect)
+
+- **Symptom**: After P1-C3 (keyring-backed API key storage) landed on main, `cargo check -p northhing` failed at the baseline: keyring 4.1.6 raises `compile_error!("At least one of the features 'v1' or 'cli' must be enabled")`, so the desktop crate had never compiled since that merge. The C3 report itself (task-c3-report.md lines 66-71) admitted the desktop verification was not run, and the 2026-08-04 handoff carried a stale "desktop 98/98" figure from before C3.
+- **Evidence**: Discovered 2026-08-05 while dispatching Task B3 of the backend follow-ups round; fixed by commit `b0bfe43` (keyring `v1` feature + 3 API/`Lazy` compile fixes + one test import path, zero behavior change, judge-verified line by line). New desktop baseline: `cargo test -p northhing --lib` = 118/118.
+- **Root cause (process)**: a security-sensitive change was accepted on a report whose verification section was incomplete, and the round handoff reused an older desktop test figure instead of a fresh measurement.
+- **Proposed fix**: gate it structurally — `cargo check -p northhing` must pass before any branch merges to main (recorded as housekeeping rule 6 in `AGENTS.md` / `AGENTS-CN.md`, 2026-08-06), and a round handoff must not carry forward a verification baseline it did not measure itself.
+- **Status**: resolved (2026-08-17, T2-1: `cargo check --workspace` in CI includes `northhing` and `northhing-cli`; code defect resolved in `b0bfe43`; process gate recorded in housekeeping rule 6).
+
+### P2-16: `ConfigManager::save_config` writes the whole config file non-atomically
+
+- **Symptom**: `save_config` writes the global config with a plain whole-file write, so an interrupted write can leave a truncated / partial `app.json`.
+- **Evidence**: Task B1 review Minor-1 (backend follow-ups round, 2026-08-05); Wave1 final review §5 triage ruled it a separate debt item (out of FU-1 scope).
+- **Proposed fix**: route the write through the `json_store::write_atomic` pattern (temp file + rename), matching the settings/vault write paths.
+- **Status**: resolved (2026-08-20, T2-4a)
+
+### P2-17: `init_once_with` double-checked-lock skeleton is duplicated between core config and AI factory
+
+- **Symptom**: `client_factory.rs` now owns a private `init_once_with` helper implementing the double-checked-locking init skeleton, while `service/config/global.rs` `GlobalConfigManager::initialize` still hand-rolls the same pattern with its own `INIT_MUTEX`.
+- **Evidence**: Task B4 review Minor-3 + Wave1 final review §5 (2026-08-06), commit `50b0f44`.
+- **Proposed fix**: if a third caller appears, lift the helper into a shared sync utility module and migrate both call sites; not worth it at two call sites.
+- **Status**: active (low priority)
+
+### P2-18: `LspManager::uninstall_plugin` has no production caller
+
+- **Symptom**: the uninstall path (fixed in FU-2 so it stops servers by resolved language keys) is currently unreachable from production code — only tests call it.
+- **Evidence**: Task B2 review observation + Wave1 final review §5 (2026-08-06), commit `7a4bdca`.
+- **Proposed fix**: either wire plugin uninstall into the product surface or record it explicitly as an API kept for a planned surface; also note `stop_server` always returns `Ok`, which makes the new warn branch unreachable.
+- **Status**: active (low priority)
+
+### P2-19: `src/apps/server/README.md:5-10` 包含 3 条指向已删 relay-server 的悬空链接
+
+- **Symptom**: `src/apps/server/README.md:5-10` 中存在 3 条指向 `src/apps/relay-server` 的链接与描述引用，但 relay-server 已在 T2-2 C5（commit `f6a011b`）整删。
+- **Evidence**: `src/apps/server/README.md:5-10`。
+- **Proposed fix**: server 为 frozen 面，留待 server 解冻时同步修整文档链接（来源：T2-2g review M-g-2）。
+- **Status**: `resolved` — T1-8 顺手清删除 3 条指向已删 relay-server 的悬空链接与废弃说明。
+
+### P2-20: `pnpm-workspace.yaml` 中注册了孤儿工作区 `desktop-tauri`
+
+- **Symptom**: `pnpm-workspace.yaml` 中包含 `src/apps/desktop-tauri` 注册条目，但磁盘上该目录不存在（已随架构演进清理）。
+- **Evidence**: `pnpm-workspace.yaml:5`。
+- **Proposed fix**: 作为独立决策项处理，在后续工作区配置清理批次中移除（来源：T2-2h review F1/M-h）。考古：注册引入于 `e3daf75`（2026-07-19，Tauri 2 scaffold F0.1），孤儿化于 `34a2397`（2026-07-23，desktop-tauri 删除转 Slint 时漏摘注册）。
+- **Status**: `resolved` — 用户 2026-08-19 拍板清除，本批移除两行注册（`src/apps/desktop-tauri` + `src/apps/desktop-tauri/ui`）。
+
+### P2-21: MiniApp 契约层三处 serde/wire 残留（零构造零生产者，反序列化兼容悬置待决）
+
+- **Symptom**: MiniApp 子系统整删后，契约层保留了三处 serde/wire 残留：`core-types/src/surface.rs:52` `RuntimeArtifactKind::MiniApp`、`services-core/src/session/session_metadata.rs:27` `SessionRelationshipKind::Miniapp`、`services-core/src/session/lineage.rs:19` `"miniapp"` tag。当前代码中零构造、零生产者，但直接删除存在旧会话/工件数据反序列化兼容风险。
+- **Evidence**: T2-2 MiniApp recon Q7 (`.superpowers/sdd/task-t2-2-miniapp-recon.md`)；`rg` 实测全仓零业务构造。
+- **Proposed fix**: 整删三处残留（曾悬置待用户拍板；经实测零生产者，磁盘旧数据不可能含这些值，风险≈0）。
+- **Status**: `resolved` — 用户 2026-08-19 拍板删除，T2-2p 执行完毕，commits 见 git log。
 
 ## Change Protocol
 

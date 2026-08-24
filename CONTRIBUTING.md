@@ -143,7 +143,6 @@ Common local checks:
 | --- | --- |
 | Repository metadata or GitHub config | `pnpm run check:repo-hygiene && pnpm run check:github-config && git diff --check` |
 | Frontend runtime or UI | `pnpm run type-check:web`, plus the nearest focused test when behavior changed |
-| Mobile web | `pnpm --dir src/mobile-web run type-check` |
 | Rust shared runtime or services | `cargo check --workspace`, plus a focused `cargo test` when behavior changed |
 | Desktop integration | `cargo check -p northhing` |
 | i18n resources or contract | use the matching i18n row in `AGENTS.md` |

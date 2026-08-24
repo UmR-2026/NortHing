@@ -19,7 +19,6 @@ const {
   printComplete,
   printBlank,
 } = require('./console-style.cjs');
-const { buildMobileWeb } = require('./mobile-web-build.cjs');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DEV_SERVER_PORT = 1422;
@@ -27,12 +26,7 @@ const DEV_SERVER_HOSTS = ['localhost', '127.0.0.1', '::1'];
 const DESKTOP_PREVIEW_REBUILD_INPUTS = [
   path.join(ROOT_DIR, 'Cargo.toml'),
   path.join(ROOT_DIR, 'src', 'apps', 'desktop'),
-  path.join(ROOT_DIR, 'src', 'crates', 'core'),
-  path.join(ROOT_DIR, 'src', 'crates', 'transport'),
-  path.join(ROOT_DIR, 'src', 'crates', 'api-layer'),
-  path.join(ROOT_DIR, 'src', 'crates', 'events'),
-  path.join(ROOT_DIR, 'src', 'crates', 'ai-adapters'),
-  path.join(ROOT_DIR, 'src', 'crates', 'webdriver'),
+  path.join(ROOT_DIR, 'src', 'crates'),
 ];
 const DESKTOP_PREVIEW_REBUILD_IGNORED_DIRS = new Set([
   '.northhing',
@@ -101,13 +95,13 @@ function decodeOutput(output) {
   if (process.platform !== 'win32') return buffer.toString('utf-8');
 
   const utf8 = buffer.toString('utf-8');
-  if (!utf8.includes('ï¿?)) return utf8;
+  if (!utf8.includes('ï¿½?)) return utf8;
 
   try {
     const { TextDecoder } = require('util');
     const decoder = new TextDecoder('gbk');
     const gbk = decoder.decode(buffer);
-    if (gbk && !gbk.includes('ï¿?)) return gbk;
+    if (gbk && !gbk.includes('ï¿½?)) return gbk;
     return gbk || utf8;
   } catch (error) {
     return utf8;
@@ -620,7 +614,7 @@ async function main() {
   printHeader(`northhing ${modeLabel} Development`);
   printBlank();
 
-  const totalSteps = desktopMode ? 5 : 3;
+  const totalSteps = desktopMode ? 4 : 3;
   let currentStep = 1;
 
   // Step 1: Copy resources
@@ -659,19 +653,7 @@ async function main() {
   
   const prepTime = ((Date.now() - startTime) / 1000).toFixed(1);
   
-  // Step 3: Build mobile-web (desktop only)
   if (desktopMode) {
-    printStep(currentStep++, totalSteps, 'Build mobile-web');
-    const mobileWebResult = buildMobileWeb({
-      install: true,
-      logInfo: printInfo,
-      logSuccess: printSuccess,
-      logError: printError,
-    });
-    if (!mobileWebResult.ok) {
-      process.exit(1);
-    }
-
     printStep(currentStep++, totalSteps, 'Build workspace search daemon');
     const flashgrepResult = ensureFlashgrepBinary();
     if (!flashgrepResult.ok) {

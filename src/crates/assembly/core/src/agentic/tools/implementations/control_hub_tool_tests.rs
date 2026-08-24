@@ -469,6 +469,99 @@ mod control_hub_tests {
     }
 
     #[tokio::test]
+    async fn system_run_script_denied_by_banned_command() {
+        let tool = ComputerUseActions::new();
+        let ctx = empty_context();
+        let results = tool
+            .handle_system(
+                "run_script",
+                &json!({ "script": "alias foo='bar'", "script_type": "shell" }),
+                &ctx,
+            )
+            .await
+            .expect("dispatch should return structured error result");
+        let payload = results.first().unwrap().content();
+        assert_eq!(payload.get("ok"), Some(&json!(false)));
+        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
+        let msg = payload["error"]["message"].as_str().unwrap_or("");
+        assert!(
+            msg.contains("alias") && msg.contains("not allowed for security reasons"),
+            "expected banned command error message, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_run_script_denied_by_denylist() {
+        let tool = ComputerUseActions::new();
+        let ctx = empty_context();
+        let results = tool
+            .handle_system(
+                "run_script",
+                &json!({ "script": "rm -rf /", "script_type": "shell" }),
+                &ctx,
+            )
+            .await
+            .expect("dispatch should return structured error result");
+        let payload = results.first().unwrap().content();
+        assert_eq!(payload.get("ok"), Some(&json!(false)));
+        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
+        let msg = payload["error"]["message"].as_str().unwrap_or("");
+        assert!(
+            msg.contains("denylist") && msg.contains("rm with recursive+force"),
+            "expected denylist error message, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_run_script_applescript_denied_by_denylist_before_os_check() {
+        let tool = ComputerUseActions::new();
+        let ctx = empty_context();
+        let results = tool
+            .handle_system(
+                "run_script",
+                &json!({ "script": "rm -rf /", "script_type": "applescript" }),
+                &ctx,
+            )
+            .await
+            .expect("dispatch should return structured error result");
+        let payload = results.first().unwrap().content();
+        assert_eq!(payload.get("ok"), Some(&json!(false)));
+        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
+        let msg = payload["error"]["message"].as_str().unwrap_or("");
+        assert!(
+            msg.contains("denylist"),
+            "expected denylist rejection before macOS OS check, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_open_app_denied_by_banned_command() {
+        let tool = ComputerUseActions::new();
+        let ctx = empty_context();
+        let err = tool
+            .handle_system("open_app", &json!({ "app_name": "alias" }), &ctx)
+            .await
+            .expect_err("banned command open_app must be rejected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("alias") && msg.contains("not allowed for security reasons"),
+            "expected banned command rejection, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn system_open_app_denied_by_denylist() {
+        let tool = ComputerUseActions::new();
+        let ctx = empty_context();
+        let err = tool
+            .handle_system("open_app", &json!({ "app_name": "rm -rf /" }), &ctx)
+            .await
+            .expect_err("denylist open_app must be rejected");
+        let msg = err.to_string();
+        assert!(msg.contains("denylist"), "expected denylist rejection, got: {msg}");
+    }
+
+    #[tokio::test]
     async fn terminal_list_sessions_without_singleton_returns_clean_error() {
         // The TerminalApi singleton is initialized only inside the desktop /
         // server runtimes, so in `cargo test -p northhing-core` it must surface

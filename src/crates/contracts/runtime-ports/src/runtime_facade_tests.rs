@@ -1,47 +1,8 @@
-//! Contract tests for remote/workspace re-exports on the runtime-ports facade.
+//! Contract tests for workspace re-exports on the runtime-ports facade.
 //!
-//! R39d sibling: split facade-test bulk from lib.rs (remote + workspace).
+//! R39d sibling: split facade-test bulk from lib.rs (workspace).
 
 use crate::*;
-
-#[test]
-fn remote_workspace_contracts_preserve_workspace_and_session_facts() {
-    let workspace = RemoteWorkspaceFacts {
-        path: "/workspace/project".to_string(),
-        name: "project".to_string(),
-        git_branch: Some("main".to_string()),
-        kind: RemoteWorkspaceKind::Remote,
-        assistant_id: Some("assistant_1".to_string()),
-    };
-    let session = RemoteSessionMetadata {
-        session_id: "session_1".to_string(),
-        name: "Research".to_string(),
-        agent_type: "CodeAgent".to_string(),
-        created_at_ms: 10,
-        last_active_at_ms: 20,
-        turn_count: 3,
-    };
-
-    assert_eq!(workspace.kind.as_wire_str(), "remote");
-    assert_eq!(workspace.assistant_id.as_deref(), Some("assistant_1"));
-    assert_eq!(session.turn_count, 3);
-}
-
-#[test]
-fn remote_projection_contract_preserves_file_chunk_identity() {
-    let chunk = RemoteWorkspaceFileChunk {
-        name: "report.md".to_string(),
-        bytes: b"chunk".to_vec(),
-        offset: 6,
-        chunk_size: 5,
-        total_size: 11,
-        mime_type: "text/markdown",
-    };
-
-    assert_eq!(chunk.name, "report.md");
-    assert_eq!(chunk.bytes, b"chunk");
-    assert_eq!(chunk.offset + chunk.chunk_size, chunk.total_size);
-}
 
 #[test]
 fn remote_control_state_snapshot_serializes_active_turn_contract() {

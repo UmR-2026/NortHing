@@ -23,13 +23,11 @@ pub mod context_profile;
 pub mod coordination;
 pub mod deep_review;
 pub mod deep_review_policy;
-pub mod harness;
 pub(crate) mod subagent_runtime;
 
 // Shared-context fork-agent execution module
 pub mod fork_agent;
 
-pub(crate) mod remote_file_delivery;
 /// Round-boundary injection support for steering/background updates
 pub mod round_preempt;
 
@@ -51,14 +49,8 @@ pub mod workspace;
 
 mod util;
 
-// Insights module
-pub mod insights;
-
 // Episode log module (growth experience storage)
 pub mod episodes;
-
-// Judge gate adapter module
-pub(crate) mod judge_gate;
 
 pub use agents::*;
 pub use context_profile::*;

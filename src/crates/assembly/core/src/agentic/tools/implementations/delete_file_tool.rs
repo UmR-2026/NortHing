@@ -112,10 +112,6 @@ Important notes:
         false
     }
 
-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
-        false
-    }
-
     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
         let path_str = match input.get("path").and_then(|v| v.as_str()) {
             Some(p) => p,
@@ -320,6 +316,7 @@ Important notes:
             logical_path: resolved.logical_path.clone(),
             resolved_path: Path::new(&resolved.resolved_path).to_path_buf(),
             recursive,
+            permanent: false, // Default: send to recycle bin for safety
         };
         let outcome = tokio::task::spawn_blocking(move || delete_local_path(delete_request))
             .await
@@ -340,5 +337,31 @@ Important notes:
             result_for_assistant: Some(result_text),
             image_attachments: None,
         }])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delete_file_tool_is_not_readonly() {
+        let tool = DeleteFileTool::new();
+        assert!(!tool.is_readonly());
+    }
+
+    #[test]
+    fn delete_file_tool_needs_permissions_returns_true() {
+        let tool = DeleteFileTool::new();
+        // Without override, needs_permissions defaults to !is_readonly() == true
+        assert!(tool.needs_permissions(None));
+        assert!(tool.needs_permissions(Some(&json!({"path": "test.txt"}))));
+        assert!(tool.needs_permissions(Some(&json!({"path": "folder", "recursive": true}))));
+    }
+
+    #[test]
+    fn delete_file_tool_concurrency_safety_is_false() {
+        let tool = DeleteFileTool::new();
+        assert!(!tool.is_concurrency_safe(None));
     }
 }

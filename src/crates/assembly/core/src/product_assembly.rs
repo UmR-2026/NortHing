@@ -6,10 +6,9 @@
 
 pub use northhing_product_capabilities::{
     default_product_assembly_plan, default_product_capability_assembly, default_product_capability_registry,
-    default_product_harness_registry, product_assembly_plan_for_profile, DeliveryProfile, ProductAssemblyPlan,
-    ProductCapabilityAssembly, ProductCapabilityId, ProductCapabilityPack, ProductCapabilityRegistry,
-    ProductCapabilitySet, ProductServiceCapabilityAvailability, ProductServiceCapabilityRequirement,
-    ProductServiceCapabilityStatus,
+    product_assembly_plan_for_profile, DeliveryProfile, ProductAssemblyPlan, ProductCapabilityAssembly,
+    ProductCapabilityId, ProductCapabilityPack, ProductCapabilityRegistry, ProductCapabilitySet,
+    ProductServiceCapabilityAvailability, ProductServiceCapabilityRequirement, ProductServiceCapabilityStatus,
 };
 
 pub use crate::product_runtime::CoreRuntimeServicesProvider;

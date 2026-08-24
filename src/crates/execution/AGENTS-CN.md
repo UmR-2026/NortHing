@@ -11,9 +11,7 @@
 | `agent-runtime` | Agent 注册、调度、prompt 缓存、hooks、goals、prompt 事实、基于端口的 `AgentRuntime` 外观、DeepReview 与 provider 无关的状态、DeepResearch 引用重编号以及运行时控制契约 | [AGENTS.md](agent-runtime/AGENTS.md) |
 | `agent-stream` | 与 provider 无关的 stream DTO、tool-call 累积以及重放契约 | [AGENTS.md](agent-stream/AGENTS.md) |
 | `tool-contracts` | 工具契约、执行闸门、输入校验以及结果展示契约。Cargo 包名仍为 `northhing-agent-tools`。 | [AGENTS.md](tool-contracts/AGENTS.md) |
-| `harness` | Harness 工作流契约与注册原语 | [AGENTS.md](harness/AGENTS.md) |
 | `runtime-services` | 类型化的运行时服务装配以及服务可用性事实 | [AGENTS.md](runtime-services/AGENTS.md) |
-| `tool-provider-groups` | Tool provider group 事实以及 product-full 工具组组合。Cargo 包名仍为 `northhing-tool-packs`。 | [AGENTS.md](tool-provider-groups/AGENTS.md) |
 | `tool-execution` | 低层的 file/search/tool IO 辅助函数。Cargo 包名仍为 `tool-runtime`。 | [AGENTS.md](tool-execution/AGENTS.md) |
 
 ## 放置规则

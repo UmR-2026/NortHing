@@ -14,7 +14,6 @@ use uuid::Uuid;
 
 use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
 use crate::agentic::tools::user_input_manager::user_input_manager;
-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent};
 use crate::util::errors::NortHingResult;
 
 /// AskUserQuestion tool
@@ -196,24 +195,7 @@ Usage notes:
         let manager = user_input_manager();
         manager.register_channel(tool_id.clone(), tx);
 
-        // 6. Send backend event to notify frontend to display question card
-        let event_system = global_event_system();
-        let session_id = context.session_id.clone().unwrap_or_else(|| "unknown".to_string());
-
-        // Send complete questions array to frontend
-        let event = BackendEvent::ToolAwaitingUserInput {
-            tool_id: tool_id.clone(),
-            session_id,
-            questions: serde_json::to_value(&tool_input).unwrap_or_else(|_| json!({})),
-        };
-
-        let _ = event_system.emit(event).await;
-        debug!(
-            "AskUserQuestion tool event emitted, waiting for user input, tool_id: {}",
-            tool_id
-        );
-
-        // 7. Wait for user answer, cancellation, or timeout.
+        // 6. Wait for user answer, cancellation, or timeout.
         // 2026-07-18 (W3a-1): Replaced bare rx.await with tokio::select! to
         // prevent turn-task leaks when no consumer exists for
         // ToolAwaitingUserInput (desktop) or when the dialog turn is cancelled.
@@ -384,14 +366,24 @@ mod tests {
                 .expect("send_answer should succeed");
         });
 
-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+        let results = tool
+            .call_impl(&input, &context)
+            .await
+            .expect("call_impl should succeed");
 
         assert_eq!(results.len(), 1);
         match &results[0] {
-            ToolResult::Result { data, result_for_assistant, .. } => {
+            ToolResult::Result {
+                data,
+                result_for_assistant,
+                ..
+            } => {
                 assert_eq!(data["status"], "answered");
                 assert_eq!(data["answers"]["0"], "A");
-                assert!(result_for_assistant.as_ref().unwrap().contains("Which path should be used?"));
+                assert!(result_for_assistant
+                    .as_ref()
+                    .unwrap()
+                    .contains("Which path should be used?"));
             }
             _ => panic!("expected Result variant"),
         }
@@ -412,11 +404,18 @@ mod tests {
             token.cancel();
         });
 
-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+        let results = tool
+            .call_impl(&input, &context)
+            .await
+            .expect("call_impl should succeed");
 
         assert_eq!(results.len(), 1);
         match &results[0] {
-            ToolResult::Result { data, result_for_assistant, .. } => {
+            ToolResult::Result {
+                data,
+                result_for_assistant,
+                ..
+            } => {
                 assert_eq!(data["status"], "cancelled");
                 assert!(result_for_assistant.as_ref().unwrap().contains("cancelled"));
             }
@@ -432,17 +431,23 @@ mod tests {
         let tool = AskUserQuestionTool::new();
         let token = CancellationToken::new();
         let mut context = context_with_cancellation_token("test-timeout-1", token.clone());
-        context.custom_data.insert(
-            "__ask_user_timeout_secs".to_string(),
-            serde_json::json!(1),
-        );
+        context
+            .custom_data
+            .insert("__ask_user_timeout_secs".to_string(), serde_json::json!(1));
         let input = valid_input();
 
-        let results = tool.call_impl(&input, &context).await.expect("call_impl should succeed");
+        let results = tool
+            .call_impl(&input, &context)
+            .await
+            .expect("call_impl should succeed");
 
         assert_eq!(results.len(), 1);
         match &results[0] {
-            ToolResult::Result { data, result_for_assistant, .. } => {
+            ToolResult::Result {
+                data,
+                result_for_assistant,
+                ..
+            } => {
                 assert_eq!(data["status"], "cancelled");
                 assert_eq!(data["reason"], "timed_out");
                 assert!(result_for_assistant.as_ref().unwrap().contains("timed out"));

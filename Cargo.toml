@@ -3,12 +3,9 @@ members = [
     "src/apps/cli",
     "src/apps/desktop",
     "src/apps/server",
-    "src/apps/relay-server",
-    "src/crates/services/relay-core",
     "src/crates/interfaces/acp",
     "src/crates/assembly/core",
     "src/crates/adapters/ai-adapters",
-    "src/crates/adapters/webdriver",
     "src/crates/services/services-core",
     "src/crates/services/services-integrations",
     "src/crates/services/terminal",
@@ -19,9 +16,7 @@ members = [
     "src/crates/execution/agent-runtime",
     "src/crates/execution/agent-stream",
     "src/crates/execution/tool-contracts",
-    "src/crates/execution/harness",
     "src/crates/execution/runtime-services",
-    "src/crates/execution/tool-provider-groups",
     "src/crates/execution/tool-execution",
     "src/crates/support/test-support",
     "src/crates/support/cli-internal",
@@ -29,7 +24,7 @@ members = [
     "src/crates/contracts/events",
     "src/crates/contracts/kernel-api",
     "src/crates/contracts/runtime-ports",
-    "tools/plan-compliance-checker",
+    "src/crates/contracts/disposable",
 ]
 
 exclude = [
@@ -101,7 +96,7 @@ chardetng = "0.1.17"
 encoding_rs = "0.8.35"
 
 # HTTP client
-reqwest = { version = "0.13.4", default-features = false, features = ["native-tls", "rustls", "json", "stream", "multipart", "query", "form"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "stream", "multipart", "query", "form"] }
 
 # Debug Log HTTP Server
 axum = { version = "0.8", features = ["json", "ws"] }
@@ -117,6 +112,8 @@ dunce = "1"
 filetime = "0.2"
 fs2 = "0.4"
 zip = { version = "4.6", default-features = false, features = ["deflate"] } # plugin load
+trash = "5.2.6"
+keyring = { version = "4.1.6", default-features = false, features = ["v1"] }
 flate2 = "1.0"
 toml = "0.9"
 
@@ -153,7 +150,7 @@ urlencoding = "2.1"
 
 # Native file dialogs (cross-platform; used by desktop Slint shell)
 # Note: workspace has tauri-plugin-dialog declared above for the
-# installer/relay-server crates, but desktop uses pure Slint + winit
+# installer crate, but desktop uses pure Slint + winit
 # (not Tauri), so desktop needs rfd for native dialogs.
 rfd = "0.14"
 
@@ -170,27 +167,9 @@ tauri-plugin-global-shortcut = "2.3"
 tauri-build = { version = "2.6", features = [] }
 
 # Desktop support
-screenshots = "0.8"
-enigo = "0.2"
-resvg = { version = "0.47", default-features = false }
-atspi = "0.29"
-leptess = "0.14"
-core-foundation = "0.9"
-core-graphics = { version = "0.23", features = ["elcapitan", "highsierra"] }
-dispatch = "0.2"
-block2 = "0.6"
-objc2 = "0.6"
-objc2-foundation = "0.3"
-objc2-app-kit = "0.3"
-objc2-vision = { version = "0.3.2", features = ["VNRecognizeTextRequest", "VNRequest", "VNObservation", "VNRequestHandler", "VNUtils", "VNTypes", "objc2-core-foundation"] }
-objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKSnapshotConfiguration", "WKPDFConfiguration", "block2", "objc2-app-kit"] }
 tempfile = "3"
-webview2-com = "0.38"
 windows = "0.61"
 windows-core = "0.61"
-glib = "0.18"
-gtk = "0.18"
-webkit2gtk = "2.0"
 
 # Windows-specific dependencies
 win32job = "2.0"
@@ -232,9 +211,8 @@ rmcp = { version = "1.7", default-features = false, features = [
     "server",
 ] }
 agent-client-protocol = { version = "0.12", features = ["unstable"] }
-russh = "0.45"
-russh-sftp = "2.1"
-russh-keys = "0.45"
+russh = "0.62.7"
+russh-sftp = "2.4.0"
 shellexpand = "3"
 ssh_config = "0.1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

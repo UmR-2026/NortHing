@@ -21,13 +21,10 @@ use super::super::background_command_output::{
 };
 use super::super::local_shell::{resolve_local_exec_shell, ResolvedLocalExecShell};
 use super::super::progress::ExecOutputProgressBridge;
-use super::shell_helpers::now_unix_seconds;
 pub(super) use super::tool::ExecCommandTool;
 use super::types::{DEFAULT_TOOL_YIELD_TIME_MS, POWERSHELL_UTF8_OUTPUT_PREFIX};
 use crate::agentic::tools::framework::{Tool, ToolResult, ToolUseContext};
-use crate::infrastructure::events::event_system::{global_event_system, BackendEvent::BackgroundCommandLifecycle};
 use crate::util::errors::{NortHingError, NortHingResult};
-use crate::util::types::event::BackgroundCommandLifecycleInfo;
 
 /// Build the local command environment that suppresses pagers, colours, and
 /// interactive git prompts. Returned as a `HashMap` because the underlying
@@ -173,18 +170,6 @@ pub(super) fn local_background_output_status_for_completion(
     }
 }
 
-/// String label for a local lifecycle status, used in the
-/// `BackgroundCommandLifecycleInfo` event.
-pub(super) fn local_lifecycle_status(status: ExecProcessLifecycleStatus) -> &'static str {
-    match status {
-        ExecProcessLifecycleStatus::Running => "running",
-        ExecProcessLifecycleStatus::Exited => "exited",
-        ExecProcessLifecycleStatus::Interrupted => "interrupted",
-        ExecProcessLifecycleStatus::Killed => "killed",
-        ExecProcessLifecycleStatus::Pruned => "pruned",
-    }
-}
-
 /// Map a local mid-flight lifecycle status to the
 /// [`BackgroundCommandOutputStatus`] the capture needs.
 pub(super) fn local_background_output_status(status: ExecProcessLifecycleStatus) -> BackgroundCommandOutputStatus {
@@ -197,42 +182,21 @@ pub(super) fn local_background_output_status(status: ExecProcessLifecycleStatus)
     }
 }
 
-/// Spawn the task that translates local process lifecycle events into
-/// `BackgroundCommandLifecycle` global events. Returns `None` when the
-/// call has no `tool_call_id` to attach metadata to.
+/// Spawn the task that updates local process lifecycle metadata on output capture.
+/// Returns `None` when the call has no `tool_call_id` to attach metadata to.
 pub(super) fn start_local_lifecycle_bridge(
     context: &ToolUseContext,
     _tool_name: &str,
 ) -> Option<mpsc::UnboundedSender<ExecProcessLifecycleEvent>> {
     let capture_id = context.tool_call_id.clone()?;
-    let agent_session_id = context.session_id.clone();
     let (tx, mut rx) = mpsc::unbounded_channel::<ExecProcessLifecycleEvent>();
     tokio::spawn(async move {
-        let event_system = global_event_system();
         let output_capture = background_command_output_capture();
         while let Some(event) = rx.recv().await {
             let capture_status = local_background_output_status(event.status);
-            if let Some(metadata) = output_capture
+            let _ = output_capture
                 .update_lifecycle(&capture_id, event.session_id, capture_status, event.exit_code)
-                .await
-            {
-                let timestamp = now_unix_seconds();
-                let _ = event_system
-                    .emit(BackgroundCommandLifecycle(BackgroundCommandLifecycleInfo {
-                        agent_session_id: metadata.agent_session_id.or(agent_session_id.clone()),
-                        exec_session_id: event.session_id,
-                        command: metadata.command,
-                        workdir: metadata.workdir,
-                        remote: false,
-                        tty: metadata.tty,
-                        status: local_lifecycle_status(event.status).to_string(),
-                        exit_code: event.exit_code,
-                        started_at: metadata.started_at,
-                        ended_at: metadata.ended_at,
-                        timestamp,
-                    }))
-                    .await;
-            }
+                .await;
         }
     });
     Some(tx)

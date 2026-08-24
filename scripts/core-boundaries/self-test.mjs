@@ -23,6 +23,9 @@ export function runManifestParserSelfTest({
   regexSourceContainsContract,
   createFacadeLineChecker,
   escapeRegex,
+  checkCrateSurfaceRegistration,
+  surfacesExemptMembers,
+  ROOT,
 }) {
   const positiveCases = [
     'northhing-core = { path = "../core" }',
@@ -130,7 +133,6 @@ export function runManifestParserSelfTest({
     'product-capabilities',
     'product-domains',
     'service-integrations',
-    'tool-packs',
   ]) {
     if (!coreProductFullFeatureAssemblyRule.requiredFeatureRefs.includes(featureName)) {
       throw new Error(`core product-full assembly rule must require ${featureName}`);
@@ -158,7 +160,6 @@ export function runManifestParserSelfTest({
     ownerCrateFeatureAssemblyRules.map((rule) => rule.manifestPath),
   );
   for (const manifestPath of [
-    'src/crates/execution/tool-provider-groups/Cargo.toml',
     'src/crates/services/services-integrations/Cargo.toml',
     'src/crates/contracts/product-domains/Cargo.toml',
   ]) {
@@ -571,24 +572,11 @@ export function runManifestParserSelfTest({
   for (const dep of [
     'northhing-runtime-ports',
     'git2',
-    'hostname',
-    'mac_address',
     'notify',
-    'qrcode',
     'rmcp',
-    'tokio-tungstenite',
-    'x25519-dalek',
   ]) {
     if (!servicesOptionalOwnerRule?.dependencies.some((dependency) => dependency.depName === dep)) {
       throw new Error(`services-integrations optional dependency owner rule must cover ${dep}`);
-    }
-  }
-  const productDomainsOptionalOwnerRule = optionalDependencyFeatureOwnerRules.find(
-    (rule) => rule.crateName === 'product-domains',
-  );
-  for (const dep of ['dirs', 'sha2']) {
-    if (!productDomainsOptionalOwnerRule?.dependencies.some((dependency) => dependency.depName === dep)) {
-      throw new Error(`product-domains optional dependency owner rule must cover ${dep}`);
     }
   }
   const productDomainRuntimeRule = forbiddenContentUnderRules.find(
@@ -611,16 +599,6 @@ export function runManifestParserSelfTest({
     if (!productDomainRuntimeRuleText.includes(contract)) {
       throw new Error(`product-domains runtime boundary rule must forbid: ${contract}`);
     }
-  }
-  const productDomainCommandRule = productDomainRuntimeRule.patterns.find((pattern) =>
-    pattern.regex.source.includes('Command::new'),
-  );
-  if (
-    !productDomainCommandRule?.allowPaths?.includes(
-      'src/crates/contracts/product-domains/src/miniapp/runtime.rs',
-    )
-  ) {
-    throw new Error('product-domains Command::new exception must stay scoped to MiniApp runtime detection');
   }
   const coreTypesProfile = dependencyProfileRules.find((rule) => rule.crateName === 'core-types');
   if (!coreTypesProfile?.forbiddenNonOptionalDeps.includes('northhing-ai-adapters')) {
@@ -708,27 +686,6 @@ export function runManifestParserSelfTest({
   for (const contract of agentToolsRuntimeForbiddenContracts) {
     if (!agentToolsManifestRuleText.includes(contract)) {
       throw new Error(`agent-tools manifest boundary rule must forbid: ${contract}`);
-    }
-  }
-  const toolPacksManifestRule = forbiddenContentUnderRules.find(
-    (rule) => rule.path === 'src/crates/execution/tool-provider-groups/src',
-  );
-  if (!toolPacksManifestRule) {
-    throw new Error('missing tool-packs manifest-owner boundary rule');
-  }
-  const toolPacksManifestRuleText = toolPacksManifestRule.patterns
-    .map((pattern) => pattern.regex.source)
-    .join('\n');
-  const toolPacksManifestContracts = [
-    'GetToolSpecTool',
-    'GET_TOOL_SPEC_TOOL_NAME',
-    'manifest_resolver',
-    'unlocked_collapsed_tools',
-    'ToolExposure',
-  ];
-  for (const contract of toolPacksManifestContracts) {
-    if (!toolPacksManifestRuleText.includes(contract)) {
-      throw new Error(`tool-packs manifest boundary rule must forbid: ${contract}`);
     }
   }
   const serviceAgentRuntimeRuleText = forbiddenRuleTextForPath(
@@ -871,17 +828,6 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/contracts/runtime-ports/src/remote.rs',
-      contracts: [
-        'RemoteWorkspaceFacts',
-        'RemoteWorkspaceRuntimeHost',
-        'RemoteWorkspacePort',
-        'RemoteWorkspaceFileRuntimeHost',
-        'RemoteProjectionPort',
-        'RemoteInitialSyncRuntimeHost',
-      ],
-    },
-    {
       path: 'src/crates/contracts/runtime-ports/src/session_workspace.rs',
       contracts: [
         'WorkspaceFileSystem',
@@ -895,8 +841,6 @@ export function runManifestParserSelfTest({
     {
       path: 'src/crates/contracts/runtime-ports/src/runtime_facade_tests.rs',
       contracts: [
-        'remote_workspace_contracts_preserve_workspace_and_session_facts',
-        'remote_projection_contract_preserves_file_chunk_identity',
         'workspace_services_contract_is_runtime_port_owned',
       ],
     },
@@ -945,11 +889,10 @@ export function runManifestParserSelfTest({
       path: 'src/crates/execution/runtime-services/tests/runtime_services_contracts.rs',
       contracts: [
         'builder_requires_mandatory_runtime_services',
-        'fake_provider_registers_required_and_remote_services_through_registry',
+        'fake_provider_registers_required_services_through_registry',
         'missing_optional_capability_returns_typed_unsupported_error',
         'capability_availability_reports_optional_service_status_without_side_effects',
         'builder_rejects_port_registered_under_the_wrong_capability',
-        'registered_remote_ports_expose_owner_contract_methods',
       ],
     },
     {
@@ -1492,10 +1435,10 @@ export function runManifestParserSelfTest({
         'summarize_get_tool_spec_collapsed_tools',
         'resolve_get_tool_spec_detail',
         'build_get_tool_spec_catalog_description',
-        'get_tool_spec_input_schema',
-        'get_tool_spec_short_description',
+        'tool_spec_input_schema',
+        'tool_spec_short_description',
         'render_get_tool_spec_tool_use_message',
-        'get_tool_spec_is_readonly',
+        'tool_spec_is_readonly',
         'get_tool_spec_is_concurrency_safe',
         'get_tool_spec_needs_permissions',
         'validate_get_tool_spec_input',
@@ -1516,7 +1459,7 @@ export function runManifestParserSelfTest({
         'validate_collapsed_tool_usage',
         'sort_tool_manifest_definitions',
         'is_tool_collapsed',
-        'get_collapsed_tool_names',
+        'collapsed_tool_names',
       ],
     },
     {
@@ -1603,7 +1546,6 @@ export function runManifestParserSelfTest({
       contracts: [
         'AgentSessionReplyRoute',
         'DialogQueuePriority',
-        'DialogSessionStateFact',
         'DialogSteerOutcome',
         'DialogSubmissionPolicy',
         'DialogSubmitOutcome',
@@ -1612,15 +1554,12 @@ export function runManifestParserSelfTest({
         'ActiveDialogTurnStore',
         'AgentSessionReplyAction',
         'AgentSessionReplyPlan',
-        'BackgroundInjectionKind',
         'DialogReplySuppressionSet',
-        'DialogSteeringAction',
         'DialogTurnQueue',
         'SessionAbortFlags',
         'resolve_agent_session_reply_action',
         'resolve_background_delivery_injection',
         'resolve_dialog_submit_queue_action',
-        'resolve_dialog_steering_action',
       ],
     },
     {
@@ -1659,52 +1598,14 @@ export function runManifestParserSelfTest({
       path: 'src/crates/assembly/core/src/service_agent_runtime.rs',
       contracts: [
         'CoreServiceAgentRuntime',
-        'remote_dialog_host',
-        'remote_cancel_host',
-        'remote_image_context',
-        'load_remote_model_catalog',
-        'RemoteModelCatalogFacts',
-        'RemoteModelCapabilityFact',
-        'RemoteReasoningModeFact',
-        'build_remote_model_catalog',
-        'update_remote_session_model',
-        'normalize_remote_session_model_id',
-        'normalize_remote_session_model_id_contract',
-        'normalize_remote_model_selection',
-        'normalize_remote_model_selection_contract',
-        'remote_chat_messages_from_turns',
-        'RemoteDialogSchedulerOutcomeFact',
-        'remote_dialog_submit_outcome_from_scheduler',
-        'RemoteChatHistoryTurn',
-        'build_remote_chat_messages',
-        'strip_remote_user_input_tags',
-        'compress_remote_chat_data_url_for_mobile',
-        'load_remote_chat_messages',
         'agent_runtime',
         'agent_runtime_with_dialog_turns',
         'agent_runtime_with_lifecycle_delivery',
         'agent_runtime_with_scheduler_ports',
         'global_agent_runtime_with_lifecycle_delivery',
         'with_lifecycle_delivery_port',
-        'agent_input_attachment_from_image_context',
-        'AgentDialogTurnRequest',
-        'submit_dialog_turn',
         'AgentRuntimeBuilder',
-        'remote_control_state_port',
-        'CoreRemoteDialogRuntimeHost',
-        'CoreRemoteCancelRuntimeHost',
-        'CoreRemoteCancelRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
         'CoreServiceAgentRuntime::agent_runtime_with_scheduler_ports',
-        'CoreRemoteWorkspaceFileRuntimeHost',
-        'CoreRemoteWorkspaceRuntimeHost',
-        'CoreRemoteSessionRuntimeHost',
-        'CoreRemoteSessionRuntimeHost\\s*\\{[\\s\\S]*?\\bruntime:\\s*',
-        'CoreRemotePollRuntimeHost',
-        'CoreRemoteInteractionRuntimeHost',
-        'CoreRemoteSessionTrackerHost',
-        'RemoteExecutionDispatcher',
-        'ImageContextData',
-        'RemoteImageContextAdapter',
         'AgentSubmissionPort',
         'AgentDialogTurnPort',
         'AgentTurnCancellationPort',
@@ -1713,11 +1614,6 @@ export function runManifestParserSelfTest({
         'RemoteControlStatePort',
         'SessionTranscriptReader',
         'core_service_agent_runtime_owner_keeps_coordinator_port_contracts',
-        'core_service_agent_runtime_owner_normalizes_remote_session_model_ids',
-        'core_service_agent_runtime_owner_normalizes_remote_model_selection_aliases',
-        'core_service_agent_runtime_owner_preserves_remote_chat_history_shape',
-        'core_service_agent_runtime_owner_skips_in_progress_remote_assistant_history',
-        'core_service_agent_runtime_owner_maps_image_context_to_lifecycle_attachment',
         'core_service_agent_runtime_owner_keeps_scheduler_lifecycle_port_contracts',
       ],
     },
@@ -1754,110 +1650,6 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/services/services-integrations/src/remote_connect.rs',
-      contracts: [
-        'pub mod device',
-        'pub mod encryption',
-        'pub mod pairing',
-        'pub mod qr_generator',
-        'pub mod relay_client',
-        'pub use device::DeviceIdentity',
-        'pub use encryption::{decrypt_from_base64, encrypt_to_base64, KeyPair}',
-        'PairingProtocol',
-        'QrPayload',
-        'pub use qr_generator::QrGenerator',
-        'RelayClient',
-        'RelayMessage',
-        'RemoteSessionStateTracker',
-        'TrackerEvent',
-        'RemoteSessionTrackerHost',
-        'RemoteSessionTrackerRegistry',
-        'make_slim_tool_params',
-        'handle_agentic_event',
-        'resolve_remote_agent_type',
-        'RemoteImageContext',
-        'build_remote_image_contexts',
-        'resolve_remote_execution_image_contexts',
-        'remote_session_restore_target',
-        'RemoteCancelDecision',
-        'resolve_remote_cancel_decision',
-        'RemoteCancelTaskRequest',
-        'RemoteCancelRuntimeHost',
-        'cancel_remote_task',
-        'RemoteChatHistoryTurn',
-        'RemoteChatHistoryRound',
-        'RemoteChatHistoryToolItem',
-        'build_remote_chat_messages',
-        'REMOTE_FILE_MAX_READ_BYTES',
-        'REMOTE_FILE_MAX_CHUNK_BYTES',
-        'resolve_remote_file_chunk_range',
-        'remote_file_display_name',
-        'RemoteWorkspaceFacts',
-        'RemoteSessionMetadata',
-        'remote_workspace_info_response',
-        'remote_recent_workspaces_response',
-        'remote_assistant_list_response',
-        'RemoteWorkspaceRuntimeHost',
-        'handle_remote_workspace_command',
-        'remote_workspace_handler_preserves_response_shapes',
-        'RemoteInitialSyncRuntimeHost',
-        'generate_remote_initial_sync',
-        'remote_session_info',
-        'remote_session_list_response',
-        'remote_initial_sync_response',
-        'remote_messages_response',
-        'RemoteSessionRuntimeHost',
-        'handle_remote_session_command',
-        'remote_session_handler_preserves_list_and_create_policy',
-        'remote_session_handler_removes_tracker_after_delete_success',
-        'RemotePollRuntimeHost',
-        'handle_remote_poll_command',
-        'remote_poll_handler_preserves_missing_workspace_error',
-        'RemoteInteractionRuntimeHost',
-        'handle_remote_interaction_command',
-        'remote_interaction_handler_preserves_default_reject_reason',
-        'RemoteDefaultModelsConfig',
-        'RemoteModelConfig',
-        'RemoteModelCatalog',
-        'RemoteModelCapabilityFact',
-        'RemoteReasoningModeFact',
-        'RemoteModelFacts',
-        'RemoteModelCatalogFacts',
-        'build_remote_model_catalog',
-        'RemoteModelCatalogPollDelta',
-        'normalize_remote_session_model_id',
-        'normalize_remote_model_selection',
-        'remote_model_selection_needs_config',
-        'RemoteDialogSchedulerOutcomeFact',
-        'remote_dialog_submit_outcome_from_scheduler',
-        'RemoteCommand',
-        'RemoteResponse',
-        'should_send_remote_model_catalog',
-        'remote_model_catalog_poll_delta',
-        'remote_no_change_poll_response',
-        'remote_snapshot_poll_response',
-        'remote_persisted_poll_response',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
-      contracts: [
-        'CoreServiceAgentRuntime',
-        'remote_image_context',
-        'handle_remote_workspace_command',
-        'handle_remote_session_command',
-        'generate_remote_initial_sync',
-        'handle_remote_poll_command',
-        'handle_remote_interaction_command',
-        'core_service_agent_runtime_owner_maps_remote_image_context',
-        'remote_execution_prefers_unified_image_contexts_over_legacy_images',
-        'remote_cancel_decision_preserves_current_turn_boundaries',
-        'remote_restore_target_only_restores_cold_sessions_with_workspace_binding',
-        'remote_command_snapshot_covers_execution_poll_and_cancel_surfaces',
-        'remote_response_snapshot_preserves_active_turn_and_result_shapes',
-      ],
-    },
-    {
       path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
       contracts: [
         'remote_queue_policy_preserves_confirmation_boundary',
@@ -1887,12 +1679,18 @@ export function runManifestParserSelfTest({
       ],
     },
     {
+      path: 'src/crates/assembly/product-capabilities/src/lib.rs',
+      contracts: [
+        'ProductCapabilityAssembly',
+        'product_assembly_plan_for_profile',
+      ],
+    },
+    {
       path: 'src/crates/assembly/core/src/agentic/tools/product_runtime.rs',
       contracts: [
         'ProductToolRuntime',
         'SnapshotToolDecorator',
         'create_product_tool_registry_from_plan',
-        'product_assembly_plan_for_profile',
         'product_tool_runtime_owner_preserves_registry_contract',
         'product_tool_runtime_registry_preserves_provider_plan_order',
       ],
@@ -1911,8 +1709,6 @@ export function runManifestParserSelfTest({
         'ProductToolCatalogProvider',
         'ToolCatalogSnapshotProvider',
         'GetToolSpecCatalogProvider',
-        'get_global_tool_registry',
-        'get_agent_registry',
         'ToolCatalogRuntime',
         'product_tool_catalog_runtime',
         'GetToolSpecRuntime',
@@ -1966,19 +1762,6 @@ export function runManifestParserSelfTest({
         'resolve_get_tool_spec_execution_result_from_provider',
         'GetToolSpecRuntime',
         'call_results',
-      ],
-    },
-    {
-      path: 'src/crates/execution/tool-provider-groups/src/lib.rs',
-      contracts: [
-        'ToolPackFeatureGroup',
-        'ToolProviderGroupPlan',
-        'all_feature_groups',
-        'enabled_feature_groups',
-        'product_tool_provider_group_plan',
-        'ToolProviderGroupPlanSelectionError',
-        'try_product_tool_provider_group_plan_for_ids',
-        'product_provider_group_plan_selector_rejects_unknown_provider_ids',
       ],
     },
     {
@@ -2232,7 +2015,7 @@ export function runManifestParserSelfTest({
       contracts: ['run_for_session_workspace', 'try_renumber_research_report', 'renumber_research_report', 'report.md', 'citations.md', 'display_map', 'REJECTED'],
     },
     {
-      path: 'src/crates/execution/agent-runtime/src/deep_research.rs',
+      path: 'src/crates/contracts/runtime-ports/src/deep_research.rs',
       contracts: ['renumber_research_report', 'ResearchCitationRenumberOutput', 'ResearchCitationDisplayMapEntry', 'rejected_index_rows_dropped'],
     },
     {
@@ -2314,19 +2097,15 @@ export function runManifestParserSelfTest({
       contracts: [
         'northhing-product-capabilities = \\{ path = "\\.\\.\\/product-capabilities", default-features = false, optional = true \\}',
         'northhing-ai-adapters = \\{ path = "\\.\\.\\/\\.\\.\\/adapters\\/ai-adapters", optional = true \\}',
-        'northhing-tool-packs = \\{ path = "\\.\\.\\/\\.\\.\\/execution\\/tool-provider-groups", default-features = false, optional = true \\}',
         'northhing-services-integrations = \\{ path = "\\.\\.\\/\\.\\.\\/services\\/services-integrations", default-features = false, features = \\["remote-ssh"\\] \\}',
         'northhing-product-domains = \\{ path = "\\.\\.\\/\\.\\.\\/contracts\\/product-domains", default-features = false, optional = true \\}',
         'dep:northhing-ai-adapters',
         'ai-adapter-runtime',
         'northhing-services-integrations\\/function-agents',
-        'northhing-services-integrations\\/miniapp-runtime',
         'dep:northhing-product-capabilities',
-        'dep:northhing-tool-packs',
-        'northhing-tool-packs\\/product-full',
         'northhing-services-integrations\\/product-full',
         'dep:northhing-product-domains',
-        'northhing-product-domains\\/product-full',
+        'northhing-product-domains\\/function-agents',
       ],
     },
     {
@@ -2336,7 +2115,6 @@ export function runManifestParserSelfTest({
         'pub mod agentic',
         'feature = "product-domains"',
         'pub mod function_agents',
-        'pub mod miniapp',
         'feature = "service-integrations"',
         'service_agent_runtime',
       ],
@@ -2366,7 +2144,6 @@ export function runManifestParserSelfTest({
         'feature = "service-integrations"',
         'pub mod git',
         'pub mod mcp',
-        'pub mod remote_connect',
         'pub mod review_platform',
         'feature = "product-full"',
         'pub mod search',
@@ -2405,168 +2182,6 @@ export function runManifestParserSelfTest({
       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
     },
     {
-      path: 'src/crates/assembly/core/src/miniapp/storage.rs',
-      contracts: [
-        'ServiceMiniAppStorage',
-        'map_storage_error',
-        'MiniAppImportBundleWriteRequest',
-        'read_import_meta_json',
-        'write_import_bundle',
-        'MiniAppStoragePort',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
-      contracts: [
-        'pub struct MiniAppStorage',
-        'MiniAppStorageError',
-        'tokio::fs::read_to_string',
-        'tokio::fs::write',
-        'tokio::fs::remove_dir_all',
-        'MiniAppStorageLayout',
-        'MiniAppStoragePort',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
-      contracts: [
-        'MiniAppImportBundleWriteRequest',
-        'read_import_meta_json',
-        'write_import_bundle',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
-      contracts: [
-        'storage_port_adapter_preserves_existing_file_lifecycle',
-        'import_bundle_io_preserves_copy_and_fallback_contract',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/builtin/mod.rs',
-      contracts: [
-        'BUILTIN_APPS',
-        'builtin_content_hash',
-        'should_seed_builtin_app',
-        'resolve_builtin_seed_check',
-        'resolve_builtin_seed_action',
-        'miniapp_builtin_io::prepare_builtin_seed_bundle_files',
-        'read_builtin_install_marker',
-        'miniapp_builtin_io::read_builtin_install_marker',
-        'write_builtin_install_marker',
-        'miniapp_builtin_io::write_builtin_install_marker',
-        'recompile',
-        'load_customization_metadata',
-        'available_builtin_update',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
-      contracts: [
-        'read_builtin_install_marker',
-        'parse_builtin_install_marker',
-        'write_builtin_install_marker',
-        'serialize_builtin_install_marker',
-        'prepare_builtin_seed_bundle_files',
-        'builtin_source_files',
-        'build_builtin_seed_meta',
-        'preserved_builtin_created_at',
-        'BUILTIN_PLACEHOLDER_COMPILED_HTML',
-        'storage.json',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/builtin.rs',
-      contracts: [
-        'builtin-pr-review',
-        'BUILTIN_APPS',
-        'BuiltinMiniAppBundle',
-        'BuiltinInstallMarker',
-        'BUILTIN_INSTALL_MARKER',
-        'builtin_content_hash',
-        'should_seed_builtin_app',
-        'BuiltinSeedArtifacts',
-        'BuiltinSeedCheck',
-        'BuiltinSeedAction',
-        'resolve_builtin_seed_check',
-        'resolve_builtin_seed_action',
-        'serialize_builtin_install_marker',
-        'parse_builtin_install_marker',
-        'builtin_source_files',
-        'BUILTIN_PLACEHOLDER_COMPILED_HTML',
-        'build_builtin_package_json',
-        'preserved_builtin_created_at',
-        'build_builtin_seed_meta',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/host_dispatch.rs',
-      contracts: [
-        'dispatch_host',
-        'northhing_services_integrations::miniapp::host_dispatch::dispatch_host',
-        'map_host_dispatch_error',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
-      contracts: [
-        'dispatch_host',
-        'split_host_method',
-        'dispatch_fs',
-        'plan_fs_legacy_path_check',
-        'plan_fs_host_call',
-        'fs_policy_scopes',
-        'MiniAppPermissionPolicyRequest::from_paths',
-        'resolve_policy_with_request',
-        'fs_resolved_path_allowed',
-        'dispatch_shell',
-        'plan_shell_host_call',
-        'shell_exec_default_env',
-        'command_basename_allowed',
-        'host_allowed_by_allowlist',
-        'process_manager::create_tokio_command',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/js_worker_pool.rs',
-      contracts: [
-        'MiniAppRuntimePort',
-        'ServiceJsWorkerPool',
-        'CoreMiniAppWorkerEventSink',
-        'emit_global_event',
-        'map_worker_pool_error',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/js_worker.rs',
-      contracts: [
-        'pub use northhing_services_integrations::miniapp::worker::{',
-        'MiniAppWorkerEventSink',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
-      contracts: [
-        'pub struct JsWorker',
-        'pub trait MiniAppWorkerEventSink',
-        'process_manager::create_tokio_command',
-        'PendingResponseMap',
-        'uuid::Uuid::new_v4',
-      ],
-    },
-    {
-      path: 'src/crates/services/services-integrations/src/miniapp/worker_pool.rs',
-      contracts: [
-        'pub struct JsWorkerPool',
-        'MiniAppWorkerPoolError',
-        'worker_pool_at_capacity',
-        'select_lru_worker',
-        'plan_install_deps',
-        'process_manager::create_tokio_command',
-        'MiniAppRuntimePort',
-      ],
-    },
-    {
       path: 'src/crates/assembly/core/src/function_agents/port_adapters.rs',
       contracts: [
         'CoreFunctionAgentGitAdapter',
@@ -2578,25 +2193,14 @@ export function runManifestParserSelfTest({
       ],
     },
     {
-      path: 'src/crates/assembly/core/src/service/remote_connect/bot/command_router_session.rs',
-      contracts: [
-        'CoreServiceAgentRuntime',
-        'agent_runtime',
-        'build_remote_session_create_request',
-      ],
-    },
-    {
       path: 'src/crates/assembly/core/src/product_domain_runtime.rs',
       contracts: [
         'CoreProductDomainRuntime',
-        'miniapp_runtime_facade',
         'function_agent_git_adapter',
         'function_agent_ai_adapter',
         'function_agent_runtime_facade',
         'CoreFunctionAgentGitAdapter',
         'CoreFunctionAgentAiAdapter',
-        'MiniAppRuntimeFacade',
-        'MiniAppStoragePort',
         'FunctionAgentRuntimeFacade',
         'FunctionAgentGitPort',
         'FunctionAgentAiPort',
@@ -2647,186 +2251,6 @@ export function runManifestParserSelfTest({
         'normalize_local_workspace_root_for_stable_id',
         'local_workspace_roots_equal',
         'unresolved_remote_session_storage_dir',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/runtime_facade.rs',
-      contracts: [
-        'MiniAppRuntimeFacade',
-        'create_app',
-        'persist_update_result_for_app',
-        'persist_draft_for_app',
-        'persist_draft_source_sync_result',
-        'persist_draft_permission_update_result',
-        'apply_draft_app',
-        'mark_builtin_update_available',
-        'mark_deps_installed_state',
-        'persist_sync_from_fs_result_for_app',
-        'persist_import_runtime_state',
-        'pub async fn import_from_path',
-        'MiniAppImportPort',
-        'MiniAppCompilePort',
-        'MiniAppImportBundleWriteRequest',
-        'build_import_bundle_plan',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/compiler.rs',
-      contracts: [
-        'MiniAppCompileRequest',
-        'from_paths',
-        'compile_with_request',
-        'compile_request_from_paths_preserves_runtime_paths',
-        'compile_with_request_preserves_legacy_compile_output',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/permission_policy.rs',
-      contracts: [
-        'MiniAppPermissionPolicyRequest',
-        'from_paths',
-        'resolve_policy_with_request',
-        'permission_policy_request_preserves_path_scope_and_granted_paths',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/storage.rs',
-      contracts: [
-        'MiniAppStorageLayout',
-        'META_JSON',
-        'source_file_path',
-        'versions_dir',
-        'DRAFT_JSON',
-        'draft_dir',
-        'customization_path',
-        'REQUIRED_SOURCE_FILES',
-        'PLACEHOLDER_COMPILED_HTML',
-        'MiniAppImportLayout',
-        'build_import_fallbacks',
-        'MiniAppImportBundlePlan',
-        'MiniAppImportBundlePlanError',
-        'MiniAppImportBundleWriteRequest',
-        'build_import_bundle_plan',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/lifecycle.rs',
-      contracts: [
-        'MiniAppCreateInput',
-        'MiniAppUpdatePatch',
-        'build_created_app',
-        'apply_update_patch',
-        'prepare_draft_app',
-        'apply_draft_source_sync_result',
-        'apply_draft_permission_update_result',
-        'apply_draft_to_active',
-        'mark_deps_installed_state',
-        'clear_worker_restart_required_state',
-        'prepare_rollback_app',
-        'apply_recompile_result',
-        'apply_sync_from_fs_result',
-        'apply_import_runtime_state',
-        'prepare_imported_meta',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/draft.rs',
-      contracts: ['MiniAppDraftManifest', 'MiniAppDraft', 'build_draft_manifest', 'build_draft_response'],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/runtime.rs',
-      contracts: [
-        'runtime_lookup_order',
-        'detect_runtime',
-        'DefaultMiniAppRuntimeProbe',
-        'MiniAppRuntimeProbe',
-        'detect_runtime_with_probe',
-        'which::which',
-        'std::fs::read_dir',
-        'create_version_command',
-        'candidate_executable_path',
-        'versioned_executable_candidate',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/worker.rs',
-      contracts: [
-        'InstallDepsPlan',
-        'plan_install_deps',
-        'worker_pool_capacity',
-        'worker_idle_timeout_ms',
-        'worker_is_idle',
-        'select_lru_worker',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/host_routing.rs',
-      contracts: [
-        'split_host_method',
-        'FsAccessMode',
-        'fs_method_access_mode',
-        'MiniAppFsHostCallPlan',
-        'plan_fs_host_call',
-        'plan_fs_legacy_path_check',
-        'fs_policy_scopes',
-        'fs_resolved_path_allowed',
-        'command_basename_for_allowlist',
-        'command_basename_allowed',
-        'host_allowed_by_allowlist',
-        'shell_exec_first_token',
-        'shell_exec_input_is_empty',
-        'shell_exec_cwd',
-        'shell_exec_timeout_ms',
-        'shell_exec_default_env',
-        'MiniAppShellHostCallPlan',
-        'plan_shell_host_call',
-      ],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/exporter.rs',
-      contracts: ['MISSING_JS_RUNTIME_MESSAGE', 'export_runtime_label', 'build_export_check_result'],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/exporter.rs',
-      contracts: ['detect_runtime', 'build_export_check_result', 'Export not yet implemented'],
-    },
-    {
-      path: 'src/crates/contracts/product-domains/src/miniapp/customization.rs',
-      contracts: [
-        'MiniAppCustomizationMetadata',
-        'MiniAppDeclinedBuiltinUpdate',
-        'MiniAppPermissionDiff',
-        'diff_permissions',
-        'apply_draft_customization_metadata',
-        'mark_builtin_update_available_metadata',
-        'decline_builtin_update_metadata',
-        'is_current_declined_builtin_update',
-      ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/manager.rs',
-      contracts: [
-        'CoreProductDomainRuntime',
-        'MiniAppRuntimeFacade',
-        'create_app',
-        'persist_update_result_for_app',
-        'persist_draft_for_app',
-        'persist_draft_source_sync_result',
-        'persist_draft_permission_update_result',
-        'apply_draft_app',
-        'mark_builtin_update_available',
-        'decline_builtin_update',
-        'persist_sync_from_fs_result_for_app',
-        'compile_source',
-        'MiniAppCompileRequest::from_paths',
-        'compile_with_request',
-        'MiniAppPermissionPolicyRequest::from_paths',
-        'resolve_policy_with_request',
-        'MiniAppCompilePort',
-        'MiniAppImportFromPathRequest',
-        'import_from_path',
-        'runtime_preflight_preserves_recompile_sync_rollback_and_deps_state',
-        'import_from_path_preserves_fallback_files_recompile_and_runtime_state',
       ],
     },
     {
@@ -2918,10 +2342,6 @@ export function runManifestParserSelfTest({
         'prepare_commit_ai_prompt',
         'parse_commit_ai_response',
       ],
-    },
-    {
-      path: 'src/crates/assembly/core/src/miniapp/runtime_detect.rs',
-      contracts: ['pub use northhing_product_domains::miniapp::runtime::{', 'detect_runtime'],
     },
   ];
   for (const { path, contracts } of requiredContentContracts) {
@@ -3259,85 +2679,6 @@ export function runManifestParserSelfTest({
     }
   }
 
-  const remoteConnectRule = forbiddenContentRules.find(
-    (rule) => rule.path === 'src/crates/assembly/core/src/service/remote_connect/remote_server.rs',
-  );
-  if (!remoteConnectRule) {
-    throw new Error('missing remote-connect remote_server boundary rule');
-  }
-  const remoteConnectContracts = [
-    'ImageAttachment',
-    'ChatImageAttachment',
-    'ChatMessage',
-    'ChatMessageItem',
-    'RemoteToolStatus',
-    'ActiveTurnSnapshot',
-    'SessionInfo',
-    'RemoteDefaultModelsConfig',
-    'RemoteModelConfig',
-    'RemoteModelCatalog',
-    'RemoteModelCatalogPollDelta',
-    'RemoteCommand',
-    'RemoteResponse',
-    'TrackerState',
-    'TrackerEvent',
-    'RemoteSessionStateTracker',
-    'DashMap',
-    'make_slim_params',
-    'match mobile_type',
-    'RemoteCancelDecision',
-    'resolve_remote_cancel_decision',
-    'RemoteCancelTaskRequest',
-    'RemoteCancelRuntimeHost',
-    'cancel_remote_task',
-    'remote_session_restore_target',
-    'resolve_remote_execution_image_contexts',
-    'RemoteImageContextAdapter',
-    'MAX_SIZE',
-    'MAX_CHUNK',
-    'unwrap_or\\("file"\\)',
-    'resolve_workspace_path',
-    'detect_mime_type',
-    'read_workspace_file',
-    'read_remote_workspace_file',
-    'read_remote_workspace_file_chunk',
-    'read_remote_workspace_file_info',
-    'remote_file_content_response',
-    'remote_file_chunk_response',
-    'remote_file_info_response',
-    'handle_remote_workspace_file_command',
-    'general_purpose::STANDARD\\.encode',
-    'remote_dialog_submit_response',
-    'remote_task_cancel_response',
-    'remote_interaction_accepted_response',
-    'remote_answer_question_response',
-    'remote_workspace_info_response',
-    'remote_recent_workspaces_response',
-    'remote_assistant_list_response',
-    'remote_workspace_updated_response',
-    'remote_assistant_updated_response',
-    'remote_session_info',
-    'remote_session_list_response',
-    'remote_initial_sync_response',
-    'remote_session_created_response',
-    'remote_session_model_updated_response',
-    'remote_messages_response',
-    'remote_session_deleted_response',
-    'should_send_remote_model_catalog',
-    'remote_model_catalog_poll_delta',
-    'remote_no_change_poll_response',
-    'remote_snapshot_poll_response',
-    'remote_persisted_poll_response',
-  ];
-  const remoteConnectRuleText = remoteConnectRule.patterns
-    .map((pattern) => pattern.regex.source)
-    .join('\n');
-  for (const contract of remoteConnectContracts) {
-    if (!remoteConnectRuleText.includes(contract)) {
-      throw new Error(`remote-connect boundary rule must forbid contract: ${contract}`);
-    }
-  }
-
   const facadePaths = new Set(facadeOnlyFiles.map((facade) => facade.path));
   for (const path of [
     'src/crates/assembly/core/src/service/mcp/protocol/transport.rs',
@@ -3347,5 +2688,51 @@ export function runManifestParserSelfTest({
     if (!facadePaths.has(path)) {
       throw new Error(`missing MCP runtime facade-only rule for ${path}`);
     }
+  }
+
+  // Crate surface registration admission guard self-tests
+  const unregisteredFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop', 'src/crates/unregistered_fixture_crate'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => unregisteredFailures.push(f),
+  });
+  if (
+    unregisteredFailures.length !== 1 ||
+    !unregisteredFailures[0].message.includes('src/crates/unregistered_fixture_crate')
+  ) {
+    throw new Error('crate surface registration guard must flag unregistered workspace member');
+  }
+
+  const compliantFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop', 'src/crates/contracts/core-types'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => compliantFailures.push(f),
+  });
+  if (compliantFailures.length !== 0) {
+    throw new Error(
+      `crate surface registration guard falsely flagged compliant members: ${compliantFailures.map((f) => f.message).join(', ')}`,
+    );
+  }
+
+  // Prefix similarity collision test: member "src/apps/desktop-unknown" must not be matched by "src/apps/desktop" in surfaces.md
+  const prefixCollisionFailures = [];
+  checkCrateSurfaceRegistration({
+    workspaceMembers: ['src/apps/desktop-unknown'],
+    surfacesPath: `${ROOT}/docs/status/surfaces.md`,
+    exemptMembers: [],
+    projectRoot: ROOT,
+    recordFailure: (f) => prefixCollisionFailures.push(f),
+  });
+  if (
+    prefixCollisionFailures.length !== 1 ||
+    !prefixCollisionFailures[0].message.includes('src/apps/desktop-unknown')
+  ) {
+    throw new Error('crate surface registration guard falsely matched prefix-similar unregistered crate');
   }
 }

@@ -87,17 +87,11 @@ northhing-agent-runtime = { path = "../../execution/agent-runtime" }
 # Agent dispatch (SkillActor / LongRunningSkill runtime) — K.2.3
 northhing-agent-dispatch = { path = "../../execution/agent-dispatch" }
 
-# Harness workflow contracts
-northhing-harness = { path = "../../execution/harness" }
-
 # Product capability pack contracts
 northhing-product-capabilities = { path = "../product-capabilities", default-features = false, optional = true }
 
 # Agent tool contracts
 northhing-agent-tools = { path = "../../execution/tool-contracts" }
-
-# Tool pack provider plan
-northhing-tool-packs = { path = "../../execution/tool-provider-groups", default-features = false, optional = true }
 
 # Core service owner crate
 northhing-services-core = { path = "../../services/services-core" }
@@ -127,12 +121,12 @@ rusqlite = { workspace = true }
 fluent-bundle = { workspace = true }
 unic-langid = { workspace = true }
 
-# Encryption (Remote Connect E2E)
+# Encryption
 aes-gcm = { workspace = true, optional = true }
 sha2 = { workspace = true }
 rand = { workspace = true, optional = true }
 
-# Device/Network info (Remote Connect)
+# Device/Network info
 local-ip-address = { workspace = true, optional = true }
 
 # QR code generation
@@ -143,13 +137,11 @@ tokio-tungstenite = { workspace = true, optional = true }
 # SSH - Remote SSH support (optional feature)
 russh = { workspace = true, optional = true }
 
-# Relay server shared library (embedded relay reuses standalone relay logic)
-northhing-relay-core = { path = "../../services/relay-core", optional = true }
-
 # Event layer dependency (lowest layer)
 northhing-core-types = { path = "../../contracts/core-types" }
 northhing-events = { path = "../../contracts/events" }
 northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-disposable = { path = "../../contracts/disposable" }
 northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
 
 # Tauri dependency (optional, enabled only when needed)
@@ -200,7 +192,6 @@ product-full = [
     "product-domains",
     "runtime-services",
     "service-integrations",
-    "tool-packs",
 ]
 ai-adapter-runtime = ["dep:northhing-ai-adapters", "dep:reqwest"]
 product-capabilities = ["dep:northhing-product-capabilities"]
@@ -208,15 +199,13 @@ product-domains = [
     "ai-adapter-runtime",
     "dep:northhing-product-domains",
     "northhing-services-integrations/function-agents",
-    "northhing-services-integrations/miniapp-runtime",
-    "northhing-product-domains/product-full",
+    "northhing-product-domains/function-agents",
 ]
 runtime-services = ["dep:northhing-runtime-services"]
 service-integrations = [
     "dep:aes",
     "dep:aes-gcm",
     "dep:axum",
-    "dep:northhing-relay-core",
     "dep:git2",
     "dep:image",
     "dep:local-ip-address",
@@ -229,7 +218,6 @@ service-integrations = [
     "dep:tower-http",
     "northhing-services-integrations/product-full",
 ]
-tool-packs = ["dep:northhing-tool-packs", "northhing-tool-packs/product-full"]
 tauri-support = ["tauri"]  # Optional tauri support
 ssh-remote = [
     "northhing-services-integrations/remote-ssh-concrete",

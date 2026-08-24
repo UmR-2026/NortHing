@@ -9,7 +9,7 @@
 
 - 产品本质：**隐藏 IDE 模块的通用 agent 应用**。IDE/CLI/编程能力是主 agent + subagent 的工具，不是人类 UI。
 - 用户面（v0.1.0 唯一认账的）：**Slint 桌面（src/apps/desktop）+ 安装器（northing-installer）**。
-- 冻结面（标记 experimental，不修 bug、不删除代码）：`src/mobile-web`、`src/apps/server`、`src/apps/relay-server`、`src/crates/services/relay-core`（relay 部分）、MiniApp 运行时 UI、SDLC harness 产品面。能力 crates（tools/MCP/search/terminal/ssh/git 等）**全部保留**——那是 agent 的工具箱。
+- 冻结面（标记 experimental，不修 bug、不删除代码）：`src/mobile-web`、`src/apps/server`、`src/apps/relay-server`、`src/crates/services/relay-core`（relay 部分）、SDLC harness 产品面。能力 crates（tools/MCP/search/terminal/ssh/git 等）**全部保留**——那是 agent 的工具箱。
 - 确认策略：全免确认（用户拍板）。兜底 = shell denylist（已加固）+ core 快照。回滚入口暂不做。
 - UI 语言：v0.1.0 维持硬编码中文，i18n 工程不做。
 
@@ -72,7 +72,7 @@
 
 ### 3.6 docs/ 下的 web-ui / 已死引用
 
-已实证含 `src/web-ui` 引用的文档（12+）：`docs/architecture/core-decomposition.md`、`docs/architecture/deep-review.md`、`docs/architecture/i18n.md`、`docs/development/i18n.md`、`docs/features/session-runtime-usage-report-design.md`、`MiniApp/Skills/miniapp-dev/SKILL.md` 等。
+已实证含 `src/web-ui` 引用的文档（12+）：`docs/architecture/core-decomposition.md`、`docs/architecture/deep-review.md`、`docs/architecture/i18n.md`、`docs/development/i18n.md`、`docs/features/session-runtime-usage-report-design.md` 等。
 - 历史交接（docs/handoffs/2026-06-* 及更早）：文件头加 `> Frozen historical snapshot (pre-v0.1.0). Describes surfaces that may be absent/frozen.` 一行，不改正文。
 - 现行架构文档：web-ui 引用改为现状注记或移除。
 
@@ -112,7 +112,7 @@
 
 ### 5.1 新建 `docs/status/surfaces.md`（单一事实源）
 
-表格：每个面（desktop/installer/cli/mobile-web/server/relay/MiniApp/SDLC/web-ui）× 状态（active/frozen/absent）× 入口命令 × 备注。以后任何文档描述面状态以此为准。
+表格：每个面（desktop/installer/cli/mobile-web/server/relay/SDLC/web-ui）× 状态（active/frozen/absent）× 入口命令 × 备注。以后任何文档描述面状态以此为准。
 
 ### 5.2 新建 `docs/status/tech-debt-ledger.md`
 

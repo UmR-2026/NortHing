@@ -1,0 +1,3 @@
+# transient per-task diff artifacts; briefs/reports/reviews stay tracked
+*.patch
+*.diff

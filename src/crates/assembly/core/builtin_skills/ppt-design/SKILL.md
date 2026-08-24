@@ -2,6 +2,7 @@
 name: ppt-design
 description: 使用 HTML 设计与生成高质量演讲幻灯片（PPT/Deck）。当用户希望生成、设计、修改幻灯片、deck、slides、presentation、汇报、提案、pitch、课件时触发。主干：960×540pt 可编辑 HTML 幻灯片（4 条 OOXML 硬约束）+ 可选 1920×1080 高保真演讲版 + 数据/信息可视化意识 + 5 种设计哲学 + 反 AI slop + 单页自包含 `slide-XX.html`。不生图；缺图用版式/SVG/占位并标注建议补图。
 license: MIT
+group: office
 ---
 
 # PPT Design

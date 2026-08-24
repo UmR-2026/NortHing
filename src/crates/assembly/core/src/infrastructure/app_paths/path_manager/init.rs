@@ -32,7 +32,6 @@ impl PathManager {
             self.user_data_dir(),
             self.user_cron_dir(),
             self.user_rules_dir(),
-            self.miniapps_dir(),
             self.logs_dir(),
             self.temp_dir(),
         ];

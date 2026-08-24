@@ -1,4 +1,4 @@
-//! R26 sibling 2/4: session_workspace — session storage + workspace filesystem/shell + permission + clock + terminal + network + git + mcp + remote-connection port traits.
+//! R26 sibling 2/4: session_workspace — session storage + workspace filesystem/shell + permission + clock + terminal + network + git + mcp port traits.
 //!
 //! Mavis take-over (interface crate, all items `pub`).
 
@@ -536,9 +536,3 @@ pub trait GitPort: RuntimeServicePort {}
 /// port trait stays narrow (single async method) while the runtime
 /// services registry can still use the standard builder pattern.
 pub trait McpCatalogPort: RuntimeServicePort {}
-
-/// Typed registration boundary for remote connection providers.
-///
-/// PR1 intentionally keeps this trait handle-free; PR2 adds owner-specific
-/// lifecycle methods once behavior-equivalence tests are in place.
-pub trait RemoteConnectionPort: RuntimeServicePort {}

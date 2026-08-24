@@ -15,7 +15,6 @@ const NAV_ENTRY_SELECTORS = [
   '.northhing-nav-panel__workspace-item-name-btn',
   '.northhing-nav-panel__inline-item',
   '.northhing-nav-panel__workspace-create-main',
-  '.northhing-nav-panel__miniapp-entry',
 ];
 
 async function getNavigationEntryCounts(): Promise<Record<string, number>> {
@@ -170,7 +169,7 @@ describe('L1 Navigation', () => {
         return;
       }
 
-      const activeItems = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active, .northhing-nav-panel__miniapp-entry.is-active');
+      const activeItems = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active');
       const activeCount = activeItems.length;
       console.log('[L1] Active navigation items:', activeCount);
 
@@ -191,7 +190,7 @@ describe('L1 Navigation', () => {
       }
 
       // Get initial active item
-      const initialActive = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active, .northhing-nav-panel__miniapp-entry.is-active');
+      const initialActive = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active');
       const initialActiveCount = initialActive.length;
       console.log('[L1] Initial active items:', initialActiveCount);
 
@@ -229,7 +228,7 @@ describe('L1 Navigation', () => {
       }
 
       // Check for active state (don't fail if state doesn't change)
-      const afterActive = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active, .northhing-nav-panel__miniapp-entry.is-active');
+      const afterActive = await browser.$$('.northhing-nav-panel__item.is-active, .northhing-nav-panel__inline-item.is-active');
       console.log('[L1] Active items after click:', afterActive.length);
 
       // Verify active state detection completed

@@ -11,9 +11,7 @@ use tool_runtime::shell::{
     LocalShellResultRenderRequest, RemoteShellResultRenderRequest, BASH_RESULT_MAX_OUTPUT_LENGTH,
 };
 
-use super::bash_sandbox::{
-    cancellation_error, cancellation_requested, emit_terminal_ready_event, noninteractive_env, resolve_shell,
-};
+use super::bash_sandbox::{cancellation_error, cancellation_requested, noninteractive_env, resolve_shell};
 use super::execute::execute_call;
 
 pub struct BashTool;

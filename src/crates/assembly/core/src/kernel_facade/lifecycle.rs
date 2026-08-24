@@ -3,16 +3,14 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 
-use tokio::sync::{Mutex as AsyncMutex, Notify};
 use std::time::Duration;
+use tokio::sync::{Mutex as AsyncMutex, Notify};
 
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use tracing::{info, warn};
 
-use crate::agentic::coordination::{
-    global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler,
-};
+use crate::agentic::coordination::{global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler};
 use crate::agentic::system::init_agentic_system;
 use crate::infrastructure::ai::AIClientFactory;
 use crate::service::config::{get_global_config_service, initialize_global_config};
@@ -106,8 +104,7 @@ impl super::KernelFacade {
         let scheduler = DialogScheduler::new(coordinator.clone(), session_manager);
 
         let notifier_ok = coordinator.set_scheduler_notifier(scheduler.outcome_sender());
-        let injection_ok =
-            coordinator.set_round_injection_source(scheduler.round_injection_monitor());
+        let injection_ok = coordinator.set_round_injection_source(scheduler.round_injection_monitor());
         if !notifier_ok || !injection_ok {
             return Err(KernelError::Runtime("dialog scheduler wiring conflict".to_string()));
         }
@@ -128,6 +125,32 @@ impl super::KernelFacade {
                 Err(e) => warn!("failed to construct MCPService: {e}"),
             },
             Err(e) => warn!("failed to fetch global config service: {e}"),
+        }
+
+        match crate::service::workspace::global_workspace_service() {
+            Some(ws_service) => {
+                let skill_watch = Arc::new(crate::service::skill_watch::SkillWatchService::new(ws_service));
+                crate::service::skill_watch::set_global_skill_watch_service(skill_watch.clone());
+                tokio::spawn(async move {
+                    if let Err(e) = skill_watch.sync_watched_paths().await {
+                        warn!("failed to sync skill watch paths: {e}");
+                    }
+                });
+            }
+            None => match crate::service::workspace::WorkspaceService::new().await {
+                Ok(ws_service) => {
+                    let ws_service = Arc::new(ws_service);
+                    crate::service::workspace::set_global_workspace_service(ws_service.clone());
+                    let skill_watch = Arc::new(crate::service::skill_watch::SkillWatchService::new(ws_service));
+                    crate::service::skill_watch::set_global_skill_watch_service(skill_watch.clone());
+                    tokio::spawn(async move {
+                        if let Err(e) = skill_watch.sync_watched_paths().await {
+                            warn!("failed to sync skill watch paths: {e}");
+                        }
+                    });
+                }
+                Err(e) => warn!("failed to construct WorkspaceService for skill watch: {e}"),
+            },
         }
 
         self.set_coordinator(coordinator.clone());

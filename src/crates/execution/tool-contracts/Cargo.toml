@@ -14,6 +14,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 northhing-core-types = { path = "../../contracts/core-types" }
 northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
+northhing-disposable = { path = "../../contracts/disposable" }
 async-trait = { workspace = true }
 indexmap = { workspace = true }
 

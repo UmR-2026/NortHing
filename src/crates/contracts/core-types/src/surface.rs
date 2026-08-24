@@ -13,7 +13,6 @@ pub type SurfaceMetadata = BTreeMap<String, String>;
 pub enum SurfaceKind {
     Desktop,
     Cli,
-    Remote,
     Acp,
     Server,
 }
@@ -24,7 +23,6 @@ pub enum ThreadEnvironmentKind {
     Local,
     Worktree,
     RemoteSsh,
-    RemoteConnect,
     CloudLike,
     Acp,
 }
@@ -51,7 +49,6 @@ pub enum RuntimeArtifactKind {
     Preview,
     Usage,
     ReviewReport,
-    MiniApp,
     McpManifest,
 }
 

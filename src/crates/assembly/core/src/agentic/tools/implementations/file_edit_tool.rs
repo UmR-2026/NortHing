@@ -154,10 +154,6 @@ impl Tool for FileEditTool {
         false
     }
 
-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
-        false
-    }
-
     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
         let file_path = match input.get("file_path").and_then(|v| v.as_str()) {
             Some(path) if !path.is_empty() => path,
@@ -379,7 +375,7 @@ impl Tool for FileEditTool {
 mod tests {
     use super::{FileEditTool, EDIT_TOOL_PROMPT};
     use crate::agentic::tools::framework::Tool;
-    use serde_json::Value;
+    use serde_json::{json, Value};
 
     #[tokio::test]
     async fn edit_tool_prompt_matches_claude_style() {
@@ -444,5 +440,17 @@ mod tests {
             "`old_string` appears 2 times in file, either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `old_string`.\n"
         ));
         assert!(!FileEditTool::is_edit_content_guardrail_error("Permission denied"));
+    }
+
+    #[test]
+    fn file_edit_tool_needs_permissions_returns_true() {
+        let tool = FileEditTool::new();
+        assert!(!tool.is_readonly());
+        assert!(tool.needs_permissions(None));
+        assert!(tool.needs_permissions(Some(&json!({
+            "file_path": "test.txt",
+            "old_string": "a",
+            "new_string": "b"
+        }))));
     }
 }

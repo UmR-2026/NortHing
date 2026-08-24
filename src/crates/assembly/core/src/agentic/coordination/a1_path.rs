@@ -253,6 +253,9 @@ fn build_execution_context(
         context: request.context.clone(),
         subagent_parent_info: phase1.subagent_parent_info.clone(),
         delegation_policy: phase1.delegation_policy,
+        // Intentional exemption (A2 hidden-subagent path): the subagent runs headless on
+        // behalf of the parent agent, so the interactive tool-confirmation gate does not
+        // apply; tool scope is enforced by `runtime_tool_restrictions` inherited from phase1.
         skip_tool_confirmation: true,
         runtime_tool_restrictions: phase1.runtime_tool_restrictions.clone(),
         workspace_services: None, // A2: services built in init_turn
@@ -364,9 +367,9 @@ pub(crate) fn map_lightweight_to_subagent_result(out: LightweightTaskOutput) -> 
 mod activation_tests {
     //! Activation regression tests for the A2 long-running path.
     //!
-    //! Per spec `docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md`,
-    //! `USE_LIGHTWEIGHT_ACTOR` was activated on 2026-06-23. These tests pin
-    //! the activation contract: the const flag is on.
+    //! Note (2026-08-21, T2-9-B2): Currently there is no production runtime producer
+    //! (desktop NullDispatcher removed); A2 path awaits true dispatcher wiring.
+    //! The flag remains `true` as a backbone invariant.
     use northhing_agent_dispatch::USE_LIGHTWEIGHT_ACTOR;
 
     /// K.2.3 follow-up T5 — regression for the A2 activation.
@@ -376,8 +379,7 @@ mod activation_tests {
     fn use_lightweight_actor_is_activated() {
         assert!(
             USE_LIGHTWEIGHT_ACTOR,
-            "USE_LIGHTWEIGHT_ACTOR must be true as of 2026-06-23 \
-             (spec docs/superpowers/specs/2026-06-23-activate-lightweight-actor-design.md). \
+            "USE_LIGHTWEIGHT_ACTOR must be true as a backbone invariant. \
              If this test fails after a deliberate revert, update the spec + \
              this test together."
         );

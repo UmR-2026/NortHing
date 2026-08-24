@@ -2,6 +2,7 @@
 
 use super::slint_glue::AppWindow;
 use super::*;
+use std::sync::Arc;
 
 /// T4 §10.1: pure desktop-side function deriving a skill's partition
 /// `category` from its `SkillInfoDto.id` (= registry `SkillInfo.key` =
@@ -195,9 +196,85 @@ pub(super) async fn refresh_skills_ui(ui_weak: slint::Weak<AppWindow>) {
     });
 }
 
+/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
+pub(super) struct DesktopSkillEventEmitter {
+    pub(super) ui: slint::Weak<AppWindow>,
+}
+
+#[async_trait::async_trait]
+impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
+    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
+        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
+            let ui_weak = self.ui.clone();
+            slint::invoke_from_event_loop(move || {
+                let ui_weak2 = ui_weak.clone();
+                tokio::spawn(async move {
+                    crate::app_state::callbacks_settings::refresh_settings_lists(ui_weak2.clone()).await;
+                    refresh_skills_ui(ui_weak2).await;
+                });
+            })
+            .ok();
+        }
+        Ok(())
+    }
+}
+
+/// Spawns a background task to register the skill watch listener as soon as
+/// `SkillWatchService` becomes available, eliminating the startup race with `init_core`.
+pub(super) fn register_desktop_skill_watch_listener(ui: slint::Weak<AppWindow>) -> tokio::task::JoinHandle<bool> {
+    tokio::spawn(async move {
+        for _ in 0..100 {
+            if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
+                let emitter = Arc::new(DesktopSkillEventEmitter { ui });
+                if let Err(e) = skill_watch.set_event_emitter(emitter).await {
+                    tracing::warn!(target: "app_state", "Failed to set DesktopSkillEventEmitter on SkillWatchService: {e}");
+                    return false;
+                }
+                tracing::info!(target: "app_state", "Registered desktop skill watch listener for live reload");
+                return true;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        }
+        tracing::warn!(target: "app_state", "Timed out waiting for SkillWatchService during desktop startup");
+        false
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::skill_category;
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_desktop_skill_event_emitter_handles_skills_changed() {
+        use northhing_events::EventEmitter;
+        let emitter = DesktopSkillEventEmitter {
+            ui: slint::Weak::default(),
+        };
+        let result = emitter
+            .emit(
+                northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME,
+                serde_json::json!({}),
+            )
+            .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_register_desktop_skill_watch_listener_mounts_listener() {
+        if let Ok(ws) = northhing_core::service::workspace::WorkspaceService::new().await {
+            let ws_service = Arc::new(ws);
+            let skill_watch = Arc::new(northhing_core::service::skill_watch::SkillWatchService::new(ws_service));
+            northhing_core::service::skill_watch::set_global_skill_watch_service(skill_watch);
+        }
+
+        let handle = register_desktop_skill_watch_listener(slint::Weak::default());
+        let completed = tokio::time::timeout(tokio::time::Duration::from_secs(2), handle).await;
+        if let Ok(Ok(success)) = completed {
+            assert!(success);
+        } else {
+            panic!("listener registration failed or timed out");
+        }
+    }
 
     /// T4 §10.1: built-in skills derive their group from the catalog
     /// (office/meta/computer-use/gstack). The dir_name is the segment

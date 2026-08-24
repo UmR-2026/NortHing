@@ -19,10 +19,6 @@ These compile and may have partial functionality, but are **not** shipped, not t
 |---------|-------------|--------|-------|
 | **CLI** | `src/apps/cli` (`northhing-cli`) | 🧊 Frozen | Compiles; no release artifact. `doctor` command has false positives. See tech-debt-ledger P2. |
 | **Server** | `src/apps/server` | 🧊 Frozen | HTTP API surface; no auth layer. Not deployed. |
-| **Relay Server** | `src/apps/relay-server` (`relay-core`) | 🧊 Frozen | Binds `0.0.0.0` by default with no authentication. Do not expose. See tech-debt-ledger P1. |
-| **Mobile Web** | `src/mobile-web/` | 🧊 Frozen | PWA shell; re-pairing flow unguided, i18n has mojibake. |
-| **MiniApp UI** | `src/crates/contracts/product-domains/src/miniapp/` | 🧊 Frozen | Built-in mini-apps (PPT live, etc.) are experimental. String-mode shell commands rejected by `guard_command_execution`. |
-| **SDLC Harness** | `src/crates/execution/harness/` | 🧊 Frozen | Test/eval harness; not user-facing. |
 | **Tauri Desktop (candidate)** | `src/apps/desktop-tauri` | 🧊 Frozen | Tauri 2 + React candidate for the next baseline; flips at F4. src-tauri is its own cargo workspace (excluded from main). |
 
 ## Active Capability Crates (Agent Toolbox)
@@ -33,7 +29,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 |-------|------|------|
 | `tool-contracts` | `src/crates/execution/tool-contracts` | Tool trait definitions |
 | `tool-execution` | `src/crates/execution/tool-execution` | Tool execution engine |
-| `tool-provider-groups` | `src/crates/execution/tool-provider-groups` | Tool registration/grouping |
 | `agent-dispatch` | `src/crates/execution/agent-dispatch` | Agent dispatch (lightweight actor mode) |
 | `agent-runtime` | `src/crates/execution/agent-runtime` | Agent runtime loop |
 | `agent-stream` | `src/crates/execution/agent-stream` | Streaming response handling |
@@ -43,7 +38,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `terminal` | `src/crates/services/terminal` | Terminal service |
 | `debug-log` | `src/crates/services/debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` constants); shared by desktop and core, re-exported from core (K4a-T5) |
 | `ai-adapters` | `src/crates/adapters/ai-adapters` | AI provider adapters |
-| `webdriver` | `src/crates/adapters/webdriver` | WebDriver adapter |
 | `kernel-api` | `src/crates/contracts/kernel-api` | Kernel facade contracts — product surfaces reach core only through this facade (K1) |
 | `acp` | `src/crates/interfaces/acp` | ACP interface |
 | `product-capabilities` | `src/crates/assembly/product-capabilities` | Product capability assembly |
@@ -51,11 +45,10 @@ These are not user-facing surfaces but are actively maintained as the agent's to
 | `core-types` | `src/crates/contracts/core-types` | Core type definitions |
 | `events` | `src/crates/contracts/events` | Event contracts |
 | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
+| `disposable` | `src/crates/contracts/disposable` | Reversible registration and disposal RAII primitives (PCS-1) |
 | `assembly-core` | `src/crates/assembly/core` | Core assembly |
-| `relay-core` | `src/crates/services/relay-core` | Relay logic (shared by relay-server) |
-| `cli-internal` | `src/crates/cli-internal` | CLI internal utilities |
-| `test-support` | `src/crates/test-support` | Test utilities |
-| `plan-compliance-checker` | `tools/plan-compliance-checker` | Plan compliance tooling |
+| `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
+| `test-support` | `src/crates/support/test-support` | Test utilities |
 
 ## Change Protocol
 

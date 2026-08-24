@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- **P1 Security Hardening**: Defaulted local deletion to OS recycle bin with fail-closed semantics (`007e513`), defaulted relay server to loopback binding with auto-generated API key and tightened CORS (`7fa7d62`), and migrated `ProviderConfig.api_key` to OS keyring with fallback sentinel (`26a15a7`, `f42451d`).
+- **T1-4 Shell Safety Guarding**: Wired `guard_command_execution` and banned shell command validation to all `ComputerUse` shell and AppleScript dispatch paths (`0b656dd`).
+- **T1-5 Tool Confirmation Gate**: Flipped `skip_tool_confirmation` default to `false` and restored file tool (`DeleteFileTool`, `WriteFileTool`, `EditFileTool`) permission gates to align with Bash confirmation (`bec0ae7`, `ea55c80`).
+- **T1-6 Installer Security Hardening**: Hardened installer against zip-slip path traversal, restricted uninstallation to registered `InstallLocation`, and eliminated frontend uninstall command injection (`cdfd059`, `3891080`).
+- **T1-10 WebSocket & Protocol Security**: Enforced WebSocket Origin loopback verification against CSWSH, pinned ACP client versions (`claude-code-acp@0.16.2`, `codex-acp@0.16.0`), and restricted debug-log CORS to loopback (`1d1d4ff`).
+- **T1-8 Server Surface Cleanup**: Removed orphaned `ai_relay.rs`, documented RPC dispatcher authentication requirements, and cleaned dangling relay links (`61ba73a`).
+- **Agentic Memory Boundary Defense**: Gated facts distillation strictly to main user dialogue sessions to prevent subagent brief prompt injection and persona pollution (`6365cf5`), with structural boundary rules isolating self-cognition and memory access (`9a9fb8a`).
+
+### Added
+- **Growth Core Memory System (`northhing-agentic-growth`)**: Introduced pure-logic layer 6 crate providing deterministic topic extraction, competition suppression, explicit negation detection, two-layer scoring, self-cognition store with system persona injection, and judge-mom competition review pipeline (`7e96126`, `5eb5fbf`, `fd61f5e`, `9f261cd`, `1e1f009`).
+- **T3-4 Gemini Multimodal Vision**: Connected Gemini tool image attachments via `inlineData` parts and expanded multimodal gate whitelist for Gemini model identifiers (`80651bf`).
+- **ROT Ratchet Budget Gate**: Added `scripts/rot-budget.json` mechanical budget gate, `verify-rot-budget.mjs` verification script, CI workflow job, and House Rule 7 preventing code rot regressions (`964afda`, `ded3544`).
+- **Kernel Facade Tool Listing**: Implemented `list_tools` on `KernelFacade` mapping registered tools to DTOs with deterministic sorting (`fbae573`).
+- **Core Types Time Helpers**: Added unified timestamp utilities `now_unix_ms` and `now_unix_millis` to `northhing-core-types` (`9721f75`).
+
+### Changed
+- **T2-1 CI Matrix Completion**: Expanded CI workflow to full 3-OS matrix `cargo check --workspace` and locked workspace tests (`3a6695f..05905ee`).
+- **Memory Distillation & Auto-Pause Recovery**: Added dual resume pathways (probe cadence & memory intent keywords) for auto-paused memory distillation (`d1d6d92`), and moved distillation prompt/parser logic to pure-logic crate (`71df0dd`, `8b64aa8`).
+- **Atomic Config Persistence**: Replaced direct config serialization with `JsonFileStore.write_atomic` for crash-safe settings persistence (`177fa1d`).
+- **Debug Log Rotation**: Added 8MiB file rotation for runtime debug logs (`1644eac`).
+
+### Removed
+- **Major Subsystem Excision (T2-2, ~40k+ lines)**: Removed legacy and unmaintained subsystems including `insights`, `webdriver`, `plan-compliance-checker`, `tool-provider-groups`, and `harness` crates (`e65d98e..7f30473`), `judge_gate` adapter (`43fdd5a`), the full remote connect and relay stack (`bdc3f9c..5c855ed`), `mobile-web` frontend (`72be802`), and the `MiniApp` subsystem across core, services, product domains, and assets (`3702baf..89abea6`).
+- **ROT-1 Code Deduplication**: Deduplicated `deep_research` twin implementations and unified scattered timestamp formatting (`9721f75`).
+
 ## [0.2.10] - 2026-07-16
 
 ### Added

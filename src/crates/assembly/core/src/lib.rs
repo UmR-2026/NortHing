@@ -14,8 +14,8 @@ pub mod error;
 #[cfg(feature = "product-domains")]
 pub mod function_agents; // Function-based agents
 pub mod infrastructure; // AI clients, storage, logging, events
-#[cfg(feature = "product-domains")]
-pub mod miniapp; // AI-generated instant apps (Zero-Dialect Runtime)
+#[cfg(feature = "product-full")]
+pub mod kernel_facade; // Kernel-api facade: pure passthrough impl (K1b1)
 #[cfg(feature = "product-full")]
 pub mod product_assembly;
 #[cfg(feature = "product-domains")]
@@ -23,8 +23,6 @@ pub(crate) mod product_domain_runtime;
 #[cfg(feature = "product-full")]
 pub mod product_runtime;
 pub mod service; // Workspace, Config, FileSystem, Terminal, Git
-#[cfg(feature = "product-full")]
-pub mod kernel_facade; // Kernel-api facade: pure passthrough impl (K1b1)
 #[cfg(all(feature = "service-integrations", feature = "product-full"))]
 pub(crate) mod service_agent_runtime;
 pub mod util; // General types, errors, helper functions // Unified error facade (re-exports util::errors)
@@ -47,7 +45,6 @@ pub use service::{
 // Export infrastructure components
 #[cfg(feature = "ai-adapter-runtime")]
 pub use infrastructure::ai::AIClient;
-pub use infrastructure::events::BackendEventManager;
 
 // Export Agentic service core types
 #[cfg(feature = "product-full")]

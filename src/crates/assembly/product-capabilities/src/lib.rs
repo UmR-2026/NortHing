@@ -7,20 +7,13 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use northhing_harness::{
-    build_descriptor_harness_registry, HarnessCapability, HarnessProviderDescriptor, HarnessRegistry,
-    HarnessRegistryBuildError, HarnessWorkflow,
-};
 use northhing_runtime_ports::RuntimeServiceCapability;
-pub use northhing_tool_packs::ToolProviderGroupPlanSelectionError as ProductCapabilityBuildError;
-use northhing_tool_packs::{try_product_tool_provider_group_plan_for_ids, ToolProviderGroupPlan};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ProductCapabilityId {
     CodeAgent,
     DeepReview,
     DeepResearch,
-    MiniApp,
 }
 
 impl ProductCapabilityId {
@@ -29,7 +22,6 @@ impl ProductCapabilityId {
             Self::CodeAgent => "code-agent",
             Self::DeepReview => "deep-review",
             Self::DeepResearch => "deep-research",
-            Self::MiniApp => "miniapp",
         }
     }
 }
@@ -44,22 +36,16 @@ impl fmt::Display for ProductCapabilityId {
 pub struct ProductCapabilityPack {
     id: ProductCapabilityId,
     required_services: &'static [RuntimeServiceCapability],
-    tool_provider_group_ids: &'static [&'static str],
-    harness_provider_descriptors: &'static [HarnessProviderDescriptor],
 }
 
 impl ProductCapabilityPack {
     pub const fn new(
         id: ProductCapabilityId,
         required_services: &'static [RuntimeServiceCapability],
-        tool_provider_group_ids: &'static [&'static str],
-        harness_provider_descriptors: &'static [HarnessProviderDescriptor],
     ) -> Self {
         Self {
             id,
             required_services,
-            tool_provider_group_ids,
-            harness_provider_descriptors,
         }
     }
 
@@ -69,14 +55,6 @@ impl ProductCapabilityPack {
 
     pub const fn required_services(self) -> &'static [RuntimeServiceCapability] {
         self.required_services
-    }
-
-    pub const fn tool_provider_group_ids(self) -> &'static [&'static str] {
-        self.tool_provider_group_ids
-    }
-
-    pub const fn harness_provider_descriptors(self) -> &'static [HarnessProviderDescriptor] {
-        self.harness_provider_descriptors
     }
 }
 
@@ -203,8 +181,6 @@ impl ProductServiceCapabilityRequirement {
 pub struct ProductCapabilityAssembly {
     capability_ids: Vec<ProductCapabilityId>,
     service_requirements: Vec<ProductServiceCapabilityRequirement>,
-    tool_provider_group_plan: Vec<ToolProviderGroupPlan>,
-    harness_provider_descriptors: Vec<HarnessProviderDescriptor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -257,24 +233,16 @@ impl ProductAssemblyPlan {
             })
             .collect()
     }
-
-    pub fn build_harness_registry(&self) -> Result<HarnessRegistry, HarnessRegistryBuildError> {
-        self.capability_assembly.build_harness_registry()
-    }
 }
 
 impl ProductCapabilityAssembly {
     fn new(
         capability_ids: Vec<ProductCapabilityId>,
         service_requirements: Vec<ProductServiceCapabilityRequirement>,
-        tool_provider_group_plan: Vec<ToolProviderGroupPlan>,
-        harness_provider_descriptors: Vec<HarnessProviderDescriptor>,
     ) -> Self {
         Self {
             capability_ids,
             service_requirements,
-            tool_provider_group_plan,
-            harness_provider_descriptors,
         }
     }
 
@@ -307,18 +275,6 @@ impl ProductCapabilityAssembly {
             .copied()
             .filter(|requirement| !is_available(requirement.service_capability()))
             .collect()
-    }
-
-    pub fn tool_provider_group_plan(&self) -> &[ToolProviderGroupPlan] {
-        &self.tool_provider_group_plan
-    }
-
-    pub fn harness_provider_descriptors(&self) -> &[HarnessProviderDescriptor] {
-        &self.harness_provider_descriptors
-    }
-
-    pub fn build_harness_registry(&self) -> Result<HarnessRegistry, HarnessRegistryBuildError> {
-        build_descriptor_harness_registry(self.harness_provider_descriptors.iter().copied())
     }
 }
 
@@ -366,58 +322,11 @@ impl ProductCapabilityRegistry {
         requirements
     }
 
-    pub fn tool_provider_group_ids(self) -> Vec<&'static str> {
-        let mut seen = HashSet::new();
-        let mut provider_ids = Vec::new();
-        for pack in self.packs {
-            for provider_id in pack.tool_provider_group_ids() {
-                if seen.insert(*provider_id) {
-                    provider_ids.push(*provider_id);
-                }
-            }
-        }
-        provider_ids
-    }
-
-    pub fn try_tool_provider_group_plan(self) -> Result<Vec<ToolProviderGroupPlan>, ProductCapabilityBuildError> {
-        let provider_ids = self.tool_provider_group_ids();
-        try_product_tool_provider_group_plan_for_ids(&provider_ids)
-    }
-
-    pub fn tool_provider_group_plan(self) -> Vec<ToolProviderGroupPlan> {
-        self.try_tool_provider_group_plan()
-            .expect("product capability packs must reference known tool provider groups")
-    }
-
-    pub fn harness_provider_descriptors(self) -> Vec<HarnessProviderDescriptor> {
-        let mut seen = HashSet::new();
-        let mut descriptors = Vec::new();
-        for pack in self.packs {
-            for descriptor in pack.harness_provider_descriptors() {
-                if seen.insert(descriptor.provider_id()) {
-                    descriptors.push(*descriptor);
-                }
-            }
-        }
-        descriptors
-    }
-
-    pub fn build_harness_registry(self) -> Result<HarnessRegistry, HarnessRegistryBuildError> {
-        build_descriptor_harness_registry(self.harness_provider_descriptors())
-    }
-
-    pub fn try_build_assembly(self) -> Result<ProductCapabilityAssembly, ProductCapabilityBuildError> {
-        Ok(ProductCapabilityAssembly::new(
+    pub fn build_assembly(self) -> ProductCapabilityAssembly {
+        ProductCapabilityAssembly::new(
             self.capability_ids(),
             self.service_requirements(),
-            self.try_tool_provider_group_plan()?,
-            self.harness_provider_descriptors(),
-        ))
-    }
-
-    pub fn build_assembly(self) -> ProductCapabilityAssembly {
-        self.try_build_assembly()
-            .expect("product capability packs must build a valid assembly")
+        )
     }
 
     pub fn capability_set(self) -> ProductCapabilitySet {
@@ -452,77 +361,19 @@ const DEEP_RESEARCH_SERVICES: &[RuntimeServiceCapability] = &[
     RuntimeServiceCapability::Permission,
     RuntimeServiceCapability::Events,
 ];
-const MINIAPP_SERVICES: &[RuntimeServiceCapability] = &[
-    RuntimeServiceCapability::FileSystem,
-    RuntimeServiceCapability::Workspace,
-    RuntimeServiceCapability::Permission,
-    RuntimeServiceCapability::Events,
-];
-
-const CODE_AGENT_TOOL_GROUPS: &[&str] = &["core.basic", "core.agent", "core.session"];
-const INTEGRATION_TOOL_GROUPS: &[&str] = &["core.integration"];
-
-const DEEP_REVIEW_HARNESS_CAPABILITIES: &[HarnessCapability] = &[
-    HarnessCapability::Plan,
-    HarnessCapability::ReviewGate,
-    HarnessCapability::PostProcessor,
-];
-const DEEP_RESEARCH_HARNESS_CAPABILITIES: &[HarnessCapability] =
-    &[HarnessCapability::Plan, HarnessCapability::PostProcessor];
-const MINIAPP_HARNESS_CAPABILITIES: &[HarnessCapability] = &[HarnessCapability::Plan, HarnessCapability::Artifact];
-
-pub const CORE_DEEP_REVIEW_HARNESS_PROVIDER_ID: &str = "core.deep_review";
-pub const CORE_DEEP_RESEARCH_HARNESS_PROVIDER_ID: &str = "core.deep_research";
-pub const CORE_MINIAPP_HARNESS_PROVIDER_ID: &str = "core.miniapp";
-
-const DEEP_REVIEW_HARNESS_PROVIDER: HarnessProviderDescriptor = HarnessProviderDescriptor::legacy_facade(
-    CORE_DEEP_REVIEW_HARNESS_PROVIDER_ID,
-    HarnessWorkflow::DeepReview,
-    DEEP_REVIEW_HARNESS_CAPABILITIES,
-    "northhing-core::agentic::deep_review",
-);
-const DEEP_RESEARCH_HARNESS_PROVIDER: HarnessProviderDescriptor = HarnessProviderDescriptor::legacy_facade(
-    CORE_DEEP_RESEARCH_HARNESS_PROVIDER_ID,
-    HarnessWorkflow::DeepResearch,
-    DEEP_RESEARCH_HARNESS_CAPABILITIES,
-    "northhing-core::agentic::agents::definitions::modes::deep_research",
-);
-const MINIAPP_HARNESS_PROVIDER: HarnessProviderDescriptor = HarnessProviderDescriptor::legacy_facade(
-    CORE_MINIAPP_HARNESS_PROVIDER_ID,
-    HarnessWorkflow::MiniApp,
-    MINIAPP_HARNESS_CAPABILITIES,
-    "northhing-core::miniapp",
-);
-
-const NO_HARNESS_PROVIDERS: &[HarnessProviderDescriptor] = &[];
-const DEEP_REVIEW_HARNESS_PROVIDERS: &[HarnessProviderDescriptor] = &[DEEP_REVIEW_HARNESS_PROVIDER];
-const DEEP_RESEARCH_HARNESS_PROVIDERS: &[HarnessProviderDescriptor] = &[DEEP_RESEARCH_HARNESS_PROVIDER];
-const MINIAPP_HARNESS_PROVIDERS: &[HarnessProviderDescriptor] = &[MINIAPP_HARNESS_PROVIDER];
 
 const DEFAULT_PRODUCT_CAPABILITY_PACKS: &[ProductCapabilityPack] = &[
     ProductCapabilityPack::new(
         ProductCapabilityId::CodeAgent,
         CODE_AGENT_SERVICES,
-        CODE_AGENT_TOOL_GROUPS,
-        NO_HARNESS_PROVIDERS,
     ),
     ProductCapabilityPack::new(
         ProductCapabilityId::DeepReview,
         DEEP_REVIEW_SERVICES,
-        INTEGRATION_TOOL_GROUPS,
-        DEEP_REVIEW_HARNESS_PROVIDERS,
     ),
     ProductCapabilityPack::new(
         ProductCapabilityId::DeepResearch,
         DEEP_RESEARCH_SERVICES,
-        INTEGRATION_TOOL_GROUPS,
-        DEEP_RESEARCH_HARNESS_PROVIDERS,
-    ),
-    ProductCapabilityPack::new(
-        ProductCapabilityId::MiniApp,
-        MINIAPP_SERVICES,
-        INTEGRATION_TOOL_GROUPS,
-        MINIAPP_HARNESS_PROVIDERS,
     ),
 ];
 
@@ -540,14 +391,4 @@ pub fn product_assembly_plan_for_profile(profile: DeliveryProfile) -> ProductAss
 
 pub fn default_product_assembly_plan() -> ProductAssemblyPlan {
     product_assembly_plan_for_profile(DeliveryProfile::ProductFull)
-}
-
-pub fn product_harness_registry_for_profile(
-    profile: DeliveryProfile,
-) -> Result<HarnessRegistry, HarnessRegistryBuildError> {
-    product_assembly_plan_for_profile(profile).build_harness_registry()
-}
-
-pub fn default_product_harness_registry() -> Result<HarnessRegistry, HarnessRegistryBuildError> {
-    product_harness_registry_for_profile(DeliveryProfile::ProductFull)
 }

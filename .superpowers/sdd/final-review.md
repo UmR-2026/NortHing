@@ -145,9 +145,9 @@ Already covered in section 3.3. Pattern is unified.
 |---|---|---|---|
 | Q-1 | Linux Path semantics test (withdrawn) | A | Withdrawn by reviewer; M-1 fix resolved the concern |
 | Q-2 | api.rs:507 unused import B64 | A | Fixed in commit e3d0e53 |
-| Q-3 | validated.rs:177-182 redundant is_drive_letter guard + inaccurate comment | D | Dead code + misleading comment; upfront split scan already covers all drive-letter forms. Delete L177-182 or fix comment. Trivial cleanup. |
-| Q-4 | validated.rs:162-171 double split scan can be merged | D | Two `normalized.split('/')` loops (drive-letter + CurDir) can merge into one. Cosmetic, no functional difference. |
-| M-4 | Test name `preserves_existing_dest_on_validation_failure` doesn't truly cover validation failure | D | Test name overpromises; rename or add the missing case. Cosmetic. |
+| Q-3 | validated.rs:177-182 redundant is_drive_letter guard + inaccurate comment | resolved | Task B5 (`6b6419b`): removed redundant guard from Normal component, unified scan |
+| Q-4 | validated.rs:162-171 double split scan can be merged | resolved | Task B5 (`6b6419b`): merged into single-pass split loop |
+| M-4 | Test name `preserves_existing_dest_on_validation_failure` doesn't truly cover validation failure | resolved | Task B5 (`6b6419b`): renamed to `map_to_room_overwrites_existing_dest_with_new_content` and added genuine validation rejection test |
 | M-5 | map_to_room TOCTOU window (theoretical) | A | Theoretical micro-window between canonicalize and remove_file. Containment check is defense-in-depth, not sole barrier (ValidatedRelPath is primary). Accepted trade-off. |
 
 ### Task 2
@@ -155,8 +155,8 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | on_disconnect micro-window between conn_to_room.remove and rooms.get_mut | A | Alternative order (set tombstone first) introduces worse race (new conn marked tombstone by old disconnect). Current order is the better choice. Desktop retry recovers. |
-| M-2 | handle_socket task panic won't release connection slot | D | No remote trigger path (requires internal bug). RAII guard or catch_unwind would harden. Track for follow-up. |
-| M-3 | handle_text_message return style mixed | D | Three return styles in match arms. Cosmetic. |
+| M-2 | handle_socket task panic won't release connection slot | resolved | Task B5 (`6b6419b`): local `ConnectionSlotGuard` RAII guard auto-releases on drop/panic/upgrade-fail |
+| M-3 | handle_text_message return style mixed | resolved | Task B5 (`6b6419b`): unified expression/return convention across all match arms |
 | M-4 | AuthExtractor::Clone expands public API | A | Clone is a common derive; no security surface expansion. |
 | (deferred) | Capability token system | D | Brief explicitly deferred. Current atomic three-state is the scoped fix. Track as separate security enhancement. |
 
@@ -164,7 +164,7 @@ Already covered in section 3.3. Pattern is unified.
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | is_genuine_traversal mirrors handler logic (drift risk) | D | Test helper duplicates handler split logic. Add comment pointing to handler line, or add property-based test. |
+| M-1 | is_genuine_traversal mirrors handler logic (drift risk) | resolved | Task B5 (`6b6419b`): added anchor comment pointing to `serve_room_web_catchall` line in relay-core |
 | M-2 | 9 variants fixed, no fuzz | A | Disk recursive scan provides generalized backstop. Manual variants cover known attack vectors. |
 | M-3 | attribution() only eprintln, not assertion | A | Attribution is diagnostic info; hard-asserting would overfit axum version behavior. |
 | M-4 | dechunk boundary conditions untested | A | All test endpoints use Content-Length, not chunked. No real exposure. |
@@ -178,15 +178,15 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | First-write no .bak (design correct) | A | No previous version to back up on first write. Design correct. |
-| M-2 | set_permissions failure silently swallowed | D | Pre-existing; brief requires keeping. Consider `tracing::warn!` on chmod failure for ops visibility. |
+| M-2 | set_permissions failure silently swallowed | D | **resolved (Wave 2 B6)**: `tracing::warn!` added on chmod failure for ops visibility (SSH + MCP OAuth vaults). |
 | M-3 | Report Cargo.lock attribution misread | A | Documentation error in report, not in code. Already clarified in review. |
-| M-4 | vault filter naming causes 2 tests missed by filter | D | `clear_deletes_file...` and `store_is_atomic...` lack "vault" substring. CI should use `--lib` or rename tests. |
+| M-4 | vault filter naming causes 2 tests missed by filter | D | **resolved (Wave 2 B6)**: renamed tests to `vault_*` so the `vault` filter catches all four (SSH + MCP OAuth vaults). |
 
 ### Task 5
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | Poison lock recovery no warn log | D | `poisoned.into_inner()` silently recovers. Add `warn!("Bot persistence write lock poisoned, recovering")`. Current `f` can't panic, so risk is low. |
+| M-1 | Poison lock recovery no warn log | D | **resolved (Wave 2 B6)**: added `warn!("Bot persistence write lock poisoned, recovering")`. |
 | M-2 | Concurrent test limited on single-core | A | Test validates correctness (serialization equivalence). Perf validation belongs in CI. |
 | M-3 | NoHomeDirectory no recovery guidance | A | Pre-existing behavior. Not introduced by this branch. |
 | M-4 | tmp write failure leaves orphan .bak | A | .bak retains old content (correct). Main file unchanged (correct). Best-effort cleanup is sufficient. |
@@ -204,20 +204,20 @@ Already covered in section 3.3. Pattern is unified.
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
 | M-1 | save_app_settings public wrapper dead code warning | D | `cargo check -p northhing` emits `warning: function save_app_settings is never used`. Recommend deleting the wrapper (option A, consistent with H-5/H-6 deleting old save APIs). Trivial. |
-| M-2 | upsert_provider unknown-type branch UI text regression | D | Unreachable branch (validate_provider_input guards it), but error text regressed from specific to generic. Three-line fix to restore original text via validation_error channel. |
+| M-2 | upsert_provider unknown-type branch UI text regression | D | **resolved (Wave 2 B7)**: restored the specific message (`不支持的服务类型: {ptype}`) via the validation_error channel. |
 | M-3 | dedup migration save path unlocked in public load path | D | Residual race: `load_app_settings()` (read-only) triggers dedup write without lock. Window is narrow (dedup only fires on duplicate providers). Recommend extracting dedup from load path into `update_app_settings` explicitly. |
 
 ### Task 8
 
 | ID | Description | Disposition | Reason |
 |---|---|---|---|
-| M-1 | Windows symlink test silently skips | D | `return;` on symlink_dir failure swallows the skip. Change to `eprintln!` or `#[cfg(unix)]` + `#[ignore]` on Windows. Test fidelity. |
+| M-1 | Windows symlink test silently skips | D | **resolved (Wave 2 B7)**: `eprintln!` reports the skip instead of silently returning. |
 | M-2 | get_plugin_dir API adaptation list minor doc omission | A | Documentation only. No code impact. |
 | M-3 | get_server_path consistency suggestion | A | Pure readability. Current design is valid. |
 | M-4 | plugin_dir.exists() TOCTOU (concurrent dual install) | D | Pre-existing. Two concurrent installs of same ID both pass exists(), both stage, one rename wins. Consider `create_dir(plugin_dir, exclusive)` to make install atomic. Track for follow-up. |
-| M-5 | Logging exposes raw string not validated repr | D | `warn!("Skipping plugin with invalid id {:?}: {}", plugin_id, e)` exposes raw dir name. Change to `warn!("Skipping plugin with invalid id: {}", e)` to avoid logging suspicious input. |
+| M-5 | Logging exposes raw string not validated repr | D | **resolved (Wave 2 B7)**: log now prints only the validation error, not the raw dir name. |
 | M-6 | cargo fmt observation | A | No action needed. |
-| M-7 | schedule_repo_release test evidence strength | D | Test only asserts `await` compiles, doesn't observe daemon release. Need inner test seam (`schedule_repo_release_for_test`). Track for follow-up. |
+| M-7 | schedule_repo_release test evidence strength | D | **resolved (Wave 2 B7)**: added `schedule_repo_release_for_test` seam in services-integrations that observes the idle-session release directly. |
 | M-8 | LspManager::uninstall_plugin calls stop_server(language=plugin_id?) -- pre-existing path unmapping bug | D | **Pre-existing functional bug**: uninstall passes plugin_id to stop_server which expects language key. LSP process not actually stopped on uninstall. Not introduced by this branch (M-9 only adds validation). Recommend follow-up task. |
 
 ### Summary counts
@@ -265,13 +265,7 @@ Already covered in section 3.3. Pattern is unified.
 - **Recommendation**: ensure CI runs `cargo check --workspace` (or the equivalent that works around the embed-resource issue) before merge.
 
 **Gap 2: Embedded relay (api_key=None) not e2e tested.**
-- Task 3 e2e tests all use a **configured** api_key. No e2e test exercises the full router with `api_key=None` (the desktop embedded relay scenario).
-- Unit tests cover the auth logic for `api_key=None`:
-  - `auth_require_gates_only_when_key_configured` (auth logic)
-  - `websocket_upgrade_open_when_api_key_unset` (WS handler)
-  - `upload_routes_accept_valid_api_key_and_stay_open_when_unset` (upload handler)
-- **Risk**: low. The `api_key=None` path is simpler (no auth check), and the auth logic is trivial (`None == open`). The e2e tests validate the full router with auth configured; the `None` path is a subset.
-- **Recommendation**: acceptable as-is. If desired, add a single e2e test with `api_key=None` to close the gap.
+- Resolved in Task B5 (`6b6419b`): Added `open_relay_when_api_key_none_accepts_all_routes_without_auth` in `e2e_web_assets.rs` covering WebSocket upgrade, file upload, check-files, and asset serving on the full router without API key. Gap closed.
 
 **Gap 3: No combined relay stress test.**
 - The three-state logic, connection limit (512), bounded queue (256), and idle timeout (90s) are each unit-tested individually. No test exercises all four simultaneously under load.
@@ -339,9 +333,9 @@ None.
 
 ### Minor (branch-level observations, not per-task)
 
-**FR-1 (Minor, consistency)**: The three atomic write implementations diverge in two features: explicit flush (only settings has it) and PermissionDenied fallback (only json_store has it). Consider backporting the explicit flush pattern from settings to bot persistence for consistency. Not blocking.
+**FR-1 (Minor, consistency)**: The three atomic write implementations diverge in two features: explicit flush (only settings has it) and PermissionDenied fallback (only json_store has it). Consider backporting the explicit flush pattern from settings to bot persistence for consistency. Not blocking. → **resolved (Wave 2 B6)**: bot persistence now writes via `File::create` + `write_all` + `flush` + drop-before-rename, matching the settings pattern.
 
-**FR-2 (Minor, consistency)**: `esm_deps.json` in `load_source_from_dirs` uses `.exists()` pre-check while `read_optional_source_file` uses `ErrorKind::NotFound` match. Pattern inconsistency, not a security issue (fail direction is safe). Consider unifying in a follow-up.
+**FR-2 (Minor, consistency)**: `esm_deps.json` in `load_source_from_dirs` uses `.exists()` pre-check while `read_optional_source_file` uses `ErrorKind::NotFound` match. Pattern inconsistency, not a security issue (fail direction is safe). Consider unifying in a follow-up. → **resolved (Wave 2 B6)**: `load_source_from_dirs` now matches on `ErrorKind::NotFound`, unifying with `read_optional_source_file`.
 
 **FR-3 (Minor, verification)**: No e2e test covers the embedded relay path (`api_key=None`). Unit tests cover the auth logic. Acceptable for merge; track for CI enhancement.
 

@@ -1,0 +1,299 @@
+fbae573 feat(kernel_facade): wire list_tools implementation and tests (T3-1a)
+
+=== STAT ===
+ docs/architecture/backend-roadmap.md               |   2 +-
+ .../assembly/core/src/kernel_facade/tests.rs       | 194 +++++++++++++++++++++
+ .../assembly/core/src/kernel_facade/tools.rs       |  30 +++-
+ 3 files changed, 223 insertions(+), 3 deletions(-)
+
+=== DIFF -U10 ===
+diff --git a/docs/architecture/backend-roadmap.md b/docs/architecture/backend-roadmap.md
+index 759ff9b..b09eeb5 100644
+--- a/docs/architecture/backend-roadmap.md
++++ b/docs/architecture/backend-roadmap.md
+@@ -202,21 +202,21 @@ FU-1 MCP 配置写 fail-closed、FU-2 LSP uninstall 按语言键停服（`7a4bdc
+ **路径作用域变量**：`{appdata}` / `{workspace}` / `{home}` 静态解析为绝对路径；`{user-selected}` 静态解析为**空**——只有运行时用户显式授权的路径（如目录选择器 `grant_path`）才进入 policy，且**同时进 read+write**。这对应 P-16 的授权点设计：安装时批准 manifest 声明，运行时按需追加用户选定路径。
+ 
+ **policy 与执行点分离**：解析器（`resolve_policy`）产出纯数据 JSON policy，作为 Worker 启动参数传入；宿主侧 `dispatch_host` 用**同一 policy 形状**按命名空间（fs/shell/os/net）分发，拒绝是显式 `deny(...)` 错误，不是隐式落空。
+ 
+ **PCS-3 设计约束（从上述语义推导）**：① 插件清单声明能力，未声明即拒绝，判定在**解析期**完成，不在每次调用时；② 声明未授予即拒绝（显式空集）；③ 批准的授权 = 数据（policy），与执行边界（沙箱/宿主分发）解耦，执行边界只消费 policy 不理解清单；④ 运行时追加授权走"用户显式选择"通道，最小粒度是具体路径/命令/域名，不支持隐式放大；⑤ 任何通配必须在清单里显式可见。
+ 
+ ### T3 功能补全（后端部分，按产品优先级）
+ 
+ | # | 内容 | 来源线 | 量 |
+ |---|---|---|---|
+-| T3-1 | kernel_facade 10+ `not yet wired` 接线（list_tools / list_artifacts / load_project_skills / generate_session_usage / onboarding 状态优先） | F 交汇+review | M |
++| T3-1 | kernel_facade 10+ `not yet wired` 接线（list_tools / list_artifacts / load_project_skills / generate_session_usage / onboarding 状态优先；2026-08-20 list_tools 已接） | F 交汇+review | M |
+ | T3-2 | WebSearch 可配置（provider 化 + 降级路径） | review | M |
+ | T3-3 | Provider 目录（preset 列表 + 能力声明化，替代名字推断） | review | M |
+ | T3-4 | Gemini 视觉接通（放开 gating） | review | S |
+ | ~~T3-5~~ | ~~MiniApp bridge 诚实化~~ | **随 MiniApp 整删关闭**（2026-08-17，随 T2-2 M1-M5 完成） | — |
+ | T3-6 | 体验洞后端部分：P2-5 失败 turn 落史、P2-6 事件丢弃策略、P2-4 CleanupService 调度 | 债 | M |
+ | T3-7 | **M 线落地**（**owner = growth session**，E-08）：TH-3 记忆浏览面板（read-only + JSONL 导出）+ TH-2 演化审计（策略/判定归 growth，P2-12 CI 硬门禁接线归编排线）+ TH-6 半被动约束配置 + P2-14 去重修复 + **本地度量埋点**（P-10 边界：不离机；记忆纠正频率/审计覆盖率/工具成功率） | M 线（论题） | M |
+ | T3-8 | **TH-5 身份演化机制**（**owner = growth session**，E-08；G15-b 自评审模式：触发限轮内/维护周期，评审执行器新写参考 SubagentJudgeRunner，**复用保留的 judge_gate 协议层**，证据禁取 episodes（P2-12），consume-once 凭证继承 P2-11 教训；insights 删除不复活） | M 线（论题） | L |
+ 
+ ### T4 解耦收口（= K 线 K4b + K3 + 瘦身，版本锚 0.4.x）
+ 
+diff --git a/src/crates/assembly/core/src/kernel_facade/tests.rs b/src/crates/assembly/core/src/kernel_facade/tests.rs
+index 236a7fa..8e2c42a 100644
+--- a/src/crates/assembly/core/src/kernel_facade/tests.rs
++++ b/src/crates/assembly/core/src/kernel_facade/tests.rs
+@@ -592,10 +592,204 @@ fn test_backward_compat_deserialization_missing_new_fields() {
+     assert_eq!(dto2.id, "s1");
+     assert_eq!(dto2.parent_session_id, None);
+     assert_eq!(dto2.state, None);
+ 
+     // DialogSubmitOutcomeDto without outcome_kind (added by K4a-T23q)
+     let json3 = r#"{"turn_id":"t1","accepted":true}"#;
+     let dto3: DialogSubmitOutcomeDto = serde_json::from_str(json3).unwrap();
+     assert_eq!(dto3.turn_id, "t1");
+     assert_eq!(dto3.outcome_kind, None);
+ }
++
++// ── T3-1a list_tools tests ───────────────────────────────────────────────────
++
++struct MockKernelTool {
++    name: String,
++    description: Option<String>,
++    schema: serde_json::Value,
++}
++
++#[async_trait::async_trait]
++impl crate::agentic::tools::framework::Tool for MockKernelTool {
++    fn name(&self) -> &str {
++        &self.name
++    }
++
++    async fn description(&self) -> crate::util::errors::NortHingResult<String> {
++        self.description
++            .clone()
++            .ok_or_else(|| crate::util::errors::NortHingError::Tool("failed description".into()))
++    }
++
++    fn short_description(&self) -> String {
++        self.description.clone().unwrap_or_default()
++    }
++
++    fn input_schema(&self) -> serde_json::Value {
++        self.schema.clone()
++    }
++
++    async fn call_impl(
++        &self,
++        _input: &serde_json::Value,
++        _context: &crate::agentic::tools::framework::ToolUseContext,
++    ) -> crate::util::errors::NortHingResult<Vec<crate::agentic::tools::framework::ToolResult>> {
++        Ok(vec![])
++    }
++}
++
++fn build_test_facade_with_tools(
++    tools: Vec<Arc<dyn crate::agentic::tools::framework::Tool>>,
++) -> Arc<KernelFacade> {
++    let event_queue = Arc::new(crate::agentic::events::EventQueue::new(
++        crate::agentic::events::EventQueueConfig::default(),
++    ));
++    let session_manager = Arc::new(crate::agentic::session::SessionManager::new(
++        Arc::new(crate::agentic::session::SessionContextStore::new()),
++        Arc::new(
++            crate::agentic::persistence::PersistenceManager::new(
++                Arc::new(crate::infrastructure::PathManager::new().expect("path manager")),
++            )
++            .expect("persistence manager"),
++        ),
++        crate::agentic::session::SessionManagerConfig {
++            max_active_sessions: 100,
++            session_idle_timeout: std::time::Duration::from_secs(3600),
++            auto_save_interval: std::time::Duration::from_secs(300),
++            enable_persistence: false,
++            prompt_cache_policy: crate::agentic::session::PromptCachePolicy::default(),
++        },
++    ));
++    let mut registry = crate::agentic::tools::registry::ToolRegistry::new();
++    for tool in tools {
++        registry.register_tool(tool);
++    }
++    let tool_registry = Arc::new(tokio::sync::RwLock::new(registry));
++    let tool_pipeline = Arc::new(crate::agentic::tools::pipeline::ToolPipeline::new(
++        tool_registry,
++        Arc::new(crate::agentic::tools::pipeline::ToolStateManager::new(
++            event_queue.clone(),
++        )),
++        None,
++        Arc::new(std::sync::OnceLock::new()),
++    ));
++    let execution_engine = Arc::new(crate::agentic::execution::ExecutionEngine::new(
++        Arc::new(crate::agentic::execution::RoundExecutor::new(
++            Arc::new(crate::agentic::execution::StreamProcessor::new(
++                event_queue.clone(),
++            )),
++            event_queue.clone(),
++            tool_pipeline.clone(),
++        )),
++        event_queue.clone(),
++        session_manager.clone(),
++        Arc::new(crate::agentic::ContextCompressor::new(
++            crate::agentic::CompressionConfig::default(),
++        )),
++        crate::agentic::execution::ExecutionEngineConfig::default(),
++    ));
++    let coordinator = crate::agentic::coordination::ConversationCoordinator::new(
++        session_manager,
++        execution_engine,
++        tool_pipeline,
++        event_queue,
++        Arc::new(crate::agentic::events::EventRouter::new()),
++    );
++    let facade = KernelFacade::new();
++    facade.set_coordinator(Arc::new(coordinator));
++    Arc::new(facade)
++}
++
++#[tokio::test]
++async fn test_list_tools_returns_err_before_init() {
++    use northhing_kernel_api::KernelToolsApi;
++    let facade = KernelFacade::new();
++    let result = facade.list_tools().await;
++    match result {
++        Err(northhing_kernel_api::error::KernelError::Internal(_)) => {}
++        Err(other) => panic!("expected KernelError::Internal, got {:?}", other),
++        Ok(_) => panic!("expected Err before init"),
++    }
++}
++
++#[tokio::test]
++async fn test_list_tools_single_tool_field_mapping() {
++    use northhing_kernel_api::KernelToolsApi;
++
++    let schema = serde_json::json!({
++        "type": "object",
++        "properties": {
++            "query": { "type": "string" }
++        }
++    });
++    let tool = Arc::new(MockKernelTool {
++        name: "test_mock_tool_custom".to_string(),
++        description: Some("test description for custom mock tool".to_string()),
++        schema: schema.clone(),
++    });
++
++    let facade = build_test_facade_with_tools(vec![tool]);
++    let tools = facade.list_tools().await.expect("list_tools should succeed");
++
++    let found = tools
++        .iter()
++        .find(|t| t.name == "test_mock_tool_custom")
++        .expect("list_tools must contain the registered mock tool");
++    assert_eq!(found.id, "test_mock_tool_custom");
++    assert_eq!(found.name, "test_mock_tool_custom");
++    assert_eq!(found.description, "test description for custom mock tool");
++    assert_eq!(found.input_schema, Some(schema));
++}
++
++#[tokio::test]
++async fn test_list_tools_ordering_and_degraded_description() {
++    use northhing_kernel_api::KernelToolsApi;
++
++    let tool_z = Arc::new(MockKernelTool {
++        name: "zzz_mock_tool".to_string(),
++        description: Some("zebra desc".to_string()),
++        schema: serde_json::json!({ "type": "object" }),
++    });
++    let tool_a = Arc::new(MockKernelTool {
++        name: "aaa_mock_tool".to_string(),
++        description: None, // Description will fail, should degrade to empty string
++        schema: serde_json::json!({ "type": "string" }),
++    });
++    let tool_m = Arc::new(MockKernelTool {
++        name: "mmm_mock_tool".to_string(),
++        description: Some("mango desc".to_string()),
++        schema: serde_json::json!({ "type": "number" }),
++    });
++
++    let facade = build_test_facade_with_tools(vec![tool_z, tool_a, tool_m]);
++    let tools = facade.list_tools().await.expect("list_tools should succeed");
++
++    // Must be strictly sorted by name
++    assert!(
++        tools.windows(2).all(|w| w[0].name <= w[1].name),
++        "tools list must be sorted by name deterministically"
++    );
++
++    let found_a = tools
++        .iter()
++        .find(|t| t.name == "aaa_mock_tool")
++        .expect("aaa_mock_tool must exist");
++    assert_eq!(found_a.description, ""); // Degraded on error
++
++    let found_m = tools
++        .iter()
++        .find(|t| t.name == "mmm_mock_tool")
++        .expect("mmm_mock_tool must exist");
++    assert_eq!(found_m.description, "mango desc");
++
++    let found_z = tools
++        .iter()
++        .find(|t| t.name == "zzz_mock_tool")
++        .expect("zzz_mock_tool must exist");
++    assert_eq!(found_z.description, "zebra desc");
++
++    // Verify ordering between the three mock tools
++    let pos_a = tools.iter().position(|t| t.name == "aaa_mock_tool").unwrap();
++    let pos_m = tools.iter().position(|t| t.name == "mmm_mock_tool").unwrap();
++    let pos_z = tools.iter().position(|t| t.name == "zzz_mock_tool").unwrap();
++    assert!(pos_a < pos_m && pos_m < pos_z, "mock tools must appear in alphabetical order");
++}
+diff --git a/src/crates/assembly/core/src/kernel_facade/tools.rs b/src/crates/assembly/core/src/kernel_facade/tools.rs
+index c42c7fc..459d017 100644
+--- a/src/crates/assembly/core/src/kernel_facade/tools.rs
++++ b/src/crates/assembly/core/src/kernel_facade/tools.rs
+@@ -1,21 +1,47 @@
+ //! KernelToolsApi implementation.
+ 
+ use async_trait::async_trait;
+ use northhing_kernel_api::error::KernelError;
+ use northhing_kernel_api::tools::{ToolInfoDto, ToolPort, UserInputRequestDto, UserInputResponseDto};
+ 
+ #[async_trait]
+ impl northhing_kernel_api::KernelToolsApi for super::KernelFacade {
++    /// Lists all registered tools in the tool pipeline (including collapsed tools).
++    ///
++    /// Note: Collapsed vs. expanded status is a prompt surface exposure policy,
++    /// not a catalog visibility semantic; all registered tools are returned here.
+     async fn list_tools(&self) -> Result<Vec<ToolInfoDto>, KernelError> {
+-        // NEEDS_CONTEXT: tool registry is not exposed through a simple passthrough.
+-        Err(KernelError::Internal("not yet wired: list_tools".to_string()))
++        let coordinator = self.coordinator()?;
++        let tools = {
++            let registry = coordinator.tool_pipeline.tool_registry.read().await;
++            registry.all_tools()
++        };
++
++        let mut dtos = Vec::with_capacity(tools.len());
++        for tool in tools {
++            let name = tool.name().to_string();
++            // Catalog listing is a read-only discovery probe; failure to resolve
++            // a single tool's description should degrade to an empty string rather
++            // than failing the entire listing.
++            let description = tool.description().await.unwrap_or_default();
++            let input_schema = Some(tool.input_schema());
++            dtos.push(ToolInfoDto {
++                id: name.clone(),
++                name,
++                description,
++                input_schema,
++            });
++        }
++
++        dtos.sort_by(|a, b| a.name.cmp(&b.name));
++        Ok(dtos)
+     }
+ 
+     async fn register_tool(&self, _tool: std::sync::Arc<dyn ToolPort>) -> Result<(), KernelError> {
+         // NEEDS_CONTEXT: ACP tool registration requires tool pipeline wiring.
+         Err(KernelError::Internal("not yet wired: register_tool".to_string()))
+     }
+ 
+     async fn request_user_input(
+         &self,
+         _request: UserInputRequestDto,

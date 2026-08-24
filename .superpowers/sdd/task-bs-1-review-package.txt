@@ -1,0 +1,243 @@
+4b26692 fix(boundary-checker): clear self-test anchor drift (T2-2a M5 parked item)
+
+=== STAT ===
+ .../rules/source/required-rules.mjs                | 20 ++++++++++++++++++++
+ scripts/core-boundaries/self-test.mjs              | 22 +++++++++++-----------
+ 2 files changed, 31 insertions(+), 11 deletions(-)
+
+=== DIFF -U10 ===
+diff --git a/scripts/core-boundaries/rules/source/required-rules.mjs b/scripts/core-boundaries/rules/source/required-rules.mjs
+index b4e53fd..2d2b575 100644
+--- a/scripts/core-boundaries/rules/source/required-rules.mjs
++++ b/scripts/core-boundaries/rules/source/required-rules.mjs
+@@ -533,20 +533,24 @@ export const requiredContentRules = [
+   },
+   {
+     path: 'src/crates/assembly/product-capabilities/src/lib.rs',
+     reason:
+       'product-capabilities must own product capability assembly without concrete execution',
+     patterns: [
+       {
+         regex: /\bProductCapabilityAssembly\b/,
+         message: 'missing product capability assembly owner',
+       },
++      {
++        regex: /\bpub fn product_assembly_plan_for_profile\b/,
++        message: 'missing product assembly plan entry',
++      },
+     ],
+   },
+   {
+     path: 'src/crates/execution/agent-runtime/src/agents.rs',
+     reason:
+       'agent-runtime must own shared mode config profile facts that are runtime-visible and product-neutral',
+     patterns: [
+       {
+         regex: /\bpub const SHARED_CODING_MODE_PROMPT_TEMPLATE\b/,
+         message: 'missing shared coding-mode prompt template fact',
+@@ -3158,20 +3162,32 @@ export const requiredContentRules = [
+         message: 'missing shared GetToolSpec manifest name contract',
+       },
+       {
+         regex: /\bpub struct ToolManifestPolicyTool\b/,
+         message: 'missing pure tool manifest policy input contract',
+       },
+       {
+         regex: /\bpub fn resolve_tool_manifest_policy\b/,
+         message: 'missing pure tool manifest policy resolver',
+       },
++      {
++        regex: /\bpub fn tool_spec_input_schema\b/,
++        message: 'missing GetToolSpec input schema contract',
++      },
++      {
++        regex: /\bpub fn tool_spec_short_description\b/,
++        message: 'missing GetToolSpec short description contract',
++      },
++      {
++        regex: /\bpub fn tool_spec_is_readonly\b/,
++        message: 'missing GetToolSpec readonly flag contract',
++      },
+       {
+         regex: /\bpub fn build_tool_manifest_policy_tools\b/,
+         message: 'missing registry snapshot to manifest policy input helper',
+       },
+       {
+         regex: /\bpub fn build_collapsed_tool_stub_definition\b/,
+         message: 'missing collapsed-tool prompt stub contract',
+       },
+       {
+         regex: /\bpub enum PromptVisibleToolManifestItem\b/,
+@@ -3394,20 +3410,24 @@ export const requiredContentRules = [
+   },
+   {
+     path: 'src/crates/execution/tool-contracts/src/framework/registry.rs',
+     reason:
+       'agent-tools may own pure and generic prompt-visible tool contracts and provider-neutral execution gate policy without owning product registry or concrete execution',
+     patterns: [
+       {
+         regex: /\bpub struct StaticToolProviderGroup\b/,
+         message: 'missing generic static provider group container',
+       },
++      {
++        regex: /\bpub fn collapsed_tool_names\b/,
++        message: 'missing collapsed tool names accessor',
++      },
+       {
+         regex: /\bpub trait StaticToolProviderPlan\b/,
+         message: 'missing provider-neutral static tool provider plan contract',
+       },
+       {
+         regex: /\bpub trait StaticToolProviderFactory\b/,
+         message: 'missing provider-neutral static tool factory contract',
+       },
+       {
+         regex: /\bpub enum StaticToolMaterializationError\b/,
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index cd09b04..32e7d7d 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -1425,45 +1425,45 @@ export function runManifestParserSelfTest({
+         'resolve_contextual_visible_tools_from_provider',
+         'resolve_contextual_tool_manifest_from_provider',
+         'build_get_tool_spec_catalog_description_from_provider',
+         'resolve_get_tool_spec_detail_from_provider',
+         'build_get_tool_spec_description',
+         'GetToolSpecCollapsedToolSummary',
+         'GetToolSpecDetail',
+         'summarize_get_tool_spec_collapsed_tools',
+         'resolve_get_tool_spec_detail',
+         'build_get_tool_spec_catalog_description',
+-        'get_tool_spec_input_schema',
+-        'get_tool_spec_short_description',
++        'tool_spec_input_schema',
++        'tool_spec_short_description',
+         'render_get_tool_spec_tool_use_message',
+-        'get_tool_spec_is_readonly',
++        'tool_spec_is_readonly',
+         'get_tool_spec_is_concurrency_safe',
+         'get_tool_spec_needs_permissions',
+         'validate_get_tool_spec_input',
+         'build_get_tool_spec_assistant_detail',
+         'build_get_tool_spec_duplicate_load_result',
+         'build_get_tool_spec_detail_result',
+         'GetToolSpecExecutionPlan',
+         'GetToolSpecExecutionError',
+         'resolve_get_tool_spec_execution_plan',
+         'resolve_get_tool_spec_execution_result_from_provider',
+         'GetToolSpecRuntime',
+         'call_results',
+         'GetToolSpecLoadObservation',
+         'collect_loaded_collapsed_tool_names',
+         'CollapsedToolUsageError',
+         'ToolExecutionAccessError',
+         'validate_tool_allowed_by_list',
+         'validate_collapsed_tool_usage',
+         'sort_tool_manifest_definitions',
+         'is_tool_collapsed',
+-        'get_collapsed_tool_names',
++        'collapsed_tool_names',
+       ],
+     },
+     {
+       path: 'src/crates/execution/tool-contracts/src/file_guidance.rs',
+       contracts: [
+         'FILE_TOOL_GUIDANCE_PREFIX',
+         'file_tool_guidance_message',
+         'is_file_tool_guidance_message',
+       ],
+     },
+@@ -1536,38 +1536,34 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/assembly/core/src/agentic/coordination/remote_ports.rs',
+       contracts: [
+         'RemoteControlStatePort',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/agentic/coordination/scheduler.rs',
+       contracts: [
+         'AgentSessionReplyRoute',
+         'DialogQueuePriority',
+-        'DialogSessionStateFact',
+         'DialogSteerOutcome',
+         'DialogSubmissionPolicy',
+         'DialogSubmitOutcome',
+         'DialogSubmitQueueAction',
+         'DialogSubmitQueueFacts',
+         'ActiveDialogTurnStore',
+         'AgentSessionReplyAction',
+         'AgentSessionReplyPlan',
+-        'BackgroundInjectionKind',
+         'DialogReplySuppressionSet',
+-        'DialogSteeringAction',
+         'DialogTurnQueue',
+         'SessionAbortFlags',
+         'resolve_agent_session_reply_action',
+         'resolve_background_delivery_injection',
+         'resolve_dialog_submit_queue_action',
+-        'resolve_dialog_steering_action',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/agentic/round_preempt.rs',
+       contracts: [
+         'northhing_agent_runtime',
+         'northhing_runtime_ports',
+         'DialogRoundInjectionSource',
+         'RoundInjection',
+         'RoundInjectionKind',
+@@ -1672,47 +1668,51 @@ export function runManifestParserSelfTest({
+     {
+       path: 'src/crates/assembly/core/src/agentic/tools/registry.rs',
+       contracts: [
+         'from_inner',
+         'ProductToolDecoratorRef',
+         'ProductToolRuntime',
+         'get_collapsed_tool_names',
+         'resolve_product_readonly_enabled_tools',
+       ],
+     },
++    {
++      path: 'src/crates/assembly/product-capabilities/src/lib.rs',
++      contracts: [
++        'ProductCapabilityAssembly',
++        'product_assembly_plan_for_profile',
++      ],
++    },
+     {
+       path: 'src/crates/assembly/core/src/agentic/tools/product_runtime.rs',
+       contracts: [
+         'ProductToolRuntime',
+         'SnapshotToolDecorator',
+         'create_product_tool_registry_from_plan',
+-        'product_assembly_plan_for_profile',
+         'product_tool_runtime_owner_preserves_registry_contract',
+         'product_tool_runtime_registry_preserves_provider_plan_order',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/agentic/tools/product_runtime/snapshot.rs',
+       contracts: [
+         'ProductSnapshotToolWrapper',
+         'SnapshotToolWrapper',
+         'wrap_tool_for_snapshot_tracking',
+       ],
+     },
+     {
+       path: 'src/crates/assembly/core/src/agentic/tools/product_runtime/catalog.rs',
+       contracts: [
+         'ProductToolCatalogProvider',
+         'ToolCatalogSnapshotProvider',
+         'GetToolSpecCatalogProvider',
+-        'get_global_tool_registry',
+-        'get_agent_registry',
+         'ToolCatalogRuntime',
+         'product_tool_catalog_runtime',
+         'GetToolSpecRuntime',
+         'product_get_tool_spec_runtime',
+         'resolve_product_tool_manifest',
+         'resolve_product_readonly_enabled_tools',
+         'resolve_product_get_tool_spec_results',
+         'unlocked_collapsed_tools',
+         'product_catalog_provider_default_get_tool_spec_catalog_matches_registry',
+         'product_resolved_manifest_owner_matches_legacy_shape',

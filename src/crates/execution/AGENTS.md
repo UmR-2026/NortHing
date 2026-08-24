@@ -15,9 +15,7 @@ delivery form.
 | `agent-runtime` | Agent registry, scheduler, prompt cache, hooks, goals, prompt facts, port-backed `AgentRuntime` facade, DeepReview provider-neutral state, DeepResearch citation renumbering, and runtime control contracts | [AGENTS.md](agent-runtime/AGENTS.md) |
 | `agent-stream` | Provider-neutral stream DTOs, tool-call accumulation, and replay contracts | [AGENTS.md](agent-stream/AGENTS.md) |
 | `tool-contracts` | Tool contracts, execution gates, input validation, and result presentation contracts. Cargo package remains `northhing-agent-tools`. | [AGENTS.md](tool-contracts/AGENTS.md) |
-| `harness` | Harness workflow contracts and registry primitives | [AGENTS.md](harness/AGENTS.md) |
 | `runtime-services` | Typed runtime service assembly and service availability facts | [AGENTS.md](runtime-services/AGENTS.md) |
-| `tool-provider-groups` | Tool provider group facts and product-full tool group composition. Cargo package remains `northhing-tool-packs`. | [AGENTS.md](tool-provider-groups/AGENTS.md) |
 | `tool-execution` | Low-level file/search/tool IO helpers. Cargo package remains `tool-runtime`. | [AGENTS.md](tool-execution/AGENTS.md) |
 
 ## Placement Rules

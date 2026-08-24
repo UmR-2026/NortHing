@@ -21,14 +21,11 @@ policies, and narrow ports; concrete runtime behavior belongs outside this crate
   outside this crate.
 - Preserve existing core import paths with re-export or wrapper facades until
   downstream call sites are intentionally migrated.
-- Feature-gated additions must remain narrow. `miniapp`, `function-agents`, and
+- Feature-gated additions must remain narrow. `function-agents` and
   `product-full` should only enable their declared product-domain feature groups.
 
 ## Ownership Boundary
 
-- `miniapp` may own MiniApp data shapes, pure lifecycle decisions, metadata and
-  import policies, built-in bundle identity, embedded source assets, seed-plan
-  facts, marker wire formats, host primitive call plans, and narrow ports.
 - `function-agents` may own function-agent DTOs, prompt/domain policies,
   response parsing and repair rules, file-shape analysis, and Git/AI port traits.
 - Concrete filesystem writes, marker IO, host dispatch, worker side effects,

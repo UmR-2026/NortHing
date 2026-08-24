@@ -1,0 +1,5 @@
+﻿f42451d fix(security): strengthen concurrent keyring migration test with shared Arc<MockKeyring> and final-state assertions (M-8)
+26a15a7 fix(security): migrate ProviderConfig.api_key to OS keyring (C3, P1-2)
+7fa7d62 fix(security): relay P1-5 鈥?loopback default, auto key, CORS tighten, fail-closed
+3404060 docs(sdd): fix C1 review findings 鈥?report corrections + P1-6 entry
+007e513 fix(security): P1-3 鏈湴鍒犻櫎榛樿璧?OS 鍥炴敹绔欙紙trash crate + fail-closed + permanent 鏄惧紡寮€鍏筹級+ ledger P1-3/P1-1 缈昏浆

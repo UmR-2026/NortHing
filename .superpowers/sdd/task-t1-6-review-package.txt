@@ -1,0 +1,381 @@
+cdfd059 fix(installer): validate manifest paths, enforce registered uninstall path, and ignore frontend uninstall command (T1-6)
+=== name-status ===
+M	northing-installer/src-tauri/src/installer/commands.rs
+M	northing-installer/src-tauri/src/installer/extract.rs
+M	northing-installer/src-tauri/src/installer/types.rs
+M	northing-installer/src/hooks/useInstaller.ts
+=== numstat ===
+146	9	northing-installer/src-tauri/src/installer/commands.rs
+105	0	northing-installer/src-tauri/src/installer/extract.rs
+5	1	northing-installer/src-tauri/src/installer/types.rs
+0	6	northing-installer/src/hooks/useInstaller.ts
+=== diff ===
+diff --git a/northing-installer/src-tauri/src/installer/commands.rs b/northing-installer/src-tauri/src/installer/commands.rs
+index c8c973c..9e6f06a 100644
+--- a/northing-installer/src-tauri/src/installer/commands.rs
++++ b/northing-installer/src-tauri/src/installer/commands.rs
+@@ -250,9 +250,12 @@ pub async fn start_installation(
+     Ok(())
+ }
+ 
++#[allow(deprecated)]
+ #[tauri::command]
+-pub async fn launch_registered_uninstaller(request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
+-    launch_command(&request.uninstall_command).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
++pub async fn launch_registered_uninstaller(_request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
++    let reg = read_uninstall_registration()
++        .ok_or_else(|| "No registered installation found to launch uninstaller.".to_string())?;
++    launch_command(&reg.uninstall_string).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
+     Ok(())
+ }
+ 
+@@ -428,11 +431,13 @@ pub async fn close_installer(app: AppHandle) -> Result<(), String> {
+ 
+ #[tauri::command]
+ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+-    let install_path = Path::new(&request.install_path);
++    let reg = read_uninstall_registration();
++    verify_uninstall_path(
++        reg.as_ref().map(|r| r.install_location.as_str()),
++        &request.install_path,
++    )?;
+ 
+-    if request.install_path.trim().is_empty() {
+-        return Err("Install path is empty; nothing to uninstall.".to_string());
+-    }
++    let install_path = Path::new(&request.install_path);
+ 
+     if !install_path.exists() {
+         return Err(format!(
+@@ -441,9 +446,7 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+         ));
+     }
+ 
+-    if install_path.exists() {
+-        fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
+-    }
++    fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
+ 
+     if let Err(e) = remove_desktop_shortcut() {
+         log::warn!("Failed to remove desktop shortcut: {}", e);
+@@ -478,6 +481,85 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+     Ok(())
+ }
+ 
++pub fn normalize_path_for_comparison(path_str: &str) -> String {
++    let trimmed = path_str.trim();
++    if trimmed.is_empty() {
++        return String::new();
++    }
++    let p = Path::new(trimmed);
++    if let Ok(canon) = p.canonicalize() {
++        let mut s = canon.to_string_lossy().to_string();
++        if let Some(stripped) = s.strip_prefix(r"\\?\UNC\") {
++            s = format!(r"\\{}", stripped);
++        } else if let Some(stripped) = s.strip_prefix(r"\\?\") {
++            s = stripped.to_string();
++        }
++        return s.replace('\\', "/").trim_end_matches('/').to_lowercase();
++    }
++
++    let mut normalized = String::new();
++    for comp in p.components() {
++        match comp {
++            std::path::Component::CurDir => {}
++            std::path::Component::ParentDir => {
++                if let Some(idx) = normalized.rfind('/') {
++                    normalized.truncate(idx);
++                } else {
++                    normalized.clear();
++                }
++            }
++            std::path::Component::RootDir => {
++                if !normalized.ends_with('/') {
++                    normalized.push('/');
++                }
++            }
++            std::path::Component::Prefix(prefix) => {
++                normalized.push_str(&prefix.as_os_str().to_string_lossy());
++            }
++            std::path::Component::Normal(part) => {
++                if !normalized.is_empty()
++                    && !normalized.ends_with('/')
++                    && !normalized.ends_with('\\')
++                    && !normalized.ends_with(':')
++                {
++                    normalized.push('/');
++                }
++                normalized.push_str(&part.to_string_lossy());
++            }
++        }
++    }
++    normalized.replace('\\', "/").trim_end_matches('/').to_lowercase()
++}
++
++pub fn verify_uninstall_path(
++    registered_location: Option<&str>,
++    requested_path: &str,
++) -> Result<(), String> {
++    let req_trimmed = requested_path.trim();
++    if req_trimmed.is_empty() {
++        return Err("Install path is empty; nothing to uninstall.".to_string());
++    }
++
++    let reg = registered_location
++        .map(|s| s.trim())
++        .filter(|s| !s.is_empty())
++        .ok_or_else(|| {
++            "Uninstall rejected: no valid installation is registered in the system registry.".to_string()
++        })?;
++
++    let norm_req = normalize_path_for_comparison(req_trimmed);
++    let norm_reg = normalize_path_for_comparison(reg);
++
++    if norm_req.is_empty() || norm_reg.is_empty() || norm_req != norm_reg {
++        return Err(format!(
++            "Uninstall rejected: requested path '{}' does not match registered install location '{}'.",
++            requested_path, reg
++        ));
++    }
++
++    Ok(())
++}
++
+ fn normalize_path(path: &Path) -> String {
+     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+     canonical.to_string_lossy().to_string()
+@@ -546,3 +628,58 @@ fn classify_connection_error(err: &str) -> String {
+         format!("Connection failed: {}", err)
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_normalize_path_for_comparison() {
++        assert_eq!(
++            normalize_path_for_comparison(r"C:\Program Files\northhing"),
++            normalize_path_for_comparison(r"C:/Program Files/northhing/")
++        );
++        assert_eq!(
++            normalize_path_for_comparison(r"c:\program files\northhing\"),
++            normalize_path_for_comparison(r"C:\Program Files\northhing")
++        );
++        assert_eq!(
++            normalize_path_for_comparison("/opt/northhing"),
++            normalize_path_for_comparison("/opt/northhing/")
++        );
++        assert_ne!(
++            normalize_path_for_comparison(r"C:\Program Files\northhing"),
++            normalize_path_for_comparison(r"C:\Windows")
++        );
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_matches() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing").is_ok());
++        assert!(verify_uninstall_path(reg, r"C:/Program Files/northhing/").is_ok());
++        assert!(verify_uninstall_path(reg, r"c:\program files\northhing").is_ok());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_mismatch_rejected() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, r"C:\Windows").is_err());
++        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing-other").is_err());
++        assert!(verify_uninstall_path(reg, r"C:\Program Files").is_err());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_no_registration_rejected() {
++        assert!(verify_uninstall_path(None, r"C:\Program Files\northhing").is_err());
++        assert!(verify_uninstall_path(Some(""), r"C:\Program Files\northhing").is_err());
++        assert!(verify_uninstall_path(Some("   "), r"C:\Program Files\northhing").is_err());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_empty_request_rejected() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, "").is_err());
++        assert!(verify_uninstall_path(reg, "   ").is_err());
++    }
++}
+diff --git a/northing-installer/src-tauri/src/installer/extract.rs b/northing-installer/src-tauri/src/installer/extract.rs
+index 7ed919a..f74ca4b 100644
+--- a/northing-installer/src-tauri/src/installer/extract.rs
++++ b/northing-installer/src-tauri/src/installer/extract.rs
+@@ -24,18 +24,77 @@ pub struct PayloadManifestFile {
+     pub sha256: String,
+ }
+ 
++pub fn validate_manifest_relative_path(path: &str) -> Result<()> {
++    let trimmed = path.trim();
++    if trimmed.is_empty() {
++        anyhow::bail!("manifest path is empty");
++    }
++
++    if trimmed.starts_with('/') || trimmed.starts_with('\\') {
++        anyhow::bail!("manifest path cannot start with a slash: '{}'", path);
++    }
++
++    if trimmed.contains(':') {
++        anyhow::bail!("manifest path cannot contain drive prefix or colon: '{}'", path);
++    }
++
++    if trimmed.starts_with(r"\\") || trimmed.starts_with("//") {
++        anyhow::bail!("manifest path cannot be UNC path: '{}'", path);
++    }
++
++    let normalized = trimmed.replace('\\', "/");
++    let p = Path::new(&normalized);
++
++    if p.is_absolute() || p.has_root() {
++        anyhow::bail!("manifest path cannot be absolute: '{}'", path);
++    }
++
++    for comp in p.components() {
++        match comp {
++            std::path::Component::Normal(c) => {
++                if c.to_string_lossy() == ".." {
++                    anyhow::bail!("manifest path contains parent dir traversal ('..'): '{}'", path);
++                }
++            }
++            std::path::Component::CurDir => {}
++            std::path::Component::ParentDir => {
++                anyhow::bail!("manifest path contains parent dir traversal ('..'): '{}'", path);
++            }
++            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
++                anyhow::bail!("manifest path contains absolute or root component: '{}'", path);
++            }
++        }
++    }
++
++    for part in normalized.split('/') {
++        if part == ".." {
++            anyhow::bail!("manifest path segment is '..': '{}'", path);
++        }
++    }
++
++    Ok(())
++}
++
+ pub fn load_payload_manifest(payload_dir: &Path) -> Result<PayloadManifest> {
+     let manifest_path = payload_dir.join(PAYLOAD_MANIFEST_FILE);
+     let raw = std::fs::read_to_string(&manifest_path)
+         .with_context(|| format!("failed to read payload manifest: {}", manifest_path.display()))?;
+     let manifest: PayloadManifest = serde_json::from_str(&raw)
+         .with_context(|| format!("failed to parse payload manifest: {}", manifest_path.display()))?;
++    for file in &manifest.files {
++        validate_manifest_relative_path(&file.path)
++            .with_context(|| format!("invalid relative path in manifest: '{}'", file.path))?;
++    }
+     Ok(manifest)
+ }
+ 
+ pub fn validate_payload_sha256(payload_dir: &Path, manifest: &PayloadManifest) -> Result<Vec<String>> {
+     let mut failures = Vec::new();
+     for file in &manifest.files {
++        if let Err(e) = validate_manifest_relative_path(&file.path) {
++            failures.push(format!("invalid manifest path '{}': {}", file.path, e));
++            continue;
++        }
+         let full_path = payload_dir.join(&file.path);
+         if !full_path.exists() {
+             failures.push(format!("missing payload file: {}", file.path));
+@@ -84,6 +143,8 @@ pub fn extract_payload(
+     let total = manifest.files.len().max(1) as u64;
+     let mut done = 0u64;
+     for file in &manifest.files {
++        validate_manifest_relative_path(&file.path)
++            .with_context(|| format!("security validation failed for path: '{}'", file.path))?;
+         let src = payload_dir.join(&file.path);
+         let dest = install_dir.join(&file.path);
+         if let Some(parent) = dest.parent() {
+@@ -125,3 +186,47 @@ pub fn find_embedded_payload_dir() -> Option<PathBuf> {
+     }
+     None
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_valid_manifest_relative_paths() {
++        assert!(validate_manifest_relative_path("northhing.exe").is_ok());
++        assert!(validate_manifest_relative_path("bin/northhing.exe").is_ok());
++        assert!(validate_manifest_relative_path("resources/app/icon.png").is_ok());
++        assert!(validate_manifest_relative_path(r"resources\app\icon.png").is_ok());
++        assert!(validate_manifest_relative_path("./bin/northhing.exe").is_ok());
++    }
++
++    #[test]
++    fn test_reject_empty_manifest_path() {
++        assert!(validate_manifest_relative_path("").is_err());
++        assert!(validate_manifest_relative_path("   ").is_err());
++    }
++
++    #[test]
++    fn test_reject_zip_slip_traversal() {
++        assert!(validate_manifest_relative_path("..").is_err());
++        assert!(validate_manifest_relative_path("../foo").is_err());
++        assert!(validate_manifest_relative_path("foo/../bar").is_err());
++        assert!(validate_manifest_relative_path("foo/../../bar").is_err());
++        assert!(validate_manifest_relative_path(r"..\foo").is_err());
++        assert!(validate_manifest_relative_path(r"foo\..\bar").is_err());
++        assert!(validate_manifest_relative_path(r"foo\bar\..\..\..\secret.txt").is_err());
++    }
++
++    #[test]
++    fn test_reject_absolute_paths_posix_and_windows() {
++        assert!(validate_manifest_relative_path("/etc/passwd").is_err());
++        assert!(validate_manifest_relative_path("/Program Files/app").is_err());
++        assert!(validate_manifest_relative_path(r"\Windows\System32").is_err());
++        assert!(validate_manifest_relative_path(r"C:\Program Files\northhing").is_err());
++        assert!(validate_manifest_relative_path(r"C:northhing.exe").is_err());
++        assert!(validate_manifest_relative_path(r"D:\data").is_err());
++        assert!(validate_manifest_relative_path(r"\\server\share\file.exe").is_err());
++        assert!(validate_manifest_relative_path("//server/share/file.exe").is_err());
++        assert!(validate_manifest_relative_path("file.txt:stream").is_err());
++    }
++}
+diff --git a/northing-installer/src-tauri/src/installer/types.rs b/northing-installer/src-tauri/src/installer/types.rs
+index 9bef82b..68a9c4a 100644
+--- a/northing-installer/src-tauri/src/installer/types.rs
++++ b/northing-installer/src-tauri/src/installer/types.rs
+@@ -144,7 +144,11 @@ pub struct LaunchApplicationRequest {
+ #[derive(Debug, Clone, Deserialize)]
+ #[serde(rename_all = "camelCase")]
+ pub struct LaunchRegisteredUninstallerRequest {
+-    pub uninstall_command: String,
++    /// Deprecated: Backend reads uninstall command directly from registry; this field is ignored for security.
++    #[deprecated(note = "Backend reads uninstall command directly from registry; this field is ignored for security")]
++    #[serde(default)]
++    pub uninstall_command: Option<String>,
++    #[serde(default)]
+     pub install_path: Option<String>,
+ }
+ 
+diff --git a/northing-installer/src/hooks/useInstaller.ts b/northing-installer/src/hooks/useInstaller.ts
+index 5ef9398..33ba4b5 100644
+--- a/northing-installer/src/hooks/useInstaller.ts
++++ b/northing-installer/src/hooks/useInstaller.ts
+@@ -208,15 +208,9 @@ export function useInstaller(): UseInstallerReturn {
+     if (!latestInstall.detected) {
+       return;
+     }
+-    const cmd = latestInstall.uninstallString?.trim();
+-    if (!cmd) {
+-      setError('No uninstall command is registered for this installation.');
+-      return;
+-    }
+     try {
+       await invoke('launch_registered_uninstaller', {
+         request: {
+-          uninstallCommand: cmd,
+           installPath: latestInstall.installLocation ?? null,
+         },
+       });

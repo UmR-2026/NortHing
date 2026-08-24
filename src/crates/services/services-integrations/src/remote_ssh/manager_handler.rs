@@ -6,9 +6,8 @@
 //! re-exported outside the `services-integrations` crate.
 
 use crate::remote_ssh::manager_known_hosts::KnownHostEntry;
-use async_trait::async_trait;
 use russh::client::{DisconnectReason, Handler};
-use russh_keys::key::PublicKey;
+use russh::keys::PublicKey;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -122,16 +121,17 @@ impl From<String> for HandlerError {
     }
 }
 
-#[async_trait]
 impl Handler for SSHHandler {
     type Error = HandlerError;
 
     async fn check_server_key(&mut self, server_public_key: &PublicKey) -> Result<bool, Self::Error> {
-        let server_fingerprint = server_public_key.fingerprint();
+        // pinned: ssh-key HashAlg::default() == Sha256 (verified 0.7.0-rc.11)
+        let server_fingerprint = server_public_key.fingerprint(russh::keys::HashAlg::Sha256).to_string();
 
         // 1. If we have an expected key, verify it matches
         if let Some((ref host, port, ref expected)) = self.expected_key {
-            if expected.fingerprint() == server_fingerprint {
+            let expected_fingerprint = expected.fingerprint(russh::keys::HashAlg::Sha256).to_string();
+            if expected_fingerprint == server_fingerprint {
                 tracing::debug!("Server key matches expected key for {}:{}", host, port);
                 return Ok(true);
             }
@@ -139,15 +139,12 @@ impl Handler for SSHHandler {
                 "Server key mismatch for {}:{}. Expected fingerprint: {}, got: {}",
                 host,
                 port,
-                expected.fingerprint(),
+                expected_fingerprint,
                 server_fingerprint
             );
             return Err(HandlerError(format!(
                 "Host key mismatch for {}:{}: expected {}, got {}",
-                host,
-                port,
-                expected.fingerprint(),
-                server_fingerprint
+                host, port, expected_fingerprint, server_fingerprint
             )));
         }
 

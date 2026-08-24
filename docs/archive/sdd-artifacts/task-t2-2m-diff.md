@@ -1,0 +1,3846 @@
+diff --git a/scripts/core-boundaries/rules/feature-rules.mjs b/scripts/core-boundaries/rules/feature-rules.mjs
+index 838b505..375340d 100644
+--- a/scripts/core-boundaries/rules/feature-rules.mjs
++++ b/scripts/core-boundaries/rules/feature-rules.mjs
+@@ -47,22 +47,22 @@ export const optionalDependencyFeatureOwnerRules = [
+       { depName: 'anyhow', ownerFeatures: ['mcp', 'remote-ssh-concrete'] },
+       {
+         depName: 'base64',
+-        ownerFeatures: ['mcp', 'miniapp-runtime', 'remote-ssh-concrete'],
++        ownerFeatures: ['mcp', 'remote-ssh-concrete'],
+       },
+-      { depName: 'northhing-product-domains', ownerFeatures: ['function-agents', 'miniapp-runtime'] },
++      { depName: 'northhing-product-domains', ownerFeatures: ['function-agents'] },
+       { depName: 'northhing-runtime-ports', ownerFeatures: ['deep-research'] },
+       {
+         depName: 'northhing-services-core',
+-        ownerFeatures: ['git', 'mcp', 'miniapp-runtime', 'workspace-search', 'remote-ssh-concrete'],
++        ownerFeatures: ['git', 'mcp', 'workspace-search', 'remote-ssh-concrete'],
+       },
+       { depName: 'chrono', ownerFeatures: ['git', 'remote-ssh-concrete'] },
+-      { depName: 'dirs', ownerFeatures: ['miniapp-runtime', 'remote-ssh-concrete'] },
++      { depName: 'dirs', ownerFeatures: ['remote-ssh-concrete'] },
+       { depName: 'dunce', ownerFeatures: ['remote-ssh', 'workspace-search'] },
+       { depName: 'futures', ownerFeatures: ['mcp'] },
+       { depName: 'git2', ownerFeatures: ['git'] },
+       { depName: 'notify', ownerFeatures: ['file-watch'] },
+       { depName: 'rand', ownerFeatures: ['mcp', 'remote-ssh-concrete'] },
+-      { depName: 'reqwest', ownerFeatures: ['mcp', 'miniapp-runtime'] },
++      { depName: 'reqwest', ownerFeatures: ['mcp'] },
+       { depName: 'rmcp', ownerFeatures: ['mcp'] },
+       { depName: 'russh', ownerFeatures: ['remote-ssh-concrete'] },
+       { depName: 'russh-keys', ownerFeatures: ['remote-ssh-concrete'] },
+@@ -74,8 +74,8 @@ export const optionalDependencyFeatureOwnerRules = [
+       { depName: 'terminal-core', ownerFeatures: ['remote-ssh-concrete'] },
+       { depName: 'thiserror', ownerFeatures: ['git', 'remote-ssh-concrete', 'workspace-search'] },
+       { depName: 'tokio-util', ownerFeatures: ['remote-ssh'] },
+-      { depName: 'uuid', ownerFeatures: ['miniapp-runtime', 'remote-ssh-concrete'] },
+-      { depName: 'which', ownerFeatures: ['miniapp-runtime', 'workspace-search'] },
++      { depName: 'uuid', ownerFeatures: ['remote-ssh-concrete'] },
++      { depName: 'which', ownerFeatures: ['workspace-search'] },
+     ],
+   },
+   {
+@@ -138,7 +138,6 @@ export const ownerCrateFeatureAssemblyRules = [
+       'file-watch',
+       'function-agents',
+       'git',
+-      'miniapp-runtime',
+       'mcp',
+       'remote-ssh',
+       'remote-ssh-concrete',
+diff --git a/scripts/core-boundaries/rules/source/forbidden-rules.mjs b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+index a4c8255..706e5c7 100644
+--- a/scripts/core-boundaries/rules/source/forbidden-rules.mjs
++++ b/scripts/core-boundaries/rules/source/forbidden-rules.mjs
+@@ -391,16 +391,6 @@ export const forbiddenContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
+-    patterns: [
+-      {
+-        regex: /\bresolve_policy\s*\(/,
+-        message:
+-          'services MiniApp host-dispatch must use MiniAppPermissionPolicyRequest for permission path adaptation',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/function_agents/runtime_services.rs',
+     patterns: [
+diff --git a/scripts/core-boundaries/rules/source/required-rules.mjs b/scripts/core-boundaries/rules/source/required-rules.mjs
+index 7bcc269..12f416e 100644
+--- a/scripts/core-boundaries/rules/source/required-rules.mjs
++++ b/scripts/core-boundaries/rules/source/required-rules.mjs
+@@ -5358,120 +5358,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
+-    reason:
+-      'services-integrations must own built-in MiniApp seed files, marker IO, and storage-preservation writes behind the miniapp-runtime feature',
+-    patterns: [
+-      {
+-        regex: /\bpub async fn read_builtin_install_marker\b/,
+-        message: 'missing built-in MiniApp marker read IO owner',
+-      },
+-      {
+-        regex: /\bparse_builtin_install_marker\b/,
+-        message: 'missing product-domain built-in MiniApp marker parse helper use',
+-      },
+-      {
+-        regex: /\bpub async fn write_builtin_install_marker\b/,
+-        message: 'missing built-in MiniApp marker write IO owner',
+-      },
+-      {
+-        regex: /\bserialize_builtin_install_marker\b/,
+-        message: 'missing product-domain built-in MiniApp marker serialization helper use',
+-      },
+-      {
+-        regex: /\bpub async fn prepare_builtin_seed_bundle_files\b/,
+-        message: 'missing built-in MiniApp seed bundle file IO owner',
+-      },
+-      {
+-        regex: /\bbuiltin_source_files\b/,
+-        message: 'missing product-domain built-in MiniApp source payload use',
+-      },
+-      {
+-        regex: /\bbuild_builtin_seed_meta\b/,
+-        message: 'missing product-domain built-in MiniApp seed meta helper use',
+-      },
+-      {
+-        regex: /\bpreserved_builtin_created_at\b/,
+-        message: 'missing product-domain built-in MiniApp timestamp preservation helper use',
+-      },
+-      {
+-        regex: /\bBUILTIN_PLACEHOLDER_COMPILED_HTML\b/,
+-        message: 'missing product-domain built-in MiniApp placeholder payload use',
+-      },
+-      {
+-        regex: /\bstorage\.json\b/,
+-        message: 'missing built-in MiniApp storage preservation file contract',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
+-    reason:
+-      'services-integrations must own MiniApp host-dispatch fs/shell/net/os execution behind the miniapp-runtime feature',
+-    patterns: [
+-      {
+-        regex: /\bpub async fn dispatch_host\b/,
+-        message: 'missing MiniApp host dispatch owner entry',
+-      },
+-      {
+-        regex: /\bsplit_host_method\b/,
+-        message: 'missing product-domain MiniApp host method split use',
+-      },
+-      {
+-        regex: /\basync fn dispatch_fs\b/,
+-        message: 'missing MiniApp fs host dispatch owner',
+-      },
+-      {
+-        regex: /\bplan_fs_legacy_path_check\b/,
+-        message: 'missing product-domain MiniApp legacy fs path-gate plan use',
+-      },
+-      {
+-        regex: /\bplan_fs_host_call\b/,
+-        message: 'missing product-domain MiniApp fs host-call plan use',
+-      },
+-      {
+-        regex: /\bfs_policy_scopes\b/,
+-        message: 'missing product-domain MiniApp fs scope extraction policy use',
+-      },
+-      {
+-        regex: /\bMiniAppPermissionPolicyRequest::from_paths\b/,
+-        message: 'missing product-domain MiniApp permission policy request/path delegation',
+-      },
+-      {
+-        regex: /\bresolve_policy_with_request\b/,
+-        message: 'missing product-domain MiniApp permission policy facade delegation',
+-      },
+-      {
+-        regex: /\bfs_resolved_path_allowed\b/,
+-        message: 'missing product-domain MiniApp fs resolved path policy use',
+-      },
+-      {
+-        regex: /\basync fn dispatch_shell\b/,
+-        message: 'missing MiniApp shell host dispatch',
+-      },
+-      {
+-        regex: /\bplan_shell_host_call\b/,
+-        message: 'missing product-domain MiniApp shell host-call plan use',
+-      },
+-      {
+-        regex: /\bshell_exec_default_env\b/,
+-        message: 'missing product-domain MiniApp shell env policy use',
+-      },
+-      {
+-        regex: /\bcommand_basename_allowed\b/,
+-        message: 'missing MiniApp shell allowlist policy use',
+-      },
+-      {
+-        regex: /\bhost_allowed_by_allowlist\b/,
+-        message: 'missing MiniApp net allowlist policy use',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message: 'missing shared process-manager command creation for shell dispatch',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/services/services-integrations/src/remote_ssh/paths.rs',
+     reason:
+@@ -6400,68 +6286,6 @@ export const requiredContentRules = [
+       },
+     ],
+   },
+-  {
+-    path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
+-    reason:
+-      'services-integrations must own MiniApp JS worker process spawning and RPC routing behind the miniapp-runtime feature',
+-    patterns: [
+-      {
+-        regex: /\bpub struct JsWorker\b/,
+-        message: 'missing services-owned MiniApp JS worker process owner',
+-      },
+-      {
+-        regex: /\bpub trait MiniAppWorkerEventSink\b/,
+-        message: 'missing MiniApp worker event sink contract',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message: 'missing services-owned MiniApp JS worker process spawning',
+-      },
+-      {
+-        regex: /\bPendingResponseMap\b/,
+-        message: 'missing MiniApp worker JSON-RPC pending-response routing owner',
+-      },
+-      {
+-        regex: /\buuid::Uuid::new_v4\b/,
+-        message: 'missing MiniApp worker RPC id generation owner',
+-      },
+-    ],
+-  },
+-  {
+-    path: 'src/crates/services/services-integrations/src/miniapp/worker_pool.rs',
+-    reason:
+-      'services-integrations must own MiniApp JS worker pool lifecycle, install-deps execution, and runtime port implementation behind the miniapp-runtime feature',
+-    patterns: [
+-      {
+-        regex: /\bpub struct JsWorkerPool\b/,
+-        message: 'missing services-owned MiniApp JS worker pool owner',
+-      },
+-      {
+-        regex: /\bMiniAppWorkerPoolError\b/,
+-        message: 'missing MiniApp worker pool integration error type',
+-      },
+-      {
+-        regex: /\bworker_pool_at_capacity\b/,
+-        message: 'missing product-domain worker capacity policy use',
+-      },
+-      {
+-        regex: /\bselect_lru_worker\b/,
+-        message: 'missing product-domain worker LRU policy use',
+-      },
+-      {
+-        regex: /\bplan_install_deps\b/,
+-        message: 'missing product-domain install-deps plan use',
+-      },
+-      {
+-        regex: /\bprocess_manager::create_tokio_command\b/,
+-        message: 'missing services-owned MiniApp install-deps process execution',
+-      },
+-      {
+-        regex: /\bimpl MiniAppRuntimePort for JsWorkerPool\b/,
+-        message: 'missing MiniApp runtime port implementation in integrations owner',
+-      },
+-    ],
+-  },
+   {
+     path: 'src/crates/assembly/core/src/function_agents/port_adapters.rs',
+     reason:
+diff --git a/scripts/core-boundaries/self-test.mjs b/scripts/core-boundaries/self-test.mjs
+index b6456fc..71b6b0f 100644
+--- a/scripts/core-boundaries/self-test.mjs
++++ b/scripts/core-boundaries/self-test.mjs
+@@ -2196,48 +2196,6 @@ export function runManifestParserSelfTest({
+       path: 'src/crates/interfaces/acp/src/client/manager_errors.rs',
+       contracts: ['startup_timeout_error_message', 'formats_startup_timeout_error_message'],
+     },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/storage.rs',
+-      contracts: [
+-        'pub struct MiniAppStorage',
+-        'MiniAppStorageError',
+-        'tokio::fs::read_to_string',
+-        'tokio::fs::write',
+-        'tokio::fs::remove_dir_all',
+-        'MiniAppStorageLayout',
+-        'MiniAppStoragePort',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs',
+-      contracts: [
+-        'MiniAppImportBundleWriteRequest',
+-        'read_import_meta_json',
+-        'write_import_bundle',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/storage_tests.rs',
+-      contracts: [
+-        'storage_port_adapter_preserves_existing_file_lifecycle',
+-        'import_bundle_io_preserves_copy_and_fallback_contract',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/builtin_io.rs',
+-      contracts: [
+-        'read_builtin_install_marker',
+-        'parse_builtin_install_marker',
+-        'write_builtin_install_marker',
+-        'serialize_builtin_install_marker',
+-        'prepare_builtin_seed_bundle_files',
+-        'builtin_source_files',
+-        'build_builtin_seed_meta',
+-        'preserved_builtin_created_at',
+-        'BUILTIN_PLACEHOLDER_COMPILED_HTML',
+-        'storage.json',
+-      ],
+-    },
+     {
+       path: 'src/crates/contracts/product-domains/src/miniapp/builtin.rs',
+       contracts: [
+@@ -2262,48 +2220,6 @@ export function runManifestParserSelfTest({
+         'build_builtin_seed_meta',
+       ],
+     },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/host_dispatch.rs',
+-      contracts: [
+-        'dispatch_host',
+-        'split_host_method',
+-        'dispatch_fs',
+-        'plan_fs_legacy_path_check',
+-        'plan_fs_host_call',
+-        'fs_policy_scopes',
+-        'MiniAppPermissionPolicyRequest::from_paths',
+-        'resolve_policy_with_request',
+-        'fs_resolved_path_allowed',
+-        'dispatch_shell',
+-        'plan_shell_host_call',
+-        'shell_exec_default_env',
+-        'command_basename_allowed',
+-        'host_allowed_by_allowlist',
+-        'process_manager::create_tokio_command',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/worker.rs',
+-      contracts: [
+-        'pub struct JsWorker',
+-        'pub trait MiniAppWorkerEventSink',
+-        'process_manager::create_tokio_command',
+-        'PendingResponseMap',
+-        'uuid::Uuid::new_v4',
+-      ],
+-    },
+-    {
+-      path: 'src/crates/services/services-integrations/src/miniapp/worker_pool.rs',
+-      contracts: [
+-        'pub struct JsWorkerPool',
+-        'MiniAppWorkerPoolError',
+-        'worker_pool_at_capacity',
+-        'select_lru_worker',
+-        'plan_install_deps',
+-        'process_manager::create_tokio_command',
+-        'MiniAppRuntimePort',
+-      ],
+-    },
+     {
+       path: 'src/crates/assembly/core/src/function_agents/port_adapters.rs',
+       contracts: [
+diff --git a/src/crates/services/AGENTS-CN.md b/src/crates/services/AGENTS-CN.md
+index 7c41ccd..89247c5 100644
+--- a/src/crates/services/AGENTS-CN.md
++++ b/src/crates/services/AGENTS-CN.md
+@@ -2,19 +2,19 @@
+ 
+ # 服务实现层
+ 
+-本层负责接触本地系统或 runtime infrastructure 的可复用具体实现：filesystem、git、file watch、terminal、MCP、remote connectivity、process lifecycle、session persistence primitives、MiniApp runtime/import IO 以及类似 OS/network 能力。
++本层负责接触本地系统或 runtime infrastructure 的可复用具体实现：filesystem、git、file watch、terminal、MCP、remote connectivity、process lifecycle、session persistence primitives 以及类似 OS/network 能力。
+ 
+ ## 模块
+ 
+ | Crate | 职责 | 本地文档 |
+ |---|---|---|
+ | `services-core` | 不包含产品组装决策的本地 service primitive，包括 session storage、metadata store CRUD/index rebuild、metadata 构造/计数/索引/字段 mutation、lineage 规则和 JSON file IO | [AGENTS.md](services-core/AGENTS.md) |
+-| `services-integrations` | MCP、git、remote、file watch、MiniApp runtime、产品领域 port 具体实现 | [AGENTS.md](services-integrations/AGENTS.md) |
++| `services-integrations` | MCP、git、remote、file watch、产品领域 port 具体实现 | [AGENTS.md](services-integrations/AGENTS.md) |
+ | `terminal` | PTY、shell integration 与 terminal session infrastructure | [AGENTS.md](terminal/AGENTS.md) |
+ 
+ ## 放置规则
+ 
+-- 具体 OS、process、filesystem、git、terminal、MCP、remote SSH、file watch、session persistence primitives、MiniApp runtime IO 和 network service 实现放在这里。
++- 具体 OS、process、filesystem、git、terminal、MCP、remote SSH、file watch、session persistence primitives 和 network service 实现放在这里。
+ - 需要具体依赖的 `contracts`、`execution` 或 `contracts/product-domains` port 实现在这里。
+ - 协议/transport projection 放在 `adapters`，产品能力选择放在 `assembly`。
+ 
+diff --git a/src/crates/services/AGENTS.md b/src/crates/services/AGENTS.md
+index 9003593..d1e4f10 100644
+--- a/src/crates/services/AGENTS.md
++++ b/src/crates/services/AGENTS.md
+@@ -4,7 +4,7 @@
+ 
+ This layer owns reusable concrete implementations that touch local systems or
+ runtime infrastructure: filesystem, git, file watch, terminal, MCP, remote
+-connectivity, process lifecycle, session persistence primitives, MiniApp concrete runtime IO, and similar
++connectivity, process lifecycle, session persistence primitives, and similar
+ OS/network capabilities.
+ 
+ ## Modules
+@@ -12,14 +12,14 @@ OS/network capabilities.
+ | Crate | Responsibility | Local doc |
+ |---|---|---|
+ | `services-core` | Reusable local service primitives, filesystem helpers, session storage layout/indexing/deletion, metadata store CRUD/index rebuild, metadata construction/counter/index/field mutation/lineage rules, and JSON file IO without product assembly decisions | [AGENTS.md](services-core/AGENTS.md) |
+-| `services-integrations` | Concrete MCP, git, remote, file-watch, MiniApp runtime, and product-domain port implementations | [AGENTS.md](services-integrations/AGENTS.md) |
++| `services-integrations` | Concrete MCP, git, remote, file-watch, and product-domain port implementations | [AGENTS.md](services-integrations/AGENTS.md) |
+ | `terminal` | PTY, shell integration, and terminal session infrastructure | [AGENTS.md](terminal/AGENTS.md) |
+ | `debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` component constants and the disk-append pipeline); shared by product surfaces and re-exported from `assembly/core` | (none) |
+ 
+ ## Placement Rules
+ 
+ - Put concrete OS, process, filesystem, git, terminal, MCP, remote SSH,
+-  file-watch, MiniApp runtime IO, and network service implementations here.
++  file-watch, session persistence primitives, and network service implementations here.
+ - Implement `contracts`, `execution`, or `contracts/product-domains` ports here
+   when the implementation needs concrete dependencies.
+ - Keep protocol/transport projection in `adapters`, and keep product capability
+diff --git a/src/crates/services/services-integrations/AGENTS.md b/src/crates/services/services-integrations/AGENTS.md
+index 0b130dc..ae5c1ac 100644
+--- a/src/crates/services/services-integrations/AGENTS.md
++++ b/src/crates/services/services-integrations/AGENTS.md
+@@ -31,10 +31,6 @@ slices that are outside pure product logic but still platform-neutral.
+   and workspace bootstrap stay in the core facade as injected hooks.
+ - Remote SSH workspace-search owns path/scope/probe/bundle/retry strategy plus
+   flashgrep session/context lifecycle behind a provider boundary.
+-- MiniApp runtime here may own host primitive dispatch, built-in seed file
+-  writes, marker IO, storage/import bundle filesystem IO, and JS worker process/pool
+-  lifecycle. Manager workflow orchestration remains outside this crate until
+-  reviewed owner migration.
+ - DeepResearch report IO here may own report/citation sidecar filesystem work;
+   provider-neutral citation numbering stays in `northhing-runtime-ports`.
+ 
+diff --git a/src/crates/services/services-integrations/Cargo.toml b/src/crates/services/services-integrations/Cargo.toml
+index 6894286..c804c88 100644
+--- a/src/crates/services/services-integrations/Cargo.toml
++++ b/src/crates/services/services-integrations/Cargo.toml
+@@ -75,16 +75,6 @@ mcp = [
+     "rmcp/transport-streamable-http-client-reqwest",
+     "sse-stream",
+ ]
+-miniapp-runtime = [
+-    "base64",
+-    "northhing-product-domains/miniapp",
+-    "northhing-services-core",
+-    "dep:northhing-product-domains",
+-    "dirs",
+-    "reqwest",
+-    "uuid",
+-    "which",
+-]
+ remote-ssh = ["dunce", "sha2", "tokio-util"]
+ remote-ssh-concrete = [
+     "remote-ssh",
+@@ -118,7 +108,6 @@ product-full = [
+     "file-watch",
+     "function-agents",
+     "git",
+-    "miniapp-runtime",
+     "mcp",
+     "remote-ssh",
+     "remote-ssh-concrete",
+diff --git a/src/crates/services/services-integrations/src/announcement/types.rs b/src/crates/services/services-integrations/src/announcement/types.rs
+index 9b678e7..5791783 100644
+--- a/src/crates/services/services-integrations/src/announcement/types.rs
++++ b/src/crates/services/services-integrations/src/announcement/types.rs
+@@ -177,7 +177,7 @@ pub struct ModalConfig {
+ /// A single announcement / feature-demo card.
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+ pub struct AnnouncementCard {
+-    /// Globally unique identifier, e.g. `feature_v1_3_0_miniapp`.
++    /// Globally unique identifier, e.g. `feature_v1_3_0_demo`.
+     pub id: String,
+     pub card_type: CardType,
+     pub source: CardSource,
+diff --git a/src/crates/services/services-integrations/src/lib.rs b/src/crates/services/services-integrations/src/lib.rs
+index 7a847fa..824b006 100644
+--- a/src/crates/services/services-integrations/src/lib.rs
++++ b/src/crates/services/services-integrations/src/lib.rs
+@@ -24,9 +24,6 @@ pub mod git;
+ #[cfg(feature = "mcp")]
+ pub mod mcp;
+ 
+-#[cfg(feature = "miniapp-runtime")]
+-pub mod miniapp;
+-
+ #[cfg(feature = "remote-ssh")]
+ pub mod remote_ssh;
+ 
+diff --git a/src/crates/services/services-integrations/src/miniapp/builtin_io.rs b/src/crates/services/services-integrations/src/miniapp/builtin_io.rs
+deleted file mode 100644
+index 5a84780..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/builtin_io.rs
++++ /dev/null
+@@ -1,190 +0,0 @@
+-//! Built-in MiniApp seed and marker filesystem IO.
+-
+-use northhing_product_domains::miniapp::builtin::{
+-    build_builtin_package_json, build_builtin_seed_meta, builtin_source_files, parse_builtin_install_marker,
+-    preserved_builtin_created_at, serialize_builtin_install_marker, BuiltinInstallMarker, BuiltinMiniAppBundle,
+-    BUILTIN_INSTALL_MARKER, BUILTIN_PLACEHOLDER_COMPILED_HTML, LEGACY_BUILTIN_VERSION_MARKER,
+-};
+-use std::fmt;
+-use std::path::{Path, PathBuf};
+-
+-#[derive(Debug)]
+-pub enum MiniAppBuiltinIoError {
+-    Io {
+-        action: &'static str,
+-        path: PathBuf,
+-        source: std::io::Error,
+-    },
+-    MarkerSerialization(serde_json::Error),
+-    MetaSerialization(serde_json::Error),
+-    PackageSerialization(serde_json::Error),
+-    InvalidBundledMeta(serde_json::Error),
+-}
+-
+-impl fmt::Display for MiniAppBuiltinIoError {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        match self {
+-            Self::Io { action, path, source } => write!(f, "{action} {} failed: {source}", path.display()),
+-            Self::MarkerSerialization(source) => {
+-                write!(f, "serialize builtin marker failed: {source}")
+-            }
+-            Self::MetaSerialization(source) => write!(f, "serialize meta.json failed: {source}"),
+-            Self::PackageSerialization(source) => {
+-                write!(f, "serialize package.json failed: {source}")
+-            }
+-            Self::InvalidBundledMeta(source) => write!(f, "invalid bundled meta.json: {source}"),
+-        }
+-    }
+-}
+-
+-impl std::error::Error for MiniAppBuiltinIoError {
+-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+-        match self {
+-            Self::Io { source, .. } => Some(source),
+-            Self::MarkerSerialization(source)
+-            | Self::MetaSerialization(source)
+-            | Self::PackageSerialization(source)
+-            | Self::InvalidBundledMeta(source) => Some(source),
+-        }
+-    }
+-}
+-
+-pub type MiniAppBuiltinIoResult<T> = Result<T, MiniAppBuiltinIoError>;
+-
+-pub async fn read_builtin_install_marker(path: &Path) -> MiniAppBuiltinIoResult<Option<BuiltinInstallMarker>> {
+-    let content = match tokio::fs::read_to_string(path).await {
+-        Ok(content) => content,
+-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+-        Err(source) => {
+-            return Err(MiniAppBuiltinIoError::Io {
+-                action: "read builtin marker",
+-                path: path.to_path_buf(),
+-                source,
+-            });
+-        }
+-    };
+-
+-    match parse_builtin_install_marker(&content) {
+-        Ok(marker) => Ok(Some(marker)),
+-        Err(error) => {
+-            tracing::warn!("ignore invalid builtin miniapp marker {}: {}", path.display(), error);
+-            Ok(None)
+-        }
+-    }
+-}
+-
+-pub async fn write_builtin_install_marker(path: &Path, marker: &BuiltinInstallMarker) -> MiniAppBuiltinIoResult<()> {
+-    let content = serialize_builtin_install_marker(marker).map_err(MiniAppBuiltinIoError::MarkerSerialization)?;
+-    write_text_file(path, &content).await
+-}
+-
+-pub async fn write_legacy_builtin_version_marker(app_dir: &Path, legacy_version: &str) -> MiniAppBuiltinIoResult<()> {
+-    write_text_file(&app_dir.join(LEGACY_BUILTIN_VERSION_MARKER), legacy_version).await
+-}
+-
+-pub async fn prepare_builtin_seed_bundle_files(
+-    app_dir: &Path,
+-    app: &BuiltinMiniAppBundle,
+-    now: i64,
+-) -> MiniAppBuiltinIoResult<()> {
+-    let source_dir = app_dir.join("source");
+-    tokio::fs::create_dir_all(&source_dir)
+-        .await
+-        .map_err(|source| MiniAppBuiltinIoError::Io {
+-            action: "create dir",
+-            path: source_dir.clone(),
+-            source,
+-        })?;
+-
+-    let meta_path = app_dir.join("meta.json");
+-    let existing_meta_json = tokio::fs::read_to_string(&meta_path).await.ok();
+-    let meta = build_builtin_seed_meta(app, preserved_builtin_created_at(existing_meta_json.as_deref()), now)
+-        .map_err(MiniAppBuiltinIoError::InvalidBundledMeta)?;
+-    let meta_json = serde_json::to_string_pretty(&meta).map_err(MiniAppBuiltinIoError::MetaSerialization)?;
+-    write_text_file(&meta_path, &meta_json).await?;
+-
+-    for (file_name, content) in builtin_source_files(app) {
+-        write_text_file(&source_dir.join(file_name), content).await?;
+-    }
+-
+-    let pkg = build_builtin_package_json(app.id);
+-    let pkg_json = serde_json::to_string_pretty(&pkg).map_err(MiniAppBuiltinIoError::PackageSerialization)?;
+-    write_text_file(&app_dir.join("package.json"), &pkg_json).await?;
+-
+-    let storage_path = app_dir.join("storage.json");
+-    if !storage_path.exists() {
+-        write_text_file(&storage_path, "{}").await?;
+-    }
+-
+-    write_text_file(&app_dir.join("compiled.html"), BUILTIN_PLACEHOLDER_COMPILED_HTML).await
+-}
+-
+-pub async fn write_text_file(path: &Path, content: &str) -> MiniAppBuiltinIoResult<()> {
+-    tokio::fs::write(path, content)
+-        .await
+-        .map_err(|source| MiniAppBuiltinIoError::Io {
+-            action: "write",
+-            path: path.to_path_buf(),
+-            source,
+-        })
+-}
+-
+-pub fn builtin_marker_path(app_dir: &Path) -> PathBuf {
+-    app_dir.join(BUILTIN_INSTALL_MARKER)
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_product_domains::miniapp::builtin::BUILTIN_APPS;
+-
+-    fn scratch_dir(label: &str) -> PathBuf {
+-        let unique = std::time::SystemTime::now()
+-            .duration_since(std::time::UNIX_EPOCH)
+-            .expect("system clock before unix epoch")
+-            .as_nanos();
+-        let path = std::env::temp_dir().join(format!("northhing-miniapp-builtin-io-{label}-{unique}"));
+-        std::fs::create_dir_all(&path).expect("create scratch dir");
+-        path
+-    }
+-
+-    #[tokio::test]
+-    async fn marker_io_ignores_invalid_marker_and_round_trips_valid_marker() {
+-        let dir = scratch_dir("marker");
+-        let path = builtin_marker_path(&dir);
+-        write_text_file(&path, "not-json").await.unwrap();
+-        assert!(read_builtin_install_marker(&path).await.unwrap().is_none());
+-
+-        let marker = BuiltinInstallMarker {
+-            version: 7,
+-            hash: "sha256:test".to_string(),
+-        };
+-        write_builtin_install_marker(&path, &marker).await.unwrap();
+-        assert_eq!(read_builtin_install_marker(&path).await.unwrap(), Some(marker));
+-
+-        let _ = tokio::fs::remove_dir_all(dir).await;
+-    }
+-
+-    #[tokio::test]
+-    async fn prepare_builtin_seed_bundle_files_preserves_existing_storage() {
+-        let dir = scratch_dir("bundle");
+-        write_text_file(&dir.join("storage.json"), r#"{"kept":true}"#)
+-            .await
+-            .unwrap();
+-
+-        prepare_builtin_seed_bundle_files(&dir, &BUILTIN_APPS[0], 1234)
+-            .await
+-            .unwrap();
+-
+-        assert!(dir.join("meta.json").exists());
+-        assert!(dir.join("source").join("index.html").exists());
+-        assert!(dir.join("package.json").exists());
+-        assert!(dir.join("compiled.html").exists());
+-        assert_eq!(
+-            tokio::fs::read_to_string(dir.join("storage.json")).await.unwrap(),
+-            r#"{"kept":true}"#
+-        );
+-
+-        let _ = tokio::fs::remove_dir_all(dir).await;
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/host_dispatch.rs b/src/crates/services/services-integrations/src/miniapp/host_dispatch.rs
+deleted file mode 100644
+index 4ddd584..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/host_dispatch.rs
++++ /dev/null
+@@ -1,746 +0,0 @@
+-//! Host-side dispatch for MiniApp framework primitives (`shell.exec`, `fs.*`, `os.info`,
+-//! `net.fetch`).
+-//!
+-//! Why this exists
+-//! ---------------
+-//! The original MiniApp design routed every `app.*` call through a Bun/Node Worker
+-//! (`resources/worker_host.js`). That gives apps a real V8 sandbox for arbitrary
+-//! `worker.js` code, but it forces every app — even ones that just want to shell out
+-//! to `git` — to depend on having Bun or Node installed and a worker runtime online.
+-//!
+-//! With this module the host can serve framework-primitive RPCs directly from Rust,
+-//! so MiniApps that only use `app.shell.exec` / `app.fs.*` / `app.net.fetch` can run
+-//! with `permissions.node.enabled = false` and no JS Worker at all.
+-//!
+-//! Routing rules (must match `useMiniAppBridge.ts`):
+-//! - `worker.call` for methods in `fs.*`, `shell.*`, `os.*`, `net.*` always go through
+-//!   the host. User `worker.js` cannot override these names anymore in node-disabled mode.
+-//! - All other methods (custom user RPCs and `storage.*`) keep going through the worker
+-//!   pool when the app has `node.enabled = true`. `storage.*` is served by the manager
+-//!   directly from the Tauri command layer regardless of node.enabled.
+-//!
+-//! Permission enforcement here mirrors `worker_host.js` exactly so the security
+-//! contract is identical regardless of the routing path.
+-
+-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+-pub use northhing_product_domains::miniapp::host_routing::is_host_primitive;
+-use northhing_product_domains::miniapp::host_routing::{
+-    command_basename_allowed, command_basename_for_allowlist, fs_policy_scopes, fs_resolved_path_allowed,
+-    host_allowed_by_allowlist, plan_fs_host_call, plan_fs_legacy_path_check, plan_shell_host_call,
+-    shell_exec_default_env, split_host_method, FsAccessMode, MiniAppFsHostCallPlan, MiniAppHostPlanError,
+-    MiniAppHostPlanErrorKind,
+-};
+-use northhing_product_domains::miniapp::permission_policy::{
+-    resolve_policy_with_request, MiniAppPermissionPolicyRequest,
+-};
+-use northhing_product_domains::miniapp::types::MiniAppPermissions;
+-use serde_json::{json, Value};
+-use std::fmt;
+-use std::path::{Path, PathBuf};
+-use std::time::Duration;
+-
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub enum MiniAppHostDispatchErrorKind {
+-    Parse,
+-    Validation,
+-    Io,
+-    Service,
+-}
+-
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct MiniAppHostDispatchError {
+-    kind: MiniAppHostDispatchErrorKind,
+-    message: String,
+-}
+-
+-impl MiniAppHostDispatchError {
+-    pub fn parse(message: impl Into<String>) -> Self {
+-        Self {
+-            kind: MiniAppHostDispatchErrorKind::Parse,
+-            message: message.into(),
+-        }
+-    }
+-
+-    pub fn validation(message: impl Into<String>) -> Self {
+-        Self {
+-            kind: MiniAppHostDispatchErrorKind::Validation,
+-            message: message.into(),
+-        }
+-    }
+-
+-    pub fn io(message: impl Into<String>) -> Self {
+-        Self {
+-            kind: MiniAppHostDispatchErrorKind::Io,
+-            message: message.into(),
+-        }
+-    }
+-
+-    pub fn service(message: impl Into<String>) -> Self {
+-        Self {
+-            kind: MiniAppHostDispatchErrorKind::Service,
+-            message: message.into(),
+-        }
+-    }
+-
+-    pub fn kind(&self) -> MiniAppHostDispatchErrorKind {
+-        self.kind
+-    }
+-
+-    pub fn message(&self) -> &str {
+-        &self.message
+-    }
+-}
+-
+-impl fmt::Display for MiniAppHostDispatchError {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        f.write_str(&self.message)
+-    }
+-}
+-
+-impl std::error::Error for MiniAppHostDispatchError {}
+-
+-pub type MiniAppHostDispatchResult<T> = Result<T, MiniAppHostDispatchError>;
+-
+-/// Dispatch a framework-primitive RPC on the host.
+-///
+-/// `perms` and the path arguments are used to build a permission policy with the
+-/// same shape `worker_host.js` consumes, then the namespace-specific handler is
+-/// invoked.
+-pub async fn dispatch_host(
+-    perms: &MiniAppPermissions,
+-    app_id: &str,
+-    app_data_dir: &Path,
+-    workspace_dir: Option<&Path>,
+-    granted_paths: &[PathBuf],
+-    method: &str,
+-    params: Value,
+-) -> MiniAppHostDispatchResult<Value> {
+-    let policy_request = MiniAppPermissionPolicyRequest::from_paths(app_id, app_data_dir, workspace_dir, granted_paths);
+-    let policy = resolve_policy_with_request(perms, &policy_request);
+-    let (ns, name) = split_host_method(method)
+-        .ok_or_else(|| MiniAppHostDispatchError::parse(format!("invalid method: {}", method)))?;
+-    match ns {
+-        "fs" => dispatch_fs(&policy, name, &params).await,
+-        "shell" => dispatch_shell(&policy, app_data_dir, workspace_dir, name, &params).await,
+-        "os" => dispatch_os(name).await,
+-        "net" => dispatch_net(&policy, name, &params).await,
+-        _ => Err(MiniAppHostDispatchError::validation(format!(
+-            "unsupported host namespace: {}",
+-            ns
+-        ))),
+-    }
+-}
+-
+-fn deny<S: Into<String>>(msg: S) -> MiniAppHostDispatchError {
+-    MiniAppHostDispatchError::validation(msg)
+-}
+-
+-/// Resolve a path to its canonical form. If the path itself doesn't exist (e.g.
+-/// `writeFile` to a brand new file), walk up to the closest existing parent,
+-/// canonicalize that, then re-append the remaining tail. Falls back to the
+-/// lexical input when nothing along the chain exists.
+-fn canonicalize_best_effort(p: &Path) -> PathBuf {
+-    if let Ok(c) = p.canonicalize() {
+-        return c;
+-    }
+-    let mut tail = PathBuf::new();
+-    let mut cur: PathBuf = p.to_path_buf();
+-    while let Some(parent) = cur.parent().map(Path::to_path_buf) {
+-        if parent.as_os_str().is_empty() {
+-            break;
+-        }
+-        if let Some(name) = cur.file_name() {
+-            let mut new_tail = PathBuf::from(name);
+-            new_tail.push(&tail);
+-            tail = new_tail;
+-        }
+-        if let Ok(c) = parent.canonicalize() {
+-            return c.join(tail);
+-        }
+-        cur = parent;
+-    }
+-    p.to_path_buf()
+-}
+-
+-/// A target path is allowed when its canonicalized form starts with one of the
+-/// canonicalized scope roots. Mirrors the worker_host.js check, but uses real
+-/// canonicalization so e.g. `/tmp/foo` on macOS (`/private/tmp/foo`) matches a
+-/// `/tmp` scope after both sides resolve symlinks.
+-fn path_allowed(policy: &Value, target: &Path, mode: FsAccessMode) -> bool {
+-    let scopes = fs_policy_scopes(policy, mode);
+-    if scopes.is_empty() {
+-        return false;
+-    }
+-    let resolved = canonicalize_best_effort(target);
+-    let resolved_scopes = scopes
+-        .into_iter()
+-        .map(PathBuf::from)
+-        .map(|scope| canonicalize_best_effort(&scope));
+-    fs_resolved_path_allowed(&resolved, resolved_scopes)
+-}
+-
+-fn host_plan_error(error: MiniAppHostPlanError) -> MiniAppHostDispatchError {
+-    match error.kind() {
+-        MiniAppHostPlanErrorKind::Parse => MiniAppHostDispatchError::parse(error.message().to_string()),
+-        MiniAppHostPlanErrorKind::Validation => MiniAppHostDispatchError::validation(error.message().to_string()),
+-    }
+-}
+-
+-fn resolve_shell_program(command: &str) -> PathBuf {
+-    let has_path_separator = command.contains('/') || command.contains('\\');
+-    if has_path_separator {
+-        return PathBuf::from(command);
+-    }
+-
+-    which::which(command).unwrap_or_else(|_| PathBuf::from(command))
+-}
+-
+-async fn dispatch_fs(policy: &Value, name: &str, params: &Value) -> MiniAppHostDispatchResult<Value> {
+-    let legacy_path_check = plan_fs_legacy_path_check(name, params);
+-    if let Some(check) = &legacy_path_check {
+-        if !path_allowed(policy, &check.path, check.mode) {
+-            return Err(deny(check.denied_message()));
+-        }
+-    }
+-
+-    let plan = plan_fs_host_call(name, params).map_err(host_plan_error)?;
+-    for check in plan.path_checks() {
+-        if legacy_path_check
+-            .as_ref()
+-            .is_some_and(|legacy_check| legacy_check == &check)
+-        {
+-            continue;
+-        }
+-        if !path_allowed(policy, &check.path, check.mode) {
+-            return Err(deny(check.denied_message()));
+-        }
+-    }
+-
+-    match plan {
+-        MiniAppFsHostCallPlan::ReadFile {
+-            path: p,
+-            encoding_base64,
+-        } => {
+-            let bytes = tokio::fs::read(&p)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("readFile {}: {}", p.display(), e)))?;
+-            if encoding_base64 {
+-                Ok(Value::String(BASE64.encode(&bytes)))
+-            } else {
+-                Ok(Value::String(String::from_utf8_lossy(&bytes).into_owned()))
+-            }
+-        }
+-        MiniAppFsHostCallPlan::WriteFile { path: p, data } => {
+-            tokio::fs::write(&p, data)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("writeFile {}: {}", p.display(), e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::ReadDir { path: p } => {
+-            let mut rd = tokio::fs::read_dir(&p)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("readdir {}: {}", p.display(), e)))?;
+-            let mut out = Vec::new();
+-            while let Some(entry) = rd
+-                .next_entry()
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(e.to_string()))?
+-            {
+-                let ft = entry.file_type().await.ok();
+-                out.push(json!({
+-                    "name": entry.file_name().to_string_lossy(),
+-                    "path": entry.path().to_string_lossy(),
+-                    "isDirectory": ft.map(|t| t.is_dir()).unwrap_or(false),
+-                }));
+-            }
+-            Ok(Value::Array(out))
+-        }
+-        MiniAppFsHostCallPlan::Stat { path: p } => {
+-            let meta = tokio::fs::metadata(&p)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("stat {}: {}", p.display(), e)))?;
+-            Ok(json!({
+-                "size": meta.len(),
+-                "isDirectory": meta.is_dir(),
+-                "isFile": meta.is_file(),
+-            }))
+-        }
+-        MiniAppFsHostCallPlan::Mkdir { path: p, recursive } => {
+-            (if recursive {
+-                tokio::fs::create_dir_all(&p).await
+-            } else {
+-                tokio::fs::create_dir(&p).await
+-            })
+-            .map_err(|e| MiniAppHostDispatchError::io(format!("mkdir {}: {}", p.display(), e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::Rm {
+-            path: p,
+-            recursive,
+-            force,
+-        } => {
+-            let result = match tokio::fs::metadata(&p).await {
+-                Ok(m) if m.is_dir() => {
+-                    if recursive {
+-                        tokio::fs::remove_dir_all(&p).await
+-                    } else {
+-                        tokio::fs::remove_dir(&p).await
+-                    }
+-                }
+-                Ok(_) => tokio::fs::remove_file(&p).await,
+-                Err(e) => {
+-                    if force {
+-                        return Ok(Value::Null);
+-                    }
+-                    return Err(MiniAppHostDispatchError::io(format!("rm {}: {}", p.display(), e)));
+-                }
+-            };
+-            result.map_err(|e| MiniAppHostDispatchError::io(format!("rm {}: {}", p.display(), e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::CopyFile { src, dst } => {
+-            tokio::fs::copy(&src, &dst)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("copyFile: {}", e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::Rename {
+-            old_path: oldp,
+-            new_path: newp,
+-        } => {
+-            tokio::fs::rename(&oldp, &newp)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("rename: {}", e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::AppendFile { path: p, data } => {
+-            use tokio::io::AsyncWriteExt;
+-            let mut f = tokio::fs::OpenOptions::new()
+-                .create(true)
+-                .append(true)
+-                .open(&p)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("appendFile open: {}", e)))?;
+-            f.write_all(data.as_bytes())
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("appendFile write: {}", e)))?;
+-            Ok(Value::Null)
+-        }
+-        MiniAppFsHostCallPlan::Access { path: p } => {
+-            tokio::fs::metadata(&p)
+-                .await
+-                .map_err(|e| MiniAppHostDispatchError::io(format!("access {}: {}", p.display(), e)))?;
+-            Ok(Value::Null)
+-        }
+-    }
+-}
+-
+-async fn dispatch_shell(
+-    policy: &Value,
+-    app_data_dir: &Path,
+-    workspace_dir: Option<&Path>,
+-    name: &str,
+-    params: &Value,
+-) -> MiniAppHostDispatchResult<Value> {
+-    // Two input shapes are supported:
+-    //   1. `{ command: "git status" }` — runs through the platform shell (sh -c / cmd /C).
+-    //   2. `{ args: ["git", "rev-parse", "--is-inside-work-tree"] }` — spawns the program
+-    //      directly with no shell. This is the cross-platform safe form: callers no longer
+-    //      need to worry about per-shell quoting (single quotes from sh do not work under
+-    //      cmd.exe on Windows, which previously broke `builtin-coding-selfie` git scans).
+-    let plan = plan_shell_host_call(name, params, workspace_dir, app_data_dir).map_err(host_plan_error)?;
+-
+-    // Allowlist check: take the program name (basename of the first token, sans
+-    // extension) and require it to be in `policy.shell.allow`.
+-    let allow: Vec<String> = policy
+-        .get("shell")
+-        .and_then(|v| v.get("allow"))
+-        .and_then(|v| v.as_array())
+-        .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+-        .unwrap_or_default();
+-    let base = command_basename_for_allowlist(&plan.first_token);
+-    if !command_basename_allowed(&allow, &base) {
+-        return Err(deny(format!("Command not in allowlist: {}", base)));
+-    }
+-
+-    // Reject string-mode commands that contain shell metacharacters. Without
+-    // this, an allowlisted `git` miniapp could run `git status && del /s /q C:\`
+-    // because the whole string is handed to `cmd /C` / `sh -c`. Newlines are
+-    // also rejected since they act as command separators in shell string mode
+-    // (e.g. "git status\nrm -rf /" would pass the first-token allowlist but
+-    // inject a second command). The safe form is the `args` array, which spawns
+-    // the program directly without a shell.
+-    if plan.argv.is_none() {
+-        let metacharacters = ['&', '|', ';', '>', '<', '`', '$', '(', ')', '\n', '\r'];
+-        if plan.command.chars().any(|c| metacharacters.contains(&c)) {
+-            return Err(deny(format!(
+-                "String-mode shell.exec command contains shell metacharacters and will not be executed: '{}'. Pass 'args' array instead to bypass the shell.",
+-                plan.command
+-            )));
+-        }
+-    }
+-
+-    let mut cmd = if let Some(argv) = plan.argv.as_ref() {
+-        let program = resolve_shell_program(&argv[0]);
+-        let mut c = northhing_services_core::process_manager::create_tokio_command(program.as_os_str());
+-        if argv.len() > 1 {
+-            c.args(&argv[1..]);
+-        }
+-        c
+-    } else {
+-        #[cfg(target_os = "windows")]
+-        {
+-            let mut c = northhing_services_core::process_manager::create_tokio_command("cmd");
+-            c.args(["/C", &plan.command]);
+-            c
+-        }
+-        #[cfg(not(target_os = "windows"))]
+-        {
+-            let mut c = northhing_services_core::process_manager::create_tokio_command("sh");
+-            c.args(["-c", &plan.command]);
+-            c
+-        }
+-    };
+-    cmd.current_dir(&plan.cwd);
+-    // Match worker_host.js: never let git prompt for credentials, force C locale so
+-    // stdout parsing is deterministic.
+-    for (key, value) in shell_exec_default_env() {
+-        cmd.env(key, value);
+-    }
+-
+-    let output = tokio::time::timeout(Duration::from_millis(plan.timeout_ms), cmd.output())
+-        .await
+-        .map_err(|_| MiniAppHostDispatchError::service(format!("shell.exec timed out after {}ms", plan.timeout_ms)))?
+-        .map_err(|e| MiniAppHostDispatchError::service(format!("shell.exec spawn failed: {}", e)))?;
+-
+-    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+-    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+-    let code = output.status.code().unwrap_or(-1);
+-
+-    if !output.status.success() {
+-        // Mirror worker_host.js (which uses Node `execAsync`, rejecting on non-zero
+-        // exit with stderr in the message).
+-        let msg = if !stderr.trim().is_empty() {
+-            stderr.trim().to_string()
+-        } else {
+-            format!("shell.exec exit {}", code)
+-        };
+-        return Err(MiniAppHostDispatchError::service(msg));
+-    }
+-
+-    Ok(json!({ "stdout": stdout, "stderr": stderr, "exit_code": code }))
+-}
+-
+-async fn dispatch_os(name: &str) -> MiniAppHostDispatchResult<Value> {
+-    if name != "info" {
+-        return Err(MiniAppHostDispatchError::validation(format!(
+-            "unknown os method: {}",
+-            name
+-        )));
+-    }
+-    let platform = if cfg!(target_os = "macos") {
+-        "darwin"
+-    } else if cfg!(target_os = "windows") {
+-        "win32"
+-    } else {
+-        "linux"
+-    };
+-    let cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
+-    Ok(json!({
+-        "platform": platform,
+-        "homedir": dirs::home_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
+-        "tmpdir": std::env::temp_dir().to_string_lossy(),
+-        "cpus": cpus,
+-        // memory stats are not available without an extra crate; report 0 for parity
+-        // with `os.totalmem()` semantics ("unknown") rather than failing the call.
+-        "totalmem": 0u64,
+-        "freemem": 0u64,
+-    }))
+-}
+-
+-async fn dispatch_net(policy: &Value, name: &str, params: &Value) -> MiniAppHostDispatchResult<Value> {
+-    if name != "fetch" {
+-        return Err(MiniAppHostDispatchError::validation(format!(
+-            "unknown net method: {}",
+-            name
+-        )));
+-    }
+-    let url = params.get("url").and_then(|v| v.as_str()).unwrap_or("");
+-    if url.is_empty() {
+-        return Err(MiniAppHostDispatchError::parse("missing url"));
+-    }
+-    let parsed =
+-        reqwest::Url::parse(url).map_err(|e| MiniAppHostDispatchError::parse(format!("invalid url: {}", e)))?;
+-    let host = parsed.host_str().unwrap_or("").to_string();
+-
+-    let allow: Vec<String> = policy
+-        .get("net")
+-        .and_then(|v| v.get("allow"))
+-        .and_then(|v| v.as_array())
+-        .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+-        .unwrap_or_default();
+-    if !host_allowed_by_allowlist(&allow, &host) {
+-        return Err(deny(format!("Domain not in allowlist: {}", host)));
+-    }
+-
+-    let method = params.get("method").and_then(|v| v.as_str()).unwrap_or("GET");
+-    let client = reqwest::Client::new();
+-    let req_method = reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET);
+-    let mut req = client.request(req_method, url);
+-    if let Some(headers) = params.get("headers").and_then(|v| v.as_object()) {
+-        for (k, v) in headers {
+-            if let Some(vs) = v.as_str() {
+-                req = req.header(k, vs);
+-            }
+-        }
+-    }
+-    if let Some(body) = params.get("body").and_then(|v| v.as_str()) {
+-        req = req.body(body.to_string());
+-    }
+-
+-    let res = req
+-        .send()
+-        .await
+-        .map_err(|e| MiniAppHostDispatchError::service(format!("net.fetch: {}", e)))?;
+-    let status = res.status().as_u16();
+-    let mut headers_out = serde_json::Map::new();
+-    for (k, v) in res.headers() {
+-        if let Ok(vs) = v.to_str() {
+-            headers_out.insert(k.as_str().to_string(), Value::String(vs.to_string()));
+-        }
+-    }
+-    let body = res
+-        .text()
+-        .await
+-        .map_err(|e| MiniAppHostDispatchError::service(format!("net.fetch read: {}", e)))?;
+-    Ok(json!({
+-        "status": status,
+-        "headers": Value::Object(headers_out),
+-        "body": body,
+-    }))
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_product_domains::miniapp::types::{MiniAppPermissions, ShellPermissions};
+-
+-    #[test]
+-    fn command_basename_allows_windows_git_executable_paths() {
+-        assert_eq!(
+-            command_basename_for_allowlist(r"C:\Program Files\Git\cmd\git.exe"),
+-            "git"
+-        );
+-        assert_eq!(command_basename_for_allowlist("git.exe"), "git");
+-        assert_eq!(command_basename_for_allowlist("/usr/bin/git"), "git");
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_runs_git_with_workspace_cwd() {
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "args": ["git", "rev-parse", "--is-inside-work-tree"],
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await
+-        .expect("git rev-parse should run in the repository workspace");
+-
+-        assert_eq!(
+-            result.get("stdout").and_then(Value::as_str).unwrap_or("").trim(),
+-            "true"
+-        );
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_rejects_string_mode_with_shell_metacharacters() {
+-        // An allowlisted `git` miniapp must NOT be able to chain arbitrary
+-        // commands via shell metacharacters when using string mode.
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "command": "git status && del /s /q C:\\",
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await;
+-
+-        assert!(
+-            result.is_err(),
+-            "string-mode command with shell metacharacters should be denied"
+-        );
+-        let err = result.unwrap_err();
+-        assert_eq!(err.kind(), MiniAppHostDispatchErrorKind::Validation);
+-        assert!(
+-            err.message().contains("metacharacters"),
+-            "error should mention metacharacters, got: {}",
+-            err.message()
+-        );
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_rejects_string_mode_with_newline_injection() {
+-        // A newline acts as a command separator in string mode. Even when the
+-        // first token is allowlisted, "git status\nrm -rf /" should be denied.
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "command": "git status\nrm -rf /",
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await;
+-
+-        assert!(
+-            result.is_err(),
+-            "string-mode command with newline injection should be denied"
+-        );
+-        let err = result.unwrap_err();
+-        assert_eq!(err.kind(), MiniAppHostDispatchErrorKind::Validation);
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_rejects_string_mode_with_crlf_injection() {
+-        // Carriage return is also a command separator in string mode.
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "command": "git status\r\nrm -rf /",
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await;
+-
+-        assert!(
+-            result.is_err(),
+-            "string-mode command with CRLF injection should be denied"
+-        );
+-        let err = result.unwrap_err();
+-        assert_eq!(err.kind(), MiniAppHostDispatchErrorKind::Validation);
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_allows_args_array_with_newline_in_arg() {
+-        // When using the args-array form, the newline is passed as argv and
+-        // does NOT go through a shell, so it is safe.
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "args": ["git", "log", "--format=%s\n%s"],
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await;
+-
+-        // Should succeed — argv bypasses the shell, newline is just an arg.
+-        assert!(
+-            result.is_ok(),
+-            "args-array form with newline in argument should be allowed, got: {:?}",
+-            result
+-        );
+-    }
+-
+-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+-    async fn host_shell_exec_allows_clean_string_mode_command() {
+-        // A clean string-mode command with no metacharacters should be allowed.
+-        let workspace_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+-        let perms = MiniAppPermissions {
+-            shell: Some(ShellPermissions {
+-                allow: Some(vec!["git".to_string()]),
+-            }),
+-            ..Default::default()
+-        };
+-
+-        let result = dispatch_host(
+-            &perms,
+-            "builtin-coding-selfie",
+-            workspace_dir,
+-            Some(workspace_dir),
+-            &[],
+-            "shell.exec",
+-            json!({
+-                "command": "git status",
+-                "cwd": workspace_dir.to_string_lossy(),
+-                "timeout": 8000,
+-            }),
+-        )
+-        .await;
+-
+-        assert!(
+-            result.is_ok(),
+-            "clean string-mode command should be allowed, got: {:?}",
+-            result
+-        );
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/mod.rs b/src/crates/services/services-integrations/src/miniapp/mod.rs
+deleted file mode 100644
+index 56922e9..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/mod.rs
++++ /dev/null
+@@ -1,12 +0,0 @@
+-//! MiniApp concrete integration services.
+-
+-pub mod builtin_io;
+-pub mod host_dispatch;
+-pub mod storage;
+-pub mod storage_app_io;
+-pub mod storage_drafts;
+-pub mod storage_imports_io;
+-pub mod storage_port;
+-pub mod storage_tests;
+-pub mod worker;
+-pub mod worker_pool;
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage.rs b/src/crates/services/services-integrations/src/miniapp/storage.rs
+deleted file mode 100644
+index 634d3a3..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage.rs
++++ /dev/null
+@@ -1,199 +0,0 @@
+-//! MiniApp storage - persist and load MiniApp data under user data dir.
+-//!
+-//! After R38c this file holds only the foundational types (error enums,
+-//! service struct, layout/path accessors) and a thin set of cross-sibling
+-//! helpers (`delete`, customization metadata, drafts helpers). The port
+-//! adapter lives in `storage_port.rs`, import-bundle IO lives in
+-//! `storage_imports_io.rs`, app IO in `storage_app_io.rs`, draft IO in
+-//! `storage_drafts.rs`, and the unit tests in `storage_tests.rs`.
+-
+-pub use northhing_product_domains::miniapp::customization::MiniAppCustomizationMetadata;
+-use northhing_product_domains::miniapp::storage::{MiniAppStorageLayout, DRAFTS_CLEANUP_MARKER};
+-pub use northhing_product_domains::miniapp::types::{MiniApp, MiniAppMeta, MiniAppSource, NpmDep};
+-use serde_json;
+-use std::path::{Path, PathBuf};
+-
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub enum MiniAppStorageErrorKind {
+-    NotFound,
+-    Validation,
+-    Deserialization,
+-    Io,
+-    Backend,
+-}
+-
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct MiniAppStorageError {
+-    kind: MiniAppStorageErrorKind,
+-    message: String,
+-}
+-
+-impl MiniAppStorageError {
+-    pub fn new(kind: MiniAppStorageErrorKind, message: impl ToString) -> Self {
+-        Self {
+-            kind,
+-            message: message.to_string(),
+-        }
+-    }
+-
+-    pub fn not_found(message: impl ToString) -> Self {
+-        Self::new(MiniAppStorageErrorKind::NotFound, message)
+-    }
+-
+-    pub fn validation(message: impl ToString) -> Self {
+-        Self::new(MiniAppStorageErrorKind::Validation, message)
+-    }
+-
+-    pub fn parse(message: impl ToString) -> Self {
+-        Self::new(MiniAppStorageErrorKind::Deserialization, message)
+-    }
+-
+-    pub fn io(message: impl ToString) -> Self {
+-        Self::new(MiniAppStorageErrorKind::Io, message)
+-    }
+-
+-    pub fn kind(&self) -> MiniAppStorageErrorKind {
+-        self.kind
+-    }
+-
+-    pub fn message(&self) -> &str {
+-        &self.message
+-    }
+-}
+-
+-impl std::fmt::Display for MiniAppStorageError {
+-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+-        f.write_str(&self.message)
+-    }
+-}
+-
+-impl std::error::Error for MiniAppStorageError {}
+-
+-pub type MiniAppStorageResult<T> = Result<T, MiniAppStorageError>;
+-
+-/// MiniApp storage service (file-based under the MiniApp data directory).
+-pub struct MiniAppStorage {
+-    miniapps_dir: PathBuf,
+-}
+-
+-impl MiniAppStorage {
+-    pub fn new(miniapps_dir: PathBuf) -> Self {
+-        Self { miniapps_dir }
+-    }
+-
+-    /// Cross-sibling accessor for the private root directory (R37d facade pattern).
+-    pub(super) fn miniapps_dir_handle(&self) -> &PathBuf {
+-        &self.miniapps_dir
+-    }
+-
+-    pub(super) fn layout(&self, app_id: &str) -> MiniAppStorageLayout {
+-        MiniAppStorageLayout::new(&self.miniapps_dir, app_id)
+-    }
+-
+-    pub(super) fn app_dir(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).app_dir()
+-    }
+-
+-    pub(super) fn meta_path(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).meta_path()
+-    }
+-
+-    pub(super) fn source_dir(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).source_dir()
+-    }
+-
+-    pub(super) fn compiled_path(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).compiled_path()
+-    }
+-
+-    pub(super) fn storage_path(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).storage_path()
+-    }
+-
+-    pub(super) fn version_path(&self, app_id: &str, version: u32) -> PathBuf {
+-        self.layout(app_id).version_path(version)
+-    }
+-
+-    pub fn drafts_root(&self) -> PathBuf {
+-        MiniAppStorageLayout::drafts_root(&self.miniapps_dir)
+-    }
+-
+-    pub fn app_drafts_dir(&self, app_id: &str) -> PathBuf {
+-        MiniAppStorageLayout::app_drafts_dir(&self.miniapps_dir, app_id)
+-    }
+-
+-    pub fn draft_dir(&self, app_id: &str, draft_id: &str) -> PathBuf {
+-        MiniAppStorageLayout::draft_dir(&self.miniapps_dir, app_id, draft_id)
+-    }
+-
+-    pub(super) fn cleanup_drafts_root(&self) -> PathBuf {
+-        MiniAppStorageLayout::cleanup_drafts_root(&self.miniapps_dir, &uuid::Uuid::new_v4().to_string())
+-    }
+-
+-    pub(super) fn cleanup_marker_path(&self, drafts_root: &Path) -> PathBuf {
+-        drafts_root.join(DRAFTS_CLEANUP_MARKER)
+-    }
+-
+-    pub(super) fn draft_not_found(app_id: &str, draft_id: &str) -> MiniAppStorageError {
+-        MiniAppStorageError::not_found(format!("MiniApp draft not found: {}/{}", app_id, draft_id))
+-    }
+-
+-    pub(super) fn ensure_active_drafts_root_readable(&self, app_id: &str, draft_id: &str) -> MiniAppStorageResult<()> {
+-        if self.cleanup_marker_path(&self.drafts_root()).exists() {
+-            return Err(Self::draft_not_found(app_id, draft_id));
+-        }
+-        Ok(())
+-    }
+-
+-    pub(super) fn draft_source_dir(&self, app_id: &str, draft_id: &str) -> PathBuf {
+-        MiniAppStorageLayout::draft_source_dir(&self.miniapps_dir, app_id, draft_id)
+-    }
+-
+-    pub(super) fn customization_path(&self, app_id: &str) -> PathBuf {
+-        self.layout(app_id).customization_path()
+-    }
+-
+-    pub async fn load_customization_metadata(
+-        &self,
+-        app_id: &str,
+-    ) -> MiniAppStorageResult<Option<MiniAppCustomizationMetadata>> {
+-        let path = self.customization_path(app_id);
+-        if !path.exists() {
+-            return Ok(None);
+-        }
+-        let content = tokio::fs::read_to_string(&path)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read customization metadata: {}", e)))?;
+-        serde_json::from_str(&content)
+-            .map(Some)
+-            .map_err(|e| MiniAppStorageError::parse(format!("Invalid customization metadata: {}", e)))
+-    }
+-
+-    pub async fn save_customization_metadata(
+-        &self,
+-        app_id: &str,
+-        metadata: &MiniAppCustomizationMetadata,
+-    ) -> MiniAppStorageResult<()> {
+-        self.ensure_app_dir(app_id).await?;
+-        let json = serde_json::to_string_pretty(metadata).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(self.customization_path(app_id), json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write customization metadata: {}", e)))?;
+-        Ok(())
+-    }
+-    pub async fn delete(&self, app_id: &str) -> MiniAppStorageResult<()> {
+-        let dir = self.app_dir(app_id);
+-        if dir.exists() {
+-            tokio::fs::remove_dir_all(&dir)
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to delete miniapp dir: {}", e)))?;
+-        }
+-        let drafts_dir = self.app_drafts_dir(app_id);
+-        if drafts_dir.exists() {
+-            tokio::fs::remove_dir_all(&drafts_dir)
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to delete miniapp drafts: {}", e)))?;
+-        }
+-        Ok(())
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage_app_io.rs b/src/crates/services/services-integrations/src/miniapp/storage_app_io.rs
+deleted file mode 100644
+index 698c8bc..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage_app_io.rs
++++ /dev/null
+@@ -1,327 +0,0 @@
+-//! MiniApp storage app IO methods (split from storage.rs in R37d).
+-//!
+-//! Owns app CRUD, source/package file IO, version snapshots, app storage (KV),
+-//! and customization metadata IO. Drafts and import bundle IO live in
+-//! `storage_drafts.rs`; the import bundle methods (`read_import_meta_json`,
+-//! `write_import_bundle`) stay inline in `storage.rs` because the boundary
+-//! `required-rules` anchor them there.
+-
+-use super::storage::{MiniApp, MiniAppMeta, MiniAppSource, MiniAppStorageError, MiniAppStorageResult, NpmDep};
+-use northhing_product_domains::miniapp::storage::{
+-    build_package_json, parse_npm_dependencies, COMPILED_HTML, ESM_DEPS_JSON, INDEX_HTML, META_JSON, PACKAGE_JSON,
+-    STORAGE_JSON, STYLE_CSS, UI_JS, WORKER_JS,
+-};
+-use std::path::PathBuf;
+-
+-impl super::storage::MiniAppStorage {
+-    pub async fn ensure_app_dir(&self, app_id: &str) -> MiniAppStorageResult<()> {
+-        let dir = self.app_dir(app_id);
+-        let source = self.source_dir(app_id);
+-        tokio::fs::create_dir_all(&dir)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to create miniapp dir {}: {}", dir.display(), e)))?;
+-        tokio::fs::create_dir_all(&source)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to create source dir {}: {}", source.display(), e)))?;
+-        Ok(())
+-    }
+-    pub async fn list_app_ids(&self) -> MiniAppStorageResult<Vec<String>> {
+-        let root = self.miniapps_dir_handle();
+-        if !root.exists() {
+-            return Ok(Vec::new());
+-        }
+-        let mut ids = Vec::new();
+-        let mut read_dir = tokio::fs::read_dir(&root)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read miniapps dir: {}", e)))?;
+-        while let Some(entry) = read_dir
+-            .next_entry()
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read miniapps entry: {}", e)))?
+-        {
+-            let path = entry.path();
+-            if path.is_dir() {
+-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+-                    if !name.starts_with('.') {
+-                        ids.push(name.to_string());
+-                    }
+-                }
+-            }
+-        }
+-        Ok(ids)
+-    }
+-    pub async fn load(&self, app_id: &str) -> MiniAppStorageResult<MiniApp> {
+-        let meta_path = self.meta_path(app_id);
+-        let meta_content = tokio::fs::read_to_string(&meta_path).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                MiniAppStorageError::not_found(format!("MiniApp not found: {}", app_id))
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read meta: {}", e))
+-            }
+-        })?;
+-        let meta: MiniAppMeta = serde_json::from_str(&meta_content)
+-            .map_err(|e| MiniAppStorageError::parse(format!("Invalid meta.json: {}", e)))?;
+-
+-        let source = self.load_source(app_id).await?;
+-        let compiled_html = self.load_compiled_html(app_id).await?;
+-
+-        Ok(MiniApp {
+-            id: meta.id,
+-            name: meta.name,
+-            description: meta.description,
+-            icon: meta.icon,
+-            category: meta.category,
+-            tags: meta.tags,
+-            version: meta.version,
+-            created_at: meta.created_at,
+-            updated_at: meta.updated_at,
+-            source,
+-            compiled_html,
+-            permissions: meta.permissions,
+-            ai_context: meta.ai_context,
+-            runtime: meta.runtime,
+-            i18n: meta.i18n,
+-        })
+-    }
+-    pub async fn load_meta(&self, app_id: &str) -> MiniAppStorageResult<MiniAppMeta> {
+-        let meta_path = self.meta_path(app_id);
+-        let content = tokio::fs::read_to_string(&meta_path).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                MiniAppStorageError::not_found(format!("MiniApp not found: {}", app_id))
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read meta: {}", e))
+-            }
+-        })?;
+-        serde_json::from_str(&content).map_err(|e| MiniAppStorageError::parse(format!("Invalid meta.json: {}", e)))
+-    }
+-    async fn load_source(&self, app_id: &str) -> MiniAppStorageResult<MiniAppSource> {
+-        self.load_source_from_dirs(self.source_dir(app_id), self.app_dir(app_id))
+-            .await
+-    }
+-    pub(super) async fn load_source_from_dirs(
+-        &self,
+-        source_dir: PathBuf,
+-        package_dir: PathBuf,
+-    ) -> MiniAppStorageResult<MiniAppSource> {
+-        let sd = source_dir;
+-        let html_path = sd.join(INDEX_HTML);
+-        let html = tokio::fs::read_to_string(&html_path).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                MiniAppStorageError::not_found(format!("MiniApp source index.html not found: {}", html_path.display()))
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read index.html: {}", e))
+-            }
+-        })?;
+-        let css = read_optional_source_file(&sd, STYLE_CSS).await?;
+-        let ui_js = read_optional_source_file(&sd, UI_JS).await?;
+-        let worker_js = read_optional_source_file(&sd, WORKER_JS).await?;
+-
+-        // Match on `ErrorKind::NotFound` (not an `.exists()` pre-check) so a
+-        // file deleted between check and read is treated as the legal empty
+-        // state, mirroring `read_optional_source_file`.
+-        let esm_dependencies_path = sd.join(ESM_DEPS_JSON);
+-        let esm_dependencies = match tokio::fs::read_to_string(&esm_dependencies_path).await {
+-            Ok(c) => serde_json::from_str(&c)
+-                .map_err(|e| MiniAppStorageError::parse(format!("Invalid esm_dependencies.json: {}", e)))?,
+-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+-            Err(e) => {
+-                return Err(MiniAppStorageError::io(format!("Failed to read esm_dependencies.json: {}", e)));
+-            }
+-        };
+-
+-        let npm_dependencies = self
+-            .load_npm_dependencies_from_package(package_dir.join(PACKAGE_JSON))
+-            .await?;
+-
+-        Ok(MiniAppSource {
+-            html,
+-            css,
+-            ui_js,
+-            esm_dependencies,
+-            worker_js,
+-            npm_dependencies,
+-        })
+-    }
+-    pub async fn load_source_only(&self, app_id: &str) -> MiniAppStorageResult<MiniAppSource> {
+-        self.load_source(app_id).await
+-    }
+-    async fn load_npm_dependencies_from_package(&self, p: PathBuf) -> MiniAppStorageResult<Vec<NpmDep>> {
+-        if !p.exists() {
+-            return Ok(Vec::new());
+-        }
+-        let c = tokio::fs::read_to_string(&p)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read package.json: {}", e)))?;
+-        parse_npm_dependencies(&c).map_err(|e| MiniAppStorageError::parse(format!("Invalid package.json: {}", e)))
+-    }
+-    async fn load_compiled_html(&self, app_id: &str) -> MiniAppStorageResult<String> {
+-        let p = self.compiled_path(app_id);
+-        tokio::fs::read_to_string(&p).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                MiniAppStorageError::not_found(format!("Compiled HTML not found: {}", app_id))
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read compiled.html: {}", e))
+-            }
+-        })
+-    }
+-    pub async fn save(&self, app: &MiniApp) -> MiniAppStorageResult<()> {
+-        self.save_app_files(&self.app_dir(&app.id), &self.source_dir(&app.id), app)
+-            .await
+-    }
+-    pub(super) async fn save_app_files(
+-        &self,
+-        app_dir: &std::path::Path,
+-        source_dir: &std::path::Path,
+-        app: &MiniApp,
+-    ) -> MiniAppStorageResult<()> {
+-        tokio::fs::create_dir_all(app_dir).await.map_err(|e| {
+-            MiniAppStorageError::io(format!("Failed to create miniapp dir {}: {}", app_dir.display(), e))
+-        })?;
+-        tokio::fs::create_dir_all(source_dir).await.map_err(|e| {
+-            MiniAppStorageError::io(format!("Failed to create source dir {}: {}", source_dir.display(), e))
+-        })?;
+-        let meta = MiniAppMeta::from(app);
+-        let meta_path = app_dir.join(META_JSON);
+-        let meta_json = serde_json::to_string_pretty(&meta).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(&meta_path, meta_json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write meta: {}", e)))?;
+-
+-        let sd = source_dir;
+-        tokio::fs::write(sd.join(INDEX_HTML), &app.source.html)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write index.html: {}", e)))?;
+-        tokio::fs::write(sd.join(STYLE_CSS), &app.source.css)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write style.css: {}", e)))?;
+-        tokio::fs::write(sd.join(UI_JS), &app.source.ui_js)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write ui.js: {}", e)))?;
+-        tokio::fs::write(sd.join(WORKER_JS), &app.source.worker_js)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write worker.js: {}", e)))?;
+-
+-        let esm_json =
+-            serde_json::to_string_pretty(&app.source.esm_dependencies).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(sd.join(ESM_DEPS_JSON), esm_json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write esm_dependencies.json: {}", e)))?;
+-
+-        self.write_package_json_to_dir(app_dir, &app.id, &app.source.npm_dependencies)
+-            .await?;
+-
+-        let storage_path = app_dir.join(STORAGE_JSON);
+-        if !storage_path.exists() {
+-            tokio::fs::write(&storage_path, "{}")
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to write storage.json: {}", e)))?;
+-        }
+-
+-        tokio::fs::write(app_dir.join(COMPILED_HTML), &app.compiled_html)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write compiled.html: {}", e)))?;
+-
+-        Ok(())
+-    }
+-    async fn write_package_json_to_dir(
+-        &self,
+-        app_dir: &std::path::Path,
+-        app_id: &str,
+-        deps: &[NpmDep],
+-    ) -> MiniAppStorageResult<()> {
+-        let pkg = build_package_json(app_id, deps);
+-        let json = serde_json::to_string_pretty(&pkg).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(app_dir.join(PACKAGE_JSON), json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write package.json: {}", e)))?;
+-        Ok(())
+-    }
+-    pub async fn save_version(&self, app_id: &str, version: u32, app: &MiniApp) -> MiniAppStorageResult<()> {
+-        let versions_dir = self.layout(app_id).versions_dir();
+-        tokio::fs::create_dir_all(&versions_dir)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to create versions dir: {}", e)))?;
+-        let path = self.version_path(app_id, version);
+-        let json = serde_json::to_string_pretty(app).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(&path, json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write version file: {}", e)))?;
+-        Ok(())
+-    }
+-    pub async fn load_app_storage(&self, app_id: &str) -> MiniAppStorageResult<serde_json::Value> {
+-        let p = self.storage_path(app_id);
+-        if !p.exists() {
+-            return Ok(serde_json::json!({}));
+-        }
+-        let c = tokio::fs::read_to_string(&p)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read storage: {}", e)))?;
+-        Ok(serde_json::from_str(&c).unwrap_or_else(|_| serde_json::json!({})))
+-    }
+-    pub async fn save_app_storage(
+-        &self,
+-        app_id: &str,
+-        key: &str,
+-        value: serde_json::Value,
+-    ) -> MiniAppStorageResult<()> {
+-        self.ensure_app_dir(app_id).await?;
+-        let mut current = self.load_app_storage(app_id).await?;
+-        let obj = current
+-            .as_object_mut()
+-            .ok_or_else(|| MiniAppStorageError::validation("App storage is not an object".to_string()))?;
+-        obj.insert(key.to_string(), value);
+-        let p = self.storage_path(app_id);
+-        let json = serde_json::to_string_pretty(&current).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(&p, json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write storage: {}", e)))?;
+-        Ok(())
+-    }
+-    pub async fn list_versions(&self, app_id: &str) -> MiniAppStorageResult<Vec<u32>> {
+-        let vdir = self.layout(app_id).versions_dir();
+-        if !vdir.exists() {
+-            return Ok(Vec::new());
+-        }
+-        let mut versions = Vec::new();
+-        let mut read_dir = tokio::fs::read_dir(&vdir)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read versions dir: {}", e)))?;
+-        while let Some(entry) = read_dir
+-            .next_entry()
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read versions entry: {}", e)))?
+-        {
+-            let name = entry.file_name();
+-            let name = name.to_string_lossy();
+-            if name.starts_with('v') && name.ends_with(".json") {
+-                if let Ok(n) = name[1..name.len() - 5].parse::<u32>() {
+-                    versions.push(n);
+-                }
+-            }
+-        }
+-        versions.sort();
+-        Ok(versions)
+-    }
+-    pub async fn load_version(&self, app_id: &str, version: u32) -> MiniAppStorageResult<MiniApp> {
+-        let p = self.version_path(app_id, version);
+-        let c = tokio::fs::read_to_string(&p).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                MiniAppStorageError::not_found(format!("Version v{} not found", version))
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read version: {}", e))
+-            }
+-        })?;
+-        serde_json::from_str(&c).map_err(|e| MiniAppStorageError::parse(format!("Invalid version file: {}", e)))
+-    }
+-}
+-
+-/// Read an optional MiniApp source file: a missing file is a legal empty
+-/// string, any other read failure is an IO error (never silently empty).
+-async fn read_optional_source_file(source_dir: &std::path::Path, name: &str) -> MiniAppStorageResult<String> {
+-    let path = source_dir.join(name);
+-    match tokio::fs::read_to_string(&path).await {
+-        Ok(content) => Ok(content),
+-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+-        Err(e) => Err(MiniAppStorageError::io(format!("Failed to read {}: {}", name, e))),
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage_drafts.rs b/src/crates/services/services-integrations/src/miniapp/storage_drafts.rs
+deleted file mode 100644
+index 5d3a5b2..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage_drafts.rs
++++ /dev/null
+@@ -1,239 +0,0 @@
+-//! MiniApp storage draft methods (split from storage.rs in R37d).
+-//!
+-//! Owns draft CRUD, draft storage (KV), and the stale-draft quarantine
+-//! machinery (mark-for-cleanup / cleanup / safe-path checks).
+-
+-use super::storage::{MiniApp, MiniAppMeta, MiniAppStorageError, MiniAppStorageResult};
+-use northhing_product_domains::miniapp::storage::{
+-    COMPILED_HTML, DRAFTS_CLEANUP_PREFIX, DRAFTS_DIR, DRAFT_JSON, META_JSON, STORAGE_JSON,
+-};
+-use std::path::{Path, PathBuf};
+-use std::time::Duration;
+-
+-impl super::storage::MiniAppStorage {
+-    pub async fn save_draft(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        app: &MiniApp,
+-        manifest: &serde_json::Value,
+-    ) -> MiniAppStorageResult<()> {
+-        self.ensure_active_drafts_root_writable().await?;
+-        let draft_dir = self.draft_dir(app_id, draft_id);
+-        let source_dir = self.draft_source_dir(app_id, draft_id);
+-        self.save_app_files(&draft_dir, &source_dir, app).await?;
+-        let manifest_json = serde_json::to_string_pretty(manifest).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(draft_dir.join(DRAFT_JSON), manifest_json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write draft.json: {}", e)))?;
+-        let storage_path = draft_dir.join(STORAGE_JSON);
+-        if !storage_path.exists() {
+-            tokio::fs::write(storage_path, "{}")
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to write draft storage: {}", e)))?;
+-        }
+-        Ok(())
+-    }
+-    pub async fn load_draft_app(&self, app_id: &str, draft_id: &str) -> MiniAppStorageResult<MiniApp> {
+-        self.ensure_active_drafts_root_readable(app_id, draft_id)?;
+-        let draft_dir = self.draft_dir(app_id, draft_id);
+-        let meta_content = tokio::fs::read_to_string(draft_dir.join(META_JSON))
+-            .await
+-            .map_err(|e| {
+-                if e.kind() == std::io::ErrorKind::NotFound {
+-                    Self::draft_not_found(app_id, draft_id)
+-                } else {
+-                    MiniAppStorageError::io(format!("Failed to read draft meta: {}", e))
+-                }
+-            })?;
+-        let meta: MiniAppMeta = serde_json::from_str(&meta_content)
+-            .map_err(|e| MiniAppStorageError::parse(format!("Invalid draft meta.json: {}", e)))?;
+-        let source = self
+-            .load_source_from_dirs(self.draft_source_dir(app_id, draft_id), draft_dir.clone())
+-            .await?;
+-        let compiled_html = tokio::fs::read_to_string(draft_dir.join(COMPILED_HTML))
+-            .await
+-            .map_err(|e| {
+-                if e.kind() == std::io::ErrorKind::NotFound {
+-                    MiniAppStorageError::not_found(format!(
+-                        "MiniApp draft compiled HTML not found: {}/{}",
+-                        app_id, draft_id
+-                    ))
+-                } else {
+-                    MiniAppStorageError::io(format!("Failed to read draft compiled.html: {}", e))
+-                }
+-            })?;
+-        Ok(MiniApp {
+-            id: meta.id,
+-            name: meta.name,
+-            description: meta.description,
+-            icon: meta.icon,
+-            category: meta.category,
+-            tags: meta.tags,
+-            version: meta.version,
+-            created_at: meta.created_at,
+-            updated_at: meta.updated_at,
+-            source,
+-            compiled_html,
+-            permissions: meta.permissions,
+-            ai_context: meta.ai_context,
+-            runtime: meta.runtime,
+-            i18n: meta.i18n,
+-        })
+-    }
+-    pub async fn load_draft_manifest(&self, app_id: &str, draft_id: &str) -> MiniAppStorageResult<serde_json::Value> {
+-        self.ensure_active_drafts_root_readable(app_id, draft_id)?;
+-        let path = self.draft_dir(app_id, draft_id).join(DRAFT_JSON);
+-        let content = tokio::fs::read_to_string(&path).await.map_err(|e| {
+-            if e.kind() == std::io::ErrorKind::NotFound {
+-                Self::draft_not_found(app_id, draft_id)
+-            } else {
+-                MiniAppStorageError::io(format!("Failed to read draft.json: {}", e))
+-            }
+-        })?;
+-        serde_json::from_str(&content).map_err(|e| MiniAppStorageError::parse(format!("Invalid draft.json: {}", e)))
+-    }
+-    pub async fn delete_draft(&self, app_id: &str, draft_id: &str) -> MiniAppStorageResult<()> {
+-        let dir = self.draft_dir(app_id, draft_id);
+-        if dir.exists() {
+-            tokio::fs::remove_dir_all(&dir)
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to delete miniapp draft: {}", e)))?;
+-        }
+-        Ok(())
+-    }
+-    pub async fn mark_stale_drafts_for_cleanup(&self) -> MiniAppStorageResult<Vec<PathBuf>> {
+-        let mut targets = self.collect_marked_drafts_roots().await?;
+-        if let Some(target) = self.isolate_active_drafts_root().await? {
+-            targets.push(target);
+-        }
+-        targets.sort();
+-        targets.dedup();
+-        Ok(targets)
+-    }
+-    pub async fn cleanup_marked_drafts(&self, targets: Vec<PathBuf>) -> MiniAppStorageResult<()> {
+-        for target in targets {
+-            if !self.is_cleanup_safe_drafts_root(&target) {
+-                continue;
+-            }
+-            if !self.cleanup_marker_path(&target).exists() {
+-                continue;
+-            }
+-            if target.exists() {
+-                tokio::fs::remove_dir_all(&target).await.map_err(|e| {
+-                    MiniAppStorageError::io(format!(
+-                        "Failed to clean marked miniapp drafts {}: {}",
+-                        target.display(),
+-                        e
+-                    ))
+-                })?;
+-            }
+-            tokio::time::sleep(Duration::from_millis(25)).await;
+-        }
+-        Ok(())
+-    }
+-    async fn ensure_active_drafts_root_writable(&self) -> MiniAppStorageResult<()> {
+-        if self.cleanup_marker_path(&self.drafts_root()).exists() {
+-            let _ = self.isolate_active_drafts_root().await?;
+-        }
+-        Ok(())
+-    }
+-    async fn collect_marked_drafts_roots(&self) -> MiniAppStorageResult<Vec<PathBuf>> {
+-        let root = self.miniapps_dir_handle();
+-        if !root.exists() {
+-            return Ok(Vec::new());
+-        }
+-        let mut targets = Vec::new();
+-        let mut read_dir = tokio::fs::read_dir(&root)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read miniapps dir: {}", e)))?;
+-        while let Some(entry) = read_dir
+-            .next_entry()
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read miniapps entry: {}", e)))?
+-        {
+-            let path = entry.path();
+-            let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+-                continue;
+-            };
+-            if name.starts_with(DRAFTS_CLEANUP_PREFIX) && path.is_dir() && self.cleanup_marker_path(&path).exists() {
+-                targets.push(path);
+-            }
+-        }
+-        Ok(targets)
+-    }
+-    async fn isolate_active_drafts_root(&self) -> MiniAppStorageResult<Option<PathBuf>> {
+-        let active = self.drafts_root();
+-        if !active.exists() {
+-            return Ok(None);
+-        }
+-        self.write_cleanup_marker(&active).await?;
+-        let target = self.cleanup_drafts_root();
+-        tokio::fs::rename(&active, &target).await.map_err(|e| {
+-            MiniAppStorageError::io(format!(
+-                "Failed to mark miniapp drafts for cleanup {} -> {}: {}",
+-                active.display(),
+-                target.display(),
+-                e
+-            ))
+-        })?;
+-        Ok(Some(target))
+-    }
+-    pub(super) async fn write_cleanup_marker(&self, drafts_root: &Path) -> MiniAppStorageResult<()> {
+-        tokio::fs::create_dir_all(drafts_root).await.map_err(|e| {
+-            MiniAppStorageError::io(format!(
+-                "Failed to create miniapp drafts dir {}: {}",
+-                drafts_root.display(),
+-                e
+-            ))
+-        })?;
+-        tokio::fs::write(self.cleanup_marker_path(drafts_root), "pending miniapp draft cleanup\n")
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to mark miniapp drafts: {}", e)))?;
+-        Ok(())
+-    }
+-    fn is_cleanup_safe_drafts_root(&self, path: &Path) -> bool {
+-        let root = self.miniapps_dir_handle();
+-        if !path.starts_with(root) {
+-            return false;
+-        }
+-        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+-            return false;
+-        };
+-        name == DRAFTS_DIR || name.starts_with(DRAFTS_CLEANUP_PREFIX)
+-    }
+-    pub async fn load_draft_storage(&self, app_id: &str, draft_id: &str) -> MiniAppStorageResult<serde_json::Value> {
+-        self.ensure_active_drafts_root_readable(app_id, draft_id)?;
+-        let p = self.draft_dir(app_id, draft_id).join(STORAGE_JSON);
+-        if !p.exists() {
+-            return Ok(serde_json::json!({}));
+-        }
+-        let c = tokio::fs::read_to_string(&p)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read draft storage: {}", e)))?;
+-        Ok(serde_json::from_str(&c).unwrap_or_else(|_| serde_json::json!({})))
+-    }
+-    pub async fn save_draft_storage(
+-        &self,
+-        app_id: &str,
+-        draft_id: &str,
+-        key: &str,
+-        value: serde_json::Value,
+-    ) -> MiniAppStorageResult<()> {
+-        self.ensure_active_drafts_root_writable().await?;
+-        let dir = self.draft_dir(app_id, draft_id);
+-        tokio::fs::create_dir_all(&dir)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to create draft dir: {}", e)))?;
+-        let mut current = self.load_draft_storage(app_id, draft_id).await?;
+-        let obj = current
+-            .as_object_mut()
+-            .ok_or_else(|| MiniAppStorageError::validation("Draft storage is not an object".to_string()))?;
+-        obj.insert(key.to_string(), value);
+-        let json = serde_json::to_string_pretty(&current).map_err(MiniAppStorageError::parse)?;
+-        tokio::fs::write(dir.join(STORAGE_JSON), json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write draft storage: {}", e)))?;
+-        Ok(())
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs b/src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs
+deleted file mode 100644
+index a21b203..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage_imports_io.rs
++++ /dev/null
+@@ -1,133 +0,0 @@
+-//! MiniApp storage import-bundle IO methods (split from storage.rs in R38c).
+-//!
+-//! Owns the three import-bundle IO entry points:
+-//! - `validate_import_layout` — gate that checks a candidate source dir
+-//!   carries the required files before any other IO runs.
+-//! - `read_import_meta_json` — read `meta.json` from the source dir, gated
+-//!   by `validate_import_layout`.
+-//! - `write_import_bundle` — copy/merge the bundle into a newly-created app
+-//!   directory, falling back to caller-provided JSON when source files are
+-//!   absent.
+-//!
+-//! These methods stay in a sibling of `storage.rs` because they have no
+-//! internal sibling split yet, are kept near the customization helpers that
+-//! complement them, and the boundary `required-rules` does not pull them
+-//! into either `storage_app_io.rs` or `storage_drafts.rs`.
+-
+-use northhing_product_domains::miniapp::storage::{
+-    MiniAppImportBundleWriteRequest, MiniAppImportLayout, COMPILED_HTML, ESM_DEPS_JSON, META_JSON, PACKAGE_JSON,
+-    REQUIRED_SOURCE_FILES, STORAGE_JSON,
+-};
+-
+-use super::storage::{MiniAppStorageError, MiniAppStorageResult};
+-use std::path::Path;
+-
+-impl super::storage::MiniAppStorage {
+-    pub(super) fn validate_import_layout(
+-        source_path: &Path,
+-        import_layout: &MiniAppImportLayout,
+-    ) -> MiniAppStorageResult<()> {
+-        if !source_path.is_dir() {
+-            return Err(MiniAppStorageError::validation(format!(
+-                "Not a directory: {}",
+-                source_path.display()
+-            )));
+-        }
+-
+-        let meta_path = import_layout.meta_path();
+-        let source_dir = import_layout.source_dir();
+-        if !meta_path.exists() {
+-            return Err(MiniAppStorageError::validation(format!(
+-                "Missing meta.json in {}",
+-                source_path.display()
+-            )));
+-        }
+-        if !source_dir.is_dir() {
+-            return Err(MiniAppStorageError::validation(format!(
+-                "Missing source/ directory in {}",
+-                source_path.display()
+-            )));
+-        }
+-        for (required, path) in import_layout.required_source_file_paths() {
+-            if !path.exists() {
+-                return Err(MiniAppStorageError::validation(format!(
+-                    "Missing source/{} in {}",
+-                    required,
+-                    source_path.display()
+-                )));
+-            }
+-        }
+-        Ok(())
+-    }
+-    pub async fn read_import_meta_json(&self, source_path: impl AsRef<Path>) -> MiniAppStorageResult<String> {
+-        let source_path = source_path.as_ref();
+-        let import_layout = MiniAppImportLayout::new(source_path);
+-        Self::validate_import_layout(source_path, &import_layout)?;
+-        tokio::fs::read_to_string(import_layout.meta_path())
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to read meta.json: {}", e)))
+-    }
+-    pub async fn write_import_bundle(&self, request: MiniAppImportBundleWriteRequest) -> MiniAppStorageResult<()> {
+-        let import_layout = MiniAppImportLayout::new(&request.source_path);
+-        Self::validate_import_layout(&request.source_path, &import_layout)?;
+-
+-        let dest_dir = self.app_dir(&request.app_id);
+-        let dest_source = self.source_dir(&request.app_id);
+-        tokio::fs::create_dir_all(&dest_source)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to create app dir: {}", e)))?;
+-
+-        tokio::fs::write(dest_dir.join(META_JSON), request.meta_json)
+-            .await
+-            .map_err(|e| MiniAppStorageError::io(format!("Failed to write meta.json: {}", e)))?;
+-
+-        let source_dir = import_layout.source_dir();
+-        for name in REQUIRED_SOURCE_FILES {
+-            let from = source_dir.join(name);
+-            let to = dest_source.join(name);
+-            if from.exists() {
+-                tokio::fs::copy(&from, &to)
+-                    .await
+-                    .map_err(|e| MiniAppStorageError::io(format!("Failed to copy {}: {}", name, e)))?;
+-            }
+-        }
+-
+-        let esm_path = import_layout.esm_dependencies_path();
+-        if esm_path.exists() {
+-            tokio::fs::copy(&esm_path, dest_source.join(ESM_DEPS_JSON))
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to copy esm_dependencies.json: {}", e)))?;
+-        } else {
+-            tokio::fs::write(dest_source.join(ESM_DEPS_JSON), request.esm_dependencies_json)
+-                .await
+-                .map_err(|_| MiniAppStorageError::io("Failed to write esm_dependencies.json"))?;
+-        }
+-
+-        let pkg_src = import_layout.package_json_path();
+-        if pkg_src.exists() {
+-            tokio::fs::copy(&pkg_src, dest_dir.join(PACKAGE_JSON))
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to copy package.json: {}", e)))?;
+-        } else {
+-            tokio::fs::write(dest_dir.join(PACKAGE_JSON), request.package_json)
+-                .await
+-                .map_err(|_| MiniAppStorageError::io("Failed to write package.json"))?;
+-        }
+-
+-        let storage_src = import_layout.storage_json_path();
+-        if storage_src.exists() {
+-            tokio::fs::copy(&storage_src, dest_dir.join(STORAGE_JSON))
+-                .await
+-                .map_err(|e| MiniAppStorageError::io(format!("Failed to copy storage.json: {}", e)))?;
+-        } else {
+-            tokio::fs::write(dest_dir.join(STORAGE_JSON), request.storage_json)
+-                .await
+-                .map_err(|_| MiniAppStorageError::io("Failed to write storage.json"))?;
+-        }
+-
+-        tokio::fs::write(dest_dir.join(COMPILED_HTML), request.compiled_html)
+-            .await
+-            .map_err(|_| MiniAppStorageError::io("Failed to write placeholder compiled.html"))?;
+-        Ok(())
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage_port.rs b/src/crates/services/services-integrations/src/miniapp/storage_port.rs
+deleted file mode 100644
+index 7564cd4..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage_port.rs
++++ /dev/null
+@@ -1,144 +0,0 @@
+-//! MiniApp storage port-adapter implementation (split from storage.rs in R38c).
+-//!
+-//! Wires `MiniAppStoragePort` callers (port-trait-based storage access) to
+-//! the concrete `MiniAppStorage` methods that live across `storage.rs`
+-//! (facade), `storage_app_io.rs`, `storage_drafts.rs`, and
+-//! `storage_imports_io.rs`. Owns the `MiniAppStorageError` →
+-//! `MiniAppPortError` translation table at the adapter boundary.
+-
+-use northhing_product_domains::miniapp::customization::MiniAppCustomizationMetadata;
+-use northhing_product_domains::miniapp::ports::{
+-    MiniAppPortError, MiniAppPortErrorKind, MiniAppPortFuture, MiniAppStoragePort,
+-};
+-
+-use super::storage::{MiniApp, MiniAppMeta, MiniAppSource, MiniAppStorageError, MiniAppStorageErrorKind};
+-
+-impl MiniAppStoragePort for super::storage::MiniAppStorage {
+-    fn list_app_ids(&self) -> MiniAppPortFuture<'_, Vec<String>> {
+-        Box::pin(async move { self.list_app_ids().await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load(&self, app_id: String) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move { self.load(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_meta(&self, app_id: String) -> MiniAppPortFuture<'_, MiniAppMeta> {
+-        Box::pin(async move { self.load_meta(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_source(&self, app_id: String) -> MiniAppPortFuture<'_, MiniAppSource> {
+-        Box::pin(async move { self.load_source_only(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save(&self, app: MiniApp) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move { self.save(&app).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save_version(&self, app_id: String, version: u32, app: MiniApp) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_version(&app_id, version, &app)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_app_storage(&self, app_id: String) -> MiniAppPortFuture<'_, serde_json::Value> {
+-        Box::pin(async move { self.load_app_storage(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn save_app_storage(&self, app_id: String, key: String, value: serde_json::Value) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_app_storage(&app_id, &key, value)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_draft_app(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move {
+-            self.load_draft_app(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_draft_manifest(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, serde_json::Value> {
+-        Box::pin(async move {
+-            self.load_draft_manifest(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn save_draft(
+-        &self,
+-        app_id: String,
+-        draft_id: String,
+-        app: MiniApp,
+-        manifest: serde_json::Value,
+-    ) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_draft(&app_id, &draft_id, &app, &manifest)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn delete_draft(&self, app_id: String, draft_id: String) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.delete_draft(&app_id, &draft_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn load_customization_metadata(
+-        &self,
+-        app_id: String,
+-    ) -> MiniAppPortFuture<'_, Option<MiniAppCustomizationMetadata>> {
+-        Box::pin(async move {
+-            self.load_customization_metadata(&app_id)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn save_customization_metadata(
+-        &self,
+-        app_id: String,
+-        metadata: MiniAppCustomizationMetadata,
+-    ) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move {
+-            self.save_customization_metadata(&app_id, &metadata)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-
+-    fn delete(&self, app_id: String) -> MiniAppPortFuture<'_, ()> {
+-        Box::pin(async move { self.delete(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn list_versions(&self, app_id: String) -> MiniAppPortFuture<'_, Vec<u32>> {
+-        Box::pin(async move { self.list_versions(&app_id).await.map_err(map_miniapp_port_error) })
+-    }
+-
+-    fn load_version(&self, app_id: String, version: u32) -> MiniAppPortFuture<'_, MiniApp> {
+-        Box::pin(async move {
+-            self.load_version(&app_id, version)
+-                .await
+-                .map_err(map_miniapp_port_error)
+-        })
+-    }
+-}
+-
+-fn map_miniapp_port_error(error: MiniAppStorageError) -> MiniAppPortError {
+-    let kind = match error.kind() {
+-        MiniAppStorageErrorKind::NotFound => MiniAppPortErrorKind::NotFound,
+-        MiniAppStorageErrorKind::Validation => MiniAppPortErrorKind::InvalidInput,
+-        MiniAppStorageErrorKind::Deserialization => MiniAppPortErrorKind::Deserialization,
+-        MiniAppStorageErrorKind::Io => MiniAppPortErrorKind::Io,
+-        MiniAppStorageErrorKind::Backend => MiniAppPortErrorKind::Backend,
+-    };
+-    MiniAppPortError::new(kind, error.to_string())
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/storage_tests.rs b/src/crates/services/services-integrations/src/miniapp/storage_tests.rs
+deleted file mode 100644
+index 9258824..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/storage_tests.rs
++++ /dev/null
+@@ -1,605 +0,0 @@
+-//! MiniApp storage unit tests (split from storage.rs in R38c).
+-//!
+-//! These tests exercised `MiniAppStorage` end-to-end from the facade, then the
+-//! port adapter, app-IO, drafts, and import-bundle IO paths. After R37d's
+-//! partial split the fixture imports (`INDEX_HTML`, `STYLE_CSS`, `UI_JS`,
+-//! `WORKER_JS`) leaked to `storage_app_io.rs`; this sibling re-establishes the
+-//! imports locally so the test surface keeps compiling.
+-
+-#[cfg(test)]
+-mod tests {
+-    use crate::miniapp::storage::{
+-        MiniApp, MiniAppCustomizationMetadata, MiniAppMeta, MiniAppSource, MiniAppStorage, MiniAppStorageErrorKind,
+-        NpmDep,
+-    };
+-    use northhing_product_domains::miniapp::customization::{
+-        MiniAppCustomizationOrigin, MiniAppCustomizationOriginKind,
+-    };
+-    use northhing_product_domains::miniapp::storage::{
+-        MiniAppStorageLayout, ESM_DEPS_JSON, INDEX_HTML, META_JSON, STYLE_CSS, UI_JS, WORKER_JS,
+-    };
+-    use northhing_test_support::TestTempDir;
+-    use std::fs;
+-    use std::path::{Path, PathBuf};
+-
+-    #[tokio::test]
+-    async fn storage_port_adapter_preserves_existing_file_lifecycle() {
+-        let root = TestTempDir::new("northhing-miniapp-storage-port");
+-        let miniapps_dir = root.path().join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-        let port: &dyn northhing_product_domains::miniapp::ports::MiniAppStoragePort = &storage;
+-        let app = sample_app("demo_app");
+-
+-        port.save(app.clone()).await.expect("invariant: port.save succeeds");
+-
+-        let ids = port
+-            .list_app_ids()
+-            .await
+-            .expect("invariant: port.list_app_ids succeeds");
+-        assert_eq!(ids, vec!["demo_app".to_string()]);
+-
+-        let meta = port
+-            .load_meta("demo_app".to_string())
+-            .await
+-            .expect("invariant: port.load_meta succeeds");
+-        assert_eq!(meta.name, "Demo");
+-
+-        let source = port
+-            .load_source("demo_app".to_string())
+-            .await
+-            .expect("invariant: port.load_source succeeds");
+-        assert_eq!(source.ui_js, "console.log('ui');");
+-
+-        let loaded = port
+-            .load("demo_app".to_string())
+-            .await
+-            .expect("invariant: port.load succeeds");
+-        assert_eq!(loaded.compiled_html, "<html></html>");
+-
+-        port.save_app_storage("demo_app".to_string(), "answer".to_string(), serde_json::json!(42))
+-            .await
+-            .expect("invariant: port.load_app_storage succeeds");
+-        let app_storage = port
+-            .load_app_storage("demo_app".to_string())
+-            .await
+-            .expect("invariant: port.load_app_storage succeeds");
+-        assert_eq!(app_storage["answer"], 42);
+-
+-        port.save_version("demo_app".to_string(), 1, app)
+-            .await
+-            .expect("invariant: port.list_versions succeeds");
+-        assert_eq!(
+-            port.list_versions("demo_app".to_string())
+-                .await
+-                .expect("invariant: port.list_versions succeeds"),
+-            vec![1]
+-        );
+-        assert_eq!(
+-            port.load_version("demo_app".to_string(), 1)
+-                .await
+-                .expect("invariant: test assertion holds")
+-                .id,
+-            "demo_app"
+-        );
+-
+-        port.delete("demo_app".to_string())
+-            .await
+-            .expect("invariant: port.list_app_ids succeeds");
+-        assert!(port
+-            .list_app_ids()
+-            .await
+-            .expect("invariant: port.list_app_ids succeeds")
+-            .is_empty());
+-    }
+-
+-    #[tokio::test]
+-    async fn storage_adapter_uses_product_domain_layout_contract() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-layout-port-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir.clone());
+-        let app = sample_app("layout_app");
+-        let layout = MiniAppStorageLayout::new(&miniapps_dir, "layout_app");
+-
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-        assert!(layout.storage_path().is_file());
+-        assert_eq!(
+-            fs::read_to_string(layout.storage_path()).expect("invariant: fs::read_to_string succeeds"),
+-            "{}".to_string()
+-        );
+-        storage
+-            .save_app_storage("layout_app", "answer", serde_json::json!(42))
+-            .await
+-            .expect("invariant: storage.save_version succeeds");
+-        storage
+-            .save_version("layout_app", 7, &app)
+-            .await
+-            .expect("invariant: storage.save_version succeeds");
+-
+-        assert!(layout.app_dir().is_dir());
+-        assert!(layout.meta_path().is_file());
+-        assert!(layout.compiled_path().is_file());
+-        assert!(layout.package_json_path().is_file());
+-        assert!(layout.source_file_path(INDEX_HTML).is_file());
+-        assert!(layout.source_file_path(STYLE_CSS).is_file());
+-        assert!(layout.source_file_path(UI_JS).is_file());
+-        assert!(layout.source_file_path(WORKER_JS).is_file());
+-        assert!(layout.source_file_path(ESM_DEPS_JSON).is_file());
+-        assert!(layout.version_path(7).is_file());
+-    }
+-
+-    #[tokio::test]
+-    async fn import_bundle_io_preserves_copy_and_fallback_contract() {
+-        let root = TestTempDir::new("northhing-miniapp-import-bundle-io");
+-        let miniapps_dir = root.path().join("miniapps");
+-        let import_root = root.path().join("import-source");
+-        let import_source_dir = import_root.join("source");
+-        fs::create_dir_all(&import_source_dir).expect("invariant: serde_json serialization succeeds");
+-
+-        let template_app = sample_app("template-id");
+-        let meta_json = serde_json::to_string_pretty(&MiniAppMeta::from(&template_app))
+-            .expect("invariant: serde_json serialization succeeds");
+-        fs::write(import_root.join(META_JSON), &meta_json).expect("invariant: fs::write succeeds");
+-        fs::write(import_source_dir.join(INDEX_HTML), "<div id=\"app\"></div>").expect("invariant: fs::write succeeds");
+-        fs::write(import_source_dir.join(STYLE_CSS), "body { color: blue; }").expect("invariant: fs::write succeeds");
+-        fs::write(
+-            import_source_dir.join(UI_JS),
+-            "document.getElementById('app').textContent = 'imported';",
+-        )
+-        .expect("invariant: storage.read_import_meta_json succeeds");
+-        fs::write(import_source_dir.join(WORKER_JS), "").expect("invariant: storage.read_import_meta_json succeeds");
+-
+-        let storage = MiniAppStorage::new(miniapps_dir.clone());
+-        let read_meta = storage
+-            .read_import_meta_json(&import_root)
+-            .await
+-            .expect("invariant: storage.read_import_meta_json succeeds");
+-        assert_eq!(read_meta, meta_json);
+-
+-        storage
+-            .write_import_bundle(
+-                northhing_product_domains::miniapp::storage::MiniAppImportBundleWriteRequest {
+-                    source_path: import_root,
+-                    app_id: "imported-app".to_string(),
+-                    meta_json,
+-                    esm_dependencies_json: "[]".to_string(),
+-                    package_json: "{\"name\":\"miniapp-imported-app\"}".to_string(),
+-                    storage_json: "{}".to_string(),
+-                    compiled_html: "<html>placeholder</html>".to_string(),
+-                },
+-            )
+-            .await
+-            .expect("invariant: fs::read_to_string succeeds");
+-
+-        let layout = MiniAppStorageLayout::new(&miniapps_dir, "imported-app");
+-        assert_eq!(
+-            fs::read_to_string(layout.source_file_path(STYLE_CSS)).expect("invariant: fs::read_to_string succeeds"),
+-            "body { color: blue; }"
+-        );
+-        assert_eq!(
+-            fs::read_to_string(layout.source_file_path(ESM_DEPS_JSON)).expect("invariant: fs::read_to_string succeeds"),
+-            "[]"
+-        );
+-        assert_eq!(
+-            fs::read_to_string(layout.package_json_path()).expect("invariant: fs::read_to_string succeeds"),
+-            "{\"name\":\"miniapp-imported-app\"}"
+-        );
+-        assert_eq!(
+-            fs::read_to_string(layout.storage_path()).expect("invariant: fs::read_to_string succeeds"),
+-            "{}"
+-        );
+-        assert_eq!(
+-            fs::read_to_string(layout.compiled_path()).expect("invariant: fs::read_to_string succeeds"),
+-            "<html>placeholder</html>"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn saving_app_files_preserves_existing_storage_json() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-storage-preserve-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-        let app = sample_app("storage_app");
+-
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-        storage
+-            .save_app_storage("storage_app", "answer", serde_json::json!(42))
+-            .await
+-            .expect("invariant: storage.save succeeds");
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-
+-        assert_eq!(
+-            storage
+-                .load_app_storage("storage_app")
+-                .await
+-                .expect("invariant: test assertion holds")
+-                .get("answer"),
+-            Some(&serde_json::json!(42))
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn draft_storage_is_hidden_and_isolated_from_active_storage() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-draft-storage-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-        let app = sample_app("demo_app");
+-
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-        storage
+-            .save_app_storage("demo_app", "answer", serde_json::json!(42))
+-            .await
+-            .expect("invariant: test assertion holds");
+-        storage
+-            .save_draft_storage("demo_app", "draft_one", "answer", serde_json::json!(7))
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        assert_eq!(
+-            storage
+-                .load_app_storage("demo_app")
+-                .await
+-                .expect("invariant: test assertion holds")
+-                .get("answer"),
+-            Some(&serde_json::json!(42))
+-        );
+-        assert_eq!(
+-            storage
+-                .load_draft_storage("demo_app", "draft_one")
+-                .await
+-                .expect("invariant: storage.list_app_ids succeeds")
+-                .get("answer"),
+-            Some(&serde_json::json!(7))
+-        );
+-        assert_eq!(
+-            storage
+-                .list_app_ids()
+-                .await
+-                .expect("invariant: storage.delete succeeds"),
+-            vec!["demo_app"]
+-        );
+-
+-        let draft_dir = storage.app_drafts_dir("demo_app");
+-        assert!(draft_dir.exists());
+-        storage
+-            .delete("demo_app")
+-            .await
+-            .expect("invariant: storage.delete succeeds");
+-        assert!(!draft_dir.exists());
+-    }
+-
+-    #[tokio::test]
+-    async fn mark_stale_drafts_moves_sandboxes_off_the_active_read_path() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-stale-drafts-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-        let app = sample_app("demo_app");
+-
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-        storage
+-            .save_draft_storage("demo_app", "stale_draft", "answer", serde_json::json!(7))
+-            .await
+-            .expect("invariant: storage.mark_stale_drafts_for_cleanup succeeds");
+-
+-        assert!(storage.drafts_root().exists());
+-        let cleanup_targets = storage
+-            .mark_stale_drafts_for_cleanup()
+-            .await
+-            .expect("invariant: storage.mark_stale_drafts_for_cleanup succeeds");
+-
+-        assert_eq!(cleanup_targets.len(), 1);
+-        assert!(cleanup_targets[0].exists());
+-        assert!(storage.cleanup_marker_path(&cleanup_targets[0]).exists());
+-        assert!(!storage.drafts_root().exists());
+-        assert!(storage.load("demo_app").await.is_ok());
+-        assert_eq!(
+-            storage
+-                .load_draft_storage("demo_app", "stale_draft")
+-                .await
+-                .expect("invariant: test assertion holds"),
+-            serde_json::json!({})
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn draft_reads_skip_marked_active_root() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-marked-draft-read-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-
+-        storage
+-            .save_draft_storage("demo_app", "stale_draft", "answer", serde_json::json!(7))
+-            .await
+-            .expect("invariant: test assertion holds");
+-        storage
+-            .write_cleanup_marker(&storage.drafts_root())
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        let error = storage.load_draft_storage("demo_app", "stale_draft").await.unwrap_err();
+-        assert_eq!(error.kind(), MiniAppStorageErrorKind::NotFound);
+-    }
+-
+-    #[tokio::test]
+-    async fn cleanup_marked_drafts_removes_quarantined_sandboxes_later() {
+-        let root = std::env::temp_dir().join(format!(
+-            "northhing-miniapp-clean-marked-drafts-{}",
+-            uuid::Uuid::new_v4()
+-        ));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-
+-        storage
+-            .save_draft_storage("demo_app", "stale_draft", "answer", serde_json::json!(7))
+-            .await
+-            .expect("invariant: storage.mark_stale_drafts_for_cleanup succeeds");
+-        let cleanup_targets = storage
+-            .mark_stale_drafts_for_cleanup()
+-            .await
+-            .expect("invariant: storage.mark_stale_drafts_for_cleanup succeeds");
+-        let cleanup_root = cleanup_targets[0].clone();
+-
+-        storage
+-            .cleanup_marked_drafts(cleanup_targets)
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        assert!(!cleanup_root.exists());
+-        assert!(!storage.drafts_root().exists());
+-    }
+-
+-    #[tokio::test]
+-    async fn saving_new_draft_isolates_marked_active_root_first() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-marked-draft-write-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-
+-        storage
+-            .save_draft_storage("demo_app", "stale_draft", "answer", serde_json::json!(7))
+-            .await
+-            .expect("invariant: test assertion holds");
+-        storage
+-            .write_cleanup_marker(&storage.drafts_root())
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        storage
+-            .save_draft_storage("demo_app", "fresh_draft", "answer", serde_json::json!(9))
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        assert_eq!(
+-            storage
+-                .load_draft_storage("demo_app", "fresh_draft")
+-                .await
+-                .expect("invariant: test assertion holds")
+-                .get("answer"),
+-            Some(&serde_json::json!(9))
+-        );
+-        assert!(!storage.cleanup_marker_path(&storage.drafts_root()).exists());
+-    }
+-
+-    #[tokio::test]
+-    async fn customization_metadata_roundtrips() {
+-        let root = std::env::temp_dir().join(format!("northhing-miniapp-customization-meta-{}", uuid::Uuid::new_v4()));
+-        let miniapps_dir = root.join("miniapps");
+-        let storage = MiniAppStorage::new(miniapps_dir);
+-        let app = sample_app("builtin-demo");
+-        storage.save(&app).await.expect("invariant: storage.save succeeds");
+-
+-        let metadata = MiniAppCustomizationMetadata {
+-            origin: MiniAppCustomizationOrigin {
+-                kind: MiniAppCustomizationOriginKind::Builtin,
+-                builtin_id: Some("builtin-demo".to_string()),
+-                builtin_version: Some(3),
+-            },
+-            local_override: true,
+-            last_applied_draft_id: Some("draft_one".to_string()),
+-            available_builtin_update: None,
+-            declined_builtin_updates: Vec::new(),
+-            updated_at: 123,
+-        };
+-
+-        storage
+-            .save_customization_metadata("builtin-demo", &metadata)
+-            .await
+-            .expect("invariant: test assertion holds");
+-
+-        assert_eq!(
+-            storage
+-                .load_customization_metadata("builtin-demo")
+-                .await
+-                .expect("invariant: test assertion holds"),
+-            Some(metadata)
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_missing_index_html_returns_not_found() {
+-        let root = TestTempDir::new("northhing-miniapp-source-missing-index");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let error = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .unwrap_err();
+-        assert_eq!(
+-            error.kind(),
+-            MiniAppStorageErrorKind::NotFound,
+-            "missing index.html must be an explicit not-found error"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_unreadable_index_html_returns_io() {
+-        let root = TestTempDir::new("northhing-miniapp-source-unreadable-index");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::create_dir(source_dir.join(INDEX_HTML)).expect("invariant: create_dir succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let error = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .unwrap_err();
+-        assert_eq!(
+-            error.kind(),
+-            MiniAppStorageErrorKind::Io,
+-            "a non-NotFound read failure of index.html must be an IO error"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_missing_optional_files_stay_empty() {
+-        let root = TestTempDir::new("northhing-miniapp-source-optional-missing");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let source = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .expect("missing optional files are legal and stay empty");
+-        assert_eq!(source.html, "<html></html>");
+-        assert_eq!(source.css, "");
+-        assert_eq!(source.ui_js, "");
+-        assert_eq!(source.worker_js, "");
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_unreadable_optional_file_returns_io() {
+-        let root = TestTempDir::new("northhing-miniapp-source-unreadable-css");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+-        fs::create_dir(source_dir.join(STYLE_CSS)).expect("invariant: create_dir succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let error = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .unwrap_err();
+-        assert_eq!(
+-            error.kind(),
+-            MiniAppStorageErrorKind::Io,
+-            "a non-NotFound read failure of an optional file must be an IO error, not silent empty"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_corrupt_esm_deps_returns_parse() {
+-        let root = TestTempDir::new("northhing-miniapp-source-corrupt-esm");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(ESM_DEPS_JSON), "not json").expect("invariant: fs::write succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let error = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .unwrap_err();
+-        assert_eq!(
+-            error.kind(),
+-            MiniAppStorageErrorKind::Deserialization,
+-            "corrupt esm_dependencies.json must be a parse error, not silent empty"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_unreadable_esm_deps_returns_io() {
+-        let root = TestTempDir::new("northhing-miniapp-source-unreadable-esm");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "<html></html>").expect("invariant: fs::write succeeds");
+-        fs::create_dir(source_dir.join(ESM_DEPS_JSON)).expect("invariant: create_dir succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let error = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .unwrap_err();
+-        assert_eq!(
+-            error.kind(),
+-            MiniAppStorageErrorKind::Io,
+-            "an existing-but-unreadable esm_dependencies.json must be an IO error"
+-        );
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_real_empty_files_stay_empty() {
+-        let root = TestTempDir::new("northhing-miniapp-source-empty-files");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(STYLE_CSS), "").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(ESM_DEPS_JSON), "[]").expect("invariant: fs::write succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let source = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .expect("real empty files stay empty without error");
+-        assert_eq!(source.html, "");
+-        assert_eq!(source.css, "");
+-    }
+-
+-    #[tokio::test]
+-    async fn load_source_from_dirs_loads_all_present_files() {
+-        let root = TestTempDir::new("northhing-miniapp-source-full");
+-        let source_dir = root.path().join("source");
+-        fs::create_dir_all(&source_dir).expect("invariant: create_dir_all succeeds");
+-        fs::write(source_dir.join(INDEX_HTML), "<html><body></body></html>").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(STYLE_CSS), "body { color: red; }").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(UI_JS), "console.log('ui');").expect("invariant: fs::write succeeds");
+-        fs::write(source_dir.join(WORKER_JS), "export default {};").expect("invariant: fs::write succeeds");
+-        fs::write(
+-            source_dir.join(ESM_DEPS_JSON),
+-            r#"[{"name": "lodash", "version": "^4.17.21"}]"#,
+-        )
+-        .expect("invariant: fs::write succeeds");
+-        let storage = MiniAppStorage::new(root.path().join("miniapps"));
+-
+-        let source = storage
+-            .load_source_from_dirs(source_dir, root.path().join("app"))
+-            .await
+-            .expect("invariant: load_source_from_dirs succeeds");
+-        assert_eq!(source.html, "<html><body></body></html>");
+-        assert_eq!(source.css, "body { color: red; }");
+-        assert_eq!(source.ui_js, "console.log('ui');");
+-        assert_eq!(source.worker_js, "export default {};");
+-        assert_eq!(source.esm_dependencies.len(), 1);
+-    }
+-
+-    fn sample_app(id: &str) -> MiniApp {
+-        MiniApp {
+-            id: id.to_string(),
+-            name: "Demo".to_string(),
+-            description: "Demo app".to_string(),
+-            icon: "sparkles".to_string(),
+-            category: "tools".to_string(),
+-            tags: vec!["demo".to_string()],
+-            version: 1,
+-            created_at: 1,
+-            updated_at: 2,
+-            source: MiniAppSource {
+-                html: "<div id=\"app\"></div>".to_string(),
+-                css: "body {}".to_string(),
+-                ui_js: "console.log('ui');".to_string(),
+-                esm_dependencies: Vec::new(),
+-                worker_js: "export default {};".to_string(),
+-                npm_dependencies: vec![NpmDep {
+-                    name: "lodash".to_string(),
+-                    version: "^4.17.21".to_string(),
+-                }],
+-            },
+-            compiled_html: "<html></html>".to_string(),
+-            permissions: Default::default(),
+-            ai_context: None,
+-            runtime: Default::default(),
+-            i18n: None,
+-        }
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/worker.rs b/src/crates/services/services-integrations/src/miniapp/worker.rs
+deleted file mode 100644
+index 12a7731..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/worker.rs
++++ /dev/null
+@@ -1,196 +0,0 @@
+-//! JS Worker — single child process (Bun/Node) with stdin/stderr JSON-RPC.
+-
+-use northhing_product_domains::miniapp::runtime::DetectedRuntime;
+-use serde_json::Value;
+-use std::collections::HashMap;
+-use std::future::Future;
+-use std::path::Path;
+-use std::pin::Pin;
+-use std::sync::atomic::{AtomicI64, Ordering};
+-use std::sync::Arc;
+-use std::time::Duration;
+-use tokio::io::{AsyncBufReadExt, BufReader};
+-use tokio::process::{Child, ChildStdin};
+-use tokio::sync::{oneshot, Mutex};
+-
+-type JsWorkerResponse = Result<Value, String>;
+-type PendingResponseSender = oneshot::Sender<JsWorkerResponse>;
+-type PendingResponseMap = HashMap<String, PendingResponseSender>;
+-pub type MiniAppWorkerEventFuture<'a> = Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
+-
+-#[derive(Debug, Clone)]
+-pub struct MiniAppWorkerEvent {
+-    pub app_id: String,
+-    pub event: String,
+-    pub data: Value,
+-}
+-
+-pub trait MiniAppWorkerEventSink: Send + Sync {
+-    fn emit_worker_event<'a>(&'a self, event: MiniAppWorkerEvent) -> MiniAppWorkerEventFuture<'a>;
+-}
+-
+-pub type SharedMiniAppWorkerEventSink = Arc<dyn MiniAppWorkerEventSink>;
+-
+-/// Single JS Worker process: stdin for requests, stderr for RPC responses, stdout for user logs.
+-pub struct JsWorker {
+-    _child: Child,
+-    stdin: Mutex<Option<ChildStdin>>,
+-    pending: Arc<Mutex<PendingResponseMap>>,
+-    last_activity: Arc<AtomicI64>,
+-}
+-
+-impl JsWorker {
+-    /// Spawn Worker process: `runtime_path worker_host_path '<policy_json>'` with cwd = app_dir.
+-    /// The `app_id` is used as the source identifier when emitting worker events.
+-    pub async fn spawn(
+-        runtime: &DetectedRuntime,
+-        worker_host_path: &Path,
+-        app_dir: &Path,
+-        policy_json: &str,
+-        app_id: String,
+-        event_sink: Option<SharedMiniAppWorkerEventSink>,
+-    ) -> Result<Self, String> {
+-        let exe = runtime.path.to_string_lossy();
+-        let host = worker_host_path.to_string_lossy();
+-        let mut child = northhing_services_core::process_manager::create_tokio_command(&*exe)
+-            .arg(&*host)
+-            .arg(policy_json)
+-            .current_dir(app_dir)
+-            .stdin(std::process::Stdio::piped())
+-            .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .kill_on_drop(true)
+-            .spawn()
+-            .map_err(|e| format!("Failed to spawn JS Worker: {}", e))?;
+-
+-        let stdin_handle = child.stdin.take().ok_or("No stdin")?;
+-        let stderr = child.stderr.take().ok_or("No stderr")?;
+-        let _stdout = child.stdout.take();
+-
+-        let pending = Arc::new(Mutex::new(PendingResponseMap::new()));
+-        let last_activity = Arc::new(AtomicI64::new(
+-            std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .unwrap_or_default()
+-                .as_millis() as i64,
+-        ));
+-
+-        let pending_clone = pending.clone();
+-        let last_activity_clone = last_activity.clone();
+-        tokio::spawn(async move {
+-            let reader = BufReader::new(stderr);
+-            let mut lines = reader.lines();
+-            while let Ok(Some(line)) = lines.next_line().await {
+-                if line.is_empty() {
+-                    continue;
+-                }
+-                let _ = last_activity_clone.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |_| {
+-                    Some(
+-                        std::time::SystemTime::now()
+-                            .duration_since(std::time::UNIX_EPOCH)
+-                            .unwrap_or_default()
+-                            .as_millis() as i64,
+-                    )
+-                });
+-                let msg: Value = match serde_json::from_str(&line) {
+-                    Ok(v) => v,
+-                    Err(_) => continue,
+-                };
+-
+-                // Lines with an `id` are RPC responses — route to the pending map.
+-                let id = msg.get("id").and_then(Value::as_str).map(String::from);
+-                if let Some(id) = id {
+-                    let result = if let Some(err) = msg.get("error") {
+-                        let msg = err.get("message").and_then(Value::as_str).unwrap_or("RPC error");
+-                        Err(msg.to_string())
+-                    } else {
+-                        msg.get("result").cloned().ok_or_else(|| "Missing result".to_string())
+-                    };
+-                    let mut guard = pending_clone.lock().await;
+-                    if let Some(tx) = guard.remove(&id) {
+-                        let _ = tx.send(result);
+-                    }
+-                    continue;
+-                }
+-
+-                // Lines with an `event` field (no `id`) are push events from the Worker.
+-                if let Some(event_name) = msg.get("event").and_then(Value::as_str) {
+-                    let Some(sink) = event_sink.as_ref() else {
+-                        continue;
+-                    };
+-                    let data = msg.get("data").cloned().unwrap_or(Value::Null);
+-                    sink.emit_worker_event(MiniAppWorkerEvent {
+-                        app_id: app_id.clone(),
+-                        event: event_name.to_string(),
+-                        data,
+-                    })
+-                    .await;
+-                }
+-            }
+-        });
+-
+-        Ok(Self {
+-            _child: child,
+-            stdin: Mutex::new(Some(stdin_handle)),
+-            pending,
+-            last_activity,
+-        })
+-    }
+-
+-    /// Send a JSON-RPC request and wait for the response (with timeout).
+-    pub async fn call(&self, method: &str, params: Value, timeout_ms: u64) -> Result<Value, String> {
+-        let id = format!("rpc-{}", uuid::Uuid::new_v4());
+-        let request = serde_json::json!({
+-            "jsonrpc": "2.0",
+-            "id": id,
+-            "method": method,
+-            "params": params,
+-        });
+-        let line = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
+-
+-        let (tx, rx) = oneshot::channel();
+-        {
+-            let mut guard = self.pending.lock().await;
+-            guard.insert(id.clone(), tx);
+-        }
+-        self.last_activity.store(
+-            std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .unwrap_or_default()
+-                .as_millis() as i64,
+-            Ordering::SeqCst,
+-        );
+-
+-        let mut stdin_guard = self.stdin.lock().await;
+-        let stdin = stdin_guard.as_mut().ok_or("Worker stdin closed")?;
+-        use tokio::io::AsyncWriteExt;
+-        stdin.write_all(line.as_bytes()).await.map_err(|e| e.to_string())?;
+-        stdin.flush().await.map_err(|e| e.to_string())?;
+-        drop(stdin_guard);
+-
+-        let timeout = Duration::from_millis(timeout_ms);
+-        match tokio::time::timeout(timeout, rx).await {
+-            Ok(Ok(Ok(v))) => Ok(v),
+-            Ok(Ok(Err(e))) => Err(e),
+-            Ok(Err(_)) => {
+-                let _ = self.pending.lock().await.remove(&id);
+-                Err("Worker dropped response".to_string())
+-            }
+-            Err(_) => {
+-                let _ = self.pending.lock().await.remove(&id);
+-                Err(format!("Worker call timeout ({}ms)", timeout_ms))
+-            }
+-        }
+-    }
+-
+-    /// Last activity timestamp (millis since epoch).
+-    pub fn last_activity_ms(&self) -> i64 {
+-        self.last_activity.load(Ordering::SeqCst)
+-    }
+-
+-    /// Kill the worker process.
+-    pub async fn kill(&mut self) {
+-        let _ = self._child.start_kill();
+-        let _ = tokio::time::timeout(Duration::from_secs(2), self._child.wait()).await;
+-    }
+-}
+diff --git a/src/crates/services/services-integrations/src/miniapp/worker_pool.rs b/src/crates/services/services-integrations/src/miniapp/worker_pool.rs
+deleted file mode 100644
+index 96f51fe..0000000
+--- a/src/crates/services/services-integrations/src/miniapp/worker_pool.rs
++++ /dev/null
+@@ -1,493 +0,0 @@
+-//! JS worker pool: LRU pool, get_or_spawn, call, stop_all, install_deps.
+-
+-use crate::miniapp::worker::{JsWorker, SharedMiniAppWorkerEventSink};
+-use northhing_product_domains::miniapp::ports::{
+-    MiniAppInstallDepsRequest, MiniAppPortError, MiniAppPortErrorKind, MiniAppPortFuture, MiniAppRuntimePort,
+-};
+-use northhing_product_domains::miniapp::runtime::{detect_runtime, DetectedRuntime};
+-use northhing_product_domains::miniapp::types::{NodePermissions, NpmDep};
+-pub use northhing_product_domains::miniapp::worker::InstallResult;
+-use northhing_product_domains::miniapp::worker::{
+-    plan_install_deps, select_lru_worker, worker_is_idle, worker_pool_at_capacity, InstallDepsPlan,
+-};
+-use serde_json::Value;
+-use std::fmt;
+-use std::path::Path;
+-use std::path::PathBuf;
+-use std::sync::Arc;
+-use tokio::sync::Mutex;
+-
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub enum MiniAppWorkerPoolErrorKind {
+-    NotFound,
+-    Validation,
+-    Io,
+-    RuntimeUnavailable,
+-    Backend,
+-}
+-
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct MiniAppWorkerPoolError {
+-    kind: MiniAppWorkerPoolErrorKind,
+-    message: String,
+-}
+-
+-impl MiniAppWorkerPoolError {
+-    pub fn new(kind: MiniAppWorkerPoolErrorKind, message: impl Into<String>) -> Self {
+-        Self {
+-            kind,
+-            message: message.into(),
+-        }
+-    }
+-
+-    pub fn validation(message: impl Into<String>) -> Self {
+-        Self::new(MiniAppWorkerPoolErrorKind::Validation, message)
+-    }
+-
+-    pub fn not_found(message: impl Into<String>) -> Self {
+-        Self::new(MiniAppWorkerPoolErrorKind::NotFound, message)
+-    }
+-
+-    pub fn io(message: impl Into<String>) -> Self {
+-        Self::new(MiniAppWorkerPoolErrorKind::Io, message)
+-    }
+-
+-    pub fn kind(&self) -> MiniAppWorkerPoolErrorKind {
+-        self.kind
+-    }
+-
+-    pub fn message(&self) -> &str {
+-        &self.message
+-    }
+-}
+-
+-impl fmt::Display for MiniAppWorkerPoolError {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        f.write_str(&self.message)
+-    }
+-}
+-
+-impl std::error::Error for MiniAppWorkerPoolError {}
+-
+-pub type MiniAppWorkerPoolResult<T> = Result<T, MiniAppWorkerPoolError>;
+-
+-struct WorkerEntry {
+-    revision: String,
+-    worker: Arc<Mutex<JsWorker>>,
+-}
+-
+-fn spawn_worker_reaper() -> Arc<Mutex<std::collections::HashMap<String, WorkerEntry>>> {
+-    let workers = Arc::new(Mutex::new(std::collections::HashMap::<String, WorkerEntry>::new()));
+-
+-    // Background task: evict idle workers every 60s without waiting for a new spawn.
+-    let workers_bg = Arc::clone(&workers);
+-    tokio::spawn(async move {
+-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+-        interval.tick().await; // skip first immediate tick
+-        loop {
+-            interval.tick().await;
+-            let now = std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .unwrap_or_default()
+-                .as_millis() as i64;
+-            let mut guard = workers_bg.lock().await;
+-            let to_remove: Vec<String> = guard
+-                .iter()
+-                .filter(|(_, entry)| {
+-                    if let Ok(worker) = entry.worker.try_lock() {
+-                        worker_is_idle(now, worker.last_activity_ms())
+-                    } else {
+-                        false
+-                    }
+-                })
+-                .map(|(k, _)| k.clone())
+-                .collect();
+-            for id in to_remove {
+-                if let Some(entry) = guard.remove(&id) {
+-                    let mut w = entry.worker.lock().await;
+-                    w.kill().await;
+-                }
+-            }
+-        }
+-    });
+-
+-    workers
+-}
+-
+-pub struct JsWorkerPool {
+-    workers: Arc<Mutex<std::collections::HashMap<String, WorkerEntry>>>,
+-    runtime: DetectedRuntime,
+-    worker_host_path: PathBuf,
+-    miniapps_dir: PathBuf,
+-    event_sink: Option<SharedMiniAppWorkerEventSink>,
+-}
+-
+-impl JsWorkerPool {
+-    pub fn new(
+-        miniapps_dir: PathBuf,
+-        worker_host_path: PathBuf,
+-        event_sink: Option<SharedMiniAppWorkerEventSink>,
+-    ) -> MiniAppWorkerPoolResult<Self> {
+-        let runtime = detect_runtime().ok_or_else(|| {
+-            MiniAppWorkerPoolError::validation("No JS runtime found (install Bun or Node.js)".to_string())
+-        })?;
+-        Ok(Self::from_runtime(miniapps_dir, worker_host_path, runtime, event_sink))
+-    }
+-
+-    pub fn from_runtime(
+-        miniapps_dir: PathBuf,
+-        worker_host_path: PathBuf,
+-        runtime: DetectedRuntime,
+-        event_sink: Option<SharedMiniAppWorkerEventSink>,
+-    ) -> Self {
+-        let workers = spawn_worker_reaper();
+-
+-        Self {
+-            workers,
+-            runtime,
+-            worker_host_path,
+-            miniapps_dir,
+-            event_sink,
+-        }
+-    }
+-
+-    fn miniapp_dir(&self, app_id: &str) -> PathBuf {
+-        self.miniapps_dir.join(app_id)
+-    }
+-
+-    pub fn runtime_info(&self) -> &DetectedRuntime {
+-        &self.runtime
+-    }
+-
+-    /// Get or spawn a Worker for the app. policy_json is the resolved permission policy JSON string.
+-    pub async fn get_or_spawn(
+-        &self,
+-        app_id: &str,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        node_perms: Option<&NodePermissions>,
+-    ) -> MiniAppWorkerPoolResult<Arc<Mutex<JsWorker>>> {
+-        let app_dir = self.miniapp_dir(app_id);
+-        self.get_or_spawn_with_app_dir(app_id, app_id, &app_dir, worker_revision, policy_json, node_perms)
+-            .await
+-    }
+-
+-    pub async fn get_or_spawn_with_app_dir(
+-        &self,
+-        worker_key: &str,
+-        app_id: &str,
+-        app_dir: &Path,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        node_perms: Option<&NodePermissions>,
+-    ) -> MiniAppWorkerPoolResult<Arc<Mutex<JsWorker>>> {
+-        let mut guard = self.workers.lock().await;
+-        self.evict_idle(&mut guard).await;
+-
+-        if let Some(entry) = guard.remove(worker_key) {
+-            if entry.revision == worker_revision {
+-                let worker = Arc::clone(&entry.worker);
+-                guard.insert(worker_key.to_string(), entry);
+-                return Ok(worker);
+-            }
+-            let mut stale = entry.worker.lock().await;
+-            stale.kill().await;
+-        }
+-
+-        if worker_pool_at_capacity(guard.len()) {
+-            self.evict_lru(&mut guard).await;
+-        }
+-
+-        if !app_dir.exists() {
+-            return Err(MiniAppWorkerPoolError::not_found(format!(
+-                "MiniApp worker dir not found: {}",
+-                app_dir.display()
+-            )));
+-        }
+-
+-        let worker = JsWorker::spawn(
+-            &self.runtime,
+-            &self.worker_host_path,
+-            app_dir,
+-            policy_json,
+-            app_id.to_string(),
+-            self.event_sink.clone(),
+-        )
+-        .await
+-        .map_err(MiniAppWorkerPoolError::validation)?;
+-
+-        let _timeout_ms = node_perms.and_then(|n| n.timeout_ms).unwrap_or(30_000);
+-        let worker = Arc::new(Mutex::new(worker));
+-        guard.insert(
+-            worker_key.to_string(),
+-            WorkerEntry {
+-                revision: worker_revision.to_string(),
+-                worker: Arc::clone(&worker),
+-            },
+-        );
+-        Ok(worker)
+-    }
+-
+-    async fn evict_idle(&self, guard: &mut std::collections::HashMap<String, WorkerEntry>) {
+-        let now = std::time::SystemTime::now()
+-            .duration_since(std::time::UNIX_EPOCH)
+-            .unwrap_or_default()
+-            .as_millis() as i64;
+-        let to_remove: Vec<String> = guard
+-            .iter()
+-            .filter(|(_, entry)| {
+-                let w = entry.worker.try_lock();
+-                if let Ok(worker) = w {
+-                    worker_is_idle(now, worker.last_activity_ms())
+-                } else {
+-                    false
+-                }
+-            })
+-            .map(|(k, _)| k.clone())
+-            .collect();
+-        for id in to_remove {
+-            if let Some(entry) = guard.remove(&id) {
+-                let mut w = entry.worker.lock().await;
+-                w.kill().await;
+-            }
+-        }
+-    }
+-
+-    async fn evict_lru(&self, guard: &mut std::collections::HashMap<String, WorkerEntry>) {
+-        let oldest_id = select_lru_worker(guard.iter().map(|(id, entry)| {
+-            let activity = entry
+-                .worker
+-                .try_lock()
+-                .map(|worker| worker.last_activity_ms())
+-                .unwrap_or(0);
+-            (id.as_str(), activity)
+-        }))
+-        .unwrap_or_default();
+-        if !oldest_id.is_empty() {
+-            if let Some(entry) = guard.remove(&oldest_id) {
+-                let mut w = entry.worker.lock().await;
+-                w.kill().await;
+-            }
+-        }
+-    }
+-
+-    /// Call a method on the app's Worker. Spawns the worker if needed; caller must provide policy_json.
+-    pub async fn call(
+-        &self,
+-        app_id: &str,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        permissions: Option<&NodePermissions>,
+-        method: &str,
+-        params: Value,
+-    ) -> MiniAppWorkerPoolResult<Value> {
+-        let worker = self
+-            .get_or_spawn(app_id, worker_revision, policy_json, permissions)
+-            .await?;
+-        let timeout_ms = permissions.and_then(|n| n.timeout_ms).unwrap_or(30_000);
+-        let guard = worker.lock().await;
+-        guard
+-            .call(method, params, timeout_ms)
+-            .await
+-            .map_err(MiniAppWorkerPoolError::validation)
+-    }
+-
+-    pub async fn call_with_app_dir(
+-        &self,
+-        worker_key: &str,
+-        app_id: &str,
+-        app_dir: &Path,
+-        worker_revision: &str,
+-        policy_json: &str,
+-        permissions: Option<&NodePermissions>,
+-        method: &str,
+-        params: Value,
+-    ) -> MiniAppWorkerPoolResult<Value> {
+-        let worker = self
+-            .get_or_spawn_with_app_dir(worker_key, app_id, app_dir, worker_revision, policy_json, permissions)
+-            .await?;
+-        let timeout_ms = permissions.and_then(|n| n.timeout_ms).unwrap_or(30_000);
+-        let guard = worker.lock().await;
+-        guard
+-            .call(method, params, timeout_ms)
+-            .await
+-            .map_err(MiniAppWorkerPoolError::validation)
+-    }
+-
+-    /// Stop and remove the Worker for the app.
+-    pub async fn stop(&self, app_id: &str) {
+-        let mut guard = self.workers.lock().await;
+-        if let Some(entry) = guard.remove(app_id) {
+-            let mut w = entry.worker.lock().await;
+-            w.kill().await;
+-        }
+-    }
+-
+-    /// Return app IDs of currently running Workers.
+-    pub async fn list_running(&self) -> Vec<String> {
+-        let guard = self.workers.lock().await;
+-        guard.keys().cloned().collect()
+-    }
+-
+-    pub async fn is_running(&self, app_id: &str) -> bool {
+-        let guard = self.workers.lock().await;
+-        guard.contains_key(app_id)
+-    }
+-
+-    /// Stop all Workers.
+-    pub async fn stop_all(&self) {
+-        let mut guard = self.workers.lock().await;
+-        for (_, entry) in guard.drain() {
+-            let mut w = entry.worker.lock().await;
+-            w.kill().await;
+-        }
+-    }
+-
+-    pub fn has_installed_deps(&self, app_id: &str) -> bool {
+-        self.miniapp_dir(app_id).join("node_modules").exists()
+-    }
+-
+-    pub fn has_installed_deps_in_dir(&self, app_dir: &Path) -> bool {
+-        app_dir.join("node_modules").exists()
+-    }
+-
+-    /// Install npm dependencies for the app (bun install or npm/pnpm install).
+-    pub async fn install_deps(&self, app_id: &str, _deps: &[NpmDep]) -> MiniAppWorkerPoolResult<InstallResult> {
+-        let app_dir = self.miniapp_dir(app_id);
+-        self.install_deps_in_dir(&app_dir, _deps).await
+-    }
+-
+-    pub async fn install_deps_in_dir(
+-        &self,
+-        app_dir: &Path,
+-        _deps: &[NpmDep],
+-    ) -> MiniAppWorkerPoolResult<InstallResult> {
+-        let package_json = app_dir.join("package.json");
+-        let command = match plan_install_deps(package_json.exists(), &self.runtime.kind, which::which("pnpm").is_ok()) {
+-            InstallDepsPlan::SkipMissingPackageJson => {
+-                return Ok(InstallResult {
+-                    success: true,
+-                    stdout: String::new(),
+-                    stderr: String::new(),
+-                });
+-            }
+-            InstallDepsPlan::Run(command) => command,
+-        };
+-
+-        let output = northhing_services_core::process_manager::create_tokio_command(command.program)
+-            .args(command.args)
+-            .current_dir(app_dir)
+-            .output()
+-            .await
+-            .map_err(|e| MiniAppWorkerPoolError::io(format!("install_deps failed: {}", e)))?;
+-
+-        Ok(InstallResult {
+-            success: output.status.success(),
+-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+-        })
+-    }
+-}
+-
+-impl MiniAppRuntimePort for JsWorkerPool {
+-    fn detect_runtime(&self) -> MiniAppPortFuture<'_, Option<DetectedRuntime>> {
+-        Box::pin(async move { Ok(Some(self.runtime.clone())) })
+-    }
+-
+-    fn install_deps(&self, request: MiniAppInstallDepsRequest) -> MiniAppPortFuture<'_, InstallResult> {
+-        Box::pin(async move {
+-            self.install_deps(&request.app_id, &request.dependencies)
+-                .await
+-                .map_err(map_miniapp_runtime_port_error)
+-        })
+-    }
+-}
+-
+-fn map_miniapp_runtime_port_error(error: MiniAppWorkerPoolError) -> MiniAppPortError {
+-    let kind = match error.kind() {
+-        MiniAppWorkerPoolErrorKind::NotFound => MiniAppPortErrorKind::NotFound,
+-        MiniAppWorkerPoolErrorKind::Validation => MiniAppPortErrorKind::InvalidInput,
+-        MiniAppWorkerPoolErrorKind::Io => MiniAppPortErrorKind::Io,
+-        MiniAppWorkerPoolErrorKind::RuntimeUnavailable => MiniAppPortErrorKind::RuntimeUnavailable,
+-        MiniAppWorkerPoolErrorKind::Backend => MiniAppPortErrorKind::Backend,
+-    };
+-    MiniAppPortError::new(kind, error.to_string())
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use northhing_product_domains::miniapp::runtime::RuntimeKind;
+-    use northhing_test_support::TestTempDir;
+-    use std::fs;
+-    use std::path::{Path, PathBuf};
+-
+-    #[tokio::test]
+-    async fn runtime_port_adapter_preserves_existing_runtime_and_noop_install() {
+-        let root = TestTempDir::new("northhing-miniapp-runtime-port");
+-        let miniapps_dir = root.path().join("miniapps");
+-        let app_id = "demo_app";
+-        tokio::fs::create_dir_all(miniapps_dir.join(app_id)).await.unwrap();
+-        let pool = JsWorkerPool::from_runtime(
+-            miniapps_dir,
+-            PathBuf::from("worker-host.js"),
+-            DetectedRuntime {
+-                kind: RuntimeKind::Node,
+-                path: PathBuf::from("node"),
+-                version: "v20.0.0".to_string(),
+-            },
+-            None,
+-        );
+-        let port: &dyn MiniAppRuntimePort = &pool;
+-
+-        let runtime = port.detect_runtime().await.unwrap().unwrap();
+-        assert_eq!(runtime.kind, RuntimeKind::Node);
+-        assert_eq!(runtime.version, "v20.0.0");
+-
+-        let result = port
+-            .install_deps(MiniAppInstallDepsRequest {
+-                app_id: app_id.to_string(),
+-                dependencies: vec![NpmDep {
+-                    name: "lodash".to_string(),
+-                    version: "^4.17.21".to_string(),
+-                }],
+-            })
+-            .await
+-            .unwrap();
+-        assert!(result.success);
+-        assert!(result.stdout.is_empty());
+-        assert!(result.stderr.is_empty());
+-    }
+-
+-    #[tokio::test]
+-    async fn install_deps_in_dir_noops_without_package_json() {
+-        let root = TestTempDir::new("northhing-miniapp-runtime-draft-port");
+-        let miniapps_dir = root.path().join("miniapps");
+-        let draft_dir = miniapps_dir.join(".drafts").join("demo_app").join("draft_1");
+-        tokio::fs::create_dir_all(&draft_dir).await.unwrap();
+-        let pool = JsWorkerPool::from_runtime(
+-            miniapps_dir,
+-            PathBuf::from("worker-host.js"),
+-            DetectedRuntime {
+-                kind: RuntimeKind::Node,
+-                path: PathBuf::from("node"),
+-                version: "v20.0.0".to_string(),
+-            },
+-            None,
+-        );
+-
+-        let result = pool
+-            .install_deps_in_dir(
+-                &draft_dir,
+-                &[NpmDep {
+-                    name: "lodash".to_string(),
+-                    version: "^4.17.21".to_string(),
+-                }],
+-            )
+-            .await
+-            .unwrap();
+-        assert!(result.success);
+-        assert!(result.stdout.is_empty());
+-        assert!(result.stderr.is_empty());
+-    }
+-}

@@ -250,9 +250,12 @@ pub async fn start_installation(
     Ok(())
 }
 
+#[allow(deprecated)]
 #[tauri::command]
-pub async fn launch_registered_uninstaller(request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
-    launch_command(&request.uninstall_command).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
+pub async fn launch_registered_uninstaller(_request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
+    let reg = read_uninstall_registration()
+        .ok_or_else(|| "No registered installation found to launch uninstaller.".to_string())?;
+    launch_command(&reg.uninstall_string).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
     Ok(())
 }
 
@@ -428,11 +431,13 @@ pub async fn close_installer(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
-    let install_path = Path::new(&request.install_path);
+    let reg = read_uninstall_registration();
+    verify_uninstall_path(
+        reg.as_ref().map(|r| r.install_location.as_str()),
+        &request.install_path,
+    )?;
 
-    if request.install_path.trim().is_empty() {
-        return Err("Install path is empty; nothing to uninstall.".to_string());
-    }
+    let install_path = Path::new(&request.install_path);
 
     if !install_path.exists() {
         return Err(format!(
@@ -441,9 +446,7 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
         ));
     }
 
-    if install_path.exists() {
-        fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
-    }
+    fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
 
     if let Err(e) = remove_desktop_shortcut() {
         log::warn!("Failed to remove desktop shortcut: {}", e);
@@ -473,6 +476,58 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
                 }
             }
         }
+    }
+
+    Ok(())
+}
+
+pub fn normalize_path_for_comparison(path_str: &str) -> String {
+    let trimmed = path_str.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    let mut s = trimmed.replace('\\', "/");
+
+    let lower_prefix = s.to_ascii_lowercase();
+    if lower_prefix.starts_with("//?/unc/") {
+        s = format!("//{}", &s[8..]);
+    } else if lower_prefix.starts_with("//?/") {
+        s = s[4..].to_string();
+    }
+
+    let trimmed_end = s.trim_end_matches('/');
+    if trimmed_end.is_empty() && s.starts_with('/') {
+        "/".to_string()
+    } else {
+        trimmed_end.to_ascii_lowercase()
+    }
+}
+
+pub fn verify_uninstall_path(
+    registered_location: Option<&str>,
+    requested_path: &str,
+) -> Result<(), String> {
+    let req_trimmed = requested_path.trim();
+    if req_trimmed.is_empty() {
+        return Err("Install path is empty; nothing to uninstall.".to_string());
+    }
+
+    let reg = registered_location
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            "Uninstall rejected: no valid installation is registered in the system registry.".to_string()
+        })?;
+
+    let norm_req = normalize_path_for_comparison(req_trimmed);
+    let norm_reg = normalize_path_for_comparison(reg);
+
+    if norm_req.is_empty() || norm_reg.is_empty() || norm_req != norm_reg {
+        return Err(format!(
+            "Uninstall rejected: requested path '{}' does not match registered install location '{}'.",
+            requested_path, reg
+        ));
     }
 
     Ok(())
@@ -544,5 +599,78 @@ fn classify_connection_error(err: &str) -> String {
         "TLS/SSL error. You may enable skip SSL verify in advanced settings.".to_string()
     } else {
         format!("Connection failed: {}", err)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_path_for_comparison() {
+        assert_eq!(
+            normalize_path_for_comparison(r"C:\Program Files\northhing"),
+            normalize_path_for_comparison(r"C:/Program Files/northhing/")
+        );
+        assert_eq!(
+            normalize_path_for_comparison(r"c:\program files\northhing\"),
+            normalize_path_for_comparison(r"C:\Program Files\northhing")
+        );
+        assert_eq!(
+            normalize_path_for_comparison(r"\\?\C:\Program Files\northhing"),
+            normalize_path_for_comparison(r"C:\Program Files\northhing")
+        );
+        assert_eq!(
+            normalize_path_for_comparison(r"\\?\UNC\server\share\northhing"),
+            normalize_path_for_comparison(r"\\server\share\northhing")
+        );
+        assert_eq!(
+            normalize_path_for_comparison("/opt/northhing"),
+            normalize_path_for_comparison("/opt/northhing/")
+        );
+        assert_ne!(
+            normalize_path_for_comparison(r"C:\Program Files\northhing"),
+            normalize_path_for_comparison(r"C:\Windows")
+        );
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_matches() {
+        let reg = Some(r"C:\Program Files\northhing");
+        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing").is_ok());
+        assert!(verify_uninstall_path(reg, r"C:/Program Files/northhing/").is_ok());
+        assert!(verify_uninstall_path(reg, r"c:\program files\northhing").is_ok());
+        assert!(verify_uninstall_path(reg, r"\\?\C:\Program Files\northhing").is_ok());
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_mismatch_rejected() {
+        let reg = Some(r"C:\Program Files\northhing");
+        assert!(verify_uninstall_path(reg, r"C:\Windows").is_err());
+        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing-other").is_err());
+        assert!(verify_uninstall_path(reg, r"C:\Program Files").is_err());
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_junction_or_link_literal_mismatch_rejected() {
+        // Pure string comparison does not follow filesystem junctions/symlinks.
+        // Even if C:\AppJunction pointed to C:\Program Files\northhing, differing literals are rejected.
+        let reg = Some(r"C:\Program Files\northhing");
+        assert!(verify_uninstall_path(reg, r"C:\AppJunction").is_err());
+        assert!(verify_uninstall_path(reg, r"C:\SymlinkTarget").is_err());
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_no_registration_rejected() {
+        assert!(verify_uninstall_path(None, r"C:\Program Files\northhing").is_err());
+        assert!(verify_uninstall_path(Some(""), r"C:\Program Files\northhing").is_err());
+        assert!(verify_uninstall_path(Some("   "), r"C:\Program Files\northhing").is_err());
+    }
+
+    #[test]
+    fn test_verify_uninstall_path_empty_request_rejected() {
+        let reg = Some(r"C:\Program Files\northhing");
+        assert!(verify_uninstall_path(reg, "").is_err());
+        assert!(verify_uninstall_path(reg, "   ").is_err());
     }
 }

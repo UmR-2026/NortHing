@@ -4,7 +4,7 @@ use super::schedule::{compute_initial_next_run_at_ms, validate_schedule};
 use super::types::{CronJob, CronJobPayload, CronJobTarget, CronLaunchSpec, CronSchedule, CronWorkspaceRef};
 use crate::agentic::coordination::{DialogQueuePriority, DialogSubmissionPolicy, DialogTriggerSource};
 use crate::util::errors::{NortHingError, NortHingResult};
-use chrono::{Local, SecondsFormat, TimeZone, Utc};
+use chrono::{Local, SecondsFormat, TimeZone};
 use northhing_runtime_ports::AgentDialogPrependedReminder;
 
 pub(super) fn reconcile_loaded_job(job: &mut CronJob, now_ms: i64) -> NortHingResult<bool> {
@@ -202,9 +202,7 @@ pub(super) fn scheduled_job_policy() -> DialogSubmissionPolicy {
     DialogSubmissionPolicy::new(DialogTriggerSource::ScheduledJob, DialogQueuePriority::Low, true)
 }
 
-pub(super) fn now_ms() -> i64 {
-    Utc::now().timestamp_millis()
-}
+pub(super) use northhing_core_types::time::now_unix_millis as now_ms;
 
 pub(super) struct EnqueueInput {
     pub job_id: String,

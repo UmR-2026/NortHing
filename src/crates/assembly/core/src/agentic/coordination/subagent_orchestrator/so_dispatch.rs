@@ -13,9 +13,7 @@ use crate::agentic::goal_mode::{
     user_facing_thread_goal_error, ThreadGoalRuntime, ThreadGoalStore,
 };
 use crate::agentic::tools::pipeline::SubagentParentInfo;
-use crate::agentic::tools::{
-    is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
-};
+use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::service_agent_runtime::CoreServiceAgentRuntime;
 use crate::util::errors::{NortHingError, NortHingResult};
 use northhing_agent_dispatch::{ActorRuntime, USE_LIGHTWEIGHT_ACTOR};

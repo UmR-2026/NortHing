@@ -194,7 +194,7 @@ AppWindow (main.slint)
 
 | 层面 | 状态 | 证据 |
 |------|------|------|
-| 设计文档 | ✅ 完成 | `docs/design/2026-07-23-self-cognition/first-entry-design.md` |
+| 设计文档 | ✅ 完成 | `docs/archive/design/2026-07-23-self-cognition/first-entry-design.md` |
 | 后端代码 | ✅ 存在 | `agentic/agents/` 中有 identity 相关 prompt builder；workspace 有 `identity_md_path` 字段 |
 | 前端组件 | ✅ 存在 | `IdentityCreatorView.slint`（9.4KB，5 轮 Q&A + LLM 生成） |
 | 前端入口 | ⚠️ 声明但未接线 | main.slint 有 `open-identity-creator` callback，但 Rust 侧无实现 |

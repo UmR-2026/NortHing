@@ -12,9 +12,10 @@
 //! now lives here, in user-space.
 //!
 //! ConfigManager **retains** its other responsibilities (`agent_models`,
-//! `func_agent_models`, config migrations, file IO helpers) and exposes
-//! `load_app_settings_from_disk` / `save_app_settings_to_disk` for disk IO
-//! while AppSettings owns the in-memory representation and the CRUD API.
+//! `func_agent_models`, config migrations, file IO helpers) while
+//! AppSettings owns the in-memory representation and the CRUD API; disk IO
+//! lives in this module's `io` submodule (`load_app_settings` /
+//! `update_app_settings`).
 //!
 //! ## Why a separate file
 //!
@@ -37,6 +38,7 @@ use std::path::{Path, PathBuf};
 
 mod integrity;
 mod io;
+mod keyring;
 mod sync;
 mod types;
 
@@ -44,6 +46,7 @@ mod types;
 mod tests;
 
 pub use io::*;
+pub use keyring::*;
 pub use sync::*;
 pub use types::*;
 
@@ -55,14 +58,8 @@ pub const SETTINGS_SCHEMA_VERSION: u32 = 1;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub schema_version: u32,
-    pub providers: Vec<ProviderConfig>,
     pub workspaces: Vec<WorkspaceEntry>,
     pub current_workspace: Option<PathBuf>,
-    /// One entry per discovered builtin skill. Built at load time by
-    /// scanning `crates/assembly/core/builtin_skills/*`.
-    pub skills_enabled: Vec<SkillState>,
-    pub mcp_servers: Vec<MCPServerConfig>,
-    pub default_model: Option<ModelRef>,
     /// True once the user has completed (or skipped) the 3-step welcome
     /// flow. Persisted so a fully-skipped onboarding does not reappear
     /// on the next launch. `#[serde(default)]` keeps pre-existing
@@ -75,103 +72,17 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             schema_version: SETTINGS_SCHEMA_VERSION,
-            providers: Vec::new(),
             workspaces: Vec::new(),
             current_workspace: None,
-            skills_enabled: Vec::new(),
-            mcp_servers: Vec::new(),
-            default_model: None,
             onboarding_completed: false,
         }
     }
 }
 
 impl AppSettings {
-    /// Spec Q9=a: triggers the welcome flow when the user has done nothing
-    /// yet. Legacy P0-B seeded entries (id contains `-default` and
-    /// `enabled=false`) do NOT count as "real" providers — the welcome
-    /// screen still shows for users whose app.json only has the old seeds.
+    /// Spec Q9=a: triggers the welcome flow when the user has done nothing yet.
     pub fn is_first_run(&self) -> bool {
-        let real_providers = self
-            .providers
-            .iter()
-            .filter(|p| !p.id.contains("-default") || p.enabled)
-            .count();
-        real_providers == 0 && self.workspaces.is_empty()
-    }
-
-    /// Spec Q1=a: detect P0-B legacy seeded placeholders so the Settings UI
-    /// can offer a one-click cleanup banner.
-    #[allow(dead_code)] // only used in tests at the moment; the Settings UI
-                        // re-detects legacy entries through `legacy_placeholder_count` (refreshed
-                        // in `callbacks_settings::refresh::refresh_settings_lists`).
-    pub fn has_legacy_placeholders(&self) -> bool {
-        self.providers.iter().any(|p| p.id.contains("-default") && !p.enabled)
-    }
-
-    /// Spec Q6=a: when a provider is removed, sessions that referenced it
-    /// fall back to the first remaining enabled provider. Returns `None`
-    /// when no other provider is enabled (the caller should then mark the
-    /// session as `broken_provider`).
-    pub fn fallback_provider_for(&self, deleted_id: &str) -> Option<&ProviderConfig> {
-        self.providers.iter().find(|p| p.enabled && p.id != deleted_id)
-    }
-
-    /// Spec C-xxiv (default model fallback): if the configured default's
-    /// provider was deleted, fall back to the first enabled provider.
-    pub fn resolve_default_model(&self) -> Option<ModelRef> {
-        if let Some(dm) = &self.default_model {
-            // Provider must exist AND be enabled; otherwise fall through.
-            let provider_ok = self.providers.iter().any(|p| p.id == dm.provider_id && p.enabled);
-            if provider_ok {
-                return Some(dm.clone());
-            }
-        }
-        self.providers.iter().find(|p| p.enabled).map(|p| ModelRef {
-            provider_id: p.id.clone(),
-            model: p.model.clone(),
-        })
-    }
-
-    /// Mutator: add or replace a provider.
-    ///
-    /// 2026-07-18 (D2c): three-tier matching —
-    /// 1. match by `id` (exact replace);
-    /// 2. match by (name, base_url, api_key) — keep the existing id so session
-    ///    references stay valid, replace the other fields;
-    /// 3. otherwise push as new.
-    pub fn upsert_provider(&mut self, mut p: ProviderConfig) {
-        if let Some(slot) = self.providers.iter_mut().find(|x| x.id == p.id) {
-            *slot = p;
-        } else if let Some(slot) = self
-            .providers
-            .iter_mut()
-            .find(|x| x.name == p.name && x.base_url == p.base_url && x.api_key == p.api_key)
-        {
-            // Keep the original id to avoid breaking session references.
-            let keep_id = slot.id.clone();
-            p.id = keep_id;
-            *slot = p;
-        } else {
-            self.providers.push(p);
-        }
-
-        // 2026-07-18 (D2c): auto-set default model on first enabled provider.
-        if self.default_model.is_none() {
-            if let Some(last) = self.providers.last() {
-                if last.enabled {
-                    self.default_model = Some(ModelRef {
-                        provider_id: last.id.clone(),
-                        model: last.model.clone(),
-                    });
-                }
-            }
-        }
-    }
-
-    pub fn remove_provider(&mut self, id: &str) -> Option<ProviderConfig> {
-        let pos = self.providers.iter().position(|p| p.id == id)?;
-        Some(self.providers.remove(pos))
+        self.workspaces.is_empty()
     }
 
     pub fn add_workspace(&mut self, path: PathBuf) {
@@ -209,27 +120,6 @@ impl AppSettings {
             self.current_workspace = None;
         }
         Some(removed)
-    }
-
-    // 2026-07-27 (K4a R3, Bug D): kept for future restore when the
-    // Settings > MCP panel's add/delete handlers are rewired back
-    // through `AppSettings.mcp_servers` (the current path goes
-    // through the kernel facade's MCP service — see
-    // `callbacks_settings::refresh::refresh_settings_lists`).
-    #[allow(dead_code)]
-    pub fn upsert_mcp(&mut self, m: MCPServerConfig) {
-        if let Some(slot) = self.mcp_servers.iter_mut().find(|x| x.id == m.id) {
-            *slot = m;
-        } else {
-            self.mcp_servers.push(m);
-        }
-    }
-
-    // 2026-07-27 (K4a R3, Bug D): see `upsert_mcp` above.
-    #[allow(dead_code)]
-    pub fn remove_mcp(&mut self, id: &str) -> Option<MCPServerConfig> {
-        let pos = self.mcp_servers.iter().position(|m| m.id == id)?;
-        Some(self.mcp_servers.remove(pos))
     }
 }
 

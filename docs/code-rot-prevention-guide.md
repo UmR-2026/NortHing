@@ -25,37 +25,9 @@
 
 ## 二、腐化检测方法
 
-### 2.1 快速扫描脚本
+### 2.1 现行检测机制
 
-```bash
-#!/bin/bash
-# 保存为 scripts/code-rot-scan.sh
-
-echo "=== 文件膨胀检测 ==="
-find src/ -name "*.rs" -not -path "*/target/*" -not -path "*/tests/*" -exec wc -l {} + | sort -rn | head -20
-
-echo "=== unwrap() 计数（生产代码） ==="
-grep -rn 'unwrap(' src/ --include='*.rs' | grep -v '/tests/' | grep -v 'test_' | grep -v '#\[cfg(test)\]' | wc -l
-
-echo "=== let _ = Result 丢弃计数 ==="
-grep -rn 'let _ = ' src/ --include='*.rs' | grep -v '/tests/' | grep -v 'test_' | grep -v '#\[cfg(test)\]' | wc -l
-
-echo "=== panic! 生产代码 ==="
-grep -rn 'panic!' src/ --include='*.rs' | grep -v '/tests/' | grep -v 'test_' | grep -v '#\[cfg(test)\]' | wc -l
-
-echo "=== unreachable! 生产代码 ==="
-grep -rn 'unreachable!' src/ --include='*.rs' | grep -v '/tests/' | grep -v 'test_' | grep -v '#\[cfg(test)\]' | wc -l
-
-echo "=== dead_code 允许 ==="
-grep -rn '#\[allow(dead_code)\]' src/ --include='*.rs' | wc -l
-
-echo "=== TODO/FIXME 遗留 ==="
-grep -rn 'TODO\|FIXME\|HACK\|XXX' src/ --include='*.rs' | grep -v '/tests/' | wc -l
-
-echo "=== target/ 大小 ==="
-du -sh target/debug 2>/dev/null || echo "no target/debug"
-du -sh target/release 2>/dev/null || echo "no target/release"
-```
+文件膨胀与 unwrap 治理现由家规 3（god-file 防线）+ tech-debt-ledger 登记 + `node scripts/check-core-boundaries.mjs` 承担。
 
 ### 2.2 健康度阈值（红线）
 
@@ -250,7 +222,7 @@ fi
 
 每月执行：
  1. `cargo clean` → 释放编译产物
- 2. `scripts/code-rot-scan.sh` → 生成健康度报告
+ 2. 家规 3（god-file 防线）+ tech-debt-ledger 登记 + `node scripts/check-core-boundaries.mjs` → 跟踪健康度与边界合规
  3. 审查 Top 5 最大文件 → 评估拆分优先级
 
 每季度执行：
@@ -336,16 +308,6 @@ fi
 | `research/audit_redim_v3_02.md` | 2026-06-28 | 技术债务第三次 | 重审 v2 |
 | `research/audit_redim_v3_03.md` | 2026-06-28 | 质量与测试第三次 | 重审 v2 |
 | `research/audit_redim_v3_04.md` | 2026-06-28 | 依赖与编译第三次 | 重审 v2 |
-
-### 6.2 快速自检命令
-
-```bash
-# 每天执行一次
-bash scripts/code-rot-scan.sh | tee research/health-$(date +%Y%m%d).log
-
-# 对比上次
-bash scripts/code-rot-scan.sh | diff research/health-$(date -d yesterday +%Y%m%d).log -
-```
 
 ---
 

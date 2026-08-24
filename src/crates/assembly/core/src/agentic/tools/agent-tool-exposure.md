@@ -41,7 +41,6 @@ Notes:
 | `GetMCPPrompt` | Collapsed | None | - |
 | `GenerativeUI` | Collapsed | None | - |
 | `Git` | Collapsed | `ReviewFixer`, `ReviewBusinessLogic`, `ReviewPerformance`, `ReviewSecurity`, `ReviewArchitecture`, `ReviewFrontend`, `ReviewJudge` | Expanded |
-| `InitMiniApp` | Collapsed | None | - |
 | `ControlHub` | Collapsed | `ComputerUse` | Expanded |
 | `ComputerUse` | Collapsed | `ComputerUse` | Expanded |
 | `Playbook` | Collapsed | None | - |

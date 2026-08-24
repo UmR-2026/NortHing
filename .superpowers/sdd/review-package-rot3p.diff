@@ -1,0 +1,746 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index dabfd27..46ce146 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -134,3 +134,18 @@ jobs:
+       - name: Run core boundary checker
+         run: node scripts/check-core-boundaries.mjs
+ 
++  # ── rot budget check ───────────────────────────────────────────────
++  rot-budget:
++    name: rot budget check
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: "22"
++
++      - name: Run rot budget checker and self-tests
++        run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
++
++
+diff --git a/.superpowers/sdd/task-rot3p-brief.md b/.superpowers/sdd/task-rot3p-brief.md
+new file mode 100644
+index 0000000..b709c6b
+--- /dev/null
++++ b/.superpowers/sdd/task-rot3p-brief.md
+@@ -0,0 +1,80 @@
++# Task ROT-3' Brief — rot-budget 预算闸（源头防腐体系的机械兜底）
++
++## 来源与验收标准
++
++来源：编排者 2026-08-21 防腐体系决策（基于 dsh verify-doc-budgets 模式移植：扁平 JSON manifest + 极简 checker + "ceiling 只降不升、升需用户拍板"治理）。
++
++**验收（逐条可机械核对）**：
++1. `scripts/rot-budget.json` 存在，初始条目 = 本 brief 预检钉死的基线值（一个字符不许差）。
++2. `node scripts/verify-rot-budget.mjs` 在当前工作树 **exit 0**（全绿）。
++3. 自测证明闸能变红：对人工构造的违规 fixture **exit 1** 且报错含 当前值/上限/修复指引。
++4. `pnpm run check:rot` 可用（package.json 新增 script）。
++5. `.github/workflows/ci.yml` 新增 `rot-budget` job（仿照 `core-boundaries` job 形态：checkout + setup-node 22 + 单 run 行）。
++6. `AGENTS.md` 与 `AGENTS-CN.md` 家规（Housekeeping rules）各新增第 7 条（文本见 Spec 5，中英各自对应）。
++
++## 编排者预检结论（2026-08-21 实测，直接采信，勿复测改值）
++
++计数口径（必须与此完全一致）：`rg -o --glob '*.rs' --glob '!**/tests/**' --glob '!**/*_tests.rs' --glob '!**/target*/**' <PATTERN> src | 行数`。注意：**内联 `#[cfg(test)]` 模块的命中被计入，这是刻意的**（ratchet 只要求单调不降分辨率，不要求精确归属）。
++
++| 指标 | pattern | 实测值 |
++|---|---|---|
++| `unwrap_production` | `\.unwrap\(\)` | **521** |
++| `expect_production` | `\.expect\(` | **1098** |
++| `let_underscore` | `let _ =` | **402** |
++
++god-file 行数（`(Get-Content).Count` 口径，生产 .rs ≥800 行全扫）：
++
++| 文件 | 行数（=ceiling） |
++|---|---|
++| `src/apps/desktop/src/app_state/callbacks_lifecycle.rs` | 1063 |
++| `src/apps/cli/src/ui/theme.rs` | 990 |
++| `src/crates/assembly/core/src/service/agent_memory/memory_db.rs` | 918 |
++| `src/crates/assembly/core/src/service/agent_memory/facts.rs` | 905 |
++| `src/apps/cli/src/ui/startup/selectors.rs` | 877 |
++| `src/crates/assembly/core/src/service/lsp/manager.rs` | 836 |
++| `src/apps/cli/src/modes/chat/input.rs` | 802 |
++
++## 复用侦察（强制）
++
++动手前先读 `scripts/check-core-boundaries.mjs` + `scripts/check-core-boundaries.test.mjs`（现有 gate 与自测先例）+ `scripts/i18n-audit.mjs` 的 baseline 加载/比对段。checker 的文件遍历、JSON 加载、报错格式、exit code 约定**优先复用/对齐这些先例的写法**，不发明新风格。report 里写「复用侦察」一节：参考了哪些、对齐了什么、何处刻意不同及理由。
++
++## Spec（必须全部满足）
++
++1. **`scripts/rot-budget.json`**：扁平结构，两类条目：
++   - grep 计数类：`"unwrap_production": { "kind": "grep-count", "pattern": "\\.unwrap\\(\\)", "ceiling": 521, "note": "R-13, ratchet: only down" }`（三条，值见预检表）
++   - 行数类：`"god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": { "kind": "file-lines", "ceiling": 1063, "note": "R-14 god-file; split planned in ROT-2" }`（七条，值见预检表）
++2. **`scripts/verify-rot-budget.mjs`**（纯 Node，不 shell 外部工具，<250 行）：
++   - 遍历 `src/**/*.rs`，排除 `**/tests/**`、`**/*_tests.rs`；逐条执行 grep-count（对拼接内容计数）与 file-lines（按行数）。
++   - **附加规则**：任何不在 manifest 中的生产 .rs 文件行数 >800 直接违规（报错指引 = 拆分或登记 manifest 带定性理由）。`src/shared/i18n/generated_locale_contract.rs`（生成物）豁免，豁免写成 checker 顶部带注释的常量数组。
++   - 报错格式：`<key>: current <N> exceeds ceiling <M> — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`；全部违规收集后一次打印，exit 1；全绿打印一行 summary，exit 0。输出 English-only、无 emoji。
++3. **自测**：`scripts/verify-rot-budget.test.mjs`（仿 check-core-boundaries.test.mjs）：用临时目录构造 fixture——(a) 超 ceiling 的计数→必须 exit 1；(b) 未登记 >800 行文件→必须 exit 1；(c) 合规 fixture→exit 0。接入现有 test 运行方式（看 check-core-boundaries.test.mjs 怎么被跑的就怎么接；若无统一入口则 package.json 加进 `check:rot` 链：`node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs`）。
++4. **package.json**：新增 `"check:rot"` script。
++5. **CI**：`.github/workflows/ci.yml` 在 `core-boundaries` job 后追加 `rot-budget` job：`runs-on: ubuntu-latest`，steps = checkout + setup-node 22 + `run: node scripts/verify-rot-budget.mjs`（自测在 CI 也要跑：`node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs`，或与 check:rot 对齐直接 `pnpm run check:rot`——选其一，保证自测不缺席）。
++6. **家规第 7 条**（两文件同步）：
++   - `AGENTS.md` Housekeeping rules 追加：`7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message.`
++   - `AGENTS-CN.md` 对应中文条目（语义等价）。
++7. 不顺手做：不改任何产品代码、不调任何 ceiling 数值、不动 i18n frozen 设施、不动其它 CI job。
++
++## Global Constraints（逐字遵守）
++
++- 日志/输出/注释 English-only，无 emoji。
++- 基线值必须逐字采用预检表数字；若你实测值与预检表不符，**停下报 BLOCKED**（说明仓已漂移），不许自行改数。
++- 历史事故禁令（来自 ERRORS.md，相关项）：写文件/JSON 用标准库直接写 UTF-8，禁止经 PowerShell 中转非 ASCII（若 note 字段含中文则需当心——本 brief 要求 note 一律英文，规避此坑）。
++
++## 验证（命令 + 输出都要进 report）
++
++1. `node scripts/verify-rot-budget.mjs`（贴输出尾部，必须 exit 0）
++2. `node scripts/verify-rot-budget.test.mjs`（贴输出，自测全过）
++3. `pnpm run check:rot`（贴输出）
++4. `node scripts/check-core-boundaries.mjs`（确认未被波及，exit 0）
++5. `git diff --stat` 全文
++
++## 报告
++
++写到本 worktree `.superpowers/sdd/task-rot3p-report.md`：六条验收逐条证据、复用侦察节、Spec 3/5 的选择与理由、验证命令+输出尾部、偏离声明。最后一条消息以 DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED 开头。
++
++## 派发元信息
++
++- BASE commit（派发前 HEAD）：`43c2c29`
++- 工作树：`E:\agent-project\.worktrees\northing-rot-budget`（分支 `feat/rot-budget-0821`）
++- commit message 后缀 `(ROT-3')`；只 stage 你改的文件。
+diff --git a/.superpowers/sdd/task-rot3p-report.md b/.superpowers/sdd/task-rot3p-report.md
+new file mode 100644
+index 0000000..4dd23e3
+--- /dev/null
++++ b/.superpowers/sdd/task-rot3p-report.md
+@@ -0,0 +1,139 @@
++# Task ROT-3' Report — rot-budget 预算闸
++
++## 一、六条验收标准逐条证据
++
++1. **`scripts/rot-budget.json` 存在且基线值严格匹配**：
++   - 文件已创建，包含 3 条 `grep-count` 规则与 7 条 `file-lines` 规则。
++   - `unwrap_production`: ceiling 521, pattern `\\.unwrap\\(\\)`
++   - `expect_production`: ceiling 1098, pattern `\\.expect\\(`
++   - `let_underscore`: ceiling 402, pattern `let _ =`
++   - 7 个 god-file 路径与 ceiling 行数完全匹配：
++     - `src/apps/desktop/src/app_state/callbacks_lifecycle.rs`: 1063
++     - `src/apps/cli/src/ui/theme.rs`: 990
++     - `src/crates/assembly/core/src/service/agent_memory/memory_db.rs`: 918
++     - `src/crates/assembly/core/src/service/agent_memory/facts.rs`: 905
++     - `src/apps/cli/src/ui/startup/selectors.rs`: 877
++     - `src/crates/assembly/core/src/service/lsp/manager.rs`: 836
++     - `src/apps/cli/src/modes/chat/input.rs`: 802
++
++2. **`node scripts/verify-rot-budget.mjs` exit 0（全绿）**：
++   - 运行输出：`Rot budget verification passed (3 grep rules, 7 god-file rules checked across 1360 files).`
++   - Exit code: 0
++
++3. **自测证明闸能变红（`scripts/verify-rot-budget.test.mjs`）**：
++   - 覆盖 6 个独立测试用例：
++     1. 合规 fixture exit 0
++     2. grep 计数超 ceiling fixture exit 1，包含当前值/上限/修复指引
++     3. 未登记 >800 行文件 fixture exit 1，包含当前值/上限/修复指引
++     4. 已登记 god-file 超 ceiling fixture exit 1
++     5. 豁免文件 `src/shared/i18n/generated_locale_contract.rs` >800 行正常放行
++     6. 当前真实工作区 rot-budget 校验全绿
++   - 运行输出 6/6 全部 pass。
++
++4. **`pnpm run check:rot` 可用**：
++   - `package.json` 添加 `"check:rot": "node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs"`
++   - 运行 `pnpm run check:rot` 成功执行并通过。
++
++5. **CI `rot-budget` job**：
++   - `.github/workflows/ci.yml` 在 `core-boundaries` 之后追加 `rot-budget` job，配置 `ubuntu-latest` + `actions/setup-node@v4 (node-version: 22)` + 运行 `node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs`。
++
++6. **家规第 7 条同步**：
++   - `AGENTS.md` Housekeeping rules 追加第 7 条（英文）。
++   - `AGENTS-CN.md` 补齐内务规则小节并包含等价中文第 7 条。
++
++---
++
++## 二、复用侦察
++
++- **参考先例**：
++  - `scripts/check-core-boundaries.mjs` & `scripts/check-core-boundaries.test.mjs`
++  - `scripts/i18n-audit.mjs`
++- **对齐点**：
++  - **Manifest 与路径**：对齐 `i18n-audit.mjs` 模式，采用 JSON flat manifest，路径一律使用以工作区根为相对基准的 POSIX `/` 路径。
++  - **测试结构**：对齐 `check-core-boundaries.test.mjs`，采用 Node.js 18+ 原生 `node:test` + `node:assert/strict`，配合 `fs.mkdtempSync` 构造独立隔离 fixture，并通过 `spawnSync` 校验 CLI 进程状态码及 stderr/stdout 文本。
++  - **错误提示与退出约定**：收集全部违规后一次性打印并 `process.exit(1)`；全绿输出单行 summary 并 `process.exit(0)`；纯英文、无 emoji。
++- **刻意不同与理由**：
++  - **单文件极简设计（140 行 < 250 行限制）**：`check-core-boundaries` 因涉及复杂 AST facade 与 Cargo 特性组合被拆解为子目录结构；而 rot budget 规则高度聚焦（计数、行数、800行警戒），单文件实现更紧凑、内聚，无需跨模块引用。
++  - **纯 Node 原生实现（零外部进程依赖）**：不通过 shell 调 `rg` 或 `powershell`，杜绝跨操作系统平台行为差异（换行符 `\r\n` vs `\n` 处理对齐 `(Get-Content).Count`）。
++
++---
++
++## 三、Spec 3 与 Spec 5 选择与理由
++
++- **Spec 3 自测集成**：
++  - 编写 `scripts/verify-rot-budget.test.mjs`，并通过 `pnpm run check:rot` 串联执行 `node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs`。
++- **Spec 5 CI 配置**：
++  - 在 `.github/workflows/ci.yml` 的 `rot-budget` job 中直接执行 `node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs`，避免引入不必要的 pnpm/corepack 安装步骤，同时保证自测与主检查均在 CI 中执行。
++
++---
++
++## 四、验证命令与完整输出
++
++### 1. `node scripts/verify-rot-budget.mjs`
++```
++Rot budget verification passed (3 grep rules, 7 god-file rules checked across 1360 files).
++```
++Exit code: 0
++
++### 2. `node scripts/verify-rot-budget.test.mjs`
++```
++✔ compliant fixture exits 0 and reports success (104.3543ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (106.1703ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (100.4301ms)
++✔ registered god-file exceeding ceiling fails (7.4386ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (7.6118ms)
++✔ actual workspace rot budget passes with current manifest (390.9462ms)
++ℹ tests 6
++ℹ suites 0
++ℹ pass 6
++ℹ fail 0
++ℹ cancelled 0
++ℹ skipped 0
++ℹ todo 0
++ℹ duration_ms 723.5862
++```
++Exit code: 0
++
++### 3. `pnpm run check:rot`
++```
++> northhing@0.2.10 check:rot E:\agent-project\.worktrees\northing-rot-budget
++> node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
++
++✔ compliant fixture exits 0 and reports success (112.8029ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (101.3926ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (106.0516ms)
++✔ registered god-file exceeding ceiling fails (6.4901ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (7.9218ms)
++✔ actual workspace rot budget passes with current manifest (363.485ms)
++ℹ tests 6
++ℹ suites 0
++ℹ pass 6
++ℹ fail 0
++ℹ cancelled 0
++ℹ skipped 0
++ℹ todo 0
++ℹ duration_ms 704.1842
++Rot budget verification passed (3 grep rules, 7 god-file rules checked across 1360 files).
++```
++Exit code: 0
++
++### 4. `node scripts/check-core-boundaries.mjs`
++```
++Core boundary check passed.
++```
++Exit code: 0
++
++### 5. `git diff --stat`
++```
++ .github/workflows/ci.yml | 15 +++++++++++++++
++ AGENTS-CN.md             | 19 +++++++++++++++++++
++ AGENTS.md                |  1 +
++ package.json             |  1 +
++ 4 files changed, 36 insertions(+)
++```
++
++---
++
++## 五、偏离声明
++
++无任何偏离。所有 baseline 数值逐字对齐 brief 预检表，未修改任何产品代码，各检查全部通过。
+diff --git a/AGENTS-CN.md b/AGENTS-CN.md
+index 4a403a9..867491f 100644
+--- a/AGENTS-CN.md
++++ b/AGENTS-CN.md
+@@ -77,6 +77,25 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast
+ 
+ ## 全局规则
+ 
++### 内务规则（2026-07-22，适用于每次 commit）
++
++0. **Lazy Senior Dev 规则 (YAGNI)**：在写代码前，先爬这个阶梯：
++   1. 这真的需要构建吗？（YAGNI）
++   2. 本代码库中已有现成的？复用它。
++   3. 标准库已支持？用标准库。
++   4. 原生平台特性已覆盖？用原生特性。
++   5. 已安装依赖已解决？用已有依赖。
++   6. 能写成一行吗？写成一行。
++   7. 只有这时：写出能工作的最少代码。
++   （绝不要为了简短而牺牲安全性、错误处理或信任边界）。
++1. **顺手清配额**：一次 commit 可以顺带包含在 scope 内发现的附近小债务修复（过期文档、缺失测试、文件增长超过 800 行）——不需要单独提清理任务；在 commit message 中保持可追溯即可。
++2. **文档同步作为硬规则**：变更 crate 结构（增加/删除 crate、移动路径）必须在同一个 commit 中更新 `docs/status/surfaces.md`；解决技术债务项必须在同一个 commit 中翻转其 ledger 状态。不搞“稍后补文档”。
++3. **God-file 防线**：生产环境超过 800 行的 `.rs` 文件会增加 review 压力；超过 1000 行必须拆分或在文件顶部带有 `// allow-god-file` 合理化注释。新模块从底线以下开始。
++4. **并发测试绑定**：触及 `tokio::select!`、cancellation token 或 timeout 竞态的变更必须随附至少一个自动化测试；judge review 不能替代。其他类型的变更可以依赖 judge review。
++5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
++6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
++7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。
++
+ ### 国际化
+ 
+ - 区域标识、别名、回退规则以及表面默认由 `src/shared/i18n/contract/locales.json` 拥有。编辑后请运行 `pnpm run i18n:generate`。
+diff --git a/AGENTS.md b/AGENTS.md
+index 3a09826..fb099ab 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -98,6 +98,7 @@ For the full script list, see [`package.json`](package.json).
+ 4. **Concurrency test binding**: changes touching `tokio::select!`, cancellation tokens, or timeout races must ship with at least one automated test; judge review does not substitute. Other change types may rely on judge review.
+ 5. **Coding curfew**: no coding work after 03:00 daily (user health rule, recorded 2026-07-22).
+ 6. **Desktop compile gate before merging to main** (recorded 2026-08-06): `cargo check -p northhing` must pass on the branch tip before it merges to main, and a round handoff must not carry forward a verification baseline it did not measure itself. Reason: P1-C3 landed on main with the desktop crate not compiling at all (keyring feature missing) and it went unnoticed across a whole round because the report's verification section was incomplete and the next handoff reused a pre-C3 test figure. See `docs/status/tech-debt-ledger.md` P2-15.
++7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message.
+ 
+ ### Internationalization
+ 
+diff --git a/package.json b/package.json
+index 0859ebe..47d47b2 100644
+--- a/package.json
++++ b/package.json
+@@ -15,6 +15,7 @@
+     "i18n:audit": "node scripts/i18n-audit.mjs",
+     "check:repo-hygiene": "node scripts/check-repo-hygiene.mjs",
+     "check:core-boundaries": "node scripts/check-core-boundaries.mjs",
++    "check:rot": "node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs",
+     "fmt:rs": "node scripts/format-changed-rust.mjs",
+     "cli:dev": "cd src/apps/cli && cargo run --",
+     "cli:build": "cd src/apps/cli && cargo build --release",
+diff --git a/scripts/rot-budget.json b/scripts/rot-budget.json
+new file mode 100644
+index 0000000..876b5d3
+--- /dev/null
++++ b/scripts/rot-budget.json
+@@ -0,0 +1,55 @@
++{
++  "unwrap_production": {
++    "kind": "grep-count",
++    "pattern": "\\.unwrap\\(\\)",
++    "ceiling": 521,
++    "note": "R-13, ratchet: only down"
++  },
++  "expect_production": {
++    "kind": "grep-count",
++    "pattern": "\\.expect\\(",
++    "ceiling": 1098,
++    "note": "R-13, ratchet: only down"
++  },
++  "let_underscore": {
++    "kind": "grep-count",
++    "pattern": "let _ =",
++    "ceiling": 402,
++    "note": "R-13, ratchet: only down"
++  },
++  "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
++    "kind": "file-lines",
++    "ceiling": 1063,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/apps/cli/src/ui/theme.rs": {
++    "kind": "file-lines",
++    "ceiling": 990,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
++    "kind": "file-lines",
++    "ceiling": 918,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/crates/assembly/core/src/service/agent_memory/facts.rs": {
++    "kind": "file-lines",
++    "ceiling": 905,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
++    "kind": "file-lines",
++    "ceiling": 877,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
++    "kind": "file-lines",
++    "ceiling": 836,
++    "note": "R-14 god-file; split planned in ROT-2"
++  },
++  "god_file:src/apps/cli/src/modes/chat/input.rs": {
++    "kind": "file-lines",
++    "ceiling": 802,
++    "note": "R-14 god-file; split planned in ROT-2"
++  }
++}
+diff --git a/scripts/verify-rot-budget.mjs b/scripts/verify-rot-budget.mjs
+new file mode 100644
+index 0000000..701bd94
+--- /dev/null
++++ b/scripts/verify-rot-budget.mjs
+@@ -0,0 +1,167 @@
++#!/usr/bin/env node
++
++import fs from 'node:fs';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++// Generated artifact exempt from >800 lines god-file limit
++const EXEMPT_FILE_PATHS = [
++  'src/shared/i18n/generated_locale_contract.rs',
++];
++
++const GOD_FILE_LINE_THRESHOLD = 800;
++
++export function countLines(content) {
++  if (!content) return 0;
++  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
++  const lines = normalized.split('\n');
++  if (lines.length > 0 && lines[lines.length - 1] === '') {
++    lines.pop();
++  }
++  return lines.length;
++}
++
++export function collectRustFiles(dir, projectRoot = dir) {
++  const results = [];
++  if (!fs.existsSync(dir)) return results;
++
++  const entries = fs.readdirSync(dir, { withFileTypes: true });
++  for (const entry of entries) {
++    const fullPath = path.join(dir, entry.name);
++    if (entry.isDirectory()) {
++      if (
++        entry.name === 'tests' ||
++        entry.name.startsWith('target') ||
++        entry.name === '.git' ||
++        entry.name === 'node_modules'
++      ) {
++        continue;
++      }
++      results.push(...collectRustFiles(fullPath, projectRoot));
++    } else if (entry.isFile()) {
++      if (entry.name.endsWith('.rs') && !entry.name.endsWith('_tests.rs')) {
++        const relPath = path.relative(projectRoot, fullPath).replace(/\\/g, '/');
++        const segments = relPath.split('/');
++        if (segments.includes('tests') || segments.some((s) => s.startsWith('target'))) {
++          continue;
++        }
++        results.push({ fullPath, relPath });
++      }
++    }
++  }
++  return results;
++}
++
++export function verifyRotBudget({
++  projectRoot = process.cwd(),
++  manifestPath = path.join(projectRoot, 'scripts', 'rot-budget.json'),
++  silent = false,
++} = {}) {
++  if (!fs.existsSync(manifestPath)) {
++    const errorMsg = `Rot budget manifest not found: ${manifestPath}`;
++    if (!silent) console.error(errorMsg);
++    return {
++      success: false,
++      violations: [errorMsg],
++      counts: {},
++    };
++  }
++
++  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
++  const violations = [];
++  const counts = {};
++
++  const grepRules = [];
++  const godFileRules = new Map();
++
++  for (const [key, entry] of Object.entries(manifest)) {
++    if (entry.kind === 'grep-count') {
++      grepRules.push({
++        key,
++        regex: new RegExp(entry.pattern, 'g'),
++        ceiling: entry.ceiling,
++        count: 0,
++      });
++    } else if (entry.kind === 'file-lines') {
++      const fileRelPath = key.startsWith('god_file:') ? key.slice('god_file:'.length) : key;
++      godFileRules.set(fileRelPath, {
++        key,
++        ceiling: entry.ceiling,
++      });
++    }
++  }
++
++  const srcDir = path.join(projectRoot, 'src');
++  const files = collectRustFiles(srcDir, projectRoot);
++  const seenGodFiles = new Set();
++
++  for (const file of files) {
++    const content = fs.readFileSync(file.fullPath, 'utf8');
++    const lineCount = countLines(content);
++    counts[file.relPath] = lineCount;
++
++    // Execute grep-count rules
++    for (const rule of grepRules) {
++      const matches = content.match(rule.regex);
++      if (matches) {
++        rule.count += matches.length;
++      }
++    }
++
++    // Check god-file threshold & manifest registration
++    if (godFileRules.has(file.relPath)) {
++      seenGodFiles.add(file.relPath);
++      const rule = godFileRules.get(file.relPath);
++      if (lineCount > rule.ceiling) {
++        violations.push(
++          `${rule.key}: current ${lineCount} exceeds ceiling ${rule.ceiling} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
++        );
++      }
++    } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
++      if (!EXEMPT_FILE_PATHS.includes(file.relPath)) {
++        violations.push(
++          `god_file:${file.relPath}: current ${lineCount} exceeds ceiling ${GOD_FILE_LINE_THRESHOLD} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
++        );
++      }
++    }
++  }
++
++  // Record grep-count results and check ceilings
++  for (const rule of grepRules) {
++    counts[rule.key] = rule.count;
++    if (rule.count > rule.ceiling) {
++      violations.push(
++        `${rule.key}: current ${rule.count} exceeds ceiling ${rule.ceiling} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
++      );
++    }
++  }
++
++  const success = violations.length === 0;
++
++  if (!silent) {
++    if (success) {
++      console.log(
++        `Rot budget verification passed (${grepRules.length} grep rules, ${godFileRules.size} god-file rules checked across ${files.length} files).`,
++      );
++    } else {
++      for (const violation of violations) {
++        console.error(violation);
++      }
++      console.error(`Rot budget verification failed with ${violations.length} violation(s).`);
++    }
++  }
++
++  return {
++    success,
++    violations,
++    counts,
++    checkedFilesCount: files.length,
++  };
++}
++
++if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
++  const result = verifyRotBudget();
++  if (!result.success) {
++    process.exit(1);
++  }
++}
+diff --git a/scripts/verify-rot-budget.test.mjs b/scripts/verify-rot-budget.test.mjs
+new file mode 100644
+index 0000000..6830f7a
+--- /dev/null
++++ b/scripts/verify-rot-budget.test.mjs
+@@ -0,0 +1,198 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++import { spawnSync } from 'node:child_process';
++import { fileURLToPath } from 'node:url';
++import { verifyRotBudget } from './verify-rot-budget.mjs';
++
++const SCRIPT_PATH = fileURLToPath(new URL('./verify-rot-budget.mjs', import.meta.url));
++const REPO_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
++
++function createFixtureDir() {
++  return fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-test-'));
++}
++
++test('compliant fixture exits 0 and reports success', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const srcDir = path.join(tmpDir, 'src');
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(srcDir, { recursive: true });
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    // Create a compliant Rust file
++    fs.writeFileSync(
++      path.join(srcDir, 'lib.rs'),
++      'pub fn hello() {\n    let _ = 42;\n    let val = Some(1).unwrap();\n}\n',
++      'utf8',
++    );
++
++    const manifest = {
++      unwrap_production: {
++        kind: 'grep-count',
++        pattern: '\\.unwrap\\(\\)',
++        ceiling: 5,
++        note: 'test unwrap',
++      },
++      let_underscore: {
++        kind: 'grep-count',
++        pattern: 'let _ =',
++        ceiling: 5,
++        note: 'test let underscore',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, true);
++    assert.equal(result.violations.length, 0);
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 0);
++    assert.match(proc.stdout, /Rot budget verification passed/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('grep count exceeding ceiling fails and exits 1 with guidance message', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const srcDir = path.join(tmpDir, 'src');
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(srcDir, { recursive: true });
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    fs.writeFileSync(
++      path.join(srcDir, 'main.rs'),
++      'fn main() {\n    let a = Some(1).unwrap();\n    let b = Some(2).unwrap();\n}\n',
++      'utf8',
++    );
++
++    const manifest = {
++      unwrap_production: {
++        kind: 'grep-count',
++        pattern: '\\.unwrap\\(\\)',
++        ceiling: 1,
++        note: 'test ceiling 1',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, false);
++    assert.equal(result.violations.length, 1);
++    assert.match(
++      result.violations[0],
++      /unwrap_production: current 2 exceeds ceiling 1 — split, reduce, or register a justified manifest entry \(raising a ceiling requires user sign-off\)/,
++    );
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 1);
++    assert.match(proc.stderr, /unwrap_production: current 2 exceeds ceiling 1/);
++    assert.match(proc.stderr, /raising a ceiling requires user sign-off/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('unregistered file exceeding 800 lines fails and exits 1', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const srcDir = path.join(tmpDir, 'src');
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(srcDir, { recursive: true });
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    const lines = Array.from({ length: 805 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
++    fs.writeFileSync(path.join(srcDir, 'huge.rs'), lines, 'utf8');
++
++    const manifest = {};
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, false);
++    assert.equal(result.violations.length, 1);
++    assert.match(
++      result.violations[0],
++      /god_file:src\/huge\.rs: current 805 exceeds ceiling 800 — split, reduce, or register a justified manifest entry \(raising a ceiling requires user sign-off\)/,
++    );
++
++    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
++      cwd: tmpDir,
++      encoding: 'utf8',
++    });
++    assert.equal(proc.status, 1);
++    assert.match(proc.stderr, /god_file:src\/huge\.rs: current 805 exceeds ceiling 800/);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('registered god-file exceeding ceiling fails', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const srcDir = path.join(tmpDir, 'src');
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(srcDir, { recursive: true });
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    const lines = Array.from({ length: 850 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
++    fs.writeFileSync(path.join(srcDir, 'legacy.rs'), lines, 'utf8');
++
++    const manifest = {
++      'god_file:src/legacy.rs': {
++        kind: 'file-lines',
++        ceiling: 820,
++        note: 'registered legacy god file',
++      },
++    };
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, false);
++    assert.equal(result.violations.length, 1);
++    assert.match(
++      result.violations[0],
++      /god_file:src\/legacy\.rs: current 850 exceeds ceiling 820 — split, reduce, or register a justified manifest entry \(raising a ceiling requires user sign-off\)/,
++    );
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry', () => {
++  const tmpDir = createFixtureDir();
++  try {
++    const i18nDir = path.join(tmpDir, 'src', 'shared', 'i18n');
++    const scriptsDir = path.join(tmpDir, 'scripts');
++    fs.mkdirSync(i18nDir, { recursive: true });
++    fs.mkdirSync(scriptsDir, { recursive: true });
++
++    const lines = Array.from({ length: 1200 }, (_, i) => `// Generated line ${i + 1}`).join('\n') + '\n';
++    fs.writeFileSync(path.join(i18nDir, 'generated_locale_contract.rs'), lines, 'utf8');
++
++    const manifest = {};
++    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
++
++    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
++    assert.equal(result.success, true);
++    assert.equal(result.violations.length, 0);
++  } finally {
++    fs.rmSync(tmpDir, { recursive: true, force: true });
++  }
++});
++
++test('actual workspace rot budget passes with current manifest', () => {
++  const result = verifyRotBudget({ projectRoot: REPO_ROOT, silent: true });
++  assert.equal(result.success, true, `Expected workspace rot budget to pass, got violations: ${result.violations.join('\n')}`);
++  assert.equal(result.violations.length, 0);
++});

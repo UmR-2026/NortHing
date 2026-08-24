@@ -374,7 +374,7 @@ fn render_field_input(
             } else {
                 let is_empty = display_value.is_empty();
                 let display = if is_empty {
-                    field_placeholder(field).to_string()
+                    field_placeholder(field, state.editing_model_id().is_some()).to_string()
                 } else {
                     display_value
                 };
@@ -409,12 +409,19 @@ fn render_field_input(
     }
 }
 
-fn field_placeholder(field: FormField) -> &'static str {
+fn field_placeholder(field: FormField, is_edit: bool) -> &'static str {
     match field {
         FormField::Name => "e.g. My Model Config",
         FormField::ModelName => "e.g. gpt-4, claude-sonnet-4-5-20250929",
         FormField::BaseUrl => "https://api.example.com/v1/chat/completions",
-        FormField::ApiKey => "Enter your API key",
+        FormField::ApiKey => {
+            if is_edit {
+                // F4: edit mode blank = keep stored keyring key.
+                "Leave blank to keep the stored key"
+            } else {
+                "Enter your API key"
+            }
+        }
         FormField::ProviderFormat => "",
         FormField::ContextWindow => "128000",
         FormField::MaxTokens => "8192",

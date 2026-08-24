@@ -1,0 +1,21 @@
+﻿ Cargo.lock                                         | 119 ++++-
+ Cargo.toml                                         |   2 +
+ docs/status/tech-debt-ledger.md                    |  31 +-
+ src/apps/desktop/Cargo.toml                        |   4 +
+ .../app_state/callbacks_settings/provider_test.rs  |   5 +-
+ src/apps/desktop/src/app_state/settings/io.rs      |  83 +++-
+ .../desktop/src/app_state/settings/io/io_tests.rs  | 195 +++++++-
+ src/apps/desktop/src/app_state/settings/keyring.rs | 349 ++++++++++++++
+ src/apps/desktop/src/app_state/settings/mod.rs     |   2 +
+ src/apps/desktop/src/app_state/settings/sync.rs    |  26 +-
+ src/apps/desktop/src/app_state/settings/tests.rs   |   4 +-
+ src/apps/relay-server/Cargo.toml                   |   3 +-
+ src/apps/relay-server/src/config.rs                | 506 ++++++++++++++++++++-
+ src/apps/relay-server/src/main.rs                  |  87 +++-
+ .../tools/implementations/delete_file_tool.rs      |   1 +
+ .../src/service/remote_connect/embedded_relay.rs   |  22 +
+ src/crates/execution/tool-execution/Cargo.toml     |   1 +
+ .../execution/tool-execution/src/fs/delete_path.rs | 241 +++++++++-
+ .../tool-execution/tests/tool_io_contracts.rs      |   1 +
+ src/crates/services/relay-core/src/lib.rs          |   4 +-
+ 20 files changed, 1637 insertions(+), 49 deletions(-)

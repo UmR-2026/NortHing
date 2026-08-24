@@ -276,18 +276,20 @@ impl RemoteExecProcessManager {
             exit_code,
         )
         .await;
-        if request.origin == RemoteExecControlOrigin::OutOfBand && closed {
-            self.store_completed_session(
-                request.session_id,
-                CompletedRemoteExecSession {
-                    output: collected.output.clone(),
-                    exit_code,
-                    original_output_chars: collected.original_output_chars,
-                    completion: completion.expect("closed process should have completion"),
-                    completed_at: Instant::now(),
-                },
-            )
-            .await;
+        if let Some(completion) = completion {
+            if request.origin == RemoteExecControlOrigin::OutOfBand {
+                self.store_completed_session(
+                    request.session_id,
+                    CompletedRemoteExecSession {
+                        output: collected.output.clone(),
+                        exit_code,
+                        original_output_chars: collected.original_output_chars,
+                        completion,
+                        completed_at: Instant::now(),
+                    },
+                )
+                .await;
+            }
         }
 
         Ok(RemoteExecCommandResponse {

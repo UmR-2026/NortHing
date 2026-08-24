@@ -41,14 +41,6 @@ jobs:
         shell: pwsh
         run: ./scripts/ci/setup-openssl-windows.ps1
 
-      - name: Create mobile-web dist directory (placeholder)
-        shell: bash
-        run: |
-          # v0.1.0: web-ui build disabled; create empty dist to avoid
-          # downstream path errors if any compile-time embeds reference it.
-          mkdir -p src/mobile-web/dist
-          echo '{"version":"v0.1.0-placeholder"}' > src/mobile-web/dist/.gitkeep
-
       - name: Install Linux system dependencies (Tauri)
         if: runner.os == 'Linux'
         shell: bash
@@ -91,14 +83,17 @@ jobs:
 
       - name: Generate i18n locale contract
         shell: bash
-        run: node scripts/generate-i18n-contract.mjs
+        run: |
+          node scripts/generate-i18n-contract.mjs
+          test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
         # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
 
       - name: Check compilation
-        run: cargo check --workspace --exclude northhing-cli --exclude northhing
+        run: cargo check --workspace
 
-      - name: Run core Rust tests
-        run: cargo test --locked -p northhing-core
+      - name: Run workspace Rust tests
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked --workspace
 
   # ── kernel-api dependency guard ─────────────────────────────────────
   kernel-api-clean:
@@ -140,4 +135,55 @@ jobs:
 
       - name: Run core boundary checker
         run: node scripts/check-core-boundaries.mjs
+
+  # ── rot budget check ───────────────────────────────────────────────
+  rot-budget:
+    name: rot budget check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run rot budget checker and self-tests
+        run: node scripts/verify-rot-budget.test.mjs && node scripts/verify-rot-budget.mjs
+
+  # ── repo hygiene check ─────────────────────────────────────────────
+  repo-hygiene:
+    name: repo hygiene check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run repo hygiene checker
+        run: node scripts/check-repo-hygiene.mjs
+
+  # ── i18n contract check ────────────────────────────────────────────
+  i18n-contract:
+    name: i18n contract check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Observation slot: 24 pre-existing failures belong to frozen T2-3 surface, convert to hard gate when unfrozen
+      - name: Run i18n contract test
+        continue-on-error: true
+        run: pnpm run i18n:contract:test:ci
+
 

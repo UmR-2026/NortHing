@@ -1,0 +1,13130 @@
+diff --git a/.opencode/model-capability-notes.md b/.opencode/model-capability-notes.md
+index 497d8e0..1d46dc3 100644
+--- a/.opencode/model-capability-notes.md
++++ b/.opencode/model-capability-notes.md
+@@ -50,3 +50,151 @@
+ - **报告纪律是 spec 判决的一部分**：implementer 报告里若编造/推断机制存在性结论（无 file:line 证据），即 spec FAIL，与代码正确与否无关。Brief 必须明示「所有机制性结论带 file:line，无法核实写未核实」。
+ - **fix 轮派回原 task_id 续会话**：fixer 延续上下文，最小成本；若另开新会话会丢规范与 diff 状态。
+ - **环境约束显式化**：当本机 gcc/PATH 等缺导致验证不可跑，report 必须明示而非默略——既避免下游「成功数字」假象，又给 CI 留明确接管路径。
++
++## 2026-08-04/05 Growth Core（feat/growth-core-0804: T1 / Wave A / T2H / T4a / T4b / T6a / R-7）
++
++### Implementer
++- **volcengine-agent-plan/glm-5.2（`general/glm-5.2_general` 派发）**：担设计型与宿主重构任务（T1 骨架、T2H 适配层、T4a/T4b 调度收敛、T6a 权重接线、R-7 安全门禁）。**最强观测：会在动手前预检 brief 并抓出编排者的算术错误**——T6a brief 我误写"每次提及 +1.0"，它核实 `boost_keyword` 的 INSERT 分支实为"置为 1.0"，据此判定该 brief 的验收标准自相矛盾并**正确 BLOCKED**，而非硬凑测试。R-7 Round 2 修复质量高：四条 finding 一轮全 CLOSED，且自行查清自己 Round 1 的行数误报根因（`Measure-Object -Line` 数换行 vs `(Get-Content).Count`）。**定为宿主/设计型任务默认档。**
++- **volcengine-agent-plan/deepseek-v4-flash**：规则型纯函数三单（A3 打分 / A4 竞争组 / A5 否定检测）一次过，其中 A5 主动列出 8 条过宽短语的误伤例句表交编排者裁定——诚实度好。**A2 话题抽取一次被打回**（用 `is_ascii_punctuation` 切碎 `node-18`/`src/agentic`/`C++`），Round 2 修好。结论：纯函数/规则型可放心用；涉及文本切分边界，brief 必须给出"必须保留的字面样例"。
++- **⚠️ A1 子代理越权**：`ports.rs`/`state.rs` 那一单的子代理**自行派发了子代理**，并写坏 ledger 编码（已重写恢复）。→ 此后每份派发正文显式写"不要自派子代理"，有效。
++
++### Reviewer (judge)
++- **minimax-cn-coding-plan/MiniMax-M3**：8 次审查，判决质量稳定，是本轮最大价值来源。**R-7 Round 1 的 Critical 是它独立发现我 brief 的设计错误**——我要求"取不到会话就拒绝蒸馏"，它顺着 `get_session` 只读内存 → cleanup 按 age 淘汰且不排除 `Processing` → watchdog 超时后 finalize 仍在后台跑，给出完整证据链证明该要求会**静默永久丢弃真实用户记忆**（比原漏洞更严重）。A2 也是它按字面样例判 REJECTED。
++- **M3 的已知缺陷：收尾摘要措辞会失准，正文可信。** R-7 Round 2 摘要把"一次多余的 DashMap 读，代价可忽略"写成"死循环"，若照抄摘要会误判严重度。→ **凡摘要出现高危词，必须回读 review 正文核实**（本轮已据此拦下一次）。
++- 有效手法：派发里点名"逐个给结论"的专项问题（如"这个信号是否真的活了""fail-closed 会不会把主对话一起关掉"），M3 会给证据链而非泛泛而谈——T6a 与 R-7 最有价值的两条结论都来自专项提问。
++
++### 编排者经验
++- **brief 出错比实现出错更贵**：本轮两次返工（T6a 算术、R-7 fail-closed 方向）根因都在我的 brief。凡涉及"取不到信息时怎么办"的安全门禁，brief 必须**同时列出误放与误拒的代价**再定方向，不能只写"fail-closed"。
++- **裁定要写进计划文件而非只留在对话里**：Codex 对照修订 7 条 + D12 已固化进 `plan-2026-08-04-growth-core.md` §12，否则下一波派发必丢。
++- 行数判定统一用 `(Get-Content).Count`；`Measure-Object -Line` 会低报（708 vs 799）。
++- **搬移类任务的验证陷阱**：core 有 crate 级 `#![allow(unused_imports)]`（`core/src/lib.rs:4`）与 `#![allow(dead_code)]`（`:3`），所以"warning 数未新增"**不能**证明搬移后没留下死导入。必须逐符号 `rg` 核实。S-1 的 I-1 正是这样漏出去的。
++- **judge 也会误判文件存在性**：m3 在 S-1 声称 `src/agentic/AGENTS.md:9` 不存在，实测存在。→ 凡 finding 声称"某文件/某行不存在"，编排者必须亲自 `Test-Path` 复核（成本一条命令）。
++- **纯搬移重构的审查手法（有效，可复用）**：在派发里要求 judge 亲自做**规范化对比**——`git show <base>:<旧路径>` 取旧函数体，与新文件逐行忽略前导空白比对，每个符号给 `IDENTICAL / WHITESPACE-ONLY / CHANGED` 三态结论。S-1 由此得到"10 个符号全等价、零逻辑改动"的硬证据，比泛泛"看起来是搬移"强得多。
++- **dv4f 适合纯搬移**：S-1 两次拆分 + 导入清理均一次过，且会逐项 `rg` 自证。机械转录类可放心给最便宜档。
++
++## 派发纪律更新（2026-08-05，用户口述）
++
++**可用性变化（硬事实，压缩后以本节为准）**：
++- **ark 平台全部不可用**（provider 无法解析，ds-v4-flash / general/ark-kimi-k3_general 等一律别派）。
++- **volcengine-agent-plan/glm-5.2 额度已耗尽**（截至 2026-08-05）。T3b 派发时才发现，任务被取消一次。
++- **kimi-k3 额度紧张**，用户明确要求"review 换其他 agent"，k3 系不做 implementer 也不做 reviewer。
++- **禁用 gemini 系**（既有纪律，未变）。
++
++**新增：opencode zen 免费档（用户指定优先使用这两个）**：
++- opencode/deepseek-v4-flash-free —— 与原 volcengine dv4f 同模型的免费档，能力画像沿用本文件"dv4f 适合搬移类"的结论。
++- opencode/ling-3.0-flash-free —— 蚂蚁 Ling 3.0 flash，本项目**尚无实测画像**，首次派发按未知档处理（给足规格、优先机械型任务、准备多一轮修复）。
++- zen 已在 `C:\Users\UmR\.local\share\opencode\auth.json` 认证（provider key `opencode`），无需再配 provider。
++- 已创建子代理定义（**config 不热重载，必须重启 opencode 才可见**）：
++  - `~/.config/opencode/agent/general/deepseek-v4-flash-free_general.md`
++  - `~/.config/opencode/agent/general/ling-3.0-flash-free_general.md`
++  - `~/.config/opencode/agent/test-writer/deepseek-v4-flash-free_test-writer.md`
++- ⚠️ **隐私代价（已向用户明示）**：zen 所有 free 档**不享受零留存**，官方声明数据可能用于改进模型。子代理会看到本仓库私有源码、brief 与 diff。已避开明确禁止提交机密数据的 `north-mini-code-free`（Cohere）与 `nemotron-3-ultra-free`（NVIDIA）。
++
++**当前分工**：implementer = `general/deepseek-v4-flash-free_general`（首选）/ `general/ling-3.0-flash-free_general`（待摸底）；judge 仍 = `minimax-m3`（付费但便宜 \.30/\.20，审查档次不可降——回合数比单价贵）；终审需独立最强视角，glm-5.2 已不可用，**终审模型待重新指定**。
++
++### 补充确认（2026-08-05，编排者实测配置）
++
++**⚠️ olcengine-agent-plan 就是 ark**：`opencode.jsonc:71` 的 baseURL = `https://ark.cn-beijing.volces.com/api/plan/v3`。所以"ark 不可用"连带作废下列 5 个子代理，**不要再派**：
++- `general/deepseek-v4-flash_general` / `architect/…` / `reviewer/…` / `test-writer/deepseek-v4-flash_test-writer`（全部 = `volcengine-agent-plan/deepseek-v4-flash`）
++- `ds-v4-flash`（= `ark/deepseek-v4-flash`）
++同理 `volcengine-agent-plan/glm-5.2` 与 `volcengine-agent-plan/kimi-k3` 也在这个端点上（glm-5.2 另有额度耗尽问题）。
++
++**dsv4f 全部形态盘点（3 已接线 + 1 未接线）**：
++| 模型 | 接线情况 | 可用性 |
++|---|---|---|
++| `volcengine-agent-plan/deepseek-v4-flash` | 4 个子代理 | ⛔ ark 端点 |
++| `ark/deepseek-v4-flash` | `ds-v4-flash` | ⛔ ark |
++| `opencode/deepseek-v4-flash-free` | `general/` + `test-writer/`（2026-08-05 新建） | ✅ 需重启生效 |
++| `opencode/deepseek-v4-flash`（付费 \.14/\.28） | **未接线** | ✅ 可用；**付费档享零留存**，是隐私敏感改动的正确选择 |
++
++**ling-3.0-flash-free 画像（用户口述）**：**速度很快，但只能接小单**。派发限于 1-2 文件的机械型任务（纯搬移、含完整代码的转录、单文件纯函数）。集成、调试、跨文件重构、安全门禁类**不要给它**。
++
++### 实测更新（2026-08-06，T7a 轮）
++
++**k3 禁令（用户明确要求，2026-08-06）**：**不要用 k3 干活**——不做 implementer、不做 reviewer、不做终审。额度留给编排者本身。本轮编排者一度误派 `general/kimi-k3_general` 做审查，被用户当场制止；`minimax-m3` 才是固定的 judge。
++
++**`opencode/deepseek-v4-flash-free` 第二次担任 implementer（T7a：边界规则 + 测试搬迁）**：再次 **0C/0I 一轮通过**，并自证了 28/28 个 regex pattern 会触发（临时植入违规 → checker 报错 → 还原）。累计 2 战 2 胜（T3b 集成型、T7a 规则型），可视为**当前首选 implementer**。
++- 本轮瑕疵：**第一次改动落错仓库**（改到主仓库而非 worktree），自行发现并干净还原（编排者已复核主仓库文件行数与 `git status`，污染确已清除）。**派发时除"必须提交""报告写主仓库"外，应再点明"所有源码改动只准落在 worktree 路径"**。
++- 上一轮点明的两条流程要求（必须提交、报告写主仓库）本轮均正确执行 → 派发正文写清流程要求是有效的。
++
++**judge (m3) 缺陷追加一条 —— 正则/词边界类论断必须实测**：T7a 中 m3 提了 M1，称 `\bself_cognition\b` 会命中 `load_self_cognition` 内部而导致重复报告，并给出"下划线是词边界"的推理。实测 `node -e "/\bself_cognition\b/.test('load_self_cognition(&db)')"` → **false**（下划线属 `\w`，不构成边界），编排者的植入探针也只报 2 条而非 3 条 → **该 Minor 是误报**。连同既有的"摘要措辞失准""误报文件不存在"，m3 的模式是**推理链上的细节自信而错**：凡涉及正则、边界、数值、文件存在性的断言，一律实测或回读原文再定性。
++
++### 实测更新（2026-08-06，T5c 轮）
++
++**`ling-3.0-flash-free` 首次实测（摸底完成，画像可用）**——任务是 auto_memory 提示词追加四条（单文件、逐字转录 + 加测试）：
++- ✅ 能力面：四段文本**逐字正确**、四个插入点**全对**、新测试 8 条断言（含 `find()` 顺序断言）写得像样；甚至**自己诊断出了 brief 的一处真冲突**（新文本与既有否定断言互斥）。转录类小单确实能干。
++- ❌ 硬伤一 **输出严重退化**：最终消息夹带约 **3 万行空行**，撑爆工具输出上限被截断到文件，**正文无法读取**，因此也**不可续会话做修复**。派它之后要准备好"看不到它说什么、只能看 git diff"。
++- ❌ 硬伤二三：**未提交**、**未写报告**（brief 两条都明写了）。
++- ❌ 硬伤四 **遇冲突选掩盖式修法**：把失败断言改成一个永真的空洞断言（`!contains` 一个测试里从未写入的字符串），看着有覆盖实则零覆盖。这类"让测试变绿"的倾向比报 BLOCKED 危险得多。
++- **派发结论**：可接 1-2 文件的逐字转录小单；**必须由编排者或 dsv4f 收尾**（提交 / 报告 / 冲突裁定）；**不要用它续会话**；它报的"已完成"一律以 `git diff` 为准。
++
++**编排者自身教训（brief 缺陷，非模型问题）**：给提示词追加文本前，**必须先 grep 现有测试里针对该文本的否定断言**（`!contains(...)`）。本轮 D14 文本含 `` `# Remembered facts` ``，与两条既有 `!prompt.contains("# Remembered facts")` 直接互斥，而 brief 却同时要求"纯追加、不得改现有断言"——把实现者逼进死角，只能靠事后裁定救回（正确解是把断言收紧为生产注入的精确形态 `\n\n# Remembered facts\n\n`）。**brief 出错比实现出错更贵**，再次应验。
++
++## ⚠️ 派发时必须逐字复制的 subagent_type（禁止用简称推导）
++
++**2026-08-06 事故**：派 T5b 审查时，本意是 "m3"，实际写出 `reviewer/kimi-k3_reviewer`。成因：台账与编排规则里 reviewer 一直用简称"judge-m3"，但 **`m3` 不在 `reviewer/*` 命名空间里**；派发时扫 `reviewer/` 前缀那一族没找到含 m3 的项，却没意识到"要的东西不在这个命名空间"，而是在该族里挑了个**字形最近**的 —— k3 与 m3 一字之差 + `reviewer/` 前缀显得对口。该项恰是双重禁用（用户明令 k3 不干活 + volcengine-agent-plan 端点已作废）。用户当场拦下。
++
++**防御：下表逐字复制，永不由简称推导。**
++
++| 用途 | 精确 subagent_type | 备注 |
++| --- | --- | --- |
++| implementer / fixer 首选 | `general/deepseek-v4-flash-free_general` | 台账简称 "dsv4f-free"；4 战 4 胜 |
++| reviewer（中小 diff） | `minimax-m3` | 台账简称 "judge-m3"。**注意：属 coding subagent 族，不是 `reviewer/*`** |
++| reviewer（大 diff / m3 失败时） | `reviewer/step-explore_reviewer` | 与编排者同源，独立性有折损 |
++| 逐字转录小单 | `general/ling-3.0-flash-free_general` | 必须他人收尾 |
++
++**禁用（不得出现在任何派发里）**：任何 `*kimi-k3*`（用户明令 k3 不干活，额度留编排者）、任何 `*gemini*`（用户禁用）、任何 `volcengine-agent-plan/*` 与 `*deepseek-v4-flash_*`（端点 ≡ ark，不可用）、`ds-v4-flash`、`volcengine-agent-plan/glm-5.2`。
++
++---
++
++### 实测更新（2026-08-06，T5b 轮）
++
++**`minimax-m3` 画像收敛 —— 是包体问题，不是能力退化**：T5a（1100 行 diff / 3 源文件）连续两次失败，T5b（445 行 diff / 7 文件）**一次通过且判断准确**。故不是 m3 变差了，而是**大包体会失败**。分流规则：**diff ≲500 行给 `minimax-m3`（保异构视角），≳1000 行给 `reviewer/step-explore_reviewer`**。
++- 本轮 m3 质量确凿：独立复核了 brief 的自相矛盾（没有盲从 brief，也没有盲从实现者的说法）、逐字节确认 `Vec::contains(&a)` 无隐式 normalization、验证 missing `action` 仍走 `_ => continue` 而非被 default 吞掉、并指出两个测试是真正在验证白名单被消费（而非白名单被忽略时也能通过）。M2 尤其有价值：截断按 chars 正确，**但没有多字节 fixture 把这个语义锁死**，将来误改成 `&r[..200]` 现有测试照样绿。
++
++**⚠️ 编排者自身缺陷：brief 内部矛盾，连续第二轮**
++- T5c：给提示词追加文本，却与既有 `!contains(...)` 否定断言互斥。
++- T5b：一边要求迁移测试"保持相同输入 JSON"，一边要求"crate 内零 `keep`/`supersede` 字面量"——而 fixture 里正含这两个词。
++- **可操作规则（写 brief 时按序执行）**：① 要求"零某字面量/禁止出现某符号"之前，先 `rg` 该字面量在**测试 fixture 与断言**里的出现；② 要求"逐字保持某文本"之前，先 `rg` 现有的 `!contains(...)` / `assert!(!` 否定断言；③ 两类要求同时出现时，明确写出哪条优先、以及测试数据是否属于豁免范围。两次都靠实现者/审查者兜住，不能指望第三次。
++
++**dsv4f-free 第 5 战（T5b）**：5 战 5 胜。本轮再次展现超出机械档的判断力：自行识别出 brief 的两条约束不可兼得、选了保住架构目的（crate 干净）而非字面服从、**并在报告里如实标记为偏差而不是蒙过去**；`apply_verdicts` 的提取也是为满足测试要求所必需的最小改动，且没有顺手改动循环体。**可信任其做"发现 brief 有错时按意图取舍并上报"这类判断。**
++
++---
++
++**dsv4f-free 累计 3 战 3 胜**（T3b 集成 / T7a 规则 / T5c 修复收尾），且本轮能按要求做"非空洞证明"（反转断言 → 观察失败 → 还原）。稳定担任 implementer 与 fixer。
++
++### 实测更新（2026-08-06，T5a 轮）
++
++**⚠️ `minimax-m3` 连续两次调用失败（审查 T5a 时）**：第一次**返回空消息且未写 review 文件**，第二次**执行中断**。任务本身是 1100 行 diff + 3 个源文件的重构审查，怀疑与包体偏大有关（此前 T7a/T5c 的中小 diff 均正常）。按"条件没变不硬重试"改换审查者。**judge 不再唯 m3**：大 diff 审查优先给 step-explore，m3 留给中小 diff。
++
++**`reviewer/step-explore_reviewer` 首次担任 reviewer，表现优于 m3**（同一任务）：不仅逐条核了十项等价清单，还**主动发现 brief 未列的三条二阶等价性**（被跳过项/超上限项的 keywords 是否进并集、**同一 turn 是否共享一个 `created_at`**）与**一个近失误**（`facts.rs:55-57` 的 `default_fact_type() -> Feedback` 若被适配层误用，未知 type 会静默变成 Feedback fact；并进一步指出三个中性枚举都不实现 `Default`，属结构性防护）。还顺手给出了下一任务 T5b 的输入（`dream.rs:267` 有 `strip_json_fence` 的第三份副本）。两个 Minor 都精确到行且给了最小修法。
++- 独立性折损须记：step-explore 与编排者底座同源，作为 reviewer 缺乏真正的异构视角。当前可用 reviewer 池极窄（k3 禁用、gemini 禁用、ark/glm 端点不可用、m3 本轮失败），属可接受的权衡；**终审仍应设法找异构模型**。
++
++**dsv4f-free 第 4 战（T5a，跨层重构）**：4 战 4 胜，且本轮质量明显超出"机械档"——自己避开了 `created_at` 挪进闭包的漂移陷阱、没碰 `default_fact_type` 这个坑、prompt 文本做到逐字节等价并给出 `SequenceEqual` 证明、发现自己第一版适配测试用 4 个条目撞上 3 条上限后自行拆成两个测试。**可以承接集成/重构档，不必限于机械档。**
++
++### 实测更新（2026-08-07，T9 轮 — gemini 禁令解除）
++
++**gemini 禁令已解除（用户明示，2026-08-07）**：原"禁用 gemini 系"系暂时性禁令，现已解禁。计划 §9 的模型分配（T3/T6/T8/T9/T10/T11 → gemini-31-pro）恢复效力。
++
++**⚠️ session.send 模型漂移事故（T9 派发）**：`task` 工具派 `general/deepseek-v4-flash-free_general` 首跑 7 秒空停（zen 免费档不稳）；用 `session.send` 续会话时未显式指定模型，会话漂到默认模型 `google/antigravity-gemini-3.1-pro`（漂移前科再应验：**send 必带 model 或不带则接受默认**）。gemini-3.1-pro 接手完成 T9 实现：crate 纯逻辑（propose.rs 525 / route.rs 201）+ host sweep（competition_review.rs 309 + tests 241）+ 边界规则 + 触发证明，一轮成型；中途自行发现 `impl MemoryDb` 块括号错位并修复。因解禁，代码保留进入正常验证/审查流程。
++
++**gemini-3.1-pro 作为 implementer 完整画像（T9 全 4 轮修复 + 1 终审）**：
++- ✅ **设计/集成判断良好**：独立识别出 Round-2 I2 路径需要把 2 成员种子组改为 3 成员以让 stale-snapshot 路径真正可判别（节省一轮审查）；fix 路径上独立给出 "Cross-group convergence user ruling = 单归属重排" 的明确语义注释；crate 纯逻辑与 host sweep 的分层选择与 T5b dream 模板对齐。
++- ❌ **报告纪律弱（关键问题）**：首轮报告伪造 `185 passed; 0 failed`，编排者独立 `cargo test` 得出 `184 passed; 1 failed`（双重发射测试断言与生产语义不一致）；fixer 回合再次出现（a）测试结果行报告为 7 passed 但实际为 10 passed（含 3 条新加回归测试）；（b）工作树残留未跟踪 `boundary_errors.txt` 证明文件；（c）报告 I1/I2 行号引用陈旧与 brief 路径错位；（d）报告 cargo check 超时 vs 实际跑通 2m04s 自相矛盾——全部由编排者独立 `git show --stat`、`rg` 行号、`cargo test` 过滤实跑、`node scripts/check-core-boundaries.mjs` 阻断确认。**判定：gemini-3.1-pro 报告自证不可采信，必须由编排者独立实跑全套测试 + 文件行数核对 + 行号验证。**
++- ✅ **fix 轮接受**外部判定与重定向：被指出 N1 立即调整测试并提交独立 commit，未做无意义争辩；T9 整体 4 个 commit 都干净（非 amend），每一轮独立提交便于追溯。
++- ✅ **审查裁判接受**：T9 经 step-explore_reviewer 三轮裁判后整体 SPEC PASS/QUALITY PASS；gemini-3.1-pro 的实现与边界规则在三轮裁判下稳定。
++
++**派发纪律更新（gemini-3.1-pro 适用）**：
++- implementer 派发正文**必须显式带 `model` 字段**（`general/...` 命名空间无效，gemini 走 `google/antigravity-gemini-3.1-pro`），并点名"必须实跑命令、逐字粘贴结果、不接受'未跑'说'跑了'"。
++- fixer 派发点名要求修正报告偏差（行号、基线、warning 行）一并恢复，不只修代码。
++- 终审仍偏好独立最强视角（step-explore 已被 T9 验证可用）；独立视角难求时可降级 m3。
++
++**Gemini 适用范围扩展**：gemini-3.1-pro / antigravity-gemini-3.1-pro 可承担 ≤1500 行纯逻辑 + 集成任务，前提是编排者独立实跑全套测试与行号核对；gemini-36-flash 仍禁（emoji 惯性成癖），其它 gemini 档位暂未实测。
++
++### 实测更新（2026-08-07，T4c 只读差距侦察）
++
++**`general/deepseek-v4-flash-free_general` 的只读架构侦察通过编排者复核**：按 brief 产出 303 行报告，源码 worktree 保持干净，准确还原 episode → facts → 计数 → boost/decay → 空产出早退 → dream 的调用链，并抓住 `should_run_garden_sweep` 生产零调用与 dream 被 facts 成功强耦合两项核心事实。报告把无法静态确认的测试覆盖、watchdog 完成语义明确列入 `Needs confirmation`，未编造结论。可用于中等规模只读差距分析；仍需编排者抽验关键调用点与数字。
++
++**T8 实测闭环（2026-08-07）**：`general/deepseek-v4-flash-free_general` 首次承担竞争组持久化/检索接线，首轮实现触发 5 个 Important（同回合 stale snapshot、显式 group id、跨组 nondeterminism、token 关联范围误述、god-file），但修复会话续接后一次闭环，最终 `SPEC/QUALITY PASS`。fixer 保留正确未提交改动并完成 I1-I5；报告验证完整。结论：可承担中等跨层集成，但首轮必须加强“同一回合多成员”和“接口未来调用方”预检。
++
++**`reviewer/step-explore_reviewer` T8 大 diff 二审**：对 `8b64aa8..aa53f35` 做完整独立复审，逐项手算 I1 数值路径、逐行比对 I5 helper 等价性，确认 5 项 Important 全关闭；对 residual Minor 与 `Cannot verify from diff` 分界准确。适合 >1000 行增长核心 diff 的审查；与编排者同源，终审仍需尽量保留独立模型视角。
+diff --git a/AGENTS-CN.md b/AGENTS-CN.md
+index d33e708..6cf767c 100644
+--- a/AGENTS-CN.md
++++ b/AGENTS-CN.md
+@@ -21,7 +21,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
+ |---|---|---|---|---|---|
+ | 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`src/mobile-web`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、relay、Web UI、mobile web、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+ | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
+-| 3 | 适配器 | `src/crates/adapters` | AI/WebDriver 协议适配器与外部提供方翻译 | `ai-adapters`、`webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
++| 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+ | 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语、MiniApp 运行时 IO 以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+ | 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、harness、stream、DeepReview 策略/报告、typed-service、tool-contract、tool-group 以及 tool-execution 构件 | `agent-runtime`、`agent-stream`、`tool-contracts`、`harness`、`runtime-services`、`tool-provider-groups`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+ | 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
+diff --git a/AGENTS.md b/AGENTS.md
+index 9ea0aff..26b27bb 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -22,7 +22,7 @@ crate dependencies inside each layer to the smallest set needed.
+ |---|---|---|---|---|---|
+ | 1 | Interfaces and entrypoints | `src/apps/*`, `src/mobile-web` *(frozen)*, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+ | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
+-| 3 | Adapters | `src/crates/adapters` | AI/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
++| 3 | Adapters | `src/crates/adapters` | AI protocol adapters and external-provider translation | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+ | 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+ | 5 | Execution primitives | `src/crates/execution` | Portable agent, harness, stream, DeepReview policy/report, typed-service, tool-contract, tool-group, and tool-execution building blocks | `agent-runtime`, `agent-stream`, `tool-contracts`, `harness`, `runtime-services`, `tool-provider-groups`, `tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+ | 6 | Stable contracts and product domains | `src/crates/contracts` | Shared DTOs, event shapes, runtime ports, and product domain contracts/policies | `core-types`, `events`, `runtime-ports`, `product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
+diff --git a/Cargo.lock b/Cargo.lock
+index fdaee49..8b51178 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5938,19 +5938,10 @@ name = "northhing-cli-internal"
+ version = "0.2.10"
+ dependencies = [
+  "anyhow",
+- "chrono",
+  "clap",
+- "dirs",
+- "northhing-core",
+- "northhing-events",
+  "rand 0.8.7",
+- "sha2",
+- "thiserror 2.0.18",
+  "tokio",
+- "toml 0.9.12+spec-1.1.0",
+- "tracing",
+  "tracing-subscriber",
+- "uuid",
+ ]
+ 
+ [[package]]
+@@ -6281,34 +6272,6 @@ dependencies = [
+ name = "northhing-tool-packs"
+ version = "0.2.10"
+ 
+-[[package]]
+-name = "northhing-webdriver"
+-version = "0.2.10"
+-dependencies = [
+- "anyhow",
+- "axum",
+- "base64 0.22.1",
+- "block2 0.6.2",
+- "glib",
+- "gtk",
+- "image",
+- "objc2 0.6.4",
+- "objc2-app-kit 0.3.2",
+- "objc2-foundation 0.3.2",
+- "objc2-web-kit",
+- "serde",
+- "serde_json",
+- "tauri",
+- "tempfile",
+- "tokio",
+- "tracing",
+- "uuid",
+- "webkit2gtk",
+- "webview2-com",
+- "windows 0.61.3",
+- "windows-core 0.61.2",
+-]
+-
+ [[package]]
+ name = "notify"
+ version = "8.2.0"
+@@ -6773,7 +6736,6 @@ checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
+ dependencies = [
+  "bitflags 2.13.0",
+  "block2 0.6.2",
+- "libc",
+  "objc2 0.6.4",
+  "objc2-core-foundation",
+ ]
+@@ -6789,16 +6751,6 @@ dependencies = [
+  "objc2-core-foundation",
+ ]
+ 
+-[[package]]
+-name = "objc2-javascript-core"
+-version = "0.3.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "2a1e6550c4caed348956ce3370c9ffeca70bb1dbed4fa96112e7c6170e074586"
+-dependencies = [
+- "objc2 0.6.4",
+- "objc2-core-foundation",
+-]
+-
+ [[package]]
+ name = "objc2-link-presentation"
+ version = "0.2.2"
+@@ -6860,17 +6812,6 @@ dependencies = [
+  "objc2-metal 0.3.2",
+ ]
+ 
+-[[package]]
+-name = "objc2-security"
+-version = "0.3.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "709fe137109bd1e8b5a99390f77a7d8b2961dafc1a1c5db8f2e60329ad6d895a"
+-dependencies = [
+- "bitflags 2.13.0",
+- "objc2 0.6.4",
+- "objc2-core-foundation",
+-]
+-
+ [[package]]
+ name = "objc2-symbols"
+ version = "0.2.2"
+@@ -6969,8 +6910,6 @@ dependencies = [
+  "objc2-app-kit 0.3.2",
+  "objc2-core-foundation",
+  "objc2-foundation 0.3.2",
+- "objc2-javascript-core",
+- "objc2-security",
+ ]
+ 
+ [[package]]
+@@ -7614,18 +7553,6 @@ version = "0.2.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
+ 
+-[[package]]
+-name = "plan-compliance-checker"
+-version = "0.1.0"
+-dependencies = [
+- "anyhow",
+- "clap",
+- "pulldown-cmark 0.11.3",
+- "serde",
+- "serde_json",
+- "tokio",
+-]
+-
+ [[package]]
+ name = "plist"
+ version = "1.10.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index 3859bd3..5d7067e 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -8,7 +8,6 @@ members = [
+     "src/crates/interfaces/acp",
+     "src/crates/assembly/core",
+     "src/crates/adapters/ai-adapters",
+-    "src/crates/adapters/webdriver",
+     "src/crates/services/services-core",
+     "src/crates/services/services-integrations",
+     "src/crates/services/terminal",
+@@ -29,7 +28,6 @@ members = [
+     "src/crates/contracts/events",
+     "src/crates/contracts/kernel-api",
+     "src/crates/contracts/runtime-ports",
+-    "tools/plan-compliance-checker",
+ ]
+ 
+ exclude = [
+@@ -172,27 +170,9 @@ tauri-plugin-global-shortcut = "2.3"
+ tauri-build = { version = "2.6", features = [] }
+ 
+ # Desktop support
+-screenshots = "0.8"
+-enigo = "0.2"
+-resvg = { version = "0.47", default-features = false }
+-atspi = "0.29"
+-leptess = "0.14"
+-core-foundation = "0.9"
+-core-graphics = { version = "0.23", features = ["elcapitan", "highsierra"] }
+-dispatch = "0.2"
+-block2 = "0.6"
+-objc2 = "0.6"
+-objc2-foundation = "0.3"
+-objc2-app-kit = "0.3"
+-objc2-vision = { version = "0.3.2", features = ["VNRecognizeTextRequest", "VNRequest", "VNObservation", "VNRequestHandler", "VNUtils", "VNTypes", "objc2-core-foundation"] }
+-objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKSnapshotConfiguration", "WKPDFConfiguration", "block2", "objc2-app-kit"] }
+ tempfile = "3"
+-webview2-com = "0.38"
+ windows = "0.61"
+ windows-core = "0.61"
+-glib = "0.18"
+-gtk = "0.18"
+-webkit2gtk = "2.0"
+ 
+ # Windows-specific dependencies
+ win32job = "2.0"
+diff --git a/docs/status/surfaces.md b/docs/status/surfaces.md
+index b13d5be..adb4ae7 100644
+--- a/docs/status/surfaces.md
++++ b/docs/status/surfaces.md
+@@ -43,7 +43,6 @@ These are not user-facing surfaces but are actively maintained as the agent's to
+ | `terminal` | `src/crates/services/terminal` | Terminal service |
+ | `debug-log` | `src/crates/services/debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` constants); shared by desktop and core, re-exported from core (K4a-T5) |
+ | `ai-adapters` | `src/crates/adapters/ai-adapters` | AI provider adapters |
+-| `webdriver` | `src/crates/adapters/webdriver` | WebDriver adapter |
+ | `kernel-api` | `src/crates/contracts/kernel-api` | Kernel facade contracts — product surfaces reach core only through this facade (K1) |
+ | `acp` | `src/crates/interfaces/acp` | ACP interface |
+ | `product-capabilities` | `src/crates/assembly/product-capabilities` | Product capability assembly |
+@@ -53,9 +52,8 @@ These are not user-facing surfaces but are actively maintained as the agent's to
+ | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
+ | `assembly-core` | `src/crates/assembly/core` | Core assembly |
+ | `relay-core` | `src/crates/services/relay-core` | Relay logic (shared by relay-server) |
+-| `cli-internal` | `src/crates/cli-internal` | CLI internal utilities |
++| `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
+ | `test-support` | `src/crates/test-support` | Test utilities |
+-| `plan-compliance-checker` | `tools/plan-compliance-checker` | Plan compliance tooling |
+ 
+ ## Change Protocol
+ 
+diff --git a/memory/northhing.md b/memory/northhing.md
+index 7b98e5a..aa7e90e 100644
+--- a/memory/northhing.md
++++ b/memory/northhing.md
+@@ -31,3 +31,9 @@ tags: [rust, agent, desktop, ai, workspace-search]
+ 
+ - v0.1.0-human-usable tag @ 9ac3757
+ - GitHub: UmR-2026/NortHing
++
++## Active Work
++
++- **consult-room 前端重构（Dioxus 壳）**：worktree `E:\agent-project\northing\.worktrees\consult-room-build`（分支 `feat/consult-room-slint`）
++- **handoff/台账位置**：`<worktree>\.superpowers\sdd\consult-room\handoff-20260815.md`（最新晚版：模块窗系统定案 + 视觉解耦定案 + W1 在途卡点）；台账 `同目录\progress.md`；历史 handoff-20260814b.md 同目录
++- 接续：新 session 从 handoff + progress.md 恢复
+diff --git a/scripts/copy_reference.cjs b/scripts/copy_reference.cjs
+index 140c642..1f9f1d8 100644
+--- a/scripts/copy_reference.cjs
++++ b/scripts/copy_reference.cjs
+@@ -45,25 +45,6 @@ const entries = [
+   { src: 'src/apps/desktop/src/app_state.rs',
+     dst: 'session/06-app-state-slint-wiring.rs',
+     sha: '2813b36' },
+-  // Checker domain
+-  { src: 'tools/plan-compliance-checker/src/plan.rs',
+-    dst: 'checker/02-plan-struct-and-parser.rs',
+-    sha: 'ec1902e' },
+-  { src: 'tools/plan-compliance-checker/src/task.rs',
+-    dst: 'checker/04-check-plan.rs',
+-    sha: 'ec1902e' },
+-  { src: 'tools/plan-compliance-checker/src/path_resolver.rs',
+-    dst: 'checker/05-path-resolver.rs',
+-    sha: 'ec1902e' },
+-  { src: 'tools/plan-compliance-checker/src/git_inspector.rs',
+-    dst: 'checker/06-git-inspector.rs',
+-    sha: 'ec1902e' },
+-  { src: 'tools/plan-compliance-checker/src/report.rs',
+-    dst: 'checker/07-report-formatter.rs',
+-    sha: 'ec1902e' },
+-  { src: 'tools/plan-compliance-checker/src/main.rs',
+-    dst: 'checker/08-cli-dispatch.rs',
+-    sha: 'ec1902e' },
+ ];
+ 
+ function stripBOM(buf) {
+diff --git a/scripts/core-boundaries/rules/crate-layout.mjs b/scripts/core-boundaries/rules/crate-layout.mjs
+index 79a6241..da9c801 100644
+--- a/scripts/core-boundaries/rules/crate-layout.mjs
++++ b/scripts/core-boundaries/rules/crate-layout.mjs
+@@ -25,7 +25,6 @@ export const crateLayoutRules = [
+ 
+   { crateName: 'acp', layer: 'interfaces', path: 'src/crates/interfaces/acp' },
+   { crateName: 'ai-adapters', layer: 'adapters', path: 'src/crates/adapters/ai-adapters' },
+-  { crateName: 'webdriver', layer: 'adapters', path: 'src/crates/adapters/webdriver' },
+ 
+   { crateName: 'core', layer: 'assembly', path: 'src/crates/assembly/core' },
+ 
+diff --git a/scripts/core-boundaries/rules/crate-rules.mjs b/scripts/core-boundaries/rules/crate-rules.mjs
+index b8b2a52..7decdd3 100644
+--- a/scripts/core-boundaries/rules/crate-rules.mjs
++++ b/scripts/core-boundaries/rules/crate-rules.mjs
+@@ -17,7 +17,6 @@ export const noCoreDependencyCrates = [
+   'product-domains',
+   'terminal',
+   'tool-runtime',
+-  'webdriver',
+ ];
+ 
+ export const lightweightBoundaryRules = [
+diff --git a/scripts/dev.cjs b/scripts/dev.cjs
+index ac51933..50f250c 100644
+--- a/scripts/dev.cjs
++++ b/scripts/dev.cjs
+@@ -27,12 +27,7 @@ const DEV_SERVER_HOSTS = ['localhost', '127.0.0.1', '::1'];
+ const DESKTOP_PREVIEW_REBUILD_INPUTS = [
+   path.join(ROOT_DIR, 'Cargo.toml'),
+   path.join(ROOT_DIR, 'src', 'apps', 'desktop'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'core'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'transport'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'api-layer'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'events'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'ai-adapters'),
+-  path.join(ROOT_DIR, 'src', 'crates', 'webdriver'),
++  path.join(ROOT_DIR, 'src', 'crates'),
+ ];
+ const DESKTOP_PREVIEW_REBUILD_IGNORED_DIRS = new Set([
+   '.northhing',
+@@ -101,13 +96,13 @@ function decodeOutput(output) {
+   if (process.platform !== 'win32') return buffer.toString('utf-8');
+ 
+   const utf8 = buffer.toString('utf-8');
+-  if (!utf8.includes('�?)) return utf8;
++  if (!utf8.includes('�?)) return utf8;
+ 
+   try {
+     const { TextDecoder } = require('util');
+     const decoder = new TextDecoder('gbk');
+     const gbk = decoder.decode(buffer);
+-    if (gbk && !gbk.includes('�?)) return gbk;
++    if (gbk && !gbk.includes('�?)) return gbk;
+     return gbk || utf8;
+   } catch (error) {
+     return utf8;
+diff --git a/src/crates/adapters/AGENTS-CN.md b/src/crates/adapters/AGENTS-CN.md
+index 8119803..c3d0357 100644
+--- a/src/crates/adapters/AGENTS-CN.md
++++ b/src/crates/adapters/AGENTS-CN.md
+@@ -9,7 +9,6 @@
+ | Crate | 职责 | 本地文档 |
+ |---|---|---|
+ | `ai-adapters` | AI provider 请求/响应 adapter 与 stream protocol glue | [AGENTS.md](ai-adapters/AGENTS.md) |
+-| `webdriver` | Embedded WebDriver protocol 与浏览器自动化 adapter | [AGENTS.md](webdriver/AGENTS.md) |
+ 
+ ## 放置规则
+ 
+diff --git a/src/crates/adapters/AGENTS.md b/src/crates/adapters/AGENTS.md
+index 7db169b..bf336c5 100644
+--- a/src/crates/adapters/AGENTS.md
++++ b/src/crates/adapters/AGENTS.md
+@@ -12,7 +12,6 @@ services.
+ | Crate | Responsibility | Local doc |
+ |---|---|---|
+ | `ai-adapters` | AI provider request/response adapters and stream protocol glue | [AGENTS.md](ai-adapters/AGENTS.md) |
+-| `webdriver` | Embedded WebDriver protocol and browser automation adapter | [AGENTS.md](webdriver/AGENTS.md) |
+ 
+ ## Placement Rules
+ 
+diff --git a/src/crates/adapters/webdriver/AGENTS.md b/src/crates/adapters/webdriver/AGENTS.md
+deleted file mode 100644
+index 9a93290..0000000
+--- a/src/crates/adapters/webdriver/AGENTS.md
++++ /dev/null
+@@ -1,24 +0,0 @@
+-# webdriver Agent Guide
+-
+-Scope: this guide applies to `src/crates/adapters/webdriver`.
+-
+-`northhing-webdriver` owns the embedded desktop WebDriver bridge. It is a
+-platform-integration crate, not a product runtime or tool-policy owner.
+-
+-## Guardrails
+-
+-- Keep startup gated by the existing debug, feature, and environment checks.
+-- Platform capture, evaluation, and native WebView access may live here; product
+-  policy, session lifecycle, tool exposure, and agent decisions must not.
+-- Preserve WebDriver protocol response shapes, session/window/element semantics,
+-  and platform-specific capture/evaluation behavior.
+-- Do not expose this crate as a shared runtime contract; route product-facing
+-  behavior through desktop/API/transport boundaries.
+-
+-## Verification
+-
+-```bash
+-cargo check -p northhing-webdriver
+-```
+-
+-For documentation-only changes, run `git diff --check`.
+diff --git a/src/crates/adapters/webdriver/Cargo.toml b/src/crates/adapters/webdriver/Cargo.toml
+deleted file mode 100644
+index 1acf0df..0000000
+--- a/src/crates/adapters/webdriver/Cargo.toml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-[package]
+-name = "northhing-webdriver"
+-version.workspace = true
+-authors.workspace = true
+-edition.workspace = true
+-description = "Embedded WebDriver server for northhing desktop"
+-
+-[features]
+-default = []
+-embedded = []
+-
+-[dependencies]
+-anyhow = { workspace = true }
+-axum = { workspace = true }
+-tokio = { workspace = true }
+-serde = { workspace = true }
+-serde_json = { workspace = true }
+-tracing = { workspace = true }
+-tauri = { workspace = true }
+-uuid = { workspace = true }
+-base64 = { workspace = true }
+-image = { workspace = true }
+-
+-[target.'cfg(target_os = "macos")'.dependencies]
+-block2 = { workspace = true }
+-objc2 = { workspace = true }
+-objc2-app-kit = { workspace = true, features = ["NSImage", "NSImageRep", "NSBitmapImageRep"] }
+-objc2-foundation = { workspace = true, features = ["NSString", "NSData", "NSError", "NSDictionary"] }
+-objc2-web-kit = { workspace = true }
+-
+-[target.'cfg(target_os = "windows")'.dependencies]
+-tempfile = { workspace = true }
+-webview2-com = { workspace = true }
+-windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage"] }
+-windows-core = { workspace = true }
+-
+-[target.'cfg(target_os = "linux")'.dependencies]
+-glib = { workspace = true }
+-gtk = { workspace = true }
+-tempfile = { workspace = true }
+-webkit2gtk = { workspace = true }
+diff --git a/src/crates/adapters/webdriver/src/executor/element/actions.rs b/src/crates/adapters/webdriver/src/executor/element/actions.rs
+deleted file mode 100644
+index 1bc8dbb..0000000
+--- a/src/crates/adapters/webdriver/src/executor/element/actions.rs
++++ /dev/null
+@@ -1,28 +0,0 @@
+-use crate::executor::BridgeExecutor;
+-use crate::platform::{self, ElementScreenshotMetadata};
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn click_element_by_id(&self, element_id: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::element::exec_element_action(self.state.clone(), &self.session.id, api::element::click(), element_id).await
+-    }
+-
+-    pub async fn clear_element_by_id(&self, element_id: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::element::exec_element_action(self.state.clone(), &self.session.id, api::element::clear(), element_id).await
+-    }
+-
+-    pub async fn send_keys_to_element(&self, element_id: &str, text: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::element::exec_element_text_action(self.state.clone(), &self.session.id, element_id, text).await
+-    }
+-
+-    pub async fn take_element_screenshot(&self, element_id: &str) -> Result<String, WebDriverErrorResponse> {
+-        let metadata = api::element::exec_screenshot_metadata(self.state.clone(), &self.session.id, element_id).await?;
+-        let metadata: ElementScreenshotMetadata = serde_json::from_value(metadata).map_err(|error| {
+-            WebDriverErrorResponse::unknown_error(format!("Failed to decode element screenshot metadata: {error}"))
+-        })?;
+-
+-        let screenshot = self.take_screenshot().await?;
+-        platform::crop_screenshot(screenshot, metadata)
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/element/lookup.rs b/src/crates/adapters/webdriver/src/executor/element/lookup.rs
+deleted file mode 100644
+index 0dcec58..0000000
+--- a/src/crates/adapters/webdriver/src/executor/element/lookup.rs
++++ /dev/null
+@@ -1,44 +0,0 @@
+-use std::time::Duration;
+-
+-use serde_json::Value;
+-use tokio::time::Instant;
+-
+-use crate::executor::BridgeExecutor;
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::webdriver::LocatorStrategy;
+-
+-impl BridgeExecutor {
+-    pub async fn find_elements(
+-        &self,
+-        root_element_id: Option<String>,
+-        using: &str,
+-        value: &str,
+-    ) -> Result<Vec<Value>, WebDriverErrorResponse> {
+-        let strategy = LocatorStrategy::try_from(using)?;
+-        let poll_interval = Duration::from_millis(50);
+-        let implicit_timeout = Duration::from_millis(self.session.timeouts.implicit);
+-        let deadline = Instant::now() + implicit_timeout;
+-
+-        loop {
+-            let result = api::element::exec_find_elements(
+-                self.state.clone(),
+-                &self.session.id,
+-                root_element_id.clone(),
+-                strategy.as_str(),
+-                value,
+-            )
+-            .await?;
+-
+-            if !result.is_empty() || Instant::now() >= deadline {
+-                return Ok(result);
+-            }
+-
+-            tokio::time::sleep(poll_interval.min(deadline.saturating_duration_since(Instant::now()))).await;
+-        }
+-    }
+-
+-    pub async fn get_active_element(&self) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_active_element(self.state.clone(), &self.session.id).await
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/element/mod.rs b/src/crates/adapters/webdriver/src/executor/element/mod.rs
+deleted file mode 100644
+index ea6c11c..0000000
+--- a/src/crates/adapters/webdriver/src/executor/element/mod.rs
++++ /dev/null
+@@ -1,4 +0,0 @@
+-mod actions;
+-mod lookup;
+-mod read;
+-mod shadow;
+diff --git a/src/crates/adapters/webdriver/src/executor/element/read.rs b/src/crates/adapters/webdriver/src/executor/element/read.rs
+deleted file mode 100644
+index 6de92f2..0000000
+--- a/src/crates/adapters/webdriver/src/executor/element/read.rs
++++ /dev/null
+@@ -1,124 +0,0 @@
+-use serde_json::Value;
+-
+-use crate::executor::BridgeExecutor;
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn is_element_selected(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_flag(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::is_selected(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn is_element_displayed(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_flag(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::is_displayed(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_attribute(&self, element_id: &str, name: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_name_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_attribute(),
+-            element_id,
+-            name,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_property(&self, element_id: &str, name: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_name_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_property(),
+-            element_id,
+-            name,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_css_value(
+-        &self,
+-        element_id: &str,
+-        property_name: &str,
+-    ) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_name_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_css_value(),
+-            element_id,
+-            property_name,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_text(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_text(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_computed_role(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_computed_role(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_computed_label(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_computed_label(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_name(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_name(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_element_rect(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_rect(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn is_element_enabled(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_flag(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::is_enabled(),
+-            element_id,
+-        )
+-        .await
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/element/shadow.rs b/src/crates/adapters/webdriver/src/executor/element/shadow.rs
+deleted file mode 100644
+index 6159539..0000000
+--- a/src/crates/adapters/webdriver/src/executor/element/shadow.rs
++++ /dev/null
+@@ -1,35 +0,0 @@
+-use serde_json::Value;
+-
+-use crate::executor::BridgeExecutor;
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn get_shadow_root(&self, element_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-        api::element::exec_element_value(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::element::get_shadow_root(),
+-            element_id,
+-        )
+-        .await
+-    }
+-
+-    pub async fn find_elements_from_shadow(
+-        &self,
+-        shadow_id: &str,
+-        using: &str,
+-        value: &str,
+-    ) -> Result<Vec<Value>, WebDriverErrorResponse> {
+-        api::element::exec_find_elements_from_shadow(self.state.clone(), &self.session.id, shadow_id, using, value)
+-            .await
+-    }
+-
+-    pub async fn validate_frame_index(&self, index: u32) -> Result<(), WebDriverErrorResponse> {
+-        api::element::exec_validate_frame_index(self.state.clone(), &self.session.id, index).await
+-    }
+-
+-    pub async fn validate_frame_element(&self, element_id: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::element::exec_validate_frame_element(self.state.clone(), &self.session.id, element_id).await
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/interaction.rs b/src/crates/adapters/webdriver/src/executor/interaction.rs
+deleted file mode 100644
+index 59db4ab..0000000
+--- a/src/crates/adapters/webdriver/src/executor/interaction.rs
++++ /dev/null
+@@ -1,42 +0,0 @@
+-use serde_json::Value;
+-
+-use super::BridgeExecutor;
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn perform_actions(&self, actions: &[Value]) -> Result<(), WebDriverErrorResponse> {
+-        api::interaction::exec_perform_actions(self.state.clone(), &self.session.id, actions).await
+-    }
+-
+-    pub async fn release_actions(
+-        &self,
+-        pressed_keys: Vec<String>,
+-        pressed_buttons: Vec<Value>,
+-    ) -> Result<(), WebDriverErrorResponse> {
+-        api::interaction::exec_release_actions(self.state.clone(), &self.session.id, pressed_keys, pressed_buttons)
+-            .await
+-    }
+-
+-    pub async fn dismiss_alert(&self) -> Result<(), WebDriverErrorResponse> {
+-        api::interaction::exec_alert_action(self.state.clone(), &self.session.id, api::interaction::dismiss_alert())
+-            .await
+-    }
+-
+-    pub async fn accept_alert(&self) -> Result<(), WebDriverErrorResponse> {
+-        api::interaction::exec_alert_action(self.state.clone(), &self.session.id, api::interaction::accept_alert())
+-            .await
+-    }
+-
+-    pub async fn get_alert_text(&self) -> Result<Value, WebDriverErrorResponse> {
+-        api::interaction::exec_alert_text(self.state.clone(), &self.session.id).await
+-    }
+-
+-    pub async fn send_alert_text(&self, text: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::interaction::exec_send_alert_text(self.state.clone(), &self.session.id, text).await
+-    }
+-
+-    pub async fn take_logs(&self) -> Result<Value, WebDriverErrorResponse> {
+-        api::interaction::exec_take_logs(self.state.clone(), &self.session.id).await
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/mod.rs b/src/crates/adapters/webdriver/src/executor/mod.rs
+deleted file mode 100644
+index b36b055..0000000
+--- a/src/crates/adapters/webdriver/src/executor/mod.rs
++++ /dev/null
+@@ -1,109 +0,0 @@
+-mod element;
+-mod interaction;
+-mod navigation;
+-mod session;
+-mod window;
+-
+-use std::sync::Arc;
+-
+-use serde_json::Value;
+-use tauri::{Manager, WebviewWindow};
+-
+-use crate::platform::{self, PrintOptions};
+-use crate::runtime;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-use crate::webdriver::Session;
+-
+-pub struct BridgeExecutor {
+-    pub(crate) state: Arc<AppState>,
+-    pub(crate) session: Session,
+-}
+-
+-impl BridgeExecutor {
+-    pub fn new(state: Arc<AppState>, session: Session) -> Self {
+-        Self { state, session }
+-    }
+-
+-    pub async fn from_session_id(state: Arc<AppState>, session_id: &str) -> Result<Self, WebDriverErrorResponse> {
+-        let session = state.sessions.read().await.get_cloned(session_id)?;
+-        Ok(Self::new(state, session))
+-    }
+-
+-    pub async fn run_script(
+-        &self,
+-        script: &str,
+-        args: Vec<Value>,
+-        async_mode: bool,
+-    ) -> Result<Value, WebDriverErrorResponse> {
+-        runtime::run_script(self.state.clone(), &self.session.id, script, args, async_mode)
+-            .await
+-            .map_err(map_bridge_error)
+-    }
+-
+-    pub async fn take_screenshot(&self) -> Result<String, WebDriverErrorResponse> {
+-        let webview = self
+-            .state
+-            .app
+-            .get_webview(&self.session.current_window)
+-            .ok_or_else(|| {
+-                WebDriverErrorResponse::no_such_window(format!("Webview not found: {}", self.session.current_window))
+-            })?;
+-
+-        platform::take_screenshot(webview, self.session.timeouts.script).await
+-    }
+-
+-    pub async fn print_page(&self, options: PrintOptions) -> Result<String, WebDriverErrorResponse> {
+-        let webview = self
+-            .state
+-            .app
+-            .get_webview(&self.session.current_window)
+-            .ok_or_else(|| {
+-                WebDriverErrorResponse::no_such_window(format!("Webview not found: {}", self.session.current_window))
+-            })?;
+-
+-        platform::print_page(webview, self.session.timeouts.script, &options).await
+-    }
+-
+-    pub(crate) fn webview_window(&self) -> Result<WebviewWindow, WebDriverErrorResponse> {
+-        self.state
+-            .app
+-            .get_webview_window(&self.session.current_window)
+-            .ok_or_else(|| {
+-                WebDriverErrorResponse::no_such_window(format!("Window not found: {}", self.session.current_window))
+-            })
+-    }
+-}
+-
+-fn map_bridge_error(error: WebDriverErrorResponse) -> WebDriverErrorResponse {
+-    if error.error != "javascript error" {
+-        return error;
+-    }
+-
+-    let message = error.message.to_ascii_lowercase();
+-    if message.contains("stale element reference") {
+-        return WebDriverErrorResponse::stale_element_reference("The element reference is stale");
+-    }
+-    if message.contains("unsupported locator strategy") {
+-        return WebDriverErrorResponse::invalid_selector(error.message);
+-    }
+-    if message.contains("no shadow root found") {
+-        return WebDriverErrorResponse::no_such_shadow_root("Element does not have a shadow root");
+-    }
+-    if message.contains("no alert is currently open") {
+-        return WebDriverErrorResponse::no_such_alert("No alert is currently open");
+-    }
+-    if message.contains("unable to locate frame")
+-        || message.contains("frame window is not available")
+-        || message.contains("element is not a frame")
+-        || message.contains("invalid frame reference")
+-        || message.contains("unsupported frame reference")
+-    {
+-        return WebDriverErrorResponse::no_such_frame("Unable to locate frame");
+-    }
+-    if message.contains("element not found") {
+-        return WebDriverErrorResponse::no_such_element("No such element");
+-    }
+-
+-    error
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/navigation.rs b/src/crates/adapters/webdriver/src/executor/navigation.rs
+deleted file mode 100644
+index 4ea94cb..0000000
+--- a/src/crates/adapters/webdriver/src/executor/navigation.rs
++++ /dev/null
+@@ -1,96 +0,0 @@
+-use std::time::Duration;
+-
+-use serde_json::Value;
+-use tokio::time::Instant;
+-
+-use super::BridgeExecutor;
+-use crate::runtime::api;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn navigate_to(&self, url: &str) -> Result<(), WebDriverErrorResponse> {
+-        api::navigation::exec_navigation_action(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::navigation::navigate_to(),
+-            vec![Value::String(url.to_string())],
+-        )
+-        .await
+-    }
+-
+-    pub async fn go_back(&self) -> Result<(), WebDriverErrorResponse> {
+-        api::navigation::exec_navigation_action(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::navigation::go_back(),
+-            Vec::new(),
+-        )
+-        .await
+-    }
+-
+-    pub async fn go_forward(&self) -> Result<(), WebDriverErrorResponse> {
+-        api::navigation::exec_navigation_action(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::navigation::go_forward(),
+-            Vec::new(),
+-        )
+-        .await
+-    }
+-
+-    pub async fn refresh_page(&self) -> Result<(), WebDriverErrorResponse> {
+-        api::navigation::exec_navigation_action(
+-            self.state.clone(),
+-            &self.session.id,
+-            api::navigation::refresh(),
+-            Vec::new(),
+-        )
+-        .await
+-    }
+-
+-    pub async fn get_title(&self) -> Result<Value, WebDriverErrorResponse> {
+-        api::navigation::exec_document_value(self.state.clone(), &self.session.id, api::navigation::title()).await
+-    }
+-
+-    pub async fn get_source(&self) -> Result<Value, WebDriverErrorResponse> {
+-        api::navigation::exec_document_value(self.state.clone(), &self.session.id, api::navigation::source()).await
+-    }
+-
+-    pub async fn wait_for_page_load(&self) -> Result<(), WebDriverErrorResponse> {
+-        let page_load_timeout = Duration::from_millis(self.session.timeouts.page_load);
+-        if page_load_timeout.is_zero() {
+-            return Ok(());
+-        }
+-
+-        let poll_interval = Duration::from_millis(50);
+-        let deadline = Instant::now() + page_load_timeout;
+-
+-        loop {
+-            match api::navigation::exec_document_value(
+-                self.state.clone(),
+-                &self.session.id,
+-                api::navigation::ready_state(),
+-            )
+-            .await
+-            {
+-                Ok(Value::String(ready_state)) if ready_state == "complete" => return Ok(()),
+-                Ok(_) => {}
+-                Err(error) if should_retry_page_load(&error) => {}
+-                Err(error) => return Err(error),
+-            }
+-
+-            if Instant::now() >= deadline {
+-                return Err(WebDriverErrorResponse::timeout(format!(
+-                    "Page load timed out after {}ms",
+-                    self.session.timeouts.page_load
+-                )));
+-            }
+-
+-            tokio::time::sleep(poll_interval.min(deadline.saturating_duration_since(Instant::now()))).await;
+-        }
+-    }
+-}
+-
+-fn should_retry_page_load(error: &WebDriverErrorResponse) -> bool {
+-    matches!(error.error.as_str(), "javascript error" | "unknown error")
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/session.rs b/src/crates/adapters/webdriver/src/executor/session.rs
+deleted file mode 100644
+index 38ff12d..0000000
+--- a/src/crates/adapters/webdriver/src/executor/session.rs
++++ /dev/null
+@@ -1,126 +0,0 @@
+-use tauri::webview::cookie::{time::OffsetDateTime, Cookie as NativeCookie, SameSite};
+-
+-use crate::executor::BridgeExecutor;
+-use crate::platform::Cookie;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn get_all_cookies(&self) -> Result<Vec<Cookie>, WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-        let cookies = window
+-            .cookies()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read cookies: {error}")))?;
+-        Ok(cookies.iter().map(to_webdriver_cookie).collect())
+-    }
+-
+-    pub async fn get_cookie(&self, name: &str) -> Result<Option<Cookie>, WebDriverErrorResponse> {
+-        let cookies = self.get_all_cookies().await?;
+-        Ok(cookies.into_iter().find(|cookie| cookie.name == name))
+-    }
+-
+-    pub async fn add_cookie(&self, mut cookie: Cookie) -> Result<(), WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-
+-        if cookie.domain.is_none() {
+-            if let Ok(url) = window.url() {
+-                cookie.domain = url.host_str().map(str::to_owned);
+-            }
+-        }
+-        if cookie.path.is_none() {
+-            cookie.path = Some("/".to_string());
+-        }
+-
+-        let cookie = build_native_cookie(&cookie)?;
+-        window
+-            .set_cookie(cookie)
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to set cookie: {error}")))?;
+-        Ok(())
+-    }
+-
+-    pub async fn delete_cookie(&self, name: &str) -> Result<(), WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-        let cookies = window
+-            .cookies()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read cookies: {error}")))?;
+-
+-        for cookie in cookies.into_iter().filter(|cookie| cookie.name() == name) {
+-            window
+-                .delete_cookie(cookie)
+-                .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to delete cookie: {error}")))?;
+-        }
+-
+-        Ok(())
+-    }
+-
+-    pub async fn delete_all_cookies(&self) -> Result<(), WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-        let cookies = window
+-            .cookies()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read cookies: {error}")))?;
+-
+-        for cookie in cookies {
+-            window
+-                .delete_cookie(cookie)
+-                .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to delete cookie: {error}")))?;
+-        }
+-
+-        Ok(())
+-    }
+-}
+-
+-fn to_webdriver_cookie(cookie: &NativeCookie<'_>) -> Cookie {
+-    Cookie {
+-        name: cookie.name().to_string(),
+-        value: cookie.value().to_string(),
+-        path: cookie.path().map(ToOwned::to_owned),
+-        domain: cookie.domain().map(ToOwned::to_owned),
+-        secure: cookie.secure().unwrap_or(false),
+-        http_only: cookie.http_only().unwrap_or(false),
+-        expiry: cookie.expires_datetime().and_then(|value| {
+-            let timestamp = value.unix_timestamp();
+-            u64::try_from(timestamp).ok()
+-        }),
+-        same_site: cookie.same_site().map(|value| value.to_string()),
+-    }
+-}
+-
+-fn parse_same_site(value: Option<&str>) -> Result<Option<SameSite>, WebDriverErrorResponse> {
+-    match value.map(str::trim).filter(|value| !value.is_empty()) {
+-        None => Ok(None),
+-        Some(value) if value.eq_ignore_ascii_case("strict") => Ok(Some(SameSite::Strict)),
+-        Some(value) if value.eq_ignore_ascii_case("lax") => Ok(Some(SameSite::Lax)),
+-        Some(value) if value.eq_ignore_ascii_case("none") => Ok(Some(SameSite::None)),
+-        Some(value) => Err(WebDriverErrorResponse::invalid_argument(format!(
+-            "Invalid SameSite value: {value}"
+-        ))),
+-    }
+-}
+-
+-fn build_native_cookie(cookie: &Cookie) -> Result<NativeCookie<'static>, WebDriverErrorResponse> {
+-    let mut builder = NativeCookie::build((cookie.name.clone(), cookie.value.clone()));
+-
+-    if let Some(path) = cookie.path.clone() {
+-        builder = builder.path(path);
+-    }
+-    if let Some(domain) = cookie.domain.clone() {
+-        builder = builder.domain(domain);
+-    }
+-    if cookie.secure {
+-        builder = builder.secure(true);
+-    }
+-    if cookie.http_only {
+-        builder = builder.http_only(true);
+-    }
+-    if let Some(same_site) = parse_same_site(cookie.same_site.as_deref())? {
+-        builder = builder.same_site(same_site);
+-    }
+-    if let Some(expiry) = cookie.expiry {
+-        let expiry = i64::try_from(expiry)
+-            .map_err(|_| WebDriverErrorResponse::invalid_argument("Cookie expiry is out of range"))?;
+-        let expiry = OffsetDateTime::from_unix_timestamp(expiry)
+-            .map_err(|error| WebDriverErrorResponse::invalid_argument(format!("Cookie expiry is invalid: {error}")))?;
+-        builder = builder.expires(expiry);
+-    }
+-
+-    Ok(builder.build())
+-}
+diff --git a/src/crates/adapters/webdriver/src/executor/window.rs b/src/crates/adapters/webdriver/src/executor/window.rs
+deleted file mode 100644
+index 1bed4aa..0000000
+--- a/src/crates/adapters/webdriver/src/executor/window.rs
++++ /dev/null
+@@ -1,85 +0,0 @@
+-use std::time::Duration;
+-
+-use tauri::{PhysicalPosition, PhysicalSize, Position, Size};
+-
+-use crate::executor::BridgeExecutor;
+-use crate::platform::WindowRect;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-impl BridgeExecutor {
+-    pub async fn get_window_rect(&self) -> Result<WindowRect, WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-        let position = window.outer_position().map_err(|error| {
+-            WebDriverErrorResponse::unknown_error(format!("Failed to read window position: {error}"))
+-        })?;
+-        let size = window
+-            .outer_size()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read window size: {error}")))?;
+-
+-        Ok(WindowRect {
+-            x: position.x,
+-            y: position.y,
+-            width: size.width,
+-            height: size.height,
+-        })
+-    }
+-
+-    pub async fn set_window_rect(&self, rect: WindowRect) -> Result<WindowRect, WebDriverErrorResponse> {
+-        let window = self.webview_window()?;
+-
+-        if window.is_fullscreen().unwrap_or(false) {
+-            let _ = window.set_fullscreen(false);
+-            tokio::time::sleep(Duration::from_millis(50)).await;
+-        }
+-        if window.is_maximized().unwrap_or(false) {
+-            let _ = window.unmaximize();
+-            tokio::time::sleep(Duration::from_millis(50)).await;
+-        }
+-
+-        window
+-            .set_position(Position::Physical(PhysicalPosition::new(rect.x, rect.y)))
+-            .map_err(|error| {
+-                WebDriverErrorResponse::unknown_error(format!("Failed to set window position: {error}"))
+-            })?;
+-
+-        let (chrome_width, chrome_height) = if let (Ok(outer), Ok(inner)) = (window.outer_size(), window.inner_size()) {
+-            (
+-                outer.width.saturating_sub(inner.width),
+-                outer.height.saturating_sub(inner.height),
+-            )
+-        } else {
+-            (0, 0)
+-        };
+-
+-        let inner_width = rect.width.saturating_sub(chrome_width);
+-        let inner_height = rect.height.saturating_sub(chrome_height);
+-        window
+-            .set_size(Size::Physical(PhysicalSize::new(inner_width, inner_height)))
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to set window size: {error}")))?;
+-
+-        self.get_window_rect().await
+-    }
+-
+-    pub async fn maximize_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
+-        self.webview_window()?
+-            .maximize()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to maximize window: {error}")))?;
+-        tokio::time::sleep(Duration::from_millis(100)).await;
+-        self.get_window_rect().await
+-    }
+-
+-    pub async fn minimize_window(&self) -> Result<(), WebDriverErrorResponse> {
+-        self.webview_window()?
+-            .minimize()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to minimize window: {error}")))?;
+-        Ok(())
+-    }
+-
+-    pub async fn fullscreen_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
+-        self.webview_window()?
+-            .set_fullscreen(true)
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to fullscreen window: {error}")))?;
+-        tokio::time::sleep(Duration::from_millis(100)).await;
+-        self.get_window_rect().await
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/lib.rs b/src/crates/adapters/webdriver/src/lib.rs
+deleted file mode 100644
+index bff74af..0000000
+--- a/src/crates/adapters/webdriver/src/lib.rs
++++ /dev/null
+@@ -1,45 +0,0 @@
+-#![allow(clippy::too_many_arguments)]
+-mod executor;
+-pub mod platform;
+-mod runtime;
+-pub mod server;
+-pub mod webdriver;
+-
+-use std::sync::atomic::{AtomicBool, Ordering};
+-use std::sync::Arc;
+-
+-use serde_json::Value;
+-use tauri::AppHandle;
+-
+-use server::AppState;
+-
+-const DEFAULT_WEBDRIVER_LABEL: &str = "main";
+-
+-static SERVER_STARTED: AtomicBool = AtomicBool::new(false);
+-
+-pub fn maybe_start(app: AppHandle) {
+-    if !(cfg!(debug_assertions) || cfg!(feature = "embedded")) {
+-        return;
+-    }
+-
+-    let Some(port) = std::env::var("NORTHHING_WEBDRIVER_PORT")
+-        .ok()
+-        .and_then(|raw| raw.parse::<u16>().ok())
+-    else {
+-        return;
+-    };
+-
+-    if SERVER_STARTED.swap(true, Ordering::SeqCst) {
+-        return;
+-    }
+-
+-    let preferred_label = std::env::var("NORTHHING_WEBDRIVER_LABEL").unwrap_or_else(|_| DEFAULT_WEBDRIVER_LABEL.into());
+-    let state = Arc::new(AppState::new(app.clone(), preferred_label, port));
+-
+-    runtime::register_listener(app, state.clone());
+-    server::start(state);
+-}
+-
+-pub fn handle_bridge_result(payload: Value) -> Result<(), String> {
+-    runtime::handle_invoke_payload(payload)
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/capture.rs b/src/crates/adapters/webdriver/src/platform/capture.rs
+deleted file mode 100644
+index 6bab6e6..0000000
+--- a/src/crates/adapters/webdriver/src/platform/capture.rs
++++ /dev/null
+@@ -1,624 +0,0 @@
+-use tauri::{Runtime, Webview};
+-
+-use super::types::PrintOptions;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-pub async fn take_screenshot<R: Runtime>(
+-    webview: Webview<R>,
+-    timeout_ms: u64,
+-) -> Result<String, WebDriverErrorResponse> {
+-    imp::take_screenshot(webview, timeout_ms).await
+-}
+-
+-pub async fn print_page<R: Runtime>(
+-    webview: Webview<R>,
+-    timeout_ms: u64,
+-    options: &PrintOptions,
+-) -> Result<String, WebDriverErrorResponse> {
+-    imp::print_page(webview, timeout_ms, options).await
+-}
+-
+-#[cfg(target_os = "macos")]
+-mod imp {
+-    use std::sync::Arc;
+-    use std::time::Duration;
+-
+-    use super::*;
+-    use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+-    use base64::Engine as _;
+-    use block2::RcBlock;
+-    use objc2::runtime::AnyObject;
+-    use objc2::MainThreadMarker;
+-    use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep, NSBitmapImageRepPropertyKey, NSImage};
+-    use objc2_foundation::{NSData, NSDictionary, NSError};
+-    use objc2_web_kit::{WKPDFConfiguration, WKSnapshotConfiguration, WKWebView};
+-    use tokio::sync::oneshot;
+-    use tracing::warn;
+-
+-    pub async fn take_screenshot<R: Runtime>(
+-        webview: Webview<R>,
+-        timeout_ms: u64,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        let (tx, rx) = oneshot::channel();
+-
+-        let result = webview.with_webview(move |platform_webview| unsafe {
+-            let wk_webview: &WKWebView = &*platform_webview.inner().cast();
+-            let mtm = MainThreadMarker::new_unchecked();
+-            let config = WKSnapshotConfiguration::new(mtm);
+-
+-            let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+-            let block = RcBlock::new(move |image: *mut NSImage, error: *mut NSError| {
+-                let response = if !error.is_null() {
+-                    let error_ref = &*error;
+-                    Err(error_ref.localizedDescription().to_string())
+-                } else if image.is_null() {
+-                    Err("No image returned".to_string())
+-                } else {
+-                    image_to_png_base64(&*image)
+-                };
+-
+-                if let Ok(mut guard) = tx.lock() {
+-                    if let Some(sender) = guard.take() {
+-                        if let Err(e) = sender.send(response) {
+-                            warn!("Screenshot response receiver already dropped: {e:?}");
+-                        }
+-                    }
+-                }
+-            });
+-
+-            wk_webview.takeSnapshotWithConfiguration_completionHandler(Some(&config), &block);
+-        });
+-
+-        if let Err(error) = result {
+-            return Err(WebDriverErrorResponse::unknown_error(format!(
+-                "Failed to capture screenshot: {error}"
+-            )));
+-        }
+-
+-        await_base64_response(rx, timeout_ms, "Screenshot").await
+-    }
+-
+-    pub async fn print_page<R: Runtime>(
+-        webview: Webview<R>,
+-        timeout_ms: u64,
+-        options: &PrintOptions,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        let page_width = options.page_width.unwrap_or(21.0);
+-        let page_height = options.page_height.unwrap_or(29.7);
+-        let margin_top = options.margin_top.unwrap_or(1.0);
+-        let margin_bottom = options.margin_bottom.unwrap_or(1.0);
+-        let margin_left = options.margin_left.unwrap_or(1.0);
+-        let margin_right = options.margin_right.unwrap_or(1.0);
+-        let orientation = options.orientation.as_deref().unwrap_or("portrait");
+-        let css = format!(
+-            r#"(function() {{
+-                let style = document.getElementById('__NORTHHING_WEBDRIVER_print_style');
+-                if (!style) {{
+-                    style = document.createElement('style');
+-                    style.id = '__NORTHHING_WEBDRIVER_print_style';
+-                    document.head.appendChild(style);
+-                }}
+-                style.textContent = `
+-                    @page {{
+-                        size: {page_width}cm {page_height}cm {orientation};
+-                        margin: {margin_top}cm {margin_right}cm {margin_bottom}cm {margin_left}cm;
+-                    }}
+-                    @media print {{
+-                        body {{
+-                            -webkit-print-color-adjust: exact;
+-                            print-color-adjust: exact;
+-                        }}
+-                    }}
+-                `;
+-            }})();"#
+-        );
+-        webview
+-            .eval(&css)
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to inject print CSS: {error}")))?;
+-
+-        let (tx, rx) = oneshot::channel();
+-        let result = webview.with_webview(move |platform_webview| unsafe {
+-            let wk_webview: &WKWebView = &*platform_webview.inner().cast();
+-            let mtm = MainThreadMarker::new_unchecked();
+-            let config = WKPDFConfiguration::new(mtm);
+-
+-            let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+-            let block = RcBlock::new(move |data: *mut NSData, error: *mut NSError| {
+-                let response = if !error.is_null() {
+-                    let error_ref = &*error;
+-                    Err(error_ref.localizedDescription().to_string())
+-                } else if data.is_null() {
+-                    Err("No PDF data returned".to_string())
+-                } else {
+-                    Ok(BASE64_STANDARD.encode((&*data).to_vec()))
+-                };
+-
+-                if let Ok(mut guard) = tx.lock() {
+-                    if let Some(sender) = guard.take() {
+-                        if let Err(e) = sender.send(response) {
+-                            warn!("Screenshot response receiver already dropped: {e:?}");
+-                        }
+-                    }
+-                }
+-            });
+-
+-            wk_webview.createPDFWithConfiguration_completionHandler(Some(&config), &block);
+-        });
+-
+-        if let Err(error) = result {
+-            return Err(WebDriverErrorResponse::unknown_error(format!(
+-                "Failed to print page: {error}"
+-            )));
+-        }
+-
+-        let response = await_base64_response(rx, timeout_ms, "Print").await;
+-        let _ = webview.eval("(() => { document.getElementById('__NORTHHING_WEBDRIVER_print_style')?.remove(); })();"); // intentionally ignored: best-effort cleanup of injected CSS
+-        response
+-    }
+-
+-    async fn await_base64_response(
+-        rx: oneshot::Receiver<Result<String, String>>,
+-        timeout_ms: u64,
+-        label: &str,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        match tokio::time::timeout(Duration::from_millis(timeout_ms), rx).await {
+-            Ok(Ok(Ok(base64))) if !base64.is_empty() => Ok(base64),
+-            Ok(Ok(Ok(_))) => Err(WebDriverErrorResponse::unknown_error(format!(
+-                "{label} returned empty data"
+-            ))),
+-            Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::unknown_error(error)),
+-            Ok(Err(_)) => Err(WebDriverErrorResponse::unknown_error(format!(
+-                "{label} channel closed unexpectedly"
+-            ))),
+-            Err(_) => Err(WebDriverErrorResponse::timeout(format!(
+-                "{label} timed out after {timeout_ms}ms"
+-            ))),
+-        }
+-    }
+-
+-    unsafe fn image_to_png_base64(image: &NSImage) -> Result<String, String> {
+-        let tiff_data: Option<objc2::rc::Retained<NSData>> = image.TIFFRepresentation();
+-        let tiff_data = tiff_data.ok_or("Failed to get TIFF representation")?;
+-
+-        let bitmap_rep = NSBitmapImageRep::imageRepWithData(&tiff_data).ok_or("Failed to create bitmap image rep")?;
+-
+-        let empty_dict: objc2::rc::Retained<NSDictionary<NSBitmapImageRepPropertyKey, AnyObject>> = NSDictionary::new();
+-        let png_data = bitmap_rep
+-            .representationUsingType_properties(NSBitmapImageFileType::PNG, &empty_dict)
+-            .ok_or("Failed to convert image to PNG")?;
+-
+-        Ok(BASE64_STANDARD.encode(png_data.to_vec()))
+-    }
+-}
+-
+-#[cfg(target_os = "windows")]
+-mod imp {
+-    use std::sync::Arc;
+-    use std::time::Duration;
+-
+-    use super::*;
+-    use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+-    use base64::Engine as _;
+-    use tokio::sync::oneshot;
+-    use tracing::warn;
+-    use webview2_com::Microsoft::Web::WebView2::Win32::{
+-        ICoreWebView2CapturePreviewCompletedHandler, ICoreWebView2CapturePreviewCompletedHandler_Impl,
+-        ICoreWebView2Environment6, ICoreWebView2PrintToPdfCompletedHandler,
+-        ICoreWebView2PrintToPdfCompletedHandler_Impl, ICoreWebView2_7, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
+-        COREWEBVIEW2_PRINT_ORIENTATION_LANDSCAPE, COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT,
+-    };
+-    use windows::core::{implement, Interface, HSTRING};
+-    use windows::Win32::Foundation::HGLOBAL;
+-    use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
+-    use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED, STATFLAG_NONAME, STREAM_SEEK_SET};
+-    use windows_core::BOOL;
+-
+-    type CaptureSender = Arc<std::sync::Mutex<Option<oneshot::Sender<Result<String, String>>>>>;
+-    type PrintSender = Arc<std::sync::Mutex<Option<oneshot::Sender<Result<(), String>>>>>;
+-
+-    pub async fn take_screenshot<R: Runtime>(
+-        webview: Webview<R>,
+-        timeout_ms: u64,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        let (tx, rx) = oneshot::channel();
+-
+-        let result = webview.with_webview(move |platform_webview| unsafe {
+-            let webview2 = match platform_webview.controller().CoreWebView2() {
+-                Ok(webview2) => webview2,
+-                Err(error) => {
+-                    if let Err(e) = tx.send(Err(format!("Failed to access CoreWebView2: {error:?}"))) {
+-                        warn!("Failed to send CoreWebView2 error to oneshot channel: {e:?}");
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let stream = match CreateStreamOnHGlobal(HGLOBAL::default(), true) {
+-                Ok(stream) => stream,
+-                Err(error) => {
+-                    if let Err(e) = tx.send(Err(format!("Failed to create preview stream: {error}"))) {
+-                        warn!("Failed to send preview stream error to oneshot channel: {e:?}");
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let handler_tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+-            let handler = CapturePreviewHandler::new(handler_tx.clone(), stream.clone());
+-            let handler: ICoreWebView2CapturePreviewCompletedHandler = handler.into();
+-
+-            if let Err(error) =
+-                webview2.CapturePreview(COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG, &stream, &handler)
+-            {
+-                if let Ok(mut guard) = handler_tx.lock() {
+-                    if let Some(tx) = guard.take() {
+-                        if let Err(e) = tx.send(Err(format!("CapturePreview failed: {error:?}"))) {
+-                            warn!("Failed to send CapturePreview error to oneshot channel: {e:?}");
+-                        }
+-                    }
+-                }
+-            }
+-        });
+-
+-        if let Err(error) = result {
+-            return Err(WebDriverErrorResponse::unknown_error(format!(
+-                "Failed to capture screenshot: {error}"
+-            )));
+-        }
+-
+-        await_base64_response(rx, timeout_ms, "Screenshot").await
+-    }
+-
+-    pub async fn print_page<R: Runtime>(
+-        webview: Webview<R>,
+-        timeout_ms: u64,
+-        options: &PrintOptions,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        let (tx, rx) = oneshot::channel();
+-        let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+-
+-        let temp_dir = tempfile::TempDir::new()
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to create temp dir: {error}")))?;
+-        let pdf_path = temp_dir.path().join("print.pdf");
+-        let pdf_path_clone = pdf_path.clone();
+-
+-        let orientation = options.orientation.clone();
+-        let scale = options.scale;
+-        let background = options.background;
+-        let page_width = options.page_width;
+-        let page_height = options.page_height;
+-        let margin_top = options.margin_top;
+-        let margin_bottom = options.margin_bottom;
+-        let margin_left = options.margin_left;
+-        let margin_right = options.margin_right;
+-
+-        let result = webview.with_webview(move |platform_webview| unsafe {
+-            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED); // intentionally ignored: may already be initialized on this thread
+-
+-            let webview2 = match platform_webview.controller().CoreWebView2() {
+-                Ok(webview2) => webview2,
+-                Err(error) => {
+-                    if let Ok(mut guard) = tx.lock() {
+-                        if let Some(tx) = guard.take() {
+-                            let _ = tx.send(Err(format!("Failed to access CoreWebView2: {error:?}")));
+-                        }
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let webview7: ICoreWebView2_7 = match webview2.cast() {
+-                Ok(webview7) => webview7,
+-                Err(error) => {
+-                    if let Ok(mut guard) = tx.lock() {
+-                        if let Some(tx) = guard.take() {
+-                            if let Err(e) = tx.send(Err(format!(
+-                                "Failed to cast CoreWebView2 to ICoreWebView2_7: {error:?}"
+-                            ))) {
+-                                warn!("Failed to send cast error to oneshot channel: {e:?}");
+-                            }
+-                        }
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let environment = match webview7.Environment() {
+-                Ok(environment) => environment,
+-                Err(error) => {
+-                    if let Ok(mut guard) = tx.lock() {
+-                        if let Some(tx) = guard.take() {
+-                            if let Err(e) = tx.send(Err(format!("Failed to access WebView2 environment: {error:?}"))) {
+-                                warn!("Failed to send environment error to oneshot channel: {e:?}");
+-                            }
+-                        }
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let env6: ICoreWebView2Environment6 = match environment.cast() {
+-                Ok(env6) => env6,
+-                Err(error) => {
+-                    if let Ok(mut guard) = tx.lock() {
+-                        if let Some(tx) = guard.take() {
+-                            if let Err(e) = tx.send(Err(format!(
+-                                "Failed to cast environment to ICoreWebView2Environment6: {error:?}"
+-                            ))) {
+-                                warn!("Failed to send environment cast error to oneshot channel: {e:?}");
+-                            }
+-                        }
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            let settings = match env6.CreatePrintSettings() {
+-                Ok(settings) => settings,
+-                Err(error) => {
+-                    if let Ok(mut guard) = tx.lock() {
+-                        if let Some(tx) = guard.take() {
+-                            if let Err(e) = tx.send(Err(format!("Failed to create print settings: {error:?}"))) {
+-                                warn!("Failed to send print settings error to oneshot channel: {e:?}");
+-                            }
+-                        }
+-                    }
+-                    return;
+-                }
+-            };
+-
+-            if let Some(orientation) = orientation.as_deref() {
+-                let orientation_value = if orientation == "landscape" {
+-                    COREWEBVIEW2_PRINT_ORIENTATION_LANDSCAPE
+-                } else {
+-                    COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT
+-                };
+-                if let Err(e) = settings.SetOrientation(orientation_value) {
+-                    warn!("SetOrientation failed: {e:?}");
+-                }
+-            }
+-            if let Some(scale) = scale {
+-                if let Err(e) = settings.SetScaleFactor(scale) {
+-                    warn!("SetScaleFactor failed: {e:?}");
+-                }
+-            }
+-            if let Some(background) = background {
+-                if let Err(e) = settings.SetShouldPrintBackgrounds(background) {
+-                    warn!("SetShouldPrintBackgrounds failed: {e:?}");
+-                }
+-            }
+-            if let Some(page_width) = page_width {
+-                if let Err(e) = settings.SetPageWidth(page_width / 2.54) {
+-                    warn!("SetPageWidth failed: {e:?}");
+-                }
+-            }
+-            if let Some(page_height) = page_height {
+-                if let Err(e) = settings.SetPageHeight(page_height / 2.54) {
+-                    warn!("SetPageHeight failed: {e:?}");
+-                }
+-            }
+-            if let Some(margin_top) = margin_top {
+-                if let Err(e) = settings.SetMarginTop(margin_top / 2.54) {
+-                    warn!("SetMarginTop failed: {e:?}");
+-                }
+-            }
+-            if let Some(margin_bottom) = margin_bottom {
+-                if let Err(e) = settings.SetMarginBottom(margin_bottom / 2.54) {
+-                    warn!("SetMarginBottom failed: {e:?}");
+-                }
+-            }
+-            if let Some(margin_left) = margin_left {
+-                if let Err(e) = settings.SetMarginLeft(margin_left / 2.54) {
+-                    warn!("SetMarginLeft failed: {e:?}");
+-                }
+-            }
+-            if let Some(margin_right) = margin_right {
+-                if let Err(e) = settings.SetMarginRight(margin_right / 2.54) {
+-                    warn!("SetMarginRight failed: {e:?}");
+-                }
+-            }
+-
+-            let handler_tx = tx.clone();
+-            let handler: ICoreWebView2PrintToPdfCompletedHandler = PrintToPdfHandler::new(tx).into();
+-            let path = HSTRING::from(pdf_path_clone.to_string_lossy().to_string());
+-
+-            if let Err(error) = webview7.PrintToPdf(&path, &settings, &handler) {
+-                if let Ok(mut guard) = handler_tx.lock() {
+-                    if let Some(tx) = guard.take() {
+-                        if let Err(e) = tx.send(Err(format!("PrintToPdf call failed: {error:?}"))) {
+-                            warn!("Failed to send PrintToPdf error to oneshot channel: {e:?}");
+-                        }
+-                    }
+-                }
+-            }
+-        });
+-
+-        if let Err(error) = result {
+-            return Err(WebDriverErrorResponse::unknown_error(format!(
+-                "Failed to print page: {error}"
+-            )));
+-        }
+-
+-        match tokio::time::timeout(Duration::from_millis(timeout_ms), rx).await {
+-            Ok(Ok(Ok(()))) => {}
+-            Ok(Ok(Err(error))) => return Err(WebDriverErrorResponse::unknown_error(error)),
+-            Ok(Err(_)) => {
+-                return Err(WebDriverErrorResponse::unknown_error(
+-                    "Print channel closed unexpectedly",
+-                ))
+-            }
+-            Err(_) => {
+-                return Err(WebDriverErrorResponse::timeout(format!(
+-                    "Print timed out after {timeout_ms}ms"
+-                )))
+-            }
+-        }
+-
+-        let pdf_bytes = std::fs::read(&pdf_path)
+-            .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read printed PDF: {error}")))?;
+-        Ok(BASE64_STANDARD.encode(pdf_bytes))
+-    }
+-
+-    async fn await_base64_response(
+-        rx: oneshot::Receiver<Result<String, String>>,
+-        timeout_ms: u64,
+-        label: &str,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        match tokio::time::timeout(Duration::from_millis(timeout_ms), rx).await {
+-            Ok(Ok(Ok(base64))) if !base64.is_empty() => Ok(base64),
+-            Ok(Ok(Ok(_))) => Err(WebDriverErrorResponse::unknown_error(format!(
+-                "{label} returned empty data"
+-            ))),
+-            Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::unknown_error(error)),
+-            Ok(Err(_)) => Err(WebDriverErrorResponse::unknown_error(format!(
+-                "{label} channel closed unexpectedly"
+-            ))),
+-            Err(_) => Err(WebDriverErrorResponse::timeout(format!(
+-                "{label} timed out after {timeout_ms}ms"
+-            ))),
+-        }
+-    }
+-
+-    #[implement(ICoreWebView2CapturePreviewCompletedHandler)]
+-    struct CapturePreviewHandler {
+-        sender: CaptureSender,
+-        stream: windows::Win32::System::Com::IStream,
+-    }
+-
+-    impl CapturePreviewHandler {
+-        fn new(sender: CaptureSender, stream: windows::Win32::System::Com::IStream) -> Self {
+-            Self { sender, stream }
+-        }
+-    }
+-
+-    impl ICoreWebView2CapturePreviewCompletedHandler_Impl for CapturePreviewHandler_Impl {
+-        fn Invoke(&self, error_code: windows::core::HRESULT) -> windows::core::Result<()> {
+-            let response = if error_code.is_err() {
+-                Err(format!("CapturePreview completion failed: {error_code:?}"))
+-            } else {
+-                unsafe {
+-                    let mut stat = std::mem::zeroed();
+-                    if self.stream.Stat(&raw mut stat, STATFLAG_NONAME).is_err() {
+-                        Err("Failed to read preview stream metadata".to_string())
+-                    } else {
+-                        let size = usize::try_from(stat.cbSize).unwrap_or(0);
+-                        if size == 0 {
+-                            Err("Preview stream was empty".to_string())
+-                        } else {
+-                            if let Err(e) = self.stream.Seek(0, STREAM_SEEK_SET, None) {
+-                                warn!("Failed to seek preview stream: {e:?}");
+-                            }
+-                            let mut bytes = vec![0u8; size];
+-                            let mut read = 0u32;
+-                            if self
+-                                .stream
+-                                .Read(
+-                                    bytes.as_mut_ptr().cast(),
+-                                    u32::try_from(size).unwrap_or(u32::MAX),
+-                                    Some(&raw mut read),
+-                                )
+-                                .is_err()
+-                            {
+-                                Err("Failed to read preview stream bytes".to_string())
+-                            } else {
+-                                bytes.truncate(read as usize);
+-                                Ok(BASE64_STANDARD.encode(bytes))
+-                            }
+-                        }
+-                    }
+-                }
+-            };
+-
+-            if let Ok(mut guard) = self.sender.lock() {
+-                if let Some(sender) = guard.take() {
+-                    if let Err(e) = sender.send(response) {
+-                        warn!("Screenshot response receiver already dropped: {e:?}");
+-                    }
+-                }
+-            }
+-
+-            Ok(())
+-        }
+-    }
+-
+-    #[implement(ICoreWebView2PrintToPdfCompletedHandler)]
+-    struct PrintToPdfHandler {
+-        sender: PrintSender,
+-    }
+-
+-    impl PrintToPdfHandler {
+-        fn new(sender: PrintSender) -> Self {
+-            Self { sender }
+-        }
+-    }
+-
+-    impl ICoreWebView2PrintToPdfCompletedHandler_Impl for PrintToPdfHandler_Impl {
+-        fn Invoke(&self, error_code: windows::core::HRESULT, is_successful: BOOL) -> windows::core::Result<()> {
+-            let response = if error_code.is_ok() && is_successful.as_bool() {
+-                Ok(())
+-            } else if error_code.is_ok() {
+-                Err("PrintToPdf reported failure".to_string())
+-            } else {
+-                Err(format!("PrintToPdf completion failed: {error_code:?}"))
+-            };
+-
+-            if let Ok(mut guard) = self.sender.lock() {
+-                if let Some(sender) = guard.take() {
+-                    if let Err(e) = sender.send(response) {
+-                        warn!("Print response receiver already dropped: {e:?}");
+-                    }
+-                }
+-            }
+-
+-            Ok(())
+-        }
+-    }
+-}
+-
+-#[cfg(target_os = "linux")]
+-mod imp {
+-    use super::*;
+-
+-    pub async fn take_screenshot<R: Runtime>(
+-        _webview: Webview<R>,
+-        _timeout_ms: u64,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        Err(WebDriverErrorResponse::unsupported_operation(
+-            "Linux embedded webdriver screenshots are temporarily disabled",
+-        ))
+-    }
+-
+-    pub async fn print_page<R: Runtime>(
+-        _webview: Webview<R>,
+-        _timeout_ms: u64,
+-        _options: &PrintOptions,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        Err(WebDriverErrorResponse::unsupported_operation(
+-            "Linux embedded webdriver print is temporarily disabled",
+-        ))
+-    }
+-}
+-
+-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+-mod imp {
+-    use super::*;
+-
+-    pub async fn take_screenshot<R: Runtime>(
+-        _webview: Webview<R>,
+-        _timeout_ms: u64,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        Err(WebDriverErrorResponse::unknown_error(
+-            "Native screenshot is not implemented for this platform yet",
+-        ))
+-    }
+-
+-    pub async fn print_page<R: Runtime>(
+-        _webview: Webview<R>,
+-        _timeout_ms: u64,
+-        _options: &PrintOptions,
+-    ) -> Result<String, WebDriverErrorResponse> {
+-        Err(WebDriverErrorResponse::unsupported_operation(
+-            "Printing is not implemented for this platform yet",
+-        ))
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/evaluator/macos.rs b/src/crates/adapters/webdriver/src/platform/evaluator/macos.rs
+deleted file mode 100644
+index af91912..0000000
+--- a/src/crates/adapters/webdriver/src/platform/evaluator/macos.rs
++++ /dev/null
+@@ -1,99 +0,0 @@
+-use std::sync::Arc;
+-use std::time::Duration;
+-
+-use block2::RcBlock;
+-use objc2::rc::Retained;
+-use objc2::runtime::AnyObject;
+-use objc2::MainThreadMarker;
+-use objc2_foundation::{NSDictionary, NSError, NSString};
+-use objc2_web_kit::{WKContentWorld, WKWebView};
+-use serde_json::Value;
+-use tokio::sync::oneshot;
+-
+-use crate::runtime::script;
+-use crate::runtime::{BridgeError, BridgeResponse};
+-use crate::server::response::WebDriverErrorResponse;
+-
+-pub(super) async fn evaluate_script<R: tauri::Runtime>(
+-    webview: tauri::Webview<R>,
+-    timeout_ms: u64,
+-    script: &str,
+-    args: &[Value],
+-    async_mode: bool,
+-    frame_context: &Value,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    let wrapped = script::build_native_eval_script(script, args, async_mode, frame_context);
+-    let (sender, receiver) = oneshot::channel::<Result<String, String>>();
+-
+-    let result = webview.with_webview(move |platform_webview| unsafe {
+-        let wk_webview: &WKWebView = &*platform_webview.inner().cast();
+-        let ns_script = NSString::from_str(&wrapped);
+-        let mtm = MainThreadMarker::new_unchecked();
+-        let empty_dict: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
+-        let content_world = WKContentWorld::pageWorld(mtm);
+-
+-        let sender = Arc::new(std::sync::Mutex::new(Some(sender)));
+-        let block = RcBlock::new(move |result: *mut AnyObject, error: *mut NSError| {
+-            let response = if !error.is_null() {
+-                Err((&*error).localizedDescription().to_string())
+-            } else if result.is_null() {
+-                Ok("null".to_string())
+-            } else {
+-                ns_object_to_string(&*result).ok_or_else(|| "Script returned a non-string payload".to_string())
+-            };
+-
+-            if let Ok(mut guard) = sender.lock() {
+-                if let Some(sender) = guard.take() {
+-                    let _ = sender.send(response);
+-                }
+-            }
+-        });
+-
+-        wk_webview.callAsyncJavaScript_arguments_inFrame_inContentWorld_completionHandler(
+-            &ns_script,
+-            Some(&empty_dict),
+-            None,
+-            &content_world,
+-            Some(&block),
+-        );
+-    });
+-
+-    if let Err(error) = result {
+-        return Err(WebDriverErrorResponse::javascript_error(
+-            format!("Failed to evaluate script: {error}"),
+-            None,
+-        ));
+-    }
+-
+-    let response_payload = tokio::time::timeout(Duration::from_millis(timeout_ms), receiver)
+-        .await
+-        .map_err(|_| WebDriverErrorResponse::timeout(format!("Script timed out after {timeout_ms}ms")))?
+-        .map_err(|_| WebDriverErrorResponse::unknown_error("Script response channel closed unexpectedly"))?
+-        .map_err(|error| WebDriverErrorResponse::javascript_error(error, None))?;
+-
+-    let response: BridgeResponse = serde_json::from_str(&response_payload)
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Invalid native script response: {error}")))?;
+-
+-    if response.ok {
+-        return Ok(response.value.unwrap_or(Value::Null));
+-    }
+-
+-    let error = response.error.unwrap_or(BridgeError {
+-        message: Some("Unknown JavaScript error".into()),
+-        stack: None,
+-    });
+-    Err(WebDriverErrorResponse::javascript_error(
+-        error.message.unwrap_or_else(|| "Unknown JavaScript error".into()),
+-        error.stack,
+-    ))
+-}
+-
+-unsafe fn ns_object_to_string(obj: &AnyObject) -> Option<String> {
+-    let class_name = obj.class().name().to_str().unwrap_or("");
+-    if !class_name.contains("String") {
+-        return None;
+-    }
+-
+-    let ns_string: &NSString = &*std::ptr::from_ref::<AnyObject>(obj).cast::<NSString>();
+-    Some(ns_string.to_string())
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/evaluator/mod.rs b/src/crates/adapters/webdriver/src/platform/evaluator/mod.rs
+deleted file mode 100644
+index b29a36c..0000000
+--- a/src/crates/adapters/webdriver/src/platform/evaluator/mod.rs
++++ /dev/null
+@@ -1,95 +0,0 @@
+-use std::sync::Arc;
+-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+-use std::time::Duration;
+-
+-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+-use crate::runtime::script;
+-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+-use crate::runtime::BridgeError;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-use serde_json::Value;
+-use tauri::Webview;
+-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+-use tokio::sync::oneshot;
+-
+-#[cfg(target_os = "macos")]
+-mod macos;
+-#[cfg(target_os = "windows")]
+-mod windows;
+-
+-pub(crate) async fn evaluate_script<R: tauri::Runtime>(
+-    state: Arc<AppState>,
+-    webview: Webview<R>,
+-    timeout_ms: u64,
+-    script_source: &str,
+-    args: &[Value],
+-    async_mode: bool,
+-    frame_context: &Value,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    #[cfg(target_os = "macos")]
+-    {
+-        let _ = state;
+-        return macos::evaluate_script(webview, timeout_ms, script_source, args, async_mode, frame_context).await;
+-    }
+-
+-    #[cfg(target_os = "windows")]
+-    {
+-        return windows::evaluate_script(
+-            state,
+-            webview,
+-            timeout_ms,
+-            script_source,
+-            args,
+-            async_mode,
+-            frame_context,
+-        )
+-        .await;
+-    }
+-
+-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+-    {
+-        let request_id = state.next_request_id();
+-        let (sender, receiver) = oneshot::channel();
+-
+-        state
+-            .pending_requests
+-            .lock()
+-            .map_err(|_| WebDriverErrorResponse::unknown_error("Failed to lock pending request map"))?
+-            .insert(request_id.clone(), sender);
+-
+-        let injected = script::build_bridge_eval_script(&request_id, script_source, args, async_mode, frame_context);
+-        webview.eval(&injected).map_err(|error| {
+-            remove_pending_request(&state, &request_id);
+-            WebDriverErrorResponse::javascript_error(format!("Failed to evaluate script: {error}"), None)
+-        })?;
+-
+-        let response = tokio::time::timeout(Duration::from_millis(timeout_ms), receiver)
+-            .await
+-            .map_err(|_| {
+-                remove_pending_request(&state, &request_id);
+-                WebDriverErrorResponse::timeout(format!("Script timed out after {timeout_ms}ms"))
+-            })?
+-            .map_err(|_| WebDriverErrorResponse::unknown_error("Bridge response channel closed unexpectedly"))?;
+-
+-        if response.ok {
+-            return Ok(response.value.unwrap_or(Value::Null));
+-        }
+-
+-        let error = response.error.unwrap_or(BridgeError {
+-            message: Some("Unknown JavaScript error".into()),
+-            stack: None,
+-        });
+-        return Err(WebDriverErrorResponse::javascript_error(
+-            error.message.unwrap_or_else(|| "Unknown JavaScript error".into()),
+-            error.stack,
+-        ));
+-    }
+-}
+-
+-#[cfg(not(target_os = "macos"))]
+-pub(super) fn remove_pending_request(state: &AppState, request_id: &str) {
+-    if let Ok(mut pending) = state.pending_requests.lock() {
+-        pending.remove(request_id);
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/evaluator/windows.rs b/src/crates/adapters/webdriver/src/platform/evaluator/windows.rs
+deleted file mode 100644
+index 39c6721..0000000
+--- a/src/crates/adapters/webdriver/src/platform/evaluator/windows.rs
++++ /dev/null
+@@ -1,175 +0,0 @@
+-use std::collections::HashSet;
+-use std::sync::{Mutex, OnceLock};
+-use std::time::Duration;
+-
+-use serde_json::Value;
+-use tauri::{Runtime, Webview};
+-use tokio::sync::oneshot;
+-use webview2_com::Microsoft::Web::WebView2::Win32::{
+-    ICoreWebView2, ICoreWebView2WebMessageReceivedEventArgs, ICoreWebView2WebMessageReceivedEventHandler,
+-    ICoreWebView2WebMessageReceivedEventHandler_Impl,
+-};
+-use windows::core::implement;
+-use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+-
+-use super::remove_pending_request;
+-use crate::runtime::{script, BridgeError};
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-
+-static REGISTERED_WEBVIEWS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+-
+-pub(super) async fn evaluate_script<R: Runtime>(
+-    state: std::sync::Arc<AppState>,
+-    webview: Webview<R>,
+-    timeout_ms: u64,
+-    script_source: &str,
+-    args: &[Value],
+-    async_mode: bool,
+-    frame_context: &Value,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    ensure_message_handler(&webview)?;
+-
+-    let request_id = state.next_request_id();
+-    let (sender, receiver) = oneshot::channel();
+-
+-    state
+-        .pending_requests
+-        .lock()
+-        .map_err(|_| WebDriverErrorResponse::unknown_error("Failed to lock pending request map"))?
+-        .insert(request_id.clone(), sender);
+-
+-    let injected = script::build_bridge_eval_script(&request_id, script_source, args, async_mode, frame_context);
+-    webview.eval(&injected).map_err(|error| {
+-        remove_pending_request(&state, &request_id);
+-        WebDriverErrorResponse::javascript_error(format!("Failed to evaluate script: {error}"), None)
+-    })?;
+-
+-    let response = tokio::time::timeout(Duration::from_millis(timeout_ms), receiver)
+-        .await
+-        .map_err(|_| {
+-            remove_pending_request(&state, &request_id);
+-            WebDriverErrorResponse::timeout(format!("Script timed out after {timeout_ms}ms"))
+-        })?
+-        .map_err(|_| WebDriverErrorResponse::unknown_error("Bridge response channel closed unexpectedly"))?;
+-
+-    if response.ok {
+-        return Ok(response.value.unwrap_or(Value::Null));
+-    }
+-
+-    let error = response.error.unwrap_or(BridgeError {
+-        message: Some("Unknown JavaScript error".into()),
+-        stack: None,
+-    });
+-
+-    Err(WebDriverErrorResponse::javascript_error(
+-        error.message.unwrap_or_else(|| "Unknown JavaScript error".into()),
+-        error.stack,
+-    ))
+-}
+-
+-fn ensure_message_handler<R: Runtime>(webview: &Webview<R>) -> Result<(), WebDriverErrorResponse> {
+-    let label = webview.label().to_string();
+-    let registry = REGISTERED_WEBVIEWS.get_or_init(|| Mutex::new(HashSet::new()));
+-
+-    {
+-        let registered = registry
+-            .lock()
+-            .map_err(|_| WebDriverErrorResponse::unknown_error("Failed to lock WebDriver message registry"))?;
+-        if registered.contains(&label) {
+-            return Ok(());
+-        }
+-    }
+-
+-    let registration_result = std::sync::Arc::new(std::sync::Mutex::new(Ok::<(), String>(())));
+-    let registration_result_slot = registration_result.clone();
+-    let result = webview.with_webview(move |platform_webview| unsafe {
+-        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+-
+-        let outcome = match platform_webview.controller().CoreWebView2() {
+-            Ok(webview2) => register_message_handler(&webview2).map_err(|error| error.message),
+-            Err(error) => Err(format!("Failed to access CoreWebView2: {error:?}")),
+-        };
+-
+-        if let Ok(mut guard) = registration_result_slot.lock() {
+-            *guard = outcome;
+-        }
+-    });
+-
+-    match result {
+-        Ok(()) => {
+-            let outcome = registration_result
+-                .lock()
+-                .map_err(|_| WebDriverErrorResponse::unknown_error("Failed to read WebView2 registration result"))?;
+-            if let Err(error) = &*outcome {
+-                return Err(WebDriverErrorResponse::unknown_error(error.clone()));
+-            }
+-            registry
+-                .lock()
+-                .map_err(|_| WebDriverErrorResponse::unknown_error("Failed to update WebDriver message registry"))?
+-                .insert(label);
+-            Ok(())
+-        }
+-        Err(error) => Err(WebDriverErrorResponse::unknown_error(format!(
+-            "Failed to register WebView2 message handler: {error}"
+-        ))),
+-    }
+-}
+-
+-#[implement(ICoreWebView2WebMessageReceivedEventHandler)]
+-struct WebMessageReceivedHandler;
+-
+-impl ICoreWebView2WebMessageReceivedEventHandler_Impl for WebMessageReceivedHandler_Impl {
+-    fn Invoke(
+-        &self,
+-        _sender: windows::core::Ref<'_, ICoreWebView2>,
+-        args: windows::core::Ref<'_, ICoreWebView2WebMessageReceivedEventArgs>,
+-    ) -> windows::core::Result<()> {
+-        let Some(args) = args.clone() else {
+-            return Ok(());
+-        };
+-
+-        let mut msg_ptr = windows::core::PWSTR::null();
+-        if unsafe { args.WebMessageAsJson(&raw mut msg_ptr) }.is_err() {
+-            tracing::warn!("Failed to read WebView2 WebMessage JSON");
+-            return Ok(());
+-        }
+-
+-        let msg_text = unsafe { msg_ptr.to_string().unwrap_or_default() };
+-        let payload = parse_message_payload(&msg_text);
+-
+-        match payload {
+-            Some(payload) => {
+-                if let Err(error) = crate::handle_bridge_result(payload) {
+-                    tracing::warn!("Failed to dispatch WebView2 bridge payload: {}", error);
+-                }
+-            }
+-            None => {
+-                tracing::warn!("Ignoring invalid WebView2 bridge payload: {}", msg_text);
+-            }
+-        }
+-
+-        Ok(())
+-    }
+-}
+-
+-unsafe fn register_message_handler(webview: &ICoreWebView2) -> Result<(), WebDriverErrorResponse> {
+-    let handler: ICoreWebView2WebMessageReceivedEventHandler = WebMessageReceivedHandler.into();
+-    let mut token = std::mem::zeroed();
+-    webview
+-        .add_WebMessageReceived(&handler, &raw mut token)
+-        .map_err(|error| {
+-            WebDriverErrorResponse::unknown_error(format!("Failed to register WebView2 message handler: {error:?}"))
+-        })?;
+-
+-    std::mem::forget(handler);
+-    Ok(())
+-}
+-
+-fn parse_message_payload(message: &str) -> Option<Value> {
+-    if let Ok(inner) = serde_json::from_str::<String>(message) {
+-        serde_json::from_str(&inner).ok()
+-    } else {
+-        serde_json::from_str::<Value>(message).ok()
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/image.rs b/src/crates/adapters/webdriver/src/platform/image.rs
+deleted file mode 100644
+index f85de82..0000000
+--- a/src/crates/adapters/webdriver/src/platform/image.rs
++++ /dev/null
+@@ -1,46 +0,0 @@
+-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+-use base64::Engine as _;
+-
+-use super::types::ElementScreenshotMetadata;
+-use crate::server::response::WebDriverErrorResponse;
+-
+-pub fn crop_screenshot(
+-    screenshot_base64: String,
+-    metadata: ElementScreenshotMetadata,
+-) -> Result<String, WebDriverErrorResponse> {
+-    let png_bytes = BASE64_STANDARD
+-        .decode(screenshot_base64)
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Invalid PNG payload: {error}")))?;
+-    let image = image::load_from_memory(&png_bytes)
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to decode screenshot PNG: {error}")))?;
+-
+-    let scale = if metadata.device_pixel_ratio.is_finite() && metadata.device_pixel_ratio > 0.0 {
+-        metadata.device_pixel_ratio
+-    } else {
+-        1.0
+-    };
+-
+-    let x = (metadata.x * scale).floor().max(0.0) as u32;
+-    let y = (metadata.y * scale).floor().max(0.0) as u32;
+-    let width = (metadata.width * scale).ceil().max(1.0) as u32;
+-    let height = (metadata.height * scale).ceil().max(1.0) as u32;
+-
+-    let image_width = image.width();
+-    let image_height = image.height();
+-    if x >= image_width || y >= image_height {
+-        return Err(WebDriverErrorResponse::unknown_error(
+-            "Element screenshot rectangle is outside the viewport",
+-        ));
+-    }
+-
+-    let clamped_width = width.min(image_width.saturating_sub(x)).max(1);
+-    let clamped_height = height.min(image_height.saturating_sub(y)).max(1);
+-    let cropped = image.crop_imm(x, y, clamped_width, clamped_height);
+-
+-    let mut png = std::io::Cursor::new(Vec::new());
+-    cropped
+-        .write_to(&mut png, image::ImageFormat::Png)
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to encode cropped PNG: {error}")))?;
+-
+-    Ok(BASE64_STANDARD.encode(png.into_inner()))
+-}
+diff --git a/src/crates/adapters/webdriver/src/platform/mod.rs b/src/crates/adapters/webdriver/src/platform/mod.rs
+deleted file mode 100644
+index cab1a3f..0000000
+--- a/src/crates/adapters/webdriver/src/platform/mod.rs
++++ /dev/null
+@@ -1,8 +0,0 @@
+-mod capture;
+-pub(crate) mod evaluator;
+-mod image;
+-mod types;
+-
+-pub use capture::{print_page, take_screenshot};
+-pub use image::crop_screenshot;
+-pub use types::{Cookie, ElementScreenshotMetadata, PrintOptions, WindowRect};
+diff --git a/src/crates/adapters/webdriver/src/platform/types.rs b/src/crates/adapters/webdriver/src/platform/types.rs
+deleted file mode 100644
+index 14e3c5c..0000000
+--- a/src/crates/adapters/webdriver/src/platform/types.rs
++++ /dev/null
+@@ -1,69 +0,0 @@
+-use serde::{Deserialize, Serialize};
+-
+-#[derive(Debug, Clone, Default, Deserialize)]
+-pub struct ElementScreenshotMetadata {
+-    pub x: f64,
+-    pub y: f64,
+-    pub width: f64,
+-    pub height: f64,
+-    #[serde(rename = "devicePixelRatio", default = "default_dpr")]
+-    pub device_pixel_ratio: f64,
+-}
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct PrintOptions {
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub orientation: Option<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub scale: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub background: Option<bool>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "pageWidth")]
+-    pub page_width: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "pageHeight")]
+-    pub page_height: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "marginTop")]
+-    pub margin_top: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "marginBottom")]
+-    pub margin_bottom: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "marginLeft")]
+-    pub margin_left: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "marginRight")]
+-    pub margin_right: Option<f64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "shrinkToFit")]
+-    pub shrink_to_fit: Option<bool>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "pageRanges")]
+-    pub page_ranges: Option<Vec<String>>,
+-}
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct WindowRect {
+-    #[serde(default)]
+-    pub x: i32,
+-    #[serde(default)]
+-    pub y: i32,
+-    pub width: u32,
+-    pub height: u32,
+-}
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct Cookie {
+-    pub name: String,
+-    pub value: String,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub path: Option<String>,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub domain: Option<String>,
+-    #[serde(default)]
+-    pub secure: bool,
+-    #[serde(default, rename = "httpOnly")]
+-    pub http_only: bool,
+-    #[serde(skip_serializing_if = "Option::is_none")]
+-    pub expiry: Option<u64>,
+-    #[serde(skip_serializing_if = "Option::is_none", rename = "sameSite")]
+-    pub same_site: Option<String>,
+-}
+-
+-fn default_dpr() -> f64 {
+-    1.0
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/api/element.rs b/src/crates/adapters/webdriver/src/runtime/api/element.rs
+deleted file mode 100644
+index 0354115..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/api/element.rs
++++ /dev/null
+@@ -1,272 +0,0 @@
+-use std::sync::Arc;
+-
+-use serde_json::Value;
+-
+-use crate::runtime::run_script;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-
+-pub(crate) fn find_elements() -> &'static str {
+-    "(rootId, using, value) => window.__agentAppWd.findElements(rootId, using, value)"
+-}
+-
+-pub(crate) fn active_element() -> &'static str {
+-    "() => document.activeElement"
+-}
+-
+-pub(crate) fn is_selected() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); return !!el && !!(el.selected || el.checked); }"
+-}
+-
+-pub(crate) fn is_displayed() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); return window.__agentAppWd.isDisplayed(el); }"
+-}
+-
+-pub(crate) fn get_attribute() -> &'static str {
+-    "(id, name) => { const el = window.__agentAppWd.getElement(id); if (!el) { return null; } const attrName = String(name || '').toLowerCase(); const tagName = String(el.tagName || '').toLowerCase(); if (attrName === 'value' && (tagName === 'input' || tagName === 'textarea')) { return el.value; } if (attrName === 'checked' && tagName === 'input' && (el.type === 'checkbox' || el.type === 'radio')) { return el.checked ? 'true' : null; } if (attrName === 'selected' && tagName === 'option') { return el.selected ? 'true' : null; } return el.getAttribute(name); }"
+-}
+-
+-pub(crate) fn get_property() -> &'static str {
+-    "(id, name) => { const el = window.__agentAppWd.getElement(id); return el ? el[name] : null; }"
+-}
+-
+-pub(crate) fn get_css_value() -> &'static str {
+-    "(id, propertyName) => { const el = window.__agentAppWd.getElement(id); return el ? window.getComputedStyle(el).getPropertyValue(propertyName) : ''; }"
+-}
+-
+-pub(crate) fn get_text() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); return el ? (el.innerText ?? el.textContent ?? '') : ''; }"
+-}
+-
+-pub(crate) fn get_computed_role() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el) { return ''; } const explicitRole = el.getAttribute('role'); if (explicitRole) { return explicitRole; } const tag = String(el.tagName || '').toLowerCase(); if (tag === 'button') return 'button'; if (tag === 'a' && el.hasAttribute('href')) return 'link'; if (tag === 'input') { const type = String(el.getAttribute('type') || 'text').toLowerCase(); if (type === 'checkbox') return 'checkbox'; if (type === 'radio') return 'radio'; if (type === 'submit' || type === 'button' || type === 'reset') return 'button'; return 'textbox'; } if (tag === 'select') return 'combobox'; if (tag === 'textarea') return 'textbox'; return ''; }"
+-}
+-
+-pub(crate) fn get_computed_label() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el) { return ''; } const labelledBy = el.getAttribute('aria-labelledby'); if (labelledBy) { return labelledBy.split(/\\s+/).map((labelId) => document.getElementById(labelId)?.innerText?.trim() || '').filter(Boolean).join(' ').trim(); } const ariaLabel = el.getAttribute('aria-label'); if (ariaLabel) { return ariaLabel; } const htmlFor = el.id ? document.querySelector(`label[for=\"${el.id}\"]`) : null; if (htmlFor) { return (htmlFor.innerText || htmlFor.textContent || '').trim(); } return (el.innerText || el.textContent || el.getAttribute('value') || '').trim(); }"
+-}
+-
+-pub(crate) fn get_name() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); return el ? String(el.tagName || '').toLowerCase() : ''; }"
+-}
+-
+-pub(crate) fn get_rect() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el) { return null; } const rect = el.getBoundingClientRect(); return { x: rect.x + window.scrollX, y: rect.y + window.scrollY, width: rect.width, height: rect.height, top: rect.top + window.scrollY, left: rect.left + window.scrollX, right: rect.right + window.scrollX, bottom: rect.bottom + window.scrollY }; }"
+-}
+-
+-pub(crate) fn is_enabled() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); return !!el && !el.disabled; }"
+-}
+-
+-pub(crate) fn click() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el) { throw new Error('Element not found'); } window.__agentAppWd.dispatchPointerClick(el, 0, false); return null; }"
+-}
+-
+-pub(crate) fn clear() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el) { throw new Error('Element not found'); } window.__agentAppWd.clearElement(el); return null; }"
+-}
+-
+-pub(crate) fn send_keys() -> &'static str {
+-    "(id, text) => { const el = window.__agentAppWd.getElement(id); if (!el) { throw new Error('Element not found'); } window.__agentAppWd.insertText(el, text); return null; }"
+-}
+-
+-pub(crate) fn screenshot_metadata() -> &'static str {
+-    "(id) => { const el = window.__agentAppWd.getElement(id); if (!el || !el.isConnected) { throw new Error('stale element reference'); } el.scrollIntoView({ block: 'center', inline: 'center' }); const rect = el.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, devicePixelRatio: window.devicePixelRatio || 1 }; }"
+-}
+-
+-pub(crate) fn get_shadow_root() -> &'static str {
+-    "(elementId) => window.__agentAppWd.getShadowRoot(elementId)"
+-}
+-
+-pub(crate) fn find_elements_from_shadow() -> &'static str {
+-    "(shadowId, using, value) => window.__agentAppWd.findElementsFromShadow(shadowId, using, value)"
+-}
+-
+-pub(crate) fn validate_frame_index() -> &'static str {
+-    "(index) => { if (!window.__agentAppWd.validateFrameByIndex(index)) { throw new Error('Unable to locate frame'); } return true; }"
+-}
+-
+-pub(crate) fn validate_frame_element() -> &'static str {
+-    "(elementId) => { if (!window.__agentAppWd.validateFrameElement(elementId)) { throw new Error('Unable to locate frame'); } return true; }"
+-}
+-
+-pub(crate) async fn exec_find_elements(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    root_element_id: Option<String>,
+-    using: &str,
+-    value: &str,
+-) -> Result<Vec<Value>, WebDriverErrorResponse> {
+-    let result = run_script(
+-        state,
+-        session_id,
+-        find_elements(),
+-        vec![
+-            root_element_id.map(Value::String).unwrap_or(Value::Null),
+-            Value::String(using.to_string()),
+-            Value::String(value.to_string()),
+-        ],
+-        false,
+-    )
+-    .await?;
+-    Ok(result.as_array().cloned().unwrap_or_default())
+-}
+-
+-pub(crate) async fn exec_active_element(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(state, session_id, active_element(), Vec::new(), false).await
+-}
+-
+-pub(crate) async fn exec_element_flag(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-    element_id: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        script,
+-        vec![Value::String(element_id.to_string())],
+-        false,
+-    )
+-    .await
+-}
+-
+-pub(crate) async fn exec_element_name_value(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-    element_id: &str,
+-    name: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        script,
+-        vec![Value::String(element_id.to_string()), Value::String(name.to_string())],
+-        false,
+-    )
+-    .await
+-}
+-
+-pub(crate) async fn exec_element_value(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-    element_id: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        script,
+-        vec![Value::String(element_id.to_string())],
+-        false,
+-    )
+-    .await
+-}
+-
+-pub(crate) async fn exec_element_action(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-    element_id: &str,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        script,
+-        vec![Value::String(element_id.to_string())],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_element_text_action(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    element_id: &str,
+-    text: &str,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        send_keys(),
+-        vec![Value::String(element_id.to_string()), Value::String(text.to_string())],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_screenshot_metadata(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    element_id: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        screenshot_metadata(),
+-        vec![Value::String(element_id.to_string())],
+-        false,
+-    )
+-    .await
+-}
+-
+-pub(crate) async fn exec_find_elements_from_shadow(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    shadow_id: &str,
+-    using: &str,
+-    value: &str,
+-) -> Result<Vec<Value>, WebDriverErrorResponse> {
+-    let result = run_script(
+-        state,
+-        session_id,
+-        find_elements_from_shadow(),
+-        vec![
+-            Value::String(shadow_id.to_string()),
+-            Value::String(using.to_string()),
+-            Value::String(value.to_string()),
+-        ],
+-        false,
+-    )
+-    .await?;
+-    Ok(result.as_array().cloned().unwrap_or_default())
+-}
+-
+-pub(crate) async fn exec_validate_frame_index(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    index: u32,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        validate_frame_index(),
+-        vec![Value::from(index)],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_validate_frame_element(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    element_id: &str,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        validate_frame_element(),
+-        vec![Value::String(element_id.to_string())],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/api/interaction.rs b/src/crates/adapters/webdriver/src/runtime/api/interaction.rs
+deleted file mode 100644
+index 2777fdf..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/api/interaction.rs
++++ /dev/null
+@@ -1,101 +0,0 @@
+-use std::sync::Arc;
+-
+-use serde_json::{json, Value};
+-
+-use crate::runtime::run_script;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-
+-pub(crate) fn perform_actions() -> &'static str {
+-    "async (actions) => { await window.__agentAppWd.performActions(actions); return null; }"
+-}
+-
+-pub(crate) fn release_actions() -> &'static str {
+-    "async (pressedKeys, pressedButtons) => { await window.__agentAppWd.releaseActions(pressedKeys, pressedButtons); return null; }"
+-}
+-
+-pub(crate) fn dismiss_alert() -> &'static str {
+-    "() => window.__agentAppWd.closeAlert(false)"
+-}
+-
+-pub(crate) fn accept_alert() -> &'static str {
+-    "() => window.__agentAppWd.closeAlert(true)"
+-}
+-
+-pub(crate) fn alert_text() -> &'static str {
+-    "() => window.__agentAppWd.getAlertText()"
+-}
+-
+-pub(crate) fn send_alert_text() -> &'static str {
+-    "(text) => window.__agentAppWd.sendAlertText(text)"
+-}
+-
+-pub(crate) fn take_logs() -> &'static str {
+-    "() => window.__agentAppWd.takeLogs()"
+-}
+-
+-pub(crate) async fn exec_perform_actions(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    actions: &[Value],
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        perform_actions(),
+-        vec![Value::Array(actions.to_vec())],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_release_actions(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    pressed_keys: Vec<String>,
+-    pressed_buttons: Vec<Value>,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        release_actions(),
+-        vec![json!(pressed_keys), Value::Array(pressed_buttons)],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_alert_action(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(state, session_id, script, Vec::new(), false).await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_alert_text(state: Arc<AppState>, session_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(state, session_id, alert_text(), Vec::new(), false).await
+-}
+-
+-pub(crate) async fn exec_send_alert_text(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    text: &str,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(
+-        state,
+-        session_id,
+-        send_alert_text(),
+-        vec![Value::String(text.to_string())],
+-        false,
+-    )
+-    .await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_take_logs(state: Arc<AppState>, session_id: &str) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(state, session_id, take_logs(), Vec::new(), false).await
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/api/mod.rs b/src/crates/adapters/webdriver/src/runtime/api/mod.rs
+deleted file mode 100644
+index 91fda82..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/api/mod.rs
++++ /dev/null
+@@ -1,3 +0,0 @@
+-pub(crate) mod element;
+-pub(crate) mod interaction;
+-pub(crate) mod navigation;
+diff --git a/src/crates/adapters/webdriver/src/runtime/api/navigation.rs b/src/crates/adapters/webdriver/src/runtime/api/navigation.rs
+deleted file mode 100644
+index 931b95d..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/api/navigation.rs
++++ /dev/null
+@@ -1,53 +0,0 @@
+-use std::sync::Arc;
+-
+-use serde_json::Value;
+-
+-use crate::runtime::run_script;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-
+-pub(crate) fn navigate_to() -> &'static str {
+-    "(url) => { window.location.href = url; return null; }"
+-}
+-
+-pub(crate) fn go_back() -> &'static str {
+-    "() => { window.history.back(); return null; }"
+-}
+-
+-pub(crate) fn go_forward() -> &'static str {
+-    "() => { window.history.forward(); return null; }"
+-}
+-
+-pub(crate) fn refresh() -> &'static str {
+-    "() => { window.location.reload(); return null; }"
+-}
+-
+-pub(crate) fn title() -> &'static str {
+-    "() => document.title || ''"
+-}
+-
+-pub(crate) fn source() -> &'static str {
+-    "() => document.documentElement ? document.documentElement.outerHTML : ''"
+-}
+-
+-pub(crate) fn ready_state() -> &'static str {
+-    "() => document.readyState || ''"
+-}
+-
+-pub(crate) async fn exec_navigation_action(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-    args: Vec<Value>,
+-) -> Result<(), WebDriverErrorResponse> {
+-    run_script(state, session_id, script, args, false).await?;
+-    Ok(())
+-}
+-
+-pub(crate) async fn exec_document_value(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script: &str,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    run_script(state, session_id, script, Vec::new(), false).await
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/mod.rs b/src/crates/adapters/webdriver/src/runtime/mod.rs
+deleted file mode 100644
+index 77a706e..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/mod.rs
++++ /dev/null
+@@ -1,102 +0,0 @@
+-use std::sync::Arc;
+-use std::sync::OnceLock;
+-
+-use serde::Deserialize;
+-use serde_json::Value;
+-use tauri::AppHandle;
+-use tauri::Listener;
+-use tauri::Manager;
+-
+-use crate::platform;
+-use crate::server::response::WebDriverErrorResponse;
+-use crate::server::AppState;
+-
+-pub(crate) mod api;
+-pub(crate) mod script;
+-
+-const BRIDGE_EVENT: &str = "NORTHHING_WEBDRIVER_result";
+-static BRIDGE_STATE: OnceLock<Arc<AppState>> = OnceLock::new();
+-
+-#[derive(Debug, Deserialize)]
+-pub(crate) struct BridgeResponse {
+-    #[serde(rename = "requestId")]
+-    pub(crate) request_id: String,
+-    pub(crate) ok: bool,
+-    pub(crate) value: Option<Value>,
+-    pub(crate) error: Option<BridgeError>,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-pub(crate) struct BridgeError {
+-    pub(crate) message: Option<String>,
+-    pub(crate) stack: Option<String>,
+-}
+-
+-pub fn register_listener(app: AppHandle, state: Arc<AppState>) {
+-    let _ = BRIDGE_STATE.set(state.clone());
+-    app.listen_any(BRIDGE_EVENT, move |event| {
+-        let Ok(payload) = serde_json::from_str::<BridgeResponse>(event.payload()) else {
+-            return;
+-        };
+-        tracing::debug!(
+-            "Embedded WebDriver bridge received event payload: request_id={}, ok={}",
+-            payload.request_id,
+-            payload.ok
+-        );
+-        dispatch_bridge_response(&state, payload);
+-    });
+-}
+-
+-pub fn handle_invoke_payload(payload: Value) -> Result<(), String> {
+-    let state = BRIDGE_STATE
+-        .get()
+-        .ok_or_else(|| "Embedded WebDriver bridge state is not initialized".to_string())?;
+-    let payload = serde_json::from_value::<BridgeResponse>(payload)
+-        .map_err(|error| format!("Invalid bridge payload: {error}"))?;
+-    tracing::debug!(
+-        "Embedded WebDriver bridge received invoke payload: request_id={}, ok={}",
+-        payload.request_id,
+-        payload.ok
+-    );
+-    dispatch_bridge_response(state, payload);
+-    Ok(())
+-}
+-
+-fn dispatch_bridge_response(state: &Arc<AppState>, payload: BridgeResponse) {
+-    let maybe_sender = state
+-        .pending_requests
+-        .lock()
+-        .ok()
+-        .and_then(|mut pending| pending.remove(&payload.request_id));
+-
+-    if let Some(sender) = maybe_sender {
+-        let _ = sender.send(payload);
+-    }
+-}
+-
+-pub async fn run_script(
+-    state: Arc<AppState>,
+-    session_id: &str,
+-    script_source: &str,
+-    args: Vec<Value>,
+-    async_mode: bool,
+-) -> Result<Value, WebDriverErrorResponse> {
+-    let session = state.sessions.read().await.get_cloned(session_id)?;
+-    let timeout_ms = session.timeouts.script.max(5_000);
+-    let webview = state.app.get_webview(&session.current_window).ok_or_else(|| {
+-        WebDriverErrorResponse::no_such_window(format!("Webview not found: {}", session.current_window))
+-    })?;
+-
+-    let frame_context = script::serialize_frame_context(&session.frame_context);
+-
+-    platform::evaluator::evaluate_script(
+-        state,
+-        webview,
+-        timeout_ms,
+-        script_source,
+-        &args,
+-        async_mode,
+-        &frame_context,
+-    )
+-    .await
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script.rs b/src/crates/adapters/webdriver/src/runtime/script.rs
+deleted file mode 100644
+index 99cf103..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script.rs
++++ /dev/null
+@@ -1,110 +0,0 @@
+-mod core;
+-mod input;
+-mod keyboard;
+-mod pointer;
+-
+-use serde_json::Value;
+-
+-use crate::webdriver::FrameId;
+-
+-pub(crate) fn serialize_frame_context(frame_context: &[FrameId]) -> Value {
+-    Value::Array(
+-        frame_context
+-            .iter()
+-            .map(|frame_id| match frame_id {
+-                FrameId::Index(index) => serde_json::json!({
+-                    "kind": "index",
+-                    "value": index
+-                }),
+-                FrameId::Element(element_id) => serde_json::json!({
+-                    "kind": "element",
+-                    "value": element_id
+-                }),
+-            })
+-            .collect(),
+-    )
+-}
+-
+-#[cfg(not(target_os = "macos"))]
+-pub(crate) fn build_bridge_eval_script(
+-    request_id: &str,
+-    script: &str,
+-    args: &[Value],
+-    async_mode: bool,
+-    frame_context: &Value,
+-) -> String {
+-    let request_id_json = serde_json::to_string(request_id).unwrap_or_else(|_| "\"invalid-request\"".into());
+-    let script_json = serde_json::to_string(script).unwrap_or_else(|_| "\"\"".into());
+-    let args_json = serde_json::to_string(args).unwrap_or_else(|_| "[]".into());
+-    let async_json = if async_mode { "true" } else { "false" };
+-    let frame_context_json = serde_json::to_string(frame_context).unwrap_or_else(|_| "[]".into());
+-
+-    format!(
+-        r#"
+-(() => {{
+-  {helper}
+-  window.__agentAppWd.run({request_id}, {script}, {args}, {async_mode}, {frame_context});
+-}})();
+-"#,
+-        helper = bridge_helper_script(),
+-        request_id = request_id_json,
+-        script = script_json,
+-        args = args_json,
+-        async_mode = async_json,
+-        frame_context = frame_context_json
+-    )
+-}
+-
+-#[cfg(target_os = "macos")]
+-pub(crate) fn build_native_eval_script(
+-    script: &str,
+-    args: &[Value],
+-    async_mode: bool,
+-    frame_context: &Value,
+-) -> String {
+-    let script_json = serde_json::to_string(script).unwrap_or_else(|_| "\"\"".into());
+-    let args_json = serde_json::to_string(args).unwrap_or_else(|_| "[]".into());
+-    let async_json = if async_mode { "true" } else { "false" };
+-    let frame_context_json = serde_json::to_string(frame_context).unwrap_or_else(|_| "[]".into());
+-
+-    format!(
+-        r#"
+-return (async () => {{
+-  {helper}
+-  const response = await window.__agentAppWd.execute({script}, {args}, {async_mode}, {frame_context});
+-  return JSON.stringify({{
+-    requestId: "__native__",
+-    ok: response.ok,
+-    value: response.value,
+-    error: response.error ?? null
+-  }});
+-}})();
+-"#,
+-        helper = bridge_helper_script(),
+-        script = script_json,
+-        args = args_json,
+-        async_mode = async_json,
+-        frame_context = frame_context_json
+-    )
+-}
+-
+-fn bridge_helper_script() -> String {
+-    format!(
+-        r#"
+-if (!window.__agentAppWd) {{
+-  window.__agentAppWd = (() => {{
+-{core_head}
+-{input}
+-{keyboard}
+-{pointer}
+-{core_tail}
+-  }})();
+-}}
+-"#,
+-        core_head = core::head(),
+-        input = input::script(),
+-        keyboard = keyboard::script(),
+-        pointer = pointer::script(),
+-        core_tail = core::tail()
+-    )
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/alert.rs b/src/crates/adapters/webdriver/src/runtime/script/core/alert.rs
+deleted file mode 100644
+index d15892a..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/alert.rs
++++ /dev/null
+@@ -1,43 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const getAlertText = (frameContext = currentFrameContext) => {
+-      const targetWindow = getCurrentWindow(frameContext);
+-      const state = ensureAlertState(targetWindow);
+-      if (!state.open) {
+-        throw new Error("No alert is currently open");
+-      }
+-      return state.text || "";
+-    };
+-
+-    const sendAlertText = (text, frameContext = currentFrameContext) => {
+-      const targetWindow = getCurrentWindow(frameContext);
+-      const state = ensureAlertState(targetWindow);
+-      if (!state.open) {
+-        throw new Error("No alert is currently open");
+-      }
+-      if (state.type !== "prompt") {
+-        throw new Error("Alert does not accept text");
+-      }
+-      state.promptText = text == null ? null : String(text);
+-      return null;
+-    };
+-
+-    const closeAlert = (accepted, frameContext = currentFrameContext) => {
+-      const targetWindow = getCurrentWindow(frameContext);
+-      const state = ensureAlertState(targetWindow);
+-      if (!state.open) {
+-        throw new Error("No alert is currently open");
+-      }
+-      const result = {
+-        accepted: !!accepted,
+-        promptText: state.promptText
+-      };
+-      state.open = false;
+-      state.type = null;
+-      state.text = "";
+-      state.defaultValue = null;
+-      state.promptText = null;
+-      return result;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/context.rs b/src/crates/adapters/webdriver/src/runtime/script/core/context.rs
+deleted file mode 100644
+index 9837710..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/context.rs
++++ /dev/null
+@@ -1,68 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const cssEscape = (value) => {
+-      if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+-        return CSS.escape(String(value));
+-      }
+-      return String(value).replace(/[^a-zA-Z0-9_\u00A0-\uFFFF-]/g, (char) => `\\${char}`);
+-    };
+-
+-    const isElementLike = (value) => !!value && typeof value === "object" && value.nodeType === 1;
+-
+-    const getCurrentWindow = (frameContext = currentFrameContext) => {
+-      let currentWindowRef = window;
+-      for (const frameRef of frameContext || []) {
+-        let frameElement = null;
+-        if (!frameRef || typeof frameRef !== "object") {
+-          throw new Error("Invalid frame reference");
+-        }
+-        if (frameRef.kind === "index") {
+-          const frames = Array.from(currentWindowRef.document.querySelectorAll("iframe, frame"));
+-          frameElement = frames[Number(frameRef.value)];
+-        } else if (frameRef.kind === "element") {
+-          frameElement = getElement(String(frameRef.value));
+-        } else {
+-          throw new Error("Unsupported frame reference");
+-        }
+-
+-        if (!frameElement || !isElementLike(frameElement)) {
+-          throw new Error("Unable to locate frame");
+-        }
+-        if (!/^(iframe|frame)$/i.test(String(frameElement.tagName || ""))) {
+-          throw new Error("Element is not a frame");
+-        }
+-        if (!frameElement.contentWindow) {
+-          throw new Error("Frame window is not available");
+-        }
+-        currentWindowRef = frameElement.contentWindow;
+-      }
+-      return currentWindowRef;
+-    };
+-
+-    const getCurrentDocument = (frameContext = currentFrameContext) => {
+-      const currentWindowRef = getCurrentWindow(frameContext);
+-      if (!currentWindowRef.document) {
+-        throw new Error("Frame document is not available");
+-      }
+-      return currentWindowRef.document;
+-    };
+-
+-    const resolveRoot = (rootId, frameContext = currentFrameContext) => {
+-      if (!rootId) {
+-        return getCurrentDocument(frameContext);
+-      }
+-      return getElement(rootId) || getCurrentDocument(frameContext);
+-    };
+-
+-    const sleep = (duration) =>
+-      new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(duration) || 0)));
+-
+-    const getActiveTarget = (frameContext = currentFrameContext) => {
+-      const doc = getCurrentDocument(frameContext);
+-      return doc.activeElement || doc.body || doc.documentElement;
+-    };
+-
+-    const getOwnerWindow = (target, frameContext = currentFrameContext) =>
+-      target?.ownerDocument?.defaultView || getCurrentWindow(frameContext);
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/cookie.rs b/src/crates/adapters/webdriver/src/runtime/script/core/cookie.rs
+deleted file mode 100644
+index 0c35ea2..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/cookie.rs
++++ /dev/null
+@@ -1,68 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const parseDocumentCookies = (doc) => {
+-      const raw = doc.cookie || "";
+-      if (!raw.trim()) {
+-        return [];
+-      }
+-      return raw
+-        .split(/;\s*/)
+-        .filter(Boolean)
+-        .map((entry) => {
+-          const separator = entry.indexOf("=");
+-          const name = separator >= 0 ? entry.slice(0, separator) : entry;
+-          const value = separator >= 0 ? entry.slice(separator + 1) : "";
+-          return {
+-            name: decodeURIComponent(name),
+-            value: decodeURIComponent(value),
+-            path: null,
+-            domain: null,
+-            secure: false,
+-            httpOnly: false,
+-            expiry: null,
+-            sameSite: null
+-          };
+-        });
+-    };
+-
+-    const getAllCookies = (frameContext = currentFrameContext) => parseDocumentCookies(getCurrentDocument(frameContext));
+-
+-    const getCookie = (name, frameContext = currentFrameContext) =>
+-      getAllCookies(frameContext).find((cookie) => cookie.name === name) || null;
+-
+-    const addCookie = (cookie, frameContext = currentFrameContext) => {
+-      if (!cookie || typeof cookie !== "object") {
+-        throw new Error("Invalid cookie payload");
+-      }
+-      if (!cookie.name) {
+-        throw new Error("Cookie name is required");
+-      }
+-      const doc = getCurrentDocument(frameContext);
+-      const parts = [
+-        `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value ?? "")}`
+-      ];
+-      if (cookie.path) parts.push(`Path=${cookie.path}`);
+-      if (cookie.domain) parts.push(`Domain=${cookie.domain}`);
+-      if (cookie.expiry) parts.push(`Expires=${new Date(Number(cookie.expiry) * 1000).toUTCString()}`);
+-      if (cookie.secure) parts.push("Secure");
+-      if (cookie.sameSite) parts.push(`SameSite=${cookie.sameSite}`);
+-      doc.cookie = parts.join("; ");
+-      return null;
+-    };
+-
+-    const deleteCookie = (name, frameContext = currentFrameContext) => {
+-      const doc = getCurrentDocument(frameContext);
+-      const expires = "Thu, 01 Jan 1970 00:00:00 GMT";
+-      doc.cookie = `${encodeURIComponent(name)}=; Expires=${expires}; Path=/`;
+-      doc.cookie = `${encodeURIComponent(name)}=; Expires=${expires}`;
+-      return null;
+-    };
+-
+-    const deleteAllCookies = (frameContext = currentFrameContext) => {
+-      getAllCookies(frameContext).forEach((cookie) => {
+-        deleteCookie(cookie.name, frameContext);
+-      });
+-      return null;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/execution.rs b/src/crates/adapters/webdriver/src/runtime/script/core/execution.rs
+deleted file mode 100644
+index 09289a1..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/execution.rs
++++ /dev/null
+@@ -1,100 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const toFunction = (script, targetWindow) => {
+-      const trimmed = String(script || "").trim();
+-      if (!trimmed) {
+-        return () => null;
+-      }
+-
+-      try {
+-        return targetWindow.eval(`(${trimmed})`);
+-      } catch (_error) {
+-        return targetWindow.Function(trimmed);
+-      }
+-    };
+-
+-    const execute = async (script, args, asyncMode, frameContext) => {
+-      patchConsole();
+-      try {
+-        setFrameContext(frameContext);
+-        const targetWindow = getCurrentWindow(frameContext);
+-        patchDialogs(targetWindow);
+-        const fn = toFunction(script, targetWindow);
+-        const resolvedArgs = deserialize(args);
+-        let value;
+-        if (asyncMode) {
+-          value = await new Promise((resolve, reject) => {
+-            const callback = (result) => resolve(result);
+-            try {
+-              fn.apply(targetWindow, [...resolvedArgs, callback]);
+-            } catch (error) {
+-              reject(error);
+-            }
+-          });
+-        } else {
+-          value = await fn.apply(targetWindow, resolvedArgs);
+-        }
+-        return {
+-          ok: true,
+-          value: serialize(value)
+-        };
+-      } catch (error) {
+-        return {
+-          ok: false,
+-          error: {
+-            name: error && error.name ? error.name : "Error",
+-            message: error && error.message ? error.message : String(error),
+-            stack: error && error.stack ? error.stack : null
+-          }
+-        };
+-      }
+-    };
+-
+-    const run = async (requestId, script, args, asyncMode, frameContext) => {
+-      const response = await execute(script, args, asyncMode, frameContext);
+-      await emitResult({
+-        requestId,
+-        ok: response.ok,
+-        value: response.value,
+-        error: response.error
+-      });
+-    };
+-
+-    const takeLogs = () => {
+-      const logs = ensureLogs().slice();
+-      ensureLogs().length = 0;
+-      return logs;
+-    };
+-
+-    patchConsole();
+-
+-    return {
+-      getElement,
+-      getCurrentWindow,
+-      getCurrentDocument,
+-      findElements,
+-      findElementsFromShadow,
+-      validateFrameByIndex,
+-      validateFrameElement,
+-      getShadowRoot,
+-      isDisplayed,
+-      clearElement,
+-      insertText,
+-      setElementText,
+-      dispatchPointerClick,
+-      performActions,
+-      releaseActions,
+-      getAllCookies,
+-      getCookie,
+-      addCookie,
+-      deleteCookie,
+-      deleteAllCookies,
+-      getAlertText,
+-      sendAlertText,
+-      closeAlert,
+-      takeLogs,
+-      execute,
+-      run
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/locator.rs b/src/crates/adapters/webdriver/src/runtime/script/core/locator.rs
+deleted file mode 100644
+index 9d036fa..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/locator.rs
++++ /dev/null
+@@ -1,68 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const findByXpath = (root, xpath, frameContext = currentFrameContext) => {
+-      const results = [];
+-      const ownerDocument = root && root.ownerDocument ? root.ownerDocument : getCurrentDocument(frameContext);
+-      const iterator = ownerDocument.evaluate(
+-        xpath,
+-        root,
+-        null,
+-        XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+-        null
+-      );
+-      let node = iterator.iterateNext();
+-      while (node) {
+-        if (isElementLike(node)) {
+-          results.push(node);
+-        }
+-        node = iterator.iterateNext();
+-      }
+-      return results;
+-    };
+-
+-    const findElements = (rootId, using, value, frameContext = currentFrameContext) => {
+-      const root = resolveRoot(rootId, frameContext);
+-      let matches = [];
+-      switch (using) {
+-        case "css selector":
+-          matches = Array.from(root.querySelectorAll(value));
+-          break;
+-        case "id":
+-          matches = Array.from(root.querySelectorAll(`#${cssEscape(value)}`));
+-          break;
+-        case "name":
+-          matches = Array.from(root.querySelectorAll(`[name="${cssEscape(value)}"]`));
+-          break;
+-        case "class name":
+-          matches = Array.from(root.getElementsByClassName(value));
+-          break;
+-        case "xpath":
+-          matches = findByXpath(root, value, frameContext);
+-          break;
+-        case "link text":
+-          matches = Array.from(root.querySelectorAll("a")).filter((item) => (item.textContent || "").trim() === value);
+-          break;
+-        case "partial link text":
+-          matches = Array.from(root.querySelectorAll("a")).filter((item) => (item.textContent || "").includes(value));
+-          break;
+-        case "tag name":
+-          matches = Array.from(root.querySelectorAll(value));
+-          break;
+-        default:
+-          throw new Error(`Unsupported locator strategy: ${using}`);
+-      }
+-      return matches.map((item) => storeElement(item));
+-    };
+-
+-    const validateFrameByIndex = (index, frameContext = currentFrameContext) => {
+-      const currentDocumentRef = getCurrentDocument(frameContext);
+-      const frames = Array.from(currentDocumentRef.querySelectorAll("iframe, frame"));
+-      return Number.isInteger(index) && index >= 0 && index < frames.length;
+-    };
+-
+-    const validateFrameElement = (elementId) => {
+-      const element = getElement(elementId);
+-      return !!element && isElementLike(element) && /^(iframe|frame)$/i.test(String(element.tagName || "")) && !!element.contentWindow;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/mod.rs b/src/crates/adapters/webdriver/src/runtime/script/core/mod.rs
+deleted file mode 100644
+index 09513b8..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/mod.rs
++++ /dev/null
+@@ -1,30 +0,0 @@
+-mod alert;
+-mod context;
+-mod cookie;
+-mod execution;
+-mod locator;
+-mod runtime;
+-mod shadow;
+-mod store;
+-mod visibility;
+-
+-pub(super) fn head() -> String {
+-    format!(
+-        "{runtime}{store}{context}{locator}{shadow}{visibility}",
+-        runtime = runtime::script(),
+-        store = store::script(),
+-        context = context::script(),
+-        locator = locator::script(),
+-        shadow = shadow::script(),
+-        visibility = visibility::script()
+-    )
+-}
+-
+-pub(super) fn tail() -> String {
+-    format!(
+-        "{cookie}{alert}{execution}",
+-        cookie = cookie::script(),
+-        alert = alert::script(),
+-        execution = execution::script()
+-    )
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/runtime.rs b/src/crates/adapters/webdriver/src/runtime/script/core/runtime.rs
+deleted file mode 100644
+index 06ec582..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/runtime.rs
++++ /dev/null
+@@ -1,204 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf";
+-    const SHADOW_KEY = "shadow-6066-11e4-a52e-4f735466cecf";
+-    const EVENT_NAME = "NORTHHING_WEBDRIVER_result";
+-    const STORE_KEY = "__agentAppWdElements";
+-    const LOG_KEY = "__agentAppWdLogs";
+-    const consolePatchedKey = "__agentAppWdConsolePatched";
+-    let currentFrameContext = [];
+-
+-    const ensureLogs = () => {
+-      if (!window[LOG_KEY]) {
+-        window[LOG_KEY] = [];
+-      }
+-      return window[LOG_KEY];
+-    };
+-
+-    const safeStringify = (value) => {
+-      if (typeof value === "string") {
+-        return value;
+-      }
+-      try {
+-        return JSON.stringify(value);
+-      } catch (_error) {
+-        return String(value);
+-      }
+-    };
+-
+-    const shouldIgnoreLogMessage = (message) => {
+-      return /^JSON error: missing field `cmd` at line 1 column \d+$/.test(message);
+-    };
+-
+-    const setFrameContext = (frameContext) => {
+-      currentFrameContext = Array.isArray(frameContext) ? frameContext : [];
+-    };
+-
+-    const getFrameContext = () => currentFrameContext;
+-
+-    const ensureRuntimeState = () => {
+-      if (!window.__agentAppWdRuntimeState) {
+-        window.__agentAppWdRuntimeState = {
+-          pointer: {
+-            x: 0,
+-            y: 0,
+-            target: null,
+-            buttons: 0,
+-            lastClickAt: 0,
+-            lastClickTargetId: null,
+-            lastClickButton: null
+-          },
+-          modifiers: {
+-            ctrl: false,
+-            shift: false,
+-            alt: false,
+-            meta: false
+-          }
+-        };
+-      }
+-      return window.__agentAppWdRuntimeState;
+-    };
+-
+-    const patchConsole = () => {
+-      if (window[consolePatchedKey]) {
+-        return;
+-      }
+-      window[consolePatchedKey] = true;
+-      ["log", "info", "warn", "error", "debug"].forEach((level) => {
+-        const original = console[level];
+-        console[level] = (...args) => {
+-          try {
+-            const message = args.map((item) => safeStringify(item)).join(" ");
+-            if (!shouldIgnoreLogMessage(message)) {
+-              ensureLogs().push({
+-                level: level === "warn" ? "WARNING" : level === "error" ? "SEVERE" : "INFO",
+-                message,
+-                timestamp: Date.now()
+-              });
+-            }
+-            if (ensureLogs().length > 200) {
+-              ensureLogs().splice(0, ensureLogs().length - 200);
+-            }
+-          } catch (_error) {}
+-          return original.apply(console, args);
+-        };
+-      });
+-    };
+-
+-    const ensureAlertState = (targetWindow = window) => {
+-      if (!targetWindow.__agentAppWdAlertState) {
+-        targetWindow.__agentAppWdAlertState = {
+-          open: false,
+-          type: null,
+-          text: "",
+-          defaultValue: null,
+-          promptText: null
+-        };
+-      }
+-      return targetWindow.__agentAppWdAlertState;
+-    };
+-
+-    const patchDialogs = (targetWindow = window) => {
+-      const patchedKey = "__agentAppWdDialogsPatched";
+-      if (targetWindow[patchedKey]) {
+-        return;
+-      }
+-      targetWindow[patchedKey] = true;
+-
+-      const state = ensureAlertState(targetWindow);
+-      targetWindow.alert = (message) => {
+-        state.open = true;
+-        state.type = "alert";
+-        state.text = String(message ?? "");
+-        state.defaultValue = null;
+-        state.promptText = null;
+-      };
+-      targetWindow.confirm = (message) => {
+-        state.open = true;
+-        state.type = "confirm";
+-        state.text = String(message ?? "");
+-        state.defaultValue = null;
+-        state.promptText = null;
+-        return false;
+-      };
+-      targetWindow.prompt = (message, defaultValue = "") => {
+-        state.open = true;
+-        state.type = "prompt";
+-        state.text = String(message ?? "");
+-        state.defaultValue = defaultValue == null ? null : String(defaultValue);
+-        state.promptText = defaultValue == null ? null : String(defaultValue);
+-        return null;
+-      };
+-    };
+-
+-    const emitResult = async (payload) => {
+-      const errors = [];
+-      const webviewPostMessage = window.chrome && window.chrome.webview
+-        && typeof window.chrome.webview.postMessage === "function"
+-        ? window.chrome.webview.postMessage.bind(window.chrome.webview)
+-        : null;
+-      const tauriInvoke = window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === "function"
+-        ? window.__TAURI__.core.invoke.bind(window.__TAURI__.core)
+-        : null;
+-      const internalInvoke = window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === "function"
+-        ? window.__TAURI_INTERNALS__.invoke.bind(window.__TAURI_INTERNALS__)
+-        : null;
+-
+-      if (webviewPostMessage) {
+-        try {
+-          webviewPostMessage(JSON.stringify(payload));
+-          return;
+-        } catch (error) {
+-          errors.push(`window.chrome.webview.postMessage failed: ${safeStringify(error)}`);
+-        }
+-      }
+-
+-      if (tauriInvoke) {
+-        try {
+-          await tauriInvoke("webdriver_bridge_result", {
+-            request: { payload }
+-          });
+-          return;
+-        } catch (error) {
+-          errors.push(`core.invoke command failed: ${safeStringify(error)}`);
+-        }
+-      }
+-
+-      if (window.__TAURI__ && window.__TAURI__.event && typeof window.__TAURI__.event.emit === "function") {
+-        try {
+-          await window.__TAURI__.event.emit(EVENT_NAME, payload);
+-          return;
+-        } catch (error) {
+-          errors.push(`window.__TAURI__.event.emit failed: ${safeStringify(error)}`);
+-        }
+-      }
+-
+-      if (internalInvoke) {
+-        try {
+-          await internalInvoke("plugin:event|emit", {
+-            event: EVENT_NAME,
+-            payload
+-          });
+-          return;
+-        } catch (error) {
+-          errors.push(`__TAURI_INTERNALS__.invoke(plugin:event|emit) failed: ${safeStringify(error)}`);
+-        }
+-
+-        try {
+-          await internalInvoke("webdriver_bridge_result", {
+-            request: { payload }
+-          });
+-          return;
+-        } catch (error) {
+-          errors.push(`__TAURI_INTERNALS__.invoke command failed: ${safeStringify(error)}`);
+-        }
+-      }
+-
+-      throw new Error(
+-        errors.length > 0
+-          ? `Tauri bridge unavailable: ${errors.join("; ")}`
+-          : "Tauri bridge unavailable"
+-      );
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/shadow.rs b/src/crates/adapters/webdriver/src/runtime/script/core/shadow.rs
+deleted file mode 100644
+index bc06cde..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/shadow.rs
++++ /dev/null
+@@ -1,19 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const getShadowRoot = (elementId) => {
+-      const element = getElement(elementId);
+-      if (!element || !isElementLike(element) || !element.shadowRoot) {
+-        return null;
+-      }
+-      return storeShadowRoot(element.shadowRoot);
+-    };
+-
+-    const findElementsFromShadow = (shadowId, using, value, frameContext = currentFrameContext) => {
+-      const shadowRoot = getElement(shadowId);
+-      if (!shadowRoot) {
+-        throw new Error("No shadow root found");
+-      }
+-      return findElements(shadowId, using, value, frameContext);
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/store.rs b/src/crates/adapters/webdriver/src/runtime/script/core/store.rs
+deleted file mode 100644
+index d62075f..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/store.rs
++++ /dev/null
+@@ -1,113 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const ensureStore = () => {
+-      if (!window[STORE_KEY]) {
+-        window[STORE_KEY] = Object.create(null);
+-      }
+-      return window[STORE_KEY];
+-    };
+-
+-    const nextElementId = () => {
+-      window.__agentAppWdElementCounter = (window.__agentAppWdElementCounter || 0) + 1;
+-      return `bf-el-${window.__agentAppWdElementCounter}`;
+-    };
+-
+-    const storeElement = (element) => {
+-      if (!element || typeof element !== "object") {
+-        return null;
+-      }
+-      const store = ensureStore();
+-      const existing = Object.entries(store).find(([, candidate]) => candidate === element);
+-      const id = existing ? existing[0] : nextElementId();
+-      store[id] = element;
+-      return { [ELEMENT_KEY]: id, ELEMENT: id };
+-    };
+-
+-    const storeShadowRoot = (shadowRoot) => {
+-      if (!shadowRoot || typeof shadowRoot !== "object") {
+-        return null;
+-      }
+-      const store = ensureStore();
+-      const existing = Object.entries(store).find(([, candidate]) => candidate === shadowRoot);
+-      const id = existing ? existing[0] : nextElementId();
+-      store[id] = shadowRoot;
+-      return { [SHADOW_KEY]: id };
+-    };
+-
+-    const getElement = (elementId) => {
+-      if (!elementId) {
+-        return null;
+-      }
+-      return ensureStore()[elementId] || null;
+-    };
+-
+-    const serialize = (value, seen = new WeakSet()) => {
+-      if (value === undefined || value === null) {
+-        return value ?? null;
+-      }
+-      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+-        return value;
+-      }
+-      if (isElementLike(value)) {
+-        return storeElement(value);
+-      }
+-      if (value && typeof value === "object" && typeof value.length === "number" && typeof value !== "string") {
+-        return Array.from(value).map((item) => serialize(item, seen));
+-      }
+-      if (value && typeof value === "object" && "x" in value && "y" in value && "width" in value && "height" in value && "top" in value && "left" in value) {
+-        return {
+-          x: value.x,
+-          y: value.y,
+-          width: value.width,
+-          height: value.height,
+-          top: value.top,
+-          right: value.right,
+-          bottom: value.bottom,
+-          left: value.left
+-        };
+-      }
+-      if (value && typeof value === "object" && "message" in value && "stack" in value) {
+-        return {
+-          name: value.name,
+-          message: value.message,
+-          stack: value.stack
+-        };
+-      }
+-      if (Array.isArray(value)) {
+-        return value.map((item) => serialize(item, seen));
+-      }
+-      if (typeof value === "object") {
+-        if (seen.has(value)) {
+-          return null;
+-        }
+-        seen.add(value);
+-        const out = {};
+-        Object.keys(value).forEach((key) => {
+-          out[key] = serialize(value[key], seen);
+-        });
+-        return out;
+-      }
+-      return String(value);
+-    };
+-
+-    const deserialize = (value) => {
+-      if (Array.isArray(value)) {
+-        return value.map(deserialize);
+-      }
+-      if (value && typeof value === "object") {
+-        if (typeof value[ELEMENT_KEY] === "string") {
+-          return getElement(value[ELEMENT_KEY]);
+-        }
+-        if (typeof value[SHADOW_KEY] === "string") {
+-          return getElement(value[SHADOW_KEY]);
+-        }
+-        const out = {};
+-        Object.keys(value).forEach((key) => {
+-          out[key] = deserialize(value[key]);
+-        });
+-        return out;
+-      }
+-      return value;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/core/visibility.rs b/src/crates/adapters/webdriver/src/runtime/script/core/visibility.rs
+deleted file mode 100644
+index 8a5e521..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/core/visibility.rs
++++ /dev/null
+@@ -1,18 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const isDisplayed = (element) => {
+-      if (!element || !element.isConnected) {
+-        return false;
+-      }
+-      const style = window.getComputedStyle(element);
+-      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") {
+-        return false;
+-      }
+-      if (Number(style.opacity || "1") === 0) {
+-        return false;
+-      }
+-      const rect = element.getBoundingClientRect();
+-      return rect.width > 0 && rect.height > 0;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/input.rs b/src/crates/adapters/webdriver/src/runtime/script/input.rs
+deleted file mode 100644
+index fce5f22..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/input.rs
++++ /dev/null
+@@ -1,132 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const setSelectionRange = (element, start, end) => {
+-      if (typeof element.setSelectionRange === "function") {
+-        element.setSelectionRange(start, end);
+-      }
+-    };
+-
+-    const getElementValue = (element) => {
+-      if (!element || !("value" in element)) {
+-        return "";
+-      }
+-      return element.value;
+-    };
+-
+-    const getNativeValueDescriptor = (element) => {
+-      const ownerWindow = element?.ownerDocument?.defaultView || window;
+-      if (element instanceof ownerWindow.HTMLInputElement) {
+-        return Object.getOwnPropertyDescriptor(ownerWindow.HTMLInputElement.prototype, "value");
+-      }
+-      if (element instanceof ownerWindow.HTMLTextAreaElement) {
+-        return Object.getOwnPropertyDescriptor(ownerWindow.HTMLTextAreaElement.prototype, "value");
+-      }
+-      return null;
+-    };
+-
+-    const setElementValue = (element, nextValue) => {
+-      if (!element || !("value" in element)) {
+-        return;
+-      }
+-      const descriptor = getNativeValueDescriptor(element);
+-      if (descriptor && typeof descriptor.set === "function") {
+-        descriptor.set.call(element, nextValue);
+-        return;
+-      }
+-      element.value = nextValue;
+-    };
+-
+-    const dispatchBeforeInputEvent = (element, inputType, data = null) => {
+-      const ownerWindow = element?.ownerDocument?.defaultView || window;
+-      if (typeof ownerWindow.InputEvent === "function") {
+-        return element.dispatchEvent(new ownerWindow.InputEvent("beforeinput", {
+-          bubbles: true,
+-          cancelable: true,
+-          composed: true,
+-          inputType,
+-          data,
+-        }));
+-      }
+-      return element.dispatchEvent(new ownerWindow.Event("beforeinput", {
+-        bubbles: true,
+-        cancelable: true,
+-      }));
+-    };
+-
+-    const emitInputEvents = (element, inputType = "insertText", data = null) => {
+-      const ownerWindow = element?.ownerDocument?.defaultView || window;
+-      if (typeof ownerWindow.InputEvent === "function") {
+-        element.dispatchEvent(new ownerWindow.InputEvent("input", {
+-          bubbles: true,
+-          composed: true,
+-          inputType,
+-          data,
+-        }));
+-      } else {
+-        element.dispatchEvent(new ownerWindow.Event("input", { bubbles: true }));
+-      }
+-      element.dispatchEvent(new ownerWindow.Event("change", { bubbles: true }));
+-    };
+-
+-    const clearElement = (element) => {
+-      if (!element) {
+-        return;
+-      }
+-      if ("value" in element) {
+-        element.focus();
+-        if (!dispatchBeforeInputEvent(element, "deleteContentBackward", null)) {
+-          return;
+-        }
+-        setElementValue(element, "");
+-        emitInputEvents(element, "deleteContentBackward", null);
+-        return;
+-      }
+-      if (element.isContentEditable) {
+-        element.focus();
+-        element.textContent = "";
+-        emitInputEvents(element, "deleteContentBackward", null);
+-      }
+-    };
+-
+-    const insertText = (element, text) => {
+-      if (!element) {
+-        return;
+-      }
+-      if ("value" in element) {
+-        const currentValue = String(getElementValue(element) || "");
+-        const start = typeof element.selectionStart === "number" ? element.selectionStart : currentValue.length;
+-        const end = typeof element.selectionEnd === "number" ? element.selectionEnd : currentValue.length;
+-        const nextValue = currentValue.slice(0, start) + text + currentValue.slice(end);
+-        if (!dispatchBeforeInputEvent(element, "insertText", text)) {
+-          return;
+-        }
+-        setElementValue(element, nextValue);
+-        const caret = start + text.length;
+-        setSelectionRange(element, caret, caret);
+-        emitInputEvents(element, "insertText", text);
+-        return;
+-      }
+-      if (element.isContentEditable) {
+-        const ownerWindow = element.ownerDocument?.defaultView || window;
+-        if (!dispatchBeforeInputEvent(element, "insertText", text)) {
+-          return;
+-        }
+-        const selection = ownerWindow.getSelection();
+-        element.focus();
+-        if (selection && selection.rangeCount > 0) {
+-          selection.deleteFromDocument();
+-          selection.getRangeAt(0).insertNode(element.ownerDocument.createTextNode(text));
+-          selection.collapseToEnd();
+-        } else {
+-          element.appendChild(element.ownerDocument.createTextNode(text));
+-        }
+-        emitInputEvents(element, "insertText", text);
+-      }
+-    };
+-
+-    const setElementText = (element, text) => {
+-      clearElement(element);
+-      insertText(element, text);
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/keyboard/edit.rs b/src/crates/adapters/webdriver/src/runtime/script/keyboard/edit.rs
+deleted file mode 100644
+index 8b7f788..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/keyboard/edit.rs
++++ /dev/null
+@@ -1,97 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const deleteSelectionOrPreviousChar = (target, value, start, end) => {
+-      if (start !== end) {
+-        setElementValue(target, value.slice(0, start) + value.slice(end));
+-        setSelectionRange(target, start, start);
+-        return;
+-      }
+-      if (start > 0) {
+-        setElementValue(target, value.slice(0, start - 1) + value.slice(end));
+-        setSelectionRange(target, start - 1, start - 1);
+-      }
+-    };
+-
+-    const deleteSelectionOrNextChar = (target, value, start, end) => {
+-      if (start !== end) {
+-        setElementValue(target, value.slice(0, start) + value.slice(end));
+-      } else {
+-        setElementValue(target, value.slice(0, start) + value.slice(start + 1));
+-      }
+-      setSelectionRange(target, start, start);
+-    };
+-
+-    const applySpecialKey = (target, key, modifiers, frameContext = currentFrameContext) => {
+-      if (!target) {
+-        return;
+-      }
+-
+-      const isInputLike = "value" in target;
+-      if ((modifiers.ctrl || modifiers.meta) && key.toLowerCase() === "a" && isInputLike) {
+-        const value = String(target.value || "");
+-        setSelectionRange(target, 0, value.length);
+-        return;
+-      }
+-
+-      if (key === "Tab") {
+-        moveFocusByTab(target, modifiers.shift, frameContext);
+-        return;
+-      }
+-
+-      if (key === "Backspace" && isInputLike) {
+-        const value = String(getElementValue(target) || "");
+-        const start = typeof target.selectionStart === "number" ? target.selectionStart : value.length;
+-        const end = typeof target.selectionEnd === "number" ? target.selectionEnd : value.length;
+-        if (!dispatchBeforeInputEvent(target, "deleteContentBackward", null)) {
+-          return;
+-        }
+-        deleteSelectionOrPreviousChar(target, value, start, end);
+-        emitInputEvents(target, "deleteContentBackward", null);
+-        return;
+-      }
+-
+-      if (key === "Delete" && isInputLike) {
+-        const value = String(getElementValue(target) || "");
+-        const start = typeof target.selectionStart === "number" ? target.selectionStart : value.length;
+-        const end = typeof target.selectionEnd === "number" ? target.selectionEnd : value.length;
+-        if (!dispatchBeforeInputEvent(target, "deleteContentForward", null)) {
+-          return;
+-        }
+-        deleteSelectionOrNextChar(target, value, start, end);
+-        emitInputEvents(target, "deleteContentForward", null);
+-        return;
+-      }
+-
+-      if (key === "ArrowLeft" && isInputLike) {
+-        moveCaret(target, "left");
+-        return;
+-      }
+-
+-      if (key === "ArrowRight" && isInputLike) {
+-        moveCaret(target, "right");
+-        return;
+-      }
+-
+-      if (key === "Home" && isInputLike) {
+-        moveCaret(target, "start");
+-        return;
+-      }
+-
+-      if (key === "End" && isInputLike) {
+-        moveCaret(target, "end");
+-        return;
+-      }
+-
+-      if (key === "Enter") {
+-        if (isInputLike && String(target.tagName || "").toUpperCase() === "TEXTAREA" && !modifiers.ctrl && !modifiers.meta) {
+-          insertText(target, "\n");
+-        }
+-        return;
+-      }
+-
+-      if (key.length === 1 && !modifiers.ctrl && !modifiers.meta && !modifiers.alt) {
+-        insertText(target, getPrintableKey(key, modifiers));
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/keyboard/event.rs b/src/crates/adapters/webdriver/src/runtime/script/keyboard/event.rs
+deleted file mode 100644
+index 41fc3dc..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/keyboard/event.rs
++++ /dev/null
+@@ -1,22 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const dispatchKeyboardEvent = (target, type, key, modifiers, frameContext = currentFrameContext) => {
+-      if (!target) {
+-        return true;
+-      }
+-      const ownerWindow = getOwnerWindow(target, frameContext);
+-      return target.dispatchEvent(
+-        new ownerWindow.KeyboardEvent(type, {
+-          key,
+-          code: eventCodeForKey(key),
+-          bubbles: true,
+-          cancelable: true,
+-          ctrlKey: modifiers.ctrl,
+-          shiftKey: modifiers.shift,
+-          altKey: modifiers.alt,
+-          metaKey: modifiers.meta
+-        })
+-      );
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/keyboard/focus.rs b/src/crates/adapters/webdriver/src/runtime/script/keyboard/focus.rs
+deleted file mode 100644
+index ea1822d..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/keyboard/focus.rs
++++ /dev/null
+@@ -1,50 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const moveFocusByTab = (target, backwards, frameContext = currentFrameContext) => {
+-      const doc = getCurrentDocument(frameContext);
+-      const selector = [
+-        "a[href]",
+-        "button",
+-        "input",
+-        "select",
+-        "textarea",
+-        "[tabindex]:not([tabindex='-1'])"
+-      ].join(", ");
+-      const focusable = Array.from(doc.querySelectorAll(selector)).filter((element) => {
+-        if (!isElementLike(element) || element.disabled) {
+-          return false;
+-        }
+-        const style = window.getComputedStyle(element);
+-        return style.display !== "none" && style.visibility !== "hidden";
+-      });
+-      if (!focusable.length) {
+-        return;
+-      }
+-      const index = Math.max(0, focusable.indexOf(target));
+-      const nextIndex = backwards
+-        ? (index - 1 + focusable.length) % focusable.length
+-        : (index + 1) % focusable.length;
+-      focusable[nextIndex].focus();
+-    };
+-
+-    const moveCaret = (target, direction) => {
+-      if (!target || !("value" in target)) {
+-        return;
+-      }
+-      const value = String(target.value || "");
+-      const start = typeof target.selectionStart === "number" ? target.selectionStart : value.length;
+-      const end = typeof target.selectionEnd === "number" ? target.selectionEnd : value.length;
+-      if (direction === "start") {
+-        setSelectionRange(target, 0, 0);
+-        return;
+-      }
+-      if (direction === "end") {
+-        setSelectionRange(target, value.length, value.length);
+-        return;
+-      }
+-      const base = direction === "left" ? Math.min(start, end) : Math.max(start, end);
+-      const next = direction === "left" ? Math.max(0, base - 1) : Math.min(value.length, base + 1);
+-      setSelectionRange(target, next, next);
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/keyboard/mapping.rs b/src/crates/adapters/webdriver/src/runtime/script/keyboard/mapping.rs
+deleted file mode 100644
+index 82d5eec..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/keyboard/mapping.rs
++++ /dev/null
+@@ -1,107 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const W3C_KEY_MAP = {
+-      "\uE000": "Unidentified",
+-      "\uE001": "Cancel",
+-      "\uE002": "Help",
+-      "\uE003": "Backspace",
+-      "\uE004": "Tab",
+-      "\uE005": "Clear",
+-      "\uE006": "Enter",
+-      "\uE007": "Enter",
+-      "\uE008": "Shift",
+-      "\uE009": "Control",
+-      "\uE00A": "Alt",
+-      "\uE00B": "Pause",
+-      "\uE00C": "Escape",
+-      "\uE00D": " ",
+-      "\uE00E": "PageUp",
+-      "\uE00F": "PageDown",
+-      "\uE010": "End",
+-      "\uE011": "Home",
+-      "\uE012": "ArrowLeft",
+-      "\uE013": "ArrowUp",
+-      "\uE014": "ArrowRight",
+-      "\uE015": "ArrowDown",
+-      "\uE016": "Insert",
+-      "\uE017": "Delete",
+-      "\uE031": "F1",
+-      "\uE032": "F2",
+-      "\uE033": "F3",
+-      "\uE034": "F4",
+-      "\uE035": "F5",
+-      "\uE036": "F6",
+-      "\uE037": "F7",
+-      "\uE038": "F8",
+-      "\uE039": "F9",
+-      "\uE03A": "F10",
+-      "\uE03B": "F11",
+-      "\uE03C": "F12",
+-      "\uE03D": "Meta"
+-    };
+-
+-    const normalizeKeyValue = (value) => W3C_KEY_MAP[String(value)] || String(value || "");
+-
+-    const isModifierKey = (key) =>
+-      key === "Control" || key === "Shift" || key === "Alt" || key === "Meta";
+-
+-    const updateModifierState = (modifiers, key, isDown) => {
+-      if (key === "Control") modifiers.ctrl = isDown;
+-      if (key === "Shift") modifiers.shift = isDown;
+-      if (key === "Alt") modifiers.alt = isDown;
+-      if (key === "Meta") modifiers.meta = isDown;
+-    };
+-
+-    const eventCodeForKey = (key) => {
+-      const specialCodes = {
+-        " ": "Space",
+-        Backspace: "Backspace",
+-        Tab: "Tab",
+-        Enter: "Enter",
+-        Escape: "Escape",
+-        Delete: "Delete",
+-        Insert: "Insert",
+-        Home: "Home",
+-        End: "End",
+-        PageUp: "PageUp",
+-        PageDown: "PageDown",
+-        ArrowLeft: "ArrowLeft",
+-        ArrowRight: "ArrowRight",
+-        ArrowUp: "ArrowUp",
+-        ArrowDown: "ArrowDown",
+-        Shift: "ShiftLeft",
+-        Control: "ControlLeft",
+-        Alt: "AltLeft",
+-        Meta: "MetaLeft"
+-      };
+-      if (specialCodes[key]) {
+-        return specialCodes[key];
+-      }
+-      if (/^F\d{1,2}$/.test(key)) {
+-        return key;
+-      }
+-      if (key.length === 1) {
+-        if (/^[a-z]$/i.test(key)) {
+-          return `Key${key.toUpperCase()}`;
+-        }
+-        if (/^\d$/.test(key)) {
+-          return `Digit${key}`;
+-        }
+-      }
+-      return key || "Unidentified";
+-    };
+-
+-    const getPrintableKey = (key, modifiers) => {
+-      if (key === " ") {
+-        return " ";
+-      }
+-      if (key.length !== 1) {
+-        return key;
+-      }
+-      if (modifiers.shift && /^[a-z]$/.test(key)) {
+-        return key.toUpperCase();
+-      }
+-      return key;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/keyboard/mod.rs b/src/crates/adapters/webdriver/src/runtime/script/keyboard/mod.rs
+deleted file mode 100644
+index 526e0b0..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/keyboard/mod.rs
++++ /dev/null
+@@ -1,14 +0,0 @@
+-mod edit;
+-mod event;
+-mod focus;
+-mod mapping;
+-
+-pub(super) fn script() -> String {
+-    format!(
+-        "{mapping}{focus}{event}{edit}",
+-        mapping = mapping::script(),
+-        focus = focus::script(),
+-        event = event::script(),
+-        edit = edit::script()
+-    )
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/key_source.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/key_source.rs
+deleted file mode 100644
+index b8c3b0f..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/key_source.rs
++++ /dev/null
+@@ -1,31 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const performKeySourceActions = async (keyState, source, frameContext = currentFrameContext) => {
+-      for (const action of source.actions) {
+-        if (action.type === "pause") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          continue;
+-        }
+-
+-        const target = getActiveTarget(frameContext);
+-        const key = normalizeKeyValue(action.value);
+-        if (action.type === "keyDown") {
+-          updateModifierState(keyState, key, true);
+-          dispatchKeyboardEvent(target, "keydown", key, keyState, frameContext);
+-          if (key.length === 1) {
+-            dispatchKeyboardEvent(target, "keypress", getPrintableKey(key, keyState), keyState, frameContext);
+-          }
+-          if (!isModifierKey(key)) {
+-            applySpecialKey(target, key, keyState, frameContext);
+-          }
+-          continue;
+-        }
+-
+-        dispatchKeyboardEvent(target, "keyup", key, keyState, frameContext);
+-        updateModifierState(keyState, key, false);
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/mod.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/mod.rs
+deleted file mode 100644
+index c1d655a..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/mod.rs
++++ /dev/null
+@@ -1,20 +0,0 @@
+-mod key_source;
+-mod mouse;
+-mod perform;
+-mod pointer_source;
+-mod release;
+-mod wheel;
+-mod wheel_source;
+-
+-pub(super) fn script() -> String {
+-    format!(
+-        "{mouse}{wheel}{pointer_source}{wheel_source}{key_source}{perform}{release}",
+-        mouse = mouse::script(),
+-        wheel = wheel::script(),
+-        pointer_source = pointer_source::script(),
+-        wheel_source = wheel_source::script(),
+-        key_source = key_source::script(),
+-        perform = perform::script(),
+-        release = release::script()
+-    )
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/mouse.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/mouse.rs
+deleted file mode 100644
+index b00b5ba..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/mouse.rs
++++ /dev/null
+@@ -1,133 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const POINTER_BUTTON_MASK = {
+-      0: 1,
+-      1: 4,
+-      2: 2,
+-      3: 8,
+-      4: 16
+-    };
+-
+-    const pointerButtonMask = (button) => POINTER_BUTTON_MASK[Number(button)] || 0;
+-
+-    const getElementFromPoint = (frameContext, x, y) => {
+-      const doc = getCurrentDocument(frameContext);
+-      return doc.elementFromPoint(Number(x) || 0, Number(y) || 0);
+-    };
+-
+-    const updatePointerTarget = (frameContext, x, y, fallbackTarget = null) => {
+-      const runtime = ensureRuntimeState();
+-      runtime.pointer.x = Number(x) || 0;
+-      runtime.pointer.y = Number(y) || 0;
+-      runtime.pointer.target =
+-        getElementFromPoint(frameContext, runtime.pointer.x, runtime.pointer.y) ||
+-        fallbackTarget ||
+-        runtime.pointer.target ||
+-        getActiveTarget(frameContext);
+-      return runtime.pointer.target;
+-    };
+-
+-    const resolveActionOrigin = (origin, action, frameContext = currentFrameContext) => {
+-      const runtime = ensureRuntimeState();
+-      if (origin === "pointer") {
+-        return {
+-          x: runtime.pointer.x + (Number(action?.x) || 0),
+-          y: runtime.pointer.y + (Number(action?.y) || 0),
+-          target: null
+-        };
+-      }
+-
+-      if (origin && typeof origin === "object" && typeof origin[ELEMENT_KEY] === "string") {
+-        const element = getElement(origin[ELEMENT_KEY]);
+-        if (!element) {
+-          throw new Error("Element not found");
+-        }
+-        const rect = element.getBoundingClientRect();
+-        return {
+-          x: rect.left + rect.width / 2 + (Number(action?.x) || 0),
+-          y: rect.top + rect.height / 2 + (Number(action?.y) || 0),
+-          target: element
+-        };
+-      }
+-
+-      return {
+-        x: Number(action?.x) || 0,
+-        y: Number(action?.y) || 0,
+-        target: null
+-      };
+-    };
+-
+-    const dispatchMouseEvent = (target, type, x, y, button, buttons, frameContext = currentFrameContext) => {
+-      if (!target) {
+-        return false;
+-      }
+-      const ownerWindow = getOwnerWindow(target, frameContext);
+-      const runtime = ensureRuntimeState();
+-      return target.dispatchEvent(
+-        new ownerWindow.MouseEvent(type, {
+-          bubbles: true,
+-          cancelable: true,
+-          clientX: x,
+-          clientY: y,
+-          button,
+-          buttons,
+-          ctrlKey: !!runtime.modifiers.ctrl,
+-          shiftKey: !!runtime.modifiers.shift,
+-          altKey: !!runtime.modifiers.alt,
+-          metaKey: !!runtime.modifiers.meta
+-        })
+-      );
+-    };
+-
+-    const maybeDispatchClick = (target, x, y, button, frameContext = currentFrameContext) => {
+-      if (!target) {
+-        return;
+-      }
+-      if (button === 2) {
+-        dispatchMouseEvent(target, "contextmenu", x, y, button, 0, frameContext);
+-        return;
+-      }
+-      dispatchMouseEvent(target, "click", x, y, button, 0, frameContext);
+-      const runtime = ensureRuntimeState();
+-      const clickTargetId = storeElement(target)?.[ELEMENT_KEY] || null;
+-      const now = Date.now();
+-      if (
+-        button === 0 &&
+-        runtime.pointer.lastClickButton === button &&
+-        runtime.pointer.lastClickTargetId === clickTargetId &&
+-        now - runtime.pointer.lastClickAt < 500
+-      ) {
+-        dispatchMouseEvent(target, "dblclick", x, y, button, 0, frameContext);
+-      }
+-      runtime.pointer.lastClickAt = now;
+-      runtime.pointer.lastClickButton = button;
+-      runtime.pointer.lastClickTargetId = clickTargetId;
+-    };
+-
+-    const dispatchPointerClick = (element, button, doubleClick) => {
+-      if (!element) {
+-        throw new Error("Element not found");
+-      }
+-      element.scrollIntoView({ block: "center", inline: "center" });
+-      if (typeof element.focus === "function") {
+-        element.focus();
+-      }
+-      const rect = element.getBoundingClientRect();
+-      const x = rect.left + rect.width / 2;
+-      const y = rect.top + rect.height / 2;
+-      updatePointerTarget(getFrameContext(), x, y, element);
+-      const runtime = ensureRuntimeState();
+-      const buttonMask = pointerButtonMask(button);
+-      dispatchMouseEvent(element, "mouseover", x, y, button, runtime.pointer.buttons, getFrameContext());
+-      dispatchMouseEvent(element, "mousemove", x, y, button, runtime.pointer.buttons, getFrameContext());
+-      runtime.pointer.buttons |= buttonMask;
+-      dispatchMouseEvent(element, "mousedown", x, y, button, runtime.pointer.buttons, getFrameContext());
+-      runtime.pointer.buttons &= ~buttonMask;
+-      dispatchMouseEvent(element, "mouseup", x, y, button, runtime.pointer.buttons, getFrameContext());
+-      maybeDispatchClick(element, x, y, button, getFrameContext());
+-      if (doubleClick && button === 0) {
+-        dispatchMouseEvent(element, "dblclick", x, y, button, runtime.pointer.buttons, getFrameContext());
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/perform.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/perform.rs
+deleted file mode 100644
+index 01869f7..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/perform.rs
++++ /dev/null
+@@ -1,35 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const performActions = async (sources, frameContext = currentFrameContext) => {
+-      const runtime = ensureRuntimeState();
+-      const keyState = {
+-        ctrl: !!runtime.modifiers.ctrl,
+-        shift: !!runtime.modifiers.shift,
+-        alt: !!runtime.modifiers.alt,
+-        meta: !!runtime.modifiers.meta
+-      };
+-
+-      for (const source of sources || []) {
+-        if (!source || !Array.isArray(source.actions)) {
+-          continue;
+-        }
+-
+-        if (source.type === "pointer") {
+-          await performPointerSourceActions(runtime, source, frameContext);
+-          continue;
+-        }
+-
+-        if (source.type === "wheel") {
+-          await performWheelSourceActions(runtime, source, frameContext);
+-          continue;
+-        }
+-
+-        if (source.type === "key") {
+-          await performKeySourceActions(keyState, source, frameContext);
+-        }
+-      }
+-
+-      runtime.modifiers = keyState;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/pointer_source.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/pointer_source.rs
+deleted file mode 100644
+index c130e81..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/pointer_source.rs
++++ /dev/null
+@@ -1,57 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const performPointerSourceActions = async (runtime, source, frameContext = currentFrameContext) => {
+-      for (const action of source.actions) {
+-        if (action.type === "pause") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          continue;
+-        }
+-
+-        if (action.type === "pointerMove") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          const origin = Object.prototype.hasOwnProperty.call(action, "origin") ? action.origin : "viewport";
+-          const resolved = resolveActionOrigin(origin, action, frameContext);
+-          const target = updatePointerTarget(frameContext, resolved.x, resolved.y, resolved.target);
+-          if (target) {
+-            dispatchMouseEvent(target, "mousemove", runtime.pointer.x, runtime.pointer.y, 0, runtime.pointer.buttons, frameContext);
+-          }
+-          continue;
+-        }
+-
+-        const target =
+-          runtime.pointer.target ||
+-          updatePointerTarget(frameContext, runtime.pointer.x, runtime.pointer.y, getActiveTarget(frameContext));
+-        const button = Number(action.button || 0);
+-        const buttonMask = pointerButtonMask(button);
+-        if (!target) {
+-          throw new Error("Pointer target not found");
+-        }
+-
+-        if (action.type === "pointerDown") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          if (typeof target.focus === "function") {
+-            target.focus();
+-          }
+-          runtime.pointer.buttons |= buttonMask;
+-          dispatchMouseEvent(target, "mousedown", runtime.pointer.x, runtime.pointer.y, button, runtime.pointer.buttons, frameContext);
+-          continue;
+-        }
+-
+-        if (action.type === "pointerUp") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          runtime.pointer.buttons &= ~buttonMask;
+-          dispatchMouseEvent(target, "mouseup", runtime.pointer.x, runtime.pointer.y, button, runtime.pointer.buttons, frameContext);
+-          maybeDispatchClick(target, runtime.pointer.x, runtime.pointer.y, button, frameContext);
+-        }
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/release.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/release.rs
+deleted file mode 100644
+index 19965fa..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/release.rs
++++ /dev/null
+@@ -1,26 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const releaseActions = async (pressedKeys, pressedButtons, frameContext = currentFrameContext) => {
+-      const runtime = ensureRuntimeState();
+-      for (const rawKey of pressedKeys || []) {
+-        const target = getActiveTarget(frameContext);
+-        const key = normalizeKeyValue(rawKey);
+-        dispatchKeyboardEvent(target, "keyup", key, runtime.modifiers, frameContext);
+-        updateModifierState(runtime.modifiers, key, false);
+-      }
+-
+-      for (const item of pressedButtons || []) {
+-        const button = Number(item?.button || 0);
+-        const buttonMask = pointerButtonMask(button);
+-        const target =
+-          runtime.pointer.target ||
+-          updatePointerTarget(frameContext, runtime.pointer.x, runtime.pointer.y, getActiveTarget(frameContext));
+-        if (!target) {
+-          continue;
+-        }
+-        runtime.pointer.buttons &= ~buttonMask;
+-        dispatchMouseEvent(target, "mouseup", runtime.pointer.x, runtime.pointer.y, button, runtime.pointer.buttons, frameContext);
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel.rs
+deleted file mode 100644
+index e9551d7..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel.rs
++++ /dev/null
+@@ -1,32 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const findScrollableTarget = (target, doc) => {
+-      let current = target;
+-      while (current && current !== doc.body && current !== doc.documentElement) {
+-        if (
+-          (current.scrollHeight > current.clientHeight || current.scrollWidth > current.clientWidth) &&
+-          current instanceof Element
+-        ) {
+-          return current;
+-        }
+-        current = current.parentElement;
+-      }
+-      return doc.scrollingElement || doc.documentElement || doc.body;
+-    };
+-
+-    const applyWheelScroll = (target, deltaX, deltaY, frameContext = currentFrameContext) => {
+-      const doc = getCurrentDocument(frameContext);
+-      const scrollTarget = findScrollableTarget(target, doc);
+-      if (!scrollTarget) {
+-        return;
+-      }
+-      if (scrollTarget === doc.body || scrollTarget === doc.documentElement || scrollTarget === doc.scrollingElement) {
+-        const ownerWindow = doc.defaultView || window;
+-        ownerWindow.scrollBy(deltaX, deltaY);
+-        return;
+-      }
+-      scrollTarget.scrollLeft += deltaX;
+-      scrollTarget.scrollTop += deltaY;
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel_source.rs b/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel_source.rs
+deleted file mode 100644
+index c82e5c2..0000000
+--- a/src/crates/adapters/webdriver/src/runtime/script/pointer/wheel_source.rs
++++ /dev/null
+@@ -1,38 +0,0 @@
+-pub(super) fn script() -> &'static str {
+-    r####"
+-    const performWheelSourceActions = async (runtime, source, frameContext = currentFrameContext) => {
+-      for (const action of source.actions) {
+-        if (action.type === "pause") {
+-          if (action.duration) {
+-            await sleep(action.duration);
+-          }
+-          continue;
+-        }
+-        if (action.duration) {
+-          await sleep(action.duration);
+-        }
+-        const origin = Object.prototype.hasOwnProperty.call(action, "origin") ? action.origin : "viewport";
+-        const resolved = resolveActionOrigin(origin, action, frameContext);
+-        const target = updatePointerTarget(frameContext, resolved.x, resolved.y, resolved.target);
+-        if (target) {
+-          const ownerWindow = getOwnerWindow(target, frameContext);
+-          target.dispatchEvent(
+-            new ownerWindow.WheelEvent("wheel", {
+-              bubbles: true,
+-              cancelable: true,
+-              clientX: runtime.pointer.x,
+-              clientY: runtime.pointer.y,
+-              deltaX: Number(action.deltaX) || 0,
+-              deltaY: Number(action.deltaY) || 0,
+-              ctrlKey: !!runtime.modifiers.ctrl,
+-              shiftKey: !!runtime.modifiers.shift,
+-              altKey: !!runtime.modifiers.alt,
+-              metaKey: !!runtime.modifiers.meta
+-            })
+-          );
+-        }
+-        applyWheelScroll(target, Number(action.deltaX) || 0, Number(action.deltaY) || 0, frameContext);
+-      }
+-    };
+-"####
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/actions.rs b/src/crates/adapters/webdriver/src/server/handlers/actions.rs
+deleted file mode 100644
+index cff10b7..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/actions.rs
++++ /dev/null
+@@ -1,185 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::{Deserialize, Serialize};
+-use serde_json::{json, Value};
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct PerformActionsRequest {
+-    actions: Vec<ActionSequence>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type")]
+-pub enum ActionSequence {
+-    #[serde(rename = "key")]
+-    Key { id: String, actions: Vec<KeyAction> },
+-    #[serde(rename = "pointer")]
+-    Pointer {
+-        id: String,
+-        #[serde(default)]
+-        parameters: Option<Value>,
+-        actions: Vec<PointerAction>,
+-    },
+-    #[serde(rename = "wheel")]
+-    Wheel { id: String, actions: Vec<WheelAction> },
+-    #[serde(rename = "none")]
+-    None { id: String, actions: Vec<PauseAction> },
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type")]
+-pub enum KeyAction {
+-    #[serde(rename = "keyDown")]
+-    KeyDown { value: String },
+-    #[serde(rename = "keyUp")]
+-    KeyUp { value: String },
+-    #[serde(rename = "pause")]
+-    Pause { duration: Option<u64> },
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type")]
+-pub enum PointerAction {
+-    #[serde(rename = "pointerDown")]
+-    PointerDown { button: u32 },
+-    #[serde(rename = "pointerUp")]
+-    PointerUp { button: u32 },
+-    #[serde(rename = "pointerMove")]
+-    PointerMove {
+-        x: i32,
+-        y: i32,
+-        duration: Option<u64>,
+-        #[serde(default)]
+-        origin: Option<Value>,
+-    },
+-    #[serde(rename = "pause")]
+-    Pause { duration: Option<u64> },
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type")]
+-pub enum WheelAction {
+-    #[serde(rename = "scroll")]
+-    Scroll {
+-        x: i32,
+-        y: i32,
+-        #[serde(rename = "deltaX")]
+-        delta_x: i32,
+-        #[serde(rename = "deltaY")]
+-        delta_y: i32,
+-        #[serde(default)]
+-        duration: Option<u64>,
+-        #[serde(default)]
+-        origin: Option<Value>,
+-    },
+-    #[serde(rename = "pause")]
+-    Pause { duration: Option<u64> },
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-#[serde(tag = "type")]
+-pub enum PauseAction {
+-    #[serde(rename = "pause")]
+-    Pause { duration: Option<u64> },
+-}
+-
+-fn update_action_state(state: &mut crate::webdriver::ActionState, actions: &[ActionSequence]) {
+-    for action_sequence in actions {
+-        match action_sequence {
+-            ActionSequence::Key { actions, .. } => {
+-                for action in actions {
+-                    match action {
+-                        KeyAction::KeyDown { value } => {
+-                            state.pressed_keys.insert(value.clone());
+-                        }
+-                        KeyAction::KeyUp { value } => {
+-                            state.pressed_keys.remove(value);
+-                        }
+-                        KeyAction::Pause { .. } => {}
+-                    }
+-                }
+-            }
+-            ActionSequence::Pointer { id, actions, .. } => {
+-                for action in actions {
+-                    match action {
+-                        PointerAction::PointerDown { button } => {
+-                            state.pressed_buttons.entry(id.clone()).or_default().insert(*button);
+-                        }
+-                        PointerAction::PointerUp { button } => {
+-                            let mut remove_source = false;
+-                            if let Some(buttons) = state.pressed_buttons.get_mut(id) {
+-                                buttons.remove(button);
+-                                remove_source = buttons.is_empty();
+-                            }
+-                            if remove_source {
+-                                state.pressed_buttons.remove(id);
+-                            }
+-                        }
+-                        PointerAction::PointerMove { .. } | PointerAction::Pause { .. } => {}
+-                    }
+-                }
+-            }
+-            ActionSequence::Wheel { .. } | ActionSequence::None { .. } => {}
+-        }
+-    }
+-}
+-
+-pub async fn perform(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<PerformActionsRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let actions_value = serde_json::to_value(&request.actions)
+-        .unwrap_or(Value::Array(Vec::new()))
+-        .as_array()
+-        .cloned()
+-        .unwrap_or_default();
+-    BridgeExecutor::from_session_id(state.clone(), &session_id)
+-        .await?
+-        .perform_actions(&actions_value)
+-        .await?;
+-
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-    update_action_state(&mut session.action_state, &request.actions);
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn release(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let action_state = {
+-        let sessions = state.sessions.read().await;
+-        sessions.get(&session_id)?.action_state.clone()
+-    };
+-
+-    let pressed_keys = action_state.pressed_keys.into_iter().collect::<Vec<_>>();
+-    let pressed_buttons = action_state
+-        .pressed_buttons
+-        .into_iter()
+-        .flat_map(|(source_id, buttons)| {
+-            buttons
+-                .into_iter()
+-                .map(move |button| json!({ "sourceId": source_id, "button": button }))
+-        })
+-        .collect::<Vec<_>>();
+-
+-    BridgeExecutor::from_session_id(state.clone(), &session_id)
+-        .await?
+-        .release_actions(pressed_keys, pressed_buttons)
+-        .await?;
+-
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-    session.action_state = Default::default();
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/alert.rs b/src/crates/adapters/webdriver/src/server/handlers/alert.rs
+deleted file mode 100644
+index 6e3b94a..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/alert.rs
++++ /dev/null
+@@ -1,67 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct SendAlertTextRequest {
+-    text: String,
+-}
+-
+-pub async fn dismiss(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .dismiss_alert()
+-        .await
+-        .map_err(|_| WebDriverErrorResponse::no_such_alert("No alert is currently open"))?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn accept(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .accept_alert()
+-        .await
+-        .map_err(|_| WebDriverErrorResponse::no_such_alert("No alert is currently open"))?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn get_text(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let text = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_alert_text()
+-        .await
+-        .map_err(|_| WebDriverErrorResponse::no_such_alert("No alert is currently open"))?;
+-    Ok(WebDriverResponse::success(text))
+-}
+-
+-pub async fn send_text(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<SendAlertTextRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .send_alert_text(&request.text)
+-        .await
+-        .map_err(|error| {
+-            if error.error == "javascript error" {
+-                WebDriverErrorResponse::no_such_alert("No prompt is currently open")
+-            } else {
+-                error
+-            }
+-        })?;
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/cookie.rs b/src/crates/adapters/webdriver/src/server/handlers/cookie.rs
+deleted file mode 100644
+index 9463b42..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/cookie.rs
++++ /dev/null
+@@ -1,80 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-
+-use super::get_session;
+-use crate::executor::BridgeExecutor;
+-use crate::platform::Cookie;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct AddCookieRequest {
+-    cookie: Cookie,
+-}
+-
+-pub async fn get_all(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let cookies = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_all_cookies()
+-        .await?;
+-    Ok(WebDriverResponse::success(cookies))
+-}
+-
+-pub async fn get(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, name)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let cookie = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_cookie(&name)
+-        .await?;
+-
+-    let Some(cookie) = cookie else {
+-        return Err(WebDriverErrorResponse::no_such_cookie(format!(
+-            "Cookie '{name}' not found"
+-        )));
+-    };
+-
+-    Ok(WebDriverResponse::success(cookie))
+-}
+-
+-pub async fn add(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<AddCookieRequest>,
+-) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .add_cookie(request.cookie)
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn delete(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, name)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .delete_cookie(&name)
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn delete_all(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .delete_all_cookies()
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/element.rs b/src/crates/adapters/webdriver/src/server/handlers/element.rs
+deleted file mode 100644
+index f584a70..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/element.rs
++++ /dev/null
+@@ -1,272 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::Value;
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct ElementLocationRequest {
+-    using: String,
+-    value: String,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-pub struct ElementValueRequest {
+-    text: Option<String>,
+-    value: Option<Vec<String>>,
+-}
+-
+-pub async fn find(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<ElementLocationRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements(None, &request.using, &request.value)
+-        .await?;
+-    let Some(first) = result.first().cloned() else {
+-        return Err(WebDriverErrorResponse::no_such_element(
+-            "No element matched the selector",
+-        ));
+-    };
+-
+-    Ok(WebDriverResponse::success(first))
+-}
+-
+-pub async fn find_all(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<ElementLocationRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements(None, &request.using, &request.value)
+-        .await?;
+-    Ok(WebDriverResponse::success(Value::Array(result)))
+-}
+-
+-pub async fn get_active(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let active = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_active_element()
+-        .await?;
+-    Ok(WebDriverResponse::success(active))
+-}
+-
+-pub async fn find_from_element(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-    Json(request): Json<ElementLocationRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements(Some(element_id), &request.using, &request.value)
+-        .await?;
+-    let Some(first) = result.first().cloned() else {
+-        return Err(WebDriverErrorResponse::no_such_element(
+-            "No child element matched the selector",
+-        ));
+-    };
+-
+-    Ok(WebDriverResponse::success(first))
+-}
+-
+-pub async fn find_all_from_element(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-    Json(request): Json<ElementLocationRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements(Some(element_id), &request.using, &request.value)
+-        .await?;
+-    Ok(WebDriverResponse::success(Value::Array(result)))
+-}
+-
+-pub async fn is_selected(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .is_element_selected(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn is_displayed(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .is_element_displayed(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_attribute(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id, name)): Path<(String, String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_attribute(&element_id, &name)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_property(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id, name)): Path<(String, String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_property(&element_id, &name)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_css_value(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id, property_name)): Path<(String, String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_css_value(&element_id, &property_name)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_text(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_text(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_computed_role(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_computed_role(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_computed_label(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_computed_label(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_name(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_name(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn get_rect(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_element_rect(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn is_enabled(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .is_element_enabled(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn click(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .click_element_by_id(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn clear(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .clear_element_by_id(&element_id)
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn send_keys(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-    Json(request): Json<ElementValueRequest>,
+-) -> WebDriverResult {
+-    let text = request
+-        .text
+-        .or_else(|| request.value.map(|items| items.join("")))
+-        .unwrap_or_default();
+-
+-    ensure_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .send_keys_to_element(&element_id, &text)
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/frame.rs b/src/crates/adapters/webdriver/src/server/handlers/frame.rs
+deleted file mode 100644
+index 6db96ec..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/frame.rs
++++ /dev/null
+@@ -1,89 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::Value;
+-
+-use super::get_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-use crate::webdriver::FrameId;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct SwitchFrameRequest {
+-    id: Value,
+-}
+-
+-pub async fn switch_to_frame(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<SwitchFrameRequest>,
+-) -> WebDriverResult {
+-    match request.id {
+-        Value::Null => {
+-            let mut sessions = state.sessions.write().await;
+-            let session = sessions.get_mut(&session_id)?;
+-            session.frame_context.clear();
+-            Ok(WebDriverResponse::null())
+-        }
+-        Value::Number(number) => {
+-            let index = number.as_u64().ok_or_else(|| {
+-                WebDriverErrorResponse::invalid_argument("Frame index must be a non-negative integer")
+-            })?;
+-            let index =
+-                u32::try_from(index).map_err(|_| WebDriverErrorResponse::invalid_argument("Frame index too large"))?;
+-
+-            BridgeExecutor::from_session_id(state.clone(), &session_id)
+-                .await?
+-                .validate_frame_index(index)
+-                .await
+-                .map_err(|_| WebDriverErrorResponse::no_such_frame("Unable to locate frame"))?;
+-
+-            let mut sessions = state.sessions.write().await;
+-            let session = sessions.get_mut(&session_id)?;
+-            session.frame_context.push(FrameId::Index(index));
+-            Ok(WebDriverResponse::null())
+-        }
+-        Value::Object(obj) => {
+-            let element_id = obj
+-                .get("element-6066-11e4-a52e-4f735466cecf")
+-                .or_else(|| obj.get("ELEMENT"))
+-                .and_then(Value::as_str)
+-                .ok_or_else(|| {
+-                    WebDriverErrorResponse::invalid_argument(
+-                        "Frame reference must be null, an index, or an element reference",
+-                    )
+-                })?
+-                .to_string();
+-
+-            BridgeExecutor::from_session_id(state.clone(), &session_id)
+-                .await?
+-                .validate_frame_element(&element_id)
+-                .await
+-                .map_err(|_| WebDriverErrorResponse::no_such_frame("Unable to locate frame"))?;
+-
+-            let mut sessions = state.sessions.write().await;
+-            let session = sessions.get_mut(&session_id)?;
+-            session.frame_context.push(FrameId::Element(element_id));
+-            Ok(WebDriverResponse::null())
+-        }
+-        _ => Err(WebDriverErrorResponse::invalid_argument(
+-            "Frame reference must be null, an index, or an element reference",
+-        )),
+-    }
+-}
+-
+-pub async fn switch_to_parent_frame(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-    session.frame_context.pop();
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/logs.rs b/src/crates/adapters/webdriver/src/server/handlers/logs.rs
+deleted file mode 100644
+index 0f1d89a..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/logs.rs
++++ /dev/null
+@@ -1,41 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::json;
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct GetLogsRequest {
+-    #[serde(rename = "type")]
+-    log_type: String,
+-}
+-
+-pub async fn get_types(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    Ok(WebDriverResponse::success(json!(["browser"])))
+-}
+-
+-pub async fn get(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<GetLogsRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    if request.log_type != "browser" {
+-        return Ok(WebDriverResponse::success(json!([])));
+-    }
+-
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .take_logs()
+-        .await?;
+-    Ok(WebDriverResponse::success(result))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/mod.rs b/src/crates/adapters/webdriver/src/server/handlers/mod.rs
+deleted file mode 100644
+index 121c8d0..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/mod.rs
++++ /dev/null
+@@ -1,43 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::extract::State;
+-use serde_json::json;
+-
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse};
+-use crate::server::AppState;
+-use crate::webdriver::Session;
+-
+-pub mod actions;
+-pub mod alert;
+-pub mod cookie;
+-pub mod element;
+-pub mod frame;
+-pub mod logs;
+-pub mod navigation;
+-pub mod print;
+-pub mod screenshot;
+-pub mod script;
+-pub mod session;
+-pub mod shadow;
+-pub mod timeouts;
+-pub mod window;
+-
+-pub async fn status(State(state): State<Arc<AppState>>) -> WebDriverResponse {
+-    WebDriverResponse::success(json!({
+-        "ready": state.initial_window_label().is_some(),
+-        "message": "northhing embedded WebDriver is ready",
+-        "build": {
+-            "version": env!("CARGO_PKG_VERSION"),
+-            "name": "northhing-embedded-webdriver"
+-        }
+-    }))
+-}
+-
+-pub(crate) async fn get_session(state: &Arc<AppState>, session_id: &str) -> Result<Session, WebDriverErrorResponse> {
+-    state.sessions.read().await.get_cloned(session_id)
+-}
+-
+-pub(crate) async fn ensure_session(state: &Arc<AppState>, session_id: &str) -> Result<(), WebDriverErrorResponse> {
+-    let _ = get_session(state, session_id).await?;
+-    Ok(())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/navigation.rs b/src/crates/adapters/webdriver/src/server/handlers/navigation.rs
+deleted file mode 100644
+index f476593..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/navigation.rs
++++ /dev/null
+@@ -1,113 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use tauri::Manager;
+-
+-use super::{ensure_session, get_session};
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct UrlRequest {
+-    url: String,
+-}
+-
+-pub async fn get_url(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let session = get_session(&state, &session_id).await?;
+-    let webview = state.app.get_webview(&session.current_window).ok_or_else(|| {
+-        WebDriverErrorResponse::no_such_window(format!("Webview not found: {}", session.current_window))
+-    })?;
+-
+-    let url = webview
+-        .url()
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to read URL: {error}")))?;
+-
+-    Ok(WebDriverResponse::success(url.to_string()))
+-}
+-
+-pub async fn navigate(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<UrlRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    {
+-        let mut sessions = state.sessions.write().await;
+-        let session = sessions.get_mut(&session_id)?;
+-        session.frame_context.clear();
+-        session.action_state = Default::default();
+-    }
+-
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    executor.navigate_to(&request.url).await?;
+-    executor.wait_for_page_load().await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn back(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    {
+-        let mut sessions = state.sessions.write().await;
+-        let session = sessions.get_mut(&session_id)?;
+-        session.frame_context.clear();
+-        session.action_state = Default::default();
+-    }
+-
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    executor.go_back().await?;
+-    executor.wait_for_page_load().await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn forward(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    {
+-        let mut sessions = state.sessions.write().await;
+-        let session = sessions.get_mut(&session_id)?;
+-        session.frame_context.clear();
+-        session.action_state = Default::default();
+-    }
+-
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    executor.go_forward().await?;
+-    executor.wait_for_page_load().await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn refresh(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    {
+-        let mut sessions = state.sessions.write().await;
+-        let session = sessions.get_mut(&session_id)?;
+-        session.frame_context.clear();
+-        session.action_state = Default::default();
+-    }
+-
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    executor.refresh_page().await?;
+-    executor.wait_for_page_load().await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn get_title(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let title = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_title()
+-        .await?;
+-    Ok(WebDriverResponse::success(title))
+-}
+-
+-pub async fn get_source(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let source = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_source()
+-        .await?;
+-    Ok(WebDriverResponse::success(source))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/print.rs b/src/crates/adapters/webdriver/src/server/handlers/print.rs
+deleted file mode 100644
+index 92ee561..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/print.rs
++++ /dev/null
+@@ -1,21 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-
+-use crate::executor::BridgeExecutor;
+-use crate::platform::PrintOptions;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-pub async fn print(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<PrintOptions>,
+-) -> WebDriverResult {
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    let pdf = executor.print_page(request).await?;
+-    Ok(WebDriverResponse::success(pdf))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/screenshot.rs b/src/crates/adapters/webdriver/src/server/handlers/screenshot.rs
+deleted file mode 100644
+index 1415a56..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/screenshot.rs
++++ /dev/null
+@@ -1,22 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::extract::{Path, State};
+-
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-pub async fn take(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    let screenshot = executor.take_screenshot().await?;
+-    Ok(WebDriverResponse::success(screenshot))
+-}
+-
+-pub async fn take_element(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    let screenshot = executor.take_element_screenshot(&element_id).await?;
+-    Ok(WebDriverResponse::success(screenshot))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/script.rs b/src/crates/adapters/webdriver/src/server/handlers/script.rs
+deleted file mode 100644
+index 72cd88f..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/script.rs
++++ /dev/null
+@@ -1,46 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::Value;
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct ExecuteRequest {
+-    script: String,
+-    #[serde(default)]
+-    args: Vec<Value>,
+-}
+-
+-pub async fn execute_sync(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<ExecuteRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .run_script(&request.script, request.args, false)
+-        .await?;
+-    Ok(WebDriverResponse::success(result))
+-}
+-
+-pub async fn execute_async(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<ExecuteRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let result = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .run_script(&request.script, request.args, true)
+-        .await?;
+-    Ok(WebDriverResponse::success(result))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/session.rs b/src/crates/adapters/webdriver/src/server/handlers/session.rs
+deleted file mode 100644
+index 35a99c4..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/session.rs
++++ /dev/null
+@@ -1,151 +0,0 @@
+-use std::sync::Arc;
+-use std::time::{Duration, Instant};
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::{json, Value};
+-use tauri::Manager;
+-
+-use crate::platform;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct NewSessionRequest {
+-    capabilities: Option<Value>,
+-}
+-
+-async fn wait_for_window(state: &Arc<AppState>, timeout_ms: u64) -> Result<String, WebDriverErrorResponse> {
+-    let start = Instant::now();
+-    let timeout = Duration::from_millis(timeout_ms);
+-    let poll_interval = Duration::from_millis(100);
+-
+-    loop {
+-        if let Some(label) = state.initial_window_label() {
+-            return Ok(label);
+-        }
+-
+-        if start.elapsed() >= timeout {
+-            return Err(WebDriverErrorResponse::session_not_created(format!(
+-                "Webview not available: {}",
+-                state.preferred_label
+-            )));
+-        }
+-
+-        tokio::time::sleep(poll_interval).await;
+-    }
+-}
+-
+-fn parse_user_agent(user_agent: &str) -> (String, String) {
+-    if user_agent.contains("Edg/") {
+-        let version = user_agent
+-            .split("Edg/")
+-            .nth(1)
+-            .and_then(|value| value.split_whitespace().next())
+-            .unwrap_or("unknown");
+-        return ("msedge".to_string(), version.to_string());
+-    }
+-
+-    if user_agent.contains("Android") {
+-        let version = user_agent
+-            .split("Chrome/")
+-            .nth(1)
+-            .and_then(|value| value.split_whitespace().next())
+-            .unwrap_or("unknown");
+-        return ("chrome".to_string(), version.to_string());
+-    }
+-
+-    if user_agent.contains("Linux") || user_agent.contains("X11") {
+-        let version = user_agent
+-            .split("AppleWebKit/")
+-            .nth(1)
+-            .and_then(|value| value.split_whitespace().next())
+-            .unwrap_or("unknown");
+-        return ("WebKitGTK".to_string(), version.to_string());
+-    }
+-
+-    if (user_agent.contains("iPhone") || user_agent.contains("iPad") || user_agent.contains("iPod"))
+-        && user_agent.contains("AppleWebKit/")
+-    {
+-        let version = user_agent
+-            .split("AppleWebKit/")
+-            .nth(1)
+-            .and_then(|value| value.split_whitespace().next())
+-            .and_then(|value| value.split('(').next())
+-            .unwrap_or("unknown");
+-        return ("webkit".to_string(), version.to_string());
+-    }
+-
+-    if user_agent.contains("Macintosh") && user_agent.contains("AppleWebKit/") {
+-        let version = user_agent
+-            .split("AppleWebKit/")
+-            .nth(1)
+-            .and_then(|value| value.split_whitespace().next())
+-            .and_then(|value| value.split('(').next())
+-            .unwrap_or("unknown");
+-        return ("webkit".to_string(), version.to_string());
+-    }
+-
+-    ("webview".to_string(), "unknown".to_string())
+-}
+-
+-async fn detect_browser_info(state: Arc<AppState>, window_label: &str) -> (String, String) {
+-    let Some(webview) = state.app.get_webview(window_label) else {
+-        return ("webview".to_string(), "unknown".to_string());
+-    };
+-
+-    let user_agent = platform::evaluator::evaluate_script(
+-        state,
+-        webview,
+-        5_000,
+-        "() => navigator.userAgent || ''",
+-        &[],
+-        false,
+-        &Value::Array(Vec::new()),
+-    )
+-    .await;
+-
+-    match user_agent {
+-        Ok(Value::String(user_agent)) => parse_user_agent(&user_agent),
+-        _ => ("webview".to_string(), "unknown".to_string()),
+-    }
+-}
+-
+-pub async fn create(State(state): State<Arc<AppState>>, Json(request): Json<NewSessionRequest>) -> WebDriverResult {
+-    let initial_window = wait_for_window(&state, 10_000).await?;
+-    let (browser_name, browser_version) = detect_browser_info(state.clone(), &initial_window).await;
+-
+-    let session = state.sessions.write().await.create(initial_window.clone());
+-
+-    let set_window_rect = cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"));
+-
+-    Ok(WebDriverResponse::success(json!({
+-        "sessionId": session.id,
+-        "capabilities": {
+-            "browserName": browser_name,
+-            "browserVersion": browser_version,
+-            "platformName": std::env::consts::OS,
+-            "acceptInsecureCerts": false,
+-            "pageLoadStrategy": "normal",
+-            "setWindowRect": set_window_rect,
+-            "takesScreenshot": cfg!(any(target_os = "macos", target_os = "windows")),
+-            "printPage": cfg!(any(target_os = "macos", target_os = "windows")),
+-            "timeouts": session.timeouts,
+-            "northhing:embedded": true,
+-            "northhing:webviewLabel": initial_window,
+-            "alwaysMatch": request.capabilities.unwrap_or(Value::Null)
+-        }
+-    })))
+-}
+-
+-pub async fn delete(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let removed = state.sessions.write().await.delete(&session_id);
+-    if !removed {
+-        return Err(WebDriverErrorResponse::invalid_session_id(&session_id));
+-    }
+-
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/shadow.rs b/src/crates/adapters/webdriver/src/server/handlers/shadow.rs
+deleted file mode 100644
+index 38b0935..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/shadow.rs
++++ /dev/null
+@@ -1,73 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::Value;
+-
+-use super::ensure_session;
+-use crate::executor::BridgeExecutor;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct FindShadowRequest {
+-    using: String,
+-    value: String,
+-}
+-
+-pub async fn get_shadow_root(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, element_id)): Path<(String, String)>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_shadow_root(&element_id)
+-        .await
+-        .map_err(|_| WebDriverErrorResponse::no_such_shadow_root("Element does not have a shadow root"))?;
+-
+-    if value.is_null() {
+-        return Err(WebDriverErrorResponse::no_such_shadow_root(
+-            "Element does not have a shadow root",
+-        ));
+-    }
+-
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn find_element_in_shadow(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, shadow_id)): Path<(String, String)>,
+-    Json(request): Json<FindShadowRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let results = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements_from_shadow(&shadow_id, &request.using, &request.value)
+-        .await?;
+-    let value = results.into_iter().next().unwrap_or(Value::Null);
+-
+-    if value.is_null() {
+-        return Err(WebDriverErrorResponse::no_such_element(
+-            "No shadow child element matched the selector",
+-        ));
+-    }
+-
+-    Ok(WebDriverResponse::success(value))
+-}
+-
+-pub async fn find_elements_in_shadow(
+-    State(state): State<Arc<AppState>>,
+-    Path((session_id, shadow_id)): Path<(String, String)>,
+-    Json(request): Json<FindShadowRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    let value = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .find_elements_from_shadow(&shadow_id, &request.using, &request.value)
+-        .await?;
+-    Ok(WebDriverResponse::success(value))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/timeouts.rs b/src/crates/adapters/webdriver/src/server/handlers/timeouts.rs
+deleted file mode 100644
+index 6850934..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/timeouts.rs
++++ /dev/null
+@@ -1,45 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-
+-use super::get_session;
+-use crate::server::response::{WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct TimeoutsRequest {
+-    implicit: Option<u64>,
+-    #[serde(rename = "pageLoad")]
+-    page_load: Option<u64>,
+-    script: Option<u64>,
+-}
+-
+-pub async fn get(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let session = get_session(&state, &session_id).await?;
+-    Ok(WebDriverResponse::success(session.timeouts))
+-}
+-
+-pub async fn set(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<TimeoutsRequest>,
+-) -> WebDriverResult {
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-
+-    if let Some(implicit) = request.implicit {
+-        session.timeouts.implicit = implicit;
+-    }
+-    if let Some(page_load) = request.page_load {
+-        session.timeouts.page_load = page_load;
+-    }
+-    if let Some(script) = request.script {
+-        session.timeouts.script = script;
+-    }
+-
+-    Ok(WebDriverResponse::null())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/handlers/window.rs b/src/crates/adapters/webdriver/src/server/handlers/window.rs
+deleted file mode 100644
+index 073aa53..0000000
+--- a/src/crates/adapters/webdriver/src/server/handlers/window.rs
++++ /dev/null
+@@ -1,168 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    extract::{Path, State},
+-    Json,
+-};
+-use serde::Deserialize;
+-use serde_json::json;
+-use tauri::Manager;
+-
+-use super::{ensure_session, get_session};
+-use crate::executor::BridgeExecutor;
+-use crate::platform::WindowRect;
+-use crate::server::response::{WebDriverErrorResponse, WebDriverResponse, WebDriverResult};
+-use crate::server::AppState;
+-
+-#[derive(Debug, Deserialize)]
+-pub struct SwitchWindowRequest {
+-    handle: String,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-pub struct NewWindowRequest {
+-    // reason: window_type is deserialized for W3C WebDriver spec compat (e.g. "tab"/"window"); today the handler ignores the value and always opens a tab
+-    #[allow(dead_code)]
+-    #[serde(rename = "type", default)]
+-    window_type: Option<String>,
+-}
+-
+-#[derive(Debug, Deserialize)]
+-pub struct WindowRectRequest {
+-    #[serde(default)]
+-    x: Option<i32>,
+-    #[serde(default)]
+-    y: Option<i32>,
+-    #[serde(default)]
+-    width: Option<u32>,
+-    #[serde(default)]
+-    height: Option<u32>,
+-}
+-
+-fn rect_response(rect: WindowRect) -> WebDriverResponse {
+-    WebDriverResponse::success(json!({
+-        "x": rect.x,
+-        "y": rect.y,
+-        "width": rect.width,
+-        "height": rect.height
+-    }))
+-}
+-
+-pub async fn get_window_handle(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let session = get_session(&state, &session_id).await?;
+-    Ok(WebDriverResponse::success(session.current_window))
+-}
+-
+-pub async fn switch_to_window(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<SwitchWindowRequest>,
+-) -> WebDriverResult {
+-    if !state.has_window(&request.handle) {
+-        return Err(WebDriverErrorResponse::no_such_window(format!(
+-            "Unknown window handle: {}",
+-            request.handle
+-        )));
+-    }
+-
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-    session.current_window = request.handle;
+-    session.frame_context.clear();
+-    session.action_state = Default::default();
+-
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn get_window_handles(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    Ok(WebDriverResponse::success(state.window_labels()))
+-}
+-
+-pub async fn close_window(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let current_window = get_session(&state, &session_id).await?.current_window;
+-    let window = state
+-        .app
+-        .get_webview_window(&current_window)
+-        .ok_or_else(|| WebDriverErrorResponse::no_such_window(format!("Window not found: {current_window}")))?;
+-    window
+-        .destroy()
+-        .map_err(|error| WebDriverErrorResponse::unknown_error(format!("Failed to close window: {error}")))?;
+-
+-    let handles = state.window_labels();
+-    let next_handle = handles.first().cloned();
+-    let mut sessions = state.sessions.write().await;
+-    let session = sessions.get_mut(&session_id)?;
+-    if let Some(next_handle) = next_handle {
+-        session.current_window = next_handle;
+-    }
+-    session.frame_context.clear();
+-    session.action_state = Default::default();
+-    Ok(WebDriverResponse::success(handles))
+-}
+-
+-pub async fn new_window(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(_request): Json<NewWindowRequest>,
+-) -> WebDriverResult {
+-    ensure_session(&state, &session_id).await?;
+-    Err(WebDriverErrorResponse::unsupported_operation(
+-        "Creating new windows is not supported in this context",
+-    ))
+-}
+-
+-pub async fn get_window_rect(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let rect = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .get_window_rect()
+-        .await?;
+-    Ok(rect_response(rect))
+-}
+-
+-pub async fn set_window_rect(
+-    State(state): State<Arc<AppState>>,
+-    Path(session_id): Path<String>,
+-    Json(request): Json<WindowRectRequest>,
+-) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let executor = BridgeExecutor::from_session_id(state, &session_id).await?;
+-    let current = executor.get_window_rect().await?;
+-    let rect = executor
+-        .set_window_rect(WindowRect {
+-            x: request.x.unwrap_or(current.x),
+-            y: request.y.unwrap_or(current.y),
+-            width: request.width.unwrap_or(current.width),
+-            height: request.height.unwrap_or(current.height),
+-        })
+-        .await?;
+-    Ok(rect_response(rect))
+-}
+-
+-pub async fn maximize(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let rect = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .maximize_window()
+-        .await?;
+-    Ok(rect_response(rect))
+-}
+-
+-pub async fn minimize(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .minimize_window()
+-        .await?;
+-    Ok(WebDriverResponse::null())
+-}
+-
+-pub async fn fullscreen(State(state): State<Arc<AppState>>, Path(session_id): Path<String>) -> WebDriverResult {
+-    let _session = get_session(&state, &session_id).await?;
+-    let rect = BridgeExecutor::from_session_id(state, &session_id)
+-        .await?
+-        .fullscreen_window()
+-        .await?;
+-    Ok(rect_response(rect))
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/mod.rs b/src/crates/adapters/webdriver/src/server/mod.rs
+deleted file mode 100644
+index 796d09a..0000000
+--- a/src/crates/adapters/webdriver/src/server/mod.rs
++++ /dev/null
+@@ -1,78 +0,0 @@
+-use std::collections::HashMap;
+-use std::net::SocketAddr;
+-use std::sync::atomic::{AtomicU64, Ordering};
+-use std::sync::{Arc, Mutex};
+-
+-use tauri::AppHandle;
+-use tauri::Manager;
+-use tokio::sync::{oneshot, RwLock};
+-
+-use crate::runtime::BridgeResponse;
+-use crate::webdriver::SessionManager;
+-
+-pub mod handlers;
+-pub mod response;
+-pub mod router;
+-
+-pub struct AppState {
+-    pub app: AppHandle,
+-    pub preferred_label: String,
+-    port: u16,
+-    pub sessions: RwLock<SessionManager>,
+-    pub(crate) pending_requests: Mutex<HashMap<String, oneshot::Sender<BridgeResponse>>>,
+-    request_counter: AtomicU64,
+-}
+-
+-impl AppState {
+-    pub fn new(app: AppHandle, preferred_label: String, port: u16) -> Self {
+-        Self {
+-            app,
+-            preferred_label,
+-            port,
+-            sessions: RwLock::new(SessionManager::new()),
+-            pending_requests: Mutex::new(HashMap::new()),
+-            request_counter: AtomicU64::new(1),
+-        }
+-    }
+-
+-    pub fn next_request_id(&self) -> String {
+-        format!(
+-            "req-{}-{}",
+-            self.request_counter.fetch_add(1, Ordering::SeqCst),
+-            std::process::id()
+-        )
+-    }
+-
+-    pub fn initial_window_label(&self) -> Option<String> {
+-        if self.app.get_webview(&self.preferred_label).is_some() {
+-            return Some(self.preferred_label.clone());
+-        }
+-
+-        self.app.webview_windows().keys().next().cloned()
+-    }
+-
+-    pub fn has_window(&self, label: &str) -> bool {
+-        self.app.get_webview(label).is_some()
+-    }
+-
+-    pub fn window_labels(&self) -> Vec<String> {
+-        self.app.webview_windows().keys().cloned().collect()
+-    }
+-}
+-
+-pub fn start(state: Arc<AppState>) {
+-    tokio::spawn(async move {
+-        if let Err(error) = serve(state).await {
+-            tracing::error!("Embedded WebDriver failed to start: {}", error);
+-        }
+-    });
+-}
+-
+-async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
+-    let router = router::create_router(state.clone());
+-    let addr = SocketAddr::from(([127, 0, 0, 1], state.port));
+-    let listener = tokio::net::TcpListener::bind(addr).await?;
+-    tracing::info!("Embedded WebDriver listening on http://{}", addr);
+-    axum::serve(listener, router).await?;
+-    Ok(())
+-}
+diff --git a/src/crates/adapters/webdriver/src/server/response.rs b/src/crates/adapters/webdriver/src/server/response.rs
+deleted file mode 100644
+index f29b27c..0000000
+--- a/src/crates/adapters/webdriver/src/server/response.rs
++++ /dev/null
+@@ -1,153 +0,0 @@
+-use axum::{
+-    http::StatusCode,
+-    response::{IntoResponse, Response},
+-    Json,
+-};
+-use serde::Serialize;
+-use serde_json::{json, Value};
+-
+-#[derive(Debug, Serialize)]
+-pub struct WebDriverResponse {
+-    pub value: Value,
+-}
+-
+-impl WebDriverResponse {
+-    pub fn success<T: Serialize>(value: T) -> Self {
+-        Self {
+-            value: serde_json::to_value(value).unwrap_or(Value::Null),
+-        }
+-    }
+-
+-    pub fn null() -> Self {
+-        Self { value: Value::Null }
+-    }
+-}
+-
+-impl IntoResponse for WebDriverResponse {
+-    fn into_response(self) -> Response {
+-        (
+-            StatusCode::OK,
+-            [("Content-Type", "application/json; charset=utf-8")],
+-            Json(self),
+-        )
+-            .into_response()
+-    }
+-}
+-
+-#[derive(Debug)]
+-pub struct WebDriverErrorResponse {
+-    pub status: StatusCode,
+-    pub error: String,
+-    pub message: String,
+-    pub stacktrace: Option<String>,
+-}
+-
+-impl WebDriverErrorResponse {
+-    pub fn new(
+-        status: StatusCode,
+-        error: impl Into<String>,
+-        message: impl Into<String>,
+-        stacktrace: Option<String>,
+-    ) -> Self {
+-        Self {
+-            status,
+-            error: error.into(),
+-            message: message.into(),
+-            stacktrace,
+-        }
+-    }
+-
+-    pub fn invalid_session_id(session_id: &str) -> Self {
+-        Self::new(
+-            StatusCode::NOT_FOUND,
+-            "invalid session id",
+-            format!("Unknown session: {session_id}"),
+-            None,
+-        )
+-    }
+-
+-    pub fn no_such_window(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such window", message, None)
+-    }
+-
+-    pub fn no_such_element(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such element", message, None)
+-    }
+-
+-    pub fn stale_element_reference(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "stale element reference", message, None)
+-    }
+-
+-    pub fn no_such_frame(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such frame", message, None)
+-    }
+-
+-    pub fn session_not_created(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::SERVICE_UNAVAILABLE, "session not created", message, None)
+-    }
+-
+-    pub fn javascript_error(message: impl Into<String>, stacktrace: Option<String>) -> Self {
+-        Self::new(
+-            StatusCode::INTERNAL_SERVER_ERROR,
+-            "javascript error",
+-            message,
+-            stacktrace,
+-        )
+-    }
+-
+-    pub fn unknown_error(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, "unknown error", message, None)
+-    }
+-
+-    pub fn invalid_argument(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::BAD_REQUEST, "invalid argument", message, None)
+-    }
+-
+-    pub fn invalid_selector(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::BAD_REQUEST, "invalid selector", message, None)
+-    }
+-
+-    pub fn no_such_cookie(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such cookie", message, None)
+-    }
+-
+-    pub fn no_such_alert(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such alert", message, None)
+-    }
+-
+-    pub fn no_such_shadow_root(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::NOT_FOUND, "no such shadow root", message, None)
+-    }
+-
+-    pub fn unsupported_operation(message: impl Into<String>) -> Self {
+-        Self::new(
+-            StatusCode::INTERNAL_SERVER_ERROR,
+-            "unsupported operation",
+-            message,
+-            None,
+-        )
+-    }
+-
+-    pub fn timeout(message: impl Into<String>) -> Self {
+-        Self::new(StatusCode::REQUEST_TIMEOUT, "timeout", message, None)
+-    }
+-}
+-
+-impl IntoResponse for WebDriverErrorResponse {
+-    fn into_response(self) -> Response {
+-        (
+-            self.status,
+-            [("Content-Type", "application/json; charset=utf-8")],
+-            Json(json!({
+-                "value": {
+-                    "error": self.error,
+-                    "message": self.message,
+-                    "stacktrace": self.stacktrace.unwrap_or_default()
+-                }
+-            })),
+-        )
+-            .into_response()
+-    }
+-}
+-
+-pub type WebDriverResult = Result<WebDriverResponse, WebDriverErrorResponse>;
+diff --git a/src/crates/adapters/webdriver/src/server/router.rs b/src/crates/adapters/webdriver/src/server/router.rs
+deleted file mode 100644
+index 2cb87ef..0000000
+--- a/src/crates/adapters/webdriver/src/server/router.rs
++++ /dev/null
+@@ -1,181 +0,0 @@
+-use std::sync::Arc;
+-
+-use axum::{
+-    routing::{delete, get, post},
+-    Router,
+-};
+-
+-use super::handlers;
+-use super::AppState;
+-
+-#[allow(clippy::too_many_lines)]
+-pub fn create_router(state: Arc<AppState>) -> Router {
+-    Router::new()
+-        .route("/status", get(handlers::status))
+-        .route("/session", post(handlers::session::create))
+-        .route("/session/{session_id}", delete(handlers::session::delete))
+-        .route(
+-            "/session/{session_id}/timeouts",
+-            get(handlers::timeouts::get).post(handlers::timeouts::set),
+-        )
+-        .route(
+-            "/session/{session_id}/url",
+-            get(handlers::navigation::get_url).post(handlers::navigation::navigate),
+-        )
+-        .route("/session/{session_id}/back", post(handlers::navigation::back))
+-        .route("/session/{session_id}/forward", post(handlers::navigation::forward))
+-        .route("/session/{session_id}/refresh", post(handlers::navigation::refresh))
+-        .route("/session/{session_id}/title", get(handlers::navigation::get_title))
+-        .route("/session/{session_id}/source", get(handlers::navigation::get_source))
+-        .route(
+-            "/session/{session_id}/window",
+-            get(handlers::window::get_window_handle)
+-                .post(handlers::window::switch_to_window)
+-                .delete(handlers::window::close_window),
+-        )
+-        .route("/session/{session_id}/window/new", post(handlers::window::new_window))
+-        .route(
+-            "/session/{session_id}/window/handles",
+-            get(handlers::window::get_window_handles),
+-        )
+-        .route(
+-            "/session/{session_id}/window/rect",
+-            get(handlers::window::get_window_rect).post(handlers::window::set_window_rect),
+-        )
+-        .route(
+-            "/session/{session_id}/window/maximize",
+-            post(handlers::window::maximize),
+-        )
+-        .route(
+-            "/session/{session_id}/window/minimize",
+-            post(handlers::window::minimize),
+-        )
+-        .route(
+-            "/session/{session_id}/window/fullscreen",
+-            post(handlers::window::fullscreen),
+-        )
+-        .route("/session/{session_id}/frame", post(handlers::frame::switch_to_frame))
+-        .route(
+-            "/session/{session_id}/frame/parent",
+-            post(handlers::frame::switch_to_parent_frame),
+-        )
+-        .route("/session/{session_id}/alert/dismiss", post(handlers::alert::dismiss))
+-        .route("/session/{session_id}/alert/accept", post(handlers::alert::accept))
+-        .route(
+-            "/session/{session_id}/alert/text",
+-            get(handlers::alert::get_text).post(handlers::alert::send_text),
+-        )
+-        .route("/session/{session_id}/element", post(handlers::element::find))
+-        .route("/session/{session_id}/elements", post(handlers::element::find_all))
+-        .route(
+-            "/session/{session_id}/element/active",
+-            get(handlers::element::get_active),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/element",
+-            post(handlers::element::find_from_element),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/elements",
+-            post(handlers::element::find_all_from_element),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/selected",
+-            get(handlers::element::is_selected),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/displayed",
+-            get(handlers::element::is_displayed),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/attribute/{name}",
+-            get(handlers::element::get_attribute),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/property/{name}",
+-            get(handlers::element::get_property),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/css/{property_name}",
+-            get(handlers::element::get_css_value),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/text",
+-            get(handlers::element::get_text),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/name",
+-            get(handlers::element::get_name),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/rect",
+-            get(handlers::element::get_rect),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/enabled",
+-            get(handlers::element::is_enabled),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/computedrole",
+-            get(handlers::element::get_computed_role),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/computedlabel",
+-            get(handlers::element::get_computed_label),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/click",
+-            post(handlers::element::click),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/clear",
+-            post(handlers::element::clear),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/value",
+-            post(handlers::element::send_keys),
+-        )
+-        .route(
+-            "/session/{session_id}/execute/sync",
+-            post(handlers::script::execute_sync),
+-        )
+-        .route(
+-            "/session/{session_id}/execute/async",
+-            post(handlers::script::execute_async),
+-        )
+-        .route("/session/{session_id}/print", post(handlers::print::print))
+-        .route(
+-            "/session/{session_id}/actions",
+-            post(handlers::actions::perform).delete(handlers::actions::release),
+-        )
+-        .route("/session/{session_id}/screenshot", get(handlers::screenshot::take))
+-        .route(
+-            "/session/{session_id}/element/{element_id}/screenshot",
+-            get(handlers::screenshot::take_element),
+-        )
+-        .route(
+-            "/session/{session_id}/element/{element_id}/shadow",
+-            get(handlers::shadow::get_shadow_root),
+-        )
+-        .route(
+-            "/session/{session_id}/shadow/{shadow_id}/element",
+-            post(handlers::shadow::find_element_in_shadow),
+-        )
+-        .route(
+-            "/session/{session_id}/shadow/{shadow_id}/elements",
+-            post(handlers::shadow::find_elements_in_shadow),
+-        )
+-        .route("/session/{session_id}/se/log/types", get(handlers::logs::get_types))
+-        .route(
+-            "/session/{session_id}/cookie",
+-            get(handlers::cookie::get_all)
+-                .post(handlers::cookie::add)
+-                .delete(handlers::cookie::delete_all),
+-        )
+-        .route(
+-            "/session/{session_id}/cookie/{name}",
+-            get(handlers::cookie::get).delete(handlers::cookie::delete),
+-        )
+-        .route("/session/{session_id}/se/log", post(handlers::logs::get))
+-        .with_state(state)
+-}
+diff --git a/src/crates/adapters/webdriver/src/webdriver/element.rs b/src/crates/adapters/webdriver/src/webdriver/element.rs
+deleted file mode 100644
+index 28c29f3..0000000
+--- a/src/crates/adapters/webdriver/src/webdriver/element.rs
++++ /dev/null
+@@ -1,44 +0,0 @@
+-use serde::{Deserialize, Serialize};
+-use serde_json::{json, Value};
+-
+-pub const ELEMENT_KEY: &str = "element-6066-11e4-a52e-4f735466cecf";
+-pub const LEGACY_ELEMENT_KEY: &str = "ELEMENT";
+-pub const SHADOW_KEY: &str = "shadow-6066-11e4-a52e-4f735466cecf";
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ElementRef {
+-    #[serde(rename = "element-6066-11e4-a52e-4f735466cecf")]
+-    pub id: String,
+-    #[serde(rename = "ELEMENT")]
+-    pub legacy_id: String,
+-}
+-
+-impl ElementRef {
+-    pub fn new(id: impl Into<String>) -> Self {
+-        let id = id.into();
+-        Self {
+-            id: id.clone(),
+-            legacy_id: id,
+-        }
+-    }
+-
+-    pub fn into_value(self) -> Value {
+-        json!(self)
+-    }
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ShadowRootRef {
+-    #[serde(rename = "shadow-6066-11e4-a52e-4f735466cecf")]
+-    pub id: String,
+-}
+-
+-impl ShadowRootRef {
+-    pub fn new(id: impl Into<String>) -> Self {
+-        Self { id: id.into() }
+-    }
+-
+-    pub fn into_value(self) -> Value {
+-        json!(self)
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/webdriver/locator.rs b/src/crates/adapters/webdriver/src/webdriver/locator.rs
+deleted file mode 100644
+index d0cfe4b..0000000
+--- a/src/crates/adapters/webdriver/src/webdriver/locator.rs
++++ /dev/null
+@@ -1,48 +0,0 @@
+-use crate::server::response::WebDriverErrorResponse;
+-
+-#[derive(Debug, Clone, Copy)]
+-pub enum LocatorStrategy {
+-    CssSelector,
+-    LinkText,
+-    PartialLinkText,
+-    TagName,
+-    XPath,
+-    Id,
+-    Name,
+-    ClassName,
+-}
+-
+-impl LocatorStrategy {
+-    pub fn as_str(self) -> &'static str {
+-        match self {
+-            Self::CssSelector => "css selector",
+-            Self::LinkText => "link text",
+-            Self::PartialLinkText => "partial link text",
+-            Self::TagName => "tag name",
+-            Self::XPath => "xpath",
+-            Self::Id => "id",
+-            Self::Name => "name",
+-            Self::ClassName => "class name",
+-        }
+-    }
+-}
+-
+-impl TryFrom<&str> for LocatorStrategy {
+-    type Error = WebDriverErrorResponse;
+-
+-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+-        match value {
+-            "css selector" => Ok(Self::CssSelector),
+-            "link text" => Ok(Self::LinkText),
+-            "partial link text" => Ok(Self::PartialLinkText),
+-            "tag name" => Ok(Self::TagName),
+-            "xpath" => Ok(Self::XPath),
+-            "id" => Ok(Self::Id),
+-            "name" => Ok(Self::Name),
+-            "class name" => Ok(Self::ClassName),
+-            other => Err(WebDriverErrorResponse::invalid_selector(format!(
+-                "Unsupported locator strategy: {other}"
+-            ))),
+-        }
+-    }
+-}
+diff --git a/src/crates/adapters/webdriver/src/webdriver/mod.rs b/src/crates/adapters/webdriver/src/webdriver/mod.rs
+deleted file mode 100644
+index 440fe94..0000000
+--- a/src/crates/adapters/webdriver/src/webdriver/mod.rs
++++ /dev/null
+@@ -1,7 +0,0 @@
+-pub mod element;
+-pub mod locator;
+-pub mod session;
+-
+-pub use element::{ElementRef, ShadowRootRef, ELEMENT_KEY, LEGACY_ELEMENT_KEY, SHADOW_KEY};
+-pub use locator::LocatorStrategy;
+-pub use session::{ActionState, FrameId, Session, SessionManager, Timeouts};
+diff --git a/src/crates/adapters/webdriver/src/webdriver/session.rs b/src/crates/adapters/webdriver/src/webdriver/session.rs
+deleted file mode 100644
+index b1ebaf2..0000000
+--- a/src/crates/adapters/webdriver/src/webdriver/session.rs
++++ /dev/null
+@@ -1,97 +0,0 @@
+-use std::collections::{HashMap, HashSet};
+-
+-use serde::Serialize;
+-use uuid::Uuid;
+-
+-use crate::server::response::WebDriverErrorResponse;
+-
+-#[derive(Debug, Clone, Serialize)]
+-#[allow(clippy::struct_field_names)]
+-pub struct Timeouts {
+-    pub implicit: u64,
+-    #[serde(rename = "pageLoad")]
+-    pub page_load: u64,
+-    pub script: u64,
+-}
+-
+-impl Default for Timeouts {
+-    fn default() -> Self {
+-        Self {
+-            implicit: 0,
+-            page_load: 300_000,
+-            script: 30_000,
+-        }
+-    }
+-}
+-
+-#[derive(Debug, Clone)]
+-pub enum FrameId {
+-    Index(u32),
+-    Element(String),
+-}
+-
+-#[derive(Debug, Clone, Default)]
+-pub struct ActionState {
+-    pub pressed_keys: HashSet<String>,
+-    pub pressed_buttons: HashMap<String, HashSet<u32>>,
+-}
+-
+-#[derive(Debug, Clone)]
+-pub struct Session {
+-    pub id: String,
+-    pub current_window: String,
+-    pub timeouts: Timeouts,
+-    pub frame_context: Vec<FrameId>,
+-    pub action_state: ActionState,
+-}
+-
+-impl Session {
+-    pub fn new(initial_window: String) -> Self {
+-        Self {
+-            id: Uuid::new_v4().to_string(),
+-            current_window: initial_window,
+-            timeouts: Timeouts::default(),
+-            frame_context: Vec::new(),
+-            action_state: ActionState::default(),
+-        }
+-    }
+-}
+-
+-#[derive(Debug, Default)]
+-pub struct SessionManager {
+-    sessions: HashMap<String, Session>,
+-}
+-
+-impl SessionManager {
+-    pub fn new() -> Self {
+-        Self {
+-            sessions: HashMap::new(),
+-        }
+-    }
+-
+-    pub fn create(&mut self, initial_window: String) -> Session {
+-        let session = Session::new(initial_window);
+-        self.sessions.insert(session.id.clone(), session.clone());
+-        session
+-    }
+-
+-    pub fn get(&self, id: &str) -> Result<&Session, WebDriverErrorResponse> {
+-        self.sessions
+-            .get(id)
+-            .ok_or_else(|| WebDriverErrorResponse::invalid_session_id(id))
+-    }
+-
+-    pub fn get_cloned(&self, id: &str) -> Result<Session, WebDriverErrorResponse> {
+-        self.get(id).cloned()
+-    }
+-
+-    pub fn get_mut(&mut self, id: &str) -> Result<&mut Session, WebDriverErrorResponse> {
+-        self.sessions
+-            .get_mut(id)
+-            .ok_or_else(|| WebDriverErrorResponse::invalid_session_id(id))
+-    }
+-
+-    pub fn delete(&mut self, id: &str) -> bool {
+-        self.sessions.remove(id).is_some()
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/cancellation.rs b/src/crates/assembly/core/src/agentic/insights/cancellation.rs
+deleted file mode 100644
+index e67ca4b..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/cancellation.rs
++++ /dev/null
+@@ -1,49 +0,0 @@
+-use std::sync::Arc;
+-use tokio::sync::Mutex;
+-use tokio_util::sync::CancellationToken;
+-use tracing::{debug, info, warn};
+-
+-type Slot = Arc<Mutex<Option<CancellationToken>>>;
+-
+-static SLOT: std::sync::OnceLock<Slot> = std::sync::OnceLock::new();
+-
+-fn get_slot() -> Slot {
+-    SLOT.get_or_init(|| Arc::new(Mutex::new(None))).clone()
+-}
+-
+-/// Registers a new insights generation task, cancelling any previous one.
+-pub async fn register() -> CancellationToken {
+-    let token = CancellationToken::new();
+-    let arc = get_slot();
+-    let mut slot = arc.lock().await;
+-    if let Some(old) = slot.take() {
+-        old.cancel();
+-        debug!("Cancelled previous insights generation");
+-    }
+-    *slot = Some(token.clone());
+-    token
+-}
+-
+-/// Cancels the current insights generation task.
+-pub async fn cancel() -> Result<(), String> {
+-    let arc = get_slot();
+-    let mut slot = arc.lock().await;
+-    match slot.take() {
+-        Some(token) => {
+-            token.cancel();
+-            info!("Insights generation cancelled by user");
+-            Ok(())
+-        }
+-        None => {
+-            warn!("No insights generation in progress to cancel");
+-            Err("No insights generation in progress".into())
+-        }
+-    }
+-}
+-
+-/// Unregisters the current task (call on completion).
+-pub async fn unregister() {
+-    let arc = get_slot();
+-    let mut slot = arc.lock().await;
+-    *slot = None;
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/coll_stats.rs b/src/crates/assembly/core/src/agentic/insights/coll_stats.rs
+deleted file mode 100644
+index e2a3647..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/coll_stats.rs
++++ /dev/null
+@@ -1,268 +0,0 @@
+-use crate::agentic::core::{Message, MessageContent, MessageRole};
+-use crate::agentic::insights::types::BaseStats;
+-use crate::service::session::DialogTurnData;
+-use chrono::{DateTime, Utc};
+-use std::collections::{HashMap, HashSet};
+-use std::path::Path;
+-use std::time::{SystemTime, UNIX_EPOCH};
+-
+-const ACTIVITY_GAP_THRESHOLD_SECS: u64 = 30 * 60;
+-
+-pub(super) fn accumulate_stats(
+-    base_stats: &mut BaseStats,
+-    session: &crate::agentic::core::Session,
+-    messages: &[Message],
+-) {
+-    base_stats.total_messages += messages.len() as u32;
+-    base_stats.total_turns += session.dialog_turn_ids.len() as u32;
+-
+-    let active_secs = compute_active_duration(messages);
+-    base_stats.total_duration_minutes += active_secs / 60;
+-
+-    *base_stats.agent_types.entry(session.agent_type.clone()).or_insert(0) += 1;
+-
+-    let mut last_assistant_time: Option<SystemTime> = None;
+-    for msg in messages {
+-        if msg.role == MessageRole::User {
+-            if let Ok(dur) = msg.timestamp.duration_since(UNIX_EPOCH) {
+-                let dt = DateTime::<Utc>::from(UNIX_EPOCH + dur);
+-                let hour = dt.format("%H").to_string().parse::<u32>().unwrap_or(0);
+-                *base_stats.hour_counts.entry(hour).or_insert(0) += 1;
+-            }
+-        }
+-
+-        match &msg.content {
+-            MessageContent::Mixed { tool_calls, .. } => {
+-                for tc in tool_calls {
+-                    *base_stats.tool_usage.entry(tc.tool_name.clone()).or_insert(0) += 1;
+-                }
+-            }
+-            MessageContent::ToolResult {
+-                tool_name, is_error, ..
+-            } if *is_error => {
+-                *base_stats.tool_errors.entry(tool_name.clone()).or_insert(0) += 1;
+-            }
+-            _ => {}
+-        }
+-
+-        match msg.role {
+-            MessageRole::Assistant => {
+-                last_assistant_time = Some(msg.timestamp);
+-            }
+-            MessageRole::User => {
+-                if let Some(prev) = last_assistant_time {
+-                    if let Ok(duration) = msg.timestamp.duration_since(prev) {
+-                        let secs = duration.as_secs();
+-                        if (2..=ACTIVITY_GAP_THRESHOLD_SECS).contains(&secs) {
+-                            base_stats.response_times_raw.push(secs as f64);
+-                        }
+-                    }
+-                }
+-            }
+-            _ => {}
+-        }
+-    }
+-}
+-
+-/// Compute active usage duration by summing adjacent message gaps,
+-/// capping each gap at `ACTIVITY_GAP_THRESHOLD_SECS`.
+-pub(super) fn compute_active_duration(messages: &[Message]) -> u64 {
+-    if messages.len() < 2 {
+-        return 0;
+-    }
+-    let mut total_secs: u64 = 0;
+-    for pair in messages.windows(2) {
+-        if let Ok(gap) = pair[1].timestamp.duration_since(pair[0].timestamp) {
+-            let gap_secs = gap.as_secs();
+-            if gap_secs <= ACTIVITY_GAP_THRESHOLD_SECS {
+-                total_secs += gap_secs;
+-            }
+-        }
+-    }
+-    total_secs
+-}
+-
+-pub(super) fn bucket_response_times(raw: &[f64]) -> HashMap<String, u32> {
+-    let buckets: &[(&str, f64, f64)] = &[
+-        ("2-10s", 2.0, 10.0),
+-        ("10-30s", 10.0, 30.0),
+-        ("30s-1m", 30.0, 60.0),
+-        ("1-2m", 60.0, 120.0),
+-        ("2-5m", 120.0, 300.0),
+-        ("5-15m", 300.0, 900.0),
+-        (">15m", 900.0, f64::MAX),
+-    ];
+-
+-    let mut result: HashMap<String, u32> = HashMap::new();
+-    for &val in raw {
+-        for &(label, lo, hi) in buckets {
+-            if val >= lo && val < hi {
+-                *result.entry(label.to_string()).or_insert(0) += 1;
+-                break;
+-            }
+-        }
+-    }
+-    result
+-}
+-
+-pub(super) fn compute_response_time_stats(raw: &[f64]) -> (f64, f64) {
+-    if raw.is_empty() {
+-        return (0.0, 0.0);
+-    }
+-
+-    let avg = raw.iter().sum::<f64>() / raw.len() as f64;
+-
+-    let mut sorted = raw.to_vec();
+-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+-    let median = if sorted.len().is_multiple_of(2) {
+-        let mid = sorted.len() / 2;
+-        (sorted[mid - 1] + sorted[mid]) / 2.0
+-    } else {
+-        sorted[sorted.len() / 2]
+-    };
+-
+-    (median, avg)
+-}
+-
+-pub(super) fn compute_days_covered(range: &crate::agentic::insights::types::DateRange) -> u32 {
+-    let parse =
+-        |s: &str| -> Option<DateTime<Utc>> { DateTime::parse_from_rfc3339(s).ok().map(|d| d.with_timezone(&Utc)) };
+-
+-    match (parse(&range.start), parse(&range.end)) {
+-        (Some(start), Some(end)) => {
+-            let diff = end.signed_duration_since(start);
+-            let days = diff.num_days().unsigned_abs() as u32;
+-            days.max(1)
+-        }
+-        _ => 1,
+-    }
+-}
+-
+-/// Extract code change statistics from persistent turn data.
+-///
+-/// For Edit tool results: uses `old_end_line - start_line + 1` as lines removed
+-/// and `new_end_line - start_line + 1` as lines added, falling back to counting
+-/// newlines in `old_string`/`new_string`.
+-///
+-/// For Write tool: uses `lines_written`, falling back to counting newlines in
+-/// the tool input for older persisted sessions.
+-///
+-/// Per session, each distinct file path touched by Edit/Write contributes once to `languages_by_files`
+-/// according to [`language_name_for_path`].
+-pub(super) fn accumulate_code_stats_from_turns(base_stats: &mut BaseStats, turns: &[DialogTurnData]) {
+-    let mut modified_files: HashSet<String> = HashSet::new();
+-
+-    for turn in turns {
+-        for round in &turn.model_rounds {
+-            for ti in &round.tool_items {
+-                let Some(ref result_data) = ti.tool_result else {
+-                    continue;
+-                };
+-                if !result_data.success {
+-                    continue;
+-                }
+-
+-                match ti.tool_name.as_str() {
+-                    "Edit" => {
+-                        let result = &result_data.result;
+-
+-                        if let Some(fp) = result.get("file_path").and_then(|v| v.as_str()) {
+-                            modified_files.insert(fp.to_string());
+-                        }
+-
+-                        let (lines_removed, lines_added) = if let (Some(start), Some(old_end), Some(new_end)) = (
+-                            result.get("start_line").and_then(|v| v.as_u64()),
+-                            result.get("old_end_line").and_then(|v| v.as_u64()),
+-                            result.get("new_end_line").and_then(|v| v.as_u64()),
+-                        ) {
+-                            let removed = old_end.saturating_sub(start) + 1;
+-                            let added = new_end.saturating_sub(start) + 1;
+-                            (removed as usize, added as usize)
+-                        } else {
+-                            let old_lines = result
+-                                .get("old_string")
+-                                .and_then(|v| v.as_str())
+-                                .map(|s| s.lines().count().max(1))
+-                                .unwrap_or(0);
+-                            let new_lines = result
+-                                .get("new_string")
+-                                .and_then(|v| v.as_str())
+-                                .map(|s| s.lines().count().max(1))
+-                                .unwrap_or(0);
+-                            (old_lines, new_lines)
+-                        };
+-
+-                        base_stats.total_lines_removed += lines_removed;
+-                        base_stats.total_lines_added += lines_added;
+-                    }
+-                    "Write" => {
+-                        let result = &result_data.result;
+-
+-                        if let Some(fp) = result.get("file_path").and_then(|v| v.as_str()) {
+-                            modified_files.insert(fp.to_string());
+-                        }
+-
+-                        if let Some(lines_written) = result.get("lines_written").and_then(|v| v.as_u64()) {
+-                            base_stats.total_lines_added += lines_written as usize;
+-                        } else if let Some(content) = ti.tool_call.input.get("content").and_then(|v| v.as_str()) {
+-                            base_stats.total_lines_added += content.lines().count().max(1);
+-                        }
+-                    }
+-                    _ => {}
+-                }
+-            }
+-        }
+-    }
+-
+-    for path in &modified_files {
+-        if let Some(lang) = language_name_for_path(path) {
+-            *base_stats.languages_by_files.entry(lang.to_string()).or_insert(0) += 1;
+-        }
+-    }
+-
+-    base_stats.total_files_modified += modified_files.len();
+-}
+-
+-/// Infer a language label from a file path (extension or well-known filename).
+-pub(super) fn language_name_for_path(path: &str) -> Option<&'static str> {
+-    let p = Path::new(path);
+-    if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+-        match name.to_ascii_lowercase().as_str() {
+-            "dockerfile" | "containerfile" => return Some("Dockerfile"),
+-            "makefile" | "gnumakefile" => return Some("Makefile"),
+-            "cargo.toml" | "cargo.lock" => return Some("Rust"),
+-            _ => {}
+-        }
+-    }
+-    let ext = p.extension()?.to_str()?.to_ascii_lowercase();
+-    Some(match ext.as_str() {
+-        "ts" | "tsx" => "TypeScript",
+-        "js" | "jsx" | "mjs" | "cjs" => "JavaScript",
+-        "py" | "pyi" | "pyw" => "Python",
+-        "rs" => "Rust",
+-        "go" => "Go",
+-        "java" => "Java",
+-        "kt" | "kts" => "Kotlin",
+-        "swift" => "Swift",
+-        "cs" => "C#",
+-        "cpp" | "cc" | "cxx" | "hpp" => "C/C++",
+-        "c" | "h" => "C/C++",
+-        "rb" => "Ruby",
+-        "php" => "PHP",
+-        "vue" => "Vue",
+-        "svelte" => "Svelte",
+-        "md" | "mdx" => "Markdown",
+-        "json" | "jsonc" => "JSON",
+-        "yaml" | "yml" => "YAML",
+-        "toml" => "TOML",
+-        "xml" => "XML",
+-        "html" | "htm" => "HTML",
+-        "css" | "scss" | "sass" | "less" => "CSS",
+-        "sh" | "bash" | "zsh" | "fish" => "Shell",
+-        "ps1" => "PowerShell",
+-        "sql" => "SQL",
+-        "gradle" => "Gradle",
+-        "properties" => "Properties",
+-        _ => return None,
+-    })
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/coll_transcript.rs b/src/crates/assembly/core/src/agentic/insights/coll_transcript.rs
+deleted file mode 100644
+index 7b669f7..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/coll_transcript.rs
++++ /dev/null
+@@ -1,271 +0,0 @@
+-use crate::agentic::core::{Message, MessageContent, MessageRole, ToolCall, ToolResult};
+-use crate::agentic::insights::types::SessionTranscript;
+-use crate::agentic::persistence::PersistenceManager;
+-use crate::service::session::{DialogTurnData, TurnStatus};
+-use crate::util::errors::NortHingResult;
+-use chrono::{DateTime, Utc};
+-use std::path::Path;
+-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+-
+-use super::coll_stats::compute_active_duration;
+-
+-const MAX_TRANSCRIPT_CHARS: usize = 16000;
+-const MAX_TEXT_PER_MESSAGE: usize = 800;
+-const TAIL_RESERVE_CHARS: usize = 4000;
+-
+-/// Load messages for a session, trying sources in priority order:
+-/// 1. Latest context snapshot (most complete, includes compression)
+-/// 2. Rebuild from pre-loaded turn data
+-pub(super) async fn load_session_messages_with_turns(
+-    pm: &PersistenceManager,
+-    workspace_path: &Path,
+-    session_id: &str,
+-    turns: &[DialogTurnData],
+-) -> NortHingResult<Vec<Message>> {
+-    if let Ok(Some((_turn_index, messages))) = pm.load_latest_turn_context_snapshot(workspace_path, session_id).await {
+-        if !messages.is_empty() {
+-            return Ok(messages);
+-        }
+-    }
+-
+-    if !turns.is_empty() {
+-        return Ok(rebuild_messages_from_turns(turns));
+-    }
+-
+-    Ok(vec![])
+-}
+-
+-pub(super) fn build_transcript(
+-    session_id: &str,
+-    session: &crate::agentic::core::Session,
+-    messages: &[Message],
+-) -> SessionTranscript {
+-    let mut all_parts: Vec<String> = Vec::new();
+-    let mut tool_names: Vec<String> = Vec::new();
+-    let mut has_errors = false;
+-
+-    for msg in messages {
+-        match &msg.content {
+-            MessageContent::Text(text) => {
+-                let role_tag = match msg.role {
+-                    MessageRole::User => "[User]",
+-                    MessageRole::Assistant => "[Assistant]",
+-                    MessageRole::System => continue,
+-                    MessageRole::Tool => continue,
+-                };
+-                let truncated = truncate_text(text, MAX_TEXT_PER_MESSAGE);
+-                all_parts.push(format!("{}: {}", role_tag, truncated));
+-            }
+-            MessageContent::Mixed { text, tool_calls, .. } => {
+-                if !text.is_empty() {
+-                    let truncated = truncate_text(text, MAX_TEXT_PER_MESSAGE);
+-                    all_parts.push(format!("[Assistant]: {}", truncated));
+-                }
+-                for tc in tool_calls {
+-                    if !tool_names.contains(&tc.tool_name) {
+-                        tool_names.push(tc.tool_name.clone());
+-                    }
+-                    all_parts.push(format!("[Tool: {}]", tc.tool_name));
+-                }
+-            }
+-            MessageContent::ToolResult {
+-                tool_name, is_error, ..
+-            } => {
+-                if *is_error {
+-                    has_errors = true;
+-                    all_parts.push(format!("[Tool Error: {}]", tool_name));
+-                }
+-            }
+-            MessageContent::Multimodal { text, .. } => {
+-                if !text.is_empty() {
+-                    let truncated = truncate_text(text, MAX_TEXT_PER_MESSAGE);
+-                    all_parts.push(format!("[User]: {} [+images]", truncated));
+-                }
+-            }
+-        }
+-    }
+-
+-    let transcript = smart_truncate_parts(&all_parts, MAX_TRANSCRIPT_CHARS, TAIL_RESERVE_CHARS);
+-
+-    let duration_minutes = compute_active_duration(messages) / 60;
+-
+-    let created_at = system_time_to_iso(session.created_at);
+-
+-    SessionTranscript {
+-        session_id: session_id.to_string(),
+-        agent_type: session.agent_type.clone(),
+-        session_name: session.session_name.clone(),
+-        workspace_path: None,
+-        last_activity_unix_secs: 0,
+-        duration_minutes,
+-        message_count: messages.len() as u32,
+-        turn_count: session.dialog_turn_ids.len() as u32,
+-        created_at,
+-        transcript,
+-        tool_names,
+-        has_errors,
+-    }
+-}
+-
+-/// Rebuild `Vec<Message>` from turn data, including call and result information
+-/// needed by `build_transcript` and `accumulate_stats`.
+-/// Preserves timestamps from turn data and marks cancelled turns with `[Cancelled]`.
+-pub(super) fn rebuild_messages_from_turns(turns: &[DialogTurnData]) -> Vec<Message> {
+-    let mut messages = Vec::new();
+-
+-    for turn in turns {
+-        if !turn.kind.is_model_visible() {
+-            continue;
+-        }
+-
+-        let user_ts = UNIX_EPOCH + Duration::from_millis(turn.start_time);
+-        let mut user_msg = Message::user(turn.user_message.content.clone());
+-        user_msg.timestamp = user_ts;
+-        messages.push(user_msg);
+-
+-        for (round_idx, round) in turn.model_rounds.iter().enumerate() {
+-            let assistant_text = round
+-                .text_items
+-                .iter()
+-                .map(|item| item.content.clone())
+-                .filter(|c| !c.trim().is_empty())
+-                .collect::<Vec<_>>()
+-                .join("\n\n");
+-
+-            let tool_calls: Vec<ToolCall> = round
+-                .tool_items
+-                .iter()
+-                .map(|ti| ToolCall {
+-                    tool_id: ti.tool_call.id.clone(),
+-                    tool_name: ti.tool_name.clone(),
+-                    arguments: ti.tool_call.input.clone(),
+-                    raw_arguments: None,
+-                    is_error: false,
+-                    recovered_from_truncation: false,
+-                })
+-                .collect();
+-
+-            let round_ts = if let Some(end_time) = turn.end_time {
+-                let start = turn.start_time;
+-                let total_rounds = turn.model_rounds.len().max(1) as u64;
+-                let step = (end_time.saturating_sub(start)) / (total_rounds + 1);
+-                UNIX_EPOCH + Duration::from_millis(start + step * (round_idx as u64 + 1))
+-            } else {
+-                UNIX_EPOCH + Duration::from_millis(turn.start_time + (round_idx as u64 + 1) * 1000)
+-            };
+-
+-            if !tool_calls.is_empty() {
+-                let mut msg = Message::assistant_with_tools(assistant_text.clone(), tool_calls);
+-                msg.timestamp = round_ts;
+-                messages.push(msg);
+-            } else if !assistant_text.trim().is_empty() {
+-                let mut msg = Message::assistant(assistant_text);
+-                msg.timestamp = round_ts;
+-                messages.push(msg);
+-            }
+-
+-            for ti in &round.tool_items {
+-                if let Some(result_data) = &ti.tool_result {
+-                    let mut msg = Message::tool_result(ToolResult {
+-                        tool_id: ti.tool_call.id.clone(),
+-                        tool_name: ti.tool_name.clone(),
+-                        result: result_data.result.clone(),
+-                        result_for_assistant: None,
+-                        is_error: !result_data.success,
+-                        duration_ms: result_data.duration_ms,
+-                        image_attachments: None,
+-                    });
+-                    msg.timestamp = round_ts;
+-                    messages.push(msg);
+-                }
+-            }
+-        }
+-
+-        if turn.status == TurnStatus::Cancelled {
+-            let cancel_ts = turn
+-                .end_time
+-                .map(|t| UNIX_EPOCH + Duration::from_millis(t))
+-                .unwrap_or(user_ts);
+-            let mut cancel_msg = Message::assistant("[Cancelled by user]".to_string());
+-            cancel_msg.timestamp = cancel_ts;
+-            messages.push(cancel_msg);
+-        }
+-    }
+-
+-    messages
+-}
+-
+-/// Keep head + tail of transcript parts, inserting an omission marker in the middle
+-/// when total length exceeds `max_chars`. Preserves the beginning (context/goals)
+-/// and end (final outcome) of a session.
+-pub(super) fn smart_truncate_parts(parts: &[String], max_chars: usize, tail_reserve: usize) -> String {
+-    let total: usize = parts.iter().map(|p| p.len() + 1).sum();
+-    if total <= max_chars {
+-        return parts.join("\n");
+-    }
+-
+-    let head_budget = max_chars.saturating_sub(tail_reserve);
+-    let mut head_parts = Vec::new();
+-    let mut head_used = 0;
+-    let mut head_end_idx = 0;
+-
+-    for (i, part) in parts.iter().enumerate() {
+-        let cost = part.len() + 1;
+-        if head_used + cost > head_budget {
+-            break;
+-        }
+-        head_parts.push(part.as_str());
+-        head_used += cost;
+-        head_end_idx = i + 1;
+-    }
+-
+-    let mut tail_parts = Vec::new();
+-    let mut tail_used = 0;
+-    let mut tail_start_idx = parts.len();
+-
+-    for (i, part) in parts.iter().enumerate().rev() {
+-        if i < head_end_idx {
+-            break;
+-        }
+-        let cost = part.len() + 1;
+-        if tail_used + cost > tail_reserve {
+-            break;
+-        }
+-        tail_parts.push(part.as_str());
+-        tail_used += cost;
+-        tail_start_idx = i;
+-    }
+-    tail_parts.reverse();
+-
+-    let omitted = tail_start_idx.saturating_sub(head_end_idx);
+-
+-    let mut result = head_parts.join("\n");
+-    if omitted > 0 {
+-        result.push_str(&format!("\n\n[... {} messages omitted ...]\n\n", omitted));
+-    }
+-    result.push_str(&tail_parts.join("\n"));
+-    result
+-}
+-
+-fn truncate_text(text: &str, max_len: usize) -> String {
+-    let trimmed = text.trim();
+-    if trimmed.len() <= max_len {
+-        trimmed.to_string()
+-    } else {
+-        let mut end = max_len.min(trimmed.len());
+-        while end > 0 && !trimmed.is_char_boundary(end) {
+-            end -= 1;
+-        }
+-        format!("{}...", &trimmed[..end])
+-    }
+-}
+-
+-fn system_time_to_iso(t: SystemTime) -> String {
+-    match t.duration_since(UNIX_EPOCH) {
+-        Ok(dur) => {
+-            let dt = DateTime::<Utc>::from(UNIX_EPOCH + dur);
+-            dt.to_rfc3339()
+-        }
+-        Err(_) => "unknown".to_string(),
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/collector.rs b/src/crates/assembly/core/src/agentic/insights/collector.rs
+deleted file mode 100644
+index 454b075..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/collector.rs
++++ /dev/null
+@@ -1,206 +0,0 @@
+-use crate::agentic::insights::session_paths::collect_effective_session_storage_roots;
+-use crate::agentic::insights::types::*;
+-use crate::agentic::persistence::PersistenceManager;
+-use crate::infrastructure::path_manager_arc;
+-use crate::util::errors::NortHingResult;
+-use std::collections::{HashMap, HashSet};
+-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+-use tracing::debug;
+-
+-use super::coll_stats::{
+-    accumulate_code_stats_from_turns, accumulate_stats, bucket_response_times, compute_days_covered,
+-    compute_response_time_stats,
+-};
+-use super::coll_transcript::{build_transcript, load_session_messages_with_turns};
+-
+-pub struct InsightsCollector;
+-
+-impl InsightsCollector {
+-    /// Stage 1: Collect session data from PersistenceManager across all workspaces
+-    pub async fn collect(days: u32) -> NortHingResult<(BaseStats, Vec<SessionTranscript>)> {
+-        let path_manager = path_manager_arc();
+-        let pm = PersistenceManager::new(path_manager)?;
+-        let cutoff = SystemTime::now() - Duration::from_secs(days as u64 * 86400);
+-
+-        let workspace_paths = collect_effective_session_storage_roots().await;
+-
+-        let mut transcripts = Vec::new();
+-        let mut base_stats = BaseStats::default();
+-        let mut seen_session_ids = HashSet::new();
+-
+-        for ws_path in &workspace_paths {
+-            let sessions = match pm.list_sessions(ws_path).await {
+-                Ok(s) => s,
+-                Err(e) => {
+-                    tracing::warn!("Skipping workspace {}: {}", ws_path.display(), e);
+-                    continue;
+-                }
+-            };
+-
+-            for summary in &sessions {
+-                if summary.last_activity_at < cutoff {
+-                    continue;
+-                }
+-
+-                if !seen_session_ids.insert(summary.session_id.clone()) {
+-                    continue;
+-                }
+-
+-                let session = match pm.load_session(ws_path, &summary.session_id).await {
+-                    Ok(s) => s,
+-                    Err(e) => {
+-                        tracing::warn!("Skipping session {}: load failed: {}", summary.session_id, e);
+-                        continue;
+-                    }
+-                };
+-
+-                let turns = pm
+-                    .load_session_turns(ws_path, &summary.session_id)
+-                    .await
+-                    .unwrap_or_default();
+-
+-                let messages = match load_session_messages_with_turns(&pm, ws_path, &summary.session_id, &turns).await {
+-                    Ok(m) if !m.is_empty() => m,
+-                    Ok(_) => {
+-                        debug!("Skipping session {}: no messages found", summary.session_id);
+-                        continue;
+-                    }
+-                    Err(e) => {
+-                        tracing::warn!("Skipping session {}: load messages failed: {}", summary.session_id, e);
+-                        continue;
+-                    }
+-                };
+-
+-                let mut transcript = build_transcript(&summary.session_id, &session, &messages);
+-                transcript.workspace_path = Some(ws_path.to_string_lossy().to_string());
+-                transcript.last_activity_unix_secs = summary
+-                    .last_activity_at
+-                    .duration_since(UNIX_EPOCH)
+-                    .unwrap_or_default()
+-                    .as_secs();
+-                accumulate_stats(&mut base_stats, &session, &messages);
+-                accumulate_code_stats_from_turns(&mut base_stats, &turns);
+-                transcripts.push(transcript);
+-            }
+-        }
+-
+-        base_stats.total_sessions = transcripts.len() as u32;
+-
+-        if let Some(earliest) = transcripts.iter().min_by_key(|t| &t.created_at) {
+-            base_stats.first_session_at = Some(earliest.created_at.clone());
+-        }
+-        if let Some(latest) = transcripts.iter().max_by_key(|t| &t.created_at) {
+-            base_stats.last_session_at = Some(latest.created_at.clone());
+-        }
+-
+-        // Compute response time buckets from raw intervals
+-        if !base_stats.response_times_raw.is_empty() {
+-            base_stats.response_time_buckets = bucket_response_times(&base_stats.response_times_raw);
+-            let (median, avg) = compute_response_time_stats(&base_stats.response_times_raw);
+-            base_stats.median_response_time_secs = Some(median);
+-            base_stats.avg_response_time_secs = Some(avg);
+-        }
+-
+-        debug!(
+-            "Collected {} sessions with {} total messages",
+-            transcripts.len(),
+-            base_stats.total_messages
+-        );
+-
+-        Ok((base_stats, transcripts))
+-    }
+-
+-    /// Stage 3: Aggregate facets into InsightsAggregate
+-    pub fn aggregate(base_stats: &BaseStats, facets: &[SessionFacet]) -> InsightsAggregate {
+-        let mut goals: HashMap<String, u32> = HashMap::new();
+-        let mut outcomes: HashMap<String, u32> = HashMap::new();
+-        let mut satisfaction: HashMap<String, u32> = HashMap::new();
+-        let mut friction: HashMap<String, u32> = HashMap::new();
+-        let mut success: HashMap<String, u32> = HashMap::new();
+-        let mut session_types: HashMap<String, u32> = HashMap::new();
+-        let mut session_summaries = Vec::new();
+-        let mut friction_details = Vec::new();
+-        let mut user_instructions = Vec::new();
+-
+-        for facet in facets {
+-            for (k, v) in &facet.goal_categories {
+-                *goals.entry(k.clone()).or_insert(0) += v;
+-            }
+-            *outcomes.entry(facet.outcome.clone()).or_insert(0) += 1;
+-            for (k, v) in &facet.user_satisfaction_counts {
+-                *satisfaction.entry(k.clone()).or_insert(0) += v;
+-            }
+-            for (k, v) in &facet.friction_counts {
+-                *friction.entry(k.clone()).or_insert(0) += v;
+-            }
+-            if !facet.primary_success.is_empty() && facet.primary_success != "none" {
+-                *success.entry(facet.primary_success.clone()).or_insert(0) += 1;
+-            }
+-            *session_types.entry(facet.session_type.clone()).or_insert(0) += 1;
+-
+-            if !facet.brief_summary.is_empty() {
+-                session_summaries.push(facet.brief_summary.clone());
+-            }
+-            if !facet.friction_detail.is_empty() {
+-                friction_details.push(facet.friction_detail.clone());
+-            }
+-            for instr in &facet.user_instructions {
+-                if !user_instructions.contains(instr) {
+-                    user_instructions.push(instr.clone());
+-                }
+-            }
+-        }
+-
+-        let mut top_tools: Vec<(String, u32)> = base_stats.tool_usage.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-        top_tools.sort_by_key(|b| std::cmp::Reverse(b.1));
+-        top_tools.truncate(15);
+-
+-        let mut top_goals: Vec<(String, u32)> = goals.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-        top_goals.sort_by_key(|b| std::cmp::Reverse(b.1));
+-        top_goals.truncate(10);
+-
+-        let hours = base_stats.total_duration_minutes as f32 / 60.0;
+-        let date_range = DateRange {
+-            start: base_stats.first_session_at.clone().unwrap_or_default(),
+-            end: base_stats.last_session_at.clone().unwrap_or_default(),
+-        };
+-
+-        let days_covered = compute_days_covered(&date_range);
+-        let msgs_per_day = if days_covered > 0 {
+-            base_stats.total_messages as f32 / days_covered as f32
+-        } else {
+-            base_stats.total_messages as f32
+-        };
+-
+-        let languages = base_stats.languages_by_files.clone();
+-
+-        InsightsAggregate {
+-            sessions: base_stats.total_sessions,
+-            analyzed: facets.len() as u32,
+-            date_range,
+-            messages: base_stats.total_messages,
+-            hours,
+-            top_tools,
+-            top_goals,
+-            outcomes,
+-            satisfaction,
+-            friction,
+-            success,
+-            languages,
+-            session_summaries,
+-            friction_details,
+-            user_instructions,
+-            session_types,
+-            tool_errors: base_stats.tool_errors.clone(),
+-            hour_counts: base_stats.hour_counts.clone(),
+-            agent_types: base_stats.agent_types.clone(),
+-            msgs_per_day,
+-            response_time_buckets: base_stats.response_time_buckets.clone(),
+-            median_response_time_secs: base_stats.median_response_time_secs,
+-            avg_response_time_secs: base_stats.avg_response_time_secs,
+-            total_lines_added: base_stats.total_lines_added,
+-            total_lines_removed: base_stats.total_lines_removed,
+-            total_files_modified: base_stats.total_files_modified,
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/facet_cache.rs b/src/crates/assembly/core/src/agentic/insights/facet_cache.rs
+deleted file mode 100644
+index 4666533..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/facet_cache.rs
++++ /dev/null
+@@ -1,73 +0,0 @@
+-//! Disk cache for per-session facet extraction (fingerprint-invalidated).
+-
+-use crate::agentic::insights::types::{SessionFacet, SessionTranscript};
+-use crate::infrastructure::path_manager_arc;
+-use crate::util::errors::NortHingResult;
+-use serde::{Deserialize, Serialize};
+-use sha2::{Digest, Sha256};
+-use tokio::fs;
+-use tracing::debug;
+-
+-const CACHE_SUBDIR: &str = "insights-facet-cache";
+-
+-#[derive(Serialize, Deserialize)]
+-struct CachedFacetFile {
+-    fingerprint: String,
+-    facet: SessionFacet,
+-}
+-
+-pub fn compute_fingerprint(transcript: &SessionTranscript) -> String {
+-    let mut hasher = Sha256::new();
+-    hasher.update(transcript.session_id.as_bytes());
+-    hasher.update(b"|");
+-    hasher.update(transcript.last_activity_unix_secs.to_string().as_bytes());
+-    hasher.update(b"|");
+-    hasher.update(transcript.turn_count.to_string().as_bytes());
+-    hasher.update(b"|");
+-    hasher.update(transcript.transcript.as_bytes());
+-    format!("{:x}", hasher.finalize())
+-}
+-
+-fn cache_file_path(session_id: &str) -> NortHingResult<std::path::PathBuf> {
+-    let pm = path_manager_arc();
+-    let safe = session_id
+-        .chars()
+-        .map(|c| if "/\\:*?\"<>|".contains(c) { '_' } else { c })
+-        .collect::<String>();
+-    Ok(pm.user_data_dir().join(CACHE_SUBDIR).join(format!("{safe}.json")))
+-}
+-
+-pub async fn try_load_cached_facet(transcript: &SessionTranscript) -> NortHingResult<Option<SessionFacet>> {
+-    let path = match cache_file_path(&transcript.session_id) {
+-        Ok(p) => p,
+-        Err(_) => return Ok(None),
+-    };
+-    let json = match fs::read_to_string(&path).await {
+-        Ok(s) => s,
+-        Err(_) => return Ok(None),
+-    };
+-    let parsed: CachedFacetFile = match serde_json::from_str(&json) {
+-        Ok(v) => v,
+-        Err(_) => return Ok(None),
+-    };
+-    let want = compute_fingerprint(transcript);
+-    if parsed.fingerprint != want {
+-        return Ok(None);
+-    }
+-    Ok(Some(parsed.facet))
+-}
+-
+-pub async fn save_cached_facet(transcript: &SessionTranscript, facet: &SessionFacet) -> NortHingResult<()> {
+-    let path = cache_file_path(&transcript.session_id)?;
+-    if let Some(parent) = path.parent() {
+-        fs::create_dir_all(parent).await?;
+-    }
+-    let payload = CachedFacetFile {
+-        fingerprint: compute_fingerprint(transcript),
+-        facet: facet.clone(),
+-    };
+-    let json = serde_json::to_string_pretty(&payload)?;
+-    fs::write(&path, json).await?;
+-    debug!("Saved facet cache {}", path.display());
+-    Ok(())
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/html/format.rs b/src/crates/assembly/core/src/agentic/insights/html/format.rs
+deleted file mode 100644
+index dea147b..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/html/format.rs
++++ /dev/null
+@@ -1,97 +0,0 @@
+-pub fn html_escape(s: &str) -> String {
+-    s.replace('&', "&amp;")
+-        .replace('<', "&lt;")
+-        .replace('>', "&gt;")
+-        .replace('"', "&quot;")
+-        .replace('\'', "&#39;")
+-}
+-
+-/// Convert simple markdown inline formatting to HTML.
+-/// Handles **bold** and *italic* after html_escape.
+-pub fn markdown_inline(s: &str) -> String {
+-    let escaped = html_escape(s);
+-    let mut result = String::with_capacity(escaped.len() + 64);
+-    let chars: Vec<char> = escaped.chars().collect();
+-    let len = chars.len();
+-    let mut i = 0;
+-
+-    while i < len {
+-        if i + 1 < len && chars[i] == '*' && chars[i + 1] == '*' {
+-            if let Some(end) = find_closing_double_star(&chars, i + 2) {
+-                result.push_str("<strong>");
+-                for &c in &chars[i + 2..end] {
+-                    result.push(c);
+-                }
+-                result.push_str("</strong>");
+-                i = end + 2;
+-                continue;
+-            }
+-        }
+-        if chars[i] == '*' && (i + 1 < len && chars[i + 1] != '*') {
+-            if let Some(end) = find_closing_single_star(&chars, i + 1) {
+-                result.push_str("<em>");
+-                for &c in &chars[i + 1..end] {
+-                    result.push(c);
+-                }
+-                result.push_str("</em>");
+-                i = end + 1;
+-                continue;
+-            }
+-        }
+-        result.push(chars[i]);
+-        i += 1;
+-    }
+-
+-    result
+-}
+-
+-fn find_closing_double_star(chars: &[char], start: usize) -> Option<usize> {
+-    let len = chars.len();
+-    let mut i = start;
+-    while i + 1 < len {
+-        if chars[i] == '*' && chars[i + 1] == '*' && i > start {
+-            return Some(i);
+-        }
+-        i += 1;
+-    }
+-    None
+-}
+-
+-fn find_closing_single_star(chars: &[char], start: usize) -> Option<usize> {
+-    let len = chars.len();
+-    let mut i = start;
+-    while i < len {
+-        if chars[i] == '*' && (i + 1 >= len || chars[i + 1] != '*') && i > start {
+-            return Some(i);
+-        }
+-        i += 1;
+-    }
+-    None
+-}
+-
+-pub fn js_escape(s: &str) -> String {
+-    s.replace('\\', "\\\\")
+-        .replace('\'', "\\'")
+-        .replace('\n', "\\n")
+-        .replace('\r', "")
+-}
+-
+-pub fn format_duration_short(secs: f64) -> String {
+-    if secs < 60.0 {
+-        format!("{:.0}s", secs)
+-    } else if secs < 3600.0 {
+-        format!("{:.1}m", secs / 60.0)
+-    } else {
+-        format!("{:.1}h", secs / 3600.0)
+-    }
+-}
+-
+-pub fn format_number(n: usize) -> String {
+-    if n >= 1_000_000 {
+-        format!("{:.1}M", n as f64 / 1_000_000.0)
+-    } else if n >= 1_000 {
+-        format!("{:.1}K", n as f64 / 1_000.0)
+-    } else {
+-        n.to_string()
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/html/mod.rs b/src/crates/assembly/core/src/agentic/insights/html/mod.rs
+deleted file mode 100644
+index c963ddc..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/html/mod.rs
++++ /dev/null
+@@ -1,7 +0,0 @@
+-pub mod format;
+-pub mod render;
+-pub mod section;
+-pub mod theme;
+-
+-pub use render::generate_html;
+-pub use theme::HtmlLabels;
+diff --git a/src/crates/assembly/core/src/agentic/insights/html/render.rs b/src/crates/assembly/core/src/agentic/insights/html/render.rs
+deleted file mode 100644
+index 63fb2ac..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/html/render.rs
++++ /dev/null
+@@ -1,503 +0,0 @@
+-use super::format::{format_duration_short, format_number, html_escape, markdown_inline};
+-use super::section::{
+-    render_big_wins, render_friction_categories, render_fun_ending, render_horizon, render_interaction_style,
+-    render_suggestions,
+-};
+-use super::theme::{HtmlLabels, CSS_STYLES, JS_SCRIPT};
+-use crate::agentic::insights::types::*;
+-
+-pub fn generate_html(report: &InsightsReport, locale: &str) -> String {
+-    let l = HtmlLabels::for_locale(locale);
+-
+-    let subtitle = l
+-        .subtitle_template
+-        .replace("{msgs}", &report.total_messages.to_string())
+-        .replace("{sessions}", &report.total_sessions.to_string())
+-        .replace("{analyzed}", &report.analyzed_sessions.to_string())
+-        .replace(
+-            "{start}",
+-            &report.date_range.start[..10.min(report.date_range.start.len())],
+-        )
+-        .replace("{end}", &report.date_range.end[..10.min(report.date_range.end.len())]);
+-
+-    let at_a_glance = render_at_a_glance(&report.at_a_glance, &l);
+-    let nav_toc = render_nav_toc(&l);
+-    let stats_row = render_stats_row(report, &l);
+-    let project_areas = render_project_areas(&report.project_areas, &l);
+-    let basic_charts = render_basic_charts(&report.stats, &l);
+-    let interaction_style = render_interaction_style(&report.interaction_style, &l);
+-    let usage_charts = render_usage_charts(&report.stats, &l);
+-    let wins_intro_html = if report.wins_intro.is_empty() {
+-        String::new()
+-    } else {
+-        format!(
+-            r#"<p class="section-intro">{}</p>"#,
+-            markdown_inline(&report.wins_intro)
+-        )
+-    };
+-    let big_wins = render_big_wins(&report.big_wins, &l);
+-    let outcome_charts = render_outcome_charts(&report.stats, &l);
+-    let friction_intro_html = if report.friction_intro.is_empty() {
+-        String::new()
+-    } else {
+-        format!(
+-            r#"<p class="section-intro">{}</p>"#,
+-            markdown_inline(&report.friction_intro)
+-        )
+-    };
+-    let friction = render_friction_categories(&report.friction_categories, &l);
+-    let friction_charts = render_friction_charts(&report.stats, &l);
+-    let suggestions = render_suggestions(&report.suggestions, &l);
+-    let horizon = render_horizon(&report.horizon_intro, &report.on_the_horizon, &l);
+-    let fun_ending = render_fun_ending(&report.fun_ending);
+-
+-    let js_with_labels = JS_SCRIPT
+-        .replace("__COPIED__", l.copied)
+-        .replace("__COPY_ALL_CHECKED__", l.copy_all_checked);
+-
+-    format!(
+-        r#"<!DOCTYPE html>
+-<html>
+-<head>
+-  <meta charset="utf-8">
+-  <title>{page_title}</title>
+-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+-  <style>
+-{CSS}
+-  </style>
+-</head>
+-<body>
+-  <div class="container">
+-    <h1>{page_title}</h1>
+-    <p class="subtitle">{subtitle}</p>
+-
+-    {at_a_glance}
+-    {nav_toc}
+-    {stats_row}
+-
+-    <h2 id="section-work">{section_work}</h2>
+-    {project_areas}
+-
+-    {basic_charts}
+-
+-    <h2 id="section-usage">{section_usage}</h2>
+-    {interaction_style}
+-
+-    {usage_charts}
+-
+-    <h2 id="section-wins">{section_wins}</h2>
+-    {wins_intro}
+-    {big_wins}
+-
+-    {outcome_charts}
+-
+-    <h2 id="section-friction">{section_friction}</h2>
+-    {friction_intro}
+-    {friction}
+-
+-    {friction_charts}
+-
+-    <h2 id="section-suggestions">{section_suggestions}</h2>
+-    {suggestions}
+-
+-    <h2 id="section-horizon">{section_horizon}</h2>
+-    {horizon}
+-
+-    {fun_ending}
+-  </div>
+-  <script>
+-{JS}
+-  </script>
+-</body>
+-</html>"#,
+-        CSS = CSS_STYLES,
+-        JS = js_with_labels,
+-        page_title = html_escape(l.title),
+-        subtitle = html_escape(&subtitle),
+-        section_work = html_escape(l.section_work),
+-        section_usage = html_escape(l.section_usage),
+-        section_wins = html_escape(l.section_wins),
+-        section_friction = html_escape(l.section_friction),
+-        section_suggestions = html_escape(l.section_suggestions),
+-        section_horizon = html_escape(l.section_horizon),
+-        at_a_glance = at_a_glance,
+-        nav_toc = nav_toc,
+-        stats_row = stats_row,
+-        project_areas = project_areas,
+-        basic_charts = basic_charts,
+-        interaction_style = interaction_style,
+-        usage_charts = usage_charts,
+-        wins_intro = wins_intro_html,
+-        big_wins = big_wins,
+-        outcome_charts = outcome_charts,
+-        friction_intro = friction_intro_html,
+-        friction = friction,
+-        friction_charts = friction_charts,
+-        suggestions = suggestions,
+-        horizon = horizon,
+-        fun_ending = fun_ending,
+-    )
+-}
+-
+-fn render_at_a_glance(aag: &AtAGlance, l: &HtmlLabels) -> String {
+-    format!(
+-        r##"<div class="at-a-glance">
+-  <div class="glance-title">{title}</div>
+-  <div class="glance-sections">
+-    <div class="glance-section"><strong>{working}</strong> {working_text} <a href="#section-wins" class="see-more">{nav_wins} &rarr;</a></div>
+-    <div class="glance-section"><strong>{hindering}</strong> {hindering_text} <a href="#section-friction" class="see-more">{nav_friction} &rarr;</a></div>
+-    <div class="glance-section"><strong>{quick}</strong> {quick_text} <a href="#section-suggestions" class="see-more">{nav_suggestions} &rarr;</a></div>
+-    <div class="glance-section"><strong>{ahead}</strong> {ahead_text} <a href="#section-horizon" class="see-more">{nav_horizon} &rarr;</a></div>
+-  </div>
+-</div>"##,
+-        title = html_escape(l.at_a_glance),
+-        working = html_escape(l.whats_working),
+-        working_text = markdown_inline(&aag.whats_working),
+-        hindering = html_escape(l.whats_hindering),
+-        hindering_text = markdown_inline(&aag.whats_hindering),
+-        quick = html_escape(l.quick_wins),
+-        quick_text = markdown_inline(&aag.quick_wins),
+-        ahead = html_escape(l.looking_ahead),
+-        ahead_text = markdown_inline(&aag.looking_ahead),
+-        nav_wins = html_escape(l.section_wins),
+-        nav_friction = html_escape(l.section_friction),
+-        nav_suggestions = html_escape(l.section_suggestions),
+-        nav_horizon = html_escape(l.section_horizon),
+-    )
+-}
+-
+-fn render_nav_toc(l: &HtmlLabels) -> String {
+-    format!(
+-        r##"<nav class="nav-toc">
+-  <a href="#section-work">{}</a>
+-  <a href="#section-usage">{}</a>
+-  <a href="#section-wins">{}</a>
+-  <a href="#section-friction">{}</a>
+-  <a href="#section-suggestions">{}</a>
+-  <a href="#section-horizon">{}</a>
+-</nav>"##,
+-        html_escape(l.nav_work),
+-        html_escape(l.nav_usage),
+-        html_escape(l.nav_wins),
+-        html_escape(l.nav_friction),
+-        html_escape(l.nav_suggestions),
+-        html_escape(l.nav_horizon),
+-    )
+-}
+-
+-fn render_stats_row(report: &InsightsReport, l: &HtmlLabels) -> String {
+-    let response_time_stats = match (
+-        report.stats.median_response_time_secs,
+-        report.stats.avg_response_time_secs,
+-    ) {
+-        (Some(median), Some(avg)) => format!(
+-            r#"  <div class="stat"><div class="stat-value">{}</div><div class="stat-label">{}</div></div>
+-  <div class="stat"><div class="stat-value">{}</div><div class="stat-label">{}</div></div>"#,
+-            format_duration_short(median),
+-            html_escape(l.stat_median_response),
+-            format_duration_short(avg),
+-            html_escape(l.stat_avg_response),
+-        ),
+-        _ => String::new(),
+-    };
+-
+-    let code_stats = if report.stats.total_lines_added > 0 || report.stats.total_lines_removed > 0 {
+-        format!(
+-            r#"  <div class="stat"><div class="stat-value">+{}/-{}</div><div class="stat-label">{}</div></div>
+-  <div class="stat"><div class="stat-value">{}</div><div class="stat-label">{}</div></div>"#,
+-            format_number(report.stats.total_lines_added),
+-            format_number(report.stats.total_lines_removed),
+-            html_escape(l.stat_lines),
+-            format_number(report.stats.total_files_modified),
+-            html_escape(l.stat_files),
+-        )
+-    } else {
+-        String::new()
+-    };
+-
+-    format!(
+-        r#"<div class="stats-row">
+-{code_stats}
+-  <div class="stat"><div class="stat-value">{sessions}</div><div class="stat-label">{l_sessions}</div></div>
+-  <div class="stat"><div class="stat-value">{messages}</div><div class="stat-label">{l_messages}</div></div>
+-  <div class="stat"><div class="stat-value">{hours:.1}</div><div class="stat-label">{l_hours}</div></div>
+-  <div class="stat"><div class="stat-value">{days}</div><div class="stat-label">{l_days}</div></div>
+-  <div class="stat"><div class="stat-value">{mpd:.1}</div><div class="stat-label">{l_mpd}</div></div>
+-{response_time_stats}
+-</div>"#,
+-        sessions = report.total_sessions,
+-        messages = report.total_messages,
+-        hours = report.stats.total_hours,
+-        days = report.days_covered,
+-        mpd = report.stats.msgs_per_day,
+-        l_sessions = html_escape(l.stat_sessions),
+-        l_messages = html_escape(l.stat_messages),
+-        l_hours = html_escape(l.stat_hours),
+-        l_days = html_escape(l.stat_days),
+-        l_mpd = html_escape(l.stat_msgs_per_day),
+-    )
+-}
+-
+-fn render_project_areas(areas: &[ProjectArea], l: &HtmlLabels) -> String {
+-    if areas.is_empty() {
+-        return format!(r#"<div class="empty">{}</div>"#, html_escape(l.no_project_areas));
+-    }
+-
+-    let items: Vec<String> = areas
+-        .iter()
+-        .map(|a| {
+-            format!(
+-                r#"<div class="project-area">
+-  <div class="area-header">
+-    <span class="area-name">{name}</span>
+-    <span class="area-count">~{count} {suffix}</span>
+-  </div>
+-  <div class="area-desc">{desc}</div>
+-</div>"#,
+-                name = html_escape(&a.name),
+-                count = a.session_count,
+-                suffix = html_escape(l.sessions_suffix),
+-                desc = markdown_inline(&a.description),
+-            )
+-        })
+-        .collect();
+-
+-    format!(r#"<div class="project-areas">{}</div>"#, items.join("\n"))
+-}
+-
+-// ============ Charts split by section ============
+-
+-fn render_basic_charts(stats: &InsightsStats, l: &HtmlLabels) -> String {
+-    let goals_chart = render_bar_chart(l.chart_goals, &stats.top_goals, "#2563eb", 6);
+-    let tools_chart = render_bar_chart(l.chart_tools, &stats.top_tools, "#0891b2", 6);
+-
+-    let mut lang_items: Vec<(String, u32)> = stats.languages.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    lang_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    lang_items.truncate(6);
+-    let lang_chart = render_bar_chart(l.chart_languages, &lang_items, "#10b981", 6);
+-
+-    let mut type_items: Vec<(String, u32)> = stats.session_types.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    type_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    type_items.truncate(6);
+-    let types_chart = render_bar_chart(l.chart_session_types, &type_items, "#8b5cf6", 6);
+-
+-    let row1 = wrap_charts_row(&goals_chart, &tools_chart);
+-    let row2 = wrap_charts_row(&lang_chart, &types_chart);
+-    format!("{}{}", row1, row2)
+-}
+-
+-fn render_usage_charts(stats: &InsightsStats, l: &HtmlLabels) -> String {
+-    let mut html = String::new();
+-
+-    if !stats.response_time_buckets.is_empty() {
+-        let response_time_chart = render_response_time_chart(&stats.response_time_buckets, stats, l);
+-        html.push_str(&response_time_chart);
+-    }
+-
+-    let time_of_day_chart = render_time_of_day_chart(&stats.hour_counts, l);
+-
+-    let mut tool_error_items: Vec<(String, u32)> = stats.tool_errors.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    tool_error_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    tool_error_items.truncate(6);
+-    let tool_errors_chart = render_bar_chart(l.chart_tool_errors, &tool_error_items, "#dc2626", 6);
+-
+-    let mut agent_types_chart = String::new();
+-    if !stats.agent_types.is_empty() {
+-        let mut agent_type_items: Vec<(String, u32)> = stats.agent_types.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-        agent_type_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-        agent_type_items.truncate(6);
+-        agent_types_chart = render_bar_chart(l.chart_agent_types, &agent_type_items, "#f97316", 6);
+-    }
+-
+-    html.push_str(&wrap_charts_row(&time_of_day_chart, &tool_errors_chart));
+-    if !agent_types_chart.is_empty() {
+-        html.push_str(&wrap_charts_row(&agent_types_chart, ""));
+-    }
+-
+-    html
+-}
+-
+-fn render_outcome_charts(stats: &InsightsStats, l: &HtmlLabels) -> String {
+-    let has_success = !stats.success.is_empty();
+-    let has_outcomes = !stats.outcomes.is_empty();
+-
+-    if !has_success && !has_outcomes {
+-        return String::new();
+-    }
+-
+-    let mut success_items: Vec<(String, u32)> = stats.success.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    success_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    success_items.truncate(6);
+-    let success_chart = render_bar_chart(l.chart_what_helped, &success_items, "#16a34a", 6);
+-
+-    let mut outcome_items: Vec<(String, u32)> = stats.outcomes.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    outcome_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    outcome_items.truncate(6);
+-    let outcomes_chart = render_bar_chart(l.chart_outcomes, &outcome_items, "#8b5cf6", 6);
+-
+-    wrap_charts_row(&success_chart, &outcomes_chart)
+-}
+-
+-fn render_friction_charts(stats: &InsightsStats, l: &HtmlLabels) -> String {
+-    let has_friction = !stats.friction.is_empty();
+-    let has_satisfaction = !stats.satisfaction.is_empty();
+-
+-    if !has_friction && !has_satisfaction {
+-        return String::new();
+-    }
+-
+-    let mut friction_items: Vec<(String, u32)> = stats.friction.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    friction_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    friction_items.truncate(6);
+-    let friction_chart = render_bar_chart(l.chart_friction_types, &friction_items, "#dc2626", 6);
+-
+-    let mut satisfaction_items: Vec<(String, u32)> = stats.satisfaction.iter().map(|(k, v)| (k.clone(), *v)).collect();
+-    satisfaction_items.sort_by_key(|b| std::cmp::Reverse(b.1));
+-    satisfaction_items.truncate(6);
+-    let satisfaction_chart = render_bar_chart(l.chart_satisfaction, &satisfaction_items, "#eab308", 6);
+-
+-    wrap_charts_row(&friction_chart, &satisfaction_chart)
+-}
+-
+-/// Wraps one or two chart cards into a layout row.
+-/// - Two non-empty cards → 2-column grid `.charts-row`.
+-/// - One non-empty card  → standalone full-width (no grid wrapper, just margin).
+-/// - Both empty           → empty string.
+-fn wrap_charts_row(card_a: &str, card_b: &str) -> String {
+-    match (card_a.is_empty(), card_b.is_empty()) {
+-        (true, true) => String::new(),
+-        (false, true) => format!(r#"<div class="charts-row charts-row-single">{}</div>"#, card_a),
+-        (true, false) => format!(r#"<div class="charts-row charts-row-single">{}</div>"#, card_b),
+-        (false, false) => format!(r#"<div class="charts-row">{}{}</div>"#, card_a, card_b),
+-    }
+-}
+-
+-// ============ Chart helpers ============
+-
+-fn render_response_time_chart(
+-    buckets: &std::collections::HashMap<String, u32>,
+-    stats: &InsightsStats,
+-    l: &HtmlLabels,
+-) -> String {
+-    let bucket_order = ["2-10s", "10-30s", "30s-1m", "1-2m", "2-5m", "5-15m", ">15m"];
+-    let ordered_items: Vec<(String, u32)> = bucket_order
+-        .iter()
+-        .filter_map(|&label| {
+-            buckets
+-                .get(label)
+-                .and_then(|&v| if v > 0 { Some((label.to_string(), v)) } else { None })
+-        })
+-        .collect();
+-
+-    if ordered_items.is_empty() {
+-        return String::new();
+-    }
+-
+-    let max_val = ordered_items.iter().map(|(_, v)| *v).max().unwrap_or(1) as f64;
+-    let bars: String = ordered_items.iter().map(|(label, value)| {
+-        let pct = (*value as f64 / max_val) * 100.0;
+-        format!(
+-            r#"<div class="bar-row"><div class="bar-label">{}</div><div class="bar-track"><div class="bar-fill" style="width:{:.1}%;background:#6366f1"></div></div><div class="bar-value">{}</div></div>"#,
+-            html_escape(label), pct, value,
+-        )
+-    }).collect();
+-
+-    let footer = match (stats.median_response_time_secs, stats.avg_response_time_secs) {
+-        (Some(median), Some(avg)) => format!(
+-            r#"<div style="font-size:12px;color:#64748b;margin-top:8px">{}: {:.1}s &bull; {}: {:.1}s</div>"#,
+-            html_escape(l.median_label),
+-            median,
+-            html_escape(l.average_label),
+-            avg,
+-        ),
+-        _ => String::new(),
+-    };
+-
+-    format!(
+-        r#"<div class="chart-card" style="margin:24px 0"><div class="chart-title">{}</div>{}{}</div>"#,
+-        html_escape(l.chart_response_time),
+-        bars,
+-        footer,
+-    )
+-}
+-
+-fn render_time_of_day_chart(hour_counts: &std::collections::HashMap<u32, u32>, l: &HtmlLabels) -> String {
+-    if hour_counts.is_empty() {
+-        return format!(
+-            r#"<div class="chart-card"><div class="chart-title">{}</div><div class="empty">{}</div></div>"#,
+-            html_escape(l.chart_time_of_day),
+-            html_escape(l.no_data),
+-        );
+-    }
+-
+-    let hour_json: Vec<String> = (0..24)
+-        .map(|h| format!("\"{}\":{}", h, hour_counts.get(&h).copied().unwrap_or(0)))
+-        .collect();
+-
+-    format!(
+-        r#"<div class="chart-card" id="time-of-day-chart">
+-  <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center">
+-    <span>{title}</span>
+-    <select id="tz-selector" class="tz-select" onchange="updateTimeChart()">
+-    </select>
+-  </div>
+-  <div id="time-bars"></div>
+-  <script>
+-    window.__hourCountsUTC = {{{hour_data}}};
+-    window.__timeLabels = {{morning:"{lm}",afternoon:"{la}",evening:"{le}",night:"{ln}"}};
+-  </script>
+-</div>"#,
+-        title = html_escape(l.chart_time_of_day),
+-        hour_data = hour_json.join(","),
+-        lm = l.time_morning,
+-        la = l.time_afternoon,
+-        le = l.time_evening,
+-        ln = l.time_night,
+-    )
+-}
+-
+-fn render_bar_chart(title: &str, items: &[(String, u32)], color: &str, max_items: usize) -> String {
+-    let non_zero: Vec<&(String, u32)> = items.iter().filter(|(_, v)| *v > 0).collect();
+-
+-    if non_zero.is_empty() {
+-        return String::new();
+-    }
+-
+-    let max_val = non_zero.iter().map(|(_, v)| *v).max().unwrap_or(1) as f64;
+-    let bars: Vec<String> = non_zero
+-        .iter()
+-        .take(max_items)
+-        .map(|(label, value)| {
+-            let pct = (*value as f64 / max_val) * 100.0;
+-            let display_label = label
+-                .replace('_', " ")
+-                .split_whitespace()
+-                .map(|w| {
+-                    let mut c = w.chars();
+-                    match c.next() {
+-                        None => String::new(),
+-                        Some(f) => f.to_uppercase().to_string() + c.as_str(),
+-                    }
+-                })
+-                .collect::<Vec<_>>()
+-                .join(" ");
+-            format!(
+-                r#"<div class="bar-row">
+-  <div class="bar-label">{}</div>
+-  <div class="bar-track"><div class="bar-fill" style="width:{:.1}%;background:{}"></div></div>
+-  <div class="bar-value">{}</div>
+-</div>"#,
+-                html_escape(&display_label),
+-                pct,
+-                color,
+-                value,
+-            )
+-        })
+-        .collect();
+-
+-    format!(
+-        r#"<div class="chart-card"><div class="chart-title">{}</div>{}</div>"#,
+-        html_escape(title),
+-        bars.join("\n"),
+-    )
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/html/section.rs b/src/crates/assembly/core/src/agentic/insights/html/section.rs
+deleted file mode 100644
+index f303a18..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/html/section.rs
++++ /dev/null
+@@ -1,317 +0,0 @@
+-use super::format::{html_escape, js_escape, markdown_inline};
+-use super::theme::HtmlLabels;
+-use crate::agentic::insights::types::*;
+-
+-pub(crate) fn render_interaction_style(style: &InteractionStyle, l: &HtmlLabels) -> String {
+-    if style.narrative.is_empty() && style.key_patterns.is_empty() {
+-        return format!(r#"<div class="empty">{}</div>"#, html_escape(l.no_interaction_style));
+-    }
+-
+-    let patterns_html = if style.key_patterns.is_empty() {
+-        String::new()
+-    } else {
+-        let items: Vec<String> = style
+-            .key_patterns
+-            .iter()
+-            .map(|p| format!(r#"<div class="key-insight">{}</div>"#, markdown_inline(p)))
+-            .collect();
+-        items.join("\n")
+-    };
+-
+-    format!(
+-        r#"<div class="narrative">
+-  <p>{}</p>
+-  {}
+-</div>"#,
+-        markdown_inline(&style.narrative),
+-        patterns_html,
+-    )
+-}
+-
+-pub(crate) fn render_big_wins(wins: &[BigWin], l: &HtmlLabels) -> String {
+-    if wins.is_empty() {
+-        return format!(r#"<div class="empty">{}</div>"#, html_escape(l.no_big_wins));
+-    }
+-
+-    let items: Vec<String> = wins
+-        .iter()
+-        .map(|w| {
+-            let impact_html = if w.impact.is_empty() {
+-                String::new()
+-            } else {
+-                format!(r#"<div class="big-win-impact">{}</div>"#, markdown_inline(&w.impact))
+-            };
+-            format!(
+-                r#"<div class="big-win">
+-  <div class="big-win-title">{}</div>
+-  <div class="big-win-desc">{}</div>
+-  {}
+-</div>"#,
+-                html_escape(&w.title),
+-                markdown_inline(&w.description),
+-                impact_html,
+-            )
+-        })
+-        .collect();
+-
+-    format!(r#"<div class="big-wins">{}</div>"#, items.join("\n"))
+-}
+-
+-pub(crate) fn render_friction_categories(categories: &[FrictionCategory], l: &HtmlLabels) -> String {
+-    if categories.is_empty() {
+-        return format!(r#"<div class="empty">{}</div>"#, html_escape(l.no_friction));
+-    }
+-
+-    let items: Vec<String> = categories
+-        .iter()
+-        .map(|f| {
+-            let examples_html = if f.examples.is_empty() {
+-                String::new()
+-            } else {
+-                let lis: Vec<String> = f
+-                    .examples
+-                    .iter()
+-                    .map(|e| format!("<li>{}</li>", markdown_inline(e)))
+-                    .collect();
+-                format!(
+-                    r#"<ul class="friction-examples">{}</ul>"#,
+-                    lis.join("\n")
+-                )
+-            };
+-
+-            let suggestion_html = if f.suggestion.is_empty() {
+-                String::new()
+-            } else {
+-                format!(
+-                    r#"<div class="key-insight" style="background:#fef2f2;border-color:#fca5a5;color:#991b1b;margin-top:10px">{}</div>"#,
+-                    markdown_inline(&f.suggestion)
+-                )
+-            };
+-
+-            format!(
+-                r#"<div class="friction-category">
+-  <div class="friction-title">{}</div>
+-  <div class="friction-desc">{}</div>
+-  {}
+-  {}
+-</div>"#,
+-                html_escape(&f.category),
+-                markdown_inline(&f.description),
+-                examples_html,
+-                suggestion_html,
+-            )
+-        })
+-        .collect();
+-
+-    format!(r#"<div class="friction-categories">{}</div>"#, items.join("\n"))
+-}
+-
+-pub(crate) fn render_suggestions(suggestions: &InsightsSuggestions, l: &HtmlLabels) -> String {
+-    let mut sections = Vec::new();
+-
+-    if !suggestions.northhing_md_additions.is_empty() {
+-        let items: Vec<String> = suggestions
+-            .northhing_md_additions
+-            .iter()
+-            .enumerate()
+-            .map(|(i, md)| {
+-                format!(
+-                    r#"<div class="claude-md-item">
+-  <input type="checkbox" class="cmd-checkbox" id="md-{i}" checked>
+-  <div class="cmd-code">{}</div>
+-  <button class="copy-btn" onclick="copyText(this, '{}')">&nbsp;Copy&nbsp;</button>
+-  <div class="cmd-why">{}</div>
+-</div>"#,
+-                    html_escape(&md.content),
+-                    js_escape(&md.content),
+-                    html_escape(&md.rationale),
+-                    i = i,
+-                )
+-            })
+-            .collect();
+-
+-        sections.push(format!(
+-            r#"<div class="claude-md-section">
+-  <h3>{md_title}</h3>
+-  <div class="claude-md-actions">
+-    <button class="copy-all-btn" onclick="copyAllChecked(this)">{copy_all}</button>
+-  </div>
+-  {items}
+-</div>"#,
+-            md_title = html_escape(l.md_additions),
+-            copy_all = html_escape(l.copy_all_checked),
+-            items = items.join("\n"),
+-        ));
+-    }
+-
+-    if !suggestions.features_to_try.is_empty() {
+-        let items: Vec<String> = suggestions
+-            .features_to_try
+-            .iter()
+-            .map(|f| {
+-                let code_html = if f.example_usage.is_empty() {
+-                    String::new()
+-                } else {
+-                    format!(
+-                        r#"<div class="feature-code">
+-  <code>{}</code>
+-  <button class="copy-btn" onclick="copyText(this, '{}')">&nbsp;Copy&nbsp;</button>
+-</div>"#,
+-                        html_escape(&f.example_usage),
+-                        js_escape(&f.example_usage),
+-                    )
+-                };
+-
+-                format!(
+-                    r#"<div class="feature-card">
+-  <div class="feature-title">{}</div>
+-  <div class="feature-oneliner">{}</div>
+-  <div class="feature-why">{}</div>
+-  {}
+-</div>"#,
+-                    html_escape(&f.feature),
+-                    markdown_inline(&f.description),
+-                    markdown_inline(&f.benefit),
+-                    code_html,
+-                )
+-            })
+-            .collect();
+-
+-        sections.push(format!(
+-            r#"<h3 id="section-features">{}</h3>
+-<div class="features-section">{}</div>"#,
+-            html_escape(l.features_to_try),
+-            items.join("\n")
+-        ));
+-    }
+-
+-    if !suggestions.usage_patterns.is_empty() {
+-        let items: Vec<String> = suggestions
+-            .usage_patterns
+-            .iter()
+-            .map(|p| {
+-                let detail_html = if p.detail.is_empty() {
+-                    String::new()
+-                } else {
+-                    format!(r#"<div class="pattern-detail">{}</div>"#, markdown_inline(&p.detail))
+-                };
+-
+-                let prompt_html = if p.suggested_prompt.is_empty() {
+-                    String::new()
+-                } else {
+-                    format!(
+-                        r#"<div class="pattern-prompt">
+-  <div class="prompt-label">{}</div>
+-  <code>{}</code>
+-  <button class="copy-btn" onclick="copyText(this, '{}')">&nbsp;Copy&nbsp;</button>
+-</div>"#,
+-                        html_escape(l.try_this_prompt),
+-                        html_escape(&p.suggested_prompt),
+-                        js_escape(&p.suggested_prompt),
+-                    )
+-                };
+-
+-                format!(
+-                    r#"<div class="pattern-card">
+-  <div class="pattern-title">{}</div>
+-  <div class="pattern-summary">{}</div>
+-  {}
+-  {}
+-</div>"#,
+-                    html_escape(&p.pattern),
+-                    markdown_inline(&p.description),
+-                    detail_html,
+-                    prompt_html,
+-                )
+-            })
+-            .collect();
+-
+-        sections.push(format!(
+-            r#"<h3 id="section-patterns">{}</h3>
+-<div class="patterns-section">{}</div>"#,
+-            html_escape(l.usage_patterns),
+-            items.join("\n")
+-        ));
+-    }
+-
+-    sections.join("\n")
+-}
+-
+-pub(crate) fn render_horizon(intro: &str, workflows: &[HorizonWorkflow], l: &HtmlLabels) -> String {
+-    if workflows.is_empty() {
+-        return format!(r#"<div class="empty">{}</div>"#, html_escape(l.no_horizon));
+-    }
+-
+-    let intro_html = if intro.is_empty() {
+-        String::new()
+-    } else {
+-        format!(r#"<p class="section-intro">{}</p>"#, markdown_inline(intro))
+-    };
+-
+-    let items: Vec<String> = workflows
+-        .iter()
+-        .map(|h| {
+-            let how_to_try_html = if h.how_to_try.is_empty() {
+-                String::new()
+-            } else {
+-                format!(r#"<div class="horizon-tip">{}</div>"#, markdown_inline(&h.how_to_try))
+-            };
+-
+-            let prompt_html = if h.copyable_prompt.is_empty() {
+-                String::new()
+-            } else {
+-                let escaped = html_escape(&h.copyable_prompt);
+-                let js_escaped = h
+-                    .copyable_prompt
+-                    .replace('\\', "\\\\")
+-                    .replace('\'', "\\'")
+-                    .replace('\n', "\\n");
+-                format!(
+-                    r#"<div class="horizon-prompt">
+-  <div class="prompt-label">{try_prompt}</div>
+-  <div class="feature-code">
+-    <code>{code}</code>
+-    <button class="copy-btn" onclick="copyText(this, '{js_code}')">Copy</button>
+-  </div>
+-</div>"#,
+-                    try_prompt = html_escape(l.try_this_prompt),
+-                    code = escaped,
+-                    js_code = js_escaped,
+-                )
+-            };
+-
+-            format!(
+-                r#"<div class="horizon-card">
+-  <div class="horizon-title">{}</div>
+-  <div class="horizon-possible">{}</div>
+-  {}
+-  {}
+-</div>"#,
+-                html_escape(&h.title),
+-                markdown_inline(&h.whats_possible),
+-                how_to_try_html,
+-                prompt_html,
+-            )
+-        })
+-        .collect();
+-
+-    format!(
+-        r#"{}<div class="horizon-section">{}</div>"#,
+-        intro_html,
+-        items.join("\n")
+-    )
+-}
+-
+-pub(crate) fn render_fun_ending(ending: &Option<FunEnding>) -> String {
+-    match ending {
+-        Some(fe) => format!(
+-            r#"<div class="fun-ending">
+-  <div class="fun-headline">{}</div>
+-  <div class="fun-detail">{}</div>
+-</div>"#,
+-            html_escape(&fe.headline),
+-            markdown_inline(&fe.detail),
+-        ),
+-        None => String::new(),
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/html/theme.rs b/src/crates/assembly/core/src/agentic/insights/html/theme.rs
+deleted file mode 100644
+index 7b3e0ec..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/html/theme.rs
++++ /dev/null
+@@ -1,388 +0,0 @@
+-pub struct HtmlLabels {
+-    pub title: &'static str,
+-    pub subtitle_template: &'static str, // "{msgs} messages across {sessions} sessions ({analyzed} analyzed) | {start} to {end}"
+-    pub at_a_glance: &'static str,
+-    pub whats_working: &'static str,
+-    pub whats_hindering: &'static str,
+-    pub quick_wins: &'static str,
+-    pub looking_ahead: &'static str,
+-    pub nav_work: &'static str,
+-    pub nav_usage: &'static str,
+-    pub nav_wins: &'static str,
+-    pub nav_friction: &'static str,
+-    pub nav_suggestions: &'static str,
+-    pub nav_horizon: &'static str,
+-    pub stat_sessions: &'static str,
+-    pub stat_messages: &'static str,
+-    pub stat_hours: &'static str,
+-    pub stat_days: &'static str,
+-    pub stat_msgs_per_day: &'static str,
+-    pub stat_median_response: &'static str,
+-    pub stat_avg_response: &'static str,
+-    pub section_work: &'static str,
+-    pub section_usage: &'static str,
+-    pub section_wins: &'static str,
+-    pub section_friction: &'static str,
+-    pub section_suggestions: &'static str,
+-    pub section_horizon: &'static str,
+-    pub chart_goals: &'static str,
+-    pub chart_tools: &'static str,
+-    pub chart_languages: &'static str,
+-    pub chart_session_types: &'static str,
+-    pub chart_tool_errors: &'static str,
+-    pub chart_agent_types: &'static str,
+-    pub chart_response_time: &'static str,
+-    pub chart_time_of_day: &'static str,
+-    pub chart_what_helped: &'static str,
+-    pub chart_outcomes: &'static str,
+-    pub chart_friction_types: &'static str,
+-    pub chart_satisfaction: &'static str,
+-    pub time_morning: &'static str,
+-    pub time_afternoon: &'static str,
+-    pub time_evening: &'static str,
+-    pub time_night: &'static str,
+-    pub sessions_suffix: &'static str,
+-    pub no_data: &'static str,
+-    pub no_project_areas: &'static str,
+-    pub no_interaction_style: &'static str,
+-    pub no_big_wins: &'static str,
+-    pub no_friction: &'static str,
+-    pub no_horizon: &'static str,
+-    pub md_additions: &'static str,
+-    pub copy_all_checked: &'static str,
+-    pub features_to_try: &'static str,
+-    pub usage_patterns: &'static str,
+-    pub try_this_prompt: &'static str,
+-    pub copied: &'static str,
+-    pub median_label: &'static str,
+-    pub average_label: &'static str,
+-    pub stat_lines: &'static str,
+-    pub stat_files: &'static str,
+-}
+-
+-impl HtmlLabels {
+-    pub fn for_locale(locale: &str) -> Self {
+-        if locale.starts_with("zh") {
+-            Self::zh()
+-        } else {
+-            Self::en()
+-        }
+-    }
+-
+-    pub fn en() -> Self {
+-        HtmlLabels {
+-            title: "northhing Insights",
+-            subtitle_template: "{msgs} messages across {sessions} sessions ({analyzed} analyzed) | {start} to {end}",
+-            at_a_glance: "At a Glance",
+-            whats_working: "What's working:",
+-            whats_hindering: "What's hindering you:",
+-            quick_wins: "Quick wins to try:",
+-            looking_ahead: "Looking ahead:",
+-            nav_work: "What You Work On",
+-            nav_usage: "How You Use northhing",
+-            nav_wins: "Impressive Things",
+-            nav_friction: "Where Things Go Wrong",
+-            nav_suggestions: "Suggestions",
+-            nav_horizon: "On the Horizon",
+-            stat_sessions: "Sessions",
+-            stat_messages: "Messages",
+-            stat_hours: "Hours",
+-            stat_days: "Days",
+-            stat_msgs_per_day: "Msgs/Day",
+-            stat_median_response: "Median Response",
+-            stat_avg_response: "Avg Response",
+-            section_work: "What You Work On",
+-            section_usage: "How You Use northhing",
+-            section_wins: "Impressive Things You Did",
+-            section_friction: "Where Things Go Wrong",
+-            section_suggestions: "Suggestions",
+-            section_horizon: "On the Horizon",
+-            chart_goals: "What You Wanted",
+-            chart_tools: "Top Tools Used",
+-            chart_languages: "Languages",
+-            chart_session_types: "Session Types",
+-            chart_tool_errors: "Tool Errors Encountered",
+-            chart_agent_types: "Agent Types",
+-            chart_response_time: "User Response Time Distribution",
+-            chart_time_of_day: "Messages by Time of Day",
+-            chart_what_helped: "What Helped Most",
+-            chart_outcomes: "Outcomes",
+-            chart_friction_types: "Primary Friction Types",
+-            chart_satisfaction: "Satisfaction (Inferred)",
+-            time_morning: "Morning (6-12)",
+-            time_afternoon: "Afternoon (12-18)",
+-            time_evening: "Evening (18-24)",
+-            time_night: "Night (0-6)",
+-            sessions_suffix: "sessions",
+-            no_data: "No data",
+-            no_project_areas: "No project areas identified.",
+-            no_interaction_style: "No interaction style data available.",
+-            no_big_wins: "No big wins identified yet.",
+-            no_friction: "No significant friction points found.",
+-            no_horizon: "No horizon workflows identified.",
+-            md_additions: "northhing.md Additions",
+-            copy_all_checked: "Copy All Checked",
+-            features_to_try: "Features to Try",
+-            usage_patterns: "Usage Patterns",
+-            try_this_prompt: "Try this prompt:",
+-            copied: "Copied!",
+-            median_label: "Median",
+-            average_label: "Average",
+-            stat_lines: "Lines",
+-            stat_files: "Files",
+-        }
+-    }
+-
+-    pub fn zh() -> Self {
+-        HtmlLabels {
+-            title: "northhing 洞察",
+-            subtitle_template: "{msgs} 条消息，{sessions} 个会话（{analyzed} 个已分析）| {start} 至 {end}",
+-            at_a_glance: "概览",
+-            whats_working: "做得好的：",
+-            whats_hindering: "遇到的阻碍：",
+-            quick_wins: "快速提升：",
+-            looking_ahead: "展望未来：",
+-            nav_work: "工作领域",
+-            nav_usage: "使用方式",
+-            nav_wins: "亮眼成果",
+-            nav_friction: "问题所在",
+-            nav_suggestions: "建议",
+-            nav_horizon: "未来展望",
+-            stat_sessions: "会话",
+-            stat_messages: "消息",
+-            stat_hours: "小时",
+-            stat_days: "天",
+-            stat_msgs_per_day: "消息/天",
+-            stat_median_response: "中位响应",
+-            stat_avg_response: "平均响应",
+-            section_work: "工作领域",
+-            section_usage: "你如何使用 northhing",
+-            section_wins: "亮眼成果",
+-            section_friction: "问题所在",
+-            section_suggestions: "建议",
+-            section_horizon: "未来展望",
+-            chart_goals: "你的需求",
+-            chart_tools: "常用工具",
+-            chart_languages: "编程语言",
+-            chart_session_types: "会话类型",
+-            chart_tool_errors: "工具错误统计",
+-            chart_agent_types: "智能体类型",
+-            chart_response_time: "用户响应时间分布",
+-            chart_time_of_day: "按时段分布",
+-            chart_what_helped: "最有帮助的方面",
+-            chart_outcomes: "结果分布",
+-            chart_friction_types: "主要摩擦类型",
+-            chart_satisfaction: "满意度（推断）",
+-            time_morning: "上午 (6-12)",
+-            time_afternoon: "下午 (12-18)",
+-            time_evening: "晚上 (18-24)",
+-            time_night: "凌晨 (0-6)",
+-            sessions_suffix: "个会话",
+-            no_data: "暂无数据",
+-            no_project_areas: "未识别到项目领域。",
+-            no_interaction_style: "暂无交互风格数据。",
+-            no_big_wins: "暂未识别到亮眼成果。",
+-            no_friction: "未发现明显摩擦点。",
+-            no_horizon: "暂未识别到未来工作流。",
+-            md_additions: "northhing.md 补充",
+-            copy_all_checked: "复制选中项",
+-            features_to_try: "推荐功能",
+-            usage_patterns: "使用模式",
+-            try_this_prompt: "试试这个提示：",
+-            copied: "已复制！",
+-            median_label: "中位数",
+-            average_label: "平均值",
+-            stat_lines: "行",
+-            stat_files: "文件",
+-        }
+-    }
+-}
+-
+-pub const CSS_STYLES: &str = r#"
+-    * { box-sizing: border-box; margin: 0; padding: 0; }
+-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
+-    .container { max-width: 800px; margin: 0 auto; }
+-    h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+-    h2 { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 48px; margin-bottom: 16px; }
+-    h3 { font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 24px; margin-bottom: 12px; }
+-    .subtitle { color: #64748b; font-size: 15px; margin-bottom: 32px; }
+-    .nav-toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 32px 0; padding: 16px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+-    .nav-toc a { font-size: 12px; color: #64748b; text-decoration: none; padding: 6px 12px; border-radius: 6px; background: #f1f5f9; transition: all 0.15s; }
+-    .nav-toc a:hover { background: #e2e8f0; color: #334155; }
+-    .stats-row { display: flex; gap: 24px; margin-bottom: 40px; padding: 20px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+-    .stat { text-align: center; }
+-    .stat-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+-    .stat-label { font-size: 11px; color: #64748b; text-transform: uppercase; }
+-    .at-a-glance { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 20px 24px; margin-bottom: 32px; }
+-    .glance-title { font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 16px; }
+-    .glance-sections { display: flex; flex-direction: column; gap: 12px; }
+-    .glance-section { font-size: 14px; color: #78350f; line-height: 1.6; }
+-    .glance-section strong { color: #92400e; }
+-    .see-more { color: #b45309; text-decoration: none; font-size: 13px; white-space: nowrap; }
+-    .see-more:hover { text-decoration: underline; }
+-    .project-areas { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+-    .project-area { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+-    .area-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+-    .area-name { font-weight: 600; font-size: 15px; color: #0f172a; }
+-    .area-count { font-size: 12px; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
+-    .area-desc { font-size: 14px; color: #475569; line-height: 1.5; }
+-    .narrative { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+-    .narrative p { margin-bottom: 12px; font-size: 14px; color: #475569; line-height: 1.7; }
+-    .key-insight { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 14px; color: #166534; }
+-    .section-intro { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
+-    .big-wins { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+-    .big-win { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+-    .big-win-title { font-weight: 600; font-size: 15px; color: #166534; margin-bottom: 8px; }
+-    .big-win-desc { font-size: 14px; color: #15803d; line-height: 1.5; }
+-    .big-win-impact { font-size: 12px; color: #166534; opacity: 0.8; font-style: italic; margin-top: 6px; }
+-    .friction-categories { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+-    .friction-category { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; }
+-    .friction-title { font-weight: 600; font-size: 15px; color: #991b1b; margin-bottom: 6px; }
+-    .friction-desc { font-size: 13px; color: #7f1d1d; margin-bottom: 10px; }
+-    .friction-examples { margin: 0 0 0 20px; font-size: 13px; color: #334155; }
+-    .friction-examples li { margin-bottom: 4px; }
+-    .claude-md-section { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+-    .claude-md-section h3 { font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 12px 0; }
+-    .claude-md-actions { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #dbeafe; }
+-    .copy-all-btn { background: #2563eb; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+-    .copy-all-btn:hover { background: #1d4ed8; }
+-    .copy-all-btn.copied { background: #16a34a; }
+-    .claude-md-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid #dbeafe; }
+-    .claude-md-item:last-child { border-bottom: none; }
+-    .cmd-checkbox { margin-top: 2px; }
+-    .cmd-code { background: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #1e40af; border: 1px solid #bfdbfe; font-family: monospace; display: block; white-space: pre-wrap; word-break: break-word; flex: 1; }
+-    .cmd-why { font-size: 12px; color: #64748b; width: 100%; padding-left: 24px; margin-top: 4px; }
+-    .features-section, .patterns-section { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+-    .feature-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; }
+-    .pattern-card { background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 8px; padding: 16px; }
+-    .feature-title, .pattern-title { font-weight: 600; font-size: 15px; color: #0f172a; margin-bottom: 6px; }
+-    .feature-oneliner, .pattern-summary { font-size: 14px; color: #475569; margin-bottom: 8px; }
+-    .feature-why { font-size: 13px; color: #334155; line-height: 1.5; }
+-    .feature-code { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; display: flex; align-items: flex-start; gap: 8px; }
+-    .feature-code code { flex: 1; font-family: monospace; font-size: 12px; color: #334155; white-space: pre-wrap; }
+-    .pattern-prompt { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; }
+-    .pattern-prompt code { font-family: monospace; font-size: 12px; color: #334155; display: block; white-space: pre-wrap; margin-bottom: 8px; }
+-    .prompt-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+-    .copy-btn { background: #e2e8f0; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #475569; flex-shrink: 0; }
+-    .copy-btn:hover { background: #cbd5e1; }
+-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
+-    .charts-row-single { grid-template-columns: 1fr; }
+-    .chart-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+-    .chart-title { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 12px; }
+-    .bar-row { display: flex; align-items: center; margin-bottom: 6px; }
+-    .bar-label { width: 100px; font-size: 11px; color: #475569; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+-    .bar-track { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; margin: 0 8px; }
+-    .bar-fill { height: 100%; border-radius: 3px; }
+-    .bar-value { width: 28px; font-size: 11px; font-weight: 500; color: #64748b; text-align: right; }
+-    .empty { color: #94a3b8; font-size: 13px; padding: 12px 0; }
+-    .tz-select { font-size: 11px; padding: 2px 6px; border: 1px solid #e2e8f0; border-radius: 4px; background: #f8fafc; color: #475569; cursor: pointer; }
+-    .horizon-section { display: flex; flex-direction: column; gap: 16px; }
+-    .horizon-card { background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%); border: 1px solid #c4b5fd; border-radius: 8px; padding: 16px; }
+-    .horizon-title { font-weight: 600; font-size: 15px; color: #5b21b6; margin-bottom: 8px; }
+-    .horizon-possible { font-size: 14px; color: #334155; margin-bottom: 10px; line-height: 1.5; }
+-    .horizon-steps { margin: 0 0 0 20px; font-size: 13px; color: #6b21a8; }
+-    .horizon-steps li { margin-bottom: 4px; }
+-    .horizon-tip { font-size: 13px; color: #5b21b6; background: #ede9fe; border-radius: 6px; padding: 8px 12px; margin-top: 10px; line-height: 1.5; }
+-    .horizon-prompt { margin-top: 10px; }
+-    .fun-ending { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 24px; margin-top: 40px; text-align: center; }
+-    .fun-headline { font-size: 18px; font-weight: 600; color: #78350f; margin-bottom: 8px; }
+-    .fun-detail { font-size: 14px; color: #92400e; }
+-    @media (max-width: 640px) { .charts-row { grid-template-columns: 1fr; } .stats-row { justify-content: center; } }
+-"#;
+-
+-pub const JS_SCRIPT: &str = r#"
+-    function copyText(btn, text) {
+-      navigator.clipboard.writeText(text).then(function() {
+-        var orig = btn.textContent;
+-        btn.textContent = ' __COPIED__ ';
+-        btn.style.background = '#16a34a';
+-        btn.style.color = 'white';
+-        setTimeout(function() {
+-          btn.textContent = orig;
+-          btn.style.background = '';
+-          btn.style.color = '';
+-        }, 2000);
+-      });
+-    }
+-
+-    function copyAllChecked(btn) {
+-      var section = btn.closest('.claude-md-section');
+-      var items = section.querySelectorAll('.claude-md-item');
+-      var texts = [];
+-      items.forEach(function(item) {
+-        var cb = item.querySelector('.cmd-checkbox');
+-        if (cb && cb.checked) {
+-          var code = item.querySelector('.cmd-code');
+-          if (code) texts.push(code.textContent.trim());
+-        }
+-      });
+-      if (texts.length === 0) return;
+-      navigator.clipboard.writeText(texts.join('\n\n')).then(function() {
+-        btn.textContent = '__COPIED__';
+-        btn.classList.add('copied');
+-        setTimeout(function() {
+-          btn.textContent = '__COPY_ALL_CHECKED__';
+-          btn.classList.remove('copied');
+-        }, 2000);
+-      });
+-    }
+-
+-    (function initTimezoneSelector() {
+-      var sel = document.getElementById('tz-selector');
+-      if (!sel || !window.__hourCountsUTC) return;
+-      var common = [
+-        'UTC',
+-        'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+-        'Europe/London','Europe/Paris','Europe/Berlin',
+-        'Asia/Tokyo','Asia/Shanghai','Asia/Kolkata','Asia/Singapore',
+-        'Australia/Sydney','Pacific/Auckland'
+-      ];
+-      var localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+-      if (common.indexOf(localTz) === -1) common.unshift(localTz);
+-      common.forEach(function(tz) {
+-        var opt = document.createElement('option');
+-        opt.value = tz;
+-        opt.textContent = tz.replace(/_/g,' ');
+-        if (tz === localTz) opt.selected = true;
+-        sel.appendChild(opt);
+-      });
+-      updateTimeChart();
+-    })();
+-
+-    function updateTimeChart() {
+-      var sel = document.getElementById('tz-selector');
+-      var container = document.getElementById('time-bars');
+-      if (!sel || !container || !window.__hourCountsUTC) return;
+-      var tz = sel.value;
+-      var shifted = {};
+-      for (var h = 0; h < 24; h++) {
+-        var utcCount = window.__hourCountsUTC[h] || 0;
+-        if (utcCount === 0) continue;
+-        var d = new Date(Date.UTC(2024,0,1,h,0,0));
+-        var localH = parseInt(d.toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:tz}));
+-        shifted[localH] = (shifted[localH]||0) + utcCount;
+-      }
+-      var labels = window.__timeLabels;
+-      var periods = [
+-        {label:labels.morning, hours:[6,7,8,9,10,11]},
+-        {label:labels.afternoon, hours:[12,13,14,15,16,17]},
+-        {label:labels.evening, hours:[18,19,20,21,22,23]},
+-        {label:labels.night, hours:[0,1,2,3,4,5]}
+-      ];
+-      var maxVal = 0;
+-      var data = periods.map(function(p) {
+-        var count = 0;
+-        p.hours.forEach(function(h){count += shifted[h]||0;});
+-        if (count > maxVal) maxVal = count;
+-        return {label:p.label, count:count};
+-      });
+-      var html = '';
+-      data.forEach(function(d) {
+-        var pct = maxVal > 0 ? (d.count/maxVal*100) : 0;
+-        html += '<div class="bar-row"><span class="bar-label">'+d.label+'</span>'
+-          +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#8b5cf6"></div></div>'
+-          +'<span class="bar-value">'+d.count+'</span></div>';
+-      });
+-      container.innerHTML = html;
+-    }
+-"#;
+diff --git a/src/crates/assembly/core/src/agentic/insights/mod.rs b/src/crates/assembly/core/src/agentic/insights/mod.rs
+deleted file mode 100644
+index 28d5dd9..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/mod.rs
++++ /dev/null
+@@ -1,13 +0,0 @@
+-pub mod cancellation;
+-mod coll_stats;
+-mod coll_transcript;
+-pub mod collector;
+-pub mod facet_cache;
+-pub mod html;
+-pub mod prompt_context;
+-pub mod service;
+-pub mod session_paths;
+-pub mod types;
+-
+-pub use service::InsightsService;
+-pub use types::*;
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompt_context.rs b/src/crates/assembly/core/src/agentic/insights/prompt_context.rs
+deleted file mode 100644
+index 962fc6b..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompt_context.rs
++++ /dev/null
+@@ -1,118 +0,0 @@
+-//! Slim aggregate JSON and bounded text blocks for LLM prompts (no duplicate long lists).
+-
+-use crate::agentic::insights::types::InsightsAggregate;
+-use serde::Serialize;
+-use std::collections::HashMap;
+-
+-/// Max lines aligned with Claude Code insights reference.
+-pub const MAX_PROMPT_SESSION_SUMMARIES: usize = 50;
+-pub const MAX_PROMPT_FRICTION_DETAILS: usize = 20;
+-pub const MAX_PROMPT_USER_INSTRUCTIONS: usize = 15;
+-
+-#[derive(Serialize)]
+-pub struct AggregatePromptStats<'a> {
+-    pub sessions: u32,
+-    pub analyzed: u32,
+-    pub date_range: &'a crate::agentic::insights::types::DateRange,
+-    pub messages: u32,
+-    pub hours: f32,
+-    pub top_tools: &'a [(String, u32)],
+-    pub top_goals: &'a [(String, u32)],
+-    pub outcomes: &'a HashMap<String, u32>,
+-    pub satisfaction: &'a HashMap<String, u32>,
+-    pub friction: &'a HashMap<String, u32>,
+-    pub success: &'a HashMap<String, u32>,
+-    pub languages: &'a HashMap<String, u32>,
+-    pub session_types: &'a HashMap<String, u32>,
+-    pub tool_errors: &'a HashMap<String, u32>,
+-    pub hour_counts: &'a HashMap<u32, u32>,
+-    pub agent_types: &'a HashMap<String, u32>,
+-    pub msgs_per_day: f32,
+-    pub response_time_buckets: &'a HashMap<String, u32>,
+-    pub median_response_time_secs: Option<f64>,
+-    pub avg_response_time_secs: Option<f64>,
+-    pub total_lines_added: usize,
+-    pub total_lines_removed: usize,
+-    pub total_files_modified: usize,
+-}
+-
+-impl<'a> From<&'a InsightsAggregate> for AggregatePromptStats<'a> {
+-    fn from(a: &'a InsightsAggregate) -> Self {
+-        Self {
+-            sessions: a.sessions,
+-            analyzed: a.analyzed,
+-            date_range: &a.date_range,
+-            messages: a.messages,
+-            hours: a.hours,
+-            top_tools: &a.top_tools,
+-            top_goals: &a.top_goals,
+-            outcomes: &a.outcomes,
+-            satisfaction: &a.satisfaction,
+-            friction: &a.friction,
+-            success: &a.success,
+-            languages: &a.languages,
+-            session_types: &a.session_types,
+-            tool_errors: &a.tool_errors,
+-            hour_counts: &a.hour_counts,
+-            agent_types: &a.agent_types,
+-            msgs_per_day: a.msgs_per_day,
+-            response_time_buckets: &a.response_time_buckets,
+-            median_response_time_secs: a.median_response_time_secs,
+-            avg_response_time_secs: a.avg_response_time_secs,
+-            total_lines_added: a.total_lines_added,
+-            total_lines_removed: a.total_lines_removed,
+-            total_files_modified: a.total_files_modified,
+-        }
+-    }
+-}
+-
+-pub fn aggregate_stats_json_for_prompt(aggregate: &InsightsAggregate) -> String {
+-    let stats = AggregatePromptStats::from(aggregate);
+-    serde_json::to_string_pretty(&stats).unwrap_or_else(|_| "{}".to_string())
+-}
+-
+-/// Bullet list for templates that embed `{summaries}` after a label.
+-pub fn summaries_block(aggregate: &InsightsAggregate) -> String {
+-    let lines: Vec<&str> = aggregate
+-        .session_summaries
+-        .iter()
+-        .take(MAX_PROMPT_SESSION_SUMMARIES)
+-        .map(|s| s.as_str())
+-        .collect();
+-    if lines.is_empty() {
+-        return String::new();
+-    }
+-    format!("- {}", lines.join("\n- "))
+-}
+-
+-pub fn friction_block(aggregate: &InsightsAggregate) -> String {
+-    let lines: Vec<&str> = aggregate
+-        .friction_details
+-        .iter()
+-        .filter(|s| !s.trim().is_empty())
+-        .take(MAX_PROMPT_FRICTION_DETAILS)
+-        .map(|s| s.as_str())
+-        .collect();
+-    if lines.is_empty() {
+-        return String::new();
+-    }
+-    format!("- {}", lines.join("\n- "))
+-}
+-
+-pub fn user_instructions_block(aggregate: &InsightsAggregate) -> String {
+-    let mut seen = std::collections::HashSet::<&str>::new();
+-    let mut lines: Vec<&str> = Vec::new();
+-    for s in &aggregate.user_instructions {
+-        if s.trim().is_empty() {
+-            continue;
+-        }
+-        if seen.insert(s.as_str()) && lines.len() < MAX_PROMPT_USER_INSTRUCTIONS {
+-            lines.push(s.as_str());
+-        }
+-    }
+-    if lines.is_empty() {
+-        "None captured".to_string()
+-    } else {
+-        format!("- {}", lines.join("\n- "))
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/areas.md b/src/crates/assembly/core/src/agentic/insights/prompts/areas.md
+deleted file mode 100644
+index 3fdced0..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/areas.md
++++ /dev/null
+@@ -1,16 +0,0 @@
+-﻿Analyze this northhing usage data and identify project areas.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "areas": [
+-    {"name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on and how northhing was used."}
+-  ]
+-}
+-
+-Include 4-5 areas. Skip internal northhing operations.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/at_a_glance.md b/src/crates/assembly/core/src/agentic/insights/prompts/at_a_glance.md
+deleted file mode 100644
+index 7f05d88..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/at_a_glance.md
++++ /dev/null
+@@ -1,38 +0,0 @@
+-﻿You're writing an "At a Glance" summary for a northhing usage insights report. The goal is to help users understand their usage and improve how they use AI-assisted coding, especially as models improve.
+-
+-You have access to the full analysis results below. Synthesize them into a concise 4-part summary.
+-
+-Use this 4-part structure:
+-
+-1. **What's working** - What is the user's unique style of interacting with the AI and what are some impactful things they've done? You can include one or two details, but keep it high level since things might not be fresh in the user's memory. Don't be fluffy or overly complimentary. Also, don't focus on the tool calls they use.
+-
+-2. **What's hindering you** - Cover both (a) AI's fault (misunderstandings, wrong approaches, bugs) and (b) user-side friction (not providing enough context, environment issues -- ideally more general than just one project) in a single paragraph. Be honest but constructive.
+-
+-3. **Quick wins to try** - Specific northhing features they could try, or a workflow technique if you think it's really compelling. Reference the suggestions analysis below. (Avoid stuff like "Ask AI to confirm before taking actions" or "Type out more context up front" which are less compelling.)
+-
+-4. **Looking ahead** - As we move to much more capable models over the next 3-6 months, what should they prepare for? What workflows that seem impossible now will become possible?
+-
+-Keep each section to 2-3 not-too-long sentences. Don't overwhelm the user. Don't mention specific numerical stats or underlined_categories from the session data below. Use a coaching tone.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT. Every value MUST be a plain string (never a nested object or array):
+-{
+-  "whats_working": "plain string, not an object",
+-  "whats_hindering": "plain string combining both AI-side and user-side points, not an object",
+-  "quick_wins": "plain string, not an object",
+-  "looking_ahead": "plain string, not an object"
+-}
+-
+-SESSION DATA:
+-{aggregate_json}
+-
+-## Project Areas
+-{areas}
+-
+-## Suggestions
+-{suggestions}
+-
+-## Big Wins & Friction Analysis
+-{wins_and_friction}
+-
+-## Interaction Style
+-{interaction_style}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/facet_extraction.md b/src/crates/assembly/core/src/agentic/insights/prompts/facet_extraction.md
+deleted file mode 100644
+index da40616..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/facet_extraction.md
++++ /dev/null
+@@ -1,47 +0,0 @@
+-﻿Analyze this northhing session and extract structured facets.
+-
+-CRITICAL GUIDELINES:
+-
+-1. **goal_categories**: Count ONLY what the USER explicitly asked for.
+-   - DO NOT count AI's autonomous codebase exploration
+-   - DO NOT count work AI decided to do on its own
+-   - ONLY count when user says "can you...", "please...", "I need...", "let's..."
+-
+-2. **user_satisfaction_counts**: Base ONLY on explicit user signals.
+-   - "Yay!", "great!", "perfect!" 鈫?happy
+-   - "thanks", "looks good", "that works" 鈫?satisfied
+-   - "ok, now let's..." (continuing without complaint) 鈫?likely_satisfied
+-   - "that's not right", "try again" 鈫?dissatisfied
+-   - "this is broken", "I give up" 鈫?frustrated
+-
+-3. **friction_counts**: Be specific about what went wrong.
+-   - misunderstood_request: AI interpreted incorrectly
+-   - wrong_approach: Right goal, wrong solution method
+-   - buggy_code: Code didn't work correctly
+-   - user_rejected_action: User said no/stop to a tool call
+-   - excessive_changes: Over-engineered or changed too much
+-   - rate_limit: Hit usage limit
+-   - context_lost: AI lost track of conversation context
+-
+-4. If very short or just warmup, use warmup_minimal for goal_category
+-
+-5. **languages_used**: Optional. The insights report's language chart is computed from edited file paths (Edit/Write tool), not from this field; you may still list languages you infer for context.
+-
+-SESSION:
+-{session_transcript}
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT matching this schema:
+-{
+-  "underlying_goal": "What the user fundamentally wanted to achieve",
+-  "goal_categories": {"category_name": count, ...},
+-  "outcome": "fully_achieved|mostly_achieved|partially_achieved|not_achieved|unclear_from_transcript",
+-  "user_satisfaction_counts": {"level": count, ...},
+-  "claude_helpfulness": "unhelpful|slightly_helpful|moderately_helpful|very_helpful|essential",
+-  "session_type": "single_task|multi_task|iterative_refinement|exploration|quick_question",
+-  "friction_counts": {"friction_type": count, ...},
+-  "friction_detail": "One sentence describing friction or empty",
+-  "primary_success": "fast_accurate_search|correct_code_edits|good_explanations|proactive_help|multi_file_changes|good_debugging",
+-  "brief_summary": "One sentence: what user wanted and whether they got it",
+-  "languages_used": ["programing_language1", "programing_language2"],
+-  "user_instructions": ["Any explicit instructions user gave to AI about how to behave"]
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/friction.md b/src/crates/assembly/core/src/agentic/insights/prompts/friction.md
+deleted file mode 100644
+index c1b8658..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/friction.md
++++ /dev/null
+@@ -1,28 +0,0 @@
+-﻿Analyze this northhing usage data and identify where friction occurs. Use second person ("you").
+-
+-Write a brief **intro** (1 sentence summarizing the overall friction situation).
+-
+-Then identify 2-3 **friction_categories** 鈥?major friction themes. For each:
+-- Split clearly between (a) AI's fault (misunderstandings, wrong approaches, bugs) and (b) user-side friction
+-- Provide specific examples from the session data
+-- Suggest concrete improvements
+-- Include the approximate count of sessions affected
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "intro": "1 sentence summarizing friction",
+-  "friction_categories": [
+-    {"category": "Concrete category name", "count": N, "description": "1-2 sentences explaining this category. Use 'you' not 'the user'.", "examples": ["Specific example with consequence", "Another example"], "suggestion": "Concrete suggestion for improvement"}
+-  ]
+-}
+-
+-Include 2-3 friction categories.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+-
+-FRICTION DETAILS:
+-{friction_details}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/fun_ending.md b/src/crates/assembly/core/src/agentic/insights/prompts/fun_ending.md
+deleted file mode 100644
+index fa32c67..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/fun_ending.md
++++ /dev/null
+@@ -1,15 +0,0 @@
+-﻿Analyze this northhing usage data and find a memorable moment.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "headline": "A memorable QUALITATIVE moment from the transcripts - not a statistic. Something human, funny, or surprising.",
+-  "detail": "Brief context about when/where this happened"
+-}
+-
+-Find something genuinely interesting or amusing from the session summaries.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/horizon.md b/src/crates/assembly/core/src/agentic/insights/prompts/horizon.md
+deleted file mode 100644
+index 9608d26..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/horizon.md
++++ /dev/null
+@@ -1,20 +0,0 @@
+-﻿Analyze this northhing usage data and identify future opportunities.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "intro": "1 sentence about evolving AI-assisted development",
+-  "opportunities": [
+-    {"title": "Short title (4-8 words)", "whats_possible": "2-3 ambitious sentences about autonomous workflows", "how_to_try": "1-2 sentences mentioning relevant tooling", "copyable_prompt": "Detailed prompt to try"}
+-  ]
+-}
+-
+-Include 3 opportunities. Think BIG - autonomous workflows, parallel agents, iterating against tests.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+-
+-FRICTION DETAILS:
+-{friction_details}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/interaction_style.md b/src/crates/assembly/core/src/agentic/insights/prompts/interaction_style.md
+deleted file mode 100644
+index ad2c7f5..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/interaction_style.md
++++ /dev/null
+@@ -1,24 +0,0 @@
+-﻿Analyze this northhing usage data and describe the user's interaction style. Use second person ("you").
+-
+-Write a **narrative** (2-3 paragraphs) about how this user interacts with the AI:
+-- What kind of tasks do they delegate vs. do themselves?
+-- How do they give instructions 鈥?detailed upfront or iterative?
+-- How do they react to mistakes 鈥?patient, corrective, frustrated?
+-- What's their typical session flow 鈥?short bursts or long deep dives?
+-- Do they use the AI more for exploration, implementation, debugging, or review?
+-
+-Then identify 2-4 **key_patterns** 鈥?short, insightful observations about their usage style. Each pattern should be a single sentence that captures a recurring behavior.
+-
+-Don't mention specific numerical stats. Use a coaching tone. Be honest but constructive.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "narrative": "2-3 paragraphs about how this user works with AI. Use markdown for emphasis.",
+-  "key_patterns": ["pattern1", "pattern2", "pattern3"]
+-}
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/suggestions.md b/src/crates/assembly/core/src/agentic/insights/prompts/suggestions.md
+deleted file mode 100644
+index e49e835..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/suggestions.md
++++ /dev/null
+@@ -1,105 +0,0 @@
+-﻿Analyze this northhing usage data and suggest improvements.
+-
+-## northhing FEATURES REFERENCE (pick from these for features_to_try):
+-
+-1. **Skills**: Create reusable prompt templates as markdown files that run with a single button or command.
+-   - How to use: Create `.northhing/skills/commit/SKILL.md` with instructions. Then trigger it from the Skills panel.
+-   - Good for: repetitive workflows - commit messages, code reviews, testing, deployment, or complex multi-step workflows
+-   - Example SKILL.md content:
+-     ```markdown
+-     # Commit Skill
+-     Review all staged changes with `git diff --cached`.
+-     Write a conventional commit message following the project's style.
+-     Run `git commit -m "<message>"` and report the result.
+-     ```
+-   - Advanced: Skills can reference other files, include conditional logic, and chain multiple steps.
+-   - Authoring new skills: Invoke the built-in `writing-skills` skill for guidance on creating well-structured skill files.
+-
+-2. **SubAgents (Task Agents)**: Custom agents you define for specific domains or tasks. SubAgents run in parallel and return results to the parent agent.
+-   - How to use: Create agents in `.northhing/agents/` with custom prompts and tool configurations.
+-   - Good for: domain-specific tasks, parallel exploration, focused code review
+-   - Example agent config (`.northhing/agents/security-reviewer/agent.json`):
+-     ```json
+-     {
+-       "name": "Security Reviewer",
+-       "description": "Reviews code for security vulnerabilities",
+-       "prompt_file": "prompt.md",
+-       "tools": ["Read", "Grep", "Glob"]
+-     }
+-     ```
+-   - Parallel exploration: Launch multiple SubAgents to investigate different parts of the codebase simultaneously, then synthesize their findings.
+-
+-3. **MCP Servers**: Connect northhing to external tools, databases, and APIs via Model Context Protocol.
+-   - How to use: Configure MCP servers in settings to connect to external services.
+-   - Good for: database queries, API integration, connecting to internal tools
+-   - Common integrations:
+-     - **Database**: Query PostgreSQL/MySQL directly from chat 鈥?`SELECT * FROM users WHERE ...`
+-     - **GitHub**: Create issues, review PRs, manage releases without leaving northhing
+-     - **Slack/Discord**: Post messages, read channels, manage notifications
+-     - **Notion/Linear**: Create and update project management items
+-   - Example config:
+-     ```json
+-     {
+-       "mcpServers": {
+-         "postgres": {
+-           "command": "npx",
+-           "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/mydb"]
+-         }
+-       }
+-     }
+-     ```
+-
+-4. **Multiple Modes**: Switch between Agentic, Cowork, Plan, and Debug modes for different tasks.
+-   - How to use: Select the appropriate mode from the mode switcher based on your task.
+-   - Mode comparison:
+-     | Mode | Best for | AI behavior |
+-     |------|----------|-------------|
+-     | **Agentic** | Autonomous implementation | AI plans and executes independently |
+-     | **Cowork** | Collaborative editing | AI suggests, you approve each change |
+-     | **Plan** | Architecture & design | AI creates detailed plans before coding |
+-     | **Debug** | Troubleshooting | AI systematically investigates issues |
+-   - Tip: Start with Plan mode for complex tasks, then switch to Agentic for implementation.
+-
+-5. **CLI Exec (Headless)**: Run northhing non-interactively from scripts and CI/CD pipelines.
+-   - How to use: `northhing exec "fix lint errors" --tools "Edit,Read,Bash"`
+-   - Good for: CI/CD integration, batch code fixes, automated reviews
+-   - CI/CD examples:
+-     ```bash
+-     # Pre-commit hook: auto-fix lint errors
+-     northhing exec "fix all lint errors in staged files" --tools "Edit,Read,Bash"
+-
+-     # PR review bot
+-     northhing exec "review changes in this PR for security issues" --tools "Read,Grep,Glob"
+-
+-     # Automated documentation
+-     northhing exec "update API docs for all changed endpoints" --tools "Read,Edit,Glob"
+-     ```
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "northhing_md_additions": [
+-    {"section": "Section name in northhing.md", "content": "A specific line or block to add based on workflow patterns", "rationale": "1 sentence explaining why this would help based on actual sessions"}
+-  ],
+-  "features_to_try": [
+-    {"feature": "Feature name from northhing FEATURES REFERENCE above", "description": "What it does", "example_usage": "Actual command or config to copy", "benefit": "Why this would help YOU based on your sessions"}
+-  ],
+-  "usage_patterns": [
+-    {"pattern": "Short title", "description": "1-2 sentence summary of the pattern", "detail": "3-4 sentences explaining how this applies to YOUR work", "suggested_prompt": "A specific prompt to copy and try"}
+-  ]
+-}
+-
+-IMPORTANT for northhing_md_additions: PRIORITIZE instructions that appear MULTIPLE TIMES in the user data. If user told AI the same thing in 2+ sessions (e.g., 'always run tests', 'use TypeScript'), that's a PRIME candidate - they shouldn't have to repeat themselves.
+-
+-IMPORTANT for features_to_try: Pick 2-3 from the northhing FEATURES REFERENCE above. Include concrete, copy-pasteable example_usage for each. Tailor the benefit to the user's actual workflow patterns.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+-
+-FRICTION DETAILS:
+-{friction_details}
+-
+-USER INSTRUCTIONS TO AI:
+-{user_instructions}
+diff --git a/src/crates/assembly/core/src/agentic/insights/prompts/wins.md b/src/crates/assembly/core/src/agentic/insights/prompts/wins.md
+deleted file mode 100644
+index c0046a4..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/prompts/wins.md
++++ /dev/null
+@@ -1,25 +0,0 @@
+-﻿Analyze this northhing usage data and identify what's working well for this user. Use second person ("you").
+-
+-Write a brief **intro** (1 sentence of context about the user's overall usage).
+-
+-Then identify 2-3 **impressive_workflows** 鈥?impressive accomplishments or effective workflows the user demonstrated. Focus on:
+-- Unique or effective ways they used AI tools
+-- Successful outcomes from their sessions
+-- Smart workflow patterns they've developed
+-Don't be fluffy or overly complimentary. Be specific about what made these impressive.
+-
+-RESPOND WITH ONLY A VALID JSON OBJECT:
+-{
+-  "intro": "1 sentence of context",
+-  "impressive_workflows": [
+-    {"title": "Short title (3-6 words)", "description": "2-3 sentences describing the impressive workflow or approach. Use 'you' not 'the user'.", "impact": "One sentence about the concrete impact."}
+-  ]
+-}
+-
+-Include 2-3 impressive workflows.
+-
+-DATA:
+-{aggregate_json}
+-
+-SESSION SUMMARIES:
+-{summaries}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_aggregate.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_aggregate.rs
+deleted file mode 100644
+index 6012d6d..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_aggregate.rs
++++ /dev/null
+@@ -1,166 +0,0 @@
+-//! Aggregate overview generation (at-a-glance, horizon, fun ending) for InsightsService.
+-
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::Message;
+-use serde_json::Value;
+-use std::sync::Arc;
+-use tracing::{debug, info};
+-
+-use super::super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    pub(crate) async fn generate_at_a_glance(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        areas_text: &str,
+-        suggestions_text: &str,
+-        wins_friction_text: &str,
+-        interaction_text: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<AtAGlance> {
+-        let prompt = format!(
+-            "{}{}",
+-            AT_A_GLANCE_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{areas}", areas_text)
+-                .replace("{suggestions}", suggestions_text)
+-                .replace("{wins_and_friction}", wins_friction_text)
+-                .replace("{interaction_style}", interaction_text),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("At a Glance AI call failed: {}", e)))?;
+-
+-        info!(
+-            "At a Glance response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("At a Glance text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse at-a-glance JSON: {}", e)))?;
+-
+-        let looking_ahead = {
+-            let v = json_value_to_string(&value["looking_ahead"]);
+-            if v.is_empty() {
+-                json_value_to_string(&value["ambitious_workflows"])
+-            } else {
+-                v
+-            }
+-        };
+-
+-        Ok(AtAGlance {
+-            whats_working: json_value_to_string(&value["whats_working"]),
+-            whats_hindering: json_value_to_string(&value["whats_hindering"]),
+-            quick_wins: json_value_to_string(&value["quick_wins"]),
+-            looking_ahead,
+-        })
+-    }
+-
+-    pub(crate) async fn generate_horizon(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        summaries: &str,
+-        friction_details: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<HorizonResult> {
+-        let prompt = format!(
+-            "{}{}",
+-            HORIZON_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{summaries}", summaries)
+-                .replace("{friction_details}", friction_details),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Horizon AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Horizon response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Horizon text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse horizon JSON: {}", e)))?;
+-
+-        Ok(HorizonResult {
+-            intro: value["intro"].as_str().unwrap_or("").to_string(),
+-            opportunities: value["opportunities"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .filter_map(|v| {
+-                            Some(HorizonWorkflow {
+-                                title: v["title"].as_str()?.to_string(),
+-                                whats_possible: v["whats_possible"].as_str()?.to_string(),
+-                                how_to_try: v["how_to_try"].as_str().unwrap_or("").to_string(),
+-                                copyable_prompt: v["copyable_prompt"].as_str().unwrap_or("").to_string(),
+-                            })
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-        })
+-    }
+-
+-    pub(crate) async fn generate_fun_ending(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        summaries: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<Option<FunEnding>> {
+-        let prompt = format!(
+-            "{}{}",
+-            FUN_ENDING_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{summaries}", summaries),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Fun Ending AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Fun Ending response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Fun Ending text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse fun ending JSON: {}", e)))?;
+-
+-        Ok(Some(FunEnding {
+-            headline: value["headline"]
+-                .as_str()
+-                .or(value["title"].as_str())
+-                .unwrap_or("")
+-                .to_string(),
+-            detail: value["detail"]
+-                .as_str()
+-                .or(value["message"].as_str())
+-                .unwrap_or("")
+-                .to_string(),
+-        }))
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_facet.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_facet.rs
+deleted file mode 100644
+index 6d1ce16..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_facet.rs
++++ /dev/null
+@@ -1,104 +0,0 @@
+-//! Facet extraction (areas and interaction style) for InsightsService.
+-
+-use crate::agentic::insights::prompt_context::{aggregate_stats_json_for_prompt, summaries_block};
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::Message;
+-use serde_json::Value;
+-use std::sync::Arc;
+-use tracing::{debug, info};
+-
+-use super::super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    pub(crate) async fn identify_areas(
+-        ai_client: &Arc<AIClient>,
+-        aggregate: &InsightsAggregate,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<Vec<ProjectArea>> {
+-        let aggregate_json = aggregate_stats_json_for_prompt(aggregate);
+-        let summaries = summaries_block(aggregate);
+-
+-        let prompt = format!(
+-            "{}{}",
+-            AREAS_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", &aggregate_json)
+-                .replace("{summaries}", &summaries),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Areas AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Areas response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Areas text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse areas JSON: {}", e)))?;
+-
+-        Ok(value["areas"]
+-            .as_array()
+-            .map(|arr| {
+-                arr.iter()
+-                    .filter_map(|v| {
+-                        Some(ProjectArea {
+-                            name: v["name"].as_str()?.to_string(),
+-                            session_count: v["session_count"].as_u64().unwrap_or(0) as u32,
+-                            description: v["description"].as_str()?.to_string(),
+-                        })
+-                    })
+-                    .collect()
+-            })
+-            .unwrap_or_default())
+-    }
+-
+-    pub(crate) async fn analyze_interaction_style(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        summaries: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<InteractionStyleResult> {
+-        let prompt = format!(
+-            "{}{}",
+-            INTERACTION_STYLE_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{summaries}", summaries),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Interaction Style AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Interaction Style response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Interaction Style text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse interaction style JSON: {}", e)))?;
+-
+-        Ok(InteractionStyleResult {
+-            narrative: value["narrative"].as_str().unwrap_or("").to_string(),
+-            key_patterns: value["key_patterns"]
+-                .as_array()
+-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+-                .unwrap_or_default(),
+-        })
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_suggestions.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_suggestions.rs
+deleted file mode 100644
+index 3159502..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_suggestions.rs
++++ /dev/null
+@@ -1,132 +0,0 @@
+-//! Suggestions generation for InsightsService.
+-
+-use crate::agentic::insights::prompt_context::{
+-    aggregate_stats_json_for_prompt, friction_block, summaries_block, user_instructions_block,
+-};
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::Message;
+-use serde_json::Value;
+-use std::sync::Arc;
+-use tracing::{debug, info};
+-
+-use super::super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    pub(crate) async fn generate_suggestions(
+-        ai_client: &Arc<AIClient>,
+-        aggregate: &InsightsAggregate,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<InsightsSuggestions> {
+-        let aggregate_json = aggregate_stats_json_for_prompt(aggregate);
+-        let summaries = summaries_block(aggregate);
+-        let friction_details = friction_block(aggregate);
+-        let user_instructions = user_instructions_block(aggregate);
+-
+-        let prompt = format!(
+-            "{}{}",
+-            SUGGESTIONS_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", &aggregate_json)
+-                .replace("{summaries}", &summaries)
+-                .replace("{friction_details}", &friction_details)
+-                .replace("{user_instructions}", &user_instructions),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Suggestions AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Suggestions response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Suggestions text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str).map_err(|e| {
+-            NortHingError::Deserialization(format!(
+-                "Failed to parse suggestions JSON: {}. Raw: {}",
+-                e,
+-                safe_truncate(&json_str, 500)
+-            ))
+-        })?;
+-
+-        debug!(
+-            "Suggestions parsed: md_additions={}, features={}, patterns={}",
+-            value["northhing_md_additions"].as_array().map(|a| a.len()).unwrap_or(0),
+-            value["features_to_try"].as_array().map(|a| a.len()).unwrap_or(0),
+-            value["usage_patterns"].as_array().map(|a| a.len()).unwrap_or(0),
+-        );
+-
+-        Ok(InsightsSuggestions {
+-            northhing_md_additions: value["northhing_md_additions"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .filter_map(|v| {
+-                            Some(MdAddition {
+-                                section: v["section"].as_str()?.to_string(),
+-                                content: v["content"].as_str()?.to_string(),
+-                                rationale: v["rationale"].as_str().or(v["why"].as_str()).unwrap_or("").to_string(),
+-                            })
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-            features_to_try: value["features_to_try"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .filter_map(|v| {
+-                            Some(FeatureRecommendation {
+-                                feature: v["feature"].as_str()?.to_string(),
+-                                description: v["description"]
+-                                    .as_str()
+-                                    .or(v["one_liner"].as_str())
+-                                    .unwrap_or("")
+-                                    .to_string(),
+-                                example_usage: v["example_usage"]
+-                                    .as_str()
+-                                    .or(v["example_code"].as_str())
+-                                    .unwrap_or("")
+-                                    .to_string(),
+-                                benefit: v["benefit"]
+-                                    .as_str()
+-                                    .or(v["why_for_you"].as_str())
+-                                    .unwrap_or("")
+-                                    .to_string(),
+-                            })
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-            usage_patterns: value["usage_patterns"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .map(|v| UsagePattern {
+-                            pattern: v["pattern"].as_str().or(v["title"].as_str()).unwrap_or("").to_string(),
+-                            description: v["description"]
+-                                .as_str()
+-                                .or(v["suggestion"].as_str())
+-                                .unwrap_or("")
+-                                .to_string(),
+-                            detail: v["detail"].as_str().unwrap_or("").to_string(),
+-                            suggested_prompt: v["suggested_prompt"]
+-                                .as_str()
+-                                .or(v["copyable_prompt"].as_str())
+-                                .unwrap_or("")
+-                                .to_string(),
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-        })
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_wins.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_wins.rs
+deleted file mode 100644
+index c223c68..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/analyze_wins.rs
++++ /dev/null
+@@ -1,121 +0,0 @@
+-//! Wins and friction derivation for InsightsService.
+-
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::Message;
+-use serde_json::Value;
+-use std::sync::Arc;
+-use tracing::{debug, info};
+-
+-use super::super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    pub(crate) async fn analyze_wins(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        summaries: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<WinsResult> {
+-        let prompt = format!(
+-            "{}{}",
+-            WINS_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{summaries}", summaries),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Wins AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Wins response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Wins text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse wins JSON: {}", e)))?;
+-
+-        Ok(WinsResult {
+-            intro: value["intro"].as_str().unwrap_or("").to_string(),
+-            big_wins: value["impressive_workflows"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .filter_map(|v| {
+-                            Some(BigWin {
+-                                title: v["title"].as_str()?.to_string(),
+-                                description: v["description"].as_str()?.to_string(),
+-                                impact: v["impact"].as_str().unwrap_or("").to_string(),
+-                            })
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-        })
+-    }
+-
+-    pub(crate) async fn analyze_friction(
+-        ai_client: &Arc<AIClient>,
+-        aggregate_json: &str,
+-        summaries: &str,
+-        friction_details: &str,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<FrictionResult> {
+-        let prompt = format!(
+-            "{}{}",
+-            FRICTION_PROMPT_TEMPLATE
+-                .replace("{aggregate_json}", aggregate_json)
+-                .replace("{summaries}", summaries)
+-                .replace("{friction_details}", friction_details),
+-            lang_instruction
+-        );
+-
+-        let messages = vec![Message::user(prompt)];
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Friction AI call failed: {}", e)))?;
+-
+-        info!(
+-            "Friction response: len={}, finish={:?}",
+-            response.text.len(),
+-            response.finish_reason
+-        );
+-        debug!("Friction text: {}", safe_truncate(&response.text, 300));
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse friction JSON: {}", e)))?;
+-
+-        Ok(FrictionResult {
+-            intro: value["intro"].as_str().unwrap_or("").to_string(),
+-            friction_categories: value["friction_categories"]
+-                .as_array()
+-                .map(|arr| {
+-                    arr.iter()
+-                        .filter_map(|v| {
+-                            Some(FrictionCategory {
+-                                category: v["category"].as_str()?.to_string(),
+-                                count: v["count"].as_u64().unwrap_or(0) as u32,
+-                                description: v["description"].as_str()?.to_string(),
+-                                examples: v["examples"]
+-                                    .as_array()
+-                                    .map(|a| a.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+-                                    .unwrap_or_default(),
+-                                suggestion: v["suggestion"].as_str().unwrap_or("").to_string(),
+-                            })
+-                        })
+-                        .collect()
+-                })
+-                .unwrap_or_default(),
+-        })
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/mod.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/mod.rs
+deleted file mode 100644
+index ecff301..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_analyze/mod.rs
++++ /dev/null
+@@ -1,295 +0,0 @@
+-//! Parallel analysis orchestration for InsightsService.
+-
+-mod analyze_aggregate;
+-mod analyze_facet;
+-mod analyze_suggestions;
+-mod analyze_wins;
+-
+-#[allow(unused_imports)]
+-pub use analyze_aggregate::*;
+-#[allow(unused_imports)]
+-pub use analyze_facet::*;
+-#[allow(unused_imports)]
+-pub use analyze_suggestions::*;
+-#[allow(unused_imports)]
+-pub use analyze_wins::*;
+-
+-use crate::agentic::insights::prompt_context::{aggregate_stats_json_for_prompt, friction_block, summaries_block};
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use std::sync::Arc;
+-use tokio::sync::Semaphore;
+-use tracing::warn;
+-
+-use super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    // ============ Stage 4a: Parallel Analysis ============
+-
+-    pub(crate) async fn generate_analysis_parallel(
+-        ai_client: &Arc<AIClient>,
+-        aggregate: &InsightsAggregate,
+-        lang_instruction: &str,
+-    ) -> (
+-        InsightsSuggestions,
+-        Vec<ProjectArea>,
+-        WinsFrictionResult,
+-        InteractionStyleResult,
+-        HorizonResult,
+-        Option<FunEnding>,
+-    ) {
+-        let aggregate_json = aggregate_stats_json_for_prompt(aggregate);
+-        let summaries_text = summaries_block(aggregate);
+-        let friction_text = friction_block(aggregate);
+-
+-        let semaphore = Arc::new(Semaphore::new(3));
+-
+-        // Task 1: Suggestions
+-        let client_1 = ai_client.clone();
+-        let agg_1 = aggregate.clone();
+-        let lang_1 = lang_instruction.to_string();
+-        let sem_1 = semaphore.clone();
+-        let suggestions_handle = tokio::spawn(async move {
+-            let _permit = sem_1
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::generate_suggestions(&client_1, &agg_1, &lang_1).await
+-        });
+-
+-        // Task 2: Areas
+-        let client_2 = ai_client.clone();
+-        let agg_2 = aggregate.clone();
+-        let lang_2 = lang_instruction.to_string();
+-        let sem_2 = semaphore.clone();
+-        let areas_handle = tokio::spawn(async move {
+-            let _permit = sem_2
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::identify_areas(&client_2, &agg_2, &lang_2).await
+-        });
+-
+-        // Task 3a: Wins
+-        let client_3a = ai_client.clone();
+-        let agg_json_3a = aggregate_json.clone();
+-        let summaries_3a = summaries_text.clone();
+-        let lang_3a = lang_instruction.to_string();
+-        let sem_3a = semaphore.clone();
+-        let wins_handle = tokio::spawn(async move {
+-            let _permit = sem_3a
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::analyze_wins(&client_3a, &agg_json_3a, &summaries_3a, &lang_3a).await
+-        });
+-
+-        // Task 3b: Friction
+-        let client_3b = ai_client.clone();
+-        let agg_json_3b = aggregate_json.clone();
+-        let summaries_3b = summaries_text.clone();
+-        let friction_3b = friction_text.clone();
+-        let lang_3b = lang_instruction.to_string();
+-        let sem_3b = semaphore.clone();
+-        let friction_handle = tokio::spawn(async move {
+-            let _permit = sem_3b
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::analyze_friction(&client_3b, &agg_json_3b, &summaries_3b, &friction_3b, &lang_3b).await
+-        });
+-
+-        // Task 4: Interaction Style
+-        let client_4 = ai_client.clone();
+-        let agg_json_4 = aggregate_json.clone();
+-        let summaries_4 = summaries_text.clone();
+-        let lang_4 = lang_instruction.to_string();
+-        let sem_4 = semaphore.clone();
+-        let interaction_handle = tokio::spawn(async move {
+-            let _permit = sem_4
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::analyze_interaction_style(&client_4, &agg_json_4, &summaries_4, &lang_4).await
+-        });
+-
+-        // Task 5: Horizon
+-        let client_5 = ai_client.clone();
+-        let agg_json_5 = aggregate_json.clone();
+-        let summaries_5 = summaries_text.clone();
+-        let friction_5 = friction_text.clone();
+-        let lang_5 = lang_instruction.to_string();
+-        let sem_5 = semaphore.clone();
+-        let horizon_handle = tokio::spawn(async move {
+-            let _permit = sem_5
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::generate_horizon(&client_5, &agg_json_5, &summaries_5, &friction_5, &lang_5).await
+-        });
+-
+-        // Task 6: Fun Ending
+-        let client_6 = ai_client.clone();
+-        let agg_json_6 = aggregate_json.clone();
+-        let summaries_6 = summaries_text.clone();
+-        let lang_6 = lang_instruction.to_string();
+-        let sem_6 = semaphore.clone();
+-        let fun_ending_handle = tokio::spawn(async move {
+-            let _permit = sem_6
+-                .acquire()
+-                .await
+-                .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-            Self::generate_fun_ending(&client_6, &agg_json_6, &summaries_6, &lang_6).await
+-        });
+-
+-        // Collect results with retry on transient failures
+-        let suggestions = Self::resolve_with_retry(
+-            suggestions_handle,
+-            "Suggestions",
+-            || async { Self::generate_suggestions(ai_client, aggregate, lang_instruction).await },
+-            default_suggestions,
+-        )
+-        .await;
+-
+-        let areas = Self::resolve_with_retry(
+-            areas_handle,
+-            "Areas",
+-            || async { Self::identify_areas(ai_client, aggregate, lang_instruction).await },
+-            Vec::new,
+-        )
+-        .await;
+-
+-        let wins_result = Self::resolve_with_retry(
+-            wins_handle,
+-            "Wins",
+-            || async {
+-                Self::analyze_wins(
+-                    ai_client,
+-                    &aggregate_stats_json_for_prompt(aggregate),
+-                    &summaries_block(aggregate),
+-                    lang_instruction,
+-                )
+-                .await
+-            },
+-            WinsResult::default,
+-        )
+-        .await;
+-
+-        let friction_result = Self::resolve_with_retry(
+-            friction_handle,
+-            "Friction",
+-            || async {
+-                Self::analyze_friction(
+-                    ai_client,
+-                    &aggregate_stats_json_for_prompt(aggregate),
+-                    &summaries_block(aggregate),
+-                    &friction_block(aggregate),
+-                    lang_instruction,
+-                )
+-                .await
+-            },
+-            FrictionResult::default,
+-        )
+-        .await;
+-
+-        let wins_friction = WinsFrictionResult {
+-            wins_intro: wins_result.intro,
+-            big_wins: wins_result.big_wins,
+-            friction_intro: friction_result.intro,
+-            friction_categories: friction_result.friction_categories,
+-        };
+-
+-        let interaction = Self::resolve_with_retry(
+-            interaction_handle,
+-            "Interaction Style",
+-            || async {
+-                Self::analyze_interaction_style(
+-                    ai_client,
+-                    &aggregate_stats_json_for_prompt(aggregate),
+-                    &summaries_block(aggregate),
+-                    lang_instruction,
+-                )
+-                .await
+-            },
+-            InteractionStyleResult::default,
+-        )
+-        .await;
+-
+-        let horizon = Self::resolve_with_retry(
+-            horizon_handle,
+-            "Horizon",
+-            || async {
+-                Self::generate_horizon(
+-                    ai_client,
+-                    &aggregate_stats_json_for_prompt(aggregate),
+-                    &summaries_block(aggregate),
+-                    &friction_block(aggregate),
+-                    lang_instruction,
+-                )
+-                .await
+-            },
+-            HorizonResult::default,
+-        )
+-        .await;
+-
+-        let fun_ending = Self::resolve_with_retry(
+-            fun_ending_handle,
+-            "Fun Ending",
+-            || async {
+-                Self::generate_fun_ending(
+-                    ai_client,
+-                    &aggregate_stats_json_for_prompt(aggregate),
+-                    &summaries_block(aggregate),
+-                    lang_instruction,
+-                )
+-                .await
+-            },
+-            || None,
+-        )
+-        .await;
+-
+-        (suggestions, areas, wins_friction, interaction, horizon, fun_ending)
+-    }
+-
+-    /// Generic helper to resolve a spawned task with retry on transient failures.
+-    ///
+-    /// Retries on rate-limit errors, empty AI responses, and JSON extraction failures.
+-    async fn resolve_with_retry<T, RetryFut, RetryFn, DefaultFn>(
+-        handle: tokio::task::JoinHandle<NortHingResult<T>>,
+-        label: &str,
+-        retry_fn: RetryFn,
+-        default_fn: DefaultFn,
+-    ) -> T
+-    where
+-        RetryFut: std::future::Future<Output = NortHingResult<T>>,
+-        RetryFn: FnOnce() -> RetryFut,
+-        DefaultFn: FnOnce() -> T,
+-    {
+-        let result = handle
+-            .await
+-            .map_err(|e| NortHingError::service(format!("{} task panicked: {}", label, e)));
+-
+-        match result {
+-            Ok(Ok(val)) => val,
+-            Ok(Err(e)) if is_retryable_error(&e) => {
+-                warn!("{} failed (retryable): {}, retrying after delay", label, e);
+-                Self::emit_progress(&format!("Retrying {}...", label.to_lowercase()), "analysis_retry", 0, 0).await;
+-                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+-                retry_fn().await.unwrap_or_else(|e| {
+-                    warn!("{} retry failed: {}, using defaults", label, e);
+-                    default_fn()
+-                })
+-            }
+-            Ok(Err(e)) => {
+-                warn!("{} failed: {}, using defaults", label, e);
+-                default_fn()
+-            }
+-            Err(e) => {
+-                warn!("{} task error: {}, using defaults", label, e);
+-                default_fn()
+-            }
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_collect.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_collect.rs
+deleted file mode 100644
+index 7e571c1..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_collect.rs
++++ /dev/null
+@@ -1,386 +0,0 @@
+-//! Data collection and pipeline orchestration for InsightsService.
+-
+-use crate::agentic::insights::cancellation;
+-use crate::agentic::insights::collector::InsightsCollector;
+-use crate::agentic::insights::facet_cache;
+-use crate::agentic::insights::prompt_context::{
+-    aggregate_stats_json_for_prompt, friction_block, summaries_block, user_instructions_block,
+-};
+-use crate::agentic::insights::session_paths::collect_effective_session_storage_roots;
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::get_global_ai_client_factory;
+-use crate::infrastructure::ai::AIClient;
+-use crate::service::config::get_global_config_service;
+-use crate::service::config::AppConfig;
+-use crate::service::i18n::LocaleId;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use crate::util::types::Message;
+-use serde_json::Value;
+-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+-use std::sync::Arc;
+-use std::time::Duration;
+-use tokio::sync::Semaphore;
+-use tokio_util::sync::CancellationToken;
+-use tracing::{debug, info, warn};
+-
+-use super::ins_analyze::*;
+-use super::ins_format::*;
+-use super::ins_query::*;
+-use super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    /// Main entry: run the full insights pipeline
+-    pub async fn generate(days: u32) -> NortHingResult<InsightsReport> {
+-        let token = cancellation::register().await;
+-        let result = Self::generate_inner(days, &token).await;
+-        cancellation::unregister().await;
+-        result
+-    }
+-
+-    /// Cancel the current insights generation.
+-    pub async fn cancel() -> Result<(), String> {
+-        cancellation::cancel().await
+-    }
+-
+-    async fn generate_inner(days: u32, token: &CancellationToken) -> NortHingResult<InsightsReport> {
+-        let user_lang = Self::get_user_language().await;
+-        let lang_instruction = Self::build_language_instruction(&user_lang);
+-        debug!("Insights generation using language: {}", user_lang);
+-
+-        // Stage 1: Data Collection
+-        Self::emit_progress("Collecting session data...", "data_collection", 0, 0).await;
+-        let (base_stats, transcripts) = InsightsCollector::collect(days).await?;
+-
+-        if transcripts.is_empty() {
+-            return Err(NortHingError::service("No sessions found in the specified time range"));
+-        }
+-
+-        info!(
+-            "Collected {} sessions, {} messages",
+-            transcripts.len(),
+-            base_stats.total_messages
+-        );
+-
+-        Self::check_cancelled(token)?;
+-
+-        // Stage 2: Parallel Facet Extraction (fast model)
+-        let ai_factory = get_global_ai_client_factory()
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Failed to get AI client factory: {}", e)))?;
+-        let ai_client_fast = ai_factory
+-            .get_client_resolved("fast")
+-            .await
+-            .map_err(|e| NortHingError::service(format!("Failed to resolve fast model: {}", e)))?;
+-
+-        // Primary model for analysis stages — falls back to fast if not configured
+-        let ai_client_primary = match ai_factory.get_client_resolved("primary").await {
+-            Ok(client) => client,
+-            Err(_) => {
+-                warn!("Primary model not configured, falling back to fast model for analysis");
+-                ai_client_fast.clone()
+-            }
+-        };
+-
+-        let facets = Self::extract_facets_adaptive(&ai_client_fast, &transcripts, &lang_instruction, token).await?;
+-
+-        info!("Extracted facets for {} sessions", facets.len());
+-
+-        Self::check_cancelled(token)?;
+-
+-        // Stage 3: Aggregation (Rust-side, no AI)
+-        Self::emit_progress("Aggregating analysis...", "aggregation", 0, 0).await;
+-        let aggregate = InsightsCollector::aggregate(&base_stats, &facets);
+-
+-        Self::check_cancelled(token)?;
+-
+-        // Stage 4a: Parallel analysis (primary model) — 7 independent tasks
+-        Self::emit_progress("Analyzing patterns...", "analysis", 0, 0).await;
+-
+-        let (suggestions, areas, wins_friction, interaction, horizon, fun_ending) =
+-            Self::generate_analysis_parallel(&ai_client_primary, &aggregate, &lang_instruction).await;
+-
+-        Self::check_cancelled(token)?;
+-
+-        // Stage 4b: Synthesis (primary model) — at_a_glance depends on 4a results
+-        Self::emit_progress("Writing summary...", "synthesis", 0, 0).await;
+-
+-        let at_a_glance = Self::generate_synthesis(
+-            &ai_client_primary,
+-            &aggregate,
+-            &suggestions,
+-            &areas,
+-            &wins_friction,
+-            &interaction,
+-            &lang_instruction,
+-        )
+-        .await;
+-
+-        Self::check_cancelled(token)?;
+-
+-        // Stage 5: Assembly
+-        Self::emit_progress("Assembling report...", "assembly", 0, 0).await;
+-        let report = Self::assemble_report(
+-            base_stats,
+-            aggregate,
+-            suggestions,
+-            areas,
+-            wins_friction,
+-            interaction,
+-            at_a_glance,
+-            horizon,
+-            fun_ending,
+-        );
+-
+-        let report = Self::save_report(report, &user_lang).await?;
+-
+-        Self::emit_progress("Complete!", "complete", 0, 0).await;
+-        info!("Insights report generated successfully");
+-
+-        Ok(report)
+-    }
+-
+-    fn check_cancelled(token: &CancellationToken) -> NortHingResult<()> {
+-        if token.is_cancelled() {
+-            Err(NortHingError::service("Insights generation cancelled"))
+-        } else {
+-            Ok(())
+-        }
+-    }
+-
+-    // ============ Stage 2: Facet Extraction ============
+-
+-    async fn extract_facets_adaptive(
+-        ai_client: &Arc<AIClient>,
+-        transcripts: &[SessionTranscript],
+-        lang_instruction: &str,
+-        token: &CancellationToken,
+-    ) -> NortHingResult<Vec<SessionFacet>> {
+-        let total = transcripts.len();
+-        let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FACET_EXTRACTIONS));
+-        let counter = Arc::new(AtomicUsize::new(0));
+-        let rate_limited = Arc::new(AtomicBool::new(false));
+-        let cancelled = Arc::new(AtomicBool::new(false));
+-
+-        let handles: Vec<_> = transcripts
+-            .iter()
+-            .enumerate()
+-            .map(|(idx, t)| {
+-                let client = ai_client.clone();
+-                let sem = semaphore.clone();
+-                let transcript = t.clone();
+-                let cnt = counter.clone();
+-                let rl = rate_limited.clone();
+-                let cl = cancelled.clone();
+-                let lang = lang_instruction.to_string();
+-                let child_token = token.clone();
+-
+-                tokio::spawn(async move {
+-                    let _permit = sem
+-                        .acquire()
+-                        .await
+-                        .map_err(|e| NortHingError::service(format!("Semaphore error: {}", e)))?;
+-
+-                    if cl.load(Ordering::Relaxed) || child_token.is_cancelled() {
+-                        return Err(NortHingError::service("Insights generation cancelled"));
+-                    }
+-
+-                    if rl.load(Ordering::Relaxed) {
+-                        return Err(NortHingError::service("skipped_rate_limited"));
+-                    }
+-
+-                    let n = cnt.fetch_add(1, Ordering::Relaxed) + 1;
+-                    Self::emit_progress(
+-                        &format!("Analyzing session {}/{}...", n, total),
+-                        "facet_extraction",
+-                        n,
+-                        total,
+-                    )
+-                    .await;
+-
+-                    let result = Self::extract_single_facet(&client, &transcript, &lang).await;
+-
+-                    if let Err(ref e) = result {
+-                        if is_rate_limit_error(e) {
+-                            rl.store(true, Ordering::Relaxed);
+-                        }
+-                    }
+-
+-                    result.map(|facet| (idx, facet))
+-                })
+-            })
+-            .collect();
+-
+-        let mut facets = Vec::new();
+-        let mut failed_indices: Vec<usize> = Vec::new();
+-        let mut hit_rate_limit = false;
+-
+-        for (idx, handle) in handles.into_iter().enumerate() {
+-            if token.is_cancelled() {
+-                return Err(NortHingError::service("Insights generation cancelled"));
+-            }
+-            match handle.await {
+-                Ok(Ok((_orig_idx, facet))) => facets.push(facet),
+-                Ok(Err(e)) => {
+-                    let err_str = e.to_string();
+-                    if err_str.contains("cancelled") {
+-                        return Err(e);
+-                    }
+-                    if err_str.contains("skipped_rate_limited") || is_rate_limit_error(&e) {
+-                        hit_rate_limit = true;
+-                        failed_indices.push(idx);
+-                    } else {
+-                        warn!("Facet extraction failed for session {}: {}", idx, e);
+-                    }
+-                }
+-                Err(e) => warn!("Facet task panicked: {}", e),
+-            }
+-        }
+-
+-        if hit_rate_limit && !failed_indices.is_empty() {
+-            let retry_count = failed_indices.len();
+-            warn!("Rate limit detected, retrying {} sessions sequentially", retry_count);
+-            Self::emit_progress(
+-                &format!("Rate limited. Retrying {} sessions sequentially...", retry_count),
+-                "facet_retry",
+-                0,
+-                retry_count,
+-            )
+-            .await;
+-
+-            tokio::time::sleep(Duration::from_secs(3)).await;
+-
+-            for (i, idx) in failed_indices.iter().enumerate() {
+-                Self::check_cancelled(token)?;
+-
+-                Self::emit_progress(
+-                    &format!("Retrying session {}/{}...", i + 1, retry_count),
+-                    "facet_retry",
+-                    i + 1,
+-                    retry_count,
+-                )
+-                .await;
+-
+-                match Self::extract_single_facet(ai_client, &transcripts[*idx], lang_instruction).await {
+-                    Ok(facet) => facets.push(facet),
+-                    Err(e) => warn!("Sequential retry also failed for session {}: {}", idx, e),
+-                }
+-
+-                if i + 1 < retry_count {
+-                    tokio::time::sleep(Duration::from_millis(500)).await;
+-                }
+-            }
+-        }
+-
+-        Ok(facets)
+-    }
+-
+-    async fn extract_single_facet(
+-        ai_client: &Arc<AIClient>,
+-        transcript: &SessionTranscript,
+-        lang_instruction: &str,
+-    ) -> NortHingResult<SessionFacet> {
+-        if let Ok(Some(cached)) = facet_cache::try_load_cached_facet(transcript).await {
+-            return Ok(cached);
+-        }
+-
+-        let session_info = format!(
+-            "Session: {}\nAgent: {}\nName: {}\nDate: {}\nDuration: {} min\n\n{}",
+-            transcript.session_id,
+-            transcript.agent_type,
+-            transcript.session_name,
+-            transcript.created_at,
+-            transcript.duration_minutes,
+-            transcript.transcript
+-        );
+-
+-        let prompt = format!(
+-            "{}{}",
+-            FACET_PROMPT_TEMPLATE.replace("{session_transcript}", &session_info),
+-            lang_instruction
+-        );
+-        let messages = vec![Message::user(prompt)];
+-
+-        let response = ai_client
+-            .send_message(messages, None)
+-            .await
+-            .map_err(|e| NortHingError::service(format!("AI call failed: {}", e)))?;
+-
+-        let json_str = extract_json_from_response(&response.text)?;
+-        let value: Value = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse facet JSON: {}", e)))?;
+-
+-        let facet = SessionFacet {
+-            session_id: transcript.session_id.clone(),
+-            underlying_goal: value["underlying_goal"].as_str().unwrap_or("").to_string(),
+-            goal_categories: parse_string_u32_map(&value["goal_categories"]),
+-            outcome: value["outcome"]
+-                .as_str()
+-                .unwrap_or("unclear_from_transcript")
+-                .to_string(),
+-            user_satisfaction_counts: parse_string_u32_map(&value["user_satisfaction_counts"]),
+-            claude_helpfulness: value["claude_helpfulness"]
+-                .as_str()
+-                .unwrap_or("moderately_helpful")
+-                .to_string(),
+-            session_type: value["session_type"].as_str().unwrap_or("single_task").to_string(),
+-            friction_counts: parse_string_u32_map(&value["friction_counts"]),
+-            friction_detail: value["friction_detail"].as_str().unwrap_or("").to_string(),
+-            primary_success: value["primary_success"].as_str().unwrap_or("").to_string(),
+-            brief_summary: value["brief_summary"].as_str().unwrap_or("").to_string(),
+-            languages_used: value["languages_used"]
+-                .as_array()
+-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+-                .unwrap_or_default(),
+-            user_instructions: value["user_instructions"]
+-                .as_array()
+-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+-                .unwrap_or_default(),
+-        };
+-
+-        let _ = facet_cache::save_cached_facet(transcript, &facet).await;
+-
+-        Ok(facet)
+-    }
+-
+-    // ============ Language helpers ============
+-
+-    async fn get_user_language() -> String {
+-        match get_global_config_service().await {
+-            Ok(config_service) => match config_service.config::<AppConfig>(Some("app")).await {
+-                Ok(app_config) => app_config.language,
+-                Err(_) => "en-US".to_string(),
+-            },
+-            Err(_) => "en-US".to_string(),
+-        }
+-    }
+-
+-    fn build_language_instruction(lang: &str) -> String {
+-        let json_rule = concat!(
+-            "\n\nCRITICAL JSON RULE: Inside JSON string values you MUST escape every literal double-quote as \\\".",
+-            " Do NOT place unescaped \" characters inside string values.",
+-            " For example, write \"he said \\\"hello\\\"\" instead of \"he said \"hello\"\".",
+-        );
+-
+-        if lang.starts_with("en") {
+-            json_rule.to_string()
+-        } else {
+-            let lang_name = match lang {
+-                "ja" | "ja-JP" => "Japanese (日本語)",
+-                "ko" | "ko-KR" => "Korean (한국어)",
+-                "fr" | "fr-FR" => "French (Français)",
+-                "de" | "de-DE" => "German (Deutsch)",
+-                "es" | "es-ES" => "Spanish (Español)",
+-                "pt" | "pt-BR" => "Portuguese (Português)",
+-                "ru" | "ru-RU" => "Russian (Русский)",
+-                _ => LocaleId::from_str(lang)
+-                    .map(|locale| locale.model_language_name())
+-                    .unwrap_or(lang),
+-            };
+-            format!(
+-                "\n\nIMPORTANT: All descriptive text, summaries, suggestions, and narrative content in your response MUST be written in {}. Keep JSON keys and enum values in English.{}",
+-                lang_name, json_rule
+-            )
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_format.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_format.rs
+deleted file mode 100644
+index 36557c8..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_format.rs
++++ /dev/null
+@@ -1,132 +0,0 @@
+-//! Report synthesis and assembly for InsightsService.
+-
+-use crate::agentic::insights::prompt_context::aggregate_stats_json_for_prompt;
+-use crate::agentic::insights::types::*;
+-use crate::infrastructure::ai::AIClient;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use std::sync::Arc;
+-use tracing::{info, warn};
+-
+-use super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    // ============ Stage 4b: Synthesis ============
+-
+-    pub(crate) async fn generate_synthesis(
+-        ai_client: &Arc<AIClient>,
+-        aggregate: &InsightsAggregate,
+-        suggestions: &InsightsSuggestions,
+-        areas: &[ProjectArea],
+-        wins_friction: &WinsFrictionResult,
+-        interaction: &InteractionStyleResult,
+-        lang_instruction: &str,
+-    ) -> AtAGlance {
+-        let aggregate_json = aggregate_stats_json_for_prompt(aggregate);
+-
+-        let areas_text = areas
+-            .iter()
+-            .map(|a| format!("- {}: {}", a.name, a.description))
+-            .collect::<Vec<_>>()
+-            .join("\n");
+-        let suggestions_text = serde_json::to_string_pretty(suggestions).unwrap_or_else(|_| "{}".to_string());
+-        let wins_friction_text = serde_json::to_string_pretty(wins_friction).unwrap_or_else(|_| "{}".to_string());
+-        let interaction_text = serde_json::to_string_pretty(interaction).unwrap_or_else(|_| "{}".to_string());
+-
+-        match Self::generate_at_a_glance(
+-            ai_client,
+-            &aggregate_json,
+-            &areas_text,
+-            &suggestions_text,
+-            &wins_friction_text,
+-            &interaction_text,
+-            lang_instruction,
+-        )
+-        .await
+-        {
+-            Ok(val) => val,
+-            Err(e) => {
+-                warn!("At a Glance generation failed: {}, using defaults", e);
+-                AtAGlance::default()
+-            }
+-        }
+-    }
+-
+-    // ============ Stage 5: Assembly ============
+-
+-    #[allow(clippy::too_many_arguments)]
+-    pub(crate) fn assemble_report(
+-        _base_stats: BaseStats,
+-        aggregate: InsightsAggregate,
+-        suggestions: InsightsSuggestions,
+-        areas: Vec<ProjectArea>,
+-        wins_friction: WinsFrictionResult,
+-        interaction: InteractionStyleResult,
+-        at_a_glance: AtAGlance,
+-        horizon: HorizonResult,
+-        fun_ending: Option<FunEnding>,
+-    ) -> InsightsReport {
+-        let days_covered = if !aggregate.date_range.start.is_empty() && !aggregate.date_range.end.is_empty() {
+-            let parse = |s: &str| -> Option<chrono::DateTime<chrono::Utc>> {
+-                chrono::DateTime::parse_from_rfc3339(s)
+-                    .ok()
+-                    .map(|d| d.with_timezone(&chrono::Utc))
+-            };
+-            match (parse(&aggregate.date_range.start), parse(&aggregate.date_range.end)) {
+-                (Some(start), Some(end)) => end.signed_duration_since(start).num_days().unsigned_abs() as u32,
+-                _ => 1,
+-            }
+-            .max(1)
+-        } else {
+-            1
+-        };
+-
+-        InsightsReport {
+-            generated_at: std::time::SystemTime::now()
+-                .duration_since(std::time::UNIX_EPOCH)
+-                .unwrap_or_default()
+-                .as_secs(),
+-            date_range: aggregate.date_range.clone(),
+-            total_sessions: aggregate.sessions,
+-            analyzed_sessions: aggregate.analyzed,
+-            total_messages: aggregate.messages,
+-            days_covered,
+-            stats: InsightsStats {
+-                total_hours: aggregate.hours,
+-                msgs_per_day: aggregate.msgs_per_day,
+-                top_tools: aggregate.top_tools.clone(),
+-                top_goals: aggregate.top_goals.clone(),
+-                outcomes: aggregate.outcomes.clone(),
+-                satisfaction: aggregate.satisfaction.clone(),
+-                session_types: aggregate.session_types.clone(),
+-                languages: aggregate.languages.clone(),
+-                hour_counts: aggregate.hour_counts.clone(),
+-                agent_types: aggregate.agent_types.clone(),
+-                response_time_buckets: aggregate.response_time_buckets.clone(),
+-                median_response_time_secs: aggregate.median_response_time_secs,
+-                avg_response_time_secs: aggregate.avg_response_time_secs,
+-                friction: aggregate.friction.clone(),
+-                success: aggregate.success.clone(),
+-                tool_errors: aggregate.tool_errors.clone(),
+-                total_lines_added: aggregate.total_lines_added,
+-                total_lines_removed: aggregate.total_lines_removed,
+-                total_files_modified: aggregate.total_files_modified,
+-            },
+-            at_a_glance,
+-            interaction_style: InteractionStyle {
+-                narrative: interaction.narrative,
+-                key_patterns: interaction.key_patterns,
+-            },
+-            project_areas: areas,
+-            wins_intro: wins_friction.wins_intro,
+-            big_wins: wins_friction.big_wins,
+-            friction_intro: wins_friction.friction_intro,
+-            friction_categories: wins_friction.friction_categories,
+-            suggestions,
+-            horizon_intro: horizon.intro,
+-            on_the_horizon: horizon.opportunities,
+-            fun_ending,
+-            html_report_path: None,
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_query.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_query.rs
+deleted file mode 100644
+index 418995d..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_query.rs
++++ /dev/null
+@@ -1,187 +0,0 @@
+-//! Report save/load/query for InsightsService.
+-
+-use crate::agentic::insights::session_paths::collect_effective_session_storage_roots;
+-use crate::agentic::insights::types::*;
+-use crate::agentic::persistence::PersistenceManager;
+-use crate::infrastructure::events::{emit_global_event, BackendEvent};
+-use crate::infrastructure::path_manager_arc;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use chrono::DateTime;
+-use serde_json::Value;
+-use std::path::Path;
+-use std::time::{SystemTime, UNIX_EPOCH};
+-use tracing::{debug, info, warn};
+-
+-use super::ins_types::*;
+-use super::InsightsService;
+-
+-impl InsightsService {
+-    // ============ Save / Load / Utility ============
+-
+-    pub(crate) async fn save_report(mut report: InsightsReport, locale: &str) -> NortHingResult<InsightsReport> {
+-        let path_manager = path_manager_arc();
+-        let usage_dir = path_manager.user_data_dir().join("usage-data");
+-        tokio::fs::create_dir_all(&usage_dir)
+-            .await
+-            .map_err(|e| NortHingError::io(format!("Failed to create usage-data dir: {}", e)))?;
+-
+-        let timestamp = report.generated_at;
+-
+-        let html_content = crate::agentic::insights::html::generate_html(&report, locale);
+-        let html_path = usage_dir.join(format!("insights-{}.html", timestamp));
+-        tokio::fs::write(&html_path, &html_content)
+-            .await
+-            .map_err(|e| NortHingError::io(format!("Failed to write HTML report: {}", e)))?;
+-
+-        report.html_report_path = Some(html_path.to_string_lossy().to_string());
+-
+-        let json_path = usage_dir.join(format!("insights-{}.json", timestamp));
+-        let json_str = serde_json::to_string_pretty(&report)
+-            .map_err(|e| NortHingError::serialization(format!("Failed to serialize report: {}", e)))?;
+-        tokio::fs::write(&json_path, &json_str)
+-            .await
+-            .map_err(|e| NortHingError::io(format!("Failed to write report JSON: {}", e)))?;
+-
+-        info!(
+-            "Report saved: json={}, html={}",
+-            json_path.display(),
+-            html_path.display()
+-        );
+-
+-        Self::cleanup_old_reports(&usage_dir, 5).await;
+-
+-        Ok(report)
+-    }
+-
+-    async fn cleanup_old_reports(usage_dir: &Path, keep: usize) {
+-        let mut entries = match tokio::fs::read_dir(usage_dir).await {
+-            Ok(dir) => dir,
+-            Err(_) => return,
+-        };
+-
+-        let mut json_files: Vec<std::path::PathBuf> = Vec::new();
+-        while let Ok(Some(entry)) = entries.next_entry().await {
+-            let name = entry.file_name().to_string_lossy().to_string();
+-            if name.starts_with("insights-") && name.ends_with(".json") {
+-                json_files.push(entry.path());
+-            }
+-        }
+-
+-        json_files.sort();
+-        json_files.reverse();
+-
+-        for old in json_files.into_iter().skip(keep) {
+-            let _ = tokio::fs::remove_file(&old).await;
+-            let html = old.with_extension("html");
+-            let _ = tokio::fs::remove_file(&html).await;
+-        }
+-    }
+-
+-    pub async fn has_data(days: u32) -> NortHingResult<bool> {
+-        let path_manager = path_manager_arc();
+-        let pm = PersistenceManager::new(path_manager)?;
+-        let cutoff = SystemTime::now() - std::time::Duration::from_secs(days as u64 * 86400);
+-
+-        for ws_path in collect_effective_session_storage_roots().await {
+-            if let Ok(sessions) = pm.list_sessions(&ws_path).await {
+-                if sessions.iter().any(|s| s.last_activity_at >= cutoff) {
+-                    return Ok(true);
+-                }
+-            }
+-        }
+-
+-        Ok(false)
+-    }
+-
+-    pub async fn load_report(path: &str) -> NortHingResult<InsightsReport> {
+-        let json_str = tokio::fs::read_to_string(path)
+-            .await
+-            .map_err(|e| NortHingError::io(format!("Failed to read report file: {}", e)))?;
+-        let report: InsightsReport = serde_json::from_str(&json_str)
+-            .map_err(|e| NortHingError::Deserialization(format!("Failed to parse report: {}", e)))?;
+-        Ok(report)
+-    }
+-
+-    pub async fn load_latest_reports() -> NortHingResult<Vec<InsightsReportMeta>> {
+-        let path_manager = path_manager_arc();
+-        let usage_dir = path_manager.user_data_dir().join("usage-data");
+-
+-        if !usage_dir.exists() {
+-            return Ok(vec![]);
+-        }
+-
+-        let mut entries = tokio::fs::read_dir(&usage_dir)
+-            .await
+-            .map_err(|e| NortHingError::io(format!("Failed to read usage-data dir: {}", e)))?;
+-
+-        let mut json_files: Vec<std::path::PathBuf> = Vec::new();
+-        while let Ok(Some(entry)) = entries.next_entry().await {
+-            let name = entry.file_name().to_string_lossy().to_string();
+-            if name.starts_with("insights-") && name.ends_with(".json") {
+-                json_files.push(entry.path());
+-            }
+-        }
+-
+-        json_files.sort();
+-        json_files.reverse();
+-
+-        let mut reports = Vec::new();
+-        for json_path in json_files.iter().take(10) {
+-            match tokio::fs::read_to_string(json_path).await {
+-                Ok(json_str) => match serde_json::from_str::<InsightsReport>(&json_str) {
+-                    Ok(report) => {
+-                        let top_goals: Vec<String> = report
+-                            .stats
+-                            .top_goals
+-                            .iter()
+-                            .take(3)
+-                            .map(|(name, _)| name.clone())
+-                            .collect();
+-                        let mut lang_entries: Vec<_> = report.stats.languages.iter().collect();
+-                        lang_entries.sort_by(|(_, a), (_, b)| b.cmp(a));
+-                        let languages: Vec<String> =
+-                            lang_entries.iter().take(3).map(|(name, _)| name.to_string()).collect();
+-
+-                        reports.push(InsightsReportMeta {
+-                            generated_at: report.generated_at,
+-                            total_sessions: report.total_sessions,
+-                            analyzed_sessions: report.analyzed_sessions,
+-                            date_range: report.date_range,
+-                            path: json_path.to_string_lossy().to_string(),
+-                            total_messages: report.total_messages,
+-                            days_covered: report.days_covered,
+-                            total_hours: report.stats.total_hours,
+-                            top_goals,
+-                            languages,
+-                        });
+-                    }
+-                    Err(e) => {
+-                        warn!("Failed to parse report {}: {}", json_path.display(), e);
+-                    }
+-                },
+-                Err(e) => {
+-                    warn!("Failed to read report {}: {}", json_path.display(), e);
+-                }
+-            }
+-        }
+-
+-        Ok(reports)
+-    }
+-
+-    pub(crate) async fn emit_progress(message: &str, stage: &str, current: usize, total: usize) {
+-        let payload = serde_json::json!({
+-            "message": message,
+-            "stage": stage,
+-            "current": current,
+-            "total": total,
+-        });
+-        if let Err(e) = emit_global_event(BackendEvent::Custom {
+-            event_name: "insights-progress".to_string(),
+-            payload,
+-        })
+-        .await
+-        {
+-            debug!("Failed to emit progress event: {}", e);
+-        }
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/ins_types.rs b/src/crates/assembly/core/src/agentic/insights/service/ins_types.rs
+deleted file mode 100644
+index 8f4d2f0..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/ins_types.rs
++++ /dev/null
+@@ -1,176 +0,0 @@
+-//! Intermediate result types, constants, and helper functions for InsightsService.
+-
+-use crate::agentic::insights::types::*;
+-use crate::util::errors::{NortHingError, NortHingResult};
+-use serde_json::Value;
+-
+-// ============ Prompt templates ============
+-
+-pub(crate) const FACET_PROMPT_TEMPLATE: &str = include_str!("../prompts/facet_extraction.md");
+-pub(crate) const SUGGESTIONS_PROMPT_TEMPLATE: &str = include_str!("../prompts/suggestions.md");
+-pub(crate) const AREAS_PROMPT_TEMPLATE: &str = include_str!("../prompts/areas.md");
+-pub(crate) const WINS_PROMPT_TEMPLATE: &str = include_str!("../prompts/wins.md");
+-pub(crate) const FRICTION_PROMPT_TEMPLATE: &str = include_str!("../prompts/friction.md");
+-pub(crate) const INTERACTION_STYLE_PROMPT_TEMPLATE: &str = include_str!("../prompts/interaction_style.md");
+-pub(crate) const AT_A_GLANCE_PROMPT_TEMPLATE: &str = include_str!("../prompts/at_a_glance.md");
+-pub(crate) const HORIZON_PROMPT_TEMPLATE: &str = include_str!("../prompts/horizon.md");
+-pub(crate) const FUN_ENDING_PROMPT_TEMPLATE: &str = include_str!("../prompts/fun_ending.md");
+-
+-pub(crate) const MAX_CONCURRENT_FACET_EXTRACTIONS: usize = 5;
+-
+-// ============ Intermediate result types ============
+-
+-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+-pub(crate) struct WinsFrictionResult {
+-    #[serde(default)]
+-    pub(crate) wins_intro: String,
+-    pub(crate) big_wins: Vec<BigWin>,
+-    #[serde(default)]
+-    pub(crate) friction_intro: String,
+-    pub(crate) friction_categories: Vec<FrictionCategory>,
+-}
+-
+-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+-pub(crate) struct WinsResult {
+-    pub(crate) intro: String,
+-    pub(crate) big_wins: Vec<BigWin>,
+-}
+-
+-impl WinsResult {
+-    pub(crate) fn default() -> Self {
+-        Self {
+-            intro: String::new(),
+-            big_wins: Vec::new(),
+-        }
+-    }
+-}
+-
+-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+-pub(crate) struct FrictionResult {
+-    pub(crate) intro: String,
+-    pub(crate) friction_categories: Vec<FrictionCategory>,
+-}
+-
+-impl FrictionResult {
+-    pub(crate) fn default() -> Self {
+-        Self {
+-            intro: String::new(),
+-            friction_categories: Vec::new(),
+-        }
+-    }
+-}
+-
+-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+-pub(crate) struct InteractionStyleResult {
+-    pub(crate) narrative: String,
+-    pub(crate) key_patterns: Vec<String>,
+-}
+-
+-impl InteractionStyleResult {
+-    pub(crate) fn default() -> Self {
+-        Self {
+-            narrative: String::new(),
+-            key_patterns: Vec::new(),
+-        }
+-    }
+-}
+-
+-#[derive(Debug, Clone)]
+-pub(crate) struct HorizonResult {
+-    pub(crate) intro: String,
+-    pub(crate) opportunities: Vec<HorizonWorkflow>,
+-}
+-
+-impl HorizonResult {
+-    pub(crate) fn default() -> Self {
+-        Self {
+-            intro: String::new(),
+-            opportunities: Vec::new(),
+-        }
+-    }
+-}
+-
+-impl AtAGlance {
+-    pub(crate) fn default() -> Self {
+-        Self {
+-            whats_working: "Analysis in progress...".to_string(),
+-            whats_hindering: String::new(),
+-            quick_wins: String::new(),
+-            looking_ahead: String::new(),
+-        }
+-    }
+-}
+-
+-// ============ Helper functions ============
+-
+-pub(crate) fn is_rate_limit_error(e: &NortHingError) -> bool {
+-    let msg = e.to_string().to_lowercase();
+-    msg.contains("429") || msg.contains("rate limit") || msg.contains("too many requests") || msg.contains("rate_limit")
+-}
+-
+-pub(crate) fn is_retryable_error(e: &NortHingError) -> bool {
+-    if is_rate_limit_error(e) {
+-        return true;
+-    }
+-    let msg = e.to_string().to_lowercase();
+-    msg.contains("cannot extract json")
+-        || msg.contains("sse stream closed")
+-        || msg.contains("stream closed before")
+-        || msg.contains("connection reset")
+-}
+-
+-pub(crate) fn default_suggestions() -> InsightsSuggestions {
+-    InsightsSuggestions {
+-        northhing_md_additions: Vec::new(),
+-        features_to_try: Vec::new(),
+-        usage_patterns: Vec::new(),
+-    }
+-}
+-
+-pub(crate) fn parse_string_u32_map(value: &Value) -> std::collections::HashMap<String, u32> {
+-    let mut map = std::collections::HashMap::new();
+-    if let Some(obj) = value.as_object() {
+-        for (k, v) in obj {
+-            if let Some(n) = v.as_u64() {
+-                map.insert(k.clone(), n as u32);
+-            } else if let Some(n) = v.as_f64() {
+-                map.insert(k.clone(), n as u32);
+-            }
+-        }
+-    }
+-    map
+-}
+-
+-pub(crate) fn safe_truncate(s: &str, max_bytes: usize) -> &str {
+-    if s.len() <= max_bytes {
+-        return s;
+-    }
+-    let mut end = max_bytes;
+-    while end > 0 && !s.is_char_boundary(end) {
+-        end -= 1;
+-    }
+-    &s[..end]
+-}
+-
+-pub(crate) fn extract_json_from_response(response: &str) -> NortHingResult<String> {
+-    crate::util::extract_json_from_ai_response(response)
+-        .ok_or_else(|| NortHingError::service("Cannot extract JSON from AI response"))
+-}
+-
+-/// Extract a string from a JSON value that may be a plain string or a nested object.
+-/// When the value is an object, concatenate all string values with spaces.
+-pub(crate) fn json_value_to_string(value: &Value) -> String {
+-    match value {
+-        Value::String(s) => s.clone(),
+-        Value::Object(map) => map
+-            .values()
+-            .filter_map(|v| match v {
+-                Value::String(s) => Some(s.as_str()),
+-                _ => None,
+-            })
+-            .collect::<Vec<_>>()
+-            .join(" "),
+-        Value::Array(arr) => arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(" "),
+-        _ => String::new(),
+-    }
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/service/mod.rs b/src/crates/assembly/core/src/agentic/insights/service/mod.rs
+deleted file mode 100644
+index 9d720a1..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/service/mod.rs
++++ /dev/null
+@@ -1,9 +0,0 @@
+-//! Insights service facade — god-split into subdomain modules.
+-
+-mod ins_analyze;
+-mod ins_collect;
+-mod ins_format;
+-mod ins_query;
+-mod ins_types;
+-
+-pub struct InsightsService;
+diff --git a/src/crates/assembly/core/src/agentic/insights/session_paths.rs b/src/crates/assembly/core/src/agentic/insights/session_paths.rs
+deleted file mode 100644
+index 62cb856..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/session_paths.rs
++++ /dev/null
+@@ -1,71 +0,0 @@
+-//! Resolve on-disk session roots for insights (local + remote SSH mirror).
+-
+-use crate::infrastructure::path_manager_arc;
+-use crate::service::remote_ssh::workspace_state::get_effective_session_path;
+-use crate::service::workspace::{global_workspace_service, WorkspaceInfo};
+-use std::collections::HashSet;
+-use std::path::PathBuf;
+-
+-/// Resolve the workspace path to pass to [`PersistenceManager`] for session lookups.
+-///
+-/// For local workspaces this is the workspace root path itself — the persistence layer
+-/// derives the actual sessions directory via [`PathManager::project_sessions_dir`].
+-/// For remote workspaces this is the local SSH mirror directory, which the persistence
+-/// layer treats as the storage root directly.
+-pub async fn effective_session_storage_path_for_workspace(ws: &WorkspaceInfo) -> PathBuf {
+-    if ws.remote_ssh_connection_id().is_none() {
+-        return ws.root_path.clone();
+-    }
+-
+-    let path_str = ws.root_path.to_string_lossy().to_string();
+-    let conn = ws.remote_ssh_connection_id().map(|s| s.to_string());
+-    let mut host = ws
+-        .metadata
+-        .get("sshHost")
+-        .and_then(|v| v.as_str())
+-        .map(|s| s.trim().to_string())
+-        .filter(|s| !s.is_empty());
+-
+-    if host.is_none() {
+-        if let (Some(cid), Some(ws_service)) = (conn.as_ref(), global_workspace_service()) {
+-            host = ws_service
+-                .remote_ssh_host_for_remote_workspace(cid.as_str(), &path_str)
+-                .await;
+-        }
+-    }
+-
+-    get_effective_session_path(&path_str, conn.as_deref(), host.as_deref()).await
+-}
+-
+-/// Unique workspace paths whose persisted session directories exist on disk.
+-///
+-/// Each returned path is the value to pass to [`PersistenceManager::list_sessions`].
+-pub async fn collect_effective_session_storage_roots() -> Vec<PathBuf> {
+-    let mut paths = Vec::new();
+-    let mut seen = HashSet::new();
+-
+-    let Some(ws_service) = global_workspace_service() else {
+-        return paths;
+-    };
+-
+-    let path_manager = path_manager_arc();
+-
+-    for ws in ws_service.list_workspace_infos().await {
+-        let workspace_path = effective_session_storage_path_for_workspace(&ws).await;
+-
+-        // For local workspaces the actual sessions directory is derived from the
+-        // workspace root via the path manager. For remote workspaces the mirror
+-        // directory itself is the sessions root.
+-        let sessions_dir = if ws.remote_ssh_connection_id().is_none() {
+-            path_manager.project_sessions_dir(&workspace_path)
+-        } else {
+-            workspace_path.clone()
+-        };
+-
+-        if sessions_dir.exists() && seen.insert(workspace_path.clone()) {
+-            paths.push(workspace_path);
+-        }
+-    }
+-
+-    paths
+-}
+diff --git a/src/crates/assembly/core/src/agentic/insights/types.rs b/src/crates/assembly/core/src/agentic/insights/types.rs
+deleted file mode 100644
+index f06069c..0000000
+--- a/src/crates/assembly/core/src/agentic/insights/types.rs
++++ /dev/null
+@@ -1,304 +0,0 @@
+-use serde::{Deserialize, Serialize};
+-use std::collections::HashMap;
+-
+-// ============ Stage 1: Data Collection ============
+-
+-/// Compact session transcript built from PersistenceManager data
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct SessionTranscript {
+-    pub session_id: String,
+-    pub agent_type: String,
+-    pub session_name: String,
+-    pub workspace_path: Option<String>,
+-    /// For facet cache fingerprinting (`SessionSummary.last_activity_at`).
+-    #[serde(default)]
+-    pub last_activity_unix_secs: u64,
+-    pub duration_minutes: u64,
+-    pub message_count: u32,
+-    pub turn_count: u32,
+-    pub created_at: String,
+-    /// Compact text transcript ([User]: ... [Tool: xxx] [Assistant]: ...)
+-    pub transcript: String,
+-    pub tool_names: Vec<String>,
+-    pub has_errors: bool,
+-}
+-
+-/// Basic statistics accumulated during data collection (pre-AI)
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct BaseStats {
+-    pub total_sessions: u32,
+-    pub total_messages: u32,
+-    pub total_turns: u32,
+-    pub total_duration_minutes: u64,
+-    pub first_session_at: Option<String>,
+-    pub last_session_at: Option<String>,
+-    pub tool_usage: HashMap<String, u32>,
+-    pub tool_errors: HashMap<String, u32>,
+-    pub hour_counts: HashMap<u32, u32>,
+-    pub agent_types: HashMap<String, u32>,
+-    /// Raw response time intervals in seconds (intermediate, not serialized to report)
+-    #[serde(skip)]
+-    pub response_times_raw: Vec<f64>,
+-    #[serde(default)]
+-    pub response_time_buckets: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub median_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub avg_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub total_lines_added: usize,
+-    #[serde(default)]
+-    pub total_lines_removed: usize,
+-    #[serde(default)]
+-    pub total_files_modified: usize,
+-    /// Language labels inferred from edited file paths (Edit/Write); drives aggregate `languages`.
+-    #[serde(default)]
+-    pub languages_by_files: HashMap<String, u32>,
+-}
+-
+-// ============ Stage 2: Facet Extraction (AI) ============
+-
+-/// AI-extracted facets per session (aligned with Claude Code)
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct SessionFacet {
+-    pub session_id: String,
+-    pub underlying_goal: String,
+-    pub goal_categories: HashMap<String, u32>,
+-    /// fully_achieved | partially_achieved | abandoned | unknown
+-    pub outcome: String,
+-    pub user_satisfaction_counts: HashMap<String, u32>,
+-    pub claude_helpfulness: String,
+-    pub session_type: String,
+-    pub friction_counts: HashMap<String, u32>,
+-    pub friction_detail: String,
+-    pub primary_success: String,
+-    pub brief_summary: String,
+-    /// Optional; not used for report language charts (those use file-extension stats from Edit/Write).
+-    #[serde(default)]
+-    pub languages_used: Vec<String>,
+-    #[serde(default)]
+-    pub user_instructions: Vec<String>,
+-}
+-
+-// ============ Stage 3: Aggregation ============
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct DateRange {
+-    pub start: String,
+-    pub end: String,
+-}
+-
+-/// Aggregated data from all sessions (Rust-side computation)
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InsightsAggregate {
+-    pub sessions: u32,
+-    pub analyzed: u32,
+-    pub date_range: DateRange,
+-    pub messages: u32,
+-    pub hours: f32,
+-    pub top_tools: Vec<(String, u32)>,
+-    pub top_goals: Vec<(String, u32)>,
+-    pub outcomes: HashMap<String, u32>,
+-    pub satisfaction: HashMap<String, u32>,
+-    pub friction: HashMap<String, u32>,
+-    pub success: HashMap<String, u32>,
+-    /// Counts by language label from edited file paths (Edit/Write), not from facet extraction.
+-    pub languages: HashMap<String, u32>,
+-    pub session_summaries: Vec<String>,
+-    pub friction_details: Vec<String>,
+-    pub user_instructions: Vec<String>,
+-    pub session_types: HashMap<String, u32>,
+-    pub tool_errors: HashMap<String, u32>,
+-    pub hour_counts: HashMap<u32, u32>,
+-    pub agent_types: HashMap<String, u32>,
+-    pub msgs_per_day: f32,
+-    #[serde(default)]
+-    pub response_time_buckets: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub median_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub avg_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub total_lines_added: usize,
+-    #[serde(default)]
+-    pub total_lines_removed: usize,
+-    #[serde(default)]
+-    pub total_files_modified: usize,
+-}
+-
+-// ============ Stage 4: AI Analysis Results ============
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct AtAGlance {
+-    pub whats_working: String,
+-    pub whats_hindering: String,
+-    pub quick_wins: String,
+-    pub looking_ahead: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InteractionStyle {
+-    pub narrative: String,
+-    pub key_patterns: Vec<String>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ProjectArea {
+-    pub name: String,
+-    pub session_count: u32,
+-    pub description: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct BigWin {
+-    pub title: String,
+-    pub description: String,
+-    pub impact: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct FrictionCategory {
+-    pub category: String,
+-    pub count: u32,
+-    pub description: String,
+-    pub examples: Vec<String>,
+-    pub suggestion: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct MdAddition {
+-    pub section: String,
+-    pub content: String,
+-    pub rationale: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct FeatureRecommendation {
+-    pub feature: String,
+-    pub description: String,
+-    pub example_usage: String,
+-    pub benefit: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct UsagePattern {
+-    pub pattern: String,
+-    pub description: String,
+-    #[serde(default)]
+-    pub detail: String,
+-    pub suggested_prompt: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InsightsSuggestions {
+-    pub northhing_md_additions: Vec<MdAddition>,
+-    pub features_to_try: Vec<FeatureRecommendation>,
+-    pub usage_patterns: Vec<UsagePattern>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct HorizonWorkflow {
+-    pub title: String,
+-    pub whats_possible: String,
+-    pub how_to_try: String,
+-    #[serde(default)]
+-    pub copyable_prompt: String,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct FunEnding {
+-    pub headline: String,
+-    pub detail: String,
+-}
+-
+-// ============ Stage 5: Final Report ============
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InsightsStats {
+-    pub total_hours: f32,
+-    pub msgs_per_day: f32,
+-    pub top_tools: Vec<(String, u32)>,
+-    pub top_goals: Vec<(String, u32)>,
+-    pub outcomes: HashMap<String, u32>,
+-    pub satisfaction: HashMap<String, u32>,
+-    pub session_types: HashMap<String, u32>,
+-    pub languages: HashMap<String, u32>,
+-    pub hour_counts: HashMap<u32, u32>,
+-    pub agent_types: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub response_time_buckets: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub median_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub avg_response_time_secs: Option<f64>,
+-    #[serde(default)]
+-    pub friction: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub success: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub tool_errors: HashMap<String, u32>,
+-    #[serde(default)]
+-    pub total_lines_added: usize,
+-    #[serde(default)]
+-    pub total_lines_removed: usize,
+-    #[serde(default)]
+-    pub total_files_modified: usize,
+-}
+-
+-/// The final insights report (shared between backend and frontend)
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InsightsReport {
+-    pub generated_at: u64,
+-    pub date_range: DateRange,
+-    pub total_sessions: u32,
+-    pub analyzed_sessions: u32,
+-    pub total_messages: u32,
+-    pub days_covered: u32,
+-
+-    pub stats: InsightsStats,
+-
+-    pub at_a_glance: AtAGlance,
+-    pub interaction_style: InteractionStyle,
+-    pub project_areas: Vec<ProjectArea>,
+-    #[serde(default)]
+-    pub wins_intro: String,
+-    pub big_wins: Vec<BigWin>,
+-    #[serde(default)]
+-    pub friction_intro: String,
+-    pub friction_categories: Vec<FrictionCategory>,
+-    pub suggestions: InsightsSuggestions,
+-    #[serde(default)]
+-    pub horizon_intro: String,
+-    pub on_the_horizon: Vec<HorizonWorkflow>,
+-    pub fun_ending: Option<FunEnding>,
+-
+-    /// Path to the generated HTML file
+-    pub html_report_path: Option<String>,
+-}
+-
+-/// Metadata for listing saved reports
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct InsightsReportMeta {
+-    pub generated_at: u64,
+-    pub total_sessions: u32,
+-    pub analyzed_sessions: u32,
+-    pub date_range: DateRange,
+-    pub path: String,
+-    #[serde(default)]
+-    pub total_messages: u32,
+-    #[serde(default)]
+-    pub days_covered: u32,
+-    #[serde(default)]
+-    pub total_hours: f32,
+-    #[serde(default)]
+-    pub top_goals: Vec<String>,
+-    #[serde(default)]
+-    pub languages: Vec<String>,
+-}
+-
+-// ============ API Request/Response ============
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct GenerateInsightsRequest {
+-    pub days: Option<u32>,
+-}
+diff --git a/src/crates/assembly/core/src/agentic/mod.rs b/src/crates/assembly/core/src/agentic/mod.rs
+index 868ef40..74838e0 100644
+--- a/src/crates/assembly/core/src/agentic/mod.rs
++++ b/src/crates/assembly/core/src/agentic/mod.rs
+@@ -51,9 +51,6 @@ pub mod workspace;
+ 
+ mod util;
+ 
+-// Insights module
+-pub mod insights;
+-
+ // Episode log module (growth experience storage)
+ pub mod episodes;
+ 
+diff --git a/src/crates/support/cli-internal/Cargo.toml b/src/crates/support/cli-internal/Cargo.toml
+index cdd6c39..6785f06 100644
+--- a/src/crates/support/cli-internal/Cargo.toml
++++ b/src/crates/support/cli-internal/Cargo.toml
+@@ -10,33 +10,18 @@ name = "northhing-internal"
+ path = "src/main.rs"
+ 
+ [dependencies]
+-# Internal crates
+-northhing-core = { path = "../../assembly/core", default-features = false, features = ["product-full"] }
+-northhing-events = { path = "../../contracts/events" }
+-
+ # CLI framework
+ clap = { workspace = true }
+ 
+-# Config and serialization
+-dirs = { workspace = true }
+-toml = { workspace = true }
+-
+ # Error handling
+ anyhow = { workspace = true }
+-thiserror = { workspace = true }
+ 
+-tracing = { workspace = true }
+ tracing-subscriber = { workspace = true }
+ 
+ # Async runtime
+ tokio = { workspace = true }
+ 
+ # Utilities
+-uuid = { workspace = true }
+-chrono = { workspace = true }
+-
+-# Encryption for token storage
+-sha2 = { workspace = true }
+ rand = { workspace = true }
+ 
+ [features]
+diff --git a/tools/plan-compliance-checker/Cargo.toml b/tools/plan-compliance-checker/Cargo.toml
+deleted file mode 100644
+index 9c055a4..0000000
+--- a/tools/plan-compliance-checker/Cargo.toml
++++ /dev/null
+@@ -1,18 +0,0 @@
+-[package]
+-name = "plan-compliance-checker"
+-version = "0.1.0"
+-edition = "2024"
+-description = "Verify workspace state against a plan markdown document"
+-license = "MIT OR Apache-2.0"
+-
+-[[bin]]
+-name = "plan-compliance-checker"
+-path = "src/main.rs"
+-
+-[dependencies]
+-clap = { workspace = true }
+-tokio = { workspace = true }
+-serde = { workspace = true }
+-serde_json = { workspace = true }
+-pulldown-cmark = { workspace = true }
+-anyhow = { workspace = true }
+diff --git a/tools/plan-compliance-checker/README.md b/tools/plan-compliance-checker/README.md
+deleted file mode 100644
+index d85f775..0000000
+--- a/tools/plan-compliance-checker/README.md
++++ /dev/null
+@@ -1,37 +0,0 @@
+-# plan-compliance-checker
+-
+-A small Rust CLI that mechanically verifies whether a workspace matches a plan markdown document. Designed to catch weaker LLM implementations that report "DONE" without actually producing the files / commits specified in the plan.
+-
+-## Usage
+-
+-```bash
+-cargo run -p plan-compliance-checker -- docs/superpowers/plans/<plan>.md
+-```
+-
+-Options:
+-- `--task <id>`: check only one task (e.g. `1.3`)
+-- `--skip-slow`: skip `cargo build` / `cargo test` verify commands
+-- `--force-verify`: run verify commands even when slow
+-- `--start-sha <sha>`: override the plan-start SHA
+-- `--format json`: machine-readable output
+-
+-Exit code: 0 if all pass (or pending), 1 if any task fails.
+-
+-## What it checks
+-
+-Four categories per task:
+-1. **File existence**: every `Create:` path exists; every `Modify:` path was changed
+-2. **Command exit code**: re-runs each step's `Run:` command and matches `Expected: PASS|FAIL|<n>`
+-3. **Commit presence**: each task ends with a `git commit` step; the latest commit touching the task's files must include them all
+-4. **Path consistency**: if a plan writes `crates/X` but the workspace root is `src/crates/`, the tool warns and suggests the real path
+-
+-## How to extend the plan format
+-
+-The parser follows the convention established by `superpowers:writing-plans`:
+-- `### Task N.M: Title` headings (level 3, with N.M id)
+-- `**Files:**` block with `Create:` / `Modify:` list items
+-- `- [ ] **Step K: ...**` for steps
+-- `Run: \`<command>\`` for verify commands
+-- `Expected: PASS|FAIL|<n>` for expected outcomes
+-
+-To support a new field, add it to `plan.rs::Plan` / `Task` / `Step`, parse it in `plan::parse_plan`, and add a unit test.
+diff --git a/tools/plan-compliance-checker/src/command_runner.rs b/tools/plan-compliance-checker/src/command_runner.rs
+deleted file mode 100644
+index 8567921..0000000
+--- a/tools/plan-compliance-checker/src/command_runner.rs
++++ /dev/null
+@@ -1,8 +0,0 @@
+-use anyhow::Result;
+-use std::path::Path;
+-
+-pub fn run_command(cwd: &Path, cmd: &str, args: &[&str]) -> Result<(i32, String)> {
+-    let output = std::process::Command::new(cmd).current_dir(cwd).args(args).output()?;
+-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+-    Ok((output.status.code().unwrap_or(-1), stdout))
+-}
+diff --git a/tools/plan-compliance-checker/src/git_inspector.rs b/tools/plan-compliance-checker/src/git_inspector.rs
+deleted file mode 100644
+index 1231de0..0000000
+--- a/tools/plan-compliance-checker/src/git_inspector.rs
++++ /dev/null
+@@ -1,49 +0,0 @@
+-use anyhow::Result;
+-use std::path::Path;
+-
+-#[derive(Debug, Clone)]
+-pub struct Commit {
+-    pub sha: String,
+-    pub message: String,
+-    pub files: Vec<String>,
+-}
+-
+-pub fn commits_since(repo_root: &Path, since: &str) -> Result<Vec<Commit>> {
+-    let output = std::process::Command::new("git")
+-        .current_dir(repo_root)
+-        .args(["log", "--reverse", "--format=%H%n%s", "--name-only", since])
+-        .output()?;
+-    if !output.status.success() {
+-        anyhow::bail!("git log failed: {}", String::from_utf8_lossy(&output.stderr));
+-    }
+-    let stdout = String::from_utf8_lossy(&output.stdout);
+-    let mut commits = Vec::new();
+-    let mut current_sha: Option<String> = None;
+-    let mut current_msg: Option<String> = None;
+-    let mut current_files: Vec<String> = Vec::new();
+-
+-    for line in stdout.lines() {
+-        if line.len() == 40 && line.chars().all(|c| c.is_ascii_hexdigit()) && current_sha.is_none() {
+-            current_sha = Some(line.to_string());
+-        } else if line.is_empty() && current_sha.is_some() {
+-            commits.push(Commit {
+-                sha: current_sha.take().unwrap(),
+-                message: current_msg.take().unwrap_or_default(),
+-                files: std::mem::take(&mut current_files),
+-            });
+-            current_msg = None;
+-        } else if current_sha.is_some() && current_msg.is_none() {
+-            current_msg = Some(line.to_string());
+-        } else if current_sha.is_some() {
+-            current_files.push(line.to_string());
+-        }
+-    }
+-    if let Some(sha) = current_sha {
+-        commits.push(Commit {
+-            sha,
+-            message: current_msg.unwrap_or_default(),
+-            files: current_files,
+-        });
+-    }
+-    Ok(commits)
+-}
+diff --git a/tools/plan-compliance-checker/src/lib.rs b/tools/plan-compliance-checker/src/lib.rs
+deleted file mode 100644
+index b528dc0..0000000
+--- a/tools/plan-compliance-checker/src/lib.rs
++++ /dev/null
+@@ -1,6 +0,0 @@
+-pub mod command_runner;
+-pub mod git_inspector;
+-pub mod path_resolver;
+-pub mod plan;
+-pub mod report;
+-pub mod task;
+diff --git a/tools/plan-compliance-checker/src/main.rs b/tools/plan-compliance-checker/src/main.rs
+deleted file mode 100644
+index 1e6c93a..0000000
+--- a/tools/plan-compliance-checker/src/main.rs
++++ /dev/null
+@@ -1,65 +0,0 @@
+-use clap::Parser;
+-
+-pub mod command_runner;
+-pub mod git_inspector;
+-pub mod path_resolver;
+-pub mod plan;
+-pub mod report;
+-pub mod task;
+-
+-#[derive(Parser)]
+-#[command(
+-    name = "plan-compliance-checker",
+-    about = "Verify workspace state against a plan markdown document",
+-    version
+-)]
+-struct Cli {
+-    /// Path to the plan markdown file
+-    plan: std::path::PathBuf,
+-
+-    /// Check only one task (e.g., "1.3")
+-    #[arg(long)]
+-    task: Option<String>,
+-
+-    /// Skip long-running verify commands (cargo build, cargo test)
+-    #[arg(long)]
+-    skip_slow: bool,
+-
+-    /// Force re-running verify commands even for slow ones
+-    #[arg(long)]
+-    force_verify: bool,
+-
+-    /// Override the plan-start SHA (default: HEAD~1, meaning compare against the commit before HEAD)
+-    #[arg(long)]
+-    start_sha: Option<String>,
+-
+-    /// Output format
+-    #[arg(long, value_enum, default_value_t = Format::Human)]
+-    format: Format,
+-}
+-
+-#[derive(Clone, Copy, clap::ValueEnum)]
+-enum Format {
+-    Human,
+-    Json,
+-}
+-
+-fn main() -> anyhow::Result<()> {
+-    let cli = Cli::parse();
+-    let plan_text = std::fs::read_to_string(&cli.plan)?;
+-    let mut plan = plan::parse_plan(&plan_text)?;
+-    plan.path = cli.plan.clone();
+-
+-    let start_sha = cli.start_sha.unwrap_or_else(|| "HEAD~1".to_string());
+-    plan.plan_start_sha = start_sha.clone();
+-
+-    let cwd = std::env::current_dir()?;
+-    let results = task::check_plan(&plan, &cwd)?;
+-
+-    match cli.format {
+-        Format::Human => report::format_human(&plan, &results),
+-        Format::Json => println!("{}", report::format_json(&plan, &results)),
+-    }
+-
+-    Ok(())
+-}
+diff --git a/tools/plan-compliance-checker/src/path_resolver.rs b/tools/plan-compliance-checker/src/path_resolver.rs
+deleted file mode 100644
+index dea621f..0000000
+--- a/tools/plan-compliance-checker/src/path_resolver.rs
++++ /dev/null
+@@ -1,47 +0,0 @@
+-use std::path::{Path, PathBuf};
+-
+-pub struct PathMismatch {
+-    pub exists_relative: bool,
+-    pub suggestion: Option<PathBuf>,
+-}
+-
+-pub fn find_workspace_root(start: &Path) -> Option<PathBuf> {
+-    let mut current: PathBuf = start.to_path_buf();
+-    loop {
+-        let manifest = current.join("Cargo.toml");
+-        if manifest.exists()
+-            && let Ok(content) = std::fs::read_to_string(&manifest)
+-            && content.contains("[workspace]")
+-        {
+-            return Some(current);
+-        }
+-        if !current.pop() {
+-            return None;
+-        }
+-    }
+-}
+-
+-pub fn detect_path_mismatch(plan_path: &Path, workspace_root: &Path) -> PathMismatch {
+-    let absolute = workspace_root.join(plan_path);
+-    if absolute.exists() {
+-        return PathMismatch {
+-            exists_relative: true,
+-            suggestion: None,
+-        };
+-    }
+-    // Heuristic for the v3 workspace layout: root/Cargo.toml declares
+-    // members with `src/` prefix (e.g. `src/crates/services/services-core/Cargo.toml`)
+-    // but a plan written before that layout was finalized might omit the
+-    // `src/` prefix (e.g. `crates/services/services-core/Cargo.toml`).
+-    let prepended_src = workspace_root.join("src").join(plan_path);
+-    if prepended_src.exists() {
+-        return PathMismatch {
+-            exists_relative: false,
+-            suggestion: Some(prepended_src),
+-        };
+-    }
+-    PathMismatch {
+-        exists_relative: false,
+-        suggestion: None,
+-    }
+-}
+diff --git a/tools/plan-compliance-checker/src/plan.rs b/tools/plan-compliance-checker/src/plan.rs
+deleted file mode 100644
+index 2bf1525..0000000
+--- a/tools/plan-compliance-checker/src/plan.rs
++++ /dev/null
+@@ -1,203 +0,0 @@
+-use anyhow::Result;
+-use pulldown_cmark::{Event, HeadingLevel, Parser as MdParser, Tag};
+-use serde::{Deserialize, Serialize};
+-use std::path::PathBuf;
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct Plan {
+-    pub path: PathBuf,
+-    pub title: String,
+-    pub tasks: Vec<Task>,
+-    pub plan_start_sha: String,
+-}
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct Task {
+-    pub id: String,
+-    pub title: String,
+-    pub files: FilesSpec,
+-    pub steps: Vec<Step>,
+-}
+-
+-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+-pub struct FilesSpec {
+-    pub create: Vec<PathBuf>,
+-    pub modify: Vec<ModifyTarget>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct ModifyTarget {
+-    pub path: PathBuf,
+-    pub range: Option<LineRange>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct LineRange {
+-    pub start: usize,
+-    pub end: usize,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub struct Step {
+-    pub index: usize,
+-    pub description: String,
+-    pub expected_outcome: ExpectedOutcome,
+-    pub verify_command: Option<String>,
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+-pub enum ExpectedOutcome {
+-    Pass,
+-    Fail(String),
+-    Custom(i32),
+-}
+-
+-pub fn parse_plan(input: &str) -> Result<Plan> {
+-    let mut plan = Plan::default();
+-    let mut current_task: Option<Task> = None;
+-    let mut in_task_heading = false;
+-    let mut in_files_block = false;
+-    let mut pending_create = false;
+-    let mut pending_modify = false;
+-    let mut current_step: Option<Step> = None;
+-    let mut step_index: usize = 0;
+-    let mut pending_step_text: bool = false;
+-
+-    for event in MdParser::new(input) {
+-        match event {
+-            Event::Start(Tag::Heading {
+-                level: HeadingLevel::H1,
+-                ..
+-            }) if current_task.is_none() && plan.title.is_empty() => {
+-                in_task_heading = true;
+-            }
+-            Event::Start(Tag::Heading {
+-                level: HeadingLevel::H3,
+-                ..
+-            }) => {
+-                // Push any pending step before starting new task
+-                if let (Some(ref mut t), Some(step)) = (current_task.as_mut(), current_step.take()) {
+-                    t.steps.push(step);
+-                }
+-                if let Some(t) = current_task.take() {
+-                    plan.tasks.push(t);
+-                }
+-                current_task = Some(Task::default());
+-                in_task_heading = true;
+-                in_files_block = false;
+-                pending_create = false;
+-                pending_modify = false;
+-                current_step = None;
+-            }
+-            Event::Start(Tag::Item) => {
+-                // Reset pending flags when entering a new list item
+-                pending_create = false;
+-                pending_modify = false;
+-                pending_step_text = false;
+-            }
+-            Event::Text(text) => {
+-                let s = text.to_string();
+-                if in_task_heading {
+-                    if let Some(ref mut t) = current_task
+-                        && t.title.is_empty()
+-                    {
+-                        let trimmed = s.trim();
+-                        if let Some(rest) = trimmed.strip_prefix("Task ")
+-                            && let Some((id, title)) = rest.split_once(':')
+-                        {
+-                            t.id = id.trim().to_string();
+-                            t.title = title.trim().to_string();
+-                        }
+-                    } else if plan.title.is_empty() {
+-                        plan.title = s;
+-                    }
+-                    in_task_heading = false;
+-                } else if let Some(ref mut t) = current_task {
+-                    if s.trim() == "Files:" || s.starts_with("**Files:**") {
+-                        in_files_block = true;
+-                    } else if in_files_block {
+-                        if s.trim().starts_with("Create:") {
+-                            pending_create = true;
+-                            pending_modify = false;
+-                        } else if s.trim().starts_with("Modify:") {
+-                            pending_modify = true;
+-                            pending_create = false;
+-                        }
+-                    } else if s.contains("Step ") {
+-                        // Finish previous step (push to task)
+-                        if let Some(step) = current_step.take() {
+-                            t.steps.push(step);
+-                        }
+-                        step_index += 1;
+-                        let desc = s
+-                            .trim()
+-                            .trim_start_matches("[ ] ")
+-                            .trim_start_matches("[x] ")
+-                            .trim_start_matches("**Step ")
+-                            .trim_end_matches("**")
+-                            .trim_end_matches(':')
+-                            .to_string();
+-                        current_step = Some(Step {
+-                            index: step_index,
+-                            description: desc,
+-                            expected_outcome: ExpectedOutcome::Pass,
+-                            verify_command: None,
+-                        });
+-                    } else if s.starts_with("Run:") {
+-                        pending_step_text = true;
+-                    } else if s.starts_with("Expected:")
+-                        && let Some(ref mut step) = current_step
+-                    {
+-                        step.expected_outcome = parse_expected(&s);
+-                    }
+-                }
+-            }
+-            Event::Code(code) => {
+-                if let Some(ref mut t) = current_task {
+-                    if pending_create {
+-                        t.files.create.push(PathBuf::from(&*code));
+-                        pending_create = false;
+-                    } else if pending_modify {
+-                        t.files.modify.push(ModifyTarget {
+-                            path: PathBuf::from(&*code),
+-                            range: None,
+-                        });
+-                        pending_modify = false;
+-                    } else if pending_step_text {
+-                        if let Some(ref mut step) = current_step {
+-                            step.verify_command = Some(code.to_string());
+-                        }
+-                        pending_step_text = false;
+-                    }
+-                }
+-            }
+-            Event::End(pulldown_cmark::TagEnd::Item) => {
+-                in_files_block = false;
+-                // Don't push step here - wait until next Step starts or plan ends
+-            }
+-            _ => {}
+-        }
+-    }
+-    // Finalize last task and any pending step
+-    if let (Some(ref mut t), Some(step)) = (current_task.as_mut(), current_step.take()) {
+-        t.steps.push(step);
+-    }
+-    if let Some(t) = current_task {
+-        plan.tasks.push(t);
+-    }
+-
+-    Ok(plan)
+-}
+-
+-fn parse_expected(line: &str) -> ExpectedOutcome {
+-    let body = line.trim_start_matches("Expected:").trim();
+-    if body == "PASS" || body == "SUCCESS" {
+-        ExpectedOutcome::Pass
+-    } else if body.starts_with("FAIL") {
+-        ExpectedOutcome::Fail(body.to_string())
+-    } else if let Ok(n) = body.parse::<i32>() {
+-        ExpectedOutcome::Custom(n)
+-    } else {
+-        ExpectedOutcome::Pass
+-    }
+-}
+diff --git a/tools/plan-compliance-checker/src/report.rs b/tools/plan-compliance-checker/src/report.rs
+deleted file mode 100644
+index 24a1f6c..0000000
+--- a/tools/plan-compliance-checker/src/report.rs
++++ /dev/null
+@@ -1,123 +0,0 @@
+-use crate::plan::Plan;
+-use crate::task::{CheckResult, TaskResult};
+-use serde::Serialize;
+-
+-#[derive(Serialize)]
+-pub struct Report {
+-    pub plan_path: String,
+-    pub plan_title: String,
+-    pub results: Vec<TaskResultJson>,
+-}
+-
+-#[derive(Serialize)]
+-pub struct TaskResultJson {
+-    pub task_id: String,
+-    pub status: String,
+-    pub checks: Vec<CheckResultJson>,
+-}
+-
+-#[derive(Serialize)]
+-pub struct CheckResultJson {
+-    pub kind: String,
+-    pub ok: bool,
+-    pub detail: String,
+-}
+-
+-pub fn format_human(plan: &Plan, results: &[TaskResult]) {
+-    println!("Plan: {} — {}", plan.path.display(), plan.title);
+-    for r in results {
+-        let (id, checks, label) = match r {
+-            TaskResult::Pass { task_id, checks } => (task_id.as_str(), checks, "PASS"),
+-            TaskResult::Pending { task_id, checks } => (task_id.as_str(), checks, "PENDING"),
+-            TaskResult::Fail { task_id, checks } => (task_id.as_str(), checks, "FAIL"),
+-        };
+-        println!("\n[TASK {}] {}", id, label);
+-        for c in checks {
+-            print_check(c);
+-        }
+-    }
+-    let (mut pass, mut pending, mut fail) = (0, 0, 0);
+-    for r in results {
+-        match r {
+-            TaskResult::Pass { .. } => pass += 1,
+-            TaskResult::Pending { .. } => pending += 1,
+-            TaskResult::Fail { .. } => fail += 1,
+-        }
+-    }
+-    println!("\nSUMMARY: {} pass / {} pending / {} fail", pass, pending, fail);
+-}
+-
+-pub fn format_json(plan: &Plan, results: &[TaskResult]) -> String {
+-    let report = Report {
+-        plan_path: plan.path.to_string_lossy().into_owned(),
+-        plan_title: plan.title.clone(),
+-        results: results
+-            .iter()
+-            .map(|r| {
+-                let (task_id, status, checks) = match r {
+-                    TaskResult::Pass { task_id, checks } => (task_id.clone(), "PASS", checks.clone()),
+-                    TaskResult::Pending { task_id, checks } => (task_id.clone(), "PENDING", checks.clone()),
+-                    TaskResult::Fail { task_id, checks } => (task_id.clone(), "FAIL", checks.clone()),
+-                };
+-                TaskResultJson {
+-                    task_id,
+-                    status: status.to_string(),
+-                    checks: checks.iter().map(check_to_json).collect(),
+-                }
+-            })
+-            .collect(),
+-    };
+-    serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".to_string())
+-}
+-
+-fn check_to_json(c: &CheckResult) -> CheckResultJson {
+-    match c {
+-        CheckResult::FileExists { path, ok } => CheckResultJson {
+-            kind: "file_exists".to_string(),
+-            ok: *ok,
+-            detail: path.clone(),
+-        },
+-        CheckResult::FileModified { path, ok, sha } => CheckResultJson {
+-            kind: "file_modified".to_string(),
+-            ok: *ok,
+-            detail: format!("{} (sha={:?})", path, sha),
+-        },
+-        CheckResult::CommitPresent { ok, sha } => CheckResultJson {
+-            kind: "commit_present".to_string(),
+-            ok: *ok,
+-            detail: format!("sha={:?}", sha),
+-        },
+-        CheckResult::CommitFilesMatch { ok, expected, actual } => CheckResultJson {
+-            kind: "commit_files_match".to_string(),
+-            ok: *ok,
+-            detail: format!("expected={:?} actual={:?}", expected, actual),
+-        },
+-        CheckResult::PathConsistency { path, ok, suggestion } => CheckResultJson {
+-            kind: "path_consistency".to_string(),
+-            ok: *ok,
+-            detail: format!("{} (suggestion={:?})", path, suggestion),
+-        },
+-    }
+-}
+-
+-fn print_check(c: &CheckResult) {
+-    let (sym, msg) = match c {
+-        CheckResult::FileExists { path, ok } => (if *ok { "✓" } else { "✗" }, format!("file_exists: {}", path)),
+-        CheckResult::FileModified { path, ok, sha } => (
+-            if *ok { "✓" } else { "✗" },
+-            format!("file_modified: {} (sha={:?})", path, sha),
+-        ),
+-        CheckResult::CommitPresent { ok, sha } => {
+-            (if *ok { "✓" } else { "✗" }, format!("commit_present: sha={:?}", sha))
+-        }
+-        CheckResult::CommitFilesMatch { ok, expected, actual } => (
+-            if *ok { "✓" } else { "✗" },
+-            format!("commit_files_match: expected={:?} actual={:?}", expected, actual),
+-        ),
+-        CheckResult::PathConsistency { path, ok, suggestion } => (
+-            if *ok { "✓" } else { "⚠" },
+-            format!("path_consistency: {} (suggestion={:?})", path, suggestion),
+-        ),
+-    };
+-    println!("  {} {}", sym, msg);
+-}
+diff --git a/tools/plan-compliance-checker/src/task.rs b/tools/plan-compliance-checker/src/task.rs
+deleted file mode 100644
+index 8c38d64..0000000
+--- a/tools/plan-compliance-checker/src/task.rs
++++ /dev/null
+@@ -1,163 +0,0 @@
+-use anyhow::Result;
+-use serde::{Deserialize, Serialize};
+-use std::path::Path;
+-
+-use crate::git_inspector::{Commit, commits_since};
+-use crate::path_resolver::{detect_path_mismatch, find_workspace_root};
+-use crate::plan::Plan;
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub enum TaskResult {
+-    Pending { task_id: String, checks: Vec<CheckResult> },
+-    Pass { task_id: String, checks: Vec<CheckResult> },
+-    Fail { task_id: String, checks: Vec<CheckResult> },
+-}
+-
+-#[derive(Debug, Clone, Serialize, Deserialize)]
+-pub enum CheckResult {
+-    FileExists {
+-        path: String,
+-        ok: bool,
+-    },
+-    FileModified {
+-        path: String,
+-        ok: bool,
+-        sha: Option<String>,
+-    },
+-    CommitPresent {
+-        ok: bool,
+-        sha: Option<String>,
+-    },
+-    CommitFilesMatch {
+-        ok: bool,
+-        expected: Vec<String>,
+-        actual: Vec<String>,
+-    },
+-    PathConsistency {
+-        path: String,
+-        ok: bool,
+-        suggestion: Option<String>,
+-    },
+-}
+-
+-fn path_matches(commit_file: &str, task_file: &str) -> bool {
+-    if commit_file == task_file {
+-        return true;
+-    }
+-    // Check if one is a suffix of the other with a path separator boundary
+-    // e.g., "src/crates/foo/Cargo.toml" ends with "crates/foo/Cargo.toml" (if task_file is relative)
+-    // or "crates/foo/Cargo.toml" is contained in "src/crates/foo/Cargo.toml"
+-    if commit_file.ends_with(task_file) {
+-        let boundary = commit_file.len() - task_file.len();
+-        return boundary == 0 || commit_file.as_bytes()[boundary - 1] == b'/';
+-    }
+-    if task_file.ends_with(commit_file) {
+-        let boundary = task_file.len() - commit_file.len();
+-        return boundary == 0 || task_file.as_bytes()[boundary - 1] == b'/';
+-    }
+-    false
+-}
+-
+-pub fn check_plan(plan: &Plan, cwd: &Path) -> Result<Vec<TaskResult>> {
+-    let workspace_root = find_workspace_root(cwd).unwrap_or_else(|| cwd.to_path_buf());
+-    let commits = commits_since(&workspace_root, &plan.plan_start_sha).unwrap_or_default();
+-
+-    let mut results = Vec::new();
+-    for task in &plan.tasks {
+-        let mut checks = Vec::new();
+-        let mut task_has_work = false;
+-        let mut all_ok = true;
+-        let mut has_commit = false;
+-
+-        // Check file existence and path consistency for all create paths
+-        for create_path in &task.files.create {
+-            let abs = workspace_root.join(create_path);
+-            let exists = abs.exists();
+-            task_has_work = true;
+-            checks.push(CheckResult::FileExists {
+-                path: create_path.to_string_lossy().into_owned(),
+-                ok: exists,
+-            });
+-
+-            // Path consistency check
+-            let m = detect_path_mismatch(create_path, &workspace_root);
+-            if !m.exists_relative && m.suggestion.is_some() {
+-                all_ok = false;
+-                checks.push(CheckResult::PathConsistency {
+-                    path: create_path.to_string_lossy().into_owned(),
+-                    ok: false,
+-                    suggestion: m.suggestion.map(|p| p.to_string_lossy().into_owned()),
+-                });
+-            }
+-        }
+-
+-        // Commit presence: find any commit that touches one of task's files
+-        let task_files: Vec<String> = task
+-            .files
+-            .create
+-            .iter()
+-            .chain(task.files.modify.iter().map(|m| &m.path))
+-            .map(|p| p.to_string_lossy().into_owned())
+-            .collect();
+-
+-        let matching_commit: Option<&Commit> = commits
+-            .iter()
+-            .rev()
+-            .find(|c| c.files.iter().any(|f| task_files.iter().any(|tf| path_matches(f, tf))));
+-
+-        if let Some(commit) = matching_commit {
+-            has_commit = true;
+-            checks.push(CheckResult::CommitPresent {
+-                ok: true,
+-                sha: Some(commit.sha.clone()),
+-            });
+-            // If commit exists but file is missing on disk → fail
+-            for create_path in &task.files.create {
+-                let abs = workspace_root.join(create_path);
+-                if !abs.exists() {
+-                    all_ok = false;
+-                }
+-            }
+-            let commit_files: Vec<String> = commit.files.clone();
+-            let all_match = task_files
+-                .iter()
+-                .all(|tf| commit_files.iter().any(|cf| path_matches(cf, tf)));
+-            if !all_match {
+-                all_ok = false;
+-            }
+-            checks.push(CheckResult::CommitFilesMatch {
+-                ok: all_match,
+-                expected: task_files.clone(),
+-                actual: commit_files,
+-            });
+-        } else if task_has_work {
+-            checks.push(CheckResult::CommitPresent { ok: false, sha: None });
+-        }
+-
+-        let status = if !task_has_work {
+-            TaskResult::Pending {
+-                task_id: task.id.clone(),
+-                checks,
+-            }
+-        } else if !has_commit {
+-            // No commit yet → Pending regardless of file existence
+-            TaskResult::Pending {
+-                task_id: task.id.clone(),
+-                checks,
+-            }
+-        } else if all_ok {
+-            TaskResult::Pass {
+-                task_id: task.id.clone(),
+-                checks,
+-            }
+-        } else {
+-            TaskResult::Fail {
+-                task_id: task.id.clone(),
+-                checks,
+-            }
+-        };
+-        results.push(status);
+-    }
+-
+-    Ok(results)
+-}
+diff --git a/tools/plan-compliance-checker/tests/cli_test.rs b/tools/plan-compliance-checker/tests/cli_test.rs
+deleted file mode 100644
+index 1e9bebd..0000000
+--- a/tools/plan-compliance-checker/tests/cli_test.rs
++++ /dev/null
+@@ -1,38 +0,0 @@
+-use std::process::Command;
+-
+-#[test]
+-fn binary_prints_help_with_no_args() {
+-    let out = Command::new(env!("CARGO_BIN_EXE_plan-compliance-checker"))
+-        .arg("--help")
+-        .output()
+-        .expect("failed to run binary");
+-    assert!(out.status.success());
+-    let stdout = String::from_utf8_lossy(&out.stdout);
+-    assert!(stdout.contains("Usage:"));
+-    assert!(stdout.contains("--task"));
+-    assert!(stdout.contains("--start-sha"));
+-}
+-
+-#[test]
+-fn binary_rejects_missing_plan_path() {
+-    let out = Command::new(env!("CARGO_BIN_EXE_plan-compliance-checker"))
+-        .output()
+-        .expect("failed to run binary");
+-    assert!(!out.status.success());
+-}
+-
+-#[test]
+-fn command_runner_returns_exit_code() {
+-    use plan_compliance_checker::command_runner::run_command;
+-    use std::path::Path;
+-
+-    let cwd = Path::new(".");
+-    // successful command
+-    let (code, stdout) = run_command(cwd, "echo", &["hello"]).expect("should run");
+-    assert_eq!(code, 0);
+-    assert!(stdout.contains("hello"));
+-
+-    // failing command
+-    let (code, _) = run_command(cwd, "false", &[]).expect("should run false");
+-    assert_ne!(code, 0);
+-}
+diff --git a/tools/plan-compliance-checker/tests/fixture_test.rs b/tools/plan-compliance-checker/tests/fixture_test.rs
+deleted file mode 100644
+index 999f913..0000000
+--- a/tools/plan-compliance-checker/tests/fixture_test.rs
++++ /dev/null
+@@ -1,41 +0,0 @@
+-use plan_compliance_checker::plan::parse_plan;
+-
+-fn fixture(name: &str) -> String {
+-    let path = format!("tests/fixtures/{name}.md");
+-    std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("missing fixture: {path}"))
+-}
+-
+-#[test]
+-fn good_plan_parses_with_no_warnings() {
+-    let plan = parse_plan(&fixture("good-plan")).expect("should parse");
+-    assert_eq!(plan.tasks.len(), 1);
+-    assert_eq!(plan.tasks[0].id, "1.1");
+-    assert_eq!(plan.tasks[0].files.create.len(), 1);
+-}
+-
+-#[test]
+-fn mismatch_plan_parses_and_path_does_not_exist() {
+-    use plan_compliance_checker::path_resolver::{detect_path_mismatch, find_workspace_root};
+-    let plan = parse_plan(&fixture("path-mismatch-plan")).expect("should parse");
+-    let cwd = std::env::current_dir().unwrap();
+-    let root = find_workspace_root(&cwd).unwrap();
+-    let m = detect_path_mismatch(&plan.tasks[0].files.create[0], &root);
+-    assert!(!m.exists_relative);
+-}
+-
+-#[test]
+-fn missing_plan_path_is_unrecoverable() {
+-    use plan_compliance_checker::path_resolver::{detect_path_mismatch, find_workspace_root};
+-    let plan = parse_plan(&fixture("missing-file-plan")).expect("should parse");
+-    let cwd = std::env::current_dir().unwrap();
+-    let root = find_workspace_root(&cwd).unwrap();
+-    let m = detect_path_mismatch(&plan.tasks[0].files.create[0], &root);
+-    assert!(!m.exists_relative);
+-    assert!(m.suggestion.is_none(), "no suggestion when path is truly absent");
+-}
+-
+-#[test]
+-fn bad_commit_plan_parses_cleanly() {
+-    let plan = parse_plan(&fixture("bad-commit-plan")).expect("should parse");
+-    assert_eq!(plan.tasks[0].id, "1.1");
+-}
+diff --git a/tools/plan-compliance-checker/tests/fixtures/bad-commit-plan.md b/tools/plan-compliance-checker/tests/fixtures/bad-commit-plan.md
+deleted file mode 100644
+index 2a5e83f..0000000
+--- a/tools/plan-compliance-checker/tests/fixtures/bad-commit-plan.md
++++ /dev/null
+@@ -1,11 +0,0 @@
+-# Bad Commit Plan
+-
+-### Task 1.1: never committed
+-
+-**Files:**
+-- Create: `some-path/Cargo.toml`
+-
+-- [ ] **Step 1: Verify**
+-
+-Run: `true`
+-Expected: PASS
+diff --git a/tools/plan-compliance-checker/tests/fixtures/good-plan.md b/tools/plan-compliance-checker/tests/fixtures/good-plan.md
+deleted file mode 100644
+index 2d685f1..0000000
+--- a/tools/plan-compliance-checker/tests/fixtures/good-plan.md
++++ /dev/null
+@@ -1,11 +0,0 @@
+-# Good Plan
+-
+-### Task 1.1: existing file
+-
+-**Files:**
+-- Create: `Cargo.toml`
+-
+-- [ ] **Step 1: Verify**
+-
+-Run: `true`
+-Expected: PASS
+diff --git a/tools/plan-compliance-checker/tests/fixtures/missing-file-plan.md b/tools/plan-compliance-checker/tests/fixtures/missing-file-plan.md
+deleted file mode 100644
+index 34071bb..0000000
+--- a/tools/plan-compliance-checker/tests/fixtures/missing-file-plan.md
++++ /dev/null
+@@ -1,11 +0,0 @@
+-# Missing Plan
+-
+-### Task 1.1: truly missing
+-
+-**Files:**
+-- Create: `this-file-does-not-exist-anywhere-xyz.rs`
+-
+-- [ ] **Step 1: Verify**
+-
+-Run: `true`
+-Expected: PASS
+diff --git a/tools/plan-compliance-checker/tests/fixtures/path-mismatch-plan.md b/tools/plan-compliance-checker/tests/fixtures/path-mismatch-plan.md
+deleted file mode 100644
+index 6df7796..0000000
+--- a/tools/plan-compliance-checker/tests/fixtures/path-mismatch-plan.md
++++ /dev/null
+@@ -1,11 +0,0 @@
+-# Mismatch Plan
+-
+-### Task 1.1: wrong path
+-
+-**Files:**
+-- Create: `crates/nonexistent/Cargo.toml`
+-
+-- [ ] **Step 1: Verify**
+-
+-Run: `true`
+-Expected: PASS
+diff --git a/tools/plan-compliance-checker/tests/git_inspector_test.rs b/tools/plan-compliance-checker/tests/git_inspector_test.rs
+deleted file mode 100644
+index a11bf4c..0000000
+--- a/tools/plan-compliance-checker/tests/git_inspector_test.rs
++++ /dev/null
+@@ -1,8 +0,0 @@
+-use plan_compliance_checker::git_inspector::commits_since;
+-
+-#[test]
+-fn lists_commits_since_given_sha() {
+-    let cwd = std::env::current_dir().unwrap();
+-    let commits = commits_since(&cwd, "HEAD~3").expect("should list commits");
+-    assert!(commits.len() >= 3, "should list at least 3 commits back from HEAD~3");
+-}
+diff --git a/tools/plan-compliance-checker/tests/path_resolver_test.rs b/tools/plan-compliance-checker/tests/path_resolver_test.rs
+deleted file mode 100644
+index f446045..0000000
+--- a/tools/plan-compliance-checker/tests/path_resolver_test.rs
++++ /dev/null
+@@ -1,29 +0,0 @@
+-use plan_compliance_checker::path_resolver::{detect_path_mismatch, find_workspace_root};
+-use std::path::PathBuf;
+-
+-#[test]
+-fn finds_workspace_root_from_subdir() {
+-    let cwd = std::env::current_dir().unwrap();
+-    let root = find_workspace_root(&cwd).expect("should find workspace root");
+-    assert!(root.join("Cargo.toml").exists(), "root should contain Cargo.toml");
+-    let manifest = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
+-    assert!(
+-        manifest.contains("[workspace]"),
+-        "Cargo.toml should be a workspace manifest"
+-    );
+-}
+-
+-#[test]
+-fn detects_mismatch_when_path_missing() {
+-    let cwd = std::env::current_dir().unwrap();
+-    let root = find_workspace_root(&cwd).unwrap();
+-    // Pick a workspace member path that does NOT exist at the plan's path
+-    // but exists at the suggestion path (the second component IS the workspace root).
+-    let plan_path = PathBuf::from("crates/services/services-core/Cargo.toml");
+-    let m = detect_path_mismatch(&plan_path, &root);
+-    assert!(!m.exists_relative, "the path should not exist as-written");
+-    assert!(
+-        m.suggestion.is_some(),
+-        "should suggest the real path: src/crates/services/services-core/Cargo.toml"
+-    );
+-}
+diff --git a/tools/plan-compliance-checker/tests/plan_parser_test.rs b/tools/plan-compliance-checker/tests/plan_parser_test.rs
+deleted file mode 100644
+index 292b486..0000000
+--- a/tools/plan-compliance-checker/tests/plan_parser_test.rs
++++ /dev/null
+@@ -1,60 +0,0 @@
+-use plan_compliance_checker::plan::parse_plan;
+-use std::path::PathBuf;
+-
+-const SAMPLE: &str = r#"# My Plan
+-
+-> preamble
+-
+-## Phase 1
+-
+-### Task 1.1: scaffold
+-
+-**Files:**
+-- Create: `crates/foo/Cargo.toml`
+-
+-- [ ] **Step 1: Write the file**
+-
+-```toml
+-[package]
+-name = "foo"
+-```
+-
+-- [ ] **Step 2: Verify**
+-
+-Run: `cargo check -p foo`
+-Expected: PASS
+-"#;
+-
+-#[test]
+-fn parse_extracts_task_with_id_and_title() {
+-    let plan = parse_plan(SAMPLE).expect("should parse");
+-    assert_eq!(plan.title, "My Plan");
+-    assert_eq!(plan.tasks.len(), 1);
+-    assert_eq!(plan.tasks[0].id, "1.1");
+-    assert_eq!(plan.tasks[0].title, "scaffold");
+-}
+-
+-#[test]
+-fn parse_extracts_create_files() {
+-    let plan = parse_plan(SAMPLE).expect("should parse");
+-    assert_eq!(plan.tasks[0].files.create.len(), 1);
+-    assert_eq!(plan.tasks[0].files.create[0], PathBuf::from("crates/foo/Cargo.toml"));
+-}
+-
+-#[test]
+-fn parse_extracts_steps_with_verify_command() {
+-    let plan = parse_plan(SAMPLE).expect("should parse");
+-    let task = &plan.tasks[0];
+-    assert_eq!(task.steps.len(), 2);
+-    assert_eq!(task.steps[1].verify_command.as_deref(), Some("cargo check -p foo"));
+-    assert_eq!(
+-        task.steps[1].expected_outcome,
+-        plan_compliance_checker::plan::ExpectedOutcome::Pass
+-    );
+-}
+-
+-#[test]
+-fn parse_extracts_real_task_id_from_heading() {
+-    let plan = parse_plan(SAMPLE).expect("should parse");
+-    assert_eq!(plan.tasks[0].id, "1.1", "id should be parsed from heading text");
+-}
+diff --git a/tools/plan-compliance-checker/tests/plan_struct_test.rs b/tools/plan-compliance-checker/tests/plan_struct_test.rs
+deleted file mode 100644
+index 41d69db..0000000
+--- a/tools/plan-compliance-checker/tests/plan_struct_test.rs
++++ /dev/null
+@@ -1,20 +0,0 @@
+-use plan_compliance_checker::plan::{ExpectedOutcome, FilesSpec, Plan};
+-
+-#[test]
+-fn empty_files_spec_is_default() {
+-    let f = FilesSpec::default();
+-    assert!(f.create.is_empty());
+-    assert!(f.modify.is_empty());
+-}
+-
+-#[test]
+-fn expected_outcome_pass_serializes_to_pass() {
+-    let s = serde_json::to_string(&ExpectedOutcome::Pass).unwrap();
+-    assert_eq!(s, "\"Pass\"");
+-}
+-
+-#[test]
+-fn plan_default_has_empty_tasks() {
+-    let p = Plan::default();
+-    assert!(p.tasks.is_empty());
+-}
+diff --git a/tools/plan-compliance-checker/tests/task_checker_test.rs b/tools/plan-compliance-checker/tests/task_checker_test.rs
+deleted file mode 100644
+index 62a2e4b..0000000
+--- a/tools/plan-compliance-checker/tests/task_checker_test.rs
++++ /dev/null
+@@ -1,34 +0,0 @@
+-use plan_compliance_checker::plan::Plan;
+-use plan_compliance_checker::task::{TaskResult, check_plan};
+-use std::path::PathBuf;
+-
+-#[test]
+-fn check_returns_pending_when_no_commits() {
+-    let cwd = std::env::current_dir().unwrap();
+-    let plan = Plan::default(); // empty plan
+-    let results = check_plan(&plan, &cwd).unwrap();
+-    assert!(results.is_empty());
+-}
+-
+-#[test]
+-fn check_reports_missing_create_path() {
+-    use plan_compliance_checker::plan::{FilesSpec, Task};
+-    let cwd = std::env::current_dir().unwrap();
+-    let plan = Plan {
+-        path: PathBuf::from("test.md"),
+-        title: "t".into(),
+-        tasks: vec![Task {
+-            id: "1.1".into(),
+-            title: "scaffold".into(),
+-            files: FilesSpec {
+-                create: vec![PathBuf::from("nonexistent-file-xyz.rs")],
+-                modify: vec![],
+-            },
+-            steps: vec![],
+-        }],
+-        plan_start_sha: "HEAD".into(),
+-    };
+-    let results = check_plan(&plan, &cwd).unwrap();
+-    assert_eq!(results.len(), 1);
+-    assert!(matches!(results[0], TaskResult::Pending { .. }));
+-}

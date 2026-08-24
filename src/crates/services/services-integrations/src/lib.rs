@@ -24,12 +24,6 @@ pub mod git;
 #[cfg(feature = "mcp")]
 pub mod mcp;
 
-#[cfg(feature = "miniapp-runtime")]
-pub mod miniapp;
-
-#[cfg(feature = "remote-connect")]
-pub mod remote_connect;
-
 #[cfg(feature = "remote-ssh")]
 pub mod remote_ssh;
 

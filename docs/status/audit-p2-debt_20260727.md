@@ -25,7 +25,7 @@
 | P2-10 | resolved | resolved (verified) | No | 2/2 >1000 files split: `settings.rs` → `settings/` (6 files), `callbacks_settings.rs` → `callbacks_settings/` (6 files). 3/3 >800 files have `// allow-god-file`: `theme.rs` (855L), `callbacks_lifecycle.rs` (832L), `judge_gate/mod.rs` (822L). No unregistered >800 files found in `src/`. ✓ |
 | P2-11 | resolved | resolved (verified) | No | `receipt_store.rs` exists (95 lines). Append-only JSONL at `data_dir/judge-gate/consumed_receipts.jsonl`. LazyLock init replays log. Persist on consume/release. ✓ |
 | P2-12 | resolved | resolved (verified) | No | `forbidden-rules.mjs:2972-2989` has `read_episodes` and `episodes::store::read` forbidden under `agentic/agents/` and `agentic/execution/`. Structural guard in place. ✓ |
-| P2-13 | resolved | resolved (verified) | No | `agentic_mode.md` at `src/crates/assembly/core/src/agentic/agents/prompts/`. Identity section no longer contains "not an IDE / not a coding tool" contradiction. Self-cognition design separated to `docs/design/2026-07-23-self-cognition/first-entry-design.md`. ✓ |
+| P2-13 | resolved | resolved (verified) | No | `agentic_mode.md` at `src/crates/assembly/core/src/agentic/agents/prompts/`. Identity section no longer contains "not an IDE / not a coding tool" contradiction. Self-cognition design separated to `docs/archive/design/2026-07-23-self-cognition/first-entry-design.md`. ✓ |
 | P2-14 | active (low priority) | active (low priority) | No | `facts.rs:113` `append_facts_dedup` uses exact-text dedup (`contains(&c.text)` at `:773`). Comment at `:594`: "Append with exact-text deduplication". Confidence still always Med, scope still always Workspace. No normalization or similarity-based dedup implemented. |
 
 ## Discrepancies Detail

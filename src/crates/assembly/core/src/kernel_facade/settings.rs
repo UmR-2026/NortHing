@@ -5,8 +5,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::settings::{
-    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, GlobalConfigPatchDto, MCPServerDto, MCPServerStatusDto,
-    ProviderConfigDto, ProviderFormDto, ProviderTestResultDto,
+    AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, MCPServerDto, MCPServerStatusDto, ProviderConfigDto,
+    ProviderFormDto, ProviderTestResultDto,
 };
 
 use crate::service::config::{get_global_config_service, GlobalConfig};
@@ -33,7 +33,6 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                     id: m.id.clone(),
                     name: m.name.clone(),
                     base_url: m.base_url.clone(),
-                    api_key: m.api_key.clone(),
                     model: m.model_name.clone(),
                     extra: None,
                     enabled: Some(m.enabled),
@@ -43,69 +42,6 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
             default_provider_id: config.ai.default_models.primary.clone(),
             workspace_config: None,
         })
-    }
-
-    async fn update_global_config(&self, patch: GlobalConfigPatchDto) -> Result<(), KernelError> {
-        let cfg_svc = get_global_config_service()
-            .await
-            .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
-        if let Some(providers) = patch.providers {
-            for p in providers {
-                let model_cfg = crate::service::config::runtime::AIModelConfig {
-                    id: p.id.clone(),
-                    name: p.name.clone(),
-                    provider: p.id.clone(),
-                    model_name: p.model.clone(),
-                    base_url: p.base_url.clone(),
-                    request_url: None,
-                    api_key: p.api_key.clone(),
-                    context_window: None,
-                    max_tokens: None,
-                    temperature: None,
-                    top_p: None,
-                    enabled: true,
-                    category: Default::default(),
-                    capabilities: vec![],
-                    recommended_for: vec![],
-                    metadata: None,
-                    enable_thinking_process: false,
-                    reasoning_mode: None,
-                    inline_think_in_text: false,
-                    custom_headers: None,
-                    custom_headers_mode: None,
-                    skip_ssl_verify: false,
-                    reasoning_effort: None,
-                    thinking_budget_tokens: None,
-                    custom_request_body: None,
-                    custom_request_body_mode: None,
-                    auth: Default::default(),
-                };
-                let existing = cfg_svc
-                    .get_ai_models()
-                    .await
-                    .map_err(|e| KernelError::Config(format!("get_ai_models: {e}")))?
-                    .iter()
-                    .any(|m| m.id == p.id);
-                if existing {
-                    cfg_svc
-                        .update_ai_model(&p.id, model_cfg)
-                        .await
-                        .map_err(|e| KernelError::Config(format!("update_ai_model: {e}")))?;
-                } else {
-                    cfg_svc
-                        .add_ai_model(model_cfg)
-                        .await
-                        .map_err(|e| KernelError::Config(format!("add_ai_model: {e}")))?;
-                }
-            }
-        }
-        if let Some(default_id) = patch.default_provider_id {
-            cfg_svc
-                .set_config("ai.default_models.primary", default_id.as_str())
-                .await
-                .map_err(|e| KernelError::Config(format!("set default provider: {e}")))?;
-        }
-        Ok(())
     }
 
     async fn list_model_configs(&self) -> Result<Vec<AIModelConfigDto>, KernelError> {
@@ -126,7 +62,6 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 max_tokens: m.max_tokens,
                 temperature: m.temperature,
                 base_url: Some(m.base_url),
-                api_key: Some(m.api_key),
                 enabled: Some(m.enabled),
                 category: Some(category_to_str(&m.category)),
                 capabilities: Some(m.capabilities.iter().map(|c| capability_to_str(c)).collect()),
@@ -136,7 +71,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
             .collect())
     }
 
-    async fn upsert_model_config(&self, config: AIModelConfigDto) -> Result<(), KernelError> {
+    async fn upsert_model_config(&self, config: AIModelConfigDto, api_key: Option<String>) -> Result<(), KernelError> {
         let cfg_svc = get_global_config_service()
             .await
             .map_err(|e| KernelError::Config(format!("get_global_config_service: {e}")))?;
@@ -153,7 +88,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 model_name: config.model.clone(),
                 base_url: config.base_url.unwrap_or_else(|| existing_model.base_url.clone()),
                 request_url: existing_model.request_url.clone(),
-                api_key: config.api_key.unwrap_or_else(|| existing_model.api_key.clone()),
+                api_key: api_key.clone().unwrap_or_else(|| existing_model.api_key.clone()),
                 context_window: existing_model.context_window,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,
@@ -197,7 +132,7 @@ impl northhing_kernel_api::KernelSettingsApi for super::KernelFacade {
                 model_name: config.model.clone(),
                 base_url: config.base_url.unwrap_or_default(),
                 request_url: None,
-                api_key: config.api_key.unwrap_or_default(),
+                api_key: api_key.clone().unwrap_or_default(),
                 context_window: None,
                 max_tokens: config.max_tokens,
                 temperature: config.temperature,

@@ -9,7 +9,8 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         State,
     },
-    response::Response,
+    http::{header::ORIGIN, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -49,8 +50,65 @@ pub struct ErrorInfo {
     data: Option<serde_json::Value>,
 }
 
+/// Validate whether an Origin header is allowed for WebSocket connections.
+/// Missing origin is allowed for local non-browser clients (curl, reqwest, CLI).
+/// When present, origin must resolve to localhost, 127.0.0.1, or [::1].
+pub fn is_allowed_origin(origin: Option<&str>) -> bool {
+    let Some(origin) = origin else {
+        // Missing Origin header: allowed for non-browser local clients
+        return true;
+    };
+
+    let origin = origin.trim();
+    if origin.is_empty() || origin.eq_ignore_ascii_case("null") {
+        return false;
+    }
+
+    // Origin format: <scheme>://<host>[:<port>]
+    let Some((_scheme, rest)) = origin.split_once("://") else {
+        return false;
+    };
+
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if authority.is_empty() {
+        return false;
+    }
+
+    if authority.starts_with('[') {
+        // IPv6 literal, e.g. [::1] or [::1]:8080
+        if let Some(end_bracket) = authority.find(']') {
+            let ip = &authority[1..end_bracket];
+            let after = &authority[end_bracket + 1..];
+            if ip != "::1" {
+                return false;
+            }
+            if after.is_empty() {
+                return true;
+            }
+            if after.starts_with(':') && after[1..].chars().all(|c| c.is_ascii_digit()) {
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    let host = authority.split(':').next().unwrap_or("");
+    host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1"
+}
+
 /// WebSocket connection handler
-pub async fn websocket_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
+pub async fn websocket_handler(headers: HeaderMap, ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
+    let origin = headers.get(ORIGIN).and_then(|v| v.to_str().ok());
+    if !is_allowed_origin(origin) {
+        tracing::warn!(origin = ?origin, "WebSocket connection rejected: forbidden origin");
+        return (
+            StatusCode::FORBIDDEN,
+            "WebSocket origin forbidden: origin must be localhost, 127.0.0.1, or [::1]",
+        )
+            .into_response();
+    }
+
     tracing::info!("New WebSocket connection");
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
@@ -162,5 +220,46 @@ async fn handle_command(method: &str, _params: serde_json::Value, _state: &AppSt
             tracing::warn!("Unknown command: {}", method);
             Err(anyhow::anyhow!("Unknown command: {}", method))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_allowed_origin_missing_origin() {
+        // Local non-browser clients (curl, reqwest, CLI) omit Origin header
+        assert!(is_allowed_origin(None));
+    }
+
+    #[test]
+    fn test_is_allowed_origin_localhost_variations() {
+        assert!(is_allowed_origin(Some("http://localhost")));
+        assert!(is_allowed_origin(Some("http://localhost:8080")));
+        assert!(is_allowed_origin(Some("https://localhost:3000")));
+        assert!(is_allowed_origin(Some("http://127.0.0.1")));
+        assert!(is_allowed_origin(Some("http://127.0.0.1:8080")));
+        assert!(is_allowed_origin(Some("https://127.0.0.1:443")));
+        assert!(is_allowed_origin(Some("http://[::1]")));
+        assert!(is_allowed_origin(Some("http://[::1]:8080")));
+        assert!(is_allowed_origin(Some("https://[::1]:3000")));
+        assert!(is_allowed_origin(Some("tauri://localhost")));
+        assert!(is_allowed_origin(Some("ws://localhost:8080")));
+    }
+
+    #[test]
+    fn test_is_allowed_origin_rejects_external_and_malformed() {
+        assert!(!is_allowed_origin(Some("http://evil.com")));
+        assert!(!is_allowed_origin(Some("http://attacker.com:8080")));
+        assert!(!is_allowed_origin(Some("http://localhost.evil.com")));
+        assert!(!is_allowed_origin(Some("http://192.168.1.1:8080")));
+        assert!(!is_allowed_origin(Some("http://10.0.0.1")));
+        assert!(!is_allowed_origin(Some("http://[::2]:8080")));
+        assert!(!is_allowed_origin(Some("null")));
+        assert!(!is_allowed_origin(Some("NULL")));
+        assert!(!is_allowed_origin(Some("")));
+        assert!(!is_allowed_origin(Some("   ")));
+        assert!(!is_allowed_origin(Some("invalid-uri")));
     }
 }

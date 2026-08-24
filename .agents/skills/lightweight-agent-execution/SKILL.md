@@ -65,7 +65,7 @@ Phase 3: Review Model
 
 ## Phase 3: Review Model
 
-**Prompt:** Use `.agents/skills/lightweight-agent-execution/review-prompt.md`
+**Prompt:** Use `.agents/skills/lightweight-agent-execution/reviewer-prompt.md`
 
 **Key rules:**
 - Do not run any commands
@@ -108,7 +108,7 @@ cp .task/templates/Taskfile.toml .task/Taskfile.toml
 # Run LAEP (three phases)
 # Phase 1: Coding Model (dispatch with coding-prompt.md)
 # Phase 2: Testing Model (dispatch with testing-prompt.md)
-# Phase 3: Review Model (dispatch with review-prompt.md)
+# Phase 3: Review Model (dispatch with reviewer-prompt.md)
 
 # Clean up after task
 rm .task/change-log.json .task/verification-report.json

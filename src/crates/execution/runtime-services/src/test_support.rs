@@ -2,11 +2,9 @@ use std::sync::Arc;
 
 use northhing_runtime_ports::{
     ClockPort, FileSystemPort, GitPort, McpCatalogPort, NetworkPort, PermissionDecision, PermissionPort,
-    PermissionRequest, PortResult, RemoteAssistantWorkspaceFacts, RemoteCapabilityPort, RemoteConnectionPort,
-    RemoteProjectionPort, RemoteRecentWorkspaceFacts, RemoteWorkspaceFacts, RemoteWorkspaceFileRuntimeHost,
-    RemoteWorkspaceKind, RemoteWorkspacePort, RemoteWorkspaceRuntimeHost, RemoteWorkspaceUpdate, RuntimeEventEnvelope,
-    RuntimeEventSink, RuntimeServiceCapability, RuntimeServicePort, SessionStoragePathRequest,
-    SessionStoragePathResolution, SessionStorePort, TerminalPort, WorkspacePort,
+    PermissionRequest, PortResult, RuntimeEventEnvelope, RuntimeEventSink, RuntimeServiceCapability,
+    RuntimeServicePort, SessionStoragePathRequest, SessionStoragePathResolution, SessionStorePort, TerminalPort,
+    WorkspacePort,
 };
 
 use crate::{RuntimeServices, RuntimeServicesBuilder, RuntimeServicesError, RuntimeServicesProvider};
@@ -43,50 +41,6 @@ impl TerminalPort for FakeRuntimePort {}
 impl NetworkPort for FakeRuntimePort {}
 impl GitPort for FakeRuntimePort {}
 impl McpCatalogPort for FakeRuntimePort {}
-impl RemoteConnectionPort for FakeRuntimePort {}
-impl RemoteCapabilityPort for FakeRuntimePort {}
-
-#[async_trait::async_trait]
-impl RemoteWorkspaceRuntimeHost for FakeRuntimePort {
-    async fn current_workspace(&self) -> Option<RemoteWorkspaceFacts> {
-        Some(RemoteWorkspaceFacts {
-            path: "/remote/project".to_string(),
-            name: "project".to_string(),
-            git_branch: Some("main".to_string()),
-            kind: RemoteWorkspaceKind::Remote,
-            assistant_id: None,
-        })
-    }
-
-    async fn recent_workspaces(&self) -> Vec<RemoteRecentWorkspaceFacts> {
-        Vec::new()
-    }
-
-    async fn open_workspace(&self, path: &str) -> Result<RemoteWorkspaceUpdate, String> {
-        Ok(RemoteWorkspaceUpdate {
-            path: path.to_string(),
-            name: "project".to_string(),
-        })
-    }
-
-    async fn assistant_workspaces(&self) -> Vec<RemoteAssistantWorkspaceFacts> {
-        Vec::new()
-    }
-
-    async fn open_assistant_workspace(&self, path: &str) -> Result<RemoteWorkspaceUpdate, String> {
-        Ok(RemoteWorkspaceUpdate {
-            path: path.to_string(),
-            name: "assistant".to_string(),
-        })
-    }
-}
-
-#[async_trait::async_trait]
-impl RemoteWorkspaceFileRuntimeHost for FakeRuntimePort {
-    async fn resolve_remote_file_workspace_root(&self, _session_id: Option<&str>) -> Option<std::path::PathBuf> {
-        Some(std::path::PathBuf::from("/remote/project"))
-    }
-}
 
 #[async_trait::async_trait]
 impl PermissionPort for FakeRuntimePort {
@@ -112,18 +66,11 @@ impl RuntimeEventSink for FakeRuntimeEventSink {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct FakeRuntimeServicesProvider {
-    include_remote: bool,
-}
+pub struct FakeRuntimeServicesProvider;
 
 impl FakeRuntimeServicesProvider {
     pub fn with_all_required() -> Self {
-        Self { include_remote: false }
-    }
-
-    pub fn with_all_remote(mut self) -> Self {
-        self.include_remote = true;
-        self
+        Self
     }
 
     pub fn build_services(self) -> Result<RuntimeServices, RuntimeServicesError> {
@@ -141,31 +88,12 @@ impl RuntimeServicesProvider for FakeRuntimeServicesProvider {
         let events: Arc<dyn RuntimeEventSink> = Arc::new(FakeRuntimeEventSink);
         let clock: Arc<dyn ClockPort> = Arc::new(FakeRuntimePort::new(RuntimeServiceCapability::Clock));
 
-        let builder = builder
+        builder
             .with_filesystem(filesystem)
             .with_workspace(workspace)
             .with_session_store(session_store)
             .with_permission(permission)
             .with_events(events)
-            .with_clock(clock);
-
-        if !self.include_remote {
-            return builder;
-        }
-
-        let remote_connection: Arc<dyn RemoteConnectionPort> =
-            Arc::new(FakeRuntimePort::new(RuntimeServiceCapability::RemoteConnection));
-        let remote_workspace: Arc<dyn RemoteWorkspacePort> =
-            Arc::new(FakeRuntimePort::new(RuntimeServiceCapability::RemoteWorkspace));
-        let remote_projection: Arc<dyn RemoteProjectionPort> =
-            Arc::new(FakeRuntimePort::new(RuntimeServiceCapability::RemoteProjection));
-        let remote_capabilities: Arc<dyn RemoteCapabilityPort> =
-            Arc::new(FakeRuntimePort::new(RuntimeServiceCapability::RemoteCapabilities));
-
-        builder
-            .with_optional_remote_connection(Some(remote_connection))
-            .with_optional_remote_workspace(Some(remote_workspace))
-            .with_optional_remote_projection(Some(remote_projection))
-            .with_optional_remote_capabilities(Some(remote_capabilities))
+            .with_clock(clock)
     }
 }

@@ -19,11 +19,11 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 
 | # | 层 | 路径 | 职责 | 模块 / 入口 | 层文档 |
 |---|---|---|---|---|---|
-| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`src/mobile-web`、`northhing-Installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、relay、Web UI、mobile web、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | 接口与入口 | `src/apps/*`、`src/web-ui`、`northing-installer`、`tests/e2e`、`src/crates/interfaces` | 产品宿主、命令、UI 入口、协议接口以及跨表面测试 | desktop、CLI、server、Web UI、installer、E2E、`acp` | 最近本地 `AGENTS.md`；[interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | 产品装配 | `src/crates/assembly` | 兼容性导出、产品能力选择、product-full 装配以及适配器/服务注册 | `core`、`product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
-| 3 | 适配器 | `src/crates/adapters` | AI/WebDriver 协议适配器与外部提供方翻译 | `ai-adapters`、`webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
-| 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语、MiniApp 运行时 IO 以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
-| 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、harness、stream、DeepReview 策略/报告、typed-service、tool-contract、tool-group 以及 tool-execution 构件 | `agent-runtime`、`agent-stream`、`tool-contracts`、`harness`、`runtime-services`、`tool-provider-groups`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+| 3 | 适配器 | `src/crates/adapters` | AI 协议适配器与外部提供方翻译 | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+| 4 | 服务 | `src/crates/services` | 可复用的 OS、文件系统、终端、MCP、远程、git、watch、进程、会话持久化原语以及网络实现 | `services-core`、`services-integrations`、`terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+| 5 | 执行原语 | `src/crates/execution` | 可移植的 agent、stream、DeepReview 策略/报告、typed-service、tool-contract 以及 tool-execution 构件 | `agent-runtime`、`agent-stream`、`tool-contracts`、`runtime-services`、`tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
 | 6 | 稳定契约与产品域 | `src/crates/contracts` | 共享 DTO、事件形态、运行时端口以及产品域契约/策略 | `core-types`、`events`、`runtime-ports`、`product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
 
 边界规则：
@@ -31,7 +31,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 - 接口和应用入口暴露选定的产品行为；可复用行为下移。
 - 装配层连接下层并选择产品能力事实；不得实现具体的适配器、OS 或服务细节。
 - 适配器翻译协议和外部系统；不应拥有产品能力选择或可复用 OS 服务行为。
-- 服务实现可复用的具体 OS、进程、终端、MCP、远程、git、文件系统以及 MiniApp 运行时 IO 能力。
+- 服务实现可复用的具体 OS、进程、终端、MCP、远程、git 以及文件系统能力。
 - 执行 crate 是可移植的运行时构件，而不是宿主特定或交付配置的所有者。
 - 契约保持轻行为，不得向上依赖。
 
@@ -53,7 +53,6 @@ pnpm run cli:dev                   # CLI 运行时
 pnpm run fmt:rs                     # 只格式化新增 / 暂存的 Rust 文件
 pnpm run lint:web
 pnpm run type-check:web
-pnpm --dir src/mobile-web run type-check
 pnpm run i18n:contract:test          # 仅 i18n 契约 / 资源
 pnpm run i18n:audit                  # 仅 i18n 契约 / 资源
 pnpm run check:repo-hygiene
@@ -67,7 +66,6 @@ cargo test --workspace                  # 广覆盖套件；由 CI 承担
 # 构建（仅用于影响构建的变更或 CI 复现）
 cargo build -p northhing-desktop           # 影响构建的变更 / CI 复现
 pnpm run build:web                      # 影响构建的变更 / CI 复现
-pnpm run build:mobile-web               # 影响构建的变更 / CI 复现
 
 # 快速构建（手工构建/调试流程）
 pnpm run desktop:build:fast           # 调试构建，不打包
@@ -79,11 +77,30 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 
 ## 全局规则
 
+### 内务规则（2026-07-22，适用于每次 commit）
+
+0. **Lazy Senior Dev 规则 (YAGNI)**：在写代码前，先爬这个阶梯：
+   1. 这真的需要构建吗？（YAGNI）
+   2. 本代码库中已有现成的？复用它。
+   3. 标准库已支持？用标准库。
+   4. 原生平台特性已覆盖？用原生特性。
+   5. 已安装依赖已解决？用已有依赖。
+   6. 能写成一行吗？写成一行。
+   7. 只有这时：写出能工作的最少代码。
+   （绝不要为了简短而牺牲安全性、错误处理或信任边界）。
+1. **顺手清配额**：一次 commit 可以顺带包含在 scope 内发现的附近小债务修复（过期文档、缺失测试、文件增长超过 800 行）——不需要单独提清理任务；在 commit message 中保持可追溯即可。
+2. **文档同步作为硬规则**：变更 crate 结构（增加/删除 crate、移动路径）必须在同一个 commit 中更新 `docs/status/surfaces.md`；解决技术债务项必须在同一个 commit 中翻转其 ledger 状态。不搞“稍后补文档”。
+3. **God-file 防线**：生产环境超过 800 行的 `.rs` 文件会增加 review 压力；超过 1000 行必须拆分或在文件顶部带有 `// allow-god-file` 合理化注释。新模块从底线以下开始。
+4. **并发测试绑定**：触及 `tokio::select!`、cancellation token 或 timeout 竞态的变更必须随附至少一个自动化测试；judge review 不能替代。其他类型的变更可以依赖 judge review。
+5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
+6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
+7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。dir-entry-count 指标的 sdd 条目是 cap-and-archive 语义（达到上限触发归档，而非只降不升）。
+
 ### 国际化
 
 - 区域标识、别名、回退规则以及表面默认由 `src/shared/i18n/contract/locales.json` 拥有。编辑后请运行 `pnpm run i18n:generate`。
 - 共享的稳定标签存放在 `src/shared/i18n/resources/shared/<locale>/terms.json`；工作流文案保留在所属的产品表面中。
-- 不要在小型产品表面（如 `src/mobile-web` 或 `northhing-Installer`）中引入 Web UI 的区域资源。详见 `docs/architecture/i18n.md`。
+- 不要在小型产品表面（如 `northing-installer`）中引入 Web UI 的区域资源。详见 `docs/architecture/i18n.md`。
 - 静态自包含页面可以使用生成的、页面作用域的共享词条文件；但不得引入 Web UI 的区域目录。
 - Web UI 仅急切加载 bootstrap 命名空间；路由或功能文案请使用 `useI18n(namespace)`，并把直接的 `i18nService.t(...)` 调用保留在 bootstrap 命名空间。
 - 用户可见的日期、时间和数字请使用共享的 i18n 格式化辅助函数，而不是直接使用 `Intl.*` 或 `toLocale*`。
@@ -134,12 +151,12 @@ await api.invoke('your_command', { request: { ... } });
 改动以下任一项需要 flag flip + 集成测试，并在同一 commit 更新本节。
 
 - **桌面包名是 `northhing`（Slint）**，不是 `northhing-desktop`。agent-dispatch flags：只剩 `USE_LIGHTWEIGHT_ACTOR = true`；Phase 3 IPC（`USE_ONESHOT_DISPATCHER` / `USE_ACTOR_IPC` / `USE_DISPATCHER_IPC` + IpcSpawnAdapter）已于 2026-07-20 descope 并删除。
-- **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。桌面 `AppSettings` 仍是 UI owner，经 `sync_providers_to_core` 适配推送到 core（见 `95e29ba`）。禁止再出现第二个运行时可读的配置文件。
+- **配置单一事实源 = core `GlobalConfig`**（`dirs::config_dir()/northhing/config/app.json`）。providers 与 default_model 单一事实源为 core GlobalConfig（段 1 拆镜像；用户拍板方案 C：core 不落 api_key 字段，桌面启动/变更时经 facade 推送明文仅内存；桌面 AppSettings 保留 workspaces/onboarding，段 2 待迁）。禁止再出现第二个运行时可读的配置文件。
 - **UI 线程纪律**：非事件循环线程写 Slint 属性会被静默丢弃。所有此类写入必须走 `slint::invoke_from_event_loop`（`error_banners.rs` 的 helper 已封装，直接复用，见 `ad349f9`）。
-- **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入；MiniApp string 模式命令含 shell 元字符一律拒绝。
+- **Shell 安全**：`guard_command_execution` 已接入 Bash/ExecCommand 的 `validate_input` 路径并写审计日志（见 `9a1575d`）。新增 shell 类工具必须同样接入。
 - **项目运行时 slug 恒带路径哈希**（CJK 路径不得冲突，见 `c7e7218`）。
 - **安装器工具链**：`northing-installer` `[lib] crate-type = ["rlib"]`（cdylib/staticlib 会突破 GNU ld 导出 ordinal 上限）；`embed-resource` pin 3.0.5（3.0.11 在 rustc 1.96 MSVC 下编译失败）。桌面构建用 MSVC；仓库目录 override 是 GNU 且 `cargo +toolchain` 不可用——用 `rustup run <tc> cargo`。
-- **v0.1.0 面基线**：发货面仅 Slint 桌面 + `northing-installer`；mobile-web / server / relay / MiniApp UI / SDLC harness 为冻结-实验面。能力 crates（tools/MCP/search/terminal/git/ssh）是 agent 工具箱，保持激活。见 `docs/tech-debt-cleanup-guide.md` §0。
+- **v0.1.0 面基线**：发货面仅 Slint 桌面 + `northing-installer`；server / SDLC harness 为冻结-实验面。能力 crates（tools/MCP/search/terminal/git/ssh）是 agent 工具箱，保持激活。见 `docs/tech-debt-cleanup-guide.md` §0。
 
 ## 架构
 
@@ -169,13 +186,12 @@ await api.invoke('your_command', { request: { ... } });
 | 仅区域资源变更 | `pnpm run i18n:audit` |
 | 区域契约或共享词条 | `pnpm run i18n:generate && pnpm run i18n:contract:test && pnpm run i18n:audit` |
 | Web UI i18n 运行时、命名空间加载或直接的 `i18nService.t(...)` 使用 | `pnpm run i18n:contract:test && pnpm run type-check:web && pnpm --dir src/web-ui run test:run src/infrastructure/i18n/core/I18nService.test.ts` |
-| Mobile Web UI、状态、配对、断连或重连行为 | `pnpm --dir src/mobile-web run type-check`；行为变化时附加手工配对/重连说明 |
 | `core`、适配器或服务中的共享 Rust 逻辑 | `cargo check --workspace`，并在行为变化时附加最近的聚焦 `cargo test` |
 | 桌面集成、Tauri API、浏览器/电脑使用或仅桌面行为 | `cargo check -p northhing-desktop`，并在行为变化时附加聚焦桌面测试 |
 | 由桌面冒烟/功能流程覆盖的行为 | 优先使用最近的聚焦 E2E/冒烟检查；除非构建行为变化，否则依赖 CI 完成广覆盖构建/测试 |
 | `src/crates/adapters/ai-adapters` | 使用上面相关的 Rust 检查；仅当流契约变化时附加 `cargo test -p northhing-agent-stream` |
-| 安装器前端或不涉及打包变更的 i18n 运行时 | `pnpm --dir northhing-Installer run type-check` |
-| 安装器的 Tauri/Rust 变更 | `cargo check --manifest-path northhing-Installer/src-tauri/Cargo.toml` |
+| 安装器前端或不涉及打包变更的 i18n 运行时 | `pnpm --dir northing-installer run type-check` |
+| 安装器的 Tauri/Rust 变更 | `cargo check --manifest-path northing-installer/src-tauri/Cargo.toml` |
 | 安装器的打包、载荷、安装/卸载流程或原生打包 | `pnpm run installer:build` |
 
 ## Agent 文档优先级

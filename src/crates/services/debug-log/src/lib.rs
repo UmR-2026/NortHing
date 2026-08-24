@@ -22,6 +22,11 @@ use uuid::Uuid;
 
 const DEFAULT_SESSION_ID: &str = "debug-session";
 
+/// Maximum single debug log file size before single-generation rotation (8 MiB).
+/// When the target log file exceeds this limit, it is rotated to `<filename>.1.<ext>`
+/// (overwriting any previous backup), and a fresh log file is started.
+const DEBUG_LOG_MAX_BYTES: u64 = 8 * 1024 * 1024;
+
 static DEFAULT_LOG_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     if let Ok(env_path) = std::env::var("northhing_DEBUG_LOG_PATH") {
         return PathBuf::from(env_path);
@@ -172,6 +177,34 @@ fn ensure_parent_exists(path: &Path) -> Result<()> {
     Ok(())
 }
 
+fn backup_path_for(path: &Path) -> Option<PathBuf> {
+    let file_name = path.file_name()?.to_str()?;
+    let new_name = match file_name.rfind('.') {
+        Some(idx) => format!("{}.1{}", &file_name[..idx], &file_name[idx..]),
+        None => format!("{}.1", file_name),
+    };
+    Some(path.with_file_name(new_name))
+}
+
+/// Note on concurrency: concurrent appends may both pass the size check;
+/// the second rename will fail and that log line is dropped.
+/// This matches the crate's existing fire-and-forget / caller-swallows-errors semantics.
+fn rotate_if_oversized(path: &Path, max_bytes: u64) -> Result<()> {
+    match fs::metadata(path) {
+        Ok(metadata) => {
+            if metadata.len() > max_bytes {
+                if let Some(backup_path) = backup_path_for(path) {
+                    let _ = fs::remove_file(&backup_path);
+                    fs::rename(path, &backup_path)?;
+                }
+            }
+            Ok(())
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
 pub async fn append_log_async(entry: DebugLogEntry, config: Option<DebugLogConfig>, send_http: bool) -> Result<()> {
     // K4a-T5: this leaf crate writes the NDJSON line to disk only. The
     // `send_http` flag and `DebugLogConfig.ingest_url` are retained for
@@ -186,6 +219,7 @@ pub async fn append_log_async(entry: DebugLogEntry, config: Option<DebugLogConfi
 
     task::spawn_blocking(move || -> Result<()> {
         ensure_parent_exists(&log_path)?;
+        rotate_if_oversized(&log_path, DEBUG_LOG_MAX_BYTES)?;
         let mut file = OpenOptions::new().create(true).append(true).open(&log_path)?;
         writeln!(file, "{}", serde_json::to_string(&log_line)?)?;
         Ok(())
@@ -338,5 +372,107 @@ mod component_tests {
         assert_eq!(COMP_MODE_ROUTING, "mode_routing");
         assert_eq!(COMP_SKILL_PANEL, "skill_panel");
         assert_eq!(COMP_ACTOR_RUNTIME, "actor_runtime");
+    }
+
+    #[test]
+    fn test_backup_path_generation() {
+        assert_eq!(
+            backup_path_for(Path::new("debug.log")),
+            Some(PathBuf::from("debug.1.log"))
+        );
+        assert_eq!(
+            backup_path_for(Path::new("path/to/my_debug.log")),
+            Some(PathBuf::from("path/to/my_debug.1.log"))
+        );
+        assert_eq!(
+            backup_path_for(Path::new("custom.app.log")),
+            Some(PathBuf::from("custom.app.1.log"))
+        );
+        assert_eq!(backup_path_for(Path::new("logfile")), Some(PathBuf::from("logfile.1")));
+        assert_eq!(backup_path_for(Path::new(".log")), Some(PathBuf::from(".1.log")));
+    }
+
+    struct TempDirGuard(PathBuf);
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn test_rotate_if_oversized() {
+        let temp_dir = std::env::temp_dir().join(format!("northhing_rotate_test_{}", Uuid::new_v4()));
+        fs::create_dir_all(&temp_dir).unwrap();
+        let _guard = TempDirGuard(temp_dir.clone());
+
+        let log_file = temp_dir.join("test.log");
+        let backup_file = temp_dir.join("test.1.log");
+
+        // Non-existent file: no error, no rotation.
+        assert!(rotate_if_oversized(&log_file, 100).is_ok());
+        assert!(!log_file.exists());
+        assert!(!backup_file.exists());
+
+        // File size <= threshold: no rotation.
+        fs::write(&log_file, vec![b'x'; 100]).unwrap();
+        assert!(rotate_if_oversized(&log_file, 100).is_ok());
+        assert!(log_file.exists());
+        assert!(!backup_file.exists());
+
+        // File size > threshold: rotates to backup_file.
+        assert!(rotate_if_oversized(&log_file, 50).is_ok());
+        assert!(!log_file.exists());
+        assert!(backup_file.exists());
+        assert_eq!(fs::metadata(&backup_file).unwrap().len(), 100);
+
+        // Write a new 200-byte log file while backup already exists.
+        fs::write(&log_file, vec![b'y'; 200]).unwrap();
+        assert!(rotate_if_oversized(&log_file, 50).is_ok());
+        assert!(!log_file.exists());
+        assert!(backup_file.exists());
+        // Backup was overwritten with the new 200-byte content.
+        assert_eq!(fs::metadata(&backup_file).unwrap().len(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_append_log_async_rotates_oversized_file() {
+        let temp_dir = std::env::temp_dir().join(format!("northhing_append_rotate_{}", Uuid::new_v4()));
+        fs::create_dir_all(&temp_dir).unwrap();
+        let _guard = TempDirGuard(temp_dir.clone());
+
+        let log_path = temp_dir.join("debug.log");
+        let backup_path = temp_dir.join("debug.1.log");
+
+        let oversized_len = (DEBUG_LOG_MAX_BYTES + 1) as usize;
+        fs::write(&log_path, vec![b'A'; oversized_len]).unwrap();
+
+        let config = DebugLogConfig {
+            log_path: log_path.clone(),
+            ingest_url: None,
+            session_id: "test-session".to_string(),
+        };
+
+        let entry = DebugLogEntry {
+            location: "test_loc".to_string(),
+            message: "new line after rotation".to_string(),
+            data: Value::Null,
+            session_id: "test-session".to_string(),
+            run_id: None,
+            hypothesis_id: None,
+            timestamp: None,
+            id: None,
+            component: "app_lifecycle".to_string(),
+            mode_id: "test".to_string(),
+        };
+
+        append_log_async(entry, Some(config), false).await.unwrap();
+
+        assert!(backup_path.exists());
+        assert_eq!(fs::metadata(&backup_path).unwrap().len(), oversized_len as u64);
+
+        assert!(log_path.exists());
+        let new_content = fs::read_to_string(&log_path).unwrap();
+        assert!(new_content.contains("new line after rotation"));
+        assert!(!new_content.contains("AAAAA"));
     }
 }

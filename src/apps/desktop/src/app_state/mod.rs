@@ -18,7 +18,6 @@
 //! audit.
 
 // Existing siblings (Phase B split, preserved)
-pub(super) mod actor;
 pub(super) mod inspector;
 pub(super) mod inspector_model_status;
 pub(super) mod log;

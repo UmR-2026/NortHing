@@ -20,11 +20,11 @@ crate dependencies inside each layer to the smallest set needed.
 
 | # | Layer | Path | Owns | Modules / entries | Layer doc |
 |---|---|---|---|---|---|
-| 1 | Interfaces and entrypoints | `src/apps/*`, `src/mobile-web` *(frozen)*, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, relay, mobile web, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
+| 1 | Interfaces and entrypoints | `src/apps/*`, `northing-installer`, `tests/e2e`, `src/crates/interfaces` | Product hosts, commands, UI entrypoints, protocol interfaces, and cross-surface tests | desktop, CLI, server, installer, E2E, `acp` | nearest local `AGENTS.md`; [interfaces](src/crates/interfaces/AGENTS.md) |
 | 2 | Product assembly | `src/crates/assembly` | Compatibility exports, product capability selection, product-full wiring, and adapter/service registration | `core`, `product-capabilities` | [AGENTS.md](src/crates/assembly/AGENTS.md) |
-| 3 | Adapters | `src/crates/adapters` | AI/WebDriver protocol adapters and external-provider translation | `ai-adapters`, `webdriver` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
-| 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, MiniApp runtime IO, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
-| 5 | Execution primitives | `src/crates/execution` | Portable agent, harness, stream, DeepReview policy/report, typed-service, tool-contract, tool-group, and tool-execution building blocks | `agent-runtime`, `agent-stream`, `tool-contracts`, `harness`, `runtime-services`, `tool-provider-groups`, `tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
+| 3 | Adapters | `src/crates/adapters` | AI protocol adapters and external-provider translation | `ai-adapters` | [AGENTS.md](src/crates/adapters/AGENTS.md) |
+| 4 | Services | `src/crates/services` | Reusable OS, filesystem, terminal, MCP, remote, git, watch, process, session persistence primitives, and network implementations | `services-core`, `services-integrations`, `terminal` | [AGENTS.md](src/crates/services/AGENTS.md) |
+| 5 | Execution primitives | `src/crates/execution` | Portable agent, stream, DeepReview policy/report, typed-service, tool-contract, and tool-execution building blocks | `agent-runtime`, `agent-stream`, `tool-contracts`, `runtime-services`, `tool-execution` | [AGENTS.md](src/crates/execution/AGENTS.md) |
 | 6 | Stable contracts and product domains | `src/crates/contracts` | Shared DTOs, event shapes, runtime ports, and product domain contracts/policies | `core-types`, `events`, `runtime-ports`, `product-domains` | [AGENTS.md](src/crates/contracts/AGENTS.md) |
 
 Boundary rules:
@@ -32,7 +32,7 @@ Boundary rules:
 - Interfaces and app entrypoints expose selected product behavior; reusable behavior moves down.
 - Assembly wires lower layers and selects product capability facts; it must not implement concrete adapter, OS, or service details.
 - Adapters translate protocols and external systems; they should not own product capability selection or reusable OS service behavior.
-- Services implement reusable concrete OS, process, terminal, MCP, remote, git, filesystem, and MiniApp runtime IO capabilities.
+- Services implement reusable concrete OS, process, terminal, MCP, remote, git, and filesystem capabilities.
 - Execution crates are portable runtime building blocks, not host-specific or delivery-profile owners.
 - Contracts stay behavior-light and must not depend upward.
 
@@ -57,7 +57,6 @@ pnpm run cli:dev                   # CLI runtime
 pnpm run fmt:rs                     # format only changed / staged Rust files
 pnpm run lint:web                  # [missing: src/web-ui]
 pnpm run type-check:web            # [missing: src/web-ui]
-pnpm --dir src/mobile-web run type-check   # [frozen: mobile-web]
 pnpm run i18n:contract:test          # i18n contract / resources only [frozen: i18n engineering]
 pnpm run i18n:audit                  # i18n contract / resources only [frozen: i18n engineering]
 pnpm run check:repo-hygiene
@@ -71,7 +70,6 @@ cargo test --workspace                  # broad suite; CI-backed
 # Build (only for build-impacting changes or CI reproduction)
 cargo build -p northhing                 # build-impacting changes / CI reproduction
 # [missing: src/web-ui — build:web not available]
-# [frozen: build:mobile-web — mobile-web is frozen-experimental]
 
 # Fast builds (manual build/debug flows)
 pnpm run desktop:build:fast           # debug build, no bundling
@@ -85,11 +83,22 @@ For the full script list, see [`package.json`](package.json).
 
 ### Housekeeping rules (2026-07-22, apply to every commit)
 
+0. **Lazy Senior Dev Rule (YAGNI)**: Before writing code, climb this ladder:
+   1. Does it need to be built? (YAGNI)
+   2. Already in this codebase? Reuse it.
+   3. Stdlib does it? Use it.
+   4. Native platform feature? Use it.
+   5. Installed dependency? Use it.
+   6. Can this be one line? Make it one line.
+   7. Only then: write the minimum code that works.
+   (Never compromise security, error handling, or trust boundaries for brevity).
 1. **顺手清配额**: a commit may include small in-scope debt fixes found nearby (outdated docs, missing tests, file growth past 800 lines) — no separate cleanup task needed; keep them traceable in the commit message.
 2. **Doc sync as hard rule**: changing crate structure (add/remove crate, move paths) requires updating `docs/status/surfaces.md` in the same commit; resolving a tech-debt item requires flipping its ledger status in the same commit. No "doc later".
 3. **God-file defense**: production `.rs` files over 800 lines raise review pressure; over 1000 lines must be split or carry a `// allow-god-file` justification comment at the top of the file. New modules start below the line.
 4. **Concurrency test binding**: changes touching `tokio::select!`, cancellation tokens, or timeout races must ship with at least one automated test; judge review does not substitute. Other change types may rely on judge review.
 5. **Coding curfew**: no coding work after 03:00 daily (user health rule, recorded 2026-07-22).
+6. **Desktop compile gate before merging to main** (recorded 2026-08-06): `cargo check -p northhing` must pass on the branch tip before it merges to main, and a round handoff must not carry forward a verification baseline it did not measure itself. Reason: P1-C3 landed on main with the desktop crate not compiling at all (keyring feature missing) and it went unnoticed across a whole round because the report's verification section was incomplete and the next handoff reused a pre-C3 test figure. See `docs/status/tech-debt-ledger.md` P2-15.
+7. **Rot budget only decreases**: `scripts/rot-budget.json` ceilings may only go down in normal commits; lowering is welcome in-scope (house rule 1). Raising any ceiling or adding a >800-line file manifest entry requires explicit user sign-off recorded in the commit message. The `dir-entry-count` metric for `.superpowers/sdd` uses cap-and-archive semantics (triggers archiving rotation when full, rather than strictly decreasing).
 
 ### Internationalization
 
@@ -103,7 +112,7 @@ For the full script list, see [`package.json`](package.json).
   `src/shared/i18n/resources/shared/<locale>/terms.json`; workflow copy stays
   in the owning product surface.
 - Do not import Web UI locale resources into smaller product surfaces such as
-  `src/mobile-web` or `northing-installer`. See `docs/architecture/i18n.md`.
+  `northing-installer`. See `docs/architecture/i18n.md`.
 - Static self-contained pages may use generated page-scoped shared-term files;
   they must not import Web UI locale catalogs.
 - Web UI loads only bootstrap namespaces eagerly; use `useI18n(namespace)` for
@@ -163,12 +172,12 @@ await api.invoke('your_command', { request: { ... } });
 Change these only with a flag flip + integration test, and update this section in the same commit.
 
 - **Desktop package is `northhing` (Slint)**, not `northhing-desktop`. agent-dispatch flags: only `USE_LIGHTWEIGHT_ACTOR = true` remains; Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC + IpcSpawnAdapter) descoped and deleted 2026-07-20.
-- **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Desktop `AppSettings` stays UI-owner and pushes providers into core via `sync_providers_to_core` (see `95e29ba`). Never add a second runtime-readable config file.
+- **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Single source of truth for providers and default_model is core GlobalConfig (Stage 1 de-mirroring; core does not persist `api_key` to disk per user-approved Scheme C; desktop pushes keys to memory via facade on startup/change; desktop AppSettings retains workspaces/onboarding, Stage 2 to migrate). Never add a second runtime-readable config file.
 - **UI thread discipline**: writing Slint properties from a non-event-loop thread is silently dropped. All such writes must go through `slint::invoke_from_event_loop` (helpers in `error_banners.rs` already wrap this — reuse them, see `ad349f9`).
-- **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too; MiniApp string-mode commands containing shell metacharacters are rejected.
+- **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too.
 - **Project runtime slug always carries a path hash** (CJK paths must not collide, see `c7e7218`).
 - **Installer toolchain**: `northing-installer` `[lib] crate-type = ["rlib"]` only (cdylib/staticlib blow past the GNU ld export-ordinal limit); `embed-resource` pinned to 3.0.5 (3.0.11 fails on rustc 1.96 MSVC). Desktop builds use MSVC; repo dir override is GNU and `cargo +toolchain` is unavailable — use `rustup run <tc> cargo`.
-- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; mobile-web / server / relay / MiniApp UI / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
+- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; server / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
 
 ## Architecture
 
@@ -214,7 +223,6 @@ change directly affects build, packaging, or CI cannot protect the path.
 | Locale resource-only changes | *[frozen: i18n engineering — run if unfrozen]* |
 | Locale contract or shared terms | *[frozen: i18n engineering — run if unfrozen]* |
 | Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | *[missing: src/web-ui — not available in v0.1.0]* |
-| Mobile web UI, state, pairing, disconnect, or reconnect behavior | *[frozen: mobile-web — `pnpm --dir src/mobile-web run type-check`; run if unfrozen]* |
 | Shared Rust logic in `core`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
 | Desktop integration, Slint UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |

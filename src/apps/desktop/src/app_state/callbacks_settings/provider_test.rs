@@ -1,23 +1,17 @@
-use super::load_app_settings_quiet;
-use super::update_app_settings_quiet;
-use crate::app_state::settings::{now_unix_secs, provider_wire_format, ProviderConfig};
+use crate::app_state::settings::provider_wire_format_from_str;
 use crate::app_state::slint_glue::AppWindow;
 use crate::app_state::state::AppState;
+use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::settings::ProviderFormDto;
+use northhing_kernel_api::KernelSettingsApi;
 use slint::ComponentHandle;
 use std::sync::Arc;
 
-// 2026-06-26 (Phase 4 fix): test-provider handler. Resolves the provider
-// id ("__last__" → the most recently saved provider), builds an AIClient
-// from the stored config, and runs `test_connection()` on a background
-// thread. Progress is surfaced via the bound `provider-test-in-flight` and
-// `provider-test-result` properties.
 pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     let ui_weak = ui.as_weak();
     ui.on_test_provider(move |id| {
         let id_str = id.to_string();
         let ui_weak2 = ui_weak.clone();
-        // Flip to in-flight immediately on the UI thread (the callback
-        // itself runs on the event loop, so a direct set is safe here).
         if let Some(ui) = ui_weak2.upgrade() {
             ui.set_provider_test_in_flight(true);
             ui.set_provider_test_result(slint::SharedString::from(""));
@@ -41,22 +35,10 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                 }
             };
             rt.block_on(async move {
-                let s = match load_app_settings_quiet().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        let ui_weak3 = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak3.upgrade() {
-                                ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from(e));
-                            }
-                        });
-                        return;
-                    }
-                };
-                // Resolve "__last__" sentinel to the last saved provider id.
+                let facade = kernel_facade();
                 let resolved_id = if id_str == "__last__" {
-                    let rid = s.providers.last().map(|p| p.id.clone()).unwrap_or_default();
+                    let models = facade.list_model_configs().await.unwrap_or_default();
+                    let rid = models.last().map(|p| p.id.clone()).unwrap_or_default();
                     let rid_for_ui = rid.clone();
                     let ui_weak3 = ui_weak2.clone();
                     let _ = slint::invoke_from_event_loop(move || {
@@ -68,38 +50,24 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                 } else {
                     id_str.clone()
                 };
-                let provider = match s.providers.iter().find(|p| p.id == resolved_id) {
-                    Some(p) => p.clone(),
-                    None => {
-                        let ui_weak3 = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak3.upgrade() {
-                                ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from("未找到要测试的服务"));
-                            }
-                        });
-                        return;
-                    }
-                };
-                // Test the provider connection via the kernel facade.
-                use northhing_core::kernel_facade::kernel_facade;
-                use northhing_kernel_api::settings::ProviderFormDto;
-                use northhing_kernel_api::KernelSettingsApi;
-                let facade = kernel_facade();
-                let form = ProviderFormDto {
-                    provider_id: provider.id.clone(),
-                    base_url: Some(provider.base_url.clone()),
-                    api_key: Some(provider.api_key.clone()),
-                    model: Some(provider.model.clone()),
-                    provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
-                };
-                match facade.test_provider_config(form).await {
+
+                if resolved_id.is_empty() {
+                    let ui_weak3 = ui_weak2.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak3.upgrade() {
+                            ui.set_provider_test_in_flight(false);
+                            ui.set_provider_test_result(slint::SharedString::from("未找到要测试的服务"));
+                        }
+                    });
+                    return;
+                }
+
+                match facade.test_provider(&resolved_id).await {
                     Ok(result) => {
                         let result_str = if result.success {
                             "ok".to_string()
                         } else {
                             let detail = result.error.unwrap_or_default();
-                            // Take the first line, cap at 120 chars.
                             let first_line = detail.lines().next().unwrap_or("").trim();
                             if first_line.is_empty() {
                                 "连接失败".to_string()
@@ -107,20 +75,6 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
                                 first_line.chars().take(120).collect()
                             }
                         };
-                        // Persist verification state on the provider.
-                        // 2026-07-31 (H-9): write through the transactional
-                        // entry (load → mutate → save under the settings
-                        // single-writer lock) instead of the raw load-then-
-                        // save sequence, which raced with other settings
-                        // actions and could clobber their fields.
-                        let _ = update_app_settings_quiet(|s| {
-                            if let Some(slot) = s.providers.iter_mut().find(|p| p.id == resolved_id) {
-                                slot.last_verified_at = Some(now_unix_secs());
-                                slot.last_verified_ok = Some(result.success);
-                            }
-                            Ok(())
-                        })
-                        .await;
                         let ui_weak3 = ui_weak2.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak3.upgrade() {
@@ -151,17 +105,10 @@ pub(crate) fn register_test_provider_callback(ui: &AppWindow, _app_state: &Arc<A
     });
 }
 
-// 2026-07-18 (D2a+1): test-provider-config — race-free variant that tests
-// an in-memory config directly without reading disk or resolving "__last__".
-// The WelcomeView test button calls this instead of test-provider to avoid
-// the race where test_provider tries to read a provider that upsert-provider
-// has not yet flushed to disk.
 pub(crate) fn register_test_provider_config_callback(ui: &AppWindow, _app_state: &Arc<AppState>) {
     let ui_weak = ui.as_weak();
-    ui.on_test_provider_config(move |name, ptype, base_url, api_key, model, enabled| {
+    ui.on_test_provider_config(move |name, ptype, base_url, api_key, model, _enabled| {
         let ui_weak2 = ui_weak.clone();
-        // Flip to in-flight immediately on the UI thread (the callback
-        // itself runs on the event loop, so a direct set is safe here).
         if let Some(ui) = ui_weak2.upgrade() {
             ui.set_provider_test_in_flight(true);
             ui.set_provider_test_result(slint::SharedString::from(""));
@@ -185,42 +132,14 @@ pub(crate) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                 }
             };
             rt.block_on(async move {
-                // Parse provider type from string — same mapping as register_upsert_provider_callback.
-                use crate::app_state::settings::ProviderType;
-                let provider_type = match ptype.as_str() {
-                    "anthropic" => ProviderType::Anthropic,
-                    "openai" => ProviderType::Openai,
-                    "gemini" => ProviderType::Gemini,
-                    "custom-openai" => ProviderType::CustomOpenaiCompatible,
-                    "custom-anthropic" => ProviderType::CustomAnthropicCompatible,
-                    _ => {
-                        let ui_weak3 = ui_weak2.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(ui) = ui_weak3.upgrade() {
-                                ui.set_provider_test_in_flight(false);
-                                ui.set_provider_test_result(slint::SharedString::from("内部错误：未知的服务类型"));
-                            }
-                        });
-                        return;
-                    }
-                };
-                // Build an in-memory ProviderConfig — no disk read, no slot to write.
-                let mut provider = ProviderConfig::new(name.to_string(), provider_type);
-                provider.base_url = base_url.to_string();
-                provider.api_key = api_key.to_string();
-                provider.model = model.to_string();
-                provider.enabled = enabled;
-                // Test the provider connection via the kernel facade.
-                use northhing_core::kernel_facade::kernel_facade;
-                use northhing_kernel_api::settings::ProviderFormDto;
-                use northhing_kernel_api::KernelSettingsApi;
+                let wire_provider = provider_wire_format_from_str(ptype.as_str());
                 let facade = kernel_facade();
                 let form = ProviderFormDto {
-                    provider_id: provider.id.clone(),
-                    base_url: Some(provider.base_url.clone()),
-                    api_key: Some(provider.api_key.clone()),
-                    model: Some(provider.model.clone()),
-                    provider_type: Some(provider_wire_format(&provider.provider_type).to_string()),
+                    provider_id: name.to_string(),
+                    base_url: Some(base_url.to_string()),
+                    api_key: Some(api_key.to_string()),
+                    model: Some(model.to_string()),
+                    provider_type: Some(wire_provider.to_string()),
                 };
                 match facade.test_provider_config(form).await {
                     Ok(result) => {
@@ -235,7 +154,6 @@ pub(crate) fn register_test_provider_config_callback(ui: &AppWindow, _app_state:
                                 first_line.chars().take(120).collect()
                             }
                         };
-                        // No disk write — result is returned to UI only.
                         let ui_weak3 = ui_weak2.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak3.upgrade() {

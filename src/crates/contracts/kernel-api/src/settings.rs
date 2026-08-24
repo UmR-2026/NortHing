@@ -18,7 +18,6 @@ pub struct ProviderConfigDto {
     pub id: String,
     pub name: String,
     pub base_url: String,
-    pub api_key: String,
     pub model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra: Option<serde_json::Value>,
@@ -28,18 +27,12 @@ pub struct ProviderConfigDto {
     pub provider_type: Option<String>,
 }
 
-/// Global config patch DTO.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct GlobalConfigPatchDto {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub providers: Option<Vec<ProviderConfigDto>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub default_provider_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub workspace_config: Option<serde_json::Value>,
-}
-
 /// AI model config DTO (enumerated from core at implementation time).
+///
+/// Contract invariant (Scheme C, 2026-08-23 design decision): no DTO shape
+/// carries a secret value back from the kernel. API keys enter only as an
+/// explicit parameter on write methods (`upsert_model_config`); readers get
+/// `list_model_configs`/`get_global_config` shapes that cannot express a key.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AIModelConfigDto {
     pub id: String,
@@ -53,8 +46,6 @@ pub struct AIModelConfigDto {
     pub temperature: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base_url: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub api_key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -147,17 +138,17 @@ pub trait KernelSettingsApi: Send + Sync {
     /// Source: #49 #50 #51
     async fn get_global_config(&self) -> Result<GlobalConfigDto, KernelError>;
 
-    /// Update global config (patch semantics).
-    /// Source: #52 (GlobalConfigManager is alias mapping for get_global_config_service, not separately exposed)
-    async fn update_global_config(&self, patch: GlobalConfigPatchDto) -> Result<(), KernelError>;
-
     /// List model configs.
     /// Source: #53
     async fn list_model_configs(&self) -> Result<Vec<AIModelConfigDto>, KernelError>;
 
     /// Add/update model config.
+    ///
+    /// `api_key` is the only path by which a secret enters the kernel (Scheme C
+    /// write-only key channel): `Some(k)` sets the in-memory key, `None` keeps
+    /// the existing one on update. The DTO itself never carries a key back out.
     /// Source: #53
-    async fn upsert_model_config(&self, config: AIModelConfigDto) -> Result<(), KernelError>;
+    async fn upsert_model_config(&self, config: AIModelConfigDto, api_key: Option<String>) -> Result<(), KernelError>;
 
     /// Delete model config.
     /// Source: #53

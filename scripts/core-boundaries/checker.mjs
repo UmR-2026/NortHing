@@ -412,6 +412,58 @@ function checkCrateLayoutRules() {
   }
 }
 
+// Non-product workspace members exempt from docs/status/surfaces.md registration (e.g. internal test-only harnesses).
+export const surfacesExemptMembers = [];
+
+export function checkCrateSurfaceRegistration({
+  workspaceMembers = parseWorkspaceMembers(),
+  surfacesPath = join(ROOT, 'docs', 'status', 'surfaces.md'),
+  exemptMembers = surfacesExemptMembers,
+  projectRoot = ROOT,
+  recordFailure = (failure) => failures.push(failure),
+} = {}) {
+  if (!existsSync(surfacesPath)) {
+    recordFailure({
+      path: surfacesPath,
+      line: 1,
+      message: 'surfaces status ledger not found: docs/status/surfaces.md',
+    });
+    return;
+  }
+  const surfacesContent = readFileSync(surfacesPath, 'utf8');
+
+  for (const member of workspaceMembers) {
+    if (exemptMembers.includes(member)) {
+      continue;
+    }
+    // Match by exact member path in surfaces.md with explicit delimiter boundaries (not word boundary \b which breaks on -)
+    const pathPattern = new RegExp(`(?<=[\`\\s|()]|^)${escapeRegex(member)}(?=[/\`\\s,;|()]|$)`);
+    let isRegistered = pathPattern.test(surfacesContent);
+
+    if (!isRegistered) {
+      const memberCargoPath = join(projectRoot, ...member.split('/'), 'Cargo.toml');
+      if (existsSync(memberCargoPath)) {
+        const cargoText = readFileSync(memberCargoPath, 'utf8');
+        const nameMatch = cargoText.match(/^name\s*=\s*"([^"]+)"/m);
+        if (nameMatch) {
+          const pkgName = nameMatch[1];
+          const shortName = pkgName.replace(/^northhing-/, '');
+          const namePattern = new RegExp(`\`${escapeRegex(pkgName)}\`|\`${escapeRegex(shortName)}\``);
+          isRegistered = namePattern.test(surfacesContent);
+        }
+      }
+    }
+
+    if (!isRegistered) {
+      recordFailure({
+        path: surfacesPath,
+        line: 1,
+        message: `workspace member crate "${member}" is not registered in docs/status/surfaces.md — add entry to shipping, frozen, or capability table (House Rule 2)`,
+      });
+    }
+  }
+}
+
 function forbiddenRuleTextForPath(path) {
   const direct = forbiddenContentRules
     .filter((rule) => rule.path === path)
@@ -904,12 +956,16 @@ export function runCoreBoundaryCheck() {
       regexSourceContainsContract,
       createFacadeLineChecker,
       escapeRegex,
+      checkCrateSurfaceRegistration,
+      surfacesExemptMembers,
+      ROOT,
     });
     console.log('Core boundary check self-test passed.');
     return;
   }
 
   checkCrateLayoutRules();
+  checkCrateSurfaceRegistration();
 
   for (const crateName of noCoreDependencyCrates) {
     const crateDir = crateDirForName(crateName);

@@ -11,7 +11,6 @@ const NAV_ENTRY_SELECTORS = [
   '.northhing-nav-panel__workspace-item-name-btn',
   '.northhing-nav-panel__inline-item',
   '.northhing-nav-panel__workspace-create-main',
-  '.northhing-nav-panel__miniapp-entry',
 ];
 
 async function getNavigationEntries() {

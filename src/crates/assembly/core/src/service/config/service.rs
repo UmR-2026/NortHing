@@ -81,8 +81,26 @@ impl ConfigService {
             manager.get(path)
         } else {
             let config = manager.config();
-            serde_json::from_value(serde_json::to_value(config)?)
-                .map_err(|e| NortHingError::config(format!("Failed to serialize config: {}", e)))
+            let mut val = serde_json::to_value(config)
+                .map_err(|e| NortHingError::config(format!("Failed to serialize config: {}", e)))?;
+            // Re-inject in-memory api_keys if deserializing GlobalConfig / AIConfig
+            if let Some(models) = val
+                .get_mut("ai")
+                .and_then(|ai| ai.get_mut("models"))
+                .and_then(|m| m.as_array_mut())
+            {
+                for (i, m) in models.iter_mut().enumerate() {
+                    if let Some(obj) = m.as_object_mut() {
+                        if let Some(orig) = config.ai.models.get(i) {
+                            if !orig.api_key.is_empty() {
+                                obj.insert("api_key".to_string(), serde_json::Value::String(orig.api_key.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+            serde_json::from_value(val)
+                .map_err(|e| NortHingError::config(format!("Failed to deserialize config: {}", e)))
         }
     }
 
@@ -277,45 +295,70 @@ impl ConfigService {
 
     /// Returns all AI model configurations.
     pub async fn get_ai_models(&self) -> NortHingResult<Vec<AIModelConfig>> {
-        let config: GlobalConfig = self.config(None).await?;
-        Ok(config.ai.models)
+        let manager = self.manager.read().await;
+        Ok(manager.config().ai.models.clone())
     }
 
     /// Adds an AI model configuration.
     pub async fn add_ai_model(&self, model: AIModelConfig) -> NortHingResult<()> {
-        let mut config: GlobalConfig = self.config(None).await?;
-        config.ai.models.push(model);
-        self.set_config("ai.models", &config.ai.models).await
+        let model_id = model.id.clone();
+        {
+            let mut manager = self.manager.write().await;
+            manager.config.ai.models.push(model);
+            manager.config.last_modified = chrono::Utc::now();
+            manager.save_config().await?;
+        }
+        self.reconcile_models("add_ai_model").await?;
+        Self::invalidate_cached_ai_client(&model_id).await;
+        Ok(())
     }
 
     /// Updates an AI model configuration.
     pub async fn update_ai_model(&self, model_id: &str, model: AIModelConfig) -> NortHingResult<()> {
-        let mut config: GlobalConfig = self.config(None).await?;
-
-        if let Some(existing_model) = config.ai.models.iter_mut().find(|m| m.id == model_id) {
-            *existing_model = model;
-            self.set_config("ai.models", &config.ai.models).await
-        } else {
-            Err(NortHingError::config(format!("AI model '{}' not found", model_id)))
+        {
+            let mut manager = self.manager.write().await;
+            if let Some(existing_model) = manager.config.ai.models.iter_mut().find(|m| m.id == model_id) {
+                *existing_model = model;
+                manager.config.last_modified = chrono::Utc::now();
+                manager.save_config().await?;
+            } else {
+                return Err(NortHingError::config(format!("AI model '{}' not found", model_id)));
+            }
         }
+        self.reconcile_models("update_ai_model").await?;
+        Self::invalidate_cached_ai_client(model_id).await;
+        Ok(())
     }
 
     /// Deletes an AI model configuration.
     pub async fn delete_ai_model(&self, model_id: &str) -> NortHingResult<()> {
-        let mut config: GlobalConfig = self.config(None).await?;
+        {
+            let mut manager = self.manager.write().await;
+            let original_len = manager.config.ai.models.len();
+            manager.config.ai.models.retain(|m| m.id != model_id);
 
-        let original_len = config.ai.models.len();
-        config.ai.models.retain(|m| m.id != model_id);
+            if manager.config.ai.models.len() == original_len {
+                return Err(NortHingError::config(format!("AI model '{}' not found", model_id)));
+            }
 
-        if config.ai.models.len() == original_len {
-            return Err(NortHingError::config(format!("AI model '{}' not found", model_id)));
+            manager.config.last_modified = chrono::Utc::now();
+            manager.save_config().await?;
         }
 
-        // Persist the list deletion. The follow-up reconcile pass triggered by
-        // `set_config` (and explicitly by `update_ai_model`) is responsible for
-        // cleaning every other place the deleted id might still be referenced
-        // (default slots, agent / func-agent mappings).
-        self.set_config("ai.models", &config.ai.models).await
+        self.reconcile_models("delete_ai_model").await?;
+        Self::invalidate_cached_ai_client(model_id).await;
+        Ok(())
+    }
+
+    /// Best-effort: drop the cached AI client for `model_id` so the next request
+    /// rebuilds it against the updated in-memory config. Scheme C key pushes are
+    /// key-only changes, so `reconcile_models` reports a noop for them and the
+    /// `ModelsReconciled` invalidation path never fires — without this call a
+    /// cached client keeps the stale (possibly empty) key until restart.
+    async fn invalidate_cached_ai_client(model_id: &str) {
+        if let Ok(factory) = crate::infrastructure::ai::get_global_ai_client_factory().await {
+            factory.invalidate_model(model_id);
+        }
     }
 
     /// Bring `ai.default_models`, `ai.agent_models`, and `ai.func_agent_models`

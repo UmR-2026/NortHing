@@ -2,7 +2,7 @@
 
 # Interface 层
 
-本层拥有 Rust 协议或面向宿主的入口，用于暴露已装配好的产品行为。UI 应用与交付宿主仍位于 `src/apps`、`src/web-ui`、`src/mobile-web` 与 `northhing-Installer`，并由它们各自最近的本地 `AGENTS.md` 管理。
+本层拥有 Rust 协议或面向宿主的入口，用于暴露已装配好的产品行为。UI 应用与交付宿主仍位于 `src/apps`、`src/web-ui` 与 `northhing-Installer`，并由它们各自最近的本地 `AGENTS.md` 管理。
 
 ## 模块
 

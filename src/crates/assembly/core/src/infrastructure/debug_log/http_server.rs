@@ -5,7 +5,10 @@
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method, StatusCode,
+    },
     routing::{get, post},
     Json, Router,
 };
@@ -15,7 +18,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 use tracing::{debug, error, info, trace, warn};
 
 use super::types::{
@@ -92,7 +95,14 @@ impl IngestServerManager {
         *self.cancel_token.write().await = Some(cancel_token.clone());
         *self.actual_port.write().await = actual_port;
 
-        let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
+        let cors = CorsLayer::new()
+            .allow_origin(AllowOrigin::predicate(
+                |origin: &HeaderValue, _parts: &axum::http::request::Parts| {
+                    origin.to_str().map(is_allowed_debug_origin).unwrap_or(false)
+                },
+            ))
+            .allow_methods(AllowMethods::list([Method::GET, Method::POST, Method::OPTIONS]))
+            .allow_headers(AllowHeaders::list([CONTENT_TYPE, AUTHORIZATION]));
 
         let app = Router::new()
             .route("/health", get(health_handler))
@@ -224,9 +234,77 @@ async fn ingest_handler(
     }
 }
 
+/// Validate whether an Origin header string is allowed for debug log ingest.
+/// Debug logs can be emitted by local web applications running on localhost, 127.0.0.1, or [::1].
+pub fn is_allowed_debug_origin(origin: &str) -> bool {
+    let origin = origin.trim();
+    if origin.is_empty() || origin.eq_ignore_ascii_case("null") {
+        return false;
+    }
+
+    let Some((_scheme, rest)) = origin.split_once("://") else {
+        return false;
+    };
+
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if authority.is_empty() {
+        return false;
+    }
+
+    if authority.starts_with('[') {
+        if let Some(end_bracket) = authority.find(']') {
+            let ip = &authority[1..end_bracket];
+            let after = &authority[end_bracket + 1..];
+            if ip != "::1" {
+                return false;
+            }
+            if after.is_empty() {
+                return true;
+            }
+            if after.starts_with(':') && after[1..].chars().all(|c| c.is_ascii_digit()) {
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    let host = authority.split(':').next().unwrap_or("");
+    host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_allowed_debug_origin_localhost_variations() {
+        assert!(is_allowed_debug_origin("http://localhost"));
+        assert!(is_allowed_debug_origin("http://localhost:3000"));
+        assert!(is_allowed_debug_origin("http://localhost:5173"));
+        assert!(is_allowed_debug_origin("https://localhost:8080"));
+        assert!(is_allowed_debug_origin("http://127.0.0.1"));
+        assert!(is_allowed_debug_origin("http://127.0.0.1:3000"));
+        assert!(is_allowed_debug_origin("https://127.0.0.1:8080"));
+        assert!(is_allowed_debug_origin("http://[::1]"));
+        assert!(is_allowed_debug_origin("http://[::1]:3000"));
+        assert!(is_allowed_debug_origin("https://[::1]:8080"));
+    }
+
+    #[test]
+    fn test_is_allowed_debug_origin_rejects_external_and_malformed() {
+        assert!(!is_allowed_debug_origin("http://evil.com"));
+        assert!(!is_allowed_debug_origin("http://attacker.com:3000"));
+        assert!(!is_allowed_debug_origin("http://localhost.evil.com"));
+        assert!(!is_allowed_debug_origin("http://192.168.1.100:3000"));
+        assert!(!is_allowed_debug_origin("http://10.0.0.1:5173"));
+        assert!(!is_allowed_debug_origin("http://[::2]:3000"));
+        assert!(!is_allowed_debug_origin("null"));
+        assert!(!is_allowed_debug_origin("NULL"));
+        assert!(!is_allowed_debug_origin(""));
+        assert!(!is_allowed_debug_origin("   "));
+        assert!(!is_allowed_debug_origin("invalid-origin"));
+    }
 
     #[tokio::test]
     async fn starts_with_session_id_ingest_route() {

@@ -11,8 +11,10 @@ use super::metadata::computer_use_augment_result_json;
 use super::validation::{computer_use_snapshot_coordinate_basis, ensure_global_xy_on_display, req_i32};
 use crate::agentic::tools::computer_use_host::ComputerUseHost;
 use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
+use crate::agentic::tools::implementations::shell_safety;
 use crate::util::errors::{NortHingError, NortHingResult};
 use serde_json::{json, Value};
+use tool_runtime::shell::banned_shell_command;
 
 use super::ComputerUseTool;
 
@@ -372,6 +374,64 @@ impl ComputerUseTool {
         Ok(vec![ToolResult::ok(body, Some(summary))])
     }
 
+    /// Validate and guard an AppleScript before execution.
+    pub(crate) async fn guard_apple_script_execution(script: &str) -> NortHingResult<()> {
+        if let Some(base_cmd) = banned_shell_command(script.trim()) {
+            return Err(NortHingError::tool(format!(
+                "Command '{}' is not allowed for security reasons",
+                base_cmd
+            )));
+        }
+
+        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
+            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                return Err(NortHingError::tool(format!(
+                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                    script, pattern
+                )));
+            }
+            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
+                return Err(NortHingError::tool(format!(
+                    "Command execution denied by confirmation: {}",
+                    reason
+                )));
+            }
+            Ok(shell_safety::GuardOutcome::Allowed) => {}
+            Err(e) => {
+                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
+            }
+        }
+
+        let cmd_str = shell_safety::program_args_to_command_string("/usr/bin/osascript", ["-e", script]);
+        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
+            return Err(NortHingError::tool(format!(
+                "Command '{}' is not allowed for security reasons",
+                base_cmd
+            )));
+        }
+
+        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
+            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
+                return Err(NortHingError::tool(format!(
+                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
+                    cmd_str, pattern
+                )));
+            }
+            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
+                return Err(NortHingError::tool(format!(
+                    "Command execution denied by confirmation: {}",
+                    reason
+                )));
+            }
+            Ok(shell_safety::GuardOutcome::Allowed) => {}
+            Err(e) => {
+                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
+            }
+        }
+
+        Ok(())
+    }
+
     /// `run_apple_script` — execute arbitrary AppleScript via `osascript` (macOS only).
     pub(crate) async fn run_apple_script_impl(
         #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] host_ref: &dyn ComputerUseHost,
@@ -382,6 +442,9 @@ impl ComputerUseTool {
             .get("script")
             .and_then(|v| v.as_str())
             .ok_or_else(|| NortHingError::tool("run_apple_script requires `script` parameter.".to_string()))?;
+
+        Self::guard_apple_script_execution(script).await?;
+
         #[cfg(not(target_os = "macos"))]
         {
             let _ = script;
@@ -611,5 +674,52 @@ pub(crate) async fn computer_use_execute_mouse_click_tool(
         _ => Err(NortHingError::tool(
             "ComputerUseMouseClick action must be \"click\" or \"wheel\"".to_string(),
         )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn apple_script_denied_by_banned_command() {
+        let err = ComputerUseTool::guard_apple_script_execution("alias foo='bar'")
+            .await
+            .expect_err("banned command in apple script must be rejected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("alias") && msg.contains("not allowed for security reasons"),
+            "expected banned command message, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn apple_script_denied_by_denylist() {
+        let err = ComputerUseTool::guard_apple_script_execution("rm -rf /")
+            .await
+            .expect_err("denylist command in apple script must be rejected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("denylist") && msg.contains("rm with recursive+force"),
+            "expected denylist message, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn apple_script_synthesized_osascript_denied_by_denylist() {
+        let err = ComputerUseTool::guard_apple_script_execution("do shell script \"shutdown -h now\"")
+            .await
+            .expect_err("embedded dangerous command in apple script must be rejected");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("denylist") && msg.contains("shutdown"),
+            "expected shutdown denylist match, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn apple_script_clean_passes_guard() {
+        let res = ComputerUseTool::guard_apple_script_execution("display dialog \"hello world\"").await;
+        assert!(res.is_ok(), "clean AppleScript must pass guard");
     }
 }

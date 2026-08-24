@@ -1,0 +1,423 @@
+0b656dd feat(core): wire shell safety guard and banned command checks to ComputerUse actions (T1-4)
+=== name-status ===
+M	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+=== numstat ===
+127	0	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+110	0	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+93	0	src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+=== diff ===
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+index 8897adf..e7ff9be 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+@@ -3,10 +3,12 @@
+ use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
+ use crate::agentic::tools::implementations::computer_use_actions::{utilities, ComputerUseActions};
+ use crate::agentic::tools::implementations::control_hub::{err_response, ControlHubError, ErrorCode};
++use crate::agentic::tools::implementations::shell_safety;
+ use crate::util::elapsed_ms_u64;
+ use crate::util::errors::{NortHingError, NortHingResult};
+ use crate::util::process_manager;
+ use serde_json::{json, Value};
++use tool_runtime::shell::banned_shell_command;
+ 
+ impl ComputerUseActions {
+     fn platform_open_command(app_name: &str) -> (String, Vec<String>) {
+@@ -95,11 +97,52 @@ impl ComputerUseActions {
+             }
+         };
+ 
++        // Guard check for banned commands or shell denylist before executing fallback commands.
++        if let Some(base_cmd) = banned_shell_command(app_name.trim()) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++        if let Some(pattern) = shell_safety::check_command_denied(app_name) {
++            return Err(NortHingError::tool(format!(
++                "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                app_name, pattern
++            )));
++        }
++
+         let mut last_err: Option<String> = None;
+         let mut output_opt = None;
+         let mut chosen_cmd = String::new();
+         let mut chosen_args: Vec<String> = vec![];
+         for (cmd, args) in &attempts {
++            let cmd_str = shell_safety::program_args_to_command_string(cmd, args);
++            if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++                return Err(NortHingError::tool(format!(
++                    "Command '{}' is not allowed for security reasons",
++                    base_cmd
++                )));
++            }
++
++            match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++                Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                    return Err(NortHingError::tool(format!(
++                        "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                        cmd_str, pattern
++                    )));
++                }
++                Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                    return Err(NortHingError::tool(format!(
++                        "Command execution denied by confirmation: {}",
++                        reason
++                    )));
++                }
++                Ok(shell_safety::GuardOutcome::Allowed) => {}
++                Err(e) => {
++                    return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++                }
++            }
++
+             match crate::util::process_manager::create_command(cmd).args(args).output() {
+                 Ok(out) => {
+                     if out.status.success() {
+@@ -179,6 +222,48 @@ impl ComputerUseActions {
+             .unwrap_or(16 * 1024)
+             .clamp(1024, 256 * 1024) as usize;
+ 
++        // Guard check: verify script content before interpreter dispatch
++        if let Some(base_cmd) = banned_shell_command(script.trim()) {
++            return Ok(err_response(
++                "system",
++                "run_script",
++                ControlHubError::new(
++                    ErrorCode::GuardRejected,
++                    format!("Command '{}' is not allowed for security reasons", base_cmd),
++                ),
++            ));
++        }
++
++        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!(
++                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                            script, pattern
++                        ),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!("Command execution denied by confirmation: {}", reason),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
+         let (program, args) = match script_type {
+             "applescript" => {
+                 #[cfg(target_os = "macos")]
+@@ -294,6 +379,48 @@ impl ComputerUseActions {
+             }
+         };
+ 
++        let cmd_str = shell_safety::program_args_to_command_string(&program, &args);
++        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++            return Ok(err_response(
++                "system",
++                "run_script",
++                ControlHubError::new(
++                    ErrorCode::GuardRejected,
++                    format!("Command '{}' is not allowed for security reasons", base_cmd),
++                ),
++            ));
++        }
++
++        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!(
++                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                            cmd_str, pattern
++                        ),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!("Command execution denied by confirmation: {}", reason),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
+         let started = std::time::Instant::now();
+         let child = process_manager::create_tokio_command(&program)
+             .args(&args)
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+index 7ef2165..b7f3897 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+@@ -11,8 +11,10 @@ use super::metadata::computer_use_augment_result_json;
+ use super::validation::{computer_use_snapshot_coordinate_basis, ensure_global_xy_on_display, req_i32};
+ use crate::agentic::tools::computer_use_host::ComputerUseHost;
+ use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
++use crate::agentic::tools::implementations::shell_safety;
+ use crate::util::errors::{NortHingError, NortHingResult};
+ use serde_json::{json, Value};
++use tool_runtime::shell::banned_shell_command;
+ 
+ use super::ComputerUseTool;
+ 
+@@ -372,6 +374,64 @@ impl ComputerUseTool {
+         Ok(vec![ToolResult::ok(body, Some(summary))])
+     }
+ 
++    /// Validate and guard an AppleScript before execution.
++    pub(crate) async fn guard_apple_script_execution(script: &str) -> NortHingResult<()> {
++        if let Some(base_cmd) = banned_shell_command(script.trim()) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++
++        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                    script, pattern
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command execution denied by confirmation: {}",
++                    reason
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
++        let cmd_str = shell_safety::program_args_to_command_string("/usr/bin/osascript", ["-e", script]);
++        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++
++        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                    cmd_str, pattern
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command execution denied by confirmation: {}",
++                    reason
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
++        Ok(())
++    }
++
+     /// `run_apple_script` — execute arbitrary AppleScript via `osascript` (macOS only).
+     pub(crate) async fn run_apple_script_impl(
+         #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] host_ref: &dyn ComputerUseHost,
+@@ -382,6 +442,9 @@ impl ComputerUseTool {
+             .get("script")
+             .and_then(|v| v.as_str())
+             .ok_or_else(|| NortHingError::tool("run_apple_script requires `script` parameter.".to_string()))?;
++
++        Self::guard_apple_script_execution(script).await?;
++
+         #[cfg(not(target_os = "macos"))]
+         {
+             let _ = script;
+@@ -613,3 +676,50 @@ pub(crate) async fn computer_use_execute_mouse_click_tool(
+         )),
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[tokio::test]
++    async fn apple_script_denied_by_banned_command() {
++        let err = ComputerUseTool::guard_apple_script_execution("alias foo='bar'")
++            .await
++            .expect_err("banned command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_denied_by_denylist() {
++        let err = ComputerUseTool::guard_apple_script_execution("rm -rf /")
++            .await
++            .expect_err("denylist command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("denylist") && msg.contains("rm with recursive+force"),
++            "expected denylist message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_synthesized_osascript_denied_by_denylist() {
++        let err = ComputerUseTool::guard_apple_script_execution("do shell script \"shutdown -h now\"")
++            .await
++            .expect_err("embedded dangerous command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("denylist") && msg.contains("shutdown"),
++            "expected shutdown denylist match, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_clean_passes_guard() {
++        let res = ComputerUseTool::guard_apple_script_execution("display dialog \"hello world\"").await;
++        assert!(res.is_ok(), "clean AppleScript must pass guard");
++    }
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs b/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+index cbe2c76..e6dd267 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+@@ -468,6 +468,99 @@ mod control_hub_tests {
+         );
+     }
+ 
++    #[tokio::test]
++    async fn system_run_script_denied_by_banned_command() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "alias foo='bar'", "script_type": "shell" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command error message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_run_script_denied_by_denylist() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "rm -rf /", "script_type": "shell" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("denylist") && msg.contains("rm with recursive+force"),
++            "expected denylist error message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_run_script_applescript_denied_by_denylist_before_os_check() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "rm -rf /", "script_type": "applescript" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("denylist"),
++            "expected denylist rejection before macOS OS check, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_open_app_denied_by_banned_command() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let err = tool
++            .handle_system("open_app", &json!({ "app_name": "alias" }), &ctx)
++            .await
++            .expect_err("banned command open_app must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command rejection, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_open_app_denied_by_denylist() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let err = tool
++            .handle_system("open_app", &json!({ "app_name": "rm -rf /" }), &ctx)
++            .await
++            .expect_err("denylist open_app must be rejected");
++        let msg = err.to_string();
++        assert!(msg.contains("denylist"), "expected denylist rejection, got: {msg}");
++    }
++
+     #[tokio::test]
+     async fn terminal_list_sessions_without_singleton_returns_clean_error() {
+         // The TerminalApi singleton is initialized only inside the desktop /

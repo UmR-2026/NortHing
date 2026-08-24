@@ -23,11 +23,8 @@ use super::sub_handle_types::TurnContext;
 use crate::agentic::core::{ProcessingPhase, SessionState};
 use crate::agentic::events::{AgenticEvent, EventPriority};
 use crate::agentic::execution::ExecutionContext;
-use crate::agentic::remote_file_delivery::needs_computer_links_for_source;
 use crate::agentic::session::SessionManager;
-use crate::agentic::tools::{
-    is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
-};
+use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::util::errors::{NortHingError, NortHingResult};
 use northhing_runtime_ports::DelegationPolicy;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -150,22 +147,11 @@ impl ConversationCoordinator {
         {
             context_vars.insert("acp_transport".to_string(), "true".to_string());
         }
-        if needs_computer_links_for_source(submission_policy.trigger_source) {
-            context_vars.insert(
-                crate::agentic::remote_file_delivery::TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY.to_string(),
-                "true".to_string(),
-            );
-        }
         let session_workspace_path = session_workspace.as_ref().map(|workspace| workspace.root_path_string());
         let session_storage_path = session_workspace
             .as_ref()
             .map(|workspace| workspace.session_storage_path().to_path_buf());
-        let runtime_tool_restrictions =
-            if is_miniapp_headless_agent_run(user_message_metadata.as_ref(), session.created_by.as_deref()) {
-                miniapp_headless_agent_tool_restrictions()
-            } else {
-                ToolRuntimeRestrictions::default()
-            };
+        let runtime_tool_restrictions = ToolRuntimeRestrictions::default();
         let execution_context = ExecutionContext {
             session_id: session_id.clone(),
             dialog_turn_id: turn_id.clone(),

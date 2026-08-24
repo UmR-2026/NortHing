@@ -1,5 +1,6 @@
 ---
 name: document-release
+group: gstack
 description: |
   Post-ship documentation update. Reads all project docs, cross-references the
   diff, updates README/ARCHITECTURE/CONTRIBUTING/AGENTS.md to match what shipped,

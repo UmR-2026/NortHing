@@ -1,0 +1,204 @@
+80651bf feat(ai-adapters,core): connect gemini tool image attachments and expand multimodal gate whitelist (T3-4)
+=== name-status ===
+M	src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs
+M	src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs
+=== numstat ===
+12	1	src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs
+70	1	src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs
+45	3	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs
+=== diff ===
+diff --git a/src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs b/src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs
+index ecc5954..b874e56 100644
+--- a/src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs
++++ b/src/crates/adapters/ai-adapters/src/providers/gemini/message_content.rs
+@@ -101,13 +101,24 @@ pub fn convert_messages(messages: Vec<Message>, model_name: &str) -> (Option<Val
+                 } else {
+                     parse_tool_response(msg.content.as_deref())
+                 };
+-                let parts = vec![json!({
++                let mut parts = vec![json!({
+                     "functionResponse": {
+                         "name": tool_name,
+                         "response": response,
+                     }
+                 })];
+ 
++                if let Some(attachments) = msg.tool_image_attachments {
++                    for att in attachments {
++                        parts.push(json!({
++                            "inlineData": {
++                                "mimeType": att.mime_type,
++                                "data": att.data_base64,
++                            }
++                        }));
++                    }
++                }
++
+                 push_content(&mut contents, "user", parts);
+             }
+             _ => {
+diff --git a/src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs b/src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs
+index 3004355..d63d58e 100644
+--- a/src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs
++++ b/src/crates/adapters/ai-adapters/src/providers/gemini/message_converter.rs
+@@ -40,7 +40,7 @@ impl GeminiMessageConverter {
+ #[cfg(test)]
+ mod tests {
+     use super::GeminiMessageConverter;
+-    use crate::types::{Message, ToolCall, ToolDefinition};
++    use crate::types::{Message, ToolCall, ToolDefinition, ToolImageAttachment};
+     use serde_json::json;
+ 
+     #[test]
+@@ -295,4 +295,73 @@ mod tests {
+         assert_eq!(converted.len(), 1);
+         assert_eq!(converted[0]["urlContext"], json!({}));
+     }
++
++    #[test]
++    fn converts_tool_message_with_image_attachments_to_inline_data_parts() {
++        let messages = vec![Message {
++            role: "tool".to_string(),
++            content: Some("{\"status\":\"ok\"}".to_string()),
++            reasoning_content: None,
++            thinking_signature: None,
++            tool_calls: None,
++            tool_call_id: Some("call_screenshot".to_string()),
++            name: Some("screenshot".to_string()),
++            is_error: None,
++            tool_image_attachments: Some(vec![
++                ToolImageAttachment {
++                    mime_type: "image/jpeg".to_string(),
++                    data_base64: "base64_jpeg_data_1".to_string(),
++                },
++                ToolImageAttachment {
++                    mime_type: "image/png".to_string(),
++                    data_base64: "base64_png_data_2".to_string(),
++                },
++            ]),
++        }];
++
++        let (_, contents) = GeminiMessageConverter::convert_messages(messages, "gemini-2.5-pro");
++
++        assert_eq!(contents.len(), 1);
++        assert_eq!(contents[0]["role"], json!("user"));
++        let parts = contents[0]["parts"].as_array().expect("parts array");
++        assert_eq!(parts.len(), 3);
++        assert_eq!(parts[0]["functionResponse"]["name"], json!("screenshot"));
++        assert_eq!(parts[0]["functionResponse"]["response"]["status"], json!("ok"));
++        assert_eq!(parts[1]["inlineData"]["mimeType"], json!("image/jpeg"));
++        assert_eq!(parts[1]["inlineData"]["data"], json!("base64_jpeg_data_1"));
++        assert_eq!(parts[2]["inlineData"]["mimeType"], json!("image/png"));
++        assert_eq!(parts[2]["inlineData"]["data"], json!("base64_png_data_2"));
++    }
++
++    #[test]
++    fn converts_error_tool_message_with_image_attachments() {
++        let messages = vec![Message {
++            role: "tool".to_string(),
++            content: Some("Capture failed partially".to_string()),
++            reasoning_content: None,
++            thinking_signature: None,
++            tool_calls: None,
++            tool_call_id: Some("call_screenshot_err".to_string()),
++            name: Some("screenshot".to_string()),
++            is_error: Some(true),
++            tool_image_attachments: Some(vec![ToolImageAttachment {
++                mime_type: "image/jpeg".to_string(),
++                data_base64: "error_preview_base64".to_string(),
++            }]),
++        }];
++
++        let (_, contents) = GeminiMessageConverter::convert_messages(messages, "gemini-2.5-pro");
++
++        assert_eq!(contents.len(), 1);
++        assert_eq!(contents[0]["role"], json!("user"));
++        let parts = contents[0]["parts"].as_array().expect("parts array");
++        assert_eq!(parts.len(), 2);
++        assert_eq!(parts[0]["functionResponse"]["name"], json!("screenshot"));
++        assert_eq!(
++            parts[0]["functionResponse"]["response"]["error"],
++            json!("Capture failed partially")
++        );
++        assert_eq!(parts[1]["inlineData"]["mimeType"], json!("image/jpeg"));
++        assert_eq!(parts[1]["inlineData"]["data"], json!("error_preview_base64"));
++    }
+ }
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs
+index bc8e4d9..2d27cd2 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/metadata.rs
+@@ -319,7 +319,7 @@ The **primary model cannot consume images** in tool results — **do not** use *
+     }
+ 
+     /// Screenshot tool results attach JPEGs via `tool_image_attachments`; only providers whose
+-    /// request converters emit multimodal tool output are supported (Anthropic + OpenAI-compatible).
++    /// request converters emit multimodal tool output are supported (Anthropic, OpenAI-compatible, and Gemini).
+     pub(crate) fn require_multimodal_tool_output_for_screenshot_impl(ctx: &ToolUseContext) -> NortHingResult<()> {
+         if !ctx.primary_model_supports_image_understanding() {
+             return Err(NortHingError::tool(
+@@ -327,14 +327,30 @@ The **primary model cannot consume images** in tool results — **do not** use *
+             ));
+         }
+         let f = Self::primary_api_format_impl(ctx);
+-        if matches!(f.as_str(), "anthropic" | "openai" | "response" | "responses") {
++        if Self::supports_multimodal_tool_output(&f) {
+             return Ok(());
+         }
+         Err(NortHingError::tool(
+-            "Screenshot results include images in tool results; set the primary model to Anthropic (Claude) or OpenAI-compatible API format. Other providers are not supported for screenshots yet.".to_string(),
++            "Screenshot results include images in tool results; set the primary model to Anthropic (Claude), OpenAI-compatible, or Gemini API format. Other providers are not supported for screenshots yet.".to_string(),
+         ))
+     }
+ 
++    /// True when the given API format string supports multimodal tool output attachments.
++    pub(crate) fn supports_multimodal_tool_output(format: &str) -> bool {
++        matches!(
++            format,
++            "anthropic"
++                | "openai"
++                | "response"
++                | "responses"
++                | "gemini"
++                | "google"
++                | "gemini-code-assist"
++                | "gemini_code_assist"
++                | "code-assist"
++        )
++    }
++
+     /// Runtime host OS label for tool description (desktop session matches this process).
+     pub(crate) fn host_os_label_impl() -> &'static str {
+         match std::env::consts::OS {
+@@ -354,3 +370,29 @@ The **primary model cannot consume images** in tool results — **do not** use *
+         }
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::ComputerUseTool;
++
++    #[test]
++    fn multimodal_tool_output_format_whitelist() {
++        // Anthropic & OpenAI formats
++        assert!(ComputerUseTool::supports_multimodal_tool_output("anthropic"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("openai"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("response"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("responses"));
++
++        // Gemini formats
++        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("google"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini-code-assist"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("gemini_code_assist"));
++        assert!(ComputerUseTool::supports_multimodal_tool_output("code-assist"));
++
++        // Unknown / unsupported formats
++        assert!(!ComputerUseTool::supports_multimodal_tool_output("mystery"));
++        assert!(!ComputerUseTool::supports_multimodal_tool_output("unknown"));
++        assert!(!ComputerUseTool::supports_multimodal_tool_output(""));
++    }
++}
+=== report tail appended below by reviewer context ===

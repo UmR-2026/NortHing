@@ -4,9 +4,7 @@
 use super::super::coordinator::SubagentResult;
 use crate::agentic::skill_agent_snapshot::TurnSkillAgentSnapshot;
 use crate::agentic::tools::pipeline::SubagentParentInfo;
-use crate::agentic::tools::{
-    is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
-};
+use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::service::session::{SessionRelationship, SessionRelationshipKind};
 use crate::util::errors::NortHingError;
 use northhing_runtime_ports::DelegationPolicy;

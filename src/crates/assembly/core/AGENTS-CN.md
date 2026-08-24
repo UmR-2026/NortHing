@@ -13,7 +13,7 @@
 主要区域：
 
 - `src/agentic/`：agents、prompts、tools、sessions、execution、persistence
-- `src/service/`：config、filesystem、terminal、git、LSP、MCP、remote connect、AI memory
+- `src/service/`：config、filesystem、terminal、git、LSP、MCP、AI memory
 - `src/infrastructure/`：AI 客户端、应用路径、事件系统、存储、调试日志服务端
 - `src/product_runtime/`：product-full 兼容性适配器与运行时服务提供者连接
 
@@ -49,12 +49,10 @@ SessionManager -> Session -> DialogTurn -> ModelRound
 - `docs/architecture/agent-runtime-services-design.md`
 - `src/crates/execution/agent-runtime/AGENTS.md`
 - `src/crates/execution/tool-contracts/AGENTS.md`
-- `src/crates/execution/harness/AGENTS.md`
 - `src/crates/contracts/product-domains/AGENTS.md`
 - `src/crates/contracts/runtime-ports/` 以及 `src/crates/execution/runtime-services/` 的源码文档
 - `src/crates/services/services-core/AGENTS.md`
 - `src/crates/services/services-integrations/AGENTS.md`
-- `src/crates/execution/tool-provider-groups/AGENTS.md`
 
 一些子树已存在更精细的本地指南：
 

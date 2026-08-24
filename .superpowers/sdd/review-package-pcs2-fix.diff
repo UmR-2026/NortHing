@@ -1,0 +1,644 @@
+diff --git a/.superpowers/sdd/task-pcs2-fix-report.md b/.superpowers/sdd/task-pcs2-fix-report.md
+new file mode 100644
+index 0000000..c5e922c
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs2-fix-report.md
+@@ -0,0 +1,73 @@
++# Task PCS-2 Fix Report — 竞态消除与 Hardening 修复
++
++## 1. 修复项说明
++
++### F1（Important）：Desktop 启动期 `init_core` 与 `create_ui` 竞态消除
++
++- **问题分析**：`main.rs` 在 worker 线程异步跑 `initialize_core_services()`（内部调用 `init_core()` 并设置 `global_skill_watch_service`），主线程同步跑 `create_ui()`。原实现仅在 `create_ui` 处单次 `if let Some(skill_watch) = global_skill_watch_service()`，若主线程先到达该分支，拿到的为 `None`，导致 `DesktopSkillEventEmitter` 监听器未挂载，live reload 功能失效。
++- **解决方案**：
++  - 在 `src/apps/desktop/src/app_state/skills.rs` 实现了 `register_desktop_skill_watch_listener(ui: slint::Weak<AppWindow>)`。
++  - 该函数派发异步轮询任务（每 50ms 检测一次 `global_skill_watch_service()`，上限 5s），无论 `init_core` 先完成还是 `create_ui` 先完成，一旦 `SkillWatchService` 注册即刻挂载 `DesktopSkillEventEmitter`。
++  - `DesktopSkillEventEmitter` 内部继续严格遵守 UI 线程纪律，经 `slint::invoke_from_event_loop` 派发 `refresh_settings_lists` 与 `refresh_skills_ui`。
++- **自动化测试**：
++  - 在 `skills.rs` tests 中编写了 `test_register_desktop_skill_watch_listener_mounts_listener` 与 `test_desktop_skill_event_emitter_handles_skills_changed`，测试通过。
++
++### F2（Minor）：Catalog 动态解析失败分支补齐 `warn!` 日志
++
++- **修改点**：在 `src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs` 的 5 层失败分支（缺失 `SKILL.md`、UTF-8 解码错误、frontmatter 解析失败、缺失 `group` 字段、未知 `group` 取值）补充了 `tracing::warn!`，确保运行时出现异常嵌入技能时具备清晰的诊断信号。
++
++### F3（Minor 说明）：AppSettings 与 WorkspaceService 工作区状态对齐
++
++- **说明**：此项为 Minor。当前在非典型路径（如 AppSettings 与 WorkspaceService 内部状态短暂不同步）下，`refresh.rs` 会防御性降级（隐藏覆盖切换按钮），不会发生数据损坏。留待终审统一 triage。
++
++## 2. 验证命令与输出记录
++
++### 2.1 编译与 Workspace 检查
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check --workspace
++# Finished `dev` profile [unoptimized + debuginfo] target(s)
++
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check -p northhing
++# Finished `dev` profile [unoptimized + debuginfo] target(s)
++```
++
++### 2.2 Skill Watch & Catalog 焦点测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib skill_watch
++# running 3 tests
++# test service::skill_watch::tests::test_skill_watch_service_sync_rebuild ... ok
++# test service::skill_watch::tests::test_skill_watch_service_lifecycle_dispose ... ok
++# test service::skill_watch::tests::test_skill_watch_service_debounce_window ... ok
++# test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1047 filtered out; finished in 0.90s
++
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib catalog
++# running 20 tests
++# test agentic::tools::implementations::skills::catalog::tests::builtin_skill_groups_match_expected_sets ... ok
++# test agentic::tools::implementations::skills::catalog::tests::catalog_covers_all_embedded_builtin_skills ... ok
++# ...
++# test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 1030 filtered out; finished in 0.06s
++```
++
++### 2.3 Desktop 桌面端测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing --lib
++# running 100 tests
++# test app_state::skills::tests::test_desktop_skill_event_emitter_handles_skills_changed ... ok
++# test app_state::skills::tests::test_register_desktop_skill_watch_listener_mounts_listener ... ok
++# test app_state::callbacks_settings::refresh::tests::build_skill_state_items_workspace_overrides ... ok
++# ...
++# test result: ok. 100 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
++```
++
++### 2.4 边界、Rot 与格式化
++```bash
++node scripts/check-core-boundaries.mjs
++# Core boundary check passed.
++
++pnpm run check:rot
++# ✔ 6 tests pass
++# Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1362 files).
++
++pnpm run fmt:rs
++# [format-changed-rust] Formatting 3 Rust file(s).
++```
+diff --git a/.superpowers/sdd/task-pcs2-review-brief.md b/.superpowers/sdd/task-pcs2-review-brief.md
+new file mode 100644
+index 0000000..521c40e
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs2-review-brief.md
+@@ -0,0 +1,51 @@
++# Review Brief — PCS-2（skills 数据目录化 + fs watch 热加载）
++
++## 审查对象
++
++- 仓库：`E:\agent-project\.worktrees\northing-pcs2`（分支 feat/pcs2-skills-watch-0821）
++- 范围：`fad68f7..3c6e2f5`（单 commit，40 文件 +960/-258）
++- diff 包：`.superpowers/sdd/review-package-pcs2.diff`
++- 实现 brief / report：`.superpowers/sdd/task-pcs2-brief.md` / `task-pcs2-report.md`
++
++## 约束（本任务 spec 的精确要求）
++
++- **trait 签名不许改**：`load_project_skills(&self)` 无参形态必须保持（用户历史约束，改了 = SPEC FAIL）。
++- watcher：单 RecommendedWatcher；`user_skills_dir()` Recursive + 项目槽 NonRecursive；远程槽不 watch；350ms 去抖（校准依据须在 report）。
++- DisposableList 持 watcher 句柄 + abort 闭包；工作区切换整体重建；停机 dispose。家规 4 并发测试。
++- desktop UI 写必须经 `slint::invoke_from_event_loop`。
++- catalog：BuiltinSkillId 枚举/BUILTIN_SKILL_SPECS 静态表删除；24 个内置 skill 的 group 元数据落 SKILL.md frontmatter（或 manifest）；catalog.rs:217 一致性测试数据源同步改；**include_dir!/build.rs/安装机制不许动**。
++- 明确不做清单（越界即 FAIL）：统一面板/权限框架、per-skill 动态工具注册、远程 watch、include_dir! 移除、installer 载荷、prompt 热路径优化。
++- desktop workaround 移除后，skills 面板 workspace 覆盖列应真实激活（on_set_skill_global/on_set_skill_workspace 回调）。
++
++## 独立验证（你必须实跑）
++
++1. `cargo check --workspace` + `cargo check -p northhing`（MSVC wrapper：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo ...`）
++2. `cargo test -p northhing-core --features product-full --lib skill_watch` + `--lib catalog` + `--lib agentic::tools::implementations::skills`
++3. `cargo test -p northhing --lib`
++4. `node scripts/check-core-boundaries.mjs` + `pnpm run check:rot`
++5. **语义深挖（本轮重点）**：
++   a. **去抖正确性**：连续事件风暴（模拟 .system staging rename）会不会导致 refresh 递归触发（refresh→install check→rename→事件→refresh 循环）？读实现判断终止性；
++   b. **DisposableList 重建竞态**：`sync_watched_paths` 重建期间，旧 watcher 的 in-flight 事件会不会落到新 registry 状态上（脏刷新）？dispose 后事件回调是否可能再触发 refresh；
++   c. **load_project_skills 工作区解析**：`global_workspace_service()` 解析失败/无当前工作区时返回什么（Err/空/default）——desktop 探测逻辑对这些分支的行为是否都安全；
++   d. **catalog 动态解析的失败面**：某个 SKILL.md frontmatter 缺 group 或写错时的行为（warn+跳过/报错/崩溃），24 个内置 skill 的 frontmatter 标注逐一抽查至少 5 个确认格式一致。
++
++## 你的角色定位
++
++你是独立验收者，**被期望找茬，不是被期望放行**。实现者的报告是待证伪的声明，不是证据；一切以 diff 和实跑输出为准。实现者已跑过的测试不重跑，但其"验证"章节的命令与输出要与 diff 内容对得上（缺输出 = 打回）。
++
++## 双判决（缺一不算通过）
++
++1. **SPEC**：对照 brief 验收逐条 PASS/FAIL + file:line 证据。
++2. **QUALITY**：常规项 + 三必查（复用核查 / 无 owner 抽象 / 预算闸）。god-file 观测点：触及登记文件则附健康度一句，未触及跳过。
++
++## Cannot verify from diff
++
++无法判定的单独列出，禁止猜。
++
++## 档位
++
++Critical / Important / Minor。plan-mandated 冲突交编排者。
++
++## 报告
++
++`.superpowers/sdd/task-pcs2-review.md`：双判决、证据、独立验证、语义深挖四点、findings。最终消息以 APPROVED / REJECTED 开头。
+diff --git a/.superpowers/sdd/task-pcs2-review.md b/.superpowers/sdd/task-pcs2-review.md
+new file mode 100644
+index 0000000..c4dbd74
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs2-review.md
+@@ -0,0 +1,303 @@
++# Task PCS-2 Review — skills 数据目录化 + fs watch 热加载（第一个 DataPlugin）
++
++## 0. 摘要（双判决）
++
++| 判决维度 | 结论 | 备注 |
++|---|---|---|
++| **SPEC** | **PASS** | Spec 1-6 全部满足，trait 签名未改，去抖/DisposableList/项目接线/catalog 去硬编码全部落地 |
++| **QUALITY** | **PASS** | 复用 identity_watch.rs / DisposableList / agent_profile_project_store.rs；无 owner 抽象；预算闸门通过 |
++| **Cannot verify from diff** | — | 见第 4 节 |
++| **Critical / Important / Minor** | 1 Important / 2 Minor | 见第 5 节 |
++
++**总评**：实现与 brief Spec 高度一致；语义深挖四点（去抖终止性、DisposableList 重建竞态、工作区解析失败分支、catalog 动态解析失败面）逐一通过；唯一 Important 是 desktop 启动期 `init_core` 与 `create_ui` 之间的 race，可能让 live reload 失效一次；不影响数据正确性。
++
++## 1. Spec 验收（逐条 + file:line 证据）
++
++### Spec 1：SkillWatchService — `service/skill_watch.rs`
++- **PASS** 单 `RecommendedWatcher`，`user_skills_dir()` Recursive（覆盖 `.system`），项目槽 NonRecursive；远程项目槽显式 `continue` 跳过（skill_watch.rs:100）。
++- **PASS** 350ms 去抖窗口：`SKILLS_DEBOUNCE_MS = 350`（skill_watch.rs:29），`schedule_refresh` 内部 `sleep(Duration::from_millis(SKILLS_DEBOUNCE_MS))`（skill_watch.rs:249）。
++- **PASS** 事件风暴校准依据：brief 报告指"实测 20-80ms 内密集触发；350ms 提供 4-5 倍缓冲"；identity_watch.rs 同窗口。
++- **PASS** 远程槽不 watch：for-loop 中 `if ws.workspace_kind == WorkspaceKind::Remote { continue; }`（skill_watch.rs:99-102）。
++- **PASS** EventEmitter 发 `skills-changed`：常量 `SKILLS_CHANGED_EVENT_NAME = "skills-changed"`（skill_watch.rs:28），`em.emit(SKILLS_CHANGED_EVENT_NAME, ...)`（skill_watch.rs:257）。
++
++### Spec 2：guard 化生命周期 + 家规 4 测试
++- **PASS** DisposableList 包装 watcher + 去抖任务 abort 闭包（skill_watch.rs:165-184）。
++- **PASS** `sync_watched_paths` 整体重建：先 `disposables.dispose()` 再 `*disposables = DisposableList::new()`（skill_watch.rs:82-86）。
++- **PASS** Drop 钩子：Drop impl 调用 `disposables.dispose()`（skill_watch.rs:280-284）。
++- **PASS** 家规 4：3 个测试（skill_watch_tests.rs）— `sync_rebuild`、`lifecycle_dispose`、`debounce_window`，实测通过（cargo test 输出"3 passed"）。
++
++### Spec 3：面板 cache 扩项目 skills + desktop 热重载
++- **PASS** `SkillRegistry::refresh` 走 `global_workspace_service()` 解析当前工作区（registry_store.rs:295-297）。
++- **PASS** desktop `create_ui` 注册 `DesktopSkillEventEmitter` 监听 `SKILLS_CHANGED_EVENT_NAME`，通过 `slint::invoke_from_event_loop` 异步触发 `refresh_settings_lists` + `refresh_skills_ui`（create_ui.rs:280-286, 487-507）。
++
++### Spec 4：load_project_skills 接线 + desktop 覆盖列激活
++- **PASS** trait 签名未改：仍 `async fn load_project_skills(&self) -> Result<ProjectSkillsDto, KernelError>`（kernel-api/src/agents.rs:126，diff 为空）。
++- **PASS** facade 经 `global_workspace_service()` 解析当前工作区 → `load_project_mode_skills_document_local`（kernel_facade/agents.rs:129-159）。
++- **PASS** save 镜像（kernel_facade/agents.rs:161-198）：workspace_path 优先走 DTO，回退再走全局服务。
++- **PASS** desktop workaround 移除：refresh.rs:134 `workspace_override_supported = s.current_workspace.is_some() && project_doc.is_some()`，不再依赖 Err 探测路径。
++- **PASS** callback 闭环：`on_set_skill_global`（misc.rs:118-153）+ `on_set_skill_workspace`（misc.rs:156-209），slint 端 SkillsSettingsPanel.slint:181-186 三态循环。
++
++### Spec 5：catalog 去硬编码
++- **PASS** `BuiltinSkillId` 枚举删除（catalog.rs diff -36 行）。
++- **PASS** `BUILTIN_SKILL_SPECS` 静态表删除（catalog.rs diff -112 行）。
++- **PASS** 24 个内置 skill 全部 frontmatter 含 `group:`（grep "group:" 在 builtin_skills/ 命中 24 个文件）。
++- **PASS** `catalog.rs:217` 一致性测试数据源同步改：现遍历 `builtin_skill_dir_names()` 校验 `BUILTIN_SPECS` 覆盖（catalog.rs:107-117）。
++- **PASS** `include_dir!` 未动（builtin.rs:20），`Cargo.toml` `include_dir` 依赖保留。
++
++### Spec 6：文档同步
++- **PASS** `surfaces.md` / 就近 AGENTS.md 本任务未做结构性变更，无需更新（diff 中无 surfaces.md 修改）。
++- **N/A** 未触及架构分层改动；`check-core-boundaries.mjs` 通过。
++
++## 2. QUALITY 判决
++
++### 2.1 复用核查（必查）
++- **PASS** identity_watch.rs 结构模式复用：`RecommendedWatcher` + `mpsc::channel` + 后台阻塞线程 + 去抖 task + EventEmitter（与 brief 要求一致）。
++- **PASS** `DisposableList` 复用：直接 `use northhing_disposable::DisposableList;`（skill_watch.rs:18），无重写。
++- **PASS** `agent_profile_project_store.rs::load_project_agent_profiles_document_local` 复用作为底层 IO（mode_overrides.rs:155-157）。
++- **PASS** `registry_store.rs::scan_skill_candidates_for_workspace` 复用，`refresh()` 改为传入 current workspace_root（registry_store.rs:294-307）。
++
++### 2.2 无 owner 抽象（必查）
++- **PASS** SkillWatchService 在 `service/`（assembly 内的服务层）；事件常量 `SKILLS_CHANGED_EVENT_NAME` 在 skill_watch.rs 公开（pub const），与 identity_watch 事件同模式。
++- **PASS** catalog 模块位置不变（仍在 skills/catalog.rs）；仅改为动态派生。
++- **PASS** 无 facade trait 包装，无新接口为单一实现而生。
++
++### 2.3 预算闸（必查）
++- **PASS** skill_watch.rs 255 行（< 800 警戒线）。
++- **PASS** catalog.rs 106 行（< 800）。
++- **PASS** skill_watch_tests.rs 76 行（< 800）。
++- **PASS** `pnpm run check:rot` 通过：4 grep rules + 7 god-file rules across 1362 files（实测输出）。
++
++### 2.4 Slint UI 写经 invoke_from_event_loop（家规）
++- **PASS** DesktopSkillEventEmitter 用 `slint::invoke_from_event_loop` 派发（create_ui.rs:496-503）。
++- **PASS** `refresh_settings_lists` 内部用 `invoke_from_event_loop`（refresh.rs:227）。
++- **PASS** `refresh_skills_ui` 自带派发通道（无侵入）。
++
++### 2.5 日志/注释 English-only，无 emoji
++- **PASS** tracing/info/warn/error 全部英文（grep 未发现 CJK 注释在新增文件）。
++- **PASS** 无 emoji（在 skill_watch.rs / catalog.rs 全文检索未发现）。
++
++### 2.6 god-file 观测点
++- **PASS** 新增/修改文件均 < 400 行，无 god-file 压力。
++
++## 3. 语义深挖四点（本轮重点）
++
++### 3.1 去抖正确性（终止性）
++
++**结论：PASS（终止性由 hash fixed point 保证）**
++
++终止链分析：
++1. **去抖层**：`schedule_refresh` 先 abort in-flight task，再 `sleep(350ms)` 再 `refresh().await` + emit（skill_watch.rs:236-269）。Staging rename 风暴期间每个事件都 abort + 重启 timer，永远只有一个 in-flight task 在等待 350ms 静默期。
++2. **refresh 层**：`skill_registry().refresh()` 内部调 `scan_skill_candidates_for_workspace`，后者调 `ensure_builtin_skills_installed()`（registry_store.rs:192）。
++3. **安装层**：检查 `manifest.bundle_hash == builtin_skills_bundle_hash()`（builtin.rs:236-240）。**匹配时直接 early return**，不写入磁盘 → 不触发 FS 事件。
++4. **首次/升级路径**：写入 `.system.tmp.<pid>.<ts>` staging → 原子 rename → 写 `.manifest.json`。rename 后 manifest 落地，下一次 install 走 early return。
++
++因此：
++- 稳定状态（manifest 已匹配）：refresh 无写入 → 无事件 → 无环。
++- 一次性升级（manifest 不匹配 → 写入 → rename → manifest 更新）：下一次 refresh 走 early return → 终止。
++
++**例外场景**：`ensure_builtin_skills_installed` 是 `await` 中。如果 in-flight refresh 在 staging write 中间被打断（被 schedule_refresh abort），下一个 refresh 拿 lock 后会进入"manifest 未匹配"分支。但 staging dir 名 = `.{pid}.{ns}` 不同时间戳，所以两次写入不会冲突。同时 `_install_lock` 在 abort 时 Drop 自动释放（BuiltinSkillsInstallLock impl Drop，builtin.rs:56-61）。
++
++**is_relevant_skill_event 过滤器**（skill_watch.rs:215-233）：
++- 空 paths 视为 relevant。
++- 跳过 `.git`、`.swp`、`*~`。
++- `.system.tmp.*` 因 `starts_with(".system")` 触发 relevant（仍是 refresh 触发）。
++
++整体：`is_relevant_skill_event` 不过滤 staging rename，依赖 350ms 去抖吸收风暴；正确。
++
++### 3.2 DisposableList 重建竞态
++
++**结论：PASS（最多 1 次额外 refresh，无数据损坏）**
++
++`sync_watched_paths` 重建序列（skill_watch.rs:80-212）：
++1. **dispose 旧资源**：`disposables.dispose()` 触发 (a) `watcher_cell.take()` 关闭旧 `RecommendedWatcher`；(b) `pending_debounce.try_lock() → take → abort`（skill_watch.rs:166-185）。
++2. **创建新 watcher** + watch 新路径。
++3. **store 新 watcher** 进 `watcher_cell`，注册 dispose 闭包。
++4. **spawn_blocking 启新线程** 接收事件。
++
++**关键 race**：`spawn_blocking` 是无限 loop（skill_watch.rs:192-204）。当旧 watcher 被 dispose 后，notify 自动关闭 `tx`，旧线程下次 `rx.recv()` 返回 `Err(_)` → `break` → 线程退出（skill_watch.rs:202）。
++
++**窗口期问题**：dispose → 新 watcher 创建之间，旧线程可能在已经收到一个事件后、正在调 `schedule_refresh`，此时 abort 已经发生（pending=None），但 schedule_refresh 自身会 `pending.take()`（None.no-op）然后 `tokio::spawn` 新任务。新任务与新线程的 schedule_refresh 共享同一个 `pending_debounce: Arc<...>`，两者竞争同一 slot。
++
++**风险评估**：
++- 旧线程最多在一次迭代中再 emit 一次 `schedule_refresh`（一次额外 refresh）。refresh 是幂等的（re-scan + cache replace），不损坏数据。
++- 旧线程终将在下次 `rx.recv()` 返回 Err 时退出，无资源泄漏。
++- 无死锁风险：`pending_debounce` 是 `Arc<Mutex>`，不是 `RwLock`。
++
++**DisposableList 闭包捕获的 watcher_cell** 是 `Arc<Mutex<Option<RecommendedWatcher>>>`（skill_watch.rs:162）。闭包 take() 拿走 watcher → Drop → watcher 内部 tx 关闭 → 旧 rx 收到 Err → 旧线程退出。链路正确。
++
++**结论**：竞态窗口存在但最坏情况是一次冗余 refresh，atomic 上安全。
++
++### 3.3 load_project_skills 工作区解析失败分支
++
++**结论：PASS（所有失败分支被 desktop 安全处理）**
++
++`KernelFacade::load_project_skills`（kernel_facade/agents.rs:129-159）三种失败：
++1. `global_workspace_service() == None` → `KernelError::Internal("workspace service not available")`
++2. `ws.current_workspace().await == None` → `KernelError::NotFound("no current workspace")`
++3. `load_project_mode_skills_document_local` 失败 → `KernelError::Config(...)`
++
++桌面 refresh.rs:133-134 的处理：
++```rust
++let project_doc = facade.load_project_skills().await.ok();
++let workspace_override_supported = s.current_workspace.is_some() && project_doc.is_some();
++```
++
++- `project_doc = None` ⇒ `workspace_override_supported = false` ⇒ SkillsSettingsPanel.slint:191 走 disabled 分支（opacity 0.5 + 不可点击的占位 Text）。
++- 用户看到的不是"按钮无声失败"，而是"按钮变灰 + 跟随全局"。
++
++**save_project_skills**（kernel_facade/agents.rs:161-198）相同三类失败，被 desktop `on_set_skill_workspace`（misc.rs:175-182）转成 `set_banner_message` 横幅提示。
++
++**细微不同步风险**：`s.current_workspace`（来自 AppSettings）vs `ws.current_workspace()`（来自 WorkspaceService）。两者数据源不同，理论上可能不一致：
++- AppSettings.current_workspace = Some(path) 但 ws.current_workspace() == None：panel `s.current_workspace.is_some() = true`，但 `project_doc.is_some() = false`（因为 load 失败）⇒ `workspace_override_supported = false` ⇒ 按钮仍隐藏。**安全。**
++- AppSettings.current_workspace = None 但 ws.current_workspace() == Some：panel `s.current_workspace.is_some() = false` ⇒ 按钮隐藏，但 save 时若有 doc.workspace_path 非空则可保存（kernel_facade/agents.rs:170-180）。**非典型路径**：用户从未在 settings 中设置 current workspace 但 kernel 内部有 workspace —— 此时 panel 不显示按钮，但通过其他途径（CLI / MCP）触发的 save 仍能走 doc.workspace_path 分支。**不破坏数据，但 panel UI 落后于 kernel 状态。** 属 Minor。
++
++### 3.4 catalog 动态解析失败面
++
++**结论：PASS（24 个内置 skill 格式一致；失败时 silently skip + 测试兜底）**
++
++catalog.rs:46-72 的 LazyLock 解析：
++```rust
++let Some(dir_name) = dir.path().file_name().and_then(|n| n.to_str()) else { continue };
++let skill_md_path = dir.path().join("SKILL.md");
++if let Some(file) = dir.get_file(&skill_md_path) {
++    if let Ok(content) = std::str::from_utf8(file.contents()) {
++        if let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) {
++            if let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) {
++                if let Some(group) = BuiltinSkillGroup::parse(group_str) {
++                    map.insert(...);
++                }
++            }
++        }
++    }
++}
++```
++
++**5 层 failure，每层 silently skip**：
++1. dir_name 解析失败 → skip
++2. SKILL.md 不存在 → skip（无 SKILL.md 的目录本不该被嵌入）
++3. UTF-8 不可解码 → skip
++4. YAML frontmatter 解析失败 → skip（但会丢失 skill）
++5. group 字段缺失/类型错 → skip
++6. group 值不在 `{office, meta, computer-use, computer_use, gstack}` → skip
++
++**测试兜底**：`catalog_covers_all_embedded_builtin_skills`（catalog.rs:107-117）遍历 `builtin_skill_dir_names()` 并 assert 全部在 `BUILTIN_SPECS`。如果任何内置 skill 缺/错 group，测试失败。
++
++**24 内置 skill frontmatter 抽查**（实测 ≥ 5）：
++- `docx/SKILL.md` line 5: `group: office` ✓
++- `pdf/SKILL.md` line 5: `group: office` ✓
++- `agent-browser/SKILL.md` line 5: `group: computer-use` ✓
++- `find-skills/SKILL.md` line 6: `group: meta` ✓
++- `memory/SKILL.md` line 4: `group: meta` ✓
++- `writing-skills/SKILL.md` line 4: `group: meta` ✓
++- `gstack-cso/SKILL.md` line 3: `group: gstack` ✓
++- `gstack-qa/SKILL.md` line 3: `group: gstack` ✓
++- `xlsx/SKILL.md` line 5: `group: office` ✓
++
++共 24 个 SKILL.md 全部含 `group:` 行（grep 命中 24/24）。格式一致（key + colon + space + value）。
++
++**Failure mode 实测验证**：跑 `cargo test -p northhing-core --features product-full --lib catalog` 实测 "20 passed; 0 failed"，包含两个 catalog 测试：
++- `builtin_skill_groups_match_expected_sets` ✓
++- `catalog_covers_all_embedded_builtin_skills` ✓
++
++**operator 视角隐患**：silent skip 不会触发 `warn!` 日志。新增 builtin skill 时若忘记 group，测试 fail 但运行时只看到"skill 无 group"。建议未来加上 `warn!` 提示（非阻塞）。属 Minor。
++
++## 4. 独立验证（实跑）
++
++### 4.1 cargo check
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check --workspace
++# Finished `dev` profile [unoptimized + debuginfo] target(s) in 45.44s
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo check -p northhing
++# Finished `dev` profile [unoptimized + debuginfo] target(s) in 45.08s
++```
++警告若干（unused variable），与 PCS-2 无关。无 error。
++
++### 4.2 skills 测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib skill_watch
++# test result: ok. 3 passed; 0 failed
++
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib catalog
++# test result: ok. 20 passed; 0 failed; (catalog::tests::builtin_skill_groups_match_expected_sets / catalog_covers_all_embedded_builtin_skills 通过)
++
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib agentic::tools::implementations::skills
++# test result: ok. 19 passed; 0 failed
++```
++
++### 4.3 desktop 测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing --lib
++# test result: ok. 98 passed; 0 failed
++# 包含 build_skill_state_items_workspace_overrides / build_skill_state_items_user_enabled_override_wins / build_skill_state_items_honors_non_user_enabled_overrides
++```
++
++### 4.4 全量 northhing-core 测试
++```bash
++& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-msvc cargo test -p northhing-core --features product-full --lib
++# test result: FAILED. 1048 passed; 1 failed; 1 ignored
++# 唯一失败：service::i18n::service::tests::translate_keeps_legacy_app_name_alias_on_shared_product_name
++#   assertion `left == right` failed: left: "NortHing" right: "northhing"
++# 与 PCS-2 无关：
++#   - 路径 src/crates/assembly/core/src/service/i18n/service.rs（i18n 服务）
++#   - 本任务 diff 不涉及 i18n/ 目录（git diff 为空）
++#   - 切到 fad68f7 重跑同样失败，确认 pre-existing
++```
++
++### 4.5 边界 + Rot
++```bash
++node scripts/check-core-boundaries.mjs
++# Core boundary check passed.
++
++pnpm run check:rot
++# ✔ 6 tests pass
++# Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1362 files)
++```
++
++## 5. Findings（分级 + 处理建议）
++
++### 5.1 Important
++
++**F1 — desktop 启动期 init_core vs create_ui race**
++- 现象：worker thread 调 `init_core()`（含 `set_global_skill_watch_service`）；main thread 调 `create_ui()`，里面 `if let Some(skill_watch) = global_skill_watch_service()`（create_ui.rs:281-286）。若 main thread 跑赢 worker，listener 不挂载，live reload 失效。
++- 当前防护：实际时序几乎总是 worker 先完成（worker 先 spawn、runtime 已 build；main thread 还要 build runtime + load UI）。但无显式同步。
++- 影响：用户首次启动可能错过一次 live reload（重启即修复）。无数据损坏。
++- 建议（Minor 升级到 Important 因 user-visible）：在 `create_ui` 中 poll `global_skill_watch_service()`（带 1-2s 上限）或显式 await `core_ready()`，或把 set_event_emitter 也放到 init_core 链路末尾（先在 create_ui 拿 ui_weak 传给 core）。
++
++### 5.2 Minor
++
++**F2 — catalog silent skip 无 warn! 日志**
++- 现象：catalog.rs:46-72 解析失败时 silently skip；operator 无法从运行日志看出某个 SKILL.md 缺 group。
++- 影响：测试兜底（`catalog_covers_all_embedded_builtin_skills`），但 production 无诊断信号。
++- 建议：在每个失败层加 `tracing::warn!`，便于排查。
++
++**F3 — AppSettings.current_workspace vs ws.current_workspace 不同步**
++- 现象：refresh.rs:134 用 `s.current_workspace.is_some()` 推断；kernel 用 `ws.current_workspace().await` 推断。两路数据可能不同步。
++- 影响：极少数情况下 panel 隐藏按钮但 kernel 仍能 save（或反之）。不破坏数据。
++- 建议：统一数据源；或者在 panel 同时读 kernel 的 current workspace 状态。
++
++## 6. Cannot verify from diff
++
++- **运行时 race F1 的实际触发概率**：理论分析给出，CI 不覆盖（无 desktop 启动集成测试）。
++- **去抖窗口 350ms 在极端 FS 场景下是否够覆盖**：report 说"4-5 倍缓冲"，缺乏压力测试数据。CI 不跑。
++
++## 7. 验证命令清单
++
++| 命令 | 结果 |
++|---|---|
++| `cargo check --workspace` | ✅ 45.44s |
++| `cargo check -p northhing` | ✅ 45.08s |
++| `cargo test -p northhing-core --features product-full --lib skill_watch` | ✅ 3 passed |
++| `cargo test -p northhing-core --features product-full --lib catalog` | ✅ 20 passed |
++| `cargo test -p northhing-core --features product-full --lib agentic::tools::implementations::skills` | ✅ 19 passed |
++| `cargo test -p northhing --lib` | ✅ 98 passed |
++| `cargo test -p northhing-core --features product-full --lib` | ⚠️ 1048 passed, 1 failed (pre-existing i18n, 与 PCS-2 无关) |
++| `node scripts/check-core-boundaries.mjs` | ✅ passed |
++| `pnpm run check:rot` | ✅ 6/6 passed, 1362 files |
++
++## 8. 结论
++
++实现与 brief 100% 对齐：Spec 1-6 全部 PASS；trait 签名未改；去抖/DI/project 接线/catalog 去硬编码/家规 4 测试/Slint invoke_from_event_loop 全部满足。语义深挖四点（去抖终止性、DisposableList 重建竞态、工作区解析失败分支、catalog 动态解析失败面）逐一通过：终止链由 hash fixed point 兜底、DisposableList 至多一次冗余 refresh、桌面探测优雅降级、catalog 测试兜底 + 24 个内置 skill 格式一致。
++
++唯一 Important finding (F1) 是 desktop 启动 race，不影响数据正确性，可在后续 hardening 处理；2 个 Minor (F2, F3) 均不阻塞。
++
++**APPROVED**
+diff --git a/src/apps/desktop/src/app_state/create_ui.rs b/src/apps/desktop/src/app_state/create_ui.rs
+index 3ddf738..3ce419c 100644
+--- a/src/apps/desktop/src/app_state/create_ui.rs
++++ b/src/apps/desktop/src/app_state/create_ui.rs
+@@ -277,13 +277,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
+     // expected to be available here.
+     event_bridge::register_desktop_event_bridge(&ui, &app_state);
+ 
+-    // Register SkillWatchService event listener for live reload (PCS-2)
+-    if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
+-        let emitter = Arc::new(DesktopSkillEventEmitter { ui: ui.as_weak() });
+-        tokio::spawn(async move {
+-            skill_watch.set_event_emitter(emitter).await.ok();
+-        });
+-    }
++    // Register SkillWatchService event listener for live reload (PCS-2 race-free mount)
++    crate::app_state::skills::register_desktop_skill_watch_listener(ui.as_weak());
+ 
+     // --- Register all 17 Slint callbacks ---
+     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
+@@ -482,26 +477,3 @@ pub(super) fn spawn_startup_session(ui: &AppWindow, app_state: &Arc<AppState>) {
+         });
+     });
+ }
+-
+-/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
+-struct DesktopSkillEventEmitter {
+-    ui: slint::Weak<AppWindow>,
+-}
+-
+-#[async_trait::async_trait]
+-impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
+-    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
+-        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
+-            let ui_weak = self.ui.clone();
+-            slint::invoke_from_event_loop(move || {
+-                let ui_weak2 = ui_weak.clone();
+-                tokio::spawn(async move {
+-                    refresh_settings_lists(ui_weak2.clone()).await;
+-                    refresh_skills_ui(ui_weak2).await;
+-                });
+-            })
+-            .ok();
+-        }
+-        Ok(())
+-    }
+-}
+diff --git a/src/apps/desktop/src/app_state/skills.rs b/src/apps/desktop/src/app_state/skills.rs
+index 5774ab4..91160da 100644
+--- a/src/apps/desktop/src/app_state/skills.rs
++++ b/src/apps/desktop/src/app_state/skills.rs
+@@ -2,6 +2,7 @@
+ 
+ use super::slint_glue::AppWindow;
+ use super::*;
++use std::sync::Arc;
+ 
+ /// Phase C.4: build a Slint ModelRc<SkillItem> from the live skill registry,
+ /// resolving the per-mode enabled state for each skill.
+@@ -86,3 +87,84 @@ pub(super) async fn refresh_skills_ui(ui_weak: slint::Weak<AppWindow>) {
+         }
+     });
+ }
++
++/// Event emitter that relays core `skills-changed` events to the Slint UI thread.
++pub(super) struct DesktopSkillEventEmitter {
++    pub(super) ui: slint::Weak<AppWindow>,
++}
++
++#[async_trait::async_trait]
++impl northhing_events::EventEmitter for DesktopSkillEventEmitter {
++    async fn emit(&self, event_name: &str, _payload: serde_json::Value) -> anyhow::Result<()> {
++        if event_name == northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME {
++            let ui_weak = self.ui.clone();
++            slint::invoke_from_event_loop(move || {
++                let ui_weak2 = ui_weak.clone();
++                tokio::spawn(async move {
++                    crate::app_state::callbacks_settings::refresh_settings_lists(ui_weak2.clone()).await;
++                    refresh_skills_ui(ui_weak2).await;
++                });
++            })
++            .ok();
++        }
++        Ok(())
++    }
++}
++
++/// Spawns a background task to register the skill watch listener as soon as
++/// `SkillWatchService` becomes available, eliminating the startup race with `init_core`.
++pub(super) fn register_desktop_skill_watch_listener(ui: slint::Weak<AppWindow>) -> tokio::task::JoinHandle<bool> {
++    tokio::spawn(async move {
++        for _ in 0..100 {
++            if let Some(skill_watch) = northhing_core::service::skill_watch::global_skill_watch_service() {
++                let emitter = Arc::new(DesktopSkillEventEmitter { ui });
++                if let Err(e) = skill_watch.set_event_emitter(emitter).await {
++                    tracing::warn!(target: "app_state", "Failed to set DesktopSkillEventEmitter on SkillWatchService: {e}");
++                    return false;
++                }
++                tracing::info!(target: "app_state", "Registered desktop skill watch listener for live reload");
++                return true;
++            }
++            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
++        }
++        tracing::warn!(target: "app_state", "Timed out waiting for SkillWatchService during desktop startup");
++        false
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
++    async fn test_desktop_skill_event_emitter_handles_skills_changed() {
++        use northhing_events::EventEmitter;
++        let emitter = DesktopSkillEventEmitter {
++            ui: slint::Weak::default(),
++        };
++        let result = emitter
++            .emit(
++                northhing_core::service::skill_watch::SKILLS_CHANGED_EVENT_NAME,
++                serde_json::json!({}),
++            )
++            .await;
++        assert!(result.is_ok());
++    }
++
++    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
++    async fn test_register_desktop_skill_watch_listener_mounts_listener() {
++        if let Ok(ws) = northhing_core::service::workspace::WorkspaceService::new().await {
++            let ws_service = Arc::new(ws);
++            let skill_watch = Arc::new(northhing_core::service::skill_watch::SkillWatchService::new(ws_service));
++            northhing_core::service::skill_watch::set_global_skill_watch_service(skill_watch);
++        }
++
++        let handle = register_desktop_skill_watch_listener(slint::Weak::default());
++        let completed = tokio::time::timeout(tokio::time::Duration::from_secs(2), handle).await;
++        if let Ok(Ok(success)) = completed {
++            assert!(success);
++        } else {
++            panic!("listener registration failed or timed out");
++        }
++    }
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs b/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
+index 0394530..08750d1 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/skills/catalog.rs
+@@ -50,23 +50,33 @@ static BUILTIN_SPECS: LazyLock<HashMap<String, BuiltinSkillSpec>> = LazyLock::ne
+             continue;
+         };
+         let skill_md_path = dir.path().join("SKILL.md");
+-        if let Some(file) = dir.get_file(&skill_md_path) {
+-            if let Ok(content) = std::str::from_utf8(file.contents()) {
+-                if let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) {
+-                    if let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) {
+-                        if let Some(group) = BuiltinSkillGroup::parse(group_str) {
+-                            map.insert(
+-                                dir_name.to_string(),
+-                                BuiltinSkillSpec {
+-                                    dir_name: dir_name.to_string(),
+-                                    group,
+-                                },
+-                            );
+-                        }
+-                    }
+-                }
+-            }
+-        }
++        let Some(file) = dir.get_file(&skill_md_path) else {
++            tracing::warn!("Built-in skill directory '{}' is missing SKILL.md", dir_name);
++            continue;
++        };
++        let Ok(content) = std::str::from_utf8(file.contents()) else {
++            tracing::warn!("SKILL.md in built-in skill '{}' is not valid UTF-8", dir_name);
++            continue;
++        };
++        let Ok((meta, _)) = FrontMatterMarkdown::load_str(content) else {
++            tracing::warn!("Failed to parse frontmatter in built-in skill '{}'", dir_name);
++            continue;
++        };
++        let Some(group_str) = meta.get("group").and_then(|v| v.as_str()) else {
++            tracing::warn!("Built-in skill '{}' is missing 'group' in frontmatter", dir_name);
++            continue;
++        };
++        let Some(group) = BuiltinSkillGroup::parse(group_str) else {
++            tracing::warn!("Unknown group '{}' in built-in skill '{}'", group_str, dir_name);
++            continue;
++        };
++        map.insert(
++            dir_name.to_string(),
++            BuiltinSkillSpec {
++                dir_name: dir_name.to_string(),
++                group,
++            },
++        );
+     }
+     map
+ });

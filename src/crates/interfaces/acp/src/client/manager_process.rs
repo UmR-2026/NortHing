@@ -16,7 +16,7 @@
 //
 // All method bodies are moved verbatim from main. No behavior change.
 
-use super::builtin_clients::{builtin_client_ids, default_config_for_builtin_client};
+use super::builtin_clients::{builtin_client_ids, default_config_for_builtin_client, CODEX_ACP_PACKAGE_PINNED};
 use super::config::{
     AcpClientConfig, AcpClientConfigFile, AcpClientInfo, AcpClientPermissionMode, AcpClientRequirementProbe,
     AcpClientStatus, RemoteAcpClientRequirementSnapshot,
@@ -219,7 +219,8 @@ mod tests {
                 AcpClientConfig {
                     name: Some("Codex".to_string()),
                     command: "npx".to_string(),
-                    args: vec!["--yes".to_string(), "@zed-industries/codex-acp@latest".to_string()],
+                    // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
+                    args: vec!["--yes".to_string(), CODEX_ACP_PACKAGE_PINNED.to_string()],
                     env: HashMap::from([("BASE".to_string(), "1".to_string())]),
                     enabled: true,
                     readonly: false,
@@ -231,7 +232,7 @@ mod tests {
         let resolved = resolve_config_for_client(&config_file, "codex", Some("huawei-server")).expect("config");
 
         assert_eq!(resolved.command, "npx");
-        assert_eq!(resolved.args, vec!["--yes", "@zed-industries/codex-acp@latest"]);
+        assert_eq!(resolved.args, vec!["--yes", CODEX_ACP_PACKAGE_PINNED]);
         assert_eq!(resolved.env.get("BASE").map(String::as_str), Some("1"));
         assert!(resolved.enabled);
     }

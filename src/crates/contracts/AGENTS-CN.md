@@ -13,6 +13,7 @@
 | `kernel-api` | Host↔kernel facade：DTO、trait 签名和错误类型 | (none) |
 | `product-domains` | 产品领域 DTO、规则、策略和窄 port | [AGENTS.md](product-domains/AGENTS.md) |
 | `runtime-ports` | runtime owner crate 使用的 trait 和 port | [AGENTS.md](runtime-ports/AGENTS.md) |
+| `disposable` | 可逆注册与释放 RAII 原语 | [AGENTS.md](disposable/AGENTS.md) |
 
 ## 放置规则
 

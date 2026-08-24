@@ -1,8 +1,0 @@
-{
-  "uiEntry": "dist/ui.bundle.js",
-  "workerEntry": null,
-  "styleEntries": [
-    "style.css"
-  ],
-  "buildMode": "bundledEsm"
-}

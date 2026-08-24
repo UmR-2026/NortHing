@@ -94,6 +94,9 @@ impl ConversationCoordinator {
             context: HashMap::new(),
             subagent_parent_info: None,
             delegation_policy: DelegationPolicy::top_level(),
+            // Intentional exemption (manual compaction): the `/compact` maintenance turn is a
+            // machine-initiated context-compression pass with no interactive user to approve,
+            // so the tool-confirmation gate is skipped by design.
             skip_tool_confirmation: true,
             runtime_tool_restrictions: ToolRuntimeRestrictions::default(),
             workspace_services: manual_workspace_services,

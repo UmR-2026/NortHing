@@ -57,12 +57,6 @@ pub struct AppState {
     /// to Rust via the `set-skill-filter` callback. Empty
     /// string = show all.
     skills_filter: Mutex<String>,
-    /// Phase I.3 (2026-06-20): the actor runtime, constructed at
-    /// `create_ui` time when `USE_LIGHTWEIGHT_ACTOR = true`. The
-    /// `OnceLock` stays empty when the flag is false (the default).
-    /// Future Phase I.x work can use this to replace the heavy
-    /// `ConversationCoordinator::execute_hidden_subagent_internal` path.
-    actor_runtime: std::sync::OnceLock<std::sync::Arc<northhing_agent_dispatch::ActorRuntime>>,
     /// A7: tracks which session is currently streaming a response.
     /// Set when user sends a message, cleared when response completes.
     current_streaming_session: Mutex<Option<String>>,
@@ -100,7 +94,6 @@ impl AppState {
             current_session_id: Mutex::new(String::new()),
             load_more_cursor: Mutex::new(None),
             show_subagents: Mutex::new(true),
-            actor_runtime: std::sync::OnceLock::new(),
             current_streaming_session: Mutex::new(None),
             active_turn_id: Mutex::new(None),
             session_metadata: Mutex::new(std::collections::HashMap::new()),
@@ -128,26 +121,6 @@ impl AppState {
             .expect("AppState::global() called before install_global()")
             .clone()
     }
-
-    /// Phase I.3: install the actor runtime (called from
-    /// `maybe_construct_actor_runtime` when the flag is on). Idempotent
-    /// — the first setter wins, subsequent calls are ignored.
-    pub fn set_actor_runtime(&self, runtime: std::sync::Arc<northhing_agent_dispatch::ActorRuntime>) {
-        let _ = self.actor_runtime.set(runtime);
-    }
-
-    /// Phase I.3: get a reference to the actor runtime, if it was
-    /// constructed. Returns `None` when `USE_LIGHTWEIGHT_ACTOR` is false.
-    /// `#[allow(dead_code)]` because Phase I.3 only constructs the
-    /// runtime — Phase I.x (the next plan phase) will replace the
-    /// `ConversationCoordinator::execute_hidden_subagent_internal` call
-    /// site with `state.actor_runtime().spawn_actor(...)` and use this
-    /// getter for the first time.
-    #[allow(dead_code)]
-    pub fn actor_runtime(&self) -> Option<std::sync::Arc<northhing_agent_dispatch::ActorRuntime>> {
-        self.actor_runtime.get().cloned()
-    }
-
     /// Mark the kernel facade core as initialized
     pub fn set_core_ready(&self) {
         let _ = self.core_ready.set(());
@@ -156,15 +129,6 @@ impl AppState {
     /// Get the agentic system, or None if not yet initialized
     pub fn get_agentic_system(&self) -> Option<&()> {
         self.core_ready.get()
-    }
-
-    /// K.2.3 follow-up: get the `ConversationCoordinator` (if
-    /// initialized). Used by `maybe_construct_actor_runtime` to
-    /// forward the runtime into the coordinator's `ToolPipeline`.
-    pub fn coordinator(
-        &self,
-    ) -> Option<std::sync::Arc<northhing_core::agentic::coordination::ConversationCoordinator>> {
-        northhing_core::agentic::coordination::global_coordinator()
     }
 
     /// Get the current session ID

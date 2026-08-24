@@ -1,5 +1,4 @@
 //! System prompts module providing main dialogue and agent dialogue prompts
-use crate::agentic::remote_file_delivery::user_workspace_relative_file_link;
 use crate::agentic::tools::implementations::ExecCommandTool;
 use crate::agentic::util::remote_workspace_layout::build_remote_workspace_layout_preview;
 use crate::agentic::workspace::WorkspaceBackend;
@@ -96,8 +95,6 @@ pub struct PromptBuilderContext {
     pub tool_listing_sections: ToolListingSections,
     /// Runtime facts needed by the current model-visible tool set.
     pub runtime_context_needs: RuntimeContextNeeds,
-    /// Remote mobile/bot turns need `computer://` links for file delivery.
-    pub remote_file_delivery_channel: bool,
     /// Context window size from model config (tokens).
     pub context_window: Option<u32>,
     /// Max output tokens from model config.
@@ -116,7 +113,6 @@ impl PromptBuilderContext {
             supports_image_understanding: None,
             tool_listing_sections: ToolListingSections::default(),
             runtime_context_needs: RuntimeContextNeeds::default(),
-            remote_file_delivery_channel: false,
             context_window: None,
             max_output_tokens: None,
         }
@@ -149,11 +145,6 @@ impl PromptBuilderContext {
     ) -> Self {
         self.remote_execution = Some(execution);
         self.remote_project_layout = project_layout;
-        self
-    }
-
-    pub fn with_remote_file_delivery_channel(mut self, enabled: bool) -> Self {
-        self.remote_file_delivery_channel = enabled;
         self
     }
 

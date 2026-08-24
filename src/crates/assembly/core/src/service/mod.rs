@@ -20,8 +20,6 @@ pub mod i18n; // I18n service
 pub mod lsp; // LSP (Language Server Protocol) system
 #[cfg(all(feature = "service-integrations", feature = "product-full"))]
 pub mod mcp; // MCP (Model Context Protocol) system
-#[cfg(all(feature = "service-integrations", feature = "product-full"))]
-pub mod remote_connect; // Remote Connect (phone → desktop)
 pub mod remote_ssh; // Remote SSH (desktop → server)
 #[cfg(feature = "service-integrations")]
 pub mod review_platform; // Pull request review platform adapters
@@ -31,6 +29,7 @@ pub mod search; // Workspace search via managed flashgrep daemon
 pub mod session; // Session persistence
 #[cfg(feature = "product-full")]
 pub mod session_usage; // Session runtime usage reports
+pub mod skill_watch; // Skill filesystem watcher and live reload
 #[cfg(feature = "product-full")]
 pub mod snapshot; // Snapshot-based change tracking
 #[cfg(feature = "product-full")]
@@ -45,7 +44,6 @@ pub use terminal_core as terminal;
 // Re-export main components.
 #[cfg(feature = "service-integrations")]
 pub use announcement::{AnnouncementCard, AnnouncementScheduler, AnnouncementSchedulerRef};
-pub use bootstrap::reset_workspace_persona_files_to_default;
 pub use config::{ConfigManager, ConfigProvider, ConfigService};
 #[cfg(feature = "product-full")]
 pub use cron::{global_cron_service, set_global_cron_service, CronEventSubscriber, CronService};
@@ -83,6 +81,7 @@ pub use search::{
     WorkspaceSearchRepoPhase, WorkspaceSearchRepoStatus, WorkspaceSearchService, WorkspaceSearchTaskKind,
     WorkspaceSearchTaskPhase, WorkspaceSearchTaskState, WorkspaceSearchTaskStatus,
 };
+pub use skill_watch::{global_skill_watch_service, set_global_skill_watch_service, SkillWatchService};
 #[cfg(feature = "product-full")]
 pub use snapshot::SnapshotService;
 pub use system::{

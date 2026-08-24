@@ -4,7 +4,6 @@ use super::{
     PLACEHOLDER_SESSION_ID, PLACEHOLDER_VISUAL_MODE,
 };
 use crate::agentic::identity::{identity_exists, load_identity};
-use crate::agentic::remote_file_delivery::user_workspace_relative_file_link;
 use crate::service::agent_memory::build_workspace_agent_memory_prompt;
 use crate::service::bootstrap::build_workspace_persona_prompt;
 use crate::util::errors::NortHingResult;
@@ -117,10 +116,7 @@ impl PromptBuilder {
                     .clone()
                     .unwrap_or_else(|| format!("unbound-{}", chrono::Local::now().format("%Y%m%d-%H%M%S")))
             });
-            let report_link = user_workspace_relative_file_link(
-                &format!(".northhing/sessions/{session_id}/research/report.md"),
-                self.context.remote_file_delivery_channel,
-            );
+            let report_link = format!(".northhing/sessions/{session_id}/research/report.md");
             result = result.replace(PLACEHOLDER_DEEP_RESEARCH_REPORT_LINK, &report_link);
         }
 
@@ -254,10 +250,7 @@ The configured **primary model does not accept image inputs**. When using **`Com
                     .clone()
                     .unwrap_or_else(|| format!("unbound-{}", chrono::Local::now().format("%Y%m%d-%H%M%S")))
             });
-            let report_link = user_workspace_relative_file_link(
-                &format!(".northhing/sessions/{session_id}/research/report.md"),
-                self.context.remote_file_delivery_channel,
-            );
+            let report_link = format!(".northhing/sessions/{session_id}/research/report.md");
             result = result.replace(PLACEHOLDER_DEEP_RESEARCH_REPORT_LINK, &report_link);
         }
 

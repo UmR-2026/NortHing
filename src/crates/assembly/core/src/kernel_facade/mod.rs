@@ -14,8 +14,7 @@ use crate::agentic::core::SessionConfig;
 
 // Re-exports for DTO types used in trait method signatures
 pub use northhing_kernel_api::events::{
-    BackendEventDto, BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase, TurnErrorKind,
-    TurnPhaseKind,
+    BannerLevel, KernelEventDto, SubscriptionId, ToolCallDto, ToolCallPhase, TurnErrorKind, TurnPhaseKind,
 };
 pub use northhing_kernel_api::session::{
     BranchId, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, PersistenceHandleDto,

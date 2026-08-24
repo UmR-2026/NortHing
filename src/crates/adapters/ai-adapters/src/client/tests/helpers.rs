@@ -11,12 +11,20 @@ use crate::client::AIClient;
 use crate::types::{AIConfig, ReasoningMode};
 use serde_json::Value;
 
+/// Fixture API key for body-builder tests, injected from the environment so
+/// no credential-shaped literal ships in test sources (Mimosa CWE-798 rule).
+/// The value never reaches an assertion — request-body builders only shape
+/// the JSON payload; keys travel in headers at send time.
+pub(super) fn fixture_api_key() -> String {
+    std::env::var("NORTHHING_TEST_API_KEY").unwrap_or_default()
+}
+
 pub(super) fn make_test_client(format: &str, custom_request_body: Option<Value>) -> AIClient {
     AIClient::new(AIConfig {
         name: format!("{}-test", format),
         base_url: "https://example.com/v1".to_string(),
         request_url: "https://example.com/v1/chat/completions".to_string(),
-        api_key: "test-key".to_string(),
+        api_key: fixture_api_key(),
         model: "test-model".to_string(),
         format: format.to_string(),
         context_window: 128000,

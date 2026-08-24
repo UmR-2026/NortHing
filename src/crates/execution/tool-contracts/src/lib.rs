@@ -48,9 +48,9 @@ pub use framework::{
     StaticToolProviderPlan, ToolCatalogRuntime, ToolCatalogSnapshotProvider, ToolContextFacts, ToolDecoratorRef,
     ToolExecutionAccessError, ToolExposure, ToolManifestDefinition, ToolManifestPolicyResolution,
     ToolManifestPolicyTool, ToolPathBackend, ToolPathContractError, ToolPathOperation, ToolPathPolicy,
-    ToolPathResolution, ToolRef, ToolRegistry, ToolRegistryItem, ToolRenderOptions, ToolRestrictionError, ToolResult,
-    ToolRuntimeAssembly, ToolRuntimeRestrictions, ToolWorkspaceKind, ValidationResult, GET_TOOL_SPEC_TOOL_NAME,
-    NORTHHING_RUNTIME_URI_PREFIX,
+    ToolPathResolution, ToolRef, ToolRegistrationGuard, ToolRegistry, ToolRegistryItem, ToolRenderOptions,
+    ToolRestrictionError, ToolResult, ToolRuntimeAssembly, ToolRuntimeRestrictions, ToolWorkspaceKind,
+    ValidationResult, GET_TOOL_SPEC_TOOL_NAME, NORTHHING_RUNTIME_URI_PREFIX,
 };
 pub use input_validator::InputValidator;
 pub use northhing_core_types::ToolImageAttachment;

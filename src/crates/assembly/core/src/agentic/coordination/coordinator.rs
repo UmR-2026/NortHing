@@ -25,9 +25,6 @@ use crate::agentic::goal_mode::{
     user_facing_thread_goal_error, ThreadGoalRuntime, ThreadGoalStore,
 };
 use crate::agentic::image_analysis::ImageContextData;
-use crate::agentic::remote_file_delivery::{
-    needs_computer_links_for_source, remote_file_delivery_reminder, TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY,
-};
 use crate::agentic::round_preempt::DialogRoundInjectionSource;
 use crate::agentic::session::SessionManager;
 use crate::agentic::side_question::build_btw_user_input;
@@ -35,12 +32,9 @@ use crate::agentic::skill_agent_snapshot::{
     diff_skill_agent_snapshot, resolve_skill_agent_snapshot, TurnSkillAgentSnapshot,
 };
 use crate::agentic::tools::pipeline::{SubagentParentInfo, ToolPipeline};
-use crate::agentic::tools::{
-    is_miniapp_headless_agent_run, miniapp_headless_agent_tool_restrictions, ToolRuntimeRestrictions,
-};
+use crate::agentic::tools::ToolRuntimeRestrictions;
 use crate::agentic::workspace::WorkspaceServices;
 use crate::agentic::WorkspaceBinding;
-use crate::service::bootstrap::{ensure_workspace_persona_files_for_prompt, is_workspace_bootstrap_pending};
 use crate::service::config::global::GlobalConfigManager;
 use crate::service::remote_ssh::normalize_remote_workspace_path;
 use crate::service::session::{SessionRelationship, SessionRelationshipKind};
@@ -249,37 +243,6 @@ pub(crate) struct HiddenSubagentExecutionRequest {
 }
 
 pub use northhing_runtime_ports::DialogTriggerSource;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssistantBootstrapSkipReason {
-    BootstrapNotRequired,
-    SessionHasExistingTurns,
-    SessionNotIdle,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssistantBootstrapBlockReason {
-    ModelUnavailable,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AssistantBootstrapEnsureOutcome {
-    Started {
-        session_id: String,
-        turn_id: String,
-    },
-    Skipped {
-        session_id: String,
-        reason: AssistantBootstrapSkipReason,
-    },
-    Blocked {
-        session_id: String,
-        reason: AssistantBootstrapBlockReason,
-        detail: String,
-    },
-}
-
-pub const ASSISTANT_BOOTSTRAP_AGENT_TYPE: &str = "Claw";
 
 /// Cancel token cleanup guard
 ///

@@ -1,14 +1,17 @@
-use super::registry_types::{ToolRef, ToolRegistry};
+use super::registry_types::{ToolRef, ToolRegistrationGuard, ToolRegistry};
+use crate::agentic::tools::framework::Tool;
 use tracing::{debug, info, warn};
 
 impl ToolRegistry {
-    /// Dynamically register MCP tools
-    pub fn register_mcp_tools(&mut self, tools: Vec<ToolRef>) {
+    /// Dynamically register MCP tools using RAII guards
+    pub fn register_mcp_tools_guarded(&mut self, tools: Vec<ToolRef>) -> Vec<ToolRegistrationGuard<dyn Tool>> {
         let tool_count = tools.len();
-        info!("Registering MCP tools: count={}", tool_count);
+        info!("Registering MCP tools (guarded): count={}", tool_count);
 
         let before_count = self.tool_names().len();
         debug!("Tool count before registration: {}", before_count);
+
+        let mut guards = Vec::with_capacity(tool_count);
 
         for (index, tool) in tools.into_iter().enumerate() {
             let name = tool.name().to_string();
@@ -19,7 +22,8 @@ impl ToolRegistry {
                 warn!("Tool already exists, will be overwritten: tool_name={}", name);
             }
 
-            self.register_tool(tool);
+            let guard = self.register_tool_guarded(tool);
+            guards.push(guard);
             debug!("MCP tool registered: tool_name={}", name);
         }
 
@@ -30,6 +34,16 @@ impl ToolRegistry {
             "MCP tools registration completed: before={}, after={}, added={}",
             before_count, after_count, added_count
         );
+
+        guards
+    }
+
+    /// Dynamically register MCP tools persistently (compatibility method)
+    pub fn register_mcp_tools(&mut self, tools: Vec<ToolRef>) {
+        let guards = self.register_mcp_tools_guarded(tools);
+        for guard in guards {
+            guard.disarm();
+        }
     }
 
     /// Remove all tools from the MCP server
@@ -67,8 +81,13 @@ impl ToolRegistry {
         count
     }
 
-    /// Register a single tool
+    /// Register a single tool persistently (compatibility method)
     pub fn register_tool(&mut self, tool: ToolRef) {
         self.inner.register_tool(tool);
+    }
+
+    /// Register a single tool returning an RAII guard
+    pub fn register_tool_guarded(&mut self, tool: ToolRef) -> ToolRegistrationGuard<dyn Tool> {
+        self.inner.register_tool_guarded(tool)
     }
 }

@@ -25,7 +25,6 @@ use crate::agentic::execution::types::FinishReason;
 use crate::agentic::image_analysis::{
     build_multimodal_message_with_images, process_image_contexts_for_provider, ImageContextData, ImageLimits,
 };
-use crate::agentic::remote_file_delivery::TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY;
 use crate::agentic::round_preempt::RoundInjectionKind;
 use crate::agentic::session::{CompressionMode, ContextCompressor, SessionManager};
 use crate::agentic::skill_agent_snapshot::build_skill_agent_tool_listing_sections_from_snapshot;
@@ -101,11 +100,6 @@ impl ExecutionEngine {
         runtime_context_needs: RuntimeContextNeeds,
     ) -> Option<PromptBuilderContext> {
         let workspace = context.workspace.as_ref()?;
-        let remote_file_delivery_channel = context
-            .context
-            .get(TOOL_CONTEXT_REMOTE_FILE_DELIVERY_KEY)
-            .and_then(|value| value.parse::<bool>().ok())
-            .unwrap_or(false);
 
         let mut prompt_context = build_prompt_context_for_workspace(
             workspace,
@@ -116,8 +110,7 @@ impl ExecutionEngine {
             tool_listing_sections,
             runtime_context_needs,
         )
-        .await
-        .map(|ctx| ctx.with_remote_file_delivery_channel(remote_file_delivery_channel))?;
+        .await?;
 
         // Look up model config and fill context_window / max_output_tokens.
         if let Ok(config_service) = get_global_config_service().await {

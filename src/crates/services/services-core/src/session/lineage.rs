@@ -16,7 +16,7 @@ const LINEAGE_CUSTOM_METADATA_KEYS: &[&str] = &[
     "subagentType",
 ];
 
-const BRANCH_EXCLUDED_TAGS: &[&str] = &["btw", "review", "deep_review", "miniapp", "subagent"];
+const BRANCH_EXCLUDED_TAGS: &[&str] = &["btw", "review", "deep_review", "subagent"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct SubagentRelationshipFacts {

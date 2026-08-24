@@ -23,11 +23,22 @@ pub trait MCPConfigStore: Send + Sync {
 
 pub struct MCPConfigService {
     config_store: Arc<dyn MCPConfigStore>,
+    /// Serializes the read-modify-write windows of the mutating paths
+    /// (`save_user_config`, `save_project_config`, `delete_server_config`).
+    /// Without it, two concurrent saves/deletes on the same instance can both
+    /// read the same baseline and each write back, losing the other's change.
+    /// Read paths (`load_*`) deliberately do not take this lock. Scope is a
+    /// single service instance; cross-instance / cross-process serialization is
+    /// out of scope for this guard.
+    write_lock: tokio::sync::Mutex<()>,
 }
 
 impl MCPConfigService {
     pub fn new(config_store: Arc<dyn MCPConfigStore>) -> Self {
-        Self { config_store }
+        Self {
+            config_store,
+            write_lock: tokio::sync::Mutex::new(()),
+        }
     }
 
     fn parse_config_array(&self, servers: &[serde_json::Value], location: ConfigLocation) -> Vec<MCPServerConfig> {
@@ -210,16 +221,19 @@ impl MCPConfigService {
     }
 
     async fn save_user_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
-        let current_value = self
-            .config_store
-            .get_config_value("mcp_servers")
-            .await?
-            .unwrap_or_else(|| serde_json::json!({ "mcpServers": {} }));
-
-        let mut mcp_servers = if let Some(obj) = current_value.get("mcpServers").and_then(|v| v.as_object()) {
-            obj.clone()
-        } else {
-            serde_json::Map::new()
+        let _write_guard = self.write_lock.lock().await;
+        let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
+            None => serde_json::Map::new(),
+            Some(current_value) => match current_value.get("mcpServers").and_then(|v| v.as_object()) {
+                Some(existing) => existing.clone(),
+                // A write path must not clobber an existing `mcp_servers` value it
+                // cannot interpret (mirrors `load_project_configs_strict`).
+                None => {
+                    return Err(MCPRuntimeError::configuration(
+                        "Refusing to overwrite user-level MCP configs with unrecognized existing format",
+                    ));
+                }
+            },
         };
 
         mcp_servers.insert(config.id.clone(), config_to_cursor_format(config));
@@ -237,6 +251,7 @@ impl MCPConfigService {
     }
 
     async fn save_project_config(&self, config: &MCPServerConfig) -> MCPRuntimeResult<()> {
+        let _write_guard = self.write_lock.lock().await;
         let mut configs = self.load_project_configs_strict().await?;
 
         if let Some(existing) = configs.iter_mut().find(|c| c.id == config.id) {
@@ -253,19 +268,25 @@ impl MCPConfigService {
     }
 
     pub async fn delete_server_config(&self, server_id: &str) -> MCPRuntimeResult<()> {
-        let current_value = self
-            .config_store
-            .get_config_value("mcp_servers")
-            .await?
-            .unwrap_or_else(|| serde_json::json!({ "mcpServers": {} }));
-
-        let mut mcp_servers = if let Some(obj) = current_value.get("mcpServers").and_then(|v| v.as_object()) {
-            obj.clone()
-        } else {
-            return Err(MCPRuntimeError::not_found(format!(
-                "MCP server config not found: {}",
-                server_id
-            )));
+        let _write_guard = self.write_lock.lock().await;
+        let mut mcp_servers = match self.config_store.get_config_value("mcp_servers").await? {
+            None => {
+                return Err(MCPRuntimeError::not_found(format!(
+                    "MCP server config not found: {}",
+                    server_id
+                )));
+            }
+            Some(current_value) => match current_value.get("mcpServers").and_then(|v| v.as_object()) {
+                Some(existing) => existing.clone(),
+                // An unrecognized existing value must fail closed instead of being
+                // conflated with "server not found": proceeding would clobber a
+                // value this path cannot interpret.
+                None => {
+                    return Err(MCPRuntimeError::configuration(
+                        "Refusing to overwrite user-level MCP configs with unrecognized existing format",
+                    ));
+                }
+            },
         };
 
         if mcp_servers.remove(server_id).is_none() {

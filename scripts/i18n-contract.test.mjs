@@ -12,14 +12,11 @@ const contractPath = path.join(root, 'src', 'shared', 'i18n', 'contract', 'local
 const sharedTermsDir = path.join(root, 'src', 'shared', 'i18n', 'resources', 'shared');
 const expectedGeneratedFiles = [
   'src/web-ui/src/infrastructure/i18n/presets/generatedLocaleContract.ts',
-  'src/mobile-web/src/i18n/generatedLocaleContract.ts',
   'northhing-Installer/src/i18n/generatedLocaleContract.ts',
   'src/crates/assembly/core/src/service/i18n/generated_locale_contract.rs',
   'northhing-Installer/src-tauri/src/installer/generated_locale_contract.rs',
 ];
-const expectedGeneratedJsonFiles = [
-  'src/apps/relay-server/static/homepage/i18n.shared.json',
-];
+const expectedGeneratedJsonFiles = [];
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8'));
@@ -178,9 +175,6 @@ test('shared i18n terms are consumed by each product surface runtime', () => {
   const webI18nSource = readText('src/web-ui/src/infrastructure/i18n/core/I18nService.ts');
   assert.match(webI18nSource, /SHARED_TERMS_BY_LOCALE/, 'Web UI should merge shared terms into i18next resources');
 
-  const mobileMessagesSource = readText('src/mobile-web/src/i18n/messages.ts');
-  assert.match(mobileMessagesSource, /SHARED_TERMS_BY_LOCALE/, 'mobile-web should expose shared terms through its message tree');
-
   const installerLanguagesSource = readText('northhing-Installer/src/i18n/languages.ts');
   assert.match(installerLanguagesSource, /SHARED_TERMS_BY_APP_LANGUAGE/, 'installer should merge shared terms into its i18next resources');
 
@@ -198,14 +192,6 @@ test('frontend runtimes use generated locale defaults and fallback chains', () =
 
   const webI18nSource = readText('src/web-ui/src/infrastructure/i18n/core/I18nService.ts');
   assert.match(webI18nSource, /getLocaleFallbackChain/, 'Web UI i18next should use the generated locale fallback chain');
-
-  const mobileProviderSource = readText('src/mobile-web/src/i18n/I18nProvider.tsx');
-  assert.match(mobileProviderSource, /getMobileFallbackChain/, 'mobile-web translate should use the generated locale fallback chain');
-  assert.doesNotMatch(
-    mobileProviderSource,
-    /messages\[DEFAULT_LANGUAGE\]/,
-    'mobile-web translate should not fall back directly to the surface default only',
-  );
 
   const installerI18nSource = readText('northhing-Installer/src/i18n/index.ts');
   assert.match(installerI18nSource, /DEFAULT_INSTALLER_UI_LANGUAGE/, 'installer i18next should use the generated default UI language');
@@ -336,7 +322,6 @@ test('i18n audit treats locale key parity as an error', () => {
 
   assert.match(parityFunction, /reportError\(`\$\{locale\}\/\$\{namespace\}\.json is missing/, 'missing locale keys should fail i18n:audit');
   assert.match(parityFunction, /reportError\(`\$\{locale\}\/\$\{namespace\}\.json has/, 'extra locale keys should fail i18n:audit');
-  assert.match(auditSource, /auditMobileWebMessageParity/, 'mobile-web message keys should be covered by i18n:audit');
   assert.match(auditSource, /auditInstallerKeyParity/, 'installer locale keys should be covered by i18n:audit');
 });
 
@@ -357,12 +342,9 @@ test('i18n audit enforces interpolation parameter parity across resource formats
   const auditSource = readText('scripts/i18n-audit.mjs');
 
   assert.match(auditSource, /auditWebI18nextPlaceholderParity/, 'Web UI JSON placeholders should be audited');
-  assert.match(auditSource, /auditMobileWebPlaceholderParity/, 'mobile-web placeholders should be audited');
   assert.match(auditSource, /auditInstallerPlaceholderParity/, 'installer placeholders should be audited');
   assert.match(auditSource, /auditCoreFluentParity/, 'core Fluent keys and placeholders should be audited');
-  assert.match(auditSource, /auditRelayStaticHomepageResources/, 'relay static homepage resources should be audited');
   assert.match(auditSource, /extractI18nextPlaceholders/, 'i18next placeholder extraction should be explicit');
-  assert.match(auditSource, /extractMobilePlaceholders/, 'mobile placeholder extraction should be explicit');
   assert.match(auditSource, /extractFluentPlaceholders/, 'Fluent placeholder extraction should be explicit');
 });
 
@@ -630,78 +612,6 @@ auditIntegrationTest('i18n audit reports same-text zh-TW copy with a l10n signal
   }
 });
 
-auditIntegrationTest('mobile-web uses shared terms for stable shared concept labels', { concurrency: false }, () => {
-  const reportPath = 'scripts/.tmp-i18n-mobile-shared-terms-report.json';
-  const absoluteReportPath = path.join(root, reportPath);
-  fs.rmSync(absoluteReportPath, { force: true });
-
-  try {
-    const result = runI18nAudit(['--report-json', reportPath]);
-    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-
-    const report = readJson(reportPath);
-    const migratedSharedKeys = new Set([
-      'product.remote',
-      'features.workspace',
-      'modes.assistant',
-      'modes.expert',
-      'agents.claw',
-      'agents.code',
-      'agents.cowork',
-      'agents.default',
-      'tools.edit',
-      'tools.explore',
-      'tools.read',
-      'tools.shell',
-      'tools.todo',
-      'tools.write',
-    ]);
-    const mobileDuplicates = report.sharedTermDuplicates
-      .filter((entry) => entry.surface === 'mobile-web' && migratedSharedKeys.has(entry.sharedKey))
-      .map((entry) => `${entry.sharedKey}:${entry.key}:${entry.locale}`)
-      .sort();
-    const legacyMobileKeys = [
-      'common.appName',
-      'sessions.workspace',
-      'sessions.assistantMode',
-      'sessions.coworkSession',
-      'sessions.codeSession',
-      'sessions.defaultAssistant',
-      'sessions.agentClaw',
-      'sessions.proMode',
-      'workspace.title',
-      'tools.edit',
-      'tools.explore',
-      'tools.read',
-      'tools.shell',
-      'tools.todo',
-      'tools.write',
-    ];
-    const mobileSourceFiles = listFiles(path.join(root, 'src', 'mobile-web', 'src'), (file) => (
-      /\.(?:ts|tsx)$/.test(file) && !file.endsWith(`${path.sep}i18n${path.sep}messages.ts`)
-    ));
-    const legacyReferences = mobileSourceFiles.flatMap((file) => {
-      const source = fs.readFileSync(file, 'utf8');
-      return legacyMobileKeys
-        .filter((key) => source.includes(`'${key}'`) || source.includes(`"${key}"`))
-        .map((key) => `${path.relative(root, file)}:${key}`);
-    }).sort();
-
-    assert.deepEqual(
-      mobileDuplicates,
-      [],
-      'mobile-web should read migrated stable labels from shared terms instead of copying values',
-    );
-    assert.deepEqual(
-      legacyReferences,
-      [],
-      'mobile-web source should not call removed local keys for migrated shared terms',
-    );
-  } finally {
-    fs.rmSync(absoluteReportPath, { force: true });
-  }
-});
-
 auditIntegrationTest('web-ui uses shared terms for stable navigation and feature labels', { concurrency: false }, () => {
   const reportPath = 'scripts/.tmp-i18n-web-ui-shared-terms-report.json';
   const absoluteReportPath = path.join(root, reportPath);
@@ -817,8 +727,8 @@ test('installer uses the shared product name for titlebar defaults', { concurren
   }
 });
 
-auditIntegrationTest('core and relay static homepage reuse shared product and feature terms', { concurrency: false }, () => {
-  const reportPath = 'scripts/.tmp-i18n-core-relay-shared-terms-report.json';
+auditIntegrationTest('core reuses shared product terms', { concurrency: false }, () => {
+  const reportPath = 'scripts/.tmp-i18n-core-shared-terms-report.json';
   const absoluteReportPath = path.join(root, reportPath);
   fs.rmSync(absoluteReportPath, { force: true });
 
@@ -829,15 +739,14 @@ auditIntegrationTest('core and relay static homepage reuse shared product and fe
     const report = readJson(reportPath);
     const blockedDuplicates = report.sharedTermDuplicates
       .filter((entry) => (
-        (entry.surface === 'core' && entry.sharedKey === 'product.name') ||
-        (entry.surface === 'relay-static-homepage' && entry.sharedKey === 'features.remoteControl')
+        entry.surface === 'core' && entry.sharedKey === 'product.name'
       ))
       .map((entry) => `${entry.surface}:${entry.sharedKey}:${entry.resourceKey}:${entry.locale}`)
       .sort();
     assert.deepEqual(
       blockedDuplicates,
       [],
-      'core product name and relay remote-control label should be resolved from shared terms instead of copied values',
+      'core product name should be resolved from shared terms instead of copied values',
     );
 
     for (const locale of ['en-US', 'zh-CN', 'zh-TW']) {
@@ -851,39 +760,9 @@ auditIntegrationTest('core and relay static homepage reuse shared product and fe
       /legacy_shared_term_key/,
       'core i18n service should keep a compatibility alias for legacy app-name callers',
     );
-
-    const relayMessages = readJson('src/apps/relay-server/static/homepage/i18n.json');
-    assert.deepEqual(
-      relayMessages['en-US'].flowMobileSub,
-      { $shared: 'features.remoteControl' },
-      'relay homepage should reference the shared remote-control term instead of copying it',
-    );
-    const relayShared = readJson('src/apps/relay-server/static/homepage/i18n.shared.json');
-    const sharedTerms = readJson('src/shared/i18n/resources/shared/zh-TW/terms.json');
-    assert.equal(relayShared['zh-TW'].features.remoteControl, sharedTerms.features.remoteControl);
-
-    const relayHtml = readText('src/apps/relay-server/static/homepage/index.html');
-    assert.match(relayHtml, /i18n\.shared\.json/, 'relay homepage should load its small generated shared-term resource');
-    assert.match(relayHtml, /\$shared/, 'relay homepage runtime should resolve shared-term references');
   } finally {
     fs.rmSync(absoluteReportPath, { force: true });
   }
-});
-
-auditIntegrationTest('i18n audit fails stale relay static shared-term references', { concurrency: false }, () => {
-  const relayPath = 'src/apps/relay-server/static/homepage/i18n.json';
-  const relayMessages = readJson(relayPath);
-  relayMessages['en-US'].flowMobileSub = { $shared: 'features.__missingForTest' };
-
-  withTemporaryTextFile(relayPath, `${JSON.stringify(relayMessages, null, 2)}\n`, () => {
-    const result = runI18nAudit();
-    assert.notEqual(result.status, 0, 'stale relay $shared references must fail i18n:audit');
-    assert.match(
-      `${result.stdout}\n${result.stderr}`,
-      /relay static homepage en-US key "flowMobileSub" references missing shared term "features\.__missingForTest"/,
-      'audit output should identify the stale relay shared-term reference',
-    );
-  });
 });
 
 auditIntegrationTest('i18n audit enforces governance candidate baselines', { concurrency: false }, () => {
@@ -1157,8 +1036,6 @@ test('i18n contract surface resource roots point at existing owned resources', (
         assert.ok(fs.existsSync(path.join(resourceRoot, `${locale.installer.uiCode}.json`)), `${surface} is missing ${localeId} resource JSON`);
       } else if (surface === 'core') {
         assert.ok(fs.existsSync(path.join(resourceRoot, `${localeId}.ftl`)), `${surface} is missing ${localeId} Fluent resource`);
-      } else if (surface === 'mobile-web') {
-        assert.ok(fs.existsSync(path.join(resourceRoot, 'messages.ts')), `${surface} is missing messages.ts`);
       }
     }
   }

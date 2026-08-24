@@ -47,7 +47,7 @@ northhing-events
 northhing-runtime-ports
 northhing-runtime-services      # typed service bundle / capability availability
 tool-contracts              # Cargo package: northhing-agent-tools
-tool-provider-groups        # Cargo package: northhing-tool-packs
+
 tool-execution              # Cargo package: tool-runtime
 northhing-agent-runtime         # agent kernel contracts and portable runtime decisions
 northhing-harness               # workflow descriptor / provider / registry contracts
@@ -70,14 +70,14 @@ Product Assembly
   -> product capability packs
   -> northhing-agent-runtime
   -> northhing-harness
-  -> tool-contracts / tool-provider-groups / tool-execution
+  -> tool-contracts / tool-execution
   -> northhing-runtime-services
   -> adapters / services
 
 Product Capability packs
   -> northhing-harness
   -> northhing-agent-runtime
-  -> tool-provider-groups
+
   -> northhing-product-domains
 
 northhing-agent-runtime
@@ -434,15 +434,11 @@ impl AgentRuntime {
 
 æå±?crateï¼?
 
-- `tool-contracts`ï¼Cargo package: `northhing-agent-tools`ï¼?
-- `tool-provider-groups`ï¼Cargo package: `northhing-tool-packs`ï¼?
-- `tool-execution`ï¼Cargo package: `tool-runtime`ï¼?
+- `tool-contracts`ï¼Cargo package: `northhing-agent-tools`ï¼?- `tool-execution`ï¼Cargo package: `tool-runtime`ï¼?
 
 ç®æ èè´£ï¼?
 
-- `tool-contracts`ï¼tool DTOãmanifestãexposureãschemaãpath policyãresult policyãadmission gate å?provider-neutral registry assemblyã?
-- `tool-provider-groups`ï¼tool provider group feature metadata å?provider planã?
-- `tool-execution`ï¼ä½å±?file/search/tool IO helperï¼ä¸æ¥æäº§å registryãpermission policy æ?agent-facing tool surfaceã?
+- `tool-contracts`ï¼tool DTOãmanifestãexposureãschemaãpath policyãresult policyãadmission gate å?provider-neutral registry assemblyã?- `tool-execution`ï¼ä½å±?file/search/tool IO helperï¼ä¸æ¥æäº§å registryãpermission policy æ?agent-facing tool surfaceã?
 
 å»ºè®®æ¨¡åï¼?
 
@@ -453,9 +449,7 @@ tool-contracts
   file_guidance.rs
   tool_result_storage.rs
   tool_execution_presentation.rs
-
-tool-provider-groups
-  provider_groups.rs
+
 
 tool-execution
   filesystem.rs
@@ -969,7 +963,7 @@ Product æµè¯ï¼?
 - Agent Runtime SDK faÃ§ade è½éè¿ fake model providerãfake runtime servicesãfake tool provider å?fake
   harness provider å®ææå°?session / turn / event stream æµç¨ã?
 - `northhing-runtime-services` æä¾ typed service injectionï¼å¹¶ç?boundary check ä¿æ¤ã?
-- `tool-contracts`ã`tool-provider-groups` å?`tool-execution` åå«æ¿æ tool contractãprovider group plan åä½å±?execution helperï¼å·ä½?tool éè¿ Product Assembly æ³¨åã?
+- `tool-contracts` å?`tool-execution` åå«æ¿æ tool contract åä½å±?execution helperï¼å·ä½?tool éè¿ Product Assembly æ³¨åã?
 - `northhing-harness` æ¯æå·¥ä½æµ?provider æ©å±ã?
 - `northhing-core` åªä½ä¸ºå¼å®?facade / product-full assemblyã?
 - ææäº§åå½¢æéè¿ Product Assembly æ¾å¼å¯ç¨è½åã?

@@ -4,7 +4,7 @@
 
 This layer owns reusable concrete implementations that touch local systems or
 runtime infrastructure: filesystem, git, file watch, terminal, MCP, remote
-connectivity, process lifecycle, session persistence primitives, MiniApp concrete runtime IO, and similar
+connectivity, process lifecycle, session persistence primitives, and similar
 OS/network capabilities.
 
 ## Modules
@@ -12,14 +12,14 @@ OS/network capabilities.
 | Crate | Responsibility | Local doc |
 |---|---|---|
 | `services-core` | Reusable local service primitives, filesystem helpers, session storage layout/indexing/deletion, metadata store CRUD/index rebuild, metadata construction/counter/index/field mutation/lineage rules, and JSON file IO without product assembly decisions | [AGENTS.md](services-core/AGENTS.md) |
-| `services-integrations` | Concrete MCP, git, remote, file-watch, MiniApp runtime, product-domain port implementations, and platform-neutral Remote Connect primitives | [AGENTS.md](services-integrations/AGENTS.md) |
+| `services-integrations` | Concrete MCP, git, remote, file-watch, and product-domain port implementations | [AGENTS.md](services-integrations/AGENTS.md) |
 | `terminal` | PTY, shell integration, and terminal session infrastructure | [AGENTS.md](terminal/AGENTS.md) |
 | `debug-log` | Debug-mode runtime logging leaf crate (`log_event` + `COMP_*` component constants and the disk-append pipeline); shared by product surfaces and re-exported from `assembly/core` | (none) |
 
 ## Placement Rules
 
 - Put concrete OS, process, filesystem, git, terminal, MCP, remote SSH,
-  file-watch, MiniApp runtime IO, and network service implementations here.
+  file-watch, session persistence primitives, and network service implementations here.
 - Implement `contracts`, `execution`, or `contracts/product-domains` ports here
   when the implementation needs concrete dependencies.
 - Keep protocol/transport projection in `adapters`, and keep product capability

@@ -113,8 +113,25 @@ impl ConfigManager {
 
     /// Gets a configuration value by dot-path from the given config.
     fn get_value_by_path_from_config(&self, config: &GlobalConfig, path: &str) -> NortHingResult<serde_json::Value> {
-        let config_value = serde_json::to_value(config)
+        let mut config_value = serde_json::to_value(config)
             .map_err(|e| NortHingError::config(format!("Failed to serialize config: {}", e)))?;
+
+        // Re-inject in-memory api_keys so in-memory queries can see them
+        if let Some(models) = config_value
+            .get_mut("ai")
+            .and_then(|ai| ai.get_mut("models"))
+            .and_then(|m| m.as_array_mut())
+        {
+            for (i, m) in models.iter_mut().enumerate() {
+                if let Some(obj) = m.as_object_mut() {
+                    if let Some(orig) = config.ai.models.get(i) {
+                        if !orig.api_key.is_empty() {
+                            obj.insert("api_key".to_string(), serde_json::Value::String(orig.api_key.clone()));
+                        }
+                    }
+                }
+            }
+        }
 
         let keys: Vec<&str> = path.split('.').collect();
         let mut current = &config_value;
@@ -130,9 +147,24 @@ impl ConfigManager {
 
     /// Sets a configuration value by dot-path.
     fn set_value_by_path(&mut self, path: &str, value: serde_json::Value) -> NortHingResult<()> {
+        let memory_keys: std::collections::HashMap<String, String> = self
+            .config
+            .ai
+            .models
+            .iter()
+            .map(|m| (m.id.clone(), m.api_key.clone()))
+            .collect();
+
         if path.is_empty() {
             self.config = serde_json::from_value(value)
                 .map_err(|e| NortHingError::config(format!("Failed to deserialize config: {}", e)))?;
+            for model in self.config.ai.models.iter_mut() {
+                if model.api_key.is_empty() {
+                    if let Some(key) = memory_keys.get(&model.id) {
+                        model.api_key = key.clone();
+                    }
+                }
+            }
             return Ok(());
         }
 
@@ -143,6 +175,13 @@ impl ConfigManager {
         if keys.is_empty() {
             self.config = serde_json::from_value(value)
                 .map_err(|e| NortHingError::config(format!("Failed to deserialize config: {}", e)))?;
+            for model in self.config.ai.models.iter_mut() {
+                if model.api_key.is_empty() {
+                    if let Some(key) = memory_keys.get(&model.id) {
+                        model.api_key = key.clone();
+                    }
+                }
+            }
             return Ok(());
         }
 
@@ -169,6 +208,14 @@ impl ConfigManager {
 
         self.config = serde_json::from_value(config_value)
             .map_err(|e| NortHingError::config(format!("Failed to deserialize updated config: {}", e)))?;
+
+        for model in self.config.ai.models.iter_mut() {
+            if model.api_key.is_empty() {
+                if let Some(key) = memory_keys.get(&model.id) {
+                    model.api_key = key.clone();
+                }
+            }
+        }
 
         Ok(())
     }

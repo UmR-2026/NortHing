@@ -253,8 +253,7 @@ if (appExePath) {
   }
 
   // Keep installer payload aligned with the desktop app's runtime lookup paths.
-  // `mobile-web` may be emitted as a sibling directory in no-bundle builds.
-  const runtimeDirs = ["resources", "locales", "swiftshader", "mobile-web"];
+  const runtimeDirs = ["resources", "locales", "swiftshader"];
   for (const dirName of runtimeDirs) {
     const srcDir = path.join(releaseDir, dirName);
     if (!fs.existsSync(srcDir) || !fs.statSync(srcDir).isDirectory()) {

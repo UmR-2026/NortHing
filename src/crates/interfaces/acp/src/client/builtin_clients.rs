@@ -2,6 +2,12 @@ use std::collections::HashMap;
 
 use super::config::{AcpClientConfig, AcpClientPermissionMode};
 
+/// Pinned claude-code-acp adapter package version for supply chain security (pinned 2026-08-21 from npm latest).
+pub const CLAUDE_CODE_ACP_PACKAGE_PINNED: &str = "@zed-industries/claude-code-acp@0.16.2";
+
+/// Pinned codex-acp adapter package version for supply chain security (pinned 2026-08-21 from npm latest).
+pub const CODEX_ACP_PACKAGE_PINNED: &str = "@zed-industries/codex-acp@0.16.0";
+
 pub(crate) struct BuiltinAcpClientPreset {
     pub(crate) id: &'static str,
     pub(crate) command: &'static str,
@@ -43,7 +49,8 @@ const BUILTIN_ACP_CLIENT_PRESETS: &[BuiltinAcpClientPreset] = &[
     BuiltinAcpClientPreset {
         id: "claude-code",
         command: "npx",
-        args: &["--yes", "@zed-industries/claude-code-acp@latest"],
+        // Pinned 2026-08-21 from npm latest @zed-industries/claude-code-acp
+        args: &["--yes", CLAUDE_CODE_ACP_PACKAGE_PINNED],
         tool_command: "claude",
         install_package: Some("@anthropic-ai/claude-code"),
         adapter_package: Some("@zed-industries/claude-code-acp"),
@@ -52,7 +59,8 @@ const BUILTIN_ACP_CLIENT_PRESETS: &[BuiltinAcpClientPreset] = &[
     BuiltinAcpClientPreset {
         id: "codex",
         command: "npx",
-        args: &["--yes", "@zed-industries/codex-acp@latest"],
+        // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
+        args: &["--yes", CODEX_ACP_PACKAGE_PINNED],
         tool_command: "codex",
         install_package: Some("@openai/codex"),
         adapter_package: Some("@zed-industries/codex-acp"),
@@ -90,7 +98,7 @@ mod tests {
         let config = default_config_for_builtin_client("claude-code").expect("builtin config");
         assert!(config.enabled);
         assert_eq!(config.command, "npx");
-        assert_eq!(config.args, vec!["--yes", "@zed-industries/claude-code-acp@latest"]);
+        assert_eq!(config.args, vec!["--yes", CLAUDE_CODE_ACP_PACKAGE_PINNED]);
     }
 
     #[test]

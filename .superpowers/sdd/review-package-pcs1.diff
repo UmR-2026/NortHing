@@ -1,0 +1,1805 @@
+diff --git a/.superpowers/sdd/task-pcs1-report.md b/.superpowers/sdd/task-pcs1-report.md
+new file mode 100644
+index 0000000..8eedb2d
+--- /dev/null
++++ b/.superpowers/sdd/task-pcs1-report.md
+@@ -0,0 +1,156 @@
++# Task PCS-1 Report — 可逆注册原语 + 三注册表 guard 化
++
++## 1. 复用侦察（Reconnaissance）
++
++- **Cordis `DisposableList` 对照**（`_external/deepseek-harness/vendor/cordis/src/utils.ts`）：
++  - 核心机制：`push(value)` 递增序列号并返回单次删除回调；`clear()` / unwind 以 `reverse()` 逆序（LIFO）回收。
++  - 对齐点：`northhing-disposable` 中 `DisposableList` 采用 LIFO 逆序 drain 释放，`push` 返回 RAII `DisposalGuard`。
++- **提案 sketch 对照**（`docs/architecture/plugin-system-proposal.md` §P0 / §P1）：
++  - 约束：`Drop` 中禁止 await；同步反注册走 `Drop` 兜底，需 await 的资源走显式 `dispose()`。
++  - 对齐点：`DisposalGuard` 封装同步 `FnOnce() + Send + 'static` 闭包，`DisposalGuard::dispose` 与 `Drop` 均提供幂等一次性保证。
++- **B5 `ConnectionSlotGuard` RAII 先例**（git commit `6b6419b`）：
++  - 先例：`ConnectionSlotGuard` 在 `Drop` 时自动释放槽位，防 panic 泄漏。
++  - 对齐点：`ToolRegistrationGuard` 与 `AgentRegistrationGuard` 均采用 `Drop` 自动回收模式，且在反注册时比对实例指针（`Arc::ptr_eq`），防止误删后覆盖的新注册项。
++
++---
++
++## 2. 两个"二选一"设计点裁决与理由
++
++1. **`DisposableList::push` 在 list 已 dispose / drop 后的行为**：
++   - **选择**：返回 `Err(DisposableListError::Disposed)`。
++   - **理由**：符合 Rust 惯例与错误分层原则，避免在普通库调用中发生不可捕获的 panic，让调用者可做显式状态流转判断。
++2. **MCP 工具卸载路径与兼容性**：
++   - **选择**：`MCPServerManager` 内部维护 `server_tool_guards: Arc<RwLock<HashMap<String, Vec<ToolRegistrationGuard<dyn Tool>>>>>`，卸载时直接 `remove(server_id)` 释放 guard 集合；同时保留 `ToolRegistry::unregister_mcp_server_tools` 作为兜底与兼容接口。
++   - **理由**：新路径完全依托 RAII 生命周期自动回收，同时旧接口完全向下兼容，不破坏现有外部调用与测试。
++
++---
++
++## 3. Crate 命名理由
++
++- **选择**：`northhing-disposable`。
++- **理由**：
++  1. 聚焦于通用可逆注册与 RAII 生命周期原语（`Disposable`, `DisposableList`, `DisposalGuard`），不与具体的 plugin 结构过早耦合；
++  2. 保持 contracts 层契约极轻、零额外依赖（纯 stdlib）；
++  3. 与 VSCode/Cordis/Rx 等生态标准命名保持一致。
++
++---
++
++## 4. Spec 逐条合规核对
++
++1. **原语 crate (`northhing-disposable`)**：
++   - `Disposable = Box<dyn FnOnce() + Send + 'static>`。
++   - `DisposableList`: `push` 返回 `Result<DisposalGuard, DisposableListError>`；`dispose` 逆序 LIFO 执行；`Drop` 自动触发 `dispose`。
++   - `DisposalGuard`: 幂等执行，支持 `dispose()`、`disarm()` 及 `Drop` 自动执行。
++   - 单测覆盖：逆序、幂等、dispose 后 push 返回 Err、guard 提前 drop 后 list 不重复执行、Drop 自动释放、并发安全、Mutex poisoning 恢复安全。
++2. **ToolRegistry guard 化**：
++   - `ToolRegistry::register_tool_guarded(&mut self, tool) -> ToolRegistrationGuard<Tool>`。
++   - `ToolRegistrationGuard` 在 `Drop` 时比对 `Arc::ptr_eq`，仅当未被后续同名覆盖时才执行移除。
++   - 保留原 `register_tool`（内部调用 guarded 并 disarm）及 `unregister_tools_by_prefix` / `unregister_mcp_server_tools`。
++3. **AgentRegistry guard 化**：
++   - `AgentRegistry::register_agent_guarded(&self, agent, category, source, custom_config) -> Option<AgentRegistrationGuard>`。
++   - `AgentRegistrationGuard` 在 `Drop` 时比对 `Arc::ptr_eq`，仅在未被覆盖时移除。
++   - 锁中毒处理：`match agents.write() { Ok(g) => g, Err(p) => p.into_inner() }`，零 panic、零 unwrap。
++4. **MCP 注册路径 guard 化**：
++   - `ToolRegistry::register_mcp_tools_guarded` 返回 `Vec<ToolRegistrationGuard<dyn Tool>>`。
++   - `MCPServerManager` 在 `register_mcp_tools` 时收集并保存 guards；`unregister_mcp_tools` / `stop_server` 释放 guards。
++5. **文档与登记面同步（家规 2）**：
++   - 根 `Cargo.toml` `workspace.members` 添加 `"src/crates/contracts/disposable"`。
++   - `scripts/core-boundaries/rules/crate-layout.mjs` 添加 `disposable` 登记。
++   - `scripts/core-boundaries/rules/crate-rules.mjs` 添加 `disposable` 依赖边界规则。
++   - `docs/status/surfaces.md` 添加 `disposable` 条目。
++   - `src/crates/contracts/AGENTS.md` 与 `AGENTS-CN.md` 添加模块说明。
++6. **不顺手碰范围**：
++   - 未触碰 T2-9 批 2 项、未触碰 PCS-2 skills、未触碰任何 UI。
++
++---
++
++## 5. Rust 编译错误修复记录
++
++| 错误代码 | 原因与位置 | 修复方式 | 修复层级 |
++|---|---|---|---|
++| `E0310` | `ToolRegistrationGuard<Tool>` 闭包要求 `'static` 生命周期 | 为泛型参数添加 `Tool: ToolRegistryItem + ?Sized + 'static` 约束 | 设计层（类型生命周期边界） |
++| `E0277` / `E0369` | `TestTool` 未实现 `PartialEq`/`Debug` | 测试断言改为 `Option::is_none()` / `is_some()` | 机制层（测试断言表达式） |
++| `E0107` | `MCPServerManager` 结构体中 `ToolRegistrationGuard` 缺泛型参数 | 显式指定 `ToolRegistrationGuard<dyn crate::agentic::tools::framework::Tool>` | 机制层（泛型实参对齐） |
++| `E0583` | worktree 缺 gitignore 生成文件 `generated_locale_contract.rs` | 运行 `node scripts/generate-i18n-contract.mjs` 补齐 | 机制层（构建环境前置生成） |
++
++---
++
++## 6. 验证命令与输出尾部
++
++### 1. `cargo test -p northhing-disposable`
++```
++running 8 tests
++test test_guard_early_drop_not_reexecuted_in_list ... ok
++test test_idempotent_guard_drop ... ok
++test test_lifo_reverse_order ... ok
++test test_list_drop_auto_disposes ... ok
++test test_push_after_dispose_err ... ok
++test test_standalone_guard_disarm ... ok
++test test_lock_poisoning_safety ... ok
++test test_concurrent_disposal_thread_safety ... ok
++
++test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
++```
++
++### 2. `cargo test -p northhing-agent-tools`
++```
++test framework::tests::test_tool_registration_guard_unregisters_on_drop ... ok
++test framework::tests::test_tool_registration_guard_manual_dispose_and_disarm ... ok
++test framework::tests::test_tool_registration_guard_does_not_unregister_if_overwritten ... ok
++
++test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
++(All other suites in package passed; total 0 failures)
++```
++
++### 3. `cargo test -p northhing-core --features product-full --lib -- agentic::agents::registry agentic::tools::registry service::mcp`
++```
++running 53 tests
++test agentic::agents::registry::tests::test_agent_registration_guard_idempotent_dispose_and_disarm ... ok
++test agentic::agents::registry::tests::test_agent_registration_guard_does_not_unregister_if_overwritten ... ok
++test agentic::agents::registry::tests::test_agent_registration_guard_unregisters_on_drop ... ok
++test agentic::agents::registry::tests::test_agent_registration_guard_concurrent_poison_safe ... ok
++test agentic::tools::registry::tests::guarded_mcp_registration_overwritten_safety ... ok
++test agentic::tools::registry::tests::guarded_tool_and_mcp_registration_lifecycle ... ok
++...
++test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 992 filtered out; finished in 0.02s
++```
++
++### 4. `cargo check --workspace`
++```
++    Checking northhing v0.2.10 (E:\agent-project\.worktrees\northing-pcs1\src\apps\desktop)
++    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 40s
++```
++
++### 5. `cargo check -p northhing` (桌面编译门禁)
++```
++    Checking northhing v0.2.10 (E:\agent-project\.worktrees\northing-pcs1\src\apps\desktop)
++    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 43s
++```
++
++### 6. `node scripts/check-core-boundaries.mjs`
++```
++Core boundary check passed.
++```
++
++### 7. `pnpm run check:rot`
++```
++✔ compliant fixture exits 0 and reports success (98.9894ms)
++✔ grep count exceeding ceiling fails and exits 1 with guidance message (91.8633ms)
++✔ unregistered file exceeding 800 lines fails and exits 1 (93.6364ms)
++✔ registered god-file exceeding ceiling fails (5.9346ms)
++✔ exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry (6.8322ms)
++✔ actual workspace rot budget passes with current manifest (352.5644ms)
++Rot budget verification passed (4 grep rules, 7 god-file rules checked across 1363 files).
++```
++
++### 8. `pnpm run fmt:rs`
++```
++[format-changed-rust] Formatting 15 Rust file(s).
++[format-changed-rust] Restoring 1 collateral Rust file(s) touched through module expansion.
++```
++
++---
++
++## 7. 偏离声明（Deviation Statement）
++
++无偏离。所有需求与约束均 100% 严格满足。
+diff --git a/Cargo.lock b/Cargo.lock
+index e91c1f5..ad27092 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5813,6 +5813,7 @@ dependencies = [
+  "async-trait",
+  "indexmap 2.14.0",
+  "northhing-core-types",
++ "northhing-disposable",
+  "northhing-runtime-ports",
+  "serde",
+  "serde_json",
+@@ -5925,6 +5926,7 @@ dependencies = [
+  "northhing-ai-adapters",
+  "northhing-core-types",
+  "northhing-debug-log",
++ "northhing-disposable",
+  "northhing-events",
+  "northhing-kernel-api",
+  "northhing-product-capabilities",
+@@ -5989,6 +5991,10 @@ dependencies = [
+  "uuid",
+ ]
+ 
++[[package]]
++name = "northhing-disposable"
++version = "0.2.10"
++
+ [[package]]
+ name = "northhing-events"
+ version = "0.2.10"
+diff --git a/Cargo.toml b/Cargo.toml
+index 4d89413..a9717b2 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -24,6 +24,7 @@ members = [
+     "src/crates/contracts/events",
+     "src/crates/contracts/kernel-api",
+     "src/crates/contracts/runtime-ports",
++    "src/crates/contracts/disposable",
+ ]
+ 
+ exclude = [
+diff --git a/docs/status/surfaces.md b/docs/status/surfaces.md
+index 1114b3b..87fe4cd 100644
+--- a/docs/status/surfaces.md
++++ b/docs/status/surfaces.md
+@@ -45,6 +45,7 @@ These are not user-facing surfaces but are actively maintained as the agent's to
+ | `core-types` | `src/crates/contracts/core-types` | Core type definitions |
+ | `events` | `src/crates/contracts/events` | Event contracts |
+ | `runtime-ports` | `src/crates/contracts/runtime-ports` | Runtime port contracts |
++| `disposable` | `src/crates/contracts/disposable` | Reversible registration and disposal RAII primitives (PCS-1) |
+ | `assembly-core` | `src/crates/assembly/core` | Core assembly |
+ | `cli-internal` | `src/crates/support/cli-internal` | CLI internal utilities |
+ | `test-support` | `src/crates/support/test-support` | Test utilities |
+diff --git a/scripts/core-boundaries/rules/crate-layout.mjs b/scripts/core-boundaries/rules/crate-layout.mjs
+index 8531dd4..98605f5 100644
+--- a/scripts/core-boundaries/rules/crate-layout.mjs
++++ b/scripts/core-boundaries/rules/crate-layout.mjs
+@@ -7,6 +7,7 @@ export const crateLayoutRules = [
+   { crateName: 'product-domains', layer: 'contracts', path: 'src/crates/contracts/product-domains' },
+   { crateName: 'runtime-ports', layer: 'contracts', path: 'src/crates/contracts/runtime-ports' },
+   { crateName: 'kernel-api', layer: 'contracts', path: 'src/crates/contracts/kernel-api' },
++  { crateName: 'disposable', layer: 'contracts', path: 'src/crates/contracts/disposable' },
+ 
+   { crateName: 'agent-runtime', layer: 'execution', path: 'src/crates/execution/agent-runtime' },
+   { crateName: 'agent-stream', layer: 'execution', path: 'src/crates/execution/agent-stream' },
+diff --git a/scripts/core-boundaries/rules/crate-rules.mjs b/scripts/core-boundaries/rules/crate-rules.mjs
+index a36ba5f..f278f83 100644
+--- a/scripts/core-boundaries/rules/crate-rules.mjs
++++ b/scripts/core-boundaries/rules/crate-rules.mjs
+@@ -3,6 +3,7 @@
+ export const noCoreDependencyCrates = [
+   'core-types',
+   'events',
++  'disposable',
+   'ai-adapters',
+   'agent-stream',
+   'agent-runtime',
+@@ -18,6 +19,35 @@ export const noCoreDependencyCrates = [
+ ];
+ 
+ export const lightweightBoundaryRules = [
++  {
++    crateName: 'disposable',
++    reason: 'disposable must stay a pure RAII contract primitive without dependencies',
++    forbiddenDeps: [
++      'northhing-core',
++      'northhing-events',
++      'northhing-ai-adapters',
++      'northhing-agent-stream',
++      'northhing-runtime-ports',
++      'northhing-services-core',
++      'northhing-services-integrations',
++      'northhing-agent-tools',
++      'northhing-product-domains',
++      'northhing-transport',
++      'terminal-core',
++      'tool-runtime',
++      'tauri',
++      'reqwest',
++      'git2',
++      'rmcp',
++      'image',
++      'tokio-tungstenite',
++      'northhing-cli',
++      'ratatui',
++      'crossterm',
++      'arboard',
++      'syntect-tui',
++    ],
++  },
+   {
+     crateName: 'core-types',
+     reason: 'core-types must stay low-level DTO-only',
+diff --git a/src/crates/assembly/core/Cargo.toml b/src/crates/assembly/core/Cargo.toml
+index f719b6d..d1c4b77 100644
+--- a/src/crates/assembly/core/Cargo.toml
++++ b/src/crates/assembly/core/Cargo.toml
+@@ -141,6 +141,7 @@ russh = { workspace = true, optional = true }
+ northhing-core-types = { path = "../../contracts/core-types" }
+ northhing-events = { path = "../../contracts/events" }
+ northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
++northhing-disposable = { path = "../../contracts/disposable" }
+ northhing-runtime-services = { path = "../../execution/runtime-services", optional = true }
+ 
+ # Tauri dependency (optional, enabled only when needed)
+diff --git a/src/crates/assembly/core/src/agentic/agents/registry/builtin.rs b/src/crates/assembly/core/src/agentic/agents/registry/builtin.rs
+index 9ff1e48..a755e99 100644
+--- a/src/crates/assembly/core/src/agentic/agents/registry/builtin.rs
++++ b/src/crates/assembly/core/src/agentic/agents/registry/builtin.rs
+@@ -1,12 +1,13 @@
+ use super::types::AgentEntry;
+ use super::visibility::SubagentVisibilityPolicy;
+-use super::AgentRegistry;
++use super::{AgentRegistrationGuard, AgentRegistry};
+ use crate::agentic::agents::registry::catalog::builtin_agent_specs;
+ use crate::agentic::agents::{Agent, AgentCategory, SubAgentSource};
+ use northhing_agent_runtime::agents as runtime_agents;
++use northhing_disposable::DisposalGuard;
+ use std::collections::HashMap;
+ use std::sync::Arc;
+-use tracing::error;
++use tracing::{debug, error, warn};
+ 
+ pub(crate) fn default_model_id_for_builtin_agent(agent_type: &str) -> &'static str {
+     runtime_agents::default_model_id_for_builtin_agent(agent_type)
+@@ -59,35 +60,80 @@ impl AgentRegistry {
+     /// Create a new agent registry with built-in agents
+     pub fn new() -> Self {
+         Self {
+-            agents: std::sync::RwLock::new(Self::build_builtin_agents()),
+-            project_subagents: std::sync::RwLock::new(HashMap::new()),
++            agents: Arc::new(std::sync::RwLock::new(Self::build_builtin_agents())),
++            project_subagents: Arc::new(std::sync::RwLock::new(HashMap::new())),
+         }
+     }
+ 
+-    /// Register a new agent. For custom SubAgent, pass Some(custom_config); for builtin/Mode/Hidden pass None.
+-    pub fn register_agent(
++    /// Register a new agent and return an RAII [`AgentRegistrationGuard`].
++    ///
++    /// When the guard is dropped, the agent is removed from the registry
++    /// provided the registry entry still references this exact agent instance.
++    pub fn register_agent_guarded(
+         &self,
+         agent: Arc<dyn Agent>,
+         category: AgentCategory,
+         subagent_source: Option<SubAgentSource>,
+         custom_config: Option<super::types::CustomSubagentConfig>,
+-    ) {
++    ) -> Option<AgentRegistrationGuard> {
+         let id = agent.id().to_string();
+         let visibility_policy = SubagentVisibilityPolicy::public();
+         let mut map = self.write_agents();
+         if map.contains_key(&id) {
+             error!("Agent {} already registered, skip registration", id);
+-            return;
++            return None;
+         }
+         map.insert(
+-            id,
++            id.clone(),
+             AgentEntry {
+                 category,
+                 subagent_source,
+-                agent,
++                agent: agent.clone(),
+                 visibility_policy,
+                 custom_config,
+             },
+         );
++        drop(map);
++
++        let weak_agents = Arc::downgrade(&self.agents);
++        let agent_clone = agent.clone();
++        let id_clone = id.clone();
++
++        let disposal = DisposalGuard::new(Box::new(move || {
++            if let Some(agents_lock) = weak_agents.upgrade() {
++                let mut map = match agents_lock.write() {
++                    Ok(guard) => guard,
++                    Err(poisoned) => {
++                        warn!("Agent registry write lock poisoned during guard disposal, recovering");
++                        poisoned.into_inner()
++                    }
++                };
++                if let Some(entry) = map.get(&id_clone) {
++                    if Arc::ptr_eq(&entry.agent, &agent_clone) {
++                        map.remove(&id_clone);
++                        debug!("Agent {} unregistered by guard", id_clone);
++                    }
++                }
++            }
++        }));
++
++        Some(AgentRegistrationGuard {
++            guard: disposal,
++            agent_id: id,
++            agent,
++        })
++    }
++
++    /// Register a new agent persistently (compatibility method).
++    pub fn register_agent(
++        &self,
++        agent: Arc<dyn Agent>,
++        category: AgentCategory,
++        subagent_source: Option<SubAgentSource>,
++        custom_config: Option<super::types::CustomSubagentConfig>,
++    ) {
++        if let Some(guard) = self.register_agent_guarded(agent, category, subagent_source, custom_config) {
++            guard.disarm();
++        }
+     }
+ }
+diff --git a/src/crates/assembly/core/src/agentic/agents/registry/mod.rs b/src/crates/assembly/core/src/agentic/agents/registry/mod.rs
+index a2f29dc..038fa1c 100644
+--- a/src/crates/assembly/core/src/agentic/agents/registry/mod.rs
++++ b/src/crates/assembly/core/src/agentic/agents/registry/mod.rs
+@@ -13,13 +13,67 @@ pub mod visibility;
+ use self::types::AgentEntry;
+ use self::types::{AgentCategory, SubAgentSource};
+ use super::Agent;
++use northhing_disposable::DisposalGuard;
+ use serde::{Deserialize, Serialize};
+ use std::collections::HashMap;
++use std::fmt;
+ use std::path::{Path, PathBuf};
+ use std::sync::RwLock;
+ use std::sync::{Arc, OnceLock};
+ use tracing::{debug, warn};
+ 
++/// An RAII guard for a registered agent in [`AgentRegistry`].
++///
++/// When dropped or explicitly disposed, the agent is removed from the registry
++/// if the registry entry still references this exact agent instance.
++pub struct AgentRegistrationGuard {
++    guard: DisposalGuard,
++    agent_id: String,
++    agent: Arc<dyn Agent>,
++}
++
++impl fmt::Debug for AgentRegistrationGuard {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("AgentRegistrationGuard")
++            .field("agent_id", &self.agent_id)
++            .field("is_disposed", &self.guard.is_disposed())
++            .finish()
++    }
++}
++
++impl AgentRegistrationGuard {
++    /// Returns the ID of the registered agent.
++    pub fn agent_id(&self) -> &str {
++        &self.agent_id
++    }
++
++    /// Returns the reference to the registered agent.
++    pub fn agent(&self) -> &Arc<dyn Agent> {
++        &self.agent
++    }
++
++    /// Explicitly unregisters the agent (idempotent).
++    pub fn dispose(&mut self) {
++        self.guard.dispose();
++    }
++
++    /// Disarms the guard so the agent remains registered even when the guard is dropped.
++    pub fn disarm(self) {
++        self.guard.disarm();
++    }
++
++    /// Returns `true` if the guard has already been disposed or disarmed.
++    pub fn is_disposed(&self) -> bool {
++        self.guard.is_disposed()
++    }
++}
++
++impl From<AgentRegistrationGuard> for DisposalGuard {
++    fn from(guard: AgentRegistrationGuard) -> Self {
++        guard.guard
++    }
++}
++
+ /// Full sub-agent definition for editing (user/project custom agents only)
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+ #[serde(rename_all = "camelCase")]
+@@ -41,9 +95,9 @@ pub struct CustomSubagentDetail {
+ /// Registry for managing all available agents
+ pub struct AgentRegistry {
+     /// id -> agent_entry
+-    agents: RwLock<HashMap<String, AgentEntry>>,
++    agents: Arc<RwLock<HashMap<String, AgentEntry>>>,
+     /// workspace root -> (project subagent id -> agent_entry)
+-    project_subagents: RwLock<HashMap<PathBuf, HashMap<String, AgentEntry>>>,
++    project_subagents: Arc<RwLock<HashMap<PathBuf, HashMap<String, AgentEntry>>>>,
+ }
+ 
+ impl Default for AgentRegistry {
+diff --git a/src/crates/assembly/core/src/agentic/agents/registry/tests.rs b/src/crates/assembly/core/src/agentic/agents/registry/tests.rs
+index 1a1921e..93ff3bc 100644
+--- a/src/crates/assembly/core/src/agentic/agents/registry/tests.rs
++++ b/src/crates/assembly/core/src/agentic/agents/registry/tests.rs
+@@ -473,3 +473,131 @@ async fn parent_subagent_overrides_follow_source_scopes() {
+     assert_eq!(visible.1.override_state, Some(SubagentOverrideState::Disabled));
+     assert_eq!(visible.2.override_state, Some(SubagentOverrideState::Disabled));
+ }
++
++#[tokio::test]
++async fn test_agent_registration_guard_unregisters_on_drop() {
++    let registry = AgentRegistry::new();
++    let agent = Arc::new(TestAgent {
++        id: "GuardedAgent".to_string(),
++    });
++
++    assert!(!registry.check_agent_exists("GuardedAgent"));
++    let guard = match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None)
++    {
++        Some(g) => g,
++        None => panic!("registration should succeed"),
++    };
++
++    assert!(registry.check_agent_exists("GuardedAgent"));
++    assert_eq!(guard.agent_id(), "GuardedAgent");
++
++    drop(guard);
++    assert!(!registry.check_agent_exists("GuardedAgent"));
++}
++
++#[tokio::test]
++async fn test_agent_registration_guard_does_not_unregister_if_overwritten() {
++    let registry = AgentRegistry::new();
++    let agent1 = Arc::new(TestAgent {
++        id: "DynamicAgent".to_string(),
++    });
++    let agent2 = Arc::new(TestAgent {
++        id: "DynamicAgent".to_string(),
++    });
++
++    let guard1 = match registry.register_agent_guarded(
++        agent1.clone(),
++        AgentCategory::SubAgent,
++        Some(SubAgentSource::User),
++        None,
++    ) {
++        Some(g) => g,
++        None => panic!("first registration"),
++    };
++
++    // Manually overwrite in map
++    {
++        let mut map = registry.write_agents();
++        map.insert(
++            "DynamicAgent".to_string(),
++            AgentEntry {
++                category: AgentCategory::SubAgent,
++                subagent_source: Some(SubAgentSource::User),
++                agent: agent2.clone(),
++                visibility_policy: SubagentVisibilityPolicy::public(),
++                custom_config: None,
++            },
++        );
++    }
++
++    // Dropping guard1 must NOT remove agent2 because Arc::ptr_eq fails
++    drop(guard1);
++    assert!(registry.check_agent_exists("DynamicAgent"));
++    let current = match registry.get_agent("DynamicAgent", None) {
++        Some(a) => a,
++        None => panic!("agent exists"),
++    };
++    assert!(Arc::ptr_eq(&current, &(agent2 as Arc<dyn Agent>)));
++}
++
++#[tokio::test]
++async fn test_agent_registration_guard_idempotent_dispose_and_disarm() {
++    let registry = AgentRegistry::new();
++    let agent = Arc::new(TestAgent {
++        id: "IdempotentAgent".to_string(),
++    });
++
++    let mut guard =
++        match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None) {
++            Some(g) => g,
++            None => panic!("registration succeeds"),
++        };
++
++    assert!(registry.check_agent_exists("IdempotentAgent"));
++
++    guard.dispose();
++    assert!(!registry.check_agent_exists("IdempotentAgent"));
++
++    // Second dispose is no-op
++    guard.dispose();
++    drop(guard);
++    assert!(!registry.check_agent_exists("IdempotentAgent"));
++
++    // Test disarm
++    let agent2 = Arc::new(TestAgent {
++        id: "DisarmedAgent".to_string(),
++    });
++    let guard2 =
++        match registry.register_agent_guarded(agent2, AgentCategory::SubAgent, Some(SubAgentSource::User), None) {
++            Some(g) => g,
++            None => panic!("registration succeeds"),
++        };
++    guard2.disarm();
++    assert!(registry.check_agent_exists("DisarmedAgent"));
++}
++
++#[test]
++fn test_agent_registration_guard_concurrent_poison_safe() {
++    let registry = Arc::new(AgentRegistry::new());
++    let agent = Arc::new(TestAgent {
++        id: "PoisonSafeAgent".to_string(),
++    });
++
++    let guard = match registry.register_agent_guarded(agent, AgentCategory::SubAgent, Some(SubAgentSource::User), None)
++    {
++        Some(g) => g,
++        None => panic!("registration succeeds"),
++    };
++
++    // Poison the agents lock in a spawned thread
++    let reg_clone = Arc::clone(&registry);
++    let _join = std::thread::spawn(move || {
++        let _lock = reg_clone.agents.write();
++        panic!("intentional panic to poison lock");
++    })
++    .join();
++
++    // Dropping guard must safely recover from lock poisoning and unregister without panicking
++    drop(guard);
++    assert!(!registry.check_agent_exists("PoisonSafeAgent"));
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/registry/mod.rs b/src/crates/assembly/core/src/agentic/tools/registry/mod.rs
+index f1be716..80fd201 100644
+--- a/src/crates/assembly/core/src/agentic/tools/registry/mod.rs
++++ b/src/crates/assembly/core/src/agentic/tools/registry/mod.rs
+@@ -12,6 +12,8 @@ pub use registry_global::{
+     all_tools, create_tool_registry, get_all_registered_tool_names, get_all_registered_tools,
+     get_readonly_registered_tool_names, get_readonly_tools, global_tool_registry,
+ };
+-pub use registry_types::{ProductToolDecoratorRef, ToolRef, ToolRegistry, GET_TOOL_SPEC_TOOL_NAME};
++pub use registry_types::{
++    ProductToolDecoratorRef, ToolRef, ToolRegistrationGuard, ToolRegistry, GET_TOOL_SPEC_TOOL_NAME,
++};
+ 
+ include!("tests.rs");
+diff --git a/src/crates/assembly/core/src/agentic/tools/registry/registry_register.rs b/src/crates/assembly/core/src/agentic/tools/registry/registry_register.rs
+index bbc89cb..9cdbc64 100644
+--- a/src/crates/assembly/core/src/agentic/tools/registry/registry_register.rs
++++ b/src/crates/assembly/core/src/agentic/tools/registry/registry_register.rs
+@@ -1,15 +1,18 @@
+-use super::registry_types::{ToolRef, ToolRegistry};
++use super::registry_types::{ToolRef, ToolRegistrationGuard, ToolRegistry};
++use crate::agentic::tools::framework::Tool;
+ use tracing::{debug, info, warn};
+ 
+ impl ToolRegistry {
+-    /// Dynamically register MCP tools
+-    pub fn register_mcp_tools(&mut self, tools: Vec<ToolRef>) {
++    /// Dynamically register MCP tools using RAII guards
++    pub fn register_mcp_tools_guarded(&mut self, tools: Vec<ToolRef>) -> Vec<ToolRegistrationGuard<dyn Tool>> {
+         let tool_count = tools.len();
+-        info!("Registering MCP tools: count={}", tool_count);
++        info!("Registering MCP tools (guarded): count={}", tool_count);
+ 
+         let before_count = self.tool_names().len();
+         debug!("Tool count before registration: {}", before_count);
+ 
++        let mut guards = Vec::with_capacity(tool_count);
++
+         for (index, tool) in tools.into_iter().enumerate() {
+             let name = tool.name().to_string();
+             debug!("Registering MCP tool [{}/{}]: {}", index + 1, tool_count, name);
+@@ -19,7 +22,8 @@ impl ToolRegistry {
+                 warn!("Tool already exists, will be overwritten: tool_name={}", name);
+             }
+ 
+-            self.register_tool(tool);
++            let guard = self.register_tool_guarded(tool);
++            guards.push(guard);
+             debug!("MCP tool registered: tool_name={}", name);
+         }
+ 
+@@ -30,6 +34,16 @@ impl ToolRegistry {
+             "MCP tools registration completed: before={}, after={}, added={}",
+             before_count, after_count, added_count
+         );
++
++        guards
++    }
++
++    /// Dynamically register MCP tools persistently (compatibility method)
++    pub fn register_mcp_tools(&mut self, tools: Vec<ToolRef>) {
++        let guards = self.register_mcp_tools_guarded(tools);
++        for guard in guards {
++            guard.disarm();
++        }
+     }
+ 
+     /// Remove all tools from the MCP server
+@@ -67,8 +81,13 @@ impl ToolRegistry {
+         count
+     }
+ 
+-    /// Register a single tool
++    /// Register a single tool persistently (compatibility method)
+     pub fn register_tool(&mut self, tool: ToolRef) {
+         self.inner.register_tool(tool);
+     }
++
++    /// Register a single tool returning an RAII guard
++    pub fn register_tool_guarded(&mut self, tool: ToolRef) -> ToolRegistrationGuard<dyn Tool> {
++        self.inner.register_tool_guarded(tool)
++    }
+ }
+diff --git a/src/crates/assembly/core/src/agentic/tools/registry/registry_types.rs b/src/crates/assembly/core/src/agentic/tools/registry/registry_types.rs
+index d9d55d8..1386963 100644
+--- a/src/crates/assembly/core/src/agentic/tools/registry/registry_types.rs
++++ b/src/crates/assembly/core/src/agentic/tools/registry/registry_types.rs
+@@ -5,7 +5,7 @@ use std::sync::Arc;
+ pub type ToolRef = Arc<dyn Tool>;
+ pub type ProductToolDecoratorRef = ToolDecoratorRef<dyn Tool>;
+ 
+-pub use northhing_agent_tools::GET_TOOL_SPEC_TOOL_NAME;
++pub use northhing_agent_tools::{ToolRegistrationGuard, GET_TOOL_SPEC_TOOL_NAME};
+ 
+ /// Tool registry - manages all available tools (using IndexMap to maintain registration order)
+ pub struct ToolRegistry {
+diff --git a/src/crates/assembly/core/src/agentic/tools/registry/tests.rs b/src/crates/assembly/core/src/agentic/tools/registry/tests.rs
+index 62b07e9..e3f9e48 100644
+--- a/src/crates/assembly/core/src/agentic/tools/registry/tests.rs
++++ b/src/crates/assembly/core/src/agentic/tools/registry/tests.rs
+@@ -670,4 +670,46 @@ mod tests {
+             );
+         }
+     }
++
++    #[test]
++    fn guarded_tool_and_mcp_registration_lifecycle() {
++        let mut registry = ToolRegistry::new();
++        let tool1 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
++        let tool2 = mcp_dynamic_tool("mcp__server1__tool_b", None, "server1", "Server 1", "tool_b");
++
++        let guards = registry.register_mcp_tools_guarded(vec![tool1.clone(), tool2.clone()]);
++        assert_eq!(guards.len(), 2);
++        assert!(registry.get_tool("mcp__server1__tool_a").is_some());
++        assert!(registry.get_tool("mcp__server1__tool_b").is_some());
++
++        // Dropping the guards automatically unregisters both tools
++        drop(guards);
++        assert!(registry.get_tool("mcp__server1__tool_a").is_none());
++        assert!(registry.get_tool("mcp__server1__tool_b").is_none());
++    }
++
++    #[test]
++    fn guarded_mcp_registration_overwritten_safety() {
++        let mut registry = ToolRegistry::new();
++        let tool1_v1 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
++        let tool1_v2 = mcp_dynamic_tool("mcp__server1__tool_a", None, "server1", "Server 1", "tool_a");
++
++        let guard_v1 = registry.register_tool_guarded(tool1_v1.clone());
++        let current1 = registry.get_tool("mcp__server1__tool_a");
++        assert!(current1.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v1)));
++
++        let guard_v2 = registry.register_tool_guarded(tool1_v2.clone());
++        let current2 = registry.get_tool("mcp__server1__tool_a");
++        assert!(current2.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v2)));
++
++        // Dropping guard_v1 must not unregister v2
++        drop(guard_v1);
++        assert!(registry.get_tool("mcp__server1__tool_a").is_some());
++        let current3 = registry.get_tool("mcp__server1__tool_a");
++        assert!(current3.is_some_and(|t| Arc::ptr_eq(&t, &tool1_v2)));
++
++        // Dropping guard_v2 unregisters v2
++        drop(guard_v2);
++        assert!(registry.get_tool("mcp__server1__tool_a").is_none());
++    }
+ }
+diff --git a/src/crates/assembly/core/src/service/mcp/server/manager/lifecycle.rs b/src/crates/assembly/core/src/service/mcp/server/manager/lifecycle.rs
+index feaf97c..497d392 100644
+--- a/src/crates/assembly/core/src/service/mcp/server/manager/lifecycle.rs
++++ b/src/crates/assembly/core/src/service/mcp/server/manager/lifecycle.rs
+@@ -259,7 +259,10 @@ impl MCPServerManager {
+                 .add_connection(server_id.to_string(), connection.clone())
+                 .await;
+ 
+-            match Self::register_mcp_tools(server_id, &config.name, connection.clone()).await {
++            match self
++                .register_mcp_tools(server_id, &config.name, connection.clone())
++                .await
++            {
+                 Ok(count) => {
+                     info!(
+                         "Registered {} MCP tools: server_name={} server_id={}",
+@@ -307,7 +310,7 @@ impl MCPServerManager {
+         self.connection_pool.remove_connection(server_id).await;
+         self.catalog_cache.remove_server(server_id).await;
+ 
+-        Self::unregister_mcp_tools(server_id).await;
++        self.unregister_mcp_tools(server_id).await;
+ 
+         stop_result
+     }
+diff --git a/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs b/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
+index dd9e654..6905f6f 100644
+--- a/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
++++ b/src/crates/assembly/core/src/service/mcp/server/manager/mod.rs
+@@ -96,6 +96,14 @@ pub struct MCPServerManager {
+     pending_interactions: Arc<tokio::sync::RwLock<HashMap<String, PendingMCPInteraction>>>,
+     oauth_sessions: Arc<tokio::sync::RwLock<HashMap<String, Arc<ActiveRemoteOAuthSession>>>>,
+     ephemeral_configs: Arc<tokio::sync::RwLock<HashMap<String, MCPServerConfig>>>,
++    server_tool_guards: Arc<
++        tokio::sync::RwLock<
++            HashMap<
++                String,
++                Vec<crate::agentic::tools::registry::ToolRegistrationGuard<dyn crate::agentic::tools::framework::Tool>>,
++            >,
++        >,
++    >,
+ }
+ 
+ impl MCPServerManager {
+@@ -113,6 +121,7 @@ impl MCPServerManager {
+             pending_interactions: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+             oauth_sessions: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+             ephemeral_configs: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
++            server_tool_guards: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+         }
+     }
+ }
+diff --git a/src/crates/assembly/core/src/service/mcp/server/manager/tools.rs b/src/crates/assembly/core/src/service/mcp/server/manager/tools.rs
+index e87143a..109dc6e 100644
+--- a/src/crates/assembly/core/src/service/mcp/server/manager/tools.rs
++++ b/src/crates/assembly/core/src/service/mcp/server/manager/tools.rs
+@@ -7,12 +7,13 @@ impl MCPServerManager {
+         server_name: &str,
+         connection: Arc<MCPConnection>,
+     ) -> NortHingResult<usize> {
+-        Self::unregister_mcp_tools(server_id).await;
+-        Self::register_mcp_tools(server_id, server_name, connection).await
++        self.unregister_mcp_tools(server_id).await;
++        self.register_mcp_tools(server_id, server_name, connection).await
+     }
+ 
+-    /// Registers MCP tools into the global tool registry.
++    /// Registers MCP tools into the global tool registry using RAII guards.
+     pub(super) async fn register_mcp_tools(
++        &self,
+         server_id: &str,
+         server_name: &str,
+         connection: Arc<MCPConnection>,
+@@ -46,19 +47,27 @@ impl MCPServerManager {
+         let mut registry_lock = registry.write().await;
+ 
+         let tools_to_register = adapter.tools().to_vec();
+-        registry_lock.register_mcp_tools(tools_to_register);
++        let guards = registry_lock.register_mcp_tools_guarded(tools_to_register);
+         drop(registry_lock);
+ 
++        self.server_tool_guards
++            .write()
++            .await
++            .insert(server_id.to_string(), guards);
++
+         info!(
+-            "Registered {} MCP tools: server_name={} server_id={}",
++            "Registered {} MCP tools (guarded): server_name={} server_id={}",
+             tool_count, server_name, server_id
+         );
+ 
+         Ok(tool_count)
+     }
+ 
+-    /// Unregisters MCP tools from the global tool registry.
+-    pub(super) async fn unregister_mcp_tools(server_id: &str) {
++    /// Unregisters MCP tools from the global tool registry by releasing the server's registration guards.
++    pub(super) async fn unregister_mcp_tools(&self, server_id: &str) {
++        let removed_guards = self.server_tool_guards.write().await.remove(server_id);
++        drop(removed_guards);
++
+         let registry = crate::agentic::tools::registry::global_tool_registry();
+         let mut registry_lock = registry.write().await;
+         registry_lock.unregister_mcp_server_tools(server_id);
+diff --git a/src/crates/contracts/AGENTS-CN.md b/src/crates/contracts/AGENTS-CN.md
+index faa3b75..d878083 100644
+--- a/src/crates/contracts/AGENTS-CN.md
++++ b/src/crates/contracts/AGENTS-CN.md
+@@ -13,6 +13,7 @@
+ | `kernel-api` | Host↔kernel facade：DTO、trait 签名和错误类型 | (none) |
+ | `product-domains` | 产品领域 DTO、规则、策略和窄 port | [AGENTS.md](product-domains/AGENTS.md) |
+ | `runtime-ports` | runtime owner crate 使用的 trait 和 port | [AGENTS.md](runtime-ports/AGENTS.md) |
++| `disposable` | 可逆注册与释放 RAII 原语 | [AGENTS.md](disposable/AGENTS.md) |
+ 
+ ## 放置规则
+ 
+diff --git a/src/crates/contracts/AGENTS.md b/src/crates/contracts/AGENTS.md
+index fecfbce..1770495 100644
+--- a/src/crates/contracts/AGENTS.md
++++ b/src/crates/contracts/AGENTS.md
+@@ -15,6 +15,7 @@ implementation details upward.
+ | `kernel-api` | Host↔kernel facade: DTOs, trait signatures, and error types | (none) |
+ | `product-domains` | Product domain DTOs, rules, policies, and narrow ports | [AGENTS.md](product-domains/AGENTS.md) |
+ | `runtime-ports` | Runtime-facing traits and ports used by owner crates | [AGENTS.md](runtime-ports/AGENTS.md) |
++| `disposable` | Reversible registration and disposal RAII primitives | [AGENTS.md](disposable/AGENTS.md) |
+ 
+ ## Placement Rules
+ 
+diff --git a/src/crates/contracts/disposable/AGENTS.md b/src/crates/contracts/disposable/AGENTS.md
+new file mode 100644
+index 0000000..df8d36f
+--- /dev/null
++++ b/src/crates/contracts/disposable/AGENTS.md
+@@ -0,0 +1,18 @@
++# Disposable Agent Guide
++
++Scope: this guide applies to `src/crates/contracts/disposable`.
++
++`northhing-disposable` owns reusable, reversible registration and disposable RAII primitives (`Disposable`, `DisposableList`, `DisposalGuard`). Keep it dependency-light, thread-safe, and stable for cross-crate reuse.
++
++## Guardrails
++
++- Do not depend on `northhing-core`, runtime owner crates, service crates, transport adapters, or external crates.
++- Keep additions limited to portable disposable lifecycle primitives.
++- Must remain pure stdlib and panic-safe against lock poisoning.
++
++## Verification
++
++```bash
++cargo test -p northhing-disposable
++node scripts/check-core-boundaries.mjs
++```
+diff --git a/src/crates/contracts/disposable/Cargo.toml b/src/crates/contracts/disposable/Cargo.toml
+new file mode 100644
+index 0000000..265eddc
+--- /dev/null
++++ b/src/crates/contracts/disposable/Cargo.toml
+@@ -0,0 +1,12 @@
++[package]
++name = "northhing-disposable"
++version.workspace = true
++edition.workspace = true
++description = "northhing reversible registration and disposable RAII primitives"
++
++[lib]
++name = "northhing_disposable"
++crate-type = ["rlib"]
++
++[dependencies]
++# Pure stdlib implementation
+diff --git a/src/crates/contracts/disposable/src/lib.rs b/src/crates/contracts/disposable/src/lib.rs
+new file mode 100644
+index 0000000..e4355ab
+--- /dev/null
++++ b/src/crates/contracts/disposable/src/lib.rs
+@@ -0,0 +1,254 @@
++//! Reversible registration and disposable RAII primitives.
++//!
++//! Provides `Disposable`, `DisposableList`, and `DisposalGuard` for managing
++//! reversible side effects, resource lifecycles, and cleanup in LIFO order.
++
++use std::fmt;
++use std::sync::{Arc, Mutex, Weak};
++
++/// A one-shot cleanup callback.
++pub type Disposable = Box<dyn FnOnce() + Send + 'static>;
++
++/// Error returned when attempting an operation on an already disposed list.
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum DisposableListError {
++    /// The disposable list has already been disposed.
++    Disposed,
++}
++
++impl fmt::Display for DisposableListError {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        match self {
++            Self::Disposed => write!(f, "disposable list has already been disposed"),
++        }
++    }
++}
++
++impl std::error::Error for DisposableListError {}
++
++struct DisposableEntry {
++    id: u64,
++    cell: Arc<Mutex<Option<Disposable>>>,
++}
++
++struct DisposableListInner {
++    disposed: bool,
++    next_id: u64,
++    items: Vec<DisposableEntry>,
++}
++
++fn lock_inner(inner: &Mutex<DisposableListInner>) -> std::sync::MutexGuard<'_, DisposableListInner> {
++    match inner.lock() {
++        Ok(guard) => guard,
++        Err(poisoned) => poisoned.into_inner(),
++    }
++}
++
++fn lock_cell(cell: &Mutex<Option<Disposable>>) -> std::sync::MutexGuard<'_, Option<Disposable>> {
++    match cell.lock() {
++        Ok(guard) => guard,
++        Err(poisoned) => poisoned.into_inner(),
++    }
++}
++
++/// An ordered stack of disposable items that are unwound in reverse (LIFO) order.
++pub struct DisposableList {
++    inner: Arc<Mutex<DisposableListInner>>,
++}
++
++impl fmt::Debug for DisposableList {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        let inner = lock_inner(&self.inner);
++        f.debug_struct("DisposableList")
++            .field("disposed", &inner.disposed)
++            .field("item_count", &inner.items.len())
++            .finish()
++    }
++}
++
++impl Default for DisposableList {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++impl DisposableList {
++    /// Creates a new, empty disposable list.
++    pub fn new() -> Self {
++        Self {
++            inner: Arc::new(Mutex::new(DisposableListInner {
++                disposed: false,
++                next_id: 1,
++                items: Vec::new(),
++            })),
++        }
++    }
++
++    /// Registers a disposable callback and returns a guard.
++    ///
++    /// If the returned guard is dropped before the list is disposed, the callback
++    /// is executed immediately and removed from the list.
++    ///
++    /// # Errors
++    ///
++    /// Returns `Err(DisposableListError::Disposed)` if this list has already been disposed.
++    pub fn push(&mut self, d: Disposable) -> Result<DisposalGuard, DisposableListError> {
++        let mut inner = lock_inner(&self.inner);
++        if inner.disposed {
++            return Err(DisposableListError::Disposed);
++        }
++
++        let id = inner.next_id;
++        inner.next_id = inner.next_id.wrapping_add(1);
++
++        let cell = Arc::new(Mutex::new(Some(d)));
++        inner.items.push(DisposableEntry {
++            id,
++            cell: Arc::clone(&cell),
++        });
++
++        Ok(DisposalGuard {
++            id,
++            cell,
++            list: Arc::downgrade(&self.inner),
++        })
++    }
++
++    /// Drains and executes all registered disposables in reverse (LIFO) order,
++    /// marking the list as disposed.
++    pub fn dispose(&mut self) {
++        let entries = {
++            let mut inner = lock_inner(&self.inner);
++            if inner.disposed {
++                return;
++            }
++            inner.disposed = true;
++            std::mem::take(&mut inner.items)
++        };
++
++        // Execute in reverse order (LIFO), releasing the list lock beforehand.
++        for entry in entries.into_iter().rev() {
++            let action = {
++                let mut guard = lock_cell(&entry.cell);
++                guard.take()
++            };
++            if let Some(d) = action {
++                d();
++            }
++        }
++    }
++
++    /// Returns `true` if this list has already been disposed.
++    pub fn is_disposed(&self) -> bool {
++        lock_inner(&self.inner).disposed
++    }
++
++    /// Returns the number of active disposables remaining in the list.
++    pub fn len(&self) -> usize {
++        lock_inner(&self.inner).items.len()
++    }
++
++    /// Returns `true` if there are no active disposables remaining in the list.
++    pub fn is_empty(&self) -> bool {
++        self.len() == 0
++    }
++
++    #[doc(hidden)]
++    pub fn __test_poison_list_lock(&self) {
++        let inner = Arc::clone(&self.inner);
++        let _handle = std::thread::spawn(move || {
++            let _lock = inner.lock();
++            panic!("intentional poisoning for test");
++        })
++        .join();
++    }
++}
++
++impl Drop for DisposableList {
++    fn drop(&mut self) {
++        self.dispose();
++    }
++}
++
++/// An RAII guard representing a registered disposable action.
++///
++/// When dropped or explicitly disposed, the underlying cleanup action is executed
++/// idempotently at most once.
++pub struct DisposalGuard {
++    id: u64,
++    cell: Arc<Mutex<Option<Disposable>>>,
++    list: Weak<Mutex<DisposableListInner>>,
++}
++
++impl fmt::Debug for DisposalGuard {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        let is_active = lock_cell(&self.cell).is_some();
++        f.debug_struct("DisposalGuard")
++            .field("id", &self.id)
++            .field("is_active", &is_active)
++            .finish()
++    }
++}
++
++impl Default for DisposalGuard {
++    fn default() -> Self {
++        Self::noop()
++    }
++}
++
++impl DisposalGuard {
++    /// Creates a standalone guard that runs `d` upon drop or disposal.
++    pub fn new(d: Disposable) -> Self {
++        Self {
++            id: 0,
++            cell: Arc::new(Mutex::new(Some(d))),
++            list: Weak::new(),
++        }
++    }
++
++    /// Creates a no-op guard that performs no action upon drop.
++    pub fn noop() -> Self {
++        Self {
++            id: 0,
++            cell: Arc::new(Mutex::new(None)),
++            list: Weak::new(),
++        }
++    }
++
++    /// Explicitly executes the disposable action immediately (idempotent).
++    pub fn dispose(&mut self) {
++        let action = {
++            let mut guard = lock_cell(&self.cell);
++            guard.take()
++        };
++
++        if let Some(d) = action {
++            if let Some(list_arc) = self.list.upgrade() {
++                let mut list_inner = lock_inner(&list_arc);
++                list_inner.items.retain(|item| item.id != self.id);
++            }
++            d();
++        }
++    }
++
++    /// Disarms the guard, consuming it without running its cleanup action.
++    pub fn disarm(self) {
++        let mut guard = lock_cell(&self.cell);
++        guard.take();
++        if let Some(list_arc) = self.list.upgrade() {
++            let mut list_inner = lock_inner(&list_arc);
++            list_inner.items.retain(|item| item.id != self.id);
++        }
++    }
++
++    /// Returns `true` if the disposable action has already been executed or disarmed.
++    pub fn is_disposed(&self) -> bool {
++        lock_cell(&self.cell).is_none()
++    }
++}
++
++impl Drop for DisposalGuard {
++    fn drop(&mut self) {
++        self.dispose();
++    }
++}
+diff --git a/src/crates/contracts/disposable/tests/disposable_tests.rs b/src/crates/contracts/disposable/tests/disposable_tests.rs
+new file mode 100644
+index 0000000..14e99fd
+--- /dev/null
++++ b/src/crates/contracts/disposable/tests/disposable_tests.rs
+@@ -0,0 +1,192 @@
++use northhing_disposable::{DisposableList, DisposableListError, DisposalGuard};
++use std::sync::atomic::{AtomicUsize, Ordering};
++use std::sync::{Arc, Mutex};
++
++#[test]
++fn test_lifo_reverse_order() {
++    let sequence = Arc::new(Mutex::new(Vec::new()));
++    let mut list = DisposableList::new();
++
++    let s1 = Arc::clone(&sequence);
++    let _g1 = list
++        .push(Box::new(move || {
++            s1.lock().unwrap().push(1);
++        }))
++        .unwrap();
++
++    let s2 = Arc::clone(&sequence);
++    let _g2 = list
++        .push(Box::new(move || {
++            s2.lock().unwrap().push(2);
++        }))
++        .unwrap();
++
++    let s3 = Arc::clone(&sequence);
++    let _g3 = list
++        .push(Box::new(move || {
++            s3.lock().unwrap().push(3);
++        }))
++        .unwrap();
++
++    assert_eq!(list.len(), 3);
++    list.dispose();
++
++    assert!(list.is_disposed());
++    assert_eq!(list.len(), 0);
++    assert_eq!(*sequence.lock().unwrap(), vec![3, 2, 1]);
++}
++
++#[test]
++fn test_idempotent_guard_drop() {
++    let count = Arc::new(AtomicUsize::new(0));
++    let c = Arc::clone(&count);
++
++    let mut guard = DisposalGuard::new(Box::new(move || {
++        c.fetch_add(1, Ordering::SeqCst);
++    }));
++
++    assert!(!guard.is_disposed());
++    guard.dispose();
++    assert!(guard.is_disposed());
++    assert_eq!(count.load(Ordering::SeqCst), 1);
++
++    // Second explicit dispose is a no-op
++    guard.dispose();
++    assert_eq!(count.load(Ordering::SeqCst), 1);
++
++    // Drop is also a no-op
++    drop(guard);
++    assert_eq!(count.load(Ordering::SeqCst), 1);
++}
++
++#[test]
++fn test_push_after_dispose_err() {
++    let mut list = DisposableList::new();
++    list.dispose();
++    assert!(list.is_disposed());
++
++    let res = list.push(Box::new(|| {}));
++    assert_eq!(res.unwrap_err(), DisposableListError::Disposed);
++}
++
++#[test]
++fn test_guard_early_drop_not_reexecuted_in_list() {
++    let sequence = Arc::new(Mutex::new(Vec::new()));
++    let mut list = DisposableList::new();
++
++    let s1 = Arc::clone(&sequence);
++    let _g1 = list
++        .push(Box::new(move || {
++            s1.lock().unwrap().push(1);
++        }))
++        .unwrap();
++
++    let s2 = Arc::clone(&sequence);
++    let g2 = list
++        .push(Box::new(move || {
++            s2.lock().unwrap().push(2);
++        }))
++        .unwrap();
++
++    let s3 = Arc::clone(&sequence);
++    let _g3 = list
++        .push(Box::new(move || {
++            s3.lock().unwrap().push(3);
++        }))
++        .unwrap();
++
++    assert_eq!(list.len(), 3);
++
++    // Early drop g2 -> executes 2 immediately
++    drop(g2);
++    assert_eq!(*sequence.lock().unwrap(), vec![2]);
++    assert_eq!(list.len(), 2);
++
++    // Now dispose list -> should execute 3 then 1, without repeating 2
++    list.dispose();
++    assert_eq!(*sequence.lock().unwrap(), vec![2, 3, 1]);
++}
++
++#[test]
++fn test_list_drop_auto_disposes() {
++    let executed = Arc::new(AtomicUsize::new(0));
++    let mut list = DisposableList::new();
++
++    let e1 = Arc::clone(&executed);
++    let _g1 = list
++        .push(Box::new(move || {
++            e1.fetch_add(1, Ordering::SeqCst);
++        }))
++        .unwrap();
++
++    let e2 = Arc::clone(&executed);
++    let _g2 = list
++        .push(Box::new(move || {
++            e2.fetch_add(1, Ordering::SeqCst);
++        }))
++        .unwrap();
++
++    drop(list);
++    assert_eq!(executed.load(Ordering::SeqCst), 2);
++}
++
++#[test]
++fn test_standalone_guard_disarm() {
++    let executed = Arc::new(AtomicUsize::new(0));
++    let e = Arc::clone(&executed);
++
++    let guard = DisposalGuard::new(Box::new(move || {
++        e.fetch_add(1, Ordering::SeqCst);
++    }));
++
++    guard.disarm();
++    assert_eq!(executed.load(Ordering::SeqCst), 0);
++}
++
++#[test]
++fn test_concurrent_disposal_thread_safety() {
++    let count = Arc::new(AtomicUsize::new(0));
++    let c = Arc::clone(&count);
++
++    let guard = Arc::new(Mutex::new(DisposalGuard::new(Box::new(move || {
++        c.fetch_add(1, Ordering::SeqCst);
++    }))));
++
++    let handles: Vec<_> = (0..8)
++        .map(|_| {
++            let g = Arc::clone(&guard);
++            std::thread::spawn(move || {
++                let mut guard = g.lock().unwrap();
++                guard.dispose();
++            })
++        })
++        .collect();
++
++    for h in handles {
++        h.join().unwrap();
++    }
++
++    assert_eq!(count.load(Ordering::SeqCst), 1);
++}
++
++#[test]
++fn test_lock_poisoning_safety() {
++    let count = Arc::new(AtomicUsize::new(0));
++    let c = Arc::clone(&count);
++
++    let mut list = DisposableList::new();
++    let _g = list
++        .push(Box::new(move || {
++            c.fetch_add(1, Ordering::SeqCst);
++        }))
++        .unwrap();
++
++    // Poison list inner lock in another thread
++    list.__test_poison_list_lock();
++
++    // Must not panic on poisoned lock
++    assert!(!list.is_disposed());
++    list.dispose();
++    assert!(list.is_disposed());
++    assert_eq!(count.load(Ordering::SeqCst), 1);
++}
+diff --git a/src/crates/execution/tool-contracts/Cargo.toml b/src/crates/execution/tool-contracts/Cargo.toml
+index 8629639..93c43c0 100644
+--- a/src/crates/execution/tool-contracts/Cargo.toml
++++ b/src/crates/execution/tool-contracts/Cargo.toml
+@@ -14,6 +14,7 @@ serde = { workspace = true }
+ serde_json = { workspace = true }
+ northhing-core-types = { path = "../../contracts/core-types" }
+ northhing-runtime-ports = { path = "../../contracts/runtime-ports" }
++northhing-disposable = { path = "../../contracts/disposable" }
+ async-trait = { workspace = true }
+ indexmap = { workspace = true }
+ 
+diff --git a/src/crates/execution/tool-contracts/src/framework/mod.rs b/src/crates/execution/tool-contracts/src/framework/mod.rs
+index 176d279..265768c 100644
+--- a/src/crates/execution/tool-contracts/src/framework/mod.rs
++++ b/src/crates/execution/tool-contracts/src/framework/mod.rs
+@@ -115,4 +115,83 @@ mod tests {
+         assert!(!description.contains("Inspect repository state."));
+         assert!(!description.contains("Fetch a URL."));
+     }
++
++    #[tokio::test]
++    async fn test_tool_registration_guard_unregisters_on_drop() {
++        let mut registry = ToolRegistry::new();
++        let tool = Arc::new(TestTool {
++            name: "GuardedTool",
++            available: true,
++        });
++
++        assert!(registry.get_tool("GuardedTool").is_none());
++        let guard = registry.register_tool_guarded(tool);
++        assert!(registry.get_tool("GuardedTool").is_some());
++        assert_eq!(guard.name(), "GuardedTool");
++
++        drop(guard);
++        assert!(registry.get_tool("GuardedTool").is_none());
++    }
++
++    #[tokio::test]
++    async fn test_tool_registration_guard_does_not_unregister_if_overwritten() {
++        let mut registry = ToolRegistry::new();
++        let tool_v1 = Arc::new(TestTool {
++            name: "OverwrittenTool",
++            available: true,
++        });
++        let tool_v2 = Arc::new(TestTool {
++            name: "OverwrittenTool",
++            available: true,
++        });
++
++        let guard1 = registry.register_tool_guarded(tool_v1.clone());
++        let current1 = registry.get_tool("OverwrittenTool");
++        assert!(current1.is_some_and(|t| Arc::ptr_eq(&t, &tool_v1)));
++
++        let guard2 = registry.register_tool_guarded(tool_v2.clone());
++        let current2 = registry.get_tool("OverwrittenTool");
++        assert!(current2.is_some_and(|t| Arc::ptr_eq(&t, &tool_v2)));
++
++        // Dropping guard1 must NOT remove tool_v2
++        drop(guard1);
++        assert!(registry.get_tool("OverwrittenTool").is_some());
++        let current3 = registry.get_tool("OverwrittenTool");
++        assert!(current3.is_some_and(|t| Arc::ptr_eq(&t, &tool_v2)));
++
++        // Dropping guard2 removes tool_v2
++        drop(guard2);
++        assert!(registry.get_tool("OverwrittenTool").is_none());
++    }
++
++    #[tokio::test]
++    async fn test_tool_registration_guard_manual_dispose_and_disarm() {
++        let mut registry = ToolRegistry::new();
++        let tool1 = Arc::new(TestTool {
++            name: "Tool1",
++            available: true,
++        });
++        let tool2 = Arc::new(TestTool {
++            name: "Tool2",
++            available: true,
++        });
++
++        let mut guard1 = registry.register_tool_guarded(tool1);
++        let guard2 = registry.register_tool_guarded(tool2);
++
++        assert!(registry.get_tool("Tool1").is_some());
++        assert!(registry.get_tool("Tool2").is_some());
++
++        // Explicit dispose
++        guard1.dispose();
++        assert!(registry.get_tool("Tool1").is_none());
++        // Second dispose is no-op
++        guard1.dispose();
++        drop(guard1);
++        assert!(registry.get_tool("Tool1").is_none());
++
++        // Disarm guard2
++        guard2.disarm();
++        assert!(registry.get_tool("Tool2").is_some());
++    }
+ }
+diff --git a/src/crates/execution/tool-contracts/src/framework/registry.rs b/src/crates/execution/tool-contracts/src/framework/registry.rs
+index 30ee4b5..0fc6448 100644
+--- a/src/crates/execution/tool-contracts/src/framework/registry.rs
++++ b/src/crates/execution/tool-contracts/src/framework/registry.rs
+@@ -9,7 +9,9 @@ use super::*;
+ use crate::{DynamicToolDescriptor, DynamicToolProvider, PortError, PortErrorKind, PortResult, ToolDecorator};
+ use async_trait::async_trait;
+ use indexmap::IndexMap;
+-use std::sync::Arc;
++use northhing_disposable::DisposalGuard;
++use std::fmt;
++use std::sync::{Arc, RwLock};
+ 
+ #[derive(Debug, Clone)]
+ struct DynamicToolMetadata {
+@@ -184,32 +186,112 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRuntimeAssembly<Tool> {
+     }
+ }
+ 
+-pub struct ToolRegistry<Tool: ToolRegistryItem + ?Sized> {
++struct ToolRegistryData<Tool: ?Sized> {
+     tools: IndexMap<String, ToolRef<Tool>>,
+     dynamic_tools: IndexMap<String, DynamicToolMetadata>,
++}
++
++fn lock_write_data<Tool: ?Sized>(
++    data: &RwLock<ToolRegistryData<Tool>>,
++) -> std::sync::RwLockWriteGuard<'_, ToolRegistryData<Tool>> {
++    match data.write() {
++        Ok(guard) => guard,
++        Err(poisoned) => poisoned.into_inner(),
++    }
++}
++
++fn lock_read_data<Tool: ?Sized>(
++    data: &RwLock<ToolRegistryData<Tool>>,
++) -> std::sync::RwLockReadGuard<'_, ToolRegistryData<Tool>> {
++    match data.read() {
++        Ok(guard) => guard,
++        Err(poisoned) => poisoned.into_inner(),
++    }
++}
++
++/// An RAII guard for a registered tool in [`ToolRegistry`].
++///
++/// When dropped or explicitly disposed, the tool is unregistered from the registry
++/// if the registry entry still references this exact tool instance.
++pub struct ToolRegistrationGuard<Tool: ToolRegistryItem + ?Sized + 'static> {
++    guard: DisposalGuard,
++    name: String,
++    tool: ToolRef<Tool>,
++}
++
++impl<Tool: ToolRegistryItem + ?Sized + 'static> fmt::Debug for ToolRegistrationGuard<Tool> {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("ToolRegistrationGuard")
++            .field("name", &self.name)
++            .field("is_disposed", &self.guard.is_disposed())
++            .finish()
++    }
++}
++
++impl<Tool: ToolRegistryItem + ?Sized + 'static> ToolRegistrationGuard<Tool> {
++    /// Returns the name of the registered tool.
++    pub fn name(&self) -> &str {
++        &self.name
++    }
++
++    /// Returns the reference to the registered tool.
++    pub fn tool(&self) -> &ToolRef<Tool> {
++        &self.tool
++    }
++
++    /// Explicitly unregisters the tool (idempotent).
++    pub fn dispose(&mut self) {
++        self.guard.dispose();
++    }
++
++    /// Disarms the guard so the tool remains registered even when the guard is dropped.
++    pub fn disarm(self) {
++        self.guard.disarm();
++    }
++
++    /// Returns `true` if the guard has already been disposed or disarmed.
++    pub fn is_disposed(&self) -> bool {
++        self.guard.is_disposed()
++    }
++}
++
++impl<Tool: ToolRegistryItem + ?Sized + 'static> From<ToolRegistrationGuard<Tool>> for DisposalGuard {
++    fn from(guard: ToolRegistrationGuard<Tool>) -> Self {
++        guard.guard
++    }
++}
++
++pub struct ToolRegistry<Tool: ToolRegistryItem + ?Sized + 'static> {
++    data: Arc<RwLock<ToolRegistryData<Tool>>>,
+     tool_decorator: ToolDecoratorRef<Tool>,
+ }
+ 
+-impl<Tool: ToolRegistryItem + ?Sized> Default for ToolRegistry<Tool> {
++impl<Tool: ToolRegistryItem + ?Sized + 'static> Default for ToolRegistry<Tool> {
+     fn default() -> Self {
+         Self::new()
+     }
+ }
+ 
+-impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
++impl<Tool: ToolRegistryItem + ?Sized + 'static> ToolRegistry<Tool> {
+     pub fn new() -> Self {
+         Self::with_tool_decorator(Arc::new(IdentityToolDecorator))
+     }
+ 
+     pub fn with_tool_decorator(tool_decorator: ToolDecoratorRef<Tool>) -> Self {
+         Self {
+-            tools: IndexMap::new(),
+-            dynamic_tools: IndexMap::new(),
++            data: Arc::new(RwLock::new(ToolRegistryData {
++                tools: IndexMap::new(),
++                dynamic_tools: IndexMap::new(),
++            })),
+             tool_decorator,
+         }
+     }
+ 
+-    pub fn register_tool(&mut self, tool: ToolRef<Tool>) {
++    /// Registers a tool and returns an RAII [`ToolRegistrationGuard`].
++    ///
++    /// When the guard is dropped, the tool is removed from the registry
++    /// provided the registry entry has not been overwritten by a newer tool.
++    pub fn register_tool_guarded(&mut self, tool: ToolRef<Tool>) -> ToolRegistrationGuard<Tool> {
+         let tool = self.tool_decorator.decorate(tool);
+         let name = tool.name().to_string();
+         let dynamic_info = tool.dynamic_tool_info().and_then(|info| {
+@@ -220,18 +302,48 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
+             }
+         });
+ 
+-        if let Some(info) = dynamic_info {
+-            self.dynamic_tools.insert(
+-                name.clone(),
+-                DynamicToolMetadata {
+-                    provider_id: info.provider_id.clone(),
+-                    info,
+-                },
+-            );
+-        } else {
+-            self.dynamic_tools.shift_remove(&name);
++        {
++            let mut data = lock_write_data(&self.data);
++            if let Some(info) = dynamic_info {
++                data.dynamic_tools.insert(
++                    name.clone(),
++                    DynamicToolMetadata {
++                        provider_id: info.provider_id.clone(),
++                        info,
++                    },
++                );
++            } else {
++                data.dynamic_tools.shift_remove(&name);
++            }
++            data.tools.insert(name.clone(), tool.clone());
+         }
+-        self.tools.insert(name, tool);
++
++        let weak_data = Arc::downgrade(&self.data);
++        let tool_for_drop = tool.clone();
++        let name_for_drop = name.clone();
++
++        let disposal = DisposalGuard::new(Box::new(move || {
++            if let Some(data_arc) = weak_data.upgrade() {
++                let mut data = lock_write_data(&data_arc);
++                if let Some(current) = data.tools.get(&name_for_drop) {
++                    if Arc::ptr_eq(current, &tool_for_drop) {
++                        data.tools.shift_remove(&name_for_drop);
++                        data.dynamic_tools.shift_remove(&name_for_drop);
++                    }
++                }
++            }
++        }));
++
++        ToolRegistrationGuard {
++            guard: disposal,
++            name,
++            tool,
++        }
++    }
++
++    /// Registers a single tool persistently (compatibility method).
++    pub fn register_tool(&mut self, tool: ToolRef<Tool>) {
++        self.register_tool_guarded(tool).disarm();
+     }
+ 
+     pub fn install_static_provider<Provider>(&mut self, provider: &Provider)
+@@ -244,7 +356,8 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
+     }
+ 
+     pub fn unregister_mcp_server_tools(&mut self, server_id: &str) {
+-        let to_remove = self
++        let mut data = lock_write_data(&self.data);
++        let to_remove = data
+             .dynamic_tools
+             .iter()
+             .filter(|(_, metadata)| {
+@@ -258,13 +371,14 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
+             .collect::<Vec<_>>();
+ 
+         for key in to_remove {
+-            self.tools.shift_remove(&key);
+-            self.dynamic_tools.shift_remove(&key);
++            data.tools.shift_remove(&key);
++            data.dynamic_tools.shift_remove(&key);
+         }
+     }
+ 
+     pub fn unregister_tools_by_prefix(&mut self, prefix: &str) -> usize {
+-        let to_remove = self
++        let mut data = lock_write_data(&self.data);
++        let to_remove = data
+             .tools
+             .keys()
+             .filter(|key| key.starts_with(prefix))
+@@ -273,29 +387,34 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
+         let count = to_remove.len();
+ 
+         for key in to_remove {
+-            self.tools.shift_remove(&key);
+-            self.dynamic_tools.shift_remove(&key);
++            data.tools.shift_remove(&key);
++            data.dynamic_tools.shift_remove(&key);
+         }
+ 
+         count
+     }
+ 
+     pub fn get_tool(&self, name: &str) -> Option<ToolRef<Tool>> {
+-        self.tools.get(name).cloned()
++        lock_read_data(&self.data).tools.get(name).cloned()
+     }
+ 
+     pub fn get_dynamic_tool_info(&self, name: &str) -> Option<DynamicToolInfo> {
+-        self.dynamic_tools.get(name).map(|metadata| metadata.info.clone())
++        lock_read_data(&self.data)
++            .dynamic_tools
++            .get(name)
++            .map(|metadata| metadata.info.clone())
+     }
+ 
+     pub fn is_tool_collapsed(&self, name: &str) -> bool {
+-        self.tools
++        lock_read_data(&self.data)
++            .tools
+             .get(name)
+             .is_some_and(|tool| tool.default_exposure() == ToolExposure::Collapsed)
+     }
+ 
+     pub fn collapsed_tool_names(&self) -> Vec<String> {
+-        self.tools
++        lock_read_data(&self.data)
++            .tools
+             .iter()
+             .filter(|&(_name, tool)| tool.default_exposure() == ToolExposure::Collapsed)
+             .map(|(name, _tool)| name.clone())
+@@ -303,21 +422,25 @@ impl<Tool: ToolRegistryItem + ?Sized> ToolRegistry<Tool> {
+     }
+ 
+     pub fn tool_names(&self) -> Vec<String> {
+-        self.tools.keys().cloned().collect()
++        lock_read_data(&self.data).tools.keys().cloned().collect()
+     }
+ 
+     pub fn all_tools(&self) -> Vec<ToolRef<Tool>> {
+-        self.tools.values().cloned().collect()
++        lock_read_data(&self.data).tools.values().cloned().collect()
+     }
+ }
+ 
+ #[async_trait]
+-impl<Tool: ToolRegistryItem + ?Sized> DynamicToolProvider for ToolRegistry<Tool> {
++impl<Tool: ToolRegistryItem + ?Sized + 'static> DynamicToolProvider for ToolRegistry<Tool> {
+     async fn list_dynamic_tools(&self) -> PortResult<Vec<DynamicToolDescriptor>> {
+         let mut descriptors = Vec::new();
++        let (tools, dynamic_tools) = {
++            let data = lock_read_data(&self.data);
++            (data.tools.clone(), data.dynamic_tools.clone())
++        };
+ 
+-        for (name, tool) in self.tools.iter() {
+-            let Some(metadata) = self.dynamic_tools.get(name) else {
++        for (name, tool) in tools.iter() {
++            let Some(metadata) = dynamic_tools.get(name) else {
+                 continue;
+             };
+             let description = tool
+diff --git a/src/crates/execution/tool-contracts/src/lib.rs b/src/crates/execution/tool-contracts/src/lib.rs
+index a4912c4..05e4cc8 100644
+--- a/src/crates/execution/tool-contracts/src/lib.rs
++++ b/src/crates/execution/tool-contracts/src/lib.rs
+@@ -48,9 +48,9 @@ pub use framework::{
+     StaticToolProviderPlan, ToolCatalogRuntime, ToolCatalogSnapshotProvider, ToolContextFacts, ToolDecoratorRef,
+     ToolExecutionAccessError, ToolExposure, ToolManifestDefinition, ToolManifestPolicyResolution,
+     ToolManifestPolicyTool, ToolPathBackend, ToolPathContractError, ToolPathOperation, ToolPathPolicy,
+-    ToolPathResolution, ToolRef, ToolRegistry, ToolRegistryItem, ToolRenderOptions, ToolRestrictionError, ToolResult,
+-    ToolRuntimeAssembly, ToolRuntimeRestrictions, ToolWorkspaceKind, ValidationResult, GET_TOOL_SPEC_TOOL_NAME,
+-    NORTHHING_RUNTIME_URI_PREFIX,
++    ToolPathResolution, ToolRef, ToolRegistrationGuard, ToolRegistry, ToolRegistryItem, ToolRenderOptions,
++    ToolRestrictionError, ToolResult, ToolRuntimeAssembly, ToolRuntimeRestrictions, ToolWorkspaceKind,
++    ValidationResult, GET_TOOL_SPEC_TOOL_NAME, NORTHHING_RUNTIME_URI_PREFIX,
+ };
+ pub use input_validator::InputValidator;
+ pub use northhing_core_types::ToolImageAttachment;

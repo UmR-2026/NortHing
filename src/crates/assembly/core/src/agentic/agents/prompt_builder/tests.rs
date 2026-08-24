@@ -216,21 +216,6 @@ async fn deep_research_report_link_defaults_to_workspace_relative_path() {
     );
 }
 
-#[tokio::test]
-async fn deep_research_report_link_uses_computer_scheme_for_remote_delivery() {
-    let context = PromptBuilderContext::new("workspace/root", Some("session-1".to_string()), None)
-        .with_remote_file_delivery_channel(true);
-    let prompt = PromptBuilder::new(context)
-        .build_prompt_from_template("[View full report]({DEEP_RESEARCH_REPORT_LINK})")
-        .await
-        .expect("prompt should build");
-
-    assert_eq!(
-        prompt,
-        "[View full report](computer://.northhing/sessions/session-1/research/report.md)"
-    );
-}
-
 #[test]
 fn workspace_context_renders_related_directories() {
     let context = PromptBuilderContext::new(r"workspace\root", None, None).with_related_paths(vec![

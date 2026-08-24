@@ -1,4 +1,4 @@
-# northhing
+# NortHing
 
 A general-purpose agent application with a Slint-based desktop interface. The IDE/CLI/coding capabilities are tools for the agent — not a human-facing IDE.
 
@@ -40,7 +40,7 @@ See [`AGENTS.md`](AGENTS.md) for the layered module index, backbone invariants, 
 See [`docs/status/surfaces.md`](docs/status/surfaces.md) for the complete ledger of shipping vs frozen-experimental surfaces.
 
 **Shipping (v0.1.0)**: Slint desktop + installer.  
-**Frozen-experimental**: CLI, server, relay, mobile-web, MiniApp UI, SDLC harness.
+**Frozen-experimental**: CLI, server, SDLC harness.
 
 ## Tech Debt
 

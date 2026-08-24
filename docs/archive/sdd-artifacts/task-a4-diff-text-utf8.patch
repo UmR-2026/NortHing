@@ -1,0 +1,651 @@
+﻿commit 414d822146a18852999dc4a064bebb5cc182bde7
+Author: Mavis <mavis@northhing.local>
+Date:   Tue Aug 4 22:32:49 2026 +0800
+
+    feat(growth): add competition group normalization and natural suppression
+
+diff --git a/src/agentic/src/topics/competition.rs b/src/agentic/src/topics/competition.rs
+index ae4824d..57b397e 100644
+--- a/src/agentic/src/topics/competition.rs
++++ b/src/agentic/src/topics/competition.rs
+@@ -1 +1,638 @@
+-//! Competition groups: in-group normalization, suppression, revival. Filled by task G2-T8.
++//! Competition groups: in-group share normalization and natural suppression.
++//!
++//! A competition group is a set of mutually exclusive topics (for example
++//! "package manager preference") that together own 100% of the group's weight
++//! share. When a user expresses a new preference, the boosted topic's share
++//! rises and every other member's share is squeezed down by renormalization.
++//! A topic whose share drops low enough stops surfacing in retrieval -- it is
++//! "naturally suppressed" -- but its data is never deleted and can always be
++//! revived by a later boost. There is deliberately no hard-retire function:
++//! the only mutation path is weight adjustment via `apply_boost`.
++
++// -------------------------------------------------------------------------
++// Constants
++// -------------------------------------------------------------------------
++
++/// Normalized share below which a topic stops surfacing in retrieval.
++pub const SUPPRESSION_SHARE_THRESHOLD: f64 = 0.15;
++
++/// Raw (un-normalized) topic weight below which a topic stops surfacing.
++pub const SUPPRESSION_RAW_THRESHOLD: f64 = 0.20;
++
++/// Maximum share a single boost event may add before renormalization.
++pub const MAX_BOOST_PER_EVENT: f64 = 0.15;
++
++/// Tolerance for share-sum assertions.
++pub const SHARE_SUM_EPSILON: f64 = 1e-9;
++
++// -------------------------------------------------------------------------
++// Types
++// -------------------------------------------------------------------------
++
++/// A single member of a competition group with its normalized share.
++#[derive(Debug, Clone, PartialEq)]
++pub struct GroupMember {
++    pub topic: String,
++    /// Normalized share in 0.0..=1.0; group members sum to 1.0.
++    pub share: f64,
++}
++
++/// Whether a topic is currently suppressed from retrieval.
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum Suppression {
++    Active,
++    Suppressed,
++}
++
++/// A structural problem found by `health_check`.
++#[derive(Debug, Clone, PartialEq)]
++pub enum HealthIssue {
++    /// Group shares do not sum to 1.0 within `SHARE_SUM_EPSILON`.
++    ShareSumDrift { sum: f64 },
++    /// A member share is NaN or outside 0.0..=1.0.
++    ShareOutOfRange { topic: String, share: f64 },
++    /// The same topic appears more than once in the group.
++    DuplicateTopic { topic: String },
++    /// The group has no members.
++    EmptyGroup,
++}
++
++// -------------------------------------------------------------------------
++// Public functions
++// -------------------------------------------------------------------------
++
++/// Normalizes raw weights into shares summing to 1.0.
++///
++/// Rules: NaN/negative -> 0.0; if every weight is 0 -> equal split;
++/// empty input -> empty output. The upper bound is not clamped because these
++/// are raw weights, not normalized shares.
++pub fn normalize(raw: &[(String, f64)]) -> Vec<GroupMember> {
++    if raw.is_empty() {
++        return Vec::new();
++    }
++    let n = raw.len();
++    // Sanitize: NaN and negative weights count as 0.0.
++    let sanitized: Vec<f64> = raw
++        .iter()
++        .map(|(_, w)| if w.is_nan() || *w < 0.0 { 0.0 } else { *w })
++        .collect();
++    let sum: f64 = sanitized.iter().sum();
++    if sum == 0.0 {
++        // Every weight is zero: split equally.
++        let each = 1.0 / (n as f64);
++        raw.iter()
++            .map(|(t, _)| GroupMember {
++                topic: t.clone(),
++                share: each,
++            })
++            .collect()
++    } else {
++        raw.iter()
++            .enumerate()
++            .map(|(i, (t, _))| GroupMember {
++                topic: t.clone(),
++                share: sanitized[i] / sum,
++            })
++            .collect()
++    }
++}
++
++/// Applies a boost to one member and renormalizes the group.
++///
++/// - `delta` is clamped to `0.0..=MAX_BOOST_PER_EVENT` (negative or NaN -> 0.0,
++///   i.e. a no-op; values above the cap become the cap).
++/// - If the topic is not in the group it is inserted with share = clamped delta
++///   before renormalizing.
++/// - The result always sums to 1.0 (within `SHARE_SUM_EPSILON`).
++/// - Only the first matching topic is boosted; `health_check` is responsible
++///   for reporting duplicates. This function never removes a member.
++pub fn apply_boost(members: &[GroupMember], topic: &str, delta: f64) -> Vec<GroupMember> {
++    let clamped = clamp_boost_delta(delta);
++    let mut working: Vec<GroupMember> = members.to_vec();
++
++    match working.iter().position(|m| m.topic == topic) {
++        Some(idx) => working[idx].share += clamped,
++        None => working.push(GroupMember {
++            topic: topic.to_string(),
++            share: clamped,
++        }),
++    }
++
++    renormalize(&mut working);
++    working
++}
++
++/// Returns the suppression state for a topic.
++///
++/// Suppression requires the normalized share AND the raw weight to both be
++/// strictly below their thresholds. The two inputs come from different data
++/// sources, so this function never derives one from the other. NaN inputs are
++/// treated as "not below threshold" (safe Active default).
++pub fn suppression_state(share: f64, raw_weight: f64) -> Suppression {
++    let share_below = share < SUPPRESSION_SHARE_THRESHOLD;
++    let raw_below = raw_weight < SUPPRESSION_RAW_THRESHOLD;
++    if share_below && raw_below {
++        Suppression::Suppressed
++    } else {
++        Suppression::Active
++    }
++}
++
++/// Minimum number of `MAX_BOOST_PER_EVENT` boosts needed for `topic` to leave
++/// the suppressed share band, or `None` if it is already above the band.
++///
++/// This is a pure arithmetic simulation using `apply_boost`. The loop is capped
++/// at 100 iterations and returns `None` if it does not converge, so it never
++/// loops forever. Returns `None` when the topic is not present in the group
++/// (there is no existing member to revive).
++pub fn boosts_to_revive(members: &[GroupMember], topic: &str) -> Option<u32> {
++    let current = match members.iter().find(|m| m.topic == topic) {
++        Some(m) => m,
++        None => return None,
++    };
++    if current.share >= SUPPRESSION_SHARE_THRESHOLD {
++        return None;
++    }
++    let mut sim: Vec<GroupMember> = members.to_vec();
++    for i in 1..=100u32 {
++        sim = apply_boost(&sim, topic, MAX_BOOST_PER_EVENT);
++        let new_share = sim
++            .iter()
++            .find(|m| m.topic == topic)
++            .map(|m| m.share)
++            .unwrap_or(0.0);
++        if new_share >= SUPPRESSION_SHARE_THRESHOLD {
++            return Some(i);
++        }
++    }
++    None
++}
++
++/// Structural validation of a group. Returns all issues found (empty = healthy).
++///
++/// Checks for: empty group, duplicate topics, shares out of `0.0..=1.0`
++/// (including NaN), and share-sum drift beyond `SHARE_SUM_EPSILON`.
++pub fn health_check(members: &[GroupMember]) -> Vec<HealthIssue> {
++    let mut issues = Vec::new();
++    if members.is_empty() {
++        issues.push(HealthIssue::EmptyGroup);
++        return issues;
++    }
++
++    // Duplicates: report once per duplicated topic, at its second occurrence.
++    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
++    let mut reported: std::collections::HashSet<String> = std::collections::HashSet::new();
++    for m in members {
++        if !seen.insert(m.topic.clone()) && reported.insert(m.topic.clone()) {
++            issues.push(HealthIssue::DuplicateTopic {
++                topic: m.topic.clone(),
++            });
++        }
++    }
++
++    // Shares out of [0.0, 1.0] or NaN.
++    for m in members {
++        if m.share.is_nan() || m.share < 0.0 || m.share > 1.0 {
++            issues.push(HealthIssue::ShareOutOfRange {
++                topic: m.topic.clone(),
++                share: m.share,
++            });
++        }
++    }
++
++    // Sum drift. NaN shares are counted as 0.0 so the reported sum is a usable
++    // number rather than NaN.
++    let sum: f64 = members
++        .iter()
++        .map(|m| if m.share.is_nan() { 0.0 } else { m.share })
++        .sum();
++    if (sum - 1.0).abs() > SHARE_SUM_EPSILON {
++        issues.push(HealthIssue::ShareSumDrift { sum });
++    }
++
++    issues
++}
++
++// -------------------------------------------------------------------------
++// Internal helpers (private, not part of the public API)
++// -------------------------------------------------------------------------
++
++/// Clamps a boost delta into the legal `[0.0, MAX_BOOST_PER_EVENT]` range.
++/// NaN and negatives become 0.0 (no-op); values above the cap become the cap.
++fn clamp_boost_delta(delta: f64) -> f64 {
++    if delta.is_nan() || delta < 0.0 {
++        0.0
++    } else if delta > MAX_BOOST_PER_EVENT {
++        MAX_BOOST_PER_EVENT
++    } else {
++        delta
++    }
++}
++
++/// Renormalizes a working slice of members so shares sum to 1.0.
++/// If every share is zero the group is split equally. Never panics: division
++/// by zero is handled by the explicit `sum == 0.0` branch, and NaN shares are
++/// treated as 0.0 so they cannot poison the result.
++fn renormalize(working: &mut [GroupMember]) {
++    let n = working.len();
++    if n == 0 {
++        return;
++    }
++    let sum: f64 = working
++        .iter()
++        .map(|m| if m.share.is_nan() { 0.0 } else { m.share })
++        .sum();
++    if sum == 0.0 {
++        let each = 1.0 / (n as f64);
++        for m in working.iter_mut() {
++            m.share = each;
++        }
++    } else {
++        for m in working.iter_mut() {
++            let s = if m.share.is_nan() { 0.0 } else { m.share };
++            m.share = s / sum;
++        }
++    }
++}
++
++// -------------------------------------------------------------------------
++// Tests
++// -------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    /// Float near-assertion helper (epsilon form, never `assert_eq!` on f64).
++    fn approx(a: f64, b: f64) -> bool {
++        (a - b).abs() < SHARE_SUM_EPSILON
++    }
++
++    /// Read the share of a topic (first match), or 0.0 if absent.
++    fn share_of(members: &[GroupMember], topic: &str) -> f64 {
++        members
++            .iter()
++            .find(|m| m.topic == topic)
++            .map(|m| m.share)
++            .unwrap_or(0.0)
++    }
++
++    /// Sum of all member shares.
++    fn sum_shares(members: &[GroupMember]) -> f64 {
++        members.iter().map(|m| m.share).sum()
++    }
++
++    // --- Core invariants ---
++
++    // Invariant 1 (rise has fall): boosting A squeezes B and C, sum stays 1.0.
++    #[test]
++    fn boost_rise_causes_fall() {
++        let g = normalize(&[
++            ("A".to_string(), 1.0),
++            ("B".to_string(), 1.0),
++            ("C".to_string(), 1.0),
++        ]);
++        let a0 = share_of(&g, "A");
++        let b0 = share_of(&g, "B");
++        let c0 = share_of(&g, "C");
++        let g2 = apply_boost(&g, "A", 0.15);
++        let a1 = share_of(&g2, "A");
++        let b1 = share_of(&g2, "B");
++        let c1 = share_of(&g2, "C");
++        assert!(a1 > a0, "boosted topic must rise");
++        assert!(b1 < b0, "sibling B must fall");
++        assert!(c1 < c0, "sibling C must fall");
++        assert!(approx(sum_shares(&g2), 1.0), "group sum must stay 1.0");
++    }
++
++    // Invariant 1 (sum conservation): 10 deterministic boosts keep sum == 1.0
++    // at every step.
++    #[test]
++    fn sum_conservation_over_many_boosts() {
++        let mut g = normalize(&[
++            ("A".to_string(), 1.0),
++            ("B".to_string(), 1.0),
++            ("C".to_string(), 1.0),
++        ]);
++        // Fixed deterministic sequence (no random library).
++        let steps: [(&str, f64); 10] = [
++            ("A", 0.15),
++            ("B", 0.05),
++            ("A", 0.10),
++            ("C", 0.15),
++            ("B", 0.08),
++            ("A", 0.12),
++            ("C", 0.15),
++            ("B", 0.03),
++            ("A", 0.15),
++            ("C", 0.07),
++        ];
++        for (topic, delta) in steps.iter() {
++            g = apply_boost(&g, topic, *delta);
++            assert!(
++                approx(sum_shares(&g), 1.0),
++                "sum must be 1.0 after every boost"
++            );
++        }
++    }
++
++    // Boost upper bound: oversize delta == capped delta; negative delta is no-op.
++    #[test]
++    fn boost_clamp_and_negative_noop() {
++        let g = normalize(&[
++            ("A".to_string(), 1.0),
++            ("B".to_string(), 1.0),
++        ]);
++        let capped = apply_boost(&g, "A", MAX_BOOST_PER_EVENT);
++        let oversize = apply_boost(&g, "A", 5.0);
++        // Results must be identical.
++        assert_eq!(capped.len(), oversize.len());
++        for (cm, om) in capped.iter().zip(oversize.iter()) {
++            assert_eq!(cm.topic, om.topic);
++            assert!(approx(cm.share, om.share), "oversize delta must equal capped");
++        }
++        // Negative delta is a no-op (group unchanged).
++        let before = g.clone();
++        let noop = apply_boost(&g, "A", -1.0);
++        assert_eq!(noop.len(), before.len());
++        for (bm, nm) in before.iter().zip(noop.iter()) {
++            assert_eq!(bm.topic, nm.topic);
++            assert!(approx(bm.share, nm.share), "negative delta must be no-op");
++        }
++    }
++
++    // Invariant 2 (revivable): a suppressed member can be boosted back above
++    // the share band, and boosts_to_revive predicts the count exactly.
++    #[test]
++    fn suppressed_member_can_revive() {
++        // B has share 0.1, below the 0.15 band.
++        let g = normalize(&[
++            ("A".to_string(), 8.0),
++            ("B".to_string(), 1.0),
++            ("C".to_string(), 1.0),
++        ]);
++        assert!(share_of(&g, "B") < SUPPRESSION_SHARE_THRESHOLD);
++        let n = boosts_to_revive(&g, "B").expect("suppressed member should be revivable");
++        let mut revived = g.clone();
++        for _ in 0..n {
++            revived = apply_boost(&revived, "B", MAX_BOOST_PER_EVENT);
++        }
++        assert!(
++            share_of(&revived, "B") >= SUPPRESSION_SHARE_THRESHOLD,
++            "after n boosts the member must leave the band"
++        );
++    }
++
++    // Invariant 2 (no irreversibility): a zero-share member can rise again.
++    #[test]
++    fn zero_share_can_rise() {
++        // A has weight 0 -> share 0.0 after normalization.
++        let g = normalize(&[
++            ("A".to_string(), 0.0),
++            ("B".to_string(), 1.0),
++        ]);
++        assert!(approx(share_of(&g, "A"), 0.0));
++        let g2 = apply_boost(&g, "A", MAX_BOOST_PER_EVENT);
++        assert!(
++            share_of(&g2, "A") > 0.0,
++            "a zero-share member must be able to rise"
++        );
++    }
++
++    // Invariant 3 (no hard retire): apply_boost never removes a member; the only
++    // mutation path is weight adjustment. Suppression is by share value, not
++    // deletion. No retire/supersede/deactivate function exists in this module.
++    #[test]
++    fn no_member_removed_by_boost() {
++        let g = normalize(&[
++            ("A".to_string(), 1.0),
++            ("B".to_string(), 1.0),
++            ("C".to_string(), 1.0),
++        ]);
++        let topics_before: std::collections::HashSet<&str> =
++            g.iter().map(|m| m.topic.as_str()).collect();
++        // A heavy boost to A squeezes B and C, but neither is removed.
++        let g2 = apply_boost(&g, "A", MAX_BOOST_PER_EVENT);
++        let topics_after: std::collections::HashSet<&str> =
++            g2.iter().map(|m| m.topic.as_str()).collect();
++        assert!(
++            topics_before.is_subset(&topics_after),
++            "no member may be retired by a boost"
++        );
++        // Even a near-zero-share member survives repeated boosts to a rival.
++        let skewed = normalize(&[
++            ("big".to_string(), 1000.0),
++            ("tiny".to_string(), 0.0001),
++        ]);
++        assert!(share_of(&skewed, "tiny") > 0.0);
++        let mut skewed2 = skewed.clone();
++        for _ in 0..5 {
++            skewed2 = apply_boost(&skewed2, "big", MAX_BOOST_PER_EVENT);
++        }
++        assert!(
++            skewed2.iter().any(|m| m.topic == "tiny"),
++            "a suppressed member must remain in the group"
++        );
++    }
++
++    // --- Boundaries ---
++
++    // 6. Empty group.
++    #[test]
++    fn empty_group_handling() {
++        assert!(normalize(&[]).is_empty());
++        let single = apply_boost(&[], "x", 0.1);
++        assert_eq!(single.len(), 1);
++        assert!(approx(share_of(&single, "x"), 1.0));
++        let issues = health_check(&[]);
++        assert_eq!(issues, vec![HealthIssue::EmptyGroup]);
++    }
++
++    // 7. Single-member group: share is always 1.0, never share-suppressed.
++    #[test]
++    fn single_member_group() {
++        let g = normalize(&[("solo".to_string(), 1.0)]);
++        assert!(approx(share_of(&g, "solo"), 1.0));
++        let g2 = apply_boost(&g, "solo", MAX_BOOST_PER_EVENT);
++        assert!(approx(share_of(&g2, "solo"), 1.0));
++        // Share is 1.0 so the share condition fails -> Active despite low raw.
++        assert_eq!(suppression_state(1.0, 0.01), Suppression::Active);
++    }
++
++    // 8. All-zero weights -> equal split.
++    #[test]
++    fn all_zero_weights_split_equally() {
++        let g = normalize(&[
++            ("A".to_string(), 0.0),
++            ("B".to_string(), 0.0),
++            ("C".to_string(), 0.0),
++        ]);
++        let third = 1.0 / 3.0;
++        assert!(approx(share_of(&g, "A"), third));
++        assert!(approx(share_of(&g, "B"), third));
++        assert!(approx(share_of(&g, "C"), third));
++    }
++
++    // 9. NaN / negative weights -> treated as 0, no panic, no pollution.
++    #[test]
++    fn nan_and_negative_treated_as_zero() {
++        let g = normalize(&[
++            ("A".to_string(), f64::NAN),
++            ("B".to_string(), -5.0),
++            ("C".to_string(), 2.0),
++        ]);
++        // A and B are 0; only C has weight -> C gets the full share.
++        assert!(approx(share_of(&g, "A"), 0.0));
++        assert!(approx(share_of(&g, "B"), 0.0));
++        assert!(approx(share_of(&g, "C"), 1.0));
++        assert!(approx(sum_shares(&g), 1.0));
++    }
++
++    // 10. Boosting a topic not in the group inserts it; sum stays 1.0.
++    #[test]
++    fn boost_inserts_new_topic() {
++        let g = normalize(&[
++            ("A".to_string(), 1.0),
++            ("B".to_string(), 1.0),
++        ]);
++        let g2 = apply_boost(&g, "C", 0.10);
++        assert_eq!(g2.len(), 3);
++        assert!(approx(sum_shares(&g2), 1.0));
++        assert!(share_of(&g2, "C") > 0.0);
++    }
++
++    // 11. Duplicate topic: apply_boost boosts only the first; health_check flags.
++    #[test]
++    fn duplicate_topic_boost_and_health() {
++        let dup = vec![
++            GroupMember { topic: "A".to_string(), share: 0.5 },
++            GroupMember { topic: "A".to_string(), share: 0.3 },
++            GroupMember { topic: "B".to_string(), share: 0.2 },
++        ];
++        let boosted = apply_boost(&dup, "A", 0.10);
++        // First A: 0.5 + 0.10 = 0.60, sum = 1.10 -> 0.60 / 1.10.
++        assert!(approx(boosted[0].share, 0.60 / 1.10));
++        // Second A only got renormalized: 0.3 / 1.10.
++        assert!(approx(boosted[1].share, 0.30 / 1.10));
++        // health_check reports the duplicate.
++        let issues = health_check(&dup);
++        assert!(issues
++            .iter()
++            .any(|i| matches!(i, HealthIssue::DuplicateTopic { topic } if topic == "A")));
++    }
++
++    // --- Suppression judgement ---
++
++    // 12. Both below -> Suppressed.
++    #[test]
++    fn suppression_both_below() {
++        assert_eq!(suppression_state(0.10, 0.10), Suppression::Suppressed);
++    }
++
++    // 13. Raw weight high -> Active.
++    #[test]
++    fn suppression_raw_high_stays_active() {
++        assert_eq!(suppression_state(0.10, 0.50), Suppression::Active);
++    }
++
++    // 14. Share high -> Active.
++    #[test]
++    fn suppression_share_high_stays_active() {
++        assert_eq!(suppression_state(0.50, 0.10), Suppression::Active);
++    }
++
++    // 15. Boundary: exactly at threshold is Active (strict less-than to suppress).
++    #[test]
++    fn suppression_boundary_strict_less_than() {
++        // Both exactly at threshold -> Active.
++        assert_eq!(
++            suppression_state(SUPPRESSION_SHARE_THRESHOLD, SUPPRESSION_RAW_THRESHOLD),
++            Suppression::Active
++        );
++        // Share at threshold, raw below -> Active (share condition fails).
++        assert_eq!(
++            suppression_state(SUPPRESSION_SHARE_THRESHOLD, 0.10),
++            Suppression::Active
++        );
++        // Share below, raw at threshold -> Active (raw condition fails).
++        assert_eq!(
++            suppression_state(0.10, SUPPRESSION_RAW_THRESHOLD),
++            Suppression::Active
++        );
++        // Just below both -> Suppressed (strict less-than holds).
++        assert_eq!(
++            suppression_state(0.1499999999, 0.1999999999),
++            Suppression::Suppressed
++        );
++    }
++
++    // --- health_check ---
++
++    // 16. Sum drift 0.9 -> ShareSumDrift.
++    #[test]
++    fn health_sum_drift() {
++        let g = vec![
++            GroupMember { topic: "A".to_string(), share: 0.5 },
++            GroupMember { topic: "B".to_string(), share: 0.4 },
++        ];
++        let issues = health_check(&g);
++        assert!(issues
++            .iter()
++            .any(|i| matches!(i, HealthIssue::ShareSumDrift { sum } if approx(*sum, 0.9))));
++    }
++
++    // 17. Shares 1.5 / -0.1 -> ShareOutOfRange.
++    #[test]
++    fn health_out_of_range() {
++        let g = vec![
++            GroupMember { topic: "A".to_string(), share: 1.5 },
++            GroupMember { topic: "B".to_string(), share: -0.1 },
++        ];
++        let issues = health_check(&g);
++        assert!(issues.iter().any(|i| matches!(
++            i,
++            HealthIssue::ShareOutOfRange { topic, .. } if topic == "A"
++        )));
++        assert!(issues.iter().any(|i| matches!(
++            i,
++            HealthIssue::ShareOutOfRange { topic, .. } if topic == "B"
++        )));
++    }
++
++    // 18. Healthy group -> no issues.
++    #[test]
++    fn health_healthy_group() {
++        let g = vec![
++            GroupMember { topic: "A".to_string(), share: 0.5 },
++            GroupMember { topic: "B".to_string(), share: 0.5 },
++        ];
++        let issues = health_check(&g);
++        assert!(issues.is_empty());
++    }
++
++    // --- Convergence protection ---
++
++    // 19. boosts_to_revive on a member already above the band -> None.
++    #[test]
++    fn revive_already_above_returns_none() {
++        let g = normalize(&[
++            ("A".to_string(), 8.0),
++            ("B".to_string(), 1.0),
++            ("C".to_string(), 1.0),
++        ]);
++        // A share 0.8 >= 0.15.
++        assert_eq!(boosts_to_revive(&g, "A"), None);
++    }
++
++    // 20. Extreme group (200 members, tiny share) returns without deadloop.
++    #[test]
++    fn revive_extreme_group_returns() {
++        let raw: Vec<(String, f64)> = (0..200).map(|i| (format!("t{}", i), 1.0)).collect();
++        let g = normalize(&raw);
++        // Each share = 1/200 = 0.005, well below the band.
++        assert!(share_of(&g, "t0") < SUPPRESSION_SHARE_THRESHOLD);
++        let result = boosts_to_revive(&g, "t0");
++        // Must return (converge) rather than hit the 100-iteration cap.
++        assert!(result.is_some(), "extreme group must converge within the cap");
++    }
++}
+

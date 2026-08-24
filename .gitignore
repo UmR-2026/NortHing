@@ -124,3 +124,9 @@ VERSIONS_DIR=.
 
 __pycache__/
 *.pyc
+
+# Tool state (parallel-session agents)
+**/.mimosa/
+
+# Local build temp (GNU toolchain mingw ld response-file workaround)
+.tmp-build/

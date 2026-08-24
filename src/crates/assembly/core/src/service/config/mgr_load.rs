@@ -1,6 +1,7 @@
 use super::manager::ConfigManager;
 use crate::service::config::types::{AIModelConfig, GlobalConfig};
 use crate::util::errors::*;
+use northhing_services_core::JsonFileStore;
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::fs;
@@ -60,16 +61,21 @@ impl ConfigManager {
 
         match serde_json::from_value::<GlobalConfig>(config_value.clone()) {
             Ok(mut config) => {
+                let scrubbed = Self::scrub_plaintext_api_keys(&mut config.ai.models);
                 Self::ensure_models_config(&mut config.ai.models);
                 Self::add_default_agent_models_config(&mut config.ai.agent_models);
                 Self::add_default_func_agent_models_config(&mut config.ai.func_agent_models);
 
                 self.config = config;
 
-                if needs_migration {
+                if needs_migration || scrubbed {
                     self.config.version = current_version;
                     self.save_config().await?;
-                    info!("Config migrated and saved");
+                    if scrubbed {
+                        info!("Scrubbed legacy plaintext api_keys from config file and saved");
+                    } else {
+                        info!("Config migrated and saved");
+                    }
                 } else {
                     debug!("Loaded config from file");
                 }
@@ -95,6 +101,7 @@ impl ConfigManager {
         let mut config: GlobalConfig = serde_json::from_value(merged_value)
             .map_err(|e| NortHingError::config(format!("Failed to deserialize merged config: {}", e)))?;
 
+        let scrubbed = Self::scrub_plaintext_api_keys(&mut config.ai.models);
         Self::ensure_models_config(&mut config.ai.models);
         Self::add_default_agent_models_config(&mut config.ai.agent_models);
         Self::add_default_func_agent_models_config(&mut config.ai.func_agent_models);
@@ -103,9 +110,33 @@ impl ConfigManager {
 
         self.config.version = env!("CARGO_PKG_VERSION").to_string();
         self.save_config().await?;
-        info!("Config automatically fixed and saved");
+        if scrubbed {
+            info!("Scrubbed legacy plaintext api_keys from merged config and saved");
+        } else {
+            info!("Config automatically fixed and saved");
+        }
 
         Ok(())
+    }
+
+    /// Scrubs plaintext API keys loaded from legacy config files (Spec 1).
+    /// Core holds keys in memory only; disk files must not contain plaintext keys.
+    /// If any non-empty api_key is found, it is cleared from memory, a warning is logged,
+    /// and `true` is returned to signal that a re-save is required.
+    fn scrub_plaintext_api_keys(models: &mut [AIModelConfig]) -> bool {
+        let mut scrubbed = false;
+        for model in models.iter_mut() {
+            if !model.api_key.is_empty() {
+                warn!(
+                    target: "config",
+                    "Scrubbing plaintext api_key from core model '{}' ({}) on load",
+                    model.id, model.name
+                );
+                model.api_key.clear();
+                scrubbed = true;
+            }
+        }
+        scrubbed
     }
 
     /// Auto-completes missing fields in model configuration (backward compatible).
@@ -142,20 +173,10 @@ impl ConfigManager {
         }
     }
 
-    /// Saves the configuration file.
+    /// Saves the configuration file atomically.
     pub(crate) async fn save_config(&self) -> NortHingResult<()> {
-        let content = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| NortHingError::config(format!("Config serialization failed: {}", e)))?;
-
-        if let Some(parent) = self.config_file.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent).await.map_err(|e| {
-                    NortHingError::config(format!("Failed to create config directory {:?}: {}", parent, e))
-                })?;
-            }
-        }
-
-        fs::write(&self.config_file, content)
+        JsonFileStore
+            .write_atomic(&self.config_file, &self.config)
             .await
             .map_err(|e| NortHingError::config(format!("Failed to write config file {:?}: {}", self.config_file, e)))?;
         Ok(())
@@ -185,3 +206,7 @@ impl ConfigManager {
         Ok(backup_file)
     }
 }
+
+#[cfg(test)]
+#[path = "mgr_load_tests.rs"]
+mod tests;

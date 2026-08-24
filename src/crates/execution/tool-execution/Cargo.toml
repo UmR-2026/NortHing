@@ -11,3 +11,4 @@ grep-searcher = { workspace = true }
 ignore = { workspace = true }
 tracing = { workspace = true }
 vte = { workspace = true, features = ["ansi"] }
+trash = { workspace = true }

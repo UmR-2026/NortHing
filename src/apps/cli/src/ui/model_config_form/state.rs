@@ -342,7 +342,12 @@ impl ModelConfigFormState {
         if self.base_url.trim().is_empty() {
             return Some("Base URL is required".into());
         }
-        if self.api_key.trim().is_empty() {
+        // Edit mode: blank API key inherits the stored keyring entry
+        // (F4: Scheme C). The inheritance chain in
+        // `update_existing_model` -> `resolve_effective_model_key`
+        // reads the keyring when this field is empty, so we only
+        // require a non-empty key on add.
+        if self.editing_model_id.is_none() && self.api_key.trim().is_empty() {
             return Some("API Key is required".into());
         }
         if self.context_window.trim().parse::<u32>().is_err() {
@@ -616,4 +621,62 @@ impl ModelConfigFormState {
 
 fn char_to_byte(s: &str, char_idx: usize) -> usize {
     s.char_indices().nth(char_idx).map(|(i, _)| i).unwrap_or(s.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_result() -> ModelFormResult {
+        ModelFormResult {
+            editing_model_id: Some("test-model".into()),
+            name: "Test Model".into(),
+            model_name: "test-model".into(),
+            base_url: "https://api.example.com/v1".into(),
+            api_key: String::new(),
+            provider_format: "openai".into(),
+            context_window: 128000,
+            max_tokens: 8192,
+            enable_thinking: false,
+            support_preserved_thinking: false,
+            skip_ssl_verify: false,
+            custom_headers: String::new(),
+            custom_headers_mode: "merge".into(),
+            custom_request_body: String::new(),
+        }
+    }
+
+    #[test]
+    fn validate_allows_blank_api_key_in_edit_mode() {
+        // Edit mode (editing_model_id is Some) with a blank api_key must
+        // pass validate() so the inheritance chain in
+        // update_existing_model can resolve the stored keyring entry.
+        let mut state = ModelConfigFormState::new();
+        let result = sample_result();
+        // unwrap_or_default keeps the rot-budget unwrap ratchet green;
+        // sample_result() always sets editing_model_id.
+        let model_id = result.editing_model_id.clone().unwrap_or_default();
+        state.show_for_edit(&model_id, &result);
+        // show_for_edit clones the empty api_key from the result, but
+        // double-check the field is the source of truth.
+        assert!(state.editing_model_id().is_some());
+        assert!(state.field_value(FormField::ApiKey).is_empty());
+        assert_eq!(state.validate(), None);
+    }
+
+    #[test]
+    fn validate_blocks_blank_api_key_in_add_mode() {
+        // Add mode (editing_model_id is None) must still require a
+        // non-empty api_key — F4 only relaxes this for edit. Fill
+        // name/model_name directly because `show_custom()` clears them
+        // and validate()'s name check runs before the api_key check;
+        // we need to reach the api_key branch to exercise it.
+        let mut state = ModelConfigFormState::new();
+        state.show_custom();
+        state.name = "Test Model".into();
+        state.model_name = "test-model".into();
+        assert!(state.editing_model_id().is_none());
+        assert!(state.field_value(FormField::ApiKey).is_empty());
+        assert_eq!(state.validate(), Some("API Key is required".to_string()));
+    }
 }

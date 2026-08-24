@@ -1,0 +1,12 @@
+[package]
+name = "northhing-disposable"
+version.workspace = true
+edition.workspace = true
+description = "northhing reversible registration and disposable RAII primitives"
+
+[lib]
+name = "northhing_disposable"
+crate-type = ["rlib"]
+
+[dependencies]
+# Pure stdlib implementation

@@ -4,9 +4,8 @@
 use std::sync::Arc;
 
 use northhing_runtime_ports::{
-    ClockPort, FileSystemPort, GitPort, McpCatalogPort, NetworkPort, PermissionPort, RemoteCapabilityPort,
-    RemoteConnectionPort, RemoteProjectionPort, RemoteWorkspacePort, RuntimeEventSink, RuntimeServiceCapability,
-    RuntimeServicePort, SessionStorePort, TerminalPort, WorkspacePort,
+    ClockPort, FileSystemPort, GitPort, McpCatalogPort, NetworkPort, PermissionPort, RuntimeEventSink,
+    RuntimeServiceCapability, RuntimeServicePort, SessionStorePort, TerminalPort, WorkspacePort,
 };
 
 pub mod test_support;
@@ -42,10 +41,6 @@ pub struct RuntimeServices {
     pub network: Option<Arc<dyn NetworkPort>>,
     pub git: Option<Arc<dyn GitPort>>,
     pub mcp_catalog: Option<Arc<dyn McpCatalogPort>>,
-    pub remote_connection: Option<Arc<dyn RemoteConnectionPort>>,
-    pub remote_workspace: Option<Arc<dyn RemoteWorkspacePort>>,
-    pub remote_projection: Option<Arc<dyn RemoteProjectionPort>>,
-    pub remote_capabilities: Option<Arc<dyn RemoteCapabilityPort>>,
 }
 
 impl std::fmt::Debug for RuntimeServices {
@@ -61,22 +56,6 @@ impl std::fmt::Debug for RuntimeServices {
             .field("network", &self.network.as_ref().map(|port| port.capability()))
             .field("git", &self.git.as_ref().map(|port| port.capability()))
             .field("mcp_catalog", &self.mcp_catalog.as_ref().map(|port| port.capability()))
-            .field(
-                "remote_connection",
-                &self.remote_connection.as_ref().map(|port| port.capability()),
-            )
-            .field(
-                "remote_workspace",
-                &self.remote_workspace.as_ref().map(|port| port.capability()),
-            )
-            .field(
-                "remote_projection",
-                &self.remote_projection.as_ref().map(|port| port.capability()),
-            )
-            .field(
-                "remote_capabilities",
-                &self.remote_capabilities.as_ref().map(|port| port.capability()),
-            )
             .finish()
     }
 }
@@ -94,10 +73,6 @@ impl RuntimeServices {
             RuntimeServiceCapability::Network => self.network.is_some(),
             RuntimeServiceCapability::Git => self.git.is_some(),
             RuntimeServiceCapability::McpCatalog => self.mcp_catalog.is_some(),
-            RuntimeServiceCapability::RemoteConnection => self.remote_connection.is_some(),
-            RuntimeServiceCapability::RemoteWorkspace => self.remote_workspace.is_some(),
-            RuntimeServiceCapability::RemoteProjection => self.remote_projection.is_some(),
-            RuntimeServiceCapability::RemoteCapabilities => self.remote_capabilities.is_some(),
         }
     }
 
@@ -129,10 +104,6 @@ pub struct RuntimeServicesBuilder {
     network: Option<Arc<dyn NetworkPort>>,
     git: Option<Arc<dyn GitPort>>,
     mcp_catalog: Option<Arc<dyn McpCatalogPort>>,
-    remote_connection: Option<Arc<dyn RemoteConnectionPort>>,
-    remote_workspace: Option<Arc<dyn RemoteWorkspacePort>>,
-    remote_projection: Option<Arc<dyn RemoteProjectionPort>>,
-    remote_capabilities: Option<Arc<dyn RemoteCapabilityPort>>,
 }
 
 impl RuntimeServicesBuilder {
@@ -190,26 +161,6 @@ impl RuntimeServicesBuilder {
         self
     }
 
-    pub fn with_optional_remote_connection(mut self, port: Option<Arc<dyn RemoteConnectionPort>>) -> Self {
-        self.remote_connection = port;
-        self
-    }
-
-    pub fn with_optional_remote_workspace(mut self, port: Option<Arc<dyn RemoteWorkspacePort>>) -> Self {
-        self.remote_workspace = port;
-        self
-    }
-
-    pub fn with_optional_remote_projection(mut self, port: Option<Arc<dyn RemoteProjectionPort>>) -> Self {
-        self.remote_projection = port;
-        self
-    }
-
-    pub fn with_optional_remote_capabilities(mut self, port: Option<Arc<dyn RemoteCapabilityPort>>) -> Self {
-        self.remote_capabilities = port;
-        self
-    }
-
     pub fn build(self) -> Result<RuntimeServices, RuntimeServicesError> {
         Ok(RuntimeServices {
             filesystem: Self::required_service(self.filesystem, RuntimeServiceCapability::FileSystem)?,
@@ -222,19 +173,6 @@ impl RuntimeServicesBuilder {
             network: Self::optional_service(self.network, RuntimeServiceCapability::Network)?,
             git: Self::optional_service(self.git, RuntimeServiceCapability::Git)?,
             mcp_catalog: Self::optional_service(self.mcp_catalog, RuntimeServiceCapability::McpCatalog)?,
-            remote_connection: Self::optional_service(
-                self.remote_connection,
-                RuntimeServiceCapability::RemoteConnection,
-            )?,
-            remote_workspace: Self::optional_service(self.remote_workspace, RuntimeServiceCapability::RemoteWorkspace)?,
-            remote_projection: Self::optional_service(
-                self.remote_projection,
-                RuntimeServiceCapability::RemoteProjection,
-            )?,
-            remote_capabilities: Self::optional_service(
-                self.remote_capabilities,
-                RuntimeServiceCapability::RemoteCapabilities,
-            )?,
         })
     }
 

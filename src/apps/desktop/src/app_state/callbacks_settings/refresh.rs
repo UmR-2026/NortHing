@@ -1,6 +1,5 @@
 use super::load_app_settings_quiet;
 use crate::app_state::error_banners::set_banner_message;
-use crate::app_state::settings::ProviderType;
 use crate::app_state::skills::skill_category;
 use crate::app_state::slint_glue::{AppWindow, MCPItem, ProviderItem, SkillStateItem, WorkspaceItem};
 use northhing_core::kernel_facade::kernel_facade;
@@ -46,32 +45,28 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         }
     };
 
-    // ProviderItem: map ProviderConfig → UI struct. The `type` string is
-    // the inverse of the type→ProviderType parsing in register_upsert_provider_callback.
-    let providers: Vec<ProviderItem> = s
-        .providers
+    let facade = kernel_facade();
+    let core_models = facade.list_model_configs().await.unwrap_or_default();
+    let global_cfg = facade.get_global_config().await.ok();
+
+    // ProviderItem: map AIModelConfigDto → UI struct.
+    let providers: Vec<ProviderItem> = core_models
         .iter()
         .map(|p| {
-            let type_str = match p.provider_type {
-                ProviderType::Anthropic => "anthropic",
-                ProviderType::Openai => "openai",
-                ProviderType::Gemini => "gemini",
-                ProviderType::CustomOpenaiCompatible => "custom-openai",
-                ProviderType::CustomAnthropicCompatible => "custom-anthropic",
-            };
-            let verified = match p.last_verified_ok {
-                None => "",
-                Some(true) => "ok",
-                Some(false) => "fail",
+            let type_str = match p.provider_id.as_str() {
+                "anthropic" => "anthropic",
+                "openai" => "openai",
+                "gemini" => "gemini",
+                _ => "custom-openai",
             };
             ProviderItem {
                 id: SharedString::from(p.id.clone()),
-                name: SharedString::from(p.name.clone()),
+                name: SharedString::from(p.display_name.clone().unwrap_or_else(|| p.id.clone())),
                 r#type: SharedString::from(type_str),
-                base_url: SharedString::from(p.base_url.clone()),
+                base_url: SharedString::from(p.base_url.clone().unwrap_or_default()),
                 model: SharedString::from(p.model.clone()),
-                enabled: p.enabled,
-                verified: SharedString::from(verified),
+                enabled: p.enabled.unwrap_or(true),
+                verified: SharedString::from(""),
             }
         })
         .collect();
@@ -93,16 +88,6 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         })
         .collect();
 
-    // 2026-07-27 (K4a R3, Bug D): MCP servers come from the live core MCP
-    // service via the kernel facade, not the (always-empty after K4a)
-    // AppSettings.mcp_servers. The DTO has no transport field — the
-    // transport is inferred from the `command` field (non-empty → stdio;
-    // the only transport supported by the current MCP wire config). The
-    // `verified` field is left empty here; the Inspector's MCP status
-    // already summarizes the connection health, and per-server status
-    // probes would force N+1 RPCs (K4a-T4 deliberately punted on this
-    // — `McpCatalogAdapter` does the N+1 for the status string).
-    let facade = kernel_facade();
     let mcp_servers: Vec<MCPItem> = match facade.list_mcp_servers().await {
         Ok(servers) => build_mcp_items(&servers),
         Err(e) => {
@@ -146,51 +131,16 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
                 .ok()
                 .map(|o| o.overrides)
                 .unwrap_or_default();
-            let items = build_skill_state_items(&facade, &skills, &overrides, mode_id).await;
-            // Probe per-workspace support: `load_project_skills`
-            // currently returns a stub `Err` (the trait
-            // signature has no `workspace_path` parameter,
-            // so it cannot resolve the per-workspace document
-            // without one). When the user is on a project
-            // workspace AND the facade returns real data,
-            // we'd compute per-row workspace overrides here
-            // and set `workspace_override_supported = true`.
-            let workspace_override_supported = match s.current_workspace.as_ref() {
-                Some(_workspace) => {
-                    // 2026-07-27 (K4a R3, fix #5): trait
-                    // signature is `load_project_skills(&self)
-                    // -> ProjectSkillsDto` — no
-                    // `workspace_path` arg. The current
-                    // implementation is a stub that returns
-                    // `KernelError::Internal("not yet wired:
-                    // load_project_skills — workspace_path not
-                    // available")`. The pre-fix code silently
-                    // wrote `workspace_override = ""` for
-                    // every row; the panel then rendered the
-                    // cycle button which silently no-op'd the
-                    // user's clicks (the callback wrote
-                    // `set-skill-workspace` to the AppSettings,
-                    // but no one ever reads from there in the
-                    // data flow). That's a UX trap: the
-                    // button LOOKED clickable but the override
-                    // never actually took effect.
-                    //
-                    // The honest path: try the facade probe;
-                    // if it returns the unwired-stub error,
-                    // tell the panel "we can't honor a
-                    // workspace override right now" via
-                    // `workspace_override_supported = false`
-                    // and let the panel hide the column.
-                    let supported = facade
-                        .load_project_skills()
-                        .await
-                        .ok()
-                        .map(|doc| !doc.skills.is_empty() || !s.current_workspace.is_none())
-                        .unwrap_or(false);
-                    supported
-                }
-                None => false,
-            };
+            let project_doc = facade.load_project_skills().await.ok();
+            let workspace_override_supported = s.current_workspace.is_some() && project_doc.is_some();
+            let items = build_skill_state_items(
+                &facade,
+                &skills,
+                &overrides,
+                mode_id,
+                project_doc.as_ref().map(|d| d.skills.as_slice()),
+            )
+            .await;
             (items, workspace_override_supported)
         }
         Err(e) => {
@@ -210,18 +160,16 @@ pub(crate) async fn refresh_settings_lists(ui_weak: slint::Weak<AppWindow>) {
         .map(|i| i as i32)
         .unwrap_or(-1);
 
-    // default-model-provider-id: use the configured value directly (not resolve_default_model).
-    let default_model_provider_id = s
-        .default_model
+    // default-model-provider-id: from core global config.
+    let default_model_provider_id = global_cfg
         .as_ref()
-        .map(|m| m.provider_id.clone())
+        .and_then(|c| c.default_provider_id.clone())
         .unwrap_or_default();
 
     // legacy-placeholder-count: providers with id containing "-default" and disabled.
-    let legacy_placeholder_count = s
-        .providers
+    let legacy_placeholder_count = core_models
         .iter()
-        .filter(|p| p.id.contains("-default") && !p.enabled)
+        .filter(|p| p.id.contains("-default") && p.enabled == Some(false))
         .count() as i32;
 
     // All 7 property sets in a single invoke_from_event_loop.
@@ -480,6 +428,7 @@ pub(crate) async fn build_skill_state_items(
     skills: &[northhing_kernel_api::agents::SkillInfoDto],
     overrides: &[northhing_kernel_api::agents::SkillOverrideEntry],
     mode_id: &str,
+    project_skills: Option<&[northhing_kernel_api::agents::ProjectSkillEntry]>,
 ) -> Vec<SkillStateItem> {
     use northhing_kernel_api::KernelAgentsApi;
     // 2026-07-27 (K4a R3, fix #4): accept ANY boolean override
@@ -513,13 +462,29 @@ pub(crate) async fn build_skill_state_items(
                 .await
                 .unwrap_or(false)
         };
+
+        let (workspace_override, effective_enabled) = match project_skills {
+            Some(entries) => {
+                if let Some(entry) = entries.iter().find(|e| e.skill_id == key) {
+                    if entry.enabled {
+                        ("on", true)
+                    } else {
+                        ("off", false)
+                    }
+                } else {
+                    ("", global_enabled)
+                }
+            }
+            None => ("", global_enabled),
+        };
+
         out.push(SkillStateItem {
             id: SharedString::from(skill.id.clone()),
             name: SharedString::from(skill.name.clone()),
             description: SharedString::from(skill.description.clone()),
             global_enabled,
-            workspace_override: SharedString::from(""),
-            effective_enabled: global_enabled,
+            workspace_override: SharedString::from(workspace_override),
+            effective_enabled,
             // T4 §10.1: derive partition category from the skill id.
             category: SharedString::from(skill_category(&skill.id)),
         });
@@ -530,7 +495,7 @@ pub(crate) async fn build_skill_state_items(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northhing_kernel_api::agents::{SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
+    use northhing_kernel_api::agents::{ProjectSkillEntry, SkillInfoDto, SkillOverrideEntry, SkillOverridesDto};
     use northhing_kernel_api::settings::{ConfigLocationDto, MCPServerConfigDto, MCPServerDto};
     use serde_json::json;
 
@@ -645,7 +610,7 @@ mod tests {
             override_entry("user::home.agents::isaac-ai-game", true),
             override_entry("user::northhing::smoke-placeholder", false),
         ];
-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
         assert_eq!(items.len(), 2);
 
         let isaac = items
@@ -680,7 +645,7 @@ mod tests {
             key: "user_mode".to_string(),
             value: json!(true),
         }];
-        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", None).await;
         assert_eq!(items.len(), 1);
         // The non-user_enabled boolean-true override MUST flip
         // the row to enabled — the Inspector's `build_skills_model`
@@ -704,11 +669,60 @@ mod tests {
             skill("user::home.agents::a", "a", "a"),
             skill("user::home.agents::b", "b", "b"),
         ];
-        let items = build_skill_state_items(&facade, &skills, &[], "agentic").await;
+        let items = build_skill_state_items(&facade, &skills, &[], "agentic", None).await;
         assert_eq!(items.len(), 2);
         for item in &items {
             assert_eq!(item.effective_enabled, item.global_enabled);
             assert_eq!(item.workspace_override.as_str(), "");
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn build_skill_state_items_workspace_overrides() {
+        let facade = kernel_facade();
+        let skills = vec![
+            skill("user::home.agents::a", "a", "a"),
+            skill("user::home.agents::b", "b", "b"),
+            skill("user::home.agents::c", "c", "c"),
+        ];
+        let overrides = vec![
+            override_entry("user::home.agents::a", true),
+            override_entry("user::home.agents::b", false),
+        ];
+        let project_skills = vec![
+            ProjectSkillEntry {
+                skill_id: "user::home.agents::a".to_string(),
+                enabled: false,
+                config: None,
+            },
+            ProjectSkillEntry {
+                skill_id: "user::home.agents::b".to_string(),
+                enabled: true,
+                config: None,
+            },
+        ];
+        let items = build_skill_state_items(&facade, &skills, &overrides, "agentic", Some(&project_skills)).await;
+
+        if let Some(a) = items.iter().find(|s| s.id.as_str() == "user::home.agents::a") {
+            assert!(a.global_enabled);
+            assert_eq!(a.workspace_override.as_str(), "off");
+            assert!(!a.effective_enabled);
+        } else {
+            panic!("missing skill a");
+        }
+
+        if let Some(b) = items.iter().find(|s| s.id.as_str() == "user::home.agents::b") {
+            assert!(!b.global_enabled);
+            assert_eq!(b.workspace_override.as_str(), "on");
+            assert!(b.effective_enabled);
+        } else {
+            panic!("missing skill b");
+        }
+
+        if let Some(c) = items.iter().find(|s| s.id.as_str() == "user::home.agents::c") {
+            assert_eq!(c.workspace_override.as_str(), "");
+        } else {
+            panic!("missing skill c");
         }
     }
 

@@ -19,6 +19,30 @@ pub struct PluginRegistry {
     extension_map: HashMap<String, String>,
 }
 
+/// Registration guard returned by [`PluginRegistry::register`].
+///
+/// Carries the registered plugin ID and can idempotently undo the
+/// registration via [`Self::unregister`]. It deliberately does not
+/// auto-unregister on `Drop`: the registry lives behind a tokio `RwLock` in
+/// the LSP manager, so dropping cannot await the write lock. Callers undo
+/// explicitly instead.
+pub struct PluginRegistrationGuard {
+    plugin_id: String,
+}
+
+impl PluginRegistrationGuard {
+    /// The registered plugin ID.
+    pub fn plugin_id(&self) -> &str {
+        &self.plugin_id
+    }
+
+    /// Idempotently unregisters the plugin. A plugin that is already gone is
+    /// a no-op, so rollback paths can call this safely.
+    pub fn unregister(self, registry: &mut PluginRegistry) {
+        registry.unregister_if_present(&self.plugin_id);
+    }
+}
+
 impl PluginRegistry {
     /// Creates a new plugin registry.
     pub fn new() -> Self {
@@ -29,8 +53,8 @@ impl PluginRegistry {
         }
     }
 
-    /// Registers a plugin.
-    pub fn register(&mut self, plugin: LspPlugin) -> Result<()> {
+    /// Registers a plugin, returning an idempotent undo guard.
+    pub fn register(&mut self, plugin: LspPlugin) -> Result<PluginRegistrationGuard> {
         let plugin_id = plugin.id.clone();
 
         if self.plugins.contains_key(&plugin_id) {
@@ -66,7 +90,7 @@ impl PluginRegistry {
             self.extension_map.values().filter(|v| *v == &plugin_id).count()
         );
 
-        Ok(())
+        Ok(PluginRegistrationGuard { plugin_id })
     }
 
     /// Unregisters a plugin.
@@ -76,6 +100,32 @@ impl PluginRegistry {
             .remove(plugin_id)
             .ok_or_else(|| anyhow!("Plugin not found: {}", plugin_id))?;
 
+        self.remove_plugin_mappings(&plugin);
+
+        info!("Plugin unregistered: {}", plugin_id);
+
+        Ok(())
+    }
+
+    /// Unregisters a plugin, tolerating an already-missing registration.
+    ///
+    /// Returns whether a registration was actually removed. Used by the
+    /// idempotent undo path so a rollback never errors on an already-removed
+    /// plugin.
+    pub fn unregister_if_present(&mut self, plugin_id: &str) -> bool {
+        let Some(plugin) = self.plugins.remove(plugin_id) else {
+            return false;
+        };
+
+        self.remove_plugin_mappings(&plugin);
+
+        info!("Plugin unregistered: {}", plugin_id);
+
+        true
+    }
+
+    /// Removes a plugin's language and extension index entries.
+    fn remove_plugin_mappings(&mut self, plugin: &LspPlugin) {
         for language in &plugin.languages {
             self.language_map.remove(language);
         }
@@ -83,10 +133,6 @@ impl PluginRegistry {
         for ext in &plugin.file_extensions {
             self.extension_map.remove(ext);
         }
-
-        info!("Plugin unregistered: {}", plugin_id);
-
-        Ok(())
     }
 
     /// Gets a plugin by plugin ID.

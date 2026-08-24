@@ -17,7 +17,7 @@ and `docs/architecture/agent-runtime-services-design.md`.
 Main areas:
 
 - `src/agentic/`: agents, prompts, tools, sessions, execution, persistence
-- `src/service/`: config, filesystem, terminal, git, LSP, MCP, remote connect, AI memory
+- `src/service/`: config, filesystem, terminal, git, LSP, MCP, AI memory
 - `src/infrastructure/`: AI clients, app paths, event system, storage, debug log server
 - `src/product_runtime/`: product-full compatibility adapters and runtime service provider wiring
 
@@ -75,12 +75,10 @@ Use these files for ownership details instead of expanding this guide:
 - `docs/architecture/agent-runtime-services-design.md`
 - `src/crates/execution/agent-runtime/AGENTS.md`
 - `src/crates/execution/tool-contracts/AGENTS.md`
-- `src/crates/execution/harness/AGENTS.md`
 - `src/crates/contracts/product-domains/AGENTS.md`
 - `src/crates/contracts/runtime-ports/` and `src/crates/execution/runtime-services/` source docs
 - `src/crates/services/services-core/AGENTS.md`
 - `src/crates/services/services-integrations/AGENTS.md`
-- `src/crates/execution/tool-provider-groups/AGENTS.md`
 
 Narrower local guides already exist for some subtrees:
 

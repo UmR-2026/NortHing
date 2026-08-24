@@ -208,15 +208,9 @@ export function useInstaller(): UseInstallerReturn {
     if (!latestInstall.detected) {
       return;
     }
-    const cmd = latestInstall.uninstallString?.trim();
-    if (!cmd) {
-      setError('No uninstall command is registered for this installation.');
-      return;
-    }
     try {
       await invoke('launch_registered_uninstaller', {
         request: {
-          uninstallCommand: cmd,
           installPath: latestInstall.installLocation ?? null,
         },
       });

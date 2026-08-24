@@ -29,6 +29,7 @@ mod stream;
 mod tool;
 mod tool_card_bridge;
 
+pub use builtin_clients::{CLAUDE_CODE_ACP_PACKAGE_PINNED, CODEX_ACP_PACKAGE_PINNED};
 pub use config::{
     AcpClientConfig, AcpClientConfigFile, AcpClientInfo, AcpClientPermissionMode, AcpClientRequirementProbe,
     AcpClientStatus, AcpRequirementProbeItem, RemoteAcpClientRequirementSnapshot,

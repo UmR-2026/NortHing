@@ -9,7 +9,6 @@
 //! Bodies + comments are preserved verbatim from the original `mod.rs`
 //! (R37a spec: preserve all comments + bodies).
 
-use super::actor::maybe_construct_actor_runtime;
 use super::callbacks_lifecycle::{
     register_clear_inline_error_callback, register_clear_input_error_callback, register_clear_session_error_callback,
     register_delete_session_callback, register_dismiss_banner_callback, register_export_markdown_callback,
@@ -22,7 +21,8 @@ use super::callbacks_settings::{
     refresh_settings_lists, register_add_workspace_callback, register_delete_provider_callback,
     register_onboarding_completed_callback, register_pick_folder_callback, register_refresh_settings_callback,
     register_remove_workspace_callback, register_set_default_model_callback,
-    register_set_skill_filter_callback, register_test_provider_callback,
+    register_set_skill_filter_callback, register_set_skill_global_callback,
+    register_set_skill_workspace_callback, register_test_provider_callback,
     register_test_provider_config_callback, register_upsert_provider_callback,
 };
 use super::error_banners::set_session_error;
@@ -150,19 +150,6 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                             );
                         }
                     }
-                    // One-time startup sync: push any providers the user
-                    // stored on disk into core's runtime config. This is
-                    // the migration path for existing users whose keys
-                    // live in app.json but whose core config is empty.
-                    // Failure is non-fatal — we just warn and continue.
-                    if !settings.providers.is_empty() {
-                        if let Err(e) = crate::app_state::settings::sync_providers_to_core(&settings).await {
-                            tracing::warn!(
-                                target: "app_state",
-                                "startup sync_providers_to_core failed: {e}"
-                            );
-                        }
-                    }
                 }
                 Err(e) => {
                     // Settings load failure is non-fatal — show the main
@@ -174,13 +161,20 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
                     );
                 }
             }
+            // Push keyring-resolved keys into core's in-memory model config
+            // (Scheme C). Deliberately outside the match above: the push reads
+            // core's model list + the OS keyring, not desktop settings, so a
+            // settings-load failure must not skip it (previously the Err arm
+            // left core key-less until restart).
+            if let Err(e) =
+                crate::app_state::settings::push_resolved_keys_to_core(&*crate::app_state::settings::PRODUCTION_KEYRING)
+                    .await
+            {
+                tracing::warn!(target: "app_state", "startup push_resolved_keys_to_core failed: {e}");
+            }
         });
     });
 
-    // Phase I.3: construct an `ActorRuntime` (when the flag is on)
-    // and register a heartbeat actor. The runtime is a no-op when the
-    // flag is `false` (the default) — no behavior change for users.
-    maybe_construct_actor_runtime(&app_state, &ui);
     // Phase G.3: bind the show-subagents toggle. Initial value comes from
     // `AppState::new` (default true). The user can flip it via the
     // sidebar checkbox; the callback updates both the Slint property
@@ -293,6 +287,9 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     // expected to be available here.
     event_bridge::register_desktop_event_bridge(&ui, &app_state);
 
+    // Register SkillWatchService event listener for live reload (PCS-2 race-free mount)
+    crate::app_state::skills::register_desktop_skill_watch_listener(ui.as_weak());
+
     // --- Register all 17 Slint callbacks ---
     // LifecyCle callbacks (chat/session/theme/subagents/skill/clears)
     register_send_message_callback(&ui, &app_state);
@@ -316,6 +313,8 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     register_upsert_provider_callback(&ui, &app_state);
     // 2026-07-18 (D2h): refresh settings lists when settings route is entered.
     register_refresh_settings_callback(&ui, &app_state);
+    register_set_skill_global_callback(&ui, &app_state);
+    register_set_skill_workspace_callback(&ui, &app_state);
     // 2026-06-26 (Phase 4 fix): welcome-flow callbacks.
     register_pick_folder_callback(&ui, &app_state);
     register_add_workspace_callback(&ui, &app_state);
@@ -353,10 +352,11 @@ pub fn create_ui(app_state: Arc<AppState>) -> Result<AppWindow> {
     const INITIAL_SKILL_FILTER: &str = "";
     app_state.set_skills_filter(INITIAL_SKILL_FILTER.to_string());
 
-    // FR-T3b: frameless 窗口控制按钮接 Rust slint::Window API。
+    // FR-T3b: frameless window controls wired to the Rust slint::Window API.
     // minimize -> set_minimized(true); maximize -> toggle is_maximized;
-    // close -> hide()（hide 递减 window_count，归零自动 quit_event_loop，
-    // 见 i-slint-core window.rs Window::hide）。无 AppState 依赖。
+    // close -> hide() (hide decrements window_count; reaching zero quits the
+    // event loop automatically, see i-slint-core window.rs Window::hide).
+    // No AppState dependency.
     let ui_weak_min = ui.as_weak();
     ui.on_window_minimize(move || {
         if let Some(ui) = ui_weak_min.upgrade() {

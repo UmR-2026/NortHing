@@ -1,0 +1,1699 @@
+075d771 sdd: T1-10 ledger line + brief/report/review artifacts (SW1-10 done; T1 line all 5 tasks landed)
+1d1d4ff security: enforce WS Origin check, pin ACP client versions, and tighten debug-log CORS (T1-10)
+1f537f6 sdd: T1-8 ledger line + brief/report/review artifacts (SW1-8+P2-19 done; T2-2 backlog fully cleared)
+61ba73a refactor(server): remove orphan ai_relay, add rpc auth notice, and clean P2-19 dangling links (T1-8)
+1f38c98 sdd: T1-6 ledger line + brief/fix/report/review artifacts (SW1-6 done, F1 fixed same-round)
+3891080 fix(installer): use pure string normalization for uninstall path comparison to prevent junction confusion (T1-6 fix)
+cdfd059 fix(installer): validate manifest paths, enforce registered uninstall path, and ignore frontend uninstall command (T1-6)
+e5a484a sdd: T1-5 ledger line + brief/fix/report/review artifacts (SW1-5+P1-6 done, F1 fixed via user option b)
+ea55c80 fix(core): restore needs_permissions gate for FileWriteTool and FileEditTool (T1-5 fix)
+bec0ae7 fix(core): default tool confirmation to required and restore DeleteFileTool permission gate (T1-5)
+5862745 sdd: T1-4 ledger line + brief/report/review artifacts (SW1-4 done, 0C/0I/1M)
+0b656dd feat(core): wire shell safety guard and banned command checks to ComputerUse actions (T1-4)
+=== name-status (code only) ===
+M	docs/status/tech-debt-ledger.md
+M	northing-installer/src-tauri/src/installer/commands.rs
+M	northing-installer/src-tauri/src/installer/extract.rs
+M	northing-installer/src-tauri/src/installer/types.rs
+M	northing-installer/src/hooks/useInstaller.ts
+M	src/apps/cli/src/acp_cli.rs
+M	src/apps/server/README.md
+D	src/apps/server/src/ai_relay.rs
+M	src/apps/server/src/routes/websocket.rs
+M	src/apps/server/src/rpc_dispatcher.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+M	src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+M	src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs
+M	src/crates/assembly/core/src/service/config/ai.rs
+M	src/crates/interfaces/acp/src/client/builtin_clients.rs
+M	src/crates/interfaces/acp/src/client/manager_process.rs
+M	src/crates/interfaces/acp/src/client/mod.rs
+=== numstat ===
+2	2	docs/status/tech-debt-ledger.md
+137	9	northing-installer/src-tauri/src/installer/commands.rs
+105	0	northing-installer/src-tauri/src/installer/extract.rs
+5	1	northing-installer/src-tauri/src/installer/types.rs
+0	6	northing-installer/src/hooks/useInstaller.ts
+7	2	src/apps/cli/src/acp_cli.rs
+1	6	src/apps/server/README.md
+0	237	src/apps/server/src/ai_relay.rs
+101	2	src/apps/server/src/routes/websocket.rs
+12	0	src/apps/server/src/rpc_dispatcher.rs
+127	0	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+110	0	src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+93	0	src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+26	4	src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+13	5	src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+8	4	src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+81	3	src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs
+71	2	src/crates/assembly/core/src/service/config/ai.rs
+11	3	src/crates/interfaces/acp/src/client/builtin_clients.rs
+4	3	src/crates/interfaces/acp/src/client/manager_process.rs
+1	0	src/crates/interfaces/acp/src/client/mod.rs
+=== diff (code only) ===
+diff --git a/docs/status/tech-debt-ledger.md b/docs/status/tech-debt-ledger.md
+index 6759a42..3b75acc 100644
+--- a/docs/status/tech-debt-ledger.md
++++ b/docs/status/tech-debt-ledger.md
+@@ -84,7 +84,7 @@
+ - **Symptom**: `DeleteFileTool` 显式覆写 `needs_permissions()` 返回 `false`（`delete_file_tool.rs:115-117`），导致本地与 remote 删除均不走 tool framework 的确认通道。`tool_confirmation.rs:55` 在 `!tool_needs_permission` 时短路为 `ToolConfirmationPlan::Skip`，`exec_retry.rs:176-232` 不创建确认通道。remote 删除路径（`build_remote_delete_command` → `rm -rf`）不可逆且无用户确认。
+ - **Evidence**: `src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs:115-117` — override `fn needs_permissions(...) -> bool { false }`。`src/crates/execution/agent-runtime/src/tool_confirmation.rs:55` — `!tool_needs_permission` 短路。`src/crates/assembly/core/src/agentic/execution/round_subhandlers/process_result.rs:269-287` — `requires_permission=false → needs_confirm=false`。
+ - **Proposed fix**: (1) 让 remote 删除路径恢复确认门（按 `ToolPathOperation::Delete` 维度判断 `needs_permissions`）。(2) 或按 `recursive` / `remote` 维度细分 `needs_permissions`（递归 remote 删除必须确认）。(3) 本地删除已由 P1-3 回收站缓解，但 `permanent=true` 路径同样无确认门。
+-- **Status**: active (discovered by C1 review 2026-08-04)
++- **Status**: `resolved` (2026-08-21, T1-5) — 删除了 `DeleteFileTool` 的 `needs_permissions` 覆写，恢复 Tool trait 默认实现 `needs_permissions() = !self.is_readonly()`（由于 `is_readonly() == false`，恢复返回 `true`）。所有删除操作（含 permanent=true、含 remote SSH 路径）全部走确认门。覆盖单元测试验证通过。
+ 
+ ## P2 — Experience and operations
+ 
+@@ -220,7 +220,7 @@
+ - **Symptom**: `src/apps/server/README.md:5-10` 中存在 3 条指向 `src/apps/relay-server` 的链接与描述引用，但 relay-server 已在 T2-2 C5（commit `f6a011b`）整删。
+ - **Evidence**: `src/apps/server/README.md:5-10`。
+ - **Proposed fix**: server 为 frozen 面，留待 server 解冻时同步修整文档链接（来源：T2-2g review M-g-2）。
+-- **Status**: active (frozen surface)
++- **Status**: `resolved` — T1-8 顺手清删除 3 条指向已删 relay-server 的悬空链接与废弃说明。
+ 
+ ### P2-20: `pnpm-workspace.yaml` 中注册了孤儿工作区 `desktop-tauri`
+ 
+diff --git a/northing-installer/src-tauri/src/installer/commands.rs b/northing-installer/src-tauri/src/installer/commands.rs
+index c8c973c..7038f82 100644
+--- a/northing-installer/src-tauri/src/installer/commands.rs
++++ b/northing-installer/src-tauri/src/installer/commands.rs
+@@ -250,9 +250,12 @@ pub async fn start_installation(
+     Ok(())
+ }
+ 
++#[allow(deprecated)]
+ #[tauri::command]
+-pub async fn launch_registered_uninstaller(request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
+-    launch_command(&request.uninstall_command).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
++pub async fn launch_registered_uninstaller(_request: LaunchRegisteredUninstallerRequest) -> Result<(), String> {
++    let reg = read_uninstall_registration()
++        .ok_or_else(|| "No registered installation found to launch uninstaller.".to_string())?;
++    launch_command(&reg.uninstall_string).map_err(|e| format!("Failed to launch uninstaller: {}", e))?;
+     Ok(())
+ }
+ 
+@@ -428,11 +431,13 @@ pub async fn close_installer(app: AppHandle) -> Result<(), String> {
+ 
+ #[tauri::command]
+ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+-    let install_path = Path::new(&request.install_path);
++    let reg = read_uninstall_registration();
++    verify_uninstall_path(
++        reg.as_ref().map(|r| r.install_location.as_str()),
++        &request.install_path,
++    )?;
+ 
+-    if request.install_path.trim().is_empty() {
+-        return Err("Install path is empty; nothing to uninstall.".to_string());
+-    }
++    let install_path = Path::new(&request.install_path);
+ 
+     if !install_path.exists() {
+         return Err(format!(
+@@ -441,9 +446,7 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+         ));
+     }
+ 
+-    if install_path.exists() {
+-        fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
+-    }
++    fs::remove_dir_all(install_path).map_err(|e| format!("Failed to remove install directory: {}", e))?;
+ 
+     if let Err(e) = remove_desktop_shortcut() {
+         log::warn!("Failed to remove desktop shortcut: {}", e);
+@@ -478,6 +481,58 @@ pub async fn uninstall(request: UninstallRequest) -> Result<(), String> {
+     Ok(())
+ }
+ 
++pub fn normalize_path_for_comparison(path_str: &str) -> String {
++    let trimmed = path_str.trim();
++    if trimmed.is_empty() {
++        return String::new();
++    }
++
++    let mut s = trimmed.replace('\\', "/");
++
++    let lower_prefix = s.to_ascii_lowercase();
++    if lower_prefix.starts_with("//?/unc/") {
++        s = format!("//{}", &s[8..]);
++    } else if lower_prefix.starts_with("//?/") {
++        s = s[4..].to_string();
++    }
++
++    let trimmed_end = s.trim_end_matches('/');
++    if trimmed_end.is_empty() && s.starts_with('/') {
++        "/".to_string()
++    } else {
++        trimmed_end.to_ascii_lowercase()
++    }
++}
++
++pub fn verify_uninstall_path(
++    registered_location: Option<&str>,
++    requested_path: &str,
++) -> Result<(), String> {
++    let req_trimmed = requested_path.trim();
++    if req_trimmed.is_empty() {
++        return Err("Install path is empty; nothing to uninstall.".to_string());
++    }
++
++    let reg = registered_location
++        .map(|s| s.trim())
++        .filter(|s| !s.is_empty())
++        .ok_or_else(|| {
++            "Uninstall rejected: no valid installation is registered in the system registry.".to_string()
++        })?;
++
++    let norm_req = normalize_path_for_comparison(req_trimmed);
++    let norm_reg = normalize_path_for_comparison(reg);
++
++    if norm_req.is_empty() || norm_reg.is_empty() || norm_req != norm_reg {
++        return Err(format!(
++            "Uninstall rejected: requested path '{}' does not match registered install location '{}'.",
++            requested_path, reg
++        ));
++    }
++
++    Ok(())
++}
++
+ fn normalize_path(path: &Path) -> String {
+     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+     canonical.to_string_lossy().to_string()
+@@ -546,3 +601,76 @@ fn classify_connection_error(err: &str) -> String {
+         format!("Connection failed: {}", err)
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_normalize_path_for_comparison() {
++        assert_eq!(
++            normalize_path_for_comparison(r"C:\Program Files\northhing"),
++            normalize_path_for_comparison(r"C:/Program Files/northhing/")
++        );
++        assert_eq!(
++            normalize_path_for_comparison(r"c:\program files\northhing\"),
++            normalize_path_for_comparison(r"C:\Program Files\northhing")
++        );
++        assert_eq!(
++            normalize_path_for_comparison(r"\\?\C:\Program Files\northhing"),
++            normalize_path_for_comparison(r"C:\Program Files\northhing")
++        );
++        assert_eq!(
++            normalize_path_for_comparison(r"\\?\UNC\server\share\northhing"),
++            normalize_path_for_comparison(r"\\server\share\northhing")
++        );
++        assert_eq!(
++            normalize_path_for_comparison("/opt/northhing"),
++            normalize_path_for_comparison("/opt/northhing/")
++        );
++        assert_ne!(
++            normalize_path_for_comparison(r"C:\Program Files\northhing"),
++            normalize_path_for_comparison(r"C:\Windows")
++        );
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_matches() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing").is_ok());
++        assert!(verify_uninstall_path(reg, r"C:/Program Files/northhing/").is_ok());
++        assert!(verify_uninstall_path(reg, r"c:\program files\northhing").is_ok());
++        assert!(verify_uninstall_path(reg, r"\\?\C:\Program Files\northhing").is_ok());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_mismatch_rejected() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, r"C:\Windows").is_err());
++        assert!(verify_uninstall_path(reg, r"C:\Program Files\northhing-other").is_err());
++        assert!(verify_uninstall_path(reg, r"C:\Program Files").is_err());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_junction_or_link_literal_mismatch_rejected() {
++        // Pure string comparison does not follow filesystem junctions/symlinks.
++        // Even if C:\AppJunction pointed to C:\Program Files\northhing, differing literals are rejected.
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, r"C:\AppJunction").is_err());
++        assert!(verify_uninstall_path(reg, r"C:\SymlinkTarget").is_err());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_no_registration_rejected() {
++        assert!(verify_uninstall_path(None, r"C:\Program Files\northhing").is_err());
++        assert!(verify_uninstall_path(Some(""), r"C:\Program Files\northhing").is_err());
++        assert!(verify_uninstall_path(Some("   "), r"C:\Program Files\northhing").is_err());
++    }
++
++    #[test]
++    fn test_verify_uninstall_path_empty_request_rejected() {
++        let reg = Some(r"C:\Program Files\northhing");
++        assert!(verify_uninstall_path(reg, "").is_err());
++        assert!(verify_uninstall_path(reg, "   ").is_err());
++    }
++}
+diff --git a/northing-installer/src-tauri/src/installer/extract.rs b/northing-installer/src-tauri/src/installer/extract.rs
+index 7ed919a..f74ca4b 100644
+--- a/northing-installer/src-tauri/src/installer/extract.rs
++++ b/northing-installer/src-tauri/src/installer/extract.rs
+@@ -24,18 +24,77 @@ pub struct PayloadManifestFile {
+     pub sha256: String,
+ }
+ 
++pub fn validate_manifest_relative_path(path: &str) -> Result<()> {
++    let trimmed = path.trim();
++    if trimmed.is_empty() {
++        anyhow::bail!("manifest path is empty");
++    }
++
++    if trimmed.starts_with('/') || trimmed.starts_with('\\') {
++        anyhow::bail!("manifest path cannot start with a slash: '{}'", path);
++    }
++
++    if trimmed.contains(':') {
++        anyhow::bail!("manifest path cannot contain drive prefix or colon: '{}'", path);
++    }
++
++    if trimmed.starts_with(r"\\") || trimmed.starts_with("//") {
++        anyhow::bail!("manifest path cannot be UNC path: '{}'", path);
++    }
++
++    let normalized = trimmed.replace('\\', "/");
++    let p = Path::new(&normalized);
++
++    if p.is_absolute() || p.has_root() {
++        anyhow::bail!("manifest path cannot be absolute: '{}'", path);
++    }
++
++    for comp in p.components() {
++        match comp {
++            std::path::Component::Normal(c) => {
++                if c.to_string_lossy() == ".." {
++                    anyhow::bail!("manifest path contains parent dir traversal ('..'): '{}'", path);
++                }
++            }
++            std::path::Component::CurDir => {}
++            std::path::Component::ParentDir => {
++                anyhow::bail!("manifest path contains parent dir traversal ('..'): '{}'", path);
++            }
++            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
++                anyhow::bail!("manifest path contains absolute or root component: '{}'", path);
++            }
++        }
++    }
++
++    for part in normalized.split('/') {
++        if part == ".." {
++            anyhow::bail!("manifest path segment is '..': '{}'", path);
++        }
++    }
++
++    Ok(())
++}
++
+ pub fn load_payload_manifest(payload_dir: &Path) -> Result<PayloadManifest> {
+     let manifest_path = payload_dir.join(PAYLOAD_MANIFEST_FILE);
+     let raw = std::fs::read_to_string(&manifest_path)
+         .with_context(|| format!("failed to read payload manifest: {}", manifest_path.display()))?;
+     let manifest: PayloadManifest = serde_json::from_str(&raw)
+         .with_context(|| format!("failed to parse payload manifest: {}", manifest_path.display()))?;
++    for file in &manifest.files {
++        validate_manifest_relative_path(&file.path)
++            .with_context(|| format!("invalid relative path in manifest: '{}'", file.path))?;
++    }
+     Ok(manifest)
+ }
+ 
+ pub fn validate_payload_sha256(payload_dir: &Path, manifest: &PayloadManifest) -> Result<Vec<String>> {
+     let mut failures = Vec::new();
+     for file in &manifest.files {
++        if let Err(e) = validate_manifest_relative_path(&file.path) {
++            failures.push(format!("invalid manifest path '{}': {}", file.path, e));
++            continue;
++        }
+         let full_path = payload_dir.join(&file.path);
+         if !full_path.exists() {
+             failures.push(format!("missing payload file: {}", file.path));
+@@ -84,6 +143,8 @@ pub fn extract_payload(
+     let total = manifest.files.len().max(1) as u64;
+     let mut done = 0u64;
+     for file in &manifest.files {
++        validate_manifest_relative_path(&file.path)
++            .with_context(|| format!("security validation failed for path: '{}'", file.path))?;
+         let src = payload_dir.join(&file.path);
+         let dest = install_dir.join(&file.path);
+         if let Some(parent) = dest.parent() {
+@@ -125,3 +186,47 @@ pub fn find_embedded_payload_dir() -> Option<PathBuf> {
+     }
+     None
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_valid_manifest_relative_paths() {
++        assert!(validate_manifest_relative_path("northhing.exe").is_ok());
++        assert!(validate_manifest_relative_path("bin/northhing.exe").is_ok());
++        assert!(validate_manifest_relative_path("resources/app/icon.png").is_ok());
++        assert!(validate_manifest_relative_path(r"resources\app\icon.png").is_ok());
++        assert!(validate_manifest_relative_path("./bin/northhing.exe").is_ok());
++    }
++
++    #[test]
++    fn test_reject_empty_manifest_path() {
++        assert!(validate_manifest_relative_path("").is_err());
++        assert!(validate_manifest_relative_path("   ").is_err());
++    }
++
++    #[test]
++    fn test_reject_zip_slip_traversal() {
++        assert!(validate_manifest_relative_path("..").is_err());
++        assert!(validate_manifest_relative_path("../foo").is_err());
++        assert!(validate_manifest_relative_path("foo/../bar").is_err());
++        assert!(validate_manifest_relative_path("foo/../../bar").is_err());
++        assert!(validate_manifest_relative_path(r"..\foo").is_err());
++        assert!(validate_manifest_relative_path(r"foo\..\bar").is_err());
++        assert!(validate_manifest_relative_path(r"foo\bar\..\..\..\secret.txt").is_err());
++    }
++
++    #[test]
++    fn test_reject_absolute_paths_posix_and_windows() {
++        assert!(validate_manifest_relative_path("/etc/passwd").is_err());
++        assert!(validate_manifest_relative_path("/Program Files/app").is_err());
++        assert!(validate_manifest_relative_path(r"\Windows\System32").is_err());
++        assert!(validate_manifest_relative_path(r"C:\Program Files\northhing").is_err());
++        assert!(validate_manifest_relative_path(r"C:northhing.exe").is_err());
++        assert!(validate_manifest_relative_path(r"D:\data").is_err());
++        assert!(validate_manifest_relative_path(r"\\server\share\file.exe").is_err());
++        assert!(validate_manifest_relative_path("//server/share/file.exe").is_err());
++        assert!(validate_manifest_relative_path("file.txt:stream").is_err());
++    }
++}
+diff --git a/northing-installer/src-tauri/src/installer/types.rs b/northing-installer/src-tauri/src/installer/types.rs
+index 9bef82b..68a9c4a 100644
+--- a/northing-installer/src-tauri/src/installer/types.rs
++++ b/northing-installer/src-tauri/src/installer/types.rs
+@@ -144,7 +144,11 @@ pub struct LaunchApplicationRequest {
+ #[derive(Debug, Clone, Deserialize)]
+ #[serde(rename_all = "camelCase")]
+ pub struct LaunchRegisteredUninstallerRequest {
+-    pub uninstall_command: String,
++    /// Deprecated: Backend reads uninstall command directly from registry; this field is ignored for security.
++    #[deprecated(note = "Backend reads uninstall command directly from registry; this field is ignored for security")]
++    #[serde(default)]
++    pub uninstall_command: Option<String>,
++    #[serde(default)]
+     pub install_path: Option<String>,
+ }
+ 
+diff --git a/northing-installer/src/hooks/useInstaller.ts b/northing-installer/src/hooks/useInstaller.ts
+index 5ef9398..33ba4b5 100644
+--- a/northing-installer/src/hooks/useInstaller.ts
++++ b/northing-installer/src/hooks/useInstaller.ts
+@@ -208,15 +208,9 @@ export function useInstaller(): UseInstallerReturn {
+     if (!latestInstall.detected) {
+       return;
+     }
+-    const cmd = latestInstall.uninstallString?.trim();
+-    if (!cmd) {
+-      setError('No uninstall command is registered for this installation.');
+-      return;
+-    }
+     try {
+       await invoke('launch_registered_uninstaller', {
+         request: {
+-          uninstallCommand: cmd,
+           installPath: latestInstall.installLocation ?? null,
+         },
+       });
+diff --git a/src/apps/cli/src/acp_cli.rs b/src/apps/cli/src/acp_cli.rs
+index 4b43d00..fed6442 100644
+--- a/src/apps/cli/src/acp_cli.rs
++++ b/src/apps/cli/src/acp_cli.rs
+@@ -48,8 +48,13 @@ impl ExternalAcpClient {
+     fn config(self) -> AcpClientConfig {
+         let (command, args) = match self {
+             Self::Opencode => ("opencode", vec!["acp"]),
+-            Self::ClaudeCode => ("npx", vec!["--yes", "@zed-industries/claude-code-acp@latest"]),
+-            Self::Codex => ("npx", vec!["--yes", "@zed-industries/codex-acp@latest"]),
++            // Pinned 2026-08-21 from npm latest @zed-industries/claude-code-acp
++            Self::ClaudeCode => (
++                "npx",
++                vec!["--yes", northhing_acp::client::CLAUDE_CODE_ACP_PACKAGE_PINNED],
++            ),
++            // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
++            Self::Codex => ("npx", vec!["--yes", northhing_acp::client::CODEX_ACP_PACKAGE_PINNED]),
+         };
+         AcpClientConfig {
+             name: Some(self.display_name().to_string()),
+diff --git a/src/apps/server/README.md b/src/apps/server/README.md
+index 613c710..a94be98 100644
+--- a/src/apps/server/README.md
++++ b/src/apps/server/README.md
+@@ -2,9 +2,4 @@
+ 
+ This directory contains the `northhing-server` application, which serves the web backend runtime for northhing.
+ 
+-If you are looking for **Remote Connect self-hosted relay deployment**, use:
+-
+-- [Relay Server README](../relay-server/README.md)
+-- [deploy.sh](../relay-server/deploy.sh)
+-
+-`src/apps/server` and `src/apps/relay-server` are different components. `src/apps/server` is the main web app backend, while `src/apps/relay-server` is the relay service used by Remote Connect.
++> Note: The server surface is currently a frozen-experimental component (see `docs/status/surfaces.md`).
+diff --git a/src/apps/server/src/ai_relay.rs b/src/apps/server/src/ai_relay.rs
+deleted file mode 100644
+index e7e21ab..0000000
+--- a/src/apps/server/src/ai_relay.rs
++++ /dev/null
+@@ -1,237 +0,0 @@
+-//! AI Relay - Lightweight HTTP proxy for AI API requests
+-//!
+-//! When running northhing Server on a remote machine that cannot directly access
+-//! AI APIs (due to network restrictions), AI Relay acts as a local proxy:
+-//!
+-//! ```text
+-//! Remote Server                    Local Machine
+-//! ┌─────────────┐    SSH Tunnel    ┌─────────────┐
+-//! │ northhing      │ ───────────────► │ AI Relay    │ ──► AI API
+-//! │ Server      │   ssh -R 9090:   │ :9090       │     (OpenAI, etc.)
+-//! └─────────────┘                  └─────────────┘
+-//! ```
+-//!
+-//! Usage:
+-//! 1. Start AI Relay on local machine: `northhing-server --ai-relay --port 9090`
+-//! 2. SSH to remote with reverse tunnel: `ssh -R 9090:localhost:9090 user@remote`
+-//! 3. Configure remote northhing to use proxy: `proxy_url = "http://localhost:9090"`
+-
+-use axum::{
+-    body::Body,
+-    extract::{Request, State},
+-    http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri},
+-    response::{IntoResponse, Response},
+-    Router,
+-};
+-use reqwest::Client;
+-use std::sync::Arc;
+-
+-/// AI Relay state
+-#[derive(Clone)]
+-pub struct RelayState {
+-    pub client: Client,
+-}
+-
+-/// Create the AI Relay router
+-pub fn create_relay_router() -> Router {
+-    let client = Client::builder()
+-        .timeout(std::time::Duration::from_secs(300))
+-        .build()
+-        .expect("Failed to create HTTP client");
+-
+-    let state = Arc::new(RelayState { client });
+-
+-    Router::new()
+-        .fallback(handle_proxy)
+-        .with_state(state)
+-}
+-
+-/// Handle all incoming requests and proxy them
+-async fn handle_proxy(
+-    State(state): State<Arc<RelayState>>,
+-    req: Request,
+-) -> Result<Response, ProxyError> {
+-    // Get the target URL from the request
+-    let uri = req.uri().clone();
+-
+-    // Reconstruct the target URL
+-    let target_url = reconstruct_target_url(&uri)?;
+-
+-    tracing::info!(
+-        "AI Relay: proxying {} {}",
+-        req.method(),
+-        target_url
+-    );
+-
+-    // Remove hop-by-hop headers
+-    let mut headers = req.headers().clone();
+-    remove_hop_by_hop_headers(&mut headers);
+-
+-    // Build the proxied request
+-    let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())
+-        .unwrap_or(reqwest::Method::GET);
+-    
+-    let mut builder = state.client.request(method, &target_url);
+-
+-    // Add headers
+-    for (name, value) in headers.iter() {
+-        if let Ok(header_value) = HeaderValue::from_bytes(value.as_bytes()) {
+-            builder = builder.header(name.as_str(), header_value);
+-        }
+-    }
+-
+-    // Add body if present
+-    let body_bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
+-        .await
+-        .map_err(|e| ProxyError::RequestError(format!("Failed to read body: {}", e)))?;
+-
+-    if !body_bytes.is_empty() {
+-        builder = builder.body(body_bytes);
+-    }
+-
+-    // Send request
+-    let response = builder
+-        .send()
+-        .await
+-        .map_err(|e| ProxyError::UpstreamError(format!("Failed to connect to upstream: {}", e)))?;
+-
+-    tracing::info!(
+-        "AI Relay: received response status {}",
+-        response.status()
+-    );
+-
+-    // Build response
+-    let status = response.status();
+-    let mut resp_builder = axum::http::Response::builder()
+-        .status(StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::OK));
+-
+-    for (name, value) in response.headers() {
+-        if let Ok(header_name) = HeaderName::try_from(name.as_str()) {
+-            if let Ok(header_value) = HeaderValue::from_bytes(value.as_bytes()) {
+-                resp_builder = resp_builder.header(header_name, header_value);
+-            }
+-        }
+-    }
+-
+-    let body_bytes = response
+-        .bytes()
+-        .await
+-        .map_err(|e| ProxyError::UpstreamError(format!("Failed to read response: {}", e)))?;
+-
+-    resp_builder
+-        .body(Body::from(body_bytes))
+-        .map_err(|e| ProxyError::ResponseError(format!("Failed to build response: {}", e)))
+-}
+-
+-/// Reconstruct the target URL from the request
+-fn reconstruct_target_url(uri: &Uri) -> Result<String, ProxyError> {
+-    // The request should contain the actual target in the path
+-    // Format: /{scheme}/{host}/{path}
+-    // Example: /https/api.openai.com/v1/chat/completions
+-
+-    let path = uri.path();
+-
+-    // Skip the leading slash and extract scheme
+-    let path = path.strip_prefix('/').ok_or_else(|| {
+-        ProxyError::InvalidRequest("Invalid path format".to_string())
+-    })?;
+-
+-    let parts: Vec<&str> = path.splitn(3, '/').collect();
+-    if parts.is_empty() {
+-        return Err(ProxyError::InvalidRequest(
+-            "Missing scheme and host in path".to_string(),
+-        ));
+-    }
+-
+-    let scheme = *parts.get(0).unwrap_or(&"https");
+-    let host = parts.get(1).ok_or_else(|| {
+-        ProxyError::InvalidRequest("Missing host in path".to_string())
+-    })?;
+-    let rest = parts.get(2).unwrap_or(&"");
+-
+-    // Build the target URL
+-    let target_url = if rest.is_empty() {
+-        format!("{}://{}", scheme, host)
+-    } else {
+-        format!("{}://{}/{}", scheme, host, rest)
+-    };
+-
+-    // Add query string if present
+-    if let Some(query) = uri.query() {
+-        Ok(format!("{}?{}", target_url, query))
+-    } else {
+-        Ok(target_url)
+-    }
+-}
+-
+-/// Remove hop-by-hop headers that should not be forwarded
+-fn remove_hop_by_hop_headers(headers: &mut HeaderMap) {
+-    const HOP_BY_HOP: &[&str] = &[
+-        "connection",
+-        "keep-alive",
+-        "proxy-authenticate",
+-        "proxy-authorization",
+-        "te",
+-        "trailers",
+-        "transfer-encoding",
+-        "upgrade",
+-        "host",
+-    ];
+-
+-    for header in HOP_BY_HOP {
+-        headers.remove(*header);
+-    }
+-}
+-
+-/// Proxy errors
+-#[derive(Debug)]
+-pub enum ProxyError {
+-    InvalidRequest(String),
+-    RequestError(String),
+-    UpstreamError(String),
+-    ResponseError(String),
+-}
+-
+-impl IntoResponse for ProxyError {
+-    fn into_response(self) -> Response {
+-        let (status, message) = match self {
+-            ProxyError::InvalidRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+-            ProxyError::RequestError(msg) => (StatusCode::BAD_REQUEST, msg),
+-            ProxyError::UpstreamError(msg) => (StatusCode::BAD_GATEWAY, msg),
+-            ProxyError::ResponseError(msg) => {
+-                (StatusCode::INTERNAL_SERVER_ERROR, msg)
+-            }
+-        };
+-
+-        let body = serde_json::json!({
+-            "error": message,
+-        });
+-
+-        (status, axum::Json(body)).into_response()
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn test_reconstruct_target_url() {
+-        // Test with full path
+-        let uri: Uri = "/https/api.openai.com/v1/chat/completions".parse().unwrap();
+-        let result = reconstruct_target_url(&uri).unwrap();
+-        assert_eq!(result, "https://api.openai.com/v1/chat/completions");
+-
+-        // Test with query string
+-        let uri: Uri = "/https/api.openai.com/v1/models?limit=10"
+-            .parse()
+-            .unwrap();
+-        let result = reconstruct_target_url(&uri).unwrap();
+-        assert_eq!(result, "https://api.openai.com/v1/models?limit=10");
+-
+-        // Test with host only
+-        let uri: Uri = "/https/api.openai.com".parse().unwrap();
+-        let result = reconstruct_target_url(&uri).unwrap();
+-        assert_eq!(result, "https://api.openai.com");
+-    }
+-}
+diff --git a/src/apps/server/src/routes/websocket.rs b/src/apps/server/src/routes/websocket.rs
+index bd208fe..55733a3 100644
+--- a/src/apps/server/src/routes/websocket.rs
++++ b/src/apps/server/src/routes/websocket.rs
+@@ -9,7 +9,8 @@ use axum::{
+         ws::{Message, WebSocket, WebSocketUpgrade},
+         State,
+     },
+-    response::Response,
++    http::{header::ORIGIN, HeaderMap, StatusCode},
++    response::{IntoResponse, Response},
+ };
+ use futures_util::{SinkExt, StreamExt};
+ use serde::{Deserialize, Serialize};
+@@ -49,8 +50,65 @@ pub struct ErrorInfo {
+     data: Option<serde_json::Value>,
+ }
+ 
++/// Validate whether an Origin header is allowed for WebSocket connections.
++/// Missing origin is allowed for local non-browser clients (curl, reqwest, CLI).
++/// When present, origin must resolve to localhost, 127.0.0.1, or [::1].
++pub fn is_allowed_origin(origin: Option<&str>) -> bool {
++    let Some(origin) = origin else {
++        // Missing Origin header: allowed for non-browser local clients
++        return true;
++    };
++
++    let origin = origin.trim();
++    if origin.is_empty() || origin.eq_ignore_ascii_case("null") {
++        return false;
++    }
++
++    // Origin format: <scheme>://<host>[:<port>]
++    let Some((_scheme, rest)) = origin.split_once("://") else {
++        return false;
++    };
++
++    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
++    if authority.is_empty() {
++        return false;
++    }
++
++    if authority.starts_with('[') {
++        // IPv6 literal, e.g. [::1] or [::1]:8080
++        if let Some(end_bracket) = authority.find(']') {
++            let ip = &authority[1..end_bracket];
++            let after = &authority[end_bracket + 1..];
++            if ip != "::1" {
++                return false;
++            }
++            if after.is_empty() {
++                return true;
++            }
++            if after.starts_with(':') && after[1..].chars().all(|c| c.is_ascii_digit()) {
++                return true;
++            }
++            return false;
++        }
++        return false;
++    }
++
++    let host = authority.split(':').next().unwrap_or("");
++    host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1"
++}
++
+ /// WebSocket connection handler
+-pub async fn websocket_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
++pub async fn websocket_handler(headers: HeaderMap, ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
++    let origin = headers.get(ORIGIN).and_then(|v| v.to_str().ok());
++    if !is_allowed_origin(origin) {
++        tracing::warn!(origin = ?origin, "WebSocket connection rejected: forbidden origin");
++        return (
++            StatusCode::FORBIDDEN,
++            "WebSocket origin forbidden: origin must be localhost, 127.0.0.1, or [::1]",
++        )
++            .into_response();
++    }
++
+     tracing::info!("New WebSocket connection");
+     ws.on_upgrade(|socket| handle_socket(socket, state))
+ }
+@@ -164,3 +222,44 @@ async fn handle_command(method: &str, _params: serde_json::Value, _state: &AppSt
+         }
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_is_allowed_origin_missing_origin() {
++        // Local non-browser clients (curl, reqwest, CLI) omit Origin header
++        assert!(is_allowed_origin(None));
++    }
++
++    #[test]
++    fn test_is_allowed_origin_localhost_variations() {
++        assert!(is_allowed_origin(Some("http://localhost")));
++        assert!(is_allowed_origin(Some("http://localhost:8080")));
++        assert!(is_allowed_origin(Some("https://localhost:3000")));
++        assert!(is_allowed_origin(Some("http://127.0.0.1")));
++        assert!(is_allowed_origin(Some("http://127.0.0.1:8080")));
++        assert!(is_allowed_origin(Some("https://127.0.0.1:443")));
++        assert!(is_allowed_origin(Some("http://[::1]")));
++        assert!(is_allowed_origin(Some("http://[::1]:8080")));
++        assert!(is_allowed_origin(Some("https://[::1]:3000")));
++        assert!(is_allowed_origin(Some("tauri://localhost")));
++        assert!(is_allowed_origin(Some("ws://localhost:8080")));
++    }
++
++    #[test]
++    fn test_is_allowed_origin_rejects_external_and_malformed() {
++        assert!(!is_allowed_origin(Some("http://evil.com")));
++        assert!(!is_allowed_origin(Some("http://attacker.com:8080")));
++        assert!(!is_allowed_origin(Some("http://localhost.evil.com")));
++        assert!(!is_allowed_origin(Some("http://192.168.1.1:8080")));
++        assert!(!is_allowed_origin(Some("http://10.0.0.1")));
++        assert!(!is_allowed_origin(Some("http://[::2]:8080")));
++        assert!(!is_allowed_origin(Some("null")));
++        assert!(!is_allowed_origin(Some("NULL")));
++        assert!(!is_allowed_origin(Some("")));
++        assert!(!is_allowed_origin(Some("   ")));
++        assert!(!is_allowed_origin(Some("invalid-uri")));
++    }
++}
+diff --git a/src/apps/server/src/rpc_dispatcher.rs b/src/apps/server/src/rpc_dispatcher.rs
+index 2af7f6f..5b90113 100644
+--- a/src/apps/server/src/rpc_dispatcher.rs
++++ b/src/apps/server/src/rpc_dispatcher.rs
+@@ -3,6 +3,18 @@
+ //! Maps Tauri command names (used by the frontend `api.invoke()`) to
+ //! server-side handler functions. Each handler receives the raw JSON
+ //! `params` and returns a JSON `result`.
++//!
++//! # Status & Authentication Notice
++//!
++//! - **Orphan / Not Compiled**: This module is currently not wired into `main.rs`
++//!   (`mod rpc_dispatcher;` is omitted) and does not participate in compilation.
++//! - **Security Scope**: Contains handlers for sensitive operations including
++//!   DeepReview queue control, configuration reload, and filesystem/workspace actions.
++//! - **Authentication Requirement**: Before re-wiring or exposing this dispatcher
++//!   over WebSocket/HTTP, robust authentication and authorization MUST be implemented.
++//!   Exposing these RPC methods without authentication is strictly prohibited.
++//! - **Protocol Alignment**: Future retention, refactoring, or deprecation will be
++//!   determined upon wire protocol freezing per T4-5 / ACP alignment.
+ 
+ use crate::bootstrap::ServerAppState;
+ use anyhow::{anyhow, Result};
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+index 8897adf..e7ff9be 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_actions/system_actions/app_control.rs
+@@ -3,10 +3,12 @@
+ use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
+ use crate::agentic::tools::implementations::computer_use_actions::{utilities, ComputerUseActions};
+ use crate::agentic::tools::implementations::control_hub::{err_response, ControlHubError, ErrorCode};
++use crate::agentic::tools::implementations::shell_safety;
+ use crate::util::elapsed_ms_u64;
+ use crate::util::errors::{NortHingError, NortHingResult};
+ use crate::util::process_manager;
+ use serde_json::{json, Value};
++use tool_runtime::shell::banned_shell_command;
+ 
+ impl ComputerUseActions {
+     fn platform_open_command(app_name: &str) -> (String, Vec<String>) {
+@@ -95,11 +97,52 @@ impl ComputerUseActions {
+             }
+         };
+ 
++        // Guard check for banned commands or shell denylist before executing fallback commands.
++        if let Some(base_cmd) = banned_shell_command(app_name.trim()) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++        if let Some(pattern) = shell_safety::check_command_denied(app_name) {
++            return Err(NortHingError::tool(format!(
++                "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                app_name, pattern
++            )));
++        }
++
+         let mut last_err: Option<String> = None;
+         let mut output_opt = None;
+         let mut chosen_cmd = String::new();
+         let mut chosen_args: Vec<String> = vec![];
+         for (cmd, args) in &attempts {
++            let cmd_str = shell_safety::program_args_to_command_string(cmd, args);
++            if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++                return Err(NortHingError::tool(format!(
++                    "Command '{}' is not allowed for security reasons",
++                    base_cmd
++                )));
++            }
++
++            match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++                Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                    return Err(NortHingError::tool(format!(
++                        "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                        cmd_str, pattern
++                    )));
++                }
++                Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                    return Err(NortHingError::tool(format!(
++                        "Command execution denied by confirmation: {}",
++                        reason
++                    )));
++                }
++                Ok(shell_safety::GuardOutcome::Allowed) => {}
++                Err(e) => {
++                    return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++                }
++            }
++
+             match crate::util::process_manager::create_command(cmd).args(args).output() {
+                 Ok(out) => {
+                     if out.status.success() {
+@@ -179,6 +222,48 @@ impl ComputerUseActions {
+             .unwrap_or(16 * 1024)
+             .clamp(1024, 256 * 1024) as usize;
+ 
++        // Guard check: verify script content before interpreter dispatch
++        if let Some(base_cmd) = banned_shell_command(script.trim()) {
++            return Ok(err_response(
++                "system",
++                "run_script",
++                ControlHubError::new(
++                    ErrorCode::GuardRejected,
++                    format!("Command '{}' is not allowed for security reasons", base_cmd),
++                ),
++            ));
++        }
++
++        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!(
++                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                            script, pattern
++                        ),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!("Command execution denied by confirmation: {}", reason),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
+         let (program, args) = match script_type {
+             "applescript" => {
+                 #[cfg(target_os = "macos")]
+@@ -294,6 +379,48 @@ impl ComputerUseActions {
+             }
+         };
+ 
++        let cmd_str = shell_safety::program_args_to_command_string(&program, &args);
++        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++            return Ok(err_response(
++                "system",
++                "run_script",
++                ControlHubError::new(
++                    ErrorCode::GuardRejected,
++                    format!("Command '{}' is not allowed for security reasons", base_cmd),
++                ),
++            ));
++        }
++
++        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!(
++                            "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                            cmd_str, pattern
++                        ),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Ok(err_response(
++                    "system",
++                    "run_script",
++                    ControlHubError::new(
++                        ErrorCode::GuardRejected,
++                        format!("Command execution denied by confirmation: {}", reason),
++                    ),
++                ));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
+         let started = std::time::Instant::now();
+         let child = process_manager::create_tokio_command(&program)
+             .args(&args)
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+index 7ef2165..b7f3897 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/computer_use_tool/actions.rs
+@@ -11,8 +11,10 @@ use super::metadata::computer_use_augment_result_json;
+ use super::validation::{computer_use_snapshot_coordinate_basis, ensure_global_xy_on_display, req_i32};
+ use crate::agentic::tools::computer_use_host::ComputerUseHost;
+ use crate::agentic::tools::framework::{ToolResult, ToolUseContext};
++use crate::agentic::tools::implementations::shell_safety;
+ use crate::util::errors::{NortHingError, NortHingResult};
+ use serde_json::{json, Value};
++use tool_runtime::shell::banned_shell_command;
+ 
+ use super::ComputerUseTool;
+ 
+@@ -372,6 +374,64 @@ impl ComputerUseTool {
+         Ok(vec![ToolResult::ok(body, Some(summary))])
+     }
+ 
++    /// Validate and guard an AppleScript before execution.
++    pub(crate) async fn guard_apple_script_execution(script: &str) -> NortHingResult<()> {
++        if let Some(base_cmd) = banned_shell_command(script.trim()) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++
++        match shell_safety::guard_command_execution(script, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                    script, pattern
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command execution denied by confirmation: {}",
++                    reason
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
++        let cmd_str = shell_safety::program_args_to_command_string("/usr/bin/osascript", ["-e", script]);
++        if let Some(base_cmd) = banned_shell_command(&cmd_str) {
++            return Err(NortHingError::tool(format!(
++                "Command '{}' is not allowed for security reasons",
++                base_cmd
++            )));
++        }
++
++        match shell_safety::guard_command_execution(&cmd_str, "ComputerUse", true).await {
++            Ok(shell_safety::GuardOutcome::DeniedByDenylist { pattern }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command matched shell denylist (R1 safety filter). Refusing to execute: {}\nMatched pattern: {}",
++                    cmd_str, pattern
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::DeniedByConfirmation { reason }) => {
++                return Err(NortHingError::tool(format!(
++                    "Command execution denied by confirmation: {}",
++                    reason
++                )));
++            }
++            Ok(shell_safety::GuardOutcome::Allowed) => {}
++            Err(e) => {
++                return Err(NortHingError::tool(format!("Shell safety guard error: {}", e)));
++            }
++        }
++
++        Ok(())
++    }
++
+     /// `run_apple_script` — execute arbitrary AppleScript via `osascript` (macOS only).
+     pub(crate) async fn run_apple_script_impl(
+         #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] host_ref: &dyn ComputerUseHost,
+@@ -382,6 +442,9 @@ impl ComputerUseTool {
+             .get("script")
+             .and_then(|v| v.as_str())
+             .ok_or_else(|| NortHingError::tool("run_apple_script requires `script` parameter.".to_string()))?;
++
++        Self::guard_apple_script_execution(script).await?;
++
+         #[cfg(not(target_os = "macos"))]
+         {
+             let _ = script;
+@@ -613,3 +676,50 @@ pub(crate) async fn computer_use_execute_mouse_click_tool(
+         )),
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[tokio::test]
++    async fn apple_script_denied_by_banned_command() {
++        let err = ComputerUseTool::guard_apple_script_execution("alias foo='bar'")
++            .await
++            .expect_err("banned command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_denied_by_denylist() {
++        let err = ComputerUseTool::guard_apple_script_execution("rm -rf /")
++            .await
++            .expect_err("denylist command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("denylist") && msg.contains("rm with recursive+force"),
++            "expected denylist message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_synthesized_osascript_denied_by_denylist() {
++        let err = ComputerUseTool::guard_apple_script_execution("do shell script \"shutdown -h now\"")
++            .await
++            .expect_err("embedded dangerous command in apple script must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("denylist") && msg.contains("shutdown"),
++            "expected shutdown denylist match, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn apple_script_clean_passes_guard() {
++        let res = ComputerUseTool::guard_apple_script_execution("display dialog \"hello world\"").await;
++        assert!(res.is_ok(), "clean AppleScript must pass guard");
++    }
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs b/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+index cbe2c76..e6dd267 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/control_hub_tool_tests.rs
+@@ -468,6 +468,99 @@ mod control_hub_tests {
+         );
+     }
+ 
++    #[tokio::test]
++    async fn system_run_script_denied_by_banned_command() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "alias foo='bar'", "script_type": "shell" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command error message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_run_script_denied_by_denylist() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "rm -rf /", "script_type": "shell" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("denylist") && msg.contains("rm with recursive+force"),
++            "expected denylist error message, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_run_script_applescript_denied_by_denylist_before_os_check() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let results = tool
++            .handle_system(
++                "run_script",
++                &json!({ "script": "rm -rf /", "script_type": "applescript" }),
++                &ctx,
++            )
++            .await
++            .expect("dispatch should return structured error result");
++        let payload = results.first().unwrap().content();
++        assert_eq!(payload.get("ok"), Some(&json!(false)));
++        assert_eq!(payload["error"]["code"], "GUARD_REJECTED");
++        let msg = payload["error"]["message"].as_str().unwrap_or("");
++        assert!(
++            msg.contains("denylist"),
++            "expected denylist rejection before macOS OS check, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_open_app_denied_by_banned_command() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let err = tool
++            .handle_system("open_app", &json!({ "app_name": "alias" }), &ctx)
++            .await
++            .expect_err("banned command open_app must be rejected");
++        let msg = err.to_string();
++        assert!(
++            msg.contains("alias") && msg.contains("not allowed for security reasons"),
++            "expected banned command rejection, got: {msg}"
++        );
++    }
++
++    #[tokio::test]
++    async fn system_open_app_denied_by_denylist() {
++        let tool = ComputerUseActions::new();
++        let ctx = empty_context();
++        let err = tool
++            .handle_system("open_app", &json!({ "app_name": "rm -rf /" }), &ctx)
++            .await
++            .expect_err("denylist open_app must be rejected");
++        let msg = err.to_string();
++        assert!(msg.contains("denylist"), "expected denylist rejection, got: {msg}");
++    }
++
+     #[tokio::test]
+     async fn terminal_list_sessions_without_singleton_returns_clean_error() {
+         // The TerminalApi singleton is initialized only inside the desktop /
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+index d4420fc..168ad93 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/delete_file_tool.rs
+@@ -112,10 +112,6 @@ Important notes:
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         let path_str = match input.get("path").and_then(|v| v.as_str()) {
+             Some(p) => p,
+@@ -343,3 +339,29 @@ Important notes:
+         }])
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn delete_file_tool_is_not_readonly() {
++        let tool = DeleteFileTool::new();
++        assert!(!tool.is_readonly());
++    }
++
++    #[test]
++    fn delete_file_tool_needs_permissions_returns_true() {
++        let tool = DeleteFileTool::new();
++        // Without override, needs_permissions defaults to !is_readonly() == true
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({"path": "test.txt"}))));
++        assert!(tool.needs_permissions(Some(&json!({"path": "folder", "recursive": true}))));
++    }
++
++    #[test]
++    fn delete_file_tool_concurrency_safety_is_false() {
++        let tool = DeleteFileTool::new();
++        assert!(!tool.is_concurrency_safe(None));
++    }
++}
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs b/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+index ae68f6a..b25308f 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/file_edit_tool.rs
+@@ -154,10 +154,6 @@ impl Tool for FileEditTool {
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         let file_path = match input.get("file_path").and_then(|v| v.as_str()) {
+             Some(path) if !path.is_empty() => path,
+@@ -379,7 +375,7 @@ impl Tool for FileEditTool {
+ mod tests {
+     use super::{FileEditTool, EDIT_TOOL_PROMPT};
+     use crate::agentic::tools::framework::Tool;
+-    use serde_json::Value;
++    use serde_json::{json, Value};
+ 
+     #[tokio::test]
+     async fn edit_tool_prompt_matches_claude_style() {
+@@ -445,4 +441,16 @@ mod tests {
+         ));
+         assert!(!FileEditTool::is_edit_content_guardrail_error("Permission denied"));
+     }
++
++    #[test]
++    fn file_edit_tool_needs_permissions_returns_true() {
++        let tool = FileEditTool::new();
++        assert!(!tool.is_readonly());
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({
++            "file_path": "test.txt",
++            "old_string": "a",
++            "new_string": "b"
++        }))));
++    }
+ }
+diff --git a/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs b/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+index 399b0e9..ce1553d 100644
+--- a/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
++++ b/src/crates/assembly/core/src/agentic/tools/implementations/file_write_tool/mod.rs
+@@ -65,10 +65,6 @@ impl Tool for FileWriteTool {
+         false
+     }
+ 
+-    fn needs_permissions(&self, _input: Option<&Value>) -> bool {
+-        false
+-    }
+-
+     async fn validate_input(&self, input: &Value, context: Option<&ToolUseContext>) -> ValidationResult {
+         validate_input(input, context).await
+     }
+@@ -300,4 +296,12 @@ mod tests {
+             Some("mode must be either 'w' (overwrite) or 'a' (append), got 'x'")
+         );
+     }
++
++    #[test]
++    fn file_write_tool_needs_permissions_returns_true() {
++        let tool = FileWriteTool::new();
++        assert!(!tool.is_readonly());
++        assert!(tool.needs_permissions(None));
++        assert!(tool.needs_permissions(Some(&json!({ "file_path": "new.txt", "content": "hello" }))));
++    }
+ }
+diff --git a/src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs b/src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs
+index 872760c..0dfa70b 100644
+--- a/src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs
++++ b/src/crates/assembly/core/src/infrastructure/debug_log/http_server.rs
+@@ -5,7 +5,10 @@
+ 
+ use axum::{
+     extract::{Path, State},
+-    http::StatusCode,
++    http::{
++        header::{AUTHORIZATION, CONTENT_TYPE},
++        HeaderValue, Method, StatusCode,
++    },
+     routing::{get, post},
+     Json, Router,
+ };
+@@ -15,7 +18,7 @@ use std::sync::Arc;
+ use std::sync::OnceLock;
+ use tokio::sync::RwLock;
+ use tokio_util::sync::CancellationToken;
+-use tower_http::cors::{Any, CorsLayer};
++use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+ use tracing::{debug, error, info, trace, warn};
+ 
+ use super::types::{
+@@ -92,7 +95,14 @@ impl IngestServerManager {
+         *self.cancel_token.write().await = Some(cancel_token.clone());
+         *self.actual_port.write().await = actual_port;
+ 
+-        let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
++        let cors = CorsLayer::new()
++            .allow_origin(AllowOrigin::predicate(
++                |origin: &HeaderValue, _parts: &axum::http::request::Parts| {
++                    origin.to_str().map(is_allowed_debug_origin).unwrap_or(false)
++                },
++            ))
++            .allow_methods(AllowMethods::list([Method::GET, Method::POST, Method::OPTIONS]))
++            .allow_headers(AllowHeaders::list([CONTENT_TYPE, AUTHORIZATION]));
+ 
+         let app = Router::new()
+             .route("/health", get(health_handler))
+@@ -224,10 +234,78 @@ async fn ingest_handler(
+     }
+ }
+ 
++/// Validate whether an Origin header string is allowed for debug log ingest.
++/// Debug logs can be emitted by local web applications running on localhost, 127.0.0.1, or [::1].
++pub fn is_allowed_debug_origin(origin: &str) -> bool {
++    let origin = origin.trim();
++    if origin.is_empty() || origin.eq_ignore_ascii_case("null") {
++        return false;
++    }
++
++    let Some((_scheme, rest)) = origin.split_once("://") else {
++        return false;
++    };
++
++    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
++    if authority.is_empty() {
++        return false;
++    }
++
++    if authority.starts_with('[') {
++        if let Some(end_bracket) = authority.find(']') {
++            let ip = &authority[1..end_bracket];
++            let after = &authority[end_bracket + 1..];
++            if ip != "::1" {
++                return false;
++            }
++            if after.is_empty() {
++                return true;
++            }
++            if after.starts_with(':') && after[1..].chars().all(|c| c.is_ascii_digit()) {
++                return true;
++            }
++            return false;
++        }
++        return false;
++    }
++
++    let host = authority.split(':').next().unwrap_or("");
++    host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1"
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn test_is_allowed_debug_origin_localhost_variations() {
++        assert!(is_allowed_debug_origin("http://localhost"));
++        assert!(is_allowed_debug_origin("http://localhost:3000"));
++        assert!(is_allowed_debug_origin("http://localhost:5173"));
++        assert!(is_allowed_debug_origin("https://localhost:8080"));
++        assert!(is_allowed_debug_origin("http://127.0.0.1"));
++        assert!(is_allowed_debug_origin("http://127.0.0.1:3000"));
++        assert!(is_allowed_debug_origin("https://127.0.0.1:8080"));
++        assert!(is_allowed_debug_origin("http://[::1]"));
++        assert!(is_allowed_debug_origin("http://[::1]:3000"));
++        assert!(is_allowed_debug_origin("https://[::1]:8080"));
++    }
++
++    #[test]
++    fn test_is_allowed_debug_origin_rejects_external_and_malformed() {
++        assert!(!is_allowed_debug_origin("http://evil.com"));
++        assert!(!is_allowed_debug_origin("http://attacker.com:3000"));
++        assert!(!is_allowed_debug_origin("http://localhost.evil.com"));
++        assert!(!is_allowed_debug_origin("http://192.168.1.100:3000"));
++        assert!(!is_allowed_debug_origin("http://10.0.0.1:5173"));
++        assert!(!is_allowed_debug_origin("http://[::2]:3000"));
++        assert!(!is_allowed_debug_origin("null"));
++        assert!(!is_allowed_debug_origin("NULL"));
++        assert!(!is_allowed_debug_origin(""));
++        assert!(!is_allowed_debug_origin("   "));
++        assert!(!is_allowed_debug_origin("invalid-origin"));
++    }
++
+     #[tokio::test]
+     async fn starts_with_session_id_ingest_route() {
+         let manager = IngestServerManager::new();
+diff --git a/src/crates/assembly/core/src/service/config/ai.rs b/src/crates/assembly/core/src/service/config/ai.rs
+index 3f8a7c4..39bd540 100644
+--- a/src/crates/assembly/core/src/service/config/ai.rs
++++ b/src/crates/assembly/core/src/service/config/ai.rs
+@@ -355,7 +355,7 @@ fn default_tool_confirmation_timeout() -> Option<u64> {
+ }
+ 
+ fn default_skip_tool_confirmation() -> bool {
+-    true
++    false
+ }
+ 
+ // ═══════════════════════════════════════════════════════════════════
+@@ -487,7 +487,7 @@ impl Default for AIConfig {
+             stream_ttft_timeout_secs: default_stream_ttft_timeout(),
+             tool_execution_timeout_secs: default_tool_execution_timeout(),
+             tool_confirmation_timeout_secs: default_tool_confirmation_timeout(),
+-            skip_tool_confirmation: true,
++            skip_tool_confirmation: false,
+             shell_security: ShellSecurityConfig::default(),
+             debug_mode_config: DebugModeConfig::default(),
+             computer_use_enabled: false,
+@@ -507,4 +507,73 @@ mod tests {
+         assert_eq!(config.tool_execution_timeout_secs, Some(300));
+         assert_eq!(config.tool_confirmation_timeout_secs, Some(300));
+     }
++
++    #[test]
++    fn default_ai_config_skip_tool_confirmation_is_false() {
++        let config = AIConfig::default();
++        assert!(!config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn deserializes_missing_skip_tool_confirmation_as_false() {
++        let config: AIConfig =
++            serde_json::from_str("{}").expect("empty object should deserialize into default AIConfig");
++        assert!(!config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn deserializes_explicit_skip_tool_confirmation_true_as_true() {
++        let config: AIConfig = serde_json::from_str(r#"{"skip_tool_confirmation": true}"#)
++            .expect("legacy config with explicit skip_tool_confirmation=true should deserialize");
++        assert!(config.skip_tool_confirmation);
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_fresh_config_requires_confirmation() {
++        let config = AIConfig::default();
++        let agent_type = "agentic";
++        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
++        // ShellSecurity defaults to Permissive (skip=true), but global legacy skip defaults to false
++        assert!(shell_security_skip);
++        assert!(!config.skip_tool_confirmation);
++
++        // Combined AND decision requires confirmation on fresh config
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(!combined_skip, "fresh configuration must not skip tool confirmation");
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_legacy_config_skips_when_both_true() {
++        let mut config = AIConfig::default();
++        config.skip_tool_confirmation = true;
++        let agent_type = "agentic";
++        let shell_security_skip = config.shell_security.should_skip_confirmation(agent_type);
++        assert!(shell_security_skip);
++        assert!(config.skip_tool_confirmation);
++
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(
++            combined_skip,
++            "legacy configuration with explicit skip=true and permissive security should skip confirmation"
++        );
++    }
++
++    #[test]
++    fn combined_skip_tool_confirmation_logic_mode_override_strict_prevents_skip() {
++        let mut config = AIConfig::default();
++        config.skip_tool_confirmation = true;
++        config
++            .shell_security
++            .mode_overrides
++            .insert("admin".to_string(), ConfirmationMode::Strict);
++
++        let shell_security_skip = config.shell_security.should_skip_confirmation("admin");
++        assert!(!shell_security_skip);
++
++        let combined_skip = shell_security_skip && config.skip_tool_confirmation;
++        assert!(
++            !combined_skip,
++            "strict mode override must prevent skip even if legacy skip is true"
++        );
++    }
+ }
+diff --git a/src/crates/interfaces/acp/src/client/builtin_clients.rs b/src/crates/interfaces/acp/src/client/builtin_clients.rs
+index e05c069..f557dc0 100644
+--- a/src/crates/interfaces/acp/src/client/builtin_clients.rs
++++ b/src/crates/interfaces/acp/src/client/builtin_clients.rs
+@@ -2,6 +2,12 @@ use std::collections::HashMap;
+ 
+ use super::config::{AcpClientConfig, AcpClientPermissionMode};
+ 
++/// Pinned claude-code-acp adapter package version for supply chain security (pinned 2026-08-21 from npm latest).
++pub const CLAUDE_CODE_ACP_PACKAGE_PINNED: &str = "@zed-industries/claude-code-acp@0.16.2";
++
++/// Pinned codex-acp adapter package version for supply chain security (pinned 2026-08-21 from npm latest).
++pub const CODEX_ACP_PACKAGE_PINNED: &str = "@zed-industries/codex-acp@0.16.0";
++
+ pub(crate) struct BuiltinAcpClientPreset {
+     pub(crate) id: &'static str,
+     pub(crate) command: &'static str,
+@@ -43,7 +49,8 @@ const BUILTIN_ACP_CLIENT_PRESETS: &[BuiltinAcpClientPreset] = &[
+     BuiltinAcpClientPreset {
+         id: "claude-code",
+         command: "npx",
+-        args: &["--yes", "@zed-industries/claude-code-acp@latest"],
++        // Pinned 2026-08-21 from npm latest @zed-industries/claude-code-acp
++        args: &["--yes", CLAUDE_CODE_ACP_PACKAGE_PINNED],
+         tool_command: "claude",
+         install_package: Some("@anthropic-ai/claude-code"),
+         adapter_package: Some("@zed-industries/claude-code-acp"),
+@@ -52,7 +59,8 @@ const BUILTIN_ACP_CLIENT_PRESETS: &[BuiltinAcpClientPreset] = &[
+     BuiltinAcpClientPreset {
+         id: "codex",
+         command: "npx",
+-        args: &["--yes", "@zed-industries/codex-acp@latest"],
++        // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
++        args: &["--yes", CODEX_ACP_PACKAGE_PINNED],
+         tool_command: "codex",
+         install_package: Some("@openai/codex"),
+         adapter_package: Some("@zed-industries/codex-acp"),
+@@ -90,7 +98,7 @@ mod tests {
+         let config = default_config_for_builtin_client("claude-code").expect("builtin config");
+         assert!(config.enabled);
+         assert_eq!(config.command, "npx");
+-        assert_eq!(config.args, vec!["--yes", "@zed-industries/claude-code-acp@latest"]);
++        assert_eq!(config.args, vec!["--yes", CLAUDE_CODE_ACP_PACKAGE_PINNED]);
+     }
+ 
+     #[test]
+diff --git a/src/crates/interfaces/acp/src/client/manager_process.rs b/src/crates/interfaces/acp/src/client/manager_process.rs
+index 17efc48..9d51ec8 100644
+--- a/src/crates/interfaces/acp/src/client/manager_process.rs
++++ b/src/crates/interfaces/acp/src/client/manager_process.rs
+@@ -16,7 +16,7 @@
+ //
+ // All method bodies are moved verbatim from main. No behavior change.
+ 
+-use super::builtin_clients::{builtin_client_ids, default_config_for_builtin_client};
++use super::builtin_clients::{builtin_client_ids, default_config_for_builtin_client, CODEX_ACP_PACKAGE_PINNED};
+ use super::config::{
+     AcpClientConfig, AcpClientConfigFile, AcpClientInfo, AcpClientPermissionMode, AcpClientRequirementProbe,
+     AcpClientStatus, RemoteAcpClientRequirementSnapshot,
+@@ -219,7 +219,8 @@ mod tests {
+                 AcpClientConfig {
+                     name: Some("Codex".to_string()),
+                     command: "npx".to_string(),
+-                    args: vec!["--yes".to_string(), "@zed-industries/codex-acp@latest".to_string()],
++                    // Pinned 2026-08-21 from npm latest @zed-industries/codex-acp
++                    args: vec!["--yes".to_string(), CODEX_ACP_PACKAGE_PINNED.to_string()],
+                     env: HashMap::from([("BASE".to_string(), "1".to_string())]),
+                     enabled: true,
+                     readonly: false,
+@@ -231,7 +232,7 @@ mod tests {
+         let resolved = resolve_config_for_client(&config_file, "codex", Some("huawei-server")).expect("config");
+ 
+         assert_eq!(resolved.command, "npx");
+-        assert_eq!(resolved.args, vec!["--yes", "@zed-industries/codex-acp@latest"]);
++        assert_eq!(resolved.args, vec!["--yes", CODEX_ACP_PACKAGE_PINNED]);
+         assert_eq!(resolved.env.get("BASE").map(String::as_str), Some("1"));
+         assert!(resolved.enabled);
+     }
+diff --git a/src/crates/interfaces/acp/src/client/mod.rs b/src/crates/interfaces/acp/src/client/mod.rs
+index 37ef391..b57b0b2 100644
+--- a/src/crates/interfaces/acp/src/client/mod.rs
++++ b/src/crates/interfaces/acp/src/client/mod.rs
+@@ -29,6 +29,7 @@ mod stream;
+ mod tool;
+ mod tool_card_bridge;
+ 
++pub use builtin_clients::{CLAUDE_CODE_ACP_PACKAGE_PINNED, CODEX_ACP_PACKAGE_PINNED};
+ pub use config::{
+     AcpClientConfig, AcpClientConfigFile, AcpClientInfo, AcpClientPermissionMode, AcpClientRequirementProbe,
+     AcpClientStatus, AcpRequirementProbeItem, RemoteAcpClientRequirementSnapshot,

@@ -45,25 +45,6 @@ const entries = [
   { src: 'src/apps/desktop/src/app_state.rs',
     dst: 'session/06-app-state-slint-wiring.rs',
     sha: '2813b36' },
-  // Checker domain
-  { src: 'tools/plan-compliance-checker/src/plan.rs',
-    dst: 'checker/02-plan-struct-and-parser.rs',
-    sha: 'ec1902e' },
-  { src: 'tools/plan-compliance-checker/src/task.rs',
-    dst: 'checker/04-check-plan.rs',
-    sha: 'ec1902e' },
-  { src: 'tools/plan-compliance-checker/src/path_resolver.rs',
-    dst: 'checker/05-path-resolver.rs',
-    sha: 'ec1902e' },
-  { src: 'tools/plan-compliance-checker/src/git_inspector.rs',
-    dst: 'checker/06-git-inspector.rs',
-    sha: 'ec1902e' },
-  { src: 'tools/plan-compliance-checker/src/report.rs',
-    dst: 'checker/07-report-formatter.rs',
-    sha: 'ec1902e' },
-  { src: 'tools/plan-compliance-checker/src/main.rs',
-    dst: 'checker/08-cli-dispatch.rs',
-    sha: 'ec1902e' },
 ];
 
 function stripBOM(buf) {
