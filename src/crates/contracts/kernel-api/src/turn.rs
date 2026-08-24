@@ -37,7 +37,10 @@ pub enum TriggerSourceDto {
 /// Distinguishes Started vs Queued submit outcomes (K4a-T23q).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum DialogSubmitOutcomeKindDto { Started, Queued }
+pub enum DialogSubmitOutcomeKindDto {
+    Started,
+    Queued,
+}
 
 /// Dialog submit outcome DTO (enumerated from core at implementation time).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -31,3 +31,9 @@ tags: [rust, agent, desktop, ai, workspace-search]
 
 - v0.1.0-human-usable tag @ 9ac3757
 - GitHub: UmR-2026/NortHing
+
+## Active Work
+
+- **consult-room 前端重构（Dioxus 壳）**：worktree `E:\agent-project\northing\.worktrees\consult-room-build`（分支 `feat/consult-room-slint`）
+- **handoff/台账位置**：`<worktree>\.superpowers\sdd\consult-room\handoff-20260821.md`（最新：W2 视觉解耦+token 清空 selfdo 完成 / W2.5 润色 / W1 竞态仍候裁定 / shell 挂死纪律）；台账 `同目录\progress.md`；历史 handoff-20260815/20260814b 同目录
+- 接续：新 session 从 handoff + progress.md 恢复

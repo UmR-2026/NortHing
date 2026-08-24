@@ -42,9 +42,5 @@ pub struct ToolFailureRecordDto {
 #[async_trait::async_trait]
 pub trait KernelMemoryApi {
     /// List episodes for a workspace, ordered by timestamp descending.
-    async fn list_episodes(
-        &self,
-        workspace_slug: &str,
-        limit: Option<u32>,
-    ) -> Result<Vec<EpisodeDto>, KernelError>;
+    async fn list_episodes(&self, workspace_slug: &str, limit: Option<u32>) -> Result<Vec<EpisodeDto>, KernelError>;
 }

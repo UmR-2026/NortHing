@@ -402,3 +402,15 @@
 - Task PHASE-1A（一次性清扫批）: complete (commits 9970c6a..455af67 = c8868fe + e768ba3 + c780c70 + merge 455af67, review r1 REJECTED[归档断 22 活引用] → fix 分流（frontend-redesign 移回=活设计真值非过程稿，预检分类错误校准；self-cognition 归档+6 引用改写）→ r2 APPROVED by minimax-m3；implementer gemini-37-flash-agy) — 删 9 个一次性脚本 + package-lock.json + .handoffs 已跟踪文件迁移 + docs/design 3 目录归档 + nightly.yml:201 大写路径真雷修复 + 文档命名修正白名单；禁区全守（split_manager/copy_reference 活的保留、growth 未跟踪文件未碰、i18n 冻结数据零触）。**-5677 行。**
 
 - Task PHASE-2（棘轮扩展）: complete (commits fe91147..dbe894a = f90b396 + 69e2c6d + ae04f4e + merge dbe894a, review r1 APPROVED 0C/0I/3M + fix（M2 `\b` 前缀假阳性→lookahead 断言+拦截测试）+ r2 APPROVED by minimax-m3；implementer gemini-37-flash-agy) — checker 加 `dir-entry-count` kind + 通过输出带实测读数（拧 ceiling 防呆口径）；4 新条目（allow_dead_code=111 / scripts=45 / docs/design=1[files-only 口径] / sdd=400 cap-and-archive）；crate 准入守卫（25/25 members 对 surfaces.md，自测含前缀相似拦截）。**闸第一次实战**：合并后即报 sdd 401/400 超线 → 触发首次归档循环，266 个已闭环旧轮工件移入 docs/archive/sdd-artifacts/（sdd 135/400）——cap-and-archive 语义被实证有效。收口拧：unwrap→502 / expect→1092 / let_→388 / docs/design→1；facts.rs 跌下 800 删除 manifest 条目（对照组 -1）。C1 核销（T2-5 已做）。**PHASE-2 CLOSED——GLM 方案 Phase 0-2 全部落地；Phase 3 = M3 排期不动。**
+
+Task final-review-fixes (F1-F5 + fixture cleanup): complete (commits 6ec5984..cbedffa, review clean: APPROVE 0C/0I/6M, report .superpowers/sdd/reviews/2026-08-23-staged/report.md; Minors M1-M6 deferred to final triage)
+
+Task P2 contract de-secreting (Scheme C write-only key channel): complete (commits cbedffa..4888d90, review: REQUEST_CHANGES C1 tokenizer dead-letter -> fixed w/ boundary matcher + inbound allowlist + self-test; orchestrator re-verified contract_shape 2/2 locally; reviewer Minors m1/m2 partially deferred - agent cleaned create_ui.rs/keyring.rs comments instead)
+
+Handoff replay-table + .gitignore .tmp-build: complete (commit ff55a9b; working-tree residue triaged - 8 items all excluded: orchestrator in-flight artifacts, fmt phantoms, local build temp)
+
+Task P3a dead-bootstrap deletion: complete (commit aab6440, 13 files -245/+17, review APPROVE 0C/0I/2M; NEW finding: so_handlers.rs:137 unannotated skip_tool_confirmation(true), pre-existing, queued for triage)
+
+Task triage batch T1-T4: complete (commit 2e4d4a6, 4 files, orchestrator self-review full-diff; T1 exemption annotated not changed; skip list M3-M6/m1/M1 recorded in report)
+
+Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-review line fully closed, queue: real-machine verification / residue triage / cargo audit

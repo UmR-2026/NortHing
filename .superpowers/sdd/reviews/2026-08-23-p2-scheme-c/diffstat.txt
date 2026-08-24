@@ -1,0 +1,9 @@
+ docs/handoffs/2026-08-22-final-review-fixes.md     | 14 ++++-
+ scripts/rot-budget.json                            |  4 +-
+ .../src/app_state/callbacks_settings/provider.rs   |  5 +-
+ src/apps/desktop/src/app_state/settings/sync.rs    | 51 ++-------------
+ src/apps/desktop/src/app_state/settings/tests.rs   | 57 +++++------------
+ .../assembly/core/src/kernel_facade/settings.rs    |  8 +--
+ src/crates/contracts/kernel-api/src/lib.rs         | 73 ++++++++++++++++++++++
+ src/crates/contracts/kernel-api/src/settings.rs    | 14 +++--
+ 8 files changed, 126 insertions(+), 100 deletions(-)
