@@ -1,0 +1,5 @@
+ .../sdd/consult-room/task-p0b-send-brief.md        | 104 ++++
+ .superpowers/sdd/reports/task-p0b-send-report.md   | 560 +++++++++++++++++++++
+ src/apps/desktop/src/ui_dioxus/api.rs              |  26 +-
+ src/apps/desktop/src/ui_dioxus/app.rs              | 180 ++++++-
+ 4 files changed, 864 insertions(+), 6 deletions(-)
