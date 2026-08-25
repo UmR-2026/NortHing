@@ -22,9 +22,7 @@ use std::rc::Rc;
 
 use super::api;
 use super::css;
-use super::entry::{
-    shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX,
-};
+use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
 use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
@@ -94,7 +92,8 @@ pub fn room_app_root() -> Element {
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
     let window_manager = use_context::<ShellWindowManager>();
-    let room_window_id = use_context::<std::sync::Arc<std::sync::Mutex<Option<dioxus::desktop::tao::window::WindowId>>>>();
+    let room_window_id =
+        use_context::<std::sync::Arc<std::sync::Mutex<Option<dioxus::desktop::tao::window::WindowId>>>>();
 
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
 
@@ -107,6 +106,8 @@ pub fn room_app_root() -> Element {
     let send_error: Signal<Option<String>> = use_signal(|| None);
     let mut user_input = use_signal(String::new);
     let mut entries = use_signal(|| seed_session());
+    let mut mind_base = use_signal(|| "#C8714C".to_string());
+    let mut mind_history = use_signal(|| vec!["#DAD6CF".to_string(), "#3F837B".to_string(), "#8B5FBF".to_string()]);
 
     let mut active_set = use_signal(|| window_manager.subscribe_active().borrow().clone());
 
@@ -246,12 +247,9 @@ pub fn room_app_root() -> Element {
 
     let theme_class = if theme_dark() { "dark" } else { "light" };
 
-            let (left_open, right_open) = {
+    let (left_open, right_open) = {
         let active = active_set.read();
-        (
-            active.contains("self"),
-            active.contains("work"),
-        )
+        (active.contains("self"), active.contains("work"))
     };
 
     // chrome 控件文案 i18n 化（2026-08-22，审查 M1 + 终审 Minor×2 合并修）：
@@ -481,9 +479,17 @@ pub fn room_app_root() -> Element {
                             div {
                                 class: "chronicle-bar",
                                 id: "chronicle-bar",
+                                style: format!("background: {}", chronicle_gradient(&mind_history.read(), &mind_base.read())),
                                 title: "它换代表色时：新色自右端进入，旧色慢慢沉向左（双击演示）",
                                 onmousedown: move |e| {
                                     e.stop_propagation();
+                                },
+                                ondoubleclick: move |_| {
+                                    let cur = mind_base();
+                                    mind_history.write().push(cur.clone());
+                                    let minds = ["#C8714C", "#3F837B", "#8B5FBF", "#D99B48", "#4B8F6B"];
+                                    let next = minds[(minds.iter().position(|m| *m == cur).unwrap_or(0) + 1) % 5];
+                                    mind_base.set(next.to_string());
                                 },
                             }
                             div { class: "state",
@@ -655,13 +661,21 @@ pub fn spawn_module_window_with_theme_rx(
             room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
             room_y_log,
             plugin.initial_width,
-            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
         ),
         DockSide::RightFull => (
             room_x_log + room_w_log + DOCK_GAP_PX as f64,
             room_y_log,
             plugin.initial_width,
-            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
         ),
         DockSide::Center => (
             room_x_log + (room_w_log - plugin.initial_width) / 2.0,
@@ -672,8 +686,16 @@ pub fn spawn_module_window_with_theme_rx(
         DockSide::Fullscreen => (
             room_x_log,
             room_y_log,
-            if room_w_log > 0.0 { room_w_log } else { plugin.initial_width },
-            if room_h_log > 0.0 { room_h_log } else { plugin.initial_height },
+            if room_w_log > 0.0 {
+                room_w_log
+            } else {
+                plugin.initial_width
+            },
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
         ),
     };
 
@@ -729,11 +751,7 @@ fn render_entries<'a>(
     }
 }
 
-fn render_entry(
-    entry: &MockEntry,
-    entries: Signal<Vec<MockEntry>>,
-    locale: &LocalePack,
-) -> Element {
+fn render_entry(entry: &MockEntry, entries: Signal<Vec<MockEntry>>, locale: &LocalePack) -> Element {
     match entry {
         MockEntry::Entity { who, body, children } => rsx! {
             div { class: "rec entity",
@@ -769,9 +787,7 @@ fn render_entry(
                         if api::respond_to_tool_confirmation(&cid, approved).await.is_ok() {
                             let mut guard = entries.write();
                             if let Some(MockEntry::Approval {
-                                resolved,
-                                state_text,
-                                ..
+                                resolved, state_text, ..
                             }) = guard.iter_mut().find(|e| match e {
                                 MockEntry::Approval { call_id, .. } => call_id == &cid,
                                 _ => false,
@@ -827,5 +843,94 @@ fn render_child(child: &super::session_mock::MockChild, _locale: &LocalePack) ->
         super::session_mock::MockChild::ArtifactChip { label } => rsx! {
             button { class: "artifact-chip", "{label}" }
         },
+    }
+}
+
+fn parse_hex_rgb(hex: &str) -> Option<(u8, u8, u8)> {
+    let s = hex.trim_start_matches('#');
+    if s.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&s[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&s[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&s[4..6], 16).ok()?;
+    Some((r, g, b))
+}
+
+pub fn mix_hex(a: &str, b: &str, t: f64) -> String {
+    let (ar, ag, ab) = match parse_hex_rgb(a) {
+        Some(c) => c,
+        None => return b.to_string(),
+    };
+    let (br, bg, bb) = match parse_hex_rgb(b) {
+        Some(c) => c,
+        None => return a.to_string(),
+    };
+    let t = t.clamp(0.0, 1.0);
+    let r = (ar as f64 + (br as f64 - ar as f64) * t).round().clamp(0.0, 255.0) as u8;
+    let g = (ag as f64 + (bg as f64 - ag as f64) * t).round().clamp(0.0, 255.0) as u8;
+    let b_val = (ab as f64 + (bb as f64 - ab as f64) * t).round().clamp(0.0, 255.0) as u8;
+    format!("#{:02X}{:02X}{:02X}", r, g, b_val)
+}
+
+pub fn chronicle_gradient(history: &[String], current: &str) -> String {
+    const BIRTH: &str = "#DAD6CF";
+    let n = history.len();
+    let mut stops = Vec::with_capacity(n + 1);
+
+    if n == 0 {
+        stops.push(format!("{BIRTH} 0.00%"));
+    } else {
+        for (i, c) in history.iter().enumerate() {
+            let (pos, col) = if n == 1 {
+                (0.0, c.clone())
+            } else {
+                let frac = i as f64 / (n - 1) as f64;
+                let pos = frac * 70.0;
+                let col = if i == 0 {
+                    c.clone()
+                } else {
+                    let t = 0.18 + 0.82 * frac;
+                    mix_hex(BIRTH, c, t)
+                };
+                (pos, col)
+            };
+            stops.push(format!("{col} {pos:.2}%"));
+        }
+    }
+
+    stops.push(format!("{current} 100%"));
+    format!("linear-gradient(90deg, {})", stops.join(", "))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mix_hex_target() {
+        assert_eq!(mix_hex("#DAD6CF", "#3F837B", 1.0), "#3F837B");
+    }
+
+    #[test]
+    fn test_mix_hex_base() {
+        assert_eq!(mix_hex("#DAD6CF", "#3F837B", 0.0), "#DAD6CF");
+    }
+
+    #[test]
+    fn test_chronicle_gradient_single() {
+        let grad = chronicle_gradient(&["#DAD6CF".to_string()], "#C8714C");
+        assert!(grad.contains("0.00%"));
+        assert!(grad.contains("100%"));
+    }
+
+    #[test]
+    fn test_chronicle_gradient_three_history() {
+        let history = vec!["#DAD6CF".to_string(), "#3F837B".to_string(), "#8B5FBF".to_string()];
+        let grad = chronicle_gradient(&history, "#C8714C");
+        assert!(grad.contains("0.00%"));
+        assert!(grad.contains("35.00%"));
+        assert!(grad.contains("70.00%"));
+        assert!(grad.contains("100%"));
     }
 }
