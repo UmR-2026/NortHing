@@ -1,0 +1,7 @@
+ .../sdd/consult-room/task-p1b-fix-brief.md         |  51 ++
+ .../sdd/consult-room/task-p1b-settings-brief.md    |  53 ++
+ .../sdd/reports/task-p1b-fix-settings-report.md    |  62 ++
+ .../sdd/reports/task-p1b-settings-report.md        | 782 +++++++++++++++++++++
+ src/apps/desktop/src/ui_dioxus/api.rs              |  45 ++
+ src/apps/desktop/src/ui_dioxus/pages_settings.rs   | 416 +++++++++--
+ 6 files changed, 1346 insertions(+), 63 deletions(-)
