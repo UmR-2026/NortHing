@@ -1,0 +1,4 @@
+ .../sdd/consult-room/task-p1a-chronicle-brief.md   |  75 +++++++++++
+ .../sdd/reports/task-p1a-chronicle-report.md       |  68 ++++++++++
+ src/apps/desktop/src/ui_dioxus/app.rs              | 147 ++++++++++++++++++---
+ 3 files changed, 269 insertions(+), 21 deletions(-)
