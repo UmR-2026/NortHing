@@ -29,6 +29,7 @@ pub enum MockEntry {
     /// Approval card — pending or resolved. The truth HTML shows both
     /// states (L393 and L407).
     Approval {
+        call_id: String,
         head: String,
         main: String,
         risk: String,
@@ -71,6 +72,7 @@ pub fn seed_session() -> Vec<MockEntry> {
             children: vec![],
         },
         MockEntry::Approval {
+            call_id: "mock-call-1".to_string(),
             head: "高危操作授权".to_string(),
             main: "将修改 3 个工作区文件".to_string(),
             risk: "风险: 不可逆语义偏移".to_string(),
@@ -78,6 +80,7 @@ pub fn seed_session() -> Vec<MockEntry> {
             state_text: None,
         },
         MockEntry::Approval {
+            call_id: "mock-call-2".to_string(),
             head: "高危操作授权 · 14:31:02".to_string(),
             main: "清除 3 号隔离区沉积记忆".to_string(),
             risk: "风险: 不可逆语义偏移".to_string(),
@@ -85,4 +88,28 @@ pub fn seed_session() -> Vec<MockEntry> {
             state_text: Some("已拒绝操作".to_string()),
         },
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_seed_session_has_mock_approvals_with_call_ids() {
+        let entries = seed_session();
+        let approvals: Vec<_> = entries
+            .iter()
+            .filter_map(|e| match e {
+                MockEntry::Approval {
+                    call_id,
+                    resolved,
+                    ..
+                } => Some((call_id.as_str(), *resolved)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(approvals.len(), 2);
+        assert_eq!(approvals[0], ("mock-call-1", false));
+        assert_eq!(approvals[1], ("mock-call-2", true));
+    }
 }

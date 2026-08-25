@@ -193,6 +193,34 @@ fn test_agentic_event_to_dtos_cancelled_summary_with_prefix_truncated_to_120() {
 }
 
 #[test]
+fn test_agentic_event_to_dtos_confirmation_needed_maps_to_awaiting_confirmation() {
+    let params = serde_json::json!({"command": "rm -rf /tmp/data", "path": "/tmp"});
+    let event = AgenticEvent::ToolEvent {
+        session_id: "s1".into(),
+        turn_id: "t1".into(),
+        round_id: "r1".into(),
+        tool_event: ToolEventData::ConfirmationNeeded {
+            tool_id: "call-confirm-123".into(),
+            tool_name: "Bash".into(),
+            params,
+        },
+    };
+    let dtos = agentic_event_to_dtos(&event);
+    assert_eq!(dtos.len(), 1, "ConfirmationNeeded should produce exactly one ToolCall DTO (no TurnPhase)");
+    let KernelEventDto::ToolCall(tc) = &dtos[0] else {
+        panic!("expected ToolCall DTO, got {:?}", &dtos[0]);
+    };
+    assert_eq!(tc.call_id, "call-confirm-123");
+    assert_eq!(tc.name, "Bash");
+    assert!(matches!(tc.phase, ToolCallPhase::AwaitingConfirmation));
+    assert_eq!(tc.session_id, "s1");
+    assert_eq!(tc.turn_id, "t1");
+    assert!(tc.summary.starts_with("rm"));
+    assert!(tc.detail.is_some());
+    assert_eq!(tc.result_count, None);
+}
+
+#[test]
 fn test_agentic_event_to_dtos_thinking_chunk_produces_phase_only() {
     let event = AgenticEvent::ThinkingChunk {
         session_id: "s1".into(),

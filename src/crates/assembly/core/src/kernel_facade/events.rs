@@ -275,6 +275,24 @@ pub(crate) fn agentic_event_to_dtos(event: &AgenticEvent) -> Vec<KernelEventDto>
                     tool_name: None,
                 },
             ],
+            crate::agentic::events::ToolEventData::ConfirmationNeeded {
+                tool_id,
+                tool_name,
+                params,
+            } => {
+                let params_str = params.to_string();
+                vec![KernelEventDto::ToolCall(super::ToolCallDto {
+                    session_id: session_id.clone(),
+                    turn_id: turn_id.clone(),
+                    call_id: tool_id.clone(),
+                    name: tool_name.clone(),
+                    phase: super::ToolCallPhase::AwaitingConfirmation,
+                    summary: crate::kernel_facade::helpers::extract_summary_from_params(params),
+                    detail: Some(crate::kernel_facade::helpers::truncate_4000(&params_str)),
+                    result_count: None,
+                })]
+                // 不发 TurnPhase——turn 仍在 ToolUse 语境，不因 awaiting 改 phase
+            }
             _ => vec![],
         },
         _ => vec![],

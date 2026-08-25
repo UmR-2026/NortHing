@@ -29,7 +29,7 @@ use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme};
-use northhing_kernel_api::events::KernelEventDto;
+use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
 use tokio::sync::watch;
 
@@ -135,6 +135,26 @@ pub fn room_app_root() -> Element {
                             let mut d = assistant_draft.write();
                             let cur = d.get_or_insert_with(String::new);
                             cur.push_str(&text);
+                        }
+                    }
+                    KernelEventDto::ToolCall(tc)
+                        if tc.phase == ToolCallPhase::AwaitingConfirmation
+                            && sid.read().as_ref().map(|s| s == &tc.session_id).unwrap_or(true) =>
+                    {
+                        let mut entries_guard = entries.write();
+                        let already_exists = entries_guard.iter().any(|e| match e {
+                            MockEntry::Approval { call_id, .. } => call_id == &tc.call_id,
+                            _ => false,
+                        });
+                        if !already_exists {
+                            entries_guard.push(MockEntry::Approval {
+                                call_id: tc.call_id,
+                                head: tc.name,
+                                main: tc.summary,
+                                risk: tc.detail.unwrap_or_default(),
+                                resolved: false,
+                                state_text: None,
+                            });
                         }
                     }
                     KernelEventDto::TurnState {
@@ -487,7 +507,7 @@ pub fn room_app_root() -> Element {
                             div { class: "session-open",
                                 "{locale.t(keys::SESSION_BANNER)}"
                             }
-                            {render_entries(entries.read().iter(), &locale)}
+                            {render_entries(entries.read().iter(), entries, &locale)}
                             if let Some(ref draft) = *assistant_draft.read() {
                                 div { class: "rec entity",
                                     div { class: "who", "它" }
@@ -698,17 +718,22 @@ fn quit_shell() {
 
 fn render_entries<'a>(
     iter: impl Iterator<Item = &'a MockEntry>,
+    entries: Signal<Vec<MockEntry>>,
     locale: &LocalePack,
 ) -> Element {
-    let entries: Vec<&MockEntry> = iter.collect();
+    let items: Vec<&MockEntry> = iter.collect();
     rsx! {
-        for entry in entries.iter() {
-            {render_entry(entry, locale)}
+        for entry in items.iter() {
+            {render_entry(entry, entries, locale)}
         }
     }
 }
 
-fn render_entry(entry: &MockEntry, locale: &LocalePack) -> Element {
+fn render_entry(
+    entry: &MockEntry,
+    entries: Signal<Vec<MockEntry>>,
+    locale: &LocalePack,
+) -> Element {
     match entry {
         MockEntry::Entity { who, body, children } => rsx! {
             div { class: "rec entity",
@@ -727,34 +752,70 @@ fn render_entry(entry: &MockEntry, locale: &LocalePack) -> Element {
                 div { class: "body", "{body}" }
             }
         },
-        MockEntry::Approval { head, main, risk, resolved, state_text } => rsx! {
-            div {
-                class: "rec entity",
-                style: "max-width:100%",
-                div {
-                    class: if *resolved { "approval-card resolved" } else { "approval-card" },
-                    div { class: "approval-main",
-                        div { class: "approval-head", "{head}" }
-                        div { class: "approval-cmd", "{main}" }
-                        div { class: "approval-risk", "{risk}" }
-                    }
-                    if *resolved {
-                        div { class: "approval-state",
-                            "{state_text.clone().unwrap_or_default()}"
-                        }
-                    } else {
-                        div { class: "approval-actions",
-                            button { class: "btn-approve",
-                                "{locale.t(keys::APPROVAL_APPROVE)}"
+        MockEntry::Approval {
+            call_id,
+            head,
+            main,
+            risk,
+            resolved,
+            state_text,
+        } => {
+            let handle_action = |approved: bool, status: &'static str| {
+                let cid = call_id.clone();
+                move |_| {
+                    let cid = cid.clone();
+                    let mut entries = entries;
+                    spawn(async move {
+                        if api::respond_to_tool_confirmation(&cid, approved).await.is_ok() {
+                            let mut guard = entries.write();
+                            if let Some(MockEntry::Approval {
+                                resolved,
+                                state_text,
+                                ..
+                            }) = guard.iter_mut().find(|e| match e {
+                                MockEntry::Approval { call_id, .. } => call_id == &cid,
+                                _ => false,
+                            }) {
+                                *resolved = true;
+                                *state_text = Some(status.to_string());
                             }
-                            button { class: "btn-reject",
-                                "{locale.t(keys::APPROVAL_REJECT)}"
+                        }
+                    });
+                }
+            };
+            rsx! {
+                div {
+                    class: "rec entity",
+                    style: "max-width:100%",
+                    div {
+                        class: if *resolved { "approval-card resolved" } else { "approval-card" },
+                        div { class: "approval-main",
+                            div { class: "approval-head", "{head}" }
+                            div { class: "approval-cmd", "{main}" }
+                            div { class: "approval-risk", "{risk}" }
+                        }
+                        if *resolved {
+                            div { class: "approval-state",
+                                "{state_text.clone().unwrap_or_default()}"
+                            }
+                        } else {
+                            div { class: "approval-actions",
+                                button {
+                                    class: "btn-approve",
+                                    onclick: handle_action(true, "已授权操作"),
+                                    "{locale.t(keys::APPROVAL_APPROVE)}"
+                                }
+                                button {
+                                    class: "btn-reject",
+                                    onclick: handle_action(false, "已拒绝操作"),
+                                    "{locale.t(keys::APPROVAL_REJECT)}"
+                                }
                             }
                         }
                     }
                 }
             }
-        },
+        }
     }
 }
 

@@ -34,11 +34,12 @@ pub struct ToolCallDto {
 }
 
 /// FROZEN ToolCallPhase (Schema §5.1).
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolCallPhase {
     Started,
     Completed,
+    AwaitingConfirmation,
 }
 
 // ── Banner Level ───────────────────────────────────────────────────────────────
@@ -114,4 +115,19 @@ pub trait KernelEventsApi: Send + Sync {
     /// Unsubscribe from events.
     /// Source: #20
     async fn unsubscribe_events(&self, id: SubscriptionId) -> Result<(), KernelError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tool_call_phase_awaiting_confirmation_serde() {
+        let phase = ToolCallPhase::AwaitingConfirmation;
+        let serialized = serde_json::to_string(&phase).expect("serialize phase");
+        assert_eq!(serialized, "\"awaiting_confirmation\"");
+        let deserialized: ToolCallPhase =
+            serde_json::from_str(&serialized).expect("deserialize phase");
+        assert_eq!(deserialized, ToolCallPhase::AwaitingConfirmation);
+    }
 }
