@@ -6,7 +6,9 @@
 use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi};
-use northhing_kernel_api::session::{KernelSessionApi, SessionDto, SessionId, SessionSummaryDto};
+use northhing_kernel_api::session::{
+    KernelSessionApi, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
+};
 use northhing_kernel_api::tools::KernelToolsApi;
 use northhing_kernel_api::turn::{
     KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto,
@@ -51,6 +53,21 @@ pub async fn list_sessions() -> Result<Vec<SessionSummaryDto>, KernelError> {
 /// Retrieves the detail of a single session.
 pub async fn get_session(id: &SessionId) -> Result<SessionDto, KernelError> {
     kernel_facade().get_session(id).await
+}
+
+/// Ensures a room session exists, returning an existing or newly created `SessionId`.
+pub async fn ensure_room_session() -> Result<SessionId, KernelError> {
+    let list = list_sessions().await?;
+    if let Some(first) = list.into_iter().next() {
+        return Ok(first.id);
+    }
+    let config = SessionConfigDto {
+        workspace_path: None,
+        agent_type: "agentic".into(),
+        model_name: "default".into(),
+        name: Some("诊室".into()),
+    };
+    kernel_facade().create_session(config).await
 }
 
 /// Responds to a pending tool execution confirmation (approve/reject).
@@ -106,6 +123,13 @@ mod tests {
         let _ = list_sessions().await;
         let _ = get_session(&"test-session".to_string()).await;
         let _ = respond_to_tool_confirmation("call-1", true).await;
+        let _ = ensure_room_session().await;
+    }
+
+    #[tokio::test]
+    async fn test_ensure_room_session_fails_cleanly_when_uninitialized() {
+        let res = ensure_room_session().await;
+        assert!(res.is_err());
     }
 
     #[test]

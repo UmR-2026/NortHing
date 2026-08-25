@@ -20,6 +20,7 @@ use dioxus::desktop::{window, Config, WindowCloseBehaviour};
 use dioxus::prelude::*;
 use std::rc::Rc;
 
+use super::api;
 use super::css;
 use super::entry::{
     shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX,
@@ -28,6 +29,8 @@ use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme};
+use northhing_kernel_api::events::KernelEventDto;
+use northhing_kernel_api::turn::{TurnId, TurnStateKind};
 use tokio::sync::watch;
 
 #[cfg(target_os = "windows")]
@@ -98,7 +101,12 @@ pub fn room_app_root() -> Element {
     let mut theme_dark = use_signal(|| true);
     let mut head_folded = use_signal(|| false);
     let mut streaming = use_signal(|| false);
-    let entries = use_signal(|| seed_session());
+    let mut active_turn_id: Signal<Option<TurnId>> = use_signal(|| None);
+    let session_id_signal: Signal<Option<String>> = use_signal(|| None);
+    let mut assistant_draft: Signal<Option<String>> = use_signal(|| None);
+    let send_error: Signal<Option<String>> = use_signal(|| None);
+    let mut user_input = use_signal(String::new);
+    let mut entries = use_signal(|| seed_session());
 
     let mut active_set = use_signal(|| window_manager.subscribe_active().borrow().clone());
 
@@ -112,6 +120,88 @@ pub fn room_app_root() -> Element {
                     break;
                 }
                 active_set.set(active_rx.borrow().clone());
+            }
+        }
+    });
+
+    use_future(move || {
+        let mut rx = api::event_channel();
+        let sid = session_id_signal;
+        async move {
+            while let Some(dto) = rx.recv().await {
+                match dto {
+                    KernelEventDto::TextChunk { session_id, text } => {
+                        if sid.read().as_ref().map(|s| s == &session_id).unwrap_or(true) {
+                            let mut d = assistant_draft.write();
+                            let cur = d.get_or_insert_with(String::new);
+                            cur.push_str(&text);
+                        }
+                    }
+                    KernelEventDto::TurnState {
+                        session_id,
+                        turn_id: _,
+                        state,
+                        error,
+                        ..
+                    } => {
+                        if sid.read().as_ref().map(|s| s == &session_id).unwrap_or(true) {
+                            match state {
+                                TurnStateKind::Completed => {
+                                    if let Some(draft) = assistant_draft.write().take() {
+                                        if !draft.is_empty() {
+                                            entries.write().push(MockEntry::Entity {
+                                                who: "它".into(),
+                                                body: draft,
+                                                children: vec![],
+                                            });
+                                        }
+                                    }
+                                    streaming.set(false);
+                                    active_turn_id.set(None);
+                                }
+                                TurnStateKind::Failed => {
+                                    let err_text = error.unwrap_or_else(|| "Turn failed".into());
+                                    let body = if let Some(draft) = assistant_draft.write().take() {
+                                        if draft.is_empty() {
+                                            format!("[Error: {err_text}]")
+                                        } else {
+                                            format!("{draft}\n[Error: {err_text}]")
+                                        }
+                                    } else {
+                                        format!("[Error: {err_text}]")
+                                    };
+                                    entries.write().push(MockEntry::Entity {
+                                        who: "它".into(),
+                                        body,
+                                        children: vec![],
+                                    });
+                                    streaming.set(false);
+                                    active_turn_id.set(None);
+                                }
+                                TurnStateKind::Cancelled => {
+                                    let body = if let Some(draft) = assistant_draft.write().take() {
+                                        if draft.is_empty() {
+                                            "[Cancelled]".to_string()
+                                        } else {
+                                            format!("{draft}\n[Cancelled]")
+                                        }
+                                    } else {
+                                        "[Cancelled]".to_string()
+                                    };
+                                    entries.write().push(MockEntry::Entity {
+                                        who: "它".into(),
+                                        body,
+                                        children: vec![],
+                                    });
+                                    streaming.set(false);
+                                    active_turn_id.set(None);
+                                }
+                                TurnStateKind::Started => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
     });
@@ -156,6 +246,62 @@ pub fn room_app_root() -> Element {
         locale.t(keys::DECK_SEND_STREAMING).to_string()
     } else {
         locale.t(keys::DECK_SEND).to_string()
+    };
+
+    let send_action = move || {
+        let text = user_input.read().trim().to_string();
+        if text.is_empty() {
+            return;
+        }
+        let mut active_turn_id = active_turn_id;
+        let mut streaming = streaming;
+        let mut user_input = user_input;
+        let mut send_error = send_error;
+        let mut session_id_signal = session_id_signal;
+        let mut entries = entries;
+        spawn(async move {
+            let sid = match session_id_signal() {
+                Some(s) => s,
+                None => match api::ensure_room_session().await {
+                    Ok(s) => {
+                        session_id_signal.set(Some(s.clone()));
+                        s
+                    }
+                    Err(e) => {
+                        send_error.set(Some(format!("Session error: {e}")));
+                        return;
+                    }
+                },
+            };
+
+            match api::submit_turn(&sid, text.clone()).await {
+                Ok(turn_id) => {
+                    active_turn_id.set(Some(turn_id));
+                    streaming.set(true);
+                    user_input.set(String::new());
+                    send_error.set(None);
+                    entries.write().push(MockEntry::Witness {
+                        who: "见证者".into(),
+                        body: text,
+                    });
+                }
+                Err(e) => {
+                    send_error.set(Some(format!("Submit error: {e}")));
+                }
+            }
+        });
+    };
+
+    let stop_action = move || {
+        let mut streaming = streaming;
+        let mut active_turn_id = active_turn_id;
+        if let Some(turn_id) = active_turn_id() {
+            spawn(async move {
+                let _ = api::stop_turn(&turn_id).await;
+            });
+        }
+        streaming.set(false);
+        active_turn_id.set(None);
     };
 
     let wm_left = window_manager.clone();
@@ -342,9 +488,20 @@ pub fn room_app_root() -> Element {
                                 "{locale.t(keys::SESSION_BANNER)}"
                             }
                             {render_entries(entries.read().iter(), &locale)}
+                            if let Some(ref draft) = *assistant_draft.read() {
+                                div { class: "rec entity",
+                                    div { class: "who", "它" }
+                                    div { class: "body",
+                                        div { class: "msg-agent", "{draft}" }
+                                    }
+                                }
+                            }
                         }
 
                         div { class: "room-input",
+                            if let Some(ref err) = *send_error.read() {
+                                div { class: "send-error", style: "color: var(--faint); font-size: 11px; padding-bottom: 4px;", "{err}" }
+                            }
                             div { class: "input-row",
                                 button {
                                     class: "attach",
@@ -360,17 +517,30 @@ pub fn room_app_root() -> Element {
                                         line { x1: "5.8", y1: "9", x2: "12.2", y2: "9" }
                                     }
                                 }
-                                div {
+                                input {
                                     class: "input-box",
-                                    "{locale.t(keys::DECK_PLACEHOLDER)}"
-                                    span { class: "cursor" }
+                                    r#type: "text",
+                                    value: "{user_input}",
+                                    placeholder: "{locale.t(keys::DECK_PLACEHOLDER)}",
+                                    oninput: move |e| user_input.set(e.value()),
+                                    onkeydown: move |e| {
+                                        if !e.is_composing() && e.key() == Key::Enter {
+                                            if !streaming() {
+                                                send_action();
+                                            }
+                                        }
+                                    },
                                 }
                                 button {
                                     class: if streaming() { "send streaming" } else { "send" },
                                     id: "send-stop",
                                     "aria-label": "{send_label}",
                                     onclick: move |_| {
-                                        streaming.set(!streaming());
+                                        if streaming() {
+                                            stop_action();
+                                        } else {
+                                            send_action();
+                                        }
                                     },
                                     if streaming() { "■" } else { "➤" }
                                 }
