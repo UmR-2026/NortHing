@@ -414,3 +414,11 @@ Task P3a dead-bootstrap deletion: complete (commit aab6440, 13 files -245/+17, r
 Task triage batch T1-T4: complete (commit 2e4d4a6, 4 files, orchestrator self-review full-diff; T1 exemption annotated not changed; skip list M3-M6/m1/M1 recorded in report)
 
 Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-review line fully closed, queue: real-machine verification / residue triage / cargo audit
+
+---
+
+# Consult-Room Dioxus 接线 Ledger (2026-08-25)
+
+计划：`.superpowers/sdd/consult-room/prescription-v3-20260825.md`（三方 judge + minimax-m3 v3 复审 12/12 VERIFIED 后用户终裁放行）
+
+- Task P0a: complete (commits 9bba819..4889d22, review APPROVE SPEC+QUALITY PASS 0C/0I/2M by minimax-m3；implementer gemini-37-flash[用户侧外部执行]) — KernelToolsApi 新增 respond_to_tool_confirmation（契约变更，用户 2026-08-25 裁定方案 A）+ facade 实现路由 coordinator.confirm_tool/reject_tool（KernelError::Runtime 体例对齐 events.rs:49）+ 新 ui_dioxus/api.rs（116L 薄封装 submit/stop/list/get/respond + event_channel callback→mpsc(256)）+ facade 单测（未初始化 Err）。验证：cargo check --workspace + cargo check -p northhing --features ui-dioxus + kernel_facade 36/36 tests 全绿。Minors（留终审 triage）：M-1 报告 "Deviations: None" 未声明 blocking_send→try_send（技术正确——callback 内 blocking_send 有卡死事件泵风险，代码注释已写明，仅需报告修正）；M-2 api.rs 预初始化测试 `let _=` 吞结果仅证不 panic，可收紧为 assert matches Err。judge follow-ups（非阻塞）：facade coordinator() helper 未初始化变体跨入口对齐 Runtime；event_channel receiver Drop guard 防悬挂订阅。

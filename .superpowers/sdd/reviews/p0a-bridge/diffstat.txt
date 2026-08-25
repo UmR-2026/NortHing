@@ -1,0 +1,7 @@
+ .../sdd/consult-room/task-p0a-bridge-brief.md      |  117 +++
+ .superpowers/sdd/reports/task-p0a-bridge-report.md | 1029 ++++++++++++++++++++
+ src/apps/desktop/src/ui_dioxus/api.rs              |  116 +++
+ src/apps/desktop/src/ui_dioxus/mod.rs              |    1 +
+ .../assembly/core/src/kernel_facade/tools.rs       |   43 +
+ src/crates/contracts/kernel-api/src/tools.rs       |   13 +
+ 6 files changed, 1319 insertions(+)
