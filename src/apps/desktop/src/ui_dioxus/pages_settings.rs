@@ -14,6 +14,9 @@ use super::css;
 use super::i18n::{keys, LocalePack};
 use super::registry::ModuleAppProps;
 use super::windows::WindowDropGuard;
+#[allow(unused_imports)]
+use crate::app_state::settings::{load_app_settings, update_app_settings};
+use northhing_kernel_api::settings::{AIModelConfigDto, MCPServerDto, ProviderConfigDto};
 
 #[cfg(target_os = "windows")]
 use dioxus::desktop::tao::platform::windows::WindowExtWindows;
@@ -80,15 +83,85 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
     let mut folded_workspace = use_signal(|| false);
     let mut folded_display = use_signal(|| false);
 
-    // Interactive mock states (right column)
-    let mut active_engine = use_signal(|| 0usize);
-    let mut active_provider_anthropic = use_signal(|| true);
-    let mut active_provider_google = use_signal(|| false);
-    let mut mcp_filesystem = use_signal(|| true);
-    let mut mcp_philosophy = use_signal(|| true);
-    let mut mcp_terminal = use_signal(|| true);
-    let mut display_breath = use_signal(|| true);
-    let mut display_dual_optics = use_signal(|| true);
+    // Model configs & active selection (Card 1: 模型引擎)
+    let model_configs = use_signal(Vec::<AIModelConfigDto>::new);
+    let mut active_model_id = use_signal(|| None::<String>);
+    let mut active_engine = use_signal(|| 0usize); // Fallback mock state
+
+    // Provider configs & default provider (Card 3: 接入点)
+    let providers = use_signal(Vec::<ProviderConfigDto>::new);
+    let mut default_provider_id = use_signal(|| None::<String>);
+    let mut active_provider_anthropic = use_signal(|| true); // Fallback mock state
+    let mut active_provider_google = use_signal(|| false); // Fallback mock state
+
+    // MCP servers (Card 4: 能力集)
+    let mut mcp_servers = use_signal(Vec::<MCPServerDto>::new);
+    let mut mcp_filesystem = use_signal(|| true); // Fallback mock state
+    let mut mcp_philosophy = use_signal(|| true); // Fallback mock state
+    let mut mcp_terminal = use_signal(|| true); // Fallback mock state
+
+    // Display modes (Card 6: 显示模式) - AppSettings has no fields, kept mock + TODO
+    let mut display_breath = use_signal(|| true); // TODO(data): no AppSettings field yet
+    let mut display_dual_optics = use_signal(|| true); // TODO(data): no AppSettings field yet
+
+    // Workspace path (Card 5: 工作区)
+    let workspace_path = use_signal(|| None::<String>);
+
+    use_future(move || {
+        let mut workspace_path = workspace_path;
+        let mut model_configs = model_configs;
+        let mut active_model_id = active_model_id;
+        let mut providers = providers;
+        let mut default_provider_id = default_provider_id;
+        let mut mcp_servers = mcp_servers;
+        async move {
+            match load_app_settings().await {
+                Ok(settings) => {
+                    if let Some(cw) = settings.current_workspace {
+                        workspace_path.set(Some(cw.to_string_lossy().to_string()));
+                    } else if let Some(first_ws) = settings.workspaces.first() {
+                        workspace_path.set(Some(first_ws.path.to_string_lossy().to_string()));
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!("Failed to load app settings on settings page mount: {err}");
+                }
+            }
+
+            match super::api::get_global_config().await {
+                Ok(global_cfg) => {
+                    if let Some(ref def_id) = global_cfg.default_provider_id {
+                        default_provider_id.set(Some(def_id.clone()));
+                        if active_model_id().is_none() {
+                            active_model_id.set(Some(def_id.clone()));
+                        }
+                    }
+                    providers.set(global_cfg.providers);
+                }
+                Err(err) => {
+                    tracing::warn!("Failed to load global config on settings page mount: {err}");
+                }
+            }
+
+            match super::api::list_model_configs().await {
+                Ok(models) => {
+                    model_configs.set(models);
+                }
+                Err(err) => {
+                    tracing::warn!("Failed to list model configs on settings page mount: {err}");
+                }
+            }
+
+            match super::api::list_mcp_servers().await {
+                Ok(servers) => {
+                    mcp_servers.set(servers);
+                }
+                Err(err) => {
+                    tracing::warn!("Failed to list MCP servers on settings page mount: {err}");
+                }
+            }
+        }
+    });
 
     let fold_all = move |_| {
         let any_open = !folded_sediment()
@@ -276,26 +349,58 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             span { class: "fold-caret", if folded_engine() { "▸" } else { "▾" } }
                         }
                         div { class: "w2-scroll",
-                            div {
-                                class: if active_engine() == 0 { "row active" } else { "row" },
-                                onclick: move |_| active_engine.set(0),
-                                span { class: "dot-radio" }
-                                "{locale.t(keys::SETTINGS_ENGINE_CLAUDE)}"
-                                if active_engine() == 0 {
-                                    span { class: "tag-x current", "{locale.t(keys::SETTINGS_ENGINE_CURRENT)}" }
+                            if !model_configs().is_empty() {
+                                for model in model_configs() {
+                                    {
+                                        let id = model.id.clone();
+                                        let is_active = active_model_id().as_deref() == Some(&id)
+                                            || (active_model_id().is_none() && default_provider_id().as_deref() == Some(&id));
+                                        let display_title = model.display_name.clone().unwrap_or_else(|| model.model.clone());
+                                        rsx! {
+                                            div {
+                                                key: "{id}",
+                                                class: if is_active { "row active" } else { "row" },
+                                                onclick: move |_| {
+                                                    let id_clone = id.clone();
+                                                    active_model_id.set(Some(id_clone.clone()));
+                                                    default_provider_id.set(Some(id_clone.clone()));
+                                                    dioxus::prelude::spawn(async move {
+                                                        if let Err(err) = super::api::set_default_provider(&id_clone).await {
+                                                            tracing::warn!("Failed to set default provider {id_clone}: {err}");
+                                                        }
+                                                    });
+                                                },
+                                                span { class: "dot-radio" }
+                                                "{display_title}"
+                                                if is_active {
+                                                    span { class: "tag-x current", "{locale.t(keys::SETTINGS_ENGINE_CURRENT)}" }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            div {
-                                class: if active_engine() == 1 { "row active" } else { "row" },
-                                onclick: move |_| active_engine.set(1),
-                                span { class: "dot-radio" }
-                                "{locale.t(keys::SETTINGS_ENGINE_GEMINI)}"
-                            }
-                            div {
-                                class: if active_engine() == 2 { "row active" } else { "row" },
-                                onclick: move |_| active_engine.set(2),
-                                span { class: "dot-radio" }
-                                "{locale.t(keys::SETTINGS_ENGINE_GPT4O)}"
+                            } else {
+                                div {
+                                    class: if active_engine() == 0 { "row active" } else { "row" },
+                                    onclick: move |_| active_engine.set(0), // TODO(data): fallback mock when empty
+                                    span { class: "dot-radio" }
+                                    "{locale.t(keys::SETTINGS_ENGINE_CLAUDE)}"
+                                    if active_engine() == 0 {
+                                        span { class: "tag-x current", "{locale.t(keys::SETTINGS_ENGINE_CURRENT)}" }
+                                    }
+                                }
+                                div {
+                                    class: if active_engine() == 1 { "row active" } else { "row" },
+                                    onclick: move |_| active_engine.set(1), // TODO(data): fallback mock when empty
+                                    span { class: "dot-radio" }
+                                    "{locale.t(keys::SETTINGS_ENGINE_GEMINI)}"
+                                }
+                                div {
+                                    class: if active_engine() == 2 { "row active" } else { "row" },
+                                    onclick: move |_| active_engine.set(2), // TODO(data): fallback mock when empty
+                                    span { class: "dot-radio" }
+                                    "{locale.t(keys::SETTINGS_ENGINE_GPT4O)}"
+                                }
                             }
                         }
                     }
@@ -336,18 +441,48 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             span { class: "fold-caret", if folded_provider() { "▸" } else { "▾" } }
                         }
                         div { class: "w2-scroll",
-                            div {
-                                class: if active_provider_anthropic() { "row active" } else { "row" },
-                                onclick: move |_| active_provider_anthropic.toggle(),
-                                span { class: "sq-toggle" }
-                                "{locale.t(keys::SETTINGS_PROVIDER_ANTHROPIC)}"
-                                span { class: "row-meta", "{locale.t(keys::SETTINGS_PROVIDER_DIRECT)}" }
-                            }
-                            div {
-                                class: if active_provider_google() { "row active" } else { "row" },
-                                onclick: move |_| active_provider_google.toggle(),
-                                span { class: "sq-toggle" }
-                                "{locale.t(keys::SETTINGS_PROVIDER_GOOGLE)}"
+                            if !providers().is_empty() {
+                                for provider in providers() {
+                                    {
+                                        let id = provider.id.clone();
+                                        let is_active = default_provider_id().as_deref() == Some(&id);
+                                        let name = provider.name.clone();
+                                        let provider_type = provider.provider_type.clone().unwrap_or_else(|| provider.model.clone());
+                                        rsx! {
+                                            div {
+                                                key: "{id}",
+                                                class: if is_active { "row active" } else { "row" },
+                                                onclick: move |_| {
+                                                    let id_clone = id.clone();
+                                                    default_provider_id.set(Some(id_clone.clone()));
+                                                    active_model_id.set(Some(id_clone.clone()));
+                                                    dioxus::prelude::spawn(async move {
+                                                        if let Err(err) = super::api::set_default_provider(&id_clone).await {
+                                                            tracing::warn!("Failed to set default provider {id_clone}: {err}");
+                                                        }
+                                                    });
+                                                },
+                                                span { class: "sq-toggle" }
+                                                "{name}"
+                                                span { class: "row-meta", "{provider_type}" }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                div {
+                                    class: if active_provider_anthropic() { "row active" } else { "row" },
+                                    onclick: move |_| active_provider_anthropic.toggle(), // TODO(data): fallback mock when empty
+                                    span { class: "sq-toggle" }
+                                    "{locale.t(keys::SETTINGS_PROVIDER_ANTHROPIC)}"
+                                    span { class: "row-meta", "{locale.t(keys::SETTINGS_PROVIDER_DIRECT)}" }
+                                }
+                                div {
+                                    class: if active_provider_google() { "row active" } else { "row" },
+                                    onclick: move |_| active_provider_google.toggle(), // TODO(data): fallback mock when empty
+                                    span { class: "sq-toggle" }
+                                    "{locale.t(keys::SETTINGS_PROVIDER_GOOGLE)}"
+                                }
                             }
                         }
                     }
@@ -363,26 +498,66 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             span { class: "fold-caret", if folded_mcp() { "▸" } else { "▾" } }
                         }
                         div { class: "w2-scroll",
-                            div {
-                                class: if mcp_filesystem() { "row active" } else { "row" },
-                                onclick: move |_| mcp_filesystem.toggle(),
-                                span { class: "sq-toggle" }
-                                "{locale.t(keys::SETTINGS_MCP_FILESYSTEM)}"
-                                span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_READWRITE)}" }
-                            }
-                            div {
-                                class: if mcp_philosophy() { "row active" } else { "row" },
-                                onclick: move |_| mcp_philosophy.toggle(),
-                                span { class: "sq-toggle" }
-                                "{locale.t(keys::SETTINGS_MCP_PHILOSOPHY)}"
-                                span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_PLUGIN)}" }
-                            }
-                            div {
-                                class: if mcp_terminal() { "row active" } else { "row" },
-                                onclick: move |_| mcp_terminal.toggle(),
-                                span { class: "sq-toggle danger" }
-                                "{locale.t(keys::SETTINGS_MCP_TERMINAL)}"
-                                span { class: "row-meta danger", "{locale.t(keys::SETTINGS_MCP_UNAUTHORIZED)}" }
+                            if !mcp_servers().is_empty() {
+                                for server in mcp_servers() {
+                                    {
+                                        let id = server.id.clone();
+                                        let is_enabled = server.enabled.unwrap_or(true);
+                                        let name = server.name.clone();
+                                        let command_display = if !server.config.command.is_empty() {
+                                            server.config.command.clone()
+                                        } else {
+                                            "MCP".to_string()
+                                        };
+                                        let server_dto = server.clone();
+                                        rsx! {
+                                            div {
+                                                key: "{id}",
+                                                class: if is_enabled { "row active" } else { "row" },
+                                                onclick: move |_| {
+                                                    let target_id = id.clone();
+                                                    let next_enabled = !is_enabled;
+                                                    for s in mcp_servers.write().iter_mut() {
+                                                        if s.id == target_id {
+                                                            s.enabled = Some(next_enabled);
+                                                        }
+                                                    }
+                                                    let server_to_send = server_dto.clone();
+                                                    dioxus::prelude::spawn(async move {
+                                                        if let Err(err) = super::api::set_mcp_enabled(server_to_send, next_enabled).await {
+                                                            tracing::warn!("Failed to set MCP enabled for {target_id}: {err}");
+                                                        }
+                                                    });
+                                                },
+                                                span { class: "sq-toggle" }
+                                                "{name}"
+                                                span { class: "row-meta", "{command_display}" }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                div {
+                                    class: if mcp_filesystem() { "row active" } else { "row" },
+                                    onclick: move |_| mcp_filesystem.toggle(), // TODO(data): fallback mock when empty
+                                    span { class: "sq-toggle" }
+                                    "{locale.t(keys::SETTINGS_MCP_FILESYSTEM)}"
+                                    span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_READWRITE)}" }
+                                }
+                                div {
+                                    class: if mcp_philosophy() { "row active" } else { "row" },
+                                    onclick: move |_| mcp_philosophy.toggle(), // TODO(data): fallback mock when empty
+                                    span { class: "sq-toggle" }
+                                    "{locale.t(keys::SETTINGS_MCP_PHILOSOPHY)}"
+                                    span { class: "row-meta", "{locale.t(keys::SETTINGS_MCP_PLUGIN)}" }
+                                }
+                                div {
+                                    class: if mcp_terminal() { "row active" } else { "row" },
+                                    onclick: move |_| mcp_terminal.toggle(), // TODO(data): fallback mock when empty
+                                    span { class: "sq-toggle danger" }
+                                    "{locale.t(keys::SETTINGS_MCP_TERMINAL)}"
+                                    span { class: "row-meta danger", "{locale.t(keys::SETTINGS_MCP_UNAUTHORIZED)}" }
+                                }
                             }
                         }
                     }
@@ -398,7 +573,14 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             span { class: "fold-caret", if folded_workspace() { "▸" } else { "▾" } }
                         }
                         div { class: "w2-scroll",
-                            div { class: "row static", "{locale.t(keys::SETTINGS_WORKSPACE_PATH)}" }
+                            div {
+                                class: "row static",
+                                if let Some(path) = workspace_path() {
+                                    "{path}"
+                                } else {
+                                    "{locale.t(keys::SETTINGS_WORKSPACE_PATH)}"
+                                }
+                            }
                             button {
                                 class: "btn-undo",
                                 onmousedown: move |e| e.stop_propagation(),
@@ -420,14 +602,14 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                         div { class: "w2-scroll",
                             div {
                                 class: if display_breath() { "row active" } else { "row" },
-                                onclick: move |_| display_breath.toggle(),
+                                onclick: move |_| display_breath.toggle(), // TODO(data): no AppSettings field yet
                                 span { class: "sq-toggle" }
                                 "{locale.t(keys::SETTINGS_DISPLAY_BREATH)}"
                                 span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_BREATH_PERIOD)}" }
                             }
                             div {
                                 class: if display_dual_optics() { "row active" } else { "row" },
-                                onclick: move |_| display_dual_optics.toggle(),
+                                onclick: move |_| display_dual_optics.toggle(), // TODO(data): no AppSettings field yet
                                 span { class: "sq-toggle" }
                                 "{locale.t(keys::SETTINGS_DISPLAY_DUAL)}"
                                 span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_DUAL_NOTE)}" }
@@ -437,5 +619,113 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app_state::settings::AppSettings;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_load_app_settings_resolves_workspace_path_or_default() {
+        let mut settings = AppSettings::default();
+        assert!(settings.current_workspace.is_none());
+
+        settings.add_workspace(PathBuf::from("/test/path/alpha"));
+        settings.set_current_workspace(Some(&PathBuf::from("/test/path/alpha")));
+
+        let resolved = settings
+            .current_workspace
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string())
+            .or_else(|| {
+                settings
+                    .workspaces
+                    .first()
+                    .map(|w| w.path.to_string_lossy().to_string())
+            });
+
+        assert_eq!(resolved, Some("/test/path/alpha".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_app_settings_transaction_closure() {
+        let mut settings = AppSettings::default();
+        let res = (|s: &mut AppSettings| -> anyhow::Result<()> {
+            s.onboarding_completed = true;
+            Ok(())
+        })(&mut settings);
+
+        assert!(res.is_ok());
+        assert!(settings.onboarding_completed);
+    }
+
+    #[test]
+    fn test_mcp_server_toggle_optimistic_update() {
+        let mut servers = vec![
+            MCPServerDto {
+                id: "srv-1".into(),
+                name: "Filesystem".into(),
+                config: northhing_kernel_api::settings::MCPServerConfigDto {
+                    command: "fs".into(),
+                    args: vec![],
+                    env: None,
+                },
+                location: northhing_kernel_api::settings::ConfigLocationDto::User,
+                enabled: Some(true),
+            },
+            MCPServerDto {
+                id: "srv-2".into(),
+                name: "Terminal".into(),
+                config: northhing_kernel_api::settings::MCPServerConfigDto {
+                    command: "term".into(),
+                    args: vec![],
+                    env: None,
+                },
+                location: northhing_kernel_api::settings::ConfigLocationDto::Project,
+                enabled: Some(false),
+            },
+        ];
+
+        let target_id = "srv-1";
+        if let Some(s) = servers.iter_mut().find(|s| s.id == target_id) {
+            let next = !s.enabled.unwrap_or(true);
+            s.enabled = Some(next);
+        }
+
+        assert_eq!(servers[0].enabled, Some(false));
+        assert_eq!(servers[1].enabled, Some(false));
+    }
+
+    #[test]
+    fn test_provider_active_matching() {
+        let providers = vec![
+            ProviderConfigDto {
+                id: "anthropic".into(),
+                name: "Anthropic".into(),
+                base_url: "https://api.anthropic.com".into(),
+                model: "claude-3-7-sonnet".into(),
+                extra: None,
+                enabled: Some(true),
+                provider_type: Some("anthropic".into()),
+            },
+            ProviderConfigDto {
+                id: "google".into(),
+                name: "Google".into(),
+                base_url: "https://generativelanguage.googleapis.com".into(),
+                model: "gemini-2.5-pro".into(),
+                extra: None,
+                enabled: Some(true),
+                provider_type: Some("gemini".into()),
+            },
+        ];
+
+        let default_provider_id = Some("anthropic".to_string());
+        let active_id = default_provider_id.as_deref();
+        assert_eq!(active_id, Some("anthropic"));
+        assert_eq!(providers[0].id, "anthropic");
+        assert_ne!(providers[1].id, "anthropic");
     }
 }

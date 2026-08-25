@@ -9,6 +9,9 @@ use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi};
 use northhing_kernel_api::session::{
     KernelSessionApi, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
 };
+use northhing_kernel_api::settings::{
+    AIModelConfigDto, GlobalConfigDto, KernelSettingsApi, MCPServerDto,
+};
 use northhing_kernel_api::tools::KernelToolsApi;
 use northhing_kernel_api::turn::{
     KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto,
@@ -80,6 +83,32 @@ pub async fn respond_to_tool_confirmation(
         .await
 }
 
+/// Retrieves global configuration including providers and default provider id.
+pub async fn get_global_config() -> Result<GlobalConfigDto, KernelError> {
+    kernel_facade().get_global_config().await
+}
+
+/// Lists all configured AI models.
+pub async fn list_model_configs() -> Result<Vec<AIModelConfigDto>, KernelError> {
+    kernel_facade().list_model_configs().await
+}
+
+/// Sets the default AI provider / model ID.
+pub async fn set_default_provider(id: &str) -> Result<(), KernelError> {
+    kernel_facade().set_default_provider(id).await
+}
+
+/// Lists all configured MCP servers.
+pub async fn list_mcp_servers() -> Result<Vec<MCPServerDto>, KernelError> {
+    kernel_facade().list_mcp_servers().await
+}
+
+/// Sets the enabled state of an MCP server and updates its configuration.
+pub async fn set_mcp_enabled(mut server: MCPServerDto, enabled: bool) -> Result<(), KernelError> {
+    server.enabled = Some(enabled);
+    kernel_facade().upsert_mcp_server(server).await
+}
+
 /// Creates a subscription to the kernel event stream and returns an unbounded/bounded mpsc receiver.
 ///
 /// Converts the callback-based `subscribe_events` interface into an async `tokio::sync::mpsc::Receiver`.
@@ -124,6 +153,22 @@ mod tests {
         let _ = get_session(&"test-session".to_string()).await;
         let _ = respond_to_tool_confirmation("call-1", true).await;
         let _ = ensure_room_session().await;
+        let _ = get_global_config().await;
+        let _ = list_model_configs().await;
+        let _ = set_default_provider("test-model").await;
+        let _ = list_mcp_servers().await;
+        let mcp = MCPServerDto {
+            id: "test".into(),
+            name: "test".into(),
+            config: northhing_kernel_api::settings::MCPServerConfigDto {
+                command: "node".into(),
+                args: vec![],
+                env: None,
+            },
+            location: northhing_kernel_api::settings::ConfigLocationDto::User,
+            enabled: Some(true),
+        };
+        let _ = set_mcp_enabled(mcp, false).await;
     }
 
     #[tokio::test]
