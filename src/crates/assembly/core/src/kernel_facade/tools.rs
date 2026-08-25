@@ -49,4 +49,47 @@ impl northhing_kernel_api::KernelToolsApi for super::KernelFacade {
         // NEEDS_CONTEXT: user input flow requires UI integration.
         Err(KernelError::Internal("not yet wired: request_user_input".to_string()))
     }
+
+    async fn respond_to_tool_confirmation(
+        &self,
+        tool_id: &str,
+        approved: bool,
+        reason: Option<String>,
+    ) -> Result<(), KernelError> {
+        let coordinator = match self.coordinator() {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(KernelError::Runtime(format!(
+                    "kernel facade not initialized — init_core not called: {e}"
+                )));
+            }
+        };
+        if approved {
+            coordinator.confirm_tool(tool_id, None).await
+        } else {
+            coordinator
+                .reject_tool(tool_id, reason.unwrap_or_default())
+                .await
+        }
+        .map_err(|e| KernelError::Runtime(format!("respond_to_tool_confirmation failed: {e}")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use northhing_kernel_api::KernelToolsApi;
+
+    #[tokio::test]
+    async fn test_respond_to_tool_confirmation_returns_runtime_err_before_init() {
+        let facade = super::super::KernelFacade::new();
+        let result = facade
+            .respond_to_tool_confirmation("tool-123", true, None)
+            .await;
+        match result {
+            Err(KernelError::Runtime(_)) => {}
+            Err(other) => panic!("expected KernelError::Runtime before init, got {:?}", other),
+            Ok(_) => panic!("respond_to_tool_confirmation should return Err before init"),
+        }
+    }
 }

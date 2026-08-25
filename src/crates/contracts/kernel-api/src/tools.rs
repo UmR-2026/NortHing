@@ -91,6 +91,19 @@ pub trait KernelToolsApi: Send + Sync {
     /// Request user input (permission/confirm).
     /// Source: #36
     async fn request_user_input(&self, request: UserInputRequestDto) -> Result<UserInputResponseDto, KernelError>;
+
+    /// Respond to a pending tool confirmation (approve or reject).
+    ///
+    /// Routes to the coordinator's confirmation channel
+    /// (`coordinator_session.rs` confirm_tool / reject_tool). Approval cards in
+    /// host UIs (Dioxus consult-room shell) call this when the user clicks
+    /// approve/reject on an unresolved ToolCall awaiting confirmation.
+    async fn respond_to_tool_confirmation(
+        &self,
+        tool_id: &str,
+        approved: bool,
+        reason: Option<String>,
+    ) -> Result<(), KernelError>;
 }
 
 // ── ToolPort (ACP tool boundary trait) ─────────────────────────────────────────

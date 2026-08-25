@@ -23,6 +23,7 @@
 // behind the same `cfg` guard the module is itself gated by.
 pub use entry::launch;
 
+mod api;
 mod entry;
 mod state;
 mod registry;
