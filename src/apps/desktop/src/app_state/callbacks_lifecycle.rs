@@ -1,3 +1,4 @@
+// allow-god-file: 1009 lines; ceiling 1011 registered in scripts/rot-budget.json with user sign-off 2026-08-26 (audit rot x4 decision: register, keep observing).
 //! Lifecycle Slint callback wirings (R37a split from mod.rs)
 //!
 //! Each `register_X_callback` function takes a `&AppWindow` +
