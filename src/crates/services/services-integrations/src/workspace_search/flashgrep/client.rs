@@ -34,7 +34,6 @@ const CLIENT_NAME: &str = "northhing-workspace-search";
 const REPO_CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
 const SHUTDOWN_REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(2);
-const DROP_CLEANUP_TIMEOUT: Duration = Duration::from_millis(150);
 
 #[derive(Debug, Clone)]
 pub struct ManagedClient {
@@ -666,9 +665,10 @@ impl Drop for AsyncDaemonClient {
     fn drop(&mut self) {
         self.mark_closed();
         self.abort_background_tasks_for_drop();
-        if let Some(child) = self.take_child_for_drop() {
-            process_manager::spawn_child_process_tree_cleanup(child, DROP_CLEANUP_TIMEOUT);
-        }
+        // kill_on_drop(true) (set at spawn) terminates the daemon on Child drop;
+        // flashgrep is spawned directly (no shell wrapper) so there are no
+        // grandchildren to tree-kill. (audit F9)
+        drop(self.take_child_for_drop());
     }
 }
 

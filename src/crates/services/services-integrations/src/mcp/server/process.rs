@@ -397,6 +397,7 @@ impl MCPServerProcess {
 impl Drop for MCPServerProcess {
     fn drop(&mut self) {
         if let Some(child) = self.child.take() {
+            // tree-kill required: Windows spawns node MCP servers via cmd.exe /c (see start()); kill_on_drop alone would orphan the grandchild server process.
             process_manager::spawn_child_process_tree_cleanup(child, Duration::from_millis(750));
         }
     }

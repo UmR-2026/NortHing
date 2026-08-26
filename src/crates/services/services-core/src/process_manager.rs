@@ -235,6 +235,10 @@ pub async fn terminate_child_process_tree(child: &mut Child, graceful_timeout: D
     child.wait().await.map(|_| ())
 }
 
+/// Spawns a background thread with a dedicated tokio runtime to terminate a child process tree.
+///
+/// Only needed for shell-wrapped spawns that can have grandchildren (e.g. MCP via cmd.exe /c).
+/// Directly-spawned binaries with kill_on_drop(true) should just drop the Child.
 pub fn spawn_child_process_tree_cleanup(child: Child, graceful_timeout: Duration) {
     let _ = std::thread::Builder::new()
         .name("process-tree-cleanup".to_string())
