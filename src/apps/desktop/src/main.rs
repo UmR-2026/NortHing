@@ -60,6 +60,25 @@ async fn initialize_core_services() -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("init_core failed: {e}"))?;
     APP_STATE.set_core_ready();
+
+    // B3 (prescription v3): daily file cleanup scheduler. Runs once at startup,
+    // then every 24h on the long-lived worker runtime.
+    tokio::spawn(async move {
+        let svc = northhing_core::infrastructure::storage::CleanupService::new(
+            northhing_core::infrastructure::PathManager::default(),
+            northhing_core::infrastructure::storage::CleanupPolicy::default(),
+        );
+        let _ = svc.cleanup_all().await;
+        let mut tick = tokio::time::interval_at(
+            tokio::time::Instant::now() + std::time::Duration::from_secs(86400),
+            std::time::Duration::from_secs(86400),
+        );
+        loop {
+            tick.tick().await;
+            let _ = svc.cleanup_all().await;
+        }
+    });
+
     Ok(())
 }
 
