@@ -67,12 +67,6 @@ pub fn is_keyring_sentinel(s: &str) -> bool {
     s == API_KEY_SENTINEL
 }
 
-/// Returns `true` when `s` is the MCP env keyring sentinel value.
-#[allow(dead_code)]
-pub fn is_mcp_env_sentinel(s: &str) -> bool {
-    s == MCP_ENV_SENTINEL
-}
-
 /// Returns `true` when `env` map represents a keyring sentinel placeholder.
 #[allow(dead_code)]
 pub fn is_env_sentinel(env: &HashMap<String, String>) -> bool {
@@ -318,33 +312,6 @@ pub fn load_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<HashMap
     }
 }
 
-/// Resolve the actual env map for an MCP server.
-///
-/// If `env` contains the sentinel, the real env map is fetched from `keyring`
-/// via [`load_env`]; otherwise `env` is cloned and returned as-is (plaintext).
-#[allow(dead_code)]
-pub fn resolve_env(
-    keyring: &dyn KeyringBackend,
-    server_id: &str,
-    env: &HashMap<String, String>,
-) -> Result<HashMap<String, String>> {
-    if is_env_sentinel(env) {
-        load_env(keyring, server_id)
-    } else {
-        Ok(env.clone())
-    }
-}
-
-/// Remove an MCP server's env entry from the keyring (best-effort).
-#[allow(dead_code)]
-pub fn delete_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<()> {
-    let account = format!("mcp-env:{server_id}");
-    match keyring.delete(&account) {
-        Ok(()) => Ok(()),
-        Err(_) => Ok(()),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -355,10 +322,6 @@ mod tests {
         assert!(!is_keyring_sentinel("sk-real-key-12345"));
         assert!(!is_keyring_sentinel(""));
         assert!(!is_keyring_sentinel("__kr__ ")); // trailing space
-
-        assert!(is_mcp_env_sentinel(MCP_ENV_SENTINEL));
-        assert!(!is_mcp_env_sentinel(""));
-        assert!(!is_mcp_env_sentinel("__kr__"));
 
         let mut map = HashMap::new();
         assert!(!is_env_sentinel(&map));
@@ -509,39 +472,5 @@ mod tests {
         let result = load_env(&kr, "corrupt");
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
-    }
-
-    #[test]
-    fn mock_keyring_resolve_env_sentinel_and_plaintext() {
-        let kr = MockKeyring::new();
-        let mut real_env = HashMap::new();
-        real_env.insert("KEY".to_string(), "secret".to_string());
-        store_env(&kr, "srv1", &real_env).unwrap();
-
-        // Sentinel env resolves from keyring
-        let sentinel_map = make_env_sentinel();
-        let resolved = resolve_env(&kr, "srv1", &sentinel_map).unwrap();
-        assert_eq!(resolved, real_env);
-
-        // Plaintext env returns directly
-        let mut plain_env = HashMap::new();
-        plain_env.insert("UNSAVED".to_string(), "direct".to_string());
-        let resolved_plain = resolve_env(&kr, "srv2", &plain_env).unwrap();
-        assert_eq!(resolved_plain, plain_env);
-    }
-
-    #[test]
-    fn mock_keyring_delete_env_removes_entry() {
-        let kr = MockKeyring::new();
-        let mut env = HashMap::new();
-        env.insert("K".to_string(), "V".to_string());
-        store_env(&kr, "srv1", &env).unwrap();
-        assert!(kr.get("mcp-env:srv1").is_ok());
-
-        delete_env(&kr, "srv1").unwrap();
-        assert!(kr.get("mcp-env:srv1").is_err());
-
-        // Deleting non-existent is best-effort Ok
-        delete_env(&kr, "nonexistent").unwrap();
     }
 }
