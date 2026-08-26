@@ -10,7 +10,8 @@ use northhing_kernel_api::session::{
     KernelSessionApi, MessageDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
 };
 use northhing_kernel_api::settings::{
-    AIModelConfigDto, GlobalConfigDto, KernelSettingsApi, MCPServerDto,
+    AIModelConfigDto, GlobalConfigDto, KernelSettingsApi, MCPServerDto, ProviderFormDto,
+    ProviderTestResultDto,
 };
 use northhing_kernel_api::tools::KernelToolsApi;
 use northhing_kernel_api::turn::{
@@ -114,6 +115,22 @@ pub async fn set_mcp_enabled(mut server: MCPServerDto, enabled: bool) -> Result<
     kernel_facade().upsert_mcp_server(server).await
 }
 
+/// Tests a provider configuration without modifying persistent global config.
+pub async fn test_provider_config(
+    form: ProviderFormDto,
+) -> Result<ProviderTestResultDto, KernelError> {
+    kernel_facade().test_provider_config(form).await
+}
+
+/// Stores an API key in the OS keyring for the onboarding flow.
+pub async fn store_provider_api_key(provider_id: &str, plaintext: &str) -> anyhow::Result<String> {
+    super::super::app_state::settings::store_api_key(
+        &*super::super::app_state::settings::PRODUCTION_KEYRING,
+        provider_id,
+        plaintext,
+    )
+}
+
 /// Creates a subscription to the kernel event stream and returns an unbounded/bounded mpsc receiver.
 ///
 /// Converts the callback-based `subscribe_events` interface into an async `tokio::sync::mpsc::Receiver`.
@@ -175,6 +192,15 @@ mod tests {
             enabled: Some(true),
         };
         let _ = set_mcp_enabled(mcp, false).await;
+        let form = ProviderFormDto {
+            provider_id: "onboarding".into(),
+            base_url: Some("http://localhost".into()),
+            api_key: Some("key".into()),
+            model: Some("default".into()),
+            provider_type: None,
+        };
+        let _ = test_provider_config(form).await;
+        let _ = store_provider_api_key("onboarding", "key").await;
     }
 
     #[tokio::test]

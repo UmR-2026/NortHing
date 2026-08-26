@@ -8,6 +8,9 @@
 
 use dioxus::desktop::window;
 use dioxus::prelude::*;
+use northhing_kernel_api::session::{KernelSessionApi, SessionConfigDto};
+use northhing_kernel_api::settings::ProviderFormDto;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use super::css;
@@ -30,6 +33,40 @@ const SWATCHES: &[(&str, &str, &str)] = &[
     ("#D99B48", "凝视", "审视 / 对齐"),
     ("#4B8F6B", "镇静", "恒稳 / 收容"),
 ];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Step {
+    One,
+    Two,
+    Three,
+}
+
+pub fn step_gate(
+    step: Step,
+    palette_ok: bool,
+    agent_ok: bool,
+    ws_exists: bool,
+) -> Result<Step, &'static str> {
+    match step {
+        Step::One => {
+            if !palette_ok {
+                Err("请先选择性格色板，为诊室注入第一个 mind 色印记。")
+            } else if !agent_ok {
+                Err("请填写实体名称。")
+            } else {
+                Ok(Step::Two)
+            }
+        }
+        Step::Two => Ok(Step::Three),
+        Step::Three => {
+            if !ws_exists {
+                Err("存根目录不存在，请检查路径。")
+            } else {
+                Ok(Step::Three)
+            }
+        }
+    }
+}
 
 pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
@@ -77,10 +114,13 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
 
     // Interaction states
     let mut selected_palette = use_signal(|| Option::<(&'static str, &'static str, &'static str)>::None);
-    let mut tested_connection = use_signal(|| false);
-    let mut test_status_text = use_signal(|| Option::<String>::None);
+    let tested_connection = use_signal(|| false);
+    let test_status_text = use_signal(|| Option::<String>::None);
     let mut ritual_completed = use_signal(|| false);
     let mut room_state_hint = use_signal(|| Option::<String>::None);
+
+    let mut current_step = use_signal(|| Step::One);
+    let mut testing = use_signal(|| false);
 
     let mut agent_input = use_signal(|| "NortHing".to_string());
     let mut agent_name_edited = use_signal(|| false);
@@ -91,6 +131,52 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
     let mut provider_url_input = use_signal(|| "https://api.anthropic.com/v1".to_string());
     let mut provider_key_input = use_signal(|| "".to_string());
     let mut workspace_dir_input = use_signal(|| "E:\\agent-project\\northing\\workspace".to_string());
+
+    let run_test_provider = move || {
+        if testing() {
+            return;
+        }
+        let mut testing = testing;
+        let mut test_status_text = test_status_text;
+        let mut tested_connection = tested_connection;
+        let mut current_step = current_step;
+        let mut room_state_hint = room_state_hint;
+
+        testing.set(true);
+        test_status_text.set(Some("测试中...".to_string()));
+
+        let form = ProviderFormDto {
+            provider_id: "onboarding".into(),
+            base_url: Some(provider_url_input.read().trim().to_string()),
+            api_key: Some(provider_key_input.read().clone()),
+            model: Some(provider_model_input.read().trim().to_string()),
+            provider_type: None,
+        };
+
+        spawn(async move {
+            match super::api::test_provider_config(form).await {
+                Ok(res) if res.success => {
+                    tested_connection.set(true);
+                    test_status_text.set(Some("✓ 心跳贯通 · 神经元就绪".to_string()));
+                    current_step.set(Step::Three);
+                    room_state_hint.set(None);
+                }
+                Ok(res) => {
+                    tested_connection.set(false);
+                    let err_msg = res.error.unwrap_or_else(|| "测试失败".to_string());
+                    let first_line = err_msg.lines().next().unwrap_or(&err_msg).trim().to_string();
+                    test_status_text.set(Some(format!("✗ {first_line}")));
+                }
+                Err(e) => {
+                    tested_connection.set(false);
+                    let err_msg = e.to_string();
+                    let first_line = err_msg.lines().next().unwrap_or(&err_msg).trim().to_string();
+                    test_status_text.set(Some(format!("✗ {first_line}")));
+                }
+            }
+            testing.set(false);
+        });
+    };
 
     // Drawer & header collapse states
     let mut head_folded = use_signal(|| false);
@@ -462,9 +548,9 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                 div { class: "test-row",
                                     button {
                                         class: "ritual-btn",
+                                        disabled: testing(),
                                         onclick: move |_| {
-                                            test_status_text.set(Some("✓ 心跳贯通 · 延迟 12ms · 神经元就绪".to_string()));
-                                            tested_connection.set(true);
+                                            run_test_provider();
                                         },
                                         "{locale.t(keys::ONBOARDING_BTN_TEST)}"
                                     }
@@ -526,21 +612,105 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                 button {
                                     class: "ritual-btn primary",
                                     id: "complete-btn",
+                                    disabled: true,
                                     style: "background:var(--ok);border-color:var(--ok);color:#fff",
                                     "✓ 诊室已诞生 · 空间运行中"
                                 }
                             } else {
-                                button {
-                                    class: "ritual-btn primary",
-                                    id: "complete-btn",
-                                    onclick: move |_| {
-                                        if selected_palette().is_none() {
-                                            room_state_hint.set(Some("请先选择性格色板，为诊室注入第一个 mind 色印记。".to_string()));
-                                        } else {
-                                            ritual_completed.set(true);
+                                {
+                                    let btn_text = if testing() {
+                                        "处理中...".to_string()
+                                    } else {
+                                        match current_step() {
+                                            Step::One => "下一步 · 身份".to_string(),
+                                            Step::Two => "下一步 · 管道".to_string(),
+                                            Step::Three => "完成仪式".to_string(),
                                         }
-                                    },
-                                    "{locale.t(keys::ONBOARDING_BTN_COMPLETE)}"
+                                    };
+                                    rsx! {
+                                        button {
+                                            class: "ritual-btn primary",
+                                            id: "complete-btn",
+                                            disabled: testing(),
+                                            onclick: move |_| {
+                                                if testing() {
+                                                    return;
+                                                }
+                                                match current_step() {
+                                                    Step::One => {
+                                                        let pal_ok = selected_palette().is_some();
+                                                        let agent_ok = !agent_input.read().trim().is_empty();
+                                                        match step_gate(Step::One, pal_ok, agent_ok, false) {
+                                                            Ok(next) => {
+                                                                current_step.set(next);
+                                                                room_state_hint.set(None);
+                                                            }
+                                                            Err(reason) => {
+                                                                room_state_hint.set(Some(reason.to_string()));
+                                                            }
+                                                        }
+                                                    }
+                                                    Step::Two => {
+                                                        run_test_provider();
+                                                    }
+                                                    Step::Three => {
+                                                        let pal_ok = selected_palette().is_some();
+                                                        let agent_ok = !agent_input.read().trim().is_empty();
+                                                        let ws_str = workspace_dir_input.read().trim().to_string();
+                                                        let ws_exists = std::path::Path::new(&ws_str).exists();
+                                                        match step_gate(Step::Three, pal_ok, agent_ok, ws_exists) {
+                                                            Err(reason) => {
+                                                                room_state_hint.set(Some(reason.to_string()));
+                                                            }
+                                                            Ok(_) => {
+                                                                room_state_hint.set(None);
+                                                                testing.set(true);
+                                                                let key_val = provider_key_input.read().clone();
+                                                                let ws_buf = PathBuf::from(&ws_str);
+                                                                let agent_name = display_agent_name.clone();
+
+                                                                spawn(async move {
+                                                                    if let Err(e) = super::api::store_provider_api_key("onboarding", &key_val).await {
+                                                                        let first_line = e.to_string().lines().next().unwrap_or("Key 存储失败").trim().to_string();
+                                                                        room_state_hint.set(Some(format!("Key 存储失败: {first_line}")));
+                                                                        testing.set(false);
+                                                                        return;
+                                                                    }
+
+                                                                    let update_res = crate::app_state::settings::update_app_settings(|s| {
+                                                                        s.onboarding_completed = true;
+                                                                        s.add_workspace(ws_buf.clone());
+                                                                        Ok(())
+                                                                    }).await;
+
+                                                                    if let Err(e) = update_res {
+                                                                        let first_line = e.to_string().lines().next().unwrap_or("设置更新失败").trim().to_string();
+                                                                        room_state_hint.set(Some(format!("设置更新失败: {first_line}")));
+                                                                        testing.set(false);
+                                                                        return;
+                                                                    }
+
+                                                                    let session_config = SessionConfigDto {
+                                                                        workspace_path: Some(ws_str.clone()),
+                                                                        agent_type: "agentic".into(),
+                                                                        model_name: "default".into(),
+                                                                        name: Some(agent_name),
+                                                                    };
+                                                                    if let Err(e) = northhing_core::kernel_facade::kernel_facade().create_session(session_config).await {
+                                                                        tracing::warn!("onboarding create_session best-effort error: {e}");
+                                                                    }
+
+                                                                    ritual_completed.set(true);
+                                                                    testing.set(false);
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "{btn_text}"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -660,5 +830,37 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_step_gate_step_one() {
+        assert_eq!(
+            step_gate(Step::One, false, true, true),
+            Err("请先选择性格色板，为诊室注入第一个 mind 色印记。")
+        );
+        assert_eq!(
+            step_gate(Step::One, true, false, true),
+            Err("请填写实体名称。")
+        );
+        assert_eq!(step_gate(Step::One, true, true, false), Ok(Step::Two));
+    }
+
+    #[test]
+    fn test_step_gate_step_two() {
+        assert_eq!(step_gate(Step::Two, false, false, false), Ok(Step::Three));
+    }
+
+    #[test]
+    fn test_step_gate_step_three() {
+        assert_eq!(
+            step_gate(Step::Three, true, true, false),
+            Err("存根目录不存在，请检查路径。")
+        );
+        assert_eq!(step_gate(Step::Three, true, true, true), Ok(Step::Three));
     }
 }
