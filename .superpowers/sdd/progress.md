@@ -14,6 +14,8 @@
 
 - Task W2-3 (r2#6): complete (commits 60cf675..b440cae, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-36-flash) — prepare_turn restore Err 臂按 `session.dialog_turn_ids.is_empty()` 分级：有历史 warn!（含 turn 数 + partial-context 后果）、新会话保持 debug!；banner 备选编排者裁定不采纳（Minor 级观测性修复）。净 +12/-4。验证：check workspace 绿 + dialog_turn 13/13。Minor×2 无需动作（if/else vs match 风格；report 行号锚小偏差）。
 
+- **W2 波次终审（5a90e04..298777b，3 任务）：CAN MERGE 0C/0I/0M by reviewer/step-explore_reviewer** —— 4 条接缝全过（flashgrep kill_on_drop 链 constructor→Drop 成立；MCP 构造器+tree-kill 双保险无矛盾；unix SIGKILL 孤儿场景与波前一致无回退；W2-3 与 W2-1/2 文件零交叠）。台账-vs-git 校准 CLEAN。**人工走查放行：无 UI/渲染/事件路由路径改动，无可察觉风险**。进程模式债 F5/F9 根治完毕，r2#6 关闭。F6（file watch 重建）/F10（detached SSE drain）仍未做——r3 低档，留下一波候选。
+
 ---
 
 # Backend Debug Progress Ledger
