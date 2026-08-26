@@ -7,8 +7,18 @@ use crate::util::errors::NortHingResult;
 use northhing_agent_stream::StreamEventSink;
 use std::collections::BinaryHeap;
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::{broadcast, Mutex, Notify};
 use tracing::{debug, trace, warn};
+
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("event queue full: max_queue_size={max_queue_size}, dropped event_id={event_id}")]
+pub struct EventQueueFull {
+    pub event_id: String,
+    pub max_queue_size: usize,
+}
+
+pub type EventId = String;
 
 const EVENT_BROADCAST_BUFFER: usize = 1024;
 const SLOW_EVENT_QUEUE_LATENCY_MS: u128 = 250;
@@ -73,7 +83,11 @@ impl EventQueue {
     }
 
     /// Enqueue event
-    pub async fn enqueue(&self, event: AgenticEvent, priority: Option<EventPriority>) -> NortHingResult<String> {
+    pub async fn enqueue(
+        &self,
+        event: AgenticEvent,
+        priority: Option<EventPriority>,
+    ) -> Result<EventId, EventQueueFull> {
         let priority = priority.unwrap_or_else(|| event.default_priority());
         let envelope = EventEnvelope::new(event, priority);
         let event_id = envelope.id.clone();
@@ -82,9 +96,11 @@ impl EventQueue {
         // acquisition to avoid redundant lock churn.
         let queue_len = {
             let mut queue = self.queue.lock().await;
-            if queue.len() >= self.config.max_queue_size {
-                warn!("Event queue full, dropping event: event_id={}", event_id);
-                return Ok(event_id);
+            if queue.len() >= self.config.max_queue_size && priority != EventPriority::Critical {
+                return Err(EventQueueFull {
+                    event_id,
+                    max_queue_size: self.config.max_queue_size,
+                });
             }
             queue.push(std::cmp::Reverse(envelope.clone()));
             queue.len()
@@ -224,6 +240,59 @@ impl EventQueue {
 #[async_trait::async_trait]
 impl StreamEventSink for EventQueue {
     async fn enqueue(&self, event: AgenticEvent, priority: Option<EventPriority>) {
-        let _ = EventQueue::enqueue(self, event, priority).await;
+        if let Err(e) = EventQueue::enqueue(self, event, priority).await {
+            tracing::error!("Agentic event dropped: {e}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_enqueue_queue_full_and_critical_bypass() {
+        let queue = EventQueue::new(EventQueueConfig {
+            max_queue_size: 2,
+            batch_size: 10,
+        });
+
+        let ev1 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+        };
+        let ev2 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t2".into(),
+        };
+        let res1 = queue.enqueue(ev1, Some(EventPriority::Normal)).await;
+        assert!(res1.is_ok());
+        let res2 = queue.enqueue(ev2, Some(EventPriority::Normal)).await;
+        assert!(res2.is_ok());
+        assert_eq!(queue.len().await, 2);
+
+        // Normal priority enqueue when full -> Err(EventQueueFull)
+        let ev3 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t3".into(),
+        };
+        let res3 = queue.enqueue(ev3, Some(EventPriority::Normal)).await;
+        assert!(matches!(
+            res3,
+            Err(EventQueueFull {
+                max_queue_size: 2,
+                ..
+            })
+        ));
+        assert_eq!(queue.len().await, 2);
+
+        // Critical priority enqueue when full -> Ok(_) and len becomes 3 (bypass)
+        let ev_crit = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t4".into(),
+        };
+        let res_crit = queue.enqueue(ev_crit, Some(EventPriority::Critical)).await;
+        assert!(res_crit.is_ok());
+        assert_eq!(queue.len().await, 3);
     }
 }
