@@ -16,6 +16,8 @@ use tracing::{debug, error, info};
 
 use super::types::ServerConfig;
 
+use northhing_services_core::process_manager;
+
 use super::process::{CrashCallback, DiagnosticsCallback, LspServerProcess, ProgressCallback, TokenCreateCallback};
 
 impl LspServerProcess {
@@ -45,6 +47,8 @@ impl LspServerProcess {
         cmd.stdin(Stdio::piped());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
+        cmd.kill_on_drop(true);
+        process_manager::configure_process_group(&mut cmd);
 
         let mut child = cmd.spawn().map_err(|e| {
             error!("Failed to spawn LSP server {}: {}", id, e);

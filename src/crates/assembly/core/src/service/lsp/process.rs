@@ -43,6 +43,7 @@ pub struct LspServerProcess {
     /// Plugin ID.
     pub id: String,
     /// Child process.
+    // ponytail: residual idling window when grandchildren hold stdout pipe is unfixed (see report)
     pub(super) child: Arc<RwLock<Child>>,
     /// Standard input.
     pub(super) stdin: Arc<RwLock<ChildStdin>>,
@@ -67,5 +68,8 @@ pub struct LspServerProcess {
 impl Drop for LspServerProcess {
     fn drop(&mut self) {
         debug!("Dropping LSP server process: {}", self.id);
+        if let Ok(mut child) = self.child.try_write() {
+            let _ = child.start_kill();
+        }
     }
 }
