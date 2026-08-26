@@ -1,0 +1,10 @@
+ .superpowers/sdd/progress.md                       |   2 +
+ .../sdd/reports/task-p1c-mcp-env-report.md         |  36 +++
+ docs/status/tech-debt-ledger.md                    |   6 +-
+ src/apps/desktop/src/app_state/settings/io.rs      | 100 +++++++-
+ .../desktop/src/app_state/settings/io/io_tests.rs  | 266 ++++++++++++++++++++-
+ src/apps/desktop/src/app_state/settings/keyring.rs | 121 ++++++++++
+ src/apps/desktop/src/app_state/settings/mod.rs     |  19 ++
+ src/apps/desktop/src/app_state/settings/types.rs   |  39 +++
+ 8 files changed, 569 insertions(+), 20 deletions(-)
+range: d4f8779..1d8dcb2 (0b14f8a feat + 1d8dcb2 fix1); full review-d4f8779..1d8dcb2.diff kept untracked per .gitignore

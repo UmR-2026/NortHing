@@ -1,0 +1,7 @@
+ src/apps/desktop/src/ui_dioxus/api.rs           |   8 +-
+ src/apps/desktop/src/ui_dioxus/app.rs           |  26 ++++
+ src/apps/desktop/src/ui_dioxus/pages_archive.rs |   1 +
+ src/apps/desktop/src/ui_dioxus/pages_space.rs   |   1 +
+ src/apps/desktop/src/ui_dioxus/session_mock.rs  | 190 ++++++++++++++++++++++++
+ 5 files changed, 225 insertions(+), 1 deletion(-)
+range: 1d8dcb2..00b559b (00b559b feat)
