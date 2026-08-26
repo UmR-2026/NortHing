@@ -43,6 +43,7 @@ struct DoorItem {
     artifacts: &'static [&'static str],
 }
 
+// TODO(data): wire to session/archive query
 const DOORS: &[DoorItem] = &[
     DoorItem {
         id: 0,

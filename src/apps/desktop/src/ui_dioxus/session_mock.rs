@@ -9,6 +9,7 @@
 // spike validated this exact pattern (Signal + spawn loop) and the
 // `count > 20` cap is preserved per the spike's §4 "上限控制" note.
 
+use northhing_kernel_api::session::{MessageContentDto, MessageDto, MessageRoleDto};
 use serde::Serialize;
 
 /// Five record kinds from the truth HTML, modeled as a flat enum so the
@@ -90,6 +91,74 @@ pub fn seed_session() -> Vec<MockEntry> {
     ]
 }
 
+/// Converts kernel `MessageDto` list into UI `MockEntry` records.
+///
+/// Mapping rules per Brief Task P2a §②:
+/// - User with Text or Multimodal -> Witness (who: "见证者", body: text)
+/// - Assistant with Mixed -> Entity (who: "它", body: text if non-empty else reasoning_content, children: ToolLog for tool_calls)
+/// - Assistant with Text or Multimodal -> Entity (who: "它", body: text, children: empty)
+/// - System or Tool (ToolResult) -> skipped
+pub fn messages_to_entries(msgs: Vec<MessageDto>) -> Vec<MockEntry> {
+    let mut entries = Vec::new();
+    for msg in msgs {
+        match (msg.role, msg.content) {
+            (MessageRoleDto::User, MessageContentDto::Text(t)) => {
+                entries.push(MockEntry::Witness {
+                    who: "见证者".to_string(),
+                    body: t,
+                });
+            }
+            (MessageRoleDto::User, MessageContentDto::Multimodal { text, .. }) => {
+                entries.push(MockEntry::Witness {
+                    who: "见证者".to_string(),
+                    body: text,
+                });
+            }
+            (
+                MessageRoleDto::Assistant,
+                MessageContentDto::Mixed {
+                    reasoning_content,
+                    text,
+                    tool_calls,
+                },
+            ) => {
+                let body = if !text.is_empty() {
+                    text
+                } else {
+                    reasoning_content.unwrap_or_default()
+                };
+                let children = tool_calls
+                    .into_iter()
+                    .map(|tc| MockChild::ToolLog {
+                        label: tc.tool_name,
+                    })
+                    .collect();
+                entries.push(MockEntry::Entity {
+                    who: "它".to_string(),
+                    body,
+                    children,
+                });
+            }
+            (MessageRoleDto::Assistant, MessageContentDto::Text(t)) => {
+                entries.push(MockEntry::Entity {
+                    who: "它".to_string(),
+                    body: t,
+                    children: vec![],
+                });
+            }
+            (MessageRoleDto::Assistant, MessageContentDto::Multimodal { text, .. }) => {
+                entries.push(MockEntry::Entity {
+                    who: "它".to_string(),
+                    body: text,
+                    children: vec![],
+                });
+            }
+            _ => {}
+        }
+    }
+    entries
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,5 +180,126 @@ mod tests {
         assert_eq!(approvals.len(), 2);
         assert_eq!(approvals[0], ("mock-call-1", false));
         assert_eq!(approvals[1], ("mock-call-2", true));
+    }
+
+    #[test]
+    fn test_messages_to_entries_user_text_to_witness() {
+        let msg = MessageDto {
+            id: "msg-1".into(),
+            role: MessageRoleDto::User,
+            content: MessageContentDto::Text("hello world".into()),
+            metadata: None,
+            timestamp: 1000,
+        };
+        let entries = messages_to_entries(vec![msg]);
+        assert_eq!(entries.len(), 1);
+        match &entries[0] {
+            MockEntry::Witness { who, body } => {
+                assert_eq!(who, "见证者");
+                assert_eq!(body, "hello world");
+            }
+            _ => panic!("Expected Witness entry"),
+        }
+    }
+
+    #[test]
+    fn test_messages_to_entries_assistant_mixed_with_tool_calls() {
+        let msg = MessageDto {
+            id: "msg-2".into(),
+            role: MessageRoleDto::Assistant,
+            content: MessageContentDto::Mixed {
+                reasoning_content: Some("thinking...".into()),
+                text: "result text".into(),
+                tool_calls: vec![
+                    northhing_kernel_api::session::ToolCallStub {
+                        tool_name: "bash".into(),
+                        arguments: None,
+                        is_error: false,
+                    },
+                    northhing_kernel_api::session::ToolCallStub {
+                        tool_name: "read".into(),
+                        arguments: None,
+                        is_error: false,
+                    },
+                ],
+            },
+            metadata: None,
+            timestamp: 1001,
+        };
+        let entries = messages_to_entries(vec![msg]);
+        assert_eq!(entries.len(), 1);
+        match &entries[0] {
+            MockEntry::Entity { who, body, children } => {
+                assert_eq!(who, "它");
+                assert_eq!(body, "result text");
+                assert_eq!(children.len(), 2);
+                match &children[0] {
+                    MockChild::ToolLog { label } => assert_eq!(label, "bash"),
+                    _ => panic!("Expected ToolLog child"),
+                }
+                match &children[1] {
+                    MockChild::ToolLog { label } => assert_eq!(label, "read"),
+                    _ => panic!("Expected ToolLog child"),
+                }
+            }
+            _ => panic!("Expected Entity entry"),
+        }
+    }
+
+    #[test]
+    fn test_messages_to_entries_assistant_mixed_reasoning_fallback() {
+        let msg = MessageDto {
+            id: "msg-mixed-fallback".into(),
+            role: MessageRoleDto::Assistant,
+            content: MessageContentDto::Mixed {
+                reasoning_content: Some("reasoning fallback".into()),
+                text: "".into(),
+                tool_calls: vec![],
+            },
+            metadata: None,
+            timestamp: 1002,
+        };
+        let entries = messages_to_entries(vec![msg]);
+        assert_eq!(entries.len(), 1);
+        match &entries[0] {
+            MockEntry::Entity { body, .. } => {
+                assert_eq!(body, "reasoning fallback");
+            }
+            _ => panic!("Expected Entity entry"),
+        }
+    }
+
+    #[test]
+    fn test_messages_to_entries_system_and_tool_skipped() {
+        let msgs = vec![
+            MessageDto {
+                id: "msg-3".into(),
+                role: MessageRoleDto::System,
+                content: MessageContentDto::Text("system prompt".into()),
+                metadata: None,
+                timestamp: 1003,
+            },
+            MessageDto {
+                id: "msg-4".into(),
+                role: MessageRoleDto::Tool,
+                content: MessageContentDto::ToolResult {
+                    tool_id: "t1".into(),
+                    tool_name: "bash".into(),
+                    result: serde_json::Value::Null,
+                    result_for_assistant: None,
+                    is_error: false,
+                },
+                metadata: None,
+                timestamp: 1004,
+            },
+        ];
+        let entries = messages_to_entries(msgs);
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_messages_to_entries_empty_returns_empty() {
+        let entries = messages_to_entries(vec![]);
+        assert!(entries.is_empty());
     }
 }

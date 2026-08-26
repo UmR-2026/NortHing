@@ -28,6 +28,7 @@ struct StratumItem {
     who_right: &'static str,
 }
 
+// TODO(data): wire to session/archive query
 const STRATA: &[StratumItem] = &[
     StratumItem {
         depth: 1,

@@ -7,7 +7,7 @@ use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi};
 use northhing_kernel_api::session::{
-    KernelSessionApi, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
+    KernelSessionApi, MessageDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
 };
 use northhing_kernel_api::settings::{
     AIModelConfigDto, GlobalConfigDto, KernelSettingsApi, MCPServerDto,
@@ -56,6 +56,11 @@ pub async fn list_sessions() -> Result<Vec<SessionSummaryDto>, KernelError> {
 /// Retrieves the detail of a single session.
 pub async fn get_session(id: &SessionId) -> Result<SessionDto, KernelError> {
     kernel_facade().get_session(id).await
+}
+
+/// Retrieves the message history of a single session.
+pub async fn get_messages(id: &SessionId) -> Result<Vec<MessageDto>, KernelError> {
+    kernel_facade().get_messages(id).await
 }
 
 /// Ensures a room session exists, returning an existing or newly created `SessionId`.
@@ -151,6 +156,7 @@ mod tests {
         let _ = stop_turn(&"test-turn".to_string()).await;
         let _ = list_sessions().await;
         let _ = get_session(&"test-session".to_string()).await;
+        let _ = get_messages(&"test-session".to_string()).await;
         let _ = respond_to_tool_confirmation("call-1", true).await;
         let _ = ensure_room_session().await;
         let _ = get_global_config().await;

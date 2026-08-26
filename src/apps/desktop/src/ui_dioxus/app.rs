@@ -111,6 +111,32 @@ pub fn room_app_root() -> Element {
 
     let mut active_set = use_signal(|| window_manager.subscribe_active().borrow().clone());
 
+    use_future(move || {
+        let mut session_id_signal = session_id_signal;
+        let mut entries = entries;
+        async move {
+            match api::ensure_room_session().await {
+                Ok(sid) => {
+                    session_id_signal.set(Some(sid.clone()));
+                    match api::get_messages(&sid).await {
+                        Ok(msgs) => {
+                            let converted = super::session_mock::messages_to_entries(msgs);
+                            if !converted.is_empty() {
+                                entries.set(converted);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("ui_dioxus::app get_messages failed: {e}");
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("ui_dioxus::app ensure_room_session failed: {e}");
+                }
+            }
+        }
+    });
+
     let wm_future = window_manager.clone();
     use_future(move || {
         let wm = wm_future.clone();
