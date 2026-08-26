@@ -384,6 +384,5 @@ pub mod keys {
     pub const ONBOARDING_BTN_TEST: &str = "dioxus-room-onboarding-btn-test";
     pub const ONBOARDING_TEST_STATUS_WAIT: &str = "dioxus-room-onboarding-test-status-wait";
     pub const ONBOARDING_BTN_BROWSE: &str = "dioxus-room-onboarding-btn-browse";
-    pub const ONBOARDING_BTN_COMPLETE: &str = "dioxus-room-onboarding-btn-complete";
     pub const ONBOARDING_PREVIEW_UNCOLORED: &str = "dioxus-room-onboarding-preview-uncolored";
 }

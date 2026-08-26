@@ -8,6 +8,7 @@ use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi};
 use northhing_kernel_api::session::{
     KernelSessionApi, MessageDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto,
+    WorkspaceSessionsDto,
 };
 use northhing_kernel_api::settings::{
     AIModelConfigDto, GlobalConfigDto, KernelSettingsApi, MCPServerDto, ProviderFormDto,
@@ -54,6 +55,11 @@ pub async fn list_sessions() -> Result<Vec<SessionSummaryDto>, KernelError> {
     kernel_facade().list_sessions().await
 }
 
+/// Lists workspace-grouped session summaries across all workspaces.
+pub async fn list_sessions_all_workspaces() -> Result<Vec<WorkspaceSessionsDto>, KernelError> {
+    kernel_facade().list_sessions_all_workspaces().await
+}
+
 /// Retrieves the detail of a single session.
 pub async fn get_session(id: &SessionId) -> Result<SessionDto, KernelError> {
     kernel_facade().get_session(id).await
@@ -64,19 +70,63 @@ pub async fn get_messages(id: &SessionId) -> Result<Vec<MessageDto>, KernelError
     kernel_facade().get_messages(id).await
 }
 
+/// Pick the room session from workspace-grouped summaries.
+/// Preferred workspace hit wins; otherwise the first group that has any
+/// session (groups are ordered most-recent-access first by the facade);
+/// `None` means "create fresh".
+fn pick_room_session<'a>(
+    groups: &'a [WorkspaceSessionsDto],
+    preferred_workspace: Option<&str>,
+) -> Option<&'a SessionSummaryDto> {
+    if let Some(ws) = preferred_workspace {
+        groups
+            .iter()
+            .find(|g| g.workspace_path == ws)
+            .and_then(|g| g.sessions.first())
+    } else {
+        groups
+            .iter()
+            .find(|g| !g.sessions.is_empty())
+            .and_then(|g| g.sessions.first())
+    }
+}
+
+static ROOM_SESSION_CACHE: tokio::sync::Mutex<Option<String>> = tokio::sync::Mutex::const_new(None);
+
 /// Ensures a room session exists, returning an existing or newly created `SessionId`.
 pub async fn ensure_room_session() -> Result<SessionId, KernelError> {
-    let list = list_sessions().await?;
-    if let Some(first) = list.into_iter().next() {
-        return Ok(first.id);
+    // ponytail: process-lifetime room session cache, restart required to switch room after session deletion/archival; upgrade path = invalidate on delete_session event
+    let mut guard = ROOM_SESSION_CACHE.lock().await;
+    if let Some(ref cached_id) = *guard {
+        return Ok(cached_id.clone());
     }
-    let config = SessionConfigDto {
-        workspace_path: None,
-        agent_type: "agentic".into(),
-        model_name: "default".into(),
-        name: Some("诊室".into()),
+
+    let preferred_workspace = match super::super::app_state::settings::load_app_settings().await {
+        Ok(s) => s
+            .current_workspace
+            .map(|p| p.to_string_lossy().to_string())
+            .or_else(|| s.workspaces.first().map(|w| w.path.to_string_lossy().to_string())),
+        Err(e) => {
+            tracing::warn!("ensure_room_session failed to load app settings: {e}");
+            None
+        }
     };
-    kernel_facade().create_session(config).await
+
+    let groups = list_sessions_all_workspaces().await?;
+    let session_id = if let Some(summary) = pick_room_session(&groups, preferred_workspace.as_deref()) {
+        summary.id.clone()
+    } else {
+        let config = SessionConfigDto {
+            workspace_path: preferred_workspace.clone(),
+            agent_type: "agentic".into(),
+            model_name: "default".into(),
+            name: Some("诊室".into()),
+        };
+        kernel_facade().create_session(config).await?
+    };
+
+    *guard = Some(session_id.clone());
+    Ok(session_id)
 }
 
 /// Responds to a pending tool execution confirmation (approve/reject).
@@ -172,6 +222,7 @@ mod tests {
         let _ = submit_turn("test-session", "hello".into()).await;
         let _ = stop_turn(&"test-turn".to_string()).await;
         let _ = list_sessions().await;
+        let _ = list_sessions_all_workspaces().await;
         let _ = get_session(&"test-session".to_string()).await;
         let _ = get_messages(&"test-session".to_string()).await;
         let _ = respond_to_tool_confirmation("call-1", true).await;
@@ -213,5 +264,103 @@ mod tests {
     fn test_event_channel_returns_receiver() {
         let rx = event_channel();
         drop(rx);
+    }
+
+    #[test]
+    fn test_pick_room_session_preferred_hit() {
+        let s1 = SessionSummaryDto {
+            id: "s1".into(),
+            name: "Room 1".into(),
+            updated_at: 100,
+            status: northhing_kernel_api::session::SessionStatusDto::Active,
+            parent_session_id: None,
+            state: None,
+        };
+        let s2 = SessionSummaryDto {
+            id: "s2".into(),
+            name: "Room 2".into(),
+            updated_at: 200,
+            status: northhing_kernel_api::session::SessionStatusDto::Active,
+            parent_session_id: None,
+            state: None,
+        };
+        let groups = vec![
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/a".into(),
+                sessions: vec![s1.clone()],
+            },
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/b".into(),
+                sessions: vec![s2.clone()],
+            },
+        ];
+
+        let picked = pick_room_session(&groups, Some("/ws/b"));
+        assert_eq!(picked.map(|s| s.id.as_str()), Some("s2"));
+    }
+
+    #[test]
+    fn test_pick_room_session_preferred_miss_returns_none() {
+        let s1 = SessionSummaryDto {
+            id: "s1".into(),
+            name: "Room 1".into(),
+            updated_at: 100,
+            status: northhing_kernel_api::session::SessionStatusDto::Active,
+            parent_session_id: None,
+            state: None,
+        };
+        let groups = vec![
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/a".into(),
+                sessions: vec![s1],
+            },
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/b".into(),
+                sessions: vec![],
+            },
+        ];
+
+        // Preferred ws does not exist -> returns None
+        assert!(pick_room_session(&groups, Some("/ws/c")).is_none());
+
+        // Preferred ws exists but sessions vector is empty -> returns None
+        assert!(pick_room_session(&groups, Some("/ws/b")).is_none());
+    }
+
+    #[test]
+    fn test_pick_room_session_no_preferred_picks_first_non_empty() {
+        let s2 = SessionSummaryDto {
+            id: "s2".into(),
+            name: "Room 2".into(),
+            updated_at: 200,
+            status: northhing_kernel_api::session::SessionStatusDto::Active,
+            parent_session_id: None,
+            state: None,
+        };
+        let groups = vec![
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/a".into(),
+                sessions: vec![],
+            },
+            WorkspaceSessionsDto {
+                workspace_path: "/ws/b".into(),
+                sessions: vec![s2.clone()],
+            },
+        ];
+
+        let picked = pick_room_session(&groups, None);
+        assert_eq!(picked.map(|s| s.id.as_str()), Some("s2"));
+    }
+
+    #[test]
+    fn test_pick_room_session_empty_groups_returns_none() {
+        let groups_empty: Vec<WorkspaceSessionsDto> = vec![];
+        assert!(pick_room_session(&groups_empty, None).is_none());
+
+        let groups_all_empty = vec![WorkspaceSessionsDto {
+            workspace_path: "/ws/a".into(),
+            sessions: vec![],
+        }];
+        assert!(pick_room_session(&groups_all_empty, None).is_none());
     }
 }
