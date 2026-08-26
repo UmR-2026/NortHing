@@ -2,7 +2,7 @@ use super::load_app_settings_quiet;
 use super::refresh_settings_lists;
 use crate::app_state::error_banners::{set_banner_message, set_inline_error};
 use crate::app_state::settings::{
-    delete_api_key, provider_wire_format_from_str, resolve_effective_api_key, validate_provider_input, KeyringBackend,
+    delete_api_key, provider_wire_format_from_str, resolve_edit_api_key, validate_provider_input, KeyringBackend,
     PRODUCTION_KEYRING,
 };
 use crate::app_state::slint_glue::AppWindow;
@@ -119,7 +119,17 @@ pub(crate) fn register_upsert_provider_callback(ui: &AppWindow, app_state: &Arc<
             rt.block_on(async move {
                 // Resolve effective API key (if editing with empty key field, reuse stored keyring key)
                 let effective_key = if !id.is_empty() && pkey.trim().is_empty() {
-                    resolve_effective_api_key(PRODUCTION_KEYRING.get(&pid).ok().as_deref(), &pkey)
+                    match resolve_edit_api_key(PRODUCTION_KEYRING.get(&pid), &pkey) {
+                        Ok(key) => key,
+                        Err(e) => {
+                            tracing::warn!(target: "app_state", "keyring read failed for provider {pid}: {e}");
+                            set_inline_error(
+                                ui_weak.clone(),
+                                "读取密钥库失败，请重试；如持续失败请重新输入 API Key".to_string(),
+                            );
+                            return;
+                        }
+                    }
                 } else {
                     pkey.clone()
                 };

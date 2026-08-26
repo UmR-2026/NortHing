@@ -342,6 +342,35 @@ fn resolve_effective_api_key_whitespace_only_treated_as_empty() {
     assert_eq!(result, "sk-stored");
 }
 
+#[test]
+fn resolve_edit_api_key_err_stored_blank_incoming_returns_err() {
+    let stored = Err(anyhow::anyhow!("keyring error"));
+    let result = resolve_edit_api_key(stored, "");
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().to_string(), "keyring error");
+}
+
+#[test]
+fn resolve_edit_api_key_ok_stored_blank_incoming_returns_ok_stored() {
+    let stored = Ok("sk-stored".to_string());
+    let result = resolve_edit_api_key(stored, "");
+    assert_eq!(result.unwrap(), "sk-stored");
+}
+
+#[test]
+fn resolve_edit_api_key_err_stored_non_blank_incoming_returns_ok_incoming() {
+    let stored = Err(anyhow::anyhow!("keyring error"));
+    let result = resolve_edit_api_key(stored, "sk-new");
+    assert_eq!(result.unwrap(), "sk-new");
+}
+
+#[test]
+fn resolve_edit_api_key_ok_stored_non_blank_incoming_returns_ok_incoming() {
+    let stored = Ok("sk-stored".to_string());
+    let result = resolve_edit_api_key(stored, "sk-new");
+    assert_eq!(result.unwrap(), "sk-new");
+}
+
 // ===== Push stream test (Spec 3/5) =====
 
 #[tokio::test]

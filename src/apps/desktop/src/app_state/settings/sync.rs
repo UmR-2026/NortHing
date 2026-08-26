@@ -10,6 +10,17 @@ pub fn resolve_effective_api_key(stored: Option<&str>, incoming: &str) -> String
     }
 }
 
+/// Edit-flow key resolution (P1-2 fail-closed): `stored` is the raw keyring
+/// read result. Blank incoming key inherits the stored one; a keyring error
+/// propagates so the caller refuses the save instead of swallowing it.
+pub fn resolve_edit_api_key(stored: anyhow::Result<String>, incoming: &str) -> anyhow::Result<String> {
+    if incoming.trim().is_empty() {
+        stored
+    } else {
+        Ok(incoming.to_string())
+    }
+}
+
 // ===== Core sync helpers =====
 
 /// Map a provider type string to the wire-format `provider` string.
