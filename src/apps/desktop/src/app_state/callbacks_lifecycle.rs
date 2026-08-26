@@ -291,10 +291,9 @@ pub(super) fn register_new_session_callback(ui: &AppWindow, app_state: &Arc<AppS
         let app_state_for_spawn = Arc::clone(&app_state_arc2);
 
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for UI callback");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone, "new-session") else {
+                return;
+            };
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 let facade = kernel_facade();
@@ -388,10 +387,9 @@ pub(super) fn register_switch_session_callback(ui: &AppWindow, app_state: &Arc<A
             let ui_weak_msg = ui.as_weak();
             let sid_clone = sid_str;
             std::thread::spawn(move || {
-                let rt = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("failed to build tokio runtime");
+                let Some(rt) = build_ui_callback_runtime(&ui_weak_msg, "switch-session") else {
+                    return;
+                };
                 rt.block_on(async move {
                     // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
                     refresh_messages_ui(ui_weak_msg.clone(), &sid_clone, None).await;
@@ -431,10 +429,9 @@ pub(super) fn register_delete_session_callback(ui: &AppWindow, app_state: &Arc<A
         let app_state_for_spawn = Arc::clone(&app_state_arc5);
 
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for UI callback");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone, "delete-session") else {
+                return;
+            };
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 let facade = kernel_facade();
@@ -537,10 +534,9 @@ pub(super) fn register_toggle_skill_callback(ui: &AppWindow, app_state: &Arc<App
         let ui_clone = ui_weak7.clone();
 
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for toggle-skill callback");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone, "toggle-skill") else {
+                return;
+            };
             rt.block_on(async move {
                 let facade = kernel_facade();
                 let skill = match facade.get_skill(&skill_name_str).await {
@@ -640,10 +636,9 @@ pub(super) fn register_load_more_messages_callback(ui: &AppWindow, app_state: &A
         let app_state_for_spawn = Arc::clone(&app_state_arc8);
 
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for load-more-messages");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone, "load-more-messages") else {
+                return;
+            };
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 let cursor = app_state.get_load_more_cursor();
@@ -716,10 +711,9 @@ pub(super) fn register_refresh_sessions_callback(ui: &AppWindow, app_state: &Arc
 
         let ui_clone_for_refresh = ui_clone.clone();
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build runtime for refresh-sessions");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone_for_refresh, "refresh-sessions") else {
+                return;
+            };
             let current_session = current_session;
             rt.block_on(async move {
                 // 2026-07-18 (D2j): background thread — pass weak directly; function upgrades on UI thread.
@@ -746,10 +740,9 @@ pub(super) fn register_refresh_messages_callback(ui: &AppWindow, app_state: &Arc
 
         let ui_clone_for_refresh = ui_clone.clone();
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for refresh-messages");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone_for_refresh, "refresh-messages") else {
+                return;
+            };
             rt.block_on(async move {
                 let app_state = &*app_state_for_spawn;
                 app_state.set_load_more_cursor(None); // Reset pagination on full refresh
@@ -825,10 +818,9 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
         let ui_clone = ui_weak_stop.clone();
         let _sid = session_id.clone();
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime for stop-streaming");
+            let Some(rt) = build_ui_callback_runtime(&ui_clone, "stop-streaming") else {
+                return;
+            };
             rt.block_on(async move {
                 let facade = kernel_facade();
                 if let Err(e) = facade.stop_turn(&turn_id).await {
@@ -841,14 +833,6 @@ pub(super) fn register_stop_streaming_callback(ui: &AppWindow, app_state: &Arc<A
     });
 }
 
-// 2026-07-18 (D2b): rename-session callback. Spawns a thread, calls
-// coordinator.update_session_title, then refreshes the sessions UI and
-// updates the current-session-name if the renamed session is the active one.
-//
-// 2026-07-18 (D2b fix): the current-session id is re-read inside the
-// event-loop closure (not captured before the spawn) so that a user who
-// switches sessions during the async rename does not get their state
-// overwritten by a stale value.
 pub(super) fn register_export_markdown_callback(ui: &AppWindow, app_state: &Arc<AppState>) {
     // --- export-markdown callback (C7=b) ---
     let app_state_arc = std::sync::Arc::clone(app_state);
@@ -1008,4 +992,18 @@ pub(super) fn register_rename_session_callback(ui: &AppWindow, app_state: &Arc<A
             });
         });
     });
+}
+
+fn build_ui_callback_runtime(
+    ui_weak: &slint::Weak<AppWindow>,
+    action: &'static str,
+) -> Option<tokio::runtime::Runtime> {
+    match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+        Ok(rt) => Some(rt),
+        Err(e) => {
+            tracing::error!(target: "app_state", "{action}: failed to build runtime: {e}");
+            set_session_error(ui_weak.clone(), "内部错误：无法启动运行时".to_string());
+            None
+        }
+    }
 }
