@@ -75,9 +75,9 @@
 ### P1-8: MCPServerConfig.env serialized as plaintext in app.json
 
 - **Symptom**: `MCPServerConfig.env` (`HashMap<String, String>`) stores environment variables for stdio subprocesses as plaintext in `app.json`. These env vars commonly carry credentials (e.g. `OPENAI_API_KEY=sk-xxx`, `AWS_ACCESS_KEY_ID=...`), creating the same plaintext-on-disk risk as P1-2.
-- **Evidence**: `src/apps/desktop/src/app_state/settings/types.rs:161-162` — `pub env: HashMap<String, String>` in `MCPServerConfig`. The field is serialized/deserialized without any encryption or keyring-backed indirection.
-- **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改").
-- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7)
+- **Evidence**: originally `src/apps/desktop/src/app_state/settings/types.rs` `MCPServerConfig.env` in desktop `app.json`. **Stale after K4a** (2026-08-26): Settings/MCP reads `kernel_facade().list_mcp_servers()`; production env plaintext is Cursor-format `mcp_servers` via `src/crates/services/services-integrations/src/mcp/config/cursor_format.rs` (`config_to_cursor_format` writes `env` as JSON). Desktop `AppSettings.mcp_servers` has no production writer.
+- **Proposed fix**: Defer to a future wave — the same `KeyringBackend` pattern from P1-2 (C3) can be reused: a per-variable sentinel or a single keyring entry per MCP server holding the full env block. C3 scope is strictly `ProviderConfig.api_key`; this concern is registered per brief §7 ("发现即登记，不擅自改"). Must target the core Cursor-format persist path, not desktop AppSettings.
+- **Status**: active (discovered by C3 review 2026-08-04, registered as concern per brief §7). P1c (2026-08-26) implemented keyring on `AppSettings.mcp_servers` per prescription v3; user ruled **do not flip resolved** because that field is dead.
 
 ### P1-6: DeleteFileTool needs_permissions()=false — 删除（含 remote rm -rf）绕过确认门
 

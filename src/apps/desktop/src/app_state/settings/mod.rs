@@ -66,6 +66,9 @@ pub struct AppSettings {
     /// app.json files compatible (they lack the field → false).
     #[serde(default)]
     pub onboarding_completed: bool,
+    /// MCP servers configured at user level.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mcp_servers: Vec<MCPServerConfig>,
 }
 
 impl Default for AppSettings {
@@ -75,6 +78,7 @@ impl Default for AppSettings {
             workspaces: Vec::new(),
             current_workspace: None,
             onboarding_completed: false,
+            mcp_servers: Vec::new(),
         }
     }
 }
@@ -120,6 +124,21 @@ impl AppSettings {
             self.current_workspace = None;
         }
         Some(removed)
+    }
+
+    #[allow(dead_code)]
+    pub fn upsert_mcp(&mut self, m: MCPServerConfig) {
+        if let Some(slot) = self.mcp_servers.iter_mut().find(|x| x.id == m.id) {
+            *slot = m;
+        } else {
+            self.mcp_servers.push(m);
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn remove_mcp(&mut self, id: &str) -> Option<MCPServerConfig> {
+        let pos = self.mcp_servers.iter().position(|m| m.id == id)?;
+        Some(self.mcp_servers.remove(pos))
     }
 }
 

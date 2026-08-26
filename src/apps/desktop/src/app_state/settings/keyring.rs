@@ -56,10 +56,35 @@ use northhing_core::infrastructure::keyring::KEYRING_SERVICE;
 #[allow(dead_code)]
 pub const API_KEY_SENTINEL: &str = "__kr__";
 
+/// Sentinel value written to `MCPServerConfig.env` on disk when the real
+/// environment variables have been moved to the OS keyring (P1c, P1-8).
+#[allow(dead_code)]
+pub const MCP_ENV_SENTINEL: &str = "__kr_env__";
+
 /// Returns `true` when `s` is the keyring sentinel value.
 #[allow(dead_code)]
 pub fn is_keyring_sentinel(s: &str) -> bool {
     s == API_KEY_SENTINEL
+}
+
+/// Returns `true` when `s` is the MCP env keyring sentinel value.
+#[allow(dead_code)]
+pub fn is_mcp_env_sentinel(s: &str) -> bool {
+    s == MCP_ENV_SENTINEL
+}
+
+/// Returns `true` when `env` map represents a keyring sentinel placeholder.
+#[allow(dead_code)]
+pub fn is_env_sentinel(env: &HashMap<String, String>) -> bool {
+    env.contains_key(MCP_ENV_SENTINEL)
+}
+
+/// Helper to create a sentinel env map for on-disk persistence.
+#[allow(dead_code)]
+pub fn make_env_sentinel() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    map.insert(MCP_ENV_SENTINEL.to_string(), "true".to_string());
+    map
 }
 
 // ===== Backend trait =====
@@ -239,6 +264,87 @@ pub fn delete_api_key(keyring: &dyn KeyringBackend, provider_id: &str) -> Result
     }
 }
 
+// ===== MCP Env Keyring Helpers (P1c, P1-8) =====
+
+/// Store an entire MCP server's env map in the OS keyring under `mcp-env:{server_id}`
+/// and return the sentinel value for on-disk persistence.
+///
+/// If `env` already contains the sentinel, the keyring is not touched and the
+/// sentinel is returned (idempotent).
+///
+/// ## Errors
+///
+/// Returns `Err` when the keyring is unavailable (fail-closed) or serialization fails.
+pub fn store_env(
+    keyring: &dyn KeyringBackend,
+    server_id: &str,
+    env: &HashMap<String, String>,
+) -> Result<String> {
+    if is_env_sentinel(env) {
+        return Ok(MCP_ENV_SENTINEL.to_string());
+    }
+    let account = format!("mcp-env:{server_id}");
+    let json = serde_json::to_string(env).context("failed to serialize MCP env to JSON")?;
+    keyring.store(&account, &json)?;
+    Ok(MCP_ENV_SENTINEL.to_string())
+}
+
+/// Restore an MCP server's env map from the OS keyring under `mcp-env:{server_id}`.
+///
+/// ## Fail-open
+///
+/// If the keyring entry is missing or JSON parsing fails, logs a warning and
+/// returns `Ok(HashMap::new())` (backward-compatible with old/missing data).
+pub fn load_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<HashMap<String, String>> {
+    let account = format!("mcp-env:{server_id}");
+    match keyring.get(&account) {
+        Ok(secret) => match serde_json::from_str::<HashMap<String, String>>(&secret) {
+            Ok(map) => Ok(map),
+            Err(e) => {
+                tracing::warn!(
+                    target: "app_state",
+                    "keyring: failed to parse MCP env JSON for '{server_id}': {e}"
+                );
+                Ok(HashMap::new())
+            }
+        },
+        Err(e) => {
+            tracing::warn!(
+                target: "app_state",
+                "keyring: failed to load MCP env for '{server_id}' (fail-open): {e}"
+            );
+            Ok(HashMap::new())
+        }
+    }
+}
+
+/// Resolve the actual env map for an MCP server.
+///
+/// If `env` contains the sentinel, the real env map is fetched from `keyring`
+/// via [`load_env`]; otherwise `env` is cloned and returned as-is (plaintext).
+#[allow(dead_code)]
+pub fn resolve_env(
+    keyring: &dyn KeyringBackend,
+    server_id: &str,
+    env: &HashMap<String, String>,
+) -> Result<HashMap<String, String>> {
+    if is_env_sentinel(env) {
+        load_env(keyring, server_id)
+    } else {
+        Ok(env.clone())
+    }
+}
+
+/// Remove an MCP server's env entry from the keyring (best-effort).
+#[allow(dead_code)]
+pub fn delete_env(keyring: &dyn KeyringBackend, server_id: &str) -> Result<()> {
+    let account = format!("mcp-env:{server_id}");
+    match keyring.delete(&account) {
+        Ok(()) => Ok(()),
+        Err(_) => Ok(()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,6 +355,18 @@ mod tests {
         assert!(!is_keyring_sentinel("sk-real-key-12345"));
         assert!(!is_keyring_sentinel(""));
         assert!(!is_keyring_sentinel("__kr__ ")); // trailing space
+
+        assert!(is_mcp_env_sentinel(MCP_ENV_SENTINEL));
+        assert!(!is_mcp_env_sentinel(""));
+        assert!(!is_mcp_env_sentinel("__kr__"));
+
+        let mut map = HashMap::new();
+        assert!(!is_env_sentinel(&map));
+        map.insert("FOO".to_string(), "BAR".to_string());
+        assert!(!is_env_sentinel(&map));
+
+        let sentinel_map = make_env_sentinel();
+        assert!(is_env_sentinel(&sentinel_map));
     }
 
     #[test]
@@ -351,5 +469,79 @@ mod tests {
         let kr = MockKeyring::new();
         kr.seed("p1", "sk-preloaded");
         kr.assert_contains("p1", "sk-preloaded");
+    }
+
+    #[test]
+    fn mock_keyring_store_load_env_roundtrip() {
+        let kr = MockKeyring::new();
+        let mut env = HashMap::new();
+        env.insert("API_KEY".to_string(), "sk-mcp-secret".to_string());
+        env.insert("PORT".to_string(), "9000".to_string());
+
+        let sentinel = store_env(&kr, "srv1", &env).unwrap();
+        assert_eq!(sentinel, MCP_ENV_SENTINEL);
+
+        let loaded = load_env(&kr, "srv1").unwrap();
+        assert_eq!(loaded, env);
+    }
+
+    #[test]
+    fn mock_keyring_store_env_sentinel_is_noop() {
+        let kr = MockKeyring::new();
+        let sentinel_map = make_env_sentinel();
+        let result = store_env(&kr, "srv1", &sentinel_map).unwrap();
+        assert_eq!(result, MCP_ENV_SENTINEL);
+        assert!(kr.get("mcp-env:srv1").is_err(), "sentinel map must not be written to keyring");
+    }
+
+    #[test]
+    fn mock_keyring_load_env_missing_returns_empty_map_fail_open() {
+        let kr = MockKeyring::new();
+        let result = load_env(&kr, "nonexistent");
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn mock_keyring_load_env_corrupt_json_returns_empty_map_fail_open() {
+        let kr = MockKeyring::new();
+        kr.store("mcp-env:corrupt", "not a valid json map").unwrap();
+        let result = load_env(&kr, "corrupt");
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn mock_keyring_resolve_env_sentinel_and_plaintext() {
+        let kr = MockKeyring::new();
+        let mut real_env = HashMap::new();
+        real_env.insert("KEY".to_string(), "secret".to_string());
+        store_env(&kr, "srv1", &real_env).unwrap();
+
+        // Sentinel env resolves from keyring
+        let sentinel_map = make_env_sentinel();
+        let resolved = resolve_env(&kr, "srv1", &sentinel_map).unwrap();
+        assert_eq!(resolved, real_env);
+
+        // Plaintext env returns directly
+        let mut plain_env = HashMap::new();
+        plain_env.insert("UNSAVED".to_string(), "direct".to_string());
+        let resolved_plain = resolve_env(&kr, "srv2", &plain_env).unwrap();
+        assert_eq!(resolved_plain, plain_env);
+    }
+
+    #[test]
+    fn mock_keyring_delete_env_removes_entry() {
+        let kr = MockKeyring::new();
+        let mut env = HashMap::new();
+        env.insert("K".to_string(), "V".to_string());
+        store_env(&kr, "srv1", &env).unwrap();
+        assert!(kr.get("mcp-env:srv1").is_ok());
+
+        delete_env(&kr, "srv1").unwrap();
+        assert!(kr.get("mcp-env:srv1").is_err());
+
+        // Deleting non-existent is best-effort Ok
+        delete_env(&kr, "nonexistent").unwrap();
     }
 }
