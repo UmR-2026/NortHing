@@ -170,10 +170,18 @@ impl ConversationCoordinator {
                     );
                 }
                 Err(e) => {
-                    debug!(
-                        "Failed to restore session history (may be new session): session_id={}, error={}",
-                        session_id, e
-                    );
+                    if session.dialog_turn_ids.is_empty() {
+                        debug!(
+                            "Failed to restore session history (may be new session): session_id={}, error={}",
+                            session_id, e
+                        );
+                    } else {
+                        warn!(
+                            "Failed to restore session history for session with {} persisted turns; turn proceeds with partial context: session_id={}, error={}",
+                            session.dialog_turn_ids.len(),
+                            session_id, e
+                        );
+                    }
                 }
             }
         }
