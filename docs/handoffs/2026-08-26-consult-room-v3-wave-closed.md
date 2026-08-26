@@ -18,6 +18,8 @@
 | a1e50e0 | P3b cleanup 调度 spawn（启动一次 + 24h）+ P2-4 收窄 | **Approved 0C/0I/1M** |
 | 2c54f33 / fa39edb / f6e8c45 | docs(sdd) 台账行 + briefs + review artifacts | — |
 | 3dbb80a | 终审 B-1：P2-6 翻 resolved + 新债 P2-22 登记 | 终审有条件放行的唯一阻塞项 |
+| 1f3a15a | **P22**（P2-22 闭环）：room 会话按持久化工作区解析 + TOCTOU 缓存 + 孤儿键删除 | **Approved 0C/0I/3M** |
+| c544276 | docs(sdd)：P22 收口 + 终审行 | — |
 
 **终审（独立视角 qwen38-max）：B-1 修复后 CAN MERGE。** 报告：`.superpowers/sdd/reviews/final-consult-room-v3/report.md`。
 
@@ -34,11 +36,12 @@
 
 ## 队列（含 blocking 边）
 
-- **P2-22（新债，active，下波主候选）**：onboarding 会话对诊室不可见——facade list_sessions 硬限定 CWD vs onboarding 工作区。owner=facade workspace 解析 / room-session 身份统一；捆绑三小项（双建 TOCTOU、entries.set 覆盖窗口、孤儿键 ONBOARDING_BTN_COMPLETE）。
+- ~~P2-22~~ **已闭环**（1f3a15a + c544276，Approved；ledger resolved）。遗留两条注记见 ledger：entries.set 启动窗口（理论项）、CWD 行为变化声明。
 - P1-8 真正闭环路径：等 B2 真实接线批把 env 写入迁到 core Cursor 格式侧（届时去 MCPServerConfig 复活块的 dead_code allow + 补 production-caller 测试）。
 - P2-4 剩余两项：session-deletion 触发清理；orphan snapshots（需 per-workspace 服务解析，独立立项）。
 - pages_onboarding.rs 866 行 >800 警戒：下次扩张前先拆 Step/step_gate/DTO 装配。
 - 遗留 judge follow-ups（非阻塞）：见 progress.md 各任务行。
+- 真机手动走查仍未做：Dioxus 壳启动 → onboarding 全流程 → room 发消息/流式/approval 卡（P0b/P2a/P3a 的"手动"验证项）。
 
 ## Subagent 运维变更
 
