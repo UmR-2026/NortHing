@@ -11,7 +11,8 @@ use northhing_kernel_api::error::KernelError;
 use tracing::{info, warn};
 
 use crate::agentic::coordination::{global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler};
-use crate::agentic::system::init_agentic_system;
+use crate::agentic::events::EventQueueConfig;
+use crate::agentic::system::{init_agentic_system, init_agentic_system_with_queue_config};
 use crate::infrastructure::ai::AIClientFactory;
 use crate::service::config::{get_global_config_service, initialize_global_config};
 use crate::service::mcp::{set_global_mcp_service, MCPService};
@@ -95,9 +96,12 @@ impl super::KernelFacade {
             .await
             .map_err(|e| KernelError::Runtime(format!("AIClientFactory init failed: {e}")))?;
 
-        let system = init_agentic_system()
-            .await
-            .map_err(|e| KernelError::Runtime(format!("init_agentic_system failed: {e}")))?;
+        let system = init_agentic_system_with_queue_config(EventQueueConfig {
+            heap_enabled: false,
+            ..Default::default()
+        })
+        .await
+        .map_err(|e| KernelError::Runtime(format!("init_agentic_system failed: {e}")))?;
 
         let coordinator = system.coordinator.clone();
         let session_manager = coordinator.session_manager().clone();

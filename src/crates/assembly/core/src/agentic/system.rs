@@ -25,13 +25,18 @@ pub struct AgenticSystem {
     pub token_usage_service: Arc<TokenUsageService>,
 }
 
-/// Initialize the agentic runtime and register the global coordinator.
+/// Initialize the agentic runtime with default queue config and register the global coordinator.
 pub async fn init_agentic_system() -> Result<AgenticSystem> {
+    init_agentic_system_with_queue_config(events::EventQueueConfig::default()).await
+}
+
+/// Initialize the agentic runtime with custom queue config and register the global coordinator.
+pub async fn init_agentic_system_with_queue_config(config: events::EventQueueConfig) -> Result<AgenticSystem> {
     info!("Initializing agentic system");
 
     let _ai_client_factory = AIClientFactory::get_global().await?;
 
-    let event_queue = Arc::new(events::EventQueue::new(Default::default()));
+    let event_queue = Arc::new(events::EventQueue::new(config));
     let event_router = Arc::new(events::EventRouter::new());
 
     let path_manager = try_get_path_manager_arc()?;

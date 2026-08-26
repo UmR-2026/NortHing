@@ -28,6 +28,9 @@ const SLOW_EVENT_QUEUE_LATENCY_MS: u128 = 250;
 pub struct EventQueueConfig {
     pub max_queue_size: usize,
     pub batch_size: usize,
+    /// `false` = broadcast-only mode for hosts without heap consumers (desktop);
+    /// this mode never returns `EventQueueFull`.
+    pub heap_enabled: bool,
 }
 
 impl Default for EventQueueConfig {
@@ -35,6 +38,7 @@ impl Default for EventQueueConfig {
         Self {
             max_queue_size: 10000,
             batch_size: 10, // Reduce to 10 to reduce latency
+            heap_enabled: true,
         }
     }
 }
@@ -91,6 +95,19 @@ impl EventQueue {
         let priority = priority.unwrap_or_else(|| event.default_priority());
         let envelope = EventEnvelope::new(event, priority);
         let event_id = envelope.id.clone();
+
+        if !self.config.heap_enabled {
+            let _ = self.broadcast_tx.send(envelope);
+
+            {
+                let mut stats = self.stats.lock().await;
+                stats.total_enqueued += 1;
+            }
+
+            trace!("Event enqueued (broadcast-only): event_id={}, priority={:?}", event_id, priority);
+
+            return Ok(event_id);
+        }
 
         // Check queue size, add to queue, and read back len under a single lock
         // acquisition to avoid redundant lock churn.
@@ -255,6 +272,7 @@ mod tests {
         let queue = EventQueue::new(EventQueueConfig {
             max_queue_size: 2,
             batch_size: 10,
+            heap_enabled: true,
         });
 
         let ev1 = AgenticEvent::DialogTurnCancelled {
@@ -294,5 +312,47 @@ mod tests {
         let res_crit = queue.enqueue(ev_crit, Some(EventPriority::Critical)).await;
         assert!(res_crit.is_ok());
         assert_eq!(queue.len().await, 3);
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_only_mode_unbounded_delivery() {
+        let queue = EventQueue::new(EventQueueConfig {
+            max_queue_size: 2,
+            heap_enabled: false,
+            ..Default::default()
+        });
+
+        let mut rx = queue.subscribe();
+
+        let ev1 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t1".into(),
+        };
+        let ev2 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t2".into(),
+        };
+        let ev3 = AgenticEvent::DialogTurnCancelled {
+            session_id: "s1".into(),
+            turn_id: "t3".into(),
+        };
+
+        let res1 = queue.enqueue(ev1, Some(EventPriority::Normal)).await;
+        let res2 = queue.enqueue(ev2, Some(EventPriority::Normal)).await;
+        let res3 = queue.enqueue(ev3, Some(EventPriority::Normal)).await;
+
+        assert!(res1.is_ok());
+        assert!(res2.is_ok());
+        assert!(res3.is_ok());
+
+        assert_eq!(queue.len().await, 0);
+
+        let recv1 = rx.recv().await.unwrap();
+        let recv2 = rx.recv().await.unwrap();
+        let recv3 = rx.recv().await.unwrap();
+
+        assert_eq!(recv1.id, res1.unwrap());
+        assert_eq!(recv2.id, res2.unwrap());
+        assert_eq!(recv3.id, res3.unwrap());
     }
 }
