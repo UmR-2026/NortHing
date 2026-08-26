@@ -417,7 +417,7 @@ impl StreamProcessor {
         // Start SSE log collector (if raw_sse_rx is provided)
         let sse_collector = if let Some(mut rx) = raw_sse_rx {
             let collector = Arc::new(tokio::sync::Mutex::new(SseLogCollector::new(
-                SseLogConfig::default(), // No limit for now
+                SseLogConfig::default(),
             )));
             let collector_clone = collector.clone();
 

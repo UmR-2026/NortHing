@@ -1,30 +1,43 @@
 //! SSE log collector.
 //!
-//! Buffers raw SSE data while a stream is in-flight and only flushes the
+//! Buffers raw SSE data in a bounded ring buffer while a stream is in-flight and only flushes the
 //! captured entries to the log on error. Output respects `SseLogConfig`'s
-//! `max_output` budget by emitting a head + tail window when the buffer
-//! overflows so long histories remain debuggable.
+//! `max_output` budget by dropping the oldest entries on overflow so long
+//! histories remain debuggable within a fixed memory bound.
 
 use crate::types::SseLogConfig;
+use std::collections::VecDeque;
 use tracing::error;
 
-/// SSE log collector - Collects raw SSE data, outputs only on error
+/// SSE log collector - Collects raw SSE data in a bounded ring buffer, outputs only on error
 pub struct SseLogCollector {
-    buffer: Vec<String>,
+    buffer: VecDeque<String>,
     config: SseLogConfig,
+    evicted: usize,
 }
 
 impl SseLogCollector {
     pub fn new(config: SseLogConfig) -> Self {
         Self {
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
             config,
+            evicted: 0,
         }
     }
 
     /// Push one SSE data entry
     pub fn push(&mut self, data: String) {
-        self.buffer.push(data);
+        if let Some(max) = self.config.max_output {
+            if max == 0 {
+                self.evicted += 1;
+                return;
+            }
+            while self.buffer.len() >= max {
+                self.buffer.pop_front();
+                self.evicted += 1;
+            }
+        }
+        self.buffer.push_back(data);
     }
 
     /// Get number of collected data entries
@@ -45,37 +58,58 @@ impl SseLogCollector {
         }
 
         error!("SSE Error: {}", error_context);
-        let mut sse_msg = format!("SSE history ({} events):\n", self.buffer.len());
+        let total_received = self.buffer.len() + self.evicted;
+        let mut sse_msg = if self.evicted > 0 {
+            format!(
+                "SSE history (showing last {} of {} events):\n",
+                self.buffer.len(),
+                total_received
+            )
+        } else {
+            format!("SSE history ({} events):\n", self.buffer.len())
+        };
 
-        match self.config.max_output {
-            None => {
-                // No limit, output all
-                for (i, data) in self.buffer.iter().enumerate() {
-                    sse_msg.push_str(&format!("{:>6}: {}\n", i, data));
-                }
-            }
-            Some(max) if self.buffer.len() <= max => {
-                // Within limit, output all
-                for (i, data) in self.buffer.iter().enumerate() {
-                    sse_msg.push_str(&format!("{:>6}: {}\n", i, data));
-                }
-            }
-            Some(max) => {
-                // Exceeds limit, smart truncation: output beginning + end
-                let head = 50.min(max / 2);
-                let tail = max - head;
-                let total = self.buffer.len();
-
-                for (i, data) in self.buffer.iter().take(head).enumerate() {
-                    sse_msg.push_str(&format!("{:>6}: {}\n", i, data));
-                }
-                sse_msg.push_str(&format!("... ({} events omitted) ...\n", total - max));
-                for (i, data) in self.buffer.iter().skip(total - tail).enumerate() {
-                    sse_msg.push_str(&format!("{:>6}: {}\n", total - tail + i, data));
-                }
-            }
+        for (i, data) in self.buffer.iter().enumerate() {
+            sse_msg.push_str(&format!("{:>6}: {}\n", i, data));
         }
 
         error!("{}", sse_msg);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::SseLogConfig;
+
+    #[test]
+    fn default_config_max_output_is_2000() {
+        assert_eq!(SseLogConfig::default().max_output, Some(2000));
+    }
+
+    #[test]
+    fn bounded_collector_evicts_oldest_on_overflow() {
+        let config = SseLogConfig {
+            max_output: Some(3),
+        };
+        let mut collector = SseLogCollector::new(config);
+        for i in 1..=5 {
+            collector.push(format!("data-{}", i));
+        }
+        assert_eq!(collector.len(), 3);
+        assert_eq!(collector.evicted, 2);
+        let items: Vec<&String> = collector.buffer.iter().collect();
+        assert_eq!(items, vec!["data-3", "data-4", "data-5"]);
+    }
+
+    #[test]
+    fn unbounded_collector_keeps_all_entries() {
+        let config = SseLogConfig { max_output: None };
+        let mut collector = SseLogCollector::new(config);
+        for i in 1..=5 {
+            collector.push(format!("data-{}", i));
+        }
+        assert_eq!(collector.len(), 5);
+        assert_eq!(collector.evicted, 0);
     }
 }

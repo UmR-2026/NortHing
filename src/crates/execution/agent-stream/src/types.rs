@@ -80,11 +80,22 @@ pub(crate) fn elapsed_ms_u64(started_at: Instant) -> u64 {
 // SSE Log Collector - Outputs raw SSE data on error
 //==============================================================================
 
+/// Default max output for SSE log collector (constrained memory ring buffer).
+pub const SSE_LOG_DEFAULT_MAX_OUTPUT: usize = 2000;
+
 /// SSE log collector configuration
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct SseLogConfig {
-    /// Maximum number of SSE data entries to output on error, None means unlimited
+    /// Maximum number of SSE data entries to buffer and output on error. None means unlimited.
     pub max_output: Option<usize>,
+}
+
+impl Default for SseLogConfig {
+    fn default() -> Self {
+        Self {
+            max_output: Some(SSE_LOG_DEFAULT_MAX_OUTPUT),
+        }
+    }
 }
 
 /// Placeholder name for tool calls whose name was not received before the stream terminated.
