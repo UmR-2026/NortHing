@@ -111,7 +111,8 @@ impl MCPRemoteOAuthCredentialVault {
 
         let mut key = [0u8; 32];
         rand::rngs::OsRng.fill_bytes(&mut key);
-        tokio::fs::write(&self.key_path, key.as_slice())
+        JsonFileStore
+            .write_bytes_atomic(&self.key_path, key.as_slice())
             .await
             .context("write MCP OAuth vault key")?;
 

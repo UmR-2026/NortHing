@@ -1,7 +1,7 @@
 use northhing_services_core::json_store::{JsonFileStore, JsonFileStoreError};
 use northhing_test_support::TestTempDir;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct TestPayload {
@@ -60,4 +60,49 @@ async fn json_store_reports_no_parent_directory() {
         .expect_err("empty path has no parent component");
 
     assert!(matches!(error, JsonFileStoreError::NoParentDirectory { .. }));
+}
+
+#[tokio::test]
+async fn json_store_write_bytes_atomic_round_trips_raw_bytes() {
+    let root = TestTempDir::new("bytes-round-trip");
+    let store = JsonFileStore::default();
+    let path = root.path().join("nested").join("secret.key");
+    let bytes = [42u8; 32];
+
+    store
+        .write_bytes_atomic(&path, &bytes)
+        .await
+        .expect("write_bytes_atomic should succeed");
+    let loaded = tokio::fs::read(&path)
+        .await
+        .expect("written bytes should be readable");
+
+    assert_eq!(loaded, bytes);
+}
+
+#[tokio::test]
+async fn json_store_write_bytes_atomic_overwrites_and_cleans_up_temp_files() {
+    let root = TestTempDir::new("bytes-overwrite");
+    let store = JsonFileStore::default();
+    let path = root.path().join("key.bin");
+
+    store
+        .write_bytes_atomic(&path, b"initial key A")
+        .await
+        .expect("first write should succeed");
+
+    store
+        .write_bytes_atomic(&path, b"updated key B")
+        .await
+        .expect("overwrite should succeed");
+
+    let loaded = tokio::fs::read(&path).await.expect("file should be readable");
+    assert_eq!(loaded, b"updated key B");
+
+    let mut entries = tokio::fs::read_dir(root.path()).await.unwrap();
+    while let Some(entry) = entries.next_entry().await.unwrap() {
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        assert!(!name_str.ends_with(".tmp"), "found leftover temp file: {}", name_str);
+    }
 }
