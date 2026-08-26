@@ -126,9 +126,9 @@
 ### P2-6: Event queue silently drops events when full
 
 - **Symptom**: `EventQueue` drops new events when full (`max_queue_size: 10000`), logs `warn!`, returns `Ok` (false success). `StreamEventSink::enqueue` ignores return value with `let _ =`. Critical events (e.g. `DialogTurnFailed`) may be silently lost.
-- **Evidence**: `src/crates/assembly/core/src/agentic/events/queue.rs:85` — drops + returns `Ok`. `queue.rs:127` — `let _ = EventQueue::enqueue(...)`.
+- **Evidence**: `src/crates/assembly/core/src/agentic/events/queue.rs:99-104` — full-and-non-Critical now returns `Err(EventQueueFull)`; `queue.rs:241-247` — `StreamEventSink` impl logs dropped events via `tracing::error!`. Critical priority bypasses the cap (`queue.rs:99` condition). Unit test `test_enqueue_queue_full_and_critical_bypass` covers Normal→Err / Critical→Ok-beyond-cap. All 11 production call sites census-verified Err-tolerant (consult-room P2b, commit df47924).
 - **Proposed fix**: (1) Return `Err` when full, let caller decide. (2) Never drop `Critical` priority events. (3) `StreamEventSink` should handle `Err` with error-level log.
-- **Status**: active
+- **Status**: resolved (2026-08-26, consult-room P2b, commit df47924 — all three proposed items implemented; final review B-1 confirmed closure)
 
 ### P2-7: subagent_ports test family is environment-sensitive (assumes no-LLM microsecond failure)
 
@@ -235,6 +235,13 @@
 - **Evidence**: T2-2 MiniApp recon Q7 (`.superpowers/sdd/task-t2-2-miniapp-recon.md`)；`rg` 实测全仓零业务构造。
 - **Proposed fix**: 整删三处残留（曾悬置待用户拍板；经实测零生产者，磁盘旧数据不可能含这些值，风险≈0）。
 - **Status**: `resolved` — 用户 2026-08-19 拍板删除，T2-2p 执行完毕，commits 见 git log。
+
+### P2-22: Onboarding 创建的会话对诊室不可见（workspace 作用域错位）
+
+- **Symptom**: consult-room P3a 完成副作用以 `workspace_path: Some(onboarding 工作区)` 创建首个 session（`pages_onboarding.rs:693-699`），但诊室启动流 `ensure_room_session` 经 facade `list_sessions` 取候选，而后者硬编码限定在 `default_workspace_path()` = **进程 CWD**（`kernel_facade/session.rs:38-49`、`helpers.rs:8-12`）。onboarding 工作区 ≠ 启动 CWD 时（默认输入即不等），onboarding 会话永远不在诊室候选集里——诊室静默另开一个 CWD 会话，§F6「启动首个 session」在常见路径下未达成。房间各分支仍可用（best-effort 兜底），非数据丢失。
+- **Evidence**: 终审 finding 2 (`.superpowers/sdd/reviews/final-consult-room-v3/report.md`)；`ui_dioxus/api.rs` ensure_room_session list→create 非原子。
+- **Proposed fix**: facade workspace 解析 / room-session 身份统一（下波立项）：要么 ensure_room_session 按持久化 workspace 解析候选集，要么 onboarding 完成后显式把创建的 session id 传递给 room 初始状态。相关小项一并处理：① startup future 与 send_action 双调用 list→create 的毫秒级双建 TOCTOU（终审 finding 3）；② 启动 hydrate `entries.set` 覆盖窗口内已 push 的 Approval 卡（P2a M1，merge-not-replace 或启动旗标）；③ i18n 键 `ONBOARDING_BTN_COMPLETE` 成孤儿（5d2d22c 移除最后使用者，warnings 35→36），下次触及时删除或复用。
+- **Status**: active（owner：facade workspace resolution / room-session identity，下一波）
 
 ## Change Protocol
 
