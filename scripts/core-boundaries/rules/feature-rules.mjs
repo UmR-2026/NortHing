@@ -65,7 +65,6 @@ export const optionalDependencyFeatureOwnerRules = [
       { depName: 'reqwest', ownerFeatures: ['mcp'] },
       { depName: 'rmcp', ownerFeatures: ['mcp'] },
       { depName: 'russh', ownerFeatures: ['remote-ssh-concrete'] },
-      { depName: 'russh-keys', ownerFeatures: ['remote-ssh-concrete'] },
       { depName: 'russh-sftp', ownerFeatures: ['remote-ssh-concrete'] },
       { depName: 'sha2', ownerFeatures: ['remote-ssh'] },
       { depName: 'shellexpand', ownerFeatures: ['remote-ssh-concrete'] },
