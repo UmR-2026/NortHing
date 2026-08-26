@@ -1,0 +1,4 @@
+ docs/status/tech-debt-ledger.md |  8 ++++----
+ src/apps/desktop/src/main.rs    | 19 +++++++++++++++++++
+ 2 files changed, 23 insertions(+), 4 deletions(-)
+range: fa39edb..a1e50e0 (a1e50e0 feat)
