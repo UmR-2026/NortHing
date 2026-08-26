@@ -1,3 +1,19 @@
+# Process-Pattern Wave Ledger (2026-08-27, W2)
+
+用户指令：根治 F5/F9 进程模式债，"先修 W1 subspans"；人工走查押后至本波次确认无察觉问题之后。
+
+**校准前置**：「W1 subspans（W1a-3/W1a-2/...）」编码全仓无源——仅存于压缩摘要派生文本，r2 Finding 6 真身 = `prepare_turn` 历史恢复失败仅记 debug!（Minor）。判定为压缩幻觉，作废记此。decide_pick_one 超时（180s），按保守默认执行推荐项 A：F5 根治 + F9 根治 + r2#6 顺带关闭；用户可推翻。
+
+**F9 预检关键事实**：MCP Windows 下 node 系命令经 `cmd.exe /c` 包装（mcp/server/process.rs:67-80）→ 孙进程真实存在 → tree-kill 语义必须保留，审计推荐 (b) 弃用 helper 仅适用于 flashgrep（直产二进制，kill_on_drop 已设）；MCP 保留 helper + 理由注释。helper 体不动。
+
+**事故注记**：本段台账曾两次写入后被 implementer 工作树清扫（`git restore` 类操作）无声抹掉——禁区条款已从"禁 commit"升级为"禁止以任何方式触碰（不 commit / 不 restore / 不 checkout）"；编排者此后每轮台账写完即 commit。
+
+- Task W2-1 (F5): complete (commits 5a90e04..bf7b8b8, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash) — `create_tokio_command_for_spawn` 三行组合构造器（create_tokio_command 本体零改动）+ 全站点分类表：真实 spawn 点全迁移（process_command.rs ×5、utilities.rs:295、app_control.rs:425）+ 三处手工合规点收口统一（process_spawn/mcp process/flashgrep client）；output() 点（command.rs:280/git utils.rs:201/workspace_info_impl.rs:380/utilities.rs ×3）原样不动。Cannot-verify×2 编排者亲验关闭：①acp/manager_transport.rs:131 非 F5 清单点、已有手工 configure_process_group、Child 由 manager 显式管理——确认无需动作（kill_on_drop 安全网可作未来观察项，非债）；②app_control Unix 新增 process_group(0) 为 F5 设计意图本身，无信号断言残留接受。验证：check workspace+desktop 绿，lsp 15/15、services-core 52/52+contracts、mcp 10/10+37。Minors：mcp process.rs rustfmt 顺手拆行（可接受）；report 未附新行号对照。
+
+- Task W2-2 (F9): complete (commits bf7b8b8..32454b8, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-36-flash) — flashgrep Drop 弃 helper 走 kill_on_drop（直产二进制无孙进程）+ DROP_CLEANUP_TIMEOUT 常量删除；MCP Drop 保留 tree-cleanup + cmd.exe 孙进程理由注释；helper 体零改动 + doc 边界说明。净代码 +9/-5。Cannot-verify×2 关闭：take_child_for_drop 编排者亲验 = 纯 take 无副作用（client.rs:647-649）；Duration import 有三常量仍在用。验证：check workspace 绿 + 107 聚焦测试。
+
+---
+
 # Backend Debug Progress Ledger
 
 计划：`northing-full-bug-audit-2026-07-31.md` + 补充报告（后端方向 8 任务）
@@ -461,6 +477,6 @@ Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-revi
 
 - Task Audit-I3: complete (commits c48e4a9..bbfe1de, review 一轮 **Approved 0C/0I/4M** by minimax-m3；implementer gemini-37-flash) — growth finalize 移出 turn 完成事件临界路径：sub_handle_out.rs 15 行重排（enqueue DialogTurnCompleted + tx.send watchdog 前移，finalize 后移，.0 先 clone 再 move）。judge 独立核查 6 个 DialogTurnCompleted 订阅者无一在完成时读 growth 数据；turn_main_loop.rs:106 C-4 不变量（persist 先于完成事件）仍成立。Minor×4 均为报告卫生（工具链 pin 偏差未自报 / 行数未实测 / 订阅者审计未写进 report / remove-先于-finalize 未点名）→ 终审 triage。验证：check workspace 绿，dialog_turn 13/13 + coordination 52/52。
 
-- **终审（全波次 66f08d1..bbfe1de，9 任务行：C1/I1/I2/I4+I5/I6/I7/I9/I8/I3）：CAN MERGE 0C/0I/2M by reviewer/step-explore_reviewer**（judge-ox-alpha 派发即失败：stealth 端点实为 ZAI GLM-5.3 Flash 推广占位，用户拉黑 + BOOTSTRAP 记忆已记）——5 条跨任务接缝全净（C1 broadcast-only 模式使 I3 `let _ = enqueue` 在生产安全；I2 与队列语义正交；I4+I5/I9 teardown 资源域独立；I8/I9 窗口与 runtime 无交叠；C-4 不变量成立）。台账-vs-git 校准通过（C1 补录行确认正确，9 行 SHA 链全对上）。递延项 triage：W1 subspans 已由 `heap_enabled: false` 满足；F5/F9 确认递延未变差；累积 Minor 无组合升级。M-1 已修（68cca7a：callbacks_lifecycle.rs 补 allow-god-file 注释，指 rot-budget 1011 签字条目）；M-2（I8 range 记法）accept-and-close（base..head 标准记法）。**残余人工项：真机走查（折叠态+抽屉+Z-order+防跳底）+ F5/F9 进程模式债。**
+- **终审（全波次 66f08d1..bbfe1de，9 任务行：C1/I1/I2/I4+I5/I6/I7/I9/I8/I3）：CAN MERGE 0C/0I/2M by reviewer/step-explore_reviewer**（judge-ox-alpha 派发即失败：stealth 端点实为 ZAI GLM-5.3 Flash 推广占位，用户拉黑 + BOOTSTRAP 记忆已记）——5 条跨任务接缝全净（C1 broadcast-only 模式使 I3 `let _ = enqueue` 在生产安全；I2 与队列语义正交；I4+I5/I9 teardown 资源域独立；I8/I9 窗口与 runtime 无交叠；C-4 不变量成立）。台账-vs-git 校准通过（C1 补录行确认正确，9 行 SHA 链全对上）。递延项 triage：「W1 subspans」编码经校准判定为压缩幻觉（详见文首 W2 段校准前置），其指向的 queue callsite 不更差保证由 `heap_enabled: false` 实证成立；F5/F9 确认递延未变差（已转 W2 波次根治，见文首）；累积 Minor 无组合升级。M-1 已修（68cca7a：callbacks_lifecycle.rs 补 allow-god-file 注释，指 rot-budget 1011 签字条目）；M-2（I8 range 记法）accept-and-close（base..head 标准记法）。**残余人工项：真机走查（折叠态+抽屉+Z-order+防跳底）+ F5/F9 进程模式债。**
 
 - Task P22: complete (commits 8622667..1f3a15a, review 一轮 **Approved 0C/0I/3M** by minimax-m3；implementer gemini-36-flash) — P2-22 闭环：ensure_room_session 改走 facade list_sessions_all_workspaces（纯函数 pick_room_session 判定表：preferred 命中 / 落空新建不回落 / 无 preferred 取第一非空组），preferred = AppSettings.current_workspace.or(first)（P3a 只 add 未设 current，first 即 onboarding 工作区）；ROOM_SESSION_CACHE Mutex 进程级缓存同时消除双建 TOCTOU（Err 不缓存 + ponytail 天花板注释：delete/archive 后需重启换房）；孤儿键 ONBOARDING_BTN_COMPLETE 删除（warnings 36→35）。4 新单测；MSVC ui_dioxus 32/0。ledger P2-22 翻 resolved 同批。Minors（文档级，编排者代为入账）：CWD 行为变化（有持久化工作区用户不再接续 CWD 历史）report 漏声明→已写入 ledger 注记；持锁跨 await 的可接受性论证 report 漏写→单次 ensure 语义、send/submit 不重入该锁，已核。
