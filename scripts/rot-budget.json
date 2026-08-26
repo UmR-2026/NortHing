@@ -44,11 +44,36 @@
   "ceiling": 400,
   "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/"
  },
- "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
-  "kind": "file-lines",
-  "ceiling": 1009,
-  "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
- },
+  "god_file:src/apps/desktop/src/app_state/callbacks_lifecycle.rs": {
+   "kind": "file-lines",
+   "ceiling": 1011,
+   "note": "R-14 god-file; live observation cohort (T2-6 superseded); 1009->1011 registered with user sign-off 2026-08-26 (audit rot x4 decision: register all four, keep observing)"
+  },
+  "god_file:src/apps/desktop/src/ui_dioxus/app.rs": {
+   "kind": "file-lines",
+   "ceiling": 962,
+   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4)"
+  },
+  "god_file:src/apps/desktop/src/app_state/callbacks_settings/refresh.rs": {
+   "kind": "file-lines",
+   "ceiling": 834,
+   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4)"
+  },
+  "god_file:src/apps/desktop/src/ui_dioxus/css.rs": {
+   "kind": "file-lines",
+   "ceiling": 830,
+   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4)"
+  },
+  "god_file:src/apps/desktop/src/ui_dioxus/pages_onboarding.rs": {
+   "kind": "file-lines",
+   "ceiling": 866,
+   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit under-report follow-up)"
+  },
+  "god_file:src/crates/assembly/core/src/kernel_facade/tests.rs": {
+   "kind": "file-lines",
+   "ceiling": 823,
+   "note": "R-14 god-file (test file); live observation cohort; registered with user sign-off 2026-08-26 (audit under-report follow-up)"
+  },
  "god_file:src/apps/cli/src/ui/theme.rs": {
   "kind": "file-lines",
   "ceiling": 989,
