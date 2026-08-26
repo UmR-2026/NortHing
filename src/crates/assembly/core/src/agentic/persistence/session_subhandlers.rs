@@ -300,11 +300,22 @@ impl PersistenceManager {
         let mut summaries = Vec::with_capacity(metadata_list.len());
 
         for metadata in metadata_list {
-            let state = self
+            let state = match self
                 .load_stored_session_state(workspace_path, &metadata.session_id)
-                .await?
-                .map(|value| Self::sanitize_runtime_state(&value.runtime_state))
-                .unwrap_or(SessionState::Idle);
+                .await
+            {
+                Ok(stored) => stored
+                    .map(|value| Self::sanitize_runtime_state(&value.runtime_state))
+                    .unwrap_or(SessionState::Idle),
+                Err(err) => {
+                    warn!(
+                        session_id = %metadata.session_id,
+                        error = %err,
+                        "Failed to load stored session state for session, falling back to Idle"
+                    );
+                    SessionState::Idle
+                }
+            };
 
             summaries.push(SessionSummary {
                 session_id: metadata.session_id,
@@ -353,7 +364,7 @@ impl PersistenceManager {
 #[cfg(test)]
 mod tests {
     use super::PersistenceManager;
-    use crate::agentic::core::{SessionKind, SessionStatus};
+    use crate::agentic::core::{SessionKind, SessionState, SessionStatus};
     use crate::infrastructure::PathManager;
     use crate::service::session::SessionMetadata;
     use std::path::{Path, PathBuf};
@@ -533,5 +544,36 @@ mod tests {
         assert_eq!(ids_b, vec!["session-b"], "workspace b keeps only its own sessions");
         assert_eq!(list_a[0].status, SessionStatus::Active);
         assert_eq!(list_b[0].status, SessionStatus::Archived);
+    }
+
+    #[tokio::test]
+    async fn list_sessions_tolerates_corrupted_session_state_file() {
+        let workspace = TestWorkspace::new();
+        let manager = PersistenceManager::new(workspace.path_manager()).expect("persistence manager");
+
+        let metadata = standard_metadata("session-corrupt", "Corrupted State Session");
+        manager
+            .save_session_metadata(workspace.path(), &metadata)
+            .await
+            .expect("save metadata");
+
+        let state_path = manager.state_path(workspace.path(), "session-corrupt");
+        if let Some(parent) = state_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .expect("create session directory");
+        }
+        tokio::fs::write(&state_path, b"invalid json {{{")
+            .await
+            .expect("write corrupt state");
+
+        let summaries = manager
+            .list_sessions(workspace.path())
+            .await
+            .expect("list_sessions should succeed despite corrupt state file");
+
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].session_id, "session-corrupt");
+        assert_eq!(summaries[0].state, SessionState::Idle);
     }
 }

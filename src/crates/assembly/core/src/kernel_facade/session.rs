@@ -88,12 +88,22 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
 
         let mut grouped = Vec::with_capacity(workspace_paths.len());
         for workspace_path in workspace_paths {
-            let summaries = coordinator
+            let summaries = match coordinator
                 .session_manager()
                 .persistence_manager
                 .list_sessions(Path::new(&workspace_path))
                 .await
-                .map_err(|e| KernelError::Runtime(format!("list_sessions failed: {e}")))?;
+            {
+                Ok(summaries) => summaries,
+                Err(err) => {
+                    tracing::warn!(
+                        workspace_path = %workspace_path,
+                        error = %err,
+                        "Failed to list sessions for workspace; returning empty session list"
+                    );
+                    Vec::new()
+                }
+            };
             grouped.push(WorkspaceSessionsDto {
                 workspace_path,
                 sessions: summaries
