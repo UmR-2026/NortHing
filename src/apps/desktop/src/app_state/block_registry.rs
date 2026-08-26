@@ -7,7 +7,7 @@ use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_APPWINDOW,
-    SetWindowPos, HWND_TOPMOST, SWP_NOMOVE, SWP_NOSIZE, IsIconic
+    IsIconic
 };
 
 use crate::app_state::slint_glue::{AppWindow, InnerWindow, OuterWindow};
@@ -150,7 +150,6 @@ fn set_tool_window(window: &slint::Window) -> bool {
                 style |= WS_EX_TOOLWINDOW.0 as isize;
                 style &= !(WS_EX_APPWINDOW.0 as isize);
                 SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style);
-                let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             }
             return true;
         }
