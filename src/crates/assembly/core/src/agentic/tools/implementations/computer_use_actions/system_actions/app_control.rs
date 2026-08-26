@@ -422,11 +422,10 @@ impl ComputerUseActions {
         }
 
         let started = std::time::Instant::now();
-        let child = process_manager::create_tokio_command(&program)
+        let child = process_manager::create_tokio_command_for_spawn(&program)
             .args(&args)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
-            .kill_on_drop(true)
             .spawn()
             .map_err(|e| NortHingError::tool(format!("Failed to spawn run_script ({}): {}", script_type, e)))?;
 

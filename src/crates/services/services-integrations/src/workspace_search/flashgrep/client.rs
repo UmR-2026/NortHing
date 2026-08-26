@@ -420,15 +420,13 @@ impl AsyncDaemonClient {
             .or_else(|| std::env::var_os("FLASHGREP_DAEMON_BIN"))
             .unwrap_or_else(|| OsString::from("flashgrep"));
 
-        let mut command = process_manager::create_tokio_command(program);
+        let mut command = process_manager::create_tokio_command_for_spawn(program);
         command
             .arg("serve")
             .arg("--stdio")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .kill_on_drop(true);
-        process_manager::configure_process_group(&mut command);
+            .stderr(Stdio::piped());
 
         let mut child = command.spawn()?;
         let stdin = child

@@ -27,7 +27,9 @@ pub use filesystem::{
     FileTreeService, FileTreeStatistics, FormattedDirectoryListing, SearchMatchType,
 };
 pub use json_store::{JsonFileStore, JsonFileStoreError};
-pub use process_manager::{cleanup_all_processes, create_command, create_tokio_command, ProcessManager};
+pub use process_manager::{
+    cleanup_all_processes, create_command, create_tokio_command, create_tokio_command_for_spawn, ProcessManager,
+};
 pub use session::{
     build_branched_session_metadata, build_session_index_snapshot, build_session_metadata, build_session_metadata_page,
     collect_hidden_subagent_cascade, empty_session_metadata_page, merge_session_custom_metadata,

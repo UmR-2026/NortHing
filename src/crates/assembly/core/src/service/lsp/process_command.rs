@@ -122,7 +122,8 @@ impl LspServerProcess {
                                 if let Some(js_path) = script_path {
                                     let node_cmd = if cfg!(windows) { "node.exe" } else { "node" };
 
-                                    let mut cmd = crate::util::process_manager::create_tokio_command(node_cmd);
+                                    let mut cmd =
+                                        crate::util::process_manager::create_tokio_command_for_spawn(node_cmd);
                                     cmd.arg(js_path);
                                     cmd.args(&config.args);
                                     cmd.envs(&config.env);
@@ -139,7 +140,7 @@ impl LspServerProcess {
                     }
                 }
 
-                let mut cmd = crate::util::process_manager::create_tokio_command(server_bin);
+                let mut cmd = crate::util::process_manager::create_tokio_command_for_spawn(server_bin);
                 cmd.args(&config.args);
                 cmd.envs(&config.env);
                 Ok(cmd)
@@ -175,7 +176,7 @@ impl LspServerProcess {
                         )
                     })?;
 
-                    let mut cmd = crate::util::process_manager::create_tokio_command(&bash_cmd);
+                    let mut cmd = crate::util::process_manager::create_tokio_command_for_spawn(&bash_cmd);
                     cmd.arg(server_bin);
                     cmd.args(&config.args);
                     cmd.envs(&config.env);
@@ -184,7 +185,7 @@ impl LspServerProcess {
 
                 #[cfg(not(windows))]
                 {
-                    let mut cmd = crate::util::process_manager::create_tokio_command("bash");
+                    let mut cmd = crate::util::process_manager::create_tokio_command_for_spawn("bash");
                     cmd.arg(server_bin);
                     cmd.args(&config.args);
                     cmd.envs(&config.env);
@@ -208,7 +209,7 @@ impl LspServerProcess {
                     }
                 }
 
-                let mut cmd = crate::util::process_manager::create_tokio_command(node_cmd);
+                let mut cmd = crate::util::process_manager::create_tokio_command_for_spawn(node_cmd);
                 cmd.arg(server_bin);
                 cmd.args(&config.args);
                 cmd.envs(&config.env);

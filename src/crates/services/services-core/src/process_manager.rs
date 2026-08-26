@@ -126,6 +126,16 @@ pub fn create_tokio_command<S: AsRef<std::ffi::OsStr>>(program: S) -> TokioComma
     cmd
 }
 
+/// Create Tokio async Command configured for spawned child processes (`kill_on_drop(true)` + process group isolation).
+///
+/// Use this for long-lived spawned child processes. Use [`create_tokio_command`] for one-shot `.output()` / `.status()` tasks.
+pub fn create_tokio_command_for_spawn<S: AsRef<std::ffi::OsStr>>(program: S) -> TokioCommand {
+    let mut cmd = create_tokio_command(program);
+    cmd.kill_on_drop(true);
+    configure_process_group(&mut cmd);
+    cmd
+}
+
 #[cfg(target_os = "macos")]
 fn apply_cached_macos_path(cmd: &mut TokioCommand) {
     if let Some(path) = cached_macos_path_env() {

@@ -292,7 +292,7 @@ pub(super) async fn clipboard_write(text: &str) -> Result<(), String> {
     use tokio::io::AsyncWriteExt;
 
     async fn pipe(bin: &str, args: &[&str], text: &str) -> Result<(), String> {
-        let mut child = process_manager::create_tokio_command(bin)
+        let mut child = process_manager::create_tokio_command_for_spawn(bin)
             .args(args)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::null())

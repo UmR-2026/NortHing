@@ -82,14 +82,12 @@ impl MCPServerProcess {
         #[cfg(not(windows))]
         let (final_command, final_args) = (command.to_string(), args.to_vec());
 
-        let mut cmd = process_manager::create_tokio_command(&final_command);
+        let mut cmd = process_manager::create_tokio_command_for_spawn(&final_command);
         cmd.args(&final_args);
         cmd.envs(env);
         cmd.stdin(std::process::Stdio::piped());
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
-        cmd.kill_on_drop(true);
-        process_manager::configure_process_group(&mut cmd);
 
         let child = cmd.spawn().map_err(|e| {
             error!(
@@ -244,7 +242,8 @@ impl MCPServerProcess {
         self.set_status(MCPServerStatus::Stopping).await;
 
         if let Some(mut child) = self.child.take() {
-            if let Err(e) = process_manager::terminate_child_process_tree(&mut child, Duration::from_millis(750)).await {
+            if let Err(e) = process_manager::terminate_child_process_tree(&mut child, Duration::from_millis(750)).await
+            {
                 warn!(
                     "Failed to kill MCP server process: name={} id={} error={}",
                     self.name, self.id, e
