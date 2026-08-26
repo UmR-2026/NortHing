@@ -238,10 +238,10 @@
 
 ### P2-22: Onboarding 创建的会话对诊室不可见（workspace 作用域错位）
 
-- **Symptom**: consult-room P3a 完成副作用以 `workspace_path: Some(onboarding 工作区)` 创建首个 session（`pages_onboarding.rs:693-699`），但诊室启动流 `ensure_room_session` 经 facade `list_sessions` 取候选，而后者硬编码限定在 `default_workspace_path()` = **进程 CWD**（`kernel_facade/session.rs:38-49`、`helpers.rs:8-12`）。onboarding 工作区 ≠ 启动 CWD 时（默认输入即不等），onboarding 会话永远不在诊室候选集里——诊室静默另开一个 CWD 会话，§F6「启动首个 session」在常见路径下未达成。房间各分支仍可用（best-effort 兜底），非数据丢失。
-- **Evidence**: 终审 finding 2 (`.superpowers/sdd/reviews/final-consult-room-v3/report.md`)；`ui_dioxus/api.rs` ensure_room_session list→create 非原子。
-- **Proposed fix**: facade workspace 解析 / room-session 身份统一（下波立项）：要么 ensure_room_session 按持久化 workspace 解析候选集，要么 onboarding 完成后显式把创建的 session id 传递给 room 初始状态。相关小项一并处理：① startup future 与 send_action 双调用 list→create 的毫秒级双建 TOCTOU（终审 finding 3）；② 启动 hydrate `entries.set` 覆盖窗口内已 push 的 Approval 卡（P2a M1，merge-not-replace 或启动旗标）；③ i18n 键 `ONBOARDING_BTN_COMPLETE` 成孤儿（5d2d22c 移除最后使用者，warnings 35→36），下次触及时删除或复用。
-- **Status**: active（owner：facade workspace resolution / room-session identity，下一波）
+- **Symptom**: consult-room P3a 完成副作用以 `workspace_path: Some(onboarding 工作区)` 创建首个 session（`pages_onboarding.rs:693-699`），但诊室启动流 `ensure_room_session` 经 facade `list_sessions` 取候选，而后者硬编码限定在 `default_workspace_path()` = **进程 CWD**。onboarding 工作区 ≠ 启动 CWD 时，onboarding 会话永远不在诊室候选集——诊室静默另开 CWD 会话。
+- **Evidence**: 终审 finding 2 (`.superpowers/sdd/reviews/final-consult-room-v3/report.md`)；修复后：`ui_dioxus/api.rs` `pick_room_session` 纯函数 + `ensure_room_session` 改走 facade `list_sessions_all_workspaces()`（组按最近访问序、CWD 组末位兜底），preferred 工作区取 `AppSettings.current_workspace.or(workspaces.first())`；进程级 `ROOM_SESSION_CACHE` Mutex 同时消除双建 TOCTOU（终审 finding 3）；孤儿键 `ONBOARDING_BTN_COMPLETE` 已删（finding 7）。commit 1f3a15a。
+- **Proposed fix**: 已全部落地（见 Evidence）。遗留注记两条：① entries.set 启动竞态窗口保留为理论项——订阅流只推订阅后新事件、启动期无运行中回合，现无真实触发路径（若将来加事件回放需重启评估）；② 行为变化：有持久化工作区的用户不再接续 CWD 历史会话（判定表明文要求，新建于 preferred 工作区）。
+- **Status**: resolved (2026-08-26, consult-room P22, commit 1f3a15a)
 
 ## Change Protocol
 

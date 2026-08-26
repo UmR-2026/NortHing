@@ -1,0 +1,3 @@
+ src/apps/desktop/src/ui_dioxus/api.rs  | 167 +++++++++++++++++++++++++++++++--
+ src/apps/desktop/src/ui_dioxus/i18n.rs |   1 -
+ 2 files changed, 158 insertions(+), 10 deletions(-)
