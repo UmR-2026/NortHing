@@ -12,6 +12,8 @@
 
 - Task W2-2 (F9): complete (commits bf7b8b8..32454b8, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-36-flash) — flashgrep Drop 弃 helper 走 kill_on_drop（直产二进制无孙进程）+ DROP_CLEANUP_TIMEOUT 常量删除；MCP Drop 保留 tree-cleanup + cmd.exe 孙进程理由注释；helper 体零改动 + doc 边界说明。净代码 +9/-5。Cannot-verify×2 关闭：take_child_for_drop 编排者亲验 = 纯 take 无副作用（client.rs:647-649）；Duration import 有三常量仍在用。验证：check workspace 绿 + 107 聚焦测试。
 
+- Task W2-3 (r2#6): complete (commits 60cf675..b440cae, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-36-flash) — prepare_turn restore Err 臂按 `session.dialog_turn_ids.is_empty()` 分级：有历史 warn!（含 turn 数 + partial-context 后果）、新会话保持 debug!；banner 备选编排者裁定不采纳（Minor 级观测性修复）。净 +12/-4。验证：check workspace 绿 + dialog_turn 13/13。Minor×2 无需动作（if/else vs match 风格；report 行号锚小偏差）。
+
 ---
 
 # Backend Debug Progress Ledger
