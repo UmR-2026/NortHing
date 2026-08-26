@@ -347,8 +347,13 @@ impl ConversationCoordinator {
                         }
                     }
                 };
-                // Finalization + event emission now inside the spawned task so all
-                // workspace_turn_status data is available without moving variables out.
+                // Growth finalize runs after completion event enqueue and watchdog signal
+                // (Audit I3: LLM distillation timeout up to 30s must not block UI turn completion).
+                if let Some(ref completed_event) = workspace_turn_status.1 {
+                    let _ = event_queue.enqueue(completed_event.clone(), None).await;
+                }
+                let turn_status_for_finalize = workspace_turn_status.0.clone();
+                let _ = tx.send(workspace_turn_status);
                 Self::finalize_persisted_turn_in_workspace_if_needed(
                     session_manager.as_ref(),
                     &session_id_clone,
@@ -358,14 +363,10 @@ impl ConversationCoordinator {
                     &user_input_for_workspace,
                     session_workspace_path.as_deref(),
                     session_storage_path_for_finalize.as_deref(),
-                    workspace_turn_status.0.clone(),
+                    turn_status_for_finalize,
                     user_message_metadata_clone,
                 )
                 .await;
-                if let Some(ref completed_event) = workspace_turn_status.1 {
-                    let _ = event_queue.enqueue(completed_event.clone(), None).await;
-                }
-                let _ = tx.send(workspace_turn_status);
             });
 
             // W3a-3 watchdog: race execution+finalization against timeout.
