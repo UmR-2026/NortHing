@@ -4,6 +4,8 @@
 
 - Task W5-1 (F1): complete (commits 86ab479..de60a0b, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — quit_shell 弃 process::exit：✕ → close_all_modules + room 关闭 → Dioxus LoopDestroyed → perform_shutdown（Mutex<Option>.take() 幂等，双路径收敛）→ shutdown_tx + MCP 清理；registry.rs 新增 mark_all_closing_targets 原子迁移（Open→Closing 单临界区）+ 单测。净 +208/-71，4 文件（审计估 S 实为关闭链布线，judge 认定增长合理非越界）。验证：check workspace/desktop/--tests 绿，hygiene 过。⚠️×2 转实测兜底（实测清单 6/7 覆盖）：Dioxus 全窗关闭→LoopDestroyed 库契约、WindowDropGuard 触发。Minors×5 记此（report 缺 test 执行输出原文、走查行号 off-by-one×2、room 双关闭冗余宜加 ponytail 注、WindowDropGuard 复用声称为未验证声明）。
 
+- Task W5-2 (F2): complete (commits 289a2de..87cb1f4, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — 事件桥分级：单 unbounded 通道 + TextChunk 原子预算（AtomicUsize CAS，满 256 丢）+ 控制事件（TurnState/ToolCall/TurnPhase/Banner/Error）直通不丢；未选双通道 select!（避免优先级反转——TurnState 抢跑 TextChunk 致 draft 提前提交，judge 认可取舍）；app.rs 消费端零改动（recv 同签名）。净 +221/-26 单文件 api.rs。测试 +2（满载 356 chunk 后控制事件必达 + drain→refill 闭环），crate 107/107。Minors×4 记此交终审：counter 过计理论窗口、pending_text_chunks 可降 pub(crate)、丢 chunk 用 debug! 运营不可见、控制侧 unbounded 无显式上限。
+
 # W4 Ledger (2026-08-28, Slint 物理删除 + Dioxus 壳终审)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w4-slint-removal.md`；用户指令原文："slint前端完全删除 仅留下dioxus壳 之后进行dioxus壳的review"。
