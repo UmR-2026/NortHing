@@ -176,9 +176,22 @@ impl SessionManager {
         // Use the local `session` directly -- no need to re-fetch from DashMap,
         // which would hold a Ref guard across the async save_session call.
         if self.config.enable_persistence && Self::should_persist_session(&session) {
-            self.persistence_manager
+            if let Err(err) = self
+                .persistence_manager
                 .save_session(&session_storage_path, &session)
-                .await?;
+                .await
+            {
+                self.sessions.remove(&session_id);
+                self.session_workspace_index.remove(&session_id);
+                self.context_store.delete_session(&session_id);
+                self.turn_skill_agent_snapshot_store.delete_session(&session_id);
+                self.file_read_state_store.delete_session(&session_id);
+                warn!(
+                    "Failed to persist new session, rolled back in-memory state: session_id={}, error={}",
+                    session_id, err
+                );
+                return Err(err);
+            }
         }
 
         info!("Session created: session_name={}", session.session_name);

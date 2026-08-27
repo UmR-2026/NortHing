@@ -329,6 +329,60 @@ async fn delete_session_removes_workspace_cache_entry() {
     assert!(manager.session_workspace_index.get(&session.session_id).is_none());
 }
 
+#[tokio::test]
+async fn create_session_persistence_failure_rolls_back_in_memory_state() {
+    let workspace = TestWorkspace::new();
+    // Block persistence root creation by placing a regular file where the home directory should be.
+    std::fs::write(workspace.path().join("home"), b"block_directory_creation").expect("marker file should write");
+
+    let persistence_manager = Arc::new(PersistenceManager::new(workspace.path_manager()).expect("persistence manager"));
+    let manager = test_manager(persistence_manager);
+
+    let session_id = "failed-persist-session-id".to_string();
+    let result = manager
+        .create_session_with_id(
+            Some(session_id.clone()),
+            "Failed persist session".to_string(),
+            "agent".to_string(),
+            SessionConfig {
+                workspace_path: Some(workspace.path().to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "create_session should return Err on persistence failure"
+    );
+    assert!(
+        manager.sessions.get(&session_id).is_none(),
+        "sessions map must not retain failed session"
+    );
+    assert!(
+        manager.session_workspace_index.get(&session_id).is_none(),
+        "session_workspace_index must not retain failed session"
+    );
+    assert!(
+        manager.get_session(&session_id).is_none(),
+        "get_session must return None for rolled back session"
+    );
+    assert!(
+        manager.context_store.get_context_messages(&session_id).is_empty(),
+        "context_store must be clean"
+    );
+    assert_eq!(
+        manager.sessions.len(),
+        0,
+        "no ghost sessions should consume active slots"
+    );
+    assert_eq!(
+        manager.session_workspace_index.len(),
+        0,
+        "session_workspace_index should be empty"
+    );
+}
+
 #[test]
 fn build_messages_from_turns_skips_model_invisible_turns() {
     use crate::service::session::{DialogTurnData, DialogTurnKind, UserMessageData};
