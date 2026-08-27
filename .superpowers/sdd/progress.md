@@ -2,6 +2,8 @@
 
 计划：`.superpowers/sdd/plan-2026-08-27-w3-minor-batch.md`；用户拍板 4 任务全上，真机实测并行（发现随时插入优先）。
 
+- **2026-08-27 旗舰翻转（用户拍板，编排者直接执行）**：`flags::DIOXUS_SHELL` false→true——Dioxus consult-room 壳成为默认启动前端，Slint 壳保留为一行回退路径；AGENTS.md 骨干不变量同 commit 更新；锁测试改名 `dioxus_shell_default_true`。门：`cargo check -p northhing` 绿。已知未覆盖：Dioxus 壳自身 r1#8（ui_dioxus/windows.rs 几何跟随线程）未修；W1 的 I8/I9 修在 Slint 回调层（block_registry/callbacks_lifecycle），Dioxus 侧窗口与 provider 编辑流（pages_settings.rs）未经本波修复与实测——真机实测清单需按 Dioxus 壳重排。
+
 - Task W3-1 (r2#5): complete (commits a7ac75d..d82a074, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — save_session Err 时回滚 sessions + session_workspace_index，并顺带回滚同调用刚插入的 context_store/turn_skill_agent_snapshot_store/file_read_state_store（judge 认定为对修复方向的更正确解读）；测试用真文件占位诱导 IO 失败（无 mock，复用 TestWorkspace/test_manager 既有设施）。净 +69/-2。验证：check workspace 绿，lifecycle 17/17 含新回滚测试。Minors×3 记此交终审 triage：①create_session_with_id 包装路径键唯一性确认未枚举（预存契约问题，非本次回归）；②测试未断言 warn! 日志；③err 类别未 matches! 锁定。
 
 - Task W3-2 (r2#7+#8): complete (commits 0f3beb8..94a786a, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — compression_payload 序列化失败臂 warn!（turn_id/round_id/error 结构化字段）回落 Null；filter 站点契约注释 + 单次调用级 debug!（dropped_count/total_images，不逐张刷）；DTO 形状/签名零变化。净 +85/-57（含 rustfmt 顺带折叠三个兄弟函数签名，函数体零改动）。验证：check workspace + desktop 绿，kernel_facade 37/37。Minors×2 记此：rustfmt 越界折叠（工具驱动，透明注记）；message_to_dto let-binding 重写（可读性持平，非缺陷）。

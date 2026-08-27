@@ -29,16 +29,19 @@ pub const DEFAULT_MODE_ID: &str = "agentic"; // 2026-07-18: registry has no "cod
 ///
 /// When `true` **and** the `ui-dioxus` cargo feature is enabled, `main.rs`
 /// launches the three-window Dioxus consult-room shell (room + inner +
-/// outer). When `false` (the deliberate default) the existing Slint shell
-/// is launched byte-identically - no behavior change.
+/// outer). When `false` the Slint shell is launched instead.
+///
+/// **2026-08-27: flipped to `true` by explicit user directive** — the
+/// Dioxus consult-room shell is the intended production frontend; the
+/// Slint shell remains compiled in as the rollback path (one-line flip
+/// back + this test updated).
 ///
 /// Per `.agents/reference/actor/06-const-flag-usage.md` rules:
-///   * Default to `false` while the new shell is being rolled out.
 ///   * Roll back with a one-line flip + commit.
 ///   * Lock the default down with a regression test so any silent flip is
 ///     paired with a corresponding test update.
 #[allow(dead_code)]
-pub const DIOXUS_SHELL: bool = false;
+pub const DIOXUS_SHELL: bool = true;
 
 #[cfg(test)]
 mod tests {
@@ -61,13 +64,13 @@ mod tests {
         assert_eq!(DEFAULT_MODE_ID, "agentic");
     }
 
-    /// `DIOXUS_SHELL = false` is the deliberate T1 Dioxus default -
-    /// flipping it to `true` is a one-line UI behavior flip, not a
-    /// silent change. Lock the default down so the parallel Slint shell
-    /// keeps owning the production launch path while the Dioxus shell is
-    /// rolled out.
+    /// `DIOXUS_SHELL = true` is the deliberate default since 2026-08-27
+    /// (user directive: the Dioxus consult-room shell is the production
+    /// frontend; Slint is the rollback path). Flipping it back is a
+    /// one-line rollback, not a silent change - pair any flip with this
+    /// test and a commit message recording the decision.
     #[test]
-    fn dioxus_shell_default_false() {
-        assert!(!DIOXUS_SHELL, "DIOXUS_SHELL default flipped - pair with task review");
+    fn dioxus_shell_default_true() {
+        assert!(DIOXUS_SHELL, "DIOXUS_SHELL default flipped - pair with task review");
     }
 }

@@ -171,7 +171,7 @@ await api.invoke('your_command', { request: { ... } });
 
 Change these only with a flag flip + integration test, and update this section in the same commit.
 
-- **Desktop package is `northhing` (Slint)**, not `northhing-desktop`. agent-dispatch flags: only `USE_LIGHTWEIGHT_ACTOR = true` remains; Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC + IpcSpawnAdapter) descoped and deleted 2026-07-20.
+- **Desktop package is `northhing`**, not `northhing-desktop`. **Default launch shell = Dioxus consult-room** (`flags::DIOXUS_SHELL = true` since 2026-08-27 per user directive; the Slint shell remains compiled in as the one-line rollback path). agent-dispatch flags: only `USE_LIGHTWEIGHT_ACTOR = true` remains; Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC + IpcSpawnAdapter) descoped and deleted 2026-07-20.
 - **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Single source of truth for providers and default_model is core GlobalConfig (Stage 1 de-mirroring; core does not persist `api_key` to disk per user-approved Scheme C; desktop pushes keys to memory via facade on startup/change; desktop AppSettings retains workspaces/onboarding, Stage 2 to migrate). Never add a second runtime-readable config file.
 - **UI thread discipline**: writing Slint properties from a non-event-loop thread is silently dropped. All such writes must go through `slint::invoke_from_event_loop` (helpers in `error_banners.rs` already wrap this — reuse them, see `ad349f9`).
 - **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too.
