@@ -10,6 +10,8 @@
 
 - Task W3-4 (F10): complete (commits 967a604..c6f2924, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — drain task JoinHandle 以函数局部 Option 持有（stream_processor.rs:418-432；StreamProcessor 共享无状态、rx 按调用，局部存储判定正确）；6 个早退点全部挂 abort（:467/:499/:526/:571/:581/:590，judge 对照枚举核实），正常流尽不 abort（JoinHandle drop 不 abort，任务随 tx 关闭自终）；单一 abort_drain_task 闭包复用，无新抽象。测试 +3（取消早退/错误早退/正常不 abort），agent-stream 54/54。净 +119/-7。验证：check workspace 绿，repo-hygiene 过。Minors×4 记此交终审 triage（要点：测试以 15ms sleep + is_closed 推断 abort，非 is_finished/is_aborted 确定性断言；report 行数小偏差 639→644；闭包 Fn vs FnOnce 风格）。
 
+- **W3 波次终审（a7ac75d..c6f2924，4 任务）：CAN MERGE 0C/0I/3M by reviewer/step-explore_reviewer**（首次空响应，按 SOP 间隔 200s 同 task_id 续派成功）—— 10 项接缝核查全 verified-clean/low-risk（四任务文件/语义双不相交；W3-3 空转→重启 ≤50ms 残余窗口维持 W3-3 行亲验结论；W3-4 is_closed 代理断言链终审认可）。Minor triage：defer×4 / reject×6 / 接受台账说明×1，无阻塞项。终审报告：`.superpowers/sdd/w3-final-review.md`。**审计 2026-08-26 Minor 残余清零**（F7 在 tech-debt P2-18；F8 留作下波候选）。**人工走查项维持开放**（用户真机实测未回填，清单见 handoff 2026-08-27-w2-closed-manual-test-pending.md）。
+
 ---
 
 # Process-Pattern Wave Ledger (2026-08-27, W2)
