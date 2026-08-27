@@ -1,62 +1,88 @@
 //! DTO conversion helpers.
 
+use tracing::{debug, warn};
+
 use crate::agentic::core::{Message, MessageContent, MessageRole};
 use crate::agentic::message::MessageMetadata;
 use northhing_kernel_api::session::{
-    MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, SessionMetadataDto,
-    ToolCallStub,
+    MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto, SessionMetadataDto, ToolCallStub,
 };
 use northhing_kernel_api::turn::DialogSubmitOutcomeDto;
 
 /// Converts a Message to MessageDto.
 pub(crate) fn message_to_dto(m: Message) -> MessageDto {
+    let role = match m.role {
+        MessageRole::User => MessageRoleDto::User,
+        MessageRole::Assistant => MessageRoleDto::Assistant,
+        MessageRole::Tool => MessageRoleDto::Tool,
+        MessageRole::System => MessageRoleDto::System,
+    };
+    let content = match &m.content {
+        MessageContent::Text(t) => MessageContentDto::Text(t.clone()),
+        MessageContent::Multimodal { text, images } => {
+            // MessageContentDto::Multimodal contract requires file paths (Vec<String>).
+            // Images carrying only a data_url (no image_path) cannot be represented in this frozen DTO schema and are dropped.
+            let mut image_paths = Vec::with_capacity(images.len());
+            let mut dropped_count = 0;
+            for img in images {
+                match &img.image_path {
+                    Some(path) => image_paths.push(path.clone()),
+                    None => dropped_count += 1,
+                }
+            }
+            if dropped_count > 0 {
+                debug!(
+                    message_id = %m.id,
+                    dropped_count,
+                    total_images = images.len(),
+                    "dropped path-less (data-URL-only) images during Multimodal MessageDto conversion"
+                );
+            }
+            MessageContentDto::Multimodal {
+                text: text.clone(),
+                images: image_paths,
+            }
+        }
+        MessageContent::ToolResult {
+            tool_id,
+            tool_name,
+            result,
+            result_for_assistant,
+            is_error,
+            ..
+        } => MessageContentDto::ToolResult {
+            tool_id: tool_id.clone(),
+            tool_name: tool_name.clone(),
+            result: result.clone(),
+            result_for_assistant: result_for_assistant.clone(),
+            is_error: *is_error,
+        },
+        MessageContent::Mixed {
+            reasoning_content,
+            text,
+            tool_calls,
+        } => MessageContentDto::Mixed {
+            reasoning_content: reasoning_content.clone(),
+            text: text.clone(),
+            tool_calls: tool_calls
+                .iter()
+                .map(|tc| ToolCallStub {
+                    tool_name: tc.tool_name.clone(),
+                    arguments: Some(tc.arguments.clone()),
+                    is_error: tc.is_error,
+                })
+                .collect(),
+        },
+    };
+    let metadata = Some(metadata_to_message_dto(&m.metadata));
+    let timestamp = crate::kernel_facade::helpers::system_time_to_ms_i64(m.timestamp);
+
     MessageDto {
         id: m.id,
-        role: match m.role {
-            MessageRole::User => MessageRoleDto::User,
-            MessageRole::Assistant => MessageRoleDto::Assistant,
-            MessageRole::Tool => MessageRoleDto::Tool,
-            MessageRole::System => MessageRoleDto::System,
-        },
-        content: match &m.content {
-            MessageContent::Text(t) => MessageContentDto::Text(t.clone()),
-            MessageContent::Multimodal { text, images } => MessageContentDto::Multimodal {
-                text: text.clone(),
-                images: images.iter().filter_map(|img| img.image_path.clone()).collect(),
-            },
-            MessageContent::ToolResult {
-                tool_id,
-                tool_name,
-                result,
-                result_for_assistant,
-                is_error,
-                ..
-            } => MessageContentDto::ToolResult {
-                tool_id: tool_id.clone(),
-                tool_name: tool_name.clone(),
-                result: result.clone(),
-                result_for_assistant: result_for_assistant.clone(),
-                is_error: *is_error,
-            },
-            MessageContent::Mixed {
-                reasoning_content,
-                text,
-                tool_calls,
-            } => MessageContentDto::Mixed {
-                reasoning_content: reasoning_content.clone(),
-                text: text.clone(),
-                tool_calls: tool_calls
-                    .iter()
-                    .map(|tc| ToolCallStub {
-                        tool_name: tc.tool_name.clone(),
-                        arguments: Some(tc.arguments.clone()),
-                        is_error: tc.is_error,
-                    })
-                    .collect(),
-            },
-        },
-        metadata: Some(metadata_to_message_dto(&m.metadata)),
-        timestamp: crate::kernel_facade::helpers::system_time_to_ms_i64(m.timestamp),
+        role,
+        content,
+        metadata,
+        timestamp,
     }
 }
 
@@ -70,15 +96,21 @@ pub(crate) fn metadata_to_message_dto(m: &MessageMetadata) -> MessageMetadataDto
         semantic_kind: m.semantic_kind.as_ref().map(|k| format!("{:?}", k)),
         internal_reminder_kind: m.internal_reminder_kind.as_ref().map(|k| format!("{:?}", k)),
         compression_payload: m.compression_payload.as_ref().map(|p| {
-            serde_json::to_value(p).unwrap_or(serde_json::Value::Null)
+            serde_json::to_value(p).unwrap_or_else(|err| {
+                warn!(
+                    turn_id = ?m.turn_id,
+                    round_id = ?m.round_id,
+                    error = %err,
+                    "failed to serialize compression_payload to json value, falling back to Null"
+                );
+                serde_json::Value::Null
+            })
         }),
     }
 }
 
 /// Converts SessionMetadata to SessionMetadataDto.
-pub(crate) fn metadata_to_dto(
-    m: &northhing_services_core::session::SessionMetadata,
-) -> SessionMetadataDto {
+pub(crate) fn metadata_to_dto(m: &northhing_services_core::session::SessionMetadata) -> SessionMetadataDto {
     SessionMetadataDto {
         session_id: m.session_id.clone(),
         session_name: m.session_name.clone(),
@@ -126,9 +158,7 @@ pub(crate) fn metadata_to_dto(
 }
 
 /// Converts DialogSubmitOutcome to DialogSubmitOutcomeDto.
-pub(crate) fn outcome_to_dto(
-    o: crate::agentic::coordination::DialogSubmitOutcome,
-) -> DialogSubmitOutcomeDto {
+pub(crate) fn outcome_to_dto(o: crate::agentic::coordination::DialogSubmitOutcome) -> DialogSubmitOutcomeDto {
     use crate::agentic::coordination::DialogSubmitOutcome;
     match o {
         DialogSubmitOutcome::Started { turn_id, .. } => DialogSubmitOutcomeDto {
@@ -147,9 +177,7 @@ pub(crate) fn outcome_to_dto(
 }
 
 /// Converts TurnStatus to TurnStateKind.
-pub(crate) fn turn_status_to_kind(
-    s: &northhing_services_core::session::TurnStatus,
-) -> super::TurnStateKind {
+pub(crate) fn turn_status_to_kind(s: &northhing_services_core::session::TurnStatus) -> super::TurnStateKind {
     match s {
         northhing_services_core::session::TurnStatus::InProgress => super::TurnStateKind::Started,
         northhing_services_core::session::TurnStatus::Completed => super::TurnStateKind::Completed,
