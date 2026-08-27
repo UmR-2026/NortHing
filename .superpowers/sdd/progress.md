@@ -8,6 +8,10 @@
 
 - Task W5-3 (F4): complete (commits 86803d7..21f9345 = fafc1fa 实现 + 21f9345 审查修复，review 两轮 by minimax-m3：一轮 Approved-with-Important（新增测试直写真 OS keyring + 清理不完整）→ 原 coder 续会话修复（KeyringBackend 注入 + MockKeyring 隔离 + 孤 key 断言清理 + 首次验证写入的真 keyring 测试条目已删）→ 重审代码全过；遗留 Minor=report 一行不实描述，编排者订正并标注）— onboarding：test_provider_config 成功 → upsert provider → set_default → create_session，三失败臂 UI 显式报错不推进。净 +203/-21，4 文件。验证：check desktop 绿，109/109。Minors 记此交终审：infer_provider_wire_format URL 启发式脆弱（proxy 路径含 anthropic 字样会误分类）。
 
+- Task W5-4 (F5+F6): complete (commits 2ebc8c3..f680cf6, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — F5：ModuleAppProps 真实 PartialEq（plugin_id+gen 身份比较 + 文档注释说明动态状态走 watch 不走 prop diffing）+ 4 例测试；F6：room_window_id 与 latest_geometry 双双去 Mutex 化——watch 通道 + `send_modify` 原地改值（塌缩原 Mutex+send 两步），entry.rs Mutex import 精确摘除。净 +101/-30，4 文件，行为零变化。验证：check desktop 绿，110/110（含新 PartialEq 测试）。Minors×3 记此交终审：send 丢弃语义可加注释、PartialEq 可加 rx-Arc 变体用例、registry.rs 678/800 接近警戒。
+
+- **W5 波次状态：4/4 任务完成且 per-task review 全过；全波终审未跑（宵禁收口，2026-08-28 ~02:00）。下 session 第一件事：review-package `86ab479..f680cf6` 派终审（step-explore_reviewer），Minors 累计 12 条在各任务行内待 triage。**
+
 # W4 Ledger (2026-08-28, Slint 物理删除 + Dioxus 壳终审)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w4-slint-removal.md`；用户指令原文："slint前端完全删除 仅留下dioxus壳 之后进行dioxus壳的review"。
