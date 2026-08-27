@@ -6,6 +6,8 @@
 
 - Task W3-2 (r2#7+#8): complete (commits 0f3beb8..94a786a, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — compression_payload 序列化失败臂 warn!（turn_id/round_id/error 结构化字段）回落 Null；filter 站点契约注释 + 单次调用级 debug!（dropped_count/total_images，不逐张刷）；DTO 形状/签名零变化。净 +85/-57（含 rustfmt 顺带折叠三个兄弟函数签名，函数体零改动）。验证：check workspace + desktop 绿，kernel_facade 37/37。Minors×2 记此：rustfmt 越界折叠（工具驱动，透明注记）；message_to_dto let-binding 重写（可读性持平，非缺陷）。
 
+- Task W3-3 (F6): complete (commits d993909..79f36db, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — 增量重构落地：watcher 存在时直接 `Watcher::watch/unwatch`（service.rs:57-86 / :88-111），`create_watcher` 仅首条/空转后调用；unwatch 未跟踪路径 no-op。测试 +164（增量投递契约 + unwatch-unknown no-op）；Cargo.toml dev-deps +anyhow（workspace 版，`EventEmitter::emit` 签名强制，judge 判 warranted）。净 +201/-10。⚠️×1 编排者亲验关闭：Spec3"存活后台任务 ≤1"结构性成立（create_watcher 是唯一 spawn 点且仅 watcher=None 时触发）；残余窗口 = 空转→重启边 ≤50ms poll tick 内旧任务未退——有界、非泄漏（原审计同语 "not a true leak"），接受。验证：check workspace+desktop 绿，file_watch 4/4 含新测试，integrations 全量绿。Minors×6 记此交终审 triage（要点：check 输出未贴 warning 段；测试 unwrap×3 风格；同路径二次 watch 幂等与增量失败不一致态未测；Spec3 无直接探针）。
+
 ---
 
 # Process-Pattern Wave Ledger (2026-08-27, W2)
