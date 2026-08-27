@@ -187,7 +187,8 @@ impl ShellWindowManager {
 
     pub fn is_any_active(&self, ids: &[&str]) -> bool {
         let guard = self.inner.active_states.lock().unwrap();
-        ids.iter().any(|id| matches!(guard.get(*id), Some(WindowState::Opening(_) | WindowState::Open(..))))
+        ids.iter()
+            .any(|id| matches!(guard.get(*id), Some(WindowState::Opening(_) | WindowState::Open(..))))
     }
 
     pub fn subscribe_active(&self) -> watch::Receiver<HashSet<&'static str>> {
@@ -216,7 +217,13 @@ impl ShellWindowManager {
         guard.insert(id, WindowState::Opening(gen));
         let active_set: HashSet<&'static str> = guard
             .iter()
-            .filter_map(|(&k, &v)| if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) { Some(k) } else { None })
+            .filter_map(|(&k, &v)| {
+                if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) {
+                    Some(k)
+                } else {
+                    None
+                }
+            })
             .collect();
         let _ = self.inner.active_tx.send(active_set);
         crate::app_state::log::log_debug_event(
@@ -241,7 +248,13 @@ impl ShellWindowManager {
                 guard.insert(id, WindowState::Open(gen, window_id, hwnd));
                 let active_set: HashSet<&'static str> = guard
                     .iter()
-                    .filter_map(|(&k, &v)| if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) { Some(k) } else { None })
+                    .filter_map(|(&k, &v)| {
+                        if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) {
+                            Some(k)
+                        } else {
+                            None
+                        }
+                    })
                     .collect();
                 let _ = self.inner.active_tx.send(active_set);
                 crate::app_state::log::log_debug_event(
@@ -284,7 +297,13 @@ impl ShellWindowManager {
         guard.insert(id, WindowState::Closing);
         let active_set: HashSet<&'static str> = guard
             .iter()
-            .filter_map(|(&k, &v)| if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) { Some(k) } else { None })
+            .filter_map(|(&k, &v)| {
+                if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) {
+                    Some(k)
+                } else {
+                    None
+                }
+            })
             .collect();
         let _ = self.inner.active_tx.send(active_set);
         crate::app_state::log::log_debug_event(
@@ -295,6 +314,40 @@ impl ShellWindowManager {
             None,
         );
         target
+    }
+
+    pub fn mark_all_closing_targets(&self) -> Vec<(&'static str, WindowId, usize)> {
+        let mut guard = self.inner.active_states.lock().unwrap();
+        let mut targets = Vec::new();
+        for (&id, state) in guard.iter_mut() {
+            match *state {
+                WindowState::Open(_gen, wid, hwnd) => {
+                    targets.push((id, wid, hwnd));
+                    *state = WindowState::Closing;
+                    crate::app_state::log::log_debug_event(
+                        northhing_debug_log::COMP_UI_DIOXUS_WIN,
+                        "mark_closing",
+                        id,
+                        "(mark_all_closing_targets Open)",
+                        None,
+                    );
+                }
+                WindowState::Opening(_gen) => {
+                    *state = WindowState::Closing;
+                    crate::app_state::log::log_debug_event(
+                        northhing_debug_log::COMP_UI_DIOXUS_WIN,
+                        "mark_closing",
+                        id,
+                        "(mark_all_closing_targets Opening)",
+                        None,
+                    );
+                }
+                WindowState::Closing => {}
+            }
+        }
+        let active_set: HashSet<&'static str> = HashSet::new();
+        let _ = self.inner.active_tx.send(active_set);
+        targets
     }
 
     #[allow(dead_code)]
@@ -313,7 +366,13 @@ impl ShellWindowManager {
             guard.remove(id);
             let active_set: HashSet<&'static str> = guard
                 .iter()
-                .filter_map(|(&k, &v)| if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) { Some(k) } else { None })
+                .filter_map(|(&k, &v)| {
+                    if matches!(v, WindowState::Opening(_) | WindowState::Open(..)) {
+                        Some(k)
+                    } else {
+                        None
+                    }
+                })
                 .collect();
             let _ = self.inner.active_tx.send(active_set);
         }
@@ -358,8 +417,14 @@ mod tests {
         assert!(!manager2.is_any_active(&["self", "facility"]));
 
         let gen = manager1.mark_opening("self").expect("mark_opening self");
-        assert!(manager2.is_active("self"), "manager2.is_active('self') must be true after manager1.mark_opening");
-        assert!(manager2.is_any_active(&["self", "facility"]), "manager2.is_any_active must be true after manager1.mark_opening");
+        assert!(
+            manager2.is_active("self"),
+            "manager2.is_active('self') must be true after manager1.mark_opening"
+        );
+        assert!(
+            manager2.is_any_active(&["self", "facility"]),
+            "manager2.is_any_active must be true after manager1.mark_opening"
+        );
 
         let mock_wid = unsafe { std::mem::transmute(1usize) };
         assert!(manager1.register_window("self", gen, mock_wid));
@@ -383,10 +448,16 @@ mod tests {
 
         let gen2 = 9999u64; // Stale generation
         manager.notify_closed_with_gen("work", gen2);
-        assert!(manager.is_active("work"), "Stale notify_closed_with_gen MUST be ignored (work stays active)");
+        assert!(
+            manager.is_active("work"),
+            "Stale notify_closed_with_gen MUST be ignored (work stays active)"
+        );
 
         manager.notify_closed_with_gen("work", gen1);
-        assert!(!manager.is_active("work"), "Matching notify_closed_with_gen MUST remove active status");
+        assert!(
+            !manager.is_active("work"),
+            "Matching notify_closed_with_gen MUST remove active status"
+        );
     }
 
     #[test]
@@ -418,7 +489,10 @@ mod tests {
         assert!(!manager.is_active("archive"));
         let gen = manager.mark_opening("archive").expect("mark_opening archive");
         assert!(manager.is_active("archive"));
-        assert!(manager.mark_opening("archive").is_none(), "singleton: duplicate mark_opening must be rejected");
+        assert!(
+            manager.mark_opening("archive").is_none(),
+            "singleton: duplicate mark_opening must be rejected"
+        );
 
         let mock_wid = unsafe { std::mem::transmute(3usize) };
         assert!(manager.register_window_with_hwnd("archive", gen, mock_wid, 0x5678));
@@ -441,7 +515,10 @@ mod tests {
         assert!(!manager.is_active("space"));
         let gen = manager.mark_opening("space").expect("mark_opening space");
         assert!(manager.is_active("space"));
-        assert!(manager.mark_opening("space").is_none(), "singleton: duplicate mark_opening must be rejected");
+        assert!(
+            manager.mark_opening("space").is_none(),
+            "singleton: duplicate mark_opening must be rejected"
+        );
 
         let mock_wid = unsafe { std::mem::transmute(4usize) };
         assert!(manager.register_window_with_hwnd("space", gen, mock_wid, 0x9abc));
@@ -465,7 +542,10 @@ mod tests {
         assert!(!manager.is_active("settings"));
         let gen = manager.mark_opening("settings").expect("mark_opening settings");
         assert!(manager.is_active("settings"));
-        assert!(manager.mark_opening("settings").is_none(), "singleton: duplicate mark_opening must be rejected");
+        assert!(
+            manager.mark_opening("settings").is_none(),
+            "singleton: duplicate mark_opening must be rejected"
+        );
 
         let mock_wid = unsafe { std::mem::transmute(5usize) };
         assert!(manager.register_window_with_hwnd("settings", gen, mock_wid, 0xdef0));
@@ -489,7 +569,10 @@ mod tests {
         assert!(!manager.is_active("onboarding"));
         let gen = manager.mark_opening("onboarding").expect("mark_opening onboarding");
         assert!(manager.is_active("onboarding"));
-        assert!(manager.mark_opening("onboarding").is_none(), "singleton: duplicate mark_opening must be rejected");
+        assert!(
+            manager.mark_opening("onboarding").is_none(),
+            "singleton: duplicate mark_opening must be rejected"
+        );
 
         let mock_wid = unsafe { std::mem::transmute(6usize) };
         assert!(manager.register_window_with_hwnd("onboarding", gen, mock_wid, 0x1357));
@@ -498,5 +581,31 @@ mod tests {
         let target = manager.mark_closing_target("onboarding");
         assert_eq!(target, Some((mock_wid, 0x1357)));
         assert!(!manager.is_active("onboarding"));
+    }
+
+    #[test]
+    fn test_mark_all_closing_targets() {
+        let manager = ShellWindowManager::default();
+        let gen1 = manager.mark_opening("self").expect("mark self");
+        let mock_wid1 = unsafe { std::mem::transmute(1usize) };
+        let mock_hwnd1 = 0x1111usize;
+        assert!(manager.register_window_with_hwnd("self", gen1, mock_wid1, mock_hwnd1));
+
+        let _gen2 = manager.mark_opening("work").expect("mark work");
+
+        assert!(manager.is_active("self"));
+        assert!(manager.is_active("work"));
+
+        let targets = manager.mark_all_closing_targets();
+        assert_eq!(targets.len(), 1);
+        assert_eq!(targets[0], ("self", mock_wid1, mock_hwnd1));
+
+        // After mark_all_closing_targets, no windows should be active
+        assert!(!manager.is_active("self"));
+        assert!(!manager.is_active("work"));
+
+        // Subsequent call returns empty
+        let targets2 = manager.mark_all_closing_targets();
+        assert!(targets2.is_empty());
     }
 }

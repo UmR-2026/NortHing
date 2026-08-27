@@ -93,10 +93,12 @@ pub fn startup_scale_factor() -> f64 {
 /// additional windows inside `room_app_root`'s `use_effect` callback
 /// (which fires once the main window's Dioxus context is up).
 ///
+/// `on_shutdown` is invoked on `Event::LoopDestroyed` (or upon exit) to
+/// ensure graceful termination of worker threads and MCP child processes.
+///
 /// Returns `Err` if the launch setup itself fails (rare; usually a
-/// WebView2 runtime initialization failure on Windows). The actual
-/// `LaunchBuilder::launch` is divergent on desktop (`!`).
-pub fn launch() -> anyhow::Result<()> {
+/// WebView2 runtime initialization failure on Windows).
+pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Result<()> {
     // Per the spike §2 conclusion + re-spike §3.2: every window must share
     // one user-data directory so the underlying WebView2 process pool is
     // reused. Without sharing we observed ~19 msedgewebview2.exe helper
@@ -138,6 +140,7 @@ pub fn launch() -> anyhow::Result<()> {
     // events can compose a full Geometry.
     let room_window_id: Arc<Mutex<Option<WindowId>>> = Arc::new(Mutex::new(None));
     let latest_geometry: Arc<Mutex<Geometry>> = Arc::new(Mutex::new(initial_geometry));
+    let window_manager = super::registry::ShellWindowManager::default();
 
     // Main window: the room itself. The launch path returns once the
     // Dioxus event loop is running; `LaunchBuilder::launch` is divergent
@@ -145,10 +148,7 @@ pub fn launch() -> anyhow::Result<()> {
     let room_window = WindowBuilder::new()
         .with_title("northhing - consult room (dioxus)")
         .with_inner_size(LogicalSize::new(ROOM_WINDOW_WIDTH, ROOM_WINDOW_HEIGHT))
-        .with_position(LogicalPosition::new(
-            ROOM_WINDOW_INITIAL_X,
-            ROOM_WINDOW_INITIAL_Y,
-        ))
+        .with_position(LogicalPosition::new(ROOM_WINDOW_INITIAL_X, ROOM_WINDOW_INITIAL_Y))
         // R4 W1 (2026-08-14): frameless per user ruling (handoff-20260814
         // §4, D = 方案一) — the old "Slint shell keeps decorations" matching
         // rationale is revoked. OS chrome is replaced by the self-drawn
@@ -197,10 +197,23 @@ pub fn launch() -> anyhow::Result<()> {
             let room_window_id = room_window_id.clone();
             let latest_geometry = latest_geometry.clone();
             let geometry_tx = geometry_tx.clone();
+            let window_manager = window_manager.clone();
+            let on_shutdown = on_shutdown.clone();
             // Event-driven geometry publish: the room window's
             // Moved/Resized OS events become the publish trigger (see
             // the comment above this builder chain).
             move |event, _event_loop_target: &EventLoopWindowTarget<_>| {
+                if let Event::LoopDestroyed = event {
+                    crate::app_state::log::log_debug_event(
+                        northhing_debug_log::COMP_UI_DIOXUS_WIN,
+                        "loop_destroyed",
+                        "event_loop",
+                        "triggering graceful shutdown callback",
+                        None,
+                    );
+                    on_shutdown();
+                    return;
+                }
                 let Event::WindowEvent { window_id, event, .. } = event else {
                     return;
                 };
@@ -217,6 +230,13 @@ pub fn launch() -> anyhow::Result<()> {
                     registered.is_none() || *registered == Some(*window_id)
                 };
                 if !is_room {
+                    return;
+                }
+                if matches!(event, WindowEvent::CloseRequested) {
+                    let targets = window_manager.mark_all_closing_targets();
+                    for (_id, _wid, hwnd) in targets {
+                        super::app::win_ops::close_os_window(hwnd);
+                    }
                     return;
                 }
                 let mut geom = latest_geometry.lock().unwrap();
@@ -250,8 +270,6 @@ pub fn launch() -> anyhow::Result<()> {
     // dioxus 0.8-alpha.1 `use_context` panics ("Could not find context ...")
     // when the type is missing. The boxed-`Any` panic surfaced as
     // "Encountered panic: Any { .. }" in the room window.
-    let window_manager = super::registry::ShellWindowManager::default();
-
     dioxus::LaunchBuilder::desktop()
         .with_context(geometry_tx)
         .with_context(geometry_rx_arc)

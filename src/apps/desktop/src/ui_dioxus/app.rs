@@ -15,6 +15,8 @@
 
 use dioxus::core::VirtualDom;
 use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
+#[cfg(target_os = "windows")]
+use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 use dioxus::desktop::tao::window::WindowBuilder;
 use dioxus::desktop::{window, Config, WindowCloseBehaviour};
 use dioxus::prelude::*;
@@ -32,7 +34,7 @@ use northhing_kernel_api::turn::{TurnId, TurnStateKind};
 use tokio::sync::watch;
 
 #[cfg(target_os = "windows")]
-mod win_ops {
+pub(crate) mod win_ops {
     use std::ffi::c_void;
 
     unsafe extern "system" {
@@ -54,7 +56,6 @@ mod win_ops {
             ShowWindow(hwnd as *mut c_void, SW_HIDE);
             PostMessageW(hwnd as *mut c_void, WM_CLOSE, 0, 0);
         }
-
         std::thread::Builder::new()
             .name("window-close-watchdog".into())
             .spawn(move || {
@@ -75,7 +76,7 @@ mod win_ops {
 }
 
 #[cfg(not(target_os = "windows"))]
-mod win_ops {
+pub(crate) mod win_ops {
     pub fn close_os_window(_hwnd: usize) {}
 }
 
@@ -84,6 +85,20 @@ fn close_module(id: &'static str, wm: &ShellWindowManager) {
         window().close_window(wid);
         win_ops::close_os_window(hwnd);
     }
+}
+
+fn close_all_modules(wm: &ShellWindowManager) {
+    for (_id, wid, hwnd) in wm.mark_all_closing_targets() {
+        window().close_window(wid);
+        win_ops::close_os_window(hwnd);
+    }
+}
+
+fn quit_shell(wm: &ShellWindowManager) {
+    close_all_modules(wm);
+    #[cfg(target_os = "windows")]
+    win_ops::close_os_window(window().hwnd() as usize);
+    window().close();
 }
 
 /// RSX root for the room main window.
@@ -348,25 +363,15 @@ pub fn room_app_root() -> Element {
         active_turn_id.set(None);
     };
 
-    let wm_left = window_manager.clone();
-    let geom_rx_left = geometry_rx_arc.clone();
-    let theme_left = theme.clone();
-
-    let wm_right = window_manager.clone();
-    let geom_rx_right = geometry_rx_arc.clone();
-    let theme_right = theme.clone();
-
-    let wm_nav_archive = window_manager.clone();
-    let geom_rx_nav_archive = geometry_rx_arc.clone();
-    let theme_nav_archive = theme.clone();
-
-    let wm_nav_space = window_manager.clone();
-    let geom_rx_nav_space = geometry_rx_arc.clone();
-    let theme_nav_space = theme.clone();
-
-    let wm_nav_onboarding = window_manager.clone();
-    let geom_rx_nav_onboarding = geometry_rx_arc.clone();
-    let theme_nav_onboarding = theme.clone();
+    let (wm_left, geom_rx_left, theme_left) = (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+    let (wm_right, geom_rx_right, theme_right) = (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+    let (wm_nav_archive, geom_rx_nav_archive, theme_nav_archive) =
+        (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+    let (wm_nav_space, geom_rx_nav_space, theme_nav_space) =
+        (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+    let (wm_nav_onboarding, geom_rx_nav_onboarding, theme_nav_onboarding) =
+        (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+    let wm_close = window_manager.clone();
 
     rsx! {
         body {
@@ -431,7 +436,7 @@ pub fn room_app_root() -> Element {
                                 "aria-label": "{locale.t(keys::CHROME_CLOSE)}",
                                 title: "{locale.t(keys::CHROME_CLOSE)}",
                                 onclick: move |_| {
-                                    quit_shell();
+                                    quit_shell(&wm_close);
                                 },
                                 "✕"
                             }
@@ -760,10 +765,6 @@ pub fn spawn_module_window_with_theme_rx(
     let _ = window().new_window(dom, cfg);
 }
 
-fn quit_shell() {
-    std::process::exit(0);
-}
-
 fn render_entries<'a>(
     iter: impl Iterator<Item = &'a MockEntry>,
     entries: Signal<Vec<MockEntry>>,
@@ -934,12 +935,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mix_hex_target() {
+    fn test_mix_hex() {
         assert_eq!(mix_hex("#DAD6CF", "#3F837B", 1.0), "#3F837B");
-    }
-
-    #[test]
-    fn test_mix_hex_base() {
         assert_eq!(mix_hex("#DAD6CF", "#3F837B", 0.0), "#DAD6CF");
     }
 
