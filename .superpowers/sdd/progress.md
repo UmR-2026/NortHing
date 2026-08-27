@@ -1,3 +1,9 @@
+# W5 Ledger (2026-08-28, Dioxus 壳审计修复)
+
+计划：`.superpowers/sdd/plan-2026-08-28-w5-dioxus-shell-fixes.md`；审计源 `w4-2-dioxus-shell-review.md`（1C/3I/3M）；用户拍板范围 F1+F2+F4+F5+F6（F3 搁置等 dioxus 上游，F7 留下一波）。
+
+- Task W5-1 (F1): complete (commits 86ab479..de60a0b, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — quit_shell 弃 process::exit：✕ → close_all_modules + room 关闭 → Dioxus LoopDestroyed → perform_shutdown（Mutex<Option>.take() 幂等，双路径收敛）→ shutdown_tx + MCP 清理；registry.rs 新增 mark_all_closing_targets 原子迁移（Open→Closing 单临界区）+ 单测。净 +208/-71，4 文件（审计估 S 实为关闭链布线，judge 认定增长合理非越界）。验证：check workspace/desktop/--tests 绿，hygiene 过。⚠️×2 转实测兜底（实测清单 6/7 覆盖）：Dioxus 全窗关闭→LoopDestroyed 库契约、WindowDropGuard 触发。Minors×5 记此（report 缺 test 执行输出原文、走查行号 off-by-one×2、room 双关闭冗余宜加 ponytail 注、WindowDropGuard 复用声称为未验证声明）。
+
 # W4 Ledger (2026-08-28, Slint 物理删除 + Dioxus 壳终审)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w4-slint-removal.md`；用户指令原文："slint前端完全删除 仅留下dioxus壳 之后进行dioxus壳的review"。
