@@ -29,8 +29,6 @@ use dioxus::desktop::{tao::event_loop::EventLoopWindowTarget, Config};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::flags::DIOXUS_SHELL;
-
 use super::app::room_app_root;
 use super::state::{Geometry, GeometryRxArc, GlobalTheme};
 
@@ -95,23 +93,10 @@ pub fn startup_scale_factor() -> f64 {
 /// additional windows inside `room_app_root`'s `use_effect` callback
 /// (which fires once the main window's Dioxus context is up).
 ///
-/// Must only be called when both:
-///   * `flags::DIOXUS_SHELL == true`, and
-///   * the `ui-dioxus` cargo feature is enabled.
-///
 /// Returns `Err` if the launch setup itself fails (rare; usually a
 /// WebView2 runtime initialization failure on Windows). The actual
-/// `LaunchBuilder::launch` is divergent on desktop (`!`), so the
-/// function returns `Ok(())` only after the launch was rejected up
-/// front (e.g. the `DIOXUS_SHELL == false` guard).
+/// `LaunchBuilder::launch` is divergent on desktop (`!`).
 pub fn launch() -> anyhow::Result<()> {
-    if !DIOXUS_SHELL {
-        anyhow::bail!(
-            "ui_dioxus::launch called with DIOXUS_SHELL = false; \
-             this is an internal misconfiguration, please report"
-        );
-    }
-
     // Per the spike §2 conclusion + re-spike §3.2: every window must share
     // one user-data directory so the underlying WebView2 process pool is
     // reused. Without sharing we observed ~19 msedgewebview2.exe helper

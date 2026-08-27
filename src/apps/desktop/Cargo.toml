@@ -3,7 +3,7 @@ name = "northhing"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-description = "northhing Desktop - Slint + Material GUI shell"
+description = "northhing Desktop - consult-room GUI shell"
 default-run = "northhing"
 
 [[bin]]
@@ -22,18 +22,14 @@ northhing-debug-log = { path = "../../crates/services/debug-log" }
 # Async traits
 async-trait = { workspace = true }
 
-# Slint UI framework
-slint = { workspace = true, features = ["backend-winit", "raw-window-handle-06"] }
+# Dioxus consult-room desktop shell (pinned to =0.8.0-alpha.1)
+dioxus = { version = "=0.8.0-alpha.1", features = ["desktop"] }
+dioxus-logger = { version = "=0.8.0-alpha.1" }
 
 # Async runtime
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 futures = { workspace = true }
-
-# Native file/folder dialogs (cross-platform). Slint has no built-in
-# file dialog; rfd wraps native Windows/macOS/Linux dialogs and is
-# called from a Slint callback via tokio::task::spawn_blocking.
-rfd = { workspace = true }
 
 # Home dir lookup for `~/.northhing/config/app.json`. The desktop app
 # resolves this directly because AppSettings lives in the desktop crate
@@ -61,57 +57,11 @@ once_cell = { workspace = true }
 # OS keyring for secure API key storage (C3, P1-2)
 keyring = { workspace = true }
 
-[build-dependencies]
-slint-build = { workspace = true }
-
-[dev-dependencies]
-northhing-test-support = { path = "../../crates/support/test-support" }
-
-[features]
-# `ui-dioxus` enables the parallel Dioxus desktop shell that mirrors the
-# consult-room room main page (room + inner + outer three-window layout).
-# Default-on: the new shell is wired through `flags::DIOXUS_SHELL`
-# (default false), so existing Slint behavior is unchanged.
-# Disabling this feature removes every Dioxus-specific dependency from
-# the graph and keeps the crate compiling byte-identically against the
-# Slint shell. (tokio/tracing/dirs/once_cell are unconditional because
-# the Slint shell already needs them too.)
-#
-# R3' brief A: dioxus pinned to =0.8.0-alpha.1 (re-spike GO, conflict
-# resolved against workspace tauri 2.11 -> wry 0.55.1 / tao 0.35.3).
-# The `desktop` feature is the new gate in 0.8.x (dioxus-desktop was
-# merged into the main crate); `dioxus-logger` is the only companion
-# crate pulled in at the same alpha version.
-default = ["ui-dioxus"]
-ui-dioxus = [
-    "dep:dioxus",
-    "dep:dioxus-logger",
-]
-
 [dependencies.raw-window-handle]
 version = "0.6"
 [dependencies.windows]
 workspace = true
 features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"]
 
-# Optional Dioxus desktop shell (R3' migration, 2026-08-13).
-#
-# When the `ui-dioxus` feature is enabled (default), these crates are
-# pulled in. When disabled, the Dioxus shell compiles out completely
-# and the Slint shell keeps owning the launch path byte-identically.
-# See `flags::DIOXUS_SHELL` for the runtime gate that defaults to
-# `false` so the Slint shell stays in charge.
-#
-# Pinned to =0.8.0-alpha.1 per `task-migrate-room-r3p-brief.md` §A —
-# the re-spike (`task-respike-dioxus08-report.md` §1) verified that
-# this version resolves cleanly against the workspace's existing
-# `tauri 2.11` -> `tauri-runtime-wry 2.11` -> `wry 0.55.1` / `tao 0.35.3`
-# chain, collapsing the wry 0.53 vs 0.55 webkit2gtk mutex that blocked
-# the R3 0.7.x attempt.
-[dependencies.dioxus]
-version = "=0.8.0-alpha.1"
-optional = true
-features = ["desktop"]
-[dependencies.dioxus-logger]
-version = "=0.8.0-alpha.1"
-optional = true
+[dev-dependencies]
+northhing-test-support = { path = "../../crates/support/test-support" }

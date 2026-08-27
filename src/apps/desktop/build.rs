@@ -1,20 +1,8 @@
 fn main() {
-    // Compile the main slint file and all its imports
-    slint_build::compile_with_config(
-        "src/ui/main.slint",
-        slint_build::CompilerConfiguration::new().with_style("material".into()),
-    )
-    .unwrap();
-
-    println!("cargo:rerun-if-changed=src/ui/main.slint");
-    println!("cargo:rerun-if-changed=src/ui/components");
-    println!("cargo:rerun-if-changed=src/ui/views");
-    println!("cargo:rerun-if-changed=src/ui/fonts");
-
     // 2026-08-07: embed an application manifest declaring ComCtl32 v6.
     //
-    // `muda` (via the Slint / tray-icon stack) calls `TaskDialogIndirect`
-    // unconditionally and `rfd` references it too. That symbol is exported
+    // `muda` (via the tray-icon stack) calls `TaskDialogIndirect`
+    // unconditionally. That symbol is exported
     // only by ComCtl32.dll v6; without a manifest the loader binds v5.82,
     // which lacks it, and the process dies with STATUS_ENTRYPOINT_NOT_FOUND
     // (0xC0000139) before `main` runs — no log output, no panic.
