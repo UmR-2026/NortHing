@@ -415,22 +415,26 @@ impl StreamProcessor {
     ) -> Result<StreamResult, StreamProcessError> {
         let mut ctx = StreamContext::new(session_id, dialog_turn_id, round_id, options);
         // Start SSE log collector (if raw_sse_rx is provided)
-        let sse_collector = if let Some(mut rx) = raw_sse_rx {
-            let collector = Arc::new(tokio::sync::Mutex::new(SseLogCollector::new(
-                SseLogConfig::default(),
-            )));
+        let (sse_collector, sse_drain_task) = if let Some(mut rx) = raw_sse_rx {
+            let collector = Arc::new(tokio::sync::Mutex::new(SseLogCollector::new(SseLogConfig::default())));
             let collector_clone = collector.clone();
 
             // Start background task to collect SSE data
-            tokio::spawn(async move {
+            let drain_task = tokio::spawn(async move {
                 while let Some(data) = rx.recv().await {
                     collector_clone.lock().await.push(data);
                 }
             });
 
-            Some(collector)
+            (Some(collector), Some(drain_task))
         } else {
-            None
+            (None, None)
+        };
+
+        let abort_drain_task = || {
+            if let Some(ref handle) = sse_drain_task {
+                handle.abort();
+            }
         };
 
         // Define a helper closure to flush SSE logs on error
@@ -460,6 +464,7 @@ impl StreamProcessor {
                         break;
                     }
                     self.graceful_shutdown_from_ctx(&mut ctx, "User cancelled stream processing".to_string()).await;
+                    abort_drain_task();
                     return Err(StreamProcessError::new(
                         StreamProcessorError::Cancelled("Stream processing cancelled".to_string()),
                         ctx.has_effective_output,
@@ -491,6 +496,7 @@ impl StreamProcessor {
                             // log SSE for network errors
                             flush_sse_on_error(&sse_collector, &error_msg).await;
                             self.graceful_shutdown_from_ctx(&mut ctx, error_msg.clone()).await;
+                            abort_drain_task();
                             return Err(StreamProcessError::new(
                                 StreamProcessorError::AiClient(error_msg),
                                 ctx.has_effective_output,
@@ -517,6 +523,7 @@ impl StreamProcessor {
                                 break;
                             }
                             self.graceful_shutdown_from_ctx(&mut ctx, error_msg.clone()).await;
+                            abort_drain_task();
                             return Err(StreamProcessError::new(
                                 StreamProcessorError::AiClient(error_msg),
                                 ctx.has_effective_output,
@@ -561,6 +568,7 @@ impl StreamProcessor {
                         if !thinking_content.is_empty() {
                             self.handle_thinking_chunk(&mut ctx, thinking_content).await;
                             if let Some(err) = self.check_cancellation(&mut ctx, cancellation_token, "processing thinking chunk").await {
+                                abort_drain_task();
                                 return err;
                             }
                         }
@@ -570,6 +578,7 @@ impl StreamProcessor {
                         self.send_thinking_end_if_needed(&mut ctx).await;
                         self.handle_text_chunk(&mut ctx, text).await;
                         if let Some(err) = self.check_cancellation(&mut ctx, cancellation_token, "processing text chunk").await {
+                            abort_drain_task();
                             return err;
                         }
                     }
@@ -578,6 +587,7 @@ impl StreamProcessor {
                         self.send_thinking_end_if_needed(&mut ctx).await;
                         self.handle_tool_call_chunk(&mut ctx, tool_call).await;
                         if let Some(err) = self.check_cancellation(&mut ctx, cancellation_token, "processing tool call").await {
+                            abort_drain_task();
                             return err;
                         }
                     }

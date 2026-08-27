@@ -553,4 +553,106 @@ mod tests {
         assert!(result.full_thinking.is_empty());
         assert!(!result.has_effective_output);
     }
+
+    #[tokio::test]
+    async fn aborts_sse_drain_task_on_cancellation_early_return() {
+        let processor = build_processor();
+        let (sse_tx, sse_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        sse_tx.send("data: initial\n\n".to_string()).expect("send sse");
+
+        // Keep sse_tx alive in the test scope so it only closes if the drain task is aborted.
+        let _keep_sse_tx = sse_tx.clone();
+
+        let cancellation_token = CancellationToken::new();
+        cancellation_token.cancel();
+
+        // Stream that never produces items, kept open with stream_tx
+        let (stream_tx, stream_rx) = tokio::sync::mpsc::unbounded_channel();
+        let _keep_stream_tx = stream_tx;
+
+        let result = processor
+            .process_stream(
+                tokio_stream::wrappers::UnboundedReceiverStream::new(stream_rx).boxed(),
+                None,
+                Some(sse_rx),
+                "session_1".to_string(),
+                "turn_1".to_string(),
+                "round_1".to_string(),
+                &cancellation_token,
+            )
+            .await;
+
+        assert!(result.is_err(), "expected early-return cancellation error");
+        tokio::time::sleep(Duration::from_millis(15)).await;
+
+        assert!(
+            sse_tx.is_closed(),
+            "SSE drain task should be aborted on cancellation early return, closing receiver"
+        );
+    }
+
+    #[tokio::test]
+    async fn aborts_sse_drain_task_on_stream_error_early_return() {
+        let processor = build_processor();
+        let (sse_tx, sse_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        sse_tx.send("data: error prelude\n\n".to_string()).expect("send sse");
+
+        let _keep_sse_tx = sse_tx.clone();
+
+        let stream = iter(vec![Err(anyhow::anyhow!("SSE Parsing Error: malformed"))]).boxed();
+
+        let result = processor
+            .process_stream(
+                stream,
+                None,
+                Some(sse_rx),
+                "session_1".to_string(),
+                "turn_1".to_string(),
+                "round_1".to_string(),
+                &CancellationToken::new(),
+            )
+            .await;
+
+        assert!(result.is_err(), "expected early-return stream error");
+        tokio::time::sleep(Duration::from_millis(15)).await;
+
+        assert!(
+            sse_tx.is_closed(),
+            "SSE drain task should be aborted on stream error early return, closing receiver"
+        );
+    }
+
+    #[tokio::test]
+    async fn does_not_abort_sse_drain_task_on_normal_stream_end() {
+        let processor = build_processor();
+        let (sse_tx, sse_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+        sse_tx.send("data: normal\n\n".to_string()).expect("send sse");
+
+        let _keep_sse_tx = sse_tx.clone();
+
+        let stream = iter(vec![Ok(UnifiedResponse {
+            text: Some("normal stream response".to_string()),
+            finish_reason: Some("stop".to_string()),
+            ..Default::default()
+        })])
+        .boxed();
+
+        let result = processor
+            .process_stream(
+                stream,
+                None,
+                Some(sse_rx),
+                "session_1".to_string(),
+                "turn_1".to_string(),
+                "round_1".to_string(),
+                &CancellationToken::new(),
+            )
+            .await;
+
+        assert!(result.is_ok(), "expected successful stream result");
+        assert!(
+            !sse_tx.is_closed(),
+            "SSE drain task should NOT be aborted on normal stream completion"
+        );
+    }
 }
