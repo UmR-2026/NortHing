@@ -8,6 +8,8 @@
 
 - Task W3-3 (F6): complete (commits d993909..79f36db, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — 增量重构落地：watcher 存在时直接 `Watcher::watch/unwatch`（service.rs:57-86 / :88-111），`create_watcher` 仅首条/空转后调用；unwatch 未跟踪路径 no-op。测试 +164（增量投递契约 + unwatch-unknown no-op）；Cargo.toml dev-deps +anyhow（workspace 版，`EventEmitter::emit` 签名强制，judge 判 warranted）。净 +201/-10。⚠️×1 编排者亲验关闭：Spec3"存活后台任务 ≤1"结构性成立（create_watcher 是唯一 spawn 点且仅 watcher=None 时触发）；残余窗口 = 空转→重启边 ≤50ms poll tick 内旧任务未退——有界、非泄漏（原审计同语 "not a true leak"），接受。验证：check workspace+desktop 绿，file_watch 4/4 含新测试，integrations 全量绿。Minors×6 记此交终审 triage（要点：check 输出未贴 warning 段；测试 unwrap×3 风格；同路径二次 watch 幂等与增量失败不一致态未测；Spec3 无直接探针）。
 
+- Task W3-4 (F10): complete (commits 967a604..c6f2924, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — drain task JoinHandle 以函数局部 Option 持有（stream_processor.rs:418-432；StreamProcessor 共享无状态、rx 按调用，局部存储判定正确）；6 个早退点全部挂 abort（:467/:499/:526/:571/:581/:590，judge 对照枚举核实），正常流尽不 abort（JoinHandle drop 不 abort，任务随 tx 关闭自终）；单一 abort_drain_task 闭包复用，无新抽象。测试 +3（取消早退/错误早退/正常不 abort），agent-stream 54/54。净 +119/-7。验证：check workspace 绿，repo-hygiene 过。Minors×4 记此交终审 triage（要点：测试以 15ms sleep + is_closed 推断 abort，非 is_finished/is_aborted 确定性断言；report 行数小偏差 639→644；闭包 Fn vs FnOnce 风格）。
+
 ---
 
 # Process-Pattern Wave Ledger (2026-08-27, W2)
