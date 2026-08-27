@@ -1,3 +1,9 @@
+# W4 Ledger (2026-08-28, Slint 物理删除 + Dioxus 壳终审)
+
+计划：`.superpowers/sdd/plan-2026-08-28-w4-slint-removal.md`；用户指令原文："slint前端完全删除 仅留下dioxus壳 之后进行dioxus壳的review"。
+
+- Task W4-1 (Slint 物理删除): complete (commits 70bc4e8..0c95aa6 = 707e414 删除 + 0c95aa6 审查修复，review 两轮 by minimax-m3：一轮 Needs fixes 4 findings（根 Cargo.toml workspace slint/slint-build/rfd 死声明、onboarding 活文案 "Slint 规格架构"、entry.rs hunk 未进审查包[编排者打包漏带]、AGENTS quick-start 漏改）→ 原 coder 续会话一轮修复 → 重审 **Approved 0C/0I**；implementer/fixer gemini-37-flash-agy) — 81 文件 +166/-16795：41 .slint + ui/fonts + 13 个 app_state Slint 模块 + build.rs slint-build + slint/rfd 依赖 + ui-dioxus feature 门收敛（dioxus deps 转必需）+ main.rs 无条件 `ui_dioxus::launch()` + flags.rs 删 DIOXUS_SHELL/SESSION_TREE_VIEW。保留面 settings/log/turn_runtime 字节不动（judge 核实）；entry.rs 改动判定合法（删除必然重接：移除永真 cfg 门守卫）。编排者授权记录：根 Cargo.toml 清理（范围扩权）+ onboarding 单字符串例外。验证：check workspace/desktop 绿，lib 105/105，hygiene 过。Minors 记此：M-4 hygiene 扫描基数 13→8（疑扫描 allow-list 覆盖收窄，W4-2 终审 triage）。
+
 # Audit-Minor Wave Ledger (2026-08-27, W3)
 
 计划：`.superpowers/sdd/plan-2026-08-27-w3-minor-batch.md`；用户拍板 4 任务全上，真机实测并行（发现随时插入优先）。
