@@ -150,7 +150,10 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
             base_url: Some(provider_url_input.read().trim().to_string()),
             api_key: Some(provider_key_input.read().clone()),
             model: Some(provider_model_input.read().trim().to_string()),
-            provider_type: None,
+            provider_type: Some(crate::app_state::settings::infer_provider_wire_format(
+                provider_url_input.read().trim(),
+                provider_model_input.read().trim(),
+            ).to_string()),
         };
 
         spawn(async move {
@@ -659,20 +662,19 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                                         let ws_str = workspace_dir_input.read().trim().to_string();
                                                         let ws_exists = std::path::Path::new(&ws_str).exists();
                                                         match step_gate(Step::Three, pal_ok, agent_ok, ws_exists) {
-                                                            Err(reason) => {
-                                                                room_state_hint.set(Some(reason.to_string()));
-                                                            }
+                                                            Err(reason) => room_state_hint.set(Some(reason.to_string())),
                                                             Ok(_) => {
                                                                 room_state_hint.set(None);
                                                                 testing.set(true);
+                                                                let model_val = provider_model_input.read().clone();
+                                                                let url_val = provider_url_input.read().clone();
                                                                 let key_val = provider_key_input.read().clone();
                                                                 let ws_buf = PathBuf::from(&ws_str);
                                                                 let agent_name = display_agent_name.clone();
 
                                                                 spawn(async move {
-                                                                    if let Err(e) = super::api::store_provider_api_key("onboarding", &key_val).await {
-                                                                        let first_line = e.to_string().lines().next().unwrap_or("Key 存储失败").trim().to_string();
-                                                                        room_state_hint.set(Some(format!("Key 存储失败: {first_line}")));
+                                                                    if let Err(err_msg) = super::api::persist_onboarding_provider(&model_val, &url_val, &key_val, &agent_name).await {
+                                                                        room_state_hint.set(Some(err_msg));
                                                                         testing.set(false);
                                                                         return;
                                                                     }
@@ -839,14 +841,8 @@ mod tests {
 
     #[test]
     fn test_step_gate_step_one() {
-        assert_eq!(
-            step_gate(Step::One, false, true, true),
-            Err("请先选择性格色板，为诊室注入第一个 mind 色印记。")
-        );
-        assert_eq!(
-            step_gate(Step::One, true, false, true),
-            Err("请填写实体名称。")
-        );
+        assert_eq!(step_gate(Step::One, false, true, true), Err("请先选择性格色板，为诊室注入第一个 mind 色印记。"));
+        assert_eq!(step_gate(Step::One, true, false, true), Err("请填写实体名称。"));
         assert_eq!(step_gate(Step::One, true, true, false), Ok(Step::Two));
     }
 
@@ -857,10 +853,7 @@ mod tests {
 
     #[test]
     fn test_step_gate_step_three() {
-        assert_eq!(
-            step_gate(Step::Three, true, true, false),
-            Err("存根目录不存在，请检查路径。")
-        );
+        assert_eq!(step_gate(Step::Three, true, true, false), Err("存根目录不存在，请检查路径。"));
         assert_eq!(step_gate(Step::Three, true, true, true), Ok(Step::Three));
     }
 }

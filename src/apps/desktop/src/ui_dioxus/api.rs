@@ -175,6 +175,68 @@ pub async fn store_provider_api_key(provider_id: &str, plaintext: &str) -> anyho
     )
 }
 
+/// Adds or updates an AI model / provider configuration in the kernel facade.
+pub async fn upsert_model_config(config: AIModelConfigDto, api_key: Option<String>) -> Result<(), KernelError> {
+    kernel_facade().upsert_model_config(config, api_key).await
+}
+
+/// Persists the onboarding provider configuration into the OS keyring and kernel facade,
+/// and sets it as the default provider in the global configuration.
+///
+/// Returns `Ok(provider_id)` on success, or `Err(user_facing_chinese_error)` on failure.
+pub async fn persist_onboarding_provider(
+    model: &str,
+    base_url: &str,
+    api_key: &str,
+    agent_name: &str,
+) -> Result<String, String> {
+    let provider_id = uuid::Uuid::new_v4().to_string();
+    let wire_format = super::super::app_state::settings::infer_provider_wire_format(base_url, model);
+
+    // 1. Store API key in keyring under the provider id
+    if let Err(e) = store_provider_api_key(&provider_id, api_key).await {
+        let first_line = e.to_string().lines().next().unwrap_or("Key 存储失败").trim().to_string();
+        return Err(format!("Key 存储失败: {first_line}"));
+    }
+
+    // 2. Build model DTO and persist into core facade
+    let model_dto = AIModelConfigDto {
+        id: provider_id.clone(),
+        provider_id: wire_format.to_string(),
+        model: model.trim().to_string(),
+        display_name: Some(if !agent_name.trim().is_empty() {
+            agent_name.trim().to_string()
+        } else {
+            model.trim().to_string()
+        }),
+        max_tokens: None,
+        temperature: None,
+        base_url: if base_url.trim().is_empty() {
+            None
+        } else {
+            Some(base_url.trim().to_string())
+        },
+        enabled: Some(true),
+        category: Some("general_chat".to_string()),
+        capabilities: Some(vec!["text_chat".to_string()]),
+        auth: Some("api_key".to_string()),
+        inline_think_in_text: Some(false),
+    };
+
+    if let Err(e) = upsert_model_config(model_dto, Some(api_key.to_string())).await {
+        let first_line = e.to_string().lines().next().unwrap_or("Provider 保存失败").trim().to_string();
+        return Err(format!("Provider 保存失败: {first_line}"));
+    }
+
+    // 3. Set as default provider in core config
+    if let Err(e) = set_default_provider(&provider_id).await {
+        let first_line = e.to_string().lines().next().unwrap_or("设为默认 Provider 失败").trim().to_string();
+        return Err(format!("设为默认 Provider 失败: {first_line}"));
+    }
+
+    Ok(provider_id)
+}
+
 /// Capacity limit for buffered lossy text chunks before dropping under UI lag.
 pub const MAX_PENDING_TEXT_CHUNKS: usize = 256;
 
@@ -316,6 +378,60 @@ mod tests {
         };
         let _ = test_provider_config(form).await;
         let _ = store_provider_api_key("onboarding", "key").await;
+        let dummy_model = AIModelConfigDto {
+            id: "test".into(),
+            provider_id: "openai".into(),
+            model: "test".into(),
+            display_name: None,
+            max_tokens: None,
+            temperature: None,
+            base_url: None,
+            enabled: Some(true),
+            category: None,
+            capabilities: None,
+            auth: None,
+            inline_think_in_text: None,
+        };
+        let _ = upsert_model_config(dummy_model, None).await;
+        let _ = persist_onboarding_provider("claude", "http://localhost", "key", "Agent").await;
+    }
+
+    #[tokio::test]
+    async fn test_persist_onboarding_provider_success_flow() -> anyhow::Result<()> {
+        let _ = northhing_core::service::config::initialize_global_config().await;
+        let res = persist_onboarding_provider(
+            "claude-3-7-sonnet",
+            "https://api.anthropic.com/v1",
+            "sk-ant-test-key-9999",
+            "TestAgent",
+        )
+        .await;
+        assert!(res.is_ok(), "persist_onboarding_provider failed: {:?}", res.err());
+        let provider_id = res.unwrap();
+
+        // Verify in global config
+        let global_cfg = get_global_config().await?;
+        assert_eq!(global_cfg.default_provider_id.as_deref(), Some(provider_id.as_str()));
+        let provider = global_cfg
+            .providers
+            .iter()
+            .find(|p| p.id == provider_id)
+            .expect("persisted provider must be in global config");
+        assert_eq!(provider.model, "claude-3-7-sonnet");
+        assert_eq!(provider.provider_type.as_deref(), Some("anthropic"));
+
+        // Verify in model configs
+        let models = list_model_configs().await?;
+        let model = models
+            .iter()
+            .find(|m| m.id == provider_id)
+            .expect("persisted model must be in model configs");
+        assert_eq!(model.model, "claude-3-7-sonnet");
+        assert_eq!(model.provider_id, "anthropic");
+
+        // Clean up
+        let _ = kernel_facade().delete_model_config(&provider_id).await;
+        Ok(())
     }
 
     #[tokio::test]

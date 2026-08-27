@@ -257,6 +257,26 @@ fn integration_welcome_provider_session_delete_provider() {
 // ===== Core sync helper tests =====
 
 #[test]
+fn test_infer_provider_wire_format() {
+    assert_eq!(
+        infer_provider_wire_format("https://api.anthropic.com/v1", "claude-3-7-sonnet"),
+        "anthropic"
+    );
+    assert_eq!(
+        infer_provider_wire_format("https://generativelanguage.googleapis.com", "gemini-2.0-flash"),
+        "gemini"
+    );
+    assert_eq!(
+        infer_provider_wire_format("https://api.openai.com/v1", "gpt-4o"),
+        "openai"
+    );
+    // Model prefix fallback
+    assert_eq!(infer_provider_wire_format("", "claude-sonnet-4-5"), "anthropic");
+    assert_eq!(infer_provider_wire_format("", "gemini-1.5-pro"), "gemini");
+    assert_eq!(infer_provider_wire_format("", "custom-model"), "openai");
+}
+
+#[test]
 fn provider_wire_format_from_str_mapping() {
     assert_eq!(provider_wire_format_from_str("anthropic"), "anthropic");
     assert_eq!(provider_wire_format_from_str("custom-anthropic"), "anthropic");

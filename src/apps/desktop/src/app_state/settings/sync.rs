@@ -23,6 +23,19 @@ pub fn resolve_edit_api_key(stored: anyhow::Result<String>, incoming: &str) -> a
 
 // ===== Core sync helpers =====
 
+/// Infer provider wire format ("anthropic", "gemini", or "openai") from base URL and model name.
+pub fn infer_provider_wire_format(base_url: &str, model: &str) -> &'static str {
+    let url_lower = base_url.to_ascii_lowercase();
+    let model_lower = model.to_ascii_lowercase();
+    if url_lower.contains("anthropic") || model_lower.starts_with("claude") {
+        "anthropic"
+    } else if url_lower.contains("google") || url_lower.contains("gemini") || model_lower.starts_with("gemini") {
+        "gemini"
+    } else {
+        "openai"
+    }
+}
+
 /// Map a provider type string to the wire-format `provider` string.
 pub fn provider_wire_format_from_str(s: &str) -> &'static str {
     match s {
