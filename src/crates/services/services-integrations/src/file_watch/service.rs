@@ -61,27 +61,53 @@ impl FileWatchService {
             return Err("Path does not exist".to_string());
         }
 
+        let target_config = config.unwrap_or_else(|| self.config.clone());
+        let mode = if target_config.watch_recursively {
+            RecursiveMode::Recursive
+        } else {
+            RecursiveMode::NonRecursive
+        };
+
         {
             let mut watched_paths = self.watched_paths.write().await;
-            watched_paths.insert(path_buf.clone(), config.unwrap_or_else(|| self.config.clone()));
+            watched_paths.insert(path_buf.clone(), target_config);
         }
 
-        self.create_watcher().await?;
-
-        Ok(())
+        let mut watcher_guard = self.watcher.lock().await;
+        if let Some(ref mut watcher) = *watcher_guard {
+            watcher
+                .watch(&path_buf, mode)
+                .map_err(|e| format!("Failed to watch path {}: {}", path_buf.display(), e))?;
+            Ok(())
+        } else {
+            drop(watcher_guard);
+            self.create_watcher().await
+        }
     }
 
     pub async fn unwatch_path(&self, path: &str) -> Result<(), String> {
         let path_buf = PathBuf::from(path);
 
-        {
+        let (removed, is_empty) = {
             let mut watched_paths = self.watched_paths.write().await;
-            watched_paths.remove(&path_buf);
+            let removed = watched_paths.remove(&path_buf).is_some();
+            (removed, watched_paths.is_empty())
+        };
+
+        let mut watcher_guard = self.watcher.lock().await;
+        if is_empty {
+            *watcher_guard = None;
+            Ok(())
+        } else if removed {
+            if let Some(ref mut watcher) = *watcher_guard {
+                watcher
+                    .unwatch(&path_buf)
+                    .map_err(|e| format!("Failed to unwatch path {}: {}", path_buf.display(), e))?;
+            }
+            Ok(())
+        } else {
+            Ok(())
         }
-
-        self.create_watcher().await?;
-
-        Ok(())
     }
 
     async fn create_watcher(&self) -> Result<(), String> {

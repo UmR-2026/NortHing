@@ -47,6 +47,7 @@ terminal-core = { path = "../terminal", optional = true }
 git2 = { workspace = true, features = ["vendored-openssl"], optional = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 async-trait = { workspace = true }
 northhing-test-support = { path = "../../support/test-support" }
 
