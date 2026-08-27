@@ -315,7 +315,7 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                         div { class: "card-body",
                             div { class: "side-section",
                                 div { class: "side-title", "底层基质 " em { "RUNTIME" } }
-                                div { class: "row active", span { class: "sq-toggle" } "Slint 规格架构" }
+                                div { class: "row active", span { class: "sq-toggle" } "Dioxus 规格架构" }
                                 div { class: "row active", span { class: "sq-toggle" } "双光学冷热流" }
                             }
                             div { class: "side-section",

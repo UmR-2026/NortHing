@@ -9,7 +9,7 @@ northhing 是一个 Rust 工作区加上 React 前端的组合。
 ## 快速开始
 
 1. 在进行架构敏感的变更前，请先阅读 `README.md` 和 `CONTRIBUTING.md`。
-2. 进行桌面开发时，优先使用 `pnpm run desktop:dev` —— 它提供完整热重载（Vite HMR + Rust 自动重建 & 重启）。仅当你需要更快的冷启动、只迭代前端时，才使用 `pnpm run desktop:preview:debug`（不会自动重建 Rust 修改）。
+2. 进行桌面开发时，优先使用 `pnpm run desktop:dev` —— 它构建并运行 Dioxus 诊室桌面应用（冷启动，无 HMR）。使用 `pnpm run desktop:check` 进行更快的纯编译验证。
 3. 修改 Rust 文件后，优先使用 `pnpm run fmt:rs` 只格式化新增或暂存的 `.rs` 文件。仅当你有意希望扩大格式化覆盖范围时，才使用 `cargo fmt`。
 4. 修改完成后，从下表中选择最小匹配的验证命令运行。
 

@@ -9,7 +9,7 @@ Repository rule: **keep product logic platform-agnostic, then expose it through 
 ## Quick start
 
 1. Read `README.md` and `CONTRIBUTING.md` before architecture-sensitive changes.
-2. For desktop development, use `pnpm run desktop:dev` — it builds and runs the Dioxus desktop app (cold start, no HMR). Use `pnpm run desktop:check` for faster compile-only verification.
+2. For desktop development, use `pnpm run desktop:dev` — it builds and runs the Dioxus consult-room desktop app (cold start, no HMR). Use `pnpm run desktop:check` for faster compile-only verification.
 3. After Rust file changes, prefer `pnpm run fmt:rs` to format only changed or staged `.rs` files. Use `cargo fmt` only when you intentionally want broader formatting coverage.
 4. After changes, run the smallest matching verification from the table below.
 

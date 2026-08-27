@@ -148,12 +148,6 @@ which = "8.0"
 similar = "2.5"
 urlencoding = "2.1"
 
-# Native file dialogs (cross-platform; used by desktop Slint shell)
-# Note: workspace has tauri-plugin-dialog declared above for the
-# installer crate, but desktop uses pure Slint + winit
-# (not Tauri), so desktop needs rfd for native dialogs.
-rfd = "0.14"
-
 # Tauri (desktop only)
 tauri = { version = "2.11", features = ["unstable", "macos-private-api", "tray-icon"] }
 tauri-plugin-opener = "2.5"
@@ -216,10 +210,6 @@ russh-sftp = "2.4.0"
 shellexpand = "3"
 ssh_config = "0.1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-
-# Slint UI framework (desktop shell)
-slint = "1.16"
-slint-build = "1.16"
 
 [profile.dev]
 debug = "line-tables-only"
