@@ -1,3 +1,11 @@
+# Audit-Minor Wave Ledger (2026-08-27, W3)
+
+计划：`.superpowers/sdd/plan-2026-08-27-w3-minor-batch.md`；用户拍板 4 任务全上，真机实测并行（发现随时插入优先）。
+
+- Task W3-1 (r2#5): complete (commits a7ac75d..d82a074, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — save_session Err 时回滚 sessions + session_workspace_index，并顺带回滚同调用刚插入的 context_store/turn_skill_agent_snapshot_store/file_read_state_store（judge 认定为对修复方向的更正确解读）；测试用真文件占位诱导 IO 失败（无 mock，复用 TestWorkspace/test_manager 既有设施）。净 +69/-2。验证：check workspace 绿，lifecycle 17/17 含新回滚测试。Minors×3 记此交终审 triage：①create_session_with_id 包装路径键唯一性确认未枚举（预存契约问题，非本次回归）；②测试未断言 warn! 日志；③err 类别未 matches! 锁定。
+
+---
+
 # Process-Pattern Wave Ledger (2026-08-27, W2)
 
 用户指令：根治 F5/F9 进程模式债，"先修 W1 subspans"；人工走查押后至本波次确认无察觉问题之后。
