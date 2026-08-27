@@ -166,13 +166,23 @@ pub async fn test_provider_config(form: ProviderFormDto) -> Result<ProviderTestR
     kernel_facade().test_provider_config(form).await
 }
 
+/// Stores an API key in the specified keyring for the onboarding flow.
+pub async fn store_provider_api_key_with_keyring(
+    keyring: &dyn super::super::app_state::settings::KeyringBackend,
+    provider_id: &str,
+    plaintext: &str,
+) -> anyhow::Result<String> {
+    super::super::app_state::settings::store_api_key(keyring, provider_id, plaintext)
+}
+
 /// Stores an API key in the OS keyring for the onboarding flow.
 pub async fn store_provider_api_key(provider_id: &str, plaintext: &str) -> anyhow::Result<String> {
-    super::super::app_state::settings::store_api_key(
+    store_provider_api_key_with_keyring(
         &*super::super::app_state::settings::PRODUCTION_KEYRING,
         provider_id,
         plaintext,
     )
+    .await
 }
 
 /// Adds or updates an AI model / provider configuration in the kernel facade.
@@ -180,11 +190,12 @@ pub async fn upsert_model_config(config: AIModelConfigDto, api_key: Option<Strin
     kernel_facade().upsert_model_config(config, api_key).await
 }
 
-/// Persists the onboarding provider configuration into the OS keyring and kernel facade,
+/// Persists the onboarding provider configuration into the specified keyring and kernel facade,
 /// and sets it as the default provider in the global configuration.
 ///
 /// Returns `Ok(provider_id)` on success, or `Err(user_facing_chinese_error)` on failure.
-pub async fn persist_onboarding_provider(
+pub async fn persist_onboarding_provider_with_keyring(
+    keyring: &dyn super::super::app_state::settings::KeyringBackend,
     model: &str,
     base_url: &str,
     api_key: &str,
@@ -194,7 +205,7 @@ pub async fn persist_onboarding_provider(
     let wire_format = super::super::app_state::settings::infer_provider_wire_format(base_url, model);
 
     // 1. Store API key in keyring under the provider id
-    if let Err(e) = store_provider_api_key(&provider_id, api_key).await {
+    if let Err(e) = store_provider_api_key_with_keyring(keyring, &provider_id, api_key).await {
         let first_line = e.to_string().lines().next().unwrap_or("Key 存储失败").trim().to_string();
         return Err(format!("Key 存储失败: {first_line}"));
     }
@@ -235,6 +246,26 @@ pub async fn persist_onboarding_provider(
     }
 
     Ok(provider_id)
+}
+
+/// Persists the onboarding provider configuration into the OS keyring and kernel facade,
+/// and sets it as the default provider in the global configuration.
+///
+/// Returns `Ok(provider_id)` on success, or `Err(user_facing_chinese_error)` on failure.
+pub async fn persist_onboarding_provider(
+    model: &str,
+    base_url: &str,
+    api_key: &str,
+    agent_name: &str,
+) -> Result<String, String> {
+    persist_onboarding_provider_with_keyring(
+        &*super::super::app_state::settings::PRODUCTION_KEYRING,
+        model,
+        base_url,
+        api_key,
+        agent_name,
+    )
+    .await
 }
 
 /// Capacity limit for buffered lossy text chunks before dropping under UI lag.
@@ -341,6 +372,7 @@ pub fn event_channel() -> EventReceiver {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app_state::settings::KeyringBackend;
 
     #[tokio::test]
     async fn test_api_functions_fail_cleanly_before_init() {
@@ -376,8 +408,9 @@ mod tests {
             model: Some("default".into()),
             provider_type: None,
         };
+        let kr = crate::app_state::settings::MockKeyring::new();
         let _ = test_provider_config(form).await;
-        let _ = store_provider_api_key("onboarding", "key").await;
+        let _ = store_provider_api_key_with_keyring(&kr, "onboarding", "key").await;
         let dummy_model = AIModelConfigDto {
             id: "test".into(),
             provider_id: "openai".into(),
@@ -393,13 +426,15 @@ mod tests {
             inline_think_in_text: None,
         };
         let _ = upsert_model_config(dummy_model, None).await;
-        let _ = persist_onboarding_provider("claude", "http://localhost", "key", "Agent").await;
+        let _ = persist_onboarding_provider_with_keyring(&kr, "claude", "http://localhost", "key", "Agent").await;
     }
 
     #[tokio::test]
     async fn test_persist_onboarding_provider_success_flow() -> anyhow::Result<()> {
         let _ = northhing_core::service::config::initialize_global_config().await;
-        let res = persist_onboarding_provider(
+        let kr = crate::app_state::settings::MockKeyring::new();
+        let res = persist_onboarding_provider_with_keyring(
+            &kr,
             "claude-3-7-sonnet",
             "https://api.anthropic.com/v1",
             "sk-ant-test-key-9999",
@@ -408,6 +443,9 @@ mod tests {
         .await;
         assert!(res.is_ok(), "persist_onboarding_provider failed: {:?}", res.err());
         let provider_id = res.unwrap();
+
+        // Verify key was stored in mock keyring
+        kr.assert_contains(&provider_id, "sk-ant-test-key-9999");
 
         // Verify in global config
         let global_cfg = get_global_config().await?;
@@ -429,8 +467,10 @@ mod tests {
         assert_eq!(model.model, "claude-3-7-sonnet");
         assert_eq!(model.provider_id, "anthropic");
 
-        // Clean up
+        // Clean up both kernel config and mock keyring
         let _ = kernel_facade().delete_model_config(&provider_id).await;
+        let _ = kr.delete(&provider_id);
+        kr.assert_not_contains(&provider_id);
         Ok(())
     }
 
