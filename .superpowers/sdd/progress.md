@@ -6,6 +6,8 @@
 
 - Task W5-2 (F2): complete (commits 289a2de..87cb1f4, review 一轮 **Approved 0C/0I** by minimax-m3；implementer gemini-37-flash-agy) — 事件桥分级：单 unbounded 通道 + TextChunk 原子预算（AtomicUsize CAS，满 256 丢）+ 控制事件（TurnState/ToolCall/TurnPhase/Banner/Error）直通不丢；未选双通道 select!（避免优先级反转——TurnState 抢跑 TextChunk 致 draft 提前提交，judge 认可取舍）；app.rs 消费端零改动（recv 同签名）。净 +221/-26 单文件 api.rs。测试 +2（满载 356 chunk 后控制事件必达 + drain→refill 闭环），crate 107/107。Minors×4 记此交终审：counter 过计理论窗口、pending_text_chunks 可降 pub(crate)、丢 chunk 用 debug! 运营不可见、控制侧 unbounded 无显式上限。
 
+- Task W5-3 (F4): complete (commits 86803d7..21f9345 = fafc1fa 实现 + 21f9345 审查修复，review 两轮 by minimax-m3：一轮 Approved-with-Important（新增测试直写真 OS keyring + 清理不完整）→ 原 coder 续会话修复（KeyringBackend 注入 + MockKeyring 隔离 + 孤 key 断言清理 + 首次验证写入的真 keyring 测试条目已删）→ 重审代码全过；遗留 Minor=report 一行不实描述，编排者订正并标注）— onboarding：test_provider_config 成功 → upsert provider → set_default → create_session，三失败臂 UI 显式报错不推进。净 +203/-21，4 文件。验证：check desktop 绿，109/109。Minors 记此交终审：infer_provider_wire_format URL 启发式脆弱（proxy 路径含 anthropic 字样会误分类）。
+
 # W4 Ledger (2026-08-28, Slint 物理删除 + Dioxus 壳终审)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w4-slint-removal.md`；用户指令原文："slint前端完全删除 仅留下dioxus壳 之后进行dioxus壳的review"。
