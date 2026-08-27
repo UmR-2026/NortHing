@@ -37,8 +37,25 @@ pub struct ModuleAppProps {
 }
 
 impl PartialEq for ModuleAppProps {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    /// Equality is based on plugin identity and lifecycle generation.
+    ///
+    /// `ModuleAppProps` is provided once at window creation when building
+    /// `VirtualDom::new_with_props`. Dynamic state updates (geometry, theme,
+    /// active window set) propagate reactively via embedded `watch::Receiver`
+    /// channels and signals rather than root prop diffing. Comparing
+    /// `plugin_id` and `gen` provides structural equality for the window
+    /// lifecycle instance.
+    fn eq(&self, other: &Self) -> bool {
+        self.plugin_id == other.plugin_id && self.gen == other.gen
+    }
+}
+
+impl std::fmt::Debug for ModuleAppProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModuleAppProps")
+            .field("plugin_id", &self.plugin_id)
+            .field("gen", &self.gen)
+            .finish()
     }
 }
 
@@ -607,5 +624,55 @@ mod tests {
         // Subsequent call returns empty
         let targets2 = manager.mark_all_closing_targets();
         assert!(targets2.is_empty());
+    }
+
+    #[test]
+    fn test_module_app_props_partial_eq() {
+        let (_geom_tx, geom_rx) = watch::channel(super::super::state::Geometry {
+            x: 0,
+            y: 0,
+            width: 800,
+            height: 600,
+        });
+        let geom_rx_arc = Arc::new(geom_rx);
+        let (_theme_tx1, theme_rx1) = watch::channel(true);
+        let (_theme_tx2, theme_rx2) = watch::channel(false);
+        let manager = ShellWindowManager::default();
+
+        let props1 = ModuleAppProps {
+            plugin_id: "self",
+            gen: 1,
+            rx: geom_rx_arc.clone(),
+            theme_rx: theme_rx1.clone(),
+            manager: manager.clone(),
+        };
+
+        let props1_same = ModuleAppProps {
+            plugin_id: "self",
+            gen: 1,
+            rx: geom_rx_arc.clone(),
+            theme_rx: theme_rx2,
+            manager: manager.clone(),
+        };
+
+        let props2_diff_gen = ModuleAppProps {
+            plugin_id: "self",
+            gen: 2,
+            rx: geom_rx_arc.clone(),
+            theme_rx: theme_rx1.clone(),
+            manager: manager.clone(),
+        };
+
+        let props3_diff_plugin = ModuleAppProps {
+            plugin_id: "work",
+            gen: 1,
+            rx: geom_rx_arc,
+            theme_rx: theme_rx1,
+            manager,
+        };
+
+        assert_eq!(props1, props1_same);
+        assert_ne!(props1, props2_diff_gen);
+        assert_ne!(props1, props3_diff_plugin);
     }
 }

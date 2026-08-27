@@ -27,7 +27,7 @@ use dioxus::desktop::tao::event::{Event, WindowEvent};
 use dioxus::desktop::tao::window::{WindowBuilder, WindowId};
 use dioxus::desktop::{tao::event_loop::EventLoopWindowTarget, Config};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use super::app::room_app_root;
 use super::state::{Geometry, GeometryRxArc, GlobalTheme};
@@ -133,13 +133,12 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
     let (geometry_tx, geometry_rx) = tokio::sync::watch::channel(initial_geometry);
     let geometry_rx_arc: GeometryRxArc = Arc::new(geometry_rx);
 
-    // r3p4 root-fix: shared state for the tao event handler (see the
-    // `with_custom_event_handler` comment below). `room_window_id` is
-    // written by `room_app_root` on mount; `latest_geometry` mirrors the
-    // channel value so Moved (position-only) and Resized (size-only)
-    // events can compose a full Geometry.
-    let room_window_id: Arc<Mutex<Option<WindowId>>> = Arc::new(Mutex::new(None));
-    let latest_geometry: Arc<Mutex<Geometry>> = Arc::new(Mutex::new(initial_geometry));
+    // r3p4 root-fix + W5-4 F6: shared channels for the tao event handler.
+    // `room_window_id` uses tokio::sync::watch (single writer on mount,
+    // lock-free readers in the event handler). `geometry_tx.send_modify`
+    // updates geometry in place from Moved/Resized events without needing
+    // an intermediate Mutex.
+    let (room_window_id_tx, room_window_id_rx) = tokio::sync::watch::channel::<Option<WindowId>>(None);
     let window_manager = super::registry::ShellWindowManager::default();
 
     // Main window: the room itself. The launch path returns once the
@@ -194,8 +193,7 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
         // events are skipped and the channel's initial_geometry covers
         // the startup window.
         .with_custom_event_handler({
-            let room_window_id = room_window_id.clone();
-            let latest_geometry = latest_geometry.clone();
+            let room_window_id_rx = room_window_id_rx.clone();
             let geometry_tx = geometry_tx.clone();
             let window_manager = window_manager.clone();
             let on_shutdown = on_shutdown.clone();
@@ -226,8 +224,8 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
                 // the very first Moved/Resized (window creation), instead
                 // of carrying the logical-cast placeholder until mount.
                 let is_room = {
-                    let registered = room_window_id.lock().unwrap();
-                    registered.is_none() || *registered == Some(*window_id)
+                    let registered = *room_window_id_rx.borrow();
+                    registered.is_none() || registered == Some(*window_id)
                 };
                 if !is_room {
                     return;
@@ -239,19 +237,21 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
                     }
                     return;
                 }
-                let mut geom = latest_geometry.lock().unwrap();
                 match event {
                     WindowEvent::Moved(pos) => {
-                        geom.x = pos.x;
-                        geom.y = pos.y;
+                        geometry_tx.send_modify(|geom| {
+                            geom.x = pos.x;
+                            geom.y = pos.y;
+                        });
                     }
                     WindowEvent::Resized(size) => {
-                        geom.width = size.width;
-                        geom.height = size.height;
+                        geometry_tx.send_modify(|geom| {
+                            geom.width = size.width;
+                            geom.height = size.height;
+                        });
                     }
-                    _ => return,
+                    _ => {}
                 }
-                let _ = geometry_tx.send(*geom);
             }
         });
 
@@ -262,8 +262,8 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
     // inner/outer VirtualDoms can clone the Arc without re-subscribing
     // to the channel.
     //
-    // `room_window_id` is the shared slot the tao event handler reads to
-    // filter for the room window; `room_app_root` writes it on mount.
+    // `room_window_id_tx` is the channel the tao event handler's receiver
+    // checks to filter for the room window; `room_app_root` writes it on mount.
     //
     // R3' panic fix (2026-08-13): `GlobalTheme` must be provided here too -
     // `room_app_root` reads it via `use_context::<GlobalTheme>()`, and in
@@ -275,7 +275,7 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
         .with_context(geometry_rx_arc)
         .with_context(GlobalTheme::new())
         .with_context(window_manager)
-        .with_context(room_window_id)
+        .with_context(room_window_id_tx)
         .with_cfg(config)
         .launch(room_app_root);
 

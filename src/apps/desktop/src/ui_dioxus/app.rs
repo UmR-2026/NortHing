@@ -28,7 +28,7 @@ use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor
 use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
-use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme};
+use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
 use tokio::sync::watch;
@@ -107,8 +107,7 @@ pub fn room_app_root() -> Element {
     let geometry_rx_arc = use_context::<GeometryRxArc>();
     let theme = use_context::<GlobalTheme>();
     let window_manager = use_context::<ShellWindowManager>();
-    let room_window_id =
-        use_context::<std::sync::Arc<std::sync::Mutex<Option<dioxus::desktop::tao::window::WindowId>>>>();
+    let room_window_id_tx = use_context::<RoomWindowIdTx>();
 
     let locale = use_hook(|| Rc::new(LocalePack::load(super::i18n::DEFAULT_LOCALE)));
 
@@ -271,9 +270,9 @@ pub fn room_app_root() -> Element {
     // Register room window ID on mount
     {
         let geometry_tx = geometry_tx.clone();
-        let room_window_id = room_window_id.clone();
+        let room_window_id_tx = room_window_id_tx.clone();
         use_effect(move || {
-            *room_window_id.lock().unwrap() = Some(window().id());
+            let _ = room_window_id_tx.send(Some(window().id()));
             if let Ok(pos) = window().outer_position() {
                 let size = window().outer_size();
                 let _ = geometry_tx.send(Geometry {

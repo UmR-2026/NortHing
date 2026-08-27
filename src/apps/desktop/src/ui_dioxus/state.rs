@@ -11,6 +11,7 @@
 // API) so changes in one window are reflected in the others - brief
 // §2.2 / §4.4 ("three-window same-toggle is C2 regression point").
 
+use dioxus::desktop::tao::window::WindowId;
 use std::sync::Arc;
 use tokio::sync::watch;
 
@@ -29,6 +30,10 @@ pub struct Geometry {
 pub type GeometryTx = watch::Sender<Geometry>;
 pub type GeometryRx = watch::Receiver<Geometry>;
 pub type GeometryRxArc = Arc<watch::Receiver<Geometry>>;
+
+/// Channel alias: the room publishes its `WindowId` on mount; the tao
+/// event handler receives it to filter OS events.
+pub type RoomWindowIdTx = watch::Sender<Option<WindowId>>;
 
 /// Theme state shared by all three windows. Per brief §1.1 the theme
 /// toggle must propagate to every window (C2 regression point - the
