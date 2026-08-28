@@ -6,6 +6,8 @@
 
 - Task W8-2 (memory_db.rs 去重): complete (commit `5d4d98a`, review 一轮 **Approved 0C/0I/3M** by minimax-m3；implementer gemini-37-flash-agy) — 三块复制（stmt 构造/query_map 闭包/字符串→枚举 match ×3）提取私有 helper，judge 逐字核对 SQL/列序/枚举 fallback 全保；死变量 ×2 清除（bm25_pos 死计算、last_mentioned_at 死解构——judge 核实非真 bug，Fact 结构体确无该字段）；两处回退 hack 按钉死语义修复：NaN score 沉底（Greater 臂方向经 judge 验证）+ 时钟回拨跳过 recency boost（Err 臂 warn），各附非恒真单测。918→894 行，ceiling 同 commit 下调到实测 894。验证：workspace check 绿、memory_db 23/23、rot 绿。
 
+- Task W8-3 (selectors.rs 消复制): complete (commit `53e70dc`, review 一轮 **Approved 0C/0I/0M** by minimax-m3；implementer gemini-37-flash-agy) — 三处复制消除且归属正确（ModelItem::from_config → ui/model_selector.rs 类型 owner；time-ago 共享函数 → ui/session_selector.rs；custom_headers → 文件私有 helper）；time-ago 四档阈值/文案逐字符等价、ModelItem 字段顺序保持；custom_headers 顺带消除一次无条件 clone。875→861 行，ceiling 同步下调。测试 +3（41/41）。rot 绿。观察项带过：provider_display_name 竞速解析、UNIX_EPOCH unwrap_or_default（留后续）。
+
 # W7 Ledger (2026-08-28, F7 设置页 provider 编辑)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w7-provider-edit.md`；侦察：`w7-f7-settings-edit-recon.md`；w7-base = `029a5ad`。用户拍板选项 A（做编辑功能）。腐化探查 `rot-probe-2026-08-28.md` 副产物：①rot-budget.json 有 3 条死登记（callbacks_lifecycle/refresh 已随 Slint 删、kernel_facade/tests.rs 被新检查器语义排除）待清；②app.rs 959/962 余量 3、pages_onboarding 859/866 余量 7、css.rs 830/830 余量 0——F7 新代码全部走新文件。
