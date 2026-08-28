@@ -1,3 +1,9 @@
+# W9 Ledger (2026-08-29, 功能补缺波：校准裁决执行)
+
+计划来源：`docs/product/requirements-vs-current-2026-08-29.md` §五（用户裁决 2026-08-29）。w9-base = `151f77c`。**选派变更（用户拍板 2026-08-29）：coder 主力这两天切 step-explore**（实际执行中 Gemini 渠道事故 + step-explore 内容拦截，见各行）。
+
+- Task W9-1 (确认门第三档"本会话内允许"): complete (commits `921c09d` 抽离 + `d742e75` 第三档 + `3e55d75` 修复，review 两轮 by step-explore_reviewer：一轮 Needs fixes 1I（自动批准失败静默吞错）→ fixer 修复（warn + 回落 pending 卡 + push_pending_approval 去重）→ 重审 **Approved 0C/0I/0M**；implementer step-explore（抽离 + 第三档半成后断线）→ minimax-m3 接续+修复）— 关键裁定：facade 第三参实测为 reason 文本无 remember 语义（step-explore 正确 NEEDS_CONTEXT）→ 桌面侧内存态 HashSet 允许集（工具名粒度、重启清空、命中自动批准 + 落可见审计记录）。app.rs 805→760→792，manifest god_file 条目删除（回归通用 800 线，观测组 6 条）。测试 +2（115/115）。**事件链记录：step-explore 首次半成断线（工作树留未提交半成品）、续派遭 censorship 拦截 ×2（该端点对桌面任务内容敏感，已是第二次）——任命 minimax-m3 接续完成。截图证据为 HTML mockup（Edge headless 渲染同 CSS），真机行为列入实测清单第 10 项。**
+
 # W8 Ledger (2026-08-29, god-file 腐化修复波)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w8-godfile-rotfix.md`；病灶来源：4 份代码层深审（`deep-rot-*.md`）；w8-base = `3ab2330`。总原则：行为零变化、机械位移优先、架构重排禁止。
