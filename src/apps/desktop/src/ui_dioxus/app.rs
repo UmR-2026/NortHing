@@ -15,92 +15,23 @@
 
 use dioxus::core::VirtualDom;
 use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
-#[cfg(target_os = "windows")]
-use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 use dioxus::desktop::tao::window::WindowBuilder;
 use dioxus::desktop::{window, Config, WindowCloseBehaviour};
 use dioxus::prelude::*;
 use std::rc::Rc;
 
 use super::api;
+use super::color::chronicle_gradient;
 use super::css;
 use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
 use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
+use super::window_ops::{close_module, quit_shell};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
 use tokio::sync::watch;
-
-#[cfg(target_os = "windows")]
-pub(crate) mod win_ops {
-    use std::ffi::c_void;
-
-    unsafe extern "system" {
-        pub fn ShowWindow(h_wnd: *mut c_void, n_cmd_show: i32) -> i32;
-        pub fn PostMessageW(h_wnd: *mut c_void, msg: u32, wparam: usize, lparam: isize) -> i32;
-        pub fn IsWindow(h_wnd: *mut c_void) -> i32;
-    }
-
-    pub const WM_CLOSE: u32 = 0x0010;
-    pub const SW_HIDE: i32 = 0;
-
-    /// Hides and posts WM_CLOSE to an OS window by HWND, with a background watchdog
-    /// (std thread, never use_future) to guarantee window destruction.
-    pub fn close_os_window(hwnd: usize) {
-        if hwnd == 0 {
-            return;
-        }
-        unsafe {
-            ShowWindow(hwnd as *mut c_void, SW_HIDE);
-            PostMessageW(hwnd as *mut c_void, WM_CLOSE, 0, 0);
-        }
-        std::thread::Builder::new()
-            .name("window-close-watchdog".into())
-            .spawn(move || {
-                let hwnd_ptr = hwnd as *mut c_void;
-                for _ in 0..5 {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                    unsafe {
-                        if IsWindow(hwnd_ptr) == 0 {
-                            break;
-                        }
-                        ShowWindow(hwnd_ptr, SW_HIDE);
-                        PostMessageW(hwnd_ptr, WM_CLOSE, 0, 0);
-                    }
-                }
-            })
-            .ok();
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-pub(crate) mod win_ops {
-    pub fn close_os_window(_hwnd: usize) {}
-}
-
-fn close_module(id: &'static str, wm: &ShellWindowManager) {
-    if let Some((wid, hwnd)) = wm.mark_closing_target(id) {
-        window().close_window(wid);
-        win_ops::close_os_window(hwnd);
-    }
-}
-
-fn close_all_modules(wm: &ShellWindowManager) {
-    for (_id, wid, hwnd) in wm.mark_all_closing_targets() {
-        // ponytail: dual close paths (Dioxus + native) are redundant on tao-managed windows; safe no-op. Drop one if close semantics ever diverge.
-        window().close_window(wid);
-        win_ops::close_os_window(hwnd);
-    }
-}
-
-fn quit_shell(wm: &ShellWindowManager) {
-    close_all_modules(wm);
-    #[cfg(target_os = "windows")]
-    win_ops::close_os_window(window().hwnd() as usize);
-    window().close();
-}
 
 /// RSX root for the room main window.
 pub fn room_app_root() -> Element {
@@ -870,90 +801,5 @@ fn render_child(child: &super::session_mock::MockChild, _locale: &LocalePack) ->
         super::session_mock::MockChild::ArtifactChip { label } => rsx! {
             button { class: "artifact-chip", "{label}" }
         },
-    }
-}
-
-fn parse_hex_rgb(hex: &str) -> Option<(u8, u8, u8)> {
-    let s = hex.trim_start_matches('#');
-    if s.len() != 6 {
-        return None;
-    }
-    let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-    let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-    let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-    Some((r, g, b))
-}
-
-pub fn mix_hex(a: &str, b: &str, t: f64) -> String {
-    let (ar, ag, ab) = match parse_hex_rgb(a) {
-        Some(c) => c,
-        None => return b.to_string(),
-    };
-    let (br, bg, bb) = match parse_hex_rgb(b) {
-        Some(c) => c,
-        None => return a.to_string(),
-    };
-    let t = t.clamp(0.0, 1.0);
-    let r = (ar as f64 + (br as f64 - ar as f64) * t).round().clamp(0.0, 255.0) as u8;
-    let g = (ag as f64 + (bg as f64 - ag as f64) * t).round().clamp(0.0, 255.0) as u8;
-    let b_val = (ab as f64 + (bb as f64 - ab as f64) * t).round().clamp(0.0, 255.0) as u8;
-    format!("#{:02X}{:02X}{:02X}", r, g, b_val)
-}
-
-pub fn chronicle_gradient(history: &[String], current: &str) -> String {
-    const BIRTH: &str = "#DAD6CF";
-    let n = history.len();
-    let mut stops = Vec::with_capacity(n + 1);
-
-    if n == 0 {
-        stops.push(format!("{BIRTH} 0.00%"));
-    } else {
-        for (i, c) in history.iter().enumerate() {
-            let (pos, col) = if n == 1 {
-                (0.0, c.clone())
-            } else {
-                let frac = i as f64 / (n - 1) as f64;
-                let pos = frac * 70.0;
-                let col = if i == 0 {
-                    c.clone()
-                } else {
-                    let t = 0.18 + 0.82 * frac;
-                    mix_hex(BIRTH, c, t)
-                };
-                (pos, col)
-            };
-            stops.push(format!("{col} {pos:.2}%"));
-        }
-    }
-
-    stops.push(format!("{current} 100%"));
-    format!("linear-gradient(90deg, {})", stops.join(", "))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mix_hex() {
-        assert_eq!(mix_hex("#DAD6CF", "#3F837B", 1.0), "#3F837B");
-        assert_eq!(mix_hex("#DAD6CF", "#3F837B", 0.0), "#DAD6CF");
-    }
-
-    #[test]
-    fn test_chronicle_gradient_single() {
-        let grad = chronicle_gradient(&["#DAD6CF".to_string()], "#C8714C");
-        assert!(grad.contains("0.00%"));
-        assert!(grad.contains("100%"));
-    }
-
-    #[test]
-    fn test_chronicle_gradient_three_history() {
-        let history = vec!["#DAD6CF".to_string(), "#3F837B".to_string(), "#8B5FBF".to_string()];
-        let grad = chronicle_gradient(&history, "#C8714C");
-        assert!(grad.contains("0.00%"));
-        assert!(grad.contains("35.00%"));
-        assert!(grad.contains("70.00%"));
-        assert!(grad.contains("100%"));
     }
 }

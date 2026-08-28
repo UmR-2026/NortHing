@@ -130,7 +130,7 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
     let mut provider_model_input = use_signal(|| "claude-3-7-sonnet".to_string());
     let mut provider_url_input = use_signal(|| "https://api.anthropic.com/v1".to_string());
     let mut provider_key_input = use_signal(|| "".to_string());
-    let mut workspace_dir_input = use_signal(|| "E:\\agent-project\\northing\\workspace".to_string());
+    let mut workspace_dir_input = use_signal(|| String::new());
 
     let run_test_provider = move || {
         if testing() {
@@ -591,7 +591,7 @@ pub fn onboarding_app_root(props: ModuleAppProps) -> Element {
                                                 id: "workspace-dir",
                                                 class: "field-input",
                                                 value: "{workspace_dir_input}",
-                                                placeholder: "选择或输入绝对路径",
+                                                placeholder: "例如 D:\\projects\\my-workspace",
                                                 oninput: move |e| workspace_dir_input.set(e.value().clone()),
                                             }
                                             button {

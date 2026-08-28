@@ -233,7 +233,7 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
                 if matches!(event, WindowEvent::CloseRequested) {
                     let targets = window_manager.mark_all_closing_targets();
                     for (_id, _wid, hwnd) in targets {
-                        super::app::win_ops::close_os_window(hwnd);
+                        super::window_ops::win_ops::close_os_window(hwnd);
                     }
                     return;
                 }

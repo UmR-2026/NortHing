@@ -41,13 +41,13 @@
  },
  "dir_entries:.superpowers/sdd": {
   "kind": "dir-entry-count",
-  "ceiling": 400,
-  "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/"
- },
+"ceiling": 400,
+   "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/"
+  },
   "god_file:src/apps/desktop/src/ui_dioxus/app.rs": {
    "kind": "file-lines",
-   "ceiling": 962,
-   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4)"
+   "ceiling": 805,
+   "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4); W8-4 ceiling lowered from 962 → 805 after color/window_ops extraction (measured 2026-08-29, brief §6: ≥800 → ceiling 下调到实测值)"
   },
   "god_file:src/apps/desktop/src/ui_dioxus/css.rs": {
    "kind": "file-lines",
