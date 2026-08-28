@@ -385,3 +385,45 @@ test('actual workspace rot budget passes with current manifest', () => {
   assert.equal(result.success, true, `Expected workspace rot budget to pass, got violations: ${result.violations.join('\n')}`);
   assert.equal(result.violations.length, 0);
 });
+
+test('dead god-file registration warns but does not fail verification', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(path.join(srcDir, 'lib.rs'), 'pub fn ok() {}\n', 'utf8');
+
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        note: 'test dead registration',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.equal(
+      result.warnings[0],
+      'warn: god_file:src/ghost.rs registered but file does not exist — dead registration, remove the entry',
+    );
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 0);
+    assert.match(
+      proc.stdout + proc.stderr,
+      /warn: god_file:src\/ghost\.rs registered but file does not exist — dead registration, remove the entry/,
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

@@ -72,6 +72,7 @@ export function verifyRotBudget({
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const violations = [];
+  const warnings = [];
   const counts = {};
 
   const grepRules = [];
@@ -105,6 +106,15 @@ export function verifyRotBudget({
   const srcDir = path.join(projectRoot, 'src');
   const files = collectRustFiles(srcDir, projectRoot);
   const seenGodFiles = new Set();
+
+  // Pre-scan: surface dead god-file registrations as warnings (non-violation).
+  for (const [fileRelPath, rule] of godFileRules) {
+    if (!fs.existsSync(path.join(projectRoot, fileRelPath))) {
+      warnings.push(
+        `warn: ${rule.key} registered but file does not exist — dead registration, remove the entry`,
+      );
+    }
+  }
 
   for (const file of files) {
     if (EXEMPT_FILE_PATHS.includes(file.relPath)) {
@@ -179,6 +189,9 @@ export function verifyRotBudget({
   const success = violations.length === 0;
 
   if (!silent) {
+    for (const warning of warnings) {
+      console.error(warning);
+    }
     if (success) {
       const grepReadings = grepRules.map((r) => `${r.key}=${r.count}/${r.ceiling}`).join(', ');
       const dirReadings = dirRules.map((r) => `${r.key}=${counts[r.key] ?? 0}/${r.ceiling}`).join(', ');
@@ -203,6 +216,7 @@ export function verifyRotBudget({
   return {
     success,
     violations,
+    warnings,
     counts,
     checkedFilesCount: files.length,
   };
