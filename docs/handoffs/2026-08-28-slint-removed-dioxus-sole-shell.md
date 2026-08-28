@@ -33,7 +33,8 @@
 
 ## 队列（无 blocking）
 
-- **check:rot（2026-08-28 W6 清账进行中）**：W6-1 已收口（`11a4e5e`，allow_dead_code 128→106 达标，review 0C/0I/0M）。剩余 3 红项（unwrap 518/502、expect 1106/1089、let_ 390/388）查明为检查器把 `tests.rs`/`*_tests/` 测试代码误计为生产（修正语义后 473/937/388 全绿）——**W6-2 检查器修正挂起等用户拍板 D1**；若拒绝则需生产真减 37 处。
+- ~~check:rot 红~~ **已全绿（2026-08-28 W6 双任务收口）**：W6-1 dead_code 128→106（`11a4e5e`）+ W6-2 检查器语义修正（`7d53621`，D1 仲裁 APPROVE-FIX，ceiling 零改动）。全部指标合规。
+- **治理新规（用户 2026-08-28）**：技术细则 = 编排者+子代理闭环；用户只拍板面向功能的产品决策。
 - F7 provider 编辑 UI（L，产品决策：要不要在 Dioxus 设置页做编辑表单）。
 - F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子；审计自证当前 workaround 可接受）。
 - r1 Minors / r2#4 等更早残余以 `audit-wave-final-review.md` triage 为准。
