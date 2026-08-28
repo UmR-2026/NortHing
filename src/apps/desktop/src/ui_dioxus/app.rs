@@ -89,6 +89,7 @@ fn close_module(id: &'static str, wm: &ShellWindowManager) {
 
 fn close_all_modules(wm: &ShellWindowManager) {
     for (_id, wid, hwnd) in wm.mark_all_closing_targets() {
+        // ponytail: dual close paths (Dioxus + native) are redundant on tao-managed windows; safe no-op. Drop one if close semantics ever diverge.
         window().close_window(wid);
         win_ops::close_os_window(hwnd);
     }

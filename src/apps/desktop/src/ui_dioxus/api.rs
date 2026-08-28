@@ -330,6 +330,7 @@ pub fn create_event_bridge() -> (Box<dyn Fn(KernelEventDto) + Send + 'static>, E
             let _ = tx.send(dto);
         }
         control_dto => {
+            // unbounded channel: send only fails if the receiver was dropped (app shutdown); discard is intentional.
             let _ = tx.send(control_dto);
         }
     });
