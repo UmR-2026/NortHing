@@ -12,6 +12,7 @@ use std::rc::Rc;
 
 use super::css;
 use super::i18n::{keys, LocalePack};
+use super::pages_settings_provider_edit::ProviderEditModal;
 use super::registry::ModuleAppProps;
 use super::windows::WindowDropGuard;
 #[allow(unused_imports)]
@@ -93,6 +94,28 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
     let mut default_provider_id = use_signal(|| None::<String>);
     let mut active_provider_anthropic = use_signal(|| true); // Fallback mock state
     let mut active_provider_google = use_signal(|| false); // Fallback mock state
+    let mut editing_provider = use_signal(|| None::<ProviderConfigDto>);
+
+    let refresh_providers = move || {
+        let mut providers = providers;
+        let mut default_provider_id = default_provider_id;
+        let mut active_model_id = active_model_id;
+        let mut model_configs = model_configs;
+        dioxus::prelude::spawn(async move {
+            if let Ok(global_cfg) = super::api::get_global_config().await {
+                if let Some(ref def_id) = global_cfg.default_provider_id {
+                    default_provider_id.set(Some(def_id.clone()));
+                    if active_model_id().is_none() {
+                        active_model_id.set(Some(def_id.clone()));
+                    }
+                }
+                providers.set(global_cfg.providers);
+            }
+            if let Ok(models) = super::api::list_model_configs().await {
+                model_configs.set(models);
+            }
+        });
+    };
 
     // MCP servers (Card 4: 能力集)
     let mut mcp_servers = use_signal(Vec::<MCPServerDto>::new);
@@ -448,6 +471,7 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                         let is_active = default_provider_id().as_deref() == Some(&id);
                                         let name = provider.name.clone();
                                         let provider_type = provider.provider_type.clone().unwrap_or_else(|| provider.model.clone());
+                                        let provider_for_edit = provider.clone();
                                         rsx! {
                                             div {
                                                 key: "{id}",
@@ -465,6 +489,16 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                                 span { class: "sq-toggle" }
                                                 "{name}"
                                                 span { class: "row-meta", "{provider_type}" }
+                                                button {
+                                                    class: "provider-edit-btn",
+                                                    style: "margin-left:auto;padding:1px 6px;font-size:11px;background:var(--bg3);border:1px solid var(--line);border-radius:3px;color:var(--text);cursor:pointer;flex-shrink:0;line-height:1.4;",
+                                                    title: "编辑此服务配置",
+                                                    onclick: move |e| {
+                                                        e.stop_propagation();
+                                                        editing_provider.set(Some(provider_for_edit.clone()));
+                                                    },
+                                                    "编辑"
+                                                }
                                             }
                                         }
                                     }
@@ -616,6 +650,17 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                             }
                         }
                     }
+                }
+            }
+
+            if let Some(provider_dto) = editing_provider() {
+                ProviderEditModal {
+                    provider: provider_dto,
+                    on_close: move |_| editing_provider.set(None),
+                    on_saved: move |_| {
+                        editing_provider.set(None);
+                        refresh_providers();
+                    },
                 }
             }
         }
