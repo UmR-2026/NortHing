@@ -33,6 +33,7 @@ export function collectRustFiles(dir, projectRoot = dir) {
     if (entry.isDirectory()) {
       if (
         entry.name === 'tests' ||
+        entry.name.endsWith('_tests') ||
         entry.name.startsWith('target') ||
         entry.name === '.git' ||
         entry.name === 'node_modules'
@@ -41,10 +42,10 @@ export function collectRustFiles(dir, projectRoot = dir) {
       }
       results.push(...collectRustFiles(fullPath, projectRoot));
     } else if (entry.isFile()) {
-      if (entry.name.endsWith('.rs') && !entry.name.endsWith('_tests.rs')) {
+      if (entry.name.endsWith('.rs') && !entry.name.endsWith('_tests.rs') && entry.name !== 'tests.rs') {
         const relPath = path.relative(projectRoot, fullPath).replace(/\\/g, '/');
         const segments = relPath.split('/');
-        if (segments.includes('tests') || segments.some((s) => s.startsWith('target'))) {
+        if (segments.includes('tests') || segments.some((s) => s.startsWith('target') || s.endsWith('_tests'))) {
           continue;
         }
         results.push({ fullPath, relPath });

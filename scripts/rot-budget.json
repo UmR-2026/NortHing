@@ -3,31 +3,31 @@
   "kind": "grep-count",
   "pattern": "\\.unwrap\\(\\)",
   "ceiling": 502,
-  "note": "R-13, ratchet: only down"
+  "note": "R-13, ratchet: only down; baseline rebased 2026-08-28 per D1 adjudication to checker semantics (excludes tests.rs and *_tests/ dirs)"
  },
  "expect_production": {
   "kind": "grep-count",
   "pattern": "\\.expect\\(",
   "ceiling": 1089,
-  "note": "R-13, ratchet: only down"
+  "note": "R-13, ratchet: only down; baseline rebased 2026-08-28 per D1 adjudication to checker semantics (excludes tests.rs and *_tests/ dirs)"
  },
  "let_underscore": {
   "kind": "grep-count",
   "pattern": "let _ =",
   "ceiling": 388,
-  "note": "R-13, ratchet: only down"
+  "note": "R-13, ratchet: only down; baseline rebased 2026-08-28 per D1 adjudication to checker semantics (excludes tests.rs and *_tests/ dirs)"
  },
  "unix_epoch_inline": {
   "kind": "grep-count",
   "pattern": "duration_since\\([^\\n]*UNIX_EPOCH",
   "ceiling": 69,
-  "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down; ceiling rebased 2026-08-21 to checker semantics (excludes tests dirs/_tests.rs)"
+  "note": "T2-9 time-helper ratchet; canonical: northhing_core_types::time; only down; ceiling rebased 2026-08-21 to checker semantics (excludes tests dirs/_tests.rs); rebased 2026-08-28 per D1 adjudication (excludes tests.rs and *_tests/ dirs)"
  },
  "allow_dead_code": {
   "kind": "grep-count",
   "pattern": "allow\\(dead_code\\)",
   "ceiling": 109,
-  "note": "R-13 allow(dead_code) ratchet: only down"
+  "note": "R-13 allow(dead_code) ratchet: only down; baseline rebased 2026-08-28 per D1 adjudication to checker semantics (excludes tests.rs and *_tests/ dirs)"
  },
  "dir_entries:scripts": {
   "kind": "dir-entry-count",

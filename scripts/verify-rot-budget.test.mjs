@@ -303,6 +303,83 @@ test('dir-entry-count on non-existent directory fails and exits 1', () => {
   }
 });
 
+test('tests.rs file is excluded from rot budget measurement', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(srcDir, 'tests.rs'),
+      'fn test_something() {\n    let a = Some(1).unwrap();\n    let b = Some(2).unwrap();\n}\n',
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(srcDir, 'lib.rs'),
+      'pub fn ok() {}\n',
+      'utf8',
+    );
+
+    const manifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 0,
+        note: 'test unwrap 0',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.counts.unwrap_production, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('*_tests directory files are excluded from rot budget measurement', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const testsDir = path.join(srcDir, 'feature_tests');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(testsDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(testsDir, 'mod.rs'),
+      'fn test_feature() {\n    let a = Some(1).unwrap();\n    let b = Some(2).unwrap();\n}\n',
+      'utf8',
+    );
+    fs.writeFileSync(
+      path.join(srcDir, 'lib.rs'),
+      'pub fn ok() {}\n',
+      'utf8',
+    );
+
+    const manifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 0,
+        note: 'test unwrap 0',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.counts.unwrap_production, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('actual workspace rot budget passes with current manifest', () => {
   const result = verifyRotBudget({ projectRoot: REPO_ROOT, silent: true });
   assert.equal(result.success, true, `Expected workspace rot budget to pass, got violations: ${result.violations.join('\n')}`);
