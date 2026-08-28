@@ -1,6 +1,6 @@
-# Handoff — 2026-08-28：Slint 已物理删除，Dioxus 唯一壳；W5 终审 + W6 rot 清账 + W7 F7 全部收口
+# Handoff — 2026-08-29 凌晨：W5/W6/W7/W8 全部收口，防腐体系升级完毕
 
-> 焦点：壳切换线全闭环；W7 交付 F7（设置页 provider 编辑）。**唯一残余 = 真机实测清单（W7 后构建，含新第 8 项 provider 编辑流）。**
+> 焦点：壳切换线全闭环 + F7 交付 + god-file 腐化修复波（W8）收口 + 防腐化 skill 实战升级。**唯一残余 = 真机实测清单（HEAD ≥ `c77a51a` 的构建）。**
 
 ## 状态一句话
 
@@ -17,6 +17,8 @@
 | W5 | 审计修复 ×4 | `de60a0b`(F1) `87cb1f4`(F2) `fafc1fa`+`21f9345`(F4+修复) `f680cf6`(F5+F6)；终审 CAN MERGE 0C/0I/12M |
 | W6 | rot 清账 ×2 | `11a4e5e`(dead_code 128→106) `7d53621`(检查器语义修正，D1 仲裁)；check:rot 全绿 |
 | W7 | F7 provider 编辑 ×2 | `2bb91ab`(API 层) `e8dbcfd`(弹窗 UI) `2cfd737`(终审注释补丁)；终审 CAN MERGE 0C/0I/0M |
+| W8 | god-file 腐化修复 ×4 | `3337c73`(input.rs 拆 5 文件) `5d4d98a`(memory_db 去重 918→894) `53e70dc`(selectors 消复制 875→861) `7e42a65`(app.rs 抽离 959→805 + 硬编码路径修复)；终审 CAN MERGE 0C/0I/2M |
+| 防腐升级 | skill + checker | `3ab2330`(深审×4) `09bb605`(死登记清理) `c77a51a`(checker 死登记检测)；skill 优化版已应用（Layer 3d 波末闸 + Dormancy 规则 + Appendix A 深审量规 + Rule 6） |
 
 ## 下 session 第一件事（按序）
 
@@ -38,17 +40,21 @@
 ## 队列（无 blocking）
 
 - **治理新规（用户 2026-08-28）**：技术细则 = 编排者+子代理闭环；用户只拍板面向功能的产品决策。
-- rot-budget.json 死登记 ×3 清理（W6 副产物：callbacks_lifecycle/refresh 已删、kernel_facade/tests.rs 被新语义排除；小机械单）。
+- CLI popup 映射去重（key_popups.rs；深审幻觉纠正后的真目标，小单）。
+- W8 遗留架构欠账：popup dispatch 下沉、apply_exit_reason 8 参数、provider_display_name 竞速解析、selectors UNIX_EPOCH 回退。
+- rot-probe P2：auth_oauth(12)/lifecycle(11)/navigation(7) 等 30 处 `let _ =` 静默错误处理（let_underscore 388 贴线的减压阀）。
 - W7-2-M1：pages_settings.rs 776/800，下次 provider feature 先抽 provider_row.rs。
 - F7 删除守卫升级版：会话引用完整性检查（产品决策，当前 ponytail 标注）。
-- F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子；审计自证当前 workaround 可接受）。
+- F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子）。
 - r1 Minors / r2#4 等更早残余以 `audit-wave-final-review.md` triage 为准。
 - T2-1 CI 补齐（老欠账，前置 i18n-contract 24 个预存失败）。
 
 ## 选派实证（今夜）
 
-- `gemini-37-flash-agy`：W3 4/4 + W4-1（大删除，1 轮修复）+ W5 4/4——全天 implementer 零 BLOCKED。
-- judge `minimax-m3` ×6 全合格（含揪出真 keyring 污染这种实锤）。
-- 终审 `reviewer/step-explore_reviewer`：W3 终审 1 次空响应→SOP 续派成功；W4-2 壳审计一轮出活（质量高）；**W5 全波终审一次出活无空响应，CAN MERGE 判决含逐条 file:line 走查，质量保持**。
-- `gemini-37-flash-agy` 补丁单（终审 triage 修一记一 ×2 注释）一轮 DONE，磁盘 diff 取证相符。
+- `gemini-37-flash-agy`：W3 4/4 + W4-1（大删除，1 轮修复）+ W5 4/4 + W7 3/4 + W6-1——implementer 主力。**W8-4 时段 Gemini 双渠道证书错误 ×2 + 一次断线留下破损工作树（半截编辑），后又一单 cancelled——渠道事故频发段，需观察**。
+- `gemini-37-flash`（vertex 付费）：W8-1 最高风险单一轮 DONE（逐臂纯位移）。
+- judge `minimax-m3` ×10+ 全合格；**且 W8-4 起实证可做实现单**（机制活 + checker 小单，两轮 DONE_WITH_CONCERNS/DONE 均如实申报）。
+- 终审 `reviewer/step-explore_reviewer`：W5/W7/W8 三波终审 + D1 仲裁；W7 初判 1 次读数幻觉（diff 偏移当行数）被磁盘复核纠偏——**终审阻塞项磁盘复核已固化进 brief 模板**。
+- `step-explore`：深审 ×4 + skill 自审出活质量高；**一次 censorship_blocked 派遣失败**（内容拦截误判）。
+- 编排者自身：`progress.md"替换当插入"今日再犯 3 次（W8-2/W8-3/W8-4 各一，均读回当场抓修）——ERRORS.md 纠正条款未能预防复发，需更强机制。
 - 2026-08-27 用户拍板：3.7 全档位主推（3.6 停用）；vertex+agy 双渠道可并行；judge-ox-alpha 已从配置删除。
