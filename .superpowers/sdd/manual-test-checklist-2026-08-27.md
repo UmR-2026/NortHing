@@ -50,6 +50,14 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='cmd.exe' or Name
 
 ---
 
+## 三、provider 编辑（W7/F7 新增，1 项）
+
+### ☐ 8. 设置页编辑 provider 全流
+- 步骤：设置 → 接入点 → 任一行点「编辑」→ 改个名称保存（列表应刷新显示新名）→ 再打开编辑，API Key **留空**直接保存 → 用该 provider 发一条消息（验证 key 没丢）；再试「测试连接」按钮（应出结果）；最后试着删除当前默认的 provider（应被拒绝并提示先切换默认）。
+- 预期：编辑保存生效、留空 key 不丢、测试连接有明确成败提示、默认 provider 拒删。
+
+---
+
 ## 结果记录（测完填这里或直接口述）
 
 | 项 | Pass/Fail | 备注 |
@@ -61,3 +69,4 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='cmd.exe' or Name
 | 5 provider key | | |
 | 6 开关无孤儿 | | |
 | 7 退出无残留 | | |
+| 8 provider 编辑流 | | |
