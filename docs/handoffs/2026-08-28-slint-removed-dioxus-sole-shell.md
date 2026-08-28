@@ -1,10 +1,10 @@
-# Handoff — 2026-08-28 凌晨：Slint 已物理删除，Dioxus 唯一壳，W5 修复完毕待终审
+# Handoff — 2026-08-28：Slint 已物理删除，Dioxus 唯一壳，W5 全波终审 CAN MERGE 收口
 
-> 焦点：今夜主线 = 壳切换（flip → 物理删除 → 壳审计 → 审计修复）。**W5 全波终审未跑，是下 session 第一件事。** 真机实测清单需按 Dioxus 壳重排后再测。
+> 焦点：壳切换线（flip → 物理删除 → 壳审计 → 审计修复 → 终审）**已全闭环**。残余 = 真机实测清单（W5 后构建）。
 
 ## 状态一句话
 
-2026-08-26 审计修复线（W1+W2+W3 共 16 任务）全部 CAN MERGE 收口；2026-08-27 晚用户拍板 Dioxus 为生产前端（`70bc4e8` 翻 flag）→ 同夜 W4-1 物理删除 Slint 壳（`707e414`+`0c95aa6`，-16,795 行，judge 两轮后 Approved）→ W4-2 壳级审计（1C/3I/3M，报告 `.superpowers/sdd/w4-2-dioxus-shell-review.md`）→ W5 修复 4/4 完成且 per-task review 全过。**main HEAD = `2ebc8c3`（台账）/ 最新代码 = `f680cf6`（W5-4）。**
+2026-08-26 审计修复线（W1+W2+W3 共 16 任务）全部 CAN MERGE 收口；2026-08-27 晚用户拍板 Dioxus 为生产前端（`70bc4e8` 翻 flag）→ 同夜 W4-1 物理删除 Slint 壳（`707e414`+`0c95aa6`，-16,795 行，judge 两轮后 Approved）→ W4-2 壳级审计（1C/3I/3M，报告 `.superpowers/sdd/w4-2-dioxus-shell-review.md`）→ W5 修复 4/4 → **W5 全波终审 `86ab479..f680cf6` CAN MERGE（SPEC+QUALITY 双 PASS，0C/0I/12M，step-explore_reviewer；判决书 `.superpowers/sdd/w5-final-review.md`），Minors 12 条 triage 完毕（3 修补入库含注释补丁 `18c0332` + w5-1 report erratum，4 accept，5 defer-with-owner）**。**main HEAD = `18c0332`。**
 
 ## commit 链（今晚，倒序）
 
@@ -18,10 +18,10 @@
 
 ## 下 session 第一件事（按序）
 
-1. **W5 全波终审**：`review-package 86ab479..f680cf6`（两步生成法，见下运维教训）派 `reviewer/step-explore_reviewer`；Minors 12 条在 W5 各任务行内待 triage；另带 W4-1 的 M-4（hygiene 扫描基数 13→8）。
-2. **实测清单 Dioxus 版重排**：
+1. ~~W5 全波终审~~ **已完成（2026-08-28）**：CAN MERGE 0C/0I/12M，triage 全执行，详见 `progress.md` W5 Ledger 末行。
+2. **真机实测（唯一残余人工项）**：
    - 第 5 项（provider 编辑不抹 key）**作废**——Dioxus 壳无编辑 UI（审计 F7，L 量级，产品决策欠账）；I1 修复随 Slint 回调层已删，sync.rs 两个 helper 现为 dead code。
-   - 第 6/7 项（进程残留）**必须用 W5 后构建测**——F1 修复后 ✕ 关窗才走优雅退出链（LoopDestroyed → perform_shutdown → MCP 清理）；库契约与 WindowDropGuard 两项 judge ⚠️ 由该实测兜底。
+   - 第 6/7 项（进程残留）**必须用 W5 后构建测**——F1 修复后 ✕ 关窗才走优雅退出链（LoopDestroyed → perform_shutdown → MCP 清理）；终审 Cannot-verify 两项（库契约 + WindowDropGuard）由该实测兜底。
    - 当前运行中的实例（1:08 启动）是 **W5 之前的构建**，测了不算数——先重拉。
 3. 真机实测其它项（折叠/抽屉=三窗跟随/防跳底/Z-order）在 Dioxus 壳上首测，发现即新 finding。
 
@@ -33,6 +33,7 @@
 
 ## 队列（无 blocking）
 
+- **check:rot 红（2026-08-28 W5 收口时发现）**：4 项计数超 ceiling（unwrap 522/502、expect 1106/1089、let_underscore 390/388、dead_code 128/109），主体早于 W5；家规 7 上调需用户拍板 → 开清账任务或拍板调 ceiling（W6 候选）。
 - F7 provider 编辑 UI（L，产品决策：要不要在 Dioxus 设置页做编辑表单）。
 - F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子；审计自证当前 workaround 可接受）。
 - r1 Minors / r2#4 等更早残余以 `audit-wave-final-review.md` triage 为准。
@@ -42,5 +43,6 @@
 
 - `gemini-37-flash-agy`：W3 4/4 + W4-1（大删除，1 轮修复）+ W5 4/4——全天 implementer 零 BLOCKED。
 - judge `minimax-m3` ×6 全合格（含揪出真 keyring 污染这种实锤）。
-- 终审 `reviewer/step-explore_reviewer`：W3 终审 1 次空响应→SOP 续派成功；W4-2 壳审计一轮出活（质量高）。
+- 终审 `reviewer/step-explore_reviewer`：W3 终审 1 次空响应→SOP 续派成功；W4-2 壳审计一轮出活（质量高）；**W5 全波终审一次出活无空响应，CAN MERGE 判决含逐条 file:line 走查，质量保持**。
+- `gemini-37-flash-agy` 补丁单（终审 triage 修一记一 ×2 注释）一轮 DONE，磁盘 diff 取证相符。
 - 2026-08-27 用户拍板：3.7 全档位主推（3.6 停用）；vertex+agy 双渠道可并行；judge-ox-alpha 已从配置删除。

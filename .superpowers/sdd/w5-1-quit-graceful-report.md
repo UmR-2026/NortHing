@@ -161,3 +161,24 @@ E:\agent-project\NortHing\src\apps\desktop\src\bin\w4_repro.rs:
 - **Finding 2:** Verified `app.rs` line count: 959 lines (ceiling is 962 in `rot-budget.json`). No god-file ceiling was raised or violated.
 - **Finding 3:** Verified that `ShutdownCoordinator` callback closure in `main.rs` uses `Mutex<Option<...>>` with `.take()`, ensuring `shutdown()` is strictly idempotent even if called multiple times (e.g. from `LoopDestroyed` and fallback `main()`).
 - **Concerns:** None.
+
+---
+
+## 7. Erratum（2026-08-28 终审后编排者补录）
+
+**缺漏**：本报告 §4 验证章节未附 `mark_all_closing_targets` 单测的执行输出原文（W5 终审 Minor W5-1-M1）。
+
+**补跑证据**（编排者在终审 HEAD `f680cf6` 上实跑，MSVC toolchain）：
+
+### Command: `cargo +stable-msvc test -p northhing --lib mark_all_closing`
+```
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.79s
+     Running unittests src\lib.rs (target\debug\deps\northhing-975f8423d7ff303b.exe)
+
+running 1 test
+test ui_dioxus::registry::tests::test_mark_all_closing_targets ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 109 filtered out; finished in 0.00s
+```
+
+另：§2 走查两处行号 off-by-one（终审 Minor W5-1-M2，accept-and-close，不影响代码正确性）；§3 关于 WindowDropGuard 复用的声明为未验证声明（终审 Minor W5-1-M4，defer-with-owner，由真机实测清单第 7 项在新 HEAD 重跑兜底）。

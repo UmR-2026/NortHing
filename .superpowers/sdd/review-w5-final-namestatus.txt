@@ -1,0 +1,9 @@
+M	src/apps/desktop/src/app_state/settings/sync.rs
+M	src/apps/desktop/src/app_state/settings/tests.rs
+M	src/apps/desktop/src/main.rs
+M	src/apps/desktop/src/ui_dioxus/api.rs
+M	src/apps/desktop/src/ui_dioxus/app.rs
+M	src/apps/desktop/src/ui_dioxus/entry.rs
+M	src/apps/desktop/src/ui_dioxus/pages_onboarding.rs
+M	src/apps/desktop/src/ui_dioxus/registry.rs
+M	src/apps/desktop/src/ui_dioxus/state.rs
