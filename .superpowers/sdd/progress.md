@@ -8,6 +8,9 @@
 
 - Task W8-3 (selectors.rs 消复制): complete (commit `53e70dc`, review 一轮 **Approved 0C/0I/0M** by minimax-m3；implementer gemini-37-flash-agy) — 三处复制消除且归属正确（ModelItem::from_config → ui/model_selector.rs 类型 owner；time-ago 共享函数 → ui/session_selector.rs；custom_headers → 文件私有 helper）；time-ago 四档阈值/文案逐字符等价、ModelItem 字段顺序保持；custom_headers 顺带消除一次无条件 clone。875→861 行，ceiling 同步下调。测试 +3（41/41）。rot 绿。观察项带过：provider_display_name 竞速解析、UNIX_EPOCH unwrap_or_default（留后续）。
 
+- Task W8-4 (app.rs 抽离 + 硬编码路径): complete (commit `7e42a65`, review 一轮 **Approved 0C/0I/2M** by minimax-m3；implementer minimax-m3——⚠️ 选派异常记录：Gemini 双渠道证书错误 ×2 + step-explore 审查拦截 ×1，三连失败后启用 judge 模型当 implementer，一轮 DONE_WITH_CONCERNS 且疑虑全部正确) — 颜色工具+测试 → color.rs（134 行）；win_ops FFI+关闭链 → window_ops.rs（91 行）；app.rs 959→805，ceiling 962→805 下调；L74 spawn 吞错补 warn；onboarding 硬编码开发者路径 → 空默认+placeholder（step_gate 存在性校验兼容）。**两个重要事件**：①深审报告 §1.2 幻觉坐实——close_all_popups/PopupType 真身在 CLI input/ 不在 desktop（编排者+实现者+judge 三方独立核实零命中），§3 popup 去重未执行 = 正确；CLI 侧 popup 映射去重转后续候选；②会话开始时 app.rs 工作树破损（疑首个 agy 派发半截编辑后断线残留），实现者点名 git restore 恢复后重做，judge 核对最终 diff 连贯无残留。测试 113/113（color 边界 +4）。Minors×2 交终审（manifest 缩进 nit、报告措辞）。
+- **W8 波次状态：4/4 任务 complete 且 per-task review 全过；全波终审派单中。**
+
 # W7 Ledger (2026-08-28, F7 设置页 provider 编辑)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w7-provider-edit.md`；侦察：`w7-f7-settings-edit-recon.md`；w7-base = `029a5ad`。用户拍板选项 A（做编辑功能）。腐化探查 `rot-probe-2026-08-28.md` 副产物：①rot-budget.json 有 3 条死登记（callbacks_lifecycle/refresh 已随 Slint 删、kernel_facade/tests.rs 被新检查器语义排除）待清；②app.rs 959/962 余量 3、pages_onboarding 859/866 余量 7、css.rs 830/830 余量 0——F7 新代码全部走新文件。
