@@ -1,15 +1,5 @@
 use super::keyring::KeyringBackend;
 
-// 2026-07-18 (D2e): edit-flow key inheritance — empty incoming key on edit
-// keeps the stored one; add-flow or non-empty key passes through.
-pub fn resolve_effective_api_key(stored: Option<&str>, incoming: &str) -> String {
-    if incoming.trim().is_empty() {
-        stored.unwrap_or("").to_string()
-    } else {
-        incoming.to_string()
-    }
-}
-
 /// Edit-flow key resolution (P1-2 fail-closed): `stored` is the raw keyring
 /// read result. Blank incoming key inherits the stored one; a keyring error
 /// propagates so the caller refuses the save instead of swallowing it.

@@ -303,31 +303,6 @@ fn validate_provider_input_accepts_valid_custom() {
 }
 
 #[test]
-fn resolve_effective_api_key_empty_incoming_keeps_stored() {
-    let stored = Some("sk-stored");
-    let result = resolve_effective_api_key(stored, "");
-    assert_eq!(result, "sk-stored");
-}
-
-#[test]
-fn resolve_effective_api_key_empty_incoming_no_stored_returns_empty() {
-    let result = resolve_effective_api_key(None, "");
-    assert_eq!(result, "");
-}
-
-#[test]
-fn resolve_effective_api_key_non_empty_incoming_passes_through() {
-    let result = resolve_effective_api_key(Some("sk-stored"), "sk-new");
-    assert_eq!(result, "sk-new");
-}
-
-#[test]
-fn resolve_effective_api_key_whitespace_only_treated_as_empty() {
-    let result = resolve_effective_api_key(Some("sk-stored"), "   ");
-    assert_eq!(result, "sk-stored");
-}
-
-#[test]
 fn resolve_edit_api_key_err_stored_blank_incoming_returns_err() {
     let stored = Err(anyhow::anyhow!("keyring error"));
     let result = resolve_edit_api_key(stored, "");

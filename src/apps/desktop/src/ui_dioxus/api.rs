@@ -18,6 +18,10 @@ use northhing_kernel_api::settings::{
 use northhing_kernel_api::tools::KernelToolsApi;
 use northhing_kernel_api::turn::{KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto};
 
+#[path = "api_provider_edit.rs"]
+mod api_provider_edit;
+pub use api_provider_edit::*;
+
 /// Submits a user dialog turn for the given session.
 ///
 /// Builds a default agentic `TurnInputDto` and forwards it to the kernel facade.
@@ -371,6 +375,9 @@ pub fn event_channel() -> EventReceiver {
 }
 
 #[cfg(test)]
+pub(crate) static TEST_GLOBAL_CONFIG_MUTEX: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::app_state::settings::KeyringBackend;
@@ -432,6 +439,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_persist_onboarding_provider_success_flow() -> anyhow::Result<()> {
+        let _guard = TEST_GLOBAL_CONFIG_MUTEX.lock().await;
         let _ = northhing_core::service::config::initialize_global_config().await;
         let kr = crate::app_state::settings::MockKeyring::new();
         let res = persist_onboarding_provider_with_keyring(
