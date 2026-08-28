@@ -1,3 +1,10 @@
+# W6 Ledger (2026-08-28, rot-budget 清账)
+
+计划：`.superpowers/sdd/plan-2026-08-28-w6-rot-cleanup.md`；来源：W5 收口发现 `check:rot` 红（CI 门 ci.yml rot-budget job）。波前取证：`86ab479` 已红 3 项（unwrap 523/expect 1103/dead_code 128），本波清历史账非 W5 回滚。
+
+- Task W6-1 (allow_dead_code 128→106): complete (commit `11a4e5e`, review 一轮 **Approved 0C/0I/0M** by minimax-m3；implementer gemini-37-flash-agy) — 17 处删码+删标注（i18n.rs 8 const + keyring resolve_api_key + types 3 + registry 4）+ 4 处误标删标注（is_keyring_sentinel/is_env_sentinel/make_env_sentinel/store_api_key，生产引用坐实）+ 1 处实现者纠偏（INNER_HEAD_FACILITY_TITLE 实为 windows.rs:307,483 活代码，A 类改 B 类——侦察 rg 漏判，brief"以实际代码为准"条款接住，编排者磁盘复核确认）；ftl 3 locale 各 −8 条同步删除；unwrap 顺带 −4（522→518）。净 +7/-223，8 文件。验证：rot 实测 dead_code 脱离违规、check 0 err warnings 50 基线持平、lib 103/103（−7 与删除测试一一对应，judge 核对）、i18n:audit 11→11 零新增、workspace check 绿、rot-budget.json 零触碰。**教训入记忆：recon 行动表必须留"以实际代码为准"纠偏通道（本次接住一个漏判）。**
+- **W6 波次状态：W6-1 complete。W6-2（检查器语义修正：tests.rs 文件 + *_tests/ 目录排除）挂起等用户拍板 D1；剩余红项 unwrap 518/502、expect 1106/1089、let_ 390/388——按修正语义实测 473/937/388 全绿（21 个测试惯例文件误计：unwrap 49/expect 169/let_ 2），若 D1 拒绝则需生产代码真减 37 处。**
+
 # W5 Ledger (2026-08-28, Dioxus 壳审计修复)
 
 计划：`.superpowers/sdd/plan-2026-08-28-w5-dioxus-shell-fixes.md`；审计源 `w4-2-dioxus-shell-review.md`（1C/3I/3M）；用户拍板范围 F1+F2+F4+F5+F6（F3 搁置等 dioxus 上游，F7 留下一波）。

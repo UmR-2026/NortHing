@@ -33,7 +33,7 @@
 
 ## 队列（无 blocking）
 
-- **check:rot 红（2026-08-28 W5 收口时发现）**：4 项计数超 ceiling（unwrap 522/502、expect 1106/1089、let_underscore 390/388、dead_code 128/109），主体早于 W5；家规 7 上调需用户拍板 → 开清账任务或拍板调 ceiling（W6 候选）。
+- **check:rot（2026-08-28 W6 清账进行中）**：W6-1 已收口（`11a4e5e`，allow_dead_code 128→106 达标，review 0C/0I/0M）。剩余 3 红项（unwrap 518/502、expect 1106/1089、let_ 390/388）查明为检查器把 `tests.rs`/`*_tests/` 测试代码误计为生产（修正语义后 473/937/388 全绿）——**W6-2 检查器修正挂起等用户拍板 D1**；若拒绝则需生产真减 37 处。
 - F7 provider 编辑 UI（L，产品决策：要不要在 Dioxus 设置页做编辑表单）。
 - F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子；审计自证当前 workaround 可接受）。
 - r1 Minors / r2#4 等更早残余以 `audit-wave-final-review.md` triage 为准。
