@@ -49,6 +49,16 @@ pub struct ProviderEditModalProps {
     pub on_saved: EventHandler<()>,
 }
 
+/// Equality is based on underlying provider config field values.
+///
+/// `ProviderConfigDto` does not implement `PartialEq` in the core contract crate,
+/// and we intentionally avoid modifying cross-crate DTO contracts for UI-specific needs.
+/// Instead, equality is checked field-by-field on the DTO properties.
+///
+/// The `EventHandler` callbacks (`on_close`, `on_saved`) are intentionally omitted
+/// because closure instances are recreated on every render pass, making equality checks
+/// meaningless. This follows the precedent in `registry.rs` (`ModuleAppProps`) where
+/// callbacks and dynamic channels are excluded from prop diffing equality.
 impl PartialEq for ProviderEditModalProps {
     fn eq(&self, other: &Self) -> bool {
         self.provider.id == other.provider.id
