@@ -56,6 +56,10 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='cmd.exe' or Name
 - 步骤：设置 → 接入点 → 任一行点「编辑」→ 改个名称保存（列表应刷新显示新名）→ 再打开编辑，API Key **留空**直接保存 → 用该 provider 发一条消息（验证 key 没丢）；再试「测试连接」按钮（应出结果）；最后试着删除当前默认的 provider（应被拒绝并提示先切换默认）。
 - 预期：编辑保存生效、留空 key 不丢、测试连接有明确成败提示、默认 provider 拒删。
 
+### ☐ 9. 重启持久化（验收环"第二天还记得"）
+- 步骤：随便聊几句 → 完全关掉应用 → 重新打开。
+- 预期：会话和消息原样还在（用户 2026-08-29 澄清：此项 = 单 session 缓存不消失）。
+
 ---
 
 ## 结果记录（测完填这里或直接口述）
@@ -70,3 +74,4 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe' or Name='cmd.exe' or Name
 | 6 开关无孤儿 | | |
 | 7 退出无残留 | | |
 | 8 provider 编辑流 | | |
+| 9 重启持久化 | | |
