@@ -3,6 +3,8 @@
 计划来源：`docs/product/requirements-vs-current-2026-08-29.md` §五（用户裁决 2026-08-29）。w9-base = `151f77c`。**选派变更（用户拍板 2026-08-29）：coder 主力这两天切 step-explore**（实际执行中 Gemini 渠道事故 + step-explore 内容拦截，见各行）。
 
 - Task W9-1 (确认门第三档"本会话内允许"): complete (commits `921c09d` 抽离 + `d742e75` 第三档 + `3e55d75` 修复，review 两轮 by step-explore_reviewer：一轮 Needs fixes 1I（自动批准失败静默吞错）→ fixer 修复（warn + 回落 pending 卡 + push_pending_approval 去重）→ 重审 **Approved 0C/0I/0M**；implementer step-explore（抽离 + 第三档半成后断线）→ minimax-m3 接续+修复）— 关键裁定：facade 第三参实测为 reason 文本无 remember 语义（step-explore 正确 NEEDS_CONTEXT）→ 桌面侧内存态 HashSet 允许集（工具名粒度、重启清空、命中自动批准 + 落可见审计记录）。app.rs 805→760→792，manifest god_file 条目删除（回归通用 800 线，观测组 6 条）。测试 +2（115/115）。**事件链记录：step-explore 首次半成断线（工作树留未提交半成品）、续派遭 censorship 拦截 ×2（该端点对桌面任务内容敏感，已是第二次）——任命 minimax-m3 接续完成。截图证据为 HTML mockup（Edge headless 渲染同 CSS），真机行为列入实测清单第 10 项。**
+- Task W9-2 (记忆浏览面板 TH-3 只读): complete (commit `c80227b` + fix `d02502e`，implementer step-explore → minimax-m3 接续；review 两轮 by step-explore/dv4p：一轮 **NEEDS FIXES 2I/6M** → fixer 修复（d02502e：I-1 export silent failure → error_msg routing；I-2 19 行 theme tracking 重复 → use_page_shell 返回值直用）→ 重审 **CAN MERGE 0C/0I/0M**)。9 文件 +512/-5 + 修复 +10/-23。验证：check -p northhing 绿、库测试 115/115。Minors×6 交终审 triage。
+- Task W9-3 (降级即报错 UI 路径 原则9): complete (commit `82371f5`) — kernel-api 重新导出 classify_ai_error_message + ErrorCategory；desktop app.rs 加 degraded Signal + TurnState::Failed/submit_turn Err 检测；css.rs 加 .degraded-banner（amber 警告样式）；RSX banner 非可关闭（自动清除）。4 文件 +80/-3。验证：check -p northhing 绿（47 warnings 基线）、库测试 115/115。
 
 # W8 Ledger (2026-08-29, god-file 腐化修复波)
 
