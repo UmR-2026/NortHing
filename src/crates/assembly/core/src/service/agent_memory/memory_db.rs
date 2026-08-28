@@ -228,118 +228,82 @@ impl MemoryDb {
         Ok(())
     }
 
+    fn map_fact_row(
+        row: &rusqlite::Row<'_>,
+    ) -> rusqlite::Result<(String, String, String, String, String, String, i64, String)> {
+        Ok((
+            row.get(0)?,
+            row.get(1)?,
+            row.get(2)?,
+            row.get(3)?,
+            row.get(4)?,
+            row.get(5)?,
+            row.get(6)?,
+            row.get(7)?,
+        ))
+    }
+
+    fn map_search_row(
+        row: &rusqlite::Row<'_>,
+    ) -> rusqlite::Result<(String, String, String, String, String, String, i64, i64, String, f64)> {
+        Ok((
+            row.get(0)?,
+            row.get(1)?,
+            row.get(2)?,
+            row.get(3)?,
+            row.get(4)?,
+            row.get(5)?,
+            row.get(6)?,
+            row.get(7)?,
+            row.get(8)?,
+            row.get(9)?,
+        ))
+    }
+
     pub(crate) fn get_facts(&self, workspace_key: Option<&str>) -> NortHingResult<Vec<Fact>> {
         let conn = self.conn.lock().map_err(|e| {
             NortHingError::service(format!("MemoryDb lock poisoned: {}", e))
         })?;
 
-        let mut stmt = if let Some(ws) = workspace_key {
+        let mut stmt = if workspace_key.is_some() {
             conn.prepare(
-                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type
+                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, fact_type
                  FROM facts
                  WHERE status = 'active' AND (scope = 'global' OR (scope = 'workspace' AND workspace_key = ?1))
                  ORDER BY created_at ASC",
             )
-            .map_err(|e| NortHingError::service(format!("Failed to prepare get_facts: {}", e)))?
         } else {
             conn.prepare(
-                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type
+                "SELECT id, text, scope, confidence, session_id, turn_id, created_at, fact_type
                  FROM facts
                  WHERE status = 'active' AND scope = 'global'
                  ORDER BY created_at ASC",
             )
-            .map_err(|e| NortHingError::service(format!("Failed to prepare get_facts: {}", e)))?
-        };
+        }
+        .map_err(|e| NortHingError::service(format!("Failed to prepare get_facts: {}", e)))?;
 
-        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, String)>> =
-            if let Some(ws) = workspace_key {
-                stmt.query_map(params![ws], |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, String>(3)?,
-                        row.get::<_, String>(4)?,
-                        row.get::<_, String>(5)?,
-                        row.get::<_, i64>(6)?,
-                        row.get::<_, i64>(7)?,
-                        row.get::<_, String>(8)?,
-                    ))
-                })
-                .map_err(|e| NortHingError::service(format!("Failed to query get_facts: {}", e)))?
-                .collect()
-            } else {
-                stmt.query_map([], |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, String>(3)?,
-                        row.get::<_, String>(4)?,
-                        row.get::<_, String>(5)?,
-                        row.get::<_, i64>(6)?,
-                        row.get::<_, i64>(7)?,
-                        row.get::<_, String>(8)?,
-                    ))
-                })
-                .map_err(|e| NortHingError::service(format!("Failed to query get_facts: {}", e)))?
-                .collect()
-            };
+        let rows = if let Some(ws) = workspace_key {
+            stmt.query_map(params![ws], Self::map_fact_row)
+        } else {
+            stmt.query_map([], Self::map_fact_row)
+        }
+        .map_err(|e| NortHingError::service(format!("Failed to query get_facts: {}", e)))?;
 
         let mut facts = Vec::new();
         for row in rows {
-            let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type) =
+            let (id, text, scope, confidence, session_id, turn_id, created_at, fact_type) =
                 row.map_err(|e| NortHingError::service(format!("Failed to read fact row: {}", e)))?;
 
-            let scope_enum = match scope.as_str() {
-                "workspace" => FactScope::Workspace,
-                "global" => FactScope::Global,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown scope: {}",
-                        scope
-                    )))
-                }
-            };
-
-            let confidence_enum = match confidence.as_str() {
-                "high" => FactConfidence::High,
-                "med" => FactConfidence::Med,
-                "low" => FactConfidence::Low,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown confidence: {}",
-                        confidence
-                    )))
-                }
-            };
-
-            let fact_type_enum = match fact_type.as_str() {
-                "user" => FactType::User,
-                "feedback" => FactType::Feedback,
-                "project" => FactType::Project,
-                "reference" => FactType::Reference,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown fact_type: {}",
-                        fact_type
-                    )))
-                }
-            };
-
-            facts.push(Fact {
-                schema_version: 1,
+            facts.push(parse_fact_fields(
                 id,
                 text,
-                provenance: FactProvenance {
-                    session_id,
-                    turn_id,
-                },
-                confidence: confidence_enum,
-                scope: scope_enum,
-                fact_type: fact_type_enum,
-                created_at: created_at as u64,
-            });
+                &scope,
+                &confidence,
+                session_id,
+                turn_id,
+                created_at,
+                &fact_type,
+            )?);
         }
 
         Ok(facts)
@@ -391,7 +355,7 @@ impl MemoryDb {
 
         let match_expr = query_tokens
             .iter()
-            .map(|t| format!("\"{}\"", t.replace("\"", "\"\"")))
+            .map(|t| format!("\"{}\"", t.replace('\"', "\"\"")))
             .collect::<Vec<_>>()
             .join(" OR ");
 
@@ -413,7 +377,6 @@ impl MemoryDb {
                   ORDER BY rank
                   LIMIT ?3",
             )
-            .map_err(|e| NortHingError::service(format!("Failed to prepare search: {}", e)))?
         } else {
             conn.prepare(
                 "SELECT f.id, f.text, f.scope, f.confidence, f.session_id, f.turn_id, f.created_at, f.last_mentioned_at, f.fact_type,
@@ -426,110 +389,45 @@ impl MemoryDb {
                   ORDER BY rank
                   LIMIT ?2",
             )
-            .map_err(|e| NortHingError::service(format!("Failed to prepare search: {}", e)))?
-        };
+        }
+        .map_err(|e| NortHingError::service(format!("Failed to prepare search: {}", e)))?;
 
         let keyword_map = Self::load_keyword_weights(&conn);
 
-        let rows: Vec<rusqlite::Result<(String, String, String, String, String, String, i64, i64, String, f64)>> =
-            if let Some(ws) = workspace_key {
-                stmt.query_map(params![match_expr, ws, candidate_limit], |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, String>(3)?,
-                        row.get::<_, String>(4)?,
-                        row.get::<_, String>(5)?,
-                        row.get::<_, i64>(6)?,
-                        row.get::<_, i64>(7)?,
-                        row.get::<_, String>(8)?,
-                        row.get::<_, f64>(9)?,
-                    ))
-                })
-                .map_err(|e| NortHingError::service(format!("Failed to search facts: {}", e)))?
-                .collect()
-            } else {
-                stmt.query_map(params![match_expr, candidate_limit], |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, String>(3)?,
-                        row.get::<_, String>(4)?,
-                        row.get::<_, String>(5)?,
-                        row.get::<_, i64>(6)?,
-                        row.get::<_, i64>(7)?,
-                        row.get::<_, String>(8)?,
-                        row.get::<_, f64>(9)?,
-                    ))
-                })
-                .map_err(|e| NortHingError::service(format!("Failed to search facts: {}", e)))?
-                .collect()
-            };
+        let rows = if let Some(ws) = workspace_key {
+            stmt.query_map(params![match_expr, ws, candidate_limit], Self::map_search_row)
+        } else {
+            stmt.query_map(params![match_expr, candidate_limit], Self::map_search_row)
+        }
+        .map_err(|e| NortHingError::service(format!("Failed to search facts: {}", e)))?;
+
+        let now_ms = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+            Ok(d) => Some(d.as_millis() as u64),
+            Err(e) => {
+                // Clock anomaly: log warning and skip recency boost.
+                tracing::warn!("System clock before UNIX_EPOCH ({}); skipping recency boost", e);
+                None
+            }
+        };
 
         let mut results = Vec::new();
-        let now_ms = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
-
         for row in rows {
             let (id, text, scope, confidence, session_id, turn_id, created_at, last_mentioned_at, fact_type, rank) =
                 row.map_err(|e| NortHingError::service(format!("Failed to read search row: {}", e)))?;
 
-            let scope_enum = match scope.as_str() {
-                "workspace" => FactScope::Workspace,
-                "global" => FactScope::Global,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown scope: {}",
-                        scope
-                    )))
-                }
-            };
-
-            let confidence_enum = match confidence.as_str() {
-                "high" => FactConfidence::High,
-                "med" => FactConfidence::Med,
-                "low" => FactConfidence::Low,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown confidence: {}",
-                        confidence
-                    )))
-                }
-            };
-
-            let fact_type_enum = match fact_type.as_str() {
-                "user" => FactType::User,
-                "feedback" => FactType::Feedback,
-                "project" => FactType::Project,
-                "reference" => FactType::Reference,
-                _ => {
-                    return Err(NortHingError::service(format!(
-                        "Unknown fact_type: {}",
-                        fact_type
-                    )))
-                }
-            };
-
-            let fact = Fact {
-                schema_version: 1,
+            let fact = parse_fact_fields(
                 id,
-                text: text.clone(),
-                provenance: FactProvenance {
-                    session_id,
-                    turn_id,
-                },
-                confidence: confidence_enum,
-                scope: scope_enum,
-                fact_type: fact_type_enum,
-                created_at: created_at as u64,
-            };
+                text,
+                &scope,
+                &confidence,
+                session_id,
+                turn_id,
+                created_at,
+                &fact_type,
+            )?;
 
             let fact_tokens: std::collections::HashSet<String> =
-                segment_for_fts(&text).split_whitespace().map(String::from).collect();
+                segment_for_fts(&fact.text).split_whitespace().map(String::from).collect();
             let keyword_weight = keyword_map
                 .iter()
                 .filter(|(kw, _)| {
@@ -539,10 +437,8 @@ impl MemoryDb {
                 .map(|(_, w)| *w)
                 .fold(1.0, f64::max);
 
-            let bm25_pos = -rank;
-            let days = ((now_ms.saturating_sub(last_mentioned_at as u64)) as f64 / 86_400_000.0).max(1.0);
-            let recency_boost = 1.0 + 0.1 * (1.0 / days);
-            let score = bm25_pos * keyword_weight * recency_boost;
+            let recency_boost = Self::compute_recency_boost(now_ms, last_mentioned_at);
+            let score = -rank * keyword_weight * recency_boost;
 
             results.push(ScoredFact {
                 fact,
@@ -553,10 +449,31 @@ impl MemoryDb {
             });
         }
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        Self::sort_scored_facts(&mut results);
         results.truncate(limit);
 
         Ok(results)
+    }
+
+    fn compute_recency_boost(now_ms: Option<u64>, last_mentioned_at: i64) -> f64 {
+        match now_ms {
+            Some(now) => {
+                let days = ((now.saturating_sub(last_mentioned_at as u64)) as f64 / 86_400_000.0).max(1.0);
+                1.0 + 0.1 * (1.0 / days)
+            }
+            // Skip recency boost on clock anomaly to avoid skewed rankings.
+            None => 1.0,
+        }
+    }
+
+    fn sort_scored_facts(results: &mut [ScoredFact]) {
+        // Sink NaN scores to the bottom in descending sort.
+        results.sort_by(|a, b| match (a.score.is_nan(), b.score.is_nan()) {
+            (true, true) => std::cmp::Ordering::Equal,
+            (true, false) => std::cmp::Ordering::Greater,
+            (false, true) => std::cmp::Ordering::Less,
+            (false, false) => b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal),
+        });
     }
 
     fn load_keyword_weights(conn: &Connection) -> std::collections::HashMap<String, f64> {
@@ -870,6 +787,65 @@ impl Drop for MemoryDbPathGuard {
             let _ = std::fs::remove_file(&shm);
         }
     }
+}
+
+fn parse_scope(scope: &str) -> NortHingResult<FactScope> {
+    match scope {
+        "workspace" => Ok(FactScope::Workspace),
+        "global" => Ok(FactScope::Global),
+        _ => Err(NortHingError::service(format!("Unknown scope: {}", scope))),
+    }
+}
+
+fn parse_confidence(confidence: &str) -> NortHingResult<FactConfidence> {
+    match confidence {
+        "high" => Ok(FactConfidence::High),
+        "med" => Ok(FactConfidence::Med),
+        "low" => Ok(FactConfidence::Low),
+        _ => Err(NortHingError::service(format!(
+            "Unknown confidence: {}",
+            confidence
+        ))),
+    }
+}
+
+fn parse_fact_type(fact_type: &str) -> NortHingResult<FactType> {
+    match fact_type {
+        "user" => Ok(FactType::User),
+        "feedback" => Ok(FactType::Feedback),
+        "project" => Ok(FactType::Project),
+        "reference" => Ok(FactType::Reference),
+        _ => Err(NortHingError::service(format!(
+            "Unknown fact_type: {}",
+            fact_type
+        ))),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn parse_fact_fields(
+    id: String,
+    text: String,
+    scope: &str,
+    confidence: &str,
+    session_id: String,
+    turn_id: String,
+    created_at: i64,
+    fact_type: &str,
+) -> NortHingResult<Fact> {
+    Ok(Fact {
+        schema_version: 1,
+        id,
+        text,
+        provenance: FactProvenance {
+            session_id,
+            turn_id,
+        },
+        confidence: parse_confidence(confidence)?,
+        scope: parse_scope(scope)?,
+        fact_type: parse_fact_type(fact_type)?,
+        created_at: created_at as u64,
+    })
 }
 
 fn is_cjk(c: char) -> bool {

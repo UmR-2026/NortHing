@@ -690,3 +690,81 @@ fn get_stale_facts_filters_and_orders() {
 
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn sort_scored_facts_nan_sinks_to_bottom() {
+    let mut scored = vec![
+        ScoredFact {
+            fact: Fact {
+                schema_version: 1,
+                id: "nan1".to_string(),
+                text: "nan fact".to_string(),
+                provenance: FactProvenance {
+                    session_id: "s1".to_string(),
+                    turn_id: "t1".to_string(),
+                },
+                confidence: FactConfidence::High,
+                scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
+                created_at: 1000,
+            },
+            bm25: 0.0,
+            keyword_weight: 1.0,
+            recency_boost: 1.0,
+            score: f64::NAN,
+        },
+        ScoredFact {
+            fact: Fact {
+                schema_version: 1,
+                id: "high".to_string(),
+                text: "high fact".to_string(),
+                provenance: FactProvenance {
+                    session_id: "s1".to_string(),
+                    turn_id: "t1".to_string(),
+                },
+                confidence: FactConfidence::High,
+                scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
+                created_at: 1000,
+            },
+            bm25: -2.0,
+            keyword_weight: 1.0,
+            recency_boost: 1.0,
+            score: 2.0,
+        },
+        ScoredFact {
+            fact: Fact {
+                schema_version: 1,
+                id: "low".to_string(),
+                text: "low fact".to_string(),
+                provenance: FactProvenance {
+                    session_id: "s1".to_string(),
+                    turn_id: "t1".to_string(),
+                },
+                confidence: FactConfidence::High,
+                scope: FactScope::Workspace,
+                fact_type: FactType::Feedback,
+                created_at: 1000,
+            },
+            bm25: -1.0,
+            keyword_weight: 1.0,
+            recency_boost: 1.0,
+            score: 1.0,
+        },
+    ];
+
+    MemoryDb::sort_scored_facts(&mut scored);
+
+    assert_eq!(scored[0].fact.id, "high");
+    assert_eq!(scored[1].fact.id, "low");
+    assert_eq!(scored[2].fact.id, "nan1");
+}
+
+#[test]
+fn recency_boost_skips_on_clock_anomaly() {
+    let normal_boost = MemoryDb::compute_recency_boost(Some(86_400_000), 0);
+    assert!(normal_boost > 1.0);
+
+    let anomaly_boost = MemoryDb::compute_recency_boost(None, 1000);
+    assert_eq!(anomaly_boost, 1.0);
+}
