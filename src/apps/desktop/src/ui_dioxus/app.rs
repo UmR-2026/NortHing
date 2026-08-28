@@ -119,39 +119,41 @@ pub fn room_app_root() -> Element {
                             && sid.read().as_ref().map(|s| s == &tc.session_id).unwrap_or(true) =>
                     {
                         let tool_name = tc.name.clone();
-                        // W9-1: session allow-list hit → auto-approve and emit a resolved card.
                         if session_allow_list
                             .read()
                             .contains(tool_name.as_str())
                         {
-                            if api::respond_to_tool_confirmation(&tc.call_id, true).await.is_ok() {
-                                entries.write().push(MockEntry::Approval {
-                                    call_id: tc.call_id,
-                                    head: tc.name,
-                                    main: tc.summary,
-                                    risk: tc.detail.unwrap_or_default(),
-                                    resolved: true,
-                                    state_text: Some("已自动允许（本会话）".to_string()),
-                                });
+                            match api::respond_to_tool_confirmation(&tc.call_id, true).await {
+                                Ok(()) => {
+                                    entries.write().push(MockEntry::Approval {
+                                        call_id: tc.call_id,
+                                        head: tc.name,
+                                        main: tc.summary,
+                                        risk: tc.detail.unwrap_or_default(),
+                                        resolved: true,
+                                        state_text: Some("已自动允许（本会话）".to_string()),
+                                    });
+                                }
+                                Err(e) => {
+                                    // S2 fix: log failure (call_id + tool + err), then fall back to a pending card so the user retains manual approve/reject affordance. Tool stays in allow-list — failure is per-call (likely transient), not a tool verdict.
+                                    tracing::warn!("ui_dioxus::app session_allow_list auto-approve failed: call_id={} tool={}: {}", tc.call_id, tool_name, e);
+                                    super::approval_card::push_pending_approval(
+                                        entries,
+                                        tc.call_id,
+                                        tc.name,
+                                        tc.summary,
+                                        tc.detail.unwrap_or_default(),
+                                    );
+                                }
                             }
                         } else {
-                            let mut entries_guard = entries.write();
-                            let already_exists = entries_guard.iter().any(|e| match e {
-                                MockEntry::Approval { call_id, .. } => {
-                                    call_id == &tc.call_id
-                                }
-                                _ => false,
-                            });
-                            if !already_exists {
-                                entries_guard.push(MockEntry::Approval {
-                                    call_id: tc.call_id,
-                                    head: tc.name,
-                                    main: tc.summary,
-                                    risk: tc.detail.unwrap_or_default(),
-                                    resolved: false,
-                                    state_text: None,
-                                });
-                            }
+                            super::approval_card::push_pending_approval(
+                                entries,
+                                tc.call_id,
+                                tc.name,
+                                tc.summary,
+                                tc.detail.unwrap_or_default(),
+                            );
                         }
                     }
                     KernelEventDto::TurnState {

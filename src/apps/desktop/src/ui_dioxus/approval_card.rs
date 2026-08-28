@@ -40,6 +40,36 @@ async fn settle_approval(
     }
 }
 
+/// Push a pending (unresolved) approval entry, deduplicating by `call_id`.
+///
+/// Used by both the explicit pending path (tool not in allow-list) and
+/// the auto-approve-failure fallback path (tool in allow-list but
+/// `respond_to_tool_confirmation` returned `Err`). Centralizing avoids
+/// divergence between the two push sites.
+pub(crate) fn push_pending_approval(
+    entries: Signal<Vec<MockEntry>>,
+    call_id: String,
+    head: String,
+    main: String,
+    risk: String,
+) {
+    let mut entries = entries;
+    let already_exists = entries.read().iter().any(|e| match e {
+        MockEntry::Approval { call_id: cid, .. } => cid == &call_id,
+        _ => false,
+    });
+    if !already_exists {
+        entries.write().push(MockEntry::Approval {
+            call_id,
+            head,
+            main,
+            risk,
+            resolved: false,
+            state_text: None,
+        });
+    }
+}
+
 /// Render an approval card for a pending or resolved tool confirmation.
 ///
 /// `call_id` is cloned per-button so each `onclick` closure owns its own
