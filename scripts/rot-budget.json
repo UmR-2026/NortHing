@@ -74,14 +74,9 @@
   "ceiling": 875,
   "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
  },
- "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
-  "kind": "file-lines",
-  "ceiling": 836,
-  "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
- },
- "god_file:src/apps/cli/src/modes/chat/input.rs": {
-  "kind": "file-lines",
-  "ceiling": 802,
-  "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
- }
+  "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
+   "kind": "file-lines",
+   "ceiling": 836,
+   "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
+  }
 }
