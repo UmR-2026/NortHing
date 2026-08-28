@@ -30,6 +30,7 @@ pub use agents::{
 };
 pub use bootstrap::KernelBootstrapApi;
 pub use error::{KernelError, KernelResult};
+pub use northhing_core_types::errors::{classify_ai_error_message, ErrorCategory};
 pub use events::{BannerLevel, KernelEventDto, KernelEventsApi, SubscriptionId, ToolCallDto, ToolCallPhase};
 pub use memory::{EpisodeDto, FactDto, KernelMemoryApi, ToolFailureRecordDto, ToolUseRecordDto};
 pub use platform::{

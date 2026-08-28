@@ -85,6 +85,7 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window] aside .diff-add, body[data-window] aside .diff-del { flex-shrink: 0; white-space: nowrap; }
   body[data-window] aside .station-head .close-btn { margin-left: 6px; background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
   body[data-window] aside .station-head .close-btn:hover { color: var(--accent-solid); }
+  body[data-window] aside .degraded-banner { background: #f59e0b18; color: #b45309; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 12px; margin: 6px 0; font-size: 12px; }
   /* 终端井（C 单成果，保留）：禁断行 + 横向兜底。 */
   body[data-window="outer"] aside#work .term-well { white-space: pre; overflow-x: hidden; }
 

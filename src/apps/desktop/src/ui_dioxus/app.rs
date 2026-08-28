@@ -32,6 +32,7 @@ use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowI
 use super::window_ops::{close_module, quit_shell};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
+use northhing_kernel_api::{classify_ai_error_message, ErrorCategory};
 use tokio::sync::watch;
 
 /// RSX root for the room main window.
@@ -51,6 +52,7 @@ pub fn room_app_root() -> Element {
     let session_id_signal: Signal<Option<String>> = use_signal(|| None);
     let mut assistant_draft: Signal<Option<String>> = use_signal(|| None);
     let send_error: Signal<Option<String>> = use_signal(|| None);
+    let mut degraded: Signal<Option<String>> = use_signal(|| None);
     let mut user_input = use_signal(String::new);
     let mut entries = use_signal(|| seed_session());
     // W9-1: session-scoped tool allow-list (tool name → auto-approve).
@@ -177,9 +179,21 @@ pub fn room_app_root() -> Element {
                                     }
                                     streaming.set(false);
                                     active_turn_id.set(None);
+                                    degraded.set(None);
                                 }
                                 TurnStateKind::Failed => {
                                     let err_text = error.unwrap_or_else(|| "Turn failed".into());
+                                    let cat = classify_ai_error_message(&err_text);
+                                    if matches!(cat, ErrorCategory::ProviderQuota | ErrorCategory::ProviderBilling) {
+                                        degraded.set(Some(
+                                            if matches!(cat, ErrorCategory::ProviderQuota) {
+                                                "API 资源已耗尽，暂无法处理请求"
+                                            } else {
+                                                "账单或套餐异常，请检查设置"
+                                            }
+                                            .into(),
+                                        ));
+                                    }
                                     let body = if let Some(draft) = assistant_draft.write().take() {
                                         if draft.is_empty() {
                                             format!("[Error: {err_text}]")
@@ -302,6 +316,19 @@ pub fn room_app_root() -> Element {
                     });
                 }
                 Err(e) => {
+                    if let northhing_kernel_api::error::KernelError::Runtime(ref msg) = e {
+                        let cat = classify_ai_error_message(msg);
+                        if matches!(cat, ErrorCategory::ProviderQuota | ErrorCategory::ProviderBilling) {
+                            degraded.set(Some(
+                                if matches!(cat, ErrorCategory::ProviderQuota) {
+                                    "API 资源已耗尽"
+                                } else {
+                                    "账单或套餐异常"
+                                }
+                                .into(),
+                            ));
+                        }
+                    }
                     send_error.set(Some(format!("Submit error: {e}")));
                 }
             }
@@ -493,11 +520,15 @@ pub fn room_app_root() -> Element {
                                 onclick: move |_| {
                                     head_folded.set(!head_folded());
                                 },
-                                span { class: if head_folded() { "seam-bar folded" } else { "seam-bar" } }
-                            }
+                            span { class: if head_folded() { "seam-bar folded" } else { "seam-bar" } }
                         }
+                    }
 
-                        div { class: "chat-flow", id: "chat-flow",
+                    if let Some(reason) = degraded.read().as_ref() {
+                        div { class: "degraded-banner", "{reason}" }
+                    }
+
+                    div { class: "chat-flow", id: "chat-flow",
                             div { class: "session-open",
                                 "{locale.t(keys::SESSION_BANNER)}"
                             }
