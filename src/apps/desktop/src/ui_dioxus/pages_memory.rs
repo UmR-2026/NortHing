@@ -66,26 +66,7 @@ fn fact_type_label(t: &str) -> &str {
 }
 
 pub fn memory_app_root(props: ModuleAppProps) -> Element {
-    use_page_shell(&props);
-
-    let theme_rx = props.theme_rx.clone();
-    let theme_dark = use_signal(|| *theme_rx.borrow());
-
-    {
-        let theme_rx = theme_rx.clone();
-        use_future(move || {
-            let mut theme_rx = theme_rx.clone();
-            let mut theme_dark = theme_dark.clone();
-            async move {
-                loop {
-                    if theme_rx.changed().await.is_err() {
-                        break;
-                    }
-                    theme_dark.set(*theme_rx.borrow());
-                }
-            }
-        });
-    }
+    let theme_dark = use_page_shell(&props);
 
     let class = if theme_dark() { "dark" } else { "light" };
 
@@ -226,7 +207,10 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join("northhing")
             .join("exports");
-        let _ = std::fs::create_dir_all(&dir);
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            error_msg.set(format!("创建导出目录失败: {}", e));
+            return;
+        }
         let path = dir.join(format!("memory-{}.jsonl", now));
         let mut lines = Vec::with_capacity(current.len());
         for item in &current {
@@ -243,8 +227,11 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
             lines.push(serde_json::to_string(&json).unwrap_or_default());
         }
         let content = lines.join("\n");
-        let _ = std::fs::write(&path, content);
-        export_path.set(path.to_string_lossy().to_string());
+        if let Err(e) = std::fs::write(&path, content) {
+            error_msg.set(format!("导出失败: {}", e));
+        } else {
+            export_path.set(path.to_string_lossy().to_string());
+        }
     };
 
     rsx! {
