@@ -18,6 +18,7 @@ use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
 use dioxus::desktop::tao::window::WindowBuilder;
 use dioxus::desktop::{window, Config, WindowCloseBehaviour};
 use dioxus::prelude::*;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::api;
@@ -52,6 +53,8 @@ pub fn room_app_root() -> Element {
     let send_error: Signal<Option<String>> = use_signal(|| None);
     let mut user_input = use_signal(String::new);
     let mut entries = use_signal(|| seed_session());
+    // W9-1: session-scoped tool allow-list (tool name → auto-approve).
+    let session_allow_list = use_signal(|| HashSet::<String>::new());
     let mut mind_base = use_signal(|| "#C8714C".to_string());
     let mut mind_history = use_signal(|| vec!["#DAD6CF".to_string(), "#3F837B".to_string(), "#8B5FBF".to_string()]);
 
@@ -97,9 +100,10 @@ pub fn room_app_root() -> Element {
         }
     });
 
-    use_future(move || {
-        let mut rx = api::event_channel();
-        let sid = session_id_signal;
+     use_future(move || {
+         let mut rx = api::event_channel();
+         let sid = session_id_signal;
+         let session_allow_list = session_allow_list;
         async move {
             while let Some(dto) = rx.recv().await {
                 match dto {
@@ -114,20 +118,40 @@ pub fn room_app_root() -> Element {
                         if tc.phase == ToolCallPhase::AwaitingConfirmation
                             && sid.read().as_ref().map(|s| s == &tc.session_id).unwrap_or(true) =>
                     {
-                        let mut entries_guard = entries.write();
-                        let already_exists = entries_guard.iter().any(|e| match e {
-                            MockEntry::Approval { call_id, .. } => call_id == &tc.call_id,
-                            _ => false,
-                        });
-                        if !already_exists {
-                            entries_guard.push(MockEntry::Approval {
-                                call_id: tc.call_id,
-                                head: tc.name,
-                                main: tc.summary,
-                                risk: tc.detail.unwrap_or_default(),
-                                resolved: false,
-                                state_text: None,
+                        let tool_name = tc.name.clone();
+                        // W9-1: session allow-list hit → auto-approve and emit a resolved card.
+                        if session_allow_list
+                            .read()
+                            .contains(tool_name.as_str())
+                        {
+                            if api::respond_to_tool_confirmation(&tc.call_id, true).await.is_ok() {
+                                entries.write().push(MockEntry::Approval {
+                                    call_id: tc.call_id,
+                                    head: tc.name,
+                                    main: tc.summary,
+                                    risk: tc.detail.unwrap_or_default(),
+                                    resolved: true,
+                                    state_text: Some("已自动允许（本会话）".to_string()),
+                                });
+                            }
+                        } else {
+                            let mut entries_guard = entries.write();
+                            let already_exists = entries_guard.iter().any(|e| match e {
+                                MockEntry::Approval { call_id, .. } => {
+                                    call_id == &tc.call_id
+                                }
+                                _ => false,
                             });
+                            if !already_exists {
+                                entries_guard.push(MockEntry::Approval {
+                                    call_id: tc.call_id,
+                                    head: tc.name,
+                                    main: tc.summary,
+                                    risk: tc.detail.unwrap_or_default(),
+                                    resolved: false,
+                                    state_text: None,
+                                });
+                            }
                         }
                     }
                     KernelEventDto::TurnState {
@@ -475,7 +499,7 @@ pub fn room_app_root() -> Element {
                             div { class: "session-open",
                                 "{locale.t(keys::SESSION_BANNER)}"
                             }
-                            {render_entries(entries.read().iter(), entries, &locale)}
+                            {render_entries(entries.read().iter(), entries, &locale, session_allow_list)}
                             if let Some(ref draft) = *assistant_draft.read() {
                                 div { class: "rec entity",
                                     div { class: "who", "它" }
@@ -700,16 +724,22 @@ fn render_entries<'a>(
     iter: impl Iterator<Item = &'a MockEntry>,
     entries: Signal<Vec<MockEntry>>,
     locale: &LocalePack,
+    session_allow_list: Signal<HashSet<String>>,
 ) -> Element {
     let items: Vec<&MockEntry> = iter.collect();
     rsx! {
         for entry in items.iter() {
-            {render_entry(entry, entries, locale)}
+            {render_entry(entry, entries, locale, session_allow_list)}
         }
     }
 }
 
-fn render_entry(entry: &MockEntry, entries: Signal<Vec<MockEntry>>, locale: &LocalePack) -> Element {
+fn render_entry(
+    entry: &MockEntry,
+    entries: Signal<Vec<MockEntry>>,
+    locale: &LocalePack,
+    session_allow_list: Signal<HashSet<String>>,
+) -> Element {
     match entry {
         MockEntry::Entity { who, body, children } => rsx! {
             div { class: "rec entity",
@@ -743,6 +773,8 @@ fn render_entry(entry: &MockEntry, entries: Signal<Vec<MockEntry>>, locale: &Loc
             *resolved,
             state_text.clone(),
             entries,
+            session_allow_list,
+            head.clone(), // tool name for the allow-list button (raw name from Tc.name in event-driven entries)
             locale,
         ),
     }
