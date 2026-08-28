@@ -32,6 +32,7 @@ mod entry;
 mod i18n;
 mod page_shell;
 mod pages_archive;
+mod pages_memory;
 mod pages_onboarding;
 mod pages_onboarding_css;
 mod pages_settings;

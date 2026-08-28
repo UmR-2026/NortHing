@@ -538,6 +538,19 @@ pub fn facility_app_root(props: ModuleAppProps) -> Element {
                         },
                         "≡ {locale.t(keys::INNER_GLOBAL_SETTINGS)}"
                     }
+                    button {
+                        class: "sys-config w2-foot",
+                        onclick: {
+                            let mgr_mem = manager.clone();
+                            let rx_mem = rx_arc.clone();
+                            let theme_mem = theme_rx_for_settings.clone();
+                            move |e| {
+                                e.stop_propagation();
+                                super::app::spawn_module_window_with_theme_rx("memory", &mgr_mem, &rx_mem, theme_mem.clone());
+                            }
+                        },
+                        "记忆浏览"
+                    }
                 }
                 div { class: "mod w2c-axioms",
                     div { class: "side-title w2-pin",

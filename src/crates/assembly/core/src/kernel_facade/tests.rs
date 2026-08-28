@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use northhing_core_types::ErrorCategory;
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase, TurnPhaseKind};
-use northhing_kernel_api::memory::KernelMemoryApi;
+use northhing_kernel_api::memory::{FactDto, KernelMemoryApi};
 use northhing_kernel_api::session::{MessageDto, SessionConfigDto, SessionSummaryDto};
 use northhing_kernel_api::settings::ProviderFormDto;
 use northhing_kernel_api::turn::{DialogSubmitOutcomeDto, DialogSubmitOutcomeKindDto, TurnStateKind};
@@ -521,7 +521,23 @@ async fn test_list_episodes_dto_fields_are_correct() {
     assert_eq!(episodes.len(), 0);
 }
 
-// 鈹€鈹€ K4a-T23q DTO gap-fill tests 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// ── W9-2 memory fact tests ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_list_facts_returns_ok() {
+    let facade = KernelFacade::new();
+    let result = facade.list_facts(None).await;
+    assert!(result.is_ok(), "list_facts should return Ok: {:?}", result.err());
+}
+
+#[tokio::test]
+async fn test_search_facts_returns_ok() {
+    let facade = KernelFacade::new();
+    let result = facade.search_facts("anything", None, Some(5)).await;
+    assert!(result.is_ok(), "search_facts should return Ok: {:?}", result.err());
+}
+
+// K4a-T23q DTO gap-fill tests鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 #[test]
 fn test_message_to_dto_carries_timestamp() {

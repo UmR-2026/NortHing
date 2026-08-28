@@ -136,6 +136,14 @@ impl WindowRegistry {
             component: super::pages_space::space_app_root,
         });
         reg.register(WindowPlugin {
+            id: "memory",
+            title: "northhing - 记忆浏览器 (dioxus)",
+            initial_width: 720.0,
+            initial_height: 600.0,
+            dock_side: DockSide::Center,
+            component: super::pages_memory::memory_app_root,
+        });
+        reg.register(WindowPlugin {
             id: "settings",
             title: "northhing - 全局设置 (dioxus)",
             initial_width: 760.0,
