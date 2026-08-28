@@ -253,11 +253,6 @@ impl ShellWindowManager {
         Some(gen)
     }
 
-    #[allow(dead_code)]
-    pub fn register_window(&self, id: &'static str, gen: u64, window_id: WindowId) -> bool {
-        self.register_window_with_hwnd(id, gen, window_id, 0)
-    }
-
     pub fn register_window_with_hwnd(&self, id: &'static str, gen: u64, window_id: WindowId, hwnd: usize) -> bool {
         let mut guard = self.inner.active_states.lock().unwrap();
         match guard.get(id) {
@@ -367,11 +362,6 @@ impl ShellWindowManager {
         targets
     }
 
-    #[allow(dead_code)]
-    pub fn mark_closing(&self, id: &'static str) -> Option<WindowId> {
-        self.mark_closing_target(id).map(|(wid, _)| wid)
-    }
-
     pub fn notify_closed_with_gen(&self, id: &'static str, gen: u64) {
         let mut guard = self.inner.active_states.lock().unwrap();
         let should_remove = match guard.get(id) {
@@ -409,16 +399,6 @@ impl ShellWindowManager {
             _ => None,
         }
     }
-
-    #[allow(dead_code)]
-    pub fn get_window_id(&self, id: &str) -> Option<WindowId> {
-        self.get_window_target(id).map(|(wid, _)| wid)
-    }
-
-    #[allow(dead_code)]
-    pub fn get_hwnd(&self, id: &str) -> Option<usize> {
-        self.get_window_target(id).map(|(_, hwnd)| hwnd)
-    }
 }
 
 #[cfg(test)]
@@ -444,14 +424,14 @@ mod tests {
         );
 
         let mock_wid = unsafe { std::mem::transmute(1usize) };
-        assert!(manager1.register_window("self", gen, mock_wid));
+        assert!(manager1.register_window_with_hwnd("self", gen, mock_wid, 0));
 
         assert!(manager2.is_active("self"));
         assert!(manager2.is_any_active(&["self", "facility"]));
-        assert_eq!(manager2.get_window_id("self"), Some(mock_wid));
+        assert_eq!(manager2.get_window_target("self"), Some((mock_wid, 0)));
 
-        let closed_wid = manager1.mark_closing("self");
-        assert_eq!(closed_wid, Some(mock_wid));
+        let closed_target = manager1.mark_closing_target("self");
+        assert_eq!(closed_target, Some((mock_wid, 0)));
         assert!(!manager2.is_active("self"));
         assert!(!manager2.is_any_active(&["self", "facility"]));
     }
@@ -461,7 +441,7 @@ mod tests {
         let manager = ShellWindowManager::default();
         let gen1 = manager.mark_opening("work").expect("mark_opening work gen1");
         let mock_wid1 = unsafe { std::mem::transmute(1usize) };
-        assert!(manager.register_window("work", gen1, mock_wid1));
+        assert!(manager.register_window_with_hwnd("work", gen1, mock_wid1, 0));
 
         let gen2 = 9999u64; // Stale generation
         manager.notify_closed_with_gen("work", gen2);
@@ -485,8 +465,7 @@ mod tests {
         let mock_hwnd = 0x1234usize;
 
         assert!(manager.register_window_with_hwnd("facility", gen, mock_wid, mock_hwnd));
-        assert_eq!(manager.get_hwnd("facility"), Some(mock_hwnd));
-        assert_eq!(manager.get_window_id("facility"), Some(mock_wid));
+        assert_eq!(manager.get_window_target("facility"), Some((mock_wid, mock_hwnd)));
 
         let target = manager.mark_closing_target("facility");
         assert_eq!(target, Some((mock_wid, mock_hwnd)));

@@ -11,8 +11,7 @@
 //!
 //! When a provider's API key is migrated to the OS keyring, the
 //! `ProviderConfig.api_key` field is replaced with [`API_KEY_SENTINEL`] before
-//! serialization to disk. At load time, code that needs the actual key calls
-//! [`resolve_api_key`]; at save time, [`store_api_key`] handles the keyring
+//! serialization to disk. At save time, [`store_api_key`] handles the keyring
 //! write and returns the sentinel for the in-memory field.
 //!
 //! ## Fail-closed
@@ -62,19 +61,16 @@ pub const API_KEY_SENTINEL: &str = "__kr__";
 pub const MCP_ENV_SENTINEL: &str = "__kr_env__";
 
 /// Returns `true` when `s` is the keyring sentinel value.
-#[allow(dead_code)]
 pub fn is_keyring_sentinel(s: &str) -> bool {
     s == API_KEY_SENTINEL
 }
 
 /// Returns `true` when `env` map represents a keyring sentinel placeholder.
-#[allow(dead_code)]
 pub fn is_env_sentinel(env: &HashMap<String, String>) -> bool {
     env.contains_key(MCP_ENV_SENTINEL)
 }
 
 /// Helper to create a sentinel env map for on-disk persistence.
-#[allow(dead_code)]
 pub fn make_env_sentinel() -> HashMap<String, String> {
     let mut map = HashMap::new();
     map.insert(MCP_ENV_SENTINEL.to_string(), "true".to_string());
@@ -210,21 +206,6 @@ pub(crate) static PRODUCTION_KEYRING: Lazy<ProductionKeyring> = Lazy::new(|| Pro
 
 // ===== High-level helpers =====
 
-/// Resolve the actual API key for a provider.
-///
-/// If the provider's `api_key` field is the sentinel, the real key is
-/// fetched from `keyring`; otherwise the field value is returned as-is
-/// (empty string means no key configured; non-empty non-sentinel means
-/// a plaintext key that hasn't been migrated yet — handled at load time).
-#[allow(dead_code)]
-pub fn resolve_api_key(keyring: &dyn KeyringBackend, provider_id: &str, api_key_field: &str) -> Result<String> {
-    if is_keyring_sentinel(api_key_field) {
-        keyring.get(provider_id)
-    } else {
-        Ok(api_key_field.to_string())
-    }
-}
-
 /// Store an API key in the keyring and return the sentinel value for
 /// in-memory / on-disk storage.
 ///
@@ -235,7 +216,6 @@ pub fn resolve_api_key(keyring: &dyn KeyringBackend, provider_id: &str, api_key_
 ///
 /// Returns `Err` when the keyring is unavailable (fail-closed) — the
 /// caller must abort and not write plaintext to disk.
-#[allow(dead_code)]
 pub fn store_api_key(keyring: &dyn KeyringBackend, provider_id: &str, plaintext: &str) -> Result<String> {
     if plaintext.is_empty() || is_keyring_sentinel(plaintext) {
         return Ok(plaintext.to_string());
@@ -358,35 +338,6 @@ mod tests {
     fn mock_keyring_delete_missing_does_not_error() {
         let kr = MockKeyring::new();
         kr.delete("nonexistent").unwrap(); // should not panic
-    }
-
-    #[test]
-    fn resolve_api_key_returns_sentinel_from_keyring() {
-        let kr = MockKeyring::new();
-        kr.store("p1", "sk-real").unwrap();
-        let result = resolve_api_key(&kr, "p1", API_KEY_SENTINEL).unwrap();
-        assert_eq!(result, "sk-real");
-    }
-
-    #[test]
-    fn resolve_api_key_returns_plaintext_directly() {
-        let kr = MockKeyring::new();
-        let result = resolve_api_key(&kr, "p1", "sk-plain").unwrap();
-        assert_eq!(result, "sk-plain");
-    }
-
-    #[test]
-    fn resolve_api_key_returns_empty_string_as_is() {
-        let kr = MockKeyring::new();
-        let result = resolve_api_key(&kr, "p1", "").unwrap();
-        assert_eq!(result, "");
-    }
-
-    #[test]
-    fn resolve_api_key_sentinel_missing_keyring_returns_err() {
-        let kr = MockKeyring::new();
-        let result = resolve_api_key(&kr, "p1", API_KEY_SENTINEL);
-        assert!(result.is_err(), "sentinel without keyring entry must fail");
     }
 
     #[test]

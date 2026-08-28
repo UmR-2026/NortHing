@@ -3,41 +3,6 @@ use crate::app_state::settings::keyring::MockKeyring;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-fn sample_provider() -> ProviderConfig {
-    ProviderConfig::new("我的 Anthropic".into(), ProviderType::Anthropic)
-}
-
-#[test]
-fn provider_type_default_base_url() {
-    assert_eq!(ProviderType::Anthropic.default_base_url(), "https://api.anthropic.com");
-    assert_eq!(ProviderType::Openai.default_base_url(), "https://api.openai.com/v1");
-    assert_eq!(
-        ProviderType::Gemini.default_base_url(),
-        "https://generativelanguage.googleapis.com/v1beta"
-    );
-    assert_eq!(ProviderType::CustomOpenaiCompatible.default_base_url(), "");
-}
-
-#[test]
-fn provider_type_default_models_non_empty_for_named() {
-    assert!(!ProviderType::Anthropic.default_models().is_empty());
-    assert!(!ProviderType::Openai.default_models().is_empty());
-    assert!(!ProviderType::Gemini.default_models().is_empty());
-    assert!(ProviderType::CustomOpenaiCompatible.default_models().is_empty());
-}
-
-#[test]
-fn provider_new_has_unique_id_and_defaults() {
-    let a = sample_provider();
-    let b = sample_provider();
-    assert_ne!(a.id, b.id);
-    assert!(a.enabled);
-    assert_eq!(a.base_url, "https://api.anthropic.com");
-    assert_eq!(a.model, "claude-sonnet-4-5");
-    assert!(a.api_key.is_empty());
-    assert!(a.last_verified_ok.is_none());
-}
-
 #[test]
 fn is_first_run_empty_settings() {
     let s = AppSettings::default();

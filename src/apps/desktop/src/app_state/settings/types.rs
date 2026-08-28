@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use uuid::Uuid;
 
 // ===== Provider =====
 
@@ -20,30 +19,6 @@ pub enum ProviderType {
     CustomOpenaiCompatible,
     /// User provides `base_url`. Uses the Anthropic Messages HTTP shape.
     CustomAnthropicCompatible,
-}
-
-#[allow(dead_code)]
-impl ProviderType {
-    /// Default endpoint for the provider, when not user-overridden.
-    pub fn default_base_url(&self) -> &'static str {
-        match self {
-            Self::Anthropic => "https://api.anthropic.com",
-            Self::Openai => "https://api.openai.com/v1",
-            Self::Gemini => "https://generativelanguage.googleapis.com/v1beta",
-            Self::CustomOpenaiCompatible | Self::CustomAnthropicCompatible => "",
-        }
-    }
-
-    /// Curated list of common models for the dropdown. Empty for `Custom*`
-    /// variants (user must type the model name).
-    pub fn default_models(&self) -> &'static [&'static str] {
-        match self {
-            Self::Anthropic => &["claude-sonnet-4-5", "claude-opus-4", "claude-haiku-4"],
-            Self::Openai => &["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
-            Self::Gemini => &["gemini-2.0-flash", "gemini-1.5-pro"],
-            Self::CustomOpenaiCompatible | Self::CustomAnthropicCompatible => &[],
-        }
-    }
 }
 
 /// Single LLM provider entry.
@@ -72,32 +47,6 @@ pub struct ProviderConfig {
     pub last_verified_ok: Option<bool>,
 }
 
-#[allow(dead_code)]
-impl ProviderConfig {
-    pub fn new(name: String, provider_type: ProviderType) -> Self {
-        let id = Uuid::new_v4().to_string();
-        let base_url = provider_type.default_base_url().to_string();
-        let model = provider_type
-            .default_models()
-            .first()
-            .copied()
-            .unwrap_or("")
-            .to_string();
-        Self {
-            id,
-            name,
-            provider_type,
-            base_url,
-            api_key: String::new(),
-            model,
-            enabled: true,
-            created_at: super::now_unix_secs(),
-            last_verified_at: None,
-            last_verified_ok: None,
-        }
-    }
-}
-
 // ===== Workspace =====
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,7 +63,6 @@ pub struct WorkspaceEntry {
 
 // ===== MCP Server =====
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum MCPTransport {
@@ -148,13 +96,4 @@ pub struct MCPServerConfig {
     pub last_verified_ok: Option<bool>,
     #[serde(default)]
     pub last_tools: Vec<String>,
-}
-
-// ===== Default model =====
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModelRef {
-    pub provider_id: String,
-    pub model: String,
 }

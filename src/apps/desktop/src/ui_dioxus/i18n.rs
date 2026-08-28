@@ -172,44 +172,18 @@ pub mod keys {
     pub const APPROVAL_STATE: &str = "dioxus-room-approval-state";
 
     // ===== Deck / input =====
-    // R6 (2026-08-14 用户判决): DECK_WITNESS_NOTE 用法已从 app.rs 移除
-    // （见证说明删除）；key 保留为词表资产，locale 词条不动。
     // 2026-08-22（审查 M1 修）：DECK_ATTACH/DECK_SEND/DECK_SEND_STREAMING
     // 复活——attach/send/stop 钮的 aria-label 改走 locale 键。
     pub const DECK_ATTACH: &str = "dioxus-room-deck-attach";
     pub const DECK_PLACEHOLDER: &str = "dioxus-room-deck-placeholder";
-    #[allow(dead_code)]
-    pub const DECK_WITNESS_NOTE: &str = "dioxus-room-deck-witness-note";
     pub const DECK_SEND: &str = "dioxus-room-deck-send";
     pub const DECK_SEND_STREAMING: &str = "dioxus-room-deck-send-streaming";
 
-    // ===== Vertical label (room-handle vlabel) =====
-    // R6.2: 竖签元素已从 app.rs 移除（用户判决「字变得多余」）；
-    // key 保留为词表资产。
-    #[allow(dead_code)]
-    pub const VLABEL_INNER: &str = "dioxus-room-vlabel-inner";
-    #[allow(dead_code)]
-    pub const VLABEL_OUTER: &str = "dioxus-room-vlabel-outer";
-
     // ===== Inner / outer station heads =====
-    #[allow(dead_code)]
-    pub const INNER_HEAD_TITLE: &str = "dioxus-room-inner-head-title";
-    #[allow(dead_code)]
     pub const INNER_HEAD_FACILITY_TITLE: &str = "dioxus-room-inner-head-facility-title";
     pub const INNER_SECTION_SEDIMENT_TITLE: &str = "dioxus-room-inner-section-sediment-title";
     pub const INNER_SECTION_SEDIMENT_EM: &str = "dioxus-room-inner-section-sediment-em";
     pub const INNER_SECTION_SEDIMENT_NOTE: &str = "dioxus-room-inner-section-sediment-note";
-    // W2 视觉解耦（2026-08-21）：ENGINE/CONTEXT 两节并入 RUNTIME 卡，
-    // 四个 section 键不再被引用；key 与 locale 词条保留为词表资产
-    // （同 DECK_ATTACH 先例），i18n:audit 基线不受影响。
-    #[allow(dead_code)]
-    pub const INNER_SECTION_ENGINE_TITLE: &str = "dioxus-room-inner-section-engine-title";
-    #[allow(dead_code)]
-    pub const INNER_SECTION_ENGINE_EM: &str = "dioxus-room-inner-section-engine-em";
-    #[allow(dead_code)]
-    pub const INNER_SECTION_CONTEXT_TITLE: &str = "dioxus-room-inner-section-context-title";
-    #[allow(dead_code)]
-    pub const INNER_SECTION_CONTEXT_EM: &str = "dioxus-room-inner-section-context-em";
     pub const INNER_SECTION_AXIOMS_TITLE: &str = "dioxus-room-inner-section-axioms-title";
     pub const INNER_SECTION_AXIOMS_EM: &str = "dioxus-room-inner-section-axioms-em";
     pub const INNER_SECTION_RAG_TITLE: &str = "dioxus-room-inner-section-rag-title";
