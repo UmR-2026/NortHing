@@ -105,12 +105,7 @@ impl ChatMode {
                 let model_items: Vec<ModelItem> = models
                     .into_iter()
                     .filter(|m| m.enabled)
-                    .map(|m| ModelItem {
-                        id: m.id,
-                        name: m.name,
-                        provider: m.provider,
-                        model_name: m.model_name,
-                    })
+                    .map(|m| ModelItem::from_config(&m))
                     .collect();
 
                 Some((model_items, current_model_id))

@@ -1,7 +1,7 @@
 use super::super::agent_selector::AgentItem;
 use super::super::model_selector::ModelItem;
 use super::super::provider_selector::ProviderSelection;
-use super::super::session_selector::SessionItem;
+use super::super::session_selector::{format_time_ago, SessionItem};
 use super::super::skill_selector::{SkillItem, SkillSelectorAction};
 use super::super::subagent_selector::{SubagentItem, SubagentSelectorAction};
 use super::super::theme::{
@@ -45,25 +45,11 @@ impl StartupPage {
 
         let session_items: Vec<SessionItem> = sessions
             .into_iter()
-            .map(|s| {
-                let last_activity = {
-                    let elapsed = s.last_activity_at.elapsed().unwrap_or_default();
-                    if elapsed.as_secs() < 60 {
-                        "just now".to_string()
-                    } else if elapsed.as_secs() < 3600 {
-                        format!("{}m ago", elapsed.as_secs() / 60)
-                    } else if elapsed.as_secs() < 86400 {
-                        format!("{}h ago", elapsed.as_secs() / 3600)
-                    } else {
-                        format!("{}d ago", elapsed.as_secs() / 86400)
-                    }
-                };
-                SessionItem {
-                    session_id: s.session_id,
-                    session_name: s.session_name,
-                    last_activity,
-                    workspace: Some(self.workspace_display.clone()),
-                }
+            .map(|s| SessionItem {
+                session_id: s.session_id,
+                session_name: s.session_name,
+                last_activity: format_time_ago(s.last_activity_at),
+                workspace: Some(self.workspace_display.clone()),
             })
             .collect();
 
@@ -113,12 +99,7 @@ impl StartupPage {
                 let model_items: Vec<ModelItem> = models
                     .into_iter()
                     .filter(|m| m.enabled)
-                    .map(|m| ModelItem {
-                        id: m.id,
-                        name: m.name,
-                        provider: m.provider,
-                        model_name: m.model_name,
-                    })
+                    .map(|m| ModelItem::from_config(&m))
                     .collect();
 
                 Some((model_items, current_model_id))
@@ -202,11 +183,8 @@ impl StartupPage {
                 .as_millis()
         );
 
-        let custom_headers: Option<std::collections::HashMap<String, String>> = (!result.custom_headers.is_empty())
-            .then(|| serde_json::from_str(&result.custom_headers).ok())
-            .flatten();
-        let headers_mode = result.custom_headers_mode.clone();
-        let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then_some(headers_mode);
+        let (custom_headers, custom_headers_mode) =
+            parse_custom_headers(&result.custom_headers, &result.custom_headers_mode);
 
         let custom_request_body: Option<String> =
             (!result.custom_request_body.is_empty()).then(|| result.custom_request_body.clone());
@@ -341,11 +319,8 @@ impl StartupPage {
             None => return,
         };
 
-        let custom_headers: Option<std::collections::HashMap<String, String>> = (!result.custom_headers.is_empty())
-            .then(|| serde_json::from_str(&result.custom_headers).ok())
-            .flatten();
-        let headers_mode = result.custom_headers_mode.clone();
-        let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then_some(headers_mode);
+        let (custom_headers, custom_headers_mode) =
+            parse_custom_headers(&result.custom_headers, &result.custom_headers_mode);
 
         // Scheme C: an empty key field on edit inherits the stored keyring key.
         let effective_key = crate::keyring_keys::resolve_effective_model_key(&model_id, &result.api_key);
@@ -872,4 +847,15 @@ impl StartupPage {
 
         self.model_display_name = result.unwrap_or_default();
     }
+}
+
+fn parse_custom_headers(
+    raw_headers: &str,
+    headers_mode: &str,
+) -> (Option<std::collections::HashMap<String, String>>, Option<String>) {
+    let custom_headers = (!raw_headers.is_empty())
+        .then(|| serde_json::from_str(raw_headers).ok())
+        .flatten();
+    let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then(|| headers_mode.to_string());
+    (custom_headers, custom_headers_mode)
 }

@@ -4,7 +4,7 @@ use anyhow::Result;
 use crate::agent::Agent;
 use crate::chat_state::ChatState;
 use crate::ui::chat::ChatView;
-use crate::ui::session_selector::SessionItem;
+use crate::ui::session_selector::{format_time_ago, SessionItem};
 
 use super::ChatMode;
 
@@ -143,25 +143,11 @@ impl ChatMode {
 
         let session_items: Vec<SessionItem> = sessions
             .into_iter()
-            .map(|s| {
-                let last_activity = {
-                    let elapsed = s.last_activity_at.elapsed().unwrap_or_default();
-                    if elapsed.as_secs() < 60 {
-                        "just now".to_string()
-                    } else if elapsed.as_secs() < 3600 {
-                        format!("{}m ago", elapsed.as_secs() / 60)
-                    } else if elapsed.as_secs() < 86400 {
-                        format!("{}h ago", elapsed.as_secs() / 3600)
-                    } else {
-                        format!("{}d ago", elapsed.as_secs() / 86400)
-                    }
-                };
-                SessionItem {
-                    session_id: s.session_id,
-                    session_name: s.session_name,
-                    last_activity,
-                    workspace: self.workspace.clone(),
-                }
+            .map(|s| SessionItem {
+                session_id: s.session_id,
+                session_name: s.session_name,
+                last_activity: format_time_ago(s.last_activity_at),
+                workspace: self.workspace.clone(),
             })
             .collect();
 

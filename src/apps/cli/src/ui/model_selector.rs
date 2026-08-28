@@ -12,14 +12,32 @@ use ratatui::{
 };
 
 use crate::ui::theme::{StyleKind, Theme};
+use northhing_core::service::config::AIModelConfig;
 
 /// A model item for display in the selector
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelItem {
     pub id: String,
     pub name: String,
     pub provider: String,
     pub model_name: String,
+}
+
+impl ModelItem {
+    pub fn from_config(m: &AIModelConfig) -> Self {
+        Self {
+            id: m.id.clone(),
+            name: m.name.clone(),
+            provider: m.provider.clone(),
+            model_name: m.model_name.clone(),
+        }
+    }
+}
+
+impl From<&AIModelConfig> for ModelItem {
+    fn from(m: &AIModelConfig) -> Self {
+        Self::from_config(m)
+    }
 }
 
 /// Model selector popup state
@@ -272,5 +290,30 @@ impl ModelSelectorState {
         }
 
         Some(index)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_model_item_from_config() {
+        let config = AIModelConfig {
+            id: "model_123".to_string(),
+            name: "Claude 3.5 Sonnet".to_string(),
+            provider: "anthropic".to_string(),
+            model_name: "claude-3-5-sonnet".to_string(),
+            ..Default::default()
+        };
+
+        let item = ModelItem::from_config(&config);
+        assert_eq!(item.id, "model_123");
+        assert_eq!(item.name, "Claude 3.5 Sonnet");
+        assert_eq!(item.provider, "anthropic");
+        assert_eq!(item.model_name, "claude-3-5-sonnet");
+
+        let from_item: ModelItem = (&config).into();
+        assert_eq!(from_item, item);
     }
 }

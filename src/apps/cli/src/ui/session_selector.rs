@@ -23,6 +23,25 @@ pub struct SessionItem {
     pub workspace: Option<String>,
 }
 
+/// Format elapsed duration into a human-readable time-ago string (4 tiers).
+pub fn format_elapsed(elapsed: std::time::Duration) -> String {
+    if elapsed.as_secs() < 60 {
+        "just now".to_string()
+    } else if elapsed.as_secs() < 3600 {
+        format!("{}m ago", elapsed.as_secs() / 60)
+    } else if elapsed.as_secs() < 86400 {
+        format!("{}h ago", elapsed.as_secs() / 3600)
+    } else {
+        format!("{}d ago", elapsed.as_secs() / 86400)
+    }
+}
+
+/// Format a SystemTime into a human-readable time-ago string (4 tiers).
+pub fn format_time_ago(time: std::time::SystemTime) -> String {
+    let elapsed = time.elapsed().unwrap_or_default();
+    format_elapsed(elapsed)
+}
+
 /// Actions emitted by the session selector back to the caller
 #[derive(Debug, Clone)]
 pub enum SessionAction {
@@ -425,5 +444,42 @@ impl SessionSelectorState {
 
     fn char_to_byte(&self, s: &str, char_pos: usize) -> usize {
         s.char_indices().nth(char_pos).map(|(i, _)| i).unwrap_or(s.len())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_format_elapsed_four_tiers() {
+        // Tier 1: < 60s -> "just now"
+        assert_eq!(format_elapsed(Duration::from_secs(0)), "just now");
+        assert_eq!(format_elapsed(Duration::from_secs(1)), "just now");
+        assert_eq!(format_elapsed(Duration::from_secs(30)), "just now");
+        assert_eq!(format_elapsed(Duration::from_secs(59)), "just now");
+
+        // Tier 2: 60s..3600s -> "Xm ago"
+        assert_eq!(format_elapsed(Duration::from_secs(60)), "1m ago");
+        assert_eq!(format_elapsed(Duration::from_secs(119)), "1m ago");
+        assert_eq!(format_elapsed(Duration::from_secs(120)), "2m ago");
+        assert_eq!(format_elapsed(Duration::from_secs(3599)), "59m ago");
+
+        // Tier 3: 3600s..86400s -> "Xh ago"
+        assert_eq!(format_elapsed(Duration::from_secs(3600)), "1h ago");
+        assert_eq!(format_elapsed(Duration::from_secs(7199)), "1h ago");
+        assert_eq!(format_elapsed(Duration::from_secs(7200)), "2h ago");
+        assert_eq!(format_elapsed(Duration::from_secs(86399)), "23h ago");
+
+        // Tier 4: >= 86400s -> "Xd ago"
+        assert_eq!(format_elapsed(Duration::from_secs(86400)), "1d ago");
+        assert_eq!(format_elapsed(Duration::from_secs(172800)), "2d ago");
+    }
+
+    #[test]
+    fn test_format_time_ago_recent() {
+        let now = std::time::SystemTime::now();
+        assert_eq!(format_time_ago(now), "just now");
     }
 }

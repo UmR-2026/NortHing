@@ -71,7 +71,7 @@
  },
  "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
   "kind": "file-lines",
-  "ceiling": 875,
+  "ceiling": 861,
   "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
  },
   "god_file:src/crates/assembly/core/src/service/lsp/manager.rs": {
