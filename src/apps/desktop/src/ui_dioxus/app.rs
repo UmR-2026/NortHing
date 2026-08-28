@@ -29,10 +29,10 @@ use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::{seed_session, MockEntry};
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
+use super::turn_banner::{cancelled_body, error_draft_body, kernel_error_message, maybe_set_degraded};
 use super::window_ops::{close_module, quit_shell};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
-use northhing_kernel_api::{classify_ai_error_message, ErrorCategory};
 use tokio::sync::watch;
 
 /// RSX root for the room main window.
@@ -102,10 +102,10 @@ pub fn room_app_root() -> Element {
         }
     });
 
-     use_future(move || {
-         let mut rx = api::event_channel();
-         let sid = session_id_signal;
-         let session_allow_list = session_allow_list;
+    use_future(move || {
+        let mut rx = api::event_channel();
+        let sid = session_id_signal;
+        let session_allow_list = session_allow_list;
         async move {
             while let Some(dto) = rx.recv().await {
                 match dto {
@@ -121,10 +121,7 @@ pub fn room_app_root() -> Element {
                             && sid.read().as_ref().map(|s| s == &tc.session_id).unwrap_or(true) =>
                     {
                         let tool_name = tc.name.clone();
-                        if session_allow_list
-                            .read()
-                            .contains(tool_name.as_str())
-                        {
+                        if session_allow_list.read().contains(tool_name.as_str()) {
                             match api::respond_to_tool_confirmation(&tc.call_id, true).await {
                                 Ok(()) => {
                                     entries.write().push(MockEntry::Approval {
@@ -138,7 +135,12 @@ pub fn room_app_root() -> Element {
                                 }
                                 Err(e) => {
                                     // S2 fix: log failure (call_id + tool + err), then fall back to a pending card so the user retains manual approve/reject affordance. Tool stays in allow-list — failure is per-call (likely transient), not a tool verdict.
-                                    tracing::warn!("ui_dioxus::app session_allow_list auto-approve failed: call_id={} tool={}: {}", tc.call_id, tool_name, e);
+                                    tracing::warn!(
+                                        "ui_dioxus::app session_allow_list auto-approve failed: call_id={} tool={}: {}",
+                                        tc.call_id,
+                                        tool_name,
+                                        e
+                                    );
                                     super::approval_card::push_pending_approval(
                                         entries,
                                         tc.call_id,
@@ -183,26 +185,8 @@ pub fn room_app_root() -> Element {
                                 }
                                 TurnStateKind::Failed => {
                                     let err_text = error.unwrap_or_else(|| "Turn failed".into());
-                                    let cat = classify_ai_error_message(&err_text);
-                                    if matches!(cat, ErrorCategory::ProviderQuota | ErrorCategory::ProviderBilling) {
-                                        degraded.set(Some(
-                                            if matches!(cat, ErrorCategory::ProviderQuota) {
-                                                "API 资源已耗尽，暂无法处理请求"
-                                            } else {
-                                                "账单或套餐异常，请检查设置"
-                                            }
-                                            .into(),
-                                        ));
-                                    }
-                                    let body = if let Some(draft) = assistant_draft.write().take() {
-                                        if draft.is_empty() {
-                                            format!("[Error: {err_text}]")
-                                        } else {
-                                            format!("{draft}\n[Error: {err_text}]")
-                                        }
-                                    } else {
-                                        format!("[Error: {err_text}]")
-                                    };
+                                    maybe_set_degraded(&err_text, degraded);
+                                    let body = error_draft_body(assistant_draft.write().take(), err_text);
                                     entries.write().push(MockEntry::Entity {
                                         who: "它".into(),
                                         body,
@@ -212,15 +196,7 @@ pub fn room_app_root() -> Element {
                                     active_turn_id.set(None);
                                 }
                                 TurnStateKind::Cancelled => {
-                                    let body = if let Some(draft) = assistant_draft.write().take() {
-                                        if draft.is_empty() {
-                                            "[Cancelled]".to_string()
-                                        } else {
-                                            format!("{draft}\n[Cancelled]")
-                                        }
-                                    } else {
-                                        "[Cancelled]".to_string()
-                                    };
+                                    let body = cancelled_body(assistant_draft.write().take());
                                     entries.write().push(MockEntry::Entity {
                                         who: "它".into(),
                                         body,
@@ -228,6 +204,7 @@ pub fn room_app_root() -> Element {
                                     });
                                     streaming.set(false);
                                     active_turn_id.set(None);
+                                    degraded.set(None);
                                 }
                                 TurnStateKind::Started => {}
                             }
@@ -316,19 +293,8 @@ pub fn room_app_root() -> Element {
                     });
                 }
                 Err(e) => {
-                    if let northhing_kernel_api::error::KernelError::Runtime(ref msg) = e {
-                        let cat = classify_ai_error_message(msg);
-                        if matches!(cat, ErrorCategory::ProviderQuota | ErrorCategory::ProviderBilling) {
-                            degraded.set(Some(
-                                if matches!(cat, ErrorCategory::ProviderQuota) {
-                                    "API 资源已耗尽"
-                                } else {
-                                    "账单或套餐异常"
-                                }
-                                .into(),
-                            ));
-                        }
-                    }
+                    let err_text = kernel_error_message(&e);
+                    maybe_set_degraded(&err_text, degraded);
                     send_error.set(Some(format!("Submit error: {e}")));
                 }
             }

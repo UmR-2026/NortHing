@@ -5340,6 +5340,7 @@ dependencies = [
  "keyring",
  "northhing-agent-dispatch",
  "northhing-core",
+ "northhing-core-types",
  "northhing-debug-log",
  "northhing-events",
  "northhing-kernel-api",

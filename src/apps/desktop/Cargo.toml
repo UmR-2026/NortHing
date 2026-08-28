@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 # Internal crates
 northhing-core = { path = "../../crates/assembly/core", default-features = false, features = ["product-full"] }
+northhing-core-types = { path = "../../crates/contracts/core-types" }
 northhing-events = { path = "../../crates/contracts/events" }
 northhing-agent-dispatch = { path = "../../crates/execution/agent-dispatch" }
 northhing-runtime-ports = { path = "../../crates/contracts/runtime-ports" }

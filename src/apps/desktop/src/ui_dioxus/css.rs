@@ -23,7 +23,8 @@
 /// the source. If the truth HTML changes, this string must be updated
 /// in lock-step — the regression test `assert_truth_css_byte_count`
 /// guards against silent divergence.
-pub const TRUTH_CSS: &str = include_str!("../../../../../docs/design/2026-07-22-frontend-redesign/consult-room/consult-room-main.css");
+pub const TRUTH_CSS: &str =
+    include_str!("../../../../../docs/design/2026-07-22-frontend-redesign/consult-room/consult-room-main.css");
 
 /// R4 (2026-08-14): BOM strip at the injection boundary.
 ///
@@ -81,11 +82,8 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window] aside .station-head, body[data-window] aside .row { overflow: hidden; }
   body[data-window] aside .station-head { display: flex; align-items: center; }
   body[data-window] aside .row > * { min-width: 0; }
-  body[data-window] aside .fold-btn, body[data-window] aside .tag-x,
-  body[data-window] aside .diff-add, body[data-window] aside .diff-del { flex-shrink: 0; white-space: nowrap; }
-  body[data-window] aside .station-head .close-btn { margin-left: 6px; background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
-  body[data-window] aside .station-head .close-btn:hover { color: var(--accent-solid); }
-  body[data-window] aside .degraded-banner { background: #f59e0b18; color: #b45309; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 12px; margin: 6px 0; font-size: 12px; }
+  body[data-window] aside .fold-btn, body[data-window] aside .tag-x, body[data-window] aside .diff-add, body[data-window] aside .diff-del { flex-shrink: 0; white-space: nowrap; }
+  body[data-window] aside .station-head .close-btn { margin-left: 6px; background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }   body[data-window] aside .degraded-banner { background: #f59e0b18; color: #b45309; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 12px; margin: 6px 0; font-size: 12px; }   body[data-window] aside .station-head .close-btn:hover { color: var(--accent-solid); }
   /* 终端井（C 单成果，保留）：禁断行 + 横向兜底。 */
   body[data-window="outer"] aside#work .term-well { white-space: pre; overflow-x: hidden; }
 

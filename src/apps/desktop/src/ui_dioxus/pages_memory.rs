@@ -6,6 +6,8 @@
 
 use dioxus::desktop::window;
 use dioxus::prelude::*;
+use northhing_core_types::time;
+use northhing_kernel_api::memory::FactDto;
 use std::rc::Rc;
 
 use super::api;
@@ -55,6 +57,19 @@ fn confidence_label(c: &str) -> &str {
     }
 }
 
+fn fact_to_item(d: FactDto) -> FactItem {
+    FactItem {
+        id: d.id,
+        text: d.text,
+        scope: d.scope,
+        confidence: d.confidence,
+        fact_type: d.fact_type,
+        created_at: d.created_at,
+        session_id: d.session_id,
+        turn_id: d.turn_id,
+    }
+}
+
 fn fact_type_label(t: &str) -> &str {
     match t {
         "user" => "用户",
@@ -95,19 +110,7 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
         spawn(async move {
             match api::list_facts(None).await {
                 Ok(f) => {
-                    let items = f
-                        .into_iter()
-                        .map(|d| FactItem {
-                            id: d.id,
-                            text: d.text,
-                            scope: d.scope,
-                            confidence: d.confidence,
-                            fact_type: d.fact_type,
-                            created_at: d.created_at,
-                            session_id: d.session_id,
-                            turn_id: d.turn_id,
-                        })
-                        .collect::<Vec<_>>();
+                    let items = f.into_iter().map(fact_to_item).collect::<Vec<_>>();
                     facts.set(items);
                     loading.set(false);
                 }
@@ -136,19 +139,7 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
         spawn(async move {
             match api::search_facts(&query, None, Some(20)).await {
                 Ok(f) => {
-                    let items = f
-                        .into_iter()
-                        .map(|d| FactItem {
-                            id: d.id,
-                            text: d.text,
-                            scope: d.scope,
-                            confidence: d.confidence,
-                            fact_type: d.fact_type,
-                            created_at: d.created_at,
-                            session_id: d.session_id,
-                            turn_id: d.turn_id,
-                        })
-                        .collect::<Vec<_>>();
+                    let items = f.into_iter().map(fact_to_item).collect::<Vec<_>>();
                     facts.set(items);
                     loading.set(false);
                 }
@@ -170,19 +161,7 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
         spawn(async move {
             match api::list_facts(None).await {
                 Ok(f) => {
-                    let items = f
-                        .into_iter()
-                        .map(|d| FactItem {
-                            id: d.id,
-                            text: d.text,
-                            scope: d.scope,
-                            confidence: d.confidence,
-                            fact_type: d.fact_type,
-                            created_at: d.created_at,
-                            session_id: d.session_id,
-                            turn_id: d.turn_id,
-                        })
-                        .collect::<Vec<_>>();
+                    let items = f.into_iter().map(fact_to_item).collect::<Vec<_>>();
                     facts.set(items);
                     loading.set(false);
                 }
@@ -199,10 +178,7 @@ pub fn memory_app_root(props: ModuleAppProps) -> Element {
         if current.is_empty() {
             return;
         }
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+        let now = time::now_unix_millis() as u64 / 1000;
         let dir = dirs::config_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join("northhing")

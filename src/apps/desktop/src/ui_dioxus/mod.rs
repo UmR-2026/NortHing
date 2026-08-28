@@ -41,5 +41,6 @@ mod pages_space;
 mod registry;
 mod session_mock;
 mod state;
+mod turn_banner;
 mod window_ops;
 mod windows;
