@@ -111,4 +111,19 @@ mod tests {
         let id = format!("no-such-model-{}", std::process::id());
         assert_eq!(resolve_effective_model_key(&id, ""), "");
     }
+
+    #[test]
+    fn chat_edit_path_resolve_contract() {
+        // Regression for W11-3: `ChatMode::update_existing_model` (in
+        // `modes/chat/model_config.rs`) must route the form's api_key
+        // field through this helper so a blank field inherits the
+        // stored keyring key rather than wiping it. Locks both arms at
+        // the call site. No real keyring entries are created.
+        let id = format!("w11-3-edit-path-{}", std::process::id());
+        // Arm 1 — blank form field on edit resolves to whatever the
+        // keyring holds (empty here because no entry exists for `id`).
+        assert_eq!(resolve_effective_model_key(&id, ""), "");
+        // Arm 2 — typed key always wins, even alongside a stored entry.
+        assert_eq!(resolve_effective_model_key(&id, "sk-typed"), "sk-typed");
+    }
 }

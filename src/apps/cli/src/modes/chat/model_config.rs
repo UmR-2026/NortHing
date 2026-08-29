@@ -191,13 +191,20 @@ impl ChatMode {
             Some(result.custom_request_body.clone())
         };
 
+        // Scheme C: an empty key field on edit inherits the stored keyring
+        // entry instead of wiping the existing key — parity with the
+        // startup-side `update_existing_model`. New-model saves (above) keep
+        // accepting the typed key as-is.
+        let effective_key =
+            crate::keyring_keys::resolve_effective_model_key(&model_id, &result.api_key);
+
         let model_config = northhing_core::service::config::AIModelConfig {
             id: model_id.clone(),
             name: result.name.clone(),
             provider: result.provider_format.clone(),
             model_name: result.model_name.clone(),
             base_url: result.base_url.clone(),
-            api_key: result.api_key.clone(),
+            api_key: effective_key,
             context_window: Some(result.context_window),
             max_tokens: Some(result.max_tokens),
             enabled: true,
