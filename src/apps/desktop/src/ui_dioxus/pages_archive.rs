@@ -142,6 +142,33 @@ pub fn format_session_export(session_id: &str, messages: &[MessageDto]) -> Strin
     format!("{header}{body}")
 }
 
+// ── Rename input validator (pure, unit-tested) ────────────────────────
+
+/// Maximum allowed session-title length, counted in Unicode scalar values (chars), not UTF-8 bytes.
+/// CJK ideographs are 3 UTF-8 bytes each; counting bytes would silently truncate ~26-char titles.
+pub const MAX_SESSION_NAME_CHARS: usize = 80;
+
+/// Reason a candidate session title was rejected.
+#[derive(Debug, PartialEq, Eq)]
+pub enum RenameError {
+    /// `name.trim().is_empty()` — nothing to save (or only whitespace).
+    Empty,
+    /// `name.chars().count() > MAX_SESSION_NAME_CHARS`.
+    TooLong,
+}
+
+/// Pure validator for the rename input box. Returns `Ok(())` when the trimmed title is
+/// non-empty AND at most `MAX_SESSION_NAME_CHARS` Unicode chars; otherwise the specific reason.
+pub fn validate_rename(name: &str) -> Result<(), RenameError> {
+    if name.trim().is_empty() {
+        return Err(RenameError::Empty);
+    }
+    if name.chars().count() > MAX_SESSION_NAME_CHARS {
+        return Err(RenameError::TooLong);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -165,6 +192,41 @@ mod tests {
         let out = format_session_export("s1", &msgs);
         assert!(out.contains("hello"));
         assert!(out.contains("User"));
+    }
+
+    #[test]
+    fn validate_rename_accepts_ascii_under_limit() {
+        assert!(validate_rename("hello world").is_ok());
+        let s = "a".repeat(MAX_SESSION_NAME_CHARS);
+        assert!(validate_rename(&s).is_ok());
+    }
+
+    #[test]
+    fn validate_rename_rejects_empty_and_whitespace() {
+        assert_eq!(validate_rename(""), Err(RenameError::Empty));
+        assert_eq!(validate_rename("   "), Err(RenameError::Empty));
+        assert_eq!(validate_rename("\t\n"), Err(RenameError::Empty));
+    }
+
+    #[test]
+    fn validate_rename_rejects_too_long_ascii() {
+        let s = "a".repeat(MAX_SESSION_NAME_CHARS + 1);
+        assert_eq!(validate_rename(&s), Err(RenameError::TooLong));
+    }
+
+    /// Regression for M-2 (CJK byte-vs-char truncation): 80 CJK ideographs are 240 UTF-8 bytes,
+    /// which the old `len() > 80` check would have flagged as too long.
+    #[test]
+    fn validate_rename_accepts_cjk_at_char_limit() {
+        let s: String = "测".repeat(MAX_SESSION_NAME_CHARS);
+        assert_eq!(s.len(), MAX_SESSION_NAME_CHARS * 3, "sanity: 80 CJK chars = 240 bytes");
+        assert!(validate_rename(&s).is_ok(), "80 CJK chars must pass; only bytes tripped the old check");
+    }
+
+    #[test]
+    fn validate_rename_rejects_cjk_over_char_limit() {
+        let s: String = "测".repeat(MAX_SESSION_NAME_CHARS + 1);
+        assert_eq!(validate_rename(&s), Err(RenameError::TooLong));
     }
 }
 
@@ -486,13 +548,12 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
                                                                     if !e.is_composing() && e.key() == Key::Enter {
                                                                         let Some(sid) = renaming_id.take() else { return };
                                                                         let new_name = rename_value.take();
-                                                                        if new_name.trim().is_empty() {
-                                                                            op_error.set(format!("{}", locale_for_handler.t(keys::ARCHIVE_RENAME_PLACEHOLDER)));
-                                                                            renaming_id.set(Some(sid));
-                                                                            return;
-                                                                        }
-                                                                        if new_name.len() > 80 {
-                                                                            op_error.set("标题不能超过 80 个字符".to_string());
+                                                                        if let Err(reason) = validate_rename(&new_name) {
+                                                                            let msg = match reason {
+                                                                                RenameError::Empty => format!("{}", locale_for_handler.t(keys::ARCHIVE_RENAME_PLACEHOLDER)),
+                                                                                RenameError::TooLong => format!("标题不能超过 {} 个字符", MAX_SESSION_NAME_CHARS),
+                                                                            };
+                                                                            op_error.set(msg);
                                                                             renaming_id.set(Some(sid));
                                                                             return;
                                                                         }
