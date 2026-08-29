@@ -4,6 +4,11 @@
 
 - Task W10-1 (api.rs 拆分): complete (commit `078af44`，review 一轮 **PASS 0C/0I/1M** by minimax-m3；implementer step-explore) — api.rs 799→266，拆出 api_settings.rs(292)/api_events.rs(253)/api_memory.rs(22)；TEST_GLOBAL_CONFIG_MUTEX 归位 api_settings + re-export 保路径；事件桥分级语义 judge 逐行等价。观察项 O-1：`test_delete_provider_default_provider_rejected` 全量跑 flaky（8 轮复现 2 失败）但 judge 判定真 pre-existing（mutex 同一实例、测试零改动、拆分前即如此）——记此待独立小单修。Minor：报告 unused-import 数字与 diff 不符（不影响代码）。
 
+- Task W10-2 (windows.rs 拆分): complete (commit `b50ba6e` 拆分 + `b284fa4` 修复，review 两轮 by minimax-m3：一轮 **FAIL 1C**——facility.rs 位移时丢 `DOCK_GAP_PX`（几何跟随会每帧内缩 16px 与主窗重叠，judge 对照原版逐常量抓出，附修复 diff）→ 原 coder 续会话修复 + 全文件同类漏项自查 → 重审 **PASS 0C/0I/3M**) — windows.rs 800 → windows/ 目录（mod 114 / self_app 281 / facility 221 / work 241）；三处 off_x 语义与原版逐字等价。**教训坐实：纯位移单的 judge 逐臂/逐常量核对不是形式——本波真抓到一个会改变窗口行为的漏移。**
+
+- Task W10-3 (全量测试收口，用户指令): complete（编排者实跑，非派发）— `cargo +stable-msvc test --workspace`：**113 套件全 ok，0 FAILED，2480 测试通过**（全量日志 C:\WINDOWS\TEMP\opencode\w10-3-full-test.log）；`check --workspace` 绿；rot 绿（6 god-file 登记）；hygiene 初红（progress.md 一条 Wave-2 旧台账行含本机绝对路径，预存问题因本文件进变更集被扫出）→ 就地脱敏修复（路径泛化，信息保留）→ 绿。
+- **W10 波次状态：COMPLETE。** 成果：api.rs 799→266、windows.rs 800→目录模块；贴线双雷全拆；全量测试绿。god-file 观测组 6 条登记余量：css.rs 829/830、pages_onboarding 859/866、cli theme.rs 989/989、memory_db 894/894、selectors 861/861、lsp/manager 836/836——cli theme/selectors/lsp-manager 三个触顶文件全是 CLI/服务层（非桌面主线），下波拆分时优先 cli theme.rs。
+
 # W9 Ledger (2026-08-29, 功能补缺波：校准裁决执行)
 
 计划来源：`docs/product/requirements-vs-current-2026-08-29.md` §五（用户裁决 2026-08-29）。w9-base = `151f77c`。**选派变更（用户拍板 2026-08-29）：coder 主力这两天切 step-explore**（实际执行中 Gemini 渠道事故 + step-explore 内容拦截，见各行）。
@@ -173,7 +178,7 @@
   - **T8 M-4 范围裁定（退回 Wave 3）**：plugin_dir 并发安装 TOCTOU（`create_dir` exclusive）涉安装语义，B7 任务清单未列，编排者判定语义风险退回计划 §4 决策清单，不随 B7。
   - 台账翻转：`final-review.md` §5/§8 的 T4 M-2/M-4、T5 M-1、T7 M-2、T8 M-1/M-5/M-7、FR-1、FR-2 九项标记 resolved（同 commit，家规 2）。
   - **验证（编排者实跑，GNU toolchain）**：`cargo test -p northhing-services-integrations --features product-full` **216/216**；`cargo test -p northhing-core --features product-full --lib remote_connect` **62/62**；`cargo test -p northhing-core --features product-full --lib lsp` **15/15**（含新 uninstall 回滚测试）；`cargo test -p northhing --lib` **118/118**（含 settings 79）；家规 6 `cargo check -p northhing` 通过。
-  - **环境陷阱（本机，已固化到验证命令）**：① gcc 16.1.0 + binutils 2.46.1 在 `TEMP=C:\WINDOWS\TEMP` 下触发 `ld.exe: cannot find @C:\WINDOWS\TEMP\ccXXX: Invalid argument`（response file 读取失败，build script 链接必崩）——改 `TEMP=C:\Users\UmR\AppData\Local\Temp` 即愈（该目录可写可删、不在 git 内、大小写与 canonicalize 一致，同时避免 file_transfer 的路径大小写断言失败与 git `branch --show-current` 误判父仓库）；② 新 worktree 缺 `generated_locale_contract.rs`（handoff §7 已知）→ `node scripts/generate-i18n-contract.mjs` 生成，但该脚本会改写 `relay-server/static/homepage/i18n.shared.json`（Session A 禁区），已 `git checkout --` 还原；③ `git branch --show-current` 在 worktree 内临时目录会返回父仓库分支名，故测试临时目录必须落在 git 仓库外。
+  - **环境陷阱（本机，已固化到验证命令）**：① gcc 16.1.0 + binutils 2.46.1 在 TEMP 指向系统临时目录时触发 `ld.exe: cannot find @<系统临时目录>\ccXXX: Invalid argument`（response file 读取失败，build script 链接必崩）——改 TEMP 到用户临时目录即愈（该目录可写可删、不在 git 内、大小写与 canonicalize 一致，同时避免 file_transfer 的路径大小写断言失败与 git `branch --show-current` 误判父仓库）；② 新 worktree 缺 `generated_locale_contract.rs`（handoff §7 已知）→ `node scripts/generate-i18n-contract.mjs` 生成，但该脚本会改写 `relay-server/static/homepage/i18n.shared.json`（Session A 禁区），已 `git checkout --` 还原；③ `git branch --show-current` 在 worktree 内临时目录会返回父仓库分支名，故测试临时目录必须落在 git 仓库外。
 
 ---
 
