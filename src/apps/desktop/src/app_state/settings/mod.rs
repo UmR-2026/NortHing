@@ -69,6 +69,23 @@ pub struct AppSettings {
     /// MCP servers configured at user level.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<MCPServerConfig>,
+    /// Display mode: breathing animation toggle (Card 6, W9-7).
+    /// Persisted across restarts; visual binding deferred to a future round
+    /// per design discipline (breath belongs to logo + agent avatar only).
+    #[serde(default = "default_display_breath")]
+    pub display_breath: bool,
+    /// Display mode: dual-optics (light/dark theme pair) toggle (Card 6, W9-7).
+    /// Persisted across restarts; visual binding deferred to a future round.
+    #[serde(default = "default_display_dual_optics")]
+    pub display_dual_optics: bool,
+}
+
+fn default_display_breath() -> bool {
+    true
+}
+
+fn default_display_dual_optics() -> bool {
+    true
 }
 
 impl Default for AppSettings {
@@ -79,6 +96,8 @@ impl Default for AppSettings {
             current_workspace: None,
             onboarding_completed: false,
             mcp_servers: Vec::new(),
+            display_breath: true,
+            display_dual_optics: true,
         }
     }
 }

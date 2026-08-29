@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900" font-family="-apple-system, 'Segoe UI', sans-serif">
+  <rect x="0" y="0" width="720" height="900" fill="#15171a"/>
+
+  <!-- Window chrome -->
+  <rect x="12" y="12" width="696" height="36" fill="#1c1e22" stroke="#2a2d32"/>
+  <text x="24" y="34" font-size="11" fill="#a37555">全局设置</text>
+  <text x="640" y="34" font-size="10" fill="#7c8087">▴ 收纳</text>
+  <text x="678" y="34" font-size="10" fill="#7c8087">✕</text>
+
+  <!-- Two columns -->
+  <!-- LEFT COLUMN 它的自我 -->
+  <rect x="12" y="56" width="340" height="820" fill="#181a1e" stroke="#2a2d32"/>
+  <text x="24" y="74" font-size="10" fill="#a37555" font-family="monospace">它的自我</text>
+
+  <!-- Card 1: 沉积记忆 SEDIMENT -->
+  <rect x="20" y="84" width="324" height="160" fill="#1f2226" stroke="#2f3238"/>
+  <text x="32" y="102" font-size="11" fill="#d8d4cc">沉积记忆 <tspan font-style="italic" fill="#a37555">SEDIMENT</tspan></text>
+  <text x="332" y="102" font-size="10" fill="#7c8087">▾</text>
+  <rect x="32" y="112" width="300" height="120" fill="#1a1c20"/>
+  <text x="40" y="130" font-size="10" fill="#a4a8b0">记忆条目 <tspan fill="#7c8087" dx="180">12</tspan></text>
+  <text x="40" y="148" font-size="10" fill="#a4a8b0">技能条目 <tspan fill="#7c8087" dx="180">8</tspan></text>
+  <text x="40" y="166" font-size="10" fill="#a4a8b0">累计 <tspan fill="#a37555" dx="210">20</tspan></text>
+  <g transform="translate(40, 178)">
+    <rect x="0"   y="0" width="50" height="6" fill="#a37555" rx="1"/>
+    <rect x="56"  y="0" width="50" height="6" fill="#a37555" rx="1"/>
+    <rect x="112" y="0" width="50" height="6" fill="#a37555" rx="1"/>
+    <rect x="168" y="0" width="50" height="6" fill="#2f3238" rx="1"/>
+    <rect x="224" y="0" width="50" height="6" fill="#2f3238" rx="1"/>
+  </g>
+  <text x="40" y="208" font-size="9" fill="#5b6068" font-style="italic">20 累计 · 已沉淀 3 段</text>
+
+  <!-- Card 2: 编年史 CHRONICLES -->
+  <rect x="20" y="254" width="324" height="100" fill="#1f2226" stroke="#2f3238"/>
+  <text x="32" y="272" font-size="11" fill="#d8d4cc">编年史 <tspan font-style="italic" fill="#a37555">CHRONICLES</tspan></text>
+  <text x="332" y="272" font-size="10" fill="#7c8087">▾</text>
+  <rect x="32" y="282" width="300" height="60" fill="#1a1c20"/>
+  <text x="40" y="300" font-size="10" fill="#a4a8b0">Genesis <tspan fill="#7c8087" dx="160">2026.07</tspan></text>
+  <text x="40" y="318" font-size="10" fill="#a4a8b0">Event <tspan fill="#7c8087" dx="180">2026.08</tspan></text>
+
+  <!-- Card 3: 身份 IDENTITY -->
+  <rect x="20" y="364" width="324" height="120" fill="#1f2226" stroke="#2f3238"/>
+  <text x="32" y="382" font-size="11" fill="#d8d4cc">身份 <tspan font-style="italic" fill="#a37555">IDENTITY</tspan></text>
+  <text x="332" y="382" font-size="10" fill="#7c8087">▾</text>
+  <rect x="32" y="392" width="300" height="80" fill="#1a1c20"/>
+  <text x="40" y="410" font-size="10" fill="#a4a8b0">名讳 <tspan fill="#a37555" font-style="italic" dx="200">Agent</tspan></text>
+  <text x="40" y="428" font-size="10" fill="#a4a8b0">位格 <tspan fill="#7c8087" dx="200">未配置</tspan></text>
+  <text x="40" y="452" font-size="9" fill="#5b6068">注：位格尚未提供独立数据通路。</text>
+
+  <!-- Card 4: 准则 AXIOMS -->
+  <rect x="20" y="494" width="324" height="100" fill="#1f2226" stroke="#2f3238"/>
+  <text x="32" y="512" font-size="11" fill="#d8d4cc">准则 <tspan font-style="italic" fill="#a37555">AXIOMS</tspan></text>
+  <text x="332" y="512" font-size="10" fill="#7c8087">▾</text>
+  <rect x="32" y="522" width="300" height="60" fill="#1a1c20"/>
+  <text x="40" y="540" font-size="10" fill="#a4a8b0"># 准则为产品设计原则，存储于 docs/，非用户数据。</text>
+  <text x="40" y="558" font-size="10" fill="#a4a8b0"># 当前无配置入口。</text>
+
+  <!-- RIGHT COLUMN 设施 -->
+  <rect x="368" y="56" width="340" height="820" fill="#181a1e" stroke="#2a2d32"/>
+  <text x="380" y="74" font-size="10" fill="#a37555" font-family="monospace">设施</text>
+
+  <!-- Card 6: 显示模式 DISPLAY -->
+  <rect x="376" y="600" width="324" height="180" fill="#1f2226" stroke="#a37555" stroke-width="1.4"/>
+  <text x="388" y="618" font-size="11" fill="#d8d4cc">显示模式 <tspan font-style="italic" fill="#a37555">DISPLAY</tspan></text>
+  <text x="688" y="618" font-size="10" fill="#7c8087">▾</text>
+  <rect x="388" y="628" width="300" height="140" fill="#1a1c20"/>
+  <!-- toggle 1: 呼吸 (ON) -->
+  <circle cx="402" cy="650" r="5" fill="#a37555"/>
+  <text x="416" y="654" font-size="10" fill="#d8d4cc">呼吸 <tspan fill="#7c8087" font-size="9"> 6s 周期</tspan></text>
+  <!-- toggle 2: 双镜 (ON) -->
+  <circle cx="402" cy="676" r="5" fill="#a37555"/>
+  <text x="416" y="680" font-size="10" fill="#d8d4cc">双镜 <tspan fill="#7c8087" font-size="9"> 同步主题</tspan></text>
+  <text x="388" y="710" font-size="9" fill="#5b6068">注：呼吸 / 双光学的视觉绑定将在后续视觉更新中生效。</text>
+  <text x="388" y="725" font-size="9" fill="#5b6068">两个开关已持久化到 ~/.northhing/config/app.json。</text>
+  <text x="388" y="752" font-size="9" fill="#a37555" font-family="monospace">display_breath=true, display_dual_optics=true</text>
+
+  <!-- Annotation arrow -->
+  <line x1="344" y1="380" x2="376" y2="660" stroke="#a37555" stroke-width="0.7" stroke-dasharray="3,2"/>
+  <text x="320" y="500" font-size="9" fill="#a37555" font-family="monospace">AppSettings</text>
+  <text x="316" y="514" font-size="9" fill="#a37555" font-family="monospace">持久化</text>
+
+  <!-- Mockup banner -->
+  <rect x="12" y="884" width="696" height="14" fill="#26292e"/>
+  <text x="24" y="894" font-size="9" fill="#5b6068">W9-7 mockup — 左列四卡接真数据 (facts+skills count / session.updated_at / provider.display_name) + 显示模式持久化 (AppSettings.display_breath/dual_optics)</text>
+</svg>

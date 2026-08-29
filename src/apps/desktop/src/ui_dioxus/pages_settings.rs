@@ -12,12 +12,12 @@ use std::rc::Rc;
 
 use super::css;
 use super::i18n::{keys, LocalePack};
+use super::pages_settings_cards::{persist_display_mode, SelfColumn};
 use super::pages_settings_provider_edit::ProviderEditModal;
 use super::pages_settings_skills::SkillsSection;
 use super::registry::ModuleAppProps;
 use super::windows::WindowDropGuard;
-#[allow(unused_imports)]
-use crate::app_state::settings::{load_app_settings, update_app_settings};
+use crate::app_state::settings::load_app_settings;
 use northhing_kernel_api::agents::SkillInfoDto;
 use northhing_kernel_api::settings::{AIModelConfigDto, MCPServerDto, ProviderConfigDto};
 
@@ -129,9 +129,9 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
     let skills = use_signal(Vec::<SkillInfoDto>::new);
     let skill_error = use_signal(|| None::<String>);
 
-    // Display modes (Card 6: 显示模式) - AppSettings has no fields, kept mock + TODO
-    let mut display_breath = use_signal(|| true); // TODO(data): no AppSettings field yet
-    let mut display_dual_optics = use_signal(|| true); // TODO(data): no AppSettings field yet
+    // Display modes (Card 6: 显示模式) — persisted in AppSettings.display_breath / .display_dual_optics
+    let mut display_breath = use_signal(|| true);
+    let mut display_dual_optics = use_signal(|| true);
 
     // Workspace path (Card 5: 工作区)
     let workspace_path = use_signal(|| None::<String>);
@@ -144,6 +144,8 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
         let mut default_provider_id = default_provider_id;
         let mut mcp_servers = mcp_servers;
         let mut skills = skills;
+        let mut display_breath = display_breath;
+        let mut display_dual_optics = display_dual_optics;
         async move {
             match load_app_settings().await {
                 Ok(settings) => {
@@ -152,6 +154,8 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                     } else if let Some(first_ws) = settings.workspaces.first() {
                         workspace_path.set(Some(first_ws.path.to_string_lossy().to_string()));
                     }
+                    display_breath.set(settings.display_breath);
+                    display_dual_optics.set(settings.display_dual_optics);
                 }
                 Err(err) => {
                     tracing::warn!("Failed to load app settings on settings page mount: {err}");
@@ -285,91 +289,12 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                 // Left Column: 它的自我 (Read-only)
                 aside { class: "settings-col", id: "settings-self",
                     div { class: "station-head", "{locale.t(keys::SETTINGS_HEAD_SELF)}" }
-
-                    // Card 1: 沉积记忆 SEDIMENT
-                    div {
-                        class: if folded_sediment() { "mod is-folded" } else { "mod" },
-                        div {
-                            class: "side-title w2-pin",
-                            onclick: move |_| { folded_sediment.toggle(); },
-                            "{locale.t(keys::SETTINGS_SECTION_SEDIMENT_TITLE)} "
-                            em { "{locale.t(keys::SETTINGS_SECTION_SEDIMENT_EM)}" }
-                            span { class: "fold-caret", if folded_sediment() { "▸" } else { "▾" } }
-                        }
-                        div { class: "w2-scroll",
-                            div { class: "row readonly", "# 边界不是围墙" }
-                            div { class: "row readonly", "# 观察先于干预" }
-                            div { class: "row readonly", "# 允许未完成" }
-                            div { class: "seg-bar",
-                                div { class: "seg on" }
-                                div { class: "seg on" }
-                                div { class: "seg on" }
-                                div { class: "seg" }
-                                div { class: "seg" }
-                            }
-                            div { class: "seg-note", "{locale.t(keys::SETTINGS_SEDIMENT_FOOT)}" }
-                        }
-                    }
-
-                    // Card 2: 编年史 CHRONICLES
-                    div {
-                        class: if folded_chronicles() { "mod is-folded" } else { "mod" },
-                        div {
-                            class: "side-title w2-pin",
-                            onclick: move |_| { folded_chronicles.toggle(); },
-                            "{locale.t(keys::SETTINGS_SECTION_CHRONICLES_TITLE)} "
-                            em { "{locale.t(keys::SETTINGS_SECTION_CHRONICLES_EM)}" }
-                            span { class: "fold-caret", if folded_chronicles() { "▸" } else { "▾" } }
-                        }
-                        div { class: "w2-scroll",
-                            div { class: "row readonly",
-                                "Genesis · 白昼唤醒"
-                                span { class: "row-meta", "2026.07" }
-                            }
-                            div { class: "row readonly",
-                                "Event · 首次脱离轨道"
-                                span { class: "row-meta", "2026.08" }
-                            }
-                        }
-                    }
-
-                    // Card 3: 身份 IDENTITY
-                    div {
-                        class: if folded_identity() { "mod is-folded" } else { "mod" },
-                        div {
-                            class: "side-title w2-pin",
-                            onclick: move |_| { folded_identity.toggle(); },
-                            "{locale.t(keys::SETTINGS_SECTION_IDENTITY_TITLE)} "
-                            em { "{locale.t(keys::SETTINGS_SECTION_IDENTITY_EM)}" }
-                            span { class: "fold-caret", if folded_identity() { "▸" } else { "▾" } }
-                        }
-                        div { class: "w2-scroll",
-                            div { class: "row readonly",
-                                "名讳"
-                                span { class: "row-meta font-agent", "NortHing" }
-                            }
-                            div { class: "row readonly",
-                                "位格"
-                                span { class: "row-meta font-agent", "观测者 / 见证中心" }
-                            }
-                        }
-                    }
-
-                    // Card 4: 准则 AXIOMS
-                    div {
-                        class: if folded_axioms() { "mod is-folded" } else { "mod" },
-                        div {
-                            class: "side-title w2-pin",
-                            onclick: move |_| { folded_axioms.toggle(); },
-                            "{locale.t(keys::SETTINGS_SECTION_AXIOMS_TITLE)} "
-                            em { "{locale.t(keys::SETTINGS_SECTION_AXIOMS_EM)}" }
-                            span { class: "fold-caret", if folded_axioms() { "▸" } else { "▾" } }
-                        }
-                        div { class: "w2-scroll",
-                            div { class: "row readonly", "# 维护主体边界" }
-                            div { class: "row readonly", "# 隐喻性修辞" }
-                            div { class: "row readonly", "# 拒绝仪表盘化" }
-                        }
+                    SelfColumn {
+                        locale: locale.clone(),
+                        folded_sediment,
+                        folded_chronicles,
+                        folded_identity,
+                        folded_axioms,
                     }
                 }
 
@@ -657,17 +582,36 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                         div { class: "w2-scroll",
                             div {
                                 class: if display_breath() { "row active" } else { "row" },
-                                onclick: move |_| display_breath.toggle(), // TODO(data): no AppSettings field yet
+                                onclick: move |_| {
+                                    let next = !display_breath();
+                                    display_breath.set(next);
+                                    dioxus::prelude::spawn(async move {
+                                        if let Err(e) = persist_display_mode(Some(next), None).await {
+                                            tracing::warn!("display_breath persist failed: {e}");
+                                        }
+                                    });
+                                },
                                 span { class: "sq-toggle" }
                                 "{locale.t(keys::SETTINGS_DISPLAY_BREATH)}"
                                 span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_BREATH_PERIOD)}" }
                             }
                             div {
                                 class: if display_dual_optics() { "row active" } else { "row" },
-                                onclick: move |_| display_dual_optics.toggle(), // TODO(data): no AppSettings field yet
+                                onclick: move |_| {
+                                    let next = !display_dual_optics();
+                                    display_dual_optics.set(next);
+                                    dioxus::prelude::spawn(async move {
+                                        if let Err(e) = persist_display_mode(None, Some(next)).await {
+                                            tracing::warn!("display_dual_optics persist failed: {e}");
+                                        }
+                                    });
+                                },
                                 span { class: "sq-toggle" }
                                 "{locale.t(keys::SETTINGS_DISPLAY_DUAL)}"
                                 span { class: "row-meta", "{locale.t(keys::SETTINGS_DISPLAY_DUAL_NOTE)}" }
+                            }
+                            div { class: "row readonly", style: "font-size:11px;color:var(--faint);",
+                                "注：呼吸 / 双光学的视觉绑定将在后续视觉更新中生效。"
                             }
                         }
                     }

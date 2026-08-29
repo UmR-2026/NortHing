@@ -23,7 +23,7 @@ pub const DEFAULT_LOCALE: &str = "zh-CN";
 /// nested message references) and the existing shell hard-codes its
 /// strings the same way. If future tasks need real fluent features, swap
 /// this for `fluent-bundle::FluentBundle` (already in workspace deps).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct LocalePack {
     by_key: HashMap<String, String>,
     locale: String,

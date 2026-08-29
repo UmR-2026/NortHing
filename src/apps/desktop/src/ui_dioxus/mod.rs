@@ -37,6 +37,7 @@ mod pages_memory;
 mod pages_onboarding;
 mod pages_onboarding_css;
 mod pages_settings;
+mod pages_settings_cards;
 mod pages_settings_provider_edit;
 mod pages_settings_skills;
 mod pages_space;
