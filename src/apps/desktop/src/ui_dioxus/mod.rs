@@ -24,6 +24,9 @@
 pub use entry::launch;
 
 mod api;
+mod api_events;
+mod api_memory;
+mod api_settings;
 mod api_fs;
 mod app;
 mod approval_card;
