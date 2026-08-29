@@ -1,3 +1,9 @@
+# W11 Ledger (2026-08-29, 腐化队列清账波)
+
+来源：验证轮②的 5 份盲审（`blind-review-*-2026-08-29.md`）。用户指令：先修 css.rs 死规则群 + selectors 克隆集群，逐项报告。
+
+- Task W11-1 (css.rs 死规则群): complete (commit `76d2c33`，review 一轮 **PASS 0C/0I/1M** by minimax-m3；implementer step-explore) — 死规则/死声明/死函数删除（depth-bar 块、membrane-node 死链、inject_stylesheet_html 等，逐点附零引用 rg 证据）+ 闸口游戏回滚（line 86 三规则恢复一行一条）+ 注释矛盾 ×3 修正 + R7.2→R8.1 属性迁移（judge 级联等价性严格通过）。css.rs 829→790，ceiling 830→790 同步下调。Minor×1：css.rs:57 残留 scrim 陈旧注释（accept-and-close，下波顺手）。**元教训闭环：首轮盲审的"闸口游戏"发现驱动了本波，E 项证据抽查纪律使 5 份盲审零误报。**
+
 # W10 Ledger (2026-08-29, 贴线大文件拆分 + 全量测试)
 
 计划：`.superpowers/sdd/plan-2026-08-29-w10-godfile-split.md`；w10-base = `f5f0882`。选派：step-explore 优先（用户拍板）。
