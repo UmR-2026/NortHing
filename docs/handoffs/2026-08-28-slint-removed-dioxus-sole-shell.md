@@ -1,10 +1,12 @@
-# Handoff — 2026-08-29 凌晨：W5/W6/W7/W8 全部收口，防腐体系升级完毕
+# Handoff — 2026-08-29：W5-W9 五波全部收口，校准裁决执行完毕
 
-> 焦点：壳切换线全闭环 + F7 交付 + god-file 腐化修复波（W8）收口 + 防腐化 skill 实战升级。**唯一残余 = 真机实测清单（HEAD ≥ `c77a51a` 的构建）。**
+> 焦点：壳切换 + 腐化修复 + **功能补缺五缺口（确认门三档/记忆面板/降级横幅/会话管理/技能管理/文件树/卡片做真）全部交付**，W9 全波终审 CAN MERGE 0C/0I/3M。**唯一残余 = 真机实测清单（10 项，用最新构建）。**
 
 ## 状态一句话
 
-2026-08-26 审计修复线（W1+W2+W3 共 16 任务）全部 CAN MERGE 收口；2026-08-27 晚用户拍板 Dioxus 为生产前端（`70bc4e8` 翻 flag）→ 同夜 W4-1 物理删除 Slint 壳（`707e414`+`0c95aa6`，-16,795 行，judge 两轮后 Approved）→ W4-2 壳级审计（1C/3I/3M，报告 `.superpowers/sdd/w4-2-dioxus-shell-review.md`） → W6 rot 清账 ×2（dead_code 128→106 + 检查器语义修正，check:rot 全绿）→ W7 F7 provider 编辑 ×2（终审 CAN MERGE 0C/0I/0M）全部收口。**main HEAD = `2cfd737`。**
+2026-08-26 审计修复线（W1+W2+W3 共 16 任务）全部 CAN MERGE 收口；2026-08-27 晚用户拍板 Dioxus 为生产前端（`70bc4e8` 翻 flag）→ 同夜 W4-1 物理删除 Slint 壳（`707e414`+`0c95aa6`，-16,795 行，judge 两轮后 Approved）→ W4-2 壳级审计（1C/3I/3M，报告 `.superpowers/sdd/w4-2-dioxus-shell-review.md`） → W6 rot 清账 ×2（dead_code 128→106 + 检查器语义修正，check:rot 全绿）→ W7 F7 provider 编辑 ×2（终审 CAN MERGE 0C/0I/0M）→ W8 god-file 腐化修复 ×4（终审 0C/0I/2M）→ **W9 功能补缺 ×7（确认门三档/记忆面板/降级横幅/会话管理/技能管理/文件树/卡片做真，终审 CAN MERGE 0C/0I/3M）全部收口。**
+
+**⚠️ 过程事件（详查 progress.md W9 段 + ERRORS.md）**：step-explore 一个 session 静默失败后续派脱轨自治（自主做了未派发的 W9-3 + 自审自判 + 违规写台账），代码本体经追溯独立审查收口；硬机制已立（静默失败 session 禁止续派/返回先查 git log/SDD 污染整 commit 复查）。
 
 ## commit 链（今晚，倒序）
 
@@ -18,6 +20,7 @@
 | W6 | rot 清账 ×2 | `11a4e5e`(dead_code 128→106) `7d53621`(检查器语义修正，D1 仲裁)；check:rot 全绿 |
 | W7 | F7 provider 编辑 ×2 | `2bb91ab`(API 层) `e8dbcfd`(弹窗 UI) `2cfd737`(终审注释补丁)；终审 CAN MERGE 0C/0I/0M |
 | W8 | god-file 腐化修复 ×4 | `3337c73`(input.rs 拆 5 文件) `5d4d98a`(memory_db 去重 918→894) `53e70dc`(selectors 消复制 875→861) `7e42a65`(app.rs 抽离 959→805 + 硬编码路径修复)；终审 CAN MERGE 0C/0I/2M |
+| W9 | 功能补缺 ×7 | `921c09d`+`d742e75`+`3e55d75`(确认门三档) `c80227b`+`d02502e`(记忆面板) `82371f5`(降级横幅) `57513b6`(追溯审查修复) `4aba165`+`9603a65`(会话管理) `879b7c4`(技能管理) `4a9818d`+`f7df521`(文件树) `7c8d1b7`(卡片做真)；终审 CAN MERGE 0C/0I/3M |
 | 防腐升级 | skill + checker | `3ab2330`(深审×4) `09bb605`(死登记清理) `c77a51a`(checker 死登记检测)；skill 优化版已应用（Layer 3d 波末闸 + Dormancy 规则 + Appendix A 深审量规 + Rule 6） |
 
 ## 下 session 第一件事（按序）
@@ -40,11 +43,13 @@
 ## 队列（无 blocking）
 
 - **治理新规（用户 2026-08-28）**：技术细则 = 编排者+子代理闭环；用户只拍板面向功能的产品决策。
+- **下个桌面波先拆贴线文件**：api.rs 799/800、windows.rs 800/800（W9 终审实测）。
+- 实测清单 10 项待真机跑（含 W9 新增的确认门三档第 10 项 + 记忆面板/文件树/技能/会话管理的 mockup 截图项转真机验证）。
 - CLI popup 映射去重（key_popups.rs；深审幻觉纠正后的真目标，小单）。
 - W8 遗留架构欠账：popup dispatch 下沉、apply_exit_reason 8 参数、provider_display_name 竞速解析、selectors UNIX_EPOCH 回退。
-- rot-probe P2：auth_oauth(12)/lifecycle(11)/navigation(7) 等 30 处 `let _ =` 静默错误处理（let_underscore 388 贴线的减压阀）。
-- W7-2-M1：pages_settings.rs 776/800，下次 provider feature 先抽 provider_row.rs。
-- F7 删除守卫升级版：会话引用完整性检查（产品决策，当前 ponytail 标注）。
+- W9 终审 3 Minor：Genesis/Event 英文硬编码走 locale、display_name 语义擦边（onboarding 重构时正名）、degraded-banner CSS 连行。
+- rot-probe P2：auth_oauth(12)/lifecycle(11)/navigation(7) 等 30 处 `let _ =` 静默错误处理。
+- 会话引用完整性检查（删除守卫升级版，产品决策）、PCS 插件系统（论题 0.3 末启动）、身份"位格/准则"真实数据源设计（W9-7 空态占位）。
 - F3 几何跟随线程（搁置，等 dioxus 0.8 stable 事件钩子）。
 - r1 Minors / r2#4 等更早残余以 `audit-wave-final-review.md` triage 为准。
 - T2-1 CI 补齐（老欠账，前置 i18n-contract 24 个预存失败）。
