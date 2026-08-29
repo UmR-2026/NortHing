@@ -3,6 +3,7 @@
 // W10-2 split — Facility ("设施") module window root component.
 
 use crate::ui_dioxus::css;
+use crate::ui_dioxus::entry::DOCK_GAP_PX;
 use crate::ui_dioxus::i18n::{keys, LocalePack};
 use crate::ui_dioxus::registry::ModuleAppProps;
 use crate::ui_dioxus::state::Geometry;
@@ -71,7 +72,7 @@ pub fn facility_app_root(props: ModuleAppProps) -> Element {
                         last = cur;
                         let dpi = unsafe { win::GetDpiForWindow(hwnd_ptr) };
                         let scale = if dpi > 0 { dpi as f64 / 96.0 } else { 1.0 };
-                        let off_x = ((280.0) * scale) as i32;
+                        let off_x = ((280.0 + DOCK_GAP_PX as f64) * scale) as i32;
                         let half_h = (cur.height as f64 / 2.0) as i32;
                         let target_x = cur.x.saturating_sub(off_x);
                         let target_y = cur.y + half_h;
