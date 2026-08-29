@@ -4,6 +4,9 @@
 
 - Task W11-1 (css.rs 死规则群): complete (commit `76d2c33`，review 一轮 **PASS 0C/0I/1M** by minimax-m3；implementer step-explore) — 死规则/死声明/死函数删除（depth-bar 块、membrane-node 死链、inject_stylesheet_html 等，逐点附零引用 rg 证据）+ 闸口游戏回滚（line 86 三规则恢复一行一条）+ 注释矛盾 ×3 修正 + R7.2→R8.1 属性迁移（judge 级联等价性严格通过）。css.rs 829→790，ceiling 830→790 同步下调。Minor×1：css.rs:57 残留 scrim 陈旧注释（accept-and-close，下波顺手）。**元教训闭环：首轮盲审的"闸口游戏"发现驱动了本波，E 项证据抽查纪律使 5 份盲审零误报。**
 
+- Task W11-2 (selectors 克隆集群 A 层): complete (commit `33bb4a4`，review 一轮 **PASS 0C/0I/0M** by step-explore_reviewer；implementer minimax-m3) — A 层全清：33 处 block_in_place 模板统一迁用 W8-1 的 bridge（复用纪律生效，未新建）；provider_display_name/model_display_name/parse_custom_headers 提取至 model_selector.rs 唯一 owner；魔数 128000/8192 与 "primary" 哨兵常量化；self-borrow 两例正确修法（async {} 借代 async move，judge 核实等价）。selectors.rs 861→827，ceiling 同步下调。cli 测试 51/51。B 层产出页面级合并地图（含合并难点 top3：视图调用对象差异/Scheme C 不对称/apply_model_selection 强写——均需产品决策）。偏离：chat/{mcp,commands,run}.rs 15 处 bridge 未迁（出 cluster 范围，下波）；sentinel 未 Option 化（语义面，留决策）。
+- **W11 波次状态：COMPLETE。** 用户点名的两项（css.rs 死规则群 + selectors 克隆集群）均已交付并过审。
+
 # W10 Ledger (2026-08-29, 贴线大文件拆分 + 全量测试)
 
 计划：`.superpowers/sdd/plan-2026-08-29-w10-godfile-split.md`；w10-base = `f5f0882`。选派：step-explore 优先（用户拍板）。
