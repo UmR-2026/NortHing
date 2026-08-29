@@ -74,6 +74,22 @@ pub async fn get_messages(id: &SessionId) -> Result<Vec<MessageDto>, KernelError
     kernel_facade().get_messages(id).await
 }
 
+/// Deletes a session by id.
+pub async fn delete_session(id: &SessionId) -> Result<(), KernelError> {
+    kernel_facade().delete_session(id).await
+}
+
+/// Renames a session by id.
+pub async fn rename_session(id: &SessionId, name: &str) -> Result<(), KernelError> {
+    kernel_facade().rename_session(id, name).await
+}
+
+/// Returns the cached room session id if any.
+pub async fn get_room_session_id() -> Option<String> {
+    let guard = ROOM_SESSION_CACHE.lock().await;
+    guard.clone()
+}
+
 /// Pick the room session from workspace-grouped summaries.
 /// Preferred workspace hit wins; otherwise the first group that has any
 /// session (groups are ordered most-recent-access first by the facade);
@@ -211,7 +227,13 @@ pub async fn persist_onboarding_provider_with_keyring(
 
     // 1. Store API key in keyring under the provider id
     if let Err(e) = store_provider_api_key_with_keyring(keyring, &provider_id, api_key).await {
-        let first_line = e.to_string().lines().next().unwrap_or("Key 存储失败").trim().to_string();
+        let first_line = e
+            .to_string()
+            .lines()
+            .next()
+            .unwrap_or("Key 存储失败")
+            .trim()
+            .to_string();
         return Err(format!("Key 存储失败: {first_line}"));
     }
 
@@ -240,13 +262,25 @@ pub async fn persist_onboarding_provider_with_keyring(
     };
 
     if let Err(e) = upsert_model_config(model_dto, Some(api_key.to_string())).await {
-        let first_line = e.to_string().lines().next().unwrap_or("Provider 保存失败").trim().to_string();
+        let first_line = e
+            .to_string()
+            .lines()
+            .next()
+            .unwrap_or("Provider 保存失败")
+            .trim()
+            .to_string();
         return Err(format!("Provider 保存失败: {first_line}"));
     }
 
     // 3. Set as default provider in core config
     if let Err(e) = set_default_provider(&provider_id).await {
-        let first_line = e.to_string().lines().next().unwrap_or("设为默认 Provider 失败").trim().to_string();
+        let first_line = e
+            .to_string()
+            .lines()
+            .next()
+            .unwrap_or("设为默认 Provider 失败")
+            .trim()
+            .to_string();
         return Err(format!("设为默认 Provider 失败: {first_line}"));
     }
 

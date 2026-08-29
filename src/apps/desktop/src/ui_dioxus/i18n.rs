@@ -261,6 +261,25 @@ pub mod keys {
     pub const ARCHIVE_SECTION_WITNESS_EM: &str = "dioxus-room-archive-section-witness-em";
     pub const ARCHIVE_FOOT_NOTE: &str = "dioxus-room-archive-foot-note";
 
+    // ===== Archive management (W9-4) =====
+    pub const ARCHIVE_SEARCH_PLACEHOLDER: &str = "dioxus-room-archive-search-placeholder";
+    pub const ARCHIVE_SEARCH_CLEAR: &str = "dioxus-room-archive-search-clear";
+    pub const ARCHIVE_BTN_RENAME: &str = "dioxus-room-archive-btn-rename";
+    pub const ARCHIVE_BTN_DELETE: &str = "dioxus-room-archive-btn-delete";
+    pub const ARCHIVE_BTN_EXPORT: &str = "dioxus-room-archive-btn-export";
+    pub const ARCHIVE_BTN_DETAIL: &str = "dioxus-room-archive-btn-detail";
+    pub const ARCHIVE_DELETE_CONFIRM: &str = "dioxus-room-archive-delete-confirm";
+    pub const ARCHIVE_DELETE_FORBIDDEN: &str = "dioxus-room-archive-delete-forbidden";
+    pub const ARCHIVE_RENAME_PLACEHOLDER: &str = "dioxus-room-archive-rename-placeholder";
+    pub const ARCHIVE_EXPORT_PATH: &str = "dioxus-room-archive-export-path";
+    pub const ARCHIVE_EXPORT_FAIL: &str = "dioxus-room-archive-export-fail";
+    pub const ARCHIVE_RENAME_FAIL: &str = "dioxus-room-archive-rename-fail";
+    pub const ARCHIVE_DELETE_FAIL: &str = "dioxus-room-archive-delete-fail";
+    pub const ARCHIVE_EMPTY: &str = "dioxus-room-archive-empty";
+    pub const ARCHIVE_EMPTY_SEARCH: &str = "dioxus-room-archive-empty-search";
+    pub const ARCHIVE_LOAD_FAIL: &str = "dioxus-room-archive-load-fail";
+    pub const ARCHIVE_SUBAGENT_BADGE: &str = "dioxus-room-archive-subagent-badge";
+
     // ===== Space window (2026-08-24 Task EF-E2) =====
     pub const NAV_SPACE: &str = "dioxus-room-nav-space";
     pub const SPACE_WINDOW_TITLE: &str = "dioxus-room-space-window-title";
