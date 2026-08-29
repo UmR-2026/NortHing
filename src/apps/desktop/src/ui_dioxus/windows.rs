@@ -675,11 +675,11 @@ pub fn work_app_root(props: ModuleAppProps) -> Element {
     let mut folded_routing = use_signal(|| false);
     let mut folded_planner = use_signal(|| false);
     let mut folded_diff = use_signal(|| false);
+    // folded_files opts out of fold_all by design (see panel_files::render_files_section).
     let folded_files = use_signal(|| false);
 
     let fold_all = move |_| {
-        let any_open = !folded_routing() || !folded_planner() || !folded_diff();
-        let target = any_open;
+        let target = !folded_routing() || !folded_planner() || !folded_diff();
         folded_routing.set(target);
         folded_planner.set(target);
         folded_diff.set(target);

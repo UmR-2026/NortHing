@@ -34,9 +34,35 @@ fn has_escape_segment(rel: &Path) -> bool {
     rel.to_string_lossy().contains('\0')
 }
 
+/// Resolve `workspace_root` for an API call. `Some(_)` uses the supplied
+/// path after canonicalization; `None` falls back to the process CWD
+/// (see `helpers::default_workspace_path`).
+fn pick_workspace_root(workspace_root: Option<&str>) -> Result<PathBuf, KernelError> {
+    match workspace_root {
+        Some(raw) if !raw.trim().is_empty() => {
+            let p = PathBuf::from(raw);
+            if !p.is_absolute() {
+                return Err(KernelError::Validation(format!(
+                    "workspace_root must be absolute: {raw}"
+                )));
+            }
+            std::fs::canonicalize(&p)
+                .map_err(|e| KernelError::Config(format!("canonicalize workspace_root {raw}: {e}")))
+        }
+        _ => Ok(PathBuf::from(crate::kernel_facade::helpers::default_workspace_path())),
+    }
+}
+
 /// Normalize a user-supplied workspace-relative path and assert it is
-/// contained within `workspace_root`. Empty or `.` paths resolve to the
-/// workspace root.
+/// contained within `workspace_root` after symlink resolution.
+///
+/// `absolute()` does not follow symlinks, so a path inside the workspace
+/// that links to `/etc/passwd` would pass the lexical prefix check while
+/// the underlying IO would reach outside. We re-fence using
+/// `std::fs::canonicalize` (which DOES follow symlinks) and additionally
+/// reject any user path whose `symlink_metadata` reports a symlink — the
+/// consult-room use case has no need for them. Empty or `.` paths resolve
+/// to the workspace root.
 fn resolve_within_workspace(workspace_root: &Path, user_path: &str) -> Result<PathBuf, KernelError> {
     if workspace_root.as_os_str().is_empty() {
         return Err(KernelError::Config("workspace root not configured".to_string()));
@@ -55,24 +81,66 @@ fn resolve_within_workspace(workspace_root: &Path, user_path: &str) -> Result<Pa
         return Err(KernelError::Validation(format!("path escapes workspace: {trimmed}")));
     }
     let joined = workspace_root.join(relative);
-    let canonical_root = std::path::absolute(workspace_root)
-        .map_err(|e| KernelError::Config(format!("canonicalize workspace root: {e}")))?;
-    let canonical_target =
-        std::path::absolute(&joined).map_err(|e| KernelError::Validation(format!("canonicalize {trimmed}: {e}")))?;
-    if !canonical_target.starts_with(&canonical_root) {
+    // Canonicalize workspace_root and the joined path so subsequent
+    // prefix comparisons live in the same "canonical" namespace
+    // (`\\?\C:\...` on Windows; resolved symlinks on POSIX). Using
+    // `absolute()` only for one side produced false-positive escape
+    // rejections on Windows (mixing `\\?\` and bare-drive forms).
+    let canonical_root = match std::fs::canonicalize(workspace_root) {
+        Ok(p) => p,
+        Err(_) => std::path::absolute(workspace_root)
+            .map_err(|e| KernelError::Config(format!("canonicalize workspace root: {e}")))?,
+    };
+    let canonical_lex = match std::fs::canonicalize(&joined) {
+        Ok(p) => p,
+        Err(_) => {
+            // Non-existent paths during the lex check are not yet
+            // conclusively rejected (NotFound surfaces later in the
+            // file/dir IO), but lexical escapes must be ruled out using
+            // `absolute()` so a missing target cannot sneak past when
+            // the canonical form is unavailable.
+            let abs_lex =
+                std::path::absolute(&joined).map_err(|e| KernelError::Validation(format!("resolve {trimmed}: {e}")))?;
+            if !abs_lex.starts_with(&canonical_root) {
+                return Err(KernelError::Validation(format!("path escapes workspace: {trimmed}")));
+            }
+            return Ok(abs_lex);
+        }
+    };
+    if !canonical_lex.starts_with(&canonical_root) {
         return Err(KernelError::Validation(format!("path escapes workspace: {trimmed}")));
     }
-    Ok(canonical_target)
+    // Symlink hardening: only meaningful when the target already exists.
+    // If it does, refuse to follow user-supplied symlinks outright (mirrors
+    // the `list_workspace_tree` behavior on each descendant) and re-fence
+    // after canonicalization.
+    match std::fs::symlink_metadata(&joined) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            return Err(KernelError::Validation(format!("symlink not allowed: {trimmed}")));
+        }
+        Ok(_) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => {
+            return Err(KernelError::Validation(format!("metadata {trimmed}: {e}")));
+        }
+    }
+    // `canonical_lex` already came from `canonicalize`, which follows
+    // symlinks — so if the user-supplied path traversed one, canonical_lex
+    // is the resolved real path and the prefix check above already
+    // enforced the workspace fence. The symlink_metadata refusal above
+    // guarantees we never return a symlinked file at all.
+    Ok(canonical_lex)
 }
 
 /// Containment check using the same canonical-prefix rule as
 /// `resolve_within_workspace`, used to re-fence recursive descendants that
 /// come from the filesystem rather than the user.
 fn is_within(workspace_root: &Path, candidate: &Path) -> bool {
-    let Ok(canonical_root) = std::path::absolute(workspace_root) else {
+    let make = |p: &Path| std::fs::canonicalize(p).or_else(|_| std::path::absolute(p));
+    let Ok(canonical_root) = make(workspace_root) else {
         return false;
     };
-    let Ok(canonical_target) = std::path::absolute(candidate) else {
+    let Ok(canonical_target) = make(candidate) else {
         return false;
     };
     canonical_target.starts_with(canonical_root)
@@ -218,11 +286,11 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
 
     async fn list_workspace_tree(
         &self,
+        workspace_root: Option<&str>,
         dir: &str,
         max_depth: Option<u32>,
     ) -> Result<Vec<FileTreeEntryDto>, KernelError> {
-        let workspace = crate::kernel_facade::helpers::default_workspace_path();
-        let workspace_root = PathBuf::from(&workspace);
+        let workspace_root = pick_workspace_root(workspace_root)?;
         let target = resolve_within_workspace(&workspace_root, dir)?;
         if !target.is_dir() {
             return Err(KernelError::NotFound(format!(
@@ -284,9 +352,13 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
         Ok(out)
     }
 
-    async fn read_workspace_file(&self, path: &str, max_bytes: Option<u64>) -> Result<String, KernelError> {
-        let workspace = crate::kernel_facade::helpers::default_workspace_path();
-        let workspace_root = PathBuf::from(&workspace);
+    async fn read_workspace_file(
+        &self,
+        workspace_root: Option<&str>,
+        path: &str,
+        max_bytes: Option<u64>,
+    ) -> Result<String, KernelError> {
+        let workspace_root = pick_workspace_root(workspace_root)?;
         let target = resolve_within_workspace(&workspace_root, path)?;
         if !target.is_file() {
             return Err(KernelError::NotFound(format!("file not found: {}", target.display())));

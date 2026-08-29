@@ -149,12 +149,17 @@ pub trait KernelPlatformApi: Send + Sync {
     /// workspace root). `max_depth = Some(n)` lets the UI request a small
     /// recursive expansion; `None` returns only the direct children.
     ///
-    /// The facade is responsible for enforcing the workspace path fence
-    /// (no `..`, no absolute paths, no symlink escapes); callers can treat the
-    /// returned `path` field as safe to display and re-pass.
+    /// `workspace_root` is the optional absolute path to use as the fence
+    /// root. `Some(_)` overrides the facade's default workspace; `None`
+    /// falls back to the facade default (process CWD today). The facade
+    /// is responsible for enforcing the workspace path fence (no `..`, no
+    /// absolute paths, no symlink escapes) whichever root is in play;
+    /// callers can treat the returned `path` field as safe to display and
+    /// re-pass.
     /// Source: W9-6 file tree module.
     async fn list_workspace_tree(
         &self,
+        workspace_root: Option<&str>,
         dir: &str,
         max_depth: Option<u32>,
     ) -> Result<Vec<FileTreeEntryDto>, KernelError>;
@@ -167,6 +172,15 @@ pub trait KernelPlatformApi: Send + Sync {
     /// with a structured reason the UI can surface. Non-existent paths
     /// return [`KernelError::NotFound`]. Traversal / absolute / symlink
     /// escapes return [`KernelError::Validation`].
+    ///
+    /// `workspace_root` matches the semantics of [`Self::list_workspace_tree`]:
+    /// `Some(_)` pins the fence root to the supplied path; `None` falls back
+    /// to the facade default.
     /// Source: W9-6 preview module.
-    async fn read_workspace_file(&self, path: &str, max_bytes: Option<u64>) -> Result<String, KernelError>;
+    async fn read_workspace_file(
+        &self,
+        workspace_root: Option<&str>,
+        path: &str,
+        max_bytes: Option<u64>,
+    ) -> Result<String, KernelError>;
 }

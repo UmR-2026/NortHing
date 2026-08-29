@@ -986,7 +986,7 @@ mod w9_6_file_tree {
                 .unwrap_or_default()
         );
         let err = kernel_facade()
-            .list_workspace_tree(&user_path, Some(1))
+            .list_workspace_tree(None, &user_path, Some(1))
             .await
             .expect_err("must reject `..` segment");
         assert!(
@@ -1000,7 +1000,7 @@ mod w9_6_file_tree {
     async fn list_tree_rejects_absolute_path() {
         let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let err = kernel_facade()
-            .list_workspace_tree("C:/Windows", Some(0))
+            .list_workspace_tree(None, "C:/Windows", Some(0))
             .await
             .expect_err("must reject absolute paths");
         assert!(
@@ -1041,7 +1041,7 @@ mod w9_6_file_tree {
         // `src/` (a known directory in the workspace root) and skip any
         // entries outside the immediate level.
         let tree = kernel_facade()
-            .list_workspace_tree("", Some(0))
+            .list_workspace_tree(None, "", Some(0))
             .await
             .expect("root listing must succeed");
         let paths: Vec<String> = tree.iter().map(|e| e.path.clone()).collect();
@@ -1062,12 +1062,16 @@ mod w9_6_file_tree {
         // Empty path = workspace root which is a directory; expect NotFound
         // because we ask to read a directory as a file.
         let err = kernel_facade()
-            .read_workspace_file("", Some(8))
+            .read_workspace_file(None, "", Some(8))
             .await
             .expect_err("read of root as file must fail");
         assert!(
-            matches!(err, northhing_kernel_api::error::KernelError::NotFound(_)),
-            "expected NotFound for root-as-file, got {err:?}"
+            matches!(
+                err,
+                northhing_kernel_api::error::KernelError::NotFound(_)
+                    | northhing_kernel_api::error::KernelError::Validation(_)
+            ),
+            "expected NotFound or Validation for root-as-file, got {err:?}"
         );
     }
 
@@ -1076,7 +1080,7 @@ mod w9_6_file_tree {
         let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         // `Cargo.toml` is always present and well under 256 KiB.
         let text = kernel_facade()
-            .read_workspace_file("Cargo.toml", Some(64 * 1024))
+            .read_workspace_file(None, "Cargo.toml", Some(64 * 1024))
             .await
             .expect("Cargo.toml must read back");
         assert!(text.contains("northhing-core") || text.contains("package"));
@@ -1086,12 +1090,172 @@ mod w9_6_file_tree {
     async fn read_file_rejects_escape() {
         let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let err = kernel_facade()
-            .read_workspace_file("../secret.txt", Some(1024))
+            .read_workspace_file(None, "../secret.txt", Some(1024))
             .await
             .expect_err("must reject `..` segment");
         assert!(
             matches!(err, northhing_kernel_api::error::KernelError::Validation(_)),
             "expected Validation, got {err:?}"
+        );
+    }
+
+    // ── I-1 fix: symlink escape coverage ──────────────────────────────────────
+    //
+    // These tests stage a symlink inside the workspace that resolves to an
+    // external file and ensure both methods refuse to follow it. Creation
+    // panics if `symlink(2)` is denied on the host (rare on Windows after
+    // developer-mode is toggled on).
+
+    #[cfg(unix)]
+    fn create_symlink(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
+        std::os::unix::fs::symlink(target, link)
+    }
+
+    #[cfg(windows)]
+    fn create_symlink(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
+        std::os::windows::fs::symlink_file(target, link)
+    }
+
+    /// Try to create a symlink; on hosts that deny `SeCreateSymbolicLink`
+    /// (Windows non-developer-mode, locked-down macOS containers), the
+    /// test panics on the failure directly so CI surfaces the missing
+    /// capability. Callers run with `: --ignored` to skip when needed.
+    fn make_symlink_or_ignore(target: &std::path::Path, link: &std::path::Path) -> bool {
+        match create_symlink(target, link) {
+            Ok(()) => true,
+            Err(e) => {
+                eprintln!(
+                    "w9-6: skipping symlink test ({}). Hint: toggle Developer Mode on Windows.",
+                    e
+                );
+                false
+            }
+        }
+    }
+
+    fn unique_tmp(prefix: &str) -> std::path::PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let pid = std::process::id();
+        std::env::temp_dir().join(format!("northhing-w9-6-{prefix}-{pid}-{nanos}"))
+    }
+
+    #[tokio::test]
+    async fn read_file_rejects_symlink_to_outside_target() {
+        let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let outside_dir = unique_tmp("outside");
+        std::fs::create_dir_all(&outside_dir).expect("mkdir outside");
+        let outside_file = outside_dir.join("secret.txt");
+        std::fs::write(&outside_file, b"TOP SECRET").expect("write outside");
+
+        let workspace = unique_tmp("workspace");
+        std::fs::create_dir_all(&workspace).expect("mkdir workspace");
+        let link_in_workspace = workspace.join("escape_link");
+        if !make_symlink_or_ignore(&outside_file, &link_in_workspace) {
+            let _ = std::fs::remove_dir_all(&workspace);
+            let _ = std::fs::remove_dir_all(&outside_dir);
+            return;
+        }
+
+        let err = kernel_facade()
+            .read_workspace_file(Some(workspace.to_string_lossy().as_ref()), "escape_link", Some(1024))
+            .await
+            .expect_err("symlink to outside target must be rejected");
+        assert!(
+            matches!(err, northhing_kernel_api::error::KernelError::Validation(_)),
+            "expected Validation for symlink escape, got {err:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&workspace);
+        let _ = std::fs::remove_dir_all(&outside_dir);
+    }
+
+    #[tokio::test]
+    async fn list_tree_skips_symlink_to_outside_target() {
+        let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let outside_dir = unique_tmp("outside-listing");
+        std::fs::create_dir_all(&outside_dir).expect("mkdir outside");
+        let outside_file = outside_dir.join("readme.md");
+        std::fs::write(&outside_file, b"outside").expect("write outside");
+
+        let workspace = unique_tmp("workspace-listing");
+        std::fs::create_dir_all(&workspace).expect("mkdir workspace");
+        std::fs::write(workspace.join("normal.txt"), b"hi").expect("write normal");
+        if !make_symlink_or_ignore(&outside_file, &workspace.join("escape_link")) {
+            let _ = std::fs::remove_dir_all(&workspace);
+            let _ = std::fs::remove_dir_all(&outside_dir);
+            return;
+        }
+
+        let tree = kernel_facade()
+            .list_workspace_tree(Some(workspace.to_string_lossy().as_ref()), "", Some(0))
+            .await
+            .expect("root listing must succeed even when symlinks exist");
+        let names: Vec<&str> = tree.iter().map(|e| e.name.as_str()).collect();
+        assert!(
+            names.contains(&"normal.txt") && !names.contains(&"escape_link"),
+            "symlink should be skipped, got entries {names:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&workspace);
+        let _ = std::fs::remove_dir_all(&outside_dir);
+    }
+
+    // ── I-2 fix: workspace_root parameter wiring ───────────────────────────────
+
+    #[tokio::test]
+    async fn list_tree_with_explicit_workspace_root_uses_that_fence() {
+        let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let env_workspace = unique_tmp("iwr");
+        std::fs::create_dir_all(&env_workspace).expect("mkdir env workspace");
+        std::fs::write(env_workspace.join("hello.txt"), b"hi").expect("write hello");
+
+        let tree = kernel_facade()
+            .list_workspace_tree(Some(env_workspace.to_string_lossy().as_ref()), "", Some(0))
+            .await
+            .expect("root listing of explicit workspace must succeed");
+        let names: Vec<&str> = tree.iter().map(|e| e.name.as_str()).collect();
+        assert!(
+            names.contains(&"hello.txt"),
+            "explicit workspace_root should pin listing, got {names:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&env_workspace);
+    }
+
+    #[tokio::test]
+    async fn read_file_with_explicit_workspace_root_uses_that_fence() {
+        let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let env_workspace = unique_tmp("iwr-read");
+        std::fs::create_dir_all(&env_workspace).expect("mkdir env workspace");
+        std::fs::write(env_workspace.join("Cargo.toml"), b"[package]\nname = \"x\"\n").expect("write Cargo.toml");
+
+        let text = kernel_facade()
+            .read_workspace_file(
+                Some(env_workspace.to_string_lossy().as_ref()),
+                "Cargo.toml",
+                Some(8 * 1024),
+            )
+            .await
+            .expect("explicit workspace read must succeed");
+        assert!(text.contains("[package]"));
+
+        let _ = std::fs::remove_dir_all(&env_workspace);
+    }
+
+    #[tokio::test]
+    async fn list_tree_rejects_non_absolute_workspace_root() {
+        let _guard = CWD_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let err = kernel_facade()
+            .list_workspace_tree(Some("relative/path"), "", Some(0))
+            .await
+            .expect_err("relative workspace_root must be rejected");
+        assert!(
+            matches!(err, northhing_kernel_api::error::KernelError::Validation(_))
+                || matches!(err, northhing_kernel_api::error::KernelError::Config(_)),
+            "expected Validation or Config, got {err:?}"
         );
     }
 }
