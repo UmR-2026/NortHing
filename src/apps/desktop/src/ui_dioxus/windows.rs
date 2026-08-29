@@ -94,7 +94,11 @@ impl Drop for WindowDropGuard {
 
 impl WindowDropGuard {
     pub fn new(plugin_id: &'static str, gen: u64, manager: ShellWindowManager) -> Self {
-        Self { plugin_id, gen, manager }
+        Self {
+            plugin_id,
+            gen,
+            manager,
+        }
     }
 }
 
@@ -206,11 +210,7 @@ pub fn self_app_root(props: ModuleAppProps) -> Element {
     let mut folded_axioms = use_signal(|| false);
 
     let fold_all = move |_| {
-        let any_open = !folded_sediment()
-            || !folded_rag()
-            || !folded_skill()
-            || !folded_runtime()
-            || !folded_axioms();
+        let any_open = !folded_sediment() || !folded_rag() || !folded_skill() || !folded_runtime() || !folded_axioms();
         let target = any_open;
         folded_sediment.set(target);
         folded_rag.set(target);
@@ -675,6 +675,7 @@ pub fn work_app_root(props: ModuleAppProps) -> Element {
     let mut folded_routing = use_signal(|| false);
     let mut folded_planner = use_signal(|| false);
     let mut folded_diff = use_signal(|| false);
+    let folded_files = use_signal(|| false);
 
     let fold_all = move |_| {
         let any_open = !folded_routing() || !folded_planner() || !folded_diff();
@@ -787,7 +788,7 @@ pub fn work_app_root(props: ModuleAppProps) -> Element {
                         span { class: "diff-del", "-06" }
                     }
                     div { class: "btn-undo", "{locale.t(keys::OUTER_DIFF_REVERTED)}" }
-                }
+                }{super::panel_files::render_files_section(&locale, folded_files)}
                 div { class: "term-well",
                     "$ northing inspect --boundary\n> 3 observers / clean\n> "
                     span { class: "preview-row", "preview: localhost:4173" }

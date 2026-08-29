@@ -361,3 +361,17 @@ dioxus-room-onboarding-test-status-wait = Awaiting test signal...
 dioxus-room-onboarding-btn-browse = Browse...
 dioxus-room-onboarding-btn-complete = ☩ Awaken Chamber · Open Imprint
 dioxus-room-onboarding-preview-uncolored = Uncolored (Gray)
+
+# ===== W9-6 file tree / preview (right panel) =====
+dioxus-room-files-section-title = Workspace
+dioxus-room-files-section-em = FILES
+dioxus-room-files-empty = No files yet
+dioxus-room-files-loading = Loading directory...
+dioxus-room-files-load-fail = Failed to list directory
+dioxus-room-files-preview-placeholder = Select a file to preview its contents
+dioxus-room-files-preview-loading = Loading preview...
+dioxus-room-files-preview-empty = (empty file)
+dioxus-room-files-preview-binary = Binary file cannot be previewed
+dioxus-room-files-preview-too-large = File too large to preview
+dioxus-room-files-preview-not-found = File not found
+dioxus-room-files-preview-fail = Preview failed to load

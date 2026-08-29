@@ -24,6 +24,7 @@
 pub use entry::launch;
 
 mod api;
+mod api_fs;
 mod app;
 mod approval_card;
 mod color;
@@ -39,6 +40,7 @@ mod pages_settings;
 mod pages_settings_provider_edit;
 mod pages_settings_skills;
 mod pages_space;
+mod panel_files;
 mod registry;
 mod session_mock;
 mod state;

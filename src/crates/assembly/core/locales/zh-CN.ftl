@@ -340,3 +340,17 @@ dioxus-room-onboarding-test-status-wait = 等待测试信号...
 dioxus-room-onboarding-btn-browse = 浏览...
 dioxus-room-onboarding-btn-complete = ☩ 唤醒诊室 · 开启印记
 dioxus-room-onboarding-preview-uncolored = 未着色 (灰)
+
+# ===== W9-6 文件树 / 预览（右侧面板）=====
+dioxus-room-files-section-title = 工作目录
+dioxus-room-files-section-em = FILES
+dioxus-room-files-empty = 暂无文件
+dioxus-room-files-loading = 正在读取目录...
+dioxus-room-files-load-fail = 列表读取失败
+dioxus-room-files-preview-placeholder = 选中文件后预览内容
+dioxus-room-files-preview-loading = 正在加载预览...
+dioxus-room-files-preview-empty = （空文件）
+dioxus-room-files-preview-binary = 二进制文件不支持预览
+dioxus-room-files-preview-too-large = 文件过大，无法预览
+dioxus-room-files-preview-not-found = 文件不存在
+dioxus-room-files-preview-fail = 预览加载失败

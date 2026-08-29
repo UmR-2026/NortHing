@@ -204,6 +204,20 @@ pub mod keys {
     pub const OUTER_DIFF_REVERTED: &str = "dioxus-room-outer-diff-reverted";
     pub const OUTER_TERMINAL_PROMPT: &str = "dioxus-room-outer-terminal-prompt";
 
+    // ===== File tree / preview module (W9-6) =====
+    pub const FILES_SECTION_TITLE: &str = "dioxus-room-files-section-title";
+    pub const FILES_SECTION_EM: &str = "dioxus-room-files-section-em";
+    pub const FILES_EMPTY: &str = "dioxus-room-files-empty";
+    pub const FILES_LOADING: &str = "dioxus-room-files-loading";
+    pub const FILES_LOAD_FAIL: &str = "dioxus-room-files-load-fail";
+    pub const FILES_PREVIEW_PLACEHOLDER: &str = "dioxus-room-files-preview-placeholder";
+    pub const FILES_PREVIEW_LOADING: &str = "dioxus-room-files-preview-loading";
+    pub const FILES_PREVIEW_EMPTY: &str = "dioxus-room-files-preview-empty";
+    pub const FILES_PREVIEW_BINARY: &str = "dioxus-room-files-preview-binary";
+    pub const FILES_PREVIEW_TOO_LARGE: &str = "dioxus-room-files-preview-too-large";
+    pub const FILES_PREVIEW_NOT_FOUND: &str = "dioxus-room-files-preview-not-found";
+    pub const FILES_PREVIEW_FAIL: &str = "dioxus-room-files-preview-fail";
+
     // ===== Empty states (F5 — F6 contract) =====
     pub const EMPTY_CHAT_FLOW: &str = "dioxus-room-empty-chat-flow";
     pub const EMPTY_STREAMING_INTERRUPT: &str = "dioxus-room-empty-streaming-interrupt";

@@ -92,6 +92,23 @@ pub struct ArtifactDto {
     pub content: Option<String>,
 }
 
+/// One row of the workspace file tree (W9-6).
+///
+/// `path` is the workspace-relative path using forward slashes (even on
+/// Windows) so the UI can mount it under `<workspace>/...` without
+/// platform-specific tweaks. `size_bytes` is `None` for directories and
+/// when the size could not be determined cheaply (e.g. traversal permission
+/// errors). The facade is responsible for rejecting any absolute or
+/// traversal path that escapes the workspace root.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FileTreeEntryDto {
+    pub path: String,
+    pub name: String,
+    pub is_dir: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
+}
+
 // ── KernelPlatformApi ──────────────────────────────────────────────────────────
 
 #[async_trait::async_trait]
@@ -127,4 +144,29 @@ pub trait KernelPlatformApi: Send + Sync {
     /// List artifacts (F2 review decision: if no existing core support).
     /// Source: F2 artifact panel
     async fn list_artifacts(&self, session_id: &SessionId) -> Result<Vec<ArtifactDto>, KernelError>;
+
+    /// List the immediate children of `dir` (workspace-relative; `""` means the
+    /// workspace root). `max_depth = Some(n)` lets the UI request a small
+    /// recursive expansion; `None` returns only the direct children.
+    ///
+    /// The facade is responsible for enforcing the workspace path fence
+    /// (no `..`, no absolute paths, no symlink escapes); callers can treat the
+    /// returned `path` field as safe to display and re-pass.
+    /// Source: W9-6 file tree module.
+    async fn list_workspace_tree(
+        &self,
+        dir: &str,
+        max_depth: Option<u32>,
+    ) -> Result<Vec<FileTreeEntryDto>, KernelError>;
+
+    /// Read a workspace-relative text file (W9-6 preview module).
+    ///
+    /// `max_bytes` caps the returned string length; `None` uses a 256 KiB
+    /// default. Files larger than the cap, or that look binary
+    /// (NUL byte in the first 4 KiB), return [`KernelError::Validation`]
+    /// with a structured reason the UI can surface. Non-existent paths
+    /// return [`KernelError::NotFound`]. Traversal / absolute / symlink
+    /// escapes return [`KernelError::Validation`].
+    /// Source: W9-6 preview module.
+    async fn read_workspace_file(&self, path: &str, max_bytes: Option<u64>) -> Result<String, KernelError>;
 }
