@@ -1,3 +1,9 @@
+# W10 Ledger (2026-08-29, 贴线大文件拆分 + 全量测试)
+
+计划：`.superpowers/sdd/plan-2026-08-29-w10-godfile-split.md`；w10-base = `f5f0882`。选派：step-explore 优先（用户拍板）。
+
+- Task W10-1 (api.rs 拆分): complete (commit `078af44`，review 一轮 **PASS 0C/0I/1M** by minimax-m3；implementer step-explore) — api.rs 799→266，拆出 api_settings.rs(292)/api_events.rs(253)/api_memory.rs(22)；TEST_GLOBAL_CONFIG_MUTEX 归位 api_settings + re-export 保路径；事件桥分级语义 judge 逐行等价。观察项 O-1：`test_delete_provider_default_provider_rejected` 全量跑 flaky（8 轮复现 2 失败）但 judge 判定真 pre-existing（mutex 同一实例、测试零改动、拆分前即如此）——记此待独立小单修。Minor：报告 unused-import 数字与 diff 不符（不影响代码）。
+
 # W9 Ledger (2026-08-29, 功能补缺波：校准裁决执行)
 
 计划来源：`docs/product/requirements-vs-current-2026-08-29.md` §五（用户裁决 2026-08-29）。w9-base = `151f77c`。**选派变更（用户拍板 2026-08-29）：coder 主力这两天切 step-explore**（实际执行中 Gemini 渠道事故 + step-explore 内容拦截，见各行）。
