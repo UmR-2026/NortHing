@@ -13,10 +13,12 @@ use std::rc::Rc;
 use super::css;
 use super::i18n::{keys, LocalePack};
 use super::pages_settings_provider_edit::ProviderEditModal;
+use super::pages_settings_skills::SkillsSection;
 use super::registry::ModuleAppProps;
 use super::windows::WindowDropGuard;
 #[allow(unused_imports)]
 use crate::app_state::settings::{load_app_settings, update_app_settings};
+use northhing_kernel_api::agents::SkillInfoDto;
 use northhing_kernel_api::settings::{AIModelConfigDto, MCPServerDto, ProviderConfigDto};
 
 #[cfg(target_os = "windows")]
@@ -123,6 +125,10 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
     let mut mcp_philosophy = use_signal(|| true); // Fallback mock state
     let mut mcp_terminal = use_signal(|| true); // Fallback mock state
 
+    // Skills (Card 4: SKILLS sub-section)
+    let skills = use_signal(Vec::<SkillInfoDto>::new);
+    let skill_error = use_signal(|| None::<String>);
+
     // Display modes (Card 6: 显示模式) - AppSettings has no fields, kept mock + TODO
     let mut display_breath = use_signal(|| true); // TODO(data): no AppSettings field yet
     let mut display_dual_optics = use_signal(|| true); // TODO(data): no AppSettings field yet
@@ -137,6 +143,7 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
         let mut providers = providers;
         let mut default_provider_id = default_provider_id;
         let mut mcp_servers = mcp_servers;
+        let mut skills = skills;
         async move {
             match load_app_settings().await {
                 Ok(settings) => {
@@ -181,6 +188,15 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                 }
                 Err(err) => {
                     tracing::warn!("Failed to list MCP servers on settings page mount: {err}");
+                }
+            }
+
+            match super::api::list_skills().await {
+                Ok(list) => {
+                    skills.set(list);
+                }
+                Err(err) => {
+                    tracing::warn!("Failed to list skills on settings page mount: {err}");
                 }
             }
         }
@@ -593,6 +609,11 @@ pub fn settings_app_root(props: ModuleAppProps) -> Element {
                                     span { class: "row-meta danger", "{locale.t(keys::SETTINGS_MCP_UNAUTHORIZED)}" }
                                 }
                             }
+                            // Skills sub-section (W9-5): user-scope enable/disable.
+                            // ponytail: project-scope overrides deferred — facade list_skills
+                            // does not surface group_key/is_builtin yet, and the user-scope
+                            // toggle is the minimal viable slice for this round.
+                            SkillsSection { skills, last_error: skill_error }
                         }
                     }
 

@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use northhing_core::kernel_facade::kernel_facade;
+use northhing_kernel_api::agents::{KernelAgentsApi, SkillInfoDto, SkillScopeDto};
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::events::{KernelEventDto, KernelEventsApi};
 use northhing_kernel_api::memory::{FactDto, KernelMemoryApi};
@@ -180,6 +181,27 @@ pub async fn list_mcp_servers() -> Result<Vec<MCPServerDto>, KernelError> {
 pub async fn set_mcp_enabled(mut server: MCPServerDto, enabled: bool) -> Result<(), KernelError> {
     server.enabled = Some(enabled);
     kernel_facade().upsert_mcp_server(server).await
+}
+
+/// Lists all skills, overlaying user-scope overrides on the `enabled` flag.
+pub async fn list_skills() -> Result<Vec<SkillInfoDto>, KernelError> {
+    let mut skills = kernel_facade().list_skills().await?;
+    let overrides = kernel_facade().load_skill_overrides().await?;
+    let map: std::collections::HashMap<String, bool> = overrides
+        .overrides
+        .iter()
+        .filter_map(|o| o.value.as_bool().map(|v| (o.skill_id.clone(), v)))
+        .collect();
+    for s in skills.iter_mut() {
+        s.enabled = map.get(&s.id).copied().unwrap_or(s.enabled);
+    }
+    Ok(skills)
+}
+
+pub async fn set_skill_enabled(skill_id: &str, enabled: bool) -> Result<(), KernelError> {
+    #[rustfmt::skip]
+    let scope = SkillScopeDto { scope_type: "user".into(), workspace_path: None, mode_id: None };
+    kernel_facade().set_skill_enabled(skill_id, scope, enabled).await
 }
 
 /// Tests a provider configuration without modifying persistent global config.
