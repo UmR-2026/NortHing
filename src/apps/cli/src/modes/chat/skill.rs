@@ -12,6 +12,7 @@ use northhing_core::agentic::tools::implementations::skills::{
     ModeSkillInfo, SkillInfo,
 };
 
+use super::input::bridge::bridge;
 use super::ChatMode;
 
 impl ChatMode {
@@ -39,17 +40,15 @@ impl ChatMode {
     ) {
         let registry = SkillRegistry::global();
         let workspace = self.agent.workspace_path_buf();
-        let outcome = tokio::task::block_in_place(|| {
-            // refresh() is the global re-scan entry point; the workspace
-            // arg of refresh_for_workspace is currently a no-op upstream,
-            // so we call refresh() directly and re-resolve the workspace
-            // count afterwards.
-            rt_handle.block_on(async {
-                registry.refresh().await;
-                registry
-                    .get_resolved_skills_for_workspace(Some(workspace.as_path()), None)
-                    .await
-            })
+        // refresh() is the global re-scan entry point; the workspace
+        // arg of refresh_for_workspace is currently a no-op upstream,
+        // so we call refresh() directly and re-resolve the workspace
+        // count afterwards.
+        let outcome = bridge(rt_handle, async {
+            registry.refresh().await;
+            registry
+                .get_resolved_skills_for_workspace(Some(workspace.as_path()), None)
+                .await
         });
 
         let count = outcome.len();
@@ -63,15 +62,13 @@ impl ChatMode {
         chat_state: &mut ChatState,
         rt_handle: &tokio::runtime::Handle,
     ) {
-        let skills = tokio::task::block_in_place(|| {
+        let skills = bridge(rt_handle, async {
             let workspace = self.agent.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            rt_handle.block_on(async {
-                let registry = SkillRegistry::global();
-                registry
-                    .get_resolved_skills_for_workspace(Some(workspace.as_path()), Some(&agent_type))
-                    .await
-            })
+            let registry = SkillRegistry::global();
+            registry
+                .get_resolved_skills_for_workspace(Some(workspace.as_path()), Some(&agent_type))
+                .await
         });
 
         if skills.is_empty() {
@@ -98,15 +95,13 @@ impl ChatMode {
         chat_state: &mut ChatState,
         rt_handle: &tokio::runtime::Handle,
     ) {
-        let skills = tokio::task::block_in_place(|| {
+        let skills = bridge(rt_handle, async {
             let workspace = self.agent.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            rt_handle.block_on(async {
-                let registry = SkillRegistry::global();
-                registry
-                    .get_mode_skill_infos_for_workspace(Some(workspace.as_path()), &agent_type)
-                    .await
-            })
+            let registry = SkillRegistry::global();
+            registry
+                .get_mode_skill_infos_for_workspace(Some(workspace.as_path()), &agent_type)
+                .await
         });
 
         let skill_items: Vec<SkillItem> = skills.into_iter().map(Self::skill_item_from_mode_info).collect();
@@ -160,31 +155,29 @@ impl ChatMode {
         let mode_id = self.agent_type.clone();
         let skill = selected.clone();
 
-        let result: Result<(), String> = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                match skill.level.as_str() {
-                    "user" => {
-                        set_user_mode_skill_state(&mode_id, &skill.key, enabled, skill.default_enabled)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                    }
-                    "project" => {
-                        let mut document = load_project_mode_skills_document_local(&workspace)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                        set_mode_skill_disabled_in_document(&mut document, &mode_id, &skill.key, !enabled)
-                            .map_err(|error| error.to_string())?;
-                        save_project_mode_skills_document_local(&workspace, &document)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                    }
-                    other => {
-                        return Err(format!("Unsupported skill level '{}'", other));
-                    }
+        let result: Result<(), String> = bridge(rt_handle, async {
+            match skill.level.as_str() {
+                "user" => {
+                    set_user_mode_skill_state(&mode_id, &skill.key, enabled, skill.default_enabled)
+                        .await
+                        .map_err(|error| error.to_string())?;
                 }
+                "project" => {
+                    let mut document = load_project_mode_skills_document_local(&workspace)
+                        .await
+                        .map_err(|error| error.to_string())?;
+                    set_mode_skill_disabled_in_document(&mut document, &mode_id, &skill.key, !enabled)
+                        .map_err(|error| error.to_string())?;
+                    save_project_mode_skills_document_local(&workspace, &document)
+                        .await
+                        .map_err(|error| error.to_string())?;
+                }
+                other => {
+                    return Err(format!("Unsupported skill level '{}'", other));
+                }
+            }
 
-                Ok(())
-            })
+            Ok(())
         });
 
         match result {

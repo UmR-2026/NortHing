@@ -5,12 +5,13 @@ use crate::ui::chat::ChatView;
 
 use northhing_core::agentic::agents::{agent_registry, AgentInfo};
 
+use super::input::bridge::bridge;
 use super::ChatMode;
 
 impl ChatMode {
     pub(crate) fn get_mode_agents(&self, rt_handle: &tokio::runtime::Handle) -> Vec<AgentInfo> {
         let registry = agent_registry();
-        let modes = tokio::task::block_in_place(|| rt_handle.block_on(registry.get_modes_info()));
+        let modes = bridge(rt_handle, registry.get_modes_info());
         modes
     }
 

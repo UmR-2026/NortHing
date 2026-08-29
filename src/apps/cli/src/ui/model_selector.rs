@@ -14,6 +14,62 @@ use ratatui::{
 use crate::ui::theme::{StyleKind, Theme};
 use northhing_core::service::config::AIModelConfig;
 
+// ===== Shared model display helpers (used by startup/selectors and modes/chat/model) =====
+
+/// Default context window size used when a model does not specify one.
+pub const DEFAULT_CONTEXT_WINDOW: u32 = 128_000;
+/// Default max tokens used when a model does not specify one.
+pub const DEFAULT_MAX_TOKENS: u32 = 8_192;
+
+/// Sentinel value for "no specific model ID resolved" in the primary fallback chain.
+pub const PRIMARY_SENTINEL: &str = "primary";
+
+/// Extract the provider name from a model config's display name.
+///
+/// Handles "Provider - ModelName" and "Provider/ModelName" formats.
+#[inline]
+pub fn provider_display_name(model: &AIModelConfig) -> String {
+    let raw_name = model.name.trim();
+    let model_name = model.model_name.trim();
+    if !raw_name.is_empty() && !model_name.is_empty() {
+        let dashed_suffix = format!(" - {}", model_name);
+        let slash_suffix = format!("/{}", model_name);
+        if let Some(provider) = raw_name.strip_suffix(&dashed_suffix) {
+            return provider.trim().to_string();
+        }
+        if let Some(provider) = raw_name.strip_suffix(&slash_suffix) {
+            return provider.trim().to_string();
+        }
+    }
+    if raw_name.is_empty() {
+        model.provider.clone()
+    } else {
+        raw_name.to_string()
+    }
+}
+
+/// Build a human-readable display name: "model_name / provider".
+#[inline]
+pub fn model_display_name(model: &AIModelConfig) -> String {
+    format!("{} / {}", model.model_name, provider_display_name(model))
+}
+
+/// Parse custom headers from form fields.
+///
+/// Returns `(parsed_headers_map, effective_mode)` where:
+/// - `parsed_headers_map` is `Some(HashMap)` if valid JSON was provided, else `None`
+/// - `effective_mode` is `Some(mode)` unless mode is empty or "merge" (the default)
+pub fn parse_custom_headers(
+    raw: &str,
+    mode: &str,
+) -> (Option<std::collections::HashMap<String, String>>, Option<String>) {
+    let custom_headers = (!raw.is_empty())
+        .then(|| serde_json::from_str(raw).ok())
+        .flatten();
+    let custom_headers_mode = (!mode.is_empty() && mode != "merge").then(|| mode.to_string());
+    (custom_headers, custom_headers_mode)
+}
+
 /// A model item for display in the selector
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelItem {
@@ -315,5 +371,109 @@ mod tests {
 
         let from_item: ModelItem = (&config).into();
         assert_eq!(from_item, item);
+    }
+
+    // --- provider_display_name tests ---
+
+    #[test]
+    fn test_provider_display_name_dash_suffix() {
+        let model = AIModelConfig {
+            name: "Anthropic - claude-3-5-sonnet".to_string(),
+            model_name: "claude-3-5-sonnet".to_string(),
+            provider: "anthropic".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(provider_display_name(&model), "Anthropic");
+    }
+
+    #[test]
+    fn test_provider_display_name_slash_suffix() {
+        let model = AIModelConfig {
+            name: "openai/gpt-4o".to_string(),
+            model_name: "gpt-4o".to_string(),
+            provider: "openai".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(provider_display_name(&model), "openai");
+    }
+
+    #[test]
+    fn test_provider_display_name_cjk_passthrough() {
+        let model = AIModelConfig {
+            name: "阶跃星辰".to_string(),
+            model_name: "step-2".to_string(),
+            provider: "stepfun".to_string(),
+            ..Default::default()
+        };
+        // CJK name without trailing pattern → returns name as-is
+        assert_eq!(provider_display_name(&model), "阶跃星辰");
+    }
+
+    #[test]
+    fn test_provider_display_name_empty_name_fallback() {
+        let model = AIModelConfig {
+            name: "".to_string(),
+            model_name: "gpt-4".to_string(),
+            provider: "openai".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(provider_display_name(&model), "openai");
+    }
+
+    // --- model_display_name tests ---
+
+    #[test]
+    fn test_model_display_name_basic() {
+        let model = AIModelConfig {
+            name: "openai/gpt-4o".to_string(),
+            model_name: "gpt-4o".to_string(),
+            provider: "openai".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(model_display_name(&model), "gpt-4o / openai");
+    }
+
+    #[test]
+    fn test_model_display_name_cjk() {
+        let model = AIModelConfig {
+            name: "阶跃星辰".to_string(),
+            model_name: "step-2-16k".to_string(),
+            provider: "stepfun".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(model_display_name(&model), "step-2-16k / 阶跃星辰");
+    }
+
+    // --- parse_custom_headers tests ---
+
+    #[test]
+    fn test_parse_custom_headers_empty() {
+        let (headers, mode) = parse_custom_headers("", "");
+        assert!(headers.is_none());
+        assert!(mode.is_none());
+    }
+
+    #[test]
+    fn test_parse_custom_headers_valid_json() {
+        let json = r#"{"X-Key": "value"}"#;
+        let (headers, mode) = parse_custom_headers(json, "merge");
+        assert!(headers.is_some());
+        assert_eq!(headers.unwrap().get("X-Key"), Some(&"value".to_string()));
+        assert!(mode.is_none()); // "merge" is the default
+    }
+
+    #[test]
+    fn test_parse_custom_headers_replace_mode() {
+        let json = r#"{"X-Key": "value"}"#;
+        let (headers, mode) = parse_custom_headers(json, "replace");
+        assert!(headers.is_some());
+        assert_eq!(mode, Some("replace".to_string()));
+    }
+
+    #[test]
+    fn test_parse_custom_headers_invalid_json() {
+        let (headers, mode) = parse_custom_headers("not-json", "merge");
+        assert!(headers.is_none());
+        assert!(mode.is_none());
     }
 }

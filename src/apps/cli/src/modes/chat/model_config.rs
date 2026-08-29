@@ -1,5 +1,6 @@
 //! Chat mode model configuration — provider selection, save new, edit, update existing.
 use crate::chat_state::ChatState;
+use crate::ui::model_selector::{DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS, parse_custom_headers};
 use crate::ui::chat::ChatView;
 use crate::ui::model_config_form::ModelFormResult;
 use crate::ui::model_selector::ModelItem;
@@ -7,6 +8,7 @@ use crate::ui::provider_selector::ProviderSelection;
 
 use northhing_core::service::config::GlobalConfigManager;
 
+use super::input::bridge::bridge;
 use super::ChatMode;
 
 impl ChatMode {
@@ -44,12 +46,8 @@ impl ChatMode {
                 .as_millis()
         );
 
-        // Parse custom headers JSON if provided
-        let custom_headers: Option<std::collections::HashMap<String, String>> = if result.custom_headers.is_empty() {
-            None
-        } else {
-            serde_json::from_str(&result.custom_headers).ok()
-        };
+        let (custom_headers, custom_headers_mode) =
+            parse_custom_headers(&result.custom_headers, &result.custom_headers_mode);
 
         let custom_request_body: Option<String> = if result.custom_request_body.is_empty() {
             None
@@ -70,58 +68,52 @@ impl ChatMode {
             enable_thinking_process: result.enable_thinking || result.support_preserved_thinking,
             skip_ssl_verify: result.skip_ssl_verify,
             custom_headers,
-            custom_headers_mode: if result.custom_headers_mode.is_empty() || result.custom_headers_mode == "merge" {
-                None
-            } else {
-                Some(result.custom_headers_mode.clone())
-            },
+            custom_headers_mode,
             custom_request_body,
             ..Default::default()
         };
 
-        let success = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                let config_service = match GlobalConfigManager::service().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Failed to get config service: {}", e);
-                        return false;
-                    }
-                };
-
-                if let Err(e) = config_service.add_ai_model(model_config).await {
-                    tracing::error!("Failed to add AI model: {}", e);
+        let success = bridge(rt_handle, async {
+            let config_service = match GlobalConfigManager::service().await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("Failed to get config service: {}", e);
                     return false;
                 }
+            };
 
-                // Auto-set as primary model if no primary model exists
-                match config_service
-                    .config::<northhing_core::service::config::GlobalConfig>(None)
-                    .await
-                {
-                    Ok(global_config) => {
-                        let has_primary = global_config
-                            .ai
-                            .default_models
-                            .primary
-                            .as_ref()
-                            .map(|p| !p.is_empty())
-                            .unwrap_or(false);
-                        if !has_primary {
-                            if let Err(e) = config_service.set_config("ai.default_models.primary", &model_id).await {
-                                tracing::warn!("Failed to auto-set primary model: {}", e);
-                            } else {
-                                tracing::info!("Auto-set primary model: {}", model_id);
-                            }
+            if let Err(e) = config_service.add_ai_model(model_config).await {
+                tracing::error!("Failed to add AI model: {}", e);
+                return false;
+            }
+
+            // Auto-set as primary model if no primary model exists
+            match config_service
+                .config::<northhing_core::service::config::GlobalConfig>(None)
+                .await
+            {
+                Ok(global_config) => {
+                    let has_primary = global_config
+                        .ai
+                        .default_models
+                        .primary
+                        .as_ref()
+                        .map(|p| !p.is_empty())
+                        .unwrap_or(false);
+                    if !has_primary {
+                        if let Err(e) = config_service.set_config("ai.default_models.primary", &model_id).await {
+                            tracing::warn!("Failed to auto-set primary model: {}", e);
+                        } else {
+                            tracing::info!("Auto-set primary model: {}", model_id);
                         }
                     }
-                    Err(e) => {
-                        tracing::warn!("Failed to read config for auto-primary: {}", e);
-                    }
                 }
+                Err(e) => {
+                    tracing::warn!("Failed to read config for auto-primary: {}", e);
+                }
+            }
 
-                true
-            })
+            true
         });
 
         if success {
@@ -141,13 +133,11 @@ impl ChatMode {
         rt_handle: &tokio::runtime::Handle,
     ) {
         let model_id = selected.id.clone();
-        let result = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                let config_service = GlobalConfigManager::service().await.ok()?;
-                let models: Vec<northhing_core::service::config::AIModelConfig> =
-                    config_service.get_ai_models().await.ok()?;
-                models.into_iter().find(|m| m.id == model_id)
-            })
+        let result = bridge(rt_handle, async {
+            let config_service = GlobalConfigManager::service().await.ok()?;
+            let models: Vec<northhing_core::service::config::AIModelConfig> =
+                config_service.get_ai_models().await.ok()?;
+            models.into_iter().find(|m| m.id == model_id)
         });
 
         match result {
@@ -159,8 +149,8 @@ impl ChatMode {
                     base_url: model.base_url,
                     api_key: model.api_key,
                     provider_format: model.provider.clone(),
-                    context_window: model.context_window.unwrap_or(128000),
-                    max_tokens: model.max_tokens.unwrap_or(8192),
+                    context_window: model.context_window.unwrap_or(DEFAULT_CONTEXT_WINDOW),
+                    max_tokens: model.max_tokens.unwrap_or(DEFAULT_MAX_TOKENS),
                     enable_thinking: model.enable_thinking_process,
                     support_preserved_thinking: model.inline_think_in_text,
                     skip_ssl_verify: model.skip_ssl_verify,
@@ -192,11 +182,8 @@ impl ChatMode {
             None => return,
         };
 
-        let custom_headers: Option<std::collections::HashMap<String, String>> = if result.custom_headers.is_empty() {
-            None
-        } else {
-            serde_json::from_str(&result.custom_headers).ok()
-        };
+        let (custom_headers, custom_headers_mode) =
+            parse_custom_headers(&result.custom_headers, &result.custom_headers_mode);
 
         let custom_request_body: Option<String> = if result.custom_request_body.is_empty() {
             None
@@ -217,32 +204,26 @@ impl ChatMode {
             enable_thinking_process: result.enable_thinking || result.support_preserved_thinking,
             skip_ssl_verify: result.skip_ssl_verify,
             custom_headers,
-            custom_headers_mode: if result.custom_headers_mode.is_empty() || result.custom_headers_mode == "merge" {
-                None
-            } else {
-                Some(result.custom_headers_mode.clone())
-            },
+            custom_headers_mode,
             custom_request_body,
             ..Default::default()
         };
 
-        let success = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                let config_service = match GlobalConfigManager::service().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Failed to get config service: {}", e);
-                        return false;
-                    }
-                };
-
-                if let Err(e) = config_service.update_ai_model(&model_id, model_config).await {
-                    tracing::error!("Failed to update AI model: {}", e);
+        let success = bridge(rt_handle, async {
+            let config_service = match GlobalConfigManager::service().await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("Failed to get config service: {}", e);
                     return false;
                 }
+            };
 
-                true
-            })
+            if let Err(e) = config_service.update_ai_model(&model_id, model_config).await {
+                tracing::error!("Failed to update AI model: {}", e);
+                return false;
+            }
+
+            true
         });
 
         if success {

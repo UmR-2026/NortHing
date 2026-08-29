@@ -1,4 +1,8 @@
 use super::super::agent_selector::AgentItem;
+use super::super::model_selector::{
+    model_display_name, parse_custom_headers, DEFAULT_CONTEXT_WINDOW, DEFAULT_MAX_TOKENS,
+    PRIMARY_SENTINEL,
+};
 use super::super::model_selector::ModelItem;
 use super::super::provider_selector::ProviderSelection;
 use super::super::session_selector::{format_time_ago, SessionItem};
@@ -9,6 +13,7 @@ use super::super::theme::{
     EffectiveColorScheme, Theme,
 };
 use super::super::theme_selector::ThemeItem;
+use crate::modes::chat::input::bridge::bridge;
 
 use northhing_core::agentic::agents::{
     agent_registry, AgentInfo, SubAgentSource, SubagentListScope, SubagentQueryContext,
@@ -28,14 +33,14 @@ use super::StartupPage;
 impl StartupPage {
     // ======================== Selectors ========================
 
-    /// Push the currently visible popup onto the navigation stack and hide it
+    /// Show the session selector popup with available sessions
     pub(super) fn show_session_selector(&mut self) {
         self.push_current_popup_to_stack();
         let coordinator = self.coordinator.clone();
-        let sessions = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let sessions = bridge(&rt, async {
             let workspace_path = self.workspace_path_buf();
-            tokio::runtime::Handle::current()
-                .block_on(async { coordinator.list_sessions(&workspace_path).await.unwrap_or_default() })
+            coordinator.list_sessions(&workspace_path).await.unwrap_or_default()
         });
 
         if sessions.is_empty() {
@@ -60,10 +65,10 @@ impl StartupPage {
         let coordinator = self.coordinator.clone();
         let sid = item.session_id.clone();
 
-        let result = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let result = bridge(&rt, async {
             let workspace_path = self.workspace_path_buf();
-            tokio::runtime::Handle::current()
-                .block_on(async { coordinator.delete_session(&workspace_path, &sid).await })
+            coordinator.delete_session(&workspace_path, &sid).await
         });
 
         match result {
@@ -81,29 +86,28 @@ impl StartupPage {
         self.push_current_popup_to_stack();
 
         let agent_type = self.agent_type.clone();
-        let result = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = GlobalConfigManager::service().await.ok()?;
-                let models: Vec<northhing_core::service::config::AIModelConfig> =
-                    config_service.get_ai_models().await.ok()?;
-                let global_config: northhing_core::service::config::GlobalConfig =
-                    config_service.config(None).await.ok()?;
+        let rt = tokio::runtime::Handle::current();
+        let result = bridge(&rt, async {
+            let config_service = GlobalConfigManager::service().await.ok()?;
+            let models: Vec<northhing_core::service::config::AIModelConfig> =
+                config_service.get_ai_models().await.ok()?;
+            let global_config: northhing_core::service::config::GlobalConfig =
+                config_service.config(None).await.ok()?;
 
-                let current_model_id = global_config
-                    .ai
-                    .agent_models
-                    .get(&agent_type)
-                    .cloned()
-                    .or_else(|| global_config.ai.default_models.primary.clone());
+            let current_model_id = global_config
+                .ai
+                .agent_models
+                .get(&agent_type)
+                .cloned()
+                .or_else(|| global_config.ai.default_models.primary.clone());
 
-                let model_items: Vec<ModelItem> = models
-                    .into_iter()
-                    .filter(|m| m.enabled)
-                    .map(|m| ModelItem::from_config(&m))
-                    .collect();
+            let model_items: Vec<ModelItem> = models
+                .into_iter()
+                .filter(|m| m.enabled)
+                .map(|m| ModelItem::from_config(&m))
+                .collect();
 
-                Some((model_items, current_model_id))
-            })
+            Some((model_items, current_model_id))
         });
 
         match result {
@@ -120,31 +124,30 @@ impl StartupPage {
         let selected_id = selected.id.clone();
         let selected_display_name = format!("{} / {}", selected.model_name, selected.name);
         let modes = self.get_mode_agents();
+        let rt = tokio::runtime::Handle::current();
 
-        let success = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = match GlobalConfigManager::service().await {
-                    Ok(s) => s,
-                    Err(_) => return false,
-                };
+        let success = bridge(&rt, async {
+            let config_service = match GlobalConfigManager::service().await {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
 
-                if let Err(e) = config_service
-                    .set_config("ai.default_models.primary", &selected_id)
-                    .await
-                {
-                    tracing::error!("Failed to set default primary model: {}", e);
-                    return false;
+            if let Err(e) = config_service
+                .set_config("ai.default_models.primary", &selected_id)
+                .await
+            {
+                tracing::error!("Failed to set default primary model: {}", e);
+                return false;
+            }
+
+            for mode in &modes {
+                let path = format!("ai.agent_models.{}", mode.id);
+                if let Err(e) = config_service.set_config(&path, &selected_id).await {
+                    tracing::error!("Failed to set model for mode '{}': {}", mode.id, e);
                 }
+            }
 
-                for mode in &modes {
-                    let path = format!("ai.agent_models.{}", mode.id);
-                    if let Err(e) = config_service.set_config(&path, &selected_id).await {
-                        tracing::error!("Failed to set model for mode '{}': {}", mode.id, e);
-                    }
-                }
-
-                true
-            })
+            true
         });
 
         if success {
@@ -209,55 +212,54 @@ impl StartupPage {
 
         let result_name = result.name.clone();
         let result_model_display = format!("{} / {}", result.model_name, result.name);
+        let rt = tokio::runtime::Handle::current();
 
-        let success = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = match GlobalConfigManager::service().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Failed to get config service: {}", e);
-                        return false;
-                    }
-                };
-
-                if let Err(e) = config_service.add_ai_model(model_config).await {
-                    tracing::error!("Failed to add AI model: {}", e);
+        let success = bridge(&rt, async {
+            let config_service = match GlobalConfigManager::service().await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("Failed to get config service: {}", e);
                     return false;
                 }
+            };
 
-                // Scheme C: persist the key to the OS keyring so it survives restarts.
-                if let Err(e) = crate::keyring_keys::store_model_key(&model_id, &result.api_key) {
-                    tracing::warn!("keyring store failed for '{model_id}': {e}");
-                }
+            if let Err(e) = config_service.add_ai_model(model_config).await {
+                tracing::error!("Failed to add AI model: {}", e);
+                return false;
+            }
 
-                // Auto-set as primary model if no primary model exists
-                match config_service
-                    .config::<northhing_core::service::config::GlobalConfig>(None)
-                    .await
-                {
-                    Ok(global_config) => {
-                        let has_primary = global_config
-                            .ai
-                            .default_models
-                            .primary
-                            .as_ref()
-                            .map(|p| !p.is_empty())
-                            .unwrap_or(false);
-                        if !has_primary {
-                            if let Err(e) = config_service.set_config("ai.default_models.primary", &model_id).await {
-                                tracing::warn!("Failed to auto-set primary model: {}", e);
-                            } else {
-                                tracing::info!("Auto-set primary model: {}", model_id);
-                            }
+            // Scheme C: persist the key to the OS keyring so it survives restarts.
+            if let Err(e) = crate::keyring_keys::store_model_key(&model_id, &result.api_key) {
+                tracing::warn!("keyring store failed for '{model_id}': {e}");
+            }
+
+            // Auto-set as primary model if no primary model exists
+            match config_service
+                .config::<northhing_core::service::config::GlobalConfig>(None)
+                .await
+            {
+                Ok(global_config) => {
+                    let has_primary = global_config
+                        .ai
+                        .default_models
+                        .primary
+                        .as_ref()
+                        .map(|p| !p.is_empty())
+                        .unwrap_or(false);
+                    if !has_primary {
+                        if let Err(e) = config_service.set_config("ai.default_models.primary", &model_id).await {
+                            tracing::warn!("Failed to auto-set primary model: {}", e);
+                        } else {
+                            tracing::info!("Auto-set primary model: {}", model_id);
                         }
                     }
-                    Err(e) => {
-                        tracing::warn!("Failed to read config for auto-primary: {}", e);
-                    }
                 }
+                Err(e) => {
+                    tracing::warn!("Failed to read config for auto-primary: {}", e);
+                }
+            }
 
-                true
-            })
+            true
         });
 
         if success {
@@ -274,13 +276,12 @@ impl StartupPage {
     /// Fetch full model config and open the edit form
     pub(super) fn edit_model(&mut self, selected: &ModelItem) {
         let model_id = selected.id.clone();
-        let result = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = GlobalConfigManager::service().await.ok()?;
-                let models: Vec<northhing_core::service::config::AIModelConfig> =
-                    config_service.get_ai_models().await.ok()?;
-                models.into_iter().find(|m| m.id == model_id)
-            })
+        let rt = tokio::runtime::Handle::current();
+        let result = bridge(&rt, async {
+            let config_service = GlobalConfigManager::service().await.ok()?;
+            let models: Vec<northhing_core::service::config::AIModelConfig> =
+                config_service.get_ai_models().await.ok()?;
+            models.into_iter().find(|m| m.id == model_id)
         });
 
         match result {
@@ -292,8 +293,8 @@ impl StartupPage {
                     base_url: model.base_url,
                     api_key: String::new(),
                     provider_format: model.provider.clone(),
-                    context_window: model.context_window.unwrap_or(128000),
-                    max_tokens: model.max_tokens.unwrap_or(8192),
+                     context_window: model.context_window.unwrap_or(DEFAULT_CONTEXT_WINDOW),
+                    max_tokens: model.max_tokens.unwrap_or(DEFAULT_MAX_TOKENS),
                     enable_thinking: model.enable_thinking_process,
                     support_preserved_thinking: model.inline_think_in_text,
                     skip_ssl_verify: model.skip_ssl_verify,
@@ -348,24 +349,23 @@ impl StartupPage {
 
         let result_name = result.name.clone();
         let result_model_display = format!("{} / {}", result.model_name, result.name);
+        let rt = tokio::runtime::Handle::current();
 
-        let success = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = match GlobalConfigManager::service().await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Failed to get config service: {}", e);
-                        return false;
-                    }
-                };
-
-                if let Err(e) = config_service.update_ai_model(&model_id, model_config).await {
-                    tracing::error!("Failed to update AI model: {}", e);
+        let success = bridge(&rt, async {
+            let config_service = match GlobalConfigManager::service().await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("Failed to get config service: {}", e);
                     return false;
                 }
+            };
 
-                true
-            })
+            if let Err(e) = config_service.update_ai_model(&model_id, model_config).await {
+                tracing::error!("Failed to update AI model: {}", e);
+                return false;
+            }
+
+            true
         });
 
         if success {
@@ -517,15 +517,14 @@ impl StartupPage {
     }
 
     fn show_available_skill_list(&mut self) {
-        let skills = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let skills = bridge(&rt, async {
             let workspace = self.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            tokio::runtime::Handle::current().block_on(async {
-                let registry = SkillRegistry::global();
-                registry
-                    .get_resolved_skills_for_workspace(Some(workspace.as_path()), Some(&agent_type))
-                    .await
-            })
+            let registry = SkillRegistry::global();
+            registry
+                .get_resolved_skills_for_workspace(Some(workspace.as_path()), Some(&agent_type))
+                .await
         });
 
         if skills.is_empty() {
@@ -544,15 +543,14 @@ impl StartupPage {
     }
 
     fn show_skill_config_selector(&mut self) {
-        let skills = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let skills = bridge(&rt, async {
             let workspace = self.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            tokio::runtime::Handle::current().block_on(async {
-                let registry = SkillRegistry::global();
-                registry
-                    .get_mode_skill_infos_for_workspace(Some(workspace.as_path()), &agent_type)
-                    .await
-            })
+            let registry = SkillRegistry::global();
+            registry
+                .get_mode_skill_infos_for_workspace(Some(workspace.as_path()), &agent_type)
+                .await
         });
 
         let skill_items: Vec<SkillItem> = skills.into_iter().map(Self::skill_item_from_mode_info).collect();
@@ -584,32 +582,31 @@ impl StartupPage {
         let workspace = self.workspace_path_buf();
         let mode_id = self.agent_type.clone();
         let skill = selected.clone();
+        let rt = tokio::runtime::Handle::current();
 
-        let result: Result<(), String> = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                match skill.level.as_str() {
-                    "user" => {
-                        set_user_mode_skill_state(&mode_id, &skill.key, enabled, skill.default_enabled)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                    }
-                    "project" => {
-                        let mut document = load_project_mode_skills_document_local(&workspace)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                        set_mode_skill_disabled_in_document(&mut document, &mode_id, &skill.key, !enabled)
-                            .map_err(|error| error.to_string())?;
-                        save_project_mode_skills_document_local(&workspace, &document)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                    }
-                    other => {
-                        return Err(format!("Unsupported skill level '{}'", other));
-                    }
+        let result: Result<(), String> = bridge(&rt, async {
+            match skill.level.as_str() {
+                "user" => {
+                    set_user_mode_skill_state(&mode_id, &skill.key, enabled, skill.default_enabled)
+                        .await
+                        .map_err(|error| error.to_string())?;
                 }
+                "project" => {
+                    let mut document = load_project_mode_skills_document_local(&workspace)
+                        .await
+                        .map_err(|error| error.to_string())?;
+                    set_mode_skill_disabled_in_document(&mut document, &mode_id, &skill.key, !enabled)
+                        .map_err(|error| error.to_string())?;
+                    save_project_mode_skills_document_local(&workspace, &document)
+                        .await
+                        .map_err(|error| error.to_string())?;
+                }
+                other => {
+                    return Err(format!("Unsupported skill level '{}'", other));
+                }
+            }
 
-                Ok(())
-            })
+            Ok(())
         });
 
         self.status = Some(match result {
@@ -656,15 +653,18 @@ impl StartupPage {
 
     fn show_available_subagent_list(&mut self) {
         let registry = agent_registry();
-        let subagents = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let subagents = bridge(&rt, async {
             let workspace = self.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            tokio::runtime::Handle::current().block_on(registry.get_subagents_for_query(&SubagentQueryContext {
-                parent_agent_type: Some(&agent_type),
-                workspace_root: Some(workspace.as_path()),
-                list_scope: SubagentListScope::TaskVisible,
-                include_disabled: false,
-            }))
+            registry
+                .get_subagents_for_query(&SubagentQueryContext {
+                    parent_agent_type: Some(&agent_type),
+                    workspace_root: Some(workspace.as_path()),
+                    list_scope: SubagentListScope::TaskVisible,
+                    include_disabled: false,
+                })
+                .await
         });
 
         if subagents.is_empty() {
@@ -687,15 +687,18 @@ impl StartupPage {
 
     fn show_subagent_config_selector(&mut self) {
         let registry = agent_registry();
-        let subagents = tokio::task::block_in_place(|| {
+        let rt = tokio::runtime::Handle::current();
+        let subagents = bridge(&rt, async {
             let workspace = self.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            tokio::runtime::Handle::current().block_on(registry.get_subagents_for_query(&SubagentQueryContext {
-                parent_agent_type: Some(&agent_type),
-                workspace_root: Some(workspace.as_path()),
-                list_scope: SubagentListScope::RegistryManagement,
-                include_disabled: true,
-            }))
+            registry
+                .get_subagents_for_query(&SubagentQueryContext {
+                    parent_agent_type: Some(&agent_type),
+                    workspace_root: Some(workspace.as_path()),
+                    list_scope: SubagentListScope::RegistryManagement,
+                    include_disabled: true,
+                })
+                .await
         });
 
         let subagent_items: Vec<SubagentItem> = subagents.into_iter().map(Self::subagent_item_from_info).collect();
@@ -728,14 +731,13 @@ impl StartupPage {
         let workspace = self.workspace_path_buf();
         let mode_id = self.agent_type.clone();
         let subagent = selected.clone();
+        let rt = tokio::runtime::Handle::current();
 
-        let result: Result<(), String> = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                registry
-                    .update_subagent_override(&mode_id, &subagent.id, enabled, Some(workspace.as_path()))
-                    .await
-                    .map_err(|error| error.to_string())
-            })
+        let result: Result<(), String> = bridge(&rt, async {
+            registry
+                .update_subagent_override(&mode_id, &subagent.id, enabled, Some(workspace.as_path()))
+                .await
+                .map_err(|error| error.to_string())
         });
 
         self.status = Some(match result {
@@ -773,8 +775,8 @@ impl StartupPage {
 
     fn get_mode_agents(&self) -> Vec<AgentInfo> {
         let registry = agent_registry();
-        let modes =
-            tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(registry.get_modes_info()));
+        let rt = tokio::runtime::Handle::current();
+        let modes = bridge(&rt, registry.get_modes_info());
         modes
     }
 
@@ -796,66 +798,30 @@ impl StartupPage {
 
     pub(super) fn load_current_model_name(&mut self) {
         let agent_type = self.agent_type.clone();
-        let result: Option<String> = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let config_service = GlobalConfigManager::service().await.ok()?;
-                let models: Vec<northhing_core::service::config::AIModelConfig> =
-                    config_service.get_ai_models().await.ok()?;
-                let global_config: northhing_core::service::config::GlobalConfig =
-                    config_service.config(None).await.ok()?;
+        let rt = tokio::runtime::Handle::current();
+        let result: Option<String> = bridge(&rt, async {
+            let config_service = GlobalConfigManager::service().await.ok()?;
+            let models: Vec<northhing_core::service::config::AIModelConfig> =
+                config_service.get_ai_models().await.ok()?;
+            let global_config: northhing_core::service::config::GlobalConfig =
+                config_service.config(None).await.ok()?;
 
-                let model_id = global_config
-                    .ai
-                    .agent_models
-                    .get(&agent_type)
-                    .cloned()
-                    .or_else(|| global_config.ai.default_models.primary.clone())
-                    .unwrap_or_else(|| "primary".to_string());
+            let model_id = global_config
+                .ai
+                .agent_models
+                .get(&agent_type)
+                .cloned()
+                .or_else(|| global_config.ai.default_models.primary.clone())
+                .unwrap_or_else(|| PRIMARY_SENTINEL.to_string());
 
-                fn provider_display_name(model: &northhing_core::service::config::AIModelConfig) -> String {
-                    let raw_name = model.name.trim();
-                    let model_name = model.model_name.trim();
-                    if !raw_name.is_empty() && !model_name.is_empty() {
-                        let dashed_suffix = format!(" - {}", model_name);
-                        let slash_suffix = format!("/{}", model_name);
-                        if let Some(provider) = raw_name.strip_suffix(&dashed_suffix) {
-                            return provider.trim().to_string();
-                        }
-                        if let Some(provider) = raw_name.strip_suffix(&slash_suffix) {
-                            return provider.trim().to_string();
-                        }
-                    }
-                    if raw_name.is_empty() {
-                        model.provider.clone()
-                    } else {
-                        raw_name.to_string()
-                    }
-                }
-
-                fn model_display_name(model: &northhing_core::service::config::AIModelConfig) -> String {
-                    format!("{} / {}", model.model_name, provider_display_name(model))
-                }
-
-                if model_id == "primary" {
-                    let primary_id = global_config.ai.default_models.primary.as_deref()?;
-                    models.iter().find(|m| m.id == primary_id).map(model_display_name)
-                } else {
-                    models.iter().find(|m| m.id == model_id).map(model_display_name)
-                }
-            })
+            if model_id == PRIMARY_SENTINEL {
+                let primary_id = global_config.ai.default_models.primary.as_deref()?;
+                models.iter().find(|m| m.id == primary_id).map(model_display_name)
+            } else {
+                models.iter().find(|m| m.id == model_id).map(model_display_name)
+            }
         });
 
         self.model_display_name = result.unwrap_or_default();
     }
-}
-
-fn parse_custom_headers(
-    raw_headers: &str,
-    headers_mode: &str,
-) -> (Option<std::collections::HashMap<String, String>>, Option<String>) {
-    let custom_headers = (!raw_headers.is_empty())
-        .then(|| serde_json::from_str(raw_headers).ok())
-        .flatten();
-    let custom_headers_mode = (!headers_mode.is_empty() && headers_mode != "merge").then(|| headers_mode.to_string());
-    (custom_headers, custom_headers_mode)
 }

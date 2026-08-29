@@ -6,6 +6,7 @@ use crate::chat_state::ChatState;
 use crate::ui::chat::ChatView;
 use crate::ui::session_selector::{format_time_ago, SessionItem};
 
+use super::input::bridge::bridge;
 use super::ChatMode;
 
 impl ChatMode {
@@ -23,50 +24,48 @@ impl ChatMode {
         let agent_type = self.agent_type.clone();
         let workspace = self.workspace.clone();
 
-        let (new_state, restored_agent_type) = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                // Restore session in core
-                agent.restore_session(&sid).await?;
+        let (new_state, restored_agent_type) = bridge(rt_handle, async {
+            // Restore session in core
+            agent.restore_session(&sid).await?;
 
-                // Get session info for agent_type and workspace
-                let workspace_path = agent.workspace_path_buf();
-                let sessions = agent
-                    .coordinator()
-                    .list_sessions(&workspace_path)
-                    .await
-                    .unwrap_or_default();
-                let session_summary = sessions.iter().find(|s| s.session_id == sid);
-                let restored_agent_type = session_summary
-                    .map(|s| s.agent_type.clone())
-                    .unwrap_or_else(|| agent_type.clone());
-                let session_name = session_summary
-                    .map(|s| s.session_name.clone())
-                    .unwrap_or_else(|| "Restored Session".to_string());
+            // Get session info for agent_type and workspace
+            let workspace_path = agent.workspace_path_buf();
+            let sessions = agent
+                .coordinator()
+                .list_sessions(&workspace_path)
+                .await
+                .unwrap_or_default();
+            let session_summary = sessions.iter().find(|s| s.session_id == sid);
+            let restored_agent_type = session_summary
+                .map(|s| s.agent_type.clone())
+                .unwrap_or_else(|| agent_type.clone());
+            let session_name = session_summary
+                .map(|s| s.session_name.clone())
+                .unwrap_or_else(|| "Restored Session".to_string());
 
-                // Use the current workspace filtered by the session list; fall back to the
-                // workspace supplied when this chat view was created.
-                let effective_workspace = workspace
-                    .clone()
-                    .or_else(|| Some(workspace_path.to_string_lossy().to_string()));
+            // Use the current workspace filtered by the session list; fall back to the
+            // workspace supplied when this chat view was created.
+            let effective_workspace = workspace
+                .clone()
+                .or_else(|| Some(workspace_path.to_string_lossy().to_string()));
 
-                // Sync global workspace path from restored session
-                if let Some(ref ws) = effective_workspace {
-                    agent.set_workspace_path(Some(std::path::PathBuf::from(ws))).await;
-                }
+            // Sync global workspace path from restored session
+            if let Some(ref ws) = effective_workspace {
+                agent.set_workspace_path(Some(std::path::PathBuf::from(ws))).await;
+            }
 
-                // Load historical messages from core.
-                let messages = agent.coordinator().get_messages(&sid).await.unwrap_or_default();
+            // Load historical messages from core.
+            let messages = agent.coordinator().get_messages(&sid).await.unwrap_or_default();
 
-                let state = ChatState::from_core_messages(
-                    sid.clone(),
-                    session_name,
-                    restored_agent_type.clone(),
-                    effective_workspace,
-                    &messages,
-                );
+            let state = ChatState::from_core_messages(
+                sid.clone(),
+                session_name,
+                restored_agent_type.clone(),
+                effective_workspace,
+                &messages,
+            );
 
-                Ok::<_, anyhow::Error>((state, restored_agent_type))
-            })
+            Ok::<_, anyhow::Error>((state, restored_agent_type))
         })?;
 
         // Update session state
@@ -97,7 +96,7 @@ impl ChatMode {
         let agent_type = self.agent_type.clone();
         let workspace = self.workspace.clone();
 
-        let new_session_id = tokio::task::block_in_place(|| rt_handle.block_on(agent.create_new_session(&agent_type)))?;
+        let new_session_id = bridge(rt_handle, agent.create_new_session(&agent_type))?;
 
         let new_state = ChatState::new(new_session_id.clone(), "CLI Session".to_string(), agent_type, workspace);
 
@@ -126,14 +125,12 @@ impl ChatMode {
         let agent = self.agent.clone();
         let current_session_id = chat_state.core_session_id.clone();
 
-        let sessions = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                agent
-                    .coordinator()
-                    .list_sessions(&agent.workspace_path_buf())
-                    .await
-                    .unwrap_or_default()
-            })
+        let sessions = bridge(rt_handle, async {
+            agent
+                .coordinator()
+                .list_sessions(&agent.workspace_path_buf())
+                .await
+                .unwrap_or_default()
         });
 
         if sessions.is_empty() {
@@ -171,11 +168,9 @@ impl ChatMode {
         let agent = self.agent.clone();
         let sid = item.session_id.clone();
 
-        let result = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                let workspace_path = agent.workspace_path_buf();
-                agent.coordinator().delete_session(&workspace_path, &sid).await
-            })
+        let result = bridge(rt_handle, async {
+            let workspace_path = agent.workspace_path_buf();
+            agent.coordinator().delete_session(&workspace_path, &sid).await
         });
 
         match result {

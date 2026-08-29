@@ -7,6 +7,7 @@ use northhing_core::agentic::agents::{
     agent_registry, AgentInfo, SubAgentSource, SubagentListScope, SubagentQueryContext,
 };
 
+use super::input::bridge::bridge;
 use super::ChatMode;
 
 impl ChatMode {
@@ -27,15 +28,17 @@ impl ChatMode {
         rt_handle: &tokio::runtime::Handle,
     ) {
         let registry = agent_registry();
-        let subagents = tokio::task::block_in_place(|| {
+        let subagents = bridge(rt_handle, async {
             let workspace = self.agent.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            rt_handle.block_on(registry.get_subagents_for_query(&SubagentQueryContext {
-                parent_agent_type: Some(&agent_type),
-                workspace_root: Some(workspace.as_path()),
-                list_scope: SubagentListScope::TaskVisible,
-                include_disabled: false,
-            }))
+            registry
+                .get_subagents_for_query(&SubagentQueryContext {
+                    parent_agent_type: Some(&agent_type),
+                    workspace_root: Some(workspace.as_path()),
+                    list_scope: SubagentListScope::TaskVisible,
+                    include_disabled: false,
+                })
+                .await
         });
 
         if subagents.is_empty() {
@@ -63,15 +66,17 @@ impl ChatMode {
         rt_handle: &tokio::runtime::Handle,
     ) {
         let registry = agent_registry();
-        let subagents = tokio::task::block_in_place(|| {
+        let subagents = bridge(rt_handle, async {
             let workspace = self.agent.workspace_path_buf();
             let agent_type = self.agent_type.clone();
-            rt_handle.block_on(registry.get_subagents_for_query(&SubagentQueryContext {
-                parent_agent_type: Some(&agent_type),
-                workspace_root: Some(workspace.as_path()),
-                list_scope: SubagentListScope::RegistryManagement,
-                include_disabled: true,
-            }))
+            registry
+                .get_subagents_for_query(&SubagentQueryContext {
+                    parent_agent_type: Some(&agent_type),
+                    workspace_root: Some(workspace.as_path()),
+                    list_scope: SubagentListScope::RegistryManagement,
+                    include_disabled: true,
+                })
+                .await
         });
 
         let subagent_items: Vec<SubagentItem> = subagents.into_iter().map(Self::subagent_item_from_info).collect();
@@ -126,13 +131,11 @@ impl ChatMode {
         let mode_id = self.agent_type.clone();
         let subagent = selected.clone();
 
-        let result: Result<(), String> = tokio::task::block_in_place(|| {
-            rt_handle.block_on(async {
-                registry
-                    .update_subagent_override(&mode_id, &subagent.id, enabled, Some(workspace.as_path()))
-                    .await
-                    .map_err(|error| error.to_string())
-            })
+        let result: Result<(), String> = bridge(rt_handle, async {
+            registry
+                .update_subagent_override(&mode_id, &subagent.id, enabled, Some(workspace.as_path()))
+                .await
+                .map_err(|error| error.to_string())
         });
 
         match result {
