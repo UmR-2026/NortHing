@@ -6,12 +6,10 @@
 // and injected via `document::Stylesheet` so the rendered pixels match
 // the truth HTML byte-for-byte (modulo the three-window layout).
 //
-// Until the dedicated `.css` file is extracted, we fall back to the full
-// `<style>` block from the truth HTML so the colors, keyframes, radial
-// gradients and shadow tokens all line up. The conversion-annotations
-// rules (color-mix 48, keyframes 21, radial-gradient 22, shadow 4式)
-// are preserved verbatim below — do not edit unless the truth HTML
-// itself changes.
+// The dedicated `.css` file is extracted from the truth HTML and embedded
+// as a `&'static str` via `include_str!`. The conversion-annotations rules
+// (color-mix 48, keyframes 21, radial-gradient 22, shadow 4式) are preserved
+// verbatim — do not edit unless the truth HTML itself changes.
 
 /// CSS payload injected into every Dioxus window. The block is byte-
 /// identical to the `<style>` section of `consult-room-main.html`
@@ -49,9 +47,8 @@ pub fn truth_css() -> &'static str {
 /// 选择器约定：
 ///   * `body[data-window="inner"]` / `body[data-window="outer"]` —— 只作用于
 ///     两个浮窗（room 主窗 body 无 `data-window` 属性，规则天然不落 room）；
-///   * `#room-scrim` + `body[data-theme="..."]` —— 只作用于 room 主窗的
-///     压暗层（scrim 是 S4 降级契约要求的转写层自绘，真值 CSS/HTML 无此规则，
-///     见 block-contract §2 规则 4）。
+///   * `body[data-theme="..."]` —— 只作用于 room 主窗的主题微调。
+///     (`#room-scrim` 压暗层已在 R8 退役，规则清空，全仓零引用。)
 pub const OVERLAY_CSS: &str = r#"
   /* ============ R3' 验收修复轮（2026-08-14）F1-F5 覆盖 ============
      真值 CSS 逐字节锁死（assert_truth_css_byte_count 必过）；转写层
@@ -83,7 +80,9 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window] aside .station-head { display: flex; align-items: center; }
   body[data-window] aside .row > * { min-width: 0; }
   body[data-window] aside .fold-btn, body[data-window] aside .tag-x, body[data-window] aside .diff-add, body[data-window] aside .diff-del { flex-shrink: 0; white-space: nowrap; }
-  body[data-window] aside .station-head .close-btn { margin-left: 6px; background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }   body[data-window] aside .degraded-banner { background: #f59e0b18; color: #b45309; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 12px; margin: 6px 0; font-size: 12px; }   body[data-window] aside .station-head .close-btn:hover { color: var(--accent-solid); }
+  body[data-window] aside .station-head .close-btn { margin-left: 6px; background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0; }
+  body[data-window] aside .degraded-banner { background: #f59e0b18; color: #b45309; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 12px; margin: 6px 0; font-size: 12px; }
+  body[data-window] aside .station-head .close-btn:hover { color: var(--accent-solid); }
   /* 终端井（C 单成果，保留）：禁断行 + 横向兜底。 */
   body[data-window="outer"] aside#work .term-well { white-space: pre; overflow-x: hidden; }
 
@@ -127,8 +126,7 @@ pub const OVERLAY_CSS: &str = r#"
      扩到 20px 宽（background-clip 保视觉 12px），hover 26px 保
      视觉 18px。 */
   #room { --gem-mid: 85px; }
-  #room .membrane-node { box-sizing: border-box; width: 20px; padding: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; background-clip: padding-box; }
-  #room .membrane-node:hover, #room .membrane-node:focus-visible { width: 26px; }
+  #room .membrane-node { box-sizing: border-box; padding: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; background-clip: padding-box; }
 
   /* ---- D（A+B+C 单成果）曾在此：room scrim 压暗层。R8 退役——
      三窗独立后 room 不再被侧栏遮挡，22% 常暗只会拉开主框与模块的
@@ -151,11 +149,8 @@ pub const OVERLAY_CSS: &str = r#"
      真值语义保留：关态=实心亮段唤起件、开态=淡化（L184/L193）。
      不可见根因：inner/outer 常开 → 两结恒 is-open opacity .22 ×
      radial-gradient 78% 处已透明 × fix2 background-clip 收窄，
-     三因子叠成隐形。数值标定（复核可调）：常态 .55→.85，
-     is-open .22→.45（淡化但不隐形），is-open:hover .6→.8。 */
-  #room .membrane-node { opacity: .85; }
-  #room .membrane-node.is-open { opacity: .45; }
-  #room .membrane-node.is-open:hover, #room .membrane-node.is-open:focus-visible { opacity: .8; }
+      三因子叠成隐形。数值标定（复核可调）：常态 .55→.85，
+      is-open .22→.45（淡化但不隐形），is-open:hover .6→.8。 */
 
   /* ---- R4 W4. 自定义细滚动条（真值零 scrollbar 规则 = 转写层新增，
      用户判决授权）。三窗统一：10px 槽、透明轨道、3px 透明边让滑块
@@ -190,12 +185,6 @@ pub const OVERLAY_CSS: &str = r#"
 
   /* ---- R4 W2 续. ▴ 收纳钮字形校正：元素已在 R7.1 移除（骑缝条
      取代小点），规则随元素退役。 */
-
-  /* ---- R4 W2 续. room-status 避让 room-controls：frameless 后
-     room-controls（absolute top:8px right:10px，五钮宽 148px）压盖
-     room-status 行右端的 state-dot（真值布局两者即重叠，frameless
-     后窗控是唯一交互钮，避让）。160px = 五钮 148 + 余量。 */
-  #room .room-status { padding-right: 160px; }
 
   /* ============ R5 去嵌套（2026-08-14 用户判决，目标图 image-2/4/5/8）
      「所有除了窗口的黑色部分都是要去掉的」：
@@ -242,9 +231,9 @@ pub const OVERLAY_CSS: &str = r#"
      真值设计哲学）。
      真值原构：左结=头像中轴线（--gem-mid），右结 bottom:230px ≈
      左结距顶的镜像——两结到对角线两端点（左下角/右上角）等距，
-     即关于反对角线对称。R5 布局上移后重测 --gem-mid=123px；右结
-     改为 bottom: calc(--gem-mid - 32px)（结高 64，中心距底 = 123 =
-     左结中心距顶），窗高变化时对称性自适应保持。
+      即关于反对角线对称。R5 布局上移后标定 --gem-mid=85px；右结
+      改为 bottom: calc(--gem-mid - 32px)（结高 64，中心距底 = 85 =
+      左结中心距顶），窗高变化时对称性自适应保持。
      命中区扩宽 20→24px（background-clip 不变 = 视觉 12px 不动）：
      frameless 下左/右 8px 被 tao hit_test 划入缩放边，实测 x=8 点击
      被 OS 吃掉（窗口被改宽 205px），x≥10 才到 webview；扩宽后可用
@@ -255,8 +244,7 @@ pub const OVERLAY_CSS: &str = r#"
   #room .membrane-node.right { top: auto; bottom: calc(var(--gem-mid) - 32px); transform: none; }
 
   /* ---- R6.1b 右结亮度标定：开态统一提至 .55（is-open 淡化语义
-     保留）。渐变加宽尝试已被 R7.2 形态重做取代（见下）。 */
-  #room .membrane-node.is-open { opacity: .55; }
+      保留）。渐变加宽尝试已被 R7.2 形态重做取代（见下）。 */
 
   /* ---- R6.2 竖签移除：app.rs 已删 vlabel 元素，此处规则同步删除。
      （R5.4 曾补定位；用户判决「字变得多余」→ 元素级移除。） */
@@ -303,13 +291,7 @@ pub const OVERLAY_CSS: &str = r#"
   #room .membrane-node { background: none; }
   /* 4px 透明命中边框把 padding-box 内推 → ::before 以 -4px 抵消，
      视觉条真正落在 x=0 / 右缘（完全贴边，用户判决）。 */
-  #room .membrane-node::before { content: ""; position: absolute; top: 0; bottom: 0; width: 3px; border-radius: 2px; transition: width .2s, box-shadow .25s; }
-  #room .membrane-node.left::before { left: -4px; background: var(--accent-solid); box-shadow: 0 0 10px 1px color-mix(in srgb, var(--accent-solid) 60%, transparent); }
-  #room .membrane-node.right::before { right: -4px; background: var(--node-right); box-shadow: 0 0 12px 1px color-mix(in srgb, var(--node-right) 55%, transparent); }
-  #room .membrane-node:hover::before, #room .membrane-node:focus-visible::before { width: 4px; }
-  #room .membrane-node.left:hover::before { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent-solid) 75%, transparent); }
-  #room .membrane-node.right:hover::before { box-shadow: 0 0 16px 2px color-mix(in srgb, var(--node-right) 70%, transparent); }
-
+  #room .membrane-node::before { content: ""; position: absolute; top: 0; bottom: 0; border-radius: 2px; transition: width .2s, box-shadow .25s; }
   /* ============ R8（2026-08-14 用户判决：存在感太低 + 色差） ============ */
 
   /* ---- R8.1 存在感标定：细柱 3→4px、光晕增强、开态淡化 .55→.72
@@ -319,8 +301,8 @@ pub const OVERLAY_CSS: &str = r#"
   #room .membrane-node.is-open { opacity: .72; }
   #room .membrane-node.is-open:hover, #room .membrane-node.is-open:focus-visible { opacity: .95; }
   #room .membrane-node::before { width: 4px; }
-  #room .membrane-node.left::before { box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent-solid) 75%, transparent); }
-  #room .membrane-node.right::before { box-shadow: 0 0 16px 2px color-mix(in srgb, var(--node-right) 70%, transparent); }
+  #room .membrane-node.left::before { left: -4px; background: var(--accent-solid); box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent-solid) 75%, transparent); }
+  #room .membrane-node.right::before { right: -4px; background: var(--node-right); box-shadow: 0 0 16px 2px color-mix(in srgb, var(--node-right) 70%, transparent); }
   #room .membrane-node:hover::before, #room .membrane-node:focus-visible::before { width: 5px; }
   #room .membrane-node.left:hover::before { box-shadow: 0 0 18px 3px color-mix(in srgb, var(--accent-solid) 85%, transparent); }
   #room .membrane-node.right:hover::before { box-shadow: 0 0 20px 3px color-mix(in srgb, var(--node-right) 80%, transparent); }
@@ -500,17 +482,6 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window="archive"] aside#archive-mind .row.active { color: var(--text); }
   body[data-window="archive"] aside#archive-mind .dot-radio { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--muted); flex-shrink: 0; }
   body[data-window="archive"] aside#archive-mind .row.active .dot-radio { border-color: var(--accent-solid); background: var(--accent-solid); }
-
-  body[data-window="archive"] .depth-bar { display: flex; gap: 2px; margin-top: 10px; height: 18px; align-items: flex-end; }
-  body[data-window="archive"] .depth-bar .depth-seg { flex: 1; background: var(--mind-base); transition: opacity 0.3s; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(1) { opacity: .95; height: 100%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(2) { opacity: .80; height: 86%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(3) { opacity: .64; height: 72%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(4) { opacity: .48; height: 58%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(5) { opacity: .34; height: 44%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(6) { opacity: .22; height: 30%; }
-  body[data-window="archive"] .depth-bar .depth-seg:nth-child(7) { opacity: .12; height: 18%; }
-  body[data-window="archive"] .depth-note { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
 
   body[data-window="archive"] section#archive-room { flex: 1 1 auto; min-width: 0; height: 100%; display: flex; flex-direction: column; background: var(--bg1); position: relative; overflow: hidden; }
   body[data-window="archive"] section#archive-room .room-status { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; padding: 8px 18px; border-bottom: 1px dashed var(--line); font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; -webkit-app-region: drag; }
@@ -743,16 +714,6 @@ pub const OVERLAY_CSS: &str = r#"
   body[data-window="settings"] .settings-col .seg-bar { display: flex; gap: 3px; margin-top: 6px; } body[data-window="settings"] .settings-col .seg { flex: 1; height: 3px; background: var(--line); } body[data-window="settings"] .settings-col .seg.on { background: #3F837B; } body[data-window="settings"] .settings-col .seg-note { font-family: var(--font-mono); font-size: 9px; color: var(--muted); margin-top: 5px; }
   body[data-window="settings"] .settings-col .btn-undo { margin-top: 6px; width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg0); color: var(--faint); font-family: var(--font-mono); font-size: 10px; cursor: pointer; transition: all 0.15s; } body[data-window="settings"] .settings-col .btn-undo:hover { color: var(--mind-line); border-color: var(--accent-solid); }
 "#;
-
-/// Build a `dioxus::desktop::wry::WebViewBuilder` attribute that injects
-/// the truth CSS as a `<style>` element inside the document head.
-///
-/// Brief §2.6 — `dioxus::desktop::document::Stylesheet { ... }` is the
-/// supported mechanism; we wrap the static CSS in `format!` once so the
-/// `<style>` tag itself is part of the payload.
-pub fn inject_stylesheet_html() -> String {
-    format!("<style id=\"truth-css\">{}</style>", truth_css())
-}
 
 /// Theme toggle SVG (moon / sun). Returns the inner SVG markup; the
 /// caller wraps it in `svg { ... }` rsx nodes with their own attributes

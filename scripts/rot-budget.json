@@ -46,7 +46,7 @@
   },
    "god_file:src/apps/desktop/src/ui_dioxus/css.rs": {
    "kind": "file-lines",
-   "ceiling": 830,
+   "ceiling": 790,
    "note": "R-14 god-file; live observation cohort; registered with user sign-off 2026-08-26 (audit rot x4)"
   },
   "god_file:src/apps/desktop/src/ui_dioxus/pages_onboarding.rs": {
