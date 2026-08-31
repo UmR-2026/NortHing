@@ -152,6 +152,7 @@ pub async fn delete_provider(id: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use northhing_kernel_api::KernelBootstrapApi;
     use crate::app_state::settings::MockKeyring;
     use crate::ui_dioxus::api::TEST_GLOBAL_CONFIG_MUTEX;
 
@@ -173,7 +174,8 @@ mod tests {
     }
 
     async fn setup_test_provider(id: &str, name: &str, provider_type: &str, model: &str) {
-        let _init_cfg = northhing_core::service::config::initialize_global_config().await;
+        let facade = kernel_facade();
+        let _ = facade.init_core().await;
         let dto = AIModelConfigDto {
             id: id.to_string(),
             provider_id: provider_type.to_string(),
@@ -188,7 +190,6 @@ mod tests {
             auth: Some("api_key".to_string()),
             inline_think_in_text: Some(true),
         };
-        let facade = kernel_facade();
         let _upsert = facade.upsert_model_config(dto, Some("initial-key".to_string())).await;
     }
 
@@ -290,7 +291,7 @@ mod tests {
     #[tokio::test]
     async fn test_edit_provider_nonexistent_id_returns_error() {
         let _guard = TEST_GLOBAL_CONFIG_MUTEX.lock().await;
-        let _init_cfg = northhing_core::service::config::initialize_global_config().await;
+        let _ = kernel_facade().init_core().await;
         let id = "test-w7-1-nonexistent-id-99999";
         let kr = MockKeyring::new();
 

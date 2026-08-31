@@ -192,6 +192,7 @@ pub(crate) static TEST_GLOBAL_CONFIG_MUTEX: tokio::sync::Mutex<()> = tokio::sync
 #[cfg(test)]
 mod tests {
     use super::*;
+    use northhing_kernel_api::KernelBootstrapApi;
 
     #[tokio::test]
     async fn test_api_functions_fail_cleanly_before_init() {
@@ -251,7 +252,7 @@ mod tests {
     #[tokio::test]
     async fn test_persist_onboarding_provider_success_flow() -> anyhow::Result<()> {
         let _guard = TEST_GLOBAL_CONFIG_MUTEX.lock().await;
-        let _ = northhing_core::service::config::initialize_global_config().await;
+        let _ = kernel_facade().init_core().await;
         let kr = crate::app_state::settings::MockKeyring::new();
         let res = persist_onboarding_provider_with_keyring(
             &kr,
