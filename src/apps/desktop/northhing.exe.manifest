@@ -10,6 +10,12 @@
     The result was STATUS_ENTRYPOINT_NOT_FOUND (0xC0000139): the process
     died in the loader, before `main`, with no log output.
 
+    Historical note (2026-08-28): the Slint shell and its `rfd`/`muda` chain
+    were physically deleted in commit `707e414`. The manifest is still
+    required by whatever other transitive deps may still rely on ComCtl32 v6
+    (e.g. native dialogs that the Dioxus shell or installer may invoke), so
+    the file is kept verbatim.
+
     rustc embeds a default manifest containing only trustInfo +
     compatibility. Supplying our own REPLACES it, so both sections are
     reproduced verbatim below and the Common-Controls v6 dependency is

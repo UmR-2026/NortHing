@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// T1 Dioxus migration (2026-08-12) — parallel Dioxus consult-room shell.
+// T1 Dioxus migration (2026-08-12) — Dioxus consult-room shell.
 //
 // This module is the entry point for the three-window Dioxus consult-room
-// shell (room main window + inner + outer). It compiles only when the
-// `ui-dioxus` cargo feature is enabled; when disabled it compiles out
-// completely so the Slint shell remains byte-identical.
-//
-// Runtime gate: `crate::flags::DIOXUS_SHELL`. When `false` (the deliberate
-// default), `main.rs` keeps launching the Slint shell. When `true` and the
-// feature is on, `launch()` brings up the three-window shell described in
+// shell (room main window + inner + outer). Since the W4-1 Slint removal
+// (commit `707e414`, 2026-08-28) the module is unconditionally compiled and
+// `main.rs` calls `ui_dioxus::launch(...)` unconditionally — there is no
+// `ui-dioxus` cargo feature or runtime flag any more (the previous
+// `crate::flags::DIOXUS_SHELL` constant was deleted together with the Slint
+// shell). The Dioxus shell brings up the three-window layout described in
 // `block-contract.md` §0/§3.1/§3.2 and the consult-room-main.html truth file.
 //
 // References:

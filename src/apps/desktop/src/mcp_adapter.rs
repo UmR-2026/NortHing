@@ -3,7 +3,9 @@
 //! Phase F.3 (2026-06-19): bridges the kernel facade's MCP read surface
 //! to the `northhing-runtime-ports::McpCatalogPort` consumer boundary.
 //! The desktop Inspector (`create_ui`) consumes this adapter when
-//! refreshing the `mcp_status` Slint property.
+//! refreshing the desktop shell's MCP status panel (Dioxus consult-room;
+//! the legacy Slint `mcp_status` property contract is deleted with the Slint
+//! shell on 2026-08-28, commit `707e414`).
 //!
 //! ## Shape (K4a-T4)
 //!
@@ -114,9 +116,12 @@ impl northhing_runtime_ports::RuntimeServicePort for McpCatalogAdapter {
     }
 }
 
-/// Compute the Inspector status string from a result returned by
-/// [`McpCatalogReader::list_servers`]. The Inspector calls this from a
-/// `set_mcp_status` Slint callback (Phase G.2).
+/// Compute the desktop shell's MCP status string from a result returned by
+/// [`McpCatalogReader::list_servers`]. Historical note: the deleted Slint
+/// shell called this from a `set_mcp_status` callback (Phase G.2, pre-2026-08-28);
+/// the helper stays in place for any future shell to reuse but is currently
+/// unused by the Dioxus consult-room path (which consumes `McpServerDto`
+/// directly via `kernel_facade().list_mcp_servers`).
 pub fn render_status(result: &Result<Vec<McpServerDto>, McpCatalogError>) -> String {
     match result {
         Ok(servers) => format_mcp_status(servers),

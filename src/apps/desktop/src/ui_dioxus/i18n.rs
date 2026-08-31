@@ -7,7 +7,8 @@
 // (zh-CN by default; en-US / zh-TW are the other two as required by the
 // i18n:audit baseline parity check).
 //
-// The locale selection mirrors the existing Slint shell behavior — read
+// The locale selection mirrors the previous Slint shell's behavior (the Slint
+// shell was physically deleted 2026-08-28, commit `707e414`) — read
 // `northhing_core::kernel_facade` for the active locale id, fall back to
 // "zh-CN" if unavailable. The strings added by this task follow the
 // `dioxus-room-*` prefix so they're easy to grep and audit.
@@ -15,7 +16,8 @@
 use std::collections::HashMap;
 
 /// Locale id used as fallback when the kernel does not report one. Mirrors
-/// the default in the Slint shell's `AppStrings` global.
+/// the previous default in the deleted Slint shell's `AppStrings` global
+/// (Slint shell removed 2026-08-28, commit `707e414`).
 pub const DEFAULT_LOCALE: &str = "zh-CN";
 
 /// A very small fluent subset. We don't pull in `fluent-bundle` because

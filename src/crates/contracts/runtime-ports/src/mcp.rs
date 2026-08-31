@@ -103,9 +103,15 @@ impl McpCatalogError {
     }
 }
 
-/// Build the Inspector status string from a list of servers. This is
-/// the consumer-side rendering helper that matches the
-/// `set_mcp_status` Slint property contract.
+/// Build the consumer-facing MCP status string from a list of servers.
+///
+/// This is a UI-agnostic rendering helper: it takes the contract
+/// `McpServerDto` list and returns a display string. The Dioxus consult-room
+/// shell consumes `McpServerDto` directly via `kernel_facade().list_mcp_servers`
+/// (see `src/apps/desktop/src/ui_dioxus/pages_settings.rs:189`); the deleted
+/// Slint shell used to call this helper from a `set_mcp_status` callback (the
+/// Slint property contract is removed together with the Slint shell on
+/// 2026-08-28, commit `707e414`).
 ///
 /// Format:
 /// - 0 servers, no error → `"MCP: not configured"`

@@ -48,7 +48,7 @@ reproduction or build-impacting changes.
 pnpm install
 
 # Dev
-pnpm run desktop:dev               # build and run Slint desktop app (cold start)
+pnpm run desktop:dev               # build and run Dioxus consult-room desktop app (cold start)
 pnpm run desktop:preview:debug     # alias: same as desktop:dev (cargo run -p northhing)
 pnpm run dev:web                   # [missing: src/web-ui — not available in v0.1.0]
 pnpm run cli:dev                   # CLI runtime
@@ -134,7 +134,7 @@ Logs must be English-only, with no emojis.
 
 ### Tauri commands (installer only)
 
-> **v0.1.0**: The Slint desktop app does not use Tauri. These rules apply to `northing-installer/src-tauri` only.
+> **v0.1.0**: The Dioxus consult-room desktop app does not use Tauri. These rules apply to `northing-installer/src-tauri` only.
 
 - Command names: `snake_case`
 - TypeScript may wrap with `camelCase`, but invoke Rust with a structured `request`
@@ -173,11 +173,11 @@ Change these only with a flag flip + integration test, and update this section i
 
 - **Desktop package is `northhing`**, not `northhing-desktop`. **唯一壳 = Dioxus consult-room（Slint 已于 2026-08-28 物理删除，回退 = git revert）**。agent-dispatch flags: only `USE_LIGHTWEIGHT_ACTOR = true` remains; Phase 3 IPC (USE_ONESHOT_DISPATCHER / USE_ACTOR_IPC / USE_DISPATCHER_IPC + IpcSpawnAdapter) descoped and deleted 2026-07-20.
 - **Config single source of truth = core `GlobalConfig`** (`dirs::config_dir()/northhing/config/app.json`). Single source of truth for providers and default_model is core GlobalConfig (Stage 1 de-mirroring; core does not persist `api_key` to disk per user-approved Scheme C; desktop pushes keys to memory via facade on startup/change; desktop AppSettings retains workspaces/onboarding, Stage 2 to migrate). Never add a second runtime-readable config file.
-- **UI thread discipline**: writing Slint properties from a non-event-loop thread is silently dropped. All such writes must go through `slint::invoke_from_event_loop` (helpers in `error_banners.rs` already wrap this — reuse them, see `ad349f9`).
+- **UI thread discipline**: the legacy rule `writing Slint properties from a non-event-loop thread is silently dropped; route through `slint::invoke_from_event_loop` (see `ad349f9`)` is no longer applicable because the Slint shell was physically deleted on 2026-08-28 (commit `707e414`). The Dioxus consult-room shell follows its own runtime contract; refer to the Dioxus 0.8 docs and the consult-room `ui_dioxus::launch` path for the current discipline. The helpers in `error_banners.rs` (`slint::invoke_from_event_loop` wrappers) are kept in tree but are unreferenced; remove in a follow-up if cleanup is needed.
 - **Shell safety**: `guard_command_execution` is wired into the `validate_input` path of Bash/ExecCommand and writes audit entries (see `9a1575d`). New shell-like tools must call it too.
 - **Project runtime slug always carries a path hash** (CJK paths must not collide, see `c7e7218`).
 - **Installer toolchain**: `northing-installer` `[lib] crate-type = ["rlib"]` only (cdylib/staticlib blow past the GNU ld export-ordinal limit); `embed-resource` pinned to 3.0.5 (3.0.11 fails on rustc 1.96 MSVC). Desktop builds use MSVC; repo dir override is GNU and `cargo +toolchain` is unavailable — use `rustup run <tc> cargo`.
-- **v0.1.0 surface baseline**: only Slint desktop + `northing-installer` are shipping surfaces; server / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
+- **v0.1.0 surface baseline**: only Dioxus consult-room desktop + `northing-installer` are shipping surfaces; server / SDLC harness are frozen-experimental. Capability crates (tools/MCP/search/terminal/git/ssh) are the agent toolbox and stay active. See `docs/tech-debt-cleanup-guide.md` §0.
 
 ## Architecture
 
@@ -224,7 +224,7 @@ change directly affects build, packaging, or CI cannot protect the path.
 | Locale contract or shared terms | *[frozen: i18n engineering — run if unfrozen]* |
 | Web UI i18n runtime, namespace loading, or direct `i18nService.t(...)` usage | *[missing: src/web-ui — not available in v0.1.0]* |
 | Shared Rust logic in `core`, adapters, or services | `cargo check --workspace`, plus the nearest focused `cargo test` when behavior changed |
-| Desktop integration, Slint UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
+| Desktop integration, Dioxus UI, browser/computer-use, or desktop-only behavior | `cargo check -p northhing`, plus focused desktop tests when behavior changed |
 | Behavior covered by desktop smoke/functional flows | Prefer the nearest focused E2E/smoke check; rely on CI for broad build/test coverage unless build behavior changed |
 | `src/crates/adapters/ai-adapters` | Relevant Rust checks above; add `cargo test -p northhing-agent-stream` only when stream contracts changed |
 | Installer frontend or i18n runtime without packaging changes | `pnpm --dir northing-installer run type-check` |

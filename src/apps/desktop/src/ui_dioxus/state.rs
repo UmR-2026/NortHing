@@ -43,6 +43,10 @@ pub type RoomWindowIdTx = watch::Sender<Option<WindowId>>;
 /// channel: the room window writes the new value synchronously and
 /// every window that subscribed re-renders.
 ///
+/// Historical note (Slint shell deleted 2026-08-28, commit `707e414`):
+/// the per-instance `RedesignTheme` bug belonged to the deleted Slint
+/// shell; the watch-channel solution is now the Dioxus-only contract.
+///
 /// R3' r3p4 delta (2026-08-13) - Bug B root fix: the previous
 /// `Arc<Mutex<bool>>` + `spawn_watcher` polling loop (50ms sleep) is
 /// gone. Polling futures are what keep the main thread busy-spinning

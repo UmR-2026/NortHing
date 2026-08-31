@@ -20,7 +20,8 @@
 //! ## Why a separate file
 //!
 //! `ConfigManager` lives in `northhing-core` (shared product runtime). Putting
-//! UI settings there would couple the shared core to the desktop Slint shell.
+//! UI settings there would couple the shared core to the desktop UI shell
+//! (was Slint; now Dioxus consult-room since 2026-08-28).
 //! Keeping AppSettings under `apps/desktop/app_state/` honours the boundary in
 //! `src/crates/assembly/AGENTS.md` ("Assembly may depend on adapter and service
 //! crates for selected delivery forms, but should not implement their protocol
@@ -30,8 +31,9 @@
 //!
 //! Settings are persisted to `~/.northhing/config/app.json` via the helper
 //! functions at the bottom of this file. The companion [`AppSettingsState`]
-//! wrapper layers debounced save + Mutex on top so the Slint UI can mutate
-//! freely without blocking the event loop.
+//! wrapper layers debounced save + Mutex on top so the desktop UI (Dioxus
+//! consult-room shell as of 2026-08-28) can mutate freely without blocking
+//! the event loop.
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

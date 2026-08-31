@@ -59,10 +59,12 @@ fn ensure_log_consumer() {
 /// Phase H (2026-06-20): fire-and-forget debug-log helper.
 ///
 /// Wraps `northhing_debug_log::log_event` via an
-/// `mpsc::unbounded_channel` so the sync Slint callbacks can record
-/// structured events without blocking.  Errors are swallowed (the
-/// underlying `log_event` is also non-blocking and silent on failure)
-/// — debug logging MUST NOT take down the UI.
+/// `mpsc::unbounded_channel` so synchronous UI callbacks (Dioxus consult-room
+/// shell as of 2026-08-28; the historical Slint consumers were deleted together
+/// with the Slint shell in commit `707e414`) can record structured events
+/// without blocking.  Errors are swallowed (the underlying `log_event` is
+/// also non-blocking and silent on failure) — debug logging MUST NOT take
+/// down the UI.
 ///
 /// Phase P4 (2026-06-22): optimised from per-call `std::thread::spawn` +
 /// new tokio runtime to a `OnceLock`-initialised channel + single

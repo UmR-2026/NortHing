@@ -57,9 +57,10 @@ pub const ROOM_WINDOW_HEIGHT: f64 = 820.0;
 pub const ROOM_WINDOW_INITIAL_X: f32 = 296.0;
 pub const ROOM_WINDOW_INITIAL_Y: f32 = 120.0;
 
-/// Docking gap between room and its floating modules (16px gap; same
-/// constant as the Slint `block_registry.rs` to keep both stacks
-/// visually equivalent).
+/// Docking gap between room and its floating modules (16px gap).
+/// Historical note (pre-2026-08-28): the deleted Slint shell kept a parallel
+/// `block_registry.rs` with the same constant to keep both shells visually
+/// equivalent; the value is now Dioxus-only.
 pub const DOCK_GAP_PX: i32 = 16;
 
 /// Startup DPI scale for converting the logical launch constants into
@@ -150,12 +151,13 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
         .with_position(LogicalPosition::new(ROOM_WINDOW_INITIAL_X, ROOM_WINDOW_INITIAL_Y))
         // R4 W1 (2026-08-14): frameless per user ruling (handoff-20260814
         // §4, D = 方案一) — the old "Slint shell keeps decorations" matching
-        // rationale is revoked. OS chrome is replaced by the self-drawn
-        // room-controls (app.rs ─□✕ wired to real window ops). tao 0.16.2
-        // gives 8-way border resize for free once MARKER_DECORATIONS is
-        // gone (platform_impl WM_NCHITTEST → hit_test); the native drop
-        // shadow is kept via `with_undecorated_shadow` so the floating
-        // window still reads as a window.
+        // rationale is revoked (and is moot since the Slint shell was
+        // physically deleted 2026-08-28, commit `707e414`). OS chrome is
+        // replaced by the self-drawn room-controls (app.rs ─□✕ wired to real
+        // window ops). tao 0.16.2 gives 8-way border resize for free once
+        // MARKER_DECORATIONS is gone (platform_impl WM_NCHITTEST → hit_test);
+        // the native drop shadow is kept via `with_undecorated_shadow` so the
+        // floating window still reads as a window.
         .with_decorations(false);
 
     #[cfg(target_os = "windows")]
