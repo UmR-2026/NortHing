@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="640" viewBox="0 0 680 640">
+  <rect x="0" y="0" width="680" height="640" fill="#121316"/>
+  <!-- Window frame -->
+  <rect x="10" y="10" width="660" height="620" fill="#1a1c20" stroke="#2c2f35" stroke-width="1" rx="6"/>
+
+  <!-- Chrome header -->
+  <rect x="10" y="10" width="660" height="34" fill="#22252a" rx="6"/>
+  <rect x="10" y="38" width="660" height="6" fill="#22252a"/>
+  <text x="24" y="32" font-family="'Segoe UI', -apple-system, sans-serif" font-size="12" font-weight="600" fill="#c4c9d4">档案馆</text>
+  <circle cx="634" cy="27" r="5" fill="#42464e"/>
+  <circle cx="650" cy="27" r="5" fill="#e05252"/>
+
+  <!-- Sidebar (archive-mind) -->
+  <rect x="10" y="44" width="160" height="586" fill="#16181b" stroke="#25282e" stroke-width="1"/>
+  <text x="24" y="70" font-family="monospace" font-size="11" font-weight="bold" fill="#b07d62">归档状态 <tspan font-style="italic" fill="#75503d">STRATA</tspan></text>
+  <rect x="18" y="82" width="144" height="26" fill="#2a221e" rx="3"/>
+  <circle cx="30" cy="95" r="3" fill="#b07d62"/>
+  <text x="40" y="99" font-family="'Segoe UI', sans-serif" font-size="11" fill="#e0a88a">已归档会话</text>
+
+  <text x="24" y="135" font-family="monospace" font-size="11" font-weight="bold" fill="#b07d62">日历尺度 <tspan font-style="italic" fill="#75503d">SOLAR</tspan></text>
+  <text x="40" y="158" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">全部</text>
+  <text x="40" y="180" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">本周</text>
+  <text x="40" y="202" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">更早</text>
+
+  <!-- Main content (archive-room) -->
+  <!-- Status bar -->
+  <rect x="170" y="44" width="500" height="28" fill="#1c1f24" stroke="#25282e" stroke-width="0.5"/>
+  <text x="186" y="62" font-family="monospace" font-size="10" fill="#727885">northing 档案馆 · 沉渊境界 · 只读 · 不可变</text>
+  <circle cx="652" cy="58" r="3" fill="#38a169"/>
+
+  <!-- Room head -->
+  <rect x="186" y="80" width="36" height="36" fill="#2a1f18" stroke="#b07d62" stroke-width="1" rx="4"/>
+  <text x="198" y="104" font-family="'Noto Serif CJK SC', serif" font-size="18" fill="#e0a88a">渊</text>
+  <text x="232" y="96" font-family="'Noto Serif CJK SC', serif" font-size="14" font-style="italic" fill="#e4e7ec">沉渊境界</text>
+  <rect x="232" y="102" width="130" height="16" fill="#2a1f18" rx="2"/>
+  <text x="238" y="114" font-family="monospace" font-size="9" fill="#e0a88a">沉积 · 只读 · 迟缓</text>
+
+  <!-- Search toolbar -->
+  <rect x="186" y="130" width="468" height="32" fill="#16181c" stroke="#32363f" stroke-width="1" rx="4"/>
+  <text x="198" y="151" font-family="'Segoe UI', sans-serif" font-size="12" fill="#e4e7ec">重构</text>
+  <rect x="604" y="135" width="44" height="22" fill="#282b32" rx="3"/>
+  <text x="616" y="150" font-family="'Segoe UI', sans-serif" font-size="11" fill="#9aa1ad">清除</text>
+
+  <!-- Search Results list -->
+  <!-- Hit 1: Title match (Prioritized) -->
+  <rect x="186" y="172" width="468" height="74" fill="#21242b" stroke="#32363f" stroke-width="1" rx="4"/>
+  <text x="198" y="190" font-family="monospace" font-size="10" fill="#e0a88a">用户</text>
+  <text x="560" y="190" font-family="monospace" font-size="9" fill="#6d7380">2026-08-31 14:20</text>
+  <text x="198" y="210" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#e4e7ec">重构核心模块架构</text>
+  <text x="198" y="230" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">...关于核心模块代码的<tspan fill="#e0a88a" font-weight="bold">重构</tspan>方案讨论，梳理了分层依赖关系...</text>
+
+  <!-- Hit 2: Message hit -->
+  <rect x="186" y="254" width="468" height="74" fill="#1c1f24" stroke="#2c2f37" stroke-width="1" rx="4"/>
+  <text x="198" y="272" font-family="monospace" font-size="10" fill="#8d939e">助手</text>
+  <text x="560" y="272" font-family="monospace" font-size="9" fill="#6d7380">2026-08-31 11:05</text>
+  <text x="198" y="292" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="500" fill="#c4c9d4">日常任务调试</text>
+  <text x="198" y="312" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">...已完成对会话搜索逻辑的<tspan fill="#e0a88a" font-weight="bold">重构</tspan>，增加标题优先排序与防抖...</text>
+
+  <!-- Hit 3: Message hit -->
+  <rect x="186" y="336" width="468" height="74" fill="#1c1f24" stroke="#2c2f37" stroke-width="1" rx="4"/>
+  <text x="198" y="354" font-family="monospace" font-size="10" fill="#8d939e">用户</text>
+  <text x="560" y="354" font-family="monospace" font-size="9" fill="#6d7380">2026-08-30 18:30</text>
+  <text x="198" y="374" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="500" fill="#c4c9d4">前端状态同步</text>
+  <text x="198" y="394" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8d939e">...建议在<tspan fill="#e0a88a" font-weight="bold">重构</tspan>后保留既有的详情展开路径，复用 view_detail...</text>
+
+  <!-- Detail panel (selected session messages) -->
+  <rect x="186" y="420" width="468" height="175" fill="#16181b" stroke="#2c2f37" stroke-width="1" rx="4"/>
+  <text x="198" y="440" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="600" fill="#c4c9d4">消息详情（只读）</text>
+  <rect x="604" y="426" width="44" height="20" fill="#24272e" rx="3"/>
+  <text x="616" y="440" font-family="'Segoe UI', sans-serif" font-size="10" fill="#9aa1ad">关闭</text>
+
+  <rect x="198" y="452" width="444" height="60" fill="#1f2227" rx="3"/>
+  <text x="208" y="468" font-family="monospace" font-size="10" font-weight="bold" fill="#c4c9d4">用户 <tspan font-weight="normal" fill="#6d7380">2026-08-31 14:18</tspan></text>
+  <text x="208" y="492" font-family="'Segoe UI', sans-serif" font-size="11" fill="#adb4c0">请帮我梳理关于核心模块代码的重构方案讨论与分层依赖关系。</text>
+
+  <rect x="198" y="520" width="444" height="64" fill="#1f2227" rx="3"/>
+  <text x="208" y="536" font-family="monospace" font-size="10" font-weight="bold" fill="#e0a88a">助手 <tspan font-weight="normal" fill="#6d7380">2026-08-31 14:20</tspan></text>
+  <text x="208" y="560" font-family="'Segoe UI', sans-serif" font-size="11" fill="#adb4c0">已完成梳理，分层结构由上至下为 interfaces → assembly → contracts...</text>
+
+  <!-- Abyss footer note -->
+  <text x="640" y="618" font-family="monospace" font-size="9" fill="#5b6068" text-anchor="end">向下滚动 · 显现更深层沉积</text>
+</svg>
