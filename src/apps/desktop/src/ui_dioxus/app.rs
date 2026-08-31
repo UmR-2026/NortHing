@@ -27,7 +27,7 @@ use super::css;
 use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
 use super::i18n::{keys, LocalePack};
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
-use super::session_mock::{seed_session, MockEntry};
+use super::session_mock::MockEntry;
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
 use super::turn_banner::{cancelled_body, error_draft_body, kernel_error_message, maybe_set_degraded};
 use super::window_ops::{close_module, quit_shell};
@@ -54,7 +54,7 @@ pub fn room_app_root() -> Element {
     let send_error: Signal<Option<String>> = use_signal(|| None);
     let mut degraded: Signal<Option<String>> = use_signal(|| None);
     let mut user_input = use_signal(String::new);
-    let mut entries = use_signal(|| seed_session());
+    let mut entries = use_signal(Vec::<MockEntry>::new);
     // W9-1: session-scoped tool allow-list (tool name → auto-approve).
     let session_allow_list = use_signal(|| HashSet::<String>::new());
     let mut mind_base = use_signal(|| "#C8714C".to_string());

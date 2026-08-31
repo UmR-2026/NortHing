@@ -52,6 +52,7 @@ pub enum MockChild {
 /// This is the initial `messages` payload the room renders before
 /// streaming starts (brief §4.6 — "mock 会话流：…Signal 直推"; the seed
 /// itself is not streamed, only appended-to).
+#[cfg(test)]
 pub fn seed_session() -> Vec<MockEntry> {
     use MockChild::*;
     vec![
