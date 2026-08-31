@@ -40,8 +40,8 @@ pub use platform::{
 pub use session::{
     BranchId, KernelSessionApi, MessageContentDto, MessageDto, MessageMetadataDto, MessageRoleDto,
     PersistenceHandleDto, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionKindDto,
-    SessionMetadataDto, SessionRelationshipDto, SessionStateDto, SessionStatusDto, SessionSummaryDto, ToolCallStub,
-    WorkspaceSessionsDto,
+    SessionMetadataDto, SessionRelationshipDto, SessionSearchHitDto, SessionStateDto, SessionStatusDto,
+    SessionSummaryDto, ToolCallStub, WorkspaceSessionsDto,
 };
 pub use settings::{
     AIModelConfigDto, ConfigLocationDto, GlobalConfigDto, KernelSettingsApi, MCPServerConfigDto, MCPServerDto,

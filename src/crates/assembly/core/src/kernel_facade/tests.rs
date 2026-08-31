@@ -1259,3 +1259,303 @@ mod w9_6_file_tree {
         );
     }
 }
+
+// ── W12-1 search_sessions tests ──────────────────────────────────────────
+
+mod w12_1_search_sessions {
+    use super::*;
+    use uuid::Uuid;
+
+    fn build_test_facade_with_persistence() -> Arc<KernelFacade> {
+        let path_manager = Arc::new(crate::infrastructure::PathManager::new().expect("path manager"));
+        let persistence = Arc::new(
+            crate::agentic::persistence::PersistenceManager::new(path_manager).expect("persistence manager"),
+        );
+        let session_manager = Arc::new(crate::agentic::session::SessionManager::new(
+            Arc::new(crate::agentic::session::SessionContextStore::new()),
+            persistence.clone(),
+            crate::agentic::session::SessionManagerConfig {
+                max_active_sessions: 100,
+                session_idle_timeout: std::time::Duration::from_secs(3600),
+                auto_save_interval: std::time::Duration::from_secs(300),
+                enable_persistence: true,
+                prompt_cache_policy: crate::agentic::session::PromptCachePolicy::default(),
+            },
+        ));
+        let event_queue = Arc::new(crate::agentic::events::EventQueue::new(
+            crate::agentic::events::EventQueueConfig::default(),
+        ));
+        let tool_registry = Arc::new(tokio::sync::RwLock::new(crate::agentic::tools::registry::ToolRegistry::new()));
+        let tool_pipeline = Arc::new(crate::agentic::tools::pipeline::ToolPipeline::new(
+            tool_registry,
+            Arc::new(crate::agentic::tools::pipeline::ToolStateManager::new(
+                event_queue.clone(),
+            )),
+            None,
+            Arc::new(std::sync::OnceLock::new()),
+        ));
+        let execution_engine = Arc::new(crate::agentic::execution::ExecutionEngine::new(
+            Arc::new(crate::agentic::execution::RoundExecutor::new(
+                Arc::new(crate::agentic::execution::StreamProcessor::new(event_queue.clone())),
+                event_queue.clone(),
+                tool_pipeline.clone(),
+            )),
+            event_queue.clone(),
+            session_manager.clone(),
+            Arc::new(crate::agentic::ContextCompressor::new(
+                crate::agentic::CompressionConfig::default(),
+            )),
+            crate::agentic::execution::ExecutionEngineConfig::default(),
+        ));
+        let coordinator = crate::agentic::coordination::ConversationCoordinator::new(
+            session_manager,
+            execution_engine,
+            tool_pipeline,
+            event_queue,
+            Arc::new(crate::agentic::events::EventRouter::new()),
+        );
+        let facade = KernelFacade::new();
+        facade.set_coordinator(Arc::new(coordinator));
+        Arc::new(facade)
+    }
+
+    fn create_test_model_round(turn_id: &str, text: &str) -> crate::service::session::ModelRoundData {
+        crate::service::session::ModelRoundData {
+            id: format!("round-{}", turn_id),
+            turn_id: turn_id.to_string(),
+            round_index: 0,
+            timestamp: 1_700_000_001_000,
+            text_items: vec![crate::service::session::TextItemData {
+                id: format!("text-{}", turn_id),
+                content: text.to_string(),
+                is_streaming: false,
+                timestamp: 1_700_000_001_000,
+                is_markdown: true,
+                order_index: None,
+                is_subagent_item: None,
+                parent_task_tool_id: None,
+                subagent_session_id: None,
+                status: None,
+            }],
+            tool_items: Vec::new(),
+            thinking_items: Vec::new(),
+            start_time: 1,
+            end_time: Some(2),
+            duration_ms: Some(1),
+            provider_id: None,
+            model_id: None,
+            model_alias: None,
+            first_chunk_ms: None,
+            first_visible_output_ms: None,
+            stream_duration_ms: None,
+            attempt_count: None,
+            failure_category: None,
+            token_details: None,
+            status: "completed".to_string(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_search_sessions_hit_snippet_and_case_insensitive() {
+        let temp_dir = std::env::temp_dir().join(format!("northhing-search-hit-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        let facade = build_test_facade_with_persistence();
+        let ws_str = temp_dir.to_str().unwrap();
+
+        let session_id = facade
+            .create_session(SessionConfigDto {
+                workspace_path: Some(ws_str.to_string()),
+                agent_type: "agentic".to_string(),
+                model_name: "default-model".to_string(),
+                name: Some("Search Test Alpha".to_string()),
+            })
+            .await
+            .expect("create session");
+
+        let coordinator = facade.coordinator().expect("coordinator");
+        let persistence = &coordinator.session_manager().persistence_manager;
+
+        let user_message = crate::service::session::UserMessageData {
+            id: "user-msg-alpha-1".to_string(),
+            content: "Please help me design a database schema for user profiles".to_string(),
+            timestamp: 1_700_000_000_000,
+            metadata: None,
+        };
+        let mut turn = crate::service::session::DialogTurnData::new(
+            "turn-1".to_string(),
+            0,
+            session_id.clone(),
+            user_message,
+        );
+        turn.model_rounds.push(create_test_model_round(
+            "turn-1",
+            "Here is the recommended PostgreSQL table structure for user profiles.",
+        ));
+        turn.mark_completed();
+        persistence.save_dialog_turn(&temp_dir, &turn).await.expect("save turn");
+
+        // 1. User message hit
+        let hits = facade
+            .search_sessions("database schema", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].session_id, session_id);
+        assert_eq!(hits[0].session_name, "Search Test Alpha");
+        assert_eq!(hits[0].role, "user");
+        assert!(hits[0].snippet.contains("database schema"));
+
+        // 2. Assistant message hit with case insensitivity
+        let hits_assistant = facade
+            .search_sessions("postgresql", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+        assert_eq!(hits_assistant.len(), 1);
+        assert_eq!(hits_assistant[0].session_id, session_id);
+        assert_eq!(hits_assistant[0].role, "assistant");
+        assert!(hits_assistant[0].snippet.contains("PostgreSQL"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[tokio::test]
+    async fn test_search_sessions_miss_and_empty_query() {
+        let temp_dir = std::env::temp_dir().join(format!("northhing-search-miss-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        let facade = build_test_facade_with_persistence();
+        let ws_str = temp_dir.to_str().unwrap();
+
+        let session_id = facade
+            .create_session(SessionConfigDto {
+                workspace_path: Some(ws_str.to_string()),
+                agent_type: "agentic".to_string(),
+                model_name: "default-model".to_string(),
+                name: Some("Search Test Beta".to_string()),
+            })
+            .await
+            .expect("create session");
+
+        let coordinator = facade.coordinator().expect("coordinator");
+        let persistence = &coordinator.session_manager().persistence_manager;
+
+        let user_message = crate::service::session::UserMessageData {
+            id: "user-msg-beta-1".to_string(),
+            content: "Some normal discussion about weather".to_string(),
+            timestamp: 1_700_000_000_000,
+            metadata: None,
+        };
+        let mut turn = crate::service::session::DialogTurnData::new(
+            "turn-1".to_string(),
+            0,
+            session_id.clone(),
+            user_message,
+        );
+        turn.mark_completed();
+        persistence.save_dialog_turn(&temp_dir, &turn).await.expect("save turn");
+
+        // 1. Search non-existent string -> empty vec
+        let hits = facade
+            .search_sessions("quantum computing", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+        assert!(hits.is_empty(), "expected empty vec for non-existent term");
+
+        // 2. Search empty query -> empty vec
+        let hits_empty = facade
+            .search_sessions("", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+        assert!(hits_empty.is_empty(), "expected empty vec for empty query");
+
+        // 3. Search whitespace query -> empty vec
+        let hits_spaces = facade
+            .search_sessions("   ", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+        assert!(hits_spaces.is_empty(), "expected empty vec for whitespace query");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[tokio::test]
+    async fn test_search_sessions_cjk_snippet_and_session_hit_cap() {
+        let temp_dir = std::env::temp_dir().join(format!("northhing-search-cjk-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).expect("create temp dir");
+
+        let facade = build_test_facade_with_persistence();
+        let ws_str = temp_dir.to_str().unwrap();
+
+        let session_id = facade
+            .create_session(SessionConfigDto {
+                workspace_path: Some(ws_str.to_string()),
+                agent_type: "agentic".to_string(),
+                model_name: "default-model".to_string(),
+                name: Some("中文搜索会话".to_string()),
+            })
+            .await
+            .expect("create session");
+
+        let coordinator = facade.coordinator().expect("coordinator");
+        let persistence = &coordinator.session_manager().persistence_manager;
+
+        // Turn 1: User message with CJK text
+        let user_msg_1 = crate::service::session::UserMessageData {
+            id: "user-cjk-1".to_string(),
+            content: "这是一个非常重要的会话管理系统的架构设计方案说明，需要支持多工作区搜索。".to_string(),
+            timestamp: 1_700_000_000_000,
+            metadata: None,
+        };
+        let mut turn_1 = crate::service::session::DialogTurnData::new(
+            "turn-1".to_string(),
+            0,
+            session_id.clone(),
+            user_msg_1,
+        );
+        turn_1.model_rounds.push(create_test_model_round(
+            "turn-1",
+            "我们已经完成了会话管理系统后端搜索的初步实现，并保持与架构设计一致。",
+        ));
+        turn_1.mark_completed();
+        persistence.save_dialog_turn(&temp_dir, &turn_1).await.expect("save turn 1");
+
+        // Turn 2: Another matching turn in same session to test per-session cap (max 2 hits)
+        let user_msg_2 = crate::service::session::UserMessageData {
+            id: "user-cjk-2".to_string(),
+            content: "第三条包含架构设计的消息，应该被每会话2条hit的上限截断。".to_string(),
+            timestamp: 1_700_000_002_000,
+            metadata: None,
+        };
+        let mut turn_2 = crate::service::session::DialogTurnData::new(
+            "turn-2".to_string(),
+            1,
+            session_id.clone(),
+            user_msg_2,
+        );
+        turn_2.mark_completed();
+        persistence.save_dialog_turn(&temp_dir, &turn_2).await.expect("save turn 2");
+
+        let hits = facade
+            .search_sessions("架构设计", Some(ws_str), None)
+            .await
+            .expect("search should succeed");
+
+        // Exactly 2 hits returned due to per-session cap of 2
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].session_name, "中文搜索会话");
+        assert_eq!(hits[0].role, "user");
+        assert!(hits[0].snippet.contains("架构设计"));
+        assert_eq!(hits[1].role, "assistant");
+        assert!(hits[1].snippet.contains("架构设计"));
+
+        // Limit test: limit = 1 returns 1 hit
+        let hits_limit = facade
+            .search_sessions("架构设计", Some(ws_str), Some(1))
+            .await
+            .expect("search with limit 1");
+        assert_eq!(hits_limit.len(), 1);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+}

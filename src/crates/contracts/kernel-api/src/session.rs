@@ -33,6 +33,16 @@ pub struct SessionSummaryDto {
     pub state: Option<String>,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SessionSearchHitDto {
+    pub session_id: String,
+    pub session_name: String,
+    pub message_id: String,
+    pub role: String, // "user" | "assistant"，与 MessageRoleDto 的 serde 表示一致
+    pub snippet: String,
+    pub timestamp_ms: i64,
+}
+
 /// Sessions of one workspace, used by the cross-workspace archive listing.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -263,6 +273,14 @@ pub trait KernelSessionApi: Send + Sync {
     /// Get session message list (abnormal item 10 solution: unified MessageDto).
     /// Source: #15 #16 #17 #18 #19
     async fn get_messages(&self, session_id: &SessionId) -> Result<Vec<MessageDto>, KernelError>;
+
+    /// Search sessions for text matching query across message content.
+    async fn search_sessions(
+        &self,
+        query: &str,
+        workspace: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<SessionSearchHitDto>, KernelError>;
 
     /// Get session persistence metadata.
     /// Source: #67

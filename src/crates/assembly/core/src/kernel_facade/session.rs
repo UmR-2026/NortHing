@@ -5,10 +5,31 @@ use std::path::Path;
 use async_trait::async_trait;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::session::{
-    BranchId, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto, WorkspaceSessionsDto,
+    BranchId, SessionBranchDto, SessionConfigDto, SessionDto, SessionId, SessionSearchHitDto, SessionSummaryDto,
+    WorkspaceSessionsDto,
 };
 
 use crate::agentic::core::SessionConfig;
+
+fn extract_search_snippet(text: &str, query: &str) -> Option<String> {
+    let lower_text = text.to_lowercase();
+    let lower_query = query.to_lowercase();
+    if lower_query.is_empty() {
+        return None;
+    }
+    let byte_pos = lower_text.find(&lower_query)?;
+    let char_pos = lower_text[..byte_pos].chars().count();
+    let text_chars: Vec<char> = text.chars().collect();
+    let query_char_len = query.chars().count();
+
+    let match_start = char_pos.min(text_chars.len());
+    let match_end = (match_start + query_char_len).min(text_chars.len());
+
+    let snippet_start = match_start.saturating_sub(40);
+    let snippet_end = (match_end + 40).min(text_chars.len());
+
+    Some(text_chars[snippet_start..snippet_end].iter().collect())
+}
 
 #[async_trait]
 impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
@@ -155,6 +176,110 @@ impl northhing_kernel_api::KernelSessionApi for super::KernelFacade {
             .into_iter()
             .map(crate::kernel_facade::dto::message_to_dto)
             .collect())
+    }
+
+    async fn search_sessions(
+        &self,
+        query: &str,
+        workspace: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<SessionSearchHitDto>, KernelError> {
+        let query_trimmed = query.trim();
+        if query_trimmed.is_empty() {
+            return Ok(Vec::new());
+        }
+        let max_hits = limit.unwrap_or(50) as usize;
+        if max_hits == 0 {
+            return Ok(Vec::new());
+        }
+
+        let workspace_path = workspace
+            .map(|s| s.to_string())
+            .unwrap_or_else(crate::kernel_facade::helpers::default_workspace_path);
+
+        let coordinator = self.coordinator()?;
+        let summaries = match coordinator
+            .session_manager()
+            .persistence_manager
+            .list_sessions(Path::new(&workspace_path))
+            .await
+        {
+            Ok(summaries) => summaries,
+            Err(err) => {
+                tracing::warn!(
+                    workspace_path = %workspace_path,
+                    error = %err,
+                    "Failed to list sessions for workspace in search_sessions; returning empty results"
+                );
+                return Ok(Vec::new());
+            }
+        };
+
+        // ponytail: 全量扫描 O(会话数 × 消息数)，无索引；会话到百级或消息到万级需升级（复用 transcript index 或引入 SQLite FTS）
+        let mut hits = Vec::new();
+        for summary in summaries {
+            if hits.len() >= max_hits {
+                break;
+            }
+            let messages = match coordinator.get_messages(&summary.session_id).await {
+                Ok(messages) => messages,
+                Err(err) => {
+                    tracing::warn!(
+                        session_id = %summary.session_id,
+                        error = %err,
+                        "Failed to load messages for session in search_sessions; skipping session"
+                    );
+                    continue;
+                }
+            };
+
+            let mut session_hit_count = 0;
+            for msg in messages {
+                if session_hit_count >= 2 || hits.len() >= max_hits {
+                    break;
+                }
+
+                let (role_str, text_content) = match &msg.role {
+                    crate::agentic::core::MessageRole::User => {
+                        let text = match &msg.content {
+                            crate::agentic::core::MessageContent::Text(t) => Some(t.as_str()),
+                            crate::agentic::core::MessageContent::Multimodal { text, .. } => Some(text.as_str()),
+                            crate::agentic::core::MessageContent::Mixed { text, .. } => Some(text.as_str()),
+                            _ => None,
+                        };
+                        ("user", text)
+                    }
+                    crate::agentic::core::MessageRole::Assistant => {
+                        let text = match &msg.content {
+                            crate::agentic::core::MessageContent::Text(t) => Some(t.as_str()),
+                            crate::agentic::core::MessageContent::Multimodal { text, .. } => Some(text.as_str()),
+                            crate::agentic::core::MessageContent::Mixed { text, .. } => Some(text.as_str()),
+                            _ => None,
+                        };
+                        ("assistant", text)
+                    }
+                    _ => continue,
+                };
+
+                let Some(text) = text_content else {
+                    continue;
+                };
+
+                if let Some(snippet) = extract_search_snippet(text, query_trimmed) {
+                    hits.push(SessionSearchHitDto {
+                        session_id: summary.session_id.clone(),
+                        session_name: summary.session_name.clone(),
+                        message_id: msg.id.clone(),
+                        role: role_str.to_string(),
+                        snippet,
+                        timestamp_ms: crate::kernel_facade::helpers::system_time_to_ms_i64(msg.timestamp),
+                    });
+                    session_hit_count += 1;
+                }
+            }
+        }
+
+        Ok(hits)
     }
 
     async fn get_session_metadata(&self, id: &SessionId) -> Result<super::SessionMetadataDto, KernelError> {
