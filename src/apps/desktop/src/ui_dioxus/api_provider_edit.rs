@@ -175,7 +175,9 @@ mod tests {
 
     async fn setup_test_provider(id: &str, name: &str, provider_type: &str, model: &str) {
         let facade = kernel_facade();
-        let _ = facade.init_core().await;
+        if let Err(err) = facade.init_core().await {
+            tracing::warn!(error = %err, "test setup: init_core failed; continuing");
+        }
         let dto = AIModelConfigDto {
             id: id.to_string(),
             provider_id: provider_type.to_string(),
@@ -291,7 +293,9 @@ mod tests {
     #[tokio::test]
     async fn test_edit_provider_nonexistent_id_returns_error() {
         let _guard = TEST_GLOBAL_CONFIG_MUTEX.lock().await;
-        let _ = kernel_facade().init_core().await;
+        if let Err(err) = kernel_facade().init_core().await {
+            tracing::warn!(error = %err, "test setup: init_core failed; continuing");
+        }
         let id = "test-w7-1-nonexistent-id-99999";
         let kr = MockKeyring::new();
 
