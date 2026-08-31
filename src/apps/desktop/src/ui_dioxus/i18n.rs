@@ -293,6 +293,9 @@ pub mod keys {
     pub const ARCHIVE_EMPTY_SEARCH: &str = "dioxus-room-archive-empty-search";
     pub const ARCHIVE_LOAD_FAIL: &str = "dioxus-room-archive-load-fail";
     pub const ARCHIVE_SUBAGENT_BADGE: &str = "dioxus-room-archive-subagent-badge";
+    pub const ARCHIVE_SEARCHING: &str = "dioxus-room-archive-searching";
+    pub const ARCHIVE_SEARCH_FAIL: &str = "dioxus-room-archive-search-fail";
+    pub const ARCHIVE_SEARCH_EMPTY: &str = "dioxus-room-archive-search-empty";
 
     // ===== Space window (2026-08-24 Task EF-E2) =====
     pub const NAV_SPACE: &str = "dioxus-room-nav-space";

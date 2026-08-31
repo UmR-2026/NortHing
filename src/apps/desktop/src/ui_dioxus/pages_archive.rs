@@ -6,13 +6,17 @@
 
 use dioxus::desktop::window;
 use dioxus::prelude::*;
-use northhing_kernel_api::session::{MessageDto, SessionId, SessionSummaryDto};
+use northhing_kernel_api::session::{MessageDto, SessionId, SessionSearchHitDto, SessionSummaryDto};
 use std::rc::Rc;
 
 use super::api;
 use super::css;
 use super::i18n::{keys, LocalePack};
 use super::page_shell::{render_close_button, use_page_shell};
+use super::pages_archive_search::{
+    fmt_ts, format_session_export, search_hit_role_label, sort_search_hits, truncate_snippet, validate_rename,
+    RenameError, MAX_SESSION_NAME_CHARS, MAX_SNIPPET_CHARS,
+};
 use super::registry::ModuleAppProps;
 
 #[cfg(target_os = "windows")]
@@ -23,16 +27,6 @@ use dioxus::desktop::tao::platform::windows::WindowExtWindows;
 
 fn is_subagent_session(name: &str, parent_id: &Option<String>) -> bool {
     name.starts_with("Subagent: ") || parent_id.is_some()
-}
-
-fn fmt_ts(ts: i64) -> String {
-    let secs = ts / 1000;
-    let nanos = ((ts % 1000) * 1_000_000) as u32;
-    if let Some(dt) = chrono::DateTime::from_timestamp(secs, nanos) {
-        dt.format("%Y-%m-%d %H:%M").to_string()
-    } else {
-        format!("{}", ts)
-    }
 }
 
 fn fmt_status(status: &northhing_kernel_api::session::SessionStatusDto) -> &'static str {
@@ -86,150 +80,6 @@ struct SessionRow {
     is_room: bool,
 }
 
-// ── Export formatter (pure, unit-tested) ─────────────────────────────
-
-/// Formats a session's messages as a Markdown document.
-///
-/// # Panics
-/// Never panics – falls back to placeholder strings on malformed content.
-pub fn format_session_export(session_id: &str, messages: &[MessageDto]) -> String {
-    let header = format!(
-        "# Session Export\n\n**Session ID:** `{session_id}`\n**Exported:** {}\n**Messages:** {}\n\n---\n",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-        messages.len()
-    );
-
-    let body = messages
-        .iter()
-        .map(|msg| {
-            let role = match msg.role {
-                northhing_kernel_api::session::MessageRoleDto::User => "User",
-                northhing_kernel_api::session::MessageRoleDto::Assistant => "Assistant",
-                northhing_kernel_api::session::MessageRoleDto::Tool => "Tool",
-                northhing_kernel_api::session::MessageRoleDto::System => "System",
-            };
-            let ts = fmt_ts(msg.timestamp);
-
-            let content = match &msg.content {
-                northhing_kernel_api::session::MessageContentDto::Text(t) => t.clone(),
-                northhing_kernel_api::session::MessageContentDto::Multimodal { text, .. } => text.clone(),
-                northhing_kernel_api::session::MessageContentDto::ToolResult {
-                    tool_name,
-                    result,
-                    is_error,
-                    ..
-                } => {
-                    let err_tag = if *is_error { " [ERROR]" } else { "" };
-                    let summary = result.as_str().unwrap_or_default();
-                    format!("[Tool: {tool_name}{err_tag}] {summary}")
-                }
-                northhing_kernel_api::session::MessageContentDto::Mixed { text, tool_calls, .. } => {
-                    let tc = if tool_calls.is_empty() {
-                        String::new()
-                    } else {
-                        let names: Vec<&str> = tool_calls.iter().map(|t| t.tool_name.as_str()).collect();
-                        format!("\n**Tool calls:** {}", names.join(", "))
-                    };
-                    format!("{text}{tc}")
-                }
-            };
-
-            format!("### [{ts}] {role}\n\n{content}\n")
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    format!("{header}{body}")
-}
-
-// ── Rename input validator (pure, unit-tested) ────────────────────────
-
-/// Maximum allowed session-title length, counted in Unicode scalar values (chars), not UTF-8 bytes.
-/// CJK ideographs are 3 UTF-8 bytes each; counting bytes would silently truncate ~26-char titles.
-pub const MAX_SESSION_NAME_CHARS: usize = 80;
-
-/// Reason a candidate session title was rejected.
-#[derive(Debug, PartialEq, Eq)]
-pub enum RenameError {
-    /// `name.trim().is_empty()` — nothing to save (or only whitespace).
-    Empty,
-    /// `name.chars().count() > MAX_SESSION_NAME_CHARS`.
-    TooLong,
-}
-
-/// Pure validator for the rename input box. Returns `Ok(())` when the trimmed title is
-/// non-empty AND at most `MAX_SESSION_NAME_CHARS` Unicode chars; otherwise the specific reason.
-pub fn validate_rename(name: &str) -> Result<(), RenameError> {
-    if name.trim().is_empty() {
-        return Err(RenameError::Empty);
-    }
-    if name.chars().count() > MAX_SESSION_NAME_CHARS {
-        return Err(RenameError::TooLong);
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn format_session_export_empty_messages() {
-        let out = format_session_export("s1", &[]);
-        assert!(out.contains("Session ID"));
-        assert!(out.contains("Messages:** 0"));
-    }
-
-    #[test]
-    fn format_session_export_includes_content() {
-        let msgs = vec![MessageDto {
-            id: "m1".into(),
-            role: northhing_kernel_api::session::MessageRoleDto::User,
-            content: northhing_kernel_api::session::MessageContentDto::Text("hello".into()),
-            metadata: None,
-            timestamp: 1_700_000_000_000,
-        }];
-        let out = format_session_export("s1", &msgs);
-        assert!(out.contains("hello"));
-        assert!(out.contains("User"));
-    }
-
-    #[test]
-    fn validate_rename_accepts_ascii_under_limit() {
-        assert!(validate_rename("hello world").is_ok());
-        let s = "a".repeat(MAX_SESSION_NAME_CHARS);
-        assert!(validate_rename(&s).is_ok());
-    }
-
-    #[test]
-    fn validate_rename_rejects_empty_and_whitespace() {
-        assert_eq!(validate_rename(""), Err(RenameError::Empty));
-        assert_eq!(validate_rename("   "), Err(RenameError::Empty));
-        assert_eq!(validate_rename("\t\n"), Err(RenameError::Empty));
-    }
-
-    #[test]
-    fn validate_rename_rejects_too_long_ascii() {
-        let s = "a".repeat(MAX_SESSION_NAME_CHARS + 1);
-        assert_eq!(validate_rename(&s), Err(RenameError::TooLong));
-    }
-
-    /// Regression for M-2 (CJK byte-vs-char truncation): 80 CJK ideographs are 240 UTF-8 bytes,
-    /// which the old `len() > 80` check would have flagged as too long.
-    #[test]
-    fn validate_rename_accepts_cjk_at_char_limit() {
-        let s: String = "测".repeat(MAX_SESSION_NAME_CHARS);
-        assert_eq!(s.len(), MAX_SESSION_NAME_CHARS * 3, "sanity: 80 CJK chars = 240 bytes");
-        assert!(validate_rename(&s).is_ok(), "80 CJK chars must pass; only bytes tripped the old check");
-    }
-
-    #[test]
-    fn validate_rename_rejects_cjk_over_char_limit() {
-        let s: String = "测".repeat(MAX_SESSION_NAME_CHARS + 1);
-        assert_eq!(validate_rename(&s), Err(RenameError::TooLong));
-    }
-}
-
 // ── Component ────────────────────────────────────────────────────────
 
 pub fn archive_app_root(props: ModuleAppProps) -> Element {
@@ -243,6 +93,10 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
     let loading = use_signal(|| false);
     let error_msg = use_signal(String::new);
     let mut search_query = use_signal(String::new);
+    let mut search_hits = use_signal(|| Vec::<SessionSearchHitDto>::new());
+    let mut search_loading = use_signal(|| false);
+    let mut search_error = use_signal(String::new);
+    let mut search_generation = use_signal(|| 0u64);
     let mut selected_ids = use_signal(|| Vec::<SessionId>::new());
     let mut session_messages = use_signal(|| Vec::<MessageDto>::new());
     let mut msgs_loading = use_signal(|| false);
@@ -308,19 +162,8 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
         });
     }
 
-    // Filtered list
-    let q = search_query.read().trim().to_lowercase();
-    let binding = all_sessions.read();
-    let filtered: Vec<&SessionRow> = binding
-        .iter()
-        .filter(|r| {
-            if q.is_empty() {
-                true
-            } else {
-                r.summary.name.to_lowercase().contains(&q)
-            }
-        })
-        .collect();
+    // Search state active flag
+    let is_searching = !search_query.read().trim().is_empty();
 
     // Action handlers
     let mut start_rename = move |id: SessionId, name: String| {
@@ -450,12 +293,59 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
                                 r#type: "text",
                                 placeholder: "{locale.t(keys::ARCHIVE_SEARCH_PLACEHOLDER)}",
                                 value: "{search_query}",
-                                oninput: move |e| search_query.set(e.value()),
+                                oninput: {
+                                    let locale_for_search = locale.clone();
+                                    move |e: FormEvent| {
+                                        let val = e.value();
+                                        search_query.set(val.clone());
+                                        let trimmed = val.trim().to_string();
+                                        let gen = search_generation() + 1;
+                                        search_generation.set(gen);
+
+                                        if trimmed.is_empty() {
+                                            search_loading.set(false);
+                                            search_error.set(String::new());
+                                            search_hits.set(Vec::new());
+                                        } else {
+                                            search_loading.set(true);
+                                            search_error.set(String::new());
+                                            let locale_async = locale_for_search.clone();
+                                            spawn(async move {
+                                                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                                                if search_generation() != gen {
+                                                    return;
+                                                }
+                                                match api::search_sessions(&trimmed, Some(50)).await {
+                                                    Ok(hits) => {
+                                                        if search_generation() == gen {
+                                                            let sorted = sort_search_hits(&trimmed, hits);
+                                                            search_hits.set(sorted);
+                                                            search_loading.set(false);
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        if search_generation() == gen {
+                                                            search_error.set(format!("{} {}", locale_async.t(keys::ARCHIVE_SEARCH_FAIL), e));
+                                                            search_loading.set(false);
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        }
+                                    }
+                                },
                             }
                             if !search_query.read().trim().is_empty() {
                                 button {
                                     class: "mem-btn mem-btn-clear",
-                                    onclick: move |_| search_query.set(String::new()),
+                                    onclick: move |_| {
+                                        search_query.set(String::new());
+                                        search_hits.set(Vec::new());
+                                        search_loading.set(false);
+                                        search_error.set(String::new());
+                                        let gen = search_generation() + 1;
+                                        search_generation.set(gen);
+                                    },
                                     "{locale.t(keys::ARCHIVE_SEARCH_CLEAR)}"
                                 }
                             }
@@ -474,64 +364,94 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
                             }
                         }
 
-                        // Loading
-                        if loading() {
-                            div { class: "mem-loading", "加载中..." }
-                        }
-
-                        // Error state
-                        if !error_msg.read().is_empty() && !loading() {
-                            div { class: "mem-error", "{error_msg}" }
-                        }
-
-                        // Empty state
-                        if !loading() && error_msg.read().is_empty() && filtered.is_empty() {
-                            div { class: "mem-empty",
-                                if q.is_empty() { "{locale.t(keys::ARCHIVE_EMPTY)}" }
-                                else { "{locale.t(keys::ARCHIVE_EMPTY_SEARCH)}" }
+                        // Search mode vs default session list
+                        if is_searching {
+                            if search_loading() {
+                                div { class: "mem-loading", "{locale.t(keys::ARCHIVE_SEARCHING)}" }
                             }
-                        }
+                            if !search_error.read().is_empty() && !search_loading() {
+                                div { class: "mem-error", "{search_error}" }
+                            }
+                            if !search_loading() && search_error.read().is_empty() && search_hits.read().is_empty() {
+                                div { class: "mem-empty", "{locale.t(keys::ARCHIVE_SEARCH_EMPTY)}" }
+                            }
+                            if !search_hits.read().is_empty() {
+                                div { class: "strata-flow", id: "strata-flow",
+                                    for hit in search_hits.read().iter() {
+                                        {
+                                            let hit_sid = hit.session_id.clone();
+                                            let hit_sname = hit.session_name.clone();
+                                            let hit_snippet = truncate_snippet(&hit.snippet, MAX_SNIPPET_CHARS);
+                                            let hit_time = fmt_ts(hit.timestamp_ms);
+                                            let hit_role = search_hit_role_label(&hit.role);
 
-                        // Session list
-                        if !filtered.is_empty() {
-                            div { class: "strata-flow", id: "strata-flow",
-                                for row in filtered.iter() {
-                                    {
-                                        let row = row;
-                                        let sid: Rc<String> = Rc::new(row.summary.id.clone());
-                                        let sname: Rc<String> = Rc::new(row.summary.name.clone());
-                                        // Per-clone Rc handles so multiple `move` closures can capture independent references.
-                                        let sid_click = Rc::clone(&sid);
-                                        let sid_view = Rc::clone(&sid);
-                                        let sid_exec = Rc::clone(&sid);
-                                        let sid_start = Rc::clone(&sid);
-                                        let sid_conf = Rc::clone(&sid);
-                                        let sid_export = Rc::clone(&sid);
-                                        let sname_start = Rc::clone(&sname);
-                                        let is_renaming = renaming_id.read().as_ref().map(|s| s.as_str()) == Some(sid.as_str());
-                                        let is_deleting = confirming_delete.read().as_ref().map(|s| s.as_str()) == Some(sid.as_str());
-                                        let room = row.is_room;
-
-                                        rsx! {
-                                            div {
-                                                class: if room { "stratum active" } else { "stratum" },
-                                                style: if row.is_subagent {
-                                                    "opacity: 0.55; padding-left: 28px;"
-                                                } else {
-                                                    ""
-                                                },
-    onclick: move |_| view_detail((*sid_view).clone()),
-                                                div { class: "stratum-head",
-                                                    span { class: "stratum-no", "{fmt_status(&row.summary.status)}" }
-                                                    span { class: "stratum-time", "{fmt_ts(row.summary.updated_at)}" }
-                                                    if row.is_subagent {
-                                                        span {
-                                                            class: "stratum-subagent-badge",
-                                                            style: "font-size: 10px; background: var(--line, #333); color: var(--faint, #888); padding: 1px 6px; border-radius: 3px; margin-left: 6px;",
-                                                            "{locale.t(keys::ARCHIVE_SUBAGENT_BADGE)}"
-                                                        }
+                                            rsx! {
+                                                div {
+                                                    class: "stratum",
+                                                    onclick: move |_| view_detail(hit_sid.clone()),
+                                                    div { class: "stratum-head",
+                                                        span { class: "stratum-no", "{hit_role}" }
+                                                        span { class: "stratum-time", "{hit_time}" }
+                                                    }
+                                                    div { class: "stratum-title", "{hit_sname}" }
+                                                    if !hit_snippet.is_empty() {
+                                                        div { class: "stratum-snippet", "{hit_snippet}" }
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if loading() {
+                                div { class: "mem-loading", "加载中..." }
+                            }
+                            if !error_msg.read().is_empty() && !loading() {
+                                div { class: "mem-error", "{error_msg}" }
+                            }
+                            if !loading() && error_msg.read().is_empty() && all_sessions.read().is_empty() {
+                                div { class: "mem-empty", "{locale.t(keys::ARCHIVE_EMPTY)}" }
+                            }
+                            if !all_sessions.read().is_empty() {
+                                div { class: "strata-flow", id: "strata-flow",
+                                    for row in all_sessions.read().iter() {
+                                        {
+                                            let row = row;
+                                            let sid: Rc<String> = Rc::new(row.summary.id.clone());
+                                            let sname: Rc<String> = Rc::new(row.summary.name.clone());
+                                            // Per-clone Rc handles so multiple `move` closures can capture independent references.
+                                            let sid_click = Rc::clone(&sid);
+                                            let sid_view = Rc::clone(&sid);
+                                            let sid_exec = Rc::clone(&sid);
+                                            let sid_start = Rc::clone(&sid);
+                                            let sid_conf = Rc::clone(&sid);
+                                            let sid_export = Rc::clone(&sid);
+                                            let sname_start = Rc::clone(&sname);
+                                            let is_renaming = renaming_id.read().as_ref().map(|s| s.as_str()) == Some(sid.as_str());
+                                            let is_deleting = confirming_delete.read().as_ref().map(|s| s.as_str()) == Some(sid.as_str());
+                                            let room = row.is_room;
+
+                                            rsx! {
+                                                div {
+                                                    class: if room { "stratum active" } else { "stratum" },
+                                                    style: if row.is_subagent {
+                                                        "opacity: 0.55; padding-left: 28px;"
+                                                    } else {
+                                                        ""
+                                                    },
+                                                    onclick: move |_| view_detail((*sid_view).clone()),
+                                                    div { class: "stratum-head",
+                                                        span { class: "stratum-no", "{fmt_status(&row.summary.status)}" }
+                                                        span { class: "stratum-time", "{fmt_ts(row.summary.updated_at)}" }
+                                                        if row.is_subagent {
+                                                            span {
+                                                                class: "stratum-subagent-badge",
+                                                                style: "font-size: 10px; background: var(--line, #333); color: var(--faint, #888); padding: 1px 6px; border-radius: 3px; margin-left: 6px;",
+                                                                "{locale.t(keys::ARCHIVE_SUBAGENT_BADGE)}"
+                                                            }
+                                                        }
+                                                    }
 
                                                 if is_renaming {
                                                     div { class: "stratum-title",
@@ -704,6 +624,7 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
                                     }
                                 }
                             }
+                        }
                         }
 
                         // Session detail panel

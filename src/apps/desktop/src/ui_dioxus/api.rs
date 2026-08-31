@@ -8,7 +8,8 @@
 use northhing_core::kernel_facade::kernel_facade;
 use northhing_kernel_api::error::KernelError;
 use northhing_kernel_api::session::{
-    KernelSessionApi, MessageDto, SessionConfigDto, SessionDto, SessionId, SessionSummaryDto, WorkspaceSessionsDto,
+    KernelSessionApi, MessageDto, SessionConfigDto, SessionDto, SessionId, SessionSearchHitDto, SessionSummaryDto,
+    WorkspaceSessionsDto,
 };
 use northhing_kernel_api::tools::KernelToolsApi;
 use northhing_kernel_api::turn::{KernelTurnApi, SubmissionPolicyDto, TriggerSourceDto, TurnId, TurnInputDto};
@@ -17,8 +18,8 @@ use northhing_kernel_api::turn::{KernelTurnApi, SubmissionPolicyDto, TriggerSour
 mod api_provider_edit;
 pub use super::api_events::*;
 pub use super::api_memory::*;
-pub use api_provider_edit::*;
 pub use super::api_settings::*;
+pub use api_provider_edit::*;
 
 /// Submits a user dialog turn for the given session.
 ///
@@ -79,6 +80,11 @@ pub async fn delete_session(id: &SessionId) -> Result<(), KernelError> {
 /// Renames a session by id.
 pub async fn rename_session(id: &SessionId, name: &str) -> Result<(), KernelError> {
     kernel_facade().rename_session(id, name).await
+}
+
+/// Searches sessions across workspace matching query text.
+pub async fn search_sessions(query: &str, limit: Option<u32>) -> Result<Vec<SessionSearchHitDto>, KernelError> {
+    kernel_facade().search_sessions(query, None, limit).await
 }
 
 /// Returns the cached room session id if any.
@@ -156,8 +162,8 @@ pub async fn respond_to_tool_confirmation(tool_id: &str, approved: bool) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northhing_kernel_api::session::SessionSummaryDto;
     use northhing_kernel_api::session::SessionStatusDto;
+    use northhing_kernel_api::session::SessionSummaryDto;
     use northhing_kernel_api::session::WorkspaceSessionsDto;
 
     #[tokio::test]

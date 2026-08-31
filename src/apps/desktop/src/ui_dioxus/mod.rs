@@ -25,9 +25,9 @@ pub use entry::launch;
 
 mod api;
 mod api_events;
+mod api_fs;
 mod api_memory;
 mod api_settings;
-mod api_fs;
 mod app;
 mod approval_card;
 mod color;
@@ -36,6 +36,7 @@ mod entry;
 mod i18n;
 mod page_shell;
 mod pages_archive;
+mod pages_archive_search;
 mod pages_memory;
 mod pages_onboarding;
 mod pages_onboarding_css;
