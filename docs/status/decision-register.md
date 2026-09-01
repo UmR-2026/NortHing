@@ -72,7 +72,7 @@
 | E-10 | 09-01 | **12 处摆设做真不移除**（plan D1）：W16 = 接真实数据源，估 2-3 天 | 生效 |
 | E-11 | 09-01 | **guard_command_execution 走风险预估 + 白名单制度**（plan D2，参考市面产品）：W18 先出设计 `.superpowers/sdd/w18-command-risk-design.md`（已出） | 生效 |
 | E-12 | 09-01 | **growth-core-0804 不开常驻 worktree**（plan D3）：保留分支 ref，移植时用临时 worktree | 生效 |
-| E-13 | 09-01 | **单对话体验优先于多会话**（plan D4）：W15（Markdown 渲染等）先，W17 多会话后置（需先解 ROOM_SESSION_CACHE 失效） | 生效 |
+| E-13 | 09-01 | **单对话体验优先于多会话**（plan D4）：W15（Markdown 渲染等）先，W17 多会话后置（需先解 ROOM_SESSION_CACHE 失效） | **已翻转（09-02 用户改判）**：W14-1 测试隔离线先做（W14-1c 开工），W15 顺延；同时拍板 **W15-1 允许引入 markdown crate**（依赖准入关闭，选型走技术仲裁）。W17 后置不变 |
 | E-14 | 09-01 | **consult-room-build worktree 不急删**（plan D5）：删前必须确认备份完整 | 生效 |
 | E-15 | 09-01 | **target/ 133GB 默认不 clean**（plan D6）：按目录粒度评估，不整体 clean | 生效 |
 
