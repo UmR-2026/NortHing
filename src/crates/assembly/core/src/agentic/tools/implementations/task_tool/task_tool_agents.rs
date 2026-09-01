@@ -120,7 +120,8 @@ pub(super) fn build_completion_result(
 mod tests {
     use super::build_available_agents_context_section;
     use crate::agentic::agents::{
-        agent_registry, Agent, AgentCategory, CustomSubagentConfig, SubAgentSource, UserContextPolicy,
+        agent_registry, Agent, AgentCategory, AgentRegistrationGuard, CustomSubagentConfig, SubAgentSource,
+        UserContextPolicy,
     };
     use crate::agentic::tools::framework::ToolUseContext;
     use crate::agentic::tools::ToolRuntimeRestrictions;
@@ -170,17 +171,22 @@ mod tests {
         }
     }
 
+    /// Registers a test subagent and returns an RAII guard that unregisters it
+    /// on drop (including during panic unwind), so the global registry stays
+    /// clean for other tests in the process.
     fn register_prompt_order_test_subagent(
         id: &str,
         source: SubAgentSource,
         custom_config: Option<CustomSubagentConfig>,
-    ) {
-        agent_registry().register_agent(
-            Arc::new(PromptOrderTestAgent { id: id.to_string() }),
-            AgentCategory::SubAgent,
-            Some(source),
-            custom_config,
-        );
+    ) -> AgentRegistrationGuard {
+        agent_registry()
+            .register_agent_guarded(
+                Arc::new(PromptOrderTestAgent { id: id.to_string() }),
+                AgentCategory::SubAgent,
+                Some(source),
+                custom_config,
+            )
+            .expect("prompt-order test agent ids must not collide")
     }
 
     fn find_agent_block_index_local(description: &str, agent_id: &str) -> usize {
@@ -244,22 +250,26 @@ mod tests {
         let builtin_z = "ZZZPromptOrderBuiltin";
         let user_a = "AAAPromptOrderUser";
         let user_z = "ZZZPromptOrderUser";
-        register_prompt_order_test_subagent(builtin_z, SubAgentSource::Builtin, None);
-        register_prompt_order_test_subagent(builtin_a, SubAgentSource::Builtin, None);
-        register_prompt_order_test_subagent(
-            user_z,
-            SubAgentSource::User,
-            Some(CustomSubagentConfig {
-                model: "fast".to_string(),
-            }),
-        );
-        register_prompt_order_test_subagent(
-            user_a,
-            SubAgentSource::User,
-            Some(CustomSubagentConfig {
-                model: "fast".to_string(),
-            }),
-        );
+        // Held until the test scope ends (panic unwind included) so the four
+        // injected agents never leak into sibling tests via the global registry.
+        let _registration_guards = [
+            register_prompt_order_test_subagent(builtin_z, SubAgentSource::Builtin, None),
+            register_prompt_order_test_subagent(builtin_a, SubAgentSource::Builtin, None),
+            register_prompt_order_test_subagent(
+                user_z,
+                SubAgentSource::User,
+                Some(CustomSubagentConfig {
+                    model: "fast".to_string(),
+                }),
+            ),
+            register_prompt_order_test_subagent(
+                user_a,
+                SubAgentSource::User,
+                Some(CustomSubagentConfig {
+                    model: "fast".to_string(),
+                }),
+            ),
+        ];
 
         let description = build_available_agents_context_section(Some(&context))
             .await

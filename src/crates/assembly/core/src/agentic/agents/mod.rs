@@ -47,7 +47,7 @@ pub use registry::types::{
     SubagentListScope, SubagentQueryContext, SubagentStateReason,
 };
 pub use registry::visibility::{BuiltinSubagentExposure, SubagentVisibilityPolicy, SubagentVisibilitySummary};
-pub use registry::{agent_registry, AgentRegistry, CustomSubagentDetail};
+pub use registry::{agent_registry, AgentRegistrationGuard, AgentRegistry, CustomSubagentDetail};
 use std::any::Any;
 
 // Include embedded prompts generated at compile time
