@@ -529,7 +529,9 @@ mod tests {
 #[cfg(test)]
 mod query_aware_tests {
     use super::super::facts::{Fact, FactConfidence, FactProvenance, FactScope, FactType};
-    use crate::service::agent_memory::build_query_aware_facts_reminder;
+    use crate::service::agent_memory::{
+        build_query_aware_facts_reminder, unique_test_memory_db_path, with_test_memory_db_path,
+    };
 
     fn make_fact(text: &str) -> Fact {
         Fact {
@@ -549,6 +551,7 @@ mod query_aware_tests {
 
     #[tokio::test]
     async fn build_query_aware_facts_reminder_returns_none_for_empty_query() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -560,6 +563,7 @@ mod query_aware_tests {
 
     #[tokio::test]
     async fn build_query_aware_facts_reminder_returns_none_when_no_match() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -573,6 +577,7 @@ mod query_aware_tests {
 
     #[tokio::test]
     async fn build_query_aware_facts_reminder_returns_some_with_matching_fact() {
+        let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
         use crate::service::agent_memory::{default_memory_db_path, MemoryDb};
 
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
