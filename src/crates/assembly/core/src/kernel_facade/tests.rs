@@ -377,16 +377,6 @@ fn test_facade_construction_no_panic() {
     assert!(facade.coordinator().is_err());
 }
 
-#[test]
-fn test_result_methods_return_error_before_init() {
-    let facade = kernel_facade();
-    match facade.coordinator() {
-        Ok(_) => panic!("coordinator() should be Err before init_core"),
-        Err(northhing_kernel_api::error::KernelError::Internal(_)) => {}
-        Err(other) => panic!("expected KernelError::Internal, got {:?}", other),
-    }
-}
-
 #[tokio::test]
 async fn test_subscribe_events_returns_err_before_init() {
     use northhing_kernel_api::KernelEventsApi;

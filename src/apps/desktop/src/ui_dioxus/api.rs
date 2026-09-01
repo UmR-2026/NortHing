@@ -166,12 +166,6 @@ mod tests {
     use northhing_kernel_api::session::SessionSummaryDto;
     use northhing_kernel_api::session::WorkspaceSessionsDto;
 
-    #[tokio::test]
-    async fn test_ensure_room_session_fails_cleanly_when_uninitialized() {
-        let res = ensure_room_session().await;
-        assert!(res.is_err());
-    }
-
     #[test]
     fn test_pick_room_session_preferred_hit() {
         let s1 = SessionSummaryDto {

@@ -48,7 +48,7 @@ impl KernelFacade {
         let _ = self.coordinator.set(coordinator);
     }
 
-    pub(super) fn coordinator(
+    pub fn coordinator(
         &self,
     ) -> Result<&Arc<crate::agentic::coordination::ConversationCoordinator>, KernelError> {
         self.coordinator.get().ok_or_else(|| {

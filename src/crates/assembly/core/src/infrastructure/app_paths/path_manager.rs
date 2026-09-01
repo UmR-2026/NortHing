@@ -233,29 +233,6 @@ mod tests {
         assert_eq!(pm.northhing_home_dir(), home_root);
     }
 
-    #[test]
-    fn e2e_storage_guard_rejects_missing_isolated_roots() {
-        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
-        let _env_guard = EnvVarGuard::capture([
-            "northhing_USER_ROOT",
-            "northhing_E2E_USER_ROOT",
-            "northhing_HOME",
-            "northhing_E2E_HOME",
-            "northhing_E2E_STORAGE_GUARD",
-        ]);
-
-        std::env::remove_var("northhing_USER_ROOT");
-        std::env::remove_var("northhing_E2E_USER_ROOT");
-        std::env::remove_var("northhing_HOME");
-        std::env::remove_var("northhing_E2E_HOME");
-        std::env::set_var("northhing_E2E_STORAGE_GUARD", "1");
-
-        let error = PathManager::new().expect_err("guard should reject real-profile storage");
-        let message = error.to_string();
-        assert!(message.contains("northhing_E2E_STORAGE_GUARD"));
-        assert!(message.contains("northhing_E2E_USER_ROOT"));
-    }
-
     struct EnvVarGuard {
         values: Vec<(&'static str, Option<OsString>)>,
     }

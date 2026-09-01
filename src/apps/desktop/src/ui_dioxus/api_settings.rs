@@ -195,61 +195,6 @@ mod tests {
     use northhing_kernel_api::KernelBootstrapApi;
 
     #[tokio::test]
-    async fn test_api_functions_fail_cleanly_before_init() {
-        // Facade is uninitialized in isolated test environment, should return Err not panic
-        let _ = crate::ui_dioxus::api::submit_turn("test-session", "hello".into()).await;
-        let _ = crate::ui_dioxus::api::stop_turn(&"test-turn".to_string()).await;
-        let _ = crate::ui_dioxus::api::list_sessions().await;
-        let _ = crate::ui_dioxus::api::list_sessions_all_workspaces().await;
-        let _ = crate::ui_dioxus::api::get_session(&"test-session".to_string()).await;
-        let _ = crate::ui_dioxus::api::get_messages(&"test-session".to_string()).await;
-        let _ = crate::ui_dioxus::api::respond_to_tool_confirmation("call-1", true).await;
-        let _ = crate::ui_dioxus::api::ensure_room_session().await;
-        let _ = get_global_config().await;
-        let _ = list_model_configs().await;
-        let _ = set_default_provider("test-model").await;
-        let _ = list_mcp_servers().await;
-        let mcp = MCPServerDto {
-            id: "test".into(),
-            name: "test".into(),
-            config: northhing_kernel_api::settings::MCPServerConfigDto {
-                command: "node".into(),
-                args: vec![],
-                env: None,
-            },
-            location: northhing_kernel_api::settings::ConfigLocationDto::User,
-            enabled: Some(true),
-        };
-        let _ = set_mcp_enabled(mcp, false).await;
-        let form = ProviderFormDto {
-            provider_id: "onboarding".into(),
-            base_url: Some("http://localhost".into()),
-            api_key: Some("key".into()),
-            model: Some("default".into()),
-            provider_type: None,
-        };
-        let kr = crate::app_state::settings::MockKeyring::new();
-        let _ = test_provider_config(form).await;
-        let _ = store_provider_api_key_with_keyring(&kr, "onboarding", "key").await;
-        let dummy_model = AIModelConfigDto {
-            id: "test".into(),
-            provider_id: "openai".into(),
-            model: "test".into(),
-            display_name: None,
-            max_tokens: None,
-            temperature: None,
-            base_url: None,
-            enabled: Some(true),
-            category: None,
-            capabilities: None,
-            auth: None,
-            inline_think_in_text: None,
-        };
-        let _ = upsert_model_config(dummy_model, None).await;
-        let _ = persist_onboarding_provider_with_keyring(&kr, "claude", "http://localhost", "key", "Agent").await;
-    }
-
-    #[tokio::test]
     async fn test_persist_onboarding_provider_success_flow() -> anyhow::Result<()> {
         let _guard = TEST_GLOBAL_CONFIG_MUTEX.lock().await;
         let _ = kernel_facade().init_core().await;

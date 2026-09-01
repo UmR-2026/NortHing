@@ -22,11 +22,11 @@
 // behind the same `cfg` guard the module is itself gated by.
 pub use entry::launch;
 
-mod api;
+pub mod api;
 mod api_events;
 mod api_fs;
 mod api_memory;
-mod api_settings;
+pub mod api_settings;
 mod app;
 mod approval_card;
 mod color;

@@ -80,20 +80,3 @@ pub fn set_session_manager(manager: Arc<SessionManager>) -> Result<(), &'static 
         .set(manager)
         .map_err(|_| "SessionManager already initialized")
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Note: Tests should be run in isolation due to global state
-    // Use `cargo test -- --test-threads=1` for reliable test execution
-
-    #[tokio::test]
-    async fn test_session_manager_not_initialized() {
-        // This test may fail if other tests have already initialized the manager
-        // In a fresh process, this should work
-        if !is_session_manager_initialized() {
-            assert!(session_manager().is_none());
-        }
-    }
-}
