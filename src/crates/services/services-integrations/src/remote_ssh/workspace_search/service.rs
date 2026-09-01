@@ -43,6 +43,13 @@ pub(super) static REMOTE_STDIO_OPEN_GUARDS: LazyLock<Mutex<HashMap<String, Arc<M
 pub(super) static REMOTE_SEARCH_CONTEXTS: LazyLock<RwLock<HashMap<String, RemoteSearchContext>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
+/// 测试专用 seam，release 构建不存在
+#[cfg(test)]
+pub async fn clear_remote_stdio_for_test() {
+    REMOTE_STDIO_SESSIONS.write().await.clear();
+    REMOTE_STDIO_OPEN_GUARDS.lock().await.clear();
+}
+
 #[derive(Clone)]
 pub struct RemoteWorkspaceSearchService {
     provider: Arc<dyn super::protocol::RemoteWorkspaceSearchProvider>,

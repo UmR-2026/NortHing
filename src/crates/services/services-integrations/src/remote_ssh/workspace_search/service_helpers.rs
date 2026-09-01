@@ -112,15 +112,11 @@ mod tests {
         RemoteCommandOutput, RemoteWorkspaceSearchProvider, RemoteWorkspaceSearchStdioProtocol,
     };
     use super::super::repo_session::RemoteStdioRepoSession;
-    use super::super::service::{RemoteSearchContext, RemoteWorkspaceSearchService, REMOTE_SEARCH_CONTEXTS};
+    use super::super::service::{
+        clear_remote_stdio_for_test, RemoteSearchContext, RemoteWorkspaceSearchService, REMOTE_SEARCH_CONTEXTS,
+    };
 
     static REMOTE_SEARCH_TEST_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-    async fn clear_remote_search_test_state() {
-        REMOTE_STDIO_SESSIONS.write().await.clear();
-        REMOTE_STDIO_OPEN_GUARDS.lock().await.clear();
-        REMOTE_SEARCH_CONTEXTS.write().await.clear();
-    }
 
     #[test]
     fn remote_search_cache_keys_normalize_workspace_root() {
@@ -137,7 +133,8 @@ mod tests {
     #[tokio::test]
     async fn remote_search_rejects_non_linux_before_stdio_open() {
         let _test_guard = REMOTE_SEARCH_TEST_LOCK.lock().await;
-        clear_remote_search_test_state().await;
+        clear_remote_stdio_for_test().await;
+        REMOTE_SEARCH_CONTEXTS.write().await.clear();
         let provider = Arc::new(FakeRemoteSearchProvider {
             cached_os_type: Some("Darwin".to_string()),
             connection_id: "conn-1".to_string(),
@@ -161,7 +158,8 @@ mod tests {
     #[tokio::test]
     async fn remote_search_context_ignores_stale_cache_before_resolving_connection() {
         let _test_guard = REMOTE_SEARCH_TEST_LOCK.lock().await;
-        clear_remote_search_test_state().await;
+        clear_remote_stdio_for_test().await;
+        REMOTE_SEARCH_CONTEXTS.write().await.clear();
         let repo_root = "/home/user/repo";
         let stale_empty_connection_key = format!("\0{repo_root}");
         REMOTE_SEARCH_CONTEXTS.write().await.insert(
@@ -203,7 +201,8 @@ mod tests {
     #[tokio::test]
     async fn remote_search_open_guard_is_removed_when_stdio_spawn_fails() {
         let _test_guard = REMOTE_SEARCH_TEST_LOCK.lock().await;
-        clear_remote_search_test_state().await;
+        clear_remote_stdio_for_test().await;
+        REMOTE_SEARCH_CONTEXTS.write().await.clear();
         let repo_root = "/home/user/repo";
         let provider = Arc::new(FakeRemoteSearchProvider {
             cached_os_type: Some("Linux".to_string()),
