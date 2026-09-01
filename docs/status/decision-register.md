@@ -13,10 +13,10 @@
 |---|---|---|---|---|
 | 产品（P） | 17 | 15 | 0 | 0（§6 已清空） |
 | 技术（T） | 9 | 7 | 2 | 0 |
-| 执行（E） | 8 | 6 | 2 | 0 |
+| 执行（E） | 14 | 12 | 2 | 0 |
 | 已接受风险（R） | 4 + 1 组合 | — | — | — |
 
-决策日期跨度：2026-08-16（论题 + grill 两轮）～ 2026-08-17（G15/MiniApp/PCS）。登记者：ZCode（决策人均为用户，缺省项除外）。
+决策日期跨度：2026-08-16（论题 + grill 两轮）～ 2026-09-01（E-10..E-15，来源 `.superpowers/sdd/plan-2026-09-01-followup.md` §0 六项裁决）。登记者：ZCode（决策人均为用户，缺省项除外）。
 
 ---
 
@@ -69,6 +69,12 @@
 | E-07 | 08-17 | **0.3 拆 0.3a/0.3b**：0.3a = T0 + T2-1 CI + T2-2 删除 + T1 五项（"安全+睁眼"）；0.3b = T2-9 合并 + PCS-1/2 + T2-10（"纯化+插件地基"） | 生效 |
 | E-08 | 08-17 | **M 线（T3-7/T3-8）归属 growth session**；CI 门禁接口约定：growth 出演化审计策略与判定逻辑，编排线负责 CI 硬门禁接线（T2-1/T3-7 交汇） | 生效 |
 | E-09 | 08-18 | **T2-2 删留冲突裁决（plan-mandated finding 上交）**：T2-2a 侦察实测 tool-provider-groups（`materialization.rs:9` + product-capabilities `lib.rs:15-16` 消费 + boundary self-test 硬编码其 manifest）与 harness（product-capabilities 非测试代码构建 DeepReview/DeepResearch/MiniApp 的 HarnessRegistry；core 非 optional 硬依赖 + facade re-export）均为活接线，与 full-review R-18/SW2-2「零调用/直接删」冲突——用户拍板**仍删，以计划为准**；执行方式 = 先拆装配面再删 crate（T2-2a' 单）；surfaces.md:25「SDLC Harness」误标随该单修正 | 生效 |
+| E-10 | 09-01 | **12 处摆设做真不移除**（plan D1）：W16 = 接真实数据源，估 2-3 天 | 生效 |
+| E-11 | 09-01 | **guard_command_execution 走风险预估 + 白名单制度**（plan D2，参考市面产品）：W18 先出设计 `.superpowers/sdd/w18-command-risk-design.md`（已出） | 生效 |
+| E-12 | 09-01 | **growth-core-0804 不开常驻 worktree**（plan D3）：保留分支 ref，移植时用临时 worktree | 生效 |
+| E-13 | 09-01 | **单对话体验优先于多会话**（plan D4）：W15（Markdown 渲染等）先，W17 多会话后置（需先解 ROOM_SESSION_CACHE 失效） | 生效 |
+| E-14 | 09-01 | **consult-room-build worktree 不急删**（plan D5）：删前必须确认备份完整 | 生效 |
+| E-15 | 09-01 | **target/ 133GB 默认不 clean**（plan D6）：按目录粒度评估，不整体 clean | 生效 |
 
 ## 4. 已接受风险登记（R 系列，均用户知情拍板）
 
