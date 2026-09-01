@@ -29,14 +29,43 @@
 
 ---
 
-## 1. W14 — 止血与收口（≈0.5 天，无前置依赖，**最先做**）
+## 1. W14 — 止血与收口（≈1.5 天，无前置依赖，**最先做**）
 
 | 任务 | 内容 | 验收 | 成本 |
 |---|---|---|---|
-| W14-1 | **O-1 flaky 定论**：`test_delete_provider_default_provider_rejected` 连跑 **5 次**统计失败率；确认 flaky 则把 `TEST_GLOBAL_CONFIG_MUTEX` 覆盖扩到 `kernel_facade().upsert_model_config(...)` 路径 | 5 次全绿，或给出根因 + 修复 | S |
+| W14-1 | **测试隔离改造**（原"O-1 flaky 定论"已升级，见 §1.1）：把依赖进程级单例状态的测试拆到独立测试目标，消除顺序依赖 | 新目标连跑 5 次全绿 **且** 全量套件连跑 5 次全绿（并行 + 串行各 5 次） | **M ≈1 天**（原估 S，翻倍） |
 | W14-2 | **P2-2 单实例锁**：`config/app.json` 读改写加进程级锁（唯一指向数据丢失的 open 项） | 双开不再 last-write-wins；有测试 | M |
 | W14-3 | **非原子写补齐**：`workspace_runtime/service/state.rs:90` 的 `runtime_layout_state.json` 改走 `write_bytes_atomic` | crash 中断不产生半文件；有测试 | S |
 | W14-4 | **全量补跑 + 推送**：`check --workspace` + 全量 test（补 W11/W12/W13 后的证据链缺口）；代理端口起来后推 15 个 commit | 全量绿 + 与 origin 同步 | S（机时 0.5h） |
+
+### 1.1 W14-1 升级说明：不是 flaky，是**测试间全局状态污染**
+
+**实测数据**（2026-09-01，测试二进制 `target/debug/deps/northhing-7cec78aa9cf51e26.exe`，单次约 0.6s）：
+
+| 模式 | 结果 |
+|---|---|
+| 默认（并行）5 次 | 1 次失败（20%）—— `test_delete_provider_default_provider_rejected` |
+| `--test-threads=1`（串行）5 次 | **5 次全失败（100%）** —— 但失败的是**另一个测试**：`ui_dioxus::api::tests::test_ensure_room_session_fails_cleanly_when_uninitialized`，panic 在 `api.rs:172` `assert!(res.is_err())` |
+
+**结论**：串行下失败是**确定性的**，并行下才是概率性的 → 这不是时序 flaky，而是**测试顺序依赖**。
+
+**根因**：`kernel_facade()` 的 `static FACADE: OnceLock<...>` 一旦被任何测试初始化就**永不重置**；`GlobalConfig` 的 default provider 同理。凡是断言"未初始化时必须报错"或"默认 provider 必须被拒绝删除"的测试，只要排在一个会初始化全局状态的测试之后，就必然失败。并行模式下它们抢跑赢了，所以看起来只是"偶发"。
+
+**O-1 原假设（mutex 未覆盖 `upsert_model_config`）只对一半**：加锁解决不了"必须在未初始化状态下失败"这类断言与"会初始化全局状态"的测试共存于同一进程的问题。
+
+**改造方案（三选一，需设计裁定）**：
+
+| 方案 | 做法 | 评价 |
+|---|---|---|
+| A（推荐） | 把依赖全局状态的测试迁到**独立集成测试目标**（如 `src/apps/desktop/tests/global_state_isolation.rs`）——每个 integration test 文件是独立进程，天然干净 | 干净、无侵入；代价是要把相关项从 `pub(crate)` 提到 `pub` |
+| B | 加 `#[cfg(test)] unsafe fn reset_facade_for_tests()`，测试里显式重置 | 改动小，但引入 unsafe 且容易被误用 |
+| C | 让断言变"宽容"（已初始化就跳过并记日志） | **不推荐**——等于把问题藏起来 |
+
+**任务拆分**：
+- W14-1a 侦察：扫出全部依赖全局状态的测试（grep `before_init` / `uninitialized` / 对 facade 的 `is_err()` 断言 / `set_default_provider` / `TEST_GLOBAL_CONFIG_MUTEX` 使用者）→ 清单（S，0.5h）
+- W14-1b 设计裁定：A / B / C 选一个（可由独立子代理仲裁）（S，0.5h）
+- W14-1c 实施：迁移 + 可见性调整 + 新目标接入（M，0.5-1 天）
+- W14-1d 验证：新目标 5 次 + 全量并行 5 次 + 全量串行 5 次（S，1-2h，机时）
 
 ## 2. W15 — 单对话体验（D4：**最先做的功能波**，≈2-3 天）
 
