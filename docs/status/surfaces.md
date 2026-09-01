@@ -8,7 +8,7 @@
 
 | Surface | Crate / Path | Toolchain | Status | Notes |
 |---------|-------------|-----------|--------|-------|
-| **Slint Desktop** | `src/apps/desktop` (`northhing`) | MSVC | ✅ Active | Primary user-facing surface. Slint UI + agent runtime. |
+| **Dioxus Desktop (consult-room)** | `src/apps/desktop` (`northhing`) | MSVC | ✅ Active | Primary user-facing surface. Dioxus consult-room UI + agent runtime (sole shell since Slint removal 2026-08-28, commit `707e414`). |
 | **Installer** | `northing-installer/` | MSVC (rlib only) | ✅ Active | `embed-resource` pinned 3.0.5. `[lib] crate-type = ["rlib"]` only. |
 
 ## Frozen-Experimental Surfaces
@@ -19,7 +19,7 @@ These compile and may have partial functionality, but are **not** shipped, not t
 |---------|-------------|--------|-------|
 | **CLI** | `src/apps/cli` (`northhing-cli`) | 🧊 Frozen | Compiles; no release artifact. `doctor` command has false positives. See tech-debt-ledger P2. |
 | **Server** | `src/apps/server` | 🧊 Frozen | HTTP API surface; no auth layer. Not deployed. |
-| **Tauri Desktop (candidate)** | `src/apps/desktop-tauri` | 🧊 Frozen | Tauri 2 + React candidate for the next baseline; flips at F4. src-tauri is its own cargo workspace (excluded from main). |
+| ~~**Tauri Desktop (candidate)**~~ | ~~`src/apps/desktop-tauri`~~ | ❌ Removed | Directory no longer exists on disk (verified 2026-09-01); row kept struck-through for audit trail. |
 
 ## Active Capability Crates (Agent Toolbox)
 
