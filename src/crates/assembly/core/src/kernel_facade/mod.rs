@@ -48,6 +48,7 @@ impl KernelFacade {
         let _ = self.coordinator.set(coordinator);
     }
 
+    #[doc(hidden)] // 为 W14-1c-1 集成测试暴露；非公共 API
     pub fn coordinator(
         &self,
     ) -> Result<&Arc<crate::agentic::coordination::ConversationCoordinator>, KernelError> {

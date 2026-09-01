@@ -22,10 +22,12 @@
 // behind the same `cfg` guard the module is itself gated by.
 pub use entry::launch;
 
+#[doc(hidden)] // 为 W14-1c-1 集成测试暴露；非公共 API，勿在桌面 UI 之外依赖
 pub mod api;
 mod api_events;
 mod api_fs;
 mod api_memory;
+#[doc(hidden)] // 为 W14-1c-1 集成测试暴露；非公共 API，勿在桌面 UI 之外依赖
 pub mod api_settings;
 mod app;
 mod approval_card;
