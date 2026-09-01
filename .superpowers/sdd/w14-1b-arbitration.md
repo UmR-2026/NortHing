@@ -184,3 +184,13 @@
 - **附带条件**：10 条（含 E-CR 前置、CI 双轨 5 轮、不许 `pub(crate)→pub`、`AgentRegistry::unregister` 永久 API 等）
 
 **本裁决闭环，不向用户上呈**（用户 2026-08-28 拍板：技术细则决策由独立仲裁闭环）。
+
+---
+
+## 补遗（2026-09-02，W14-1c-1 验收后编排者追记）
+
+**附带条件 #2「只允许 `#[cfg(test)] pub`」对 `tests/` 集成测试技术上不可行**：`tests/*.rs` 集成测试链接的是**无 `cfg(test)`** 的 lib 构建，`#[cfg(test)] pub` 项对它们不可见。A 类迁移（本裁决 §2.1 的核心）因此必然需要**无条件 `pub`** 提升。W14-1c-1 实际发生 3 处（`pub mod api` / `pub mod api_settings` / `pub fn coordinator`），已用 `#[doc(hidden)]` + 注释标记为测试专用表面（commit `9cd72f4`）。
+
+**修订后的规则**：① 迁移到 `tests/` 所需的可见性提升允许无条件 `pub`，但**必须** `#[doc(hidden)]` + 注释「为 W14-1c 集成测试暴露；非公共 API」；② 留在 module 测试内（B 类 seam 等）仍只允许 `#[cfg(test)] pub`；③ 每层提升在实施报告中显式列出（W14-1c-1 report §3 已立此例）。cfg(test) 语义边界：cfg(test) = 仅本 crate 单元测试构建；integration test = 独立 crate 链正常 lib。
+
+另两处本裁决被实施证伪的假设（未造成损失，brief 预检已纠正）：desktop「需先拆 lib+bin」不成立（`src/lib.rs` 已存在且 4 个 mod 均 pub）；terminal `SESSION_MANAGER` 「模块私有需 seam」不成立（`session_manager()`/`is_session_manager_initialized()` 已是 pub 并经 session/mod.rs re-export）。

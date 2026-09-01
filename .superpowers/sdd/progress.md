@@ -594,3 +594,18 @@ Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-revi
 - Task W12-1 (会话全文搜索后端): complete (commit `ca38f88`，review **APPROVE 0C/1I/4M** by minimax-m3；implementer gemini-37-flash) — contracts 加 `SessionSearchHitDto` + `KernelSessionApi::search_sessions(query, workspace: Option<&str>, limit: Option<u32>)`；facade session.rs:181 实现（列会话 → 复用 get_messages → 正文大小写不敏感包含 → snippet 用 chars() 切片，单会话取消息失败 warn+skip）；3 测试（命中+大小写不敏感 / 未命中+空 query / CJK snippet + 单会话命中上限）；复用既有 list_sessions/get_messages/default_workspace_path/system_time_to_ms_i64，零新写等价物；ponytail 全量扫描注释（O(会话数×消息数)，升级路径 transcript index 或 SQLite FTS）。编译错误 2 个（E0599 PathManager::with_user_root_for_tests 不存在 / E0063 fixture 字段未填全）均修在测试层。验证：check --workspace 0 error、northhing-core session 158 passed、rot 绿。Important-1 = report 口径差（称 2 测试实为 3），不阻塞。
 - Task W12-2 (归档页接入全文搜索): complete (commit `2b3ecfb`，review **APPROVE 0C/0I/3M** by minimax-m3；implementer gemini-37-flash) — api.rs wrapper + 归档页由客户端标题过滤改为服务端全文搜索（debounce 300ms + generation token 防过期回写，空串回退列表）；结果行三段式（会话名/snippet/时间），点击复用既有 view_detail；排序与截断提纯到 `pages_archive_search.rs`（sort_search_hits 标题命中优先 + 时间倒序，CJK chars 截断），14 单测；i18n 新增 3 key × 3 语 FTL；**css.rs 零触碰**（790/790 守住）；pages_archive.rs 686→627，新文件 290 行。验证：check -p northhing 0 error、test -p northhing --lib 147 passed、rot 绿。截图为 SVG mockup（NOTE.md 已明示非真机）。Minors：报告「753→674」数字错误（实为 686→627）、role label 硬编码中文（沿用同文件旧模式）、抽离范围略超 brief 字面（动机正当）。
 - **W12 波状态：COMPLETE**（3 单，两场法官验收全 APPROVE，0 Critical / 0 Important 代码项）。用户拍板默认值已落地：搜索范围 = default workspace、只匹配 User+Assistant 正文、本次不做导出增强。
+
+# W13 Ledger（2026-09-01，审计修复波）— 2026-09-02 补登
+
+- Task W13-1（mock 残留清除）: complete（commit `cf34a7a`，review APPROVE）— 生产路径移除 seed_session mock 残留。
+- Task W13-2（facade 旁路修复）: complete（commit `43ca492`，review APPROVE）— 测试初始化改走 kernel_facade 而非直接 core config init。⚠️ 教训：本单曾被 cancel 的子代理留未提交残留，重派前 `git status` 核查成固定动作。
+- Task W13-3（Slint 幽灵清理）: complete（commits `a93b4a3` + `bccdae0`，request-changes 修复后过）— 清除文档/注释里的 Slint 残留引用；judge 抓出 AGENTS.md 误留 error_banners.rs 描述，已修。
+- **W13 波状态：COMPLETE**（波级判决书 `a4462b7` / `.superpowers/sdd/w13-wave-review.md` → 已归档 docs/archive/sdd-artifacts/）。
+
+# W14 Ledger（2026-09-01 起，测试隔离波）
+
+- Task W14-1a（全局状态测试侦察）: complete — 50 个涉险测试清单（A5/B22/C24/D4/E6/F43），报告 `w14-1a-global-state-test-inventory.md`。
+- Task W14-1b（方案仲裁）: complete — minimax-m3 独立仲裁：A+B 混合（一测试一文件 + cfg(test) seam），否决 C；成本 ≈3.75 人天（编排者复核剔除仲裁"desktop 拆 lib+bin"误估 0.5）。裁决书 `w14-1b-arbitration.md`。
+- Task W14-1e（真实记忆库污染 E-CR 先行单）: complete（commit `eee1552`，review **APPROVE 0C/0I/1M** by minimax-m3）— auto_memory.rs 3 处补 `with_test_memory_db_path` 守卫；真实 memory.db 测试前后零变化取证；core memory 76/76 绿。
+- Task W14-1c-1（A 类 5 测试进程隔离迁移）: complete（commits `3e085f1` + `9cd72f4`，编排者亲自验收 + 独立复跑 5/5 绿；implementer gemini-37-flash）— 5 个「未初始化断言」各迁独立 `tests/*.rs`（desktop×2 / core×2 / terminal×1），文件头 3 行守则注释齐全；测试数守恒（147/1071/22 三仓不变）；rot 闸绿且 let_underscore 388→371 反降。**Important×1 已 fix-forward 关闭**：仲裁 C2「只许 cfg(test) 可见性提升」对 tests/ 集成测试技术上不可行（集成测试链接无 cfg(test) 的 lib 构建），实现者被迫 pub 提升 3 处（pub mod api / api_settings / pub fn coordinator）且报告 §3 透明披露 → 裁定不打回，`9cd72f4` 补 `#[doc(hidden)]` 标记非公共 API，仲裁书补遗修订该约束（见 w14-1b-arbitration.md 补遗）。仲裁另两处误估被 brief 预检纠正：desktop 已有 lib.rs（无需拆 lib+bin）、terminal accessor 已 pub（无需 seam）。
+- W14-1c 余下：B 类 seam（仲裁步骤 4-7）、C/D 扫描（8）、E 类余 5 条（9-10）、CI 双轨（11）。
