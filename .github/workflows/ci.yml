@@ -95,6 +95,62 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo test --locked --workspace
 
+  # ── Rust: serial tests ────────────────────────────────────────────
+  rust-tests-serial:
+    name: Rust Tests Serial (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies (Tauri)
+        shell: bash
+        run: |
+          sudo apt-get update
+          if apt-cache show libwebkit2gtk-4.1-dev >/dev/null 2>&1; then
+            WEBKIT_PKG=libwebkit2gtk-4.1-dev
+          else
+            WEBKIT_PKG=libwebkit2gtk-4.0-dev
+          fi
+
+          if apt-cache show libappindicator3-dev >/dev/null 2>&1; then
+            APPINDICATOR_PKG=libappindicator3-dev
+          else
+            APPINDICATOR_PKG=libayatana-appindicator3-dev
+          fi
+
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libxdo-dev \
+            "$WEBKIT_PKG" \
+            "$APPINDICATOR_PKG" \
+            librsvg2-dev \
+            patchelf \
+            libleptonica-dev \
+            libtesseract-dev \
+            tesseract-ocr \
+            tesseract-ocr-eng
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "ci-check-v2-${{ runner.os }}-no-cargo-bin-v1"
+          cache-bin: false
+          # PR caches are scoped to merge refs; main pushes own shared cache refreshes.
+          save-if: ${{ github.event_name != 'pull_request' }}
+
+      - name: Generate i18n locale contract
+        shell: bash
+        run: |
+          node scripts/generate-i18n-contract.mjs
+          test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
+        # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+
+      - name: Run workspace Rust tests (serial)
+        run: cargo test --locked --workspace -- --test-threads=1
+
   # ── kernel-api dependency guard ─────────────────────────────────────
   kernel-api-clean:
     name: kernel-api dep guard
