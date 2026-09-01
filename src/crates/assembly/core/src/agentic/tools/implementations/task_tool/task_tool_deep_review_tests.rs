@@ -175,6 +175,8 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_waits_while_active_reviewer_is_running() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-queue-active-wait";
         let tool_id = "tool-queue-active-wait";
         let occupied_a = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer(turn_id, 2)
@@ -233,6 +235,8 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_starts_later_batch_when_reviewer_capacity_frees() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-launch-batch-fill-free-slot";
         let tool_id = "tool-launch-batch-fill-free-slot";
         let occupied_a = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer_for_launch_batch(
@@ -305,6 +309,9 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_cancel_control_skips_waiting_reviewer() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_queue_control_tracker_for_test();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-queue-cancel";
         let tool_id = "tool-queue-cancel";
         let _occupied = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer(turn_id, 1)
@@ -344,6 +351,8 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_records_one_runtime_wait_when_ready() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-queue-ready-diagnostics";
         let tool_id = "tool-queue-ready-diagnostics";
         let occupied = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer(turn_id, 1)
@@ -395,6 +404,9 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_pause_does_not_expire_until_continued() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_queue_control_tracker_for_test();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-queue-pause";
         let tool_id = "tool-queue-pause";
         let occupied = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer(turn_id, 1)
@@ -453,6 +465,9 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_capacity_queue_skip_optional_skips_optional_waiter() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_queue_control_tracker_for_test();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-queue-skip-optional";
         let tool_id = "tool-queue-skip-optional";
         let _occupied = crate::agentic::deep_review_policy::try_begin_deep_review_active_reviewer(turn_id, 1)

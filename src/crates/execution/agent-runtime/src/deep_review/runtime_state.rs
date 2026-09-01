@@ -228,3 +228,15 @@ pub fn deep_review_turn_elapsed_seconds(parent_dialog_turn_id: &str) -> Option<u
 pub fn deep_review_max_retries_per_role(_parent_dialog_turn_id: &str) -> usize {
     DEFAULT_MAX_RETRIES_PER_ROLE
 }
+
+/// 为 W14-1c 集成测试暴露；非公共 API
+#[doc(hidden)]
+pub fn reset_deep_review_budget_tracker_for_test() {
+    GLOBAL_DEEP_REVIEW_BUDGET_TRACKER.reset_for_test();
+}
+
+/// 为 W14-1c 集成测试暴露；非公共 API
+#[doc(hidden)]
+pub fn reset_deep_review_queue_control_tracker_for_test() {
+    GLOBAL_DEEP_REVIEW_QUEUE_CONTROL_TRACKER.reset_for_test();
+}

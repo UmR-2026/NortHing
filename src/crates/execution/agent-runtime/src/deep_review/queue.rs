@@ -255,6 +255,14 @@ impl DeepReviewQueueControlTracker {
             self.cancelled_tools.remove(&key);
         }
     }
+
+    /// 为 W14-1c 集成测试暴露；非公共 API
+    #[doc(hidden)]
+    pub(crate) fn reset_for_test(&self) {
+        self.paused_tools.clear();
+        self.cancelled_tools.clear();
+        self.skip_optional_turns.clear();
+    }
 }
 
 pub fn classify_deep_review_capacity_error(

@@ -201,6 +201,8 @@ mod tests {
 
     #[test]
     fn deep_review_provider_capacity_error_builds_capacity_skipped_payload_and_lowers_effective_cap() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.blocking_lock();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let policy = DeepReviewConcurrencyPolicy {
             max_parallel_instances: 3,
             stagger_seconds: 0,
@@ -252,6 +254,8 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_provider_capacity_queue_retries_when_active_reviewer_frees_capacity() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-provider-queue-active-release";
         let tool_id = "tool-provider-queue-active-release";
         let occupied = try_begin_deep_review_active_reviewer(turn_id, 2)
@@ -315,6 +319,8 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_provider_retry_after_wait_ignores_active_reviewer_release() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-provider-retry-after-hard-wait";
         let tool_id = "tool-provider-retry-after-hard-wait";
         let occupied = try_begin_deep_review_active_reviewer(turn_id, 2)
@@ -374,6 +380,9 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_provider_capacity_queue_cancel_control_skips_retry() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_queue_control_tracker_for_test();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-provider-queue-cancel";
         let tool_id = "tool-provider-queue-cancel";
         apply_deep_review_queue_control(turn_id, tool_id, DeepReviewQueueControlAction::Cancel);
@@ -427,6 +436,9 @@ mod tests {
 
     #[tokio::test]
     async fn deep_review_provider_capacity_queue_pause_does_not_count_against_wait() {
+        let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+        northhing_agent_runtime::deep_review::reset_deep_review_queue_control_tracker_for_test();
+        northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
         let turn_id = "turn-provider-queue-pause";
         let tool_id = "tool-provider-queue-pause";
         apply_deep_review_queue_control(turn_id, tool_id, DeepReviewQueueControlAction::Pause);

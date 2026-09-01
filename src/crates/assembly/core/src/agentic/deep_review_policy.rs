@@ -77,6 +77,9 @@ pub fn is_missing_default_review_team_config_error(error: &NortHingError) -> boo
 }
 
 #[cfg(test)]
+pub(crate) static TRACKER_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+#[cfg(test)]
 mod tests {
     use super::{
         default_review_team_definition, is_missing_default_review_team_config_error, DeepReviewBudgetTracker,

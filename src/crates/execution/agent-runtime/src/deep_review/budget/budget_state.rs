@@ -369,6 +369,12 @@ impl DeepReviewBudgetTracker {
         }
     }
 
+    /// 为 W14-1c 集成测试暴露；非公共 API
+    #[doc(hidden)]
+    pub(crate) fn reset_for_test(&self) {
+        self.cleanup();
+    }
+
     /// Returns the number of reviewer calls recorded for a given turn.
     /// Used by the concurrency enforcement to check if a new launch is allowed.
     pub fn active_reviewer_count(&self, parent_dialog_turn_id: &str) -> usize {

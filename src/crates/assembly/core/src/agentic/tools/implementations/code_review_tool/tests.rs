@@ -352,6 +352,8 @@ async fn deep_review_submission_fills_runtime_reliability_signals() {
 
 #[tokio::test]
 async fn deep_review_submission_fills_concurrency_limited_from_runtime_tracker() {
+    let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+    northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
     use crate::agentic::deep_review_policy::record_deep_review_concurrency_cap_rejection;
 
     let tool = CodeReviewTool::new();
@@ -393,6 +395,8 @@ async fn deep_review_submission_fills_concurrency_limited_from_runtime_tracker()
 
 #[tokio::test]
 async fn deep_review_shared_context_diagnostics_stays_out_of_report() {
+    let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+    northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
     let turn_id = "turn-code-review-shared-context-diagnostics";
     record_deep_review_shared_context_tool_use(turn_id, "ReviewSecurity", "Read", "src/lib.rs");
     record_deep_review_shared_context_tool_use(turn_id, "ReviewPerformance", "Read", "src/lib.rs");
@@ -435,6 +439,8 @@ async fn deep_review_shared_context_diagnostics_stays_out_of_report() {
 
 #[tokio::test]
 async fn deep_review_submission_folds_capacity_skips_into_concurrency_limited_signal() {
+    let _lock = crate::agentic::deep_review_policy::TRACKER_TEST_LOCK.lock().await;
+    northhing_agent_runtime::deep_review::reset_deep_review_budget_tracker_for_test();
     record_deep_review_capacity_skip("turn-code-review-capacity-skip");
 
     let tool = CodeReviewTool::new();
