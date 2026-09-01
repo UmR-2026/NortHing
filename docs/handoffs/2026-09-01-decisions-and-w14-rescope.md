@@ -6,7 +6,9 @@
 
 ## 0. 一句话状态
 
-`main` HEAD **`aed78fa`**，工作区干净，**ahead 18 未推送**（代理端口在的话一条命令可推）。今天把六项决策（D1–D6）落到计划里、删除了最后一个悬挂 worktree、把 W14-1 从"flaky 小修"**重新定性为测试隔离改造**、装了 PowerSkills 的 `system` + `desktop` 两个技能并验证可用。
+`main` HEAD **`615b35b`**，**已全量推送到 origin/main（ahead 0 / behind 0）**，工作区干净。今天把六项决策（D1–D6）落到计划里、删除了最后一个悬挂 worktree、把 W14-1 从"flaky 小修"**重新定性为测试隔离改造**、装了 PowerSkills 的 `system` + `desktop` 两个技能并验证可用。
+
+> **推送状态（2026-09-01 20:41 更新）**：`5e95cf2..615b35b` 共 19 个 commit 已推，直连成功（未走代理）。远端 HEAD 经 GitHub API 独立复核 = `615b35b`。
 
 ---
 
@@ -137,7 +139,7 @@ $env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
 
 ## 8. 下 session 第一件事（按序）
 
-1. **推送 18 个 commit**：代理端口 `127.0.0.1:7897` 在的话 `git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 push origin main`（端口不在就先等）。
+1. ~~推送 18 个 commit~~ → **已完成**：2026-09-01 20:41 直连推送成功（`5e95cf2..615b35b`，共 19 个 commit），远端与本地一致。后续推送先试直连，失败再走代理（见 §9）。
 2. **W14-1a 侦察**：扫出全部依赖全局状态的测试，出清单（grep `before_init` / `uninitialized` / 对 facade 的 `is_err()` 断言 / `set_default_provider` / `TEST_GLOBAL_CONFIG_MUTEX` 使用者）。
 3. **W14-1b 设计裁定** → **W14-1c 实施** → **W14-1d 验证**（新目标 5 次 + 全量并行 5 次 + 全量串行 5 次）。
 4. 之后按 D4 走 W15-1（Markdown 渲染）。
@@ -146,7 +148,7 @@ $env:TEMP = "C:\Users\UmR\AppData\Local\Temp"; $env:TMP = $env:TEMP
 
 ## 9. 环境/工具事实（新增，务必记住）
 
-- **推 GitHub**：直连 `github.com:443` 被阻断；走本机 clash 代理 `127.0.0.1:7897`（clash-verge **服务进程**独立于 GUI 和系统代理开关）。**SSH 不可用**：22/443 均返回异常 banner `SSH-2.0-2ff2ba9`，KEX 失败。
+- **推 GitHub（2026-09-01 20:41 更新）**：**直连推送成功，未走代理**（`5e95cf2..615b35b`）。历史：08-31 与 09-01 早些时候直连 `github.com:443` 曾被阻断（TCP 失败），那时走本机 clash 代理 `127.0.0.1:7897` 可用（clash-verge **服务进程**独立于 GUI 和系统代理开关，端口在就能用）。→ **直连是间歇可用的：每次先试直连，失败再上代理，别把"必须代理"当恒定事实。** **SSH 始终不可用**：22/443 均返回异常 banner `SSH-2.0-2ff2ba9`，KEX 失败。
 - **cargo 必须 rustup 前缀**：`& "$env:USERPROFILE\.cargo\bin\rustup.exe" run stable-x86_64-pc-windows-msvc cargo ...`（PATH 上 GNU cargo 会遮住 shim 并链接失败）。
 - **重复跑测试**：先 `cargo test --no-run` 构建一次拿到二进制路径，再直接跑二进制（0.6s/次），不要每次调 cargo（2-5 分钟/次）。
 - **PowerShell 管道会永久阻塞**：测试派生子进程继承 stdout 句柄 → 用 `cmd /c "... > log 2>&1"`。
