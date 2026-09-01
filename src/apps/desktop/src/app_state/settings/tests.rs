@@ -345,7 +345,7 @@ async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_cl
     let facade = kernel_facade();
     let kr = MockKeyring::new();
 
-    let model_id = format!("test-push-model-{}", uuid::Uuid::new_v4());
+    let model_id = format!("{TEST_PUSH_MODEL_PREFIX}{}", uuid::Uuid::new_v4());
     kr.seed(&model_id, "sk-push-secret-999");
 
     let model_dto = AIModelConfigDto {
@@ -381,5 +381,7 @@ async fn push_resolved_keys_to_core_populates_in_memory_keys_and_disk_remains_cl
 
     // Clean up
     let _ = facade.delete_model_config(&model_id).await;
+    // B-1 测试隔离：清空本测试的 resolved-keys 内存态（同 crate 测试专用 seam）
+    _reset_resolved_keys_for_test().await?;
     Ok(())
 }

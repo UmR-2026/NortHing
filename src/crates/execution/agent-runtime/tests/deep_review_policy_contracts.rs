@@ -22,8 +22,12 @@ use northhing_agent_runtime::deep_review::{
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
+// B 类共享守护：本文件测试变更 DeepReview 全局 tracker 状态，须与 core 侧 B 类 tracker 测试同进程隔离，故全部 #[test] 串行取锁
+static INIT_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn deep_review_policy_owner_exposes_execution_policy_and_manifest_gate() {
+    let _guard = INIT_GUARD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let policy = DeepReviewExecutionPolicy::from_config_value(Some(&json!({
         "strategy_level": "deep",
         "member_strategy_overrides": {
@@ -58,6 +62,7 @@ fn deep_review_policy_owner_exposes_execution_policy_and_manifest_gate() {
 
 #[test]
 fn deep_review_runtime_owner_tracks_budget_queue_and_shared_context() {
+    let _guard = INIT_GUARD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let tracker = DeepReviewBudgetTracker::default();
     let policy = DeepReviewExecutionPolicy::default();
 
@@ -93,6 +98,7 @@ fn deep_review_runtime_owner_tracks_budget_queue_and_shared_context() {
 
 #[test]
 fn deep_review_tool_context_data_injection_stays_provider_neutral() {
+    let _guard = INIT_GUARD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let mut custom_data = HashMap::<String, Value>::new();
     let context_vars = HashMap::from([
         (
@@ -130,6 +136,7 @@ fn deep_review_tool_context_data_injection_stays_provider_neutral() {
 
 #[test]
 fn deep_review_report_owner_enriches_packet_reliability_and_cache_facts() {
+    let _guard = INIT_GUARD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let manifest = json!({
         "reviewMode": "deep",
         "scopeProfile": {
@@ -210,6 +217,7 @@ fn deep_review_report_owner_enriches_packet_reliability_and_cache_facts() {
 
 #[test]
 fn deep_review_task_execution_owner_preserves_packet_retry_and_queue_contracts() {
+    let _guard = INIT_GUARD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let manifest = json!({
         "reviewMode": "deep",
         "workPackets": [

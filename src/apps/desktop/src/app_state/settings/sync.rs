@@ -57,6 +57,26 @@ pub async fn push_resolved_keys_to_core(keyring: &dyn KeyringBackend) -> anyhow:
     Ok(count)
 }
 
+/// Prefix of the in-memory test models pushed by [`push_resolved_keys_to_core`] in unit tests.
+#[cfg(test)]
+pub const TEST_PUSH_MODEL_PREFIX: &str = "test-push-model-";
+
+/// 测试专用 seam，release 构建不存在。清空 resolved-keys 内存态：把
+/// [`push_resolved_keys_to_core`] 写入 core 内存的带前缀测试模型（及其内存态 key）
+/// 移除；无残留时只读不写盘。
+#[cfg(test)]
+pub async fn _reset_resolved_keys_for_test() -> anyhow::Result<()> {
+    use northhing_core::kernel_facade::kernel_facade;
+    use northhing_kernel_api::KernelSettingsApi;
+    let facade = kernel_facade();
+    for m in facade.list_model_configs().await? {
+        if m.id.starts_with(TEST_PUSH_MODEL_PREFIX) {
+            facade.delete_model_config(&m.id).await?;
+        }
+    }
+    Ok(())
+}
+
 /// Validate user input from the provider form. Returns `Ok(())` when the
 /// input is acceptable, or `Err(msg)` with a Chinese error message.
 pub fn validate_provider_input(
