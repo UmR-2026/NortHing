@@ -406,9 +406,22 @@ Topic-oriented durable memory files available in this workspace.{topic_descripti
 #[cfg(test)]
 mod tests {
     use super::super::facts::{select_facts_for_prompt, Fact, FactConfidence, FactProvenance, FactScope, FactType};
+    use crate::infrastructure::app_paths::path_manager::with_test_project_memory_root_for_test;
     use crate::service::agent_memory::{
         build_workspace_agent_memory_prompt, unique_test_memory_db_path, with_test_memory_db_path,
     };
+
+    /// Isolated temp root for `project_memory_dir` redirection, mirroring the
+    /// `with_test_memory_db_path` guard so prompt tests never write under the
+    /// real `~/.northhing/projects/` tree.
+    fn install_test_project_memory_root() -> (
+        std::path::PathBuf,
+        crate::infrastructure::app_paths::path_manager::ProjectMemoryRootGuard,
+    ) {
+        let mem_root = std::env::temp_dir().join(format!("northhing-test-projmem-{}", uuid::Uuid::new_v4()));
+        let guard = with_test_project_memory_root_for_test(mem_root.clone());
+        (mem_root, guard)
+    }
 
     fn make_fact(text: &str) -> Fact {
         Fact {
@@ -429,6 +442,7 @@ mod tests {
     #[tokio::test]
     async fn prompt_injection_with_facts_includes_remembered_facts_section() {
         let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
+        let (mem_root, _mem_guard) = install_test_project_memory_root();
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -457,11 +471,15 @@ mod tests {
 
         // Cleanup
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
+        tokio::fs::remove_dir_all(&mem_root).await.unwrap();
     }
 
     #[tokio::test]
     async fn prompt_injection_without_facts_excludes_remembered_facts_section() {
         let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
+        // The prompt builder creates the memory dir + memory.md placeholder,
+        // so this test needs the redirect too.
+        let (mem_root, _mem_guard) = install_test_project_memory_root();
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -476,11 +494,13 @@ mod tests {
 
         // Cleanup
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
+        tokio::fs::remove_dir_all(&mem_root).await.unwrap();
     }
 
     #[tokio::test]
     async fn prompt_injection_with_select_facts_budget_limit() {
         let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
+        let (mem_root, _mem_guard) = install_test_project_memory_root();
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -499,11 +519,13 @@ mod tests {
 
         // Cleanup
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
+        tokio::fs::remove_dir_all(&mem_root).await.unwrap();
     }
 
     #[tokio::test]
     async fn prompt_injection_degrades_when_facts_file_unreadable() {
         let _db_guard = with_test_memory_db_path(unique_test_memory_db_path());
+        let (mem_root, _mem_guard) = install_test_project_memory_root();
         let workspace = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
         tokio::fs::create_dir_all(&workspace).await.unwrap();
 
@@ -523,6 +545,7 @@ mod tests {
 
         // Cleanup
         tokio::fs::remove_dir_all(&workspace).await.unwrap();
+        tokio::fs::remove_dir_all(&mem_root).await.unwrap();
     }
 }
 

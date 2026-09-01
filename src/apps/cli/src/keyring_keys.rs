@@ -14,6 +14,10 @@ use northhing_core::infrastructure::keyring::KEYRING_SERVICE;
 /// Read the stored API key for `model_id` from the OS keyring.
 /// `Ok(None)` means "no entry" (treated as no key, not an error).
 fn keyring_get(model_id: &str) -> Result<Option<String>> {
+    #[cfg(test)]
+    if let Some(found) = mock_keyring::get(model_id) {
+        return Ok(found);
+    }
     let entry = keyring::Entry::new(KEYRING_SERVICE, model_id)
         .with_context(|| format!("keyring: failed to open entry for '{model_id}'"))?;
     match entry.get_password() {
@@ -27,6 +31,10 @@ fn keyring_get(model_id: &str) -> Result<Option<String>> {
 
 /// Store `secret` for `model_id`; an empty secret deletes the entry instead.
 pub fn store_model_key(model_id: &str, secret: &str) -> Result<()> {
+    #[cfg(test)]
+    if mock_keyring::store(model_id, secret) {
+        return Ok(());
+    }
     let entry = keyring::Entry::new(KEYRING_SERVICE, model_id)
         .with_context(|| format!("keyring: failed to open entry for '{model_id}'"))?;
     if secret.is_empty() {
@@ -93,21 +101,79 @@ pub async fn push_keyring_keys_into_core() {
     tracing::info!("Scheme C keyring push complete: {pushed} model key(s) resolved into core memory");
 }
 
+/// Test-only in-memory keyring so unit tests never consult the OS keyring
+/// (red line: `cmdkey /list` output must be identical before and after a
+/// test run, and CI must not need a keyring backend). Thread-local + RAII
+/// guard, same isolation shape as core's `with_test_memory_db_path`. The
+/// `keyring` crate 4.x exposes no runtime-replaceable mock for its v1
+/// `Entry` (the platform store is installed once, unconditionally, on the
+/// first call), so this module-level seam is the minimal abstraction.
+#[cfg(test)]
+mod mock_keyring {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    thread_local! {
+        static STORE: RefCell<Option<HashMap<String, String>>> = RefCell::new(None);
+    }
+
+    pub(super) struct MockKeyringGuard {
+        prev: Option<HashMap<String, String>>,
+    }
+
+    impl Drop for MockKeyringGuard {
+        fn drop(&mut self) {
+            STORE.with(|s| *s.borrow_mut() = self.prev.take());
+        }
+    }
+
+    /// Activate the mock for the calling thread until the guard is dropped.
+    pub(super) fn with_test_keyring() -> MockKeyringGuard {
+        let prev = STORE.with(|s| s.borrow_mut().replace(HashMap::new()));
+        MockKeyringGuard { prev }
+    }
+
+    /// `Some(None)` = mock active with no entry; `None` = mock inactive.
+    pub(super) fn get(model_id: &str) -> Option<Option<String>> {
+        STORE.with(|s| s.borrow().as_ref().map(|store| store.get(model_id).cloned()))
+    }
+
+    /// Returns `false` when the mock is inactive (caller falls through to
+    /// the real keyring). An empty `secret` deletes the entry, matching the
+    /// production contract.
+    pub(super) fn store(model_id: &str, secret: &str) -> bool {
+        STORE.with(|s| match &mut *s.borrow_mut() {
+            Some(store) => {
+                if secret.is_empty() {
+                    store.remove(model_id);
+                } else {
+                    store.insert(model_id.to_string(), secret.to_string());
+                }
+                true
+            }
+            None => false,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::mock_keyring::with_test_keyring;
     use super::*;
 
     #[test]
     fn typed_key_wins_over_keyring() {
+        let _kr = with_test_keyring();
         assert_eq!(resolve_effective_model_key("any-model", "sk-typed"), "sk-typed");
-        // Whitespace-only input counts as empty (form left blank).
+        // Whitespace-only input counts as empty (form left blank); the mock
+        // keyring holds no entry for "any-model", so it resolves to empty.
         assert_eq!(resolve_effective_model_key("any-model", "  "), "");
     }
 
     #[test]
     fn missing_keyring_entry_resolves_to_empty() {
-        // Uses a random-ish id that no real entry exists for; both
-        // "no entry" and "keyring backend unavailable" resolve to empty.
+        // Mock keyring: no entry stored, no real OS keyring consulted.
+        let _kr = with_test_keyring();
         let id = format!("no-such-model-{}", std::process::id());
         assert_eq!(resolve_effective_model_key(&id, ""), "");
     }
@@ -118,12 +184,16 @@ mod tests {
         // `modes/chat/model_config.rs`) must route the form's api_key
         // field through this helper so a blank field inherits the
         // stored keyring key rather than wiping it. Locks both arms at
-        // the call site. No real keyring entries are created.
+        // the call site against a mock keyring (no real entries touched).
+        let _kr = with_test_keyring();
         let id = format!("w11-3-edit-path-{}", std::process::id());
-        // Arm 1 — blank form field on edit resolves to whatever the
-        // keyring holds (empty here because no entry exists for `id`).
-        assert_eq!(resolve_effective_model_key(&id, ""), "");
+        store_model_key(&id, "sk-stored").unwrap();
+        // Arm 1 — blank form field on edit inherits the stored key.
+        assert_eq!(resolve_effective_model_key(&id, ""), "sk-stored");
         // Arm 2 — typed key always wins, even alongside a stored entry.
         assert_eq!(resolve_effective_model_key(&id, "sk-typed"), "sk-typed");
+        // Storing an empty secret deletes (round-trip via the mock).
+        store_model_key(&id, "").unwrap();
+        assert_eq!(resolve_effective_model_key(&id, ""), "");
     }
 }

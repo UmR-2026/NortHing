@@ -79,7 +79,16 @@ impl PathManager {
     }
 
     /// Get project memory directory: ~/.northhing/projects/<workspace-slug>/memory/
+    ///
+    /// Under `#[cfg(test)]` a thread-local redirect
+    /// (`path_manager::with_test_project_memory_root_for_test`) relocates the
+    /// directory under an isolated temp root so tests never touch the real
+    /// user home. Production builds are unaffected.
     pub fn project_memory_dir(&self, workspace_path: &Path) -> PathBuf {
+        #[cfg(test)]
+        if let Some(root) = super::test_project_memory_root_override() {
+            return root.join(self.project_runtime_slug(workspace_path)).join("memory");
+        }
         self.project_runtime_root(workspace_path).join("memory")
     }
 
@@ -240,9 +249,6 @@ mod tests {
         let slug = pm.project_runtime_slug(Path::new(r"E:\Projects\myapp"));
         let suffix = slug.rsplit('-').next().expect("hash suffix present");
         assert_eq!(suffix.len(), 16, "suffix should be 16 hex chars");
-        assert!(
-            u64::from_str_radix(suffix, 16).is_ok(),
-            "suffix should be valid hex"
-        );
+        assert!(u64::from_str_radix(suffix, 16).is_ok(), "suffix should be valid hex");
     }
 }

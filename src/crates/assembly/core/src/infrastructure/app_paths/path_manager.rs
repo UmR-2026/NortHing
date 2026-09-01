@@ -200,6 +200,54 @@ pub fn try_get_path_manager_arc() -> NortHingResult<Arc<PathManager>> {
     }
 }
 
+// ── Test-only isolation seam ────────────────────────────────────────
+//
+// `PathManager::project_memory_dir` normally resolves under the real user
+// home (`~/.northhing/projects/<slug>/memory`). The auto-memory prompt
+// tests seed facts files through that accessor, and
+// `build_workspace_agent_memory_prompt` creates the directory plus a
+// `memory.md` placeholder there — one test run litters the real profile
+// with `temp-*` project slugs that are never cleaned up.
+//
+// The seam below is a thread-local override consulted by
+// `project_memory_dir`. `#[tokio::test]` uses a current-thread runtime, so
+// every resolution inside one test happens on the thread that set the
+// override, while parallel tests on other threads never observe it. The
+// guard restores the prior value on drop (same shape as
+// `service::agent_memory::with_test_memory_db_path`).
+
+#[cfg(test)]
+thread_local! {
+    static TEST_PROJECT_MEMORY_ROOT: std::cell::RefCell<Option<PathBuf>> = std::cell::RefCell::new(None);
+}
+
+/// Current thread-local redirect root for `project_memory_dir`, if any.
+#[cfg(test)]
+pub(super) fn test_project_memory_root_override() -> Option<PathBuf> {
+    TEST_PROJECT_MEMORY_ROOT.with(|c| c.borrow().clone())
+}
+
+#[cfg(test)]
+pub(crate) struct ProjectMemoryRootGuard {
+    prev: Option<PathBuf>,
+}
+
+#[cfg(test)]
+impl Drop for ProjectMemoryRootGuard {
+    fn drop(&mut self) {
+        TEST_PROJECT_MEMORY_ROOT.with(|c| *c.borrow_mut() = self.prev.take());
+    }
+}
+
+/// RAII guard that redirects [`PathManager::project_memory_dir`] to
+/// `<root>/<workspace-slug>/memory` for the lifetime of the guard, on the
+/// calling thread only. Tests are responsible for removing `root`.
+#[cfg(test)]
+pub(crate) fn with_test_project_memory_root_for_test(root: PathBuf) -> ProjectMemoryRootGuard {
+    let prev = TEST_PROJECT_MEMORY_ROOT.with(|c| c.borrow_mut().replace(root));
+    ProjectMemoryRootGuard { prev }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PathManager;
