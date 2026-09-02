@@ -24,3 +24,22 @@
 ## 状态
 
 DONE
+
+## Fix 轮 1
+
+### 修复内容 (Fix Summary)
+- 在 `rust-tests-serial` job 中，在 `actions/checkout@v4` 之后与 `dtolnay/rust-toolchain@stable` 之前，补充 `Setup OpenSSL (Windows, prebuilt)` 步骤（调用 `./scripts/ci/setup-openssl-windows.ps1`，`shell: pwsh`，`if: runner.os == 'Windows'`），形态与 `rust-build-check` 保持严格一致，确保 windows-latest runner 上 serial 测试链接所需 OpenSSL 环境变量与二进制就绪。
+
+### 验证证据 (Verification Evidence)
+1. **YAML 语法验证**:
+   - 命令: `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('YAML validation PASS')"`
+   - 输出: `YAML validation PASS`
+2. **Whitespace / Diff Check**:
+   - 命令: `git diff --check`
+   - 输出: 无输出（无 whitespace 错误）
+3. **Diff 自审**:
+   - 仅在 `rust-tests-serial` 的 checkout 与 rust-toolchain 间插入 5 行 OpenSSL setup 步骤，无其它任何改动。
+
+### 状态
+DONE
+
