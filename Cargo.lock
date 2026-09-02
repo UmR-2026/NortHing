@@ -5348,6 +5348,7 @@ dependencies = [
  "northhing-test-support",
  "once_cell",
  "parking_lot",
+ "pulldown-cmark",
  "raw-window-handle 0.6.2",
  "serde",
  "serde_json",

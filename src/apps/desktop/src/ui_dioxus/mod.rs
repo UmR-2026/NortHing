@@ -35,6 +35,7 @@ mod color;
 mod css;
 mod entry;
 mod i18n;
+pub mod markdown_render;
 mod page_shell;
 mod pages_archive;
 mod pages_archive_search;
