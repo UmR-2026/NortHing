@@ -26,6 +26,8 @@ use super::color::chronicle_gradient;
 use super::css;
 use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
 use super::i18n::{keys, LocalePack};
+use super::markdown_render::render_markdown;
+use super::pages_chat_md_css;
 use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
 use super::session_mock::MockEntry;
 use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
@@ -329,6 +331,7 @@ pub fn room_app_root() -> Element {
             lang: "zh-CN",
             style { dangerous_inner_html: "{css::truth_css()}" }
             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
+            style { dangerous_inner_html: "{pages_chat_md_css::CHAT_MD_CSS}" }
             meta { charset: "UTF-8" }
             meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
             title { "{locale.t(keys::WINDOW_TITLE_ROOM)}" }
@@ -503,7 +506,7 @@ pub fn room_app_root() -> Element {
                                 div { class: "rec entity",
                                     div { class: "who", "它" }
                                     div { class: "body",
-                                        div { class: "msg-agent", "{draft}" }
+                                        div { class: "msg-agent md-rendered", {render_markdown(draft)} }
                                     }
                                 }
                             }
@@ -744,7 +747,7 @@ fn render_entry(
             div { class: "rec entity",
                 div { class: "who", "{who}" }
                 div { class: "body",
-                    div { class: "msg-agent", "{body}" }
+                    div { class: "msg-agent md-rendered", {render_markdown(body)} }
                     for child in children.iter() {
                         {render_child(child, locale)}
                     }
@@ -754,7 +757,7 @@ fn render_entry(
         MockEntry::Witness { who, body } => rsx! {
             div { class: "rec witness",
                 div { class: "who", "{who}" }
-                div { class: "body", "{body}" }
+                div { class: "body md-rendered", {render_markdown(body)} }
             }
         },
         MockEntry::Approval {

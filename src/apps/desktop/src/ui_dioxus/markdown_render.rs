@@ -134,6 +134,7 @@ impl InlineContext {
             | InlineContext::Emphasis(children)
             | InlineContext::Link { children, .. } => children.push(inline),
             InlineContext::Image { alt, .. } => {
+                // Known limitation: nested inline formatting inside image alt text is flattened to plain text.
                 if let MdInline::Text(t) = inline {
                     alt.push_str(&t);
                 }
@@ -208,6 +209,7 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
                     title: title.to_string(),
                     alt: String::new(),
                 }),
+                // ponytail: Options::empty() 下其余 Tag::* 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
                 _ => {}
             },
             Event::End(tag_end) => match tag_end {
@@ -240,6 +242,7 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
                         push_inline_to_target(&mut inline_stack, &mut block_stack, ctx.into_inline());
                     }
                 }
+                // ponytail: Options::empty() 下其余 TagEnd::* 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
                 _ => {}
             },
             Event::Text(text) => {
@@ -267,6 +270,7 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
             Event::Rule => {
                 push_block_to_parent(&mut block_stack, MdBlock::Rule);
             }
+            // ponytail: Options::empty() 下其余 Event::* (FootnoteReference/TaskListMarker/...) 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
             _ => {}
         }
     }
@@ -327,25 +331,28 @@ fn render_inlines(inlines: Vec<MdInline>) -> Element {
 }
 
 /// Render a single `MdInline` node to Dioxus RSX.
-fn render_single_inline(inline: MdInline, _key: usize) -> Element {
+fn render_single_inline(inline: MdInline, key: usize) -> Element {
     match inline {
         MdInline::Text(text) => rsx! {
             "{text}"
         },
         MdInline::Code(code) => rsx! {
             code {
+                key: "{key}",
                 class: "md-inline-code",
                 "{code}"
             }
         },
         MdInline::Strong(children) => rsx! {
             strong {
+                key: "{key}",
                 class: "md-strong",
                 {render_inlines(children)}
             }
         },
         MdInline::Emphasis(children) => rsx! {
             em {
+                key: "{key}",
                 class: "md-em",
                 {render_inlines(children)}
             }
@@ -355,6 +362,7 @@ fn render_single_inline(inline: MdInline, _key: usize) -> Element {
                 let has_title = !title.is_empty();
                 rsx! {
                     a {
+                        key: "{key}",
                         class: "md-link",
                         href: "{safe_url}",
                         target: "_blank",
@@ -374,6 +382,7 @@ fn render_single_inline(inline: MdInline, _key: usize) -> Element {
                 let has_title = !title.is_empty();
                 rsx! {
                     img {
+                        key: "{key}",
                         class: "md-img",
                         src: "{safe_url}",
                         alt: "{alt}",
@@ -383,6 +392,7 @@ fn render_single_inline(inline: MdInline, _key: usize) -> Element {
             } else {
                 rsx! {
                     span {
+                        key: "{key}",
                         class: "md-img-alt",
                         "{alt}"
                     }
@@ -390,29 +400,31 @@ fn render_single_inline(inline: MdInline, _key: usize) -> Element {
             }
         }
         MdInline::SoftBreak => rsx! { " " },
-        MdInline::HardBreak => rsx! { br { class: "md-br" } },
+        MdInline::HardBreak => rsx! { br { key: "{key}", class: "md-br" } },
     }
 }
 
 /// Render a single `MdBlock` to Dioxus RSX.
-fn render_single_block(block: MdBlock, _key: usize) -> Element {
+fn render_single_block(block: MdBlock, key: usize) -> Element {
     match block {
         MdBlock::Heading { level, inlines } => match level {
-            1 => rsx! { h1 { class: "md-h1", {render_inlines(inlines)} } },
-            2 => rsx! { h2 { class: "md-h2", {render_inlines(inlines)} } },
-            3 => rsx! { h3 { class: "md-h3", {render_inlines(inlines)} } },
-            4 => rsx! { h4 { class: "md-h4", {render_inlines(inlines)} } },
-            5 => rsx! { h5 { class: "md-h5", {render_inlines(inlines)} } },
-            _ => rsx! { h6 { class: "md-h6", {render_inlines(inlines)} } },
+            1 => rsx! { h1 { key: "{key}", class: "md-h1", {render_inlines(inlines)} } },
+            2 => rsx! { h2 { key: "{key}", class: "md-h2", {render_inlines(inlines)} } },
+            3 => rsx! { h3 { key: "{key}", class: "md-h3", {render_inlines(inlines)} } },
+            4 => rsx! { h4 { key: "{key}", class: "md-h4", {render_inlines(inlines)} } },
+            5 => rsx! { h5 { key: "{key}", class: "md-h5", {render_inlines(inlines)} } },
+            _ => rsx! { h6 { key: "{key}", class: "md-h6", {render_inlines(inlines)} } },
         },
         MdBlock::Paragraph(inlines) => rsx! {
             p {
+                key: "{key}",
                 class: "md-p",
                 {render_inlines(inlines)}
             }
         },
         MdBlock::BlockQuote(blocks) => rsx! {
             blockquote {
+                key: "{key}",
                 class: "md-blockquote",
                 for (idx, b) in blocks.into_iter().enumerate() {
                     {render_single_block(b, idx)}
@@ -427,6 +439,7 @@ fn render_single_block(block: MdBlock, _key: usize) -> Element {
             };
             rsx! {
                 pre {
+                    key: "{key}",
                     class: "{class_attr}",
                     code {
                         class: "md-code",
@@ -443,9 +456,11 @@ fn render_single_block(block: MdBlock, _key: usize) -> Element {
             if ordered {
                 rsx! {
                     ol {
+                        key: "{key}",
                         class: "md-ol",
-                        for (_idx, item) in items.into_iter().enumerate() {
+                        for (idx, item) in items.into_iter().enumerate() {
                             li {
+                                key: "{idx}",
                                 class: "md-li",
                                 for (b_idx, b) in item.blocks.into_iter().enumerate() {
                                     {render_single_block(b, b_idx)}
@@ -457,9 +472,11 @@ fn render_single_block(block: MdBlock, _key: usize) -> Element {
             } else {
                 rsx! {
                     ul {
+                        key: "{key}",
                         class: "md-ul",
-                        for (_idx, item) in items.into_iter().enumerate() {
+                        for (idx, item) in items.into_iter().enumerate() {
                             li {
+                                key: "{idx}",
                                 class: "md-li",
                                 for (b_idx, b) in item.blocks.into_iter().enumerate() {
                                     {render_single_block(b, b_idx)}
@@ -470,7 +487,7 @@ fn render_single_block(block: MdBlock, _key: usize) -> Element {
                 }
             }
         }
-        MdBlock::Rule => rsx! { hr { class: "md-hr" } },
+        MdBlock::Rule => rsx! { hr { key: "{key}", class: "md-hr" } },
     }
 }
 
@@ -502,6 +519,7 @@ mod tests {
                 '>' => out.push_str("&gt;"),
                 '&' => out.push_str("&amp;"),
                 '"' => out.push_str("&quot;"),
+                '\'' => out.push_str("&#39;"),
                 _ => out.push(c),
             }
         }

@@ -39,6 +39,7 @@ pub mod markdown_render;
 mod page_shell;
 mod pages_archive;
 mod pages_archive_search;
+mod pages_chat_md_css;
 mod pages_memory;
 mod pages_onboarding;
 mod pages_onboarding_css;
