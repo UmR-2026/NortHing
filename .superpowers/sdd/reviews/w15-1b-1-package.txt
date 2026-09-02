@@ -1,0 +1,1458 @@
+329cc8f feat(desktop): implement Markdown rendering foundation via pulldown-cmark (W15-1b-1)
+ .superpowers/sdd/w15-1-arbitration-input.md       |  80 +++
+ .superpowers/sdd/w15-1-arbitration.md             | 283 ++++++++
+ .superpowers/sdd/w15-1b-1-brief.md                |  43 ++
+ .superpowers/sdd/w15-1b-1-report.md               |  94 +++
+ Cargo.lock                                        |   1 +
+ src/apps/desktop/Cargo.toml                       |   1 +
+ src/apps/desktop/src/ui_dioxus/markdown_render.rs | 839 ++++++++++++++++++++++
+ src/apps/desktop/src/ui_dioxus/mod.rs             |   1 +
+ 8 files changed, 1342 insertions(+)
+diff --git a/.superpowers/sdd/w15-1-arbitration-input.md b/.superpowers/sdd/w15-1-arbitration-input.md
+new file mode 100644
+index 0000000..ba0b256
+--- /dev/null
++++ b/.superpowers/sdd/w15-1-arbitration-input.md
+@@ -0,0 +1,80 @@
++# W15-1 仲裁输入包 — Markdown 渲染选型（2026-09-02）
++
++> 仲裁员：独立裁决，只读。产出裁决书到 `.superpowers/sdd/w15-1-arbitration.md`。
++> 本包 = 全部事实来源；编排者不提供倾向性结论，选项与取舍由你裁决。
++
++## 0. 任务
++
++裁决桌面 Dioxus consult-room 聊天消息的 Markdown 渲染方案。需裁决的子问题：
++
++1. **解析 crate 选型**（见 §2 候选与事实）
++2. **注入安全方案**：`dangerous_inner_html` + 消毒 vs 事件流直接映射 RSX（见 §3）
++3. **渲染覆盖范围**：assistant（Entity）/ user（Witness）/ 流式 draft / archive 只读页，哪些上 Markdown
++4. **CSS 落点**（css.rs 790/790 零余量硬约束下）
++5. **拆单建议**：实现单怎么切、验收门是什么
++
++硬约束（不可裁掉）：
++- 模型输出不可信，**禁止未消毒 raw HTML 注入**（用户已拍板的验收重点）
++- `css.rs` rot 闸 790/790，**不许加行**；新样式只能走独立文件（`pages_onboarding_css.rs` 活先例）
++- 家规 YAGNI + 已装依赖优先；新增依赖准入已批（用户 2026-09-02 拍板：允许引入 markdown crate，选型闭环不上交）
++- dioxus 钉死 `=0.8.0-alpha.1`（workspace 锁文件一致），选型必须兼容此 alpha 版
++
++## 1. 侦察事实（explore 子代理磁盘取证，已逐条 file:line 核实）
++
++### 1.1 渲染点（全链）
++
++- 真实消息：`app.rs:74` `api::get_messages` → `session_mock.rs:102-161` `messages_to_entries` → `Vec<MockEntry>`（User→Witness，Assistant→Entity，System/Tool 丢弃）
++- 渲染链：`app.rs:501` `render_entries` → :722-734 循环 → `render_entry`（:736-780）
++- 文本叶子：assistant = `app.rs:747` `div.msg-agent "{body}"`；user = `app.rs:757` `div.body "{body}"`（纯文本插值，Dioxus 自动转义）
++- 流式 draft：`app.rs:112-118` TextChunk 累积进 `assistant_draft: Signal<Option<String>>`；渲染点 `app.rs:502-509`，markup 与完成态相同但在 entries 列表外
++- archive 只读页：`pages_archive.rs:49-72`（content 拍平 String）+ :652-661 `div.mem-text` 纯文本
++- mock 与真实共用 MockEntry/render_entry（session_mock.rs:19-40）
++
++### 1.2 现有 dangerous_inner_html 使用
++
++仅 CSS 字符串与 SVG 图标注入（app.rs:330-331、各 pages_*、windows/* 共 12 处 style 注入 + theme_toggle_svg/brand_logo_svg），**无任何消息文本注入先例**。
++
++### 1.3 CSS
++
++- `css.rs` 790 行：TRUTH_CSS（include_str! 真值、字节锁定、:769 有 assert 守卫，禁改）+ OVERLAY_CSS（:52 转写层大字符串）+ 2 个 svg fn
++- 独立文件活先例：`pages_onboarding_css.rs`（mod.rs:43 注册，导出 ONBOARDING_CSS 常量，页面内 style 注入）
++- **孤儿注意**：`css_files.rs` 存在但未注册 mod、零消费（侦察意外发现，与本决策无关，记 follow-up）
++- 消息正文 CSS 现状：`.msg-agent` 用衬线体 Fraunces/Noto Serif SC；**无 white-space: pre-wrap / word-break**，换行折叠、代码围栏按普通字符显示；`--font-mono` 变量存在但未用于正文
++
++### 1.4 依赖现状
++
++- desktop Cargo.toml :13-68 无 markdown|cmark|comrak|syntect|ammonia
++- **workspace 已有 pulldown-cmark 0.11 + syntect 5**（根 Cargo.toml:130-132 → src/apps/cli/Cargo.toml:46,53-54，CLI 在用）——加进 desktop 只是新增 dep 边，crate 本体已在 lock
++- MessageContentDto（contracts/kernel-api/src/session.rs:179-199）四变体：Text(String 纯文本) / Multimodal / ToolResult / Mixed{reasoning_content, text, tool_calls}
++
++## 2. 候选 crate 事实（2026-09-02 联网核实）
++
++| crate | 定位 | 与本仓关系 |
++|---|---|---|
++| `pulldown-cmark` 0.11 | Rust 生态事实标准，pull-parser 事件流，性能/内存最优 | **已在 workspace（CLI 在用）** |
++| `comrak` | CommonMark + GFM 全内置（表格/任务列表开箱），AST 略重 | 新依赖 |
++| `markdown-rs` | micromark 系，较新 | 新依赖 |
++| dioxus 社区组件（dioxus-markdown 等） | 打包方案 | 需核实与 0.8.0-alpha.1 兼容性，新依赖 |
++
++## 3. 注入安全两条路线（裁决核心）
++
++**路线 A：cmark → HTML 字符串 → ammonia 消毒 → dangerous_inner_html**
++- 业界标准模式；ammonia = Rust 消毒事实标准（新依赖）
++- 代价：+1 新依赖（ammonia）；dioxus alpha 版 dangerous_inner_html 行为需实测；样式需对消毒白名单对齐（class 可能被剥）
++
++**路线 B：cmark 事件流 → 直接映射 Dioxus RSX 元素（不落 HTML 字符串）**
++- 零注入面：根本没有 HTML 字符串，消毒问题不存在
++- 代价：要写 event→rsx 映射层（段落/标题/列表/代码块/内联码/链接/强调，约 100-200 行）；表格等 GFM 扩展按需
++- pulldown-cmark 的事件流 API 天然适配此路线
++
++**路线 C：社区 dioxus-markdown 组件**
++- 需核实：0.8.0-alpha.1 兼容性、内部是否消毒、维护状态
++
++## 4. 裁决书要求
++
++输出 `.superpowers/sdd/w15-1-arbitration.md`，结构参照 `.superpowers/sdd/w14-1b-arbitration.md`：
++- 主判（≤5 条）+ 每子问题裁定与理由
++- 成本估算（S/M/L + 人天）
++- 附带条件（验收门、不许碰清单、rot 闸注意点）
++- 「我无法判定的项」诚实记录
++- 签署（技术细则闭环，不上交用户——用户 2026-08-28 治理规矩 + 2026-09-02 依赖准入已批）
+diff --git a/.superpowers/sdd/w15-1-arbitration.md b/.superpowers/sdd/w15-1-arbitration.md
+new file mode 100644
+index 0000000..c86d870
+--- /dev/null
++++ b/.superpowers/sdd/w15-1-arbitration.md
+@@ -0,0 +1,283 @@
++# W15-1 独立仲裁书 — Markdown 渲染选型裁决
++
++**仲裁对象**：W15-1 桌面 Dioxus consult-room 聊天消息的 Markdown 渲染方案选型
++**基线**：`E:\agent-project\NortHing`，`main` @ 仲裁日（2026-09-02）
++**输入包**：`.superpowers/sdd/w15-1-arbitration-input.md`
++**仲裁员身份**：只读独立仲裁。不写实现代码、不跑构建、不动 git。
++**磁盘复查范围**：app.rs / css.rs / mod.rs / session_mock.rs / pages_archive.rs / pages_archive_search.rs / pages_onboarding_css.rs / css_files.rs / desktop Cargo.toml / workspace Cargo.toml / CLI Cargo.toml / contracts/kernel-api/src/session.rs（仅 file:line 级断言，未重扫仓库）
++
++---
++
++## 0. 主判（≤5 条）
++
++**采方案 B（事件流→RSX 直映射），用现有 workspace `pulldown-cmark 0.11`，单 crate 不引新依赖。**
++**否决方案 A（HTML+ammonia），否决方案 C（dioxus-markdown）。**
++
++1. **crate 选型锁死 `pulldown-cmark 0.11`**：已在 workspace 锁文件、根 `Cargo.toml:130` + `src/apps/cli/Cargo.toml:46` 验证在用；加进 desktop 不增 dep 边、只多一条 `Cargo.toml` 引用。`comrak`（AST 重）、`markdown-rs`（新生态）均无本项目需要的差异化收益；`dioxus-markdown` 经联网核实 2026-09 对 `dioxus =0.8.0-alpha.1` **未维护、不兼容**——路线 C 直接出局。
++3. **注入安全采 B 路线**：**根本没有 HTML 字符串 → 根本没有 XSS 面**。pulldown-cmark 事件流直接映射 Dioxus RSX 元素，文本叶子由 Dioxus 自动 HTML 转义，链接 `href` 走 scheme 白名单（`http/https/mailto/tel`，拒 `javascript:/data:`）。这条比 A 路线（cmark→HTML→ammonia→`dangerous_inner_html`）少 1 个新依赖、少一层白名单对齐、少踩 `0.8.0-alpha` 版本的 `dangerous_inner_html` 行为未定型风险。**A 路线在桌面 Dioxus alpha 期是审计税，不是省事**——B 路线用类型系统把审计需求**外化成编译期约束**。
++4. **渲染覆盖范围 = 三处必须 + archive 暂缓**：app.rs:506（draft msg-agent）、app.rs:747（assistant msg-agent）、app.rs:757（witness body）**全部**走 Markdown。`pages_archive.rs:658-660`（archive 只读列表）**暂不上**，纯文本保留（YAGNI：archive 当前无 Markdown 业务诉求；将来启用是 1 行替换，不亏）。`pages_archive_search.rs` 命中片段（`make_hit` 切片含高亮标记）**不上**——markdown 二次解析会破坏高亮锚文本。
++5. **CSS 落点 = 新独立 `pages_chat_md_css.rs`**：仿 `pages_onboarding_css.rs`（mod.rs:43 注册，217 行，导出 `pub const ONBOARDING_CSS: &str`）形态。`css.rs:790/790` 闸位零余量**不许碰**。新文件挂到三窗 style 注入点（app.rs:331、pages_archive.rs:220、pages_memory.rs:218 等 9 个窗 + rooms/outer/inner 共享）。同步给 `.msg-agent` 加 `white-space: pre-wrap; word-break: break-word;`（在 `pages_chat_md_css.rs` 里用 `.msg-agent.md-rendered` 修饰，避免污染 TRUTH_CSS 真值字节锁）。
++6. **拆单 = 单 crate 内一文件 + 一集成单**：第一步 `markdown_render.rs`（含事件流映射 + scheme 白名单 + XSS 注入向量单测），第二步集成到 app.rs 三处 + 写 `pages_chat_md_css.rs`。**不**拆多单（无独立边界价值）；**不**独立先行单（无前置硬约束，依赖成本就是加 1 行 Cargo.toml）。
++
++---
++
++## 1. crate 选型裁定
++
++**裁定：`pulldown-cmark 0.11`，workspace 复用。**
++
++| 候选 | 与本项目适配度 | 结论 |
++|---|---|---|
++| **`pulldown-cmark 0.11`** | 已在 workspace 锁；CLI 在用（`src/apps/cli/Cargo.toml:46`）；pull-parser 事件流天然适配 Dioxus RSX 直映射；1M ctx 不影响；2026-09 仍是 Rust 生态事实标准 | ✅ **采** |
++| `comrak` | CommonMark + GFM 全内置（表格/任务列表开箱），但 AST 略重；新依赖；本项目不需要 GFM 全集（见 §3） | ❌ 否决 |
++| `markdown-rs`（micromark 系） | 较新；社区采用面窄；workspace 未锁；新增 dep 边 | ❌ 否决 |
++| `dioxus-markdown`（社区组件） | 联网核实 2026-09 维护停滞，未声明对 `dioxus =0.8.0-alpha.1` 兼容；0.8 alpha 周期 RSX 宏、信号、组件 API 有破坏性变更，社区组件普遍滞后 | ❌ 否决 |
++| `markdown-dx` / `dioxus-mdx` / `dioxus-press` | 联网结果指向存在，但需要逐项核 `Cargo.toml` 的 dioxus 依赖版本——属新依赖评估范围；本任务无 GFM 全集诉求，YAGNI 不入 | ❌ 否决（本轮） |
++
++**workspace 复用判定（已逐项落实）**：
++- 根 `Cargo.toml:130-132`：`pulldown-cmark = "0.11"` / `syntect = "5"` / `syntect-tui = "3.0"` ✅
++- `src/apps/cli/Cargo.toml:46,53-54`：CLI 已 `workspace = true` 引用 ✅
++- `src/apps/desktop/Cargo.toml:13-68`：**无** markdown/cmark/comrak/syntect/ammonia——零复用 ✅
++- `Cargo.lock`：pulldown-cmark 0.11 已锁定，仅需在 desktop Cargo.toml 加 `pulldown-cmark = { workspace = true }`
++
++**`syntect` 不联动**：本期不上代码块高亮（YAGNI；如要支持，事件→RSX 阶段用 `class="language-rust"` + CSS 选择器着色，**不**用 ammonia 风格的 inline style——见 §4）。
++
++---
++
++## 2. 注入安全路线裁定（核心）
++
++**裁定：路线 B（事件流→RSX 直映射）。否决 A。**
++
++### 2.1 路线对比（按本项目硬约束收敛）
++
++| 维度 | A：cmark→HTML→ammonia→inner_html | B：cmark 事件→RSX 元素 |
++|---|---|---|
++| 新依赖 | +1（ammonia） | 0 |
++| XSS 攻击面 | HTML 字符串是攻击面，必须靠白名单堵 | **不存在 HTML 字符串**，XSS 面 = 0 |
++| `dangerous_inner_html` 风险 | 消息正文用它——Dioxus 0.8.0-alpha 行为未定型 | 不调用，纯 RSX |
++| class 属性保留 | 需 ammonia `add_allowed_classes` 同步对齐 CSS | 直接 `class: "md-xxx"` |
++| Streaming draft 适配 | 每 token 推 HTML 串，串越长越费 | 事件流可逐事件 emit，token 级重渲染 |
++| 代码量 | ammonia 调用 ~10 行 | 事件映射 ~100-150 行 |
++| 维护成本 | 依赖 ammonia 白名单升级、cmark 输出格式漂移 | 自管映射，单元测试覆盖事件→RSX 即可 |
++| alpha 期风险 | 高（alpha API 改名/移除风险 + 第三方依赖漂移） | 低（自管代码，RSX 宏是稳定的） |
++
++### 2.2 B 路线的安全性论证
++
++**为何"事件流不做消毒"在本项目中安全**：
++- pulldown-cmark 事件是**结构化 token**（Start/End/Text/Code/Html/...），不是字符串拼接
++- 文本叶子（`Event::Text(s)` / `Event::Code(s)`）映射到 RSX 文本插值 `{s}`，**Dioxus 自动 HTML 转义**
++- 链接（`Start(Tag::Link{...})`）映射到 `<a href="{url}">` —— `url` 走 scheme 白名单（`http`、`https`、`mailto`、`tel` 放行；其它按裸文本展示或丢弃 `<a>` 包装）
++- 图片（`Start(Tag::Image{...})`）映射到 `<img src="{url}" alt="{alt}">` —— `src` 走同样的 scheme 白名单
++- 原始 HTML（`Event::Html(s)`）—— **直接丢弃**，绝不映射为 RSX 元素。这是 B 路线的关键安全声明：用户给的 markdown 里如果写了 `<script>...</script>`，pulldown-cmark 解为 `Html` 事件，B 路线不渲染。
++
++**联网核实结果中"event-level sanitization 不可取"对本项目不适用**——那条劝告针对"试图在事件层用字符串替换实现消毒"的反模式；B 路线不做字符串消毒，**直接用 Dioxus 类型系统的边界做转义**。
++
++### 2.3 A 路线被否决的具体理由
++
++1. **新依赖税**：ammonia 必须新加，违背家规 #0 第 5 阶「已装依赖优先」（A 路线本身能做，但用户额外批了「允许引入 markdown crate」——仅批 markdown 解析器，未批消毒器）
++2. **alpha 期风险**：把消息正文（不可信）塞进 `dangerous_inner_html` 是 Dioxus alpha 期最高危的注入面。A 路线无法消除这个调用，只能在 ammonia 那一层兜底
++3. **CSS 对齐**：ammonia 默认剥 `class`，要 `add_allowed_classes` 白名单与本仓 CSS 选择器对齐——双重维护
++4. **Streaming 适配差**：每 token 推 HTML 串且要过 ammonia，性能浪费
++
++### 2.4 路线 C 否决
++
++`dioxus-markdown` 对 `=0.8.0-alpha.1` 不兼容（联网核实，2026-09）。即使兼容，社区组件 = 第三方引入 A 路线的所有风险（内部如何消毒未知、依赖漂移、alpha 期不更新）。否决。
++
++---
++
++## 3. 渲染覆盖范围裁定
++
++**裁定：起步 = 三处必上（app.rs:506 / :747 / :757）；archive 暂缓；archive search 永不解析。**
++
++| 渲染点 | 文件:行 | 现行 | 裁定 | 理由 |
++|---|---|---|---|---|
++| Assistant 流式 draft | `app.rs:502-509`（`div.msg-agent "{draft}"`） | 纯文本 | ✅ 上 Markdown | 与完成态语义一致；用户期待流式即所见 |
++| Assistant 完成态 entry | `app.rs:747`（`div.msg-agent "{body}"`） | 纯文本 | ✅ 上 Markdown | 模型输出 markdown 是常见诉求 |
++| Witness 完成态 entry | `app.rs:757`（`div.body "{body}"`） | 纯文本 | ✅ 上 Markdown | 用户手敲 markdown（含代码块）应被尊重 |
++| Archive 消息列表 | `pages_archive.rs:658-660`（`div.mem-text "{...}"`） | 纯文本 | ❌ 暂缓 | YAGNI：当前无业务诉求；将来启用 = 1 行 `render_markdown` 替换 `{...}`；优先保证 session room 三处先稳 |
++| Archive search 命中片段 | `pages_archive_search.rs`（`make_hit` 高亮切片） | 高亮文本 | ❌ 永不解析 | markdown 二次解析会破坏高亮锚文本（如 ``片段`` `片段` `**片段**`） |
++
++**裁定原理**：
++- 三个 session room 渲染点（draft / assistant / witness）共享同一种消息体（`MockEntry.body: String`），逻辑等价 → 同一映射函数，三处共用，无重复成本
++- Archive 是只读回放页，业务优先级低，**首版不绑 Markdown 渲染**
++- Archive search 是 highlight 切片，本质是"搜索 UI 片段"而非"消息正文"，**永远不应**进 markdown 解析器
++
++---
++
++## 4. CSS 落点裁定
++
++**裁定：新独立文件 `pages_chat_md_css.rs`，仿 `pages_onboarding_css.rs` 形态。`css.rs` 不许碰。**
++
++### 4.1 css.rs 闸位复核（已逐项落实）
++
++- `css.rs` 总行数 = **790 行** ✅
++- `:769` `fn assert_truth_css_byte_count` 断言只锁 TRUTH_CSS 真值字节数，**不**锁 OVERLAY_CSS 长度（OVERLAY_CSS 是 :52 起的 `pub const ... r#"..."#`，是合成层可改写字符串）。但根 AGENTS.md 家规 #3「Rot budget only decreases」——790/790 闸位零余量，**整个文件不许加行**。
++- 任何新样式必须走独立文件（用户已拍板：`pages_onboarding_css.rs` 是活先例）
++
++### 4.2 活先例形态（已逐项落实）
++
++- `pages_onboarding_css.rs` 217 行（独立文件）
++- `mod.rs:43` 注册 `mod pages_onboarding_css;`
++- 文件内：`pub const ONBOARDING_CSS: &str = r#"..."#;`
++- 消费：`pages_onboarding.rs:258` `style { dangerous_inner_html: "{ONBOARDING_CSS}" }`
++
++### 4.3 新文件方案
++
++**新文件**：`src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs`
++- 形态：217 行的 `pub const CHAT_MD_CSS: &str = r#"..."#;`
++- 内容：
++  - `.msg-agent.md-rendered p, .msg-agent.md-rendered ul, ...` —— 段落/列表/标题排版
++  - `.msg-agent.md-rendered pre` —— 代码块（保留 `pre-wrap`）
++  - `.msg-agent.md-rendered code` —— 内联码（`--font-mono`）
++  - `.msg-agent.md-rendered a` —— 链接（color: var(--accent-solid)）
++  - `.msg-agent.md-rendered blockquote` —— 引用（左 border 灰条）
++  - `.msg-agent.md-rendered hr` —— 分隔线（dashed）
++  - 关键 fix：`.msg-agent { white-space: pre-wrap; word-break: break-word; }` —— **进 chat-md CSS，不进 css.rs**（root AGENTS.md 第 1 条：markdown 样式专属于 chat-md 模块）
++- 注册：`mod.rs` 新加 `mod pages_chat_md_css;`
++- 注入点：app.rs:331 那个 `style { dangerous_inner_html: ... }` 之后**追加** `, style { dangerous_inner_html: "{pages_chat_md_css::CHAT_MD_CSS}" }`（或合并到 OVERLAY_CSS 块——后者不可，因为 css.rs 不许碰 → 必须独立 style 标签）
++
++### 4.4 注入点计数
++
++`dangerous_inner_html` 现行使用情况（已 grep 落实）：
++- **17 处** `style { dangerous_inner_html: "..." }`（8 个窗 × 2 个 CSS 常量 TRUTH_CSS + OVERLAY_CSS，pages_onboarding 1 个）
++- **9 处** svg/dangerous_inner_html 注入（theme_toggle_svg / brand_logo_svg）
++- **全部 26 处** 输入均为受信任常量（CSS / SVG），**无**任何用户/模型输出文本注入——本任务结束后，CHAT_MD_CSS 注入是新增的 9 处独立 style（每个房间 1 个），但仍属受信任常量
++
++---
++
++## 5. 拆单建议
++
++**裁定：单 crate 内 2 个 PR 切片（不跨 crate、不独立先行单）。**
++
++### 5.1 切片设计
++
++**切片 1（基础单）**：`src/apps/desktop/src/ui_dioxus/markdown_render.rs` 新建
++- `pub fn render_markdown(input: &str) -> Element` —— 事件流映射 Dioxus RSX
++- `fn sanitize_url_scheme(url: &str) -> Option<&str>` —— scheme 白名单（`http/https/mailto/tel` 放行；其它丢弃 `<a>` 包装）
++- `#[cfg(test)] mod tests` 覆盖：
++  - 段落、标题 h1-h6、列表 ul/ol/li、代码块、内联码、链接、强调 em/strong、引用、分隔线
++  - **XSS 注入向量**（必须）：`<script>alert(1)</script>` / `[click](javascript:alert(1))` / `![x](data:text/html,<script>alert(1)</script>)` / `<img src=x onerror=alert(1)>` —— 每个断言"渲染出的字符串不含 `<script>`、不含 `onerror=`、不含原始 HTML 标签"
++- 单元测试使用 `dioxus::core::Element::as_node()` 或渲染为字符串后断言关键字（具体 API 需 implementer 落地时确认 dioxus 0.8.0-alpha.1 的测试钩子）
++- **不**在切片 1 动 app.rs / pages_archive.rs / css.rs
++- **不**在切片 1 写 CSS 文件（避免基础单依赖 UI）
++
++**切片 2（集成单）**：
++- 新建 `src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs`（217 行 ONBOARDING_CSS 形态）
++- `mod.rs` 注册 `mod pages_chat_md_css;`
++- `app.rs:331` 之后追加 1 个 style 标签注入 CHAT_MD_CSS（**不**改原行；OVERLAY_CSS 仍由原行提供——避免触碰 TRUTH_CSS 锁）
++- `app.rs:506` draft 渲染：`<div class: "msg-agent md-rendered">{render_markdown(draft)}</div>`
++- `app.rs:747` assistant 渲染：同上，body 字段传入
++- `app.rs:757` witness 渲染：`<div class: "body md-rendered">{render_markdown(body)}</div>`
++- `app.rs:render_entry` 的 MockEntry::Entity.body / MockEntry::Witness.body 均用 `render_markdown` 替换 `{body}`
++
++### 5.2 不拆独立先行单的理由
++
++- 无前置硬约束（切片 1 完成后切片 2 立刻可做）
++- 切片 1 无 UI 依赖，单独 review 干净，但合并策略与切片 2 一致（同一 crate、同一 review 周期）——分两个 PR 仅增加治理负担，不增加代码纯度
++- 用户已批「允许引入 markdown crate，选型闭环不上交」——技术细节闭环，**不**走"先批一单再批一单"
++
++### 5.3 不拆多单的理由
++
++- 单 crate、单 feature，~250 行总代码量（150 行映射 + 100 行 CSS + 集成 patch）—— M 级单，**不应**再切
++- 切多单 = 治理税 > 工程税
++
++---
++
++## 6. 成本估算
++
++按"独立可执行步骤"拆。每步标 S/M/L + 人天。
++
++| # | 步骤 | 规模 | 人天 | 备注 |
++|---|---|---|---|---|
++| 1 | desktop `Cargo.toml` 加 `pulldown-cmark = { workspace = true }` + 跑 `cargo check -p northhing` 通过 | S | **0.25** | 仅锁文件引用，无新下载（lock 已锁） |
++| 2 | 新建 `markdown_render.rs`：事件→RSX 映射（含 scheme 白名单） + XSS 注入向量单测（≥6 条） | M | **1.0** | 事件流 mapping 约 100-150 行；XSS 向量单测 6-8 条 |
++| 3 | 新建 `pages_chat_md_css.rs`（CHAT_MD_CSS const）+ `mod.rs` 注册 | S | **0.5** | 217 行常量串，主要时间在写 CSS 选择器（仿 TRUTH_CSS 风格） |
++| 4 | `app.rs:331` 追加 CHAT_MD_CSS 注入（**不**改原行）+ `:506/:747/:757` 三处 `{body}` 替换为 `{render_markdown(body)}` + MockEntry 两处调用同步 | M | **0.5** | 加 `class: "md-rendered"` 标记；保持原有 div 结构 |
++| 5 | `cargo check -p northhing` + `cargo test -p northhing` + 全量 `cargo check --workspace` 通过 | S | **0.25** | 必须三段全绿（家规 #6 desktop compile gate） |
++| 6 | `pnpm run fmt:rs` + 视觉回归（draft / 完成 assistant / 完成 witness 三类截图对比） | S | **0.25** | 截图在 orchestrator 看，implementer 提供 |
++| **合计** | | | **2.75 人天** | ≈ 0.55 人周 |
++
++### 6.1 与编排者预期值的对照
++
++- 编排者输入包未给出数字估算。本估算基于：
++  - 事件流映射 ~100-150 行（实测 pulldown-cmark 0.11 事件枚举：`Start/End/Text/Code/Html/SoftBreak/HardBreak/Rule/FootnoteReference/TaskList/...`——本任务支持 9 类即可）+ scheme 白名单 ~10 行
++  - XSS 单测 6-8 条 ~ 80 行
++  - CSS 文件 217 行（含注释、空白）—— 以 pages_onboarding_css.rs 217 行做参考
++  - 集成 patch ~30 行（3 处 `{body}` 替换 + 1 处 style 追加）
++- **如果 GFM 表格/任务列表本期要支持**：加 0.5 人天（增加 Table/TaskList 事件分支 + CSS）
++- **如果代码块需要 syntect 高亮**：加 0.5 人天（加 syntect 依赖 + `ClassedHTMLGenerator` + CSS 选择器—— 但这会回到 A 路线风险，**不推荐**）
++
++### 6.2 关键成本上限标记
++
++- **XSS 单测是验收门**（§7 附带条件 #4）—— 不能省
++- **视觉回归必须有截图**（家规）—— implementer 必附 3 张截图（draft / assistant / witness），orchestrator 看
++- **`dangerous_inner_html` 不许扩到消息文本**—— 切片 2 的 `{body}` 一律走 `render_markdown`，绝不走 `dangerous_inner_html`（永不允许）
++
++---
++
++## 7. 附带条件（accept 本方案必须同时做的事）
++
++1. **不许引入 ammonia**：`desktop Cargo.toml` 中**禁止**出现 `ammonia` 字段。reviewer 看到立刻打回。
++2. **`dangerous_inner_html` 不许扩到消息文本**：`app.rs:506/:747/:757` 三处的 `{body}` 必须是 `{render_markdown(body)}`，绝不能是 `dangerous_inner_html: "{body}"`。reviewer 看到任何"消息文本走 dangerous_inner_html"立刻打回。
++3. **`css.rs` 一行不加**：切片 2 的 CSS 走 `pages_chat_md_css.rs`，禁止在 css.rs 内追加任何字符（含注释、空行、字符串）。`git diff src/apps/desktop/src/ui_dioxus/css.rs` 必须为空。
++4. **XSS 单测必过**：切片 1 的 `tests/` 必须含至少 6 条 XSS 注入向量断言，断言内容：
++   - `<script>alert(1)</script>` → 输出不含字面量 `<script>`（只可能保留为文本节点）
++   - `[click](javascript:alert(1))` → 输出不含 `href="javascript:"`
++   - `![x](data:text/html,<b>)` → 输出不含 `src="data:text/html"`
++   - `<img src=x onerror=alert(1)>` → 输出不含 `onerror=`
++   - `[a](vbscript:msgbox(1))` → 输出不含 `vbscript:`
++   - 恶意 markdown 套娃 `<scr<script>ipt>` → 输出不含可执行 `<script>`
++5. **scheme 白名单代码可审查**：`sanitize_url_scheme` 函数必须有**显式** `match`/`if` 链，`http/https/mailto/tel` 四类放行，其它返回 `None`（外层剥 `<a>` 包装）。不能用正则黑名单。
++6. **archive 暂缓硬约束**：切片 2 **不**改 `pages_archive.rs:658-660` 和 `pages_archive_search.rs`。reviewer 看到 diff 含这两个文件立刻打回（除非附带"加 archive 支持"的 follow-up issue 编号 + 用户显式同意）。
++7. **CSS 加 `pre-wrap` 与 word-break**：`.msg-agent { white-space: pre-wrap; word-break: break-word; }` 必须出现在 `pages_chat_md_css.rs` 的 CHAT_MD_CSS 中（解决输入包侦察事实 §1.3 的"无 pre-wrap"现状）。
++8. **GFM 扩展本期不启用**：`Parser::new_ext(input, Options::empty())` 必须用 `Options::empty()`，**不**加 `ENABLE_TABLES / ENABLE_STRIKETHROUGH / ENABLE_TASKLISTS / ENABLE_FOOTNOTES`。任何 GFM 语法在 markdown 中应被解释为字面量文本。reviewer 看到 `Options::*` 包含以上 flag 立刻打回。
++9. **`Event::Html` 必丢弃**：在映射函数中，`Event::Html(_)` 必须 explicit drop（不映射、不输出、不留痕迹）。reviewer 看到 `Event::Html =>` 输出到 RSX 立刻打回。
++10. **`cargo check -p northhing` + `cargo test -p northhing` + `cargo check --workspace` 三段必绿**：家规 #6 desktop compile gate。任一不绿 = 整单 revert。
++11. **视觉回归必附截图**：implementer report 必附 3 张截图（流式 draft / 完成 assistant / 完成 witness），orchestrator 看图确认 markdown 渲染视觉效果（标题/列表/代码块/链接）正常显示且不破坏现有布局。
++12. **回滚预案**：若切片 2 集成破坏现有布局（如 `.msg-agent` 衬线字体丢失、`.rec.entity` flex 布局错位），整单 revert 不进 main。切片 1 的 `markdown_render.rs` 单元测试可保留（自包含，单测绿即合格）。
++13. **`ponytail:` 注释**：对 `sanitize_url_scheme` 的 scheme 白名单，加 `// ponytail: 4 类白名单（http/https/mailto/tel）；升级路径 = 读 config.toml 的 allowed-url-schemes`（YAGNI 默认 4 类，不读 config）。
++14. **顺手清孤儿**（家规 #1 顺手清配）：`css_files.rs` 已被侦察确认孤儿（不在 mod.rs、未消费、仅 README 提及）。**本单不**删除它（避免 scope creep），但 implementer 应在 report 末尾追加一条 follow-up：「W15-2 候选：删除 css_files.rs 或注册进 mod.rs」。**不**强制本单处理。
++15. **不许碰清单**：
++    - `css.rs` 任何字符
++    - `pages_archive.rs` / `pages_archive_search.rs`
++    - `contracts/kernel-api/src/session.rs`（MessageContentDto 形态不变）
++    - `session_mock.rs`（MockEntry 形态不变）
++    - `Cargo.lock` 直接编辑（仅允许 `cargo add` 触发的自动更新）
++    - `docs/status/surfaces.md`（除非 desktop 增加新 surface，本单不加）
++
++---
++
++## 8. 我无法判定的项（明确记录）
++
++1. **`render_markdown` 返回 `Element` 还是 `Vec<Element>` 的具体 dioxus 0.8.0-alpha.1 API 形态**：本裁决要求返回可被 `rsx!` 直接嵌入的元素，但 `Element` 在 0.8.0-alpha.1 是否有公开构造器、`IntoIterator` for `Element` 是否可用——需 implementer 落地时实测。如果 alpha 1 公开 API 限制 `Element` 只能在 `rsx!` 内构造，则需用 `LazyNodes`/`VNode` 等价物。这是 alpha 期的实现细节，本裁决不预设。
++2. **Dioxus 0.8.0-alpha.1 的测试钩子**：`Element` 转字符串断言 vs `VirtualDom` 渲染对比 vs `dioxus::ssr` 渲染——具体哪条最稳需 implementer 跑通后选定。本裁决要求"XSS 注入向量单测"，但不指定 API 路径。
++3. **`MsgAgent::md-rendered` 修饰类 vs 单独的 `.md-*` 选择器作用域**：本裁决要求 markdown 样式**仅作用于** `.md-rendered` 子树（避免污染 archive / settings 等其它使用 `.msg-agent` 的位置——grep 未发现其它使用，但防御性写法仍然正确）。具体选择器组合（`.msg-agent.md-rendered p` vs `.md-rendered p`）留给 implementer。
++4. **`pages_chat_md_css.rs` 注入到几个 style 标签**：本裁决建议"三窗各注入一次"，但发现有些窗（如 inner/outer）并不显示消息正文——如能减少冗余注入，injector 数量可优化（取决于 chat-flow DOM 是否在所有窗渲染）。implementer 跑通后定。
++5. **`markdown-rs`（micromark 系）是否在 2026 末已被 Rust 生态广泛采用**：联网核实时结果指向"较新"，但未深入对比性能/维护性。本裁决否决 `markdown-rs` 基于 YAGNI，但若后续 GFM 表格/任务列表需要支持，可重新评估。
++6. **archive 消息列表未来启用 markdown 时的策略**：本裁决"暂缓"是基于当前业务诉求；如果 W15 之后某单提出 archive 也要 markdown，则 `pages_archive.rs:658-660` 的 `{message_content_text(msg)}` 改为 `{render_markdown(message_content_text(msg))}`——但需注意 `message_content_text` 把 ToolResult 拍平成 `"[{tool_name}] {summary}"` 格式（已经是单行文本，再过 markdown 解析器无害**。**这是 W15-2 议题。
++
++---
++
++## 9. 签署
++
++- **crate 选择**：`pulldown-cmark 0.11`（workspace 复用，零新下载）
++- **注入安全路线**：**B**（事件流→RSX 直映射，零 XSS 面），否决 A、否决 C
++- **覆盖范围**：app.rs 三处必上；archive 暂缓；archive search 永不解析
++- **CSS 落点**：新独立 `pages_chat_md_css.rs`（仿 `pages_onboarding_css.rs` 形态）
++- **拆单**：单 crate 内 2 切片（基础 + 集成），不跨 crate，不独立先行
++- **总人天**：**2.75 人天**（≈ 0.55 人周）
++- **附带条件**：15 条（核心：不许 ammonia、不许消息文本走 dangerous_inner_html、css.rs 一行不加、XSS 单测 6 条以上、scheme 白名单显式 match、GFM 不启用、Event::Html 必丢）
++- **孤儿 follow-up**：`css_files.rs` 删除或注册（建议列入 W15-2，不强制本单）
++
++**本裁决闭环，不向用户上呈**（用户 2026-08-28 拍板：技术细则决策由独立仲裁闭环；2026-09-02 依赖准入已批 markdown crate）。
++
++---
++
++## 补遗（实施期需 implementer 现场确认）
++
++本裁决 §8 列出 6 条「无法判定项」均属 alpha 期 API 细节，**不**上呈用户，由 implementer 在 brief 中按以下原则处理：
++- §8.1 / §8.2（dioxus 0.8.0-alpha.1 API 形态）：implementer 落地时跑通即可，**不**打回
++- §8.3 / §8.4（CSS 选择器作用域 / 注入窗数量）：implementer 自决，reviewer 仅检查"markdown 样式不漏到非 `.md-rendered` 区域"
++- §8.5（markdown-rs）：本单不上，**不**打回
++- §8.6（archive 未来启用）：本单不碰 archive，**不**打回
++
++总判不变，附加条件不变。
+\ No newline at end of file
+diff --git a/.superpowers/sdd/w15-1b-1-brief.md b/.superpowers/sdd/w15-1b-1-brief.md
+new file mode 100644
+index 0000000..2b71075
+--- /dev/null
++++ b/.superpowers/sdd/w15-1b-1-brief.md
+@@ -0,0 +1,43 @@
++# W15-1b-1 Brief — markdown_render.rs 基础单（事件流→RSX 映射）
++
++> 来源：`.superpowers/sdd/w15-1-arbitration.md` 主判（方案 B + pulldown-cmark 0.11 复用）+ §5.1 切片 1 + §7 附带条件。BASE：`c14171f`。
++> 本单只做基础层：新文件 + 依赖引用 + 单测。**不**动 app.rs / css.rs / 任何现有渲染点（那是切片 2）。
++
++## Spec
++
++- S1：`src/apps/desktop/Cargo.toml` 加一行 `pulldown-cmark = { workspace = true }`（workspace 根 Cargo.toml:130-132 已锁 0.11，零新下载）。
++- S2：新建 `src/apps/desktop/src/ui_dioxus/markdown_render.rs`：
++  - `pub fn render_markdown(input: &str) -> Element` —— pulldown-cmark 事件流直接映射 Dioxus RSX 元素（dioxus 0.8.0-alpha.1 的具体返回形态——Element / LazyNodes / 其它——由你落地实测选定，仲裁 §8.1 已声明不预设）。
++  - 支持事件：段落、标题 h1-h6、列表 ul/ol/li、代码块、内联码、链接、强调 em/strong、引用 blockquote、分隔线 hr、SoftBreak/HardBreak。`Parser::new_ext(input, Options::empty())`——**Options::empty()**，不加任何 GFM flag。
++  - `fn sanitize_url_scheme(url: &str) -> Option<&str>` —— 显式 match/if 链白名单 `http/https/mailto/tel` 放行，其它返回 None（外层剥 `<a>` 包装、链接文字按纯文本渲染）；禁正则黑名单。加 `// ponytail: 4 类白名单（http/https/mailto/tel）；升级路径 = 读 config.toml 的 allowed-url-schemes`。
++  - `Event::Html(_)` 必须 explicit drop（不映射、不输出、不留痕迹）；`Event::InlineHtml` 若该版本存在同样 drop。
++  - 图片：scheme 白名单同款；非白名单 src 不渲染 img（alt 按文本展示）。
++  - 所有渲染出的元素 class 带 `md-*` 前缀或落在 `.md-rendered` 子树内（具体选择器策略你定，仲裁 §8.3 不预设；原则：markdown 样式不漏到非 md 区域）。
++- S3：`ui_dioxus/mod.rs` 注册 `mod markdown_render;`（或 `pub mod`，按该文件现有兄弟模块的形态对齐——以磁盘为准）。
++- S4：单测 ≥6 条 XSS 注入向量（仲裁 §7#4 逐字）+ 常规渲染断言（段落/标题/列表/代码块/内联码/链接/强调/引用/分隔线）：
++  - `<script>alert(1)</script>` → 输出不含字面量 `<script>`
++  - `[click](javascript:alert(1))` → 不含 `href="javascript:"`
++  - `![x](data:text/html,<b>)` → 不含 `src="data:text/html"`
++  - `<img src=x onerror=alert(1)>` → 不含 `onerror=`
++  - `[a](vbscript:msgbox(1))` → 不含 `vbscript:`
++  - 套娃 `<scr<script>ipt>` → 不含可执行 `<script>`
++  - 测试断言对象的具体形态（VirtualDom 渲染字符串 / dioxus-ssr / 其它）由你跑通后选定（仲裁 §8.2 不预设），但**断言必须是真实渲染输出的字符串检查，不是恒真断言**。
++
++## Constraints
++
++C1 只许动：`src/apps/desktop/Cargo.toml`、`src/apps/desktop/src/ui_dioxus/markdown_render.rs`（新建）、`src/apps/desktop/src/ui_dioxus/mod.rs`（一行注册）、`Cargo.lock`（cargo 自动更新）。
++C2 **禁碰清单**（仲裁 §7#15）：css.rs / pages_archive.rs / pages_archive_search.rs / contracts/kernel-api/src/session.rs / session_mock.rs / app.rs。
++C3 禁止出现 ammonia 依赖；禁止任何 `dangerous_inner_html` 用于消息文本。
++C4 以磁盘实际代码为准；dioxus alpha API 与 brief 描述不符时以编译器为准，偏差记 report。
++C5 日志英文无 emoji；rot 闸：`let _ =` 371/388 基线不许涨。
++C6 构建/测试走 `rustup run stable-x86_64-pc-windows-msvc cargo ...`，输出 `cmd /c` 重定向，禁 PS 管道；先读 skill `long-running-shell`。
++
++## 验证（report 必须含命令+输出摘录）
++
++1. `rustup run stable-x86_64-pc-windows-msvc cargo check -p northhing`（家规 #6 desktop compile gate）
++2. `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render` 全绿（含 6 条 XSS 向量）
++3. `git diff --check` 无 whitespace error
++
++## 报告
++
++写 `.superpowers/sdd/w15-1b-1-report.md`：API 形态选定理由（仲裁 §8.1/8.2 的现场结论）/ 测试清单与输出 / 偏差 / 状态词。完成后自行 commit（message 含 W15-1b-1）。
+diff --git a/.superpowers/sdd/w15-1b-1-report.md b/.superpowers/sdd/w15-1b-1-report.md
+new file mode 100644
+index 0000000..b6c8907
+--- /dev/null
++++ b/.superpowers/sdd/w15-1b-1-report.md
+@@ -0,0 +1,94 @@
++# W15-1b-1 Implementation Report — Desktop Markdown Render Foundation
++
++## 1. 概述与完成情况
++
++- **任务**：W15-1b-1 桌面聊天消息 Markdown 渲染基础单（事件流→RSX 直映射，零 HTML 注入面）
++- **状态**：**DONE**
++- **改动范围**：
++  - `src/apps/desktop/Cargo.toml`：添加 `pulldown-cmark = { workspace = true }` 引用（锁版本 0.11.3，零新下载）。
++  - `src/apps/desktop/src/ui_dioxus/mod.rs`：注册 `pub mod markdown_render;`。
++  - `src/apps/desktop/src/ui_dioxus/markdown_render.rs`：新建模块，提供 `pub fn render_markdown(input: &str) -> Element`、`pub fn sanitize_url_scheme(url: &str) -> Option<&str>`、AST 解析与 RSX 直映射，以及完整单元测试套件（含 6 条 XSS 注入向量断言）。
++  - `Cargo.lock`：cargo 自动更新 northhing 依赖。
++
++## 2. API 形态现场结论（仲裁 §8.1 / §8.2）
++
++1. **§8.1 `render_markdown` 返回形态**：
++   - 函数签名定为 `pub fn render_markdown(input: &str) -> Element`。
++   - 内部通过 `parse_markdown_to_blocks(input: &str) -> Vec<MdBlock>` 将 pulldown-cmark（`Options::empty()`）拉式事件流组织为紧凑 AST，随后通过递归 RSX 宏映射生成 `Element`（即 Dioxus `Result<VNode, RenderError>` / `Option<VNode>`），顶层挂载 `<div class="md-rendered">` 容器。
++   - 支持段落（`p.md-p`）、标题（`h1.md-h1`..`h6.md-h6`）、列表（`ul.md-ul`、`ol.md-ol`、`li.md-li`）、代码块（`pre.md-code-block` + `code.md-code`）、内联码（`code.md-inline-code`）、链接（`a.md-link`）、强调与加粗（`em.md-em`、`strong.md-strong`）、引用（`blockquote.md-blockquote`）、分隔线（`hr.md-hr`）、换行（`br.md-br` / softbreak）。
++
++2. **§8.2 测试钩子与断言形态**：
++   - 测试中实现了 `render_to_html_string(el: Element) -> String`，深度遍历 `VNode.template` 与 `VNode.dynamic_nodes` / `VNode.dynamic_attrs`，并对文本节点与动态属性应用完整的 HTML 实体转义。
++   - 所有单测断言均为针对真实 DOM 树序列化生成的 HTML 字符串精确断言（包含 6 条 XSS 向量与 13 条标准元素/Scheme 校验），非恒真断言。
++
++3. **安全约束落实**：
++   - 零 HTML 注入面：`Event::Html` 与 `Event::InlineHtml` 显式 drop，`Tag::HtmlBlock` 丢弃。
++   - Scheme 白名单：`sanitize_url_scheme` 显式 match `http` / `https` / `mailto` / `tel` 四类放行，其余返回 `None`；非白名单链接剥除 `<a>` 标签降级为纯文本，非白名单图片不渲染 `<img>` 降级为 alt 文本。
++   - 无 ammonia 依赖，无 `dangerous_inner_html`。
++   - 禁碰清单（`css.rs` / `app.rs` / `pages_archive.rs` / `session_mock.rs` 等）零触碰。
++   - Rot 闸位：未引入任何 `let _ =`（0 增长）。
++
++## 3. 验证证据
++
++### 验证 1：Desktop 编译门禁（家规 #6）
++```powershell
++C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing
++```
++输出摘录：
++```text
++    Checking pulldown-cmark v0.11.3
++    Checking northhing v0.2.10 (E:\agent-project\northing\src\apps\desktop)
++    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.91s
++```
++
++### 验证 2：单测全绿（19/19 通过，含 6 条 XSS 注入向量）
++```powershell
++C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing --lib markdown_render
++```
++输出摘录：
++```text
++running 19 tests
++test ui_dioxus::markdown_render::tests::test_render_inline_code ... ok
++test ui_dioxus::markdown_render::tests::test_render_code_block ... ok
++test ui_dioxus::markdown_render::tests::test_render_blockquote ... ok
++test ui_dioxus::markdown_render::tests::test_render_ordered_list ... ok
++test ui_dioxus::markdown_render::tests::test_sanitize_url_scheme_whitelist ... ok
++test ui_dioxus::markdown_render::tests::test_render_whitelisted_image ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_1_raw_script_tag ... ok
++test ui_dioxus::markdown_render::tests::test_render_paragraph ... ok
++test ui_dioxus::markdown_render::tests::test_render_unordered_list ... ok
++test ui_dioxus::markdown_render::tests::test_render_headings_h1_to_h6 ... ok
++test ui_dioxus::markdown_render::tests::test_render_hard_and_soft_break ... ok
++test ui_dioxus::markdown_render::tests::test_render_links_whitelisted ... ok
++test ui_dioxus::markdown_render::tests::test_render_emphasis_and_strong ... ok
++test ui_dioxus::markdown_render::tests::test_render_horizontal_rule ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_2_javascript_scheme_link ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_4_raw_img_onerror ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_6_nested_script_tags ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_3_data_scheme_image ... ok
++test ui_dioxus::markdown_render::tests::test_xss_vector_5_vbscript_scheme_link ... ok
++
++test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 145 filtered out; finished in 0.00s
++```
++
++### 验证 3：Whitespace 检查
++```powershell
++git diff --check
++```
++输出：无 whitespace 错误。
++
++### 验证 4：Workspace 整体编译与 Repo Hygiene
++```powershell
++C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace
++pnpm run check:repo-hygiene
++```
++输出：编译通过，Repository hygiene check passed。
++
++## 4. 偏差与 Follow-up
++
++- **Spec 偏差**：无。严格遵循仲裁方案 B 与 brief 所有约束。
++- **Follow-up 记项**（仲裁 §7#14）：孤儿文件 `css_files.rs` 留待 W15-2 处理（删除或注册进 mod.rs）。
++
++## 5. 状态结论
++
++**DONE**
+diff --git a/Cargo.lock b/Cargo.lock
+index c426cbb..85c43bd 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5341,20 +5341,21 @@ dependencies = [
+  "northhing-agent-dispatch",
+  "northhing-core",
+  "northhing-core-types",
+  "northhing-debug-log",
+  "northhing-events",
+  "northhing-kernel-api",
+  "northhing-runtime-ports",
+  "northhing-test-support",
+  "once_cell",
+  "parking_lot",
++ "pulldown-cmark",
+  "raw-window-handle 0.6.2",
+  "serde",
+  "serde_json",
+  "tokio",
+  "tokio-util",
+  "tracing",
+  "tracing-subscriber",
+  "uuid",
+  "windows 0.61.3",
+ ]
+diff --git a/src/apps/desktop/Cargo.toml b/src/apps/desktop/Cargo.toml
+index a22f14f..58bbd18 100644
+--- a/src/apps/desktop/Cargo.toml
++++ b/src/apps/desktop/Cargo.toml
+@@ -47,20 +47,21 @@ tracing-subscriber = { workspace = true }
+ 
+ # Serialization
+ serde = { workspace = true }
+ serde_json = { workspace = true }
+ 
+ # Utilities
+ uuid = { workspace = true }
+ chrono = { workspace = true }
+ parking_lot = { workspace = true }
+ once_cell = { workspace = true }
++pulldown-cmark = { workspace = true }
+ 
+ # OS keyring for secure API key storage (C3, P1-2)
+ keyring = { workspace = true }
+ 
+ [dependencies.raw-window-handle]
+ version = "0.6"
+ [dependencies.windows]
+ workspace = true
+ features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"]
+ 
+diff --git a/src/apps/desktop/src/ui_dioxus/markdown_render.rs b/src/apps/desktop/src/ui_dioxus/markdown_render.rs
+new file mode 100644
+index 0000000..ecf9393
+--- /dev/null
++++ b/src/apps/desktop/src/ui_dioxus/markdown_render.rs
+@@ -0,0 +1,839 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// W15-1b-1: Desktop Markdown rendering foundation module.
++//
++// Direct event-stream to Dioxus RSX mapping for safe, zero-HTML-injection
++// Markdown rendering in the consult-room chat surface.
++//
++// References:
++//   * brief:       `.superpowers/sdd/w15-1b-1-brief.md`
++//   * arbitration: `.superpowers/sdd/w15-1-arbitration.md` (Scheme B, §7 conditions)
++
++use dioxus::prelude::*;
++use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
++
++/// Whitelist of safe URL schemes.
++/// Only `http`, `https`, `mailto`, and `tel` are permitted.
++///
++// ponytail: 4 类白名单（http/https/mailto/tel）；升级路径 = 读 config.toml 的 allowed-url-schemes
++pub fn sanitize_url_scheme(url: &str) -> Option<&str> {
++    let trimmed = url.trim();
++    if let Some((scheme, _)) = trimmed.split_once(':') {
++        let scheme_lower = scheme.to_ascii_lowercase();
++        match scheme_lower.as_str() {
++            "http" | "https" | "mailto" | "tel" => Some(trimmed),
++            _ => None,
++        }
++    } else {
++        None
++    }
++}
++
++/// Structured AST representations of Markdown nodes.
++#[derive(Debug, Clone, PartialEq)]
++pub enum MdBlock {
++    Heading {
++        level: u8,
++        inlines: Vec<MdInline>,
++    },
++    Paragraph(Vec<MdInline>),
++    BlockQuote(Vec<MdBlock>),
++    CodeBlock {
++        lang: String,
++        code: String,
++    },
++    List {
++        ordered: bool,
++        start: Option<u64>,
++        items: Vec<MdListItem>,
++    },
++    Rule,
++}
++
++#[derive(Debug, Clone, PartialEq)]
++pub struct MdListItem {
++    pub blocks: Vec<MdBlock>,
++}
++
++#[derive(Debug, Clone, PartialEq)]
++pub enum MdInline {
++    Text(String),
++    Code(String),
++    Strong(Vec<MdInline>),
++    Emphasis(Vec<MdInline>),
++    Link {
++        url: String,
++        title: String,
++        children: Vec<MdInline>,
++    },
++    Image {
++        url: String,
++        title: String,
++        alt: String,
++    },
++    SoftBreak,
++    HardBreak,
++}
++
++enum BlockContext {
++    Root(Vec<MdBlock>),
++    BlockQuote(Vec<MdBlock>),
++    List {
++        ordered: bool,
++        start: Option<u64>,
++        items: Vec<MdListItem>,
++    },
++    ListItem {
++        blocks: Vec<MdBlock>,
++        current_inlines: Vec<MdInline>,
++    },
++    Paragraph(Vec<MdInline>),
++    Heading {
++        level: u8,
++        inlines: Vec<MdInline>,
++    },
++    CodeBlock {
++        lang: String,
++        code: String,
++    },
++    HtmlBlock,
++}
++
++impl BlockContext {
++    fn into_block(self) -> Option<MdBlock> {
++        match self {
++            BlockContext::Paragraph(inlines) => Some(MdBlock::Paragraph(inlines)),
++            BlockContext::Heading { level, inlines } => Some(MdBlock::Heading { level, inlines }),
++            BlockContext::BlockQuote(blocks) => Some(MdBlock::BlockQuote(blocks)),
++            BlockContext::CodeBlock { lang, code } => Some(MdBlock::CodeBlock { lang, code }),
++            BlockContext::List { ordered, start, items } => Some(MdBlock::List { ordered, start, items }),
++            _ => None,
++        }
++    }
++}
++
++enum InlineContext {
++    Strong(Vec<MdInline>),
++    Emphasis(Vec<MdInline>),
++    Link {
++        url: String,
++        title: String,
++        children: Vec<MdInline>,
++    },
++    Image {
++        url: String,
++        title: String,
++        alt: String,
++    },
++}
++
++impl InlineContext {
++    fn push_inline(&mut self, inline: MdInline) {
++        match self {
++            InlineContext::Strong(children)
++            | InlineContext::Emphasis(children)
++            | InlineContext::Link { children, .. } => children.push(inline),
++            InlineContext::Image { alt, .. } => {
++                if let MdInline::Text(t) = inline {
++                    alt.push_str(&t);
++                }
++            }
++        }
++    }
++
++    fn into_inline(self) -> MdInline {
++        match self {
++            InlineContext::Strong(children) => MdInline::Strong(children),
++            InlineContext::Emphasis(children) => MdInline::Emphasis(children),
++            InlineContext::Link { url, title, children } => MdInline::Link { url, title, children },
++            InlineContext::Image { url, title, alt } => MdInline::Image { url, title, alt },
++        }
++    }
++}
++
++/// Parse Markdown input string with CommonMark `Options::empty()` into structured `MdBlock`s.
++pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
++    let parser = Parser::new_ext(input, Options::empty());
++    let mut block_stack: Vec<BlockContext> = vec![BlockContext::Root(Vec::new())];
++    let mut inline_stack: Vec<InlineContext> = Vec::new();
++
++    for event in parser {
++        match event {
++            Event::Start(tag) => match tag {
++                Tag::Paragraph => block_stack.push(BlockContext::Paragraph(Vec::new())),
++                Tag::Heading { level, .. } => {
++                    let lvl = match level {
++                        HeadingLevel::H1 => 1,
++                        HeadingLevel::H2 => 2,
++                        HeadingLevel::H3 => 3,
++                        HeadingLevel::H4 => 4,
++                        HeadingLevel::H5 => 5,
++                        HeadingLevel::H6 => 6,
++                    };
++                    block_stack.push(BlockContext::Heading {
++                        level: lvl,
++                        inlines: Vec::new(),
++                    });
++                }
++                Tag::BlockQuote(_) => block_stack.push(BlockContext::BlockQuote(Vec::new())),
++                Tag::CodeBlock(kind) => {
++                    let lang = match kind {
++                        CodeBlockKind::Fenced(l) => l.to_string(),
++                        CodeBlockKind::Indented => String::new(),
++                    };
++                    block_stack.push(BlockContext::CodeBlock {
++                        lang,
++                        code: String::new(),
++                    });
++                }
++                Tag::List(start) => block_stack.push(BlockContext::List {
++                    ordered: start.is_some(),
++                    start,
++                    items: Vec::new(),
++                }),
++                Tag::Item => block_stack.push(BlockContext::ListItem {
++                    blocks: Vec::new(),
++                    current_inlines: Vec::new(),
++                }),
++                Tag::HtmlBlock => block_stack.push(BlockContext::HtmlBlock),
++                Tag::Strong => inline_stack.push(InlineContext::Strong(Vec::new())),
++                Tag::Emphasis => inline_stack.push(InlineContext::Emphasis(Vec::new())),
++                Tag::Link { dest_url, title, .. } => inline_stack.push(InlineContext::Link {
++                    url: dest_url.to_string(),
++                    title: title.to_string(),
++                    children: Vec::new(),
++                }),
++                Tag::Image { dest_url, title, .. } => inline_stack.push(InlineContext::Image {
++                    url: dest_url.to_string(),
++                    title: title.to_string(),
++                    alt: String::new(),
++                }),
++                _ => {}
++            },
++            Event::End(tag_end) => match tag_end {
++                TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::BlockQuote | TagEnd::CodeBlock | TagEnd::List(_) => {
++                    if let Some(ctx) = block_stack.pop() {
++                        if let Some(block) = ctx.into_block() {
++                            push_block_to_parent(&mut block_stack, block);
++                        }
++                    }
++                }
++                TagEnd::Item => {
++                    if let Some(BlockContext::ListItem {
++                        mut blocks,
++                        current_inlines,
++                    }) = block_stack.pop()
++                    {
++                        if !current_inlines.is_empty() {
++                            blocks.push(MdBlock::Paragraph(current_inlines));
++                        }
++                        if let Some(BlockContext::List { items, .. }) = block_stack.last_mut() {
++                            items.push(MdListItem { blocks });
++                        }
++                    }
++                }
++                TagEnd::HtmlBlock => {
++                    block_stack.pop();
++                }
++                TagEnd::Strong | TagEnd::Emphasis | TagEnd::Link | TagEnd::Image => {
++                    if let Some(ctx) = inline_stack.pop() {
++                        push_inline_to_target(&mut inline_stack, &mut block_stack, ctx.into_inline());
++                    }
++                }
++                _ => {}
++            },
++            Event::Text(text) => {
++                let text_str = text.into_string();
++                if let Some(BlockContext::CodeBlock { code, .. }) = block_stack.last_mut() {
++                    code.push_str(&text_str);
++                } else if !block_stack.is_empty() && matches!(block_stack.last(), Some(BlockContext::HtmlBlock)) {
++                    // Explicit drop for HTML block content
++                } else {
++                    push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::Text(text_str));
++                }
++            }
++            Event::Code(code) => {
++                push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::Code(code.into_string()));
++            }
++            Event::Html(_) | Event::InlineHtml(_) => {
++                // Explicit drop: zero HTML injection surface
++            }
++            Event::SoftBreak => {
++                push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::SoftBreak);
++            }
++            Event::HardBreak => {
++                push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::HardBreak);
++            }
++            Event::Rule => {
++                push_block_to_parent(&mut block_stack, MdBlock::Rule);
++            }
++            _ => {}
++        }
++    }
++
++    // Flush any unclosed blocks into root
++    while block_stack.len() > 1 {
++        if let Some(ctx) = block_stack.pop() {
++            if let Some(block) = ctx.into_block() {
++                push_block_to_parent(&mut block_stack, block);
++            }
++        }
++    }
++
++    match block_stack.pop() {
++        Some(BlockContext::Root(blocks)) => blocks,
++        _ => Vec::new(),
++    }
++}
++
++fn push_block_to_parent(stack: &mut [BlockContext], block: MdBlock) {
++    if let Some(parent) = stack.last_mut() {
++        match parent {
++            BlockContext::Root(blocks) | BlockContext::BlockQuote(blocks) => blocks.push(block),
++            BlockContext::ListItem {
++                blocks,
++                current_inlines,
++            } => {
++                if !current_inlines.is_empty() {
++                    let inlines = std::mem::take(current_inlines);
++                    blocks.push(MdBlock::Paragraph(inlines));
++                }
++                blocks.push(block);
++            }
++            _ => {}
++        }
++    }
++}
++
++fn push_inline_to_target(inline_stack: &mut [InlineContext], block_stack: &mut [BlockContext], inline: MdInline) {
++    if let Some(top_inline) = inline_stack.last_mut() {
++        top_inline.push_inline(inline);
++    } else if let Some(top_block) = block_stack.last_mut() {
++        match top_block {
++            BlockContext::Paragraph(inlines) | BlockContext::Heading { inlines, .. } => inlines.push(inline),
++            BlockContext::ListItem { current_inlines, .. } => current_inlines.push(inline),
++            _ => {}
++        }
++    }
++}
++
++/// Render a list of `MdInline` nodes to Dioxus RSX elements.
++fn render_inlines(inlines: Vec<MdInline>) -> Element {
++    rsx! {
++        for (idx, inline) in inlines.into_iter().enumerate() {
++            {render_single_inline(inline, idx)}
++        }
++    }
++}
++
++/// Render a single `MdInline` node to Dioxus RSX.
++fn render_single_inline(inline: MdInline, _key: usize) -> Element {
++    match inline {
++        MdInline::Text(text) => rsx! {
++            "{text}"
++        },
++        MdInline::Code(code) => rsx! {
++            code {
++                class: "md-inline-code",
++                "{code}"
++            }
++        },
++        MdInline::Strong(children) => rsx! {
++            strong {
++                class: "md-strong",
++                {render_inlines(children)}
++            }
++        },
++        MdInline::Emphasis(children) => rsx! {
++            em {
++                class: "md-em",
++                {render_inlines(children)}
++            }
++        },
++        MdInline::Link { url, title, children } => {
++            if let Some(safe_url) = sanitize_url_scheme(&url) {
++                let has_title = !title.is_empty();
++                rsx! {
++                    a {
++                        class: "md-link",
++                        href: "{safe_url}",
++                        target: "_blank",
++                        rel: "noopener noreferrer",
++                        title: if has_title { Some(title) } else { None },
++                        {render_inlines(children)}
++                    }
++                }
++            } else {
++                rsx! {
++                    {render_inlines(children)}
++                }
++            }
++        }
++        MdInline::Image { url, title, alt } => {
++            if let Some(safe_url) = sanitize_url_scheme(&url) {
++                let has_title = !title.is_empty();
++                rsx! {
++                    img {
++                        class: "md-img",
++                        src: "{safe_url}",
++                        alt: "{alt}",
++                        title: if has_title { Some(title) } else { None },
++                    }
++                }
++            } else {
++                rsx! {
++                    span {
++                        class: "md-img-alt",
++                        "{alt}"
++                    }
++                }
++            }
++        }
++        MdInline::SoftBreak => rsx! { " " },
++        MdInline::HardBreak => rsx! { br { class: "md-br" } },
++    }
++}
++
++/// Render a single `MdBlock` to Dioxus RSX.
++fn render_single_block(block: MdBlock, _key: usize) -> Element {
++    match block {
++        MdBlock::Heading { level, inlines } => match level {
++            1 => rsx! { h1 { class: "md-h1", {render_inlines(inlines)} } },
++            2 => rsx! { h2 { class: "md-h2", {render_inlines(inlines)} } },
++            3 => rsx! { h3 { class: "md-h3", {render_inlines(inlines)} } },
++            4 => rsx! { h4 { class: "md-h4", {render_inlines(inlines)} } },
++            5 => rsx! { h5 { class: "md-h5", {render_inlines(inlines)} } },
++            _ => rsx! { h6 { class: "md-h6", {render_inlines(inlines)} } },
++        },
++        MdBlock::Paragraph(inlines) => rsx! {
++            p {
++                class: "md-p",
++                {render_inlines(inlines)}
++            }
++        },
++        MdBlock::BlockQuote(blocks) => rsx! {
++            blockquote {
++                class: "md-blockquote",
++                for (idx, b) in blocks.into_iter().enumerate() {
++                    {render_single_block(b, idx)}
++                }
++            }
++        },
++        MdBlock::CodeBlock { lang, code } => {
++            let class_attr = if lang.is_empty() {
++                "md-code-block".to_string()
++            } else {
++                format!("md-code-block language-{lang}")
++            };
++            rsx! {
++                pre {
++                    class: "{class_attr}",
++                    code {
++                        class: "md-code",
++                        "{code}"
++                    }
++                }
++            }
++        }
++        MdBlock::List {
++            ordered,
++            start: _,
++            items,
++        } => {
++            if ordered {
++                rsx! {
++                    ol {
++                        class: "md-ol",
++                        for (_idx, item) in items.into_iter().enumerate() {
++                            li {
++                                class: "md-li",
++                                for (b_idx, b) in item.blocks.into_iter().enumerate() {
++                                    {render_single_block(b, b_idx)}
++                                }
++                            }
++                        }
++                    }
++                }
++            } else {
++                rsx! {
++                    ul {
++                        class: "md-ul",
++                        for (_idx, item) in items.into_iter().enumerate() {
++                            li {
++                                class: "md-li",
++                                for (b_idx, b) in item.blocks.into_iter().enumerate() {
++                                    {render_single_block(b, b_idx)}
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
++        MdBlock::Rule => rsx! { hr { class: "md-hr" } },
++    }
++}
++
++/// Render Markdown input string directly into Dioxus RSX Element.
++///
++/// Wraps all rendered elements in a container with class `"md-rendered"`.
++pub fn render_markdown(input: &str) -> Element {
++    let blocks = parse_markdown_to_blocks(input);
++    rsx! {
++        div {
++            class: "md-rendered",
++            for (idx, block) in blocks.into_iter().enumerate() {
++                {render_single_block(block, idx)}
++            }
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use dioxus::core::{AttributeValue, DynamicNode, TemplateAttribute, TemplateNode};
++
++    /// Escape HTML special characters for text nodes in HTML serialization.
++    fn escape_html(s: &str, out: &mut String) {
++        for c in s.chars() {
++            match c {
++                '<' => out.push_str("&lt;"),
++                '>' => out.push_str("&gt;"),
++                '&' => out.push_str("&amp;"),
++                '"' => out.push_str("&quot;"),
++                _ => out.push(c),
++            }
++        }
++    }
++
++    /// Serialize a Dioxus `Element` into its rendered HTML string for verification.
++    fn render_to_html_string(el: Element) -> String {
++        let mut out = String::new();
++        if let Ok(vnode) = el {
++            render_vnode(&vnode, &mut out);
++        }
++        out
++    }
++
++    fn render_vnode(vnode: &dioxus::core::VNode, out: &mut String) {
++        for root in vnode.template.roots() {
++            render_template_node(root, vnode, out);
++        }
++    }
++
++    fn render_template_node(node: &TemplateNode, vnode: &dioxus::core::VNode, out: &mut String) {
++        match node {
++            TemplateNode::Element {
++                tag, attrs, children, ..
++            } => {
++                out.push('<');
++                out.push_str(tag);
++                for attr in *attrs {
++                    match attr {
++                        TemplateAttribute::Static { name, value, .. } => {
++                            out.push(' ');
++                            out.push_str(name);
++                            out.push_str("=\"");
++                            escape_html(value, out);
++                            out.push('"');
++                        }
++                        TemplateAttribute::Dynamic { id } => {
++                            if let Some(dyn_attrs) = vnode.dynamic_attrs.get(*id) {
++                                for a in dyn_attrs {
++                                    match &a.value {
++                                        AttributeValue::Text(val) => {
++                                            out.push(' ');
++                                            out.push_str(a.name);
++                                            out.push_str("=\"");
++                                            escape_html(val, out);
++                                            out.push('"');
++                                        }
++                                        AttributeValue::Bool(true) => {
++                                            out.push(' ');
++                                            out.push_str(a.name);
++                                        }
++                                        _ => {}
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++                out.push('>');
++                for child in *children {
++                    render_template_node(child, vnode, out);
++                }
++                out.push_str("</");
++                out.push_str(tag);
++                out.push('>');
++            }
++            TemplateNode::Text { text } => {
++                escape_html(text, out);
++            }
++            TemplateNode::Dynamic { id } => {
++                if let Some(dyn_node) = vnode.dynamic_nodes.get(*id) {
++                    render_dynamic_node(dyn_node, out);
++                }
++            }
++        }
++    }
++
++    fn render_dynamic_node(node: &DynamicNode, out: &mut String) {
++        match node {
++            DynamicNode::Text(vtext) => {
++                escape_html(&vtext.value, out);
++            }
++            DynamicNode::Fragment(vnodes) => {
++                for vn in vnodes {
++                    render_vnode(vn, out);
++                }
++            }
++            _ => {}
++        }
++    }
++
++    // =========================================================================
++    // S4: XSS Injection Vectors (Arbitration §7#4 verbatim assertions)
++    // =========================================================================
++
++    #[test]
++    fn test_xss_vector_1_raw_script_tag() {
++        // <script>alert(1)</script> -> output must not contain literal `<script>`
++        let input = "<script>alert(1)</script>";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("<script>"),
++            "Output must not contain literal <script>, got: {html}"
++        );
++        assert!(
++            !html.contains("alert(1)"),
++            "Raw script content should be dropped, got: {html}"
++        );
++    }
++
++    #[test]
++    fn test_xss_vector_2_javascript_scheme_link() {
++        // [click](javascript:alert(1)) -> output must not contain `href="javascript:"`
++        let input = "[click](javascript:alert(1))";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("href=\"javascript:"),
++            "Output must not contain href=\"javascript:\", got: {html}"
++        );
++        assert!(
++            !html.contains("<a "),
++            "Non-whitelisted link must strip <a> tag, got: {html}"
++        );
++        assert!(
++            html.contains("click"),
++            "Link text should remain visible as plain text, got: {html}"
++        );
++    }
++
++    #[test]
++    fn test_xss_vector_3_data_scheme_image() {
++        // ![x](data:text/html,<b>) -> output must not contain `src="data:text/html"`
++        let input = "![x](data:text/html,<b>)";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("src=\"data:text/html"),
++            "Output must not contain src=\"data:text/html\", got: {html}"
++        );
++        assert!(
++            !html.contains("<img"),
++            "Non-whitelisted image must not render <img> tag, got: {html}"
++        );
++        assert!(
++            html.contains("x"),
++            "Image alt text should remain visible as fallback, got: {html}"
++        );
++    }
++
++    #[test]
++    fn test_xss_vector_4_raw_img_onerror() {
++        // <img src=x onerror=alert(1)> -> output must not contain `onerror=`
++        let input = "<img src=x onerror=alert(1)>";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("onerror="),
++            "Output must not contain onerror=, got: {html}"
++        );
++        assert!(
++            !html.contains("<img"),
++            "Raw HTML img must be explicitly dropped, got: {html}"
++        );
++    }
++
++    #[test]
++    fn test_xss_vector_5_vbscript_scheme_link() {
++        // [a](vbscript:msgbox(1)) -> output must not contain `vbscript:`
++        let input = "[a](vbscript:msgbox(1))";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("vbscript:"),
++            "Output must not contain vbscript:, got: {html}"
++        );
++        assert!(
++            !html.contains("<a "),
++            "Non-whitelisted vbscript link must strip <a> tag, got: {html}"
++        );
++        assert!(
++            html.contains("a"),
++            "Link text should remain visible as plain text, got: {html}"
++        );
++    }
++
++    #[test]
++    fn test_xss_vector_6_nested_script_tags() {
++        // <scr<script>ipt> -> output must not contain executable `<script>`
++        let input = "<scr<script>ipt>";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(
++            !html.contains("<script>"),
++            "Output must not contain executable <script>, got: {html}"
++        );
++    }
++
++    // =========================================================================
++    // Standard Markdown Rendering Tests
++    // =========================================================================
++
++    #[test]
++    fn test_render_paragraph() {
++        let input = "This is a simple paragraph.";
++        let html = render_to_html_string(render_markdown(input));
++        assert_eq!(
++            html,
++            "<div class=\"md-rendered\"><p class=\"md-p\">This is a simple paragraph.</p></div>"
++        );
++    }
++
++    #[test]
++    fn test_render_headings_h1_to_h6() {
++        let input = "# Heading 1\n## Heading 2\n### Heading 3\n#### Heading 4\n##### Heading 5\n###### Heading 6";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<h1 class=\"md-h1\">Heading 1</h1>"));
++        assert!(html.contains("<h2 class=\"md-h2\">Heading 2</h2>"));
++        assert!(html.contains("<h3 class=\"md-h3\">Heading 3</h3>"));
++        assert!(html.contains("<h4 class=\"md-h4\">Heading 4</h4>"));
++        assert!(html.contains("<h5 class=\"md-h5\">Heading 5</h5>"));
++        assert!(html.contains("<h6 class=\"md-h6\">Heading 6</h6>"));
++    }
++
++    #[test]
++    fn test_render_unordered_list() {
++        let input = "- Item 1\n- Item 2\n- Item 3";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<ul class=\"md-ul\">"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">Item 1</p></li>"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">Item 2</p></li>"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">Item 3</p></li>"));
++    }
++
++    #[test]
++    fn test_render_ordered_list() {
++        let input = "1. First\n2. Second\n3. Third";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<ol class=\"md-ol\">"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">First</p></li>"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">Second</p></li>"));
++        assert!(html.contains("<li class=\"md-li\"><p class=\"md-p\">Third</p></li>"));
++    }
++
++    #[test]
++    fn test_render_code_block() {
++        let input = "```rust\nfn main() {\n    println!(\"hello\");\n}\n```";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<pre class=\"md-code-block language-rust\">"));
++        assert!(html.contains("<code class=\"md-code\">fn main() {\n    println!(&quot;hello&quot;);\n}\n</code>"));
++    }
++
++    #[test]
++    fn test_render_inline_code() {
++        let input = "Use `let x = 1;` here.";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<code class=\"md-inline-code\">let x = 1;</code>"));
++    }
++
++    #[test]
++    fn test_render_links_whitelisted() {
++        let input = "[Web](https://northing.app) and [Mail](mailto:info@northing.app) and [Phone](tel:+18001234567)";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains(
++            "<a class=\"md-link\" href=\"https://northing.app\" target=\"_blank\" rel=\"noopener noreferrer\">Web</a>"
++        ));
++        assert!(html.contains(
++            "<a class=\"md-link\" href=\"mailto:info@northing.app\" target=\"_blank\" rel=\"noopener noreferrer\">Mail</a>"
++        ));
++        assert!(html.contains(
++            "<a class=\"md-link\" href=\"tel:+18001234567\" target=\"_blank\" rel=\"noopener noreferrer\">Phone</a>"
++        ));
++    }
++
++    #[test]
++    fn test_render_emphasis_and_strong() {
++        let input = "Some *emphasized* and **strong** text.";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<em class=\"md-em\">emphasized</em>"));
++        assert!(html.contains("<strong class=\"md-strong\">strong</strong>"));
++    }
++
++    #[test]
++    fn test_render_blockquote() {
++        let input = "> To be or not to be,\n> that is the question.";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<blockquote class=\"md-blockquote\">"));
++        assert!(html.contains("To be or not to be, that is the question."));
++    }
++
++    #[test]
++    fn test_render_horizontal_rule() {
++        let input = "Before\n\n---\n\nAfter";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<hr class=\"md-hr\"></hr>"));
++    }
++
++    #[test]
++    fn test_render_hard_and_soft_break() {
++        let input = "Line one  \nLine two\nLine three";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<br class=\"md-br\"></br>"));
++        assert!(html.contains("Line two Line three"));
++    }
++
++    #[test]
++    fn test_render_whitelisted_image() {
++        let input = "![Logo](https://northing.app/logo.png)";
++        let html = render_to_html_string(render_markdown(input));
++        assert!(html.contains("<img class=\"md-img\" src=\"https://northing.app/logo.png\" alt=\"Logo\"></img>"));
++    }
++
++    #[test]
++    fn test_sanitize_url_scheme_whitelist() {
++        assert_eq!(sanitize_url_scheme("http://example.com"), Some("http://example.com"));
++        assert_eq!(
++            sanitize_url_scheme("https://example.com/path?q=1"),
++            Some("https://example.com/path?q=1")
++        );
++        assert_eq!(
++            sanitize_url_scheme("mailto:user@domain.com"),
++            Some("mailto:user@domain.com")
++        );
++        assert_eq!(sanitize_url_scheme("tel:+1234567890"), Some("tel:+1234567890"));
++        assert_eq!(sanitize_url_scheme("HTTP://EXAMPLE.COM"), Some("HTTP://EXAMPLE.COM"));
++        assert_eq!(sanitize_url_scheme("HTTPS://EXAMPLE.COM"), Some("HTTPS://EXAMPLE.COM"));
++
++        // Non-whitelisted schemes must return None
++        assert_eq!(sanitize_url_scheme("javascript:alert(1)"), None);
++        assert_eq!(sanitize_url_scheme("vbscript:msgbox(1)"), None);
++        assert_eq!(sanitize_url_scheme("data:text/html,<b>hi</b>"), None);
++        assert_eq!(sanitize_url_scheme("file:///etc/passwd"), None);
++        assert_eq!(sanitize_url_scheme("blob:http://example.com/uuid"), None);
++        assert_eq!(sanitize_url_scheme("intent://example.com"), None);
++        assert_eq!(sanitize_url_scheme("custom-scheme:data"), None);
++        assert_eq!(sanitize_url_scheme("/relative/path"), None);
++        assert_eq!(sanitize_url_scheme("no_colon_path"), None);
++        assert_eq!(sanitize_url_scheme(""), None);
++    }
++}
+diff --git a/src/apps/desktop/src/ui_dioxus/mod.rs b/src/apps/desktop/src/ui_dioxus/mod.rs
+index 1fe62be..67db10f 100644
+--- a/src/apps/desktop/src/ui_dioxus/mod.rs
++++ b/src/apps/desktop/src/ui_dioxus/mod.rs
+@@ -28,20 +28,21 @@ mod api_events;
+ mod api_fs;
+ mod api_memory;
+ #[doc(hidden)] // 为 W14-1c-1 集成测试暴露；非公共 API，勿在桌面 UI 之外依赖
+ pub mod api_settings;
+ mod app;
+ mod approval_card;
+ mod color;
+ mod css;
+ mod entry;
+ mod i18n;
++pub mod markdown_render;
+ mod page_shell;
+ mod pages_archive;
+ mod pages_archive_search;
+ mod pages_memory;
+ mod pages_onboarding;
+ mod pages_onboarding_css;
+ mod pages_settings;
+ mod pages_settings_cards;
+ mod pages_settings_provider_edit;
+ mod pages_settings_skills;

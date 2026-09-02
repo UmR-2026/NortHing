@@ -1,0 +1,658 @@
+4bf004c feat(desktop): integrate markdown rendering into chat render points + scoped CSS (W15-1b-2)
+ .superpowers/sdd/w15-1b-2-report.md                |  48 +++++++
+ src/apps/desktop/src/ui_dioxus/app.rs              |   9 +-
+ src/apps/desktop/src/ui_dioxus/markdown_render.rs  |  42 ++++--
+ src/apps/desktop/src/ui_dioxus/mod.rs              |   1 +
+ .../desktop/src/ui_dioxus/pages_chat_md_css.rs     | 155 +++++++++++++++++++++
+ 5 files changed, 240 insertions(+), 15 deletions(-)
+diff --git a/.superpowers/sdd/w15-1b-2-report.md b/.superpowers/sdd/w15-1b-2-report.md
+new file mode 100644
+index 0000000..c634f31
+--- /dev/null
++++ b/.superpowers/sdd/w15-1b-2-report.md
+@@ -0,0 +1,48 @@
++# W15-1b-2 Report — Markdown 集成单（app.rs 三渲染点 + CSS）
++
++BASE: `329cc8f`。接手时工作树含前任 coder 未提交半成品（app.rs / markdown_render.rs / mod.rs 修改 + pages_chat_md_css.rs 新建）。本报告含对半成品的逐条裁定。
++
++## 完成状态: DONE
++
++## 改动清单（最终态，vs BASE）
++
++| 文件 | 改动 |
++|---|---|
++| `src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs` | 新建（S1）。`pub const CHAT_MD_CSS`，仿 `pages_onboarding_css.rs` 形态。全部选择器以 `.md-rendered` 为前缀作用域（仲裁 §8.3：不漏到非 md 区域）。`.md-rendered { white-space: pre-wrap; word-break: break-word; }` 覆盖仲裁 §7#7 硬性要求。段落/标题 h1-h6/列表/`pre.md-code-block`（等宽+pre-wrap）/内联 code（`--font-mono`）/链接（`var(--accent-solid)`，磁盘核实该变量存在于 css.rs :439/:536/:699）/blockquote 左灰条/hr dashed/img/strong/em。 |
++| `src/apps/desktop/src/ui_dioxus/mod.rs` | S2：`mod pages_chat_md_css;` 一行，按字母序插入（与兄弟模块形态一致）。 |
++| `src/apps/desktop/src/ui_dioxus/app.rs` | S3：`:334` 在 `room_app_root` 的 head 追加 `style { dangerous_inner_html: "{pages_chat_md_css::CHAT_MD_CSS}" }`（原 :332-333 两行未动；CHAT_MD_CSS 为受信任常量，注入形态与现有同款）。S4：三渲染点 `:509`（流式 draft）、`:750`（assistant 完成态）、`:760`（witness 完成态）接 `render_markdown`，div 加 `md-rendered` class。消息文本零 `dangerous_inner_html`（仲裁 §7#2 红线，diff 中唯一新增 dangerous_inner_html 即 S3 的 CSS 常量注入）。 |
++| `src/apps/desktop/src/ui_dioxus/markdown_render.rs` | S5 四处小修：`render_single_inline`/`render_single_block` 的 `key` 实参接入 RSX `key:` 属性（含列表 `li` 的 `key: "{idx}"`）；`escape_html` 补 `'` → `&#39;`；三处 `_ => {}` catch-all 加 `// ponytail:` 注释（Options::empty() 下不可达，升级路径=pulldown-cmark 升版/GFM 扩展时改穷尽匹配）；图片 alt 内格式化丢弃处加已知限制注释。 |
++
++注入窗裁定（仲裁 §8.4）：**仅注入 1 窗（room_app_root）**。grep 证据：`.msg-agent` 与 `render_entry`/`render_entries` 只存在于 app.rs 的 room 文档树；archive/space/settings/memory/work/self/facility 等窗不渲染本三处消息正文。
++
++## 对半成品的裁定
++
++**保留约 95%，1 处删减，0 处重写。**
++
++- app.rs 四处改动：**全保留**。逐点核对正确（含 `draft`/`body` 均为 `&String`，`render_markdown(&str)` 经 deref  coercion 成立；children 循环在 msg-agent div 之外，不受 md 渲染污染）。
++- markdown_render.rs S5：**全保留**。四项要求全部落实且形态正确。
++- mod.rs：**保留**。
++- pages_chat_md_css.rs：**保留主体，删一个冗余选择器块**。前任写了 `.msg-agent.md-rendered, .body.md-rendered, .rec.witness .body.md-rendered { pre-wrap... }`，与紧随其后的 `.md-rendered { pre-wrap... }` 声明完全相同且被后者全量覆盖——删除并留一行注释指向 §7#7。其余样式逐条对照 brief S1 清单无遗漏，CSS 变量全部磁盘核实存在（`--accent-solid`/`--font-mono`/`--mind-base`/`--bg0`/`--line`/`--muted`/`--text`/`--faint`/`--mind-line`），`color-mix` 用法与 TRUTH_CSS 既有语言一致。
++- 半成品的问题：**无任何验证记录、无 report**——三验证 + git diff --check 本次全部由我重跑（见下）。
++
++## 验证输出摘录（全部本 coder 实测，C6 范式）
++
++1. `cmd /c "cd /d E:\agent-project\NortHing && %USERPROFILE%\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check -p northhing > w15b2-check-desktop.log 2>&1"` → **通过**：`Finished dev profile ... in 35.43s`，0 error；无本次改动引入的新 warning。
++2. 同范式 `cargo check --workspace` → **通过**：`Finished dev profile ... in 9.33s`，0 error（w15b2-check-ws.log）。
++3. 同范式 `cargo test -p northhing --lib --no-run` → `BUILD_OK`，二进制 `target\debug\deps\northhing-aba6cc17ae1929a4.exe`；cd 到 `src\apps\desktop` 直接跑二进制 → **`test result: ok. 164 passed; 0 failed; 0 ignored`**，其中 markdown_render 测试行数 = **19**（全绿，覆盖不下降）。注：cmd 等父进程退出后孙进程短暂持有日志句柄导致立即 findstr 报"文件正被使用"，等待后读取正常（正是 long-running-shell skill 预警的句柄继承现象，非测试失败）。
++4. `git diff --check` → **通过**（exit 0，无空白错误）。
++5. 截图：按 brief 修订剥离给编排者。**本单未启动任何 GUI 进程**。
++6. 熔断：未触发，所有命令分钟级内完成（最长 35s）。
++
++红线自查：`git diff` 对 `css.rs`、`pages_archive.rs`、`pages_archive_search.rs`、`contracts/kernel-api/src/session.rs` 全部为空 ✓；diff 中无新增 `let _ =`（rot 闸 371/388 不涨）✓；日志/注释英文（ponytail 注释按仓内既有中文注释惯例除外——app.rs 周边即中文）✓。
++
++## 偏差（C4 记录）
++
++- brief 行号 :502-509/:747/:757 → 磁盘实际 :509/:750/:760；注入点 brief :330-331 → 实际追加于 :334（原两行之后）。语义与 brief 一致。
++- brief 写 `render_markdown(&draft)`，实现用 `render_markdown(draft)`（draft 已是 `&String`，`&&String` 写法冗余；类型等价）。
++- `cargo fmt`（`pnpm run fmt:rs`）本地不可跑：`rustfmt.exe is not installed for the toolchain stable-x86_64-pc-windows-msvc`。安装组件超出本单权限，留给 CI/编排者。手工对齐了周边风格。
++
++## 遗留 follow-up（仲裁 §7#14 要求记录）
++
++- W15-2 候选：删除 `css_files.rs` 孤儿文件，或注册进 mod.rs（本单按裁决不处理）。
++- 仲裁 §7#11 的三张视觉回归截图：由编排者验证 5' 负责（流式 draft / 完成 assistant / 完成 witness 三态）。
+diff --git a/src/apps/desktop/src/ui_dioxus/app.rs b/src/apps/desktop/src/ui_dioxus/app.rs
+index 8c9b6b1..140d178 100644
+--- a/src/apps/desktop/src/ui_dioxus/app.rs
++++ b/src/apps/desktop/src/ui_dioxus/app.rs
+@@ -19,20 +19,22 @@ use dioxus::desktop::tao::window::WindowBuilder;
+ use dioxus::desktop::{window, Config, WindowCloseBehaviour};
+ use dioxus::prelude::*;
+ use std::collections::HashSet;
+ use std::rc::Rc;
+ 
+ use super::api;
+ use super::color::chronicle_gradient;
+ use super::css;
+ use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
+ use super::i18n::{keys, LocalePack};
++use super::markdown_render::render_markdown;
++use super::pages_chat_md_css;
+ use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
+ use super::session_mock::MockEntry;
+ use super::state::{Geometry, GeometryRxArc, GeometryTx, GlobalTheme, RoomWindowIdTx};
+ use super::turn_banner::{cancelled_body, error_draft_body, kernel_error_message, maybe_set_degraded};
+ use super::window_ops::{close_module, quit_shell};
+ use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
+ use northhing_kernel_api::turn::{TurnId, TurnStateKind};
+ use tokio::sync::watch;
+ 
+ /// RSX root for the room main window.
+@@ -322,20 +324,21 @@ pub fn room_app_root() -> Element {
+     let (wm_nav_onboarding, geom_rx_nav_onboarding, theme_nav_onboarding) =
+         (window_manager.clone(), geometry_rx_arc.clone(), theme.clone());
+     let wm_close = window_manager.clone();
+ 
+     rsx! {
+         body {
+             "data-theme": "{theme_class}",
+             lang: "zh-CN",
+             style { dangerous_inner_html: "{css::truth_css()}" }
+             style { dangerous_inner_html: "{css::OVERLAY_CSS}" }
++            style { dangerous_inner_html: "{pages_chat_md_css::CHAT_MD_CSS}" }
+             meta { charset: "UTF-8" }
+             meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
+             title { "{locale.t(keys::WINDOW_TITLE_ROOM)}" }
+ 
+             div { id: "containment" }
+             div { class: "membrane-frame" }
+             div { id: "global-aura" }
+ 
+             div { id: "engine",
+                 div { id: "room-wrap",
+@@ -496,21 +499,21 @@ pub fn room_app_root() -> Element {
+ 
+                     div { class: "chat-flow", id: "chat-flow",
+                             div { class: "session-open",
+                                 "{locale.t(keys::SESSION_BANNER)}"
+                             }
+                             {render_entries(entries.read().iter(), entries, &locale, session_allow_list)}
+                             if let Some(ref draft) = *assistant_draft.read() {
+                                 div { class: "rec entity",
+                                     div { class: "who", "它" }
+                                     div { class: "body",
+-                                        div { class: "msg-agent", "{draft}" }
++                                        div { class: "msg-agent md-rendered", {render_markdown(draft)} }
+                                     }
+                                 }
+                             }
+                         }
+ 
+                         div { class: "room-input",
+                             if let Some(ref err) = *send_error.read() {
+                                 div { class: "send-error", style: "color: var(--faint); font-size: 11px; padding-bottom: 4px;", "{err}" }
+                             }
+                             div { class: "input-row",
+@@ -737,31 +740,31 @@ fn render_entry(
+     entry: &MockEntry,
+     entries: Signal<Vec<MockEntry>>,
+     locale: &LocalePack,
+     session_allow_list: Signal<HashSet<String>>,
+ ) -> Element {
+     match entry {
+         MockEntry::Entity { who, body, children } => rsx! {
+             div { class: "rec entity",
+                 div { class: "who", "{who}" }
+                 div { class: "body",
+-                    div { class: "msg-agent", "{body}" }
++                    div { class: "msg-agent md-rendered", {render_markdown(body)} }
+                     for child in children.iter() {
+                         {render_child(child, locale)}
+                     }
+                 }
+             }
+         },
+         MockEntry::Witness { who, body } => rsx! {
+             div { class: "rec witness",
+                 div { class: "who", "{who}" }
+-                div { class: "body", "{body}" }
++                div { class: "body md-rendered", {render_markdown(body)} }
+             }
+         },
+         MockEntry::Approval {
+             call_id,
+             head,
+             main,
+             risk,
+             resolved,
+             state_text,
+         } => super::approval_card::render_approval_card(
+diff --git a/src/apps/desktop/src/ui_dioxus/markdown_render.rs b/src/apps/desktop/src/ui_dioxus/markdown_render.rs
+index ecf9393..206ba7a 100644
+--- a/src/apps/desktop/src/ui_dioxus/markdown_render.rs
++++ b/src/apps/desktop/src/ui_dioxus/markdown_render.rs
+@@ -127,20 +127,21 @@ enum InlineContext {
+     },
+ }
+ 
+ impl InlineContext {
+     fn push_inline(&mut self, inline: MdInline) {
+         match self {
+             InlineContext::Strong(children)
+             | InlineContext::Emphasis(children)
+             | InlineContext::Link { children, .. } => children.push(inline),
+             InlineContext::Image { alt, .. } => {
++                // Known limitation: nested inline formatting inside image alt text is flattened to plain text.
+                 if let MdInline::Text(t) = inline {
+                     alt.push_str(&t);
+                 }
+             }
+         }
+     }
+ 
+     fn into_inline(self) -> MdInline {
+         match self {
+             InlineContext::Strong(children) => MdInline::Strong(children),
+@@ -201,20 +202,21 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
+                 Tag::Link { dest_url, title, .. } => inline_stack.push(InlineContext::Link {
+                     url: dest_url.to_string(),
+                     title: title.to_string(),
+                     children: Vec::new(),
+                 }),
+                 Tag::Image { dest_url, title, .. } => inline_stack.push(InlineContext::Image {
+                     url: dest_url.to_string(),
+                     title: title.to_string(),
+                     alt: String::new(),
+                 }),
++                // ponytail: Options::empty() 下其余 Tag::* 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
+                 _ => {}
+             },
+             Event::End(tag_end) => match tag_end {
+                 TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::BlockQuote | TagEnd::CodeBlock | TagEnd::List(_) => {
+                     if let Some(ctx) = block_stack.pop() {
+                         if let Some(block) = ctx.into_block() {
+                             push_block_to_parent(&mut block_stack, block);
+                         }
+                     }
+                 }
+@@ -233,20 +235,21 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
+                     }
+                 }
+                 TagEnd::HtmlBlock => {
+                     block_stack.pop();
+                 }
+                 TagEnd::Strong | TagEnd::Emphasis | TagEnd::Link | TagEnd::Image => {
+                     if let Some(ctx) = inline_stack.pop() {
+                         push_inline_to_target(&mut inline_stack, &mut block_stack, ctx.into_inline());
+                     }
+                 }
++                // ponytail: Options::empty() 下其余 TagEnd::* 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
+                 _ => {}
+             },
+             Event::Text(text) => {
+                 let text_str = text.into_string();
+                 if let Some(BlockContext::CodeBlock { code, .. }) = block_stack.last_mut() {
+                     code.push_str(&text_str);
+                 } else if !block_stack.is_empty() && matches!(block_stack.last(), Some(BlockContext::HtmlBlock)) {
+                     // Explicit drop for HTML block content
+                 } else {
+                     push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::Text(text_str));
+@@ -260,20 +263,21 @@ pub fn parse_markdown_to_blocks(input: &str) -> Vec<MdBlock> {
+             }
+             Event::SoftBreak => {
+                 push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::SoftBreak);
+             }
+             Event::HardBreak => {
+                 push_inline_to_target(&mut inline_stack, &mut block_stack, MdInline::HardBreak);
+             }
+             Event::Rule => {
+                 push_block_to_parent(&mut block_stack, MdBlock::Rule);
+             }
++            // ponytail: Options::empty() 下其余 Event::* (FootnoteReference/TaskListMarker/...) 不可达；升级路径 = pulldown-cmark 升版或扩展 GFM 时改穷尽匹配
+             _ => {}
+         }
+     }
+ 
+     // Flush any unclosed blocks into root
+     while block_stack.len() > 1 {
+         if let Some(ctx) = block_stack.pop() {
+             if let Some(block) = ctx.into_block() {
+                 push_block_to_parent(&mut block_stack, block);
+             }
+@@ -320,164 +324,177 @@ fn push_inline_to_target(inline_stack: &mut [InlineContext], block_stack: &mut [
+ /// Render a list of `MdInline` nodes to Dioxus RSX elements.
+ fn render_inlines(inlines: Vec<MdInline>) -> Element {
+     rsx! {
+         for (idx, inline) in inlines.into_iter().enumerate() {
+             {render_single_inline(inline, idx)}
+         }
+     }
+ }
+ 
+ /// Render a single `MdInline` node to Dioxus RSX.
+-fn render_single_inline(inline: MdInline, _key: usize) -> Element {
++fn render_single_inline(inline: MdInline, key: usize) -> Element {
+     match inline {
+         MdInline::Text(text) => rsx! {
+             "{text}"
+         },
+         MdInline::Code(code) => rsx! {
+             code {
++                key: "{key}",
+                 class: "md-inline-code",
+                 "{code}"
+             }
+         },
+         MdInline::Strong(children) => rsx! {
+             strong {
++                key: "{key}",
+                 class: "md-strong",
+                 {render_inlines(children)}
+             }
+         },
+         MdInline::Emphasis(children) => rsx! {
+             em {
++                key: "{key}",
+                 class: "md-em",
+                 {render_inlines(children)}
+             }
+         },
+         MdInline::Link { url, title, children } => {
+             if let Some(safe_url) = sanitize_url_scheme(&url) {
+                 let has_title = !title.is_empty();
+                 rsx! {
+                     a {
++                        key: "{key}",
+                         class: "md-link",
+                         href: "{safe_url}",
+                         target: "_blank",
+                         rel: "noopener noreferrer",
+                         title: if has_title { Some(title) } else { None },
+                         {render_inlines(children)}
+                     }
+                 }
+             } else {
+                 rsx! {
+                     {render_inlines(children)}
+                 }
+             }
+         }
+         MdInline::Image { url, title, alt } => {
+             if let Some(safe_url) = sanitize_url_scheme(&url) {
+                 let has_title = !title.is_empty();
+                 rsx! {
+                     img {
++                        key: "{key}",
+                         class: "md-img",
+                         src: "{safe_url}",
+                         alt: "{alt}",
+                         title: if has_title { Some(title) } else { None },
+                     }
+                 }
+             } else {
+                 rsx! {
+                     span {
++                        key: "{key}",
+                         class: "md-img-alt",
+                         "{alt}"
+                     }
+                 }
+             }
+         }
+         MdInline::SoftBreak => rsx! { " " },
+-        MdInline::HardBreak => rsx! { br { class: "md-br" } },
++        MdInline::HardBreak => rsx! { br { key: "{key}", class: "md-br" } },
+     }
+ }
+ 
+ /// Render a single `MdBlock` to Dioxus RSX.
+-fn render_single_block(block: MdBlock, _key: usize) -> Element {
++fn render_single_block(block: MdBlock, key: usize) -> Element {
+     match block {
+         MdBlock::Heading { level, inlines } => match level {
+-            1 => rsx! { h1 { class: "md-h1", {render_inlines(inlines)} } },
+-            2 => rsx! { h2 { class: "md-h2", {render_inlines(inlines)} } },
+-            3 => rsx! { h3 { class: "md-h3", {render_inlines(inlines)} } },
+-            4 => rsx! { h4 { class: "md-h4", {render_inlines(inlines)} } },
+-            5 => rsx! { h5 { class: "md-h5", {render_inlines(inlines)} } },
+-            _ => rsx! { h6 { class: "md-h6", {render_inlines(inlines)} } },
++            1 => rsx! { h1 { key: "{key}", class: "md-h1", {render_inlines(inlines)} } },
++            2 => rsx! { h2 { key: "{key}", class: "md-h2", {render_inlines(inlines)} } },
++            3 => rsx! { h3 { key: "{key}", class: "md-h3", {render_inlines(inlines)} } },
++            4 => rsx! { h4 { key: "{key}", class: "md-h4", {render_inlines(inlines)} } },
++            5 => rsx! { h5 { key: "{key}", class: "md-h5", {render_inlines(inlines)} } },
++            _ => rsx! { h6 { key: "{key}", class: "md-h6", {render_inlines(inlines)} } },
+         },
+         MdBlock::Paragraph(inlines) => rsx! {
+             p {
++                key: "{key}",
+                 class: "md-p",
+                 {render_inlines(inlines)}
+             }
+         },
+         MdBlock::BlockQuote(blocks) => rsx! {
+             blockquote {
++                key: "{key}",
+                 class: "md-blockquote",
+                 for (idx, b) in blocks.into_iter().enumerate() {
+                     {render_single_block(b, idx)}
+                 }
+             }
+         },
+         MdBlock::CodeBlock { lang, code } => {
+             let class_attr = if lang.is_empty() {
+                 "md-code-block".to_string()
+             } else {
+                 format!("md-code-block language-{lang}")
+             };
+             rsx! {
+                 pre {
++                    key: "{key}",
+                     class: "{class_attr}",
+                     code {
+                         class: "md-code",
+                         "{code}"
+                     }
+                 }
+             }
+         }
+         MdBlock::List {
+             ordered,
+             start: _,
+             items,
+         } => {
+             if ordered {
+                 rsx! {
+                     ol {
++                        key: "{key}",
+                         class: "md-ol",
+-                        for (_idx, item) in items.into_iter().enumerate() {
++                        for (idx, item) in items.into_iter().enumerate() {
+                             li {
++                                key: "{idx}",
+                                 class: "md-li",
+                                 for (b_idx, b) in item.blocks.into_iter().enumerate() {
+                                     {render_single_block(b, b_idx)}
+                                 }
+                             }
+                         }
+                     }
+                 }
+             } else {
+                 rsx! {
+                     ul {
++                        key: "{key}",
+                         class: "md-ul",
+-                        for (_idx, item) in items.into_iter().enumerate() {
++                        for (idx, item) in items.into_iter().enumerate() {
+                             li {
++                                key: "{idx}",
+                                 class: "md-li",
+                                 for (b_idx, b) in item.blocks.into_iter().enumerate() {
+                                     {render_single_block(b, b_idx)}
+                                 }
+                             }
+                         }
+                     }
+                 }
+             }
+         }
+-        MdBlock::Rule => rsx! { hr { class: "md-hr" } },
++        MdBlock::Rule => rsx! { hr { key: "{key}", class: "md-hr" } },
+     }
+ }
+ 
+ /// Render Markdown input string directly into Dioxus RSX Element.
+ ///
+ /// Wraps all rendered elements in a container with class `"md-rendered"`.
+ pub fn render_markdown(input: &str) -> Element {
+     let blocks = parse_markdown_to_blocks(input);
+     rsx! {
+         div {
+@@ -495,20 +512,21 @@ mod tests {
+     use dioxus::core::{AttributeValue, DynamicNode, TemplateAttribute, TemplateNode};
+ 
+     /// Escape HTML special characters for text nodes in HTML serialization.
+     fn escape_html(s: &str, out: &mut String) {
+         for c in s.chars() {
+             match c {
+                 '<' => out.push_str("&lt;"),
+                 '>' => out.push_str("&gt;"),
+                 '&' => out.push_str("&amp;"),
+                 '"' => out.push_str("&quot;"),
++                '\'' => out.push_str("&#39;"),
+                 _ => out.push(c),
+             }
+         }
+     }
+ 
+     /// Serialize a Dioxus `Element` into its rendered HTML string for verification.
+     fn render_to_html_string(el: Element) -> String {
+         let mut out = String::new();
+         if let Ok(vnode) = el {
+             render_vnode(&vnode, &mut out);
+diff --git a/src/apps/desktop/src/ui_dioxus/mod.rs b/src/apps/desktop/src/ui_dioxus/mod.rs
+index 67db10f..75aad39 100644
+--- a/src/apps/desktop/src/ui_dioxus/mod.rs
++++ b/src/apps/desktop/src/ui_dioxus/mod.rs
+@@ -32,20 +32,21 @@ pub mod api_settings;
+ mod app;
+ mod approval_card;
+ mod color;
+ mod css;
+ mod entry;
+ mod i18n;
+ pub mod markdown_render;
+ mod page_shell;
+ mod pages_archive;
+ mod pages_archive_search;
++mod pages_chat_md_css;
+ mod pages_memory;
+ mod pages_onboarding;
+ mod pages_onboarding_css;
+ mod pages_settings;
+ mod pages_settings_cards;
+ mod pages_settings_provider_edit;
+ mod pages_settings_skills;
+ mod pages_space;
+ mod panel_files;
+ mod registry;
+diff --git a/src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs b/src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs
+new file mode 100644
+index 0000000..c1d5fdc
+--- /dev/null
++++ b/src/apps/desktop/src/ui_dioxus/pages_chat_md_css.rs
+@@ -0,0 +1,155 @@
++// SPDX-License-Identifier: MIT OR Apache-2.0
++//
++// W15-1b-2 (2026-09-02) — Markdown chat styling.
++//
++// Stylesheet for Markdown rendered messages in the consult-room chat surface.
++// Scoped exclusively to `.md-rendered` subtrees to prevent style leaks to non-Markdown UI.
++
++pub const CHAT_MD_CSS: &str = r#"
++  /* ============ W15-1b-2 Chat Markdown Stylesheet ============
++     Scoped strictly to .md-rendered container to protect host UI layout.
++     Aligns with TRUTH_CSS serif body font and color system. */
++
++  /* Arbitration §7#7 hard requirement: pre-wrap + break-word on every
++     rendered subtree (.msg-agent / .body carry .md-rendered too). */
++  .md-rendered {
++    white-space: pre-wrap;
++    word-break: break-word;
++  }
++
++  .md-rendered p.md-p {
++    margin: 0 0 8px 0;
++    line-height: inherit;
++  }
++  .md-rendered p.md-p:last-child {
++    margin-bottom: 0;
++  }
++
++  .md-rendered h1.md-h1,
++  .md-rendered h2.md-h2,
++  .md-rendered h3.md-h3,
++  .md-rendered h4.md-h4,
++  .md-rendered h5.md-h5,
++  .md-rendered h6.md-h6 {
++    margin: 12px 0 6px 0;
++    font-family: inherit;
++    font-weight: 600;
++    line-height: 1.3;
++    color: var(--text);
++  }
++  .md-rendered h1.md-h1:first-child,
++  .md-rendered h2.md-h2:first-child,
++  .md-rendered h3.md-h3:first-child,
++  .md-rendered h4.md-h4:first-child,
++  .md-rendered h5.md-h5:first-child,
++  .md-rendered h6.md-h6:first-child {
++    margin-top: 0;
++  }
++  .md-rendered h1.md-h1 { font-size: 1.35em; }
++  .md-rendered h2.md-h2 { font-size: 1.22em; }
++  .md-rendered h3.md-h3 { font-size: 1.12em; }
++  .md-rendered h4.md-h4 { font-size: 1.05em; }
++  .md-rendered h5.md-h5,
++  .md-rendered h6.md-h6 { font-size: 1.0em; }
++
++  .md-rendered ul.md-ul,
++  .md-rendered ol.md-ol {
++    margin: 0 0 8px 0;
++    padding-left: 20px;
++  }
++  .md-rendered ul.md-ul:last-child,
++  .md-rendered ol.md-ol:last-child {
++    margin-bottom: 0;
++  }
++  .md-rendered li.md-li {
++    margin: 2px 0;
++  }
++  .md-rendered li.md-li > p.md-p {
++    margin: 0;
++  }
++
++  .md-rendered code.md-inline-code {
++    font-family: var(--font-mono);
++    font-size: 0.9em;
++    padding: 2px 5px;
++    border-radius: 3px;
++    background: color-mix(in srgb, var(--mind-base) 10%, var(--bg0));
++    border: 1px solid var(--line);
++  }
++
++  .md-rendered pre.md-code-block {
++    font-family: var(--font-mono);
++    font-size: 12px;
++    line-height: 1.5;
++    padding: 10px 12px;
++    margin: 8px 0;
++    background: var(--bg0);
++    border: 1px solid var(--line);
++    border-radius: 4px;
++    overflow-x: auto;
++    white-space: pre-wrap;
++    word-break: break-all;
++  }
++  .md-rendered pre.md-code-block code.md-code {
++    font-family: inherit;
++    font-size: inherit;
++    background: none;
++    border: none;
++    padding: 0;
++    color: inherit;
++  }
++  .md-rendered pre.md-code-block:last-child {
++    margin-bottom: 0;
++  }
++
++  .md-rendered blockquote.md-blockquote {
++    margin: 8px 0;
++    padding: 4px 12px;
++    border-left: 3px solid var(--line);
++    color: var(--muted);
++    background: color-mix(in srgb, var(--mind-base) 5%, transparent);
++    border-radius: 0 3px 3px 0;
++  }
++  .md-rendered blockquote.md-blockquote:last-child {
++    margin-bottom: 0;
++  }
++  .md-rendered blockquote.md-blockquote > *:last-child {
++    margin-bottom: 0;
++  }
++
++  .md-rendered a.md-link {
++    color: var(--accent-solid);
++    text-decoration: underline;
++    text-underline-offset: 2px;
++    transition: color 0.15s;
++  }
++  .md-rendered a.md-link:hover {
++    color: var(--mind-line);
++  }
++
++  .md-rendered hr.md-hr {
++    border: none;
++    border-top: 1px dashed var(--line);
++    margin: 12px 0;
++  }
++
++  .md-rendered img.md-img {
++    max-width: 100%;
++    height: auto;
++    border-radius: 3px;
++    border: 1px solid var(--line);
++    margin: 6px 0;
++  }
++  .md-rendered span.md-img-alt {
++    font-family: var(--font-mono);
++    font-size: 11px;
++    color: var(--faint);
++  }
++
++  .md-rendered strong.md-strong {
++    font-weight: 600;
++  }
++  .md-rendered em.md-em {
++    font-style: italic;
++  }
++"#;
