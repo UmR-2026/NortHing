@@ -1,0 +1,394 @@
+09a0c69 test(assembly/core): W14-1c-4a init gate tests use local state, drop global FACADE_READY/INIT_STATE writes
+ .superpowers/sdd/w14-1c-4a-report.md               | 47 ++++++++++++++
+ .../assembly/core/src/kernel_facade/lifecycle.rs   | 35 ++++++++---
+ .../assembly/core/src/kernel_facade/tests.rs       | 72 +++++++++++-----------
+ 3 files changed, 108 insertions(+), 46 deletions(-)
+diff --git a/.superpowers/sdd/w14-1c-4a-report.md b/.superpowers/sdd/w14-1c-4a-report.md
+new file mode 100644
+index 0000000..86eaabf
+--- /dev/null
++++ b/.superpowers/sdd/w14-1c-4a-report.md
+@@ -0,0 +1,47 @@
++# W14-1c-4a Report — init gate 测试局部重写
++
++状态：**DONE**（BASE `b7675d1`，工作树验证）
++
++## 改动清单
++
++1. `src/crates/assembly/core/src/kernel_facade/lifecycle.rs`（修改）
++   - `run_init_gate` 瘦身为委托：`run_init_gate_with(&FACADE_READY, &INIT_STATE, &INIT_NOTIFY, init).await`。
++   - 新增 inner 函数 `run_init_gate_with`（`pub(super)`，无新可见性扩张），接收 `ready: &AtomicBool, state: &AsyncMutex<InitState>, notify: &Notify`。状态机迁移、错误文案（"init_core timed out waiting for concurrent initialization"）、Notify 唤醒、ready 置位时机、`info!` 日志逐行不变（diff 为纯参数化改名）。
++2. `src/crates/assembly/core/src/kernel_facade/tests.rs`（修改）
++   - `test_init_gate_lifecycle_all_scenarios` 重写：每个 scenario 用局部 fresh `AtomicBool` / `tokio::sync::Mutex<InitState>` / `Notify` 调 `run_init_gate_with`。**测试体内 `FACADE_READY` / `INIT_STATE` / `INIT_NOTIFY` 三个名字的读写全部消失**（grep 证实，仅剩 `run_init_gate_with` 调用）。
++   - Scenario 1（并发只跑一次）/ 2（Ready 幂等不重跑）/ 3（失败回退 NotStarted 可重试）断言语义全保留，并顺手加局部 `ready` 翻转断言（成功置位 / 失败不置位），覆盖 FACADE_READY 置位时机的局部门禁行为。
++   - Scenario 4（fresh facade `list_sessions()` 未 init 返回 `KernelError::Internal` 不 panic）：删除原全局重置前奏——该断言只依赖新 facade 无 coordinator（`mod.rs` `coordinator()`），与进程级门禁无关，天然并发安全。
++   - mojibake 顺手清（in-scope 配额）：原 :401/:433/:468 场景注释（`鈥?`/`涔嬪悗鍐嶈皟`/`鈫?`）随重写改为英文；:650 分隔线 `鈹€` 串改为与其它分隔线一致的 `──`。
++   - 导入：`run_init_gate/FACADE_READY/INIT_STATE` → `run_init_gate_with`；新增 `use tokio::sync::{Mutex as AsyncMutex, Notify};` 与 `AtomicBool`。
++3. `.superpowers/sdd/w14-1c-4a-report.md`（本文件，新增）
++
++`kernel_facade/mod.rs` 未动（附带条件 #9 / C1）。rot 闸：diff 新增行中 `let _ =` 计数 = 0（rg 证实），371/388 基线不涨。S4：未引入有已知上限的简化，无新增 `ponytail:` 注释需求。
++
++## inner 函数签名
++
++```rust
++pub(super) async fn run_init_gate_with<Fut>(
++    ready: &AtomicBool,
++    state: &AsyncMutex<InitState>,
++    notify: &Notify,
++    init: Fut,
++) -> Result<(), KernelError>
++where
++    Fut: std::future::Future<Output = Result<(), KernelError>>,
++```
++
++## 验证输出摘录
++
++全部经 `rustup run stable-x86_64-pc-windows-msvc cargo ...` + `cmd /c` 重定向（skill `long-running-shell`）。
++
++1. `cargo check --workspace` → `Finished dev profile in 1m 03s`，日志 542 行无任何 `error`（并行 coder 的 `path_manager_uninit.rs` 未破坏 lib 编译）。
++2. ⚠️ **偏差（C3 记录）**：brief 原命令 `cargo test -p northhing-core --lib kernel_facade` **在 BASE 上即无法裸编译**——`default = []`（core Cargo.toml:172），`lib.rs:11` 把 `pub mod agentic` 门控在 `product-full` 后，而本单未触碰的干净文件 `service/skill_watch.rs:12-13`、`service/config/service.rs:359` 无条件引用之 → 3×E0433。`cargo check --workspace` 因 desktop 消费方 feature 合并掩盖了该问题。**与本 diff 无关**（基线预存，属 P2-15 类"desktop 能编 ≠ 单 crate 能编"形态，建议后续单跟踪）。故按 crate 的组装边界补 `--features product-full` 执行：
++   - `cargo test -p northhing-core --lib --features product-full kernel_facade` → `CARGO_TEST_OK`
++   - 构建一次后直接跑测试二进制（CWD=包根）：`test result: ok. 53 passed; 0 failed; 0 ignored`（含 `test_init_gate_lifecycle_all_scenarios ... ok`），本模块零警告。
++3. `--test-threads=1` 串行复跑同一二进制 → `test result: ok. 53 passed; 0 failed; 0 ignored`。并行/串行双绿（本测试原为全局污染点，现已解耦）。
++4. `git diff --check` → exit 0（仅 lifecycle.rs 的 CRLF→LF 换行提示，非 whitespace error）。
++
++## 遗留
++
++- 裸 `cargo test -p northhing-core`（不带 features）的基线编译缺口不在本单范围，未修。
++- 并发计时余量（50ms/10ms/5ms sleep）沿用原测试数值，未改语义。
+diff --git a/src/crates/assembly/core/src/kernel_facade/lifecycle.rs b/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
+index a751e4c..b9606ad 100644
+--- a/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
++++ b/src/crates/assembly/core/src/kernel_facade/lifecycle.rs
+@@ -13,69 +13,86 @@ use tracing::{info, warn};
+ use crate::agentic::coordination::{global_coordinator, global_scheduler, set_global_scheduler, DialogScheduler};
+ use crate::agentic::events::EventQueueConfig;
+ use crate::agentic::system::{init_agentic_system, init_agentic_system_with_queue_config};
+ use crate::infrastructure::ai::AIClientFactory;
+ use crate::service::config::{get_global_config_service, initialize_global_config};
+ use crate::service::mcp::{set_global_mcp_service, MCPService};
+ 
+ pub(super) static FACADE_READY: AtomicBool = AtomicBool::new(false);
+ 
+ /// Generic init gate: handles the three-state Mutex + Notify wait/wake/take-over
+-/// protocol so callers only provide the actual init future.
++/// protocol so callers only provide the actual init future. Production entry point:
++/// delegates to [`run_init_gate_with`] backed by the real process-global state.
+ pub(super) async fn run_init_gate<Fut>(init: Fut) -> Result<(), KernelError>
+ where
+     Fut: std::future::Future<Output = Result<(), KernelError>>,
+ {
+-    if FACADE_READY.load(Ordering::SeqCst) {
++    run_init_gate_with(&FACADE_READY, &INIT_STATE, &INIT_NOTIFY, init).await
++}
++
++/// Gate state machine parameterized over the ready flag / init-state mutex /
++/// notify, so tests can exercise the protocol against local instances without
++/// touching the process-wide globals. Behavior is identical to the historical
++/// `run_init_gate` body.
++pub(super) async fn run_init_gate_with<Fut>(
++    ready: &AtomicBool,
++    state: &AsyncMutex<InitState>,
++    notify: &Notify,
++    init: Fut,
++) -> Result<(), KernelError>
++where
++    Fut: std::future::Future<Output = Result<(), KernelError>>,
++{
++    if ready.load(Ordering::SeqCst) {
+         return Ok(());
+     }
+ 
+-    let mut guard = INIT_STATE.lock().await;
++    let mut guard = state.lock().await;
+     match *guard {
+         InitState::Ready => return Ok(()),
+         InitState::InProgress => {
+             drop(guard);
+-            INIT_NOTIFY.notified().await;
+-            if FACADE_READY.load(Ordering::SeqCst) {
++            notify.notified().await;
++            if ready.load(Ordering::SeqCst) {
+                 return Ok(());
+             }
+-            let mut guard = INIT_STATE.lock().await;
++            let mut guard = state.lock().await;
+             if matches!(*guard, InitState::Ready) {
+                 return Ok(());
+             }
+             if matches!(*guard, InitState::InProgress) {
+                 return Err(KernelError::Internal(
+                     "init_core timed out waiting for concurrent initialization".to_string(),
+                 ));
+             }
+             *guard = InitState::InProgress;
+             drop(guard);
+         }
+         InitState::NotStarted => {
+             *guard = InitState::InProgress;
+             drop(guard);
+         }
+     }
+ 
+     let result = init.await;
+ 
+     {
+-        let mut guard = INIT_STATE.lock().await;
++        let mut guard = state.lock().await;
+         match result {
+             Ok(()) => *guard = InitState::Ready,
+             Err(_) => *guard = InitState::NotStarted,
+         }
+     }
+-    INIT_NOTIFY.notify_waiters();
++    notify.notify_waiters();
+ 
+     if result.is_ok() {
+-        FACADE_READY.store(true, Ordering::SeqCst);
++        ready.store(true, Ordering::SeqCst);
+         info!("kernel facade core initialized");
+     }
+     result
+ }
+ 
+ pub(super) static INIT_STATE: AsyncMutex<InitState> = AsyncMutex::const_new(InitState::NotStarted);
+ pub(super) static INIT_NOTIFY: Notify = Notify::const_new();
+ 
+ pub(super) enum InitState {
+     NotStarted,
+diff --git a/src/crates/assembly/core/src/kernel_facade/tests.rs b/src/crates/assembly/core/src/kernel_facade/tests.rs
+index 6a9bbe5..e4e2860 100644
+--- a/src/crates/assembly/core/src/kernel_facade/tests.rs
++++ b/src/crates/assembly/core/src/kernel_facade/tests.rs
+@@ -1,27 +1,29 @@
+ //! Tests for the kernel_facade module.
+ 
+-use std::sync::atomic::Ordering;
++use std::sync::atomic::{AtomicBool, Ordering};
+ use std::sync::Arc;
+ 
++use tokio::sync::{Mutex as AsyncMutex, Notify};
++
+ use northhing_core_types::ErrorCategory;
+ use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase, TurnPhaseKind};
+ use northhing_kernel_api::memory::{FactDto, KernelMemoryApi};
+ use northhing_kernel_api::session::{MessageDto, SessionConfigDto, SessionSummaryDto};
+ use northhing_kernel_api::settings::ProviderFormDto;
+ use northhing_kernel_api::turn::{DialogSubmitOutcomeDto, DialogSubmitOutcomeKindDto, TurnStateKind};
+ use northhing_kernel_api::KernelSessionApi;
+ 
+ use crate::agentic::events::{AgenticEvent, ToolEventData};
+ use crate::kernel_facade::events::agentic_event_to_dtos;
+ use crate::kernel_facade::helpers::{first_line_truncated, truncate_4000};
+-use crate::kernel_facade::lifecycle::{run_init_gate, InitState, FACADE_READY, INIT_STATE};
++use crate::kernel_facade::lifecycle::{run_init_gate_with, InitState};
+ use crate::kernel_facade::{kernel_facade, KernelFacade};
+ 
+ fn make_started_event(params: serde_json::Value) -> AgenticEvent {
+     AgenticEvent::ToolEvent {
+         session_id: "s1".into(),
+         turn_id: "t1".into(),
+         round_id: "r1".into(),
+         tool_event: ToolEventData::Started {
+             tool_id: "call-abc".into(),
+             tool_name: "Bash".into(),
+@@ -385,146 +387,142 @@ async fn test_subscribe_events_returns_err_before_init() {
+     let result = facade.subscribe_events(callback).await;
+     match result {
+         Err(northhing_kernel_api::error::KernelError::Runtime(_)) => {}
+         Err(other) => panic!("expected KernelError::Runtime before init, got {:?}", other),
+         Ok(_) => panic!("subscribe_events should return Err before init_core"),
+     }
+ }
+ 
+ #[tokio::test]
+ async fn test_init_gate_lifecycle_all_scenarios() {
+-    FACADE_READY.store(false, Ordering::SeqCst);
++    // Scenario 1: two concurrent calls on one gate -- init runs exactly once
+     {
+-        let mut guard = INIT_STATE.lock().await;
+-        *guard = InitState::NotStarted;
+-    }
++        let ready = AtomicBool::new(false);
++        let state = AsyncMutex::new(InitState::NotStarted);
++        let notify = Notify::new();
+ 
+-    // Scenario 1: Two concurrent calls 鈥?init runs exactly once
+-    {
+         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+         let call_count_clone = call_count.clone();
+ 
+         let fake_init = || async move {
+             call_count_clone.fetch_add(1, Ordering::SeqCst);
+             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+             Ok(())
+         };
+ 
+         let call_count_for_r2 = call_count.clone();
+         let (r1, r2) = tokio::join!(
+-            run_init_gate(fake_init()),
+-            run_init_gate(async move {
++            run_init_gate_with(&ready, &state, &notify, fake_init()),
++            run_init_gate_with(&ready, &state, &notify, async move {
+                 let cc = call_count_for_r2;
+                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                 cc.fetch_add(1, Ordering::SeqCst);
+                 tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                 Ok(())
+             })
+         );
+ 
+         assert!(r1.is_ok(), "first concurrent call should succeed");
+         assert!(r2.is_ok(), "second concurrent call should succeed");
+         assert_eq!(
+             call_count.load(Ordering::SeqCst),
+             1,
+             "init should run exactly once across concurrent calls"
+         );
++        assert!(ready.load(Ordering::SeqCst), "gate should flip ready after successful init");
+     }
+ 
+-    // Scenario 2: Ready涔嬪悗鍐嶈皟 鈥?init count does not increase
++    // Scenario 2: second call after Ready -- init count does not increase
+     {
+-        FACADE_READY.store(false, Ordering::SeqCst);
+-        {
+-            let mut guard = INIT_STATE.lock().await;
+-            *guard = InitState::NotStarted;
+-        }
++        let ready = AtomicBool::new(false);
++        let state = AsyncMutex::new(InitState::NotStarted);
++        let notify = Notify::new();
+ 
+         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+         let call_count_for_r2 = call_count.clone();
+         let call_count_for_assert = call_count.clone();
+ 
+-        let r1 = run_init_gate(async move {
++        let r1 = run_init_gate_with(&ready, &state, &notify, async move {
+             let cc = call_count;
+             cc.fetch_add(1, Ordering::SeqCst);
+             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+             Ok(())
+         })
+         .await;
+         assert!(r1.is_ok(), "first init should succeed");
+ 
+-        let r2 = run_init_gate(async move {
++        let r2 = run_init_gate_with(&ready, &state, &notify, async move {
+             let cc = call_count_for_r2;
+             cc.fetch_add(1, Ordering::SeqCst);
+             Ok(())
+         })
+         .await;
+-        assert!(r2.is_ok(), "second call on Ready facade should succeed (idempotent)");
++        assert!(r2.is_ok(), "second call on Ready gate should succeed (idempotent)");
+         assert_eq!(
+             call_count_for_assert.load(Ordering::SeqCst),
+             1,
+-            "init should not re-run when facade is already Ready"
++            "init should not re-run when gate is already Ready"
+         );
+     }
+ 
+-    // Scenario 3: First init fails 鈫?state resets 鈫?second init succeeds
++    // Scenario 3: first init fails -> state resets -> retry succeeds
+     {
+-        FACADE_READY.store(false, Ordering::SeqCst);
+-        {
+-            let mut guard = INIT_STATE.lock().await;
+-            *guard = InitState::NotStarted;
+-        }
++        let ready = AtomicBool::new(false);
++        let state = AsyncMutex::new(InitState::NotStarted);
++        let notify = Notify::new();
+ 
+         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+         let call_count_for_r2 = call_count.clone();
+         let call_count_for_assert = call_count.clone();
+ 
+-        let r1 = run_init_gate(async move {
++        let r1 = run_init_gate_with(&ready, &state, &notify, async move {
+             let cc = call_count;
+             cc.fetch_add(1, Ordering::SeqCst);
+             Err(northhing_kernel_api::error::KernelError::Internal(
+                 "simulated init failure".to_string(),
+             ))
+         })
+         .await;
+         assert!(r1.is_err(), "first init should fail");
+         assert_eq!(call_count_for_assert.load(Ordering::SeqCst), 1);
++        assert!(
++            !ready.load(Ordering::SeqCst),
++            "ready must stay false after a failed init"
++        );
+         {
+-            let guard = INIT_STATE.lock().await;
++            let guard = state.lock().await;
+             assert!(
+                 matches!(*guard, InitState::NotStarted),
+                 "state should reset to NotStarted after failed init"
+             );
+         }
+ 
+-        let r2 = run_init_gate(async move {
++        let r2 = run_init_gate_with(&ready, &state, &notify, async move {
+             let cc = call_count_for_r2;
+             cc.fetch_add(1, Ordering::SeqCst);
+             tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+             Ok(())
+         })
+         .await;
+         assert!(r2.is_ok(), "retry after failure should succeed");
+         assert_eq!(
+             call_count_for_assert.load(Ordering::SeqCst),
+             2,
+             "second (retry) init should actually run"
+         );
++        assert!(ready.load(Ordering::SeqCst), "retry success should flip ready");
+     }
+ 
+-    // Scenario 4: list_sessions returns KernelError before init, not panic
++    // Scenario 4: list_sessions on a never-initialized facade returns KernelError, not panic.
++    // No gate-state reset needed: a fresh KernelFacade has no coordinator, so this
++    // is independent of the process-wide init gate.
+     {
+-        FACADE_READY.store(false, Ordering::SeqCst);
+-        {
+-            let mut guard = INIT_STATE.lock().await;
+-            *guard = InitState::NotStarted;
+-        }
+-
+         let facade = KernelFacade::new();
+         let result: Result<Vec<SessionSummaryDto>, northhing_kernel_api::error::KernelError> =
+             facade.list_sessions().await;
+         match result {
+             Err(northhing_kernel_api::error::KernelError::Internal(_)) => {}
+             Err(other) => panic!("expected KernelError::Internal before init, got {:?}", other),
+             Ok(_) => panic!("list_sessions should return error before init, not Ok"),
+         }
+     }
+ }
+@@ -640,21 +638,21 @@ async fn test_list_facts_returns_ok() {
+     assert!(result.is_ok(), "list_facts should return Ok: {:?}", result.err());
+ }
+ 
+ #[tokio::test]
+ async fn test_search_facts_returns_ok() {
+     let facade = KernelFacade::new();
+     let result = facade.search_facts("anything", None, Some(5)).await;
+     assert!(result.is_ok(), "search_facts should return Ok: {:?}", result.err());
+ }
+ 
+-// K4a-T23q DTO gap-fill tests鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++// ── K4a-T23q DTO gap-fill tests ──────────────────────────────────────────────
+ 
+ #[test]
+ fn test_message_to_dto_carries_timestamp() {
+     use crate::agentic::core::{Message, MessageContent, MessageRole};
+     use crate::kernel_facade::dto::message_to_dto;
+     use std::time::SystemTime;
+ 
+     let msg = Message {
+         id: "m1".into(),
+         role: MessageRole::User,

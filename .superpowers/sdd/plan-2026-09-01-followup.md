@@ -135,7 +135,7 @@
 ## 6. 执行纪律（沿用本仓既有，不得简化）
 
 - 每任务：brief 文件 → 派 coder → `git diff <父 commit> <commit> -- <点名文件>` 生成审查包 → 派 judge 双判决（SPEC + QUALITY）→ Critical/Important 必返修 → 通过后**立即**追加 progress.md 台账行并 commit（不攒到波末）。
-- 涉 Rust 任务的 brief 必须附 `.opencode/templates/rust-brief-block.md` 全文。
+- 涉 Rust 任务的 brief 必须附 `.opencode/memory/templates/rust-brief-block.md` 全文（2026-09-02 起路径迁入 memory 仓）。
 - **审查包 BASE 取 implementer 的父 commit**，不用跨 commit 范围 diff（会混入并行任务改动——2026-08-31 由 judge 指出）。
 - 子代理返回后**一律磁盘复核**（`git log`/`status`/读 diff），尤其带具体行数的阻塞性结论——审计 R1 曾报「main.rs 799 / app.rs 791 行」，实测 693 / 749，纯属虚构。
 - 子代理会话被 cancel 后**先 `git status` 查残留再重派**（W13-2 踩过）。
