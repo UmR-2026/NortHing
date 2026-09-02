@@ -57,18 +57,28 @@ W14-1c：5 切片完成 4 + 切片 5 已解锁（serial 移 windows）；W15-1�
 
 ## 6. 队列
 
+0. **【用户指令 09-03】3.8-agy 冒烟门禁**：下次启动后在项目中先做 3.8-agy 冒烟（派 `gemini-38-flash-agy` 一个只读小任务，如"报告某文件行数"）——**失败就直接回退 3.7-agy**（`gemini-37-flash-agy` 已实证健康），不要再排查，修复记录见 §8。
 1. **W15-1 §7#11 截图验收**（§4）→ 拍齐后 W15-1 才算完整闭环（代码层已双 APPROVE）
 2. **CI 双轨测试红排查**：本地 `cargo test --locked --workspace` 复现 / 或拿 CI 日志权限；serial 5 轮连绿观测从测试转绿后开始计
 3. **预存红治理（需拍板/仲裁）**：repo hygiene（.superpowers 路径豁免）、core boundary（anyhow optional 化）、ubuntu/macos 编译（6 周陈账）
 4. follow-up：core 裸 feature 编译缺口（P2-15 形态，4a 发现）；`turn_persist.rs:546` 泄漏候选（3d 发现）；css_files.rs 孤儿（删除或注册，仲裁 §7#14 建议列 W15-2）；settings push 测试触真实配置目录（E 类）
 5. W15-2 输入框多行+拖入 → W15-3 → W16 → …
 
+## 8. 3.8-agy 全案（2026-09-03 凌晨，已修待冒烟）
+
+**症状**：派 `gemini-38-flash-agy` 即「No subagent session id on task metadata」/ 无限无响应；vertex 渠道同模型正常。
+**根因链**（debug=2 日志实证）：opencode 同时加载两个 antigravity 插件——`plugin` 数组 file:// 直引的 fork（含 09-03 补丁）与 `~/.config/opencode/package.json` 依赖触发的 **npm registry 旧版 1.5.2 缓存**（无 UA stale 守卫）——旧件挤赢。旧件 UA=`antigravity/2.0.6`（auto-updater API 钉死值）→ daily 端点按 UA≥2.6 门控 3.8 → 404 → 落 prod → 403 SUBSCRIPTION_REQUIRED → **403 被当可重试错误每 0.5s 无限重试** = 「挂死」。
+**修复**（09-03 05:30，用户批准）：删 package.json 里该依赖行（备份 `package.json.bak-20260903`）+ 删三个缓存目录（`@latest`/`@1.5.2`/无后缀）。**待重启后冒烟验证**（见队列 #0）。
+**fork 待修（留给 fork 主人）**：403/404 终态错误不该进重试循环（这是「配置错误伪装成挂死」的元凶）；主请求 fetch 无超时（plugin.js:1787/1656）。
+**fork 补丁本体**（stellar-island session 昨晚完成）：UA 版本底 2.11.0 + stale 守卫 + resolver tier 白名单加 3.8——补丁是对的，只是之前没被加载。
+
 ## 7. 环境/雷区（全仍有效 + 新增）
 
 - cargo 走 `C:/Users/UmR/.cargo/bin/rustup.exe run stable-x86_64-pc-windows-msvc`（PTY 里用正斜杠防 `\r` 断行）；输出 cmd 重定向；构建一次跑二进制；先读 skill `long-running-shell`。
 - 推送先试直连（本 session 直推成功），失败上 clash `127.0.0.1:7897`；SSH 不可用。
 - rot 闸：let _ = 371/388、css.rs 790/790 等基线均未涨（本波全守）。
-- progress.md 是 **GB18030 主导编码的混合文件**——追加中文必须用字节级 GB18030 append（脚本 `C:\WINDOWS\TEMP\opencode\ledger-append2.ps1` + ledger-text.md 范式），edit 工具直接写会混 UTF-8 岛。
+- progress.md 是 **GB18030 主导编码的混合文件**——追加中文用编排插件工具 `ledger_append`（`.opencode/plugins/orch-tools.js`，已实证）；PS 脚本范式留档 `C:\WINDOWS\TEMP\opencode\ledger-append2.ps1`。
+- 编排插件已就位（重启后生效）：`tool-logger.js`（全工具调用 JSONL 日志，查 subagent 挂死点 = 最后一条无配对 after 的 before）+ `orch-tools.js`（ci_status / ledger_append / run_detached / poll_log / shot_window）。
 - 宵禁 03:00。
 
 ## Suggested skills
