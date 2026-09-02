@@ -42,7 +42,7 @@ W14-1c：5 切片完成 4 + 切片 5 已解锁（serial 移 windows）；W15-1�
 ## 4. W15-1 未闭环项（下 session 第一件事）
 
 **仲裁 §7#11：3 张视觉回归截图（draft / assistant / witness）。**
-- 本 session 末 `cargo build -p northhing` 在 PTY `pty_9823fe36` 里跑（日志 `C:\WINDOWS\TEMP\opencode\build-desktop.log`，BUILD_OK/BUILD_FAIL 哨兵）；session 重启后 PTY 失效则重跑。
+- **build 未曾启动**：PTY 里命令只回显未执行（cmd 要 CR 不要 LF 的坑），`target\debug\northhing.exe` 还是 09-02 02:51 的旧构建。下 session 从头跑：`cargo build -p northhing`（PTY + cmd 重定向，记得补 CR）。
 - 流程：build → `Start-Process target\debug\northhing.exe`（detached，**绝不直接跑会阻塞 shell**）→ 等 ~20s → `powershell .opencode\tools\shot-window.ps1 -OutFile screenshots\w15-1-*.png` → 读图验证 → `Stop-Process -Name northhing`。
 - 验收点：markdown 结构（标题/列表/代码块/链接）正常渲染、衬线正文与 .rec 布局不破坏、`.md-rendered` 的 pre-wrap 生效。
 - 若用户会话里没有含 markdown 的消息，需造一条（真实发一条或在测试会话里写）。
