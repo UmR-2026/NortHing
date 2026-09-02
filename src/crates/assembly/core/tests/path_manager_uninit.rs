@@ -4,6 +4,10 @@
 
 use northhing_core::infrastructure::PathManager;
 use std::ffi::OsString;
+use std::sync::Mutex;
+
+/// Guards process-level environment variable overrides during uninitialized PathManager tests.
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 struct EnvVarGuard {
     values: Vec<(&'static str, Option<OsString>)>,
@@ -31,6 +35,7 @@ impl Drop for EnvVarGuard {
 
 #[test]
 fn e2e_storage_guard_rejects_missing_isolated_roots() {
+    let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
     let _env_guard = EnvVarGuard::capture([
         "northhing_USER_ROOT",
         "northhing_E2E_USER_ROOT",

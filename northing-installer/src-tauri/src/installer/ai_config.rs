@@ -367,6 +367,32 @@ pub fn write_theme_preference(theme_id: &str) -> Result<()> {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::Mutex;
+
+    /// Guards process-level environment variable NORTHHING_INSTALLER_CONFIG_DIR during tests.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct EnvVarGuard {
+        prev: Option<std::ffi::OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn set(value: &std::path::Path) -> Self {
+            let prev = std::env::var_os("NORTHHING_INSTALLER_CONFIG_DIR");
+            std::env::set_var("NORTHHING_INSTALLER_CONFIG_DIR", value);
+            Self { prev }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(ref prev) = self.prev {
+                std::env::set_var("NORTHHING_INSTALLER_CONFIG_DIR", prev);
+            } else {
+                std::env::remove_var("NORTHHING_INSTALLER_CONFIG_DIR");
+            }
+        }
+    }
 
     fn unique_temp_dir() -> std::path::PathBuf {
         let mut p = std::env::temp_dir();
@@ -399,9 +425,10 @@ mod tests {
 
     #[test]
     fn write_model_then_theme_preserves_both() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let dir = unique_temp_dir();
-        let _ = fs::remove_dir_all(&dir);
-        std::env::set_var("NORTHHING_INSTALLER_CONFIG_DIR", &dir);
+        let _clean = fs::remove_dir_all(&dir);
+        let _env_guard = EnvVarGuard::set(&dir);
 
         let model = make_model_config("model-1");
         write_model_config(&model).expect("write_model_config should succeed");
@@ -430,15 +457,15 @@ mod tests {
             .expect("theme.theme.current should exist");
         assert_eq!(theme, "northhing-dark");
 
-        let _ = fs::remove_dir_all(&dir);
-        std::env::remove_var("NORTHHING_INSTALLER_CONFIG_DIR");
+        let _clean_end = fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn write_theme_then_model_preserves_both() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let dir = unique_temp_dir();
-        let _ = fs::remove_dir_all(&dir);
-        std::env::set_var("NORTHHING_INSTALLER_CONFIG_DIR", &dir);
+        let _clean = fs::remove_dir_all(&dir);
+        let _env_guard = EnvVarGuard::set(&dir);
 
         write_theme_preference("northhing-light").expect("write_theme_preference should succeed");
         let model = make_model_config("model-2");
@@ -467,7 +494,6 @@ mod tests {
             .expect("theme.theme.current should exist");
         assert_eq!(theme, "northhing-light");
 
-        let _ = fs::remove_dir_all(&dir);
-        std::env::remove_var("NORTHHING_INSTALLER_CONFIG_DIR");
+        let _clean_end = fs::remove_dir_all(&dir);
     }
 }
