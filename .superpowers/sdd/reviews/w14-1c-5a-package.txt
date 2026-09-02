@@ -1,0 +1,127 @@
+a81202d ci: add OpenSSL setup step to rust-tests-serial job on Windows (W14-1c-5a fix)
+0f90e94 ci: move rust tests (parallel and serial) to windows-latest (W14-1c-5a)
+ .github/workflows/ci.yml             | 39 ++++++-------------------------
+ .superpowers/sdd/w14-1c-5a-report.md | 45 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 52 insertions(+), 32 deletions(-)
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 92af030..cc1445c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -85,59 +85,34 @@ jobs:
+         shell: bash
+         run: |
+           node scripts/generate-i18n-contract.mjs
+           test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
+         # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+ 
+       - name: Check compilation
+         run: cargo check --workspace
+ 
+       - name: Run workspace Rust tests
+-        if: matrix.os == 'ubuntu-latest'
++        if: matrix.os == 'windows-latest'
+         run: cargo test --locked --workspace
+ 
+   # ── Rust: serial tests ────────────────────────────────────────────
+   rust-tests-serial:
+-    name: Rust Tests Serial (ubuntu-latest)
+-    runs-on: ubuntu-latest
++    name: Rust Tests Serial (windows-latest)
++    runs-on: windows-latest
+     steps:
+       - uses: actions/checkout@v4
+ 
+-      - name: Install Linux system dependencies (Tauri)
+-        shell: bash
+-        run: |
+-          sudo apt-get update
+-          if apt-cache show libwebkit2gtk-4.1-dev >/dev/null 2>&1; then
+-            WEBKIT_PKG=libwebkit2gtk-4.1-dev
+-          else
+-            WEBKIT_PKG=libwebkit2gtk-4.0-dev
+-          fi
+-
+-          if apt-cache show libappindicator3-dev >/dev/null 2>&1; then
+-            APPINDICATOR_PKG=libappindicator3-dev
+-          else
+-            APPINDICATOR_PKG=libayatana-appindicator3-dev
+-          fi
+-
+-          sudo apt-get install -y --no-install-recommends \
+-            pkg-config \
+-            libglib2.0-dev \
+-            libgtk-3-dev \
+-            libxdo-dev \
+-            "$WEBKIT_PKG" \
+-            "$APPINDICATOR_PKG" \
+-            librsvg2-dev \
+-            patchelf \
+-            libleptonica-dev \
+-            libtesseract-dev \
+-            tesseract-ocr \
+-            tesseract-ocr-eng
++      - name: Setup OpenSSL (Windows, prebuilt)
++        if: runner.os == 'Windows'
++        shell: pwsh
++        run: ./scripts/ci/setup-openssl-windows.ps1
+ 
+       - uses: dtolnay/rust-toolchain@stable
+ 
+       - uses: swatinem/rust-cache@v2
+         with:
+           shared-key: "ci-check-v2-${{ runner.os }}-no-cargo-bin-v1"
+           cache-bin: false
+           # PR caches are scoped to merge refs; main pushes own shared cache refreshes.
+           save-if: ${{ github.event_name != 'pull_request' }}
+ 
+diff --git a/.superpowers/sdd/w14-1c-5a-report.md b/.superpowers/sdd/w14-1c-5a-report.md
+new file mode 100644
+index 0000000..24ccb0e
+--- /dev/null
++++ b/.superpowers/sdd/w14-1c-5a-report.md
+@@ -0,0 +1,45 @@
++# W14-1c-5a Report — CI 双轨落到 windows-latest
++
++## 变更摘要 (Diff Summary)
++
++- **文件**: `.github/workflows/ci.yml`
++  - **S1**: `rust-tests-serial` job `runs-on` 修改为 `windows-latest`；删除了 Linux 依赖安装步骤（Tauri apt 块）；保留了 checkout、rust-toolchain、rust-cache、i18n locale contract 生成（带 `shell: bash`）以及 serial 测试命令。
++  - **S2**: `rust-build-check` job 中的 `Run workspace Rust tests` 步骤触发条件由 `if: matrix.os == 'ubuntu-latest'` 修改为 `if: matrix.os == 'windows-latest'`。
++  - **S3**: `rust-tests-serial` job 名称由 `Rust Tests Serial (ubuntu-latest)` 修改为 `Rust Tests Serial (windows-latest)`。
++
++## 验证结果 (Verification Evidence)
++
++1. **YAML 语法验证**:
++   - 命令: `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('YAML validation PASS')"`
++   - 输出: `YAML validation PASS`
++2. **Whitespace / Diff Check**:
++   - 命令: `git diff --check`
++   - 输出: 无输出（无任何 whitespace error）
++3. **Diff 自审**:
++   - 仅 `.github/workflows/ci.yml` 发生变更，精准覆盖 S1 / S2 / S3，无多余改动。
++4. **Repo Hygiene Check**:
++   - 命令: `pnpm run check:repo-hygiene`
++   - 输出: `Repository hygiene check passed (2 content files scanned, 3740 filenames checked).`
++
++## 状态
++
++DONE
++
++## Fix 轮 1
++
++### 修复内容 (Fix Summary)
++- 在 `rust-tests-serial` job 中，在 `actions/checkout@v4` 之后与 `dtolnay/rust-toolchain@stable` 之前，补充 `Setup OpenSSL (Windows, prebuilt)` 步骤（调用 `./scripts/ci/setup-openssl-windows.ps1`，`shell: pwsh`，`if: runner.os == 'Windows'`），形态与 `rust-build-check` 保持严格一致，确保 windows-latest runner 上 serial 测试链接所需 OpenSSL 环境变量与二进制就绪。
++
++### 验证证据 (Verification Evidence)
++1. **YAML 语法验证**:
++   - 命令: `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8')); print('YAML validation PASS')"`
++   - 输出: `YAML validation PASS`
++2. **Whitespace / Diff Check**:
++   - 命令: `git diff --check`
++   - 输出: 无输出（无 whitespace 错误）
++3. **Diff 自审**:
++   - 仅在 `rust-tests-serial` 的 checkout 与 rust-toolchain 间插入 5 行 OpenSSL setup 步骤，无其它任何改动。
++
++### 状态
++DONE
++
