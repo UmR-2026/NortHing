@@ -1,7 +1,9 @@
 //! Tests for the kernel_facade module.
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+
+use tokio::sync::{Mutex as AsyncMutex, Notify};
 
 use northhing_core_types::ErrorCategory;
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase, TurnPhaseKind};
@@ -14,7 +16,7 @@ use northhing_kernel_api::KernelSessionApi;
 use crate::agentic::events::{AgenticEvent, ToolEventData};
 use crate::kernel_facade::events::agentic_event_to_dtos;
 use crate::kernel_facade::helpers::{first_line_truncated, truncate_4000};
-use crate::kernel_facade::lifecycle::{run_init_gate, InitState, FACADE_READY, INIT_STATE};
+use crate::kernel_facade::lifecycle::{run_init_gate_with, InitState};
 use crate::kernel_facade::{kernel_facade, KernelFacade};
 
 fn make_started_event(params: serde_json::Value) -> AgenticEvent {
@@ -392,14 +394,12 @@ async fn test_subscribe_events_returns_err_before_init() {
 
 #[tokio::test]
 async fn test_init_gate_lifecycle_all_scenarios() {
-    FACADE_READY.store(false, Ordering::SeqCst);
+    // Scenario 1: two concurrent calls on one gate -- init runs exactly once
     {
-        let mut guard = INIT_STATE.lock().await;
-        *guard = InitState::NotStarted;
-    }
+        let ready = AtomicBool::new(false);
+        let state = AsyncMutex::new(InitState::NotStarted);
+        let notify = Notify::new();
 
-    // Scenario 1: Two concurrent calls 鈥?init runs exactly once
-    {
         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
         let call_count_clone = call_count.clone();
 
@@ -411,8 +411,8 @@ async fn test_init_gate_lifecycle_all_scenarios() {
 
         let call_count_for_r2 = call_count.clone();
         let (r1, r2) = tokio::join!(
-            run_init_gate(fake_init()),
-            run_init_gate(async move {
+            run_init_gate_with(&ready, &state, &notify, fake_init()),
+            run_init_gate_with(&ready, &state, &notify, async move {
                 let cc = call_count_for_r2;
                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                 cc.fetch_add(1, Ordering::SeqCst);
@@ -428,21 +428,20 @@ async fn test_init_gate_lifecycle_all_scenarios() {
             1,
             "init should run exactly once across concurrent calls"
         );
+        assert!(ready.load(Ordering::SeqCst), "gate should flip ready after successful init");
     }
 
-    // Scenario 2: Ready涔嬪悗鍐嶈皟 鈥?init count does not increase
+    // Scenario 2: second call after Ready -- init count does not increase
     {
-        FACADE_READY.store(false, Ordering::SeqCst);
-        {
-            let mut guard = INIT_STATE.lock().await;
-            *guard = InitState::NotStarted;
-        }
+        let ready = AtomicBool::new(false);
+        let state = AsyncMutex::new(InitState::NotStarted);
+        let notify = Notify::new();
 
         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
         let call_count_for_r2 = call_count.clone();
         let call_count_for_assert = call_count.clone();
 
-        let r1 = run_init_gate(async move {
+        let r1 = run_init_gate_with(&ready, &state, &notify, async move {
             let cc = call_count;
             cc.fetch_add(1, Ordering::SeqCst);
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
@@ -451,33 +450,31 @@ async fn test_init_gate_lifecycle_all_scenarios() {
         .await;
         assert!(r1.is_ok(), "first init should succeed");
 
-        let r2 = run_init_gate(async move {
+        let r2 = run_init_gate_with(&ready, &state, &notify, async move {
             let cc = call_count_for_r2;
             cc.fetch_add(1, Ordering::SeqCst);
             Ok(())
         })
         .await;
-        assert!(r2.is_ok(), "second call on Ready facade should succeed (idempotent)");
+        assert!(r2.is_ok(), "second call on Ready gate should succeed (idempotent)");
         assert_eq!(
             call_count_for_assert.load(Ordering::SeqCst),
             1,
-            "init should not re-run when facade is already Ready"
+            "init should not re-run when gate is already Ready"
         );
     }
 
-    // Scenario 3: First init fails 鈫?state resets 鈫?second init succeeds
+    // Scenario 3: first init fails -> state resets -> retry succeeds
     {
-        FACADE_READY.store(false, Ordering::SeqCst);
-        {
-            let mut guard = INIT_STATE.lock().await;
-            *guard = InitState::NotStarted;
-        }
+        let ready = AtomicBool::new(false);
+        let state = AsyncMutex::new(InitState::NotStarted);
+        let notify = Notify::new();
 
         let call_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
         let call_count_for_r2 = call_count.clone();
         let call_count_for_assert = call_count.clone();
 
-        let r1 = run_init_gate(async move {
+        let r1 = run_init_gate_with(&ready, &state, &notify, async move {
             let cc = call_count;
             cc.fetch_add(1, Ordering::SeqCst);
             Err(northhing_kernel_api::error::KernelError::Internal(
@@ -487,15 +484,19 @@ async fn test_init_gate_lifecycle_all_scenarios() {
         .await;
         assert!(r1.is_err(), "first init should fail");
         assert_eq!(call_count_for_assert.load(Ordering::SeqCst), 1);
+        assert!(
+            !ready.load(Ordering::SeqCst),
+            "ready must stay false after a failed init"
+        );
         {
-            let guard = INIT_STATE.lock().await;
+            let guard = state.lock().await;
             assert!(
                 matches!(*guard, InitState::NotStarted),
                 "state should reset to NotStarted after failed init"
             );
         }
 
-        let r2 = run_init_gate(async move {
+        let r2 = run_init_gate_with(&ready, &state, &notify, async move {
             let cc = call_count_for_r2;
             cc.fetch_add(1, Ordering::SeqCst);
             tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
@@ -508,16 +509,13 @@ async fn test_init_gate_lifecycle_all_scenarios() {
             2,
             "second (retry) init should actually run"
         );
+        assert!(ready.load(Ordering::SeqCst), "retry success should flip ready");
     }
 
-    // Scenario 4: list_sessions returns KernelError before init, not panic
+    // Scenario 4: list_sessions on a never-initialized facade returns KernelError, not panic.
+    // No gate-state reset needed: a fresh KernelFacade has no coordinator, so this
+    // is independent of the process-wide init gate.
     {
-        FACADE_READY.store(false, Ordering::SeqCst);
-        {
-            let mut guard = INIT_STATE.lock().await;
-            *guard = InitState::NotStarted;
-        }
-
         let facade = KernelFacade::new();
         let result: Result<Vec<SessionSummaryDto>, northhing_kernel_api::error::KernelError> =
             facade.list_sessions().await;
@@ -647,7 +645,7 @@ async fn test_search_facts_returns_ok() {
     assert!(result.is_ok(), "search_facts should return Ok: {:?}", result.err());
 }
 
-// K4a-T23q DTO gap-fill tests鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// ── K4a-T23q DTO gap-fill tests ──────────────────────────────────────────────
 
 #[test]
 fn test_message_to_dto_carries_timestamp() {

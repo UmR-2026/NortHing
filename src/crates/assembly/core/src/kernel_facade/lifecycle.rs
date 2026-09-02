@@ -20,25 +20,42 @@ use crate::service::mcp::{set_global_mcp_service, MCPService};
 pub(super) static FACADE_READY: AtomicBool = AtomicBool::new(false);
 
 /// Generic init gate: handles the three-state Mutex + Notify wait/wake/take-over
-/// protocol so callers only provide the actual init future.
+/// protocol so callers only provide the actual init future. Production entry point:
+/// delegates to [`run_init_gate_with`] backed by the real process-global state.
 pub(super) async fn run_init_gate<Fut>(init: Fut) -> Result<(), KernelError>
 where
     Fut: std::future::Future<Output = Result<(), KernelError>>,
 {
-    if FACADE_READY.load(Ordering::SeqCst) {
+    run_init_gate_with(&FACADE_READY, &INIT_STATE, &INIT_NOTIFY, init).await
+}
+
+/// Gate state machine parameterized over the ready flag / init-state mutex /
+/// notify, so tests can exercise the protocol against local instances without
+/// touching the process-wide globals. Behavior is identical to the historical
+/// `run_init_gate` body.
+pub(super) async fn run_init_gate_with<Fut>(
+    ready: &AtomicBool,
+    state: &AsyncMutex<InitState>,
+    notify: &Notify,
+    init: Fut,
+) -> Result<(), KernelError>
+where
+    Fut: std::future::Future<Output = Result<(), KernelError>>,
+{
+    if ready.load(Ordering::SeqCst) {
         return Ok(());
     }
 
-    let mut guard = INIT_STATE.lock().await;
+    let mut guard = state.lock().await;
     match *guard {
         InitState::Ready => return Ok(()),
         InitState::InProgress => {
             drop(guard);
-            INIT_NOTIFY.notified().await;
-            if FACADE_READY.load(Ordering::SeqCst) {
+            notify.notified().await;
+            if ready.load(Ordering::SeqCst) {
                 return Ok(());
             }
-            let mut guard = INIT_STATE.lock().await;
+            let mut guard = state.lock().await;
             if matches!(*guard, InitState::Ready) {
                 return Ok(());
             }
@@ -59,16 +76,16 @@ where
     let result = init.await;
 
     {
-        let mut guard = INIT_STATE.lock().await;
+        let mut guard = state.lock().await;
         match result {
             Ok(()) => *guard = InitState::Ready,
             Err(_) => *guard = InitState::NotStarted,
         }
     }
-    INIT_NOTIFY.notify_waiters();
+    notify.notify_waiters();
 
     if result.is_ok() {
-        FACADE_READY.store(true, Ordering::SeqCst);
+        ready.store(true, Ordering::SeqCst);
         info!("kernel facade core initialized");
     }
     result
