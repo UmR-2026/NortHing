@@ -47,7 +47,6 @@ terminal-core = { path = "../terminal", optional = true }
 git2 = { workspace = true, features = ["vendored-openssl"], optional = true }
 
 [dev-dependencies]
-anyhow = { workspace = true }
 async-trait = { workspace = true }
 northhing-test-support = { path = "../../support/test-support" }
 
@@ -56,7 +55,7 @@ default = []
 announcement = []
 deep-research = ["northhing-runtime-ports"]
 git = ["northhing-services-core", "chrono", "git2", "thiserror"]
-file-watch = ["notify"]
+file-watch = ["notify", "anyhow"]
 function-agents = [
     "northhing-product-domains/function-agents",
     "dep:northhing-product-domains",
