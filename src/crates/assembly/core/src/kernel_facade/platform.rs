@@ -316,15 +316,10 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
                     break;
                 }
                 let p = entry.path();
-                // Re-fence each descendant against the workspace root.
-                if !is_within(&workspace_root, &p) {
-                    return Err(KernelError::Validation(format!(
-                        "entry escaped workspace: {}",
-                        p.display()
-                    )));
-                }
-                let name = entry.file_name().to_string_lossy().to_string();
                 // Pick the canonical metadata so symlinks do not slip past.
+                // `symlink_metadata` does not follow links, so this must run
+                // before `is_within`: its `canonicalize` would resolve an
+                // escaping symlink and trip the fence instead of skipping.
                 let meta = match tokio::fs::symlink_metadata(&p).await {
                     Ok(m) => m,
                     Err(e) => {
@@ -335,6 +330,14 @@ impl northhing_kernel_api::KernelPlatformApi for super::KernelFacade {
                     // Skip symlinks — they could resolve outside the workspace.
                     continue;
                 }
+                // Re-fence each descendant against the workspace root.
+                if !is_within(&workspace_root, &p) {
+                    return Err(KernelError::Validation(format!(
+                        "entry escaped workspace: {}",
+                        p.display()
+                    )));
+                }
+                let name = entry.file_name().to_string_lossy().to_string();
                 let is_dir = meta.is_dir();
                 let rel = relative_to_root(&workspace_root, &p);
                 let size_bytes = if is_dir { None } else { Some(meta.len()) };
