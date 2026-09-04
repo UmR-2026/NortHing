@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Window OS FFI + shell close helpers extracted from app.rs (W8-4).
+// Window OS FFI + shell open/close helpers (W8-4 / W15-1k).
 //
 // Non-Windows: close_os_window is a no-op; close_module / close_all_modules /
 // quit_shell still function (they fall through to Dioxus window().close()).
 
-use dioxus::desktop::window;
+use dioxus::core::VirtualDom;
+use dioxus::desktop::tao::dpi::{LogicalPosition, LogicalSize};
+use dioxus::desktop::tao::window::WindowBuilder;
+use dioxus::desktop::{window, Config, WindowCloseBehaviour};
+use tokio::sync::watch;
 
-use super::registry::ShellWindowManager;
+use super::entry::{shared_webview_data_directory_for_inner, startup_scale_factor, DOCK_GAP_PX};
+use super::registry::{DockSide, ModuleAppProps, ShellWindowManager};
+use super::state::{GeometryRxArc, GlobalTheme};
 
 #[cfg(target_os = "windows")]
 use dioxus::desktop::tao::platform::windows::WindowExtWindows;
@@ -88,4 +94,130 @@ pub(crate) fn quit_shell(wm: &ShellWindowManager) {
     #[cfg(target_os = "windows")]
     win_ops::close_os_window(window().hwnd() as usize);
     window().close();
+}
+
+// ─── Dynamic module window spawners ────────────────────────────────────────
+
+/// Dynamic module window spawner using `new_window` and `WindowCloseBehaviour::WindowCloses`.
+pub fn spawn_module_window(
+    id: &'static str,
+    manager: &ShellWindowManager,
+    geometry_rx: &GeometryRxArc,
+    theme: &GlobalTheme,
+) {
+    let theme_rx = theme.subscribe();
+    spawn_module_window_with_theme_rx(id, manager, geometry_rx, theme_rx);
+}
+
+/// Dynamic module window spawner accepting a theme receiver.
+pub fn spawn_module_window_with_theme_rx(
+    id: &'static str,
+    manager: &ShellWindowManager,
+    geometry_rx: &GeometryRxArc,
+    theme_rx: watch::Receiver<bool>,
+) {
+    let plugin = match manager.registry().get(id) {
+        Some(p) => p.clone(),
+        None => return,
+    };
+
+    let gen = match manager.mark_opening(id) {
+        Some(g) => g,
+        None => return,
+    };
+
+    let data_directory = shared_webview_data_directory_for_inner();
+
+    // I2 审查降级证据（2026-08-22，review-w2 I2 不修的决定依据）：
+    // 此处 borrow 到的几何在 gem 可点击前必然已是真实值——两层保证：
+    //   1. 通道初值 = 房间创建位（entry.rs initial_geometry 与
+    //      with_position 同源常量，非病态占位）；
+    //   2. entry.rs tao 事件处理器 pre-mount 接纳（r3p5）：窗口创建
+    //      的首个 Moved 事件即发布真实物理几何，早于 webview 渲染。
+    // gem 位于 room webview 内，渲染完成才可点击，故「首帧前点击」
+    // 时序不可达；残留风险仅 cosmetic。行为不改，避免触碰 W1 取证区。
+    let room_geom = *geometry_rx.borrow();
+    let scale = startup_scale_factor();
+    let scale = if scale > 0.0 { scale } else { 1.0 };
+    let room_x_log = room_geom.x as f64 / scale;
+    let room_y_log = room_geom.y as f64 / scale;
+    let room_w_log = room_geom.width as f64 / scale;
+    let room_h_log = room_geom.height as f64 / scale;
+
+    let (initial_x, initial_y, initial_w, initial_h) = match plugin.dock_side {
+        DockSide::LeftFull => (
+            room_x_log - plugin.initial_width - DOCK_GAP_PX as f64,
+            room_y_log,
+            plugin.initial_width,
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
+        ),
+        DockSide::RightFull => (
+            room_x_log + room_w_log + DOCK_GAP_PX as f64,
+            room_y_log,
+            plugin.initial_width,
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
+        ),
+        DockSide::Center => (
+            room_x_log + (room_w_log - plugin.initial_width) / 2.0,
+            room_y_log + 24.0,
+            plugin.initial_width,
+            plugin.initial_height,
+        ),
+        DockSide::Fullscreen => (
+            room_x_log,
+            room_y_log,
+            if room_w_log > 0.0 {
+                room_w_log
+            } else {
+                plugin.initial_width
+            },
+            if room_h_log > 0.0 {
+                room_h_log
+            } else {
+                plugin.initial_height
+            },
+        ),
+    };
+
+    let mut builder = WindowBuilder::new()
+        .with_title(plugin.title)
+        .with_inner_size(LogicalSize::new(initial_w, initial_h))
+        .with_position(LogicalPosition::new(initial_x, initial_y))
+        .with_decorations(false);
+
+    #[cfg(target_os = "windows")]
+    {
+        use dioxus::desktop::tao::platform::windows::WindowBuilderExtWindows;
+        builder = builder.with_skip_taskbar(true);
+    }
+
+    let cfg = Config::default()
+        .with_window(builder)
+        .with_close_behaviour(WindowCloseBehaviour::WindowCloses)
+        .with_data_directory(data_directory);
+
+    let props = ModuleAppProps {
+        plugin_id: id,
+        gen,
+        rx: geometry_rx.clone(),
+        theme_rx,
+        manager: manager.clone(),
+    };
+
+    let dom = VirtualDom::new_with_props(plugin.component, props);
+
+    // T7 裁定（③-c 接受+注释）：new_window 返回的 PendingDesktopContext 有意丢弃。
+    // 影响面 = 放弃经 dioxus DesktopContext API 操控本窗；模块窗生命周期（开/关/析构）
+    // 已由 registry + HWND 通道全权负责（W1 racefix，见 registry.rs close_os_window），
+    // 且本窗 chrome 只有 收纳/✕，min/max/drag 等 DesktopContext 能力用不上。
+    // 若未来确需 dioxus 原生窗控，再透传并 resolve()。
+    let _ = window().new_window(dom, cfg);
 }
