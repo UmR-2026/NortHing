@@ -769,60 +769,67 @@ fn recency_boost_skips_on_clock_anomaly() {
 
 #[test]
 fn concurrent_open_fresh_db_all_succeed() {
-    let temp_path = std::env::temp_dir().join(format!("northhing-test-concurrent-open-{}.db", uuid::Uuid::new_v4()));
+    for round in 0..3 {
+        let temp_path = std::env::temp_dir().join(format!(
+            "northhing-test-concurrent-open-r{}-{}.db",
+            round,
+            uuid::Uuid::new_v4()
+        ));
 
-    struct CleanupGuard(std::path::PathBuf);
-    impl Drop for CleanupGuard {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_file(&self.0);
-            let mut wal = self.0.clone().into_os_string();
-            wal.push("-wal");
-            let _ = std::fs::remove_file(&wal);
-            let mut shm = self.0.clone().into_os_string();
-            shm.push("-shm");
-            let _ = std::fs::remove_file(&shm);
+        struct CleanupGuard(std::path::PathBuf);
+        impl Drop for CleanupGuard {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+                let mut wal = self.0.clone().into_os_string();
+                wal.push("-wal");
+                let _ = std::fs::remove_file(&wal);
+                let mut shm = self.0.clone().into_os_string();
+                shm.push("-shm");
+                let _ = std::fs::remove_file(&shm);
+            }
         }
-    }
-    let _guard = CleanupGuard(temp_path.clone());
+        let _guard = CleanupGuard(temp_path.clone());
 
-    const THREAD_COUNT: usize = 8;
-    let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREAD_COUNT));
+        const THREAD_COUNT: usize = 12;
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(THREAD_COUNT));
 
-    let handles: Vec<_> = (0..THREAD_COUNT)
-        .map(|_| {
-            let path = temp_path.clone();
-            let b = barrier.clone();
-            std::thread::spawn(move || {
-                b.wait();
-                MemoryDb::open(&path)
+        let handles: Vec<_> = (0..THREAD_COUNT)
+            .map(|_| {
+                let path = temp_path.clone();
+                let b = barrier.clone();
+                std::thread::spawn(move || {
+                    b.wait();
+                    MemoryDb::open(&path)
+                })
             })
-        })
-        .collect();
+            .collect();
 
-    for handle in handles {
-        let res = handle.join().expect("thread panicked");
+        for handle in handles {
+            let res = handle.join().expect("thread panicked");
+            assert!(
+                res.is_ok(),
+                "MemoryDb::open failed under concurrent migration in round {}: {:?}",
+                round,
+                res.err()
+            );
+        }
+
+        let conn = Connection::open(&temp_path).expect("open connection for schema verification");
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(facts)")
+            .expect("prepare PRAGMA table_info(facts)");
+        let cols: Vec<String> = stmt
+            .query_map([], |row| row.get(1))
+            .expect("query_map table_info")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("collect table_info column names");
+
+        assert!(cols.contains(&"status".to_string()), "missing status column");
         assert!(
-            res.is_ok(),
-            "MemoryDb::open failed under concurrent migration: {:?}",
-            res.err()
+            cols.contains(&"superseded_by".to_string()),
+            "missing superseded_by column"
         );
+        assert!(cols.contains(&"fact_type".to_string()), "missing fact_type column");
+        assert!(cols.contains(&"text_fts".to_string()), "missing text_fts column");
     }
-
-    let conn = Connection::open(&temp_path).expect("open connection for schema verification");
-    let mut stmt = conn
-        .prepare("PRAGMA table_info(facts)")
-        .expect("prepare PRAGMA table_info(facts)");
-    let cols: Vec<String> = stmt
-        .query_map([], |row| row.get(1))
-        .expect("query_map table_info")
-        .collect::<Result<Vec<_>, _>>()
-        .expect("collect table_info column names");
-
-    assert!(cols.contains(&"status".to_string()), "missing status column");
-    assert!(
-        cols.contains(&"superseded_by".to_string()),
-        "missing superseded_by column"
-    );
-    assert!(cols.contains(&"fact_type".to_string()), "missing fact_type column");
-    assert!(cols.contains(&"text_fts".to_string()), "missing text_fts column");
 }

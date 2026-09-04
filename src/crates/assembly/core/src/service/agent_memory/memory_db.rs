@@ -1,5 +1,5 @@
 use crate::util::errors::{NortHingError, NortHingResult};
-use rusqlite::{params, Connection, TransactionBehavior};
+use rusqlite::{params, Connection, ErrorCode, TransactionBehavior};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -27,6 +27,38 @@ pub(crate) struct FactReview {
     pub created_at: u64,
 }
 
+fn is_busy_error(err: &rusqlite::Error) -> bool {
+    if let Some(code) = err.sqlite_error_code() {
+        if code == ErrorCode::DatabaseBusy || code == ErrorCode::DatabaseLocked {
+            return true;
+        }
+    }
+    let msg = err.to_string();
+    msg.contains("database is locked") || msg.contains("busy")
+}
+
+fn retry_on_busy<F, T>(budget: Duration, base_backoff: Duration, mut f: F) -> Result<T, rusqlite::Error>
+where
+    F: FnMut() -> Result<T, rusqlite::Error>,
+{
+    let start = std::time::Instant::now();
+    let mut attempt = 0;
+    loop {
+        match f() {
+            Ok(val) => return Ok(val),
+            Err(e) if is_busy_error(&e) => {
+                if start.elapsed() >= budget {
+                    return Err(e);
+                }
+                let sleep_ms = (base_backoff.as_millis() as u64 + (attempt * 10)).min(200);
+                std::thread::sleep(Duration::from_millis(sleep_ms));
+                attempt += 1;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 impl MemoryDb {
     pub(crate) fn open(db_path: &Path) -> NortHingResult<Self> {
         if let Some(parent) = db_path.parent() {
@@ -40,8 +72,10 @@ impl MemoryDb {
         conn.busy_timeout(Duration::from_secs(5))
             .map_err(|e| NortHingError::service(format!("Failed to set busy timeout for memory db: {}", e)))?;
 
-        conn.execute_batch("PRAGMA journal_mode=WAL;")
-            .map_err(|e| NortHingError::io(format!("Failed to set WAL mode: {}", e)))?;
+        retry_on_busy(Duration::from_secs(5), Duration::from_millis(50), || {
+            conn.execute_batch("PRAGMA journal_mode=WAL;")
+        })
+        .map_err(|e| NortHingError::io(format!("Failed to set WAL mode: {}", e)))?;
 
         let db = Self { conn: Mutex::new(conn) };
 
@@ -56,8 +90,9 @@ impl MemoryDb {
             .lock()
             .map_err(|e| NortHingError::service(format!("MemoryDb lock poisoned: {}", e)))?;
 
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS facts (
+        retry_on_busy(Duration::from_secs(5), Duration::from_millis(50), || {
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS facts (
                 id TEXT PRIMARY KEY,
                 text TEXT NOT NULL,
                 text_fts TEXT NOT NULL,
@@ -108,7 +143,8 @@ impl MemoryDb {
                 reason TEXT,
                 created_at INTEGER NOT NULL
             );",
-        )
+            )
+        })
         .map_err(|e| NortHingError::service(format!("Failed to create memory db tables: {}", e)))?;
 
         Self::migrate_facts_columns(&mut conn)?;
