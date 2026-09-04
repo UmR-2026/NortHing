@@ -107,14 +107,7 @@ impl JsonFileStore {
     pub const DEFAULT_TIMEOUT: Duration = JSON_FILE_IO_TIMEOUT;
 
     pub async fn read_optional<T: DeserializeOwned>(&self, path: &Path) -> Result<Option<T>, JsonFileStoreError> {
-        self.read_optional_timeout(path, Self::DEFAULT_TIMEOUT).await
-    }
-
-    pub async fn read_optional_timeout<T: DeserializeOwned>(
-        &self,
-        path: &Path,
-        timeout: Duration,
-    ) -> Result<Option<T>, JsonFileStoreError> {
+        let timeout = Self::DEFAULT_TIMEOUT;
         let started_at = Instant::now();
         let metadata_started_at = Instant::now();
         let metadata = match io_timeout(path, "metadata", timeout, fs::metadata(path)).await {
@@ -168,15 +161,7 @@ impl JsonFileStore {
     }
 
     pub async fn write_bytes_atomic(&self, path: &Path, bytes: &[u8]) -> Result<(), JsonFileStoreError> {
-        self.write_bytes_atomic_timeout(path, bytes, Self::DEFAULT_TIMEOUT).await
-    }
-
-    pub async fn write_bytes_atomic_timeout(
-        &self,
-        path: &Path,
-        bytes: &[u8],
-        timeout: Duration,
-    ) -> Result<(), JsonFileStoreError> {
+        let timeout = Self::DEFAULT_TIMEOUT;
         let parent = path.parent().ok_or_else(|| JsonFileStoreError::NoParentDirectory {
             path: path.to_path_buf(),
         })?;
