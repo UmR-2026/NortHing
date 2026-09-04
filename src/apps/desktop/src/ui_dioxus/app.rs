@@ -35,7 +35,7 @@ use super::turn_banner::{cancelled_body, error_draft_body, kernel_error_message,
 use super::window_ops::{close_module, quit_shell};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
-use tokio::sync::watch;
+use tokio::sync::{oneshot, watch};
 
 /// RSX root for the room main window.
 pub fn room_app_root() -> Element {
@@ -68,23 +68,43 @@ pub fn room_app_root() -> Element {
         let mut session_id_signal = session_id_signal;
         let mut entries = entries;
         async move {
-            match api::ensure_room_session().await {
-                Ok(sid) => {
+            let Some(rt) = crate::app_state::turn_runtime::turn_runtime() else {
+                tracing::warn!("ui_dioxus::app turn_runtime handle unavailable for room session initialization");
+                return;
+            };
+
+            let (tx, rx) = oneshot::channel();
+            rt.spawn(async move {
+                let session_res = api::ensure_room_session().await;
+                let messages_res = match &session_res {
+                    Ok(sid) => Some(api::get_messages(sid).await),
+                    Err(_) => None,
+                };
+                let _ = tx.send((session_res, messages_res));
+            });
+
+            match rx.await {
+                Ok((Ok(sid), msgs_opt)) => {
                     session_id_signal.set(Some(sid.clone()));
-                    match api::get_messages(&sid).await {
-                        Ok(msgs) => {
-                            let converted = super::session_mock::messages_to_entries(msgs);
-                            if !converted.is_empty() {
-                                entries.set(converted);
+                    if let Some(msgs_res) = msgs_opt {
+                        match msgs_res {
+                            Ok(msgs) => {
+                                let converted = super::session_mock::messages_to_entries(msgs);
+                                if !converted.is_empty() {
+                                    entries.set(converted);
+                                }
                             }
-                        }
-                        Err(e) => {
-                            tracing::warn!("ui_dioxus::app get_messages failed: {e}");
+                            Err(e) => {
+                                tracing::warn!("ui_dioxus::app get_messages failed: {e}");
+                            }
                         }
                     }
                 }
-                Err(e) => {
+                Ok((Err(e), _)) => {
                     tracing::warn!("ui_dioxus::app ensure_room_session failed: {e}");
+                }
+                Err(e) => {
+                    tracing::warn!("ui_dioxus::app room session initialization channel closed: {e}");
                 }
             }
         }

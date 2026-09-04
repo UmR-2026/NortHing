@@ -176,16 +176,18 @@ pub fn launch(on_shutdown: Arc<dyn Fn() + Send + Sync + 'static>) -> anyhow::Res
         // never showed it because frameless windows get it swapped out;
         // explicit None pins the intent regardless of that swap path.
         .with_menu(None)
-        // r3p4 root-fix (2026-08-14): event-driven geometry publishing.
+        // r3p4 root-fix (2026-08-14, corrected 2026-09-04 per W15-1i trace):
+        // event-driven geometry publishing.
         //
         // The previous design polled the room window's position from a
-        // 100ms `use_future`. Controlled CPU measurements (experiments
-        // A/B/C in `task-migrate-room-report-r3p4.md`) proved that ANY
-        // sleeping use_future in the room window - including a bare
-        // `loop { sleep(100ms).await }` with no window()/send calls -
-        // makes one background thread busy-spin at ~97% single-core
-        // CPU on dioxus 0.8.0-alpha.1. The polling shape itself is the
-        // poison, so geometry publishing must not use a future at all.
+        // 100ms `use_future`. Controlled experiments in W15-1i trace
+        // vindicated sleeping use_futures (Experiments D/E showed sleeping
+        // watch/channel futures are completely harmless). The true poison
+        // is a busy-wake future returning Pending that is repeatedly polled
+        // at high frequency (~42k/s) under dioxus 0.8.0-alpha.1's hybrid loop,
+        // which freezes tokio time drivers and starves the tao message pump.
+        // The old polling loop with timer sleep triggered this freeze.
+        // Geometry publishing must not rely on timer polling futures.
         //
         // Instead we hook the tao event loop directly: the room window's
         // Moved/Resized OS events become the publish trigger. Zero
