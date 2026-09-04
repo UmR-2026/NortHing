@@ -61,8 +61,8 @@
  },
  "god_file:src/crates/assembly/core/src/service/agent_memory/memory_db.rs": {
   "kind": "file-lines",
-  "ceiling": 894,
-  "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
+  "ceiling": 859,
+  "note": "R-14 god-file; live observation cohort (T2-6 superseded); W15-1k ceiling 894→859 (test seam extraction, 0 behavior change)"
  },
   "god_file:src/apps/cli/src/ui/startup/selectors.rs": {
    "kind": "file-lines",
