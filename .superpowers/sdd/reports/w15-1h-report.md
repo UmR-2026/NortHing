@@ -175,4 +175,110 @@ warning: `northhing` (bin "northhing") generated 61 warnings (2 duplicates) (run
 
 - 无。`kernel_facade/tests.rs` 两个测试未走 thread-local 隔离缝是独立的后续重构项，本次改动已保证即使多线程并发打开同一真实路径亦具备完全的原子性与容错能力。
 
+## 7. 续单修复记录（WAL pragma & create_tables 有界 busy 重试）
+
+### 7.1 CI 故障现象与机制分析
+- **故障现象**：CI run 33859531617 中，`concurrent_open_fresh_db_all_succeed` 在并发 open 路径上发生 panic：
+  `MemoryDb::open failed under concurrent migration: Some(Io(Custom { kind: Other, error: "Failed to set WAL mode: database is locked" }))`
+- **机制机理**：虽然 `conn.busy_timeout(5s)` 设置在 WAL pragma 之前，但 SQLite 规范中 `PRAGMA journal_mode=WAL` 转换涉及从 rollback journal 切换到 WAL 的排他锁获取。SQLite 在该 PRAGMA 期间**不调用注册的 busy handler / busy_timeout**，一旦与其他并发 opener 冲突便立即返回 `SQLITE_BUSY`（"database is locked"）。此外，`create_tables` 的多语句 DDL batch 在并发建表冲突时也可能遭遇瞬时 locked。
+
+### 7.2 修复措施
+1. **`is_busy_error` 判定**：检查 `err.sqlite_error_code()` 是否匹配 `ErrorCode::DatabaseBusy` 或 `ErrorCode::DatabaseLocked`，并双重校验错误信息是否包含 `"database is locked"` / `"busy"`。
+2. **`retry_on_busy` 有界重试器**：
+   - 总时间预算：5 秒（与 `busy_timeout` 授权值一致，对齐 CI 极端时延窗口）；
+   - 基础退避：50ms（每次重试递增 10ms，上限 200ms，在 50-200ms 区间睡眠并让出 CPU 线程）；
+   - 精准重试：仅对 busy / locked 错误进行退避重试，其余错误（语法错误、IO 权限等）立即短路传播。
+3. **关键段包裹**：
+   - `PRAGMA journal_mode=WAL;` 执行段包裹 `retry_on_busy`。
+   - `create_tables` 中 `conn.execute_batch` 建表段包裹 `retry_on_busy`。
+   - 后续的 `migrate_facts_columns` 保持 `BEGIN IMMEDIATE` 事务不变（该语句由 SQLite 原生 busy handler 正确接管）。
+4. **加固并发回归测试**：
+   - `memory_db_tests.rs` 中的 `concurrent_open_fresh_db_all_succeed` 升级为 3 轮独立全新临时库循环，每轮由 12 个 OS 线程通过 `Barrier` 强同步并发 open，大幅提升本地并发争用强度。
+
+### 7.3 验证结果
+
+#### (1) 单测套件全绿
+```bash
+cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full memory_db"
+```
+```text
+running 24 tests
+test service::agent_memory::memory_db::tests::recency_boost_skips_on_clock_anomaly ... ok
+test service::agent_memory::memory_db::tests::sort_scored_facts_nan_sinks_to_bottom ... ok
+test service::agent_memory::memory_db::tests::segment_for_fts_bigram ... ok
+test service::agent_memory::memory_db::tests::boost_keyword_increases_weight ... ok
+test service::agent_memory::memory_db::tests::fts_search_two_char_cjk ... ok
+test service::agent_memory::memory_db::tests::insert_duplicate_id_ignored ... ok
+test service::agent_memory::memory_db::tests::open_creates_tables ... ok
+test service::agent_memory::memory_db::tests::decay_weights_respects_floor ... ok
+test service::agent_memory::memory_db::tests::status_filter_hides_superseded ... ok
+test service::agent_memory::memory_db::tests::empty_query_returns_empty ... ok
+test service::agent_memory::memory_db::tests::judge_mom_kv_round_trip ... ok
+test service::agent_memory::memory_db::tests::fts_search_matches_keyword ... ok
+test service::agent_memory::memory_db::tests::migration_idempotent_on_reopen ... ok
+test service::agent_memory::memory_db::tests::fact_type_round_trip ... ok
+test service::agent_memory::memory_db::tests::fts_search_chinese_bigram ... ok
+test service::agent_memory::memory_db::tests::fact_reviews_round_trip ... ok
+test service::agent_memory::memory_db::tests::delete_fact_removes_from_fts ... ok
+test service::agent_memory::memory_db::tests::keyword_weight_affects_scored_fact ... ok
+test service::agent_memory::memory_db::tests::insert_and_get_fact_round_trip ... ok
+test service::agent_memory::memory_db::tests::fts_search_respects_workspace_scope ... ok
+test service::agent_memory::memory_db::tests::ranking_fuses_three_factors ... ok
+test service::agent_memory::memory_db::tests::get_stale_facts_filters_and_orders ... ok
+test service::agent_memory::memory_db::tests::boost_keyword_respects_cap ... ok
+test service::agent_memory::memory_db::tests::concurrent_open_fresh_db_all_succeed ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 1047 filtered out; finished in 0.55s
+```
+
+#### (2) 并发测试 20 轮连续执行统计
+```powershell
+$exe = "E:\agent-project\NortHing\target\debug\deps\northhing_core-a3bccb815e7e79b9.exe"
+$pass = 0
+$fail = 0
+1..20 | ForEach-Object {
+    $out = & $exe concurrent_open_fresh_db_all_succeed 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $pass++
+        Write-Host "Round $_ : PASS"
+    } else {
+        $fail++
+        Write-Host "Round $_ : FAIL"
+        Write-Host $out
+    }
+}
+Write-Host "Total Rounds: 20, Passed: $pass, Failed: $fail"
+```
+```text
+Round 1 : PASS
+Round 2 : PASS
+Round 3 : PASS
+Round 4 : PASS
+Round 5 : PASS
+Round 6 : PASS
+Round 7 : PASS
+Round 8 : PASS
+Round 9 : PASS
+Round 10 : PASS
+Round 11 : PASS
+Round 12 : PASS
+Round 13 : PASS
+Round 14 : PASS
+Round 15 : PASS
+Round 16 : PASS
+Round 17 : PASS
+Round 18 : PASS
+Round 19 : PASS
+Round 20 : PASS
+Total Rounds: 20, Passed: 20, Failed: 0
+```
+
+#### (3) 工作区类型检查全绿
+```bash
+cmd /c "C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace"
+```
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.25s
+```
+
 DONE
