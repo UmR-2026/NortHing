@@ -1,7 +1,8 @@
-use northhing_services_core::json_store::{JsonFileStore, JsonFileStoreError};
+use northhing_services_core::json_store::{io_timeout, JsonFileStore, JsonFileStoreError};
 use northhing_test_support::TestTempDir;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct TestPayload {
@@ -105,4 +106,74 @@ async fn json_store_write_bytes_atomic_overwrites_and_cleans_up_temp_files() {
         let name_str = name.to_string_lossy();
         assert!(!name_str.ends_with(".tmp"), "found leftover temp file: {}", name_str);
     }
+}
+
+#[tokio::test]
+async fn json_store_io_timeout_read_with_pending_future_triggers_timeout() {
+    let result = io_timeout(
+        Path::new("sessions/5da38044/state.json"),
+        "read_to_string",
+        Duration::from_millis(10),
+        std::future::pending::<std::io::Result<String>>(),
+    )
+    .await;
+
+    let err = result.expect_err("pending read future must time out");
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
+    assert!(err.to_string().contains("read_to_string"));
+    assert!(err.to_string().contains("timed out after 10ms"));
+}
+
+#[tokio::test]
+async fn json_store_io_timeout_metadata_with_pending_future_triggers_timeout() {
+    let result = io_timeout(
+        Path::new("sessions/5da38044/state.json"),
+        "metadata",
+        Duration::from_millis(10),
+        std::future::pending::<std::io::Result<std::fs::Metadata>>(),
+    )
+    .await;
+
+    let err = result.expect_err("pending metadata future must time out");
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
+    assert!(err.to_string().contains("metadata"));
+    assert!(err.to_string().contains("timed out after 10ms"));
+}
+
+#[tokio::test]
+async fn json_store_io_timeout_write_with_pending_future_triggers_timeout() {
+    let result = io_timeout(
+        Path::new("sessions/5da38044/state.json.tmp"),
+        "write_temp",
+        Duration::from_millis(10),
+        std::future::pending::<std::io::Result<()>>(),
+    )
+    .await;
+
+    let err = result.expect_err("pending write future must time out");
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
+    assert!(err.to_string().contains("write_temp"));
+    assert!(err.to_string().contains("timed out after 10ms"));
+}
+
+#[tokio::test]
+async fn json_store_io_timeout_replace_with_pending_future_triggers_timeout() {
+    let result = io_timeout(
+        Path::new("sessions/5da38044/state.json"),
+        "rename_replace",
+        Duration::from_millis(10),
+        std::future::pending::<std::io::Result<()>>(),
+    )
+    .await;
+
+    let err = result.expect_err("pending replace future must time out");
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
+    assert!(err.to_string().contains("rename_replace"));
+    assert!(err.to_string().contains("timed out after 10ms"));
+}
+
+#[test]
+fn json_store_timed_out_is_retryable() {
+    let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "operation timed out");
+    assert!(JsonFileStore::is_retryable_write_error(&error));
 }

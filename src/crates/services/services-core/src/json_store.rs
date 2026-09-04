@@ -16,6 +16,25 @@ use tracing::{debug, warn};
 
 const JSON_WRITE_MAX_RETRIES: usize = 5;
 const JSON_WRITE_RETRY_BASE_DELAY_MS: u64 = 30;
+pub const JSON_FILE_IO_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub async fn io_timeout<F, T>(
+    path: &Path,
+    op: &'static str,
+    timeout: Duration,
+    future: F,
+) -> std::io::Result<T>
+where
+    F: std::future::Future<Output = std::io::Result<T>>,
+{
+    match tokio::time::timeout(timeout, future).await {
+        Ok(result) => result,
+        Err(_) => Err(std::io::Error::new(
+            ErrorKind::TimedOut,
+            format!("operation '{op}' timed out after {timeout:?} for path {}", path.display()),
+        )),
+    }
+}
 
 static JSON_FILE_WRITE_LOCKS: OnceLock<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = OnceLock::new();
 
@@ -85,10 +104,20 @@ impl JsonFileStoreError {
 pub struct JsonFileStore;
 
 impl JsonFileStore {
+    pub const DEFAULT_TIMEOUT: Duration = JSON_FILE_IO_TIMEOUT;
+
     pub async fn read_optional<T: DeserializeOwned>(&self, path: &Path) -> Result<Option<T>, JsonFileStoreError> {
+        self.read_optional_timeout(path, Self::DEFAULT_TIMEOUT).await
+    }
+
+    pub async fn read_optional_timeout<T: DeserializeOwned>(
+        &self,
+        path: &Path,
+        timeout: Duration,
+    ) -> Result<Option<T>, JsonFileStoreError> {
         let started_at = Instant::now();
         let metadata_started_at = Instant::now();
-        let metadata = match fs::metadata(path).await {
+        let metadata = match io_timeout(path, "metadata", timeout, fs::metadata(path)).await {
             Ok(metadata) => metadata,
             Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
             Err(error) => {
@@ -101,7 +130,7 @@ impl JsonFileStore {
         let metadata_duration = metadata_started_at.elapsed();
 
         let read_started_at = Instant::now();
-        let content = fs::read_to_string(path)
+        let content = io_timeout(path, "read_to_string", timeout, fs::read_to_string(path))
             .await
             .map_err(|source| JsonFileStoreError::Read {
                 path: path.to_path_buf(),
@@ -139,11 +168,20 @@ impl JsonFileStore {
     }
 
     pub async fn write_bytes_atomic(&self, path: &Path, bytes: &[u8]) -> Result<(), JsonFileStoreError> {
+        self.write_bytes_atomic_timeout(path, bytes, Self::DEFAULT_TIMEOUT).await
+    }
+
+    pub async fn write_bytes_atomic_timeout(
+        &self,
+        path: &Path,
+        bytes: &[u8],
+        timeout: Duration,
+    ) -> Result<(), JsonFileStoreError> {
         let parent = path.parent().ok_or_else(|| JsonFileStoreError::NoParentDirectory {
             path: path.to_path_buf(),
         })?;
 
-        fs::create_dir_all(parent)
+        io_timeout(parent, "create_dir_all", timeout, fs::create_dir_all(parent))
             .await
             .map_err(|source| JsonFileStoreError::CreateParent { source })?;
 
@@ -154,16 +192,16 @@ impl JsonFileStore {
 
         for attempt in 0..=JSON_WRITE_MAX_RETRIES {
             let tmp_path = Self::build_temp_json_path(path, attempt)?;
-            if let Err(source) = fs::write(&tmp_path, bytes).await {
+            if let Err(source) = io_timeout(&tmp_path, "write_temp", timeout, fs::write(&tmp_path, bytes)).await {
                 return Err(JsonFileStoreError::WriteTemp { source });
             }
 
-            match Self::replace_file_from_temp(path, &tmp_path).await {
+            match Self::replace_file_from_temp(path, &tmp_path, timeout).await {
                 Ok(()) => return Ok(()),
                 Err(error) => {
                     let should_retry = Self::is_retryable_write_error(&error) && attempt < JSON_WRITE_MAX_RETRIES;
                     last_replace_error = Some(error);
-                    let _ = fs::remove_file(&tmp_path).await;
+                    let _ = io_timeout(&tmp_path, "remove_temp", timeout, fs::remove_file(&tmp_path)).await;
 
                     if should_retry {
                         tokio::time::sleep(Self::retry_delay(attempt)).await;
@@ -185,7 +223,7 @@ impl JsonFileStore {
                     "Atomic JSON replace permission denied for {}, fallback to direct overwrite",
                     path.display()
                 );
-                fs::write(path, bytes)
+                io_timeout(path, "fallback_overwrite", timeout, fs::write(path, bytes))
                     .await
                     .map_err(|source| JsonFileStoreError::FallbackOverwrite {
                         path: path.to_path_buf(),
@@ -228,23 +266,27 @@ impl JsonFileStore {
         Ok(parent.join(temp_name))
     }
 
-    async fn replace_file_from_temp(target_path: &Path, tmp_path: &Path) -> std::io::Result<()> {
-        if let Ok(()) = fs::rename(tmp_path, target_path).await {
+    async fn replace_file_from_temp(
+        target_path: &Path,
+        tmp_path: &Path,
+        timeout: Duration,
+    ) -> std::io::Result<()> {
+        if let Ok(()) = io_timeout(target_path, "rename_initial", timeout, fs::rename(tmp_path, target_path)).await {
             return Ok(());
         }
 
         if target_path.exists() {
-            match fs::remove_file(target_path).await {
+            match io_timeout(target_path, "remove_target", timeout, fs::remove_file(target_path)).await {
                 Ok(()) => {}
                 Err(error) if error.kind() == ErrorKind::NotFound => {}
                 Err(error) => return Err(error),
             }
         }
 
-        fs::rename(tmp_path, target_path).await
+        io_timeout(target_path, "rename_replace", timeout, fs::rename(tmp_path, target_path)).await
     }
 
-    fn is_retryable_write_error(error: &std::io::Error) -> bool {
+    pub fn is_retryable_write_error(error: &std::io::Error) -> bool {
         matches!(
             error.kind(),
             ErrorKind::PermissionDenied
