@@ -15,27 +15,33 @@ use super::session_mock::MockEntry;
 
 /// Approve or reject a pending tool call and flip the card to resolved.
 #[allow(unused_mut)]
-async fn settle_approval(
-    call_id: String,
-    approved: bool,
-    status: &'static str,
-    entries: Signal<Vec<MockEntry>>,
-) {
-    if api::respond_to_tool_confirmation(&call_id, approved)
-        .await
-        .is_ok()
-    {
-        // Signal<T> is Copy (Rc-like), but .write() needs a mutable binding.
-        let mut entries = entries;
-        let mut guard = entries.write();
-        if let Some(MockEntry::Approval {
-            resolved, state_text, ..
-        }) = guard.iter_mut().find(|e| match e {
-            MockEntry::Approval { call_id: cid, .. } => cid == &call_id,
-            _ => false,
-        }) {
-            *resolved = true;
-            *state_text = Some(status.to_string());
+async fn settle_approval(call_id: String, approved: bool, status: &'static str, entries: Signal<Vec<MockEntry>>) {
+    let cid_kernel = call_id.clone();
+    let res = api::spawn_on_turn_runtime("settle_approval", async move {
+        api::respond_to_tool_confirmation(&cid_kernel, approved).await
+    })
+    .await;
+
+    match res {
+        Ok(Ok(())) => {
+            // Signal<T> is Copy (Rc-like), but .write() needs a mutable binding.
+            let mut entries = entries;
+            let mut guard = entries.write();
+            if let Some(MockEntry::Approval {
+                resolved, state_text, ..
+            }) = guard.iter_mut().find(|e| match e {
+                MockEntry::Approval { call_id: cid, .. } => cid == &call_id,
+                _ => false,
+            }) {
+                *resolved = true;
+                *state_text = Some(status.to_string());
+            }
+        }
+        Ok(Err(e)) => {
+            tracing::warn!("ui_dioxus::settle_approval respond_to_tool_confirmation failed: {e}");
+        }
+        Err(()) => {
+            // Error logged by spawn_on_turn_runtime; card remains unresolved.
         }
     }
 }

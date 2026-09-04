@@ -159,6 +159,35 @@ pub async fn respond_to_tool_confirmation(tool_id: &str, approved: bool) -> Resu
         .await
 }
 
+/// Spawns an async operation onto the worker `turn_runtime` and awaits its result
+/// on the UI executor via a oneshot channel.
+///
+/// Keeps kernel awaits off the Dioxus UI executor to prevent busy-polling hangs.
+pub(crate) async fn spawn_on_turn_runtime<T, F>(caller: &'static str, fut: F) -> Result<T, ()>
+where
+    T: Send + 'static,
+    F: std::future::Future<Output = T> + Send + 'static,
+{
+    let Some(rt) = crate::app_state::turn_runtime::turn_runtime() else {
+        tracing::warn!("ui_dioxus::{caller} turn_runtime handle unavailable");
+        return Err(());
+    };
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    rt.spawn(async move {
+        let res = fut.await;
+        let _ = tx.send(res);
+    });
+
+    match rx.await {
+        Ok(val) => Ok(val),
+        Err(e) => {
+            tracing::warn!("ui_dioxus::{caller} background channel closed: {e}");
+            Err(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,5 +291,15 @@ mod tests {
             sessions: vec![],
         }];
         assert!(pick_room_session(&groups_all_empty, None).is_none());
+    }
+
+    #[tokio::test]
+    async fn test_spawn_on_turn_runtime_behavior() {
+        let res = spawn_on_turn_runtime("test", async { 42 }).await;
+        if crate::app_state::turn_runtime::turn_runtime().is_none() {
+            assert!(res.is_err());
+        } else {
+            assert_eq!(res, Ok(42));
+        }
     }
 }

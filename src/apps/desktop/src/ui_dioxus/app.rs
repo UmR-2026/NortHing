@@ -288,36 +288,65 @@ pub fn room_app_root() -> Element {
         let mut send_error = send_error;
         let mut session_id_signal = session_id_signal;
         let mut entries = entries;
+        let degraded = degraded;
+        let existing_sid = session_id_signal();
+        let text_witness = text.clone();
         spawn(async move {
-            let sid = match session_id_signal() {
-                Some(s) => s,
-                None => match api::ensure_room_session().await {
-                    Ok(s) => {
-                        session_id_signal.set(Some(s.clone()));
-                        s
-                    }
-                    Err(e) => {
-                        send_error.set(Some(format!("Session error: {e}")));
-                        return;
-                    }
+            enum SendOutcome {
+                Success {
+                    new_sid: Option<String>,
+                    turn_id: TurnId,
                 },
-            };
+                SessionError(northhing_kernel_api::error::KernelError),
+                SubmitError {
+                    new_sid: Option<String>,
+                    error: northhing_kernel_api::error::KernelError,
+                },
+            }
 
-            match api::submit_turn(&sid, text.clone()).await {
-                Ok(turn_id) => {
+            let res = api::spawn_on_turn_runtime("send_action", async move {
+                let (new_sid, sid) = match existing_sid {
+                    Some(s) => (None, s),
+                    None => match api::ensure_room_session().await {
+                        Ok(s) => (Some(s.clone()), s),
+                        Err(e) => return SendOutcome::SessionError(e),
+                    },
+                };
+
+                match api::submit_turn(&sid, text).await {
+                    Ok(turn_id) => SendOutcome::Success { new_sid, turn_id },
+                    Err(error) => SendOutcome::SubmitError { new_sid, error },
+                }
+            })
+            .await;
+
+            match res {
+                Ok(SendOutcome::Success { new_sid, turn_id }) => {
+                    if let Some(s) = new_sid {
+                        session_id_signal.set(Some(s));
+                    }
                     active_turn_id.set(Some(turn_id));
                     streaming.set(true);
                     user_input.set(String::new());
                     send_error.set(None);
                     entries.write().push(MockEntry::Witness {
                         who: "见证者".into(),
-                        body: text,
+                        body: text_witness,
                     });
                 }
-                Err(e) => {
-                    let err_text = kernel_error_message(&e);
+                Ok(SendOutcome::SubmitError { new_sid, error }) => {
+                    if let Some(s) = new_sid {
+                        session_id_signal.set(Some(s));
+                    }
+                    let err_text = kernel_error_message(&error);
                     maybe_set_degraded(&err_text, degraded);
-                    send_error.set(Some(format!("Submit error: {e}")));
+                    send_error.set(Some(format!("Submit error: {error}")));
+                }
+                Ok(SendOutcome::SessionError(e)) => {
+                    send_error.set(Some(format!("Session error: {e}")));
+                }
+                Err(()) => {
+                    send_error.set(Some("Background runtime unavailable".to_string()));
                 }
             }
         });
@@ -328,7 +357,11 @@ pub fn room_app_root() -> Element {
         let mut active_turn_id = active_turn_id;
         if let Some(turn_id) = active_turn_id() {
             spawn(async move {
-                let _ = api::stop_turn(&turn_id).await;
+                let res =
+                    api::spawn_on_turn_runtime("stop_action", async move { api::stop_turn(&turn_id).await }).await;
+                if let Ok(Err(e)) = res {
+                    tracing::warn!("ui_dioxus::stop_action stop_turn failed: {e}");
+                }
             });
         }
         streaming.set(false);
