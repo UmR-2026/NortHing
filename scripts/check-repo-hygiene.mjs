@@ -49,6 +49,9 @@ const localChangedFiles = uniqueFiles([
 const committedChangedFiles = hasCommit('HEAD^1')
   ? runGit(['diff', '--name-only', '--diff-filter=ACMRT', 'HEAD^1', 'HEAD'])
   : [];
+if (localChangedFiles.length === 0 && committedChangedFiles.length === 0) {
+  console.warn('WARNING: full-repo scan fallback active — HEAD^1 unavailable or no local changes; scan scope is ALL tracked files');
+}
 const contentScanFiles = uniqueFiles(
   localChangedFiles.length > 0
     ? localChangedFiles

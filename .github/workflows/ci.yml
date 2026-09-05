@@ -154,7 +154,10 @@ jobs:
     name: repo hygiene check
     runs-on: ubuntu-latest
     steps:
+      # Shallow clone (fetch-depth: 1) leaves HEAD^1 unavailable, triggering full-repo fallback scan (run 33982832690)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - uses: actions/setup-node@v4
         with:

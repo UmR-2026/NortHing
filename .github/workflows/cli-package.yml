@@ -84,21 +84,9 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - os: macos-15
-            name: macos-arm64
-            target: aarch64-apple-darwin
-            can_smoke_test: true
-          - os: macos-15-intel
-            name: macos-x64
-            target: x86_64-apple-darwin
-            can_smoke_test: true
-          - os: ubuntu-latest
-            name: linux-x64
-            target: x86_64-unknown-linux-gnu
-            can_smoke_test: true
-          - os: ubuntu-24.04-arm
-            name: linux-arm64
-            target: aarch64-unknown-linux-gnu
+          - os: windows-latest
+            name: windows-x64
+            target: x86_64-pc-windows-msvc
             can_smoke_test: true
 
     steps:
@@ -107,19 +95,10 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.checkout_ref }}
 
-      - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config \
-            build-essential \
-            libssl-dev \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev
+      - name: Setup OpenSSL (Windows, prebuilt)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci/setup-openssl-windows.ps1
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -146,6 +125,9 @@ jobs:
         run: |
           set -euo pipefail
           BIN="target/${{ matrix.platform.target }}/release/northhing-cli"
+          if [[ -f "${BIN}.exe" ]]; then
+            BIN="${BIN}.exe"
+          fi
           "$BIN" --version
           "$BIN" --help > /dev/null
 
@@ -161,7 +143,11 @@ jobs:
           STAGE_DIR="$(pwd)/dist-cli/northhing-cli-${VERSION}-${TARGET}"
           mkdir -p "$STAGE_DIR"
 
-          cp "target/${TARGET}/release/northhing-cli" "$STAGE_DIR/"
+          if [[ -f "target/${TARGET}/release/northhing-cli.exe" ]]; then
+            cp "target/${TARGET}/release/northhing-cli.exe" "$STAGE_DIR/"
+          else
+            cp "target/${TARGET}/release/northhing-cli" "$STAGE_DIR/"
+          fi
           cp LICENSE "$STAGE_DIR/" || true
           cp README.md "$STAGE_DIR/" || true
 
