@@ -95,6 +95,12 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 5. **编码宵禁**：每天 03:00 以后禁止进行编码工作（用户健康规则，2026-07-22 记录）。
 6. **合入 main 前的桌面编译门禁**（2026-08-06 记录）：分支末端必须通过 `cargo check -p northhing` 才能合入 main，且 round handoff 不得沿用自身未实测的验证基线。原因：P1-C3 曾合入 main 但桌面 crate 根本无法编译（缺少 keyring feature），因报告验证节不完整且下一个 handoff 复用了 C3 前的测试数字而整整一轮未被察觉。参见 `docs/status/tech-debt-ledger.md` P2-15。
 7. **防腐预算只降不升**：`scripts/rot-budget.json` 中的上限在日常 commit 中只允许调低；顺手调低属于欢迎的内务行为（家规 1）。调高任何上限或新增 >800 行文件的 manifest 条目均需要用户显式确认并记录在 commit message 中。dir-entry-count 指标的 sdd 条目是 cap-and-archive 语义（达到上限触发归档，而非只降不升）。
+8. **Commit 绑定工作流闸**：
+   1. 任务验收以 BASE_SHA / TIP_SHA + brief 允许文件集为界；机械比较命令：`node scripts/verify-task-gate.mjs verify-attempt --base <sha> --tip <sha> --allowlist <file>`，越界即失败。
+   2. 续单 = 新 attempt：必须有独立 brief（含自己的 BASE 与允许文件集）；不接受事后叙述扩围。
+   3. 审查结论状态机：PASS / FAIL / CANNOT_VERIFY / BLOCKED；CANNOT_VERIFY 按 `scripts/workflow-policy.json` 的 `cannotVerifyPolicy` 分级（判定性证据阻塞；辅助证据 ≤2 项且不触 trust boundary ⇒ 结论上限 APPROVE_WITH_CONCERNS + owner + 截止），禁止直接转 APPROVE。
+   4. meta-ratchet：修改 `scripts/workflow-policy.json` 的 `metaRatchetPaths` 所列文件的 commit，自动升最高审查车道（双 judge + 用户拍板）。
+   5. `APPROVE_WITH_CONCERNS` 是一等结论状态：“无法确定”不被惩罚，但必须带 owner 与截止时间。
 
 ### 国际化
 
