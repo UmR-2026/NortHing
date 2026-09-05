@@ -12,4 +12,4 @@ pub mod render;
 pub mod types;
 
 pub use render::render_question_overlay;
-pub use types::{QuestionAction, QuestionData, QuestionOption, QuestionPrompt};
+pub use types::{QuestionAction, QuestionPrompt};
