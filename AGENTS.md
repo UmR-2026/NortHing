@@ -102,7 +102,7 @@ For the full script list, see [`package.json`](package.json).
 8. **Commit-bound workflow gate**:
    1. Task acceptance is bounded by BASE_SHA / TIP_SHA + the brief's allowlist; mechanical verification command: `node scripts/verify-task-gate.mjs verify-attempt --base <sha> --tip <sha> --allowlist <file>`, failing immediately on any out-of-bounds change.
    2. Continuation = new attempt: must have an independent brief (with its own BASE and allowlist); ex-post narrative expansion is not accepted.
-   3. Review verdict state machine: PASS / FAIL / CANNOT_VERIFY / BLOCKED; CANNOT_VERIFY is tiered per `cannotVerifyPolicy` in `scripts/workflow-policy.json` (decisive evidence blocks; auxiliary evidence ≤2 items and not touching trust boundary ⇒ verdict capped at APPROVE_WITH_CONCERNS + owner + deadline); direct promotion to APPROVE is forbidden.
+   3. Review verdicts use `reviewVerdicts` in `scripts/workflow-policy.json` as the sole vocabulary (currently APPROVE / APPROVE_WITH_CONCERNS / CANNOT_VERIFY / BLOCKED / FAIL); CANNOT_VERIFY is tiered per `cannotVerifyPolicy` in `scripts/workflow-policy.json` (decisive evidence blocks; auxiliary evidence ≤2 items and not touching trust boundary ⇒ verdict capped at APPROVE_WITH_CONCERNS + owner + deadline); direct promotion to APPROVE is forbidden.
    4. Meta-ratchet: commits modifying any file listed in `metaRatchetPaths` of `scripts/workflow-policy.json` automatically escalate to the highest review lane (dual judges + user sign-off).
    5. `APPROVE_WITH_CONCERNS` is a first-class verdict: "cannot verify" is not penalized, but must specify an owner and a deadline.
 

@@ -21,7 +21,11 @@
     "scripts/verify-task-gate.mjs",
     "scripts/verify-rot-budget.mjs",
     "scripts/workflow-policy.json",
-    ".github/workflows/"
+    ".github/workflows/",
+    "scripts/check-repo-hygiene.mjs",
+    "scripts/check-core-boundaries.mjs",
+    "scripts/check-github-config.mjs",
+    "package.json"
   ],
   "briefRequiredSections": ["任务标识", "BASE", "允许文件集", "禁区", "验证", "报告"],
   "reportRequiredSections": ["改动摘要", "验证", "状态"]

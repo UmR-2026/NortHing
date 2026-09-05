@@ -98,7 +98,7 @@ pnpm run desktop:build:nsis:fast      # Windows 安装包，使用 release-fast 
 8. **Commit 绑定工作流闸**：
    1. 任务验收以 BASE_SHA / TIP_SHA + brief 允许文件集为界；机械比较命令：`node scripts/verify-task-gate.mjs verify-attempt --base <sha> --tip <sha> --allowlist <file>`，越界即失败。
    2. 续单 = 新 attempt：必须有独立 brief（含自己的 BASE 与允许文件集）；不接受事后叙述扩围。
-   3. 审查结论状态机：PASS / FAIL / CANNOT_VERIFY / BLOCKED；CANNOT_VERIFY 按 `scripts/workflow-policy.json` 的 `cannotVerifyPolicy` 分级（判定性证据阻塞；辅助证据 ≤2 项且不触 trust boundary ⇒ 结论上限 APPROVE_WITH_CONCERNS + owner + 截止），禁止直接转 APPROVE。
+   3. 审查结论以 `scripts/workflow-policy.json` 的 `reviewVerdicts` 为唯一词表（当前为 APPROVE / APPROVE_WITH_CONCERNS / CANNOT_VERIFY / BLOCKED / FAIL）；CANNOT_VERIFY 按 `scripts/workflow-policy.json` 的 `cannotVerifyPolicy` 分级（判定性证据阻塞；辅助证据 ≤2 项且不触 trust boundary ⇒ 结论上限 APPROVE_WITH_CONCERNS + owner + 截止），禁止直接转 APPROVE。
    4. meta-ratchet：修改 `scripts/workflow-policy.json` 的 `metaRatchetPaths` 所列文件的 commit，自动升最高审查车道（双 judge + 用户拍板）。
    5. `APPROVE_WITH_CONCERNS` 是一等结论状态：“无法确定”不被惩罚，但必须带 owner 与截止时间。
 
