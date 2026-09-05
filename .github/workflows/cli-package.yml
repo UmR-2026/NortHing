@@ -111,6 +111,13 @@ jobs:
           shared-key: "cli-v1-${{ matrix.platform.name }}"
           cache-bin: false
 
+      - name: Generate i18n locale contract
+        shell: bash
+        run: |
+          node scripts/generate-i18n-contract.mjs
+          test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
+        # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+
       - name: Build northhing-cli
         shell: bash
         run: |

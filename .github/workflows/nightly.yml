@@ -134,6 +134,13 @@ jobs:
           echo "package.json version: $(jq -r '.version' package.json)"
           echo "Cargo.toml version:   $(grep 'x-release-please-version' Cargo.toml)"
 
+      - name: Generate i18n locale contract
+        shell: bash
+        run: |
+          node scripts/generate-i18n-contract.mjs
+          test ! -d northhing-Installer && test -f northing-installer/src/i18n/generatedLocaleContract.ts
+        # generated_locale_contract.rs is gitignored; northhing-core fails E0583 without it
+
       - name: Build desktop app
         run: ${{ matrix.platform.build_command }}
 
