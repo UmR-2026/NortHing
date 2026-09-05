@@ -119,44 +119,47 @@ pub fn archive_app_root(props: ModuleAppProps) -> Element {
     // Load sessions on mount
     {
         let locale_for_load = locale.clone();
-        let mut error_msg = error_msg;
-        let mut loading = loading;
-        let mut all_sessions = all_sessions;
-        let mut room_session_id = room_session_id;
-        spawn(async move {
-            loading.set(true);
-            error_msg.set(String::new());
+        use_future(move || {
+            let mut loading = loading;
+            let mut error_msg = error_msg;
+            let mut all_sessions = all_sessions;
+            let mut room_session_id = room_session_id;
+            let locale_for_load = locale_for_load.clone();
+            async move {
+                loading.set(true);
+                error_msg.set(String::new());
 
-            // Resolve room session id for delete guard
-            let room_id = api::get_room_session_id().await;
-            let room_id_for_guard = room_id.clone();
-            room_session_id.set(room_id);
+                // Resolve room session id for delete guard
+                let room_id = api::get_room_session_id().await;
+                let room_id_for_guard = room_id.clone();
+                room_session_id.set(room_id);
 
-            match api::list_sessions_all_workspaces().await {
-                Ok(groups) => {
-                    let mut rows = Vec::new();
-                    for group in groups {
-                        for summary in group.sessions {
-                            let is_subagent = is_subagent_session(&summary.name, &summary.parent_session_id);
-                            let is_room = room_id_for_guard
-                                .as_ref()
-                                .map(|rid| rid == &summary.id)
-                                .unwrap_or(false);
-                            rows.push(SessionRow {
-                                summary,
-                                is_subagent,
-                                is_room,
-                            });
+                match api::list_sessions_all_workspaces().await {
+                    Ok(groups) => {
+                        let mut rows = Vec::new();
+                        for group in groups {
+                            for summary in group.sessions {
+                                let is_subagent = is_subagent_session(&summary.name, &summary.parent_session_id);
+                                let is_room = room_id_for_guard
+                                    .as_ref()
+                                    .map(|rid| rid == &summary.id)
+                                    .unwrap_or(false);
+                                rows.push(SessionRow {
+                                    summary,
+                                    is_subagent,
+                                    is_room,
+                                });
+                            }
                         }
+                        // Sort by updated_at descending
+                        rows.sort_by(|a, b| b.summary.updated_at.cmp(&a.summary.updated_at));
+                        all_sessions.set(rows);
+                        loading.set(false);
                     }
-                    // Sort by updated_at descending
-                    rows.sort_by(|a, b| b.summary.updated_at.cmp(&a.summary.updated_at));
-                    all_sessions.set(rows);
-                    loading.set(false);
-                }
-                Err(e) => {
-                    error_msg.set(format!("{} {}", locale_for_load.t(keys::ARCHIVE_LOAD_FAIL), e));
-                    loading.set(false);
+                    Err(e) => {
+                        error_msg.set(format!("{} {}", locale_for_load.t(keys::ARCHIVE_LOAD_FAIL), e));
+                        loading.set(false);
+                    }
                 }
             }
         });
