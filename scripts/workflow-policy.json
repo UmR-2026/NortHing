@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "judgeChecklist": [
+    "spec-by-acceptance-criteria",
+    "quality-independent",
+    "reuse-verification",
+    "no-ownerless-abstraction",
+    "budget-gate",
+    "conditional-early-exit-test",
+    "god-file-health-note-if-touched",
+    "pure-move-equivalence",
+    "evidence-spot-check"
+  ],
+  "statusWords": ["DONE", "DONE_WITH_CONCERNS", "NEEDS_CONTEXT", "BLOCKED"],
+  "reviewVerdicts": ["APPROVE", "APPROVE_WITH_CONCERNS", "CANNOT_VERIFY", "BLOCKED", "FAIL"],
+  "cannotVerifyPolicy": {
+    "blocking": "verdict-blocking evidence (acceptance criteria assertions)",
+    "auxiliary": "max 2 items, no trust-boundary touch, requires owner + deadline, verdict capped at APPROVE_WITH_CONCERNS"
+  },
+  "metaRatchetPaths": [
+    "scripts/verify-task-gate.mjs",
+    "scripts/verify-rot-budget.mjs",
+    "scripts/workflow-policy.json",
+    ".github/workflows/"
+  ],
+  "briefRequiredSections": ["任务标识", "BASE", "允许文件集", "禁区", "验证", "报告"],
+  "reportRequiredSections": ["改动摘要", "验证", "状态"]
+}

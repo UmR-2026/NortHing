@@ -31,8 +31,8 @@
  },
  "dir_entries:scripts": {
   "kind": "dir-entry-count",
-  "ceiling": 42,
-  "note": "only down; new script requires retiring an old one first"
+  "ceiling": 48,
+  "note": "一次性额度：用户 2026-09-05 拍板 +6 供 Phase -1~2 整改用，到期 2026-10-15 未用部分回落需重确认；新增脚本仍须退役旧脚本（机械化待 Phase 0）"
  },
  "dir_entries:docs/design": {
   "kind": "dir-entry-count",
