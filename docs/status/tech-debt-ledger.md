@@ -243,6 +243,13 @@
 - **Proposed fix**: 已全部落地（见 Evidence）。遗留注记两条：① entries.set 启动竞态窗口保留为理论项——订阅流只推订阅后新事件、启动期无运行中回合，现无真实触发路径（若将来加事件回放需重启评估）；② 行为变化：有持久化工作区的用户不再接续 CWD 历史会话（判定表明文要求，新建于 preferred 工作区）。
 - **Status**: resolved (2026-08-26, consult-room P22, commit 1f3a15a)
 
+### P2-23: 非 Windows 平台构建失败（terminal-core E0624 private deadline method）
+
+- **Symptom**: 非 Windows 平台构建失败——`terminal-core` 在 macos/ubuntu 报 `error[E0624]: method deadline is private` ×2（CI run 33964321637，2026-09-05）。
+- **Evidence**: GitHub Actions CI run 33964321637（2026-09-05），`rust-build-check` 在 `ubuntu-latest` 与 `macos-15` 上构建失败，`terminal-core` 报 `error[E0624]: method deadline is private`。
+- **Proposed fix**: 若未来恢复跨平台支持需先修此项；当前按用户 2026-09-05「Windows 限定」拍板挂起。
+- **Status**: `deferred` — 按用户 2026-09-05「Windows 限定」拍板挂起；若未来恢复跨平台支持需先修此项；关联：ci.yml 矩阵同日收窄为 windows-only（W17-1）。
+
 ## Change Protocol
 
 - **New entry**: Add with next available ID, include evidence (file:line), proposed fix, and status.
