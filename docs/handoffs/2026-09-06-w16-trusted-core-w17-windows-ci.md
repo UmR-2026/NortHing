@@ -32,8 +32,8 @@ agent-project 仓（已推与否未核）：`c827e02`+`63a9289` — W16-2 组装
 
 ## 3. 待决与卡点
 
-1. ~~push 授权~~ **已闭环**：用户授权推送（2026-09-06），`19349cd..d133f40` 已上 origin/main。CI 首跑 run `33982832690`（Windows 腿）结果待观察——绿 = 终审 I-3 彻底闭环；红 = 起诊断单。
-2. **W17-2（push 验证后做）**：`nightly.yml`（工作日 cron）与 `cli-package.yml` 仍含非 Windows leg，触发即红——按同一拍板收窄（meta-ratchet 车道：双 judge）。
+1. ~~push 授权~~ **已闭环**：用户授权推送（2026-09-06），origin/main = `a805c4b`。CI run `33985087774`（4fe8bed）**7/7 全绿**——ci.yml 60 连红终结，终审 I-3 闭环：hygiene 口径修复（fetch-depth）生效、Windows Build/Tests 双绿。
+2. ~~**W17-2（push 验证后做）**~~ **已闭环**：`nightly.yml` / `cli-package.yml` 已收窄 Windows-only（commits `46c9f53`+`9aa5762`，双 judge 车道——judge-53 抓出 Windows 打包 leg 缺 i18n contract 生成前置的真 Important 并修复）；`check-repo-hygiene.mjs` fallback 已 fail-loud；存量 ~170 历史文件路径挂账 P2-24（deferred）。
 3. **P2-23**：terminal-core E0624 非 Windows 编译失败，deferred（用户拍板挂起；恢复跨平台时先修它）。
 
 ## 4. 队列（下一波 = Phase 0 checker 加固，D 报告 §3）
