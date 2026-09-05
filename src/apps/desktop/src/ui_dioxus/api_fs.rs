@@ -43,10 +43,14 @@ async fn desktop_workspace_root() -> Option<String> {
 /// The workspace root comes from `AppSettings.current_workspace` (I-2 fix);
 /// falls back to `None` (process CWD) if the settings file is unavailable.
 pub async fn list_workspace_tree(dir: &str, max_depth: Option<u32>) -> Result<Vec<FileTreeEntryDto>, KernelError> {
-    let workspace_root = desktop_workspace_root().await;
-    kernel_facade()
-        .list_workspace_tree(workspace_root.as_deref(), dir, max_depth)
-        .await
+    let dir = dir.to_string();
+    crate::ui_dioxus::api::kernel_dispatch("list_workspace_tree", async move {
+        let workspace_root = desktop_workspace_root().await;
+        kernel_facade()
+            .list_workspace_tree(workspace_root.as_deref(), &dir, max_depth)
+            .await
+    })
+    .await
 }
 
 /// Reads a workspace-relative text file. The facade enforces a default and
@@ -56,10 +60,14 @@ pub async fn list_workspace_tree(dir: &str, max_depth: Option<u32>) -> Result<Ve
 ///
 /// The workspace root comes from `AppSettings.current_workspace` (I-2 fix).
 pub async fn read_workspace_file(path: &str, max_bytes: Option<u64>) -> Result<String, KernelError> {
-    let workspace_root = desktop_workspace_root().await;
-    kernel_facade()
-        .read_workspace_file(workspace_root.as_deref(), path, max_bytes)
-        .await
+    let path = path.to_string();
+    crate::ui_dioxus::api::kernel_dispatch("read_workspace_file", async move {
+        let workspace_root = desktop_workspace_root().await;
+        kernel_facade()
+            .read_workspace_file(workspace_root.as_deref(), &path, max_bytes)
+            .await
+    })
+    .await
 }
 
 /// Pure helper used by the UI for placeholder text — kept here so the same

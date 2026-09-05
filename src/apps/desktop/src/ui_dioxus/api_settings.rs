@@ -16,54 +16,80 @@ use crate::app_state::settings::{
 
 /// Retrieves global configuration including providers and default provider id.
 pub async fn get_global_config() -> Result<GlobalConfigDto, KernelError> {
-    kernel_facade().get_global_config().await
+    crate::ui_dioxus::api::kernel_dispatch("get_global_config", async move {
+        kernel_facade().get_global_config().await
+    })
+    .await
 }
 
 /// Lists all configured AI models.
 pub async fn list_model_configs() -> Result<Vec<AIModelConfigDto>, KernelError> {
-    kernel_facade().list_model_configs().await
+    crate::ui_dioxus::api::kernel_dispatch("list_model_configs", async move {
+        kernel_facade().list_model_configs().await
+    })
+    .await
 }
 
 /// Sets the default AI provider / model ID.
 pub async fn set_default_provider(id: &str) -> Result<(), KernelError> {
-    kernel_facade().set_default_provider(id).await
+    let id = id.to_string();
+    crate::ui_dioxus::api::kernel_dispatch("set_default_provider", async move {
+        kernel_facade().set_default_provider(&id).await
+    })
+    .await
 }
 
 /// Lists all configured MCP servers.
 pub async fn list_mcp_servers() -> Result<Vec<MCPServerDto>, KernelError> {
-    kernel_facade().list_mcp_servers().await
+    crate::ui_dioxus::api::kernel_dispatch("list_mcp_servers", async move {
+        kernel_facade().list_mcp_servers().await
+    })
+    .await
 }
 
 /// Sets the enabled state of an MCP server and updates its configuration.
 pub async fn set_mcp_enabled(mut server: MCPServerDto, enabled: bool) -> Result<(), KernelError> {
     server.enabled = Some(enabled);
-    kernel_facade().upsert_mcp_server(server).await
+    crate::ui_dioxus::api::kernel_dispatch("set_mcp_enabled", async move {
+        kernel_facade().upsert_mcp_server(server).await
+    })
+    .await
 }
 
 /// Lists all skills, overlaying user-scope overrides on the `enabled` flag.
 pub async fn list_skills() -> Result<Vec<SkillInfoDto>, KernelError> {
-    let mut skills = kernel_facade().list_skills().await?;
-    let overrides = kernel_facade().load_skill_overrides().await?;
-    let map: std::collections::HashMap<String, bool> = overrides
-        .overrides
-        .iter()
-        .filter_map(|o| o.value.as_bool().map(|v| (o.skill_id.clone(), v)))
-        .collect();
-    for s in skills.iter_mut() {
-        s.enabled = map.get(&s.id).copied().unwrap_or(s.enabled);
-    }
-    Ok(skills)
+    crate::ui_dioxus::api::kernel_dispatch("list_skills", async move {
+        let mut skills = kernel_facade().list_skills().await?;
+        let overrides = kernel_facade().load_skill_overrides().await?;
+        let map: std::collections::HashMap<String, bool> = overrides
+            .overrides
+            .iter()
+            .filter_map(|o| o.value.as_bool().map(|v| (o.skill_id.clone(), v)))
+            .collect();
+        for s in skills.iter_mut() {
+            s.enabled = map.get(&s.id).copied().unwrap_or(s.enabled);
+        }
+        Ok(skills)
+    })
+    .await
 }
 
 pub async fn set_skill_enabled(skill_id: &str, enabled: bool) -> Result<(), KernelError> {
-    #[rustfmt::skip]
-    let scope = SkillScopeDto { scope_type: "user".into(), workspace_path: None, mode_id: None };
-    kernel_facade().set_skill_enabled(skill_id, scope, enabled).await
+    let skill_id = skill_id.to_string();
+    crate::ui_dioxus::api::kernel_dispatch("set_skill_enabled", async move {
+        #[rustfmt::skip]
+        let scope = SkillScopeDto { scope_type: "user".into(), workspace_path: None, mode_id: None };
+        kernel_facade().set_skill_enabled(&skill_id, scope, enabled).await
+    })
+    .await
 }
 
 /// Tests a provider configuration without modifying persistent global config.
 pub async fn test_provider_config(form: ProviderFormDto) -> Result<ProviderTestResultDto, KernelError> {
-    kernel_facade().test_provider_config(form).await
+    crate::ui_dioxus::api::kernel_dispatch("test_provider_config", async move {
+        kernel_facade().test_provider_config(form).await
+    })
+    .await
 }
 
 /// Stores an API key in the specified keyring for the onboarding flow.
@@ -87,7 +113,10 @@ pub async fn store_provider_api_key(provider_id: &str, plaintext: &str) -> anyho
 
 /// Adds or updates an AI model / provider configuration in the kernel facade.
 pub async fn upsert_model_config(config: AIModelConfigDto, api_key: Option<String>) -> Result<(), KernelError> {
-    kernel_facade().upsert_model_config(config, api_key).await
+    crate::ui_dioxus::api::kernel_dispatch("upsert_model_config", async move {
+        kernel_facade().upsert_model_config(config, api_key).await
+    })
+    .await
 }
 
 /// Persists the onboarding provider configuration into the specified keyring and kernel facade,

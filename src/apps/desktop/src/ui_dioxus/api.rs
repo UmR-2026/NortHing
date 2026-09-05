@@ -26,65 +26,100 @@ pub use api_provider_edit::*;
 /// Builds a default agentic `TurnInputDto` and forwards it to the kernel facade.
 /// Returns the generated `TurnId` on acceptance, or `KernelError::Runtime` on rejection.
 pub async fn submit_turn(session_id: &str, text: String) -> Result<TurnId, KernelError> {
-    let input = TurnInputDto {
-        session_id: session_id.to_string(),
-        text,
-        mode: "agentic".into(),
-        policy: SubmissionPolicyDto {
-            allow_subagent: true,
-            max_turns: None,
-        },
-        source: TriggerSourceDto::User,
-        workspace_path: None,
-    };
-    let outcome = kernel_facade().submit_turn(input).await?;
-    if !outcome.accepted {
-        let err_msg = outcome
-            .error
-            .unwrap_or_else(|| "submit_turn rejected by kernel".to_string());
-        return Err(KernelError::Runtime(err_msg));
-    }
-    Ok(outcome.turn_id)
+    let session_id = session_id.to_string();
+    kernel_dispatch("submit_turn", async move {
+        let input = TurnInputDto {
+            session_id,
+            text,
+            mode: "agentic".into(),
+            policy: SubmissionPolicyDto {
+                allow_subagent: true,
+                max_turns: None,
+            },
+            source: TriggerSourceDto::User,
+            workspace_path: None,
+        };
+        let outcome = kernel_facade().submit_turn(input).await?;
+        if !outcome.accepted {
+            let err_msg = outcome
+                .error
+                .unwrap_or_else(|| "submit_turn rejected by kernel".to_string());
+            return Err(KernelError::Runtime(err_msg));
+        }
+        Ok(outcome.turn_id)
+    })
+    .await
 }
 
 /// Stops/cancels an executing dialog turn.
 pub async fn stop_turn(turn_id: &TurnId) -> Result<(), KernelError> {
-    kernel_facade().stop_turn(turn_id).await
+    let turn_id = turn_id.clone();
+    kernel_dispatch("stop_turn", async move {
+        kernel_facade().stop_turn(&turn_id).await
+    })
+    .await
 }
 
 /// Lists summaries for all sessions.
 pub async fn list_sessions() -> Result<Vec<SessionSummaryDto>, KernelError> {
-    kernel_facade().list_sessions().await
+    kernel_dispatch("list_sessions", async move {
+        kernel_facade().list_sessions().await
+    })
+    .await
 }
 
 /// Lists workspace-grouped session summaries across all workspaces.
 pub async fn list_sessions_all_workspaces() -> Result<Vec<WorkspaceSessionsDto>, KernelError> {
-    kernel_facade().list_sessions_all_workspaces().await
+    kernel_dispatch("list_sessions_all_workspaces", async move {
+        kernel_facade().list_sessions_all_workspaces().await
+    })
+    .await
 }
 
 /// Retrieves the detail of a single session.
 pub async fn get_session(id: &SessionId) -> Result<SessionDto, KernelError> {
-    kernel_facade().get_session(id).await
+    let id = id.clone();
+    kernel_dispatch("get_session", async move {
+        kernel_facade().get_session(&id).await
+    })
+    .await
 }
 
 /// Retrieves the message history of a single session.
 pub async fn get_messages(id: &SessionId) -> Result<Vec<MessageDto>, KernelError> {
-    kernel_facade().get_messages(id).await
+    let id = id.clone();
+    kernel_dispatch("get_messages", async move {
+        kernel_facade().get_messages(&id).await
+    })
+    .await
 }
 
 /// Deletes a session by id.
 pub async fn delete_session(id: &SessionId) -> Result<(), KernelError> {
-    kernel_facade().delete_session(id).await
+    let id = id.clone();
+    kernel_dispatch("delete_session", async move {
+        kernel_facade().delete_session(&id).await
+    })
+    .await
 }
 
 /// Renames a session by id.
 pub async fn rename_session(id: &SessionId, name: &str) -> Result<(), KernelError> {
-    kernel_facade().rename_session(id, name).await
+    let id = id.clone();
+    let name = name.to_string();
+    kernel_dispatch("rename_session", async move {
+        kernel_facade().rename_session(&id, &name).await
+    })
+    .await
 }
 
 /// Searches sessions across workspace matching query text.
 pub async fn search_sessions(query: &str, limit: Option<u32>) -> Result<Vec<SessionSearchHitDto>, KernelError> {
-    kernel_facade().search_sessions(query, None, limit).await
+    let query = query.to_string();
+    kernel_dispatch("search_sessions", async move {
+        kernel_facade().search_sessions(&query, None, limit).await
+    })
+    .await
 }
 
 /// Returns the cached room session id if any.
@@ -135,18 +170,21 @@ pub async fn ensure_room_session() -> Result<SessionId, KernelError> {
         }
     };
 
-    let groups = list_sessions_all_workspaces().await?;
-    let session_id = if let Some(summary) = pick_room_session(&groups, preferred_workspace.as_deref()) {
-        summary.id.clone()
-    } else {
-        let config = SessionConfigDto {
-            workspace_path: preferred_workspace.clone(),
-            agent_type: "agentic".into(),
-            model_name: "default".into(),
-            name: Some("诊室".into()),
-        };
-        kernel_facade().create_session(config).await?
-    };
+    let session_id = kernel_dispatch("ensure_room_session", async move {
+        let groups = kernel_facade().list_sessions_all_workspaces().await?;
+        if let Some(summary) = pick_room_session(&groups, preferred_workspace.as_deref()) {
+            Ok(summary.id.clone())
+        } else {
+            let config = SessionConfigDto {
+                workspace_path: preferred_workspace.clone(),
+                agent_type: "agentic".into(),
+                model_name: "default".into(),
+                name: Some("诊室".into()),
+            };
+            kernel_facade().create_session(config).await
+        }
+    })
+    .await?;
 
     *guard = Some(session_id.clone());
     Ok(session_id)
@@ -154,37 +192,65 @@ pub async fn ensure_room_session() -> Result<SessionId, KernelError> {
 
 /// Responds to a pending tool execution confirmation (approve/reject).
 pub async fn respond_to_tool_confirmation(tool_id: &str, approved: bool) -> Result<(), KernelError> {
-    kernel_facade()
-        .respond_to_tool_confirmation(tool_id, approved, None)
-        .await
+    let tool_id = tool_id.to_string();
+    kernel_dispatch("respond_to_tool_confirmation", async move {
+        kernel_facade()
+            .respond_to_tool_confirmation(&tool_id, approved, None)
+            .await
+    })
+    .await
 }
 
 /// Spawns an async operation onto the worker `turn_runtime` and awaits its result
 /// on the UI executor via a oneshot channel.
 ///
 /// Keeps kernel awaits off the Dioxus UI executor to prevent busy-polling hangs.
+/// When turn_runtime is unavailable (e.g. tests or uninit CLI), falls back to inline execution.
 pub(crate) async fn spawn_on_turn_runtime<T, F>(caller: &'static str, fut: F) -> Result<T, ()>
 where
     T: Send + 'static,
     F: std::future::Future<Output = T> + Send + 'static,
 {
     let Some(rt) = crate::app_state::turn_runtime::turn_runtime() else {
-        tracing::warn!("ui_dioxus::{caller} turn_runtime handle unavailable");
-        return Err(());
+        tracing::warn!("ui_dioxus::{caller} turn_runtime handle unavailable, falling back to inline execution");
+        return Ok(fut.await);
     };
 
     let (tx, rx) = tokio::sync::oneshot::channel();
+    let start = std::time::Instant::now();
+    tracing::info!("ui_dioxus::{caller} spawning onto turn_runtime");
     rt.spawn(async move {
         let res = fut.await;
         let _ = tx.send(res);
     });
 
     match rx.await {
-        Ok(val) => Ok(val),
+        Ok(val) => {
+            tracing::info!("ui_dioxus::{caller} completed on turn_runtime in {:?}", start.elapsed());
+            Ok(val)
+        }
         Err(e) => {
-            tracing::warn!("ui_dioxus::{caller} background channel closed: {e}");
+            tracing::warn!("ui_dioxus::{caller} background channel closed after {:?}: {e}", start.elapsed());
             Err(())
         }
+    }
+}
+
+/// Dispatches a kernel operation returning `Result<T, KernelError>` to `turn_runtime`.
+///
+/// Flattens background channel failures to `KernelError::Runtime`.
+pub(crate) async fn kernel_dispatch<T, F>(caller: &'static str, fut: F) -> Result<T, KernelError>
+where
+    T: Send + 'static,
+    F: std::future::Future<Output = Result<T, KernelError>> + Send + 'static,
+{
+    match spawn_on_turn_runtime(caller, fut).await {
+        Ok(Ok(res)) => Ok(res),
+        Ok(Err(e)) => {
+            tracing::warn!("ui_dioxus::{caller} kernel returned error: {e}");
+            Err(e)
+        }
+        Err(()) => Err(KernelError::Runtime(format!("ui_dioxus::{caller} background channel closed"))),
     }
 }
 
@@ -296,10 +362,18 @@ mod tests {
     #[tokio::test]
     async fn test_spawn_on_turn_runtime_behavior() {
         let res = spawn_on_turn_runtime("test", async { 42 }).await;
-        if crate::app_state::turn_runtime::turn_runtime().is_none() {
-            assert!(res.is_err());
-        } else {
-            assert_eq!(res, Ok(42));
-        }
+        assert_eq!(res, Ok(42));
+    }
+
+    #[tokio::test]
+    async fn test_kernel_dispatch_behavior() {
+        let res = kernel_dispatch("test_kernel", async { Ok(100) }).await;
+        assert!(matches!(res, Ok(100)));
+
+        let err_res: Result<(), KernelError> = kernel_dispatch("test_kernel_err", async {
+            Err(KernelError::Runtime("inner failure".into()))
+        })
+        .await;
+        assert!(matches!(err_res, Err(KernelError::Runtime(ref msg)) if msg.contains("inner failure")));
     }
 }

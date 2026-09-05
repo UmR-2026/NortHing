@@ -30,11 +30,11 @@ pub async fn edit_provider_with_keyring(
     enabled: bool,
 ) -> Result<(), String> {
     // 1. Load existing config from kernel facade
-    let facade = kernel_facade();
-    let existing_models = facade
-        .list_model_configs()
-        .await
-        .map_err(|e| format!("获取模型配置失败: {e}"))?;
+    let existing_models = crate::ui_dioxus::api::kernel_dispatch("edit_provider::list_models", async move {
+        kernel_facade().list_model_configs().await
+    })
+    .await
+    .map_err(|e| format!("获取模型配置失败: {e}"))?;
     let existing = existing_models
         .into_iter()
         .find(|m| m.id == id)
@@ -81,10 +81,12 @@ pub async fn edit_provider_with_keyring(
         inline_think_in_text: existing.inline_think_in_text.or(Some(true)),
     };
 
-    facade
-        .upsert_model_config(updated_dto, Some(effective_key))
-        .await
-        .map_err(|e| format!("保存配置失败: {e}"))?;
+    let key_opt = Some(effective_key);
+    crate::ui_dioxus::api::kernel_dispatch("edit_provider::upsert_model", async move {
+        kernel_facade().upsert_model_config(updated_dto, key_opt).await
+    })
+    .await
+    .map_err(|e| format!("保存配置失败: {e}"))?;
 
     Ok(())
 }
@@ -118,22 +120,23 @@ pub async fn edit_provider(
 /// 2. Deletes model configuration from kernel facade.
 /// 3. Deletes keyring entry (best-effort).
 pub async fn delete_provider_with_keyring(keyring: &dyn KeyringBackend, id: &str) -> Result<(), String> {
-    let facade = kernel_facade();
-
     // 1. Refuse deleting default provider
-    let global_cfg = facade
-        .get_global_config()
-        .await
-        .map_err(|e| format!("获取全局配置失败: {e}"))?;
+    let global_cfg = crate::ui_dioxus::api::kernel_dispatch("delete_provider::get_global_config", async move {
+        kernel_facade().get_global_config().await
+    })
+    .await
+    .map_err(|e| format!("获取全局配置失败: {e}"))?;
     if global_cfg.default_provider_id.as_deref() == Some(id) {
         return Err("不能删除默认 AI 服务，请先切换默认服务后再删除".to_string());
     }
 
     // 2. Delete model config via facade
-    facade
-        .delete_model_config(id)
-        .await
-        .map_err(|e| format!("删除模型配置失败: {e}"))?;
+    let id_str = id.to_string();
+    crate::ui_dioxus::api::kernel_dispatch("delete_provider::delete_model", async move {
+        kernel_facade().delete_model_config(&id_str).await
+    })
+    .await
+    .map_err(|e| format!("删除模型配置失败: {e}"))?;
 
     // 3. Best-effort keyring deletion
     // ponytail: no session-reference scan on delete; add when session metadata query lands

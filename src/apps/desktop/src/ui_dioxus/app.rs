@@ -31,7 +31,6 @@ use super::turn_banner::{cancelled_body, error_draft_body, kernel_error_message,
 use super::window_ops::{close_module, quit_shell};
 use northhing_kernel_api::events::{KernelEventDto, ToolCallPhase};
 use northhing_kernel_api::turn::{TurnId, TurnStateKind};
-use tokio::sync::oneshot;
 
 pub use super::window_ops::{spawn_module_window, spawn_module_window_with_theme_rx};
 
@@ -66,43 +65,23 @@ pub fn room_app_root() -> Element {
         let mut session_id_signal = session_id_signal;
         let mut entries = entries;
         async move {
-            let Some(rt) = crate::app_state::turn_runtime::turn_runtime() else {
-                tracing::warn!("ui_dioxus::app turn_runtime handle unavailable for room session initialization");
-                return;
-            };
-
-            let (tx, rx) = oneshot::channel();
-            rt.spawn(async move {
-                let session_res = api::ensure_room_session().await;
-                let messages_res = match &session_res {
-                    Ok(sid) => Some(api::get_messages(sid).await),
-                    Err(_) => None,
-                };
-                let _ = tx.send((session_res, messages_res));
-            });
-
-            match rx.await {
-                Ok((Ok(sid), msgs_opt)) => {
+            match api::ensure_room_session().await {
+                Ok(sid) => {
                     session_id_signal.set(Some(sid.clone()));
-                    if let Some(msgs_res) = msgs_opt {
-                        match msgs_res {
-                            Ok(msgs) => {
-                                let converted = super::session_mock::messages_to_entries(msgs);
-                                if !converted.is_empty() {
-                                    entries.set(converted);
-                                }
+                    match api::get_messages(&sid).await {
+                        Ok(msgs) => {
+                            let converted = super::session_mock::messages_to_entries(msgs);
+                            if !converted.is_empty() {
+                                entries.set(converted);
                             }
-                            Err(e) => {
-                                tracing::warn!("ui_dioxus::app get_messages failed: {e}");
-                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("ui_dioxus::app get_messages failed: {e}");
                         }
                     }
                 }
-                Ok((Err(e), _)) => {
-                    tracing::warn!("ui_dioxus::app ensure_room_session failed: {e}");
-                }
                 Err(e) => {
-                    tracing::warn!("ui_dioxus::app room session initialization channel closed: {e}");
+                    tracing::warn!("ui_dioxus::app ensure_room_session failed: {e}");
                 }
             }
         }
@@ -290,36 +269,19 @@ pub fn room_app_root() -> Element {
         let existing_sid = session_id_signal();
         let text_witness = text.clone();
         spawn(async move {
-            enum SendOutcome {
-                Success {
-                    new_sid: Option<String>,
-                    turn_id: TurnId,
+            let (new_sid, sid) = match existing_sid {
+                Some(s) => (None, s),
+                None => match api::ensure_room_session().await {
+                    Ok(s) => (Some(s.clone()), s),
+                    Err(e) => {
+                        send_error.set(Some(format!("Session error: {e}")));
+                        return;
+                    }
                 },
-                SessionError(northhing_kernel_api::error::KernelError),
-                SubmitError {
-                    new_sid: Option<String>,
-                    error: northhing_kernel_api::error::KernelError,
-                },
-            }
+            };
 
-            let res = api::spawn_on_turn_runtime("send_action", async move {
-                let (new_sid, sid) = match existing_sid {
-                    Some(s) => (None, s),
-                    None => match api::ensure_room_session().await {
-                        Ok(s) => (Some(s.clone()), s),
-                        Err(e) => return SendOutcome::SessionError(e),
-                    },
-                };
-
-                match api::submit_turn(&sid, text).await {
-                    Ok(turn_id) => SendOutcome::Success { new_sid, turn_id },
-                    Err(error) => SendOutcome::SubmitError { new_sid, error },
-                }
-            })
-            .await;
-
-            match res {
-                Ok(SendOutcome::Success { new_sid, turn_id }) => {
+            match api::submit_turn(&sid, text).await {
+                Ok(turn_id) => {
                     if let Some(s) = new_sid {
                         session_id_signal.set(Some(s));
                     }
@@ -332,19 +294,13 @@ pub fn room_app_root() -> Element {
                         body: text_witness,
                     });
                 }
-                Ok(SendOutcome::SubmitError { new_sid, error }) => {
+                Err(error) => {
                     if let Some(s) = new_sid {
                         session_id_signal.set(Some(s));
                     }
                     let err_text = kernel_error_message(&error);
                     maybe_set_degraded(&err_text, degraded);
                     send_error.set(Some(format!("Submit error: {error}")));
-                }
-                Ok(SendOutcome::SessionError(e)) => {
-                    send_error.set(Some(format!("Session error: {e}")));
-                }
-                Err(()) => {
-                    send_error.set(Some("Background runtime unavailable".to_string()));
                 }
             }
         });
@@ -355,9 +311,7 @@ pub fn room_app_root() -> Element {
         let mut active_turn_id = active_turn_id;
         if let Some(turn_id) = active_turn_id() {
             spawn(async move {
-                let res =
-                    api::spawn_on_turn_runtime("stop_action", async move { api::stop_turn(&turn_id).await }).await;
-                if let Ok(Err(e)) = res {
+                if let Err(e) = api::stop_turn(&turn_id).await {
                     tracing::warn!("ui_dioxus::stop_action stop_turn failed: {e}");
                 }
             });
