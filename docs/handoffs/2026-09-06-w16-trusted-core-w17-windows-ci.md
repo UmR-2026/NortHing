@@ -1,10 +1,10 @@
-# Handoff — 2026-09-06 W16 可信核落地 + W17-1 CI 收窄，待推送
+# Handoff — 2026-09-06 W16 可信核落地 + W17-1 CI 收窄，已推送
 
 >  freshest session state。旧篇：`2026-09-05-six-tasks-green-rot-audit.md`（同目录）；再早见 `docs/archive/handoffs/`。
 
 ## 0. 一句话状态
 
-Phase -1（最小可信核）已完整落地并全部过审；CI 已按用户拍板收窄 Windows-only；**本地 10 个 commit 未推送（origin/main = `19349cd`），推送待用户授权**。
+Phase -1（最小可信核）已完整落地并全部过审；CI 已按用户拍板收窄 Windows-only；**已推送（2026-09-06，用户授权，`19349cd..d133f40` 共 12 commits），CI 首跑 run `33982832690` 结果见 §3.1**。
 
 ## 1. 需求基线
 
@@ -32,7 +32,7 @@ agent-project 仓（已推与否未核）：`c827e02`+`63a9289` — W16-2 组装
 
 ## 3. 待决与卡点
 
-1. **push 授权**（用户）：10 commits 待推。推送后 CI 首跑验证 Windows 腿转绿 = 终审 I-3 闭环。
+1. ~~push 授权~~ **已闭环**：用户授权推送（2026-09-06），`19349cd..d133f40` 已上 origin/main。CI 首跑 run `33982832690`（Windows 腿）结果待观察——绿 = 终审 I-3 彻底闭环；红 = 起诊断单。
 2. **W17-2（push 验证后做）**：`nightly.yml`（工作日 cron）与 `cli-package.yml` 仍含非 Windows leg，触发即红——按同一拍板收窄（meta-ratchet 车道：双 judge）。
 3. **P2-23**：terminal-core E0624 非 Windows 编译失败，deferred（用户拍板挂起；恢复跨平台时先修它）。
 
