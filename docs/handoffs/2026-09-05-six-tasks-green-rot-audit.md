@@ -60,6 +60,16 @@ brief/report/review 全链在 `.superpowers/sdd/`（w15-1h~1l 各自成套）。
 - 宵禁 03:00 不变。
 - 用户侧前端工作文件 `frontend-redesign-*` 勿碰（老规矩）。
 
+## 7. 外部强模型独立审查（用户发起，下 session 收结果）
+
+两块体系已打包送外部强模型独立审查（用户侧操作）。包位置 = `E:\agent-project\.opencode\external-review\2026-09-05\`（**不在任何 git 仓**，磁盘持久）：
+
+- `A-workflow-review.md`（49KB）= 编排工作流包（AGENTS.md + BOOTSTRAP + CORE + 模板三件套 + W15-1l 标本链）
+- `B-antirot-review.md`（92KB）= 防腐化体系包（SKILL.md + rot-budget.json + checker + ci.yml + 今日两份深审报告）
+- `A-brief.md` / `B-brief.md` = 我亲笔的审查任务书（6 问/包）；`assemble-review-pkgs.ps1` = 装配脚本（工件更新后可重新生成）
+
+**盲审纪律**：两包不含我们的自我诊断（防泄题）；两包独立会话送审、互不引用。**下 session 拿到结果后：findings 逐条磁盘取证再整合（外部评审有误报前科），确认真缺口的进队列**。
+
 ## Suggested skills
 
 - `anti-rot-system`（腐化治理全程）、`subagent-driven-development`、`verification-before-completion`、`long-running-shell`、`requesting-code-review`、拆 onboarding 时 `m15-anti-pattern`
