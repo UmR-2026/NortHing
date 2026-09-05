@@ -658,3 +658,4 @@ Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-revi
 # W17 Ledger (2026-09-06 凌晨跨日, CI 修复波)
 
 - Task W17-1 (CI Windows-only + cli 0 warning): complete (commits 1c9ac2f..77b69df+4bc3fb1, review **双 judge 车道首跑**：minimax-m3 APPROVE 0C/0I/2M + reviewer-53 APPROVE 0C/0I/1M——meta-ratchet 家规 8.4 首次实战) — 用户拍板「Windows 限定，不考虑其他平台」(2026-09-05)：ci.yml rust-build-check 矩阵收窄 windows-latest + Linux 死配置删除 + P2-23 挂账（terminal-core E0624 deferred，跨平台回归时重启）；mod.rs 删孤儿重导出（QuestionData/QuestionOption 无人经 mod.rs 消费），**cli 0 warning 坐实**（剩余 16 条属 northhing-core 既有基线）。**新发现**：nightly.yml（工作日 cron）+ cli-package.yml 仍含非 Windows leg（judge-53 范围外观察），收窄 = W17-2 候选，待 push 验证 ci.yml 绿后做。**待用户授权：push（origin/main=19349cd，本地 8 commits 未推）。**
+- Handoff 已写：`docs/handoffs/2026-09-06-w16-trusted-core-w17-windows-ci.md`（旧篇 09-04 归档）。**会话于此暂停，续会焦点：用户 push 授权 → W17-2（nightly/cli-package 收窄）→ Phase 0 七连单（validateManifest fail-closed 先行，D-3 红队 probe 同步）**。台账为准。

@@ -12,7 +12,7 @@ NortHing main HEAD `4d6bba2`（已推）。agy 双渠道（3.7/3.8-flash）**修
 - 修复：fork `bbbc28f`（四连修+回归测试），judge minimax-m3 APPROVE 0C/0I/5M，编排者亲跑双模型真 API 冒烟全过。
 - Antigravity 升级 2.12.0 跟进：fork `6ee7e7c` 抬版本底线；**指纹自愈逻辑实战首验**（自动滚 2.12.0 win32）。
 - **以后上游再升级：只需抬 constants.ts 的 ANTIGRAVITY_VERSION_FALLBACK + npm run build**。
-- fork 在 `C:\Users\UmR\Desktop\opencode-antigravity-auth-fork`（dist gitignored，本地重建生效）。
+- fork 在 `<USERPROFILE>\Desktop\opencode-antigravity-auth-fork`（dist gitignored，本地重建生效）。
 
 ## 2. 模型基准夜（选派表已更新，权威在 memory/BOOTSTRAP.md）
 
