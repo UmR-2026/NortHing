@@ -2,7 +2,6 @@ use once_cell::sync::Lazy;
 /// Theme and style definitions
 use std::collections::{HashMap, HashSet};
 use std::io::IsTerminal;
-use std::path::Path;
 use std::time::{Duration, Instant};
 
 use ratatui::style::{Color, Modifier, Style};
@@ -161,6 +160,10 @@ fn detect_terminal_appearance(timeout: Duration) -> Option<Appearance> {
         use std::os::fd::AsRawFd;
 
         let fd = std::io::stdin().as_raw_fd();
+        // SAFETY: `fd` is standard input (`std::io::stdin().as_raw_fd()`), a valid open descriptor
+        // for the lifetime of this process. `fcntl` reads (`F_GETFL`) and temporarily sets non-blocking
+        // mode (`F_SETFL`), restoring original flags before exit. Stdin is locked during reads to avoid
+        // concurrent access conflicts.
         unsafe {
             let flags = libc::fcntl(fd, libc::F_GETFL);
             if flags < 0 {
@@ -190,7 +193,9 @@ fn detect_terminal_appearance(timeout: Duration) -> Option<Appearance> {
                 }
             }
 
-            let _ = libc::fcntl(fd, libc::F_SETFL, flags);
+            if libc::fcntl(fd, libc::F_SETFL, flags) < 0 {
+                tracing::warn!("Failed to restore stdin flags in terminal appearance detection");
+            }
         }
 
         let s = String::from_utf8_lossy(&buf);
@@ -212,7 +217,7 @@ fn detect_terminal_appearance(timeout: Duration) -> Option<Appearance> {
     }
 }
 
-// reason: parse_osc_color() reserved for terminal integration that parses OSC color escape sequences; not yet wired into the theme loader
+// reason: parse_osc_color() is called by detect_terminal_appearance on Unix; allow(dead_code) needed on non-Unix targets
 #[allow(dead_code)]
 fn parse_osc_color(s: &str) -> Option<(u8, u8, u8)> {
     if let Some(hex) = s.strip_prefix('#') {
@@ -489,8 +494,6 @@ impl Theme {
             StyleKind::Border => Style::default().fg(self.border),
             StyleKind::DiffAdded => Style::default().fg(self.diff_added_fg).bg(self.diff_added_bg),
             StyleKind::DiffRemoved => Style::default().fg(self.diff_removed_fg).bg(self.diff_removed_bg),
-            StyleKind::BackgroundPanel => Style::default().bg(self.background_panel),
-            StyleKind::BackgroundElement => Style::default().bg(self.background_element),
             StyleKind::BlockBackground => Style::default().bg(self.block_bg),
             StyleKind::BlockBackgroundHover => Style::default().bg(self.block_bg_hover),
             StyleKind::BlockBorderActive => Style::default().fg(self.block_border_active),
@@ -632,9 +635,8 @@ fn rgb_to_ansi16(r: u8, g: u8, b: u8) -> Color {
     }
 }
 
-// reason: StyleKind enum kept for theme-aware styling API; current theme rendering uses hardcoded Color values instead
+// Semantic styling tokens used across command palette, tool cards, and diff rendering
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
 pub enum StyleKind {
     Primary,
     Success,
@@ -646,8 +648,6 @@ pub enum StyleKind {
     Border,
     DiffAdded,
     DiffRemoved,
-    BackgroundPanel,
-    BackgroundElement,
     BlockBackground,
     BlockBackgroundHover,
     BlockBorderActive,
@@ -696,8 +696,6 @@ pub struct OpencodeThemeJson {
     // reason: $schema field is deserialized to keep the JSON Schema metadata accessible for future validation; not yet consumed by the loader
     #[allow(dead_code)]
     pub schema: Option<String>,
-    // reason: defs field is deserialized to accept shared color tokens referenced by the `theme` map; not yet dereferenced by the loader
-    #[allow(dead_code)]
     pub defs: Option<HashMap<String, ColorValueJson>>,
     pub theme: HashMap<String, ColorValueJson>,
 }
@@ -721,14 +719,6 @@ pub enum ColorValueJson {
         dark: Box<ColorValueJson>,
         light: Box<ColorValueJson>,
     },
-}
-
-// reason: load_opencode_theme_json() reserved for future on-disk theme loader; today themes are bundled via BUILTIN_OPENCODE_THEMES only
-#[allow(dead_code)]
-pub fn load_opencode_theme_json(path: &Path) -> anyhow::Result<OpencodeThemeJson> {
-    let data = std::fs::read_to_string(path)?;
-    let json = serde_json::from_str::<OpencodeThemeJson>(&data)?;
-    Ok(json)
 }
 
 static BUILTIN_OPENCODE_THEMES: Lazy<HashMap<&'static str, OpencodeThemeJson>> = Lazy::new(|| {
