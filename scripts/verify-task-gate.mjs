@@ -229,7 +229,7 @@ export function verifyAttempt({ base, tip, allowlistPath, projectRoot = REPO_ROO
 
   let diffOutput = '';
   try {
-    diffOutput = execFileSync('git', ['diff', '--name-only', `${base}..${tip}`], {
+    diffOutput = execFileSync('git', ['diff', '--name-status', '-z', `${base}..${tip}`], {
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8',
       cwd: projectRoot,
@@ -244,13 +244,57 @@ export function verifyAttempt({ base, tip, allowlistPath, projectRoot = REPO_ROO
     };
   }
 
-  const actualFiles = diffOutput
-    .split(/\r?\n/)
-    .map((f) => f.trim().replace(/\\/g, '/').replace(/^\.\//, ''))
-    .filter(Boolean);
+  const actualFiles = [];
+  const renameSources = new Set();
+  const copySources = new Set();
+
+  if (diffOutput) {
+    const tokens = diffOutput.split('\0');
+    let i = 0;
+    while (i < tokens.length) {
+      const statusToken = tokens[i];
+      if (!statusToken) {
+        i++;
+        continue;
+      }
+      const statusCode = statusToken[0];
+      if (statusCode === 'R' || statusCode === 'C') {
+        const srcPath = tokens[i + 1];
+        const dstPath = tokens[i + 2];
+        i += 3;
+        if (srcPath) {
+          const normSrc = srcPath.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+          if (normSrc) {
+            actualFiles.push(normSrc);
+            if (statusCode === 'R') {
+              renameSources.add(normSrc);
+            } else {
+              copySources.add(normSrc);
+            }
+          }
+        }
+        if (dstPath) {
+          const normDst = dstPath.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+          if (normDst) {
+            actualFiles.push(normDst);
+          }
+        }
+      } else {
+        const filePath = tokens[i + 1];
+        i += 2;
+        if (filePath) {
+          const normPath = filePath.trim().replace(/\\/g, '/').replace(/^\.\//, '');
+          if (normPath) {
+            actualFiles.push(normPath);
+          }
+        }
+      }
+    }
+  }
+
   const actualSet = new Set(actualFiles);
 
-  const outOfBounds = actualFiles.filter((f) => !allowlist.has(f));
+  const outOfBounds = [...new Set(actualFiles)].filter((f) => !allowlist.has(f));
   const unfulfilled = [...allowlist].filter((f) => !actualSet.has(f));
 
   if (unfulfilled.length > 0) {
@@ -261,7 +305,13 @@ export function verifyAttempt({ base, tip, allowlistPath, projectRoot = REPO_ROO
 
   if (outOfBounds.length > 0) {
     for (const f of outOfBounds) {
-      errors.push(`Out-of-bounds file modification: ${f}`);
+      let extra = '';
+      if (renameSources.has(f)) {
+        extra = ' (rename source)';
+      } else if (copySources.has(f)) {
+        extra = ' (copy source)';
+      }
+      errors.push(`Out-of-bounds file modification: ${f}${extra}`);
     }
   }
 
@@ -508,6 +558,34 @@ export function runSelftest() {
     const passedG = resG.status !== 0;
     record('negative fixture g', passedG, 'policy enum mismatch rejected');
 
+    // --- Negative fixture h: Rename source path omitted from allowlist ---
+    const allowlistRenameNegPath = path.join(tmpDir, 'allowlist-rename-neg.txt');
+    const allowlistRenameNegFiles = [
+      '.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-hardening.md',
+      'docs/handoffs/2026-09-07-workflow-improvement-verdicts.md',
+      'docs/archive/handoffs/2026-09-05-six-tasks-green-rot-audit.md',
+    ];
+    fs.writeFileSync(allowlistRenameNegPath, allowlistRenameNegFiles.join('\n'), 'utf8');
+
+    const resH = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(import.meta.url),
+        'verify-attempt',
+        '--base',
+        'df5c1ce',
+        '--tip',
+        'a32b4f7',
+        '--allowlist',
+        allowlistRenameNegPath,
+      ],
+      { encoding: 'utf8', cwd: REPO_ROOT }
+    );
+    const passedH =
+      resH.status !== 0 &&
+      (resH.stdout + resH.stderr).includes('docs/handoffs/2026-09-05-six-tasks-green-rot-audit.md');
+    record('negative fixture h', passedH, 'rename source path omitted from allowlist rejected');
+
     // --- Positive fixture 1: Complete 8-file allowlist ---
     const allowlist8Path = path.join(tmpDir, 'allowlist-w15-1l-8.txt');
     const allowlist8Files = [...allowlist7Files, 'src/apps/desktop/src/ui_dioxus/pages_archive.rs'];
@@ -569,6 +647,31 @@ export function runSelftest() {
     );
     const passedPos4 = resPos4.status === 0;
     record('positive fixture 4', passedPos4, 'default workflow-policy.json passes validate-policy');
+
+    // --- Positive fixture 5: Rename with both source and destination paths in allowlist ---
+    const allowlistRenamePosPath = path.join(tmpDir, 'allowlist-rename-pos.txt');
+    const allowlistRenamePosFiles = [
+      ...allowlistRenameNegFiles,
+      'docs/handoffs/2026-09-05-six-tasks-green-rot-audit.md',
+    ];
+    fs.writeFileSync(allowlistRenamePosPath, allowlistRenamePosFiles.join('\n'), 'utf8');
+
+    const resPos5 = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(import.meta.url),
+        'verify-attempt',
+        '--base',
+        'df5c1ce',
+        '--tip',
+        'a32b4f7',
+        '--allowlist',
+        allowlistRenamePosPath,
+      ],
+      { encoding: 'utf8', cwd: REPO_ROOT }
+    );
+    const passedPos5 = resPos5.status === 0;
+    record('positive fixture 5', passedPos5, 'rename with both source and destination in allowlist passes');
   } finally {
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -578,8 +681,10 @@ export function runSelftest() {
   }
 
   const allPassed = results.every((r) => r.passed);
+  const negCount = results.filter((r) => r.id.startsWith('negative')).length;
+  const posCount = results.filter((r) => r.id.startsWith('positive')).length;
   if (allPassed) {
-    console.log(`Selftest passed: ${results.length} fixtures passed (7 negative, 4 positive).`);
+    console.log(`Selftest passed: ${results.length} fixtures passed (${negCount} negative, ${posCount} positive).`);
     return true;
   } else {
     console.error(`Selftest failed: ${results.filter((r) => !r.passed).length} fixtures failed.`);
