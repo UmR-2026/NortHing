@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 // Generated artifact exempt from >800 lines god-file limit and grep counts
@@ -14,12 +15,12 @@ const EXEMPT_FILE_PATHS = [
 
 const GOD_FILE_LINE_THRESHOLD = 800;
 
-const COMMON_FIELDS = ['kind', 'ceiling', 'note'];
+const COMMON_FIELDS = ['kind', 'ceiling', 'note', 'authorization'];
 
 const FIELD_WHITELIST = {
   'grep-count': [...COMMON_FIELDS, 'pattern'],
   'file-lines': [...COMMON_FIELDS],
-  'dir-entry-count': [...COMMON_FIELDS, 'dir'],
+  'dir-entry-count': [...COMMON_FIELDS, 'dir', 'action'],
 };
 
 const VALID_KINDS = new Set(Object.keys(FIELD_WHITELIST));
@@ -57,6 +58,37 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
     // 3. note if present must be a string
     if (entry.note !== undefined && typeof entry.note !== 'string') {
       errors.push(`${key}: "note" must be a string if present, got ${typeof entry.note}`);
+    }
+
+    // action validation if present
+    if (entry.action !== undefined) {
+      if (typeof entry.action !== 'object' || entry.action === null || Array.isArray(entry.action)) {
+        errors.push(`${key}: "action" must be an object if present`);
+      } else {
+        if (typeof entry.action.type !== 'string' || entry.action.type.trim() === '') {
+          errors.push(`${key}: "action.type" must be a non-empty string`);
+        } else if (entry.action.type === 'cap-and-archive') {
+          if (typeof entry.action.archiveTo !== 'string' || entry.action.archiveTo.trim() === '') {
+            errors.push(`${key}: "action.archiveTo" must be a non-empty string for cap-and-archive`);
+          }
+        }
+      }
+    }
+
+    // authorization validation if present
+    if (entry.authorization !== undefined) {
+      if (typeof entry.authorization !== 'object' || entry.authorization === null || Array.isArray(entry.authorization)) {
+        errors.push(`${key}: "authorization" must be an object if present`);
+      } else {
+        for (const field of ['reason', 'commit', 'expires']) {
+          if (typeof entry.authorization[field] !== 'string' || entry.authorization[field].trim() === '') {
+            errors.push(`${key}: "authorization.${field}" must be a non-empty string`);
+          }
+        }
+        if (typeof entry.authorization.expires === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(entry.authorization.expires)) {
+          errors.push(`${key}: "authorization.expires" must match YYYY-MM-DD format, got "${entry.authorization.expires}"`);
+        }
+      }
     }
 
     // 4. kind-specific validation
@@ -106,6 +138,13 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
   };
 }
 
+export function isAuthorizationLive(authorization, todayUtc = new Date().toISOString().slice(0, 10)) {
+  if (!authorization || typeof authorization !== 'object' || Array.isArray(authorization)) return false;
+  if (typeof authorization.expires !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(authorization.expires)) return false;
+  return authorization.expires >= todayUtc;
+}
+
 export function countLines(content) {
   if (!content) return 0;
   const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -152,6 +191,7 @@ export function verifyRotBudget({
   projectRoot = process.cwd(),
   manifestPath = path.join(projectRoot, 'scripts', 'rot-budget.json'),
   silent = false,
+  base,
 } = {}) {
   if (!fs.existsSync(manifestPath)) {
     const errorMsg = `Rot budget manifest not found: ${manifestPath}`;
@@ -186,6 +226,57 @@ export function verifyRotBudget({
     };
   }
 
+  let baseManifest = null;
+  if (base) {
+    try {
+      const rawBase = execFileSync('git', ['show', `${base}:scripts/rot-budget.json`], {
+        cwd: projectRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      baseManifest = JSON.parse(rawBase);
+      if (typeof baseManifest !== 'object' || baseManifest === null || Array.isArray(baseManifest)) {
+        violations.push(`Base manifest from git show ${base}:scripts/rot-budget.json is not a valid JSON object`);
+        baseManifest = null;
+      }
+    } catch (err) {
+      violations.push(`Failed to retrieve or parse base manifest from git show ${base}:scripts/rot-budget.json: ${err.message}`);
+    }
+  }
+
+  if (baseManifest) {
+    // 1. 禁删指标: BASE 有而 TIP 无的 key => violation
+    for (const baseKey of Object.keys(baseManifest)) {
+      if (!Object.hasOwn(manifest, baseKey)) {
+        violations.push(
+          `${baseKey}: metric exists in base manifest (${base}) but was removed in tip manifest (deleting metrics is prohibited)`,
+        );
+      }
+    }
+
+    // 2. only-down: TIP ceiling > BASE ceiling => violation (unless live authorization)
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    for (const [key, entry] of Object.entries(manifest)) {
+      if (baseManifest[key] !== undefined && typeof baseManifest[key].ceiling === 'number') {
+        const baseCeiling = baseManifest[key].ceiling;
+        if (entry.ceiling > baseCeiling) {
+          const live = isAuthorizationLive(entry.authorization, todayUtc);
+          if (!live) {
+            if (entry.authorization && typeof entry.authorization.expires === 'string' && entry.authorization.expires < todayUtc) {
+              violations.push(
+                `${key}: ceiling raised from ${baseCeiling} to ${entry.ceiling} with expired authorization (expired ${entry.authorization.expires}, today ${todayUtc}) — raising a ceiling requires live authorization or user sign-off`,
+              );
+            } else {
+              violations.push(
+                `${key}: ceiling raised from ${baseCeiling} to ${entry.ceiling} without authorization — raising a ceiling requires user sign-off`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
   const grepRules = [];
   const godFileRules = new Map();
   const dirRules = [];
@@ -210,6 +301,7 @@ export function verifyRotBudget({
         key,
         dirRelPath,
         ceiling: entry.ceiling,
+        action: entry.action,
       });
     }
   }
@@ -252,6 +344,18 @@ export function verifyRotBudget({
           `${rule.key}: current ${lineCount} exceeds ceiling ${rule.ceiling} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
         );
       }
+      // Headroom floor check under --base mode
+      if (baseManifest && baseManifest[rule.key] !== undefined && typeof baseManifest[rule.key].ceiling === 'number') {
+        const baseCeiling = baseManifest[rule.key].ceiling;
+        if (rule.ceiling < baseCeiling) {
+          const requiredFloor = lineCount + Math.max(5, Math.ceil(lineCount * 0.05));
+          if (rule.ceiling < requiredFloor) {
+            violations.push(
+              `${rule.key}: lowered ceiling ${rule.ceiling} violates headroom floor (minimum allowed: ${requiredFloor} for current reading ${lineCount}) — use exception lease channel for temporary tighter budgets`,
+            );
+          }
+        }
+      }
     } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
       if (!EXEMPT_FILE_PATHS.includes(file.relPath)) {
         violations.push(
@@ -291,8 +395,32 @@ export function verifyRotBudget({
     const count = entries.filter((e) => e.isFile()).length;
     counts[rule.key] = count;
     if (count > rule.ceiling) {
-      violations.push(
-        `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — clean up directory entries, archive, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
+      if (rule.action && rule.action.type === 'cap-and-archive') {
+        violations.push(
+          `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — cap-and-archive threshold reached; archive closed-round artifacts to ${rule.action.archiveTo}`,
+        );
+      } else {
+        violations.push(
+          `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — clean up directory entries, archive, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
+        );
+      }
+    }
+  }
+
+  // Check zero headroom warnings for all registered manifest entries
+  for (const [key, entry] of Object.entries(manifest)) {
+    let current;
+    if (entry.kind === 'grep-count') {
+      current = counts[key];
+    } else if (entry.kind === 'file-lines') {
+      const fileRelPath = key.startsWith('god_file:') ? key.slice('god_file:'.length) : key;
+      current = counts[fileRelPath];
+    } else if (entry.kind === 'dir-entry-count') {
+      current = counts[key];
+    }
+    if (current !== undefined && current === entry.ceiling) {
+      warnings.push(
+        `warn: ${key} has zero headroom (current ${current} == ceiling ${entry.ceiling}) — use exception lease channel`,
       );
     }
   }
@@ -509,6 +637,382 @@ export function runSelftest() {
     } catch {}
   }
 
+  // Helper for synthetic git repo for --base test cases
+  function createSyntheticGitRepo(baseManifest, extraFiles = {}) {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-git-'));
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(baseManifest, null, 2), 'utf8');
+
+    for (const [relPath, content] of Object.entries(extraFiles)) {
+      const full = path.join(tmpDir, relPath);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, content, 'utf8');
+    }
+
+    execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['add', '.'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync(
+      'git',
+      ['-c', 'user.name=test', '-c', 'user.email=test@test', 'commit', '-m', 'base commit'],
+      { cwd: tmpDir, stdio: 'ignore' },
+    );
+    const baseSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: tmpDir, encoding: 'utf8' }).trim();
+    return { tmpDir, baseSha };
+  }
+
+  // 12. Negative inline: malformed action missing archiveTo
+  try {
+    const manifest = {
+      'dir_entries:docs': {
+        kind: 'dir-entry-count',
+        ceiling: 10,
+        action: {
+          type: 'cap-and-archive',
+        },
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('action.archiveTo'));
+    record('negative inline: malformed-action-missing-archiveTo', passed, 'rejects cap-and-archive action missing archiveTo');
+  } catch (err) {
+    record('negative inline: malformed-action-missing-archiveTo', false, `failed with exception: ${err.message}`);
+  }
+
+  // 13. Negative inline: malformed authorization missing expires
+  try {
+    const manifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+        authorization: {
+          reason: 'temporary bump',
+          commit: 'abcdef1',
+        },
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('authorization.expires'));
+    record('negative inline: malformed-authorization-missing-expires', passed, 'rejects authorization missing expires field');
+  } catch (err) {
+    record('negative inline: malformed-authorization-missing-expires', false, `failed with exception: ${err.message}`);
+  }
+
+  // 14. Negative base: unauthorized ceiling raise
+  let gitCase1 = null;
+  try {
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    gitCase1 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 15,
+      },
+    };
+    fs.writeFileSync(path.join(gitCase1.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase1.tmpDir, base: gitCase1.baseSha, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('ceiling raised') && v.includes('without authorization'));
+    record('negative base: unauthorized ceiling raise', passed, 'rejects ceiling increase without authorization in --base mode');
+  } catch (err) {
+    record('negative base: unauthorized ceiling raise', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase1) try { fs.rmSync(gitCase1.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 15. Negative base: expired authorization ceiling raise
+  let gitCase2 = null;
+  try {
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    gitCase2 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 15,
+        authorization: {
+          reason: 'expired bump',
+          commit: 'abc1234',
+          expires: '2020-01-01',
+        },
+      },
+    };
+    fs.writeFileSync(path.join(gitCase2.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase2.tmpDir, base: gitCase2.baseSha, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('expired authorization'));
+    record('negative base: expired authorization ceiling raise', passed, 'rejects ceiling increase with expired authorization in --base mode');
+  } catch (err) {
+    record('negative base: expired authorization ceiling raise', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase2) try { fs.rmSync(gitCase2.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 16. Negative base: ceiling lowering violates headroom floor
+  let gitCase3 = null;
+  try {
+    const fileLines700 = Array.from({ length: 700 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    const baseManifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 900,
+      },
+    };
+    gitCase3 = createSyntheticGitRepo(baseManifest, { 'src/heavy.rs': fileLines700 });
+    const tipManifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 720,
+      },
+    };
+    fs.writeFileSync(path.join(gitCase3.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase3.tmpDir, base: gitCase3.baseSha, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('violates headroom floor') && v.includes('exception lease'));
+    record('negative base: ceiling lowering violates headroom floor', passed, 'rejects ceiling lowering that breaches headroom floor');
+  } catch (err) {
+    record('negative base: ceiling lowering violates headroom floor', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase3) try { fs.rmSync(gitCase3.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 17. Negative base: deleted metric in tip manifest
+  let gitCase4 = null;
+  try {
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+      let_underscore: {
+        kind: 'grep-count',
+        pattern: 'let _ =',
+        ceiling: 20,
+      },
+    };
+    gitCase4 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    fs.writeFileSync(path.join(gitCase4.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase4.tmpDir, base: gitCase4.baseSha, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('let_underscore') && v.includes('removed in tip manifest'));
+    record('negative base: deleted metric in tip manifest', passed, 'rejects deletion of metric from manifest in --base mode');
+  } catch (err) {
+    record('negative base: deleted metric in tip manifest', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase4) try { fs.rmSync(gitCase4.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 18. Positive base: live authorization permits ceiling raise
+  let gitCase5 = null;
+  try {
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    gitCase5 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 15,
+        authorization: {
+          reason: 'approved expansion',
+          commit: 'abc1234',
+          expires: '2099-12-31',
+        },
+      },
+    };
+    fs.writeFileSync(path.join(gitCase5.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase5.tmpDir, base: gitCase5.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive base: live authorization permits ceiling raise', passed, 'permits ceiling increase with valid unexpired authorization');
+  } catch (err) {
+    record('positive base: live authorization permits ceiling raise', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase5) try { fs.rmSync(gitCase5.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 19. Positive date boundary: expires equals today utc is live
+  let gitCase6 = null;
+  try {
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    gitCase6 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 15,
+        authorization: {
+          reason: 'expires today',
+          commit: 'abc1234',
+          expires: todayUtc,
+        },
+      },
+    };
+    fs.writeFileSync(path.join(gitCase6.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase6.tmpDir, base: gitCase6.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive date boundary: expires equals today utc is live', passed, 'expires matching today UTC is accepted as live');
+  } catch (err) {
+    record('positive date boundary: expires equals today utc is live', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase6) try { fs.rmSync(gitCase6.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 20. Negative date boundary: expires yesterday is expired
+  let gitCase7 = null;
+  try {
+    const yesterdayUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 1)).toISOString().slice(0, 10);
+    const baseManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 10,
+      },
+    };
+    gitCase7 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      unwrap_production: {
+        kind: 'grep-count',
+        pattern: '\\.unwrap\\(\\)',
+        ceiling: 15,
+        authorization: {
+          reason: 'expired yesterday',
+          commit: 'abc1234',
+          expires: yesterdayUtc,
+        },
+      },
+    };
+    fs.writeFileSync(path.join(gitCase7.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase7.tmpDir, base: gitCase7.baseSha, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('expired authorization'));
+    record('negative date boundary: expires yesterday is expired', passed, 'expires matching yesterday UTC is rejected as expired');
+  } catch (err) {
+    record('negative date boundary: expires yesterday is expired', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase7) try { fs.rmSync(gitCase7.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 21. Positive base: compliant ceiling lowering satisfies headroom floor
+  let gitCase8 = null;
+  try {
+    const fileLines700 = Array.from({ length: 700 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    const baseManifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 900,
+      },
+    };
+    gitCase8 = createSyntheticGitRepo(baseManifest, { 'src/heavy.rs': fileLines700 });
+    const tipManifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 740,
+      },
+    };
+    fs.writeFileSync(path.join(gitCase8.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase8.tmpDir, base: gitCase8.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive base: compliant ceiling lowering satisfies headroom floor', passed, 'permits ceiling lowering when headroom floor is met');
+  } catch (err) {
+    record('positive base: compliant ceiling lowering satisfies headroom floor', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase8) try { fs.rmSync(gitCase8.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 22. Positive cap-and-archive: violation includes archiveTo guidance
+  const tmpArchive = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-archive-'));
+  try {
+    const docsDir = path.join(tmpArchive, 'docs', 'sdd');
+    const scriptsDir = path.join(tmpArchive, 'scripts');
+    fs.mkdirSync(docsDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(path.join(docsDir, 'f1.md'), '1', 'utf8');
+    fs.writeFileSync(path.join(docsDir, 'f2.md'), '2', 'utf8');
+    fs.writeFileSync(path.join(docsDir, 'f3.md'), '3', 'utf8');
+
+    const manifest = {
+      'dir_entries:docs/sdd': {
+        kind: 'dir-entry-count',
+        ceiling: 2,
+        action: {
+          type: 'cap-and-archive',
+          archiveTo: 'docs/archive/sdd-artifacts/',
+        },
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpArchive, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.length === 1 &&
+      res.violations[0].includes('docs/archive/sdd-artifacts/') &&
+      res.violations[0].includes('cap-and-archive');
+    record('positive cap-and-archive: violation includes archiveTo guidance', passed, 'cap-and-archive breach outputs dedicated guidance containing archiveTo');
+  } catch (err) {
+    record('positive cap-and-archive: violation includes archiveTo guidance', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpArchive, { recursive: true, force: true }); } catch {}
+  }
+
+  // 23. Positive zero-headroom: warning emitted when current equals ceiling
+  const tmpZero = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-zero-'));
+  try {
+    const srcDir = path.join(tmpZero, 'src');
+    const scriptsDir = path.join(tmpZero, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(path.join(srcDir, 'lib.rs'), 'pub fn f() { let _ = 1; }\n', 'utf8');
+
+    const manifest = {
+      let_underscore: {
+        kind: 'grep-count',
+        pattern: 'let _ =',
+        ceiling: 1,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpZero, silent: true });
+    const passed =
+      res.success &&
+      res.warnings.some((w) => w.includes('let_underscore') && w.includes('zero headroom') && w.includes('exception lease'));
+    record('positive zero-headroom: warning emitted when current equals ceiling', passed, 'emits zero headroom warning and points to exception lease channel');
+  } catch (err) {
+    record('positive zero-headroom: warning emitted when current equals ceiling', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpZero, { recursive: true, force: true }); } catch {}
+  }
+
   const allPassed = results.every((r) => r.passed);
   const negCount = results.filter((r) => r.id.startsWith('negative')).length;
   const posCount = results.filter((r) => !r.id.startsWith('negative')).length;
@@ -521,12 +1025,45 @@ export function runSelftest() {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  if (process.argv.includes('--selftest')) {
+export function parseArgs(argv) {
+  const flags = {};
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg.startsWith('--')) {
+      const key = arg.slice(2);
+      if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
+        flags[key] = argv[i + 1];
+        i++;
+      } else {
+        flags[key] = true;
+      }
+    } else {
+      positional.push(arg);
+    }
+  }
+  return { flags, positional };
+}
+
+if (process.argv[1] && path.resolve(fileURLToPath(import.meta.url)).toLowerCase() === path.resolve(process.argv[1]).toLowerCase()) {
+  const argv = process.argv.slice(2);
+  const { flags } = parseArgs(argv);
+
+  if (flags.selftest) {
     const passed = runSelftest();
     process.exit(passed ? 0 : 1);
   }
-  const result = verifyRotBudget();
+
+  let base;
+  if (flags.base) {
+    if (typeof flags.base !== 'string' || flags.base.trim() === '') {
+      console.error('Error: --base requires a commit SHA or ref');
+      process.exit(1);
+    }
+    base = flags.base.trim();
+  }
+
+  const result = verifyRotBudget({ base });
   if (!result.success) {
     process.exit(1);
   }

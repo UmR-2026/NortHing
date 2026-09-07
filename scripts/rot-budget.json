@@ -41,9 +41,13 @@
  },
  "dir_entries:.superpowers/sdd": {
   "kind": "dir-entry-count",
-"ceiling": 400,
-   "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/"
-  },
+  "ceiling": 400,
+  "note": "cap-and-archive (not only-down): trip triggers archiving closed-round artifacts to docs/archive/sdd-artifacts/",
+  "action": {
+   "type": "cap-and-archive",
+   "archiveTo": "docs/archive/sdd-artifacts/"
+  }
+ },
    "god_file:src/apps/desktop/src/ui_dioxus/css.rs": {
    "kind": "file-lines",
    "ceiling": 790,
