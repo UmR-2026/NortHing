@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "file": "scripts/verify-rot-budget.mjs",
+    "owner": "orchestrator",
+    "reason": "W18 波内 selftest 内联增长",
+    "revisit_after": "2026-10-15",
+    "next_action": "波后拆分 selftest 外置"
+  },
+  {
+    "file": "scripts/i18n-audit.mjs",
+    "owner": "orchestrator",
+    "reason": "i18n 工程冻结期存量",
+    "revisit_after": "2026-10-15",
+    "next_action": "解冻时拆分"
+  }
+]

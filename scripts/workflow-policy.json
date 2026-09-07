@@ -28,5 +28,9 @@
     "package.json"
   ],
   "briefRequiredSections": ["任务标识", "BASE", "允许文件集", "禁区", "验证", "报告"],
-  "reportRequiredSections": ["改动摘要", "验证", "状态"]
+  "reportRequiredSections": ["改动摘要", "验证", "状态"],
+  "rotScanScope": {
+    "grepRoots": ["src"],
+    "fileLinesRoots": ["src", "northing-installer/src-tauri", "scripts"]
+  }
 }

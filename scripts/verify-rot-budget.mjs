@@ -19,6 +19,10 @@ const FIELD_WHITELIST = {
 
 const VALID_KINDS = new Set(Object.keys(FIELD_WHITELIST));
 
+export const SCAN_SCOPE_GREP_ROOTS = ['src'];
+export const SCAN_SCOPE_FILE_LINES_ROOTS = ['src', 'northing-installer/src-tauri', 'scripts'];
+export const BANNED_COMMENT_REGEX = /^[ \t]*\/\/[ \t]*allow-god-file/m;
+
 export function validateManifest(manifest, projectRoot = process.cwd()) {
   const errors = [];
 
@@ -254,6 +258,83 @@ export function validateExceptionLeases(leases, projectRoot = process.cwd()) {
   };
 }
 
+export function attestScanScope(policyPath, projectRoot = process.cwd()) {
+  const violations = [];
+  if (!fs.existsSync(policyPath)) {
+    // Policy file missing => attestation skipped (synthetic root semantics)
+    return { success: true, violations };
+  }
+
+  let policy;
+  try {
+    const raw = fs.readFileSync(policyPath, 'utf8');
+    policy = JSON.parse(raw);
+  } catch (err) {
+    violations.push(
+      `Failed to parse workflow policy file at ${path.relative(projectRoot, policyPath).replace(/\\/g, '/')}: ${err.message}`,
+    );
+    return { success: false, violations };
+  }
+
+  if (typeof policy !== 'object' || policy === null || Array.isArray(policy)) {
+    violations.push('workflow-policy.json must be a JSON object');
+    return { success: false, violations };
+  }
+
+  if (policy.rotScanScope === undefined) {
+    violations.push('workflow-policy.json is missing required "rotScanScope" field');
+    return { success: false, violations };
+  }
+
+  if (typeof policy.rotScanScope !== 'object' || policy.rotScanScope === null || Array.isArray(policy.rotScanScope)) {
+    violations.push('workflow-policy.json "rotScanScope" must be an object');
+    return { success: false, violations };
+  }
+
+  const { grepRoots, fileLinesRoots } = policy.rotScanScope;
+
+  if (!Array.isArray(grepRoots) || !grepRoots.every((r) => typeof r === 'string')) {
+    violations.push('workflow-policy.json "rotScanScope.grepRoots" must be an array of strings');
+  }
+
+  if (!Array.isArray(fileLinesRoots) || !fileLinesRoots.every((r) => typeof r === 'string')) {
+    violations.push('workflow-policy.json "rotScanScope.fileLinesRoots" must be an array of strings');
+  }
+
+  if (violations.length > 0) {
+    return { success: false, violations };
+  }
+
+  const declaredGrepSet = new Set(grepRoots);
+  const actualGrepSet = new Set(SCAN_SCOPE_GREP_ROOTS);
+  if (
+    grepRoots.length !== SCAN_SCOPE_GREP_ROOTS.length ||
+    declaredGrepSet.size !== actualGrepSet.size ||
+    !SCAN_SCOPE_GREP_ROOTS.every((r) => declaredGrepSet.has(r))
+  ) {
+    violations.push(
+      `rotScanScope.grepRoots mismatch: declared [${grepRoots.join(', ')}] does not match actual [${SCAN_SCOPE_GREP_ROOTS.join(', ')}]`,
+    );
+  }
+
+  const declaredFileLinesSet = new Set(fileLinesRoots);
+  const actualFileLinesSet = new Set(SCAN_SCOPE_FILE_LINES_ROOTS);
+  if (
+    fileLinesRoots.length !== SCAN_SCOPE_FILE_LINES_ROOTS.length ||
+    declaredFileLinesSet.size !== actualFileLinesSet.size ||
+    !SCAN_SCOPE_FILE_LINES_ROOTS.every((r) => declaredFileLinesSet.has(r))
+  ) {
+    violations.push(
+      `rotScanScope.fileLinesRoots mismatch: declared [${fileLinesRoots.join(', ')}] does not match actual [${SCAN_SCOPE_FILE_LINES_ROOTS.join(', ')}]`,
+    );
+  }
+
+  return {
+    success: violations.length === 0,
+    violations,
+  };
+}
+
 export function isLeaseLive(lease, todayUtc = new Date().toISOString().slice(0, 10)) {
   if (!lease || typeof lease !== 'object' || Array.isArray(lease)) return false;
   if (typeof lease.revisit_after !== 'string') return false;
@@ -310,10 +391,99 @@ export function collectRustFiles(dir, projectRoot = dir) {
   return results;
 }
 
+export function collectScriptFiles(scriptsDir, projectRoot = scriptsDir) {
+  const results = [];
+  if (!fs.existsSync(scriptsDir)) return results;
+
+  const testExclusion = /\.(test|spec)\.(mjs|js)$/;
+  const entries = fs.readdirSync(scriptsDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isFile() && (entry.name.endsWith('.mjs') || entry.name.endsWith('.js'))) {
+      if (testExclusion.test(entry.name)) {
+        continue;
+      }
+      const fullPath = path.join(scriptsDir, entry.name);
+      const relPath = path.relative(projectRoot, fullPath).replace(/\\/g, '/');
+      results.push({ fullPath, relPath });
+    }
+  }
+  return results;
+}
+
+export function checkFileLinesSurface({
+  file,
+  content,
+  lineCount,
+  exemptPaths,
+  godFileRules,
+  seenGodFiles = new Set(),
+  leaseMap = new Map(),
+  baseManifest = null,
+  todayUtc = new Date().toISOString().slice(0, 10),
+}) {
+  const violations = [];
+
+  if (exemptPaths.has(file.relPath)) {
+    return violations;
+  }
+
+  // Prohibition on allow-god-file comment (line-anchored)
+  if (BANNED_COMMENT_REGEX.test(content)) {
+    violations.push(
+      `${file.relPath}: contains banned comment "allow-god-file" — allow-god-file comment protocol has been abolished; use scripts/exception-leases.json instead`,
+    );
+  }
+
+  // >1000 lines hard boundary check
+  const ruleKey = godFileRules.has(file.relPath) ? godFileRules.get(file.relPath).key : `god_file:${file.relPath}`;
+  if (lineCount > 1000) {
+    const lease = leaseMap.get(file.relPath);
+    if (!lease) {
+      violations.push(
+        `${ruleKey}: current ${lineCount} exceeds hard limit 1000 without exception lease — register an active lease in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action)`,
+      );
+    } else if (!isLeaseLive(lease, todayUtc)) {
+      violations.push(
+        `${ruleKey}: current ${lineCount} exceeds hard limit 1000 with expired lease (expired ${lease.revisit_after}, today ${todayUtc}) — update revisit_after in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action) or split file`,
+      );
+    }
+  }
+
+  // Check god-file threshold & manifest registration
+  if (godFileRules.has(file.relPath)) {
+    seenGodFiles.add(file.relPath);
+    const rule = godFileRules.get(file.relPath);
+    if (lineCount > rule.ceiling) {
+      violations.push(
+        `${rule.key}: current ${lineCount} exceeds ceiling ${rule.ceiling} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
+      );
+    }
+    // Headroom floor check under --base mode
+    if (baseManifest && baseManifest[rule.key] !== undefined && typeof baseManifest[rule.key].ceiling === 'number') {
+      const baseCeiling = baseManifest[rule.key].ceiling;
+      if (rule.ceiling < baseCeiling) {
+        const requiredFloor = lineCount + Math.max(5, Math.ceil(lineCount * 0.05));
+        if (rule.ceiling < requiredFloor) {
+          violations.push(
+            `${rule.key}: lowered ceiling ${rule.ceiling} violates headroom floor (minimum allowed: ${requiredFloor} for current reading ${lineCount}) — use exception lease channel for temporary tighter budgets`,
+          );
+        }
+      }
+    }
+  } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
+    violations.push(
+      `god_file:${file.relPath}: current ${lineCount} exceeds ceiling ${GOD_FILE_LINE_THRESHOLD} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
+    );
+  }
+
+  return violations;
+}
+
 export function verifyRotBudget({
   projectRoot = process.cwd(),
   manifestPath = path.join(projectRoot, 'scripts', 'rot-budget.json'),
   leasesPath = path.join(projectRoot, 'scripts', 'exception-leases.json'),
+  policyPath = path.join(projectRoot, 'scripts', 'workflow-policy.json'),
   silent = false,
   base,
 } = {}) {
@@ -350,6 +520,12 @@ export function verifyRotBudget({
     };
   }
 
+  // Policy attestation
+  const attestation = attestScanScope(policyPath, projectRoot);
+  if (!attestation.success) {
+    violations.push(...attestation.violations);
+  }
+
   let leaseMap = new Map();
   if (fs.existsSync(leasesPath)) {
     try {
@@ -366,6 +542,7 @@ export function verifyRotBudget({
   }
 
   let baseManifest = null;
+  const todayUtc = new Date().toISOString().slice(0, 10);
   if (base) {
     try {
       const rawBase = execFileSync('git', ['show', `${base}:scripts/rot-budget.json`], {
@@ -394,7 +571,6 @@ export function verifyRotBudget({
     }
 
     // 2. only-down: TIP ceiling > BASE ceiling => violation (unless live authorization)
-    const todayUtc = new Date().toISOString().slice(0, 10);
     for (const [key, entry] of Object.entries(manifest)) {
       if (baseManifest[key] !== undefined && typeof baseManifest[key].ceiling === 'number') {
         const baseCeiling = baseManifest[key].ceiling;
@@ -454,8 +630,18 @@ export function verifyRotBudget({
     }
   }
 
-  const srcDir = path.join(projectRoot, 'src');
-  const files = collectRustFiles(srcDir, projectRoot);
+  const srcFiles = collectRustFiles(path.join(projectRoot, 'src'), projectRoot);
+  const installerFiles = collectRustFiles(
+    path.join(projectRoot, 'northing-installer', 'src-tauri'),
+    projectRoot,
+  );
+  const scriptFiles = collectScriptFiles(path.join(projectRoot, 'scripts'), projectRoot);
+
+  const allScannedFiles = [
+    ...srcFiles.map((f) => ({ ...f, isGrepTarget: true })),
+    ...installerFiles.map((f) => ({ ...f, isGrepTarget: false })),
+    ...scriptFiles.map((f) => ({ ...f, isGrepTarget: false })),
+  ];
   const seenGodFiles = new Set();
 
   // Pre-scan: surface dead god-file registrations as warnings or violations (when ceiling lowered under --base)
@@ -476,7 +662,7 @@ export function verifyRotBudget({
     }
   }
 
-  for (const file of files) {
+  for (const file of allScannedFiles) {
     if (exemptPaths.has(file.relPath)) {
       continue;
     }
@@ -484,63 +670,25 @@ export function verifyRotBudget({
     const lineCount = countLines(content);
     counts[file.relPath] = lineCount;
 
-    // Prohibition on allow-god-file comment
-    if (content.includes('allow-god-file')) {
-      violations.push(
-        `${file.relPath}: contains banned comment "allow-god-file" — allow-god-file comment protocol has been abolished; use scripts/exception-leases.json instead`,
-      );
-    }
+    const surfaceViolations = checkFileLinesSurface({
+      file,
+      content,
+      lineCount,
+      exemptPaths,
+      godFileRules,
+      seenGodFiles,
+      leaseMap,
+      baseManifest,
+      todayUtc,
+    });
+    violations.push(...surfaceViolations);
 
-    // >1000 lines hard boundary check
-    if (lineCount > 1000) {
-      const lease = leaseMap.get(file.relPath);
-      const todayUtc = new Date().toISOString().slice(0, 10);
-      const ruleKey = godFileRules.has(file.relPath) ? godFileRules.get(file.relPath).key : `god_file:${file.relPath}`;
-      if (!lease) {
-        violations.push(
-          `${ruleKey}: current ${lineCount} exceeds hard limit 1000 without exception lease — register an active lease in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action)`,
-        );
-      } else if (!isLeaseLive(lease, todayUtc)) {
-        violations.push(
-          `${ruleKey}: current ${lineCount} exceeds hard limit 1000 with expired lease (expired ${lease.revisit_after}, today ${todayUtc}) — update revisit_after in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action) or split file`,
-        );
-      }
-    }
-
-    // Execute grep-count rules
-    for (const rule of grepRules) {
-      const matches = content.match(rule.regex);
-      if (matches) {
-        rule.count += matches.length;
-      }
-    }
-
-    // Check god-file threshold & manifest registration
-    if (godFileRules.has(file.relPath)) {
-      seenGodFiles.add(file.relPath);
-      const rule = godFileRules.get(file.relPath);
-      if (lineCount > rule.ceiling) {
-        violations.push(
-          `${rule.key}: current ${lineCount} exceeds ceiling ${rule.ceiling} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
-        );
-      }
-      // Headroom floor check under --base mode
-      if (baseManifest && baseManifest[rule.key] !== undefined && typeof baseManifest[rule.key].ceiling === 'number') {
-        const baseCeiling = baseManifest[rule.key].ceiling;
-        if (rule.ceiling < baseCeiling) {
-          const requiredFloor = lineCount + Math.max(5, Math.ceil(lineCount * 0.05));
-          if (rule.ceiling < requiredFloor) {
-            violations.push(
-              `${rule.key}: lowered ceiling ${rule.ceiling} violates headroom floor (minimum allowed: ${requiredFloor} for current reading ${lineCount}) — use exception lease channel for temporary tighter budgets`,
-            );
-          }
+    if (file.isGrepTarget) {
+      for (const rule of grepRules) {
+        const matches = content.match(rule.regex);
+        if (matches) {
+          rule.count += matches.length;
         }
-      }
-    } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
-      if (!exemptPaths.has(file.relPath)) {
-        violations.push(
-          `god_file:${file.relPath}: current ${lineCount} exceeds ceiling ${GOD_FILE_LINE_THRESHOLD} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
-        );
       }
     }
   }
@@ -588,7 +736,6 @@ export function verifyRotBudget({
   }
 
   // Check zero headroom warnings for all registered manifest entries
-  const todayUtc = new Date().toISOString().slice(0, 10);
   for (const [key, entry] of Object.entries(manifest)) {
     let current;
     let fileRelPath = null;
@@ -630,7 +777,7 @@ export function verifyRotBudget({
         .filter(Boolean)
         .join(', ');
       console.log(
-        `Rot budget verification passed (${readingsSummary} checked across ${files.length} files).`,
+        `Rot budget verification passed (${readingsSummary} checked across ${allScannedFiles.length} files [src: ${srcFiles.length}, northing-installer/src-tauri: ${installerFiles.length}, scripts: ${scriptFiles.length}]).`,
       );
     } else {
       for (const violation of violations) {
@@ -645,7 +792,7 @@ export function verifyRotBudget({
     violations,
     warnings,
     counts,
-    checkedFilesCount: files.length,
+    checkedFilesCount: allScannedFiles.length,
   };
 }
 
@@ -1633,6 +1780,209 @@ export function runSelftest() {
     record('positive inline: exempt-list skips god-file check', false, `failed with exception: ${err.message}`);
   } finally {
     try { fs.rmSync(tmpExempt, { recursive: true, force: true }); } catch {}
+  }
+
+  // 39. Negative policy: rotScanScope mismatch with actual scan roots
+  const tmpMismatch = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-mismatch-'));
+  try {
+    const scriptsDir = path.join(tmpMismatch, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const badPolicy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'scripts'],
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(badPolicy, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpMismatch, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('rotScanScope.fileLinesRoots mismatch'));
+    record('negative policy: rotScanScope mismatch with actual scan roots', passed, 'rejects workflow policy with mismatched scan roots');
+  } catch (err) {
+    record('negative policy: rotScanScope mismatch with actual scan roots', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpMismatch, { recursive: true, force: true }); } catch {}
+  }
+
+  // 40. Negative policy: missing rotScanScope field
+  const tmpMissingField = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-missing-field-'));
+  try {
+    const scriptsDir = path.join(tmpMissingField, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const emptyPolicy = { version: 1 };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(emptyPolicy, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpMissingField, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('missing required "rotScanScope" field'));
+    record('negative policy: missing rotScanScope field', passed, 'rejects workflow policy missing rotScanScope field');
+  } catch (err) {
+    record('negative policy: missing rotScanScope field', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpMissingField, { recursive: true, force: true }); } catch {}
+  }
+
+  // 41. Negative policy: malformed rotScanScope shape (missing fileLinesRoots)
+  const tmpMalformedShape = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-malformed-shape-'));
+  try {
+    const scriptsDir = path.join(tmpMalformedShape, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const malformedPolicy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(malformedPolicy, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpMalformedShape, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('rotScanScope.fileLinesRoots') && v.includes('array of strings'));
+    record('negative policy: malformed rotScanScope shape', passed, 'rejects rotScanScope missing fileLinesRoots or having invalid shape');
+  } catch (err) {
+    record('negative policy: malformed rotScanScope shape', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpMalformedShape, { recursive: true, force: true }); } catch {}
+  }
+
+  // 42. Negative inline: scripts 1001-line file without lease
+  const tmpScript1001 = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-script-1001-'));
+  try {
+    const scriptsDir = path.join(tmpScript1001, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `console.log(${i + 1});`).join('\n') + '\n';
+    fs.writeFileSync(path.join(scriptsDir, 'large.mjs'), lines1001, 'utf8');
+    const manifest = {
+      'god_file:scripts/large.mjs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpScript1001, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('scripts/large.mjs') && v.includes('exceeds hard limit 1000 without exception lease'));
+    record('negative inline: scripts 1001-line file without lease', passed, 'rejects scripts .mjs file >1000 lines without exception lease');
+  } catch (err) {
+    record('negative inline: scripts 1001-line file without lease', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpScript1001, { recursive: true, force: true }); } catch {}
+  }
+
+  // 43. Negative inline: scripts 900-line file unregistered
+  const tmpScript900 = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-script-900-'));
+  try {
+    const scriptsDir = path.join(tmpScript900, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const lines900 = Array.from({ length: 900 }, (_, i) => `console.log(${i + 1});`).join('\n') + '\n';
+    fs.writeFileSync(path.join(scriptsDir, 'unregistered.js'), lines900, 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpScript900, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('god_file:scripts/unregistered.js') && v.includes('exceeds ceiling 800'));
+    record('negative inline: scripts 900-line file unregistered', passed, 'rejects unregistered scripts .js file exceeding 800 lines');
+  } catch (err) {
+    record('negative inline: scripts 900-line file unregistered', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpScript900, { recursive: true, force: true }); } catch {}
+  }
+
+  // 44. Negative inline: scripts file with banned allow-god-file comment
+  const tmpScriptBanned = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-script-banned-'));
+  try {
+    const scriptsDir = path.join(tmpScriptBanned, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(scriptsDir, 'tool.mjs'),
+      '// allow-god-file: temporary justification\nconsole.log("hello");\n',
+      'utf8',
+    );
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpScriptBanned, silent: true });
+    const passed = !res.success && res.violations.some((v) => v.includes('scripts/tool.mjs') && v.includes('banned comment "allow-god-file"'));
+    record('negative inline: scripts file with banned allow-god-file comment', passed, 'rejects scripts file containing line-anchored allow-god-file comment');
+  } catch (err) {
+    record('negative inline: scripts file with banned allow-god-file comment', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpScriptBanned, { recursive: true, force: true }); } catch {}
+  }
+
+  // 45. Positive policy: missing policy file skips attestation
+  const tmpNoPolicy = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-no-policy-'));
+  try {
+    const srcDir = path.join(tmpNoPolicy, 'src');
+    const scriptsDir = path.join(tmpNoPolicy, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'lib.rs'), 'pub fn ok() {}\n', 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpNoPolicy, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive policy: missing policy file skips attestation', passed, 'missing workflow policy skips attestation for synthetic roots');
+  } catch (err) {
+    record('positive policy: missing policy file skips attestation', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpNoPolicy, { recursive: true, force: true }); } catch {}
+  }
+
+  // 46. Positive inline: test-named script excluded from scan
+  const tmpTestScript = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-test-script-'));
+  try {
+    const scriptsDir = path.join(tmpTestScript, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const lines1200 = Array.from({ length: 1200 }, (_, i) => `// Test line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(scriptsDir, 'custom.test.mjs'), lines1200, 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'custom.spec.js'), lines1200, 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpTestScript, silent: true });
+    const passed = res.success && res.violations.length === 0 && !res.counts['scripts/custom.test.mjs'] && !res.counts['scripts/custom.spec.js'];
+    record('positive inline: test-named script excluded from scan', passed, 'scripts matching test or spec naming pattern are excluded from file-lines scan');
+  } catch (err) {
+    record('positive inline: test-named script excluded from scan', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpTestScript, { recursive: true, force: true }); } catch {}
+  }
+
+  // 47. Positive inline: installer 801-line file passes when registered
+  const tmpInstaller = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-installer-'));
+  try {
+    const installerDir = path.join(tmpInstaller, 'northing-installer', 'src-tauri', 'src');
+    const scriptsDir = path.join(tmpInstaller, 'scripts');
+    fs.mkdirSync(installerDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const lines801 = Array.from({ length: 801 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(installerDir, 'main.rs'), lines801, 'utf8');
+    const manifest = {
+      'god_file:northing-installer/src-tauri/src/main.rs': {
+        kind: 'file-lines',
+        ceiling: 805,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpInstaller, silent: true });
+    const passed = res.success && res.violations.length === 0 && res.counts['northing-installer/src-tauri/src/main.rs'] === 801;
+    record('positive inline: installer 801-line file passes when registered', passed, 'installer 801-line file passes when registered in manifest');
+  } catch (err) {
+    record('positive inline: installer 801-line file passes when registered', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpInstaller, { recursive: true, force: true }); } catch {}
+  }
+
+  // 48. Positive inline: non-anchored allow-god-file literal does not trigger comment ban
+  const tmpLiteral = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-literal-'));
+  try {
+    const scriptsDir = path.join(tmpLiteral, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const checkerLiteralCode = [
+      'const MSG = "contains banned comment \\"allow-god-file\\"";',
+      '// This file explains that allow-god-file is abolished.',
+      '/* Note: allow-god-file is not allowed */',
+      'console.log(MSG);',
+    ].join('\n') + '\n';
+    fs.writeFileSync(path.join(scriptsDir, 'checker-like.mjs'), checkerLiteralCode, 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: tmpLiteral, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive inline: non-anchored allow-god-file literal does not trigger comment ban', passed, 'non-anchored allow-god-file literal in code or string does not trigger comment ban');
+  } catch (err) {
+    record('positive inline: non-anchored allow-god-file literal does not trigger comment ban', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpLiteral, { recursive: true, force: true }); } catch {}
   }
 
   const allPassed = results.every((r) => r.passed);

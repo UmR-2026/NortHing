@@ -38,7 +38,8 @@
 | W18-2 | only-down 机械化（`--base` 模式）+ headroom floor（-1.5）+ cap-and-archive 结构化 action | 0.2 + 0.5 + -1.5 |
 | W18-3 | >1000 硬边界走 exception lease（禁复活 allow-god-file 注释，O-2 errata） | 0.3 |
 | W18-4 | config 字段兑现或删承诺 + EXEMPT_FILE_PATHS 移入 manifest | 0.4 |
-| W18-5 | 扫描范围 attestation（覆盖 installer + scripts 自身）+ -1.7 退役机械化 | 0.6 + O-1 + -1.7 |
+| W18-5a | 扫描范围 attestation + 收集器扩展 + 3 项登记 + 2 条 lease | 0.6 + O-1 |
+| W18-5b | -1.7 退役机械化（净不得增口径） | -1.7 |
 | W18-6 | verdict rubric 互斥化进 SSOT + dead registration 限期升级 violation | 0.7 + 0.8 |
 | W18-7 | mutation/fixture 集外部预注册锁定 + D-1 历史事故 replay 并入 | 0.9 + D-1 |
 
@@ -114,18 +115,24 @@
 - **验证最小集**：`--selftest` 全绿 + `node scripts/verify-rot-budget.mjs` 绿且读数与 BASE 完全一致（豁免语义不变）+ hygiene。
 - **skill 前置**：`anti-rot-system`。
 
-### W18-5 扫描范围 attestation + scripts 退役机械化
+### W18-5a 扫描范围 attestation + 收集器扩展 + 登记
 
-- **允许文件集**：`scripts/verify-rot-budget.mjs`、`scripts/rot-budget.json`、`scripts/workflow-policy.json`、`scripts/fixtures/rot-budget/`。
+- **拆分说明**（2026-09-07，brief review 裁决）：原 W18-5 拆 5a/5b——5a = attestation + 收集器扩展 + 登记 + lease（内部强耦合不可再拆）；5b = 退役规则（独立）。规模预警兑现。
+- **用户拍板（2026-09-07 二次）**：`god_file:scripts/verify-task-gate.mjs` ceiling **847**（floor 公式精确值）；`god_file:scripts/verify-rot-budget.mjs` ceiling **2300**（装下本波增长，波后拆 selftest 后经 only-down 下调）+ lease；`god_file:scripts/i18n-audit.mjs` ceiling **4025** + lease。lease revisit_after = 2026-10-15。
+- **允许文件集**：`scripts/verify-rot-budget.mjs`、`scripts/rot-budget.json`（仅新增 3 登记项）、`scripts/workflow-policy.json`（仅新增 rotScanScope）、`scripts/exception-leases.json`（仅新增 2 lease）。
 - **功能要求**：
-  1. policy.json 增 `rotScanScope`：`{"grepRoots": ["src"], "fileLinesRoots": ["src", "northing-installer/src-tauri", "scripts"]}` 为声明单源。checker 启动时断言实际扫描根 == 声明；不一致 ⇒ violation（扫描范围变化自动报警，O-1）。
-  2. file-lines 收集器扩展：`northing-installer/src-tauri`（.rs）与 `scripts`（顶层 .mjs/.js）纳入 god-file 登记扫描；**grep-count 规则仍只扫 `src/`（语义不变，读数不得漂移）**。scripts 收集沿用测试排除口径：**`*test*.mjs` / `*test*.js` 不入扫描**（与 .rs 的 tests 排除同口径——用户 2026-09-07 拍板，`i18n-contract.test.mjs` 1042 行据此豁免）。
-  3. **超千行准入（用户 2026-09-07 拍板，混合）**：`scripts/i18n-audit.mjs`（3833 行，checker 口径）登记 manifest + 持 exception lease（W18-3 机制；lease 内容 = 拆分计划或类型豁免理由，revisit_after 由 lease 审批定）；`northing-installer/src-tauri` 下若有 >800 行文件需同单登记 + commit message 引用户拍板。派发前由编排者实测确认清单写进 brief。
-  4. -1.7 退役机械化（口径 = **严格一增一退**，用户 2026-09-07 拍板）：`--base` 模式下 `scripts/` 顶层文件数较 BASE 上升 ⇒ 要求 BASE..TIP diff 中 ≥1 个 `scripts/` 顶层文件被删除（先退后增），否则 violation——一次性额度只兜历史存量，不兜新增。
-  5. fixture：扫描根声明被篡改（红）/ scripts 净增无退役（红）/ 净增有退役（绿）/ 测试命名文件不计入（绿）。
-- **验证最小集**：`--selftest` 全绿 + `node scripts/verify-rot-budget.mjs --base df5c1ce` 绿 + grep 读数与实测基线逐一对照贴出（证明无漂移）+ hygiene。
+  1. policy.json 增 `rotScanScope: {"grepRoots": ["src"], "fileLinesRoots": ["src", "northing-installer/src-tauri", "scripts"]}`；checker 断言实际扫描根 == 声明，不一致 ⇒ violation。**policy 文件缺失 ⇒ attestation 跳过**（合成根专用语义；真实仓库由 git 跟踪 + validate-policy 兜底，report 写明该残余面）；文件存在但缺字段 ⇒ violation。
+  2. file-lines 收集面扩三根：src（.rs）+ installer（.rs）+ scripts（顶层 .mjs/.js，排除 `/\.(test|spec)\.(mjs|js)$/`——较计划的 `*test*` glob 有意收窄，test-acp.js 计入扫描）。grep 仍只扫 src。>1000/注释禁令/豁免/>800 未登记检查全部对新面生效（>1000 检查须先从 .rs 循环提取）。注释禁令判定锚定行首注释形态 `/^[ \t]*\/\/[ \t]*allow-god-file/`（防 checker 自身 8 处字面量自触发）。
+  3. manifest 三登记 + leases 两条（拍板值逐字）。
+  4. selftest 扩展（负：scope 不一致/缺字段/合成 1001 行 .mjs 无 lease；正：测试命名豁免/installer 覆盖）；既有 38 项全绿。
+- **验证最小集**：主运行（新基线：9 god-file rules、checkedFiles 1397、grep/dir 零漂移、零余量 warning 5 项）+ `--selftest` + `--base 356b33c`（规则生效起点 = 落地 commit；用更早 BASE 会追溯触发新规则，已核实）+ `verify-rot-budget.test.mjs` + `node scripts/verify-task-gate.mjs validate-policy` + hygiene。
 - **skill 前置**：`anti-rot-system`。
-- **规模预警**：本单是波内最大单（两个机制 + 收集器扩展）；brief 阶段若 reviewer-53 判过大，拆 5a（attestation）/ 5b（退役机械化）。
+
+### W18-5b scripts 退役机械化（净不得增）
+
+- **允许文件集**：`scripts/verify-rot-budget.mjs`。
+- **功能要求**：`--base` 模式下 `dir_entries:scripts` 计数 TIP > BASE ⇒ violation（**净不得增**，用户拍板 2026-09-07——无需 diff 解析，纯计数比较；合法一增一退 = 计数不变 = 绿）。fixture：净增（红）/ 增删平衡（绿）/ 不变（绿）。
+- **验证最小集**：同 5a 第 2/3/4 项 + hygiene（`--base` 用 5a TIP）。
 
 ### W18-6 verdict rubric 互斥化 + dead registration 限期
 

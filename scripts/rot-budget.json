@@ -78,6 +78,21 @@
    "ceiling": 836,
    "note": "R-14 god-file; live observation cohort (T2-6 superseded)"
   },
+  "god_file:scripts/verify-task-gate.mjs": {
+   "kind": "file-lines",
+   "ceiling": 847,
+   "note": "W18-5a 扫描范围扩面登记，用户拍板 2026-09-07"
+  },
+  "god_file:scripts/verify-rot-budget.mjs": {
+   "kind": "file-lines",
+   "ceiling": 2300,
+   "note": "W18-5a 扫描范围扩面登记，用户拍板 2026-09-07"
+  },
+  "god_file:scripts/i18n-audit.mjs": {
+   "kind": "file-lines",
+   "ceiling": 4025,
+   "note": "W18-5a 扫描范围扩面登记，用户拍板 2026-09-07"
+  },
   "exempt_generated_files": {
    "kind": "exempt-list",
    "paths": [
