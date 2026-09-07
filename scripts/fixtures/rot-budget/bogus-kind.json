@@ -1,0 +1,7 @@
+{
+  "test_entry": {
+    "kind": "bogus-kind",
+    "ceiling": 10,
+    "note": "negative fixture: bogus kind"
+  }
+}

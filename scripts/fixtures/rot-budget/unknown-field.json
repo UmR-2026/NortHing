@@ -1,0 +1,9 @@
+{
+  "test_entry": {
+    "kind": "grep-count",
+    "pattern": "test",
+    "ceiling": 10,
+    "note": "negative fixture: unknown field",
+    "unknown_extra": true
+  }
+}

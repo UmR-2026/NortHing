@@ -1,0 +1,8 @@
+{
+  "test_entry": {
+    "kind": "grep-count",
+    "pattern": "",
+    "ceiling": 10,
+    "note": "negative fixture: empty pattern"
+  }
+}

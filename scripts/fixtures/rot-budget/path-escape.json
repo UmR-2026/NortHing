@@ -1,0 +1,7 @@
+{
+  "dir_entries:../escaped": {
+    "kind": "dir-entry-count",
+    "ceiling": 10,
+    "note": "negative fixture: path escape via .."
+  }
+}
