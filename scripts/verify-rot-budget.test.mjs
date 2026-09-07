@@ -169,7 +169,7 @@ test('registered god-file exceeding ceiling fails', () => {
   }
 });
 
-test('exempt file generated_locale_contract.rs >800 lines is permitted without manifest entry', () => {
+test('exempt file generated_locale_contract.rs >800 lines is permitted with exempt-list manifest entry', () => {
   const tmpDir = createFixtureDir();
   try {
     const i18nDir = path.join(tmpDir, 'src', 'shared', 'i18n');
@@ -180,7 +180,12 @@ test('exempt file generated_locale_contract.rs >800 lines is permitted without m
     const lines = Array.from({ length: 1200 }, (_, i) => `// Generated line ${i + 1}`).join('\n') + '\n';
     fs.writeFileSync(path.join(i18nDir, 'generated_locale_contract.rs'), lines, 'utf8');
 
-    const manifest = {};
+    const manifest = {
+      exempt_generated_files: {
+        kind: 'exempt-list',
+        paths: ['src/shared/i18n/generated_locale_contract.rs'],
+      },
+    };
     fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });

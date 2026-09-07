@@ -6,13 +6,6 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-// Generated artifact exempt from >800 lines god-file limit and grep counts
-const EXEMPT_FILE_PATHS = [
-  'src/shared/i18n/generated_locale_contract.rs',
-  'src/crates/assembly/core/src/service/i18n/generated_locale_contract.rs',
-  'northhing-installer/src-tauri/src/installer/generated_locale_contract.rs',
-];
-
 const GOD_FILE_LINE_THRESHOLD = 800;
 
 const COMMON_FIELDS = ['kind', 'ceiling', 'note', 'authorization'];
@@ -21,6 +14,7 @@ const FIELD_WHITELIST = {
   'grep-count': [...COMMON_FIELDS, 'pattern'],
   'file-lines': [...COMMON_FIELDS],
   'dir-entry-count': [...COMMON_FIELDS, 'dir', 'action'],
+  'exempt-list': ['kind', 'paths', 'note'],
 };
 
 const VALID_KINDS = new Set(Object.keys(FIELD_WHITELIST));
@@ -50,9 +44,13 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
       errors.push(`${key}: invalid kind "${entry.kind}", must be one of: ${[...VALID_KINDS].join(', ')}`);
     }
 
-    // 2. ceiling must be a finite non-negative integer
-    if (typeof entry.ceiling !== 'number' || !Number.isInteger(entry.ceiling) || entry.ceiling < 0) {
-      errors.push(`${key}: "ceiling" must be a non-negative integer, got ${JSON.stringify(entry.ceiling)}`);
+    // 2. ceiling must be a finite non-negative integer (for kinds requiring ceiling)
+    const kindFields = entry.kind && Object.hasOwn(FIELD_WHITELIST, entry.kind) ? FIELD_WHITELIST[entry.kind] : null;
+    const ceilingRequired = kindFields ? kindFields.includes('ceiling') : true;
+    if (ceilingRequired) {
+      if (typeof entry.ceiling !== 'number' || !Number.isInteger(entry.ceiling) || entry.ceiling < 0) {
+        errors.push(`${key}: "ceiling" must be a non-negative integer, got ${JSON.stringify(entry.ceiling)}`);
+      }
     }
 
     // 3. note if present must be a string
@@ -116,6 +114,25 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
           const isContained = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
           if (!isContained) {
             errors.push(`${key}: directory path "${rawDir}" escapes project root "${resolvedRoot}"`);
+          }
+        }
+      }
+    } else if (entry.kind === 'exempt-list') {
+      if (!Array.isArray(entry.paths) || entry.paths.length === 0) {
+        errors.push(`${key}: "paths" must be a non-empty array of strings for exempt-list`);
+      } else {
+        for (let i = 0; i < entry.paths.length; i++) {
+          const p = entry.paths[i];
+          if (typeof p !== 'string' || p.trim() === '') {
+            errors.push(`${key}: paths[${i}] must be a non-empty string`);
+          } else {
+            const normalized = p.trim().replace(/\\/g, '/');
+            const resolvedTarget = path.resolve(resolvedRoot, normalized);
+            const rel = path.relative(resolvedRoot, resolvedTarget);
+            const isContained = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+            if (!isContained) {
+              errors.push(`${key}: path "${p}" escapes project root "${resolvedRoot}"`);
+            }
           }
         }
       }
@@ -402,6 +419,7 @@ export function verifyRotBudget({
   const grepRules = [];
   const godFileRules = new Map();
   const dirRules = [];
+  const exemptPaths = new Set();
 
   for (const [key, entry] of Object.entries(manifest)) {
     if (entry.kind === 'grep-count') {
@@ -425,6 +443,14 @@ export function verifyRotBudget({
         ceiling: entry.ceiling,
         action: entry.action,
       });
+    } else if (entry.kind === 'exempt-list') {
+      if (Array.isArray(entry.paths)) {
+        for (const p of entry.paths) {
+          if (typeof p === 'string') {
+            exemptPaths.add(p.trim().replace(/\\/g, '/'));
+          }
+        }
+      }
     }
   }
 
@@ -451,7 +477,7 @@ export function verifyRotBudget({
   }
 
   for (const file of files) {
-    if (EXEMPT_FILE_PATHS.includes(file.relPath)) {
+    if (exemptPaths.has(file.relPath)) {
       continue;
     }
     const content = fs.readFileSync(file.fullPath, 'utf8');
@@ -511,7 +537,7 @@ export function verifyRotBudget({
         }
       }
     } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
-      if (!EXEMPT_FILE_PATHS.includes(file.relPath)) {
+      if (!exemptPaths.has(file.relPath)) {
         violations.push(
           `god_file:${file.relPath}: current ${lineCount} exceeds ceiling ${GOD_FILE_LINE_THRESHOLD} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
         );
@@ -1518,6 +1544,95 @@ export function runSelftest() {
     record('positive zero-headroom: warning suppressed by live lease', false, `failed with exception: ${err.message}`);
   } finally {
     try { fs.rmSync(tmpZeroLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 34. Negative inline: exempt-list path-escape
+  try {
+    const manifest = {
+      exempt_list: {
+        kind: 'exempt-list',
+        paths: ['../outside.rs'],
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('escapes project root'));
+    record('negative inline: exempt-list path-escape', passed, 'rejects exempt-list path escaping project root');
+  } catch (err) {
+    record('negative inline: exempt-list path-escape', false, `failed with exception: ${err.message}`);
+  }
+
+  // 35. Negative inline: exempt-list empty-paths
+  try {
+    const manifest = {
+      exempt_list: {
+        kind: 'exempt-list',
+        paths: [],
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('paths') && (e.includes('non-empty') || e.includes('empty')));
+    record('negative inline: exempt-list empty-paths', passed, 'rejects empty paths array for exempt-list');
+  } catch (err) {
+    record('negative inline: exempt-list empty-paths', false, `failed with exception: ${err.message}`);
+  }
+
+  // 36. Negative inline: exempt-list non-string-paths
+  try {
+    const manifest = {
+      exempt_list: {
+        kind: 'exempt-list',
+        paths: [123],
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('string'));
+    record('negative inline: exempt-list non-string-paths', passed, 'rejects non-string element in exempt-list paths');
+  } catch (err) {
+    record('negative inline: exempt-list non-string-paths', false, `failed with exception: ${err.message}`);
+  }
+
+  // 37. Negative inline: exempt-list with-ceiling
+  try {
+    const manifest = {
+      exempt_list: {
+        kind: 'exempt-list',
+        ceiling: 10,
+        paths: ['src/generated.rs'],
+      },
+    };
+    const res = validateManifest(manifest, repoRoot);
+    const passed = !res.success && res.errors.some((e) => e.includes('unknown field') && e.includes('ceiling'));
+    record('negative inline: exempt-list with-ceiling', passed, 'rejects ceiling field on exempt-list as unknown field');
+  } catch (err) {
+    record('negative inline: exempt-list with-ceiling', false, `failed with exception: ${err.message}`);
+  }
+
+  // 38. Positive inline: exempt-list skips god-file check
+  const tmpExempt = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-exempt-'));
+  try {
+    const srcDir = path.join(tmpExempt, 'src');
+    const scriptsDir = path.join(tmpExempt, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines801 = Array.from({ length: 801 }, (_, i) => `// Generated line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'exempt_gen.rs'), lines801, 'utf8');
+
+    const manifest = {
+      exempt_generated: {
+        kind: 'exempt-list',
+        paths: ['src/exempt_gen.rs'],
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpExempt, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive inline: exempt-list skips god-file check', passed, 'file with 801 lines in exempt-list passes god-file limit without violation');
+  } catch (err) {
+    record('positive inline: exempt-list skips god-file check', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpExempt, { recursive: true, force: true }); } catch {}
   }
 
   const allPassed = results.every((r) => r.passed);
