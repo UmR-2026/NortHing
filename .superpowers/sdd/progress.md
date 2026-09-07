@@ -665,3 +665,4 @@ Handoff 2026-08-23-final-review-line-closed written (commit fc81a24); final-revi
 ## W18 Phase 0 checker 加固（BASE df5c1ce，计划 plan-2026-09-07-w18-phase0-checker-hardening.md v2）
 
 - Task W18-0: complete (commits a32b4f7..bdc8c35, dual-judge clean: m3 APPROVE + 53 APPROVE, 0C/0I/3M 记台账) — task-gate rename/copy 漏检修复（name-status -z 双端校验），selftest 11→13 fixture，漏洞复现前后对照实证。耗时账：派发 2026-09-07 ~18:2x / 通过 19:05，返工 0 轮。Minor 备忘：归一化三重复制（W18 波末 triage）、W18-5 时评估 selftest fixture 外置 scripts/fixtures/。
+- Task W18-1: complete (commits eaa592f..785355e, dual-judge clean: m3 APPROVE + 53 APPROVE 修复轮后，0C/0I 残留) — validateManifest fail-closed 六规则 + 11 项 selftest（含 800/801 边界、__proto__ 对抗输入钉）。brief review 两轮（FAIL→4I+2M 全闭环→复审 N1 修后过）。修复轮 1：53 抓原型链 kind TypeError（1I+2M，原 coder 续会话修复）。读数零漂移实证。耗时账：派发 ~19:1x / 通过 20:20，返工 1 轮。备忘：verify-task-gate 的「续单」子串匹配误报（"后续单"触发）——波末 triage 候选。
