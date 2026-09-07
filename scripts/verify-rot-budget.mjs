@@ -138,6 +138,112 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
   };
 }
 
+export const LEASE_REQUIRED_FIELDS = ['file', 'owner', 'reason', 'revisit_after', 'next_action'];
+export const LEASE_FIELD_WHITELIST = new Set(LEASE_REQUIRED_FIELDS);
+
+export function validateExceptionLeases(leases, projectRoot = process.cwd()) {
+  const errors = [];
+  const leaseMap = new Map();
+
+  if (!Array.isArray(leases)) {
+    return {
+      success: false,
+      errors: ['Exception leases must be a JSON array of objects'],
+      leases: leaseMap,
+    };
+  }
+
+  const resolvedRoot = path.resolve(projectRoot);
+
+  for (let i = 0; i < leases.length; i++) {
+    const entry = leases[i];
+    const prefix = `scripts/exception-leases.json[${i}]`;
+
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      errors.push(`${prefix}: entry must be an object`);
+      continue;
+    }
+
+    // Check required fields
+    for (const field of LEASE_REQUIRED_FIELDS) {
+      if (entry[field] === undefined || entry[field] === null) {
+        errors.push(`${prefix}: missing required field "${field}"`);
+      }
+    }
+
+    // Check unknown fields
+    for (const field of Object.keys(entry)) {
+      if (!LEASE_FIELD_WHITELIST.has(field)) {
+        errors.push(`${prefix}: unknown field "${field}"`);
+      }
+    }
+
+    // Field type & format validation
+    if (entry.file !== undefined) {
+      if (typeof entry.file !== 'string' || entry.file.trim() === '') {
+        errors.push(`${prefix}: "file" must be a non-empty string`);
+      } else {
+        const normalized = entry.file.trim().replace(/\\/g, '/');
+        const resolvedTarget = path.resolve(resolvedRoot, normalized);
+        const rel = path.relative(resolvedRoot, resolvedTarget);
+        const isContained = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+        if (!isContained) {
+          errors.push(`${prefix}: file path "${entry.file}" escapes project root "${resolvedRoot}"`);
+        }
+      }
+    }
+
+    if (entry.owner !== undefined) {
+      if (typeof entry.owner !== 'string' || entry.owner.trim() === '') {
+        errors.push(`${prefix}: "owner" must be a non-empty string`);
+      }
+    }
+
+    if (entry.reason !== undefined) {
+      if (typeof entry.reason !== 'string' || entry.reason.trim() === '') {
+        errors.push(`${prefix}: "reason" must be a non-empty string`);
+      }
+    }
+
+    if (entry.revisit_after !== undefined) {
+      if (typeof entry.revisit_after !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(entry.revisit_after)) {
+        errors.push(`${prefix}: "revisit_after" must match YYYY-MM-DD format, got ${JSON.stringify(entry.revisit_after)}`);
+      }
+    }
+
+    if (entry.next_action !== undefined) {
+      if (typeof entry.next_action !== 'string' || entry.next_action.trim() === '') {
+        errors.push(`${prefix}: "next_action" must be a non-empty string`);
+      }
+    }
+
+    if (typeof entry.file === 'string' && entry.file.trim() !== '') {
+      const normalized = entry.file.trim().replace(/\\/g, '/');
+      if (leaseMap.has(normalized)) {
+        errors.push(`${prefix}: duplicate lease for file "${normalized}"`);
+      } else {
+        leaseMap.set(normalized, {
+          ...entry,
+          file: normalized,
+        });
+      }
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    errors,
+    leases: leaseMap,
+  };
+}
+
+export function isLeaseLive(lease, todayUtc = new Date().toISOString().slice(0, 10)) {
+  if (!lease || typeof lease !== 'object' || Array.isArray(lease)) return false;
+  if (typeof lease.revisit_after !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lease.revisit_after)) return false;
+  return lease.revisit_after >= todayUtc;
+}
+
 export function isAuthorizationLive(authorization, todayUtc = new Date().toISOString().slice(0, 10)) {
   if (!authorization || typeof authorization !== 'object' || Array.isArray(authorization)) return false;
   if (typeof authorization.expires !== 'string') return false;
@@ -190,6 +296,7 @@ export function collectRustFiles(dir, projectRoot = dir) {
 export function verifyRotBudget({
   projectRoot = process.cwd(),
   manifestPath = path.join(projectRoot, 'scripts', 'rot-budget.json'),
+  leasesPath = path.join(projectRoot, 'scripts', 'exception-leases.json'),
   silent = false,
   base,
 } = {}) {
@@ -226,6 +333,21 @@ export function verifyRotBudget({
     };
   }
 
+  let leaseMap = new Map();
+  if (fs.existsSync(leasesPath)) {
+    try {
+      const rawLeases = fs.readFileSync(leasesPath, 'utf8');
+      const parsedLeases = JSON.parse(rawLeases);
+      const leaseValidation = validateExceptionLeases(parsedLeases, projectRoot);
+      if (!leaseValidation.success) {
+        violations.push(...leaseValidation.errors);
+      }
+      leaseMap = leaseValidation.leases;
+    } catch (err) {
+      violations.push(`Failed to parse exception leases file at ${path.relative(projectRoot, leasesPath).replace(/\\/g, '/')}: ${err.message}`);
+    }
+  }
+
   let baseManifest = null;
   if (base) {
     try {
@@ -245,7 +367,7 @@ export function verifyRotBudget({
   }
 
   if (baseManifest) {
-    // 1. 禁删指标: BASE 有而 TIP 无的 key => violation
+    // 1. Metric deletion prohibition: key present in BASE but missing in TIP => violation
     for (const baseKey of Object.keys(baseManifest)) {
       if (!Object.hasOwn(manifest, baseKey)) {
         violations.push(
@@ -310,9 +432,18 @@ export function verifyRotBudget({
   const files = collectRustFiles(srcDir, projectRoot);
   const seenGodFiles = new Set();
 
-  // Pre-scan: surface dead god-file registrations as warnings (non-violation).
+  // Pre-scan: surface dead god-file registrations as warnings or violations (when ceiling lowered under --base)
   for (const [fileRelPath, rule] of godFileRules) {
     if (!fs.existsSync(path.join(projectRoot, fileRelPath))) {
+      if (baseManifest && baseManifest[rule.key] !== undefined && typeof baseManifest[rule.key].ceiling === 'number') {
+        const baseCeiling = baseManifest[rule.key].ceiling;
+        if (rule.ceiling < baseCeiling) {
+          violations.push(
+            `${rule.key}: dead registration with lowered ceiling (lowered from ${baseCeiling} to ${rule.ceiling} but file does not exist) violates headroom floor — register in scripts/exception-leases.json or follow formal metric retirement process`,
+          );
+          continue;
+        }
+      }
       warnings.push(
         `warn: ${rule.key} registered but file does not exist — dead registration, remove the entry`,
       );
@@ -326,6 +457,29 @@ export function verifyRotBudget({
     const content = fs.readFileSync(file.fullPath, 'utf8');
     const lineCount = countLines(content);
     counts[file.relPath] = lineCount;
+
+    // Prohibition on allow-god-file comment
+    if (content.includes('allow-god-file')) {
+      violations.push(
+        `${file.relPath}: contains banned comment "allow-god-file" — allow-god-file comment protocol has been abolished; use scripts/exception-leases.json instead`,
+      );
+    }
+
+    // >1000 lines hard boundary check
+    if (lineCount > 1000) {
+      const lease = leaseMap.get(file.relPath);
+      const todayUtc = new Date().toISOString().slice(0, 10);
+      const ruleKey = godFileRules.has(file.relPath) ? godFileRules.get(file.relPath).key : `god_file:${file.relPath}`;
+      if (!lease) {
+        violations.push(
+          `${ruleKey}: current ${lineCount} exceeds hard limit 1000 without exception lease — register an active lease in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action)`,
+        );
+      } else if (!isLeaseLive(lease, todayUtc)) {
+        violations.push(
+          `${ruleKey}: current ${lineCount} exceeds hard limit 1000 with expired lease (expired ${lease.revisit_after}, today ${todayUtc}) — update revisit_after in scripts/exception-leases.json (required fields: file, owner, reason, revisit_after, next_action) or split file`,
+        );
+      }
+    }
 
     // Execute grep-count rules
     for (const rule of grepRules) {
@@ -408,17 +562,25 @@ export function verifyRotBudget({
   }
 
   // Check zero headroom warnings for all registered manifest entries
+  const todayUtc = new Date().toISOString().slice(0, 10);
   for (const [key, entry] of Object.entries(manifest)) {
     let current;
+    let fileRelPath = null;
     if (entry.kind === 'grep-count') {
       current = counts[key];
     } else if (entry.kind === 'file-lines') {
-      const fileRelPath = key.startsWith('god_file:') ? key.slice('god_file:'.length) : key;
+      fileRelPath = key.startsWith('god_file:') ? key.slice('god_file:'.length) : key;
       current = counts[fileRelPath];
     } else if (entry.kind === 'dir-entry-count') {
       current = counts[key];
     }
     if (current !== undefined && current === entry.ceiling) {
+      if (entry.kind === 'file-lines' && fileRelPath) {
+        const lease = leaseMap.get(fileRelPath);
+        if (lease && isLeaseLive(lease, todayUtc)) {
+          continue;
+        }
+      }
       warnings.push(
         `warn: ${key} has zero headroom (current ${current} == ceiling ${entry.ceiling}) — use exception lease channel`,
       );
@@ -586,7 +748,7 @@ export function runSelftest() {
     record('positive: workspace manifest', false, `failed with exception: ${err.message}`);
   }
 
-  // 10. Threshold boundary (档 A): synthetic projectRoot with 800 vs 801 lines
+  // 10. Threshold boundary (Tier A): synthetic projectRoot with 800 vs 801 lines
   const tmpBoundary = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-boundary-'));
   try {
     const srcDir = path.join(tmpBoundary, 'src');
@@ -1011,6 +1173,351 @@ export function runSelftest() {
     record('positive zero-headroom: warning emitted when current equals ceiling', false, `failed with exception: ${err.message}`);
   } finally {
     try { fs.rmSync(tmpZero, { recursive: true, force: true }); } catch {}
+  }
+
+  // 24. Negative inline: 1001-line file without exception lease
+  const tmpNoLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-no-lease-'));
+  try {
+    const srcDir = path.join(tmpNoLease, 'src');
+    const scriptsDir = path.join(tmpNoLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'heavy.rs'), lines1001, 'utf8');
+
+    const manifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify([], null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpNoLease, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('src/heavy.rs') && v.includes('exceeds hard limit 1000 without exception lease'));
+    record('negative inline: 1001-line file without lease', passed, 'rejects file >1000 lines when no exception lease exists');
+  } catch (err) {
+    record('negative inline: 1001-line file without lease', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpNoLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 25. Negative inline: expired exception lease
+  const tmpExpiredLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-expired-lease-'));
+  try {
+    const srcDir = path.join(tmpExpiredLease, 'src');
+    const scriptsDir = path.join(tmpExpiredLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'heavy.rs'), lines1001, 'utf8');
+
+    const manifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    const leases = [
+      {
+        file: 'src/heavy.rs',
+        owner: 'team',
+        reason: 'refactoring underway',
+        revisit_after: '2020-01-01',
+        next_action: 'split module',
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpExpiredLease, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('src/heavy.rs') && v.includes('expired lease'));
+    record('negative inline: expired exception lease', passed, 'rejects file >1000 lines when exception lease has expired');
+  } catch (err) {
+    record('negative inline: expired exception lease', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpExpiredLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 26. Negative date boundary: lease revisit_after equals yesterday UTC
+  const tmpYesterdayLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-yesterday-lease-'));
+  try {
+    const srcDir = path.join(tmpYesterdayLease, 'src');
+    const scriptsDir = path.join(tmpYesterdayLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const yesterdayUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 1)).toISOString().slice(0, 10);
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'heavy.rs'), lines1001, 'utf8');
+
+    const manifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    const leases = [
+      {
+        file: 'src/heavy.rs',
+        owner: 'team',
+        reason: 'deadline push',
+        revisit_after: yesterdayUtc,
+        next_action: 'split file',
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpYesterdayLease, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('src/heavy.rs') && v.includes('expired lease'));
+    record('negative date boundary: lease revisit_after yesterday is expired', passed, 'revisit_after matching yesterday UTC is rejected as expired');
+  } catch (err) {
+    record('negative date boundary: lease revisit_after yesterday is expired', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpYesterdayLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 27. Negative inline: file containing banned allow-god-file comment
+  const tmpBannedComment = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-banned-comment-'));
+  try {
+    const srcDir = path.join(tmpBannedComment, 'src');
+    const scriptsDir = path.join(tmpBannedComment, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(srcDir, 'mod.rs'),
+      '// allow-god-file: temporary exemption\npub fn run() {}\n',
+      'utf8',
+    );
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpBannedComment, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('mod.rs') && v.includes('allow-god-file'));
+    record('negative inline: banned allow-god-file comment', passed, 'rejects file containing banned allow-god-file comment');
+  } catch (err) {
+    record('negative inline: banned allow-god-file comment', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpBannedComment, { recursive: true, force: true }); } catch {}
+  }
+
+  // 28. Negative inline: malformed exception leases file (missing fields & invalid JSON)
+  const tmpMalformedLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-malformed-lease-'));
+  try {
+    const scriptsDir = path.join(tmpMalformedLease, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    // Test missing fields in lease
+    const badLeases = [
+      {
+        file: 'src/heavy.rs',
+        owner: 'team',
+        // missing reason, revisit_after, next_action
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify({}, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(badLeases, null, 2), 'utf8');
+
+    const res1 = verifyRotBudget({ projectRoot: tmpMalformedLease, silent: true });
+    const passed1 = !res1.success && res1.violations.some((v) => v.includes('missing required field'));
+
+    // Test broken JSON
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), '{ not valid json', 'utf8');
+    const res2 = verifyRotBudget({ projectRoot: tmpMalformedLease, silent: true });
+    const passed2 = !res2.success && res2.violations.some((v) => v.includes('Failed to parse exception leases file'));
+
+    record('negative inline: malformed exception leases file', passed1 && passed2, 'rejects malformed exception leases file (missing fields and invalid JSON)');
+  } catch (err) {
+    record('negative inline: malformed exception leases file', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpMalformedLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 29. Negative base: dead registration with lowered ceiling
+  let gitCase9 = null;
+  try {
+    const baseManifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 900,
+      },
+    };
+    gitCase9 = createSyntheticGitRepo(baseManifest);
+    const tipManifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 800,
+      },
+    };
+    fs.writeFileSync(path.join(gitCase9.tmpDir, 'scripts', 'rot-budget.json'), JSON.stringify(tipManifest, null, 2), 'utf8');
+    const res = verifyRotBudget({ projectRoot: gitCase9.tmpDir, base: gitCase9.baseSha, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('ghost.rs') && v.includes('dead registration') && v.includes('lowered ceiling'));
+    record('negative base: dead registration with lowered ceiling', passed, 'rejects dead registration with lowered ceiling in --base mode');
+  } catch (err) {
+    record('negative base: dead registration with lowered ceiling', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCase9) try { fs.rmSync(gitCase9.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 30. Positive threshold boundary: exactly 1000 lines
+  const tmpExact1000 = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-exact-1000-'));
+  try {
+    const srcDir = path.join(tmpExact1000, 'src');
+    const scriptsDir = path.join(tmpExact1000, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines1000 = Array.from({ length: 1000 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'limit.rs'), lines1000, 'utf8');
+
+    const manifest = {
+      'god_file:src/limit.rs': {
+        kind: 'file-lines',
+        ceiling: 1000,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify([], null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpExact1000, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive threshold boundary: exactly 1000 lines', passed, 'exactly 1000 lines registered in manifest passes without exception lease');
+  } catch (err) {
+    record('positive threshold boundary: exactly 1000 lines', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpExact1000, { recursive: true, force: true }); } catch {}
+  }
+
+  // 31. Positive inline: 1001-line file covered by live exception lease
+  const tmpLiveLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-live-lease-'));
+  try {
+    const srcDir = path.join(tmpLiveLease, 'src');
+    const scriptsDir = path.join(tmpLiveLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'heavy.rs'), lines1001, 'utf8');
+
+    const manifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    const leases = [
+      {
+        file: 'src/heavy.rs',
+        owner: 'team',
+        reason: 'architectural split planned for W19',
+        revisit_after: '2099-12-31',
+        next_action: 'split service handlers into submodule',
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpLiveLease, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive inline: 1001-line file with live lease', passed, 'permits file >1000 lines when covered by a valid live exception lease');
+  } catch (err) {
+    record('positive inline: 1001-line file with live lease', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpLiveLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 32. Positive date boundary: lease revisit_after equals today UTC
+  const tmpTodayLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-today-lease-'));
+  try {
+    const srcDir = path.join(tmpTodayLease, 'src');
+    const scriptsDir = path.join(tmpTodayLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const lines1001 = Array.from({ length: 1001 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'heavy.rs'), lines1001, 'utf8');
+
+    const manifest = {
+      'god_file:src/heavy.rs': {
+        kind: 'file-lines',
+        ceiling: 1050,
+      },
+    };
+    const leases = [
+      {
+        file: 'src/heavy.rs',
+        owner: 'team',
+        reason: 'revisit due today',
+        revisit_after: todayUtc,
+        next_action: 'split or renew',
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpTodayLease, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive date boundary: lease revisit_after equals today utc', passed, 'lease revisit_after matching today UTC is accepted as live');
+  } catch (err) {
+    record('positive date boundary: lease revisit_after equals today utc', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpTodayLease, { recursive: true, force: true }); } catch {}
+  }
+
+  // 33. Positive zero-headroom: warning suppressed when file-lines has live lease
+  const tmpZeroLease = fs.mkdtempSync(path.join(os.tmpdir(), 'rot-budget-zero-lease-'));
+  try {
+    const srcDir = path.join(tmpZeroLease, 'src');
+    const scriptsDir = path.join(tmpZeroLease, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    const lines850 = Array.from({ length: 850 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+    fs.writeFileSync(path.join(srcDir, 'pinned.rs'), lines850, 'utf8');
+
+    const manifest = {
+      'god_file:src/pinned.rs': {
+        kind: 'file-lines',
+        ceiling: 850,
+      },
+    };
+    const leases = [
+      {
+        file: 'src/pinned.rs',
+        owner: 'team',
+        reason: 'at ceiling with active lease',
+        revisit_after: '2099-12-31',
+        next_action: 'reduce size',
+      },
+    ];
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: tmpZeroLease, silent: true });
+    const passed =
+      res.success &&
+      res.violations.length === 0 &&
+      !res.warnings.some((w) => w.includes('god_file:src/pinned.rs'));
+    record('positive zero-headroom: warning suppressed by live lease', passed, 'suppresses zero headroom warning for file-lines entry with live lease');
+  } catch (err) {
+    record('positive zero-headroom: warning suppressed by live lease', false, `failed with exception: ${err.message}`);
+  } finally {
+    try { fs.rmSync(tmpZeroLease, { recursive: true, force: true }); } catch {}
   }
 
   const allPassed = results.every((r) => r.passed);
