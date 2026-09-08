@@ -6,7 +6,7 @@ W18-5b（波次计划：`.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-har
 
 ## BASE
 
-W18-5a 的 TIP（编排者派发时填入实际 commit；规则生效起点 = 落地 commit）。
+`6dc9b13`（W18-5a 落地 commit，规则生效起点；与派发时 main HEAD 代码树等价，其间仅 docs 提交）。
 
 ## 允许文件集
 
@@ -20,7 +20,7 @@ scripts 一次性额度 48（到期 2026-10-15）只兜历史存量。**退役�
 
 ## 功能要求
 
-1. **退役规则**：`--base` 模式下比较 `scripts/` 顶层文件的 **BASE 实测计数 vs TIP 实测计数**（ceiling 不参与该比较）：TIP 计数 > BASE 计数 ⇒ violation（文案含「净不得增」口径与到期日 2026-10-15）。**BASE 计数语义钉死**：仅计顶层 regular file（blob），与 TIP 侧 `isFile()` 语义逐字一致——`git ls-tree <base> scripts/` 输出含 tree 条目（子目录），必须按 blob 类型过滤（实证：356b33c 上该命令 49 行 = 45 blob + 4 tree，朴素行计数会静默 fail-open +4）。
+1. **退役规则**：`--base` 模式下比较 `scripts/` 顶层文件的 **BASE 实测计数 vs TIP 实测计数**（ceiling 不参与该比较）：TIP 计数 > BASE 计数 ⇒ violation（violation 文案用英文表达净不得增口径，如 'net increase prohibited under scripts retirement quota'，并含到期日 2026-10-15；不得出现中文字面量）。**BASE 计数语义钉死**：仅计顶层 regular file（blob），与 TIP 侧 `isFile()` 语义逐字一致——`git ls-tree <base> scripts/` 输出含 tree 条目（子目录），必须按 blob 类型过滤（实证：356b33c 上该命令 49 行 = 45 blob + 4 tree，朴素行计数会静默 fail-open +4）。
 2. **selftest 扩展**（内联，tmpdir 合成 git repo）：
    - 负例（判别 blob-only 语义的 fail-open 方向）：BASE scripts/ 含子目录（子目录内含 ≥1 文件）且 TIP 净增数 ≤ 子目录数 ⇒ **红**（机理：朴素行计数把 tree 行计入 BASE ⇒ 基数虚高挡住净增判定 ⇒ 误绿；正确实现只计 blob ⇒ 净增 >0 ⇒ 红）；
    - 判别用例（钉「比较计数而非 ceiling」）：BASE manifest ceiling=48 但 BASE 实测=5、净增 2 ⇒ 红（错误实现 7<48 会误绿）；
@@ -47,7 +47,7 @@ scripts 一次性额度 48（到期 2026-10-15）只兜历史存量。**退役�
 
 1. `node scripts/verify-rot-budget.mjs` —— 绿，读数与 W18-5a 交付后基线零漂移（9 god-file rules、checkedFiles 1397）。
 2. `node scripts/verify-rot-budget.mjs --selftest` —— 全绿（既有 + 本单新增）。
-3. `node scripts/verify-rot-budget.mjs --base <W18-5a TIP>` —— 绿（本单不动 scripts 文件数）。
+3. `node scripts/verify-rot-budget.mjs --base 6dc9b13` —— 绿（本单不动 scripts 文件数）。
 4. `node scripts/verify-rot-budget.test.mjs` —— 绿（12 回归）。
 5. `pnpm run check:repo-hygiene` —— 绿。
 
