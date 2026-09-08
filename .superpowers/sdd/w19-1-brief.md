@@ -47,7 +47,7 @@ report 写 `.superpowers/sdd/w19-1-report.md`，不进本单验收 diff。
 
 ## 验证
 
-1. `node scripts/verify-rot-budget.mjs` —— 绿；读数零漂移（5 grep 同数、dir_entries:scripts=45/48、god-file rules 9、checkedFiles 1397、verdict: rotting）。**另附机械取证命令打印自身条目读数**（主运行摘要不打 per-file 读数）：如 `node -e "import('./scripts/verify-rot-budget.mjs').then(async (m) => { const r = await m.verifyRotBudget({ projectRoot: process.cwd() }); console.log(r.counts['god_file:scripts/verify-rot-budget.mjs']); })"`（形态可调，目标 = 机器输出「拆分后行数/新 ceiling」）。
+1. `node scripts/verify-rot-budget.mjs` —— 绿；读数零漂移（5 grep 同数、dir_entries:scripts=45/48、god-file rules 9、checkedFiles 1397、verdict: rotting）。**另附机械取证命令打印自身条目读数**（主运行摘要不打 per-file 读数）：如 `node -e "import('./scripts/verify-rot-budget.mjs').then(async (m) => { const fs = await import('node:fs'); const r = await m.verifyRotBudget({ projectRoot: process.cwd() }); const c = JSON.parse(fs.readFileSync('scripts/rot-budget.json', 'utf8'))['god_file:scripts/verify-rot-budget.mjs'].ceiling; console.log(r.counts['scripts/verify-rot-budget.mjs'] + '/' + c); })"`（counts 按 relPath 为键，不带 `god_file:` 前缀；形态可调，目标 = 机器输出「拆分后行数/新 ceiling」）。
 2. `node scripts/verify-rot-budget.mjs --selftest` —— 53/53 绿（registry 起步校验绿），与拆分前输出逐项一致。
 3. `node scripts/verify-rot-budget.mjs --base 1ac7438` —— 绿（ceiling 降且满足 headroom floor；scripts 顶层计数 45==45）。
 4. `node scripts/verify-rot-budget.test.mjs` —— 33 绿。
