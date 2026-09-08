@@ -20,9 +20,9 @@ report 写 `.superpowers/sdd/w19-1-report.md`，不进本单验收 diff。
 
 ## 功能要求
 
-1. **纯移动外置拆分**：`runSelftest`（现 line ~927–2253，53 项用例 + 合成 helper）整体迁出至 `scripts/fixtures/rot-budget/selftest-cases.test.mjs`，主文件保留瘦 `runSelftest()` 接线（含 W18-7 registry attestation 起步调用，位置语义不变：起步先校验，失败非零退出）。**用例判定逻辑逐字不变**（pure move）；模块间依赖用 ESM 静态 import 或依赖注入均可，约束 = 模块求值期互不调用（运行期调用安全）。
+1. **纯移动外置拆分**：`runSelftest`（现 line ~927–2253，53 项用例 + 合成 helper）整体迁出至 `scripts/fixtures/rot-budget/selftest-cases.test.mjs`，主文件保留瘦 `runSelftest()` 接线（含 W18-7 registry attestation 起步调用，位置语义不变：起步先校验，失败非零退出）。**用例判定逻辑逐字不变**（pure move）；模块间依赖用 ESM 静态 import 或依赖注入均可，约束 = 模块求值期互不调用（运行期调用安全）。**`fixturesDir`/`repoRoot` 由主文件注入迁出函数签名；`import.meta.url` 推导留在主文件**（用例 1–5/9/11–13 自由引用这两个值，随迁会改指 cases 文件导致路径全错）。
 2. **主文件目标 ≤1000 行**（逃出 >1000 硬边界；搬迁区约 1330 行，净效果主文件约 950–990）。最终行数如实进 report。
-3. **ceiling 重组（only-down）**：`god_file:scripts/verify-rot-budget.mjs` ceiling 2300 → 拆分后实际行数上取整到 50 的倍数（须 ≥ 实际行数，headroom floor）；note 追记「W19-1 selftest 外置拆分重组 2300→<新值>」。
+3. **ceiling 重组（only-down）**：`god_file:scripts/verify-rot-budget.mjs` ceiling 2300 → **满足 headroom floor 的最小 50 倍数**，公式逐字钉死：`ceil((L + max(5, ceil(0.05·L))) / 50) × 50`（L = 拆分后实际行数；floor 语义出处 `verify-rot-budget.mjs:525`，例：L=966 → floor 1015 → ceiling 1050）；note 追记「W19-1 selftest 外置拆分重组 2300→<新值>」。
 4. **条件槽位**：主文件 ≤1000 ⇒ 删 exception-leases.json 中该文件条目；否则不动。
 5. 纯 Node 标准库，零新依赖；输出 English-only 不变。
 
@@ -47,7 +47,7 @@ report 写 `.superpowers/sdd/w19-1-report.md`，不进本单验收 diff。
 
 ## 验证
 
-1. `node scripts/verify-rot-budget.mjs` —— 绿；读数零漂移（5 grep 同数、dir_entries:scripts=45/48、god-file rules 9、checkedFiles 1397、verdict: rotting；verify-rot-budget.mjs 自身读数 = 拆分后行数/新 ceiling）。
+1. `node scripts/verify-rot-budget.mjs` —— 绿；读数零漂移（5 grep 同数、dir_entries:scripts=45/48、god-file rules 9、checkedFiles 1397、verdict: rotting）。**另附机械取证命令打印自身条目读数**（主运行摘要不打 per-file 读数）：如 `node -e "import('./scripts/verify-rot-budget.mjs').then(async (m) => { const r = await m.verifyRotBudget({ projectRoot: process.cwd() }); console.log(r.counts['god_file:scripts/verify-rot-budget.mjs']); })"`（形态可调，目标 = 机器输出「拆分后行数/新 ceiling」）。
 2. `node scripts/verify-rot-budget.mjs --selftest` —— 53/53 绿（registry 起步校验绿），与拆分前输出逐项一致。
 3. `node scripts/verify-rot-budget.mjs --base 1ac7438` —— 绿（ceiling 降且满足 headroom floor；scripts 顶层计数 45==45）。
 4. `node scripts/verify-rot-budget.test.mjs` —— 33 绿。
