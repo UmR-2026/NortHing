@@ -18,7 +18,7 @@ W18-7（波次计划：`.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-hard
 
 fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全部在 tmpdir 进行，产物只进 report。report 写 `.superpowers/sdd/w18-7-report.md`，不进本单验收 diff。
 
-**主文件体量纪律**：`verify-rot-budget.mjs` 现 2278 行 / ceiling 2300，净增 **≤ 20 行**。registry 校验实现必须极简（复用 W18-5a attestation 模式与 Node `crypto`）。若无法在预算内交付 ⇒ BLOCKED 上交编排者转用户决策（ceiling 调整属家规 7 用户拍板，不在本单授权），不得压线硬塞。
+**主文件体量纪律**：`verify-rot-budget.mjs` 现 2278 行 / ceiling 2300，净增 **≤ 20 行**。校验规则**降范围至 plan 最低语义**（plan line 153 只强制「哈希一致，漂移 ⇒ fail」）：malformed registry ⇒ fail + 逐条目「文件存在 + sha256 匹配」+ 无 registry ⇒ 跳过——估 15-17 行可容。条目缺字段不单列 schema 校验（缺 sha256 ⇒ 比对自然失败，fail-closed 兜底）。**降范围剔除项**（预算允许时亦不得做，留待波后 selftest 外置拆分单一并评估）：未登记 fixture 检测、path·sha256·purpose 三字段 schema——缓释依据 = registry.json 本单进 metaRatchetPaths（改动即升最高车道）+ fixture 新增必经评审任务。若连最低语义也无法在预算内交付 ⇒ BLOCKED 上交编排者转用户决策（ceiling 调整属家规 7 用户拍板，不在本单授权），不得压线硬塞。
 
 ## 功能要求
 
@@ -38,9 +38,9 @@ fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全�
   `fixtures` 覆盖目录内既有 5 个 fixture（bogus-kind / empty-pattern / path-escape / string-ceiling / unknown-field），sha256 为文件实测哈希；`notApplicable` 承载 D-1 判定（见功能 3）。
 - `verify-rot-budget.mjs` 新增 registry attestation（W18-5a 模式同构，目录参数化以便合成测试）：
   - `--selftest` 起步先对**真实仓库** fixtures 跑校验（scriptDir 锚定），漂移 ⇒ 非零退出；
-  - 校验规则（fail-closed 双向）：registry 存在但 JSON  malformed / fixtures 条目缺 path·sha256·purpose ⇒ fail；目录内任一 fixture 文件（registry.json 自身除外）未登记 ⇒ fail；登记条目指向缺失文件 ⇒ fail；sha256 不符 ⇒ fail；
+  - 校验规则（fail-closed，plan 最低语义）：registry 存在但 JSON malformed ⇒ fail；登记条目指向缺失文件 ⇒ fail；sha256 不符 ⇒ fail（条目缺 sha256 字段 ⇒ 比对自然失败，同向兜底）；
   - registry 文件不存在（合成环境）⇒ 跳过（与既有 attestation 哲学一致）。
-- 用例（承载于 `verify-rot-budget.test.mjs` 尾部新块，tmpdir 合成）：哈希匹配 ⇒ 绿 / 篡改字节 ⇒ 红 / 未登记 fixture ⇒ 红 / 登记指向缺失文件 ⇒ 红 / malformed registry ⇒ 红 / 无 registry ⇒ 跳过绿。
+- 用例（承载于 `verify-rot-budget.test.mjs` 尾部新块，tmpdir 合成）：哈希匹配 ⇒ 绿 / 篡改字节 ⇒ 红 / 登记指向缺失文件 ⇒ 红 / malformed registry ⇒ 红 / 条目缺 sha256 ⇒ 红 / 无 registry ⇒ 跳过绿。
 - report 贴**篡改演示**：对真实 fixture 改一字节 → `--selftest` 红（原文输出 + exit code）→ `git checkout --` 还原 → 复跑绿。
 
 ### 2. metaRatchetPaths 增补
@@ -53,7 +53,7 @@ fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全�
 
 | 事故 | 层位预分析（编排者供参考，实现者复核裁决） |
 |---|---|
-| W15-1g 符号链接假绿 | 可能可表达（文件计数/行数口径对 symlink 的处理）；若表达，用条件槽位 `incident-w15-1g-symlink.json` 或 tmpdir 合成用例 |
+| W15-1g 符号链接假绿 | 可能可表达（文件计数/行数口径对 symlink 的处理）；若表达，用条件槽位 `incident-w15-1g-symlink.json` 或 tmpdir 合成用例。**Windows 现实约束**：tmpdir symlink 用例依赖 `fs.symlinkSync`，无 Developer Mode/权限即抛错——用例须在此情形下跳过；此限制亦可作为 not-applicable 的正当理由 |
 | W7-2 台账回滚 | 流程/git 卫生层，rot checker 不可表达 ⇒ not-applicable |
 | P1-C3 编译红未察觉 | CI/桌面编译闸层（家规 6 已覆盖）⇒ not-applicable |
 | W15-1l 续单扩围 | verify-task-gate 层（其 selftest 已有 W15 用例）⇒ not-applicable |
@@ -62,14 +62,14 @@ fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全�
 
 ### 4. E02 新旧规则对照（用户拍板 D08）
 
-- tmpdir 中 `git show df5c1ce:scripts/verify-rot-budget.mjs` 取旧版 checker，与本波全部 fixture（5 个 fixture 文件 + 本波新增的合成场景：1001 行无 lease / allow-god-file 注释 / exempt-list / attestation / 退役净增）逐一对照新旧 checker 判定。
+- tmpdir 中 `git show df5c1ce:scripts/verify-rot-budget.mjs` 取旧版 checker，与本波全部 fixture 及合成场景逐一对照新旧 checker 判定。**对照场景底线清单**：5 个 fixture 文件 + 1001 行无 lease / allow-god-file 注释 / exempt-list / rotScanScope attestation / 退役净增 + **`--base` 家族三例**（未授权上调 / 过期授权 / 删指标）+ **扫描面两例**（scripts/installer 纳入 file-lines——本波最大覆盖变化）+ rubric mismatch + deadSince 31 天升级；**另须以 selftest 53 项负例清单为底册查漏补缺**；条件槽位第 6 个 fixture 若落成也进对照集。
 - 输出**新增拒绝清单**与**解除拒绝清单**进 report（每条：场景 + 旧判定 + 新判定）；不建模拟器、不单独立项、不产生仓库文件。
 
-## Constraints（逐字自波次计划 Global Constraints，与本单相关项）
+## Constraints（自波次计划 Global Constraints 摘录，按本单语境适配占位符口径）
 
 1. 纯 Node 标准库，零新依赖；脚本输出与日志 English-only。
 2. **任何 ceiling 不得上调**；manifest 删指标视同上调（禁止）。本单不改 `scripts/rot-budget.json`、`scripts/exception-leases.json`。
-4. checker 改动**先负向 fixture 后实现**（GC4）：report「旧代码行为确认」节如实记录旧代码无 registry 校验（fail-open by absence），**并贴「本单新用例对旧代码跑 `node scripts/verify-rot-budget.test.mjs` ⇒ 新用例红」的命令原文输出 + exit code**。
+4. checker 改动**先负向 fixture 后实现**（GC4）：report「旧代码行为确认」节如实记录旧代码无 registry 校验（fail-open by absence），**并贴「本单新用例对旧代码跑 `node scripts/verify-rot-budget.test.mjs`」的命令原文输出 + exit code——预期形态钉死：旧代码无新具名导出 ⇒ 模块加载失败（no export named …）整文件红，如实记录即 fail-open-by-absence 证据**。
 6. 不得用 Markdown 说明替代机器校验；report 中验证命令贴原文输出 + exit code。
 7. commit 逐文件点名 `git add`（禁 `-A`）；message 前缀 `feat(scripts):` + `(W18-7)` 后缀。
 8. 产物内本地绝对路径用 `<REPO_ROOT>` 等占位（hygiene 闸）；收口前必跑 `node scripts/check-repo-hygiene.mjs`。
