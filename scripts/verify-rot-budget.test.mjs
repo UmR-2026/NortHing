@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { verifyRotBudget } from './verify-rot-budget.mjs';
+import { verifyRotBudget, attestFixtureRegistry } from './verify-rot-budget.mjs';
 
 const SCRIPT_PATH = fileURLToPath(new URL('./verify-rot-budget.mjs', import.meta.url));
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -836,6 +837,135 @@ test('W18-6 F2.5: malformed deadSince is rejected by manifest validation', () =>
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
     assert.equal(result.success, false);
     assert.ok(result.violations.some((v) => v.includes('deadSince')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.1: fixture registry with matching hashes passes', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    const samplePath = 'scripts/fixtures/rot-budget/sample.json';
+    const sampleContent = '{"test": 1}\n';
+    fs.writeFileSync(path.join(tmpDir, samplePath), sampleContent, 'utf8');
+    const hash = crypto.createHash('sha256').update(sampleContent).digest('hex');
+    const registry = {
+      fixtures: [{ path: samplePath, sha256: hash, purpose: 'sample test fixture' }],
+    };
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.2: fixture registry with tampered file hash fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    const samplePath = 'scripts/fixtures/rot-budget/sample.json';
+    fs.writeFileSync(path.join(tmpDir, samplePath), '{"test": 1}\n', 'utf8');
+    const registry = {
+      fixtures: [{ path: samplePath, sha256: '0000000000000000000000000000000000000000000000000000000000000000', purpose: 'sample' }],
+    };
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('sha256 mismatch')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.3: fixture registry pointing to missing file fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    const registry = {
+      fixtures: [{ path: 'scripts/fixtures/rot-budget/missing.json', sha256: 'deadbeef', purpose: 'missing' }],
+    };
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('fixture not found')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.4: malformed fixture registry fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), 'not valid json {{{', 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('malformed registry')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.5: fixture registry entry missing sha256 fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    const samplePath = 'scripts/fixtures/rot-budget/sample.json';
+    fs.writeFileSync(path.join(tmpDir, samplePath), '{"test": 1}\n', 'utf8');
+    const registry = {
+      fixtures: [{ path: samplePath, purpose: 'missing sha256' }],
+    };
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('sha256 mismatch')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.6: fixture registry missing or empty fixtures array fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify({ fixtures: [] }), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('fixtures missing or empty')));
+
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify({ notApplicable: [] }), 'utf8');
+    const result2 = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result2.success, false);
+    assert.ok(result2.violations.some((v) => v.includes('fixtures missing or empty')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-7 F1.7: missing fixture registry file skips attestation and passes', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

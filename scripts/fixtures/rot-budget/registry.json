@@ -1,0 +1,47 @@
+{
+  "fixtures": [
+    {
+      "path": "scripts/fixtures/rot-budget/bogus-kind.json",
+      "sha256": "986d3903fcaa6f30dfc9779994bda41ca63a087a03d67cd5deb45b52bf188f35",
+      "purpose": "rejects invalid kind in manifest"
+    },
+    {
+      "path": "scripts/fixtures/rot-budget/empty-pattern.json",
+      "sha256": "3350b75ba0bf092bee2b20562624197dbc5e98a269d6c8ba7409aacff9d0d207",
+      "purpose": "rejects empty pattern for grep-count"
+    },
+    {
+      "path": "scripts/fixtures/rot-budget/path-escape.json",
+      "sha256": "cbab679c1fd7808aafca67f8830e870d6d0935042abaf2a28c4660ee4120498c",
+      "purpose": "rejects directory path escaping project root"
+    },
+    {
+      "path": "scripts/fixtures/rot-budget/string-ceiling.json",
+      "sha256": "4768c753387bca2f3cff83f8f3360b5a107b5d88fe027eac312dc9c61d115bfa",
+      "purpose": "rejects string ceiling in manifest"
+    },
+    {
+      "path": "scripts/fixtures/rot-budget/unknown-field.json",
+      "sha256": "75dbcb41d428252c36f9a54c6516e74dc2b7de75404bf57db205c513baeea6cb",
+      "purpose": "rejects unknown field in manifest"
+    }
+  ],
+  "notApplicable": [
+    {
+      "incident": "W15-1g",
+      "reason": "Windows symlink creation requires Developer Mode/elevation; filesystem traversal behavior rather than manifest schema or ceiling rule; cannot be reliably expressed as static cross-platform manifest fixture"
+    },
+    {
+      "incident": "W7-2",
+      "reason": "Process and git hygiene layer (ledger rollback); rot checker cannot express workflow/git commit reversions"
+    },
+    {
+      "incident": "P1-C3",
+      "reason": "CI and desktop compilation gate layer; covered by house rule 6 (cargo check -p northhing) rather than rot checker"
+    },
+    {
+      "incident": "W15-1l",
+      "reason": "Task-gate boundary layer (scope expansion); verify-task-gate selftest already covers W15 verification attempts"
+    }
+  ]
+}

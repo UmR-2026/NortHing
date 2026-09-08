@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -374,6 +375,21 @@ export function attestVerdictRubric(policyPath, projectRoot = process.cwd()) {
     } else if (rubric[key] !== expected) {
       violations.push(`rotVerdictRubric.${key} mismatch: declared "${rubric[key]}" does not match actual "${expected}"`);
     }
+  }
+  return { success: violations.length === 0, violations };
+}
+
+export function attestFixtureRegistry(fixturesDir, projectRoot = process.cwd()) {
+  const regPath = path.join(fixturesDir, 'registry.json');
+  if (!fs.existsSync(regPath)) return { success: true, violations: [] };
+  let reg;
+  try { reg = JSON.parse(fs.readFileSync(regPath, 'utf8')); } catch (e) { return { success: false, violations: [`malformed registry: ${e.message}`] }; }
+  if (!reg || !Array.isArray(reg.fixtures) || reg.fixtures.length === 0) return { success: false, violations: ['registry fixtures missing or empty'] };
+  const violations = [];
+  for (const entry of reg.fixtures) {
+    const p = path.resolve(projectRoot, (entry && entry.path) || '');
+    if (!entry || !entry.path || !fs.existsSync(p)) violations.push(`fixture not found: ${entry && entry.path}`);
+    else if (crypto.createHash('sha256').update(fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n')).digest('hex') !== entry.sha256) violations.push(`sha256 mismatch for ${entry.path}`);
   }
   return { success: violations.length === 0, violations };
 }
@@ -923,6 +939,8 @@ export function runSelftest() {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
   const repoRoot = path.resolve(scriptDir, '..');
   const fixturesDir = path.join(scriptDir, 'fixtures', 'rot-budget');
+  const regRes = attestFixtureRegistry(fixturesDir, repoRoot);
+  if (!regRes.success) { console.error(regRes.violations.join('\n')); return false; }
 
   // 1. Negative fixture: bogus-kind
   try {
