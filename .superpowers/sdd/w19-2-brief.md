@@ -2,11 +2,13 @@
 
 ## 任务标识
 
-W19-2（W18 波级终审 triage 处置 + W19-1 53 Minor 修复，一单清账）。前置：W19-1 拆分已落地（主文件 983/1050，余量 67 行；task-gate 807/847，余量 40 行）。无独立波次计划文档，本 brief 自带全部 constraints。**verdict 口径（findings 是否只计 violations）不在本单**——用户拍板待定，本单维持现状。
+W19-2（W18 波级终审 triage 处置 + W19-1 53 Minor 修复，一单清账）。前置：W19-1 拆分已落地（主文件 983/1050，余量 67 行；task-gate 806/847，余量 41 行）。无独立波次计划文档，本 brief 自带全部 constraints。**verdict 口径（findings 是否只计 violations）不在本单**——用户拍板待定，本单维持现状。
 
 ## BASE
 
 `547c228`（main HEAD，代码树干净；派发时 task-gate 起点 = 本 brief 提交后的 docs commit，与 547c228 代码树等价，仅 docs 差异）。
+
+- BASE: `547c228`
 
 ## 允许文件集
 
