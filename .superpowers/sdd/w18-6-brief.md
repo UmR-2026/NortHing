@@ -12,6 +12,7 @@ W18-6（波次计划：`.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-hard
 
 - `scripts/workflow-policy.json`（修改）
 - `scripts/verify-rot-budget.mjs`（修改）
+- `scripts/verify-rot-budget.test.mjs`（修改，编辑范围钉死：仅更新死登记文案两处断言——line ~417-420 全等断言 + line ~427-430 regex 断言，新文案逐字写入；其余零改动）
 - `AGENTS.md`（修改，仅家规 3 段落）
 - `AGENTS-CN.md`（修改，仅家规 3 对应段落）
 
@@ -27,15 +28,16 @@ fixture 全部 selftest 内联 tmpdir 合成，不新增文件（日期用例必
   `"rotVerdictRubric": {"healthy": "0 findings", "stable": "1-2 bounded findings", "rotting": ">=3 findings OR any unbounded"}`
 - `verify-rot-budget.mjs` 读取 policy 的 rotVerdictRubric（复用 W18-5a 的 policy 读取通道）：
   - policy 文件存在但 rubric 缺失 / 非三键对象 / 值非字符串 ⇒ violation（fail-closed，与 rotScanScope attestation 同哲学）；policy 文件不存在（合成环境）⇒ 跳过校验（与既有 attestation 行为一致）。
-  - 摘要行追加 verdict 分段：`verdict: <class> (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric)`。映射钉死：findings = 本次运行 violations + warnings 总数；0 ⇒ healthy；1–2 ⇒ stable；≥3 或任一 unbounded ⇒ rotting；**unbounded = 未在 manifest 登记的 file-lines 违规**（即无 ceiling 登记的 >800 行文件违规，字面「无界」）。
+  - **declared-vs-actual 对账**：policy 三键的值须与 checker 内钉死字面（`0 findings` / `1-2 bounded findings` / `>=3 findings OR any unbounded`）逐字相等，不等 ⇒ violation（防三处尺度静默漂移，同 W18-5a attestation 模式）。
+  - **可观测面钉死**：`verifyRotBudget` 返回值新增 `verdict` 字段（含 findings 计数与 unbounded 布尔）；verdict 分段 `verdict: <class> (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric)` 同时追加到**绿路径与红路径两条摘要行**（红路径 selftest 用例经返回值断言，不依赖 stdout）。映射钉死：findings = 本次运行 violations + warnings 总数；0 ⇒ healthy；1–2 ⇒ stable；≥3 或任一 unbounded ⇒ rotting；**unbounded = 未在 manifest 登记的 file-lines 违规**（即无 ceiling 登记的 >800 行文件违规，字面「无界」）。
 - selftest（内联 tmpdir）：policy 缺 rubric ⇒ 红；rubric  malformed（缺键）⇒ 红；合法 rubric ⇒ 绿且摘要含 verdict 分段；1 条 warning ⇒ stable；≥3 findings ⇒ rotting；未登记 >800 文件违规 ⇒ rotting（unbounded 方向）。
 
 ### 2. dead registration 30 天限期（相位 0.8）
 
 - manifest `file-lines` entry 增可选字段 `deadSince`（FIELD_WHITELIST['file-lines'] 加入；validateManifest fail-closed：非 `YYYY-MM-DD` 合法日期 ⇒ 拒绝）。
 - 预扫描死登记分支（现行 line ~667 块）扩展：
-  - 文件缺失 + 无 deadSince ⇒ warning（保持绿），文案指引补登 deadSince 或移除登记；
-  - 文件缺失 + deadSince 距今（today UTC，复用既有 todayUtc/lease 日期机制）**> 30 天 ⇒ violation**；≤ 30 天 ⇒ warning（宽限期，绿）；
+  - 文件缺失 + 无 deadSince ⇒ warning（保持绿），文案指引补登 deadSince 或移除登记；**同步更新 `verify-rot-budget.test.mjs` 的死登记文案两处断言（新文案逐字写入，见允许文件集编辑范围）**；
+  - 文件缺失 + deadSince ⇒ 日差判定：复用既有 todayUtc/YYYY-MM-DD 约定，**新增 UTC 日差计算（算法口径钉死：`(todayUtc - deadSince) 毫秒差 / 86400000 > 30`）**；> 30 天 ⇒ violation；≤ 30 天 ⇒ warning（宽限期，绿）；
   - 文件存活 ⇒ 无 warning（deadSince 被忽略——刻意语义，写进注释）。
 - selftest（内联 tmpdir，日期相对 today 合成）：死登记无日期 ⇒ warning 不红 / 死登记 31 天 ⇒ 红 / 死登记恰好 30 天 ⇒ warning 绿（边界钉死）/ 文件存活带 deadSince ⇒ 无 warning / malformed deadSince ⇒ manifest 拒绝。既有 selftest 全绿。
 
@@ -49,9 +51,9 @@ fixture 全部 selftest 内联 tmpdir 合成，不新增文件（日期用例必
 
 - `scripts/workflow-policy.json` 的 `metaRatchetPaths` 数组追加 `"scripts/rot-budget.json"`（改 manifest = 改判据，升最高车道）。
 
-### 5. P03 最小版（可选，brief review 判超范围则整体剔除顺延）
+### 5. ~~P03 最小版~~（brief review 裁决剔除，顺延下波）
 
-- policy.json 新增 `"reviewMaterials": {"default": ["task brief", "acceptance diff", "implementer report with verbatim command outputs"]}`，纯登记字段（checker 不消费），为后续按任务类型扩展留位。
+裁决理由（reviewer-53）：纯死配置（无消费方）与本波 W18-4 清除死豁免的反模式自相矛盾；plan 最小形态（按任务类型）未达成；正确形态 = W18-7 改 policy.json 时与消费方同单落地。plan L145 已预授权「判超范围则顺延」。
 
 ## Constraints（逐字自波次计划 Global Constraints，与本单相关项）
 
@@ -68,7 +70,7 @@ fixture 全部 selftest 内联 tmpdir 合成，不新增文件（日期用例必
 
 ## 禁区
 
-- 禁改收集器/扫描面/其他校验规则的任何部分；禁改 `scripts/` 下其他文件；禁改 `verify-task-gate.mjs`。
+- 禁改收集器/扫描面/其他校验规则的任何部分；禁改 `scripts/` 下其他文件（`verify-rot-budget.test.mjs` 除允许文件集钉死的两处断言外零改动）；禁改 `verify-task-gate.mjs`。
 - 禁为过关调整 fixture 判定标准。
 - 禁上调任何 ceiling、禁删 manifest 指标。
 - AGENTS.md/CN 仅改家规 3 段落，其他行零改动。
