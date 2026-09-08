@@ -25,7 +25,7 @@ report 写 `.superpowers/sdd/w20-1-report.md`，不进本单验收 diff。
 
 ## 功能要求
 
-1. 修复可见性：`fn deadline` → `pub(crate) fn deadline`（最小口径；若实现中发现第二处私有项同样被跨模块调用，一并同口径处理并在 report 说明）。
+1. 修复可见性：`fn deadline` → `pub(crate) fn deadline`（已知 `pub(super)` 亦可行，拍板 `pub(crate)` 以对齐 types.rs 全文件统一风格；若实现中发现第二处私有项同样被跨模块调用，**限 types.rs 内**同口径处理；其他文件的问题只在 report 记录，不修）。
 2. 修复后两个 unix 目标 check 全绿（见验证 1/2）。
 3. Windows 回归零影响（验证 3/4）。
 
@@ -37,6 +37,7 @@ report 写 `.superpowers/sdd/w20-1-report.md`，不进本单验收 diff。
 - 工具链纪律（AGENTS.md）：repo 目录 override 为 GNU，桌面构建用 MSVC；一律 `rustup run <tc> cargo` 形式调用。
 - 收口前必跑 `node scripts/check-repo-hygiene.mjs`。
 - report 结尾状态词：DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED。
+- report 不 commit、不 `git add`，留工作树由编排者收口。
 - 先读就近文档：`src/crates/services/AGENTS.md`。
 
 ## 禁区
@@ -56,4 +57,4 @@ report 写 `.superpowers/sdd/w20-1-report.md`，不进本单验收 diff。
 
 ## 报告
 
-写 `.superpowers/sdd/w20-1-report.md`，必含三节：**改动摘要**（含根因一句话）/ **验证**（5 条命令原文输出 + exit code，含 BASE 红态证据）/ **状态**（状态词结尾）。另须如实记录：cross-target check ≠ 真机构建（无链接、无 CI runner），残余风险一句话。
+写 `.superpowers/sdd/w20-1-report.md`，必含三节：**改动摘要**（含根因一句话）/ **验证**（5 条命令原文输出 + exit code，含 BASE 红态证据）/ **状态**（状态词结尾）。另须如实记录：cross-target check ≠ 真机构建（无链接、无 CI runner）；且本单只验证 `-p terminal-core`（含依赖树），workspace 其余 crate 的 unix 目标状态未验证（CI 矩阵仍 windows-only），残余风险两句话。
