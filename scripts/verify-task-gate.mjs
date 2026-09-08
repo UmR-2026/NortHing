@@ -407,7 +407,7 @@ export function validateBrief(briefPath, { policyPath = DEFAULT_POLICY_PATH } = 
     }
   }
 
-  const containsXuDan = normalizedLines.some((l) => l.includes('续单'));
+  const containsXuDan = normalizedLines.some((l) => /(?<!后)续单/.test(l));
   if (containsXuDan) {
     const hasBaseLine = rawLines.some((l) => /^(?:-\s+)?BASE(?:[:：\s]|$)/i.test(l.trim()));
     const hasAllowlistSection = hasSection(rawLines, '允许文件集');
@@ -672,6 +672,23 @@ export function runSelftest() {
     );
     const passedPos5 = resPos5.status === 0;
     record('positive fixture 5', passedPos5, 'rename with both source and destination in allowlist passes');
+
+    // W19-2: Continuation check bidirectional tests and parseArgs tests
+    const baseBriefSections = '## 任务标识\nW\n## BASE\n547c228\n## 允许文件集\n- a\n## 禁区\n-\n## 验证\n-\n## 报告\n-';
+    const trueXuDanPath = path.join(tmpDir, 'brief-true-xudan.md');
+    fs.writeFileSync(trueXuDanPath, `${baseBriefSections}\n真续单缺独立BASE行\n`, 'utf8');
+    const resXuDan = validateBrief(trueXuDanPath);
+    record('negative fixture i', !resXuDan.success && resXuDan.errors.some((e) => e.includes('续单')), 'brief mentions 续单 without BASE line fails');
+
+    const houXuDanPath = path.join(tmpDir, 'brief-houxudan.md');
+    fs.writeFileSync(houXuDanPath, `${baseBriefSections}\n含后续单的合规brief\n`, 'utf8');
+    const resHouXuDan = validateBrief(houXuDanPath);
+    record('positive fixture 6', resHouXuDan.success && resHouXuDan.errors.length === 0, 'brief mentions 后续单 with ## BASE title passes');
+
+    const pParsed = parseArgs(['--base=sha123', '-h']);
+    let pThrows = false;
+    try { parseArgs(['--unknown']); } catch { pThrows = true; }
+    record('positive fixture 7', pParsed.flags.base === 'sha123' && pParsed.flags.h === true && pThrows, 'parseArgs supports --flag=value, -h, and rejects unknown flags');
   } finally {
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -692,19 +709,22 @@ export function runSelftest() {
   }
 }
 
-function parseArgs(argv) {
+const ALLOWED_FLAGS = new Set(['selftest', 'help', 'h', 'policy', 'base', 'tip', 'allowlist']);
+
+export function parseArgs(argv, allowed = ALLOWED_FLAGS) {
   const flags = {};
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
-        flags[key] = argv[i + 1];
-        i++;
-      } else {
-        flags[key] = true;
-      }
+    if (arg.startsWith('-')) {
+      const isShort = arg === '-h';
+      if (!arg.startsWith('--') && !isShort) throw new Error(`Unknown flag "${arg}"`);
+      const raw = isShort ? 'h' : arg.slice(2);
+      const eqIdx = raw.indexOf('=');
+      const key = eqIdx !== -1 ? raw.slice(0, eqIdx) : raw;
+      const val = eqIdx !== -1 ? raw.slice(eqIdx + 1) : (!isShort && i + 1 < argv.length && !argv[i + 1].startsWith('-') ? argv[++i] : true);
+      if (!allowed.has(key)) throw new Error(`Unknown flag "${arg.split('=')[0]}"`);
+      flags[key] = val;
     } else {
       positional.push(arg);
     }
@@ -723,7 +743,15 @@ function printUsage() {
 
 function main() {
   const argv = process.argv.slice(2);
-  const { flags, positional } = parseArgs(argv);
+  let flags, positional;
+  try {
+    const parsed = parseArgs(argv);
+    flags = parsed.flags;
+    positional = parsed.positional;
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
 
   if (flags.selftest) {
     const passed = runSelftest();

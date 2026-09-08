@@ -6,7 +6,13 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { verifyRotBudget, attestFixtureRegistry } from './verify-rot-budget.mjs';
+import {
+  verifyRotBudget,
+  attestFixtureRegistry,
+  parseArgs,
+  BANNED_COMMENT_REGEX,
+  validateManifest,
+} from './verify-rot-budget.mjs';
 
 const SCRIPT_PATH = fileURLToPath(new URL('./verify-rot-budget.mjs', import.meta.url));
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -836,7 +842,7 @@ test('W18-6 F2.5: malformed deadSince is rejected by manifest validation', () =>
 
     const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
     assert.equal(result.success, false);
-    assert.ok(result.violations.some((v) => v.includes('deadSince')));
+    assert.ok(result.violations.some((v) => v.includes('must match YYYY-MM-DD')));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -966,6 +972,98 @@ test('W18-7 F1.7: missing fixture registry file skips attestation and passes', (
     const result = attestFixtureRegistry(fixturesDir, tmpDir);
     assert.equal(result.success, true);
     assert.equal(result.violations.length, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W19-2 F1: parseArgs supports --flag=value and rejects unknown flags', () => {
+  const parsed = parseArgs(['--base=547c228', '--selftest']);
+  assert.equal(parsed.flags.base, '547c228');
+  assert.equal(parsed.flags.selftest, true);
+  assert.throws(() => parseArgs(['--unknown']), /Unknown flag "--unknown"/);
+  assert.throws(() => parseArgs(['-h']), /Unknown flag "-h"/);
+});
+
+test('W19-2 F2: BANNED_COMMENT_REGEX matches /// and /* comments and preserves non-anchored string literals', () => {
+  assert.equal(BANNED_COMMENT_REGEX.test('/// allow-god-file'), true);
+  assert.equal(BANNED_COMMENT_REGEX.test('/* allow-god-file */'), true);
+  assert.equal(BANNED_COMMENT_REGEX.test('// allow-god-file'), true);
+  assert.equal(BANNED_COMMENT_REGEX.test('const s = "// allow-god-file";'), false);
+  assert.equal(BANNED_COMMENT_REGEX.test('// This file mentions allow-god-file'), false);
+});
+
+test('W19-2 F3: dangling exception lease produces warning and live lease produces no warning', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+
+    fs.writeFileSync(path.join(srcDir, 'exists.rs'), 'pub fn ok() {}\n', 'utf8');
+
+    const manifest = {};
+    const leases = [
+      {
+        file: 'src/exists.rs',
+        owner: 'team',
+        reason: 'existing file',
+        revisit_after: '2099-12-31',
+        next_action: 'none',
+      },
+      {
+        file: 'src/missing.rs',
+        owner: 'team',
+        reason: 'missing file',
+        revisit_after: '2099-12-31',
+        next_action: 'none',
+      },
+    ];
+
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(scriptsDir, 'exception-leases.json'), JSON.stringify(leases, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.ok(result.warnings.some((w) => w.includes('src/missing.rs') && w.includes('dangling lease')));
+    assert.ok(!result.warnings.some((w) => w.includes('src/exists.rs')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W19-2 F4: future deadSince date is rejected by manifest validation', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        deadSince: '2099-01-01',
+      },
+    };
+    const res = validateManifest(manifest, tmpDir);
+    assert.equal(res.success, false);
+    assert.ok(res.errors.some((e) => e.includes('deadSince') && e.includes('cannot be in the future')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W19-2 F8: attestFixtureRegistry polishes invalid entry to <invalid entry>', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const fixturesDir = path.join(tmpDir, 'scripts', 'fixtures', 'rot-budget');
+    fs.mkdirSync(fixturesDir, { recursive: true });
+    const registry = {
+      fixtures: [{ sha256: 'deadbeef', purpose: 'entry missing path' }],
+    };
+    fs.writeFileSync(path.join(fixturesDir, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+
+    const result = attestFixtureRegistry(fixturesDir, tmpDir);
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('fixture not found: <invalid entry>')));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

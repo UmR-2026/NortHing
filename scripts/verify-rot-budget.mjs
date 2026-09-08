@@ -22,9 +22,9 @@ const VALID_KINDS = new Set(Object.keys(FIELD_WHITELIST));
 
 export const SCAN_SCOPE_GREP_ROOTS = ['src'];
 export const SCAN_SCOPE_FILE_LINES_ROOTS = ['src', 'northing-installer/src-tauri', 'scripts'];
-export const BANNED_COMMENT_REGEX = /^[ \t]*\/\/[ \t]*allow-god-file/m;
+export const BANNED_COMMENT_REGEX = /^[ \t]*(?:\/\/+|\/\*+)[ \t]*allow-god-file/m;
 
-export function validateManifest(manifest, projectRoot = process.cwd()) {
+export function validateManifest(manifest, projectRoot = process.cwd(), todayUtc = new Date().toISOString().slice(0, 10)) {
   const errors = [];
 
   if (typeof manifest !== 'object' || manifest === null || Array.isArray(manifest)) {
@@ -99,6 +99,8 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
       const parsed = typeof entry.deadSince === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(entry.deadSince) ? Date.parse(entry.deadSince + 'T00:00:00Z') : NaN;
       if (Number.isNaN(parsed) || new Date(parsed).toISOString().slice(0, 10) !== entry.deadSince) {
         errors.push(`${key}: "deadSince" must match YYYY-MM-DD format, got ${JSON.stringify(entry.deadSince)}`);
+      } else if (entry.deadSince > todayUtc) {
+        errors.push(`${key}: "deadSince" cannot be in the future, got "${entry.deadSince}" (today ${todayUtc})`);
       }
     }
 
@@ -388,7 +390,7 @@ export function attestFixtureRegistry(fixturesDir, projectRoot = process.cwd()) 
   const violations = [];
   for (const entry of reg.fixtures) {
     const p = path.resolve(projectRoot, (entry && entry.path) || '');
-    if (!entry || !entry.path || !fs.existsSync(p)) violations.push(`fixture not found: ${entry && entry.path}`);
+    if (!entry || !entry.path || !fs.existsSync(p)) violations.push(`fixture not found: ${(entry && entry.path) || '<invalid entry>'}`);
     else if (crypto.createHash('sha256').update(fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n')).digest('hex') !== entry.sha256) violations.push(`sha256 mismatch for ${entry.path}`);
   }
   return { success: violations.length === 0, violations };
@@ -757,6 +759,12 @@ export function verifyRotBudget({
     }
   }
 
+  for (const [leaseFile] of leaseMap) {
+    if (!fs.existsSync(path.join(projectRoot, leaseFile))) {
+      warnings.push(`warn: exception lease for ${leaseFile} registered but file does not exist — dangling lease`);
+    }
+  }
+
   const unboundedState = { hasUnbounded: false };
 
   for (const file of allScannedFiles) {
@@ -937,19 +945,21 @@ export function runSelftest() {
   return runSelftestCases({ fixturesDir, repoRoot });
 }
 
-export function parseArgs(argv) {
+const ALLOWED_FLAGS = new Set(['selftest', 'base']);
+
+export function parseArgs(argv, allowed = ALLOWED_FLAGS) {
   const flags = {};
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
-        flags[key] = argv[i + 1];
-        i++;
-      } else {
-        flags[key] = true;
-      }
+    if (arg.startsWith('-')) {
+      if (!arg.startsWith('--')) throw new Error(`Unknown flag "${arg}"`);
+      const raw = arg.slice(2);
+      const eqIdx = raw.indexOf('=');
+      const key = eqIdx !== -1 ? raw.slice(0, eqIdx) : raw;
+      const val = eqIdx !== -1 ? raw.slice(eqIdx + 1) : (i + 1 < argv.length && !argv[i + 1].startsWith('-') ? argv[++i] : true);
+      if (!allowed.has(key)) throw new Error(`Unknown flag "${arg.split('=')[0]}"`);
+      flags[key] = val;
     } else {
       positional.push(arg);
     }
@@ -959,7 +969,13 @@ export function parseArgs(argv) {
 
 if (process.argv[1] && path.resolve(fileURLToPath(import.meta.url)).toLowerCase() === path.resolve(process.argv[1]).toLowerCase()) {
   const argv = process.argv.slice(2);
-  const { flags } = parseArgs(argv);
+  let flags;
+  try {
+    flags = parseArgs(argv).flags;
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
 
   if (flags.selftest) {
     const passed = runSelftest();
