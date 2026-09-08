@@ -248,7 +248,7 @@
 - **Symptom**: 非 Windows 平台构建失败——`terminal-core` 在 macos/ubuntu 报 `error[E0624]: method deadline is private` ×2（CI run 33964321637，2026-09-05）。
 - **Evidence**: GitHub Actions CI run 33964321637（2026-09-05），`rust-build-check` 在 `ubuntu-latest` 与 `macos-15` 上构建失败，`terminal-core` 报 `error[E0624]: method deadline is private`。
 - **Proposed fix**: 若未来恢复跨平台支持需先修此项；当前按用户 2026-09-05「Windows 限定」拍板挂起。
-- **Status**: `deferred` — 按用户 2026-09-05「Windows 限定」拍板挂起；若未来恢复跨平台支持需先修此项；关联：ci.yml 矩阵同日收窄为 windows-only（W17-1）。
+- **Status**: resolved (2026-09-08, W20-1 — `LocalPipeControlState::deadline` 设为 `pub(crate)` 解决非 Windows unix 目标 E0624 编译错误；非 Windows 完整支持政策仍维持 Windows 限定，CI 矩阵不动)
 
 ### P2-24: 历史存量文件含本地绝对路径（check-repo-hygiene 全仓 fallback 扫描暴露）
 

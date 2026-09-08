@@ -194,7 +194,7 @@ pub(crate) enum LocalPipeControlState {
 
 #[cfg(unix)]
 impl LocalPipeControlState {
-    fn deadline(self) -> tokio::time::Instant {
+    pub(crate) fn deadline(self) -> tokio::time::Instant {
         match self {
             Self::InterruptGrace { deadline } => deadline,
         }
