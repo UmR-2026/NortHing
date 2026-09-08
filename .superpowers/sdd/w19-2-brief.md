@@ -11,7 +11,7 @@ W19-2（W18 波级终审 triage 处置 + W19-1 53 Minor 修复，一单清账）
 ## 允许文件集
 
 - `scripts/verify-rot-budget.mjs`（修改，净增 ≤30 行，超 ⇒ BLOCKED）
-- `scripts/verify-task-gate.mjs`（修改，净增 ≤40 行，超 ⇒ BLOCKED；ceiling 847 硬约束，上调须用户拍板）
+- `scripts/verify-task-gate.mjs`（修改，净增 ≤40 行，超 ⇒ BLOCKED；ceiling 847 硬约束（现 806），上调须用户拍板。**新增 selftest 用例优先直接调用导出函数（`parseArgs` / `validateBrief`），勿照抄既有 spawnSync 模板**（模板 ~15 行/个会超预算））
 - `scripts/verify-rot-budget.test.mjs`（修改：F2.5 断言收紧 + 尾部追加本单新用例块）
 - `scripts/rot-budget.json`（修改，**仅** `god_file:scripts/verify-rot-budget.mjs` 的 note 字段，见功能 7）
 
@@ -19,12 +19,12 @@ report 写 `.superpowers/sdd/w19-2-report.md`，不进本单验收 diff。
 
 ## 功能要求
 
-1. **`--flag=value` 形态 + 未知 flag fail-closed（两脚本统一）**：`verify-rot-budget.mjs` parseArgs（line ~940）与 `verify-task-gate.mjs` parseArgs（line ~695）支持 `--flag=value` 拆分（`--base=sha` 等价 `--base sha`）；未知 flag ⇒ 非零退出 + 英文错误（现状：`--base=sha` 静默降级为无基线模式，fail-open）。task-gate 的 parseArgs 可导出以便直接调用测试。
-2. **注释禁令正则扩面**：`BANNED_COMMENT_REGEX`（verify-rot-budget.mjs:25）从仅 `//` 行注释扩展到 `///`（doc comment）与 `/* */` 块注释形态；**既有正例不破**（「非锚定 allow-god-file 字面量不触发」用例须保持绿——只拦行首/行内注释形态，不拦字符串字面量）。
+1. **`--flag=value` 形态 + 未知 flag fail-closed（两脚本统一）**：`verify-rot-budget.mjs` parseArgs（line ~940）与 `verify-task-gate.mjs` parseArgs（line ~695）支持 `--flag=value` 拆分（`--base=sha` 等价 `--base sha`）；未知 flag ⇒ 非零退出 + 英文错误（现状：`--base=sha` 静默降级为无基线模式，fail-open）。已知 flag 白名单钉死：rot-budget = `selftest`/`base`；task-gate = `selftest`/`help`/`h`/`policy`/`base`/`tip`/`allowlist`（防漏列 help 造成 CLI 回归）。两脚本 parseArgs 均导出以便直接调用测试（rot-budget 侧已导出）。
+2. **注释禁令正则扩面**：`BANNED_COMMENT_REGEX`（verify-rot-budget.mjs:25）目标形态钉死 `^[ \t]*(?:\/\/+|\/\*+)[ \t]*allow-god-file`（**保持行首锚定** + 注释标记后仅空白语义；不得去锚定——字符串字面量如 `"// allow-god-file"` 不得误伤）；用例双向：`/// allow-god-file` 命中 / `/* allow-god-file` 命中 / 字符串字面量不命中；既有正例（case 48 散文前置形态）保持绿。
 3. **悬空 lease warning**：lease 登记的文件已不存在 ⇒ warning（不红），复用死登记预扫位置；live lease（文件存在）⇒ 无 warning。
 4. **deadSince 未来日期守卫**：manifest `deadSince` > todayUtc ⇒ validateManifest 拒绝（fail-closed；终审授权的行为口径收紧）。
-5. **F2.5 断言钉机制**：`verify-rot-budget.test.mjs` 中 deadSince 用例的断言从 `includes('deadSince')` 收紧为匹配新校验机制文案（如 `must match YYYY-MM-DD`），钉住机制而非巧合拒绝。
-6. **task-gate「续单」误报**：`verify-task-gate.mjs:410` 的 `includes('续单')` 误伤「后续单」；修为不匹配「后续单」的形态（如负向后行断言），并补双向用例（真续单缺 BASE ⇒ 红；含「后续单」合规 brief ⇒ 绿）。
+5. **F2.5 断言钉机制**：`verify-rot-budget.test.mjs` 中 deadSince 用例的断言从 `includes('deadSince')` 收紧为匹配格式校验文案 `must match YYYY-MM-DD`（该文案为既有 :101 校验产生，收紧钉住机制而非巧合拒绝；本项是测试钉住，GC4 负向证据由功能 4 的未来日期新用例承载）。
+6. **task-gate「续单」误报**：`verify-task-gate.mjs:410` 的 `includes('续单')` 误伤「后续单」；修为不匹配「后续单」的形态（如负向后行断言），并补双向用例（真续单缺 BASE ⇒ 红；含「后续单」合规 brief ⇒ 绿）。**绿色用例必须复现误报真实形态：六节俱全且 BASE 节为 `## BASE` 标题（无 `BASE:` 行——hasBaseLine 行正则不认标题形态），正文含「后续单」；该用例对旧代码必须红（即 GC4 负向证据），对新代码绿**。**已知上限声明**（写进 report）：引号包裹的「续单」、「接续单元」等形态仍可能命中，属 triage 外残余面，不在本单收口。
 7. **ceiling note 追记修复**（W19-1 53 Minor）：`rot-budget.json` 该条目 note 恢复累积式：`"W18-5a 扫描范围扩面登记，用户拍板 2026-09-07；W19-1 selftest 外置拆分重组 2300→1050"`（仅 note，ceiling 不动）。
 8. **registry 错误消息 polish**：`attestFixtureRegistry` 对 null/缺字段条目的 `fixture not found: ${...}` 消息改打印 `<invalid entry>` 兜底。
 9. **E02 映射表**：report 附 selftest/test.mjs 用例 id ↔ E02 场景映射表（纯 report 内容，不进代码）。
@@ -51,7 +51,7 @@ report 写 `.superpowers/sdd/w19-2-report.md`，不进本单验收 diff。
 
 1. `node scripts/verify-rot-budget.mjs` —— 绿；读数零漂移（5 grep、45/48、9 god-file、1397、verdict: rotting）。
 2. `node scripts/verify-rot-budget.mjs --selftest` —— 53/53 绿（含既有「非锚定字面量不触发」用例）。
-3. `node scripts/verify-rot-budget.mjs --base 547c228` —— 绿；`--base=547c228` 等价形态 —— 绿（新解析）。
+3. `node scripts/verify-rot-budget.mjs --base 547c228` —— 绿；`--base=547c228` 等价形态 —— 绿（新解析）。**区分性探针**（证明等号形态真进 base 管线而非静默降级）：`--base=<无效ref>` 等号形态 ⇒ exit 1 + base 管线错误文案，原文输出进 report。
 4. `node scripts/verify-rot-budget.test.mjs` —— 33 + 本单新增全绿。
 5. `node scripts/verify-task-gate.mjs --selftest` —— 13 + 本单新增全绿。
 6. `node scripts/verify-task-gate.mjs validate-policy` —— 绿。
