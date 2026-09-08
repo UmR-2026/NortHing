@@ -85,8 +85,8 @@
   },
   "god_file:scripts/verify-rot-budget.mjs": {
    "kind": "file-lines",
-   "ceiling": 2300,
-   "note": "W18-5a 扫描范围扩面登记，用户拍板 2026-09-07"
+   "ceiling": 1050,
+   "note": "W19-1 selftest 外置拆分重组 2300→1050"
   },
   "god_file:scripts/i18n-audit.mjs": {
    "kind": "file-lines",
