@@ -16,7 +16,7 @@ W18-6（波次计划：`.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-hard
 - `AGENTS.md`（修改，仅家规 3 段落）
 - `AGENTS-CN.md`（修改，仅家规 3 对应段落）
 
-fixture 全部 tmpdir 合成（日期用例必须相对 today 计算，禁用静态日期），不新增文件。**承载位置（brief review round-2 裁决）**：主文件 `verify-rot-budget.mjs` 自身 ceiling 2300 / 现 2204，余量仅 96 行——本单新用例（约 11 个）**全部写进既有 `verify-rot-budget.test.mjs`**（node --test 形态，与该文件既有合成根用例同构；test-named 免于 file-lines 扫描，顶层文件数不变 ⇒ dir_entries 与 W18-5b 净不得增规则零影响）；主文件内 selftest 保持 53 项零新增。由此验证 2 的「本单新增」由验证 4 承载。report 写 `.superpowers/sdd/w18-6-report.md`，不进本单验收 diff。
+fixture 全部 tmpdir 合成（日期用例必须相对 today 计算，禁用静态日期），不新增文件。**承载位置（brief review round-2 裁决）**：主文件 `verify-rot-budget.mjs` 自身 ceiling 2300 / 现 2204，余量仅 96 行——本单新用例（14 个：功能 1 九条 + 功能 2 五条）**全部写进既有 `verify-rot-budget.test.mjs`**（node --test 形态，与该文件既有合成根用例同构；test-named 免于 file-lines 扫描，顶层文件数不变 ⇒ dir_entries 与 W18-5b 净不得增规则零影响）；主文件内 selftest 保持 53 项零新增。由此验证 2 的「本单新增」由验证 4 承载。report 写 `.superpowers/sdd/w18-6-report.md`，不进本单验收 diff。
 
 **主文件体量纪律**：`verify-rot-budget.mjs` 净增 ≤ 90 行（ceiling 2300 硬约束，家规 7：上调须用户拍板，不在本单授权内）。若核心逻辑无法在该预算内交付 ⇒ BLOCKED 上交编排者转用户决策，不得压线硬塞。
 
@@ -31,14 +31,14 @@ fixture 全部 tmpdir 合成（日期用例必须相对 today 计算，禁用静
 - `verify-rot-budget.mjs` 读取 policy 的 rotVerdictRubric（复用 W18-5a 的 policy 读取通道）：
   - policy 文件存在但 rubric 缺失 / 非三键对象 / 值非字符串 ⇒ violation（fail-closed，与 rotScanScope attestation 同哲学）；policy 文件不存在（合成环境）⇒ 跳过校验（与既有 attestation 行为一致）。
   - **declared-vs-actual 对账**：policy 三键的值须与 checker 内钉死字面（`0 findings` / `1-2 bounded findings` / `>=3 findings OR any unbounded`）逐字相等，不等 ⇒ violation（防三处尺度静默漂移，同 W18-5a attestation 模式）。
-  - **可观测面钉死**：`verifyRotBudget` 返回值新增 `verdict` 字段（含 findings 计数与 unbounded 布尔）；verdict 分段 `verdict: <class> (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric)` 同时追加到**绿路径与红路径两条摘要行**（红路径用例经返回值断言，不依赖 stdout）；**verdict 仅在完整扫描路径定义——manifest 缺失 / 校验失败早退不带 verdict 字段与分段**。映射钉死：findings = 本次运行 violations + warnings 总数；0 ⇒ healthy；1–2 ⇒ stable；≥3 或任一 unbounded ⇒ rotting；**unbounded = 未在 manifest 登记的 file-lines 违规**（即无 ceiling 登记的 >800 行文件违规，字面「无界」）。
-- 用例（承载于 `verify-rot-budget.test.mjs`，tmpdir 合成）：policy 缺 rubric ⇒ 红；rubric malformed（缺键）⇒ 红；rubric 值与钉死字面不等 ⇒ 红；合法 rubric ⇒ 绿且 verdict=healthy；1 条 warning ⇒ stable；≥3 findings ⇒ rotting；未登记 >800 文件违规 ⇒ rotting（unbounded 方向，经返回值断言）。
+  - **可观测面钉死**：`verifyRotBudget` 返回值新增 `verdict` 字段（含 findings 计数与 unbounded 布尔）；verdict 分段 `verdict: <class> (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric)` 同时追加到**绿路径与红路径两条摘要行**（红路径用例经返回值断言，不依赖 stdout）；**verdict 仅在完整扫描路径定义——manifest 缺失 / 校验失败早退不带 verdict 字段与分段**。映射钉死：findings = 本次运行 violations + warnings 总数；0 ⇒ healthy；1–2 ⇒ stable；≥3 或任一 unbounded ⇒ rotting；**unbounded = 未在 manifest 登记的 file-lines 违规**（即无 ceiling 登记的 >800 行文件违规，字面「无界」）。**unbounded 信号实现路线钉死**：允许为 unbounded 信号做最小标记传出（file-lines push 点传出布尔）或汇总处 manifest 键回查，二者择一，不改 file-lines 既有判定逻辑。
+- 用例（承载于 `verify-rot-budget.test.mjs`，tmpdir 合成）：policy 缺 rubric ⇒ 红；rubric malformed（缺键）⇒ 红；rubric 值与钉死字面不等 ⇒ 红；合法 rubric ⇒ 绿且 verdict=healthy；1 条 warning ⇒ stable；≥3 findings ⇒ rotting；未登记 >800 文件违规 ⇒ rotting（unbounded 方向，经返回值断言）；manifest 校验失败早退 ⇒ 返回值无 verdict 字段；绿路径 spawn 断言 stdout 含 `verdict: healthy (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric)` 分段。
 
 ### 2. dead registration 30 天限期（相位 0.8）
 
 - manifest `file-lines` entry 增可选字段 `deadSince`（FIELD_WHITELIST['file-lines'] 加入；validateManifest fail-closed：非 `YYYY-MM-DD` 合法日期 ⇒ 拒绝）。
 - 预扫描死登记分支（现行 line ~667 块）扩展：
-  - 文件缺失 + 无 deadSince ⇒ warning（保持绿），文案指引补登 deadSince 或移除登记；**同步更新 `verify-rot-budget.test.mjs` 的死登记文案两处断言（新文案逐字写入，见允许文件集编辑范围）**；
+  - 文件缺失 + 无 deadSince ⇒ warning（保持绿），新文案逐字钉死：`warn: <key> registered but file does not exist — dead registration, add deadSince (YYYY-MM-DD) or remove the entry`；**同步更新 `verify-rot-budget.test.mjs` 的死登记文案两处断言（新文案逐字写入，见允许文件集编辑范围）**；
   - 文件缺失 + deadSince ⇒ 日差判定：复用既有 todayUtc/YYYY-MM-DD 约定，**新增 UTC 日差计算（算法口径钉死：`(todayUtc - deadSince) 毫秒差 / 86400000 > 30`）**；> 30 天 ⇒ violation；≤ 30 天 ⇒ warning（宽限期，绿）；
   - 文件存活 ⇒ 无 warning（deadSince 被忽略——刻意语义，写进注释）。
 - 用例（承载于 `verify-rot-budget.test.mjs`，tmpdir 合成，日期相对 today）：死登记无日期 ⇒ warning 不红 / 死登记 31 天 ⇒ 红 / 死登记恰好 30 天 ⇒ warning 绿（边界钉死）/ 文件存活带 deadSince ⇒ 无 warning / malformed deadSince ⇒ manifest 拒绝。既有 selftest 与 test.mjs 用例全绿。
@@ -47,7 +47,7 @@ fixture 全部 tmpdir 合成（日期用例必须相对 today 计算，禁用静
 
 - `AGENTS.md` 家规 3 现状句逐字：「production `.rs` files over 800 lines raise review pressure; over 1000 lines must be split or carry a `// allow-god-file` justification comment at the top of the file. New modules start below the line.」——将 allow-god-file 通道替换为 exception lease 通道（>1000 ⇒ split 或 `scripts/exception-leases.json` 登记 lease 含 revisit_after），并钉两句口径：**allow-god-file 头注释通道已被机械禁令废除**；**闸口径 = checker `countLines`，仅换行/重排产生的行数下降不得报告为结构改善（P09）**。
 - `AGENTS-CN.md` 对应段落同步同口径改写。
-- 跨仓部分不由本单执行：anti-rot skill（`E:\agent-project\.opencode\skills\anti-rot-system\SKILL.md`，属 agent-project 仓）的头注释口径对齐由编排者在该仓另行提交，不进本单 diff。
+- 跨仓部分不由本单执行：anti-rot skill 仓（`E:\agent-project\.opencode\skills\anti-rot-system\`，属 agent-project 仓）的口径对齐由编排者在该仓另行提交，不进本单 diff。对照面 = 三处：SKILL.md 头注释、skill 内嵌 checker 副本/模板、深审 rubric 词汇（healthy/stable/rotting 同名不同尺度）——编排者提交时逐一对照。
 
 ### 4. W18-2 Minor-3 处置
 
@@ -61,7 +61,7 @@ fixture 全部 tmpdir 合成（日期用例必须相对 today 计算，禁用静
 
 1. 纯 Node 标准库，零新依赖；脚本输出与日志 English-only。
 2. **任何 ceiling 不得上调**；manifest 删指标视同上调（禁止）。本单不改 `scripts/rot-budget.json`、`scripts/exception-leases.json`。
-4. checker 改动**先负向 fixture 后实现**（GC4）：report「旧代码行为确认」节如实记录旧代码行为（无 rubric 校验、死登记无限期——fail-open by absence）。
+4. checker 改动**先负向 fixture 后实现**（GC4）：report「旧代码行为确认」节如实记录旧代码行为（无 rubric 校验、死登记无限期——fail-open by absence），**并贴「本单新用例对旧代码跑 `node scripts/verify-rot-budget.test.mjs` ⇒ 新用例红」的命令原文输出 + exit code**（先负向后实现的可审计证据）。
 5. **禁止复活 `allow-god-file` 头注释**（O-2 errata）；>1000 只能走 exception lease。
 6. 不得用 Markdown 说明替代机器校验；report 中验证命令贴原文输出 + exit code。
 7. commit 逐文件点名 `git add`（禁 `-A`）；message 前缀 `feat(scripts):` + `(W18-6)` 后缀。
