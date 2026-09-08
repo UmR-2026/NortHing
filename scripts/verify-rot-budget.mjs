@@ -542,6 +542,7 @@ export function verifyRotBudget({
   }
 
   let baseManifest = null;
+  let baseScriptsCount = null;
   const todayUtc = new Date().toISOString().slice(0, 10);
   if (base) {
     try {
@@ -557,6 +558,25 @@ export function verifyRotBudget({
       }
     } catch (err) {
       violations.push(`Failed to retrieve or parse base manifest from git show ${base}:scripts/rot-budget.json: ${err.message}`);
+    }
+
+    try {
+      const rawLs = execFileSync('git', ['ls-tree', base, 'scripts/'], {
+        cwd: projectRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let blobCount = 0;
+      const lsLines = rawLs.trim().split('\n').filter(Boolean);
+      for (const line of lsLines) {
+        const match = line.trim().match(/^\d+\s+(\w+)\s+/);
+        if (match && match[1] === 'blob') {
+          blobCount++;
+        }
+      }
+      baseScriptsCount = blobCount;
+    } catch (err) {
+      violations.push(`Failed to inspect base scripts directory from git ls-tree ${base} scripts/: ${err.message}`);
     }
   }
 
@@ -732,6 +752,24 @@ export function verifyRotBudget({
           `${rule.key}: current ${count} exceeds ceiling ${rule.ceiling} — clean up directory entries, archive, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
         );
       }
+    }
+  }
+
+  // Scripts retirement quota check under --base mode (net increase prohibited)
+  if (base && baseScriptsCount !== null) {
+    const scriptsDir = path.join(projectRoot, 'scripts');
+    let tipScriptsCount = 0;
+    if (fs.existsSync(scriptsDir) && fs.statSync(scriptsDir).isDirectory()) {
+      const entries = fs.readdirSync(scriptsDir, { withFileTypes: true });
+      tipScriptsCount = entries.filter((e) => e.isFile()).length;
+    }
+    if (counts['dir_entries:scripts'] === undefined) {
+      counts['dir_entries:scripts'] = tipScriptsCount;
+    }
+    if (tipScriptsCount > baseScriptsCount) {
+      violations.push(
+        `dir_entries:scripts: current ${tipScriptsCount} exceeds base count ${baseScriptsCount} — net increase prohibited under scripts retirement quota (expires 2026-10-15)`,
+      );
     }
   }
 
@@ -1983,6 +2021,130 @@ export function runSelftest() {
     record('positive inline: non-anchored allow-god-file literal does not trigger comment ban', false, `failed with exception: ${err.message}`);
   } finally {
     try { fs.rmSync(tmpLiteral, { recursive: true, force: true }); } catch {}
+  }
+
+  // 49. Negative base: scripts retirement detects net increase when base has subdirectories
+  let gitCaseScripts1 = null;
+  try {
+    const baseManifest = {
+      'dir_entries:scripts': {
+        kind: 'dir-entry-count',
+        ceiling: 48,
+      },
+    };
+    gitCaseScripts1 = createSyntheticGitRepo(baseManifest, {
+      'scripts/a.mjs': '// a',
+      'scripts/sub/helper.mjs': '// helper',
+    });
+    fs.writeFileSync(path.join(gitCaseScripts1.tmpDir, 'scripts', 'b.mjs'), '// b', 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: gitCaseScripts1.tmpDir, base: gitCaseScripts1.baseSha, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('dir_entries:scripts') && v.includes('net increase prohibited') && v.includes('2026-10-15'));
+    record('negative base: scripts retirement detects net increase when base has subdirectories', passed, 'rejects net increase in scripts when base has subdirectories (discriminates blob-only from line count)');
+  } catch (err) {
+    record('negative base: scripts retirement detects net increase when base has subdirectories', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCaseScripts1) try { fs.rmSync(gitCaseScripts1.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 50. Negative base: scripts retirement compares actual count rather than ceiling
+  let gitCaseScripts2 = null;
+  try {
+    const baseManifest = {
+      'dir_entries:scripts': {
+        kind: 'dir-entry-count',
+        ceiling: 48,
+      },
+    };
+    gitCaseScripts2 = createSyntheticGitRepo(baseManifest, {
+      'scripts/f1.mjs': '1',
+      'scripts/f2.mjs': '2',
+      'scripts/f3.mjs': '3',
+      'scripts/f4.mjs': '4',
+    });
+    fs.writeFileSync(path.join(gitCaseScripts2.tmpDir, 'scripts', 'f5.mjs'), '5', 'utf8');
+    fs.writeFileSync(path.join(gitCaseScripts2.tmpDir, 'scripts', 'f6.mjs'), '6', 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: gitCaseScripts2.tmpDir, base: gitCaseScripts2.baseSha, silent: true });
+    const passed =
+      !res.success &&
+      res.violations.some((v) => v.includes('dir_entries:scripts') && v.includes('net increase prohibited') && v.includes('2026-10-15'));
+    record('negative base: scripts retirement compares actual count rather than ceiling', passed, 'rejects net increase even when below ceiling (compares actual count rather than ceiling)');
+  } catch (err) {
+    record('negative base: scripts retirement compares actual count rather than ceiling', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCaseScripts2) try { fs.rmSync(gitCaseScripts2.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 51. Positive base: scripts retirement permits balanced addition and deletion
+  let gitCaseScripts3 = null;
+  try {
+    const baseManifest = {
+      'dir_entries:scripts': {
+        kind: 'dir-entry-count',
+        ceiling: 48,
+      },
+    };
+    gitCaseScripts3 = createSyntheticGitRepo(baseManifest, {
+      'scripts/old_tool.mjs': '// old',
+      'scripts/keep.mjs': '// keep',
+    });
+    fs.unlinkSync(path.join(gitCaseScripts3.tmpDir, 'scripts', 'old_tool.mjs'));
+    fs.writeFileSync(path.join(gitCaseScripts3.tmpDir, 'scripts', 'new_tool.mjs'), '// new', 'utf8');
+
+    const res = verifyRotBudget({ projectRoot: gitCaseScripts3.tmpDir, base: gitCaseScripts3.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive base: scripts retirement permits balanced addition and deletion', passed, 'permits balanced script addition and deletion (net increase is zero)');
+  } catch (err) {
+    record('positive base: scripts retirement permits balanced addition and deletion', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCaseScripts3) try { fs.rmSync(gitCaseScripts3.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 52. Positive base: scripts retirement permits unchanged scripts count
+  let gitCaseScripts4 = null;
+  try {
+    const baseManifest = {
+      'dir_entries:scripts': {
+        kind: 'dir-entry-count',
+        ceiling: 48,
+      },
+    };
+    gitCaseScripts4 = createSyntheticGitRepo(baseManifest, {
+      'scripts/tool1.mjs': '// 1',
+      'scripts/tool2.mjs': '// 2',
+    });
+    const res = verifyRotBudget({ projectRoot: gitCaseScripts4.tmpDir, base: gitCaseScripts4.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive base: scripts retirement permits unchanged scripts count', passed, 'permits unchanged scripts count under --base mode');
+  } catch (err) {
+    record('positive base: scripts retirement permits unchanged scripts count', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCaseScripts4) try { fs.rmSync(gitCaseScripts4.tmpDir, { recursive: true, force: true }); } catch {}
+  }
+
+  // 53. Positive base: scripts retirement ignores subdirectories on both base and tip
+  let gitCaseScripts5 = null;
+  try {
+    const baseManifest = {
+      'dir_entries:scripts': {
+        kind: 'dir-entry-count',
+        ceiling: 48,
+      },
+    };
+    gitCaseScripts5 = createSyntheticGitRepo(baseManifest, {
+      'scripts/tool.mjs': '// tool',
+      'scripts/sub/nested.mjs': '// nested',
+    });
+    const res = verifyRotBudget({ projectRoot: gitCaseScripts5.tmpDir, base: gitCaseScripts5.baseSha, silent: true });
+    const passed = res.success && res.violations.length === 0;
+    record('positive base: scripts retirement ignores subdirectories on both base and tip', passed, 'ignores subdirectories on both base and tip when count is unchanged');
+  } catch (err) {
+    record('positive base: scripts retirement ignores subdirectories on both base and tip', false, `failed with exception: ${err.message}`);
+  } finally {
+    if (gitCaseScripts5) try { fs.rmSync(gitCaseScripts5.tmpDir, { recursive: true, force: true }); } catch {}
   }
 
   const allPassed = results.every((r) => r.passed);
