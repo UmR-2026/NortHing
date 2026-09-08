@@ -14,7 +14,7 @@ W18-7（波次计划：`.superpowers/sdd/plan-2026-09-07-w18-phase0-checker-hard
 - `scripts/workflow-policy.json`（修改，仅 metaRatchetPaths 追加一行）
 - `scripts/verify-rot-budget.mjs`（修改，体量纪律见下）
 - `scripts/verify-rot-budget.test.mjs`（修改，仅尾部追加本单新用例块）
-- `scripts/fixtures/rot-budget/incident-w15-1g-symlink.json`（条件槽位：仅当 D-1 判定 W15-1g 可表达为 rot checker fixture 时新增；判定 not-applicable 则不用此槽位，gate 对未兑现条目只出 warning 不红）
+- `scripts/fixtures/rot-budget/incident-w15-1g-symlink.json`（条件槽位：仅当 D-1 判定 W15-1g 可表达为 rot checker fixture 时新增；**槽位落成 ⇒ 必须同单登记进 registry.json（fixtures 变 6 条）**；判定 not-applicable 则不用此槽位，gate 对未兑现条目只出 warning 不红）
 
 fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全部在 tmpdir 进行，产物只进 report。report 写 `.superpowers/sdd/w18-7-report.md`，不进本单验收 diff。
 
@@ -35,12 +35,12 @@ fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全�
     ]
   }
   ```
-  `fixtures` 覆盖目录内既有 5 个 fixture（bogus-kind / empty-pattern / path-escape / string-ceiling / unknown-field），sha256 为文件实测哈希；`notApplicable` 承载 D-1 判定（见功能 3）。
+  `fixtures` 覆盖目录内既有 5 个 fixture（bogus-kind / empty-pattern / path-escape / string-ceiling / unknown-field；**条件槽位落成则 6 个**），sha256 为文件实测哈希；`notApplicable` 承载 D-1 判定（见功能 3）。
 - `verify-rot-budget.mjs` 新增 registry attestation（W18-5a 模式同构，目录参数化以便合成测试）：
   - `--selftest` 起步先对**真实仓库** fixtures 跑校验（scriptDir 锚定），漂移 ⇒ 非零退出；
-  - 校验规则（fail-closed，plan 最低语义）：registry 存在但 JSON malformed ⇒ fail；登记条目指向缺失文件 ⇒ fail；sha256 不符 ⇒ fail（条目缺 sha256 字段 ⇒ 比对自然失败，同向兜底）；
+  - 校验规则（fail-closed，plan 最低语义）：registry 存在但 JSON malformed ⇒ fail；**registry 存在但 `fixtures` 字段缺失 / 非数组 / 为空数组 ⇒ fail（对齐 attestScanScope missing-required-field 语义，堵「清空即静默解锁」边）**；登记条目指向缺失文件 ⇒ fail；sha256 不符 ⇒ fail（条目缺 sha256 字段 ⇒ 比对自然失败，同向兜底）；
   - registry 文件不存在（合成环境）⇒ 跳过（与既有 attestation 哲学一致）。
-- 用例（承载于 `verify-rot-budget.test.mjs` 尾部新块，tmpdir 合成）：哈希匹配 ⇒ 绿 / 篡改字节 ⇒ 红 / 登记指向缺失文件 ⇒ 红 / malformed registry ⇒ 红 / 条目缺 sha256 ⇒ 红 / 无 registry ⇒ 跳过绿。
+- 用例（承载于 `verify-rot-budget.test.mjs` 尾部新块，tmpdir 合成）：哈希匹配 ⇒ 绿 / 篡改字节 ⇒ 红 / 登记指向缺失文件 ⇒ 红 / malformed registry ⇒ 红 / 条目缺 sha256 ⇒ 红 / registry 在但 fixtures 缺失或为空 ⇒ 红 / 无 registry ⇒ 跳过绿。
 - report 贴**篡改演示**：对真实 fixture 改一字节 → `--selftest` 红（原文输出 + exit code）→ `git checkout --` 还原 → 复跑绿。
 
 ### 2. metaRatchetPaths 增补
@@ -62,7 +62,7 @@ fixture 除上述槽位外不新增文件；D-1/E02 的分析与对照运行全�
 
 ### 4. E02 新旧规则对照（用户拍板 D08）
 
-- tmpdir 中 `git show df5c1ce:scripts/verify-rot-budget.mjs` 取旧版 checker，与本波全部 fixture 及合成场景逐一对照新旧 checker 判定。**对照场景底线清单**：5 个 fixture 文件 + 1001 行无 lease / allow-god-file 注释 / exempt-list / rotScanScope attestation / 退役净增 + **`--base` 家族三例**（未授权上调 / 过期授权 / 删指标）+ **扫描面两例**（scripts/installer 纳入 file-lines——本波最大覆盖变化）+ rubric mismatch + deadSince 31 天升级；**另须以 selftest 53 项负例清单为底册查漏补缺**；条件槽位第 6 个 fixture 若落成也进对照集。
+- tmpdir 中 `git show df5c1ce:scripts/verify-rot-budget.mjs` 取旧版 checker，与本波全部 fixture 及合成场景逐一对照新旧 checker 判定。**对照场景底线清单**：5 个 fixture 文件 + 1001 行无 lease / allow-god-file 注释 / exempt-list / rotScanScope attestation / 退役净增 + **`--base` 家族三例**（未授权上调 / 过期授权 / 删指标）+ **扫描面两例**（scripts/installer 纳入 file-lines——本波最大覆盖变化）+ rubric mismatch + deadSince 31 天升级；**另须以 selftest 53 项清单为底册查漏补缺**；条件槽位第 6 个 fixture 若落成也进对照集。
 - 输出**新增拒绝清单**与**解除拒绝清单**进 report（每条：场景 + 旧判定 + 新判定）；不建模拟器、不单独立项、不产生仓库文件。
 
 ## Constraints（自波次计划 Global Constraints 摘录，按本单语境适配占位符口径）
