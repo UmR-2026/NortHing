@@ -25,12 +25,18 @@
     "scripts/check-repo-hygiene.mjs",
     "scripts/check-core-boundaries.mjs",
     "scripts/check-github-config.mjs",
-    "package.json"
+    "package.json",
+    "scripts/rot-budget.json"
   ],
   "briefRequiredSections": ["任务标识", "BASE", "允许文件集", "禁区", "验证", "报告"],
   "reportRequiredSections": ["改动摘要", "验证", "状态"],
   "rotScanScope": {
     "grepRoots": ["src"],
     "fileLinesRoots": ["src", "northing-installer/src-tauri", "scripts"]
+  },
+  "rotVerdictRubric": {
+    "healthy": "0 findings",
+    "stable": "1-2 bounded findings",
+    "rotting": ">=3 findings OR any unbounded"
   }
 }

@@ -416,7 +416,7 @@ test('dead god-file registration warns but does not fail verification', () => {
     assert.equal(result.warnings.length, 1);
     assert.equal(
       result.warnings[0],
-      'warn: god_file:src/ghost.rs registered but file does not exist — dead registration, remove the entry',
+      'warn: god_file:src/ghost.rs registered but file does not exist — dead registration, add deadSince (YYYY-MM-DD) or remove the entry',
     );
 
     const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
@@ -426,8 +426,416 @@ test('dead god-file registration warns but does not fail verification', () => {
     assert.equal(proc.status, 0);
     assert.match(
       proc.stdout + proc.stderr,
-      /warn: god_file:src\/ghost\.rs registered but file does not exist — dead registration, remove the entry/,
+      /warn: god_file:src\/ghost\.rs registered but file does not exist — dead registration, add deadSince \(YYYY-MM-DD\) or remove the entry/,
     );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.1: workflow policy missing rotVerdictRubric fails and reports violation', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      test_metric: { kind: 'grep-count', pattern: 'foo', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('rotVerdictRubric')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.2: workflow policy with malformed rotVerdictRubric (missing key) fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      test_metric: { kind: 'grep-count', pattern: 'foo', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('rotVerdictRubric')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.3: workflow policy rotVerdictRubric value mismatch with pinned literal fails', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      test_metric: { kind: 'grep-count', pattern: 'foo', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 errors',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('rotVerdictRubric.healthy mismatch')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.4: valid rubric with 0 findings passes and verdict is healthy', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      test_metric: { kind: 'grep-count', pattern: 'foo', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 0);
+    assert.ok(result.verdict);
+    assert.equal(result.verdict.class, 'healthy');
+    assert.equal(result.verdict.findings, 0);
+    assert.equal(result.verdict.unbounded, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.5: 1 warning (bounded) passes with verdict stable', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.ok(result.verdict);
+    assert.equal(result.verdict.class, 'stable');
+    assert.equal(result.verdict.findings, 1);
+    assert.equal(result.verdict.unbounded, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.6: >=3 findings results in verdict rotting', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      'god_file:src/ghost1.rs': { kind: 'file-lines', ceiling: 500 },
+      'god_file:src/ghost2.rs': { kind: 'file-lines', ceiling: 500 },
+      'god_file:src/ghost3.rs': { kind: 'file-lines', ceiling: 500 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.warnings.length, 3);
+    assert.ok(result.verdict);
+    assert.equal(result.verdict.class, 'rotting');
+    assert.equal(result.verdict.findings, 3);
+    assert.equal(result.verdict.unbounded, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.7: unregistered file exceeding 800 lines results in verdict rotting (unbounded)', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'giant.rs'), '// line\n'.repeat(801), 'utf8');
+    const manifest = {
+      dummy: { kind: 'grep-count', pattern: 'nonexistent', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(result.verdict);
+    assert.equal(result.verdict.class, 'rotting');
+    assert.equal(result.verdict.unbounded, true);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.8: manifest validation failure early exit does not carry verdict field', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      invalid_entry: { kind: 'bogus-kind', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.equal(result.verdict, undefined);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F1.9: green path spawn stdout contains verdict segment', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      test_metric: { kind: 'grep-count', pattern: 'foo', ceiling: 10 },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    const policy = {
+      rotScanScope: {
+        grepRoots: ['src'],
+        fileLinesRoots: ['src', 'northing-installer/src-tauri', 'scripts'],
+      },
+      rotVerdictRubric: {
+        healthy: '0 findings',
+        stable: '1-2 bounded findings',
+        rotting: '>=3 findings OR any unbounded',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'workflow-policy.json'), JSON.stringify(policy, null, 2), 'utf8');
+
+    const proc = spawnSync(process.execPath, [SCRIPT_PATH], {
+      cwd: tmpDir,
+      encoding: 'utf8',
+    });
+    assert.equal(proc.status, 0);
+    assert.match(
+      proc.stdout,
+      /verdict: healthy \(rubric SSOT: scripts\/workflow-policy\.json rotVerdictRubric\)/,
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F2.1: dead registration without deadSince produces warning and passes', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 1);
+    assert.equal(
+      result.warnings[0],
+      'warn: god_file:src/ghost.rs registered but file does not exist — dead registration, add deadSince (YYYY-MM-DD) or remove the entry',
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F2.2: dead registration with deadSince 31 days ago fails with violation', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const thirtyOneDaysAgoUtc = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 31),
+    ).toISOString().slice(0, 10);
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        deadSince: thirtyOneDaysAgoUtc,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.equal(result.violations.length, 1);
+    assert.ok(result.violations[0].includes('dead registration'));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F2.3: dead registration with deadSince exactly 30 days ago produces warning and passes', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const thirtyDaysAgoUtc = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 30),
+    ).toISOString().slice(0, 10);
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        deadSince: thirtyDaysAgoUtc,
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 1);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F2.4: live file with deadSince ignores deadSince and emits no warning', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const srcDir = path.join(tmpDir, 'src');
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'live.rs'), 'pub fn alive() {}\n', 'utf8');
+    const manifest = {
+      'god_file:src/live.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        deadSince: '2020-01-01',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, true);
+    assert.equal(result.violations.length, 0);
+    assert.equal(result.warnings.length, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('W18-6 F2.5: malformed deadSince is rejected by manifest validation', () => {
+  const tmpDir = createFixtureDir();
+  try {
+    const scriptsDir = path.join(tmpDir, 'scripts');
+    fs.mkdirSync(scriptsDir, { recursive: true });
+    const manifest = {
+      'god_file:src/ghost.rs': {
+        kind: 'file-lines',
+        ceiling: 500,
+        deadSince: 'invalid-date',
+      },
+    };
+    fs.writeFileSync(path.join(scriptsDir, 'rot-budget.json'), JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = verifyRotBudget({ projectRoot: tmpDir, silent: true });
+    assert.equal(result.success, false);
+    assert.ok(result.violations.some((v) => v.includes('deadSince')));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

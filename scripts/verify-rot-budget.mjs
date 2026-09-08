@@ -12,7 +12,7 @@ const COMMON_FIELDS = ['kind', 'ceiling', 'note', 'authorization'];
 
 const FIELD_WHITELIST = {
   'grep-count': [...COMMON_FIELDS, 'pattern'],
-  'file-lines': [...COMMON_FIELDS],
+  'file-lines': [...COMMON_FIELDS, 'deadSince'],
   'dir-entry-count': [...COMMON_FIELDS, 'dir', 'action'],
   'exempt-list': ['kind', 'paths', 'note'],
 };
@@ -90,6 +90,14 @@ export function validateManifest(manifest, projectRoot = process.cwd()) {
         if (typeof entry.authorization.expires === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(entry.authorization.expires)) {
           errors.push(`${key}: "authorization.expires" must match YYYY-MM-DD format, got "${entry.authorization.expires}"`);
         }
+      }
+    }
+
+    // deadSince validation if present
+    if (entry.deadSince !== undefined) {
+      const parsed = typeof entry.deadSince === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(entry.deadSince) ? Date.parse(entry.deadSince + 'T00:00:00Z') : NaN;
+      if (Number.isNaN(parsed) || new Date(parsed).toISOString().slice(0, 10) !== entry.deadSince) {
+        errors.push(`${key}: "deadSince" must match YYYY-MM-DD format, got ${JSON.stringify(entry.deadSince)}`);
       }
     }
 
@@ -335,6 +343,41 @@ export function attestScanScope(policyPath, projectRoot = process.cwd()) {
   };
 }
 
+export const EXPECTED_ROT_VERDICT_RUBRIC = {
+  healthy: '0 findings',
+  stable: '1-2 bounded findings',
+  rotting: '>=3 findings OR any unbounded',
+};
+
+export function attestVerdictRubric(policyPath, projectRoot = process.cwd()) {
+  const violations = [];
+  if (!fs.existsSync(policyPath)) return { success: true, violations };
+  let policy;
+  try {
+    policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+  } catch (err) {
+    return { success: false, violations: [`Failed to parse workflow policy file: ${err.message}`] };
+  }
+  if (typeof policy !== 'object' || policy === null || Array.isArray(policy)) {
+    return { success: false, violations: ['workflow-policy.json must be a JSON object'] };
+  }
+  const rubric = policy.rotVerdictRubric;
+  if (rubric === undefined) {
+    return { success: false, violations: ['workflow-policy.json is missing required "rotVerdictRubric" field'] };
+  }
+  if (typeof rubric !== 'object' || rubric === null || Array.isArray(rubric) || Object.keys(rubric).length !== 3) {
+    return { success: false, violations: ['workflow-policy.json "rotVerdictRubric" must be an object with exactly 3 keys: healthy, stable, rotting'] };
+  }
+  for (const [key, expected] of Object.entries(EXPECTED_ROT_VERDICT_RUBRIC)) {
+    if (typeof rubric[key] !== 'string') {
+      violations.push(`workflow-policy.json "rotVerdictRubric.${key}" must be a string`);
+    } else if (rubric[key] !== expected) {
+      violations.push(`rotVerdictRubric.${key} mismatch: declared "${rubric[key]}" does not match actual "${expected}"`);
+    }
+  }
+  return { success: violations.length === 0, violations };
+}
+
 export function isLeaseLive(lease, todayUtc = new Date().toISOString().slice(0, 10)) {
   if (!lease || typeof lease !== 'object' || Array.isArray(lease)) return false;
   if (typeof lease.revisit_after !== 'string') return false;
@@ -420,6 +463,7 @@ export function checkFileLinesSurface({
   leaseMap = new Map(),
   baseManifest = null,
   todayUtc = new Date().toISOString().slice(0, 10),
+  unboundedState = null,
 }) {
   const violations = [];
 
@@ -471,6 +515,9 @@ export function checkFileLinesSurface({
       }
     }
   } else if (lineCount > GOD_FILE_LINE_THRESHOLD) {
+    if (unboundedState) {
+      unboundedState.hasUnbounded = true;
+    }
     violations.push(
       `god_file:${file.relPath}: current ${lineCount} exceeds ceiling ${GOD_FILE_LINE_THRESHOLD} — split, reduce, or register a justified manifest entry (raising a ceiling requires user sign-off)`,
     );
@@ -524,6 +571,10 @@ export function verifyRotBudget({
   const attestation = attestScanScope(policyPath, projectRoot);
   if (!attestation.success) {
     violations.push(...attestation.violations);
+  }
+  const rubricAttestation = attestVerdictRubric(policyPath, projectRoot);
+  if (!rubricAttestation.success) {
+    violations.push(...rubricAttestation.violations);
   }
 
   let leaseMap = new Map();
@@ -630,6 +681,7 @@ export function verifyRotBudget({
       godFileRules.set(fileRelPath, {
         key,
         ceiling: entry.ceiling,
+        deadSince: entry.deadSince,
       });
     } else if (entry.kind === 'dir-entry-count') {
       const dirRelPath = entry.dir || (key.startsWith('dir_entries:') ? key.slice('dir_entries:'.length) : key);
@@ -676,11 +728,20 @@ export function verifyRotBudget({
           continue;
         }
       }
-      warnings.push(
-        `warn: ${rule.key} registered but file does not exist — dead registration, remove the entry`,
-      );
+      if (rule.deadSince) {
+        const diffDays = (Date.parse(todayUtc + 'T00:00:00Z') - Date.parse(rule.deadSince + 'T00:00:00Z')) / 86400000;
+        if (diffDays > 30) {
+          violations.push(`${rule.key}: dead registration has exceeded 30-day grace period (dead since ${rule.deadSince}) — remove the entry`);
+        } else {
+          warnings.push(`warn: ${rule.key} registered but file does not exist — dead registration within grace period (dead since ${rule.deadSince})`);
+        }
+      } else {
+        warnings.push(`warn: ${rule.key} registered but file does not exist — dead registration, add deadSince (YYYY-MM-DD) or remove the entry`);
+      }
     }
   }
+
+  const unboundedState = { hasUnbounded: false };
 
   for (const file of allScannedFiles) {
     if (exemptPaths.has(file.relPath)) {
@@ -690,6 +751,7 @@ export function verifyRotBudget({
     const lineCount = countLines(content);
     counts[file.relPath] = lineCount;
 
+    // Note: if file exists, deadSince is ignored (dead registration rules only apply when target file is missing)
     const surfaceViolations = checkFileLinesSurface({
       file,
       content,
@@ -700,6 +762,7 @@ export function verifyRotBudget({
       leaseMap,
       baseManifest,
       todayUtc,
+      unboundedState,
     });
     violations.push(...surfaceViolations);
 
@@ -798,6 +861,14 @@ export function verifyRotBudget({
     }
   }
 
+  const findings = violations.length + warnings.length;
+  const verdictClass = (!unboundedState.hasUnbounded && findings === 0) ? 'healthy' : (!unboundedState.hasUnbounded && findings <= 2) ? 'stable' : 'rotting';
+  const verdict = {
+    class: verdictClass,
+    findings,
+    unbounded: unboundedState.hasUnbounded,
+  };
+
   const success = violations.length === 0;
 
   if (!silent) {
@@ -815,13 +886,15 @@ export function verifyRotBudget({
         .filter(Boolean)
         .join(', ');
       console.log(
-        `Rot budget verification passed (${readingsSummary} checked across ${allScannedFiles.length} files [src: ${srcFiles.length}, northing-installer/src-tauri: ${installerFiles.length}, scripts: ${scriptFiles.length}]).`,
+        `Rot budget verification passed (${readingsSummary} checked across ${allScannedFiles.length} files [src: ${srcFiles.length}, northing-installer/src-tauri: ${installerFiles.length}, scripts: ${scriptFiles.length}]) — verdict: ${verdict.class} (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
       );
     } else {
       for (const violation of violations) {
         console.error(violation);
       }
-      console.error(`Rot budget verification failed with ${violations.length} violation(s).`);
+      console.error(
+        `Rot budget verification failed with ${violations.length} violation(s) — verdict: ${verdict.class} (rubric SSOT: scripts/workflow-policy.json rotVerdictRubric).`,
+      );
     }
   }
 
@@ -831,6 +904,7 @@ export function verifyRotBudget({
     warnings,
     counts,
     checkedFilesCount: allScannedFiles.length,
+    verdict,
   };
 }
 
