@@ -53,7 +53,7 @@
 
 ### 1. `cargo check --workspace`
 
-- **Command**: `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo check --workspace`
+- **Command**: `rustup run stable-x86_64-pc-windows-msvc cargo check --workspace`
 - **Exit Code**: `0`
 - **Output 原文**:
 ```text
@@ -69,7 +69,7 @@ warning: `northhing` (bin "northhing") generated 60 warnings (2 duplicates) (run
 
 ### 2. 新增测试跑绿 (`run_file_cleanup`)
 
-- **Command**: `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib run_file_cleanup`
+- **Command**: `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib run_file_cleanup`
 - **Exit Code**: `0`
 - **Output 原文**:
 ```text
@@ -84,7 +84,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1072 filtered out; f
 
 ### 3. 既有测试回归 (`delete_session`)
 
-- **Command**: `C:\Users\UmR\.cargo\bin\rustup.exe run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib delete_session`
+- **Command**: `rustup run stable-x86_64-pc-windows-msvc cargo test -p northhing-core --features product-full --lib delete_session`
 - **Exit Code**: `0`
 - **Output 原文**:
 ```text
