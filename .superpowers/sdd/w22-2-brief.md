@@ -19,16 +19,16 @@ W22-2（技术债清账；P2-4 残余窄义版：`delete_session` 挂钩 Cleanup
 ## 允许文件集
 
 - `src/crates/assembly/core/src/agentic/session/session_manager_lifecycle.rs`（修改：加 cleanup 触发段 + 抽出可测小函数）
-- `src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/session_manager_lifecycle_tests_rollback_delete.rs`（修改：加一个测试；若该文件是 mod 引用形态则由 implementer 按实际落点，report 注明）
+- `src/crates/assembly/core/src/agentic/session/session_manager_lifecycle_tests/session_manager_lifecycle_tests_rollback_delete.rs`（修改：加一个测试，落点钉死此文件）
 - `docs/status/tech-debt-ledger.md`（修改：P2-4 条目 status 翻转——家规 2 同 commit）
 
 report 写 `.superpowers/sdd/w22-2-report.md`，不进本单验收 diff（不 commit、不 git add）。
 
 ## 功能要求
 
-1. **cleanup 触发段**：`delete_session` stage 1（快照清理段，:318 之后）后插入新阶段：调用一个抽出的 `pub(crate) async fn run_file_cleanup(path_manager: &PathManager)` 小函数（落 session_manager_lifecycle.rs 内），内部构造 `CleanupService::new(path_manager.clone_or_default(), CleanupPolicy::default())` 并 `cleanup_all().await`。形态与既有 cron/terminal 段一致：**失败 `warn!` 继续，禁 `?`**。PathManager 的获取：优先 `crate::infrastructure::path_manager_arc()` 通路（path_manager.rs:171-174）；若 `PathManager` 不可 Clone 则以 `PathManager::default()`（main.rs:28 同款）——implementer 按实际类型能力选，report 注明选择。
+1. **cleanup 触发段**：`delete_session` 快照段 stage-completed debug（:323）之后插入新阶段（不打散 started_at/debug! 成对模式）：调用 `run_file_cleanup(&crate::infrastructure::path_manager_arc())`（`path_manager_arc()` 在 `src/crates/assembly/core/src/infrastructure/app_paths/path_manager.rs:171-184`，Arc deref 协变传 `&PathManager`）。`run_file_cleanup` = 抽出的 `pub(crate) async fn run_file_cleanup(path_manager: &PathManager)` 小函数（落 session_manager_lifecycle.rs 内），内部 `CleanupService::new(path_manager.clone(), CleanupPolicy::default())` 并 `cleanup_all().await`（PathManager 可 Clone 已实证：path_manager.rs:44 `#[derive(Debug, Clone)]`）。形态与既有 cron/terminal 段一致：**失败 `warn!` 继续，禁 `?`**。**PathManager 获取钉死 `path_manager_arc()`，无第二分支**。
 2. **可测性缝**：`run_file_cleanup(path_manager: &PathManager)` 参数注入即缝——`delete_session` 本体只调它，测试直测该函数（不给 SessionManager 加字段）。
-3. **测试**：在 delete 测试文件加一个测试：用 `PathManager::with_user_root_for_tests` 指向的隔离 user_root 下伪造一个 mtime 8 天前的 temp 文件（超过默认 temp_retention_days=7），调 `run_file_cleanup`，断言文件被删。测试需自行保证隔离（不得触碰真实用户目录）。
+3. **测试**：在 `session_manager_lifecycle_tests/session_manager_lifecycle_tests_rollback_delete.rs`（已实证存在，437 行叶子模块）加一个测试：用 `PathManager::with_user_root_for_tests`（path_manager.rs:143-158 `#[cfg(test)] pub(crate)`，同 crate cfg(test) 调用先例 = session_manager_tests.rs:57 TestWorkspace）指向的隔离 user_root 下伪造一个 mtime 8 天前的 temp 文件（超过默认 temp_retention_days=7），调 `run_file_cleanup`，断言文件被删。测试需自行保证隔离（不得触碰真实用户目录）。
 4. **ledger 翻转**：P2-4 status → `resolved`（注明窄义口径：session 删除触发全局 temp/log/cache 清理已通；孤儿快照纳入为独立设计题划出；同 commit）。
 
 ## Constraints
@@ -37,6 +37,7 @@ report 写 `.superpowers/sdd/w22-2-report.md`，不进本单验收 diff（不 co
 - report 贴原文输出 + exit code；结尾状态词。
 - 日志全英文，无 emoji。
 - 错误处理家规：cleanup 失败不得阻断 session 删除主流程（warn-continue）。
+- **已知副作用声明（53 复审钉死，本单接受）**：新阶段无条件插入非 test 的 `delete_session` 后，全 crate 恰有 2 个既有测试（rollback_delete.rs:325、metadata_tests_subagent_metadata.rs:180）走完整 `delete_session` 且用 `in_memory_test_manager()`（真实根 PathManager）——本地/CI 跑这些测试会对真实用户 profile 执行一次 retention 清理（语义等价每日 24h 调度器，CI 临时 profile 无害）。测试侧 env 覆盖在并行测试 + OnceLock 下不可靠、从 manager 注入 PM 违反「不加字段」——接受并声明即正解。
 
 ## 禁区
 
@@ -49,7 +50,9 @@ report 写 `.superpowers/sdd/w22-2-report.md`，不进本单验收 diff（不 co
 ## 验证
 
 1. `cargo check --workspace` → 绿（BASE Rust 树与 CI run 34341758420 全绿时逐字相同——注意派发时若 W22-1 已落地，以派发点 HEAD 为准重跑确认）。
-2. 新增测试跑绿：`cargo test -p northhing-core --features product-full --lib <test_name>`（**必须带 `--features product-full`**——kernel_facade/agentic 模块在 feature 门后，不带 = 假绿）。
+2. 新增测试跑绿 + 行为被改变的既有测试不回归（两条都跑，report 都贴）：
+   - `cargo test -p northhing-core --features product-full --lib run_file_cleanup`（新测试；**必须带 `--features product-full`**——agentic 模块在 feature 门后，不带 = 假绿）
+   - `cargo test -p northhing-core --features product-full --lib delete_session`（覆盖走完整 delete_session 的 2 个既有测试）
 3. report 附：`run_file_cleanup` 签名原文 + delete_session 插入段 diff 摘要 + 测试隔离机制说明（with_user_root_for_tests 如何保证不碰真实目录）。
 
 ## skill 前置
@@ -58,4 +61,4 @@ report 写 `.superpowers/sdd/w22-2-report.md`，不进本单验收 diff（不 co
 
 ## 报告
 
-写 `.superpowers/sdd/w22-2-report.md`，必含三节：**改动摘要**（含 PathManager 获取选择理由）/ **验证**（3 项原文输出 + exit code）/ **状态**（状态词结尾）。
+写 `.superpowers/sdd/w22-2-report.md`，必含三节：**改动摘要** / **验证**（3 项原文输出 + exit code）/ **状态**（状态词结尾）。
